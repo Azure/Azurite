@@ -32,6 +32,9 @@
   },
   "homepage": "https://github.com/arafato/azurite#readme",
   "dependencies": {
+    "bluebird": "^3.4.6",
+    "express": "^4.14.0",
+    "lokijs": "^1.4.1",
     "minimist": "^1.2.0"
   }
 }
