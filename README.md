@@ -11,3 +11,6 @@ QueueEndpoint=http://127.0.0.1:10001/devstoreaccount1;
 
 # REST APIs
 https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/blob-service-rest-api
+
+# Error Codes
+https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/blob-service-error-codes
