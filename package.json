@@ -35,6 +35,7 @@
     "bluebird": "^3.4.6",
     "express": "^4.14.0",
     "fs-extra": "^1.0.0",
+    "js2xmlparser": "^2.0.2",
     "lokijs": "^1.4.1",
     "minimist": "^1.2.0"
   }
