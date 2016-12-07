@@ -59,7 +59,7 @@ Deletes the container and any blobs that it contains.
 ## List Blobs 
 Lists all of the blobs in a container.
 
-## Put Blob
+## Put Blob [IN-PROGRESS]
 Creates a new blob or replaces an existing blob within a container.
 
 ## Get Blob 	 	
