@@ -33,6 +33,7 @@
   "homepage": "https://github.com/arafato/azurite#readme",
   "dependencies": {
     "bluebird": "^3.4.6",
+    "body-parser": "^1.15.2",
     "express": "^4.14.0",
     "fs-extra": "^1.0.0",
     "js2xmlparser": "^2.0.2",
