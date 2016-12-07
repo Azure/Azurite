@@ -16,8 +16,9 @@ https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/blob-serv
 https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/blob-service-error-codes
 
 # API Status Implementation
-## List Containers
+## List Containers [DONE]
 Lists all of the containers in a storage account.
+Markers are not supported yet.
 
 ## Set Blob Service Properties 	
 Sets the properties of the Blob service, including logging and metrics settings, and the default service version.
