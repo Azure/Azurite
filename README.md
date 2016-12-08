@@ -53,7 +53,7 @@ Sets the public access policy and any stored access policies for the container.
 ## Lease Container 	
 Establishes and manages a lock on a container for delete operations.
 
-## Delete Container [IN-PROGRESS, blob integration is missing] 	
+## Delete Container [DONE] 	
 Deletes the container and any blobs that it contains.
 
 ## List Blobs 
@@ -77,7 +77,7 @@ Retrieves all user-defined metadata of an existing blob or snapshot.
 ## Set Blob Metadata
 Sets user-defined metadata of an existing blob.
 
-## Delete Blob 
+## Delete Blob [DONE]
 Marks a blob for deletion.
 
 ## Lease Blob
