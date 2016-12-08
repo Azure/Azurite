@@ -1,6 +1,11 @@
 # Azurite
 A lightweight server clone of Azure Blob Storage that simulates most of the commands supported by it with minimal dependencies.
 
+# Installation
+$ npm install -g Azurite
+
+$ azurite -l path/to/localfolder
+
 # Endpoints
 Standard Emulator Connection String:
 DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;
