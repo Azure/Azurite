@@ -39,6 +39,7 @@
     "js2xmlparser": "^2.0.2",
     "lokijs": "^1.4.1",
     "md5": "^2.2.1",
-    "minimist": "^1.2.0"
+    "minimist": "^1.2.0",
+    "request": "^2.79.0"
   }
 }
