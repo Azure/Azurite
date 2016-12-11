@@ -1,4 +1,7 @@
 # Azurite
+[![npm version](https://badge.fury.io/js/azurite.svg)](https://badge.fury.io/js/azurite)
+[![license](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)]()
+
 A lightweight server clone of Azure Blob Storage that simulates most of the commands supported by it with minimal dependencies.
 
 # Installation
@@ -67,7 +70,9 @@ Lists all of the blobs in a container.
 ## Put Blob [DONE]
 Creates a new blob or replaces an existing blob within a container.
 
-## Get Blob 	 	
+## Get Blob [DONE]	
+Block Blobs only.
+ 	
 Reads or downloads a blob from the Blob service, including its user-defined metadata and system properties.
 
 ## Get Blob Properties 	 	
