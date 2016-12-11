@@ -64,7 +64,7 @@ Establishes and manages a lock on a container for delete operations.
 ## Delete Container [DONE] 	
 Deletes the container and any blobs that it contains.
 
-## List Blobs 
+## List Blobs [DONE]
 Lists all of the blobs in a container.
 
 ## Put Blob [DONE]
