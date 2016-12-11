@@ -7,5 +7,4 @@ let argv = require('minimist')(process.argv.slice(2));
 let A = require('../lib/Azurite'),
  	azurite = new A();
 	
-azurite.init(argv);
-	
+azurite.init(argv);	
