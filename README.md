@@ -102,7 +102,7 @@ Copies a source blob to a destination blob in this storage account or in another
 ## Abort Copy Blob
 Aborts a pending Copy Blob operation, and leaves a destination blob with zero length and full metadata.
 
-## Put Block 	
+## Put Block [DONE]
 Block blobs only 	
 Creates a new block to be committed as part of a block blob.
 
