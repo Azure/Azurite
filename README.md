@@ -106,7 +106,7 @@ Aborts a pending Copy Blob operation, and leaves a destination blob with zero le
 Block blobs only 	
 Creates a new block to be committed as part of a block blob.
 
-## Put Block List
+## Put Block List [DONE]
 Block blobs only
 Commits a blob by specifying the set of block IDs that comprise the block blob.
 
