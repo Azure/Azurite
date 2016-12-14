@@ -110,7 +110,7 @@ Creates a new block to be committed as part of a block blob.
 Block blobs only
 Commits a blob by specifying the set of block IDs that comprise the block blob.
 
-## Get Block List
+## Get Block List [DONE]
 Block blobs only
 Retrieves the list of blocks that have been uploaded as part of a block blob.
 
