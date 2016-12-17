@@ -3,7 +3,10 @@
   "version": "0.4.7",
   "description": "A lightweight server clone of Azure Blob Storage that simulates most of the commands supported by it with minimal dependencies.",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "pretest": "npm run clean",
+    "test": "cross-env AZURITE_LOCATION=azurite-testdrive mocha --timeout 10000",
+    "start": "bin/azurite -l azurite-testdrive",
+    "clean": "rimraf azurite-testdrive"
   },
   "engines": {
     "node": ">=4.0"
@@ -45,5 +48,12 @@
     "morgan": "^1.7.0",
     "request": "^2.79.0",
     "xml2js": "^0.4.17"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "chai-http": "^3.0.0",
+    "cross-env": "^3.1.3",
+    "mocha": "^3.2.0",
+    "rimraf": "^2.5.4"
   }
 }
