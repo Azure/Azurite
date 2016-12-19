@@ -1,6 +1,7 @@
 # Azurite
 [![npm version](https://badge.fury.io/js/azurite.svg)](https://badge.fury.io/js/azurite)
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)]()
+[![Build Status](https://travis-ci.org/arafato/azurite.svg?branch=master)](https://travis-ci.org/arafato/azurite)
 
 A lightweight server clone of Azure Blob Storage that simulates most of the commands supported by it with minimal dependencies.
 
@@ -11,11 +12,10 @@ $ azurite -l path/to/localfolder
 
 # Endpoints
 Standard Emulator Connection String:
-DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;
-AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;
+
 BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;
-TableEndpoint=http://127.0.0.1:10002/devstoreaccount1;
-QueueEndpoint=http://127.0.0.1:10001/devstoreaccount1;
+
+You do not need to provide an account key.
 
 # REST APIs
 https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/blob-service-rest-api
