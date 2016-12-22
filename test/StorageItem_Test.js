@@ -12,6 +12,9 @@ describe('StorageItem', () => {
         expect(item.httpProps).to.have.property('Last-Modified');
         expect(item.httpProps).to.have.property('Content-Type', 'application/octet-stream');
         expect(item.httpProps).to.have.property('Content-Encoding', 'utf8');
+        expect(item.httpProps).to.not.have.property('Content-MD5');
+        expect(item.httpProps).to.not.have.property('Content-Language');
+        expect(item.httpProps).to.not.have.property('Cache-Control');
         expect(item.metaProps).to.be.empty;
     });
     it('should initialize meta and http props correctly.', () => {
