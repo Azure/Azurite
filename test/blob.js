@@ -123,4 +123,20 @@ describe('Blob HTTP API', () => {
                 });                
         });
     });
+
+    describe('Blob Properties', () => {
+        it('should successfully set all system properties', () => {
+            return chai.request(url)
+                .put(`${urlPath}/${containerName}/${blobName}`)
+                .set('x-ms-blob-cache-control', 'true')
+                .set('x-ms-blob-content-type', 'contenttype')
+                .set('x-ms-blob-content-md5', 'contentmd5')
+                .set('x-ms-blob-content-encoding', 'contentencoding')
+                .set('x-ms-blob-content-language', 'contentlanguage')
+                .query({ comp: 'properties' })
+                .then((res) => {
+                    res.should.have.status(200);
+                });
+        });
+    });
 });
