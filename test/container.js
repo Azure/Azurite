@@ -25,43 +25,38 @@ describe('Container HTTP API', () => {
     const simpleContainerName = 'simpleContainer'
 
     describe('PUT Simple Container', () => {
-        it('should create a container', (done) => {
-            chai.request(url)
+        it('should create a container', () => {
+            return chai.request(url)
                 .put(`${urlPath}/${simpleContainerName}`)
                 .query({ restype: 'container' })
-                .end((err, res) => {
-                    should.not.exist(err);
+                .then((res) => {
                     res.should.have.status(200);
-                    done();
                 });
         });
-        it('and a second with the same name that fails', (done) => {
-            chai.request(url)
+        it('and a second with the same name that fails', () => {
+            return chai.request(url)
                 .put(`${urlPath}/${simpleContainerName}`)
                 .query({ restype: 'container' })
-                .end((err, res) => {
-                    res.should.have.status(409);
-                    done();
-                });
+                .catch((e) => {
+                    e.should.have.status(409);
+                })
         });
     });
     describe('DELETE Simple Container', () => {
-        it('successfully deletes the container', (done) => {
-            chai.request(url)
+        it('successfully deletes the container', () => {
+            return chai.request(url)
                 .delete(`${urlPath}/${simpleContainerName}`)
                 .query({ restype: 'container' })
-                .end((err, res) => {
+                .then((res) => {
                     res.should.have.status(200);
-                    done();
                 });
         });
-        it('deleting a non-existant container fails', (done) => {
-            chai.request(url)
+        it('deleting a non-existant container fails', () => {
+            return chai.request(url)
                 .delete(`${urlPath}/DOESNOTEXIST`)
                 .query({ restype: 'container' })
-                .end((err, res) => {
-                    res.should.have.status(404);
-                    done();
+                .catch((e) => {
+                    e.should.have.status(404);
                 });
         });
     });
