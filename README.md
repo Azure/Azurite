@@ -84,7 +84,7 @@ Sets system properties defined for an existing blob.
 ## Get Blob Metadata
 Retrieves all user-defined metadata of an existing blob or snapshot.
 
-## Set Blob Metadata
+## Set Blob Metadata [DONE]
 Sets user-defined metadata of an existing blob.
 
 ## Delete Blob [DONE]
