@@ -93,5 +93,34 @@ describe('Blob HTTP API', () => {
                     res.should.have.status(200);
                 });
         });
+        it('should get the correct metadata.', () => {
+            return chai.request(url)
+                .get(`${urlPath}/${containerName}/${blobName}`)
+                .query({ comp: 'metadata' })
+                .then((res) => {
+                    res.should.have.status(200);
+                    res.should.have.header('x-ms-meta-test1', 'value1');
+                    res.should.have.header('x-ms-meta-test2', 'value2');
+                    res.should.have.header('x-ms-meta-meta1', 'meta1Value');
+                    res.should.have.header('Last-Modified');
+                    res.should.have.header('ETag');
+                });
+        });
+        it('should fail to get metadata of a non-existant blob', () => {
+            return chai.request(url)
+                .get(`${urlPath}/${containerName}/BLOB_DOESNOTEXISTS`)
+                .query({ comp: 'metadata' })
+                .catch((e) => {
+                    e.should.have.status(404);
+                });                
+        });
+        it('should fail to get metadata of a blob in a non-existant container', () => {
+            return chai.request(url)
+                .get(`${urlPath}/CONTAINER_DOESNOTEXIST/BLOB_DOESNOTEXISTS`)
+                .query({ comp: 'metadata' })
+                .catch((e) => {
+                    e.should.have.status(404);
+                });                
+        });
     });
 });
