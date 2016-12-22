@@ -78,7 +78,7 @@ Reads or downloads a blob from the Blob service, including its user-defined meta
 ## Get Blob Properties 	 	
 Returns all system properties and user-defined metadata on the blob.
 
-## Set Blob Properties 	 	
+## Set Blob Properties [DONE] 	 	
 Sets system properties defined for an existing blob.
 
 ## Get Blob Metadata [DONE]
