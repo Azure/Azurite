@@ -2,9 +2,22 @@
 
 'use strict'
 
-let argv = require('minimist')(process.argv.slice(2));
+const BbPromise = require('bluebird');
 
-let A = require('../lib/Azurite'),
- 	azurite = new A();
-	
-azurite.init(argv);
+process.on('unhandledRejection', (e) => {
+	console.error('**PANIC** Something unexpected happened! Emulator may be in an inconsistent state!');
+	console.error(e);
+});
+process.noDeprecation = true;
+
+(() => BbPromise.resolve().then(() => {
+	// requiring here so that if anything went wrong,
+	// during require, it will be caught.
+	let argv = require('minimist')(process.argv.slice(2));
+	let A = require('../lib/Azurite'),
+		azurite = new A();
+	azurite.init(argv);
+}).catch(e => {
+	process.exitCode = 1;
+	console.error(e);
+}))();
