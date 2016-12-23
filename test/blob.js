@@ -112,7 +112,7 @@ describe('Blob HTTP API', () => {
                 .query({ comp: 'metadata' })
                 .catch((e) => {
                     e.should.have.status(404);
-                });                
+                });
         });
         it('should fail to get metadata of a blob in a non-existant container', () => {
             return chai.request(url)
@@ -120,7 +120,7 @@ describe('Blob HTTP API', () => {
                 .query({ comp: 'metadata' })
                 .catch((e) => {
                     e.should.have.status(404);
-                });                
+                });
         });
     });
 
@@ -129,13 +129,28 @@ describe('Blob HTTP API', () => {
             return chai.request(url)
                 .put(`${urlPath}/${containerName}/${blobName}`)
                 .set('x-ms-blob-cache-control', 'true')
-                .set('x-ms-blob-content-type', 'contenttype')
-                .set('x-ms-blob-content-md5', 'contentmd5')
-                .set('x-ms-blob-content-encoding', 'contentencoding')
-                .set('x-ms-blob-content-language', 'contentlanguage')
+                .set('x-ms-blob-content-type', 'ContentType')
+                .set('x-ms-blob-content-md5', 'ContentMD5')
+                .set('x-ms-blob-content-encoding', 'ContentEncoding')
+                .set('x-ms-blob-content-language', 'ContentLanguage')
                 .query({ comp: 'properties' })
                 .then((res) => {
                     res.should.have.status(200);
+                });
+        });
+        it('should get all previously set system properties', () => {
+            return chai.request(url)
+                .head(`${urlPath}/${containerName}/${blobName}`)
+                .then((res) => {
+                    res.should.have.status(200);
+                    res.should.have.header('ETag');
+                    res.should.have.header('Last-Modified');
+                    res.should.have.header('Content-Type', 'ContentType');
+                    res.should.have.header('Content-Encoding', 'ContentEncoding');
+                    res.should.have.header('Content-MD5', 'ContentMD5');
+                    res.should.have.header('Content-Language', 'ContentLanguage');
+                    res.should.have.header('Cache-Control', 'true');
+                    res.should.have.header('x-ms-blob-type', 'BlockBlob');
                 });
         });
     });
