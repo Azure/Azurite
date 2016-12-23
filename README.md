@@ -75,7 +75,7 @@ Block Blobs only.
  	
 Reads or downloads a blob from the Blob service, including its user-defined metadata and system properties.
 
-## Get Blob Properties 	 	
+## Get Blob Properties [DONE] 	 	
 Returns all system properties and user-defined metadata on the blob.
 
 ## Set Blob Properties [DONE] 	 	
