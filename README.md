@@ -46,10 +46,10 @@ Creates a new container in a storage account.
 ## Get Container Properties 	
 Returns all user-defined metadata and system properties of a container.
 
-## Get Container Metadata 	
+## Get Container Metadata [DONE]	
 Returns only user-defined metadata of a container.
 
-## Set Container Metadata
+## Set Container Metadata [DONE]
 Sets user-defined metadata of a container.
 
 ## Get Container ACL 	 	
