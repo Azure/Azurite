@@ -127,5 +127,63 @@ describe('Container HTTP API', () => {
                     e.should.have.status(404);
                 });
         });
+
+        describe('Container System Properties', () => {
+            it('should update an existing container with metadata.', () => {
+                return chai.request(url)
+                    .put(`${urlPath}/${propContainer}`)
+                    .query({ restype: 'container', comp: 'metadata' })
+                    .set('x-ms-meta-test1', 'value1')
+                    .set('x-ms-meta-test2', 'value2')
+                    .set('x-ms-meta-meta1', 'meta1Value')
+                    .then((res) => {
+                        res.should.have.status(200);
+                    });
+            });
+            it('should get the correct metadata. (GET)', () => {
+                return chai.request(url)
+                    .get(`${urlPath}/${propContainer}`)
+                    .query({ restype: 'container' })
+                    .then((res) => {
+                        res.should.have.status(200);
+                        res.should.have.header('x-ms-meta-test1', 'value1');
+                        res.should.have.header('x-ms-meta-test2', 'value2');
+                        res.should.have.header('x-ms-meta-meta1', 'meta1Value');
+                        res.should.have.header('Last-Modified');
+                        res.should.have.header('ETag');
+                        res.should.have.header('x-ms-blob-public-access');
+                    });
+            });
+            it('should get the correct metadata. (HEAD)', () => {
+                return chai.request(url)
+                    .head(`${urlPath}/${propContainer}`)
+                    .query({ restype: 'container' })
+                    .then((res) => {
+                        res.should.have.status(200);
+                        res.should.have.header('x-ms-meta-test1', 'value1');
+                        res.should.have.header('x-ms-meta-test2', 'value2');
+                        res.should.have.header('x-ms-meta-meta1', 'meta1Value');
+                        res.should.have.header('Last-Modified');
+                        res.should.have.header('ETag');
+                        res.should.have.header('x-ms-blob-public-access');
+                    });
+            });
+            it('should fail to get metadata of a non-existant container (GET)', () => {
+                return chai.request(url)
+                    .get(`${urlPath}/CONTAINER_DOESNOTEXIST`)
+                    .query({ restype: 'container' })
+                    .catch((e) => {
+                        e.should.have.status(404);
+                    });
+            });
+            it('should fail to get metadata of a non-existant container (HEAD)', () => {
+                return chai.request(url)
+                    .head(`${urlPath}/CONTAINER_DOESNOTEXIST`)
+                    .query({ restype: 'container' })
+                    .catch((e) => {
+                        e.should.have.status(404);
+                    });
+            });
+        });
     });
 });
