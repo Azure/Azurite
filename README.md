@@ -43,7 +43,7 @@ Retrieves statistics related to replication for the Blob service. This operation
 ## Create Container [DONE] 
 Creates a new container in a storage account.
 
-## Get Container Properties 	
+## Get Container Properties [DONE] 	
 Returns all user-defined metadata and system properties of a container.
 
 ## Get Container Metadata [DONE]	
