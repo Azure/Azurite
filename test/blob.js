@@ -11,7 +11,8 @@ const chai = require('chai'),
 chai.use(chaiHttp);
 
 const containerName = 'testcontainer';
-const blobName = 'testblob';
+const blockBlobName = 'testblockblob';
+const appendBlobName = 'testappendblob';
 const url = `http://localhost:10000`;
 const urlPath = `/devstoreaccount1`;
 
@@ -28,18 +29,30 @@ describe('Blob HTTP API', () => {
                     uri: `http://localhost:10000/devstoreaccount1/${containerName}?restype=container`,
                     body: ''
                 };
-                const optionsBlob = {
+                const optionsBlockBlob = {
                     method: 'PUT',
                     headers: {
                         'x-ms-blob-type': 'BlockBlob',
                         'Content-Type': 'application/octet-stream'
                     },
-                    uri: `http://localhost:10000/devstoreaccount1/${containerName}/${blobName}`,
+                    uri: `http://localhost:10000/devstoreaccount1/${containerName}/${blockBlobName}`,
                     body: 'abc123'
+                }
+                const optionsAppendBlob = {
+                    method: 'PUT',
+                    headers: {
+                        'x-ms-blob-type': 'AppendBlob',
+                        'Content-Type': 'application/octet-stream'
+                    },
+                    uri: `http://localhost:10000/devstoreaccount1/${containerName}/${appendBlobName}`,
+                    body: ''
                 }
                 return rp(optionsContainer)
                     .then(() => {
-                        return rp(optionsBlob);
+                        return rp(optionsBlockBlob);
+                    })
+                    .then(() => {
+                        return rp(optionsAppendBlob);
                     });
             });
     });
@@ -48,7 +61,7 @@ describe('Blob HTTP API', () => {
         return azurite.close();
     });
 
-    describe('PUT Blob', () => {
+    describe('PUT Block Blob', () => {
         it('should fail to create a block due to missing container', () => {
             return chai.request(url)
                 .put(`${urlPath}/DOESNOTEXISTS/blob`)
@@ -66,17 +79,65 @@ describe('Blob HTTP API', () => {
                 .set('Content-Type', 'application/octet-stream')
                 .send('THIS IS CONTENT')
                 .catch((e) => {
-                    e.should.have.status(500);
+                    e.should.have.status(400);
                 });
         });
-        it('should create a simple blob without meta headers', () => {
+        it('should create a simple block blob without meta headers', () => {
             return chai.request(url)
                 .put(`${urlPath}/${containerName}/blob`)
                 .set('x-ms-blob-type', 'BlockBlob')
                 .set('Content-Type', 'application/octet-stream')
-                .send('THIS IS CONTENT.')
+                .send('abcdefghijklmn')
                 .then((res) => {
                     res.should.have.status(201);
+                });
+        });
+    });
+
+    describe('Append Blobs', () => {
+        it('should create an append blob', () => {
+            return chai.request(url)
+                .put(`${urlPath}/${containerName}/appendBlob`)
+                .set('x-ms-blob-type', 'AppendBlob')
+                .set('Content-Type', 'application/octet-stream')
+                .send('123456789')
+                .then((res) => {
+                    res.should.have.status(201);
+                });
+        });
+        it('should append data to the append blob', () => {
+            return chai.request(url)
+                .put(`${urlPath}/${containerName}/appendBlob`)
+                .query({ comp: 'appendblock' })
+                .set('x-ms-blob-type', 'AppendBlob')
+                .set('Content-Type', 'application/octet-stream')
+                .send('abcdefghi')
+                .then((res) => {
+                    res.should.have.status(201);
+                });
+        });
+    });
+
+    describe('GET Blob', () => {
+        it('should get the correct content of the Block Blob', () => {
+            const optionsBlockBlobGet = {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/octet-stream'
+                },
+                uri: `http://localhost:10000/devstoreaccount1/${containerName}/${blockBlobName}`
+            }
+            return rp(optionsBlockBlobGet)
+                .then((res) => {
+                    expect(res).to.be.equal('abc123');
+                });
+        });
+        it('should get the correct type of the append blob', () => {
+            return chai.request(url)
+                .get(`${urlPath}/${containerName}/${appendBlobName}`)
+                .then((res) => {
+                    res.should.have.status(200);
+                    res.should.have.header('x-ms-blob-type', 'AppendBlob');
                 });
         });
     });
@@ -84,7 +145,7 @@ describe('Blob HTTP API', () => {
     describe('Blob Metadata', () => {
         it('should update an existing blob with metadata.', () => {
             return chai.request(url)
-                .put(`${urlPath}/${containerName}/${blobName}`)
+                .put(`${urlPath}/${containerName}/${blockBlobName}`)
                 .query({ comp: 'metadata' })
                 .set('x-ms-meta-test1', 'value1')
                 .set('x-ms-meta-test2', 'value2')
@@ -93,9 +154,9 @@ describe('Blob HTTP API', () => {
                     res.should.have.status(200);
                 });
         });
-        it('should get the correct metadata.', () => {
+        it('should get the correct metadata', () => {
             return chai.request(url)
-                .get(`${urlPath}/${containerName}/${blobName}`)
+                .get(`${urlPath}/${containerName}/${blockBlobName}`)
                 .query({ comp: 'metadata' })
                 .then((res) => {
                     res.should.have.status(200);
@@ -127,7 +188,7 @@ describe('Blob HTTP API', () => {
     describe('Blob Properties', () => {
         it('should successfully set all system properties', () => {
             return chai.request(url)
-                .put(`${urlPath}/${containerName}/${blobName}`)
+                .put(`${urlPath}/${containerName}/${blockBlobName}`)
                 .set('x-ms-blob-cache-control', 'true')
                 .set('x-ms-blob-content-type', 'ContentType')
                 .set('x-ms-blob-content-md5', 'ContentMD5')
@@ -140,7 +201,7 @@ describe('Blob HTTP API', () => {
         });
         it('should get all previously set system properties', () => {
             return chai.request(url)
-                .head(`${urlPath}/${containerName}/${blobName}`)
+                .head(`${urlPath}/${containerName}/${blockBlobName}`)
                 .then((res) => {
                     res.should.have.status(200);
                     res.should.have.header('ETag');
