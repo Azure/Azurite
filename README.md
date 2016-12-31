@@ -122,5 +122,5 @@ Writes a range of pages into a page blob.
 Page blobs only
 Returns a list of valid page ranges for a page blob or a snapshot of a page blob.
 
-## Append Block
+## Append Block [DONE]
 Append blobs only
