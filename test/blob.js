@@ -16,6 +16,30 @@ const appendBlobName = 'testappendblob';
 const url = `http://localhost:10000`;
 const urlPath = `/devstoreaccount1`;
 
+
+function createBlob(containerNamex, blobNamex, payload, blobType) {
+    // Make sure there is an existing container 'testcontainer'
+    const optionsContainer = {
+        method: 'PUT',
+        uri: `http://localhost:10000/devstoreaccount1/${containerNamex}?restype=container`,
+        body: ''
+    };
+    const optionsBlob = {
+        method: 'PUT',
+        headers: {
+            'x-ms-blob-type': blobType,
+            'Content-Type': 'application/octet-stream'
+        },
+        uri: `http://localhost:10000/devstoreaccount1/${containerNamex}/${blobNamex}`,
+        body: payload
+    }
+
+    return rp(optionsContainer)
+        .then(() => {
+            return rp(optionsBlob);
+        });
+}
+
 describe('Blob HTTP API', () => {
     const azurite = new Azurite();
 
@@ -74,7 +98,7 @@ describe('Blob HTTP API', () => {
         });
         it('should fail to create a block due to wrong or unsupported blob type', () => {
             return chai.request(url)
-                .put(`${urlPath}/DOESNOTEXISTS/blob`)
+                .put(`${urlPath}/${containerName}/blob`)
                 .set('x-ms-blob-type', 'NOTSUPPORTED')
                 .set('Content-Type', 'application/octet-stream')
                 .send('THIS IS CONTENT')
@@ -94,13 +118,91 @@ describe('Blob HTTP API', () => {
         });
     });
 
+    describe('Put BlockList', () => {
+        const putBlockListBlobName = 'putBlockListBlobName';
+        it('should create a block blob from a list of blocks', () => {
+            const optionsBlockBlob = {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/octet-stream',
+                    'Content-Length': 6
+                },
+                qs: {
+                    'comp': 'block',
+                    'blockid': 'AAAAAA=='
+                },
+                uri: `http://localhost:10000/devstoreaccount1/${containerName}/${putBlockListBlobName}`,
+                body: 'AAAAAA'
+            }
+
+            return rp(optionsBlockBlob)
+                .then(() => {
+                    optionsBlockBlob.body = 'BBBBBB';
+                    optionsBlockBlob.qs.blockid = 'BBBBBB=='
+                    return rp(optionsBlockBlob);
+                })
+                .then(() => {
+                    optionsBlockBlob.body = 'CCCCCC';
+                    optionsBlockBlob.qs.blockid = 'CCCCCC=='
+                    return rp(optionsBlockBlob);
+                })
+                .then(() => {
+                    optionsBlockBlob.body = 'DDDDDD';
+                    optionsBlockBlob.qs.blockid = 'DDDDDD=='
+                    return rp(optionsBlockBlob);
+                })
+                .then(() => {
+                    const xmlBody = 
+                    `<!--?xml version="1.0" encoding="utf-8"?-->
+                    <blocklist>
+                        <latest>AAAAAA==</latest>
+                        <latest>CCCCCC==</latest>
+                        <latest>AAAAAA==</latest
+                    ></blocklist>`
+                    return chai.request(url)
+                        .put(`${urlPath}/${containerName}/${putBlockListBlobName}`)
+                        .query({ comp: 'blocklist' })
+                        .send(xmlBody)
+                        .then((res) => {
+                            res.should.have.status(201);
+                        });
+                });
+        });
+    });
+
+    describe('Delete Blob', () => {
+        it('should delete an existing Block Blob', () => {
+            return createBlob('deleteblobtest', 'blob', 'abc123', 'BlockBlob')
+                .then(() => {
+                    return chai.request(url)
+                        .delete(`${urlPath}/deleteblobtest/blob`);
+                })
+                .then((res) => {
+                    res.should.have.status(202);
+                })
+        });
+        it('should fail when deleting a non-existant blob', () => {
+            return chai.request(url)
+                .delete(`${urlPath}/deleteblobtest/DOESNOTEXIST`)
+                .catch((e) => {
+                    e.should.have.status(404);
+                });
+        });
+        it('should fail when deleting from a non-existant container', () => {
+            return chai.request(url)
+                .delete(`${urlPath}/DOESNOTEXIST/DOESNOTEXIST`)
+                .catch((e) => {
+                    e.should.have.status(404);
+                });
+        });
+    });
+
     describe('Append Blobs', () => {
         it('should create an append blob', () => {
             return chai.request(url)
                 .put(`${urlPath}/${containerName}/appendBlob`)
                 .set('x-ms-blob-type', 'AppendBlob')
                 .set('Content-Type', 'application/octet-stream')
-                .send('123456789')
                 .then((res) => {
                     res.should.have.status(201);
                 });
@@ -114,6 +216,16 @@ describe('Blob HTTP API', () => {
                 .send('abcdefghi')
                 .then((res) => {
                     res.should.have.status(201);
+                });
+        });
+        it('should fail to create an append blob with size > 0', () => {
+            return chai.request(url)
+                .put(`${urlPath}/${containerName}/appendBlob`)
+                .set('x-ms-blob-type', 'AppendBlob')
+                .set('Content-Type', 'application/octet-stream')
+                .send('abcdefg')
+                .catch((e) => {
+                    e.should.have.status(409);
                 });
         });
     });

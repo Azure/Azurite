@@ -41,19 +41,4 @@ describe('Model', () => {
             expect(item.metaProps).to.have.property('key2', 'value2');
         });
     });
-    describe('Blob', () => {
-        it('should throw an error when BlobType is not supported.', () => {
-            expect(function () {
-                new Blob('testBlob', null, 'NOT_SUPPORTED_BLOB_TYPE');
-            }).to.throw('Unsupported Blob Type');
-        });
-        it('should successfully create a Blob object when blob type is supported', () => {
-            expect(function () {
-                new Blob('testBlob', null, 'BlockBlob');
-            }).to.not.throw(Error);
-            expect(function () {
-                new Blob('testBlob', null, 'AppendBlob');
-            }).to.not.throw(Error);
-        });
-    });
 });
