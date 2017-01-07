@@ -7,7 +7,7 @@ const chai = require('chai'),
 describe('ResponseHeader', () => {
     it('should initialize basic properties (x-ms-version and Date)', () => {
         const respHeader = new ResponseHeader();
-        expect(respHeader).to.have.property('x-ms-version', '2013-08-18');
+        expect(respHeader).to.have.property('x-ms-version', '2016-05-31');
         expect(respHeader).to.have.property('Date');
     });
     it('should initialize meta and system props correctly.', () => {
