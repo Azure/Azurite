@@ -114,7 +114,7 @@ Commits a blob by specifying the set of block IDs that comprise the block blob.
 Block blobs only
 Retrieves the list of blocks that have been uploaded as part of a block blob.
 
-## Put Page
+## Put Page [DONE]
 Page blobs only
 Writes a range of pages into a page blob.
 
