@@ -119,7 +119,7 @@ describe('Blob HTTP API', () => {
     });
 
     describe('Put BlockList', () => {
-        const putBlockListBlobName = 'putBlockListBlobName';
+        const putBlockListBlobName = 'dir/putBlockListBlobName';
         it('should create a block blob from a list of blocks', () => {
             const optionsBlockBlob = {
                 method: 'PUT',
