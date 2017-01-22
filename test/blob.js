@@ -154,11 +154,11 @@ describe('Blob HTTP API', () => {
                 .then(() => {
                     const xmlBody = 
                     `<!--?xml version="1.0" encoding="utf-8"?-->
-                    <blocklist>
-                        <latest>AAAAAA==</latest>
-                        <latest>CCCCCC==</latest>
-                        <latest>AAAAAA==</latest
-                    ></blocklist>`
+                    <BlockList>
+                        <Latest>AAAAAA==</Latest>
+                        <Latest>CCCCCC==</Latest>
+                        <Latest>AAAAAA==</Latest>
+                    </BlockList>`
                     return chai.request(url)
                         .put(`${urlPath}/${containerName}/${putBlockListBlobName}`)
                         .query({ comp: 'blocklist' })
