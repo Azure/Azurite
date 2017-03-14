@@ -118,7 +118,7 @@ Retrieves the list of blocks that have been uploaded as part of a block blob.
 Page blobs only
 Writes a range of pages into a page blob.
 
-## Get Page Ranges
+## Get Page Ranges [DONE]
 Page blobs only
 Returns a list of valid page ranges for a page blob or a snapshot of a page blob.
 
