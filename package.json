@@ -5,7 +5,7 @@
   "scripts": {
     "pretest": "npm run clean",
     "test": "cross-env AZURITE_LOCATION=azurite-testdrive mocha --timeout 10000",
-    "start": "bin/azurite -l azurite-testdrive",
+    "start": "node bin/azurite -l azurite-testdrive",
     "clean": "rimraf azurite-testdrive"
   },
   "engines": {
