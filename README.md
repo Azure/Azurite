@@ -10,6 +10,8 @@ $ npm install -g azurite
 
 $ azurite -l path/to/localfolder
 
+Please note that NodeJS >= 4.0 is required.
+
 # Endpoints
 Standard Emulator Connection String:
 
