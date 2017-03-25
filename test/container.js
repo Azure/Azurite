@@ -43,7 +43,7 @@ describe('Container HTTP API', () => {
                 .put(`${urlPath}/${containerName}`)
                 .query({ restype: 'container' })
                 .then((res) => {
-                    res.should.have.status(200);
+                    res.should.have.status(201);
                 });
         });
         it('and a second with the same name that fails', () => {
