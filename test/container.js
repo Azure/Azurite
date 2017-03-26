@@ -61,7 +61,7 @@ describe('Container HTTP API', () => {
                 .delete(`${urlPath}/${containerName}`)
                 .query({ restype: 'container' })
                 .then((res) => {
-                    res.should.have.status(200);
+                    res.should.have.status(202);
                 });
         });
         it('deleting a non-existant container fails', () => {
