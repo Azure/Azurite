@@ -1,6 +1,6 @@
 {
   "name": "azurite",
-  "version": "0.6.11",
+  "version": "0.6.12",
   "description": "A lightweight server clone of Azure Blob Storage that simulates most of the commands supported by it with minimal dependencies.",
   "scripts": {
     "pretest": "npm run clean",
