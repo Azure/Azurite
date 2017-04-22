@@ -151,7 +151,6 @@ describe('Container HTTP API', () => {
                     res.should.have.header('x-ms-meta-meta1', 'meta1Value');
                     res.should.have.header('Last-Modified');
                     res.should.have.header('ETag');
-                    res.should.have.header('x-ms-blob-public-access');
                 });
         });
         it('should get the correct metadata. (HEAD)', () => {
@@ -165,7 +164,6 @@ describe('Container HTTP API', () => {
                     res.should.have.header('x-ms-meta-meta1', 'meta1Value');
                     res.should.have.header('Last-Modified');
                     res.should.have.header('ETag');
-                    res.should.have.header('x-ms-blob-public-access');
                 });
         });
         it('should fail to get metadata of a non-existant container (GET)', () => {
