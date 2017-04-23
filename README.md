@@ -54,10 +54,10 @@ Returns only user-defined metadata of a container.
 ## Set Container Metadata [DONE]
 Sets user-defined metadata of a container.
 
-## Get Container ACL 	 	
+## Get Container ACL [DONE] 	 	
 Gets the public access policy and any stored access policies for the container.
 
-## Set Container ACL 
+## Set Container ACL [DONE]
 Sets the public access policy and any stored access policies for the container.
 
 ## Lease Container 	
