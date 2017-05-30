@@ -27,6 +27,11 @@ If you are interested in making a code contribution and would like to learn more
 - Azurite uses [LokiJS](http://lokijs.org) which is an in-memory data store with persistence. It serves as our central database to store metadata (names, properties, leases, etc.) about all objects put into Azurite.
 - Azurite makes heavy use of [Bluebird](http://bluebirdjs.com/docs/getting-started.html) which is a fully featured promises library with unmatched performance.  
 
+## What TODOs are there?
+The current status of Azurite's support of the [Official Blob Storage REST API Specification](https://docs.microsoft.com/rest/api/storageservices/blob-service-rest-api) is listed in below section [Blob Storage - API Implementation Status](https://github.com/arafato/azurite/#blob-storage---api-implementation-status). Features that are still unimplemented are marked with `[TODO]`. Completed features are marked with `[DONE]`.
+
+Current bugs that need to be fixed are listed at our [issues site on Github](https://github.com/arafato/azurite/issues) and tagged with a red label `bug`.
+
 ## How do I make a contribution?
 
 Never made an open source contribution before? Wondering how contributions work in Azurite? Here's a quick rundown!
