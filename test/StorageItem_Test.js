@@ -40,4 +40,25 @@ describe('Model', () => {
             expect(item.metaProps).to.have.property('key2', 'value2');
         });
     });
+
+    describe('Blob', () => {
+        it('should mark blobname/ as virtual directory', () => {
+            expect(new Blob('blobname/').isVirtualDirectory()).to.be.true;
+        });
+        it('should mark blobname/// as virtual directory', () => {
+            expect(new Blob('blobname///').isVirtualDirectory()).to.be.true;
+
+        });
+        it('should mark some/folder/blobname/ as virtual directory', () => {
+            expect(new Blob('some/folder/blobname/').isVirtualDirectory()).to.be.true;
+
+        });
+        it('should not mark some/folder/blobname as virtual directory', () => {
+            expect(new Blob('some/folder/blobname').isVirtualDirectory()).to.be.false;
+
+        });
+        it('should not mark blobname as virtual directory', () => {
+            expect(new Blob('blobname').isVirtualDirectory()).to.be.false;
+        });
+    });
 });
