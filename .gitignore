@@ -42,3 +42,7 @@ azurite-testdrive
 
 # Arafato
 NOTES
+
+#IntelliJ
+.idea
+*.iml

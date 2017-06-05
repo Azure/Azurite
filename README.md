@@ -18,6 +18,20 @@ Then simply start it with the following command:
 
 This tells Azurite to store all data in a particular directory. If the `-l` option is ommitted it will use the current working directory.
 
+
+## Docker image
+### Build the Docker image
+To build the Docker image, execute the following:
+```bash
+docker build -t arafato/azurite .
+```
+
+### Run the Docker image
+To run the Docker image, execute the following command:
+```bash
+docker run -d -t -p 10000:10000 -v /path/to/folder:/opt/azurite/folder arafato/azurite
+```
+
 # Contributions
 ## What do I need to know to help?
 If you are interested in making a code contribution and would like to learn more about the technologies that we use, check out the list below.
