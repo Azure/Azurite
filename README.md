@@ -160,7 +160,7 @@ Marks a blob for deletion.
 - Lease Blob [TODO]  
 Establishes and manages a lock on write and delete operations. To delete or write to a locked blob, a client must provide the lease ID.
 
-- Snapshot Blob [TODO]  
+- Snapshot Blob [DONE]  
 Creates a read-only snapshot of a blob.
 
 - Copy Blob [TODO]  
