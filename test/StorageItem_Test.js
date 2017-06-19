@@ -10,7 +10,7 @@ describe('Model', () => {
         it('should initialize properties ETags, Last-Modified and Content-Type if they are missing.', () => {
             const item = new StorageItem('testItem', {});
             expect(item).to.have.property('name', 'testItem');
-            expect(item.httpProps).to.have.property('ETag', 1);
+            expect(item.httpProps).to.have.property('ETag', 0);
             expect(item.httpProps).to.have.property('Last-Modified');
             expect(item.httpProps).to.have.property('Content-Type', 'application/octet-stream');
             expect(item.httpProps).to.not.have.property('Content-MD5');
@@ -29,7 +29,7 @@ describe('Model', () => {
                 'Cache-Control': 'CacheControl'
             };
             const item = new StorageItem('testItem', httpHeader);
-            expect(item.httpProps).to.have.property('ETag', 1);
+            expect(item.httpProps).to.have.property('ETag', 0);
             expect(item.httpProps).to.have.property('Last-Modified');
             expect(item.httpProps).to.have.property('Content-Type', 'ContentType');
             expect(item.httpProps).to.have.property('Content-Encoding', 'ContentEncoding');
