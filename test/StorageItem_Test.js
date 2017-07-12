@@ -20,15 +20,13 @@ describe('Model', () => {
         });
         it('should initialize meta and http props correctly.', () => {
             const httpHeader = {
-                'x-ms-meta-key1': 'value1',
-                'x-ms-meta-key2': 'value2',
                 'Content-Type': 'ContentType',
                 'Content-Encoding': 'ContentEncoding',
                 'Content-MD5': 'ContentMD5',
                 'Content-Language': 'ContentLanguage',
                 'Cache-Control': 'CacheControl'
             };
-            const item = new StorageItem('testItem', httpHeader);
+            const item = new StorageItem('testItem', httpHeader, ['x-ms-meta-KEY1', 'VALUE1', 'x-ms-meta-key2', 'value2']);
             expect(item.httpProps).to.have.property('ETag', 0);
             expect(item.httpProps).to.have.property('Last-Modified');
             expect(item.httpProps).to.have.property('Content-Type', 'ContentType');
@@ -36,7 +34,7 @@ describe('Model', () => {
             expect(item.httpProps).to.have.property('Content-MD5', 'ContentMD5');
             expect(item.httpProps).to.have.property('Content-Language', 'ContentLanguage');
             expect(item.httpProps).to.have.property('Cache-Control', 'CacheControl');
-            expect(item.metaProps).to.have.property('key1', 'value1');
+            expect(item.metaProps).to.have.property('KEY1', 'VALUE1');
             expect(item.metaProps).to.have.property('key2', 'value2');
         });
     });
