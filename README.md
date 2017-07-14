@@ -126,7 +126,7 @@ Gets the public access policy and any stored access policies for the container.
 - Set Container ACL [DONE]  
 Sets the public access policy and any stored access policies for the container.
 
-- Lease Container [TODO]  
+- Lease Container [IN-PROGRESS]  
 Establishes and manages a lock on a container for delete operations.
 
 - Delete Container [DONE]  
