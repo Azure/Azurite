@@ -9,7 +9,7 @@
     "clean": "rimraf azurite-testdrive"
   },
   "engines": {
-    "node": ">=4.0"
+    "node": ">=6.0"
   },
   "main": "lib/Azurite.js",
   "bin": {
