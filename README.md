@@ -6,7 +6,7 @@
 A lightweight server clone of Azure Blob Storage that simulates most of the commands supported by it with minimal dependencies.
 
 # Installation and Usage
-In order to run Azurite you need [Node.js](https://nodejs.org/) >= 4.0 installed on your system. Azurite works cross-platform on Windows, Linux, and OS X. 
+In order to run Azurite you need [Node.js](https://nodejs.org/) >= 6.0 installed on your system. Azurite works cross-platform on Windows, Linux, and OS X. 
 
 After installation you can install Azurite simply with `npm` which is Node.js package management tool and which is included with every Node.js installation.
 
