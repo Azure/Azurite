@@ -157,7 +157,7 @@ Sets user-defined metadata of an existing blob.
 - Delete Blob [DONE]  
 Marks a blob for deletion.
 
-- Lease Blob [TODO]  
+- Lease Blob [DONE]  
 Establishes and manages a lock on write and delete operations. To delete or write to a locked blob, a client must provide the lease ID.
 
 - Snapshot Blob [DONE]  
