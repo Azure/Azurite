@@ -6,6 +6,7 @@
 A lightweight server clone of Azure Blob Storage that simulates most of the commands supported by it with minimal dependencies.
 
 # Installation and Usage
+## NPM
 In order to run Azurite you need [Node.js](https://nodejs.org/) >= 6.0 installed on your system. Azurite works cross-platform on Windows, Linux, and OS X. 
 
 After installation you can install Azurite simply with `npm` which is Node.js package management tool and which is included with every Node.js installation.
@@ -18,6 +19,13 @@ Then simply start it with the following command:
 
 This tells Azurite to store all data in a particular directory. If the `-l` option is ommitted it will use the current working directory.
 
+## Nuget
+Azurite is also available as Nuget package at [https://www.nuget.org/packages/Azurite/](https://www.nuget.org/packages/Azurite/).
+You can install it via the [Package Manager Console](https://docs.nuget.org/docs/start-here/using-the-package-manager-console) with the following command:
+```bash
+PM> Install-Package Azurite
+```
+This will install Azurite to your current project and also immediately start it in a dedicated console window.
 
 ## Docker image
 ### Build the Docker image
