@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package >
   <metadata>
-    <id>com.github.arafato.azurite</id>
+    <id>Azurite</id>
     <version>0.9.5.1</version>
     <authors>olarafat</authors>
     <owners>olarafat</owners>
