@@ -25,7 +25,8 @@ You can install it via the [Package Manager Console](https://docs.nuget.org/docs
 ```bash
 PM> Install-Package Azurite
 ```
-This will install Azurite to your current project and also immediately start it in a dedicated console window.
+This will install Azurite to your current project and also immediately start it in a dedicated console window. Note that you do not need to install Node.js since Azurite is packaged into
+a single self-contained executable, thanks to [pkg](https://www.npmjs.com/package/pkg).
 
 ## Docker image
 ### Build the Docker image
