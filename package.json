@@ -6,7 +6,8 @@
     "pretest": "npm run clean",
     "test": "cross-env AZURITE_LOCATION=azurite-testdrive mocha --timeout 10000",
     "start": "node bin/azurite -l azurite-testdrive",
-    "clean": "rimraf azurite-testdrive"
+    "clean": "rimraf azurite-testdrive *.nupkg azurite.exe",
+    "nuget": "pkg -t node6-win --output azurite package.json && nuget pack && nuget push *.nupkg -Source https://www.nuget.org/api/v2/package"
   },
   "engines": {
     "node": ">=6.0"
@@ -55,6 +56,7 @@
     "chai-http": "^3.0.0",
     "cross-env": "^3.1.3",
     "mocha": "^3.2.0",
+    "pkg": "^4.2.2",
     "request-promise": "^4.1.1",
     "rimraf": "^2.5.4"
   }

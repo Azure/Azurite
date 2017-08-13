@@ -40,6 +40,11 @@ jsconfig.json
 # Default storage of Azurite
 azurite-testdrive
 
+# Nuget
+azurite.exe
+*.nupkg
+
+
 # Arafato
 NOTES
 

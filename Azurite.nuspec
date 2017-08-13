@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>com.github.arafato.azurite</id>
+    <version>0.9.5.1</version>
+    <authors>olarafat</authors>
+    <owners>olarafat</owners>
+    <licenseUrl>https://github.com/arafato/azurite/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/arafato/azurite</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>A lightweight server clone of Azure Blob Storage that simulates most of the commands supported by it with minimal dependencies.</description>
+    <releaseNotes>Initial Azurite Nuget Package</releaseNotes>
+    <copyright>Copyright 2017</copyright>
+    <tags>azure devops emulator azure-storage</tags>
+  </metadata>
+  <files>
+    <file src="azurite.exe" target="tools" />
+    <file src="nuget\init.ps1" target="tools" />
+  </files>
+</package>
