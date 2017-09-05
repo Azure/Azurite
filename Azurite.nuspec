@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>Azurite</id>
-    <version>0.9.5.1</version>
+    <version>0.9.6</version>
     <authors>olarafat</authors>
     <owners>olarafat</owners>
     <licenseUrl>https://github.com/arafato/azurite/blob/master/LICENSE</licenseUrl>
