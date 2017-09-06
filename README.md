@@ -29,16 +29,24 @@ This will install Azurite to your current project and also immediately start it 
 a single self-contained executable, thanks to [pkg](https://www.npmjs.com/package/pkg).
 
 ## Docker image
-### Build the Docker image
-To build the Docker image, execute the following:
+
+### Pulling from Docker Hub
+Every release of Azurite starting with version 0.9.7 is available at [Docker Hub](https://hub.docker.com/r/arafato/azurite/) and ready to be pulled with:
 ```bash
-docker build -t arafato/azurite .
+$ docker pull arafato/azurite
+```
+Please note that the `latest` tag will always refer to the latest release.
+
+### Build the Docker image 
+To build the Docker image yourself, execute the following:
+```bash
+$ docker build -t arafato/azurite .
 ```
 
 ### Run the Docker image
 To run the Docker image, execute the following command:
 ```bash
-docker run -d -t -p 10000:10000 -v /path/to/folder:/opt/azurite/folder arafato/azurite
+$ docker run -d -t -p 10000:10000 -v /path/to/folder:/opt/azurite/folder arafato/azurite
 ```
 
 # Contributions
