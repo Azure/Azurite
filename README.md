@@ -143,6 +143,9 @@ Gets the public access policy and any stored access policies for the container.
 - Set Container ACL [DONE]  
 Sets the public access policy and any stored access policies for the container.
 
+- Set Blob Tier [TODO]
+The Set Blob Tier operation sets the tier on a blob.
+
 - Lease Container [DONE]  
 Establishes and manages a lock on a container for delete operations.
 
