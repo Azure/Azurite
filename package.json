@@ -8,7 +8,7 @@
     "start": "node bin/azurite -l azurite-testdrive",
     "clean": "rimraf azurite-testdrive *.nupkg azurite.exe",
     "nuget": "cross-var \"npm run clean && pkg -t node6-win --output azurite ./package.json && nuget pack -Version $npm_package_version && nuget push *.nupkg  -Source https://www.nuget.org/api/v2/package\"",
-    "docker": "cross-var \"docker build -t arafato/azurite:$npm_package_version . && docker build -t arafato/azurite:latest . && docker push arafato/azurite$npm_package_version && docker push arafato/azurite_latest\""
+    "docker": "cross-var \"docker build -t arafato/azurite:$npm_package_version . && docker build -t arafato/azurite:latest . && docker push arafato/azurite:$npm_package_version && docker push arafato/azurite:latest\""
   },
   "engines": {
     "node": ">=6.0"
