@@ -1,4 +1,6 @@
 # 0.9
+## 0.9.12
+- fixes the fixes [#83](https://github.com/arafato/azurite/issues/83): ListBlobs delimiter is really working now
 ## 0.9.11
 - fixes [#83](https://github.com/arafato/azurite/issues/83): ListBlobs delimiter is working now
 ## 0.9.10
