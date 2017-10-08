@@ -13,8 +13,8 @@ process.noDeprecation = true;
 (() => BbPromise.resolve().then(() => {
 	// requiring here so that if anything went wrong,
 	// during require, it will be caught.
-	let argv = require('minimist')(process.argv.slice(2));
-	let A = require('../lib/Azurite'),
+	const argv = require('minimist')(process.argv.slice(2));
+	const A = require('../lib/Azurite'),
 		azurite = new A();
 	azurite.init(argv);
 }).catch(e => {
