@@ -1,4 +1,6 @@
 # 0.9
+## 0.9.14
+- fixes [#85](https://github.com/arafato/azurite/issues/85): append block on non-existing blob does not crash anymore
 ## 0.9.13
 - fixes [#84](https://github.com/arafato/azurite/issues/84): changed CRLF line endings to LF to make Azurite run on *nix OS
 ## 0.9.12
