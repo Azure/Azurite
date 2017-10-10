@@ -1,4 +1,9 @@
 # 0.9
+## 0.9.15
+- fixes [#86](https://github.com/arafato/azurite/issues/86)
+- fixes [#87](https://github.com/arafato/azurite/issues/87)
+- fixes [#88](https://github.com/arafato/azurite/issues/88)
+- fixes [#89](https://github.com/arafato/azurite/issues/89)
 ## 0.9.14
 - fixes [#85](https://github.com/arafato/azurite/issues/85): append block on non-existing blob does not crash anymore
 ## 0.9.13
