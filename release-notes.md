@@ -1,4 +1,6 @@
 # 0.9
+## 0.9.16
+- fixes [#90](https://github.com/arafato/azurite/issues/90)
 ## 0.9.15
 - fixes [#86](https://github.com/arafato/azurite/issues/86)
 - fixes [#87](https://github.com/arafato/azurite/issues/87)
