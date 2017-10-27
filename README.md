@@ -183,10 +183,10 @@ Establishes and manages a lock on write and delete operations. To delete or writ
 - Snapshot Blob [DONE]  
 Creates a read-only snapshot of a blob.
 
-- Copy Blob [IN-PROGRESS]  
+- Copy Blob [DONE]  
 Copies a source blob to a destination blob in this storage account or in another storage account.
 
-- Abort Copy Blob [TODO]  
+- Abort Copy Blob [DONE]  
 Aborts a pending Copy Blob operation, and leaves a destination blob with zero length and full metadata.
 
 - Put Block [DONE]  
