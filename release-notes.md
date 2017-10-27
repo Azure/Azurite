@@ -1,4 +1,8 @@
 # 0.10
+## 0.10.1
+- fixes [#93](https://github.com/arafato/azurite/issues/93)
+- fixes [#92](https://github.com/arafato/azurite/issues/92)
+- fixes [#91](https://github.com/arafato/azurite/issues/91)
 ## 0.10.0
 - initial support for Copy Blob and Abort Copy Blob [#63](https://github.com/arafato/azurite/issues/63)
 
