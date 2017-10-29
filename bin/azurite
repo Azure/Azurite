@@ -27,11 +27,11 @@ process.noDeprecation = true;
             // Forking individual modules to spread them across different cores if possible
             // and restarting them automatically in case of a crash.
             const fork = require('child_process').fork;
+
             (function forkBlobModule(code, signal) {
                 const mod = fork(env.blobModulePath, process.argv);
                 mod.on('exit', forkBlobModule);
             })();
-
             (function forkQueueModule(code, signal) {
                 const mod = fork(env.queueModulePath, process.argv);
                 mod.on('exit', forkQueueModule);
