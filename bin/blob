@@ -5,7 +5,7 @@
 const BbPromise = require('bluebird');
 
 process.on('unhandledRejection', (e) => {
-	console.error('**PANIC** Something unexpected happened! Emulator may be in an inconsistent state!');
+	console.error('**PANIC** Something unexpected happened! Blob Storage Emulator may be in an inconsistent state!');
 	console.error(e);
 });
 process.noDeprecation = true;
