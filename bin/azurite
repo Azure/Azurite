@@ -46,12 +46,12 @@ process.noDeprecation = true;
 
 // If this is a child process (e.g. forked by NPM through '$ npm start') we are propagating the signals from the 
 // parent (i.e. NPM) to exit from this process and its child processes.
-process.on('SIGINT', function () {
+process.on('SIGINT', () => {
     process.exitCode = 1;
     process.exit();
 });
 
-process.on('SIGTERM', function () {
+process.on('SIGTERM', () => {
     process.exitCode = 1;
     process.exit();
 });
