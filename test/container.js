@@ -3,7 +3,7 @@ const chai = require('chai'),
     should = chai.should(),
     BbPromise = require('bluebird'),
     fs = BbPromise.promisifyAll(require("fs-extra")),
-    Azurite = require('./../lib/Azurite'),
+    Azurite = require('./../lib/AzuriteBlob'),
     rp = require('request-promise'),
     path = require('path');
 

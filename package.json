@@ -13,7 +13,7 @@
   "engines": {
     "node": ">=6.0"
   },
-  "main": "lib/Azurite.js",
+  "main": "./bin/azurite",
   "bin": {
     "azurite": "./bin/azurite"
   },
