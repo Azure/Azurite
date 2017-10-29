@@ -5,8 +5,8 @@
 const BbPromise = require('bluebird');
 
 process.on('unhandledRejection', (e) => {
-	console.error('**PANIC** Something unexpected happened! Emulator may be in an inconsistent state!');
-	console.error(e);
+    console.error('**PANIC** Something unexpected happened! Emulator may be in an inconsistent state!');
+    console.error(e);
 });
 process.noDeprecation = true;
 
@@ -14,7 +14,6 @@ process.noDeprecation = true;
     // requiring here so that if anything went wrong,
     // during require, it will be caught.
     const argv = require('minimist')(process.argv.slice(2)),
-        fork = require('child_process').fork,
         env = require('./../lib/env'),
         cli = require('./../lib/cli');
 
@@ -27,17 +26,16 @@ process.noDeprecation = true;
         .then(() => {
             // Forking individual modules to spread them across different cores if possible
             // and restarting them automatically in case of a crash.
-            const forkBlobModule = (code, signal) => {
+            const fork = require('child_process').fork;
+            (function forkBlobModule(code, signal) {
                 const mod = fork(env.blobModulePath, process.argv);
                 mod.on('exit', forkBlobModule);
-            }
+            })();
 
-            const forkQueueModule = (code, signal) => {
+            (function forkQueueModule(code, signal) {
                 const mod = fork(env.queueModulePath, process.argv);
                 mod.on('exit', forkQueueModule);
-            }
-            forkBlobModule();
-            forkQueueModule();
+            })();
         });
 }).catch(e => {
     process.exitCode = 1;
