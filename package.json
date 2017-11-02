@@ -15,7 +15,9 @@
   },
   "main": "./bin/azurite",
   "bin": {
-    "azurite": "./bin/azurite"
+    "azurite": "./bin/azurite",
+    "azurite-blob": "./bin/blob",
+    "azurite-queue": "./bin/queue"
   },
   "preferGlobal": true,
   "repository": {
