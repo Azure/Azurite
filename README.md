@@ -17,7 +17,16 @@ Then simply start it with the following command:
 
 `$ azurite -l path/to/localfolder`
 
-This tells Azurite to store all data in a particular directory. If the `-l` option is ommitted it will use the current working directory.
+This tells Azurite to store all data in a particular directory. If the `-l` option is ommitted it will use the current working directory. This also will start both blob storage and queue storage emulation in two different processes.
+You can also selectively start the different storage emulators.
+
+For Blob Storage Emulator only:
+
+`$ azurite-blob -l path/to/localfolder`
+
+For Queue Storage Emulator only:
+
+`$ azurite-queue`
 
 ## Nuget
 Azurite is also available as Nuget package at [https://www.nuget.org/packages/Azurite/](https://www.nuget.org/packages/Azurite/).
