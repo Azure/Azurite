@@ -6,6 +6,8 @@
     "pretest": "npm run clean",
     "test": "cross-env AZURITE_LOCATION=azurite-testdrive mocha --timeout 10000",
     "start": "node bin/azurite -l azurite-testdrive",
+    "blob": "node bin/blob -l azurite-testdrive",
+    "queue": "node bin/queue",
     "clean": "rimraf azurite-testdrive *.nupkg azurite.exe",
     "nuget": "cross-var \"npm run clean && pkg -t node6-win --output azurite ./package.json && nuget pack -Version $npm_package_version && nuget push *.nupkg  -Source https://www.nuget.org/api/v2/package\"",
     "docker": "cross-var \"docker build -t arafato/azurite:$npm_package_version . && docker build -t arafato/azurite:latest . && docker push arafato/azurite:$npm_package_version && docker push arafato/azurite:latest\""
