@@ -35,7 +35,7 @@ node_modules
 # VS CODE
 typings
 jsconfig.json
-.vscode
+.vscode/settings.json
 
 # Default storage of Azurite
 azurite-testdrive
