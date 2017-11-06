@@ -14,7 +14,8 @@
     <tags>azure devops emulator azure-storage</tags>
   </metadata>
   <files>
-    <file src="azurite.exe" target="tools" />
+    <file src="blob.exe" target="tools" />
+    <file src="queue.exe" target="tools" />
     <file src="nuget\init.ps1" target="tools" />
   </files>
 </package>

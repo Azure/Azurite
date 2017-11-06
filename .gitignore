@@ -42,6 +42,8 @@ azurite-testdrive
 
 # Nuget
 azurite.exe
+blob.exe
+queue.exe
 *.nupkg
 
 
