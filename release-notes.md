@@ -1,4 +1,6 @@
 # 1.0
+## 1.1.0
+- fixes [#96](https://github.com/arafato/azurite/issues/96): Added support for DeleteQueue
 ## 1.0.0
 - architectural changes to support different storage services such as queues, files, tables
 - support for queues started [#96](https://github.com/arafato/azurite/issues/96): support for CreateQueue
