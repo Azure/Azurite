@@ -1,4 +1,6 @@
 # 1.0
+## 1.2.0
+-fixes [#98](https://github.com/arafato/azurite/issues/98): Added support for SetQueueMetadata
 ## 1.1.0
 - fixes [#96](https://github.com/arafato/azurite/issues/96): Added support for DeleteQueue
 ## 1.0.0
