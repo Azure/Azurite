@@ -10,6 +10,11 @@ COPY lib /opt/azurite/lib
 
 VOLUME /opt/azurite/folder
 
+# Blob Storage Emulator
 EXPOSE 10000
+# Azure Queue Storage Emulator
+EXPOSE 10001
 
-CMD ["node", "bin/azurite", "-l", "/opt/azurite/folder"]
+ENV executable azurite
+
+CMD ["sh", "-c", "node bin/${executable} -l /opt/azurite/folder"]
