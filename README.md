@@ -55,7 +55,19 @@ $ docker build -t arafato/azurite .
 ### Run the Docker image
 To run the Docker image, execute the following command:
 ```bash
-$ docker run -d -t -p 10000:10000 -v /path/to/folder:/opt/azurite/folder arafato/azurite
+$ docker run -d -t -p 10000:10000 -p 10001:10001 -v /path/to/folder:/opt/azurite/folder arafato/azurite
+```
+
+#### Configure the executable when running the container
+By default, the container starts all services available (currently blob and queue).
+Using the environment variable `executable`, specific executables can be specifed:
+
+ * `blob` Start the Blob Storage Emulator only
+ * `queue` Start the Azure Queue Storage Emulator only
+
+##### Usage example:
+```bash
+$ docker run -e executable=blob -d -t -p 10000:10000 -v /path/to/folder:/opt/azurite/folder arafato/azurite
 ```
 
 # Contributions
