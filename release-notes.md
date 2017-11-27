@@ -1,10 +1,11 @@
 # 1.0
+## 1.4
+- fixes [#104](https://github.com/arafato/azurite/issues/104): Queue Storage: Adds support for DeleteMessage
 ## 1.3
 ### 1.3.1
 - fixes [#103](https://github.com/arafato/azurite/issues/103): Queue Storage: Adds support for PeekMessages
 - fixes [#105](https://github.com/arafato/azurite/issues/105): Queue Storage: Adds support for ClearMessages
 - fixes [#102](https://github.com/arafato/azurite/issues/102): Queue Storage: Adds support for GetMessages
-
 - fixes [#101](https://github.com/arafato/azurite/issues/101): Queue Storage: Adds support for PutMessage
 ### 1.3.0
 - fixes [#110](https://github.com/arafato/azurite/issues/110): fixed require directive for QueueManager
