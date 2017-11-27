@@ -1,4 +1,6 @@
 # 1.0
+## 1.5
+- fixes [#106](https://github.com/arafato/azurite/issues/106): Queue Storage: Adds support for UpdateMessage
 ## 1.4
 - fixes [#104](https://github.com/arafato/azurite/issues/104): Queue Storage: Adds support for DeleteMessage
 ## 1.3
