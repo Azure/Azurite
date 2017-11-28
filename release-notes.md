@@ -1,4 +1,6 @@
 # 1.0
+## 1.5.2
+- fixes [#119](https://github.com/arafato/azurite/issues/119): Queue Storage
 ## 1.5.1
 - fixes [#118](https://github.com/arafato/azurite/issues/118): Queue Storage
 - fixes [#117](https://github.com/arafato/azurite/issues/117): Queue Storage
