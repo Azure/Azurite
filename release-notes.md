@@ -1,5 +1,6 @@
 # 1.0
 ## 1.5.1
+- fixes [#118](https://github.com/arafato/azurite/issues/118)
 - fixes [#117](https://github.com/arafato/azurite/issues/117)
 - fixes [#116](https://github.com/arafato/azurite/issues/116)
 - fixes [#115](https://github.com/arafato/azurite/issues/115)
