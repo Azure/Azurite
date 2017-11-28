@@ -1,9 +1,9 @@
 # 1.0
 ## 1.5.1
-- fixes [#118](https://github.com/arafato/azurite/issues/118)
-- fixes [#117](https://github.com/arafato/azurite/issues/117)
-- fixes [#116](https://github.com/arafato/azurite/issues/116)
-- fixes [#115](https://github.com/arafato/azurite/issues/115)
+- fixes [#118](https://github.com/arafato/azurite/issues/118): Queue Storage
+- fixes [#117](https://github.com/arafato/azurite/issues/117): Queue Storage
+- fixes [#116](https://github.com/arafato/azurite/issues/116): Queue Storage
+- fixes [#115](https://github.com/arafato/azurite/issues/115): Queue Storage
 ## 1.5.0
 - fixes [#106](https://github.com/arafato/azurite/issues/106): Queue Storage: Adds support for UpdateMessage
 ## 1.4
