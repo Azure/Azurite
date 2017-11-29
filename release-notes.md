@@ -1,6 +1,7 @@
 # 1.0
 ## 1.6.0
 - fixes [#121](https://github.com/arafato/azurite/issues/121): Queue Storage: Adds support for ListQueues
+- fixes [#97](https://github.com/arafato/azurite/issues/97): Queue Storage: Adds support for GetQueueMetadata
 - fixes [#119](https://github.com/arafato/azurite/issues/119): Queue Storage
 ## 1.5.1
 - fixes [#118](https://github.com/arafato/azurite/issues/118): Queue Storage
