@@ -1,6 +1,6 @@
 # 1.0
 ## 1.6.1
-- fixes [#123](https://github.com/arafato/azurite/issues/122): Blob Storage Bugfix
+- fixes [#123](https://github.com/arafato/azurite/issues/123): Blob Storage Bugfix
 - fixes [#122](https://github.com/arafato/azurite/issues/122): Blob Storage Bugfix
 ## 1.6.0
 - fixes [#121](https://github.com/arafato/azurite/issues/121): Queue Storage: Adds support for ListQueues
