@@ -1,4 +1,6 @@
 # 1.0
+## 1.7.0
+- fixes [#60](https://github.com/arafato/azurite/issues/60): Blob: Added support for servic-level Shared Access Signatures
 ## 1.6.1
 - fixes [#123](https://github.com/arafato/azurite/issues/123): Blob Storage Bugfix
 - fixes [#122](https://github.com/arafato/azurite/issues/122): Blob Storage Bugfix
