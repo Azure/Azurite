@@ -131,7 +131,7 @@ Markers are not supported yet.
 - Account SAS Support [TODO]  
 See [https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-an-account-sas](https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-an-account-sas) for specification
 
-- Blob Service SAS Support [TODO]  
+- Blob Service SAS Support [DONE]  
 See [https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-an-account-sas](https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-an-account-sas) for specification
 
 - Set Blob Service Properties [TODO]  
