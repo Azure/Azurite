@@ -147,6 +147,4 @@ Retrieves statistics related to replication for the Blob service. This operation
 The Set Blob Tier operation sets the tier on a blob.
 
 ## Queue Storage - API Implementation Status
-All DONE except: 
-- Set Queue ACL (https://github.com/arafato/azurite/issues/100) [In-PROGRESS]
-- Get Queue ACL (https://github.com/arafato/azurite/issues/99) [IN-PROGRESS]
+All DONE.
