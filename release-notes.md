@@ -1,4 +1,7 @@
 # 1.0
+## 1.8.0
+- fixes [#100](https://github.com/arafato/azurite/issues/124): Queue: Adds support for Set Queue ACL
+- fixes [#99](https://github.com/arafato/azurite/issues/124): Queue: Adds support for Get Queue ACL
 ## 1.7.2
 - removed typo (see comment at https://github.com/arafato/azurite/commit/78ac258550232fd801a3184aee2286ed3469bfd4#commitcomment-26027432)
 ## 1.7.1
