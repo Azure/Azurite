@@ -116,11 +116,14 @@ Make changes to the pull request if the reviewing maintainer recommends them.
 If you need help, you can ask questions directly at our [issues site on Github](https://github.com/arafato/azurite/issues).
 
 # API Support
-Currently, Azurite only supports the [Blob Storage APIs](https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/blob-service-rest-api). Support for Azure Queues and Azure Files is planned, but currently not available. 
+Currently, Azurite only supports the [Blob Storage APIs](https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/blob-service-rest-api), and the [Queue Storage API](https://docs.microsoft.com/en-us/rest/api/storageservices/queue-service-rest-api). Support for Azure Storage Files and Azure Storage Tables is planned (see https://github.com/arafato/azurite/issues/114 for details),
+but currently not available. 
 
 The Standard Emulator Connection String is the same as required by [Microsoft's Official Storage Emulator](https://go.microsoft.com/fwlink/?LinkId=717179):
 
 `BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;`
+
+`QueueEndpoint=http://127.0.0.1:10001/devstoreaccount1;`
 
 
 ## Blob Storage - API Implementation Status
@@ -232,3 +235,8 @@ Returns a list of valid page ranges for a page blob or a snapshot of a page blob
 
 - Append Block [DONE]  
 Append blobs only
+
+## Queue Storage - API Implementation Status
+All done except 
+- Set Queue ACL (https://github.com/arafato/azurite/issues/100) [In-PROGRESS]
+- Get Queue ACL (https://github.com/arafato/azurite/issues/99) [IN-PROGRESS]
