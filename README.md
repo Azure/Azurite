@@ -80,7 +80,7 @@ If you are interested in making a code contribution and would like to learn more
 - Azurite makes heavy use of [Bluebird](http://bluebirdjs.com/docs/getting-started.html) which is a fully featured promises library with unmatched performance.  
 
 ## What TODOs are there?
-The current status of Azurite's support of the [Official Blob Storage REST API Specification](https://docs.microsoft.com/rest/api/storageservices/blob-service-rest-api) is listed in below section [Blob Storage - API Implementation Status](https://github.com/arafato/azurite/#blob-storage---api-implementation-status). Features that are still unimplemented are marked with `[TODO]`. Completed features are marked with `[DONE]`.
+The current status of Azurite's support of the [Official Blob Storage REST API Specification](https://docs.microsoft.com/rest/api/storageservices/blob-service-rest-api) is listed in below section [API Support](https://github.com/arafato/azurite/#api-support). Features that are still unimplemented are marked with `[TODO]`. Features that are currently being worked on are marked with `[IN-PROGRESS]`.
 
 Current bugs that need to be fixed are listed at our [issues site on Github](https://github.com/arafato/azurite/issues) and tagged with a red label `bug`.
 
@@ -127,14 +127,8 @@ The Standard Emulator Connection String is the same as required by [Microsoft's 
 
 
 ## Blob Storage - API Implementation Status
-- List Containers [DONE]  
-  Lists all of the containers in a storage account.
-Markers are not supported yet.
-
+All DONE except:
 - Account SAS Support [TODO]  
-See [https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-an-account-sas](https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-an-account-sas) for specification
-
-- Blob Service SAS Support [DONE]  
 See [https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-an-account-sas](https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-an-account-sas) for specification
 
 - Set Blob Service Properties [TODO]  
@@ -149,94 +143,10 @@ Queries the Cross-Origin Resource Sharing (CORS) rules for the Blob service prio
 - Get Blob Service Stats [TODO]  
 Retrieves statistics related to replication for the Blob service. This operation is only available on the secondary location endpoint when read-access geo-redundant replication is enabled for the storage account.
 
-- Create Container [DONE]   
-Creates a new container in a storage account.
-
-- Get Container Properties [DONE]  
-Returns all user-defined metadata and system properties of a container.
-
-- Get Container Metadata [DONE]  
-Returns only user-defined metadata of a container.
-
-- Set Container Metadata [DONE]  
-Sets user-defined metadata of a container.
-
-- Get Container ACL [DONE]  
-Gets the public access policy and any stored access policies for the container.
-
-- Set Container ACL [DONE]  
-Sets the public access policy and any stored access policies for the container.
-
 - Set Blob Tier [TODO]
 The Set Blob Tier operation sets the tier on a blob.
 
-- Lease Container [DONE]  
-Establishes and manages a lock on a container for delete operations.
-
-- Delete Container [DONE]  
-Deletes the container and any blobs that it contains.
-
-- List Blobs [DONE]  
-Lists all of the blobs in a container.
-
-- Put Blob [DONE]  
-Creates a new blob or replaces an existing blob within a container.
-
-- Get Blob [DONE]  
-Block Blobs only.
-Reads or downloads a blob from the Blob service, including its user-defined metadata and system properties.
-
-- Get Blob Properties [DONE]  
-Returns all system properties and user-defined metadata on the blob.
-
-- Set Blob Properties [DONE]  
-Sets system properties defined for an existing blob.
-
-- Get Blob Metadata [DONE]  
-Retrieves all user-defined metadata of an existing blob or snapshot.
-
-- Set Blob Metadata [DONE]  
-Sets user-defined metadata of an existing blob.
-
-- Delete Blob [DONE]  
-Marks a blob for deletion.
-
-- Lease Blob [DONE]  
-Establishes and manages a lock on write and delete operations. To delete or write to a locked blob, a client must provide the lease ID.
-
-- Snapshot Blob [DONE]  
-Creates a read-only snapshot of a blob.
-
-- Copy Blob [DONE]  
-Copies a source blob to a destination blob in this storage account or in another storage account.
-
-- Abort Copy Blob [DONE]  
-Aborts a pending Copy Blob operation, and leaves a destination blob with zero length and full metadata.
-
-- Put Block [DONE]  
-Block blobs only. 	
-Creates a new block to be committed as part of a block blob.
-
-- Put Block List [DONE]  
-Block blobs only.
-Commits a blob by specifying the set of block IDs that comprise the block blob.
-
-- Get Block List [DONE]  
-Block blobs only.
-Retrieves the list of blocks that have been uploaded as part of a block blob.
-
-- Put Page [DONE]  
-Page blobs only.
-Writes a range of pages into a page blob.
-
-- Get Page Ranges [DONE]  
-Page blobs only.
-Returns a list of valid page ranges for a page blob or a snapshot of a page blob.
-
-- Append Block [DONE]  
-Append blobs only
-
 ## Queue Storage - API Implementation Status
-All done except 
+All DONE except: 
 - Set Queue ACL (https://github.com/arafato/azurite/issues/100) [In-PROGRESS]
 - Get Queue ACL (https://github.com/arafato/azurite/issues/99) [IN-PROGRESS]
