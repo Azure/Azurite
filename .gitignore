@@ -46,15 +46,9 @@ blob.exe
 queue.exe
 *.nupkg
 
-
 # Arafato
 NOTES
 
 #IntelliJ
 .idea
 *.iml
-
-# data storage location
-tmp/**/*
-!tmp/.gitkeep
-
