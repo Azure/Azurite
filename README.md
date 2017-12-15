@@ -70,6 +70,22 @@ Using the environment variable `executable`, specific executables can be specife
 $ docker run -e executable=blob -d -t -p 10000:10000 -v /path/to/folder:/opt/azurite/folder arafato/azurite
 ```
 
+## Usage with Azure Cross-Platform CLI 2.0
+
+To perform blob storage operations using the 2.0 Azure cross-platform CLI, you need to operate with the
+appropriate connection string. The values within are based on the hardcoded Azure Storage Emulator values.
+
+Example command to create a container:
+
+```shell
+$ az storage container create --name 'test' --connection-string 'DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;'
+
+{
+  "created": true
+}
+```
+
+
 # Contributions
 ## What do I need to know to help?
 If you are interested in making a code contribution and would like to learn more about the technologies that we use, check out the list below.

@@ -53,3 +53,8 @@ NOTES
 #IntelliJ
 .idea
 *.iml
+
+# data storage location
+tmp/**/*
+!tmp/.gitkeep
+

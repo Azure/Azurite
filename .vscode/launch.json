@@ -7,7 +7,7 @@
         {
             "type": "node",
             "request": "launch",
-            "env":{
+            "env": {
                 "AZURITE_LOCATION": "azurite-testdrive"
             },
             "name": "Mocha Tests",
@@ -28,10 +28,11 @@
             "request": "launch",
             "protocol": "auto",
             "name": "Launch Azurite",
-            "program": "${workspaceRoot}\\bin\\azurite",
+            "program": "${workspaceRoot}/bin/azurite",
             "cwd": "${workspaceRoot}",
             "args": [
-                "-l", "C:\\Users\\olarafat\\azurite-test-drive"
+                "-l",
+                "${workspaceRoot}/tmp"
             ],
             "skipFiles": [
                 "node_modules/**/*.js"
@@ -42,10 +43,11 @@
             "request": "launch",
             "protocol": "auto",
             "name": "Launch Blob only",
-            "program": "${workspaceRoot}\\bin\\blob",
+            "program": "${workspaceRoot}/bin/blob",
             "cwd": "${workspaceRoot}",
             "args": [
-                "-l", "C:\\Users\\olarafat\\azurite-test-drive"
+                "-l",
+                "${workspaceRoot}/tmp"
             ],
             "skipFiles": [
                 "node_modules/**/*.js"
@@ -56,10 +58,11 @@
             "request": "launch",
             "protocol": "auto",
             "name": "Launch Queue only",
-            "program": "${workspaceRoot}\\bin\\queue",
+            "program": "${workspaceRoot}/bin/queue",
             "cwd": "${workspaceRoot}",
             "args": [
-                "-l", "C:\\Users\\olarafat\\azurite-test-drive"
+                "-l",
+                "${workspaceRoot}/tmp"
             ],
             "skipFiles": [
                 "node_modules/**/*.js"
