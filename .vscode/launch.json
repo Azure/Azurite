@@ -32,7 +32,7 @@
             "cwd": "${workspaceRoot}",
             "args": [
                 "-l",
-                "${workspaceRoot}/azurite_testdrive"
+                "${workspaceRoot}/azurite-testdrive"
             ],
             "skipFiles": [
                 "node_modules/**/*.js"
@@ -47,7 +47,7 @@
             "cwd": "${workspaceRoot}",
             "args": [
                 "-l",
-                "${workspaceRoot}/azurite_testdrive"
+                "${workspaceRoot}/azurite-testdrive"
             ],
             "skipFiles": [
                 "node_modules/**/*.js"
@@ -62,7 +62,7 @@
             "cwd": "${workspaceRoot}",
             "args": [
                 "-l",
-                "${workspaceRoot}/azurite_testdrive"
+                "${workspaceRoot}/azurite-testdrive"
             ],
             "skipFiles": [
                 "node_modules/**/*.js"
