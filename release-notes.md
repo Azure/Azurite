@@ -1,4 +1,7 @@
 # 1.0
+## 1.8.1
+- fixes [#128](https://github.com/arafato/azurite/pull/128): Queue: Adds support for Queue Length in metadata -> thanks to @leafnode for PR!
+- fixes [#16](https://github.com/arafato/azurite/issues/126): Optimized launch configuration, improved README, improved unsupported route handling -> thanks to @liamdawson for PR!
 ## 1.8.0
 - fixes [#100](https://github.com/arafato/azurite/issues/124): Queue: Adds support for Set Queue ACL
 - fixes [#99](https://github.com/arafato/azurite/issues/124): Queue: Adds support for Get Queue ACL
