@@ -1,4 +1,6 @@
 # 1.0
+## 1.8.3
+- fixes [#144](https://github.com/arafato/azurite/issues/144): Blob Storage Bugfix: Wrong offset calculation for continuation token
 ## 1.8.2
 - fixes [#142](https://github.com/arafato/azurite/issues/142): Blob Storage Bugfix
 ## 1.8.1
