@@ -6,13 +6,15 @@ const chai = require('chai'),
     fs = BbPromise.promisifyAll(require("fs-extra")),
     Azurite = require('./../lib/AzuriteBlob'),
     rp = require('request-promise'),
-    path = require('path');
+    path = require('path'),
+    xml2js = require('xml2js');
 
 chai.use(chaiHttp);
 
 const containerName = 'testcontainer';
 const blockBlobName = 'testblockblob';
 const appendBlobName = 'testappendblob';
+const pageBlobName = 'testpageblob';
 const url = `http://localhost:10000`;
 const urlPath = `/devstoreaccount1`;
 
@@ -71,12 +73,24 @@ describe('Blob HTTP API', () => {
                     uri: `http://localhost:10000/devstoreaccount1/${containerName}/${appendBlobName}`,
                     body: ''
                 }
+                const optionsPageBlob = {
+                    method: 'PUT',
+                    headers: {
+                        'x-ms-blob-type': 'PageBlob',
+                        'Content-Type': 'application/octet-stream'
+                    },
+                    uri: `http://localhost:10000/devstoreaccount1/${containerName}/${pageBlobName}`,
+                    body: ''
+                }
                 return rp(optionsContainer)
                     .then(() => {
                         return rp(optionsBlockBlob);
                     })
                     .then(() => {
                         return rp(optionsAppendBlob);
+                    })
+                    .then(() => {
+                        return rp(optionsPageBlob);
                     });
             });
     });
@@ -226,6 +240,93 @@ describe('Blob HTTP API', () => {
                 .send('abcdefg')
                 .catch((e) => {
                     e.should.have.status(409);
+                });
+        });
+    });
+
+    describe('Page Blobs', () => {
+        it('should get an empty page list from the page blob', () => {
+            return chai.request(url)
+                .get(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'pagelist' })
+                .then((res) => {
+                    res.should.have.status(200);
+		    xml2js.Parser().parseString(res.text, function(err, result) {
+			expect(result.PageList).to.not.have.any.keys('PageRange');
+		    });
+                });
+        });
+        it('should write data to the page blob range [0-511]', () => {
+	    const bodydata = Buffer.alloc(512)
+            return chai.request(url)
+                .put(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'page' })
+                .set('x-ms-page-write', 'update')
+                .set('x-ms-range', 'bytes=0-511')
+                .set('Content-Type', 'application/octet-stream')
+                .send(bodydata)
+                .then((res) => {
+                    res.should.have.status(201);
+                });
+        });
+        it('should fail to write data to the page blob with an invalid range', () => {
+	    const bodydata = Buffer.alloc(513)
+            return chai.request(url)
+                .put(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'page' })
+                .set('x-ms-page-write', 'update')
+                .set('x-ms-range', 'bytes=0-512')
+                .set('Content-Type', 'application/octet-stream')
+                .send(bodydata)
+                .catch((e) => {
+                    e.should.have.status(416);
+                });
+        });
+        it('should fail to write data to the page blob with an invalid body length', () => {
+	    const bodydata = Buffer.alloc(513)
+            return chai.request(url)
+                .put(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'page' })
+                .set('x-ms-page-write', 'update')
+                .set('x-ms-range', 'bytes=0-511')
+                .set('Content-Type', 'application/octet-stream')
+                .send(bodydata)
+                .catch((e) => {
+                    e.should.have.status(400);
+                });
+        });
+        it('should get the page range [0-511] from the page blob', () => {
+            return chai.request(url)
+                .get(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'pagelist' })
+                .then((res) => {
+                    res.should.have.status(200);
+		    xml2js.Parser().parseString(res.text, function(err, result) {
+			expect(result.PageList.PageRange.length).to.equal(1);
+			expect(result.PageList.PageRange[0]).to.deep.equal({"Start":["0"],"End":["511"]});
+		    });
+                });
+        });
+        it('should get the page range [0-511] from the page blob within range [0-1023]', () => {
+            return chai.request(url)
+                .get(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'pagelist' })
+                .set('x-ms-range', 'bytes=0-1023')
+                .then((res) => {
+                    res.should.have.status(200);
+		    xml2js.Parser().parseString(res.text, function(err, result) {
+			expect(result.PageList.PageRange.length).to.equal(1);
+			expect(result.PageList.PageRange[0]).to.deep.equal({"Start":["0"],"End":["511"]});
+		    });
+                });
+        });
+        it('should fail to get the page list from the page blob within an invalid range', () => {
+            return chai.request(url)
+                .get(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'pagelist' })
+                .set('x-ms-range', 'bytes=0-1095')
+                .catch((e) => {
+                    e.should.have.status(416);
                 });
         });
     });
