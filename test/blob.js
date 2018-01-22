@@ -329,6 +329,80 @@ describe('Blob HTTP API', () => {
                     e.should.have.status(416);
                 });
         });
+        it('should write data to the page blob range [1024-1535]', () => {
+	    const bodydata = Buffer.alloc(512)
+            return chai.request(url)
+                .put(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'page' })
+                .set('x-ms-page-write', 'update')
+                .set('x-ms-range', 'bytes=1024-1535')
+                .set('Content-Type', 'application/octet-stream')
+                .send(bodydata)
+                .then((res) => {
+                    res.should.have.status(201);
+                });
+        });
+        it('should get the page ranges [0-511],[1024-1535] from the page blob', () => {
+            return chai.request(url)
+                .get(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'pagelist' })
+                .then((res) => {
+                    res.should.have.status(200);
+		    xml2js.Parser().parseString(res.text, function(err, result) {
+			expect(result.PageList.PageRange.length).to.equal(2);
+			expect(result.PageList.PageRange[0]).to.deep.equal({"Start":["0"],"End":["511"]});
+			expect(result.PageList.PageRange[1]).to.deep.equal({"Start":["1024"],"End":["1535"]});
+		    });
+                });
+        });
+	it('should write data to the page blob range [512-1023]', () => {
+	    const bodydata = Buffer.alloc(512)
+            return chai.request(url)
+                .put(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'page' })
+                .set('x-ms-page-write', 'update')
+                .set('x-ms-range', 'bytes=512-1023')
+                .set('Content-Type', 'application/octet-stream')
+                .send(bodydata)
+                .then((res) => {
+                    res.should.have.status(201);
+                });
+        });
+        it('should get the page range [0-1535] from the page blob', () => {
+            return chai.request(url)
+                .get(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'pagelist' })
+                .then((res) => {
+                    res.should.have.status(200);
+		    xml2js.Parser().parseString(res.text, function(err, result) {
+			expect(result.PageList.PageRange.length).to.equal(1);
+			expect(result.PageList.PageRange[0]).to.deep.equal({"Start":["0"],"End":["1535"]});
+		    });
+                });
+        });
+	it('should clear data in the page blob range [512-1023]', () => {
+            return chai.request(url)
+                .put(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'page' })
+                .set('x-ms-page-write', 'clear')
+                .set('x-ms-range', 'bytes=512-1023')
+                .then((res) => {
+                    res.should.have.status(201);
+                });
+        });
+        it('should get the page ranges [0-511],[1024-1535] from the page blob', () => {
+            return chai.request(url)
+                .get(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'pagelist' })
+                .then((res) => {
+                    res.should.have.status(200);
+		    xml2js.Parser().parseString(res.text, function(err, result) {
+			expect(result.PageList.PageRange.length).to.equal(2);
+			expect(result.PageList.PageRange[0]).to.deep.equal({"Start":["0"],"End":["511"]});
+			expect(result.PageList.PageRange[1]).to.deep.equal({"Start":["1024"],"End":["1535"]});
+		    });
+                });
+        });
     });
 
     describe('GET Blob', () => {
