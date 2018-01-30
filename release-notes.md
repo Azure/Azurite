@@ -1,4 +1,6 @@
 # 1.0
+## 1.8.5
+- merged PR https://github.com/arafato/azurite/pull/148 -> thanks to @Nighthawk22 
 ## 1.8.3
 - fixes [#144](https://github.com/arafato/azurite/issues/144): Blob Storage Bugfix: Wrong offset calculation for continuation token
 ## 1.8.2
