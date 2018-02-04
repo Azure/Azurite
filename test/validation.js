@@ -39,6 +39,7 @@ describe('validation', () => {
         it('should throw invalid input if contians anything except alphanumeric characters and dashes', () => {
             expect(() => QueueName.validate(createQueueNameRequest("queue-name"))).not.to.throw();
             expect(() => QueueName.validate(createQueueNameRequest("queue1"))).not.to.throw();
+            expect(() => QueueName.validate(createQueueNameRequest("QUEUE-name-1"))).not.to.throw();
             expect(() => QueueName.validate(createQueueNameRequest("queue_name"))).to.throw(AError, ErrorCodes.InvalidInput);
             expect(() => QueueName.validate(createQueueNameRequest("queue name"))).to.throw(AError, ErrorCodes.InvalidInput);
             expect(() => QueueName.validate(createQueueNameRequest("queue~name"))).to.throw(AError, ErrorCodes.InvalidInput);
