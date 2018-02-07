@@ -1,4 +1,7 @@
 # 1.0
+## 1.8.6
+- merged PR https://github.com/arafato/azurite/pull/153 -> thanks to @jamesrichford 
+- merged PR https://github.com/arafato/azurite/pull/151 -> thanks to @jamesrichford 
 ## 1.8.5
 - fixes [#149](https://github.com/arafato/azurite/issues/149): -> thanks a lot to @kautsig for proposing an initial solution in [PR 147](https://github.com/arafato/azurite/pull/147)
 - merged PR https://github.com/arafato/azurite/pull/148 -> thanks to @Nighthawk22 
