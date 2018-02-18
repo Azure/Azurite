@@ -1,4 +1,6 @@
 # 1.0
+## 1.9.2
+- fixes [#158](https://github.com/arafato/azurite/issues/158): Blob Storage Bugfix
 ## 1.9.1
 - fixes [#159](https://github.com/arafato/azurite/issues/159): Blob Storage Bugfix
 ## 1.9.0
