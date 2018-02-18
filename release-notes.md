@@ -1,4 +1,6 @@
 # 1.0
+## 1.9.0
+- fixes [#156](https://github.com/arafato/azurite/issues/156): Blob Storage Featre: Support for Get/Set StorageServiceProperties, Preflight Request, and CORS Support
 ## 1.8.6
 - merged PR https://github.com/arafato/azurite/pull/153 -> thanks to @jamesrichford 
 - merged PR https://github.com/arafato/azurite/pull/151 -> thanks to @jamesrichford 
