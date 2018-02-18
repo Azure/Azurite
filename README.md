@@ -147,15 +147,6 @@ All DONE except:
 - Account SAS Support [TODO]  
 See [https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-an-account-sas](https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-an-account-sas) for specification
 
-- Set Blob Service Properties [TODO]  
-  Sets the properties of the Blob service, including logging and metrics settings, and the default service version.
-
-- Get Blob Service Properties  [TODO]
-Gets the properties of the Blob service, including logging and metrics settings, and the default service version.
-
-- Preflight Blob Request [TODO]  
-Queries the Cross-Origin Resource Sharing (CORS) rules for the Blob service prior to sending the actual request.
-
 - Get Blob Service Stats [TODO]  
 Retrieves statistics related to replication for the Blob service. This operation is only available on the secondary location endpoint when read-access geo-redundant replication is enabled for the storage account.
 
