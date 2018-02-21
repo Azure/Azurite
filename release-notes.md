@@ -1,4 +1,6 @@
 # 1.0
+## 1.9.3
+- fixes [#157](https://github.com/arafato/azurite/issues/157): Blob Storage Bugfix in CopyBlob
 ## 1.9.2
 - fixes [#158](https://github.com/arafato/azurite/issues/158): Blob Storage Bugfix
 ## 1.9.1
