@@ -14,6 +14,8 @@ VOLUME /opt/azurite/folder
 EXPOSE 10000
 # Azure Queue Storage Emulator
 EXPOSE 10001
+# Azure Table Storage Emulator
+EXPOSE 10002
 
 ENV executable azurite
 
