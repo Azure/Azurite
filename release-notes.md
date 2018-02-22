@@ -1,3 +1,9 @@
+# 2.0
+## 2.0.0
+- Initial support for Table Storage: 
+    - technical base work [#141](https://github.com/arafato/azurite/issues/141)
+    - Support for CreateTable [#129](https://github.com/arafato/azurite/issues/129)
+- fixes [#157](https://github.com/arafato/azurite/issues/157): Blob Storage Bugfix in CopyBlob (again)
 # 1.0
 ## 1.9.3
 - fixes [#157](https://github.com/arafato/azurite/issues/157): Blob Storage Bugfix in CopyBlob
