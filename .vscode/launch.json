@@ -70,6 +70,21 @@
         },
         {
             "type": "node",
+            "request": "launch",
+            "protocol": "auto",
+            "name": "Launch Table only",
+            "program": "${workspaceRoot}/bin/table",
+            "cwd": "${workspaceRoot}",
+            "args": [
+                "-l",
+                "${workspaceRoot}/azurite-testdrive"
+            ],
+            "skipFiles": [
+                "node_modules/**/*.js"
+            ]
+        },
+        {
+            "type": "node",
             "request": "attach",
             "name": "Attach to Process",
             "port": 5858

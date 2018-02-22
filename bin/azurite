@@ -36,6 +36,10 @@ process.noDeprecation = true;
                 const mod = fork(env.queueModulePath, process.argv);
                 mod.on('exit', forkQueueModule);
             })();
+            (function forkTableModule(code, signal) {
+                const mod = fork(env.tableModulePath, process.argv);
+                mod.on('exit', forkTableModule);
+            })();
         });
 }).catch(e => {
     process.exitCode = 1;
