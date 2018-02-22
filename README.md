@@ -160,7 +160,7 @@ All DONE.
 ALL DONE except:
 
 - Delete Table [TODO]
-- Insert Entity [TODO]
+- Insert Entity [IN-PROGRESS]
 - Query Entity [TODO]
 - Query Tables [TODO]
 - Get Table ACL [TODO]
