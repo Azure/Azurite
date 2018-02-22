@@ -155,3 +155,18 @@ The Set Blob Tier operation sets the tier on a blob.
 
 ## Queue Storage - API Implementation Status
 All DONE.
+
+## Table Storage - API Implementation Status
+ALL DONE except:
+
+- Delete Table [TODO]
+- Insert Entity [TODO]
+- Query Entity [TODO]
+- Query Tables [TODO]
+- Get Table ACL [TODO]
+- Set Table ACL [TODO]
+- Update Entity [TODO]
+- Merge Entity [TODO]
+- Delete Entity [TODO]
+- Insert or Replace Entity [TODO]
+- Insert or Merge Entity [TODO]
