@@ -39,6 +39,8 @@ jsconfig.json
 
 # Default storage of Azurite
 azurite-testdrive
+__azurite_db_table__.json
+__azurite_db_blob__.json
 
 # Nuget
 azurite.exe
