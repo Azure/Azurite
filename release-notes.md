@@ -1,4 +1,6 @@
 # 2.0
+## 2.2.1
+- added table support in package.json
 ## 2.2.0
 - support for DeleteEntity [#138](https://github.com/arafato/azurite/issues/138)
 ## 2.1.0
