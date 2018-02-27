@@ -1,4 +1,6 @@
 # 2.0
+## 2.2.0
+- support for DeleteEntity [#138](https://github.com/arafato/azurite/issues/138)
 ## 2.1.0
 - support for InsertEntity [#131](https://github.com/arafato/azurite/issues/131)
 - support for DeleteTable [#130](https://github.com/arafato/azurite/issues/130)
