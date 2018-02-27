@@ -159,7 +159,6 @@ All DONE.
 ## Table Storage - API Implementation Status
 ALL DONE except:
 
-- Delete Table [IN-PROGRESS]
 - Query Entity [TODO]
 - Query Tables [TODO]
 - Get Table ACL [TODO]
