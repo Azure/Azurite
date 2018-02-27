@@ -1,13 +1,14 @@
 {
   "name": "azurite",
   "version": "2.2.0",
-  "description": "A lightweight server clone of Azure Blob Storage that simulates most of the commands supported by it with minimal dependencies.",
+  "description": "A lightweight server clone of Azure Blob, Queue, and Table Storage that simulates most of the commands supported by it with minimal dependencies.",
   "scripts": {
     "pretest": "npm run clean",
     "test": "cross-env AZURITE_LOCATION=azurite-testdrive mocha --timeout 10000",
     "start": "node bin/azurite -l azurite-testdrive",
     "blob": "node bin/blob -l azurite-testdrive",
     "queue": "node bin/queue",
+    "table": "node bin/table",
     "clean": "rimraf azurite-testdrive *.nupkg blob.exe queue.exe",
     "nuget": "cross-var \"npm run clean && pkg -t node6-win --output blob bin/blob && pkg -t node6-win --output queue bin/queue && nuget pack -Version $npm_package_version && nuget push *.nupkg  -Source https://www.nuget.org/api/v2/package\"",
     "docker": "cross-var \"docker build -t arafato/azurite:$npm_package_version . && docker build -t arafato/azurite:latest . && docker push arafato/azurite:$npm_package_version && docker push arafato/azurite:latest\""
@@ -19,7 +20,8 @@
   "bin": {
     "azurite": "./bin/azurite",
     "azurite-blob": "./bin/blob",
-    "azurite-queue": "./bin/queue"
+    "azurite-queue": "./bin/queue",
+    "azurite-table": "./bin/table"
   },
   "preferGlobal": true,
   "repository": {
@@ -30,6 +32,8 @@
     "azure",
     "storage",
     "blob",
+    "queue",
+    "table",
     "blobstore",
     "emulator",
     "microsoft"

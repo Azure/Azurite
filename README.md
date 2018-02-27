@@ -3,7 +3,7 @@
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)]()
 [![Build Status](https://travis-ci.org/arafato/azurite.svg?branch=master)](https://travis-ci.org/arafato/azurite)
 
-A lightweight server clone of Azure Blob Storage that simulates most of the commands supported by it with minimal dependencies.
+A lightweight server clone of Azure Blob, Queue, and Table Storage that simulates most of the commands supported by it with minimal dependencies.
 
 # Installation and Usage
 ## NPM
@@ -22,11 +22,15 @@ You can also selectively start the different storage emulators.
 
 For Blob Storage Emulator only:
 
-`$ azurite-blob -l path/to/localfolder`
+`$ azurite-blob -l path/to/azurite/workspace`
 
 For Queue Storage Emulator only:
 
 `$ azurite-queue`
+
+For Table Storage Emulator only:
+
+`$ azurite-table -l path/to/azurite/workspace`
 
 ## Nuget
 Azurite is also available as Nuget package at [https://www.nuget.org/packages/Azurite/](https://www.nuget.org/packages/Azurite/).
@@ -59,11 +63,12 @@ $ docker run -d -t -p 10000:10000 -p 10001:10001 -v /path/to/folder:/opt/azurite
 ```
 
 #### Configure the executable when running the container
-By default, the container starts all services available (currently blob and queue).
+By default, the container starts all services available (currently blob, queue, and table).
 Using the environment variable `executable`, specific executables can be specifed:
 
  * `blob` Start the Blob Storage Emulator only
  * `queue` Start the Azure Queue Storage Emulator only
+ * `table` Start the Azure Table Storage Emulator only
 
 ##### Usage example:
 ```bash
@@ -132,8 +137,7 @@ Make changes to the pull request if the reviewing maintainer recommends them.
 If you need help, you can ask questions directly at our [issues site on Github](https://github.com/arafato/azurite/issues).
 
 # API Support
-Currently, Azurite only supports the [Blob Storage APIs](https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/blob-service-rest-api), and the [Queue Storage API](https://docs.microsoft.com/en-us/rest/api/storageservices/queue-service-rest-api). Support for Azure Storage Files and Azure Storage Tables is planned (see https://github.com/arafato/azurite/issues/114 for details),
-but currently not available. 
+Currently, Azurite only supports the [Blob Storage APIs](https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/blob-service-rest-api), the [Queue Storage API](https://docs.microsoft.com/en-us/rest/api/storageservices/queue-service-rest-api), and the [Table Storage API](https://docs.microsoft.com/en-us/rest/api/storageservices/table-service-rest-api). Support for Azure Storage Files is planned, but currently not available. 
 
 The Standard Emulator Connection String is the same as required by [Microsoft's Official Storage Emulator](https://go.microsoft.com/fwlink/?LinkId=717179):
 
