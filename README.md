@@ -165,6 +165,6 @@ ALL DONE except:
 - Set Table ACL [TODO]
 - Update Entity [TODO]
 - Merge Entity [TODO]
-- Delete Entity [TODO]
+- Delete Entity [IN-PROGRESS]
 - Insert or Replace Entity [TODO]
 - Insert or Merge Entity [TODO]
