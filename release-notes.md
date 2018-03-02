@@ -1,4 +1,7 @@
 # 2.0
+## 2.2.2
+- fixes [#160](https://github.com/arafato/azurite/issues/160): adds working $root container semantics
+- fixes [#155](https://github.com/arafato/azurite/issues/155): Improvements in Azure Storage Explorer integration (Blob Storage)
 ## 2.2.1
 - added table support in package.json
 ## 2.2.0
