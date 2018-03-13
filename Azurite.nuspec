@@ -16,6 +16,7 @@
   <files>
     <file src="blob.exe" target="tools" />
     <file src="queue.exe" target="tools" />
+    <file src="table.exe" target="tools" />
     <file src="nuget\init.ps1" target="tools" />
   </files>
 </package>
