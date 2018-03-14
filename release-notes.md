@@ -1,5 +1,7 @@
 # 2.0
 ## 2.3.0
+- support for QueryEntities [#132](https://github.com/arafato/azurite/issues/132)
+## 2.3.0
 - support for QueryTable [#133](https://github.com/arafato/azurite/issues/133)
     - thanks to @tlycken for various bugfixes (see PR @ https://github.com/arafato/azurite/pull/163)
 ## 2.2.2
