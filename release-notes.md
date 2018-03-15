@@ -1,4 +1,6 @@
 # 2.0
+## 2.5.0
+- support for UpdateEntity [#136](https://github.com/arafato/azurite/issues/136)
 ## 2.4.1
 - fixes [#165](https://github.com/arafato/azurite/issues/165): Blob: ETag is properly enclosed in escaped double parenthesis
 ## 2.4.0

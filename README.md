@@ -165,7 +165,7 @@ ALL DONE except:
 
 - Get Table ACL [TODO]
 - Set Table ACL [TODO]
-- Update Entity [TODO]
 - Merge Entity [TODO]
 - Insert or Replace Entity [TODO]
 - Insert or Merge Entity [TODO]
+- Entity Group Transaction (Batch Operation) [TODO]
