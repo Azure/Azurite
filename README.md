@@ -95,7 +95,7 @@ $ az storage container create --name 'test' --connection-string 'DefaultEndpoint
 ## What do I need to know to help?
 If you are interested in making a code contribution and would like to learn more about the technologies that we use, check out the list below.
 
-- Azurite runs on [Node.js](https://nodejs.org/). If you never worked with this technology before make sure to get yourself familiar with it. There are many [good tutorials](https://blog.risingstack.com/node-hero-tutorial-getting-started-with-node-js/) out there along with a [comprehensive API documentation](https://nodejs.org/dist/latest-v6.x/docs/api/) that will get you up to speed quickly! We are currently coding against Node.js v6.10.x LTS 
+- Azurite runs on [Node.js](https://nodejs.org/). If you never worked with this technology before make sure to get yourself familiar with it. There are many [good tutorials](https://blog.risingstack.com/node-hero-tutorial-getting-started-with-node-js/) out there along with a [comprehensive API documentation](https://nodejs.org/dist/latest-v6.x/docs/api/) that will get you up to speed quickly! We are currently coding against Node.js v8.9.4 LTS 
 - Azurite exposes its REST-based API via [Express.js](https://expressjs.com/) which is a "fast, unopinionated, minimalist web framework for Node.js. 
 - Azurite uses [LokiJS](http://lokijs.org) which is an in-memory data store with persistence. It serves as our central database to store metadata (names, properties, leases, etc.) about all objects put into Azurite.
 - Azurite makes heavy use of [Bluebird](http://bluebirdjs.com/docs/getting-started.html) which is a fully featured promises library with unmatched performance.  
