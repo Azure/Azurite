@@ -46,6 +46,7 @@ __azurite_db_blob__.json
 azurite.exe
 blob.exe
 queue.exe
+table.exe
 *.nupkg
 
 # Arafato
