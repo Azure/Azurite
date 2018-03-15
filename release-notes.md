@@ -1,5 +1,7 @@
 # 2.0
-## 2.3.0
+## 2.4.1
+- fixes [#165](https://github.com/arafato/azurite/issues/165): Blob: ETag is properly enclosed in escaped double parenthesis
+## 2.4.0
 - support for QueryEntities [#132](https://github.com/arafato/azurite/issues/132)
 ## 2.3.0
 - support for QueryTable [#133](https://github.com/arafato/azurite/issues/133)
