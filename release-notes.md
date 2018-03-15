@@ -1,4 +1,6 @@
 # 2.0
+## 2.5.1
+- fixes [#166](https://github.com/arafato/azurite/issues/166): Blob: ETag in validation is now also properly enclosed in escaped double parenthesis
 ## 2.5.0
 - support for UpdateEntity [#136](https://github.com/arafato/azurite/issues/136)
 ## 2.4.1
