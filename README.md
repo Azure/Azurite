@@ -145,6 +145,8 @@ The Standard Emulator Connection String is the same as required by [Microsoft's 
 
 `QueueEndpoint=http://127.0.0.1:10001/devstoreaccount1;`
 
+`TableEndpoint=http://127.0.0.1:10002/devstoreaccount1;`
+
 
 ## Blob Storage - API Implementation Status
 All DONE except:
