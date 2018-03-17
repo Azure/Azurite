@@ -162,7 +162,6 @@ All DONE.
 
 ## Table Storage - API Implementation Status
 ALL DONE except:
-
 - Get Table ACL [TODO]
 - Set Table ACL [TODO]
 - Entity Group Transaction (Batch Operation) [TODO]
