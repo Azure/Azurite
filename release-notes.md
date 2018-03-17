@@ -1,4 +1,6 @@
 # 2.0
+## 2.6.1
+- fixes [#169](https://github.com/arafato/azurite/issues/169) 
 ## 2.6.0
 - support for Merge Entity [#137](https://github.com/arafato/azurite/issues/137)
 - support for Insert or Replace Entity [#139](https://github.com/arafato/azurite/issues/139)
