@@ -1,4 +1,8 @@
 # 2.0
+## 2.6.0
+- support for Merge Entity [#137](https://github.com/arafato/azurite/issues/137)
+- support for Insert or Replace Entity [#139](https://github.com/arafato/azurite/issues/139)
+- support for Insert Or Merge Entity [#140](https://github.com/arafato/azurite/issues/140)
 ## 2.5.1
 - fixes [#166](https://github.com/arafato/azurite/issues/166): Blob: ETag in validation is now also properly enclosed in escaped double parenthesis
 ## 2.5.0
