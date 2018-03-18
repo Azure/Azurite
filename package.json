@@ -1,6 +1,6 @@
 {
   "name": "azurite",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "description": "A lightweight server clone of Azure Blob, Queue, and Table Storage that simulates most of the commands supported by it with minimal dependencies.",
   "scripts": {
     "pretest": "npm run clean",
