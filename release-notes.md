@@ -1,4 +1,6 @@
 # 2.0
+## 2.6.2
+- merged PR https://github.com/arafato/azurite/pull/170 -> thanks to @julienr 
 ## 2.6.1
 - fixes [#169](https://github.com/arafato/azurite/issues/169) 
 ## 2.6.0
