@@ -1,7 +1,7 @@
 # Azurite
 [![npm version](https://badge.fury.io/js/azurite.svg)](https://badge.fury.io/js/azurite)
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)]()
-[![Build Status](https://travis-ci.org/azure/azurite.svg?branch=master)](https://travis-ci.org/arafato/azurite)
+[![Build Status](https://travis-ci.org/Azure/Azurite.svg?branch=master)](https://travis-ci.org/Azure/Azurite)
 
 A lightweight server clone of Azure Blob, Queue, and Table Storage that simulates most of the commands supported by it with minimal dependencies.
 
