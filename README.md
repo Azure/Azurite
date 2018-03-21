@@ -3,13 +3,6 @@
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)]()
 [![Build Status](https://travis-ci.org/arafato/azurite.svg?branch=master)](https://travis-ci.org/arafato/azurite)
 
-:warning: **Warning: This repository has now moved to [https://github.com/azure/azurite](https://github.com/azure/azurite)**
-
-Dear friends, thank you for your contributions so far!
-Please take note of the above, this project is now part of the Azure repo and will only accept changes there.
-We are just in the process of moving everything over.
-___
-
 A lightweight server clone of Azure Blob, Queue, and Table Storage that simulates most of the commands supported by it with minimal dependencies.
 
 # Installation and Usage
