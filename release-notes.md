@@ -1,4 +1,6 @@
 # 2.0
+## 2.6.4
+- fixes [#172](https://github.com/arafato/azurite/issues/172) 
 ## 2.6.3
 - fixes [#171](https://github.com/arafato/azurite/issues/171) 
 - fixes [#168](https://github.com/arafato/azurite/issues/168) 
