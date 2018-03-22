@@ -1,4 +1,7 @@
 # 2.0
+## 2.6.5 (moved to github.com/azure/azurite)
+- merged PR [#4](https://github.com/Azure/Azurite/pull/4) -> thanks to @trekawek
+- merged PR [#2](https://github.com/Azure/Azurite/pull/2) -> thanks to @trekawek
 ## 2.6.4
 - fixes [#172](https://github.com/arafato/azurite/issues/172) 
 ## 2.6.3
