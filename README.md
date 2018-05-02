@@ -105,36 +105,23 @@ The current status of Azurite's support of the [Official Blob Storage REST API S
 
 Current bugs that need to be fixed are listed at our [issues site on Github](https://github.com/arafato/azurite/issues) and tagged with a red label `bug`.
 
-## How do I make a contribution?
+## Need Help?
+Be sure to check out the Microsoft Azure Developer Forums on MSDN or the Developer Forums on Stack Overflow if you have trouble with the provided code.
 
-Never made an open source contribution before? Wondering how contributions work in Azurite? Here's a quick rundown!
+## Contribute Code or Provide Feedback
+If you would like to become an active contributor to this project please follow the instructions provided in Azure Projects [Contribution Guidelines](https://azure.github.io/guidelines/).
 
-1. Find an issue that you are interested in addressing or a feature that you would like to add.
+If you encounter any bugs with the library please file an issue in the [Issues](https://github.com/Azure/Azurite/issues) section of the project.
 
-2. Fork the Azurite repository to your local GitHub organization. This means that you will have a copy of the repository under `your-GitHub-username/azurite`.
-
-3. Clone the repository to your local machine using git clone `https://github.com/github-username/azurite.git`.
-
-4. Create a new branch for your fix using `git checkout -b branch-name-here`.
-Make the appropriate changes for the issue you are trying to address or the feature that you want to add.
-
-5. Use `git add insert-paths-of-changed-files-here` to add the file contents of the changed files to the "snapshot" git uses to manage the state of the project, also known as the index.
-
-6. Use `git commit -m "Insert a short message of the changes made here"` to store the contents of the index with a descriptive message.
-
-7. Push the changes to the remote repository using `git push origin branch-name-here`.
-
-8. Submit a pull request to the upstream repository.
-Title the pull request with a short description of the changes made and the issue or bug number associated with your change. For example, you can title an issue like so "Added more log outputting to resolve #4352".
-In the description of the pull request, explain the changes that you made, any issues you think exist with the pull request you made, and any questions you have for the maintainer. It's OK if your pull request is not perfect (no pull request is), the reviewer will be able to help you fix any problems and improve it!
-
-9. Wait for the pull request to be reviewed by a maintainer.
-Make changes to the pull request if the reviewing maintainer recommends them.
-
-10. Celebrate your success after your pull request is merged!
+When sending pull requests, please send **non-breaking PRs** to the dev branch and breaking changes to the **dev_breaking** branch. Please do not make PRs against master.
 
 ## Where can I go for help?
-If you need help, you can ask questions directly at our [issues site on Github](https://github.com/arafato/azurite/issues).
+If you need help, you can ask questions directly at our [issues site on Github](https://github.com/Azure/Azurite/issues).  
+Alternatively, check out the following links:  
+  
+[Azure Developer Center](https://azure.microsoft.com/en-us/develop/)  
+[Azure Storage Service](https://azure.microsoft.com/en-us/documentation/services/storage/)  
+[Azure Storage Team Blog](https://blogs.msdn.com/b/windowsazurestorage/)  
 
 # API Support
 Currently, Azurite only supports the [Blob Storage APIs](https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/blob-service-rest-api), the [Queue Storage API](https://docs.microsoft.com/en-us/rest/api/storageservices/queue-service-rest-api), and the [Table Storage API](https://docs.microsoft.com/en-us/rest/api/storageservices/table-service-rest-api). Support for Azure Storage Files is planned, but currently not available. 
