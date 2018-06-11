@@ -103,7 +103,7 @@ If you are interested in making a code contribution and would like to learn more
 ## What TODOs are there?
 The current status of Azurite's support of the [Official Blob Storage REST API Specification](https://docs.microsoft.com/rest/api/storageservices/blob-service-rest-api) is listed in below section [API Support](https://github.com/arafato/azurite/#api-support). Features that are still unimplemented are marked with `[TODO]`. Features that are currently being worked on are marked with `[IN-PROGRESS]`.
 
-Current bugs that need to be fixed are listed at our [issues site on Github](https://github.com/arafato/azurite/issues) and tagged with a red label `bug`.
+Current bugs that need to be fixed are listed at our [issues site on Github](https://github.com/Azure/Azurite/issues) and tagged with a red label `bug`.
 
 ## How do I make a contribution?
 
@@ -134,7 +134,7 @@ Make changes to the pull request if the reviewing maintainer recommends them.
 10. Celebrate your success after your pull request is merged!
 
 ## Where can I go for help?
-If you need help, you can ask questions directly at our [issues site on Github](https://github.com/arafato/azurite/issues).
+If you need help, you can ask questions directly at our [issues site on Github](https://github.com/Azure/Azurite/issues).
 
 # API Support
 Currently, Azurite only supports the [Blob Storage APIs](https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/blob-service-rest-api), the [Queue Storage API](https://docs.microsoft.com/en-us/rest/api/storageservices/queue-service-rest-api), and the [Table Storage API](https://docs.microsoft.com/en-us/rest/api/storageservices/table-service-rest-api). Support for Azure Storage Files is planned, but currently not available. 
@@ -167,3 +167,4 @@ ALL DONE except:
 - Get Table ACL [TODO]
 - Set Table ACL [TODO]
 - Entity Group Transaction (Batch Operation) [TODO]
+
