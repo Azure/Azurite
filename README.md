@@ -116,16 +116,13 @@ If you encounter any bugs with the library please file an issue in the [Issues](
 When sending pull requests, please send **non-breaking PRs** to the dev branch and breaking changes to the **dev_breaking** branch. Please do not make PRs against master.
 
 ## Where can I go for help?
-<<<<<<< HEAD
-If you need help, you can ask questions directly at our [issues site on Github](https://github.com/Azure/Azurite/issues).
-=======
+
 If you need help, you can ask questions directly at our [issues site on Github](https://github.com/Azure/Azurite/issues).  
 Alternatively, check out the following links:  
   
 [Azure Developer Center](https://azure.microsoft.com/en-us/develop/)  
 [Azure Storage Service](https://azure.microsoft.com/en-us/documentation/services/storage/)  
 [Azure Storage Team Blog](https://blogs.msdn.com/b/windowsazurestorage/)  
->>>>>>> vitaly-goot-shared_key_BLOB_auth
 
 # API Support
 Currently, Azurite only supports the [Blob Storage APIs](https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/blob-service-rest-api), the [Queue Storage API](https://docs.microsoft.com/en-us/rest/api/storageservices/queue-service-rest-api), and the [Table Storage API](https://docs.microsoft.com/en-us/rest/api/storageservices/table-service-rest-api). Support for Azure Storage Files is planned, but currently not available. 
