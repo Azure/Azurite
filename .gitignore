@@ -1,12 +1,7 @@
-<<<<<<< HEAD
 #Azurite storage simulation
 __blobstorage__
 __azurite_db_blob__*
 __azurite_db_table__*
-=======
-# ignore Azurite storage
-__blobstorage__
->>>>>>> vitaly-goot-shared_key_BLOB_auth
 
 # Logs
 logs
