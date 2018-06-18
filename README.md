@@ -103,7 +103,7 @@ If you are interested in making a code contribution and would like to learn more
 ## What TODOs are there?
 The current status of Azurite's support of the [Official Blob Storage REST API Specification](https://docs.microsoft.com/rest/api/storageservices/blob-service-rest-api) is listed in below section [API Support](https://github.com/arafato/azurite/#api-support). Features that are still unimplemented are marked with `[TODO]`. Features that are currently being worked on are marked with `[IN-PROGRESS]`.
 
-Current bugs that need to be fixed are listed at our [issues site on Github](https://github.com/arafato/azurite/issues) and tagged with a red label `bug`.
+Current bugs that need to be fixed are listed at our [issues site on Github](https://github.com/Azure/Azurite/issues) and tagged with a red label `bug`.
 
 ## Need Help?
 Be sure to check out the Microsoft Azure Developer Forums on MSDN or the Developer Forums on Stack Overflow if you have trouble with the provided code.
@@ -116,6 +116,7 @@ If you encounter any bugs with the library please file an issue in the [Issues](
 When sending pull requests, please send **non-breaking PRs** to the dev branch and breaking changes to the **dev_breaking** branch. Please do not make PRs against master.
 
 ## Where can I go for help?
+
 If you need help, you can ask questions directly at our [issues site on Github](https://github.com/Azure/Azurite/issues).  
 Alternatively, check out the following links:  
   
@@ -154,3 +155,4 @@ ALL DONE except:
 - Get Table ACL [TODO]
 - Set Table ACL [TODO]
 - Entity Group Transaction (Batch Operation) [TODO]
+

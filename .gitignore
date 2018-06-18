@@ -1,3 +1,8 @@
+#Azurite storage simulation
+__blobstorage__
+__azurite_db_blob__*
+__azurite_db_table__*
+
 # Logs
 logs
 *.log
