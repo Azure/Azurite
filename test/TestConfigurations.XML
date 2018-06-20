@@ -1,0 +1,27 @@
+<TestConfigurations>
+  <TargetTestTenant>ProductionTenant</TargetTestTenant>
+  <TargetPremiumBlobTenant>ProductionTenant</TargetPremiumBlobTenant>
+  <TenantConfigurations>
+    <TenantConfiguration>
+      <TenantName>DevStore</TenantName>
+      <TenantType>DevStore</TenantType>
+      <AccountName>devstoreaccount1</AccountName>
+      <AccountKey>Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==</AccountKey>
+      <BlobServiceEndpoint>http://127.0.0.1:10000/devstoreaccount1</BlobServiceEndpoint>
+      <QueueServiceEndpoint>http://127.0.0.1:10001/devstoreaccount1</QueueServiceEndpoint>
+      <TableServiceEndpoint>http://127.0.0.1:10002/devstoreaccount1</TableServiceEndpoint>
+    </TenantConfiguration>
+    <TenantConfiguration>
+      <TenantName>ProductionTenant</TenantName>
+      <TenantType>DevStore</TenantType>
+      <AccountName>devstoreaccount1</AccountName>
+      <AccountKey>Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==</AccountKey>
+      <BlobServiceEndpoint>http://127.0.0.1:10000/devstoreaccount1</BlobServiceEndpoint>
+      <QueueServiceEndpoint>http://127.0.0.1:10001/devstoreaccount1</QueueServiceEndpoint>
+      <TableServiceEndpoint>http://127.0.0.1:10002/devstoreaccount1</TableServiceEndpoint>
+      <BlobServiceSecondaryEndpoint>http://127.0.0.1:10100/devstoreaccount1</BlobServiceSecondaryEndpoint>
+      <QueueServiceSecondaryEndpoint>http://127.0.0.1:10101/devstoreaccount1</QueueServiceSecondaryEndpoint>
+      <TableServiceSecondaryEndpoint>http://127.0.0.1:10102/devstoreaccount1</TableServiceSecondaryEndpoint>
+    </TenantConfiguration>
+  </TenantConfigurations>
+</TestConfigurations>
