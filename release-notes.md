@@ -1,4 +1,11 @@
 # 2.0
+## 2.6.6  
+
+- fixes [#12](https://github.com/Azure/Azurite/issues/12)  
+- merged PR [#28](https://github.com/Azure/Azurite/pull/28) fixes [#26](https://github.com/Azure/Azurite/issues/26) -> thanks to @kalleep  
+- merged PR [#25](BLOB shared key authentication) -> thanks to @vitaly-goot  
+- merged PR [#15](https://github.com/Azure/Azurite/pull/15) fixes [#19](https://github.com/Azure/Azurite/issues/19) -> thanks to @david-driscoll  
+
 ## 2.6.5 (moved to github.com/azure/azurite)
 - merged PR [#4](https://github.com/Azure/Azurite/pull/4) -> thanks to @trekawek
 - merged PR [#2](https://github.com/Azure/Azurite/pull/2) -> thanks to @trekawek

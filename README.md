@@ -13,7 +13,9 @@ After installation you can install Azurite simply with `npm` which is Node.js pa
 
 `$ npm install -g azurite`
 
-Then simply start it with the following command: 
+## Running Azurite
+
+Simply start it with the following command: 
 
 `$ azurite -l path/to/localfolder`
 
@@ -31,6 +33,7 @@ For Queue Storage Emulator only:
 For Table Storage Emulator only:
 
 `$ azurite-table -l path/to/azurite/workspace`
+
 
 ## Nuget
 Azurite is also available as Nuget package at [https://www.nuget.org/packages/Azurite/](https://www.nuget.org/packages/Azurite/).
@@ -90,6 +93,31 @@ $ az storage container create --name 'test' --connection-string 'DefaultEndpoint
 }
 ```
 
+## Current List of Command Line Options
+
+```
+-a
+``` 
+Enables sharedkey authentication check
+```
+-l c:\tmp\emulatorPath
+--location c:\tmp\emulatorPath
+```
+Allows the specification of a path
+```
+--blobPort 101000
+```
+Sets the TCP Port for blob storage to the value following the argument.
+```
+--queuePort 10001
+```
+Sets the TCP Port for queue storage to the value following the argument.
+```
+--tablePort 10002
+```
+Sets the TCP Port for table storage to the value following the argument.
+
+
 
 # Contributions
 ## What do I need to know to help?
@@ -101,9 +129,16 @@ If you are interested in making a code contribution and would like to learn more
 - Azurite makes heavy use of [Bluebird](http://bluebirdjs.com/docs/getting-started.html) which is a fully featured promises library with unmatched performance.  
 
 ## What TODOs are there?
-The current status of Azurite's support of the [Official Blob Storage REST API Specification](https://docs.microsoft.com/rest/api/storageservices/blob-service-rest-api) is listed in below section [API Support](https://github.com/arafato/azurite/#api-support). Features that are still unimplemented are marked with `[TODO]`. Features that are currently being worked on are marked with `[IN-PROGRESS]`.
+The current status of Azurite's support of the [Official Blob Storage REST API Specification](https://docs.microsoft.com/rest/api/storageservices/blob-service-rest-api) is listed in below section [API Support](https://github.com/Azure/azurite/#api-support).  
+
+Major features that are still unimplemented are marked with `[TODO]`. Features that are currently being worked on are marked with `[IN-PROGRESS]`.
+
+We are using a combination of the Azure Storage Explorer, Azure Samples and TDD using the Azure Storage SDKs tests.  
+To get more details on how to run tests against Azurite for TDD, check out [Azurite's TDD with Visual Studio](./doc/vs_tdd.md)
+
 
 Current bugs that need to be fixed are listed at our [issues site on Github](https://github.com/Azure/Azurite/issues) and tagged with a red label `bug`.
+
 
 ## Need Help?
 Be sure to check out the Microsoft Azure Developer Forums on MSDN or the Developer Forums on Stack Overflow if you have trouble with the provided code.
