@@ -62,7 +62,7 @@ $ docker build -t arafato/azurite .
 ### Run the Docker image
 To run the Docker image, execute the following command:
 ```bash
-$ docker run -d -t -p 10000:10000 -p 10001:10001 -v /path/to/folder:/opt/azurite/folder arafato/azurite
+$ docker run -d -t -p 10000:10000 -p 10001:10001 -p 10002:10002 -v /path/to/folder:/opt/azurite/folder arafato/azurite
 ```
 
 #### Configure the executable when running the container
