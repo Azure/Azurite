@@ -1,5 +1,6 @@
 # 2.0  
 ## 2.6.7  
+- merged PR [#32](https://github.com/Azure/Azurite/pull/32) -> thanks to @trekawek   
 - merged PR [#30](https://github.com/Azure/Azurite/pull/30) -> thanks to @julienr    
 - merged PR [#46](https://github.com/Azure/Azurite/pull/46) -> thanks to @Fanarito  
 - merged PR [#47](https://github.com/Azure/Azurite/pull/47) -> thanks to @kalleep    
