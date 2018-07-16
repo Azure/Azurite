@@ -1,8 +1,8 @@
-FROM node:alpine
+FROM node:10.6-alpine
 
 WORKDIR /opt/azurite
 
-COPY package.json /opt/azurite
+COPY package.json package-lock.json /opt/azurite/
 RUN npm install
 
 COPY bin /opt/azurite/bin
