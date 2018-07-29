@@ -1,26 +1,27 @@
-'use strict';
+import * as express from "express";
+import { Server } from "http";
 
-const express = require('express'),
-    env = require('./core/env'),
-    bodyParser = require('body-parser'),
-    morgan = require('morgan'),
-    cli = require('./core/cli'),    
-    BbPromise = require('bluebird');
+const BbPromise = require("bluebird"),
+    bodyParser = require("body-parser"),
+    env = require("./core/env"),
+    storageManager = require("./core/blob/StorageManager"),
+    morgan = require("morgan"),
+    cli = require("./core/cli");
 
 class AzuriteQueue {
+    private server: Server;
     constructor() {
-        this.server;
         // Support for PM2 Graceful Shutdown on Windows and Linux/OSX
         // See http://pm2.keymetrics.io/docs/usage/signals-clean-restart/
-        if (process.platform === 'win32') {
-            process.on('message', function (msg) {
-                if (msg == 'shutdown') {
+        if (process.platform === "win32") {
+            process.on("message", function (msg) {
+                if (msg === "shutdown") {
                     this.close();
                 }
             });
         }
         else {
-            process.on('SIGINT', function () {
+            process.on("SIGINT", function () {
                 this.close();
             });
         }
@@ -31,20 +32,20 @@ class AzuriteQueue {
             .then(() => {
                 const app = express();
                 if (!env.silent) {
-                    app.use(morgan('dev'));
+                    app.use(morgan("dev"));
                 }
                 app.use(bodyParser.raw({
                     inflate: true,
-                    limit: '10000kb',
+                    limit: "10000kb",
                     type: function (type) {
                         return true;
                     }
                 }));
-                require('./routes/queue/AccountRoute')(app);
-                require('./routes/queue/QueueRoute')(app);
-                require('./routes/queue/MessageRoute')(app);
-                app.use(require('./middleware/queue/validation'));
-                app.use(require('./middleware/queue/actions'));
+                require("./routes/queue/AccountRoute")(app);
+                require("./routes/queue/QueueRoute")(app);
+                require("./routes/queue/MessageRoute")(app);
+                app.use(require("./middleware/queue/validation"));
+                app.use(require("./middleware/queue/actions"));
                 this.server = app.listen(env.queueStoragePort, () => {
                     if (!env.silent) {
                         cli.queueStorageStatus();
@@ -60,4 +61,4 @@ class AzuriteQueue {
     }
 }
 
-module.exports = AzuriteQueue;
+export default AzuriteQueue;
