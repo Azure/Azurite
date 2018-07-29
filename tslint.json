@@ -17,9 +17,9 @@
     "no-trailing-whitespace": true,
     "no-floating-promises": true,
     "no-unused-expression": true,
-    "no-unused-variable": true,
-    "promise-function-async": true,
+    // "promise-function-async": true,
     "no-invalid-template-strings": true,
+    // "await-promise": true,
     "no-return-await": true,    
     "one-line": [
       true,

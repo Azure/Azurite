@@ -4,24 +4,23 @@ import { Server } from "http";
 const BbPromise = require("bluebird"),
     bodyParser = require("body-parser"),
     env = require("./core/env"),
-    storageManager = require("./core/blob/StorageManager"),
     morgan = require("morgan"),
     cli = require("./core/cli");
 
 class AzuriteQueue {
-    private server: Server;
+    private server !: Server;
     constructor() {
         // Support for PM2 Graceful Shutdown on Windows and Linux/OSX
         // See http://pm2.keymetrics.io/docs/usage/signals-clean-restart/
         if (process.platform === "win32") {
-            process.on("message", function (msg) {
+            process.on("message", (msg) => {
                 if (msg === "shutdown") {
                     this.close();
                 }
             });
         }
         else {
-            process.on("SIGINT", function () {
+            process.on("SIGINT", () => {
                 this.close();
             });
         }
@@ -37,7 +36,7 @@ class AzuriteQueue {
                 app.use(bodyParser.raw({
                     inflate: true,
                     limit: "10000kb",
-                    type: function (type) {
+                    type: function () {
                         return true;
                     }
                 }));

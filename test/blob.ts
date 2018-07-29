@@ -1,11 +1,9 @@
 import AzuriteBlob from "../lib/AzuriteBlob";
 import * as chai from "chai";
+import { describe, before, it, after } from "mocha";
 import chaiHttp = require("chai-http");
 
-const should = chai.should(),
-  expect = chai.expect,
-  BbPromise = require("bluebird"),
-  fs = BbPromise.promisifyAll(require("fs-extra")),
+const expect = chai.expect,
   rp = require("request-promise"),
   path = require("path"),
   xml2js = require("xml2js");
@@ -259,7 +257,7 @@ describe("Blob HTTP API", () => {
         .query({ comp: "pagelist" })
         .then(res => {
           res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(err, result) {
+          xml2js.Parser().parseString(res.text, function(result) {
             expect(result.PageList).to.not.have.any.keys("PageRange");
           });
         });
@@ -313,7 +311,7 @@ describe("Blob HTTP API", () => {
         .query({ comp: "pagelist" })
         .then(res => {
           res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(err, result) {
+          xml2js.Parser().parseString(res.text, function(result) {
             expect(result.PageList.PageRange.length).to.equal(1);
             expect(result.PageList.PageRange[0]).to.deep.equal({
               Start: ["0"],
@@ -330,7 +328,7 @@ describe("Blob HTTP API", () => {
         .set("x-ms-range", "bytes=0-1023")
         .then(res => {
           res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(err, result) {
+          xml2js.Parser().parseString(res.text, function(result) {
             expect(result.PageList.PageRange.length).to.equal(1);
             expect(result.PageList.PageRange[0]).to.deep.equal({
               Start: ["0"],
@@ -370,7 +368,7 @@ describe("Blob HTTP API", () => {
         .query({ comp: "pagelist" })
         .then(res => {
           res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(err, result) {
+          xml2js.Parser().parseString(res.text, function(result) {
             expect(result.PageList.PageRange.length).to.equal(2);
             expect(result.PageList.PageRange[0]).to.deep.equal({
               Start: ["0"],
@@ -404,7 +402,7 @@ describe("Blob HTTP API", () => {
         .query({ comp: "pagelist" })
         .then(res => {
           res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(err, result) {
+          xml2js.Parser().parseString(res.text, function(result) {
             expect(result.PageList.PageRange.length).to.equal(1);
             expect(result.PageList.PageRange[0]).to.deep.equal({
               Start: ["0"],
@@ -431,7 +429,7 @@ describe("Blob HTTP API", () => {
         .query({ comp: "pagelist" })
         .then(res => {
           res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(err, result) {
+          xml2js.Parser().parseString(res.text, function(result) {
             expect(result.PageList.PageRange.length).to.equal(2);
             expect(result.PageList.PageRange[0]).to.deep.equal({
               Start: ["0"],

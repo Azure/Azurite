@@ -2,10 +2,7 @@ import AzuriteBlob from "../lib/AzuriteBlob";
 import * as chai from "chai";
 import chaiHttp = require("chai-http");
 
-const should = chai.should(),
-    BbPromise = require("bluebird"),
-    fs = BbPromise.promisifyAll(require("fs-extra")),
-    rp = require("request-promise"),
+const rp = require("request-promise"),
     path = require("path");
 
 chai.use(chaiHttp);

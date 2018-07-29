@@ -3,10 +3,8 @@
   "version": "2.6.6",
   "description": "A lightweight server clone of Azure Blob, Queue, and Table Storage that simulates most of the commands supported by it with minimal dependencies.",
   "scripts": {
-    "pretest": "npm run clean",
-    "test-js": "cross-env AZURITE_LOCATION=azurite-testdrive mocha --timeout 10000",
-    "test-ts": "cross-env AZURITE_LOCATION=azurite-testdrive mocha -r ts-node/register test/**/*.ts --timeout 10000",
-    "test": "npm run test-js && npm run test-ts",
+    "lint": "tslint --project .",
+    "test": "npm run lint && cross-env AZURITE_LOCATION=azurite-testdrive mocha -r ts-node/register test/**/*.ts --timeout 10000",
     "start": "ts-node bin/azurite.ts -l azurite-testdrive",
     "blob": "ts-node bin/blob.ts -l azurite-testdrive",
     "queue": "ts-node bin/queue.ts",
@@ -79,6 +77,7 @@
     "rimraf": "2.6.2",
     "ts-lint": "^4.5.1",
     "ts-node": "^7.0.0",
+    "tslint": "^5.11.0",
     "typescript": "^2.9.2"
   }
 }
