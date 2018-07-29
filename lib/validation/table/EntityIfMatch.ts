@@ -1,11 +1,9 @@
-const AError = require("./../../core/AzuriteError"),
-  N = require("./../../core/HttpHeaderNames"),
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  N = from "./../../core/HttpHeaderNames"),
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 class EntityIfMatch {
-  constructor() {}
-
-  validate({ request = undefined, entity = undefined }) {
+  public validate({ request = undefined, entity = undefined }) {
     if (request.httpProps[N.IF_MATCH] === undefined) {
       throw new AError(ErrorCodes.MissingRequiredHeader);
     }

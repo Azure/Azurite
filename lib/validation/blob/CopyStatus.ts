@@ -1,6 +1,6 @@
-const AError = require("./../../core/AzuriteError"),
-  ErrorCodes = require("./../../core/ErrorCodes"),
-  CopyStat = require("./../../core/Constants").CopyStatus;
+const AError = from "./../../core/AzuriteError"),
+  ErrorCodes = from "./../../core/ErrorCodes"),
+  CopyStat = from "./../../core/Constants").CopyStatus;
 
 /**
  * Checks whether the a pending copy operation already exists at the destination.
@@ -8,9 +8,7 @@ const AError = require("./../../core/AzuriteError"),
  * @class CopyStatus
  */
 class CopyStatus {
-  constructor() {}
-
-  validate({ blobProxy = undefined }) {
+  public validate({ blobProxy = undefined }) {
     if (
       blobProxy !== undefined &&
       blobProxy.original.copyStatus === CopyStat.PENDING

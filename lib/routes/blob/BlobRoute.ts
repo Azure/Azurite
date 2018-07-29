@@ -1,9 +1,9 @@
-const env = require("./../../core/env"),
-  BlobRequest = require("./../../model/blob/AzuriteBlobRequest"),
-  AzuriteRequest = require("./../../model/blob/AzuriteRequest"),
-  EntityType = require("./../../core/Constants").StorageEntityType,
-  Serializers = require("./../../xml/Serializers"),
-  Operations = require("./../../core/Constants").Operations;
+const env = from "./../../core/env"),
+  BlobRequest = from "./../../model/blob/AzuriteBlobRequest"),
+  AzuriteRequest = from "./../../model/blob/AzuriteRequest"),
+  EntityType = from "./../../core/Constants").StorageEntityType,
+  Serializers = from "./../../xml/Serializers"),
+  Operations = from "./../../core/Constants").Operations;
 
 /*
  * Route definitions for all operation on the "Blob" resource type.
@@ -23,12 +23,12 @@ export default app => {
       } else {
         req.azuriteOperation = Operations.Blob.GET_BLOB;
       }
-      req.azuriteRequest = new BlobRequest({ req: req });
+      req.azuriteRequest = new BlobRequest({ req });
       next();
     })
     .head((req, res, next) => {
       req.azuriteOperation = Operations.Blob.GET_BLOB_PROPERTIES;
-      req.azuriteRequest = new BlobRequest({ req: req });
+      req.azuriteRequest = new BlobRequest({ req });
       next();
     })
     .put((req, res, next) => {
@@ -40,7 +40,7 @@ export default app => {
         req.azuriteOperation = Operations.Blob.PUT_BLOCK_LIST;
         Serializers.deserializeBlockList(req.body).then(blocklist => {
           req.azuriteRequest = new BlobRequest({
-            req: req,
+            req,
             entityType: EntityType.BlockBlob,
             payload: blocklist
           });
@@ -69,19 +69,19 @@ export default app => {
         req.azuriteOperation = Operations.Blob.PUT_BLOB;
       }
       req.azuriteRequest = new BlobRequest({
-        req: req,
-        entityType: entityType
+        req,
+        entityType
       });
       next();
     })
     .delete((req, res, next) => {
       req.azuriteOperation = Operations.Blob.DELETE_BLOB;
-      req.azuriteRequest = new BlobRequest({ req: req });
+      req.azuriteRequest = new BlobRequest({ req });
       next();
     })
     .options((req, res, next) => {
       req.azuriteOperation = Operations.Account.PREFLIGHT_BLOB_REQUEST;
-      req.azuriteRequest = new AzuriteRequest({ req: req });
+      req.azuriteRequest = new AzuriteRequest({ req });
       next();
     });
 };

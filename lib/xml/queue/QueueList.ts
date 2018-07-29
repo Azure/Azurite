@@ -1,4 +1,4 @@
-const js2xml = require("js2xmlparser");
+const js2xml = from "js2xmlparser");
 
 /*
  * These classes are used as model for XML-Serialization in the "ListQueues" API
@@ -15,11 +15,11 @@ class QueueList {
     this.NextMarker = {}; // this will be converted to <NextMarker/> by js2xmlparser
   }
 
-  add(queue) {
+  public add(queue) {
     this.Queues.Queue.push(queue);
   }
 
-  toXml() {
+  public toXml() {
     if (this.Prefix === undefined) {
       delete this.Prefix;
     }
@@ -48,12 +48,12 @@ class Queue {
     this.Name = name;
   }
 
-  addMetadata(metaProps) {
+  public addMetadata(metaProps) {
     this.Metadata = metaProps;
   }
 }
 
 export default {
-  QueueList: QueueList,
-  Queue: Queue
+  QueueList,
+  Queue
 };

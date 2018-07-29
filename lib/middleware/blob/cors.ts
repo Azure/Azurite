@@ -1,9 +1,9 @@
-const BbPromise = require("bluebird"),
-  AError = require("./../../core/AzuriteError"),
-  ErrorCodes = require("./../../core/ErrorCodes"),
-  N = require("./../../core/HttpHeaderNames"),
-  Operations = require("./../../core/Constants").Operations,
-  sm = require("./../../core/blob/StorageManager");
+const BbPromise = from "bluebird"),
+  AError = from "./../../core/AzuriteError"),
+  ErrorCodes = from "./../../core/ErrorCodes"),
+  N = from "./../../core/HttpHeaderNames"),
+  Operations = from "./../../core/Constants").Operations,
+  sm = from "./../../core/blob/StorageManager");
 
 // Performs CORS rule-validation iff CORS is enabled and request header "origin" is set.
 export default (req, res, next) => {
@@ -78,6 +78,8 @@ export default (req, res, next) => {
     return;
   }).catch(e => {
     res.status(e.statusCode || 500).send(e.message);
-    if (!e.statusCode) throw e;
+    if (!e.statusCode) {
+      throw e;
+    }
   });
 };

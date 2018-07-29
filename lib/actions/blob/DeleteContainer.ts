@@ -1,9 +1,7 @@
-const storageManager = require("./../../core/blob/StorageManager");
+import storageManager from "./../../core/blob/StorageManager";
 
 class DeleteContainer {
-  constructor() {}
-
-  process(azuriteRequest, res) {
+  public process(azuriteRequest, res) {
     storageManager
       .deleteContainer(azuriteRequest)
       .then(response => {

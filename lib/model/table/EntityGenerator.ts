@@ -1,4 +1,4 @@
-const etag = require("./../../core/utils").computeEtag;
+const etag = from "./../../core/utils").computeEtag;
 
 const _baseUrl = `http://127.0.0.1:10002/devstoreaccount1/`;
 
@@ -8,8 +8,6 @@ const _baseUrl = `http://127.0.0.1:10002/devstoreaccount1/`;
  * @class TableGenerator
  */
 class EntityGenerator {
-  constructor() {}
-
   /**
    * Generates a persistable table storage "Table" entity representation.
    *
@@ -17,7 +15,7 @@ class EntityGenerator {
    * @returns
    * @memberof TableGenerator
    */
-  generateTable(name) {
+  public generateTable(name) {
     const entity = {};
     entity.name = name;
     entity.odata = {};
@@ -28,7 +26,7 @@ class EntityGenerator {
     return entity;
   }
 
-  generateEntity(rawEntity, tableName) {
+  public generateEntity(rawEntity, tableName) {
     // Enriching raw entity from payload with odata attributes
     const entity = { attribs: {} };
     entity.partitionKey = rawEntity.PartitionKey;

@@ -1,7 +1,7 @@
-const crypto = require("crypto"),
-  StorageEntityProxy = require("./StorageEntityProxy"),
-  etag = require("./../../core/utils").computeEtag,
-  InternalAzuriteError = require("./../../core/InternalAzuriteError");
+const crypto = from "crypto"),
+  StorageEntityProxy = from "./StorageEntityProxy"),
+  etag = from "./../../core/utils").computeEtag,
+  InternalAzuriteError = from "./../../core/InternalAzuriteError");
 
 /**
  * Serves as a blob proxy to the corresponding LokiJS object.
@@ -9,6 +9,13 @@ const crypto = require("crypto"),
  * @class BlobProxy
  */
 class BlobProxy extends StorageEntityProxy {
+  public static createFromArray(entities, containerName) {
+    const array = [];
+    for (const entity of entities) {
+      array.push(new BlobProxy(entity, containerName));
+    }
+    return array;
+  }
   constructor(original, containerName) {
     super(original);
     if (!containerName) {
@@ -17,21 +24,13 @@ class BlobProxy extends StorageEntityProxy {
     this.containerName = containerName;
   }
 
-  static createFromArray(entities, containerName) {
-    let array = [];
-    for (const entity of entities) {
-      array.push(new BlobProxy(entity, containerName));
-    }
-    return array;
-  }
-
   /**
    * Updates and returns the strong ETag of the underlying blob.
    *
    * @returns
    * @memberof BlobProxy
    */
-  updateETag() {
+  public updateETag() {
     const etagValue = etag(
       `${this.lastModified()}${JSON.stringify(this.original.metaProps)}${
         this.original.id

@@ -9,12 +9,7 @@
  * @class ValidationContext
  */
 class ValidationContext {
-  constructor({
-    request = undefined,
-    queue = undefined,
-    message = undefined,
-    operation = undefined
-  }) {
+  constructor({ request, queue, message, operation }) {
     this.request = request;
     this.queue = queue;
     (this.message = message), (this.operation = operation);
@@ -30,7 +25,7 @@ class ValidationContext {
    *
    * @memberOf ValidationContext
    */
-  run(valModule, moduleOptions, skip) {
+  public run(valModule, moduleOptions, skip) {
     if (skip) {
       return this;
     }
@@ -45,7 +40,7 @@ class ValidationContext {
       operation: moduleOptions
         ? moduleOptions.operation || this.operation
         : this.operation,
-      moduleOptions: moduleOptions
+      moduleOptions
     });
     return this;
   }

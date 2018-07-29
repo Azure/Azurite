@@ -1,11 +1,9 @@
-const AzuriteTableResponse = require("./../../model/table/AzuriteTableResponse"),
-  ODataMode = require("./../../core/Constants").ODataMode,
-  tableStorageManager = require("./../../core/table/TableStorageManager");
+const AzuriteTableResponse = from "./../../model/table/AzuriteTableResponse"),
+  ODataMode = from "./../../core/Constants").ODataMode,
+  tableStorageManager = from "./../../core/table/TableStorageManager");
 
 class QueryEntities {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     tableStorageManager.queryEntities(request).then(response => {
       res.set(response.httpProps);
       const payload = this._createResponsePayload(
@@ -17,7 +15,7 @@ class QueryEntities {
     });
   }
 
-  _createResponsePayload(payload, tableName, accept) {
+  public _createResponsePayload(payload, tableName, accept) {
     const response = {};
     if (accept !== ODataMode.NONE) {
       response[
@@ -28,8 +26,8 @@ class QueryEntities {
     let i = 0;
     for (const item of payload) {
       response.value.push(item.attribs(accept));
-      response.value[i]["PartitionKey"] = item.partitionKey;
-      response.value[i]["RowKey"] = item.rowKey;
+      response.value[i].PartitionKey = item.partitionKey;
+      response.value[i].RowKey = item.rowKey;
       if (accept === ODataMode.FULL) {
         const odataItems = item.odata(accept);
         for (const key of odataItems) {

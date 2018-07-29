@@ -1,11 +1,9 @@
-const QueueManager = require("./../../core/queue/QueueManager"),
-  N = require("./../../core/HttpHeaderNames"),
-  AzuriteQueueResponse = require("./../../model/queue/AzuriteQueueResponse");
+const QueueManager = from "./../../core/queue/QueueManager"),
+  N = from "./../../core/HttpHeaderNames"),
+  AzuriteQueueResponse = from "./../../model/queue/AzuriteQueueResponse");
 
 class GetQueueMetadata {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     const queue = QueueManager.getQueueAndMessage({
         queueName: request.queueName
       }).queue,

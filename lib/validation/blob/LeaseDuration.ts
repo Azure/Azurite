@@ -1,7 +1,7 @@
-const AError = require("./../../core/AzuriteError"),
-  N = require("./../../core/HttpHeaderNames"),
-  LeaseAction = require("./../../core/Constants").LeaseActions,
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  N = from "./../../core/HttpHeaderNames"),
+  LeaseAction = from "./../../core/Constants").LeaseActions,
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 /**
  * Checks whether lease duration and lease break period conforms to specification
@@ -12,9 +12,7 @@ const AError = require("./../../core/AzuriteError"),
  * @class LeaseDuration
  */
 class LeaseDuration {
-  constructor() {}
-
-  validate({ request = undefined }) {
+  public validate({ request = undefined }) {
     const leaseAction = request.httpProps[N.LEASE_ACTION],
       leaseBreakPeriod = request.httpProps[N.LEASE_BREAK_PERIOD]
         ? parseInt(request.httpProps[N.LEASE_BREAK_PERIOD])

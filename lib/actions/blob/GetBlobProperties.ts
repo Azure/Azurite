@@ -1,11 +1,9 @@
-const storageManager = require("./../../core/blob/StorageManager"),
-  N = require("./../../core/HttpHeaderNames"),
-  LeaseStatus = require("./../../core/Constants").LeaseStatus;
+import storageManager from "./../../core/blob/StorageManager";
+import { LeaseStatus } from "./../../core/Constants";
+import N from "./../../core/HttpHeaderNames";
 
 class GetBlobProperties {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     storageManager.getBlobProperties(request).then(response => {
       response.addHttpProperty(N.ACCEPT_RANGES, "bytes");
       response.addHttpProperty(N.REQUEST_SERVER_ENCRYPTED, false);
@@ -85,7 +83,9 @@ class GetBlobProperties {
         N.BLOB_COMMITTED_BLOCK_COUNT,
         response.proxy.original[N.BLOB_COMMITTED_BLOCK_COUNT]
       );
-      if (request.auth) response.sasOverrideHeaders(request.query);
+      if (request.auth) {
+        response.sasOverrideHeaders(request.query);
+      }
       res.set(response.httpProps);
       res.status(200).send();
     });

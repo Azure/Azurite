@@ -1,11 +1,11 @@
-const storageManager = require("./../../core/blob/StorageManager"),
-  AzuriteResponse = require("./../../model/blob/AzuriteResponse"),
-  N = require("./../../core/HttpHeaderNames");
+import storageManager from "./../../core/blob/StorageManager";
+  AzuriteResponse = from "./../../model/blob/AzuriteResponse"),
+  import N from "./../../core/HttpHeaderNames";
 
 class PreflightBlobRequest {
-  constructor() {}
+  
 
-  process(req, res) {
+  public process(req, res) {
     const response = new AzuriteResponse(); // Add Access-Control-Expose-Headers
     response.addHttpProperty(
       N.ACCESS_CONTROL_ALLOW_ORIGIN,

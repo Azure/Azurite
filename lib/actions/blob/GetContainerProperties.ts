@@ -1,11 +1,11 @@
-const storageManager = require("./../../core/blob/StorageManager"),
-  LeaseStatus = require("./../../core/Constants").LeaseStatus,
-  N = require("./../../core/HttpHeaderNames");
+import storageManager from "./../../core/blob/StorageManager";
+  LeaseStatus = from "./../../core/Constants").LeaseStatus,
+  import N from "./../../core/HttpHeaderNames";
 
 class GetContainerProperties {
-  constructor() {}
+  
 
-  process(request, res) {
+  public process(request, res) {
     storageManager.getContainerProperties(request).then(response => {
       response.addHttpProperty(
         N.LEASE_STATUS,

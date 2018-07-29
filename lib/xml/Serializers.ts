@@ -1,14 +1,14 @@
-const BbPromise = require("bluebird"),
-  xml2js = require("xml2js"),
-  SignedIdentifiers = require("./SignedIdentifierXmlModel"),
-  AError = require("./../core/AzuriteError"),
+const BbPromise = from "bluebird"),
+  xml2js = from "xml2js"),
+  SignedIdentifiers = from "./SignedIdentifierXmlModel"),
+  AError = from "./../core/AzuriteError"),
   parseStringAsync = BbPromise.promisify(
     new xml2js.Parser({ explicitArray: true }).parseString
   ),
   parseStringAsyncNoArray = BbPromise.promisify(
     new xml2js.Parser({ explicitArray: false }).parseString
   ),
-  xml2jsAsync = BbPromise.promisify(require("xml2js").parseString);
+  xml2jsAsync = BbPromise.promisify(from "xml2js").parseString);
 
 // see https://docs.microsoft.com/en-us/rest/api/storageservices/Set-Container-ACL?redirectedfrom=MSDN
 exports.parseSignedIdentifiers = body => {
@@ -46,7 +46,7 @@ exports.parseSignedIdentifiers = body => {
               si,
               '"'
             );
-            let MAX_TIMESTAMP = 8640000000000000;
+            const MAX_TIMESTAMP = 8640000000000000;
             expiry = new Date(MAX_TIMESTAMP).toISOString();
           }
 
@@ -73,12 +73,12 @@ exports.deserializeBlockList = body => {
   const txt = body.toString("utf8");
   return xml2jsAsync(txt)
     .then(result => {
-      let blockIds = [];
+      const blockIds = [];
       Object.keys(result.BlockList).forEach(type => {
         result.BlockList[type].forEach(id => {
           blockIds.push({
-            type: type,
-            id: id
+            type,
+            id
           });
         });
       });

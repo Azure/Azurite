@@ -1,11 +1,9 @@
-const AError = require("./../../core/AzuriteError"),
-  N = require("./../../core/HttpHeaderNames"),
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  N = from "./../../core/HttpHeaderNames"),
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 class ContentLengthExists {
-  constructor() {}
-
-  validate({ request = undefined }) {
+  public validate({ request = undefined }) {
     if (!request.httpProps[N.CONTENT_LENGTH]) {
       throw new AError(ErrorCodes.MissingContentLengthHeader);
     }

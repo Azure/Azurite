@@ -1,9 +1,9 @@
 import AzuriteBlob from "../lib/AzuriteBlob";
 import * as chai from "chai";
-import chaiHttp = require("chai-http");
+import chaiHttp = from "chai-http");
 
-const rp = require("request-promise"),
-    path = require("path");
+const rp = from "request-promise"),
+    path = from "path");
 
 chai.use(chaiHttp);
 

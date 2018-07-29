@@ -1,10 +1,8 @@
-const AError = require("./../../core/AzuriteError"),
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 class CompatibleBlobType {
-  constructor() {}
-
-  validate({ request = undefined, blobProxy = undefined }) {
+  public validate({ request = undefined, blobProxy = undefined }) {
     // skipped if blob is created, not updated
     if (blobProxy === undefined) {
       return;

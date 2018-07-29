@@ -1,7 +1,7 @@
-const crypto = require("crypto"),
-  BbPromise = require("bluebird"),
-  fs = BbPromise.promisifyAll(require("fs-extra")),
-  InternalAzuriteError = require("./../../core/InternalAzuriteError");
+const crypto = from "crypto"),
+  BbPromise = from "bluebird"),
+  fs = BbPromise.promisifyAll(from "fs-extra")),
+  InternalAzuriteError = from "./../../core/InternalAzuriteError");
 
 /**
  * DO NOT INSTANTIATE.
@@ -17,7 +17,7 @@ class StorageEntityProxy {
     this.original = original;
   }
 
-  release() {
+  public release() {
     this.updateLeaseState();
     this.updateETag();
     return this.original;
@@ -30,7 +30,7 @@ class StorageEntityProxy {
    * @returns
    * @memberof StorageEntityProxy
    */
-  updateLeaseState() {
+  public updateLeaseState() {
     const now = Date.now();
     switch (this.original.leaseState) {
       // Has breaking period expired?
@@ -54,7 +54,7 @@ class StorageEntityProxy {
     return this.original.leaseState;
   }
 
-  updateETag() {
+  public updateETag() {
     throw new InternalAzuriteError("updateETag not implemented!");
   }
 
@@ -64,7 +64,7 @@ class StorageEntityProxy {
    * @returns
    * @memberof StorageEntityProxy
    */
-  lastModified() {
+  public lastModified() {
     return new Date(
       this.original.meta.updated || this.original.meta.created
     ).toUTCString();

@@ -1,12 +1,10 @@
-const crypto = require("crypto"),
-  N = require("./../../core/HttpHeaderNames"),
-  AError = require("./../../core/AzuriteError"),
-  ErrorCodes = require("./../../core/ErrorCodes");
+const crypto = from "crypto"),
+  N = from "./../../core/HttpHeaderNames"),
+  AError = from "./../../core/AzuriteError"),
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 class MD5 {
-  constructor() {}
-
-  validate({ request = undefined }) {
+  public validate({ request = undefined }) {
     const sourceMd5 = request.httpProps[N.CONTENT_MD5];
     const targetMd5 = request.calculateContentMd5();
     if (sourceMd5 && targetMd5 !== sourceMd5) {

@@ -1,6 +1,11 @@
-const N = require("./../../core/HttpHeaderNames");
+const import N from "./../../core/HttpHeaderNames";
 
 class AzuriteRequest {
+
+  public static clone(request) {
+    const copy = new AzuriteRequest({ req: {} });
+    return { ...copy, ...request };
+  }
   protected httpProps: any = {};
   protected metaProps: any = {};
   protected body: any;
@@ -14,18 +19,13 @@ class AzuriteRequest {
     this._initHttpProps(req.headers);
   }
 
-  static clone(request) {
-    const copy = new AzuriteRequest({ req: {} });
-    return { ...copy, ...request };
-  }
-
   /**
    * A container request cannot refer to a blob name (which is what publicName is about).
    *
    * @returns
    * @memberof AzuriteRequest
    */
-  publicName() {
+  public publicName() {
     return undefined;
   }
 
@@ -35,16 +35,16 @@ class AzuriteRequest {
    * @returns
    * @memberof AzuriteRequest
    */
-  isSnapshot() {
+  public isSnapshot() {
     return false;
   }
 
-  leaseId() {
+  public leaseId() {
     return this.httpProps[N.LEASE_ID];
   }
 
   // Working on rawHeaders for meta attributes to preserve casing.
-  _initMetaProps(rawHeaders) {
+  public _initMetaProps(rawHeaders) {
     this.metaProps = rawHeaders
       .map((e, i, a) => {
         if (e.indexOf("x-ms-meta-") !== -1) {
@@ -64,10 +64,10 @@ class AzuriteRequest {
       }, {});
   }
 
-  _initHttpProps(httpHeaders) {
+  public _initHttpProps(httpHeaders) {
     this.httpProps[N.CONTENT_LENGTH] =
       httpHeaders["Content-Length"] || httpHeaders["content-length"];
-    this.httpProps[N.ORIGIN] = httpHeaders["origin"];
+    this.httpProps[N.ORIGIN] = httpHeaders.origin;
     this.httpProps[N.ACCESS_CONTROL_REQUEST_METHOD] =
       httpHeaders["access-control-request-method"];
     this.httpProps[N.ACCESS_CONTROL_REQUEST_HEADERS] =
@@ -90,7 +90,7 @@ class AzuriteRequest {
       httpHeaders["content-language"];
     this.httpProps[N.CONTENT_MD5] =
       httpHeaders["x-ms-blob-content-md5"] || httpHeaders["content-md5"];
-    this.httpProps[N.RANGE] = httpHeaders["x-ms-range"] || httpHeaders["range"];
+    this.httpProps[N.RANGE] = httpHeaders["x-ms-range"] || httpHeaders.range;
 
     this.httpProps[N.BLOB_TYPE] = httpHeaders["x-ms-blob-type"];
     this.httpProps[N.RANGE_GET_CONTENT_MD5] =

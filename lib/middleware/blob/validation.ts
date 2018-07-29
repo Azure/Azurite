@@ -1,46 +1,46 @@
-const BbPromise = require("bluebird"),
-  Operations = require("./../../core/Constants").Operations,
-  Usage = require("./../../core/Constants").Usage,
-  StorageEntityType = require("./../../core/Constants").StorageEntityType,
-  SasOperation = require("./../../core/Constants").ServiceSAS,
-  AzuriteContainerRequest = require("./../../model/blob/AzuriteContainerRequest"),
-  AzuriteBlobRequest = require("./../../model/blob/AzuriteBlobRequest"),
-  sm = require("./../../core/blob/StorageManager"),
+const BbPromise = from "bluebird"),
+  Operations = from "./../../core/Constants").Operations,
+  Usage = from "./../../core/Constants").Usage,
+  StorageEntityType = from "./../../core/Constants").StorageEntityType,
+  SasOperation = from "./../../core/Constants").ServiceSAS,
+  AzuriteContainerRequest = from "./../../model/blob/AzuriteContainerRequest"),
+  AzuriteBlobRequest = from "./../../model/blob/AzuriteBlobRequest"),
+  sm = from "./../../core/blob/StorageManager"),
   // Validation modules
-  ValidationContext = require("./../../validation/blob/ValidationContext"),
-  AppendMaxBlobCommittedBlocksVal = require("./../../validation/blob/AppendMaxBlobCommittedBlocks"),
-  BlobCreationSizeVal = require("./../../validation/blob/BlobCreationSize"),
-  BlockPageSizeVal = require("./../../validation/blob/BlockPageSize"),
-  SupportedBlobTypeVal = require("./../../validation/blob/SupportedBlobType"),
-  CompatibleBlobTypeVal = require("./../../validation/blob/CompatibleBlobType"),
-  MD5Val = require("./../../validation/blob/MD5"),
-  ContentLengthExistsVal = require("./../../validation/blob/ContentLengthExists"),
-  ContainerExistsVal = require("./../../validation/blob/ContainerExists"),
-  BlobExistsVal = require("./../../validation/blob/BlobExists"),
-  BlobNameVal = require("./../../validation/blob/BlobName"),
-  BlobCommittedVal = require("./../../validation/blob/BlobCommitted"),
-  IsOfBlobTypeVal = require("./../../validation/blob/IsOfBlobType"),
-  RangeVal = require("./../../validation/blob/Range"),
-  PageAlignmentVal = require("./../../validation/blob/PageAlignment"),
-  NumOfSignedIdentifiersVal = require("./../../validation/NumOfSignedIdentifiers"),
-  PutBlobHeaderVal = require("./../../validation/blob/PutBlobHeaders"),
-  OriginHeaderVal = require("./../../validation/blob/OriginHeader"),
-  ConditionalRequestHeadersVal = require("./../../validation/blob/ConditionalRequestHeaders"),
-  AppendBlobConditionalRequestHeadersVal = require("./../../validation/blob/AppendBlobConditionalRequestHeaders"),
-  PageBlobHeaderSanityVal = require("./../../validation/blob/PageBlobHeaderSanity"),
-  AssociatedSnapshotDeletion = require("./../../validation/blob/AssociatedSnapshotsDeletion"),
-  LeaseActionsValidation = require("./../../validation/blob/LeaseActions"),
-  LeaseDurationValidation = require("./../../validation/blob/LeaseDuration"),
-  LeaseIdValidation = require("./../../validation/blob/LeaseId"),
-  ContainerLeaseUsageValidation = require("./../../validation/blob/ContainerLeaseUsage"),
-  ConflictingContainerVal = require("./../../validation/blob/ConflictingContainer"),
-  BlobLeaseUsageValidation = require("./../../validation/blob/BlobLeaseUsage"),
-  BlockListValidation = require("./../../validation/blob/BlockList"),
-  AbortCopyValidation = require("./../../validation/blob/AbortCopy"),
-  ServiceSignatureValidation = require("./../../validation/blob/ServiceSignature"),
-  ServicePropertiesValidation = require("./../../validation/blob/ServiceProperties"),
-  ContainerNameValidation = require("./../../validation/blob/ContainerName"),
-  CopyStatusValidation = require("./../../validation/blob/CopyStatus");
+  ValidationContext = from "./../../validation/blob/ValidationContext"),
+  AppendMaxBlobCommittedBlocksVal = from "./../../validation/blob/AppendMaxBlobCommittedBlocks"),
+  BlobCreationSizeVal = from "./../../validation/blob/BlobCreationSize"),
+  BlockPageSizeVal = from "./../../validation/blob/BlockPageSize"),
+  SupportedBlobTypeVal = from "./../../validation/blob/SupportedBlobType"),
+  CompatibleBlobTypeVal = from "./../../validation/blob/CompatibleBlobType"),
+  MD5Val = from "./../../validation/blob/MD5"),
+  ContentLengthExistsVal = from "./../../validation/blob/ContentLengthExists"),
+  ContainerExistsVal = from "./../../validation/blob/ContainerExists"),
+  BlobExistsVal = from "./../../validation/blob/BlobExists"),
+  BlobNameVal = from "./../../validation/blob/BlobName"),
+  BlobCommittedVal = from "./../../validation/blob/BlobCommitted"),
+  IsOfBlobTypeVal = from "./../../validation/blob/IsOfBlobType"),
+  RangeVal = from "./../../validation/blob/Range"),
+  PageAlignmentVal = from "./../../validation/blob/PageAlignment"),
+  NumOfSignedIdentifiersVal = from "./../../validation/NumOfSignedIdentifiers"),
+  PutBlobHeaderVal = from "./../../validation/blob/PutBlobHeaders"),
+  OriginHeaderVal = from "./../../validation/blob/OriginHeader"),
+  ConditionalRequestHeadersVal = from "./../../validation/blob/ConditionalRequestHeaders"),
+  AppendBlobConditionalRequestHeadersVal = from "./../../validation/blob/AppendBlobConditionalRequestHeaders"),
+  PageBlobHeaderSanityVal = from "./../../validation/blob/PageBlobHeaderSanity"),
+  AssociatedSnapshotDeletion = from "./../../validation/blob/AssociatedSnapshotsDeletion"),
+  LeaseActionsValidation = from "./../../validation/blob/LeaseActions"),
+  LeaseDurationValidation = from "./../../validation/blob/LeaseDuration"),
+  LeaseIdValidation = from "./../../validation/blob/LeaseId"),
+  ContainerLeaseUsageValidation = from "./../../validation/blob/ContainerLeaseUsage"),
+  ConflictingContainerVal = from "./../../validation/blob/ConflictingContainer"),
+  BlobLeaseUsageValidation = from "./../../validation/blob/BlobLeaseUsage"),
+  BlockListValidation = from "./../../validation/blob/BlockList"),
+  AbortCopyValidation = from "./../../validation/blob/AbortCopy"),
+  ServiceSignatureValidation = from "./../../validation/blob/ServiceSignature"),
+  ServicePropertiesValidation = from "./../../validation/blob/ServiceProperties"),
+  ContainerNameValidation = from "./../../validation/blob/ContainerName"),
+  CopyStatusValidation = from "./../../validation/blob/CopyStatus");
 
 export default (req, res, next) => {
   BbPromise.try(() => {
@@ -54,16 +54,18 @@ export default (req, res, next) => {
       blobId
     );
     const validationContext = new ValidationContext({
-      request: request,
-      containerProxy: containerProxy,
-      blobProxy: blobProxy
+      request,
+      containerProxy,
+      blobProxy
     });
     validations[req.azuriteOperation](request, validationContext);
     next();
     // Refactor me: Move this to bin/azurite (exception needs to carry res object), and handle entire exception handling there
   }).catch(e => {
     res.status(e.statusCode || 500).send(e.message);
-    if (!e.statusCode) throw e;
+    if (!e.statusCode) {
+      throw e;
+    }
   });
 };
 

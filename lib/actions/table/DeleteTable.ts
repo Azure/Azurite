@@ -1,11 +1,9 @@
-const AzuriteTableResponse = require("./../../model/table/AzuriteTableResponse"),
-  tableStorageManager = require("./../../core/table/TableStorageManager"),
-  N = require("./../../core/HttpHeaderNames");
+const AzuriteTableResponse = from "./../../model/table/AzuriteTableResponse"),
+  tableStorageManager = from "./../../core/table/TableStorageManager");
+import N from "./../../core/HttpHeaderNames";
 
 class DeleteTable {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     tableStorageManager.deleteTable(request).then(response => {
       res.set(request.httpProps);
       res.status(201).send();

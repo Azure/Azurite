@@ -1,6 +1,6 @@
-const ODataMode = require("./../../core/Constants").ODataMode,
-  BaseProxy = require("./BaseProxy"),
-  InternalAzuriteError = require("./../../core/InternalAzuriteError");
+const ODataMode = from "./../../core/Constants").ODataMode,
+  BaseProxy = from "./BaseProxy"),
+  InternalAzuriteError = from "./../../core/InternalAzuriteError");
 
 class EntityProxy extends BaseProxy {
   constructor(entity) {
@@ -17,7 +17,7 @@ class EntityProxy extends BaseProxy {
    * @returns
    * @memberof EntityProxy
    */
-  odata(mode) {
+  public odata(mode) {
     const odata = super.odata(mode);
     if (mode === ODataMode.FULL) {
       odata["odata.etag"] = this._.odata.etag;
@@ -33,7 +33,7 @@ class EntityProxy extends BaseProxy {
    * @returns
    * @memberof EntityProxy
    */
-  attribs(mode) {
+  public attribs(mode) {
     if (mode === ODataMode.MINIMAL || mode === ODataMode.FULL) {
       return this._.attribs; // also return the OData type specifications
     }

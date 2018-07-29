@@ -1,9 +1,9 @@
-const ContainerRequest = require("./../../model/blob/AzuriteContainerRequest"),
-  StorageManager = require("./../../core/blob/StorageManager"),
-  Usage = require("./../../core/Constants").Usage,
-  env = require("./../../core/env"),
-  Serializers = require("./../../xml/Serializers"),
-  Operations = require("./../../core/Constants").Operations;
+const ContainerRequest = from "./../../model/blob/AzuriteContainerRequest"),
+  StorageManager = from "./../../core/blob/StorageManager"),
+  Usage = from "./../../core/Constants").Usage,
+  env = from "./../../core/env"),
+  Serializers = from "./../../xml/Serializers"),
+  Operations = from "./../../core/Constants").Operations;
 
 // Possibly implicit call to blob in $root container
 const REWRITE_URL_AND_FORWARD_TO_BLOB_ROUTE = (req, next) => {
@@ -41,7 +41,7 @@ export default app => {
         REWRITE_URL_AND_FORWARD_TO_BLOB_ROUTE(req, next);
         return;
       }
-      req.azuriteRequest = new ContainerRequest({ req: req });
+      req.azuriteRequest = new ContainerRequest({ req });
       next();
     })
     .head((req, res, next) => {
@@ -58,7 +58,7 @@ export default app => {
         REWRITE_URL_AND_FORWARD_TO_BLOB_ROUTE(req, next);
         return;
       }
-      req.azuriteRequest = new ContainerRequest({ req: req });
+      req.azuriteRequest = new ContainerRequest({ req });
       next();
     })
     .put((req, res, next) => {
@@ -71,7 +71,7 @@ export default app => {
         req.azuriteOperation = Operations.Container.SET_CONTAINER_ACL;
         Serializers.parseSignedIdentifiers(req.body).then(signedIdentifiers => {
           req.azuriteRequest = new ContainerRequest({
-            req: req,
+            req,
             payload: signedIdentifiers
           });
           next();
@@ -88,7 +88,7 @@ export default app => {
         REWRITE_URL_AND_FORWARD_TO_BLOB_ROUTE(req, next);
         return;
       }
-      req.azuriteRequest = new ContainerRequest({ req: req });
+      req.azuriteRequest = new ContainerRequest({ req });
       next();
     })
     .delete((req, res, next) => {
@@ -98,7 +98,7 @@ export default app => {
         REWRITE_URL_AND_FORWARD_TO_BLOB_ROUTE(req, next);
         return;
       }
-      req.azuriteRequest = new ContainerRequest({ req: req });
+      req.azuriteRequest = new ContainerRequest({ req });
       next();
     });
 };

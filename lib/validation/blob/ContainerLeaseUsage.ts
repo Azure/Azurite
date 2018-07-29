@@ -1,7 +1,7 @@
-const AError = require("./../../core/AzuriteError"),
-  ErrorCodes = require("./../../core/ErrorCodes"),
-  Usage = require("./../../core/Constants").Usage,
-  LeaseStatus = require("./../../core/Constants").LeaseStatus;
+const AError = from "./../../core/AzuriteError"),
+  ErrorCodes = from "./../../core/ErrorCodes"),
+  Usage = from "./../../core/Constants").Usage,
+  LeaseStatus = from "./../../core/Constants").LeaseStatus;
 
 /**
  * Checks whether intended lease usage operation is semantically valid as specified
@@ -10,9 +10,7 @@ const AError = require("./../../core/AzuriteError"),
  * @class ContainerLeaseUsage
  */
 class ContainerLeaseUsage {
-  constructor() {}
-
-  validate({
+  public validate({
     request = undefined,
     containerProxy = undefined,
     moduleOptions = undefined

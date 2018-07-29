@@ -1,9 +1,9 @@
 import { describe, it } from "mocha";
 import { expect } from "chai";
 
-const QueueName = require("../lib/validation/queue/QueueName"),
-      AError = require("../lib/core/AzuriteError"),
-      ErrorCodes = require("../lib/core/ErrorCodes");
+const QueueName = from "../lib/validation/queue/QueueName"),
+      AError = from "../lib/core/AzuriteError"),
+      ErrorCodes = from "../lib/core/ErrorCodes");
 
 describe("validation", () => {
     describe("QueueName", () => {

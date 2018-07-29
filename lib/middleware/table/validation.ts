@@ -1,16 +1,16 @@
-const BbPromise = require("bluebird"),
-  N = require("./../../core/HttpHeaderNames"),
-  AError = require("./../../core/AzuriteError"),
-  ErrorCodes = require("./../../core/ErrorCodes"),
-  Operations = require("./../../core/Constants").Operations.Table,
-  tsm = require("./../../core/table/TableStorageManager"),
-  ValidationContext = require("./../../validation/table/ValidationContext"),
-  TableExistsVal = require("./../../validation/table/TableExists"),
-  ConflictingEntityVal = require("./../../validation/table/ConflictingEntity"),
-  TableNameVal = require("./../../validation/table/TableName"),
-  EntityExistsVal = require("./../../validation/table/EntityExists"),
-  EntityIfMatchVal = require("./../../validation/table/EntityIfMatch"),
-  ConflictingTableVal = require("./../../validation/table/ConflictingTable");
+const BbPromise = from "bluebird"),
+  N = from "./../../core/HttpHeaderNames"),
+  AError = from "./../../core/AzuriteError"),
+  ErrorCodes = from "./../../core/ErrorCodes"),
+  Operations = from "./../../core/Constants").Operations.Table,
+  tsm = from "./../../core/table/TableStorageManager"),
+  ValidationContext = from "./../../validation/table/ValidationContext"),
+  TableExistsVal = from "./../../validation/table/TableExists"),
+  ConflictingEntityVal = from "./../../validation/table/ConflictingEntity"),
+  TableNameVal = from "./../../validation/table/TableName"),
+  EntityExistsVal = from "./../../validation/table/EntityExists"),
+  EntityIfMatchVal = from "./../../validation/table/EntityIfMatch"),
+  ConflictingTableVal = from "./../../validation/table/ConflictingTable");
 
 export default (req, res, next) => {
   BbPromise.try(() => {
@@ -26,7 +26,7 @@ export default (req, res, next) => {
         request.rowKey
       ),
       validationContext = new ValidationContext({
-        request: request,
+        request,
         table: tableProxy,
         entity: entityProxy
       });

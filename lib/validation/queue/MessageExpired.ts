@@ -1,14 +1,12 @@
-const AError = require("./../../core/AzuriteError"),
-  ErrorCodes = require("./../../core/ErrorCodes"),
-  QueueManager = require("./../../core/queue/QueueManager");
+const AError = from "./../../core/AzuriteError"),
+  ErrorCodes = from "./../../core/ErrorCodes"),
+  QueueManager = from "./../../core/queue/QueueManager");
 
 /**
  * Validates whether the message is already expired.
  */
 class PopReceipt {
-  constructor() {}
-
-  validate({ request = undefined }) {
+  public validate({ request = undefined }) {
     const msg = QueueManager.getQueueAndMessage({
       queueName: request.queueName,
       messageId: request.messageId

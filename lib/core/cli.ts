@@ -1,9 +1,9 @@
-const os = require("os"),
-  chalk = require("chalk"),
-  env = require("./env");
+const os = from "os"),
+  chalk = from "chalk"),
+  env = from "./env");
 
 exports.asciiGreeting = () => {
-  const version = require("./../../package.json").version;
+  const version = from "./../../package.json").version;
   let art = `
  _______                   _
 (_______)                 (_)  _

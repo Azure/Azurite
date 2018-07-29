@@ -1,5 +1,5 @@
-const uuidV1 = require("uuid/v1"),
-  N = require("./../../core/HttpHeaderNames");
+const uuidV1 = from "uuid/v1");
+import N from "./../../core/HttpHeaderNames";
 
 class AzuriteQueueResponse {
   constructor() {
@@ -9,13 +9,13 @@ class AzuriteQueueResponse {
     this.httpProps[N.REQUEST_ID] = uuidV1();
   }
 
-  addHttpProperty(key, value) {
+  public addHttpProperty(key, value) {
     if (value !== undefined) {
       this.httpProps[key] = value;
     }
   }
 
-  addMetaProps(metaProps) {
+  public addMetaProps(metaProps) {
     Object.keys(metaProps).forEach(key => {
       this.addHttpProperty(`x-ms-meta-${key}`, metaProps[key]);
     });

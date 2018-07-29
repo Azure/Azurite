@@ -1,9 +1,9 @@
-const AError = require("./../../core/AzuriteError"),
-  N = require("./../../core/HttpHeaderNames"),
-  LeaseAction = require("./../../core/Constants").LeaseActions,
-  LeaseStatus = require("./../../core/Constants").LeaseStatus,
-  AzuriteBlobRequest = require("./../../model/blob/AzuriteBlobRequest"),
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  N = from "./../../core/HttpHeaderNames"),
+  LeaseAction = from "./../../core/Constants").LeaseActions,
+  LeaseStatus = from "./../../core/Constants").LeaseStatus,
+  AzuriteBlobRequest = from "./../../model/blob/AzuriteBlobRequest"),
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 /**
  * Checks whether intended lease operation is semantically valid as specified
@@ -12,9 +12,7 @@ const AError = require("./../../core/AzuriteError"),
  * @class LeaseActions
  */
 class LeaseActions {
-  constructor() {}
-
-  validate({
+  public validate({
     request = undefined,
     containerProxy = undefined,
     blobProxy = undefined

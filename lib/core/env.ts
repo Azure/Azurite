@@ -1,31 +1,30 @@
-const utils = require("./utils"),
-  path = require("path"),
-  BbPromise = require("bluebird"),
-  crypto = require("crypto"),
-  fs = BbPromise.promisifyAll(require("fs-extra"));
+const utils = from "./utils"),
+  path = from "path"),
+  BbPromise = from "bluebird"),
+  crypto = from "crypto"),
+  fs = BbPromise.promisifyAll(from "fs-extra"));
 
 let initialized = false;
 
 class Environment {
-  azuriteWorkspacePath: any;
-  azuriteRootPath: any;
-  silent: any;
-  accountAuth: any;
-  dbNameBlob: string;
-  dbNameTable: string;
-  localStoragePath: any;
-  azuriteDBPathBlob: any;
-  azuriteDBPathTable: any;
-  emulatedStorageAccountName: string;
-  blobStoragePort: any;
-  queueStoragePort: any;
-  tableStoragePort: any;
-  blobModulePath: any;
-  queueModulePath: any;
-  tableModulePath: any;
-  constructor() {}
+  public azuriteWorkspacePath: any;
+  public azuriteRootPath: any;
+  public silent: any;
+  public accountAuth: any;
+  public dbNameBlob: string;
+  public dbNameTable: string;
+  public localStoragePath: any;
+  public azuriteDBPathBlob: any;
+  public azuriteDBPathTable: any;
+  public emulatedStorageAccountName: string;
+  public blobStoragePort: any;
+  public queueStoragePort: any;
+  public tableStoragePort: any;
+  public blobModulePath: any;
+  public queueModulePath: any;
+  public tableModulePath: any;
 
-  init(options) {
+  public init(options) {
     if (initialized && !options.overwrite) {
       return BbPromise.resolve();
     }
@@ -68,7 +67,7 @@ class Environment {
    *
    * @memberof Environment
    * */
-  webStorageUri(id) {
+  public webStorageUri(id) {
     const hash = crypto
       .createHash("sha1")
       .update(id)
@@ -84,7 +83,7 @@ class Environment {
    * @returns full path to blob on disk
    * @memberof Environment
    */
-  diskStorageUri(id) {
+  public diskStorageUri(id) {
     const hash = crypto
       .createHash("sha1")
       .update(id)
@@ -95,20 +94,20 @@ class Environment {
 
   // We prepend a specific character to guarantee unique ids.
   // This is neccessary since otherwise snapshot IDs could overlap with block IDs could overlap with block-/append-/page-blob IDs.
-  blobId(containerName, blobName) {
+  public blobId(containerName, blobName) {
     return Buffer.from(`A${containerName}${blobName}`, "utf8").toString(
       "base64"
     );
   }
 
-  blockId(containerName, blobName, blockId) {
+  public blockId(containerName, blobName, blockId) {
     return Buffer.from(
       `B${containerName}${blobName}${blockId}`,
       "utf8"
     ).toString("base64");
   }
 
-  snapshotId(containerName, blobName, date) {
+  public snapshotId(containerName, blobName, date) {
     return Buffer.from(`C${containerName}${blobName}${date}`, "utf8").toString(
       "base64"
     );

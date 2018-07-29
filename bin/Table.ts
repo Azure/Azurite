@@ -9,7 +9,7 @@ process.on("unhandledRejection", (e) => {
 (() => BbPromise.resolve().then(() => {
   // requiring here so that if anything went wrong,
   // during require, it will be caught.
-  const argv = require("minimist")(process.argv.slice(2));
+  const argv = from "minimist")(process.argv.slice(2));
   const azuriteTable = new AzuriteTable();
   azuriteTable.init(argv);
 }).catch(e => {

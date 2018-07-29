@@ -1,20 +1,20 @@
-const BbPromise = require("bluebird"),
-  fs = require("fs");
+const BbPromise = from "bluebird"),
+  fs = from "fs");
 
 class CopyOperationsManager {
   constructor() {
     this.ops = {};
   }
 
-  add(copyId, readStream, writeStream, toFilename) {
+  public add(copyId, readStream, writeStream, toFilename) {
     this.ops[copyId] = {
-      readStream: readStream,
-      writeStream: writeStream,
-      toFilename: toFilename
+      readStream,
+      writeStream,
+      toFilename
     };
   }
 
-  cancel(copyId) {
+  public cancel(copyId) {
     return new BbPromise((resolve, reject) => {
       this.ops[copyId].writeStream.on("unpipe", () => {
         fs.unlink(this.ops[copyId].toFilename, err => {
@@ -26,11 +26,11 @@ class CopyOperationsManager {
     });
   }
 
-  clear(copyId) {
+  public clear(copyId) {
     delete this.ops[copyId];
   }
 
-  isPending(copyId) {
+  public isPending(copyId) {
     return this.ops[copyId] !== undefined;
   }
 }

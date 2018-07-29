@@ -1,12 +1,10 @@
-const QueueManager = require("./../../core/queue/QueueManager"),
-  js2xmlparser = require("js2xmlparser"),
-  AzuriteQueueResponse = require("./../../model/queue/AzuriteQueueResponse"),
-  N = require("./../../core/HttpHeaderNames");
+const QueueManager = from "./../../core/queue/QueueManager"),
+  js2xmlparser = from "js2xmlparser"),
+  AzuriteQueueResponse = from "./../../model/queue/AzuriteQueueResponse");
+import N from "./../../core/HttpHeaderNames";
 
 class GetQueueAcl {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     const queue = QueueManager.getQueueAndMessage({
         queueName: request.queueName
       }).queue,

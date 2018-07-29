@@ -1,7 +1,7 @@
-const env = require("./../../core/env"),
-  QueueMessageTextXmlModel = require("./../../xml/queue/QueueMessageText"),
-  AzuriteQueueRequest = require("../../model/queue/AzuriteQueueRequest"),
-  Operations = require("./../../core/Constants").Operations;
+const env = from "./../../core/env"),
+  QueueMessageTextXmlModel = from "./../../xml/queue/QueueMessageText"),
+  AzuriteQueueRequest = from "../../model/queue/AzuriteQueueRequest"),
+  Operations = from "./../../core/Constants").Operations;
 
 /*
  * Route definitions for all operation on the "message" resource type.
@@ -14,11 +14,11 @@ export default app => {
     .get((req, res, next) => {
       if (req.query.peekonly === "true") {
         req.azuriteOperation = Operations.Queue.PEEK_MESSAGES;
-        req.azuriteRequest = new AzuriteQueueRequest({ req: req });
+        req.azuriteRequest = new AzuriteQueueRequest({ req });
       } else {
         req.azuriteOperation = Operations.Queue.GET_MESSAGE;
         req.azuriteRequest = new AzuriteQueueRequest({
-          req: req,
+          req,
           operation: Operations.Queue.GET_MESSAGE
         });
       }
@@ -31,8 +31,8 @@ export default app => {
       req.azuriteOperation = Operations.Queue.UPDATE_MESSAGE;
       QueueMessageTextXmlModel.toJs(req.body).then(payload => {
         req.azuriteRequest = new AzuriteQueueRequest({
-          req: req,
-          payload: payload
+          req,
+          payload
         });
         next();
       });
@@ -41,8 +41,8 @@ export default app => {
       req.azuriteOperation = Operations.Queue.PUT_MESSAGE;
       QueueMessageTextXmlModel.toJs(req.body).then(payload => {
         req.azuriteRequest = new AzuriteQueueRequest({
-          req: req,
-          payload: payload
+          req,
+          payload
         });
         next();
       });
@@ -53,7 +53,7 @@ export default app => {
       } else {
         req.azuriteOperation = Operations.Queue.CLEAR_MESSAGES;
       }
-      req.azuriteRequest = new AzuriteQueueRequest({ req: req });
+      req.azuriteRequest = new AzuriteQueueRequest({ req });
       next();
     });
 };

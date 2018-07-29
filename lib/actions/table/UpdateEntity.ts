@@ -1,12 +1,10 @@
-const AzuriteTableResponse = require("./../../model/table/AzuriteTableResponse"),
-  tableStorageManager = require("./../../core/table/TableStorageManager"),
-  ODataMode = require("./../../core/Constants").ODataMode,
-  N = require("./../../core/HttpHeaderNames");
+const AzuriteTableResponse = from "./../../model/table/AzuriteTableResponse"),
+  tableStorageManager = from "./../../core/table/TableStorageManager"),
+  ODataMode = from "./../../core/Constants").ODataMode;
+import N from "./../../core/HttpHeaderNames";
 
 class UpdateEntity {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     tableStorageManager.updateEntity(request).then(response => {
       res.set(response.httpProps);
       res.status(204).send();

@@ -1,6 +1,6 @@
-const env = require("./../../core/env"),
-  AzuriteTableRequest = require("./../../model/table/AzuriteTableRequest"),
-  Operations = require("./../../core/Constants").Operations.Table;
+const env = from "./../../core/env"),
+  AzuriteTableRequest = from "./../../model/table/AzuriteTableRequest"),
+  Operations = from "./../../core/Constants").Operations.Table;
 
 /*
  * Route definitions for all operation on the "message" resource type.
@@ -12,7 +12,7 @@ export default app => {
     .route(new RegExp(`\/${env.emulatedStorageAccountName}\/Tables(.*)`))
     .get((req, res, next) => {
       req.azuriteOperation = Operations.QUERY_TABLE;
-      req.azuriteRequest = new AzuriteTableRequest({ req: req });
+      req.azuriteRequest = new AzuriteTableRequest({ req });
       next();
     })
     .head((req, res, next) => {
@@ -24,14 +24,14 @@ export default app => {
     .post((req, res, next) => {
       req.azuriteOperation = Operations.CREATE_TABLE;
       req.azuriteRequest = new AzuriteTableRequest({
-        req: req,
+        req,
         payload: req.payload
       });
       next();
     })
     .delete((req, res, next) => {
       req.azuriteOperation = Operations.DELETE_TABLE;
-      req.azuriteRequest = new AzuriteTableRequest({ req: req });
+      req.azuriteRequest = new AzuriteTableRequest({ req });
       next();
     });
 };

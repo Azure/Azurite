@@ -9,11 +9,7 @@
  * @class ValidationContext
  */
 class ValidationContext {
-  constructor({
-    request = undefined,
-    containerProxy = undefined,
-    blobProxy = undefined
-  }) {
+  constructor({ request, containerProxy, blobProxy }) {
     this.request = request;
     this.containerProxy = containerProxy;
     this.blobProxy = blobProxy;
@@ -29,7 +25,7 @@ class ValidationContext {
    *
    * @memberOf ValidationContext
    */
-  run(valModule, moduleOptions, skip) {
+  public run(valModule, moduleOptions, skip) {
     if (skip) {
       return this;
     }
@@ -43,7 +39,7 @@ class ValidationContext {
       blobProxy: moduleOptions
         ? moduleOptions.blobProxy || this.blobProxy
         : this.blobProxy,
-      moduleOptions: moduleOptions
+      moduleOptions
     });
     return this;
   }

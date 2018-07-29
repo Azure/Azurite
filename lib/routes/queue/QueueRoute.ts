@@ -1,7 +1,7 @@
-const env = require("./../../core/env"),
-  AzuriteQueueRequest = require("../../model/queue/AzuriteQueueRequest"),
-  Serializers = require("./../../xml/Serializers"),
-  Operations = require("./../../core/Constants").Operations;
+const env = from "./../../core/env"),
+  AzuriteQueueRequest = from "../../model/queue/AzuriteQueueRequest"),
+  Serializers = from "./../../xml/Serializers"),
+  Operations = from "./../../core/Constants").Operations;
 
 /*
  * Route definitions for all operation on the "queue" resource type.
@@ -17,7 +17,7 @@ export default app => {
       } else if (req.query.comp === "acl") {
         req.azuriteOperation = Operations.Queue.GET_QUEUE_ACL;
       }
-      req.azuriteRequest = new AzuriteQueueRequest({ req: req });
+      req.azuriteRequest = new AzuriteQueueRequest({ req });
       next();
     })
     .head((req, res, next) => {
@@ -26,7 +26,7 @@ export default app => {
       } else if (req.query.comp === "acl") {
         req.azuriteOperation = Operations.Queue.GET_QUEUE_ACL;
       }
-      req.azuriteRequest = new AzuriteQueueRequest({ req: req });
+      req.azuriteRequest = new AzuriteQueueRequest({ req });
       next();
     })
     .put((req, res, next) => {
@@ -36,7 +36,7 @@ export default app => {
         req.azuriteOperation = Operations.Queue.SET_QUEUE_ACL;
         Serializers.parseSignedIdentifiers(req.body).then(signedIdentifiers => {
           req.azuriteRequest = new AzuriteQueueRequest({
-            req: req,
+            req,
             payload: signedIdentifiers
           });
           next();
@@ -45,12 +45,12 @@ export default app => {
       } else {
         req.azuriteOperation = Operations.Queue.CREATE_QUEUE;
       }
-      req.azuriteRequest = new AzuriteQueueRequest({ req: req });
+      req.azuriteRequest = new AzuriteQueueRequest({ req });
       next();
     })
     .delete((req, res, next) => {
       req.azuriteOperation = Operations.Queue.DELETE_QUEUE;
-      req.azuriteRequest = new AzuriteQueueRequest({ req: req });
+      req.azuriteRequest = new AzuriteQueueRequest({ req });
       next();
     });
 };

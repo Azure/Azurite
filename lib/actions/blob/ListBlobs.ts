@@ -1,14 +1,12 @@
-const storageManager = require("./../../core/blob/StorageManager"),
-  LeaseStatus = require("./../../core/Constants").LeaseStatus,
-  N = require("./../../core/HttpHeaderNames"),
-  js2xmlparser = require("js2xmlparser"),
-  utils = require("./../../core/utils"),
-  model = require("./../../xml/blob/BlobListXmlModel");
+import storageManager from "./../../core/blob/StorageManager";
+(LeaseStatus = from "./../../core/Constants").LeaseStatus),
+  import N from "./../../core/HttpHeaderNames";
+  (js2xmlparser = from "js2xmlparser")),
+  (utils = from "./../../core/utils")),
+  (model = from "./../../xml/blob/BlobListXmlModel"));
 
 class ListBlobs {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     const query = {
       prefix: request.query.prefix || "",
       delimiter: request.query.delimiter,
@@ -46,8 +44,8 @@ class ListBlobs {
     });
   }
 
-  _transformBlobList(blobList, query, blobPrefixes, nextMarker) {
-    let xmlBlobListModel = new model.BlobList();
+  public _transformBlobList(blobList, query, blobPrefixes, nextMarker) {
+    const xmlBlobListModel = new model.BlobList();
     query.prefix === undefined
       ? delete xmlBlobListModel.Prefix
       : (xmlBlobListModel.Prefix = query.prefix);
@@ -92,7 +90,7 @@ class ListBlobs {
     }
 
     for (const blob of blobList) {
-      let modelBlob = new model.Blob(
+      const modelBlob = new model.Blob(
         blob.original.name,
         blob.original.blobType
       );
@@ -128,7 +126,7 @@ class ListBlobs {
       }
 
       modelBlob.Properties["Last-Modified"] = blob.lastModified();
-      modelBlob.Properties["Etag"] = blob.original.etag;
+      modelBlob.Properties.Etag = blob.original.etag;
       modelBlob.Properties["Content-Type"] = blob.original.contentType
         ? blob.original.contentType
         : {};
@@ -172,9 +170,9 @@ class ListBlobs {
     return xmlBlobListModel;
   }
 
-  _addMetadata(blobModel, metaProps) {
+  public _addMetadata(blobModel, metaProps) {
     Object.keys(metaProps).forEach(key => {
-      let value = metaProps[key];
+      const value = metaProps[key];
       key = key.replace("x-ms-meta-", "");
       blobModel.Metadata[key] = value;
     });

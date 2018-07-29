@@ -1,15 +1,13 @@
-const storageManager = require("./../../core/blob/StorageManager"),
-  N = require("./../../core/HttpHeaderNames"),
-  EntityType = require("./../../core/Constants").StorageEntityType,
-  env = require("./../../core/env"),
-  req = require("request"),
-  fs = require("fs-extra"),
-  crypto = require("crypto");
+import storageManager from "./../../core/blob/StorageManager";
+import N from "./../../core/HttpHeaderNames";
+const EntityType = from "./../../core/Constants").StorageEntityType;
+import crypto from "crypto";
+import fs from "fs-extra";
+import req from "request";
+import env from "./../../core/env";
 
 class GetBlob {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     const range = request.httpProps[N.RANGE];
     storageManager.getBlob(request).then(response => {
       response.addHttpProperty(N.ACCEPT_RANGES, "bytes");
@@ -36,7 +34,9 @@ class GetBlob {
         N.CACHE_CONTROL,
         response.proxy.original.cacheControl
       );
-      if (request.auth) response.sasOverrideHeaders(request.query);
+      if (request.auth) {
+        response.sasOverrideHeaders(request.query);
+      }
 
       // If x-ms-range-get-content-md5 is specified together with the range attribute we load the entire data range into memory
       // in order to compute the MD5 hash of this chunk. We cannot use piping in this case since we cannot modify the HTTP headers
@@ -60,7 +60,7 @@ class GetBlob {
           data.push(chunk);
         });
         readStream.on("end", () => {
-          const body = new Buffer(data, "utf8");
+          const body = new Buffer(data);
           const hash = crypto
             .createHash("md5")
             .update(body)
@@ -91,10 +91,14 @@ class GetBlob {
     });
   }
 
-  _createRequestHeader(url, range) {
-    const request = {};
-    request.headers = {};
-    request.url = url;
+  public _createRequestHeader(url, range) {
+    const request = {
+      headers: {
+        Range: undefined
+      },
+      url
+    };
+
     if (range) {
       request.headers.Range = range;
     }

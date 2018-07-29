@@ -1,27 +1,36 @@
 import * as crypto from "crypto";
 import AzuriteRequest from "./AzuriteRequest";
 
-const url = require("url"),
-  BlockListType = require("./../../core/Constants").BlockListType,
-  N = require("./../../core/HttpHeaderNames"),
-  env = require("./../../core/env"),
-  InternalAzuriteError = require("./../../core/InternalAzuriteError");
+const url = from "url"),
+  BlockListType = from "./../../core/Constants").BlockListType,
+  N = from "./../../core/HttpHeaderNames"),
+  env = from "./../../core/env"),
+  InternalAzuriteError = from "./../../core/InternalAzuriteError");
 
 class AzuriteBlobRequest extends AzuriteRequest {
-  containerName: any;
-  blobName: any;
-  blockId: any;
-  snapshot: boolean;
-  copyId: any;
-  commit: boolean;
-  blockListType: any;
-  snapshotDate?: string;
-  id: any;
-  originId: any;
-  originUri: any;
-  parentId: any;
-  parentUri: any;
-  uri: any;
+  public static clone(request) {
+    const copy = new AzuriteBlobRequest({
+      req: { rawHeaders: [], headers: {}, params: {}, query: {} },
+      entityType: request.entityType,
+      payload: request.payload
+    });
+
+    return { ...copy, ...request };
+  }
+  public containerName: any;
+  public blobName: any;
+  public blockId: any;
+  public snapshot: boolean;
+  public copyId: any;
+  public commit: boolean;
+  public blockListType: any;
+  public snapshotDate?: string;
+  public id: any;
+  public originId: any;
+  public originUri: any;
+  public parentId: any;
+  public parentUri: any;
+  public uri: any;
   constructor(req, entityType?: any, payload?: any) {
     super({
       req,
@@ -58,16 +67,6 @@ class AzuriteBlobRequest extends AzuriteRequest {
     this.uri = env.diskStorageUri(this.id);
   }
 
-  static clone(request) {
-    const copy = new AzuriteBlobRequest({
-      req: { rawHeaders: [], headers: {}, params: {}, query: {} },
-      entityType: request.entityType,
-      payload: request.payload
-    });
-
-    return { ...copy, ...request };
-  }
-
   public calculateContentMd5() {
     if (!this.body) {
       return undefined;
@@ -78,11 +77,11 @@ class AzuriteBlobRequest extends AzuriteRequest {
       .digest("base64");
   }
 
-  isSnapshot() {
+  public isSnapshot() {
     return this.snapshot;
   }
 
-  copySourceName() {
+  public copySourceName() {
     if (this.httpProps[N.COPY_SOURCE] === undefined) {
       throw new InternalAzuriteError(
         "Request: copySourceUrl was called without copy-source header set."
@@ -113,7 +112,7 @@ class AzuriteBlobRequest extends AzuriteRequest {
     return {
       sourceContainerName: containerName,
       sourceBlobName: blobName,
-      date: date
+      date
     };
   }
 }

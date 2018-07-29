@@ -1,5 +1,5 @@
-const ODataMode = require("./../../core/Constants").ODataMode,
-  InternalAzuriteError = require("./../../core/InternalAzuriteError");
+const ODataMode = from "./../../core/Constants").ODataMode,
+  InternalAzuriteError = from "./../../core/InternalAzuriteError");
 
 class BaseProxy {
   constructor(entity) {
@@ -13,7 +13,7 @@ class BaseProxy {
    * @returns
    * @memberof TableProxy
    */
-  odata(mode) {
+  public odata(mode) {
     switch (mode) {
       case ODataMode.NONE:
         return {

@@ -1,15 +1,15 @@
-const js2xml = require("js2xmlparser");
+const js2xml = from "js2xmlparser");
 
 class QueueMessagesListXmlModel {
   constructor() {
     this.QueueMessage = [];
   }
 
-  add(msg) {
+  public add(msg) {
     this.QueueMessage.push(msg);
   }
 
-  toXml() {
+  public toXml() {
     const xml = js2xml.parse("QueueMessagesList", this);
     return xml.replace(/\>[\s]+\</g, "><");
   }
@@ -72,5 +72,5 @@ class QueueMessageXmlModel {
 
 export default {
   QueueMessageListXmlModel: QueueMessagesListXmlModel,
-  QueueMessageXmlModel: QueueMessageXmlModel
+  QueueMessageXmlModel
 };

@@ -1,10 +1,8 @@
-const AError = require("./../../core/AzuriteError"),
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 class QueueExists {
-  constructor() {}
-
-  validate({ request = undefined, queue = undefined }) {
+  public validate({ request = undefined, queue = undefined }) {
     if (queue === undefined) {
       throw new AError(ErrorCodes.QueueNotFound);
     }

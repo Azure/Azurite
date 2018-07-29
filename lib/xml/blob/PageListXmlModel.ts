@@ -1,28 +1,28 @@
-const os = require("os");
+const os = from "os");
 
 /*
- * The serialization model for GET PageRanges. 
+ * The serialization model for GET PageRanges.
  * Note that we are not using xml2js since the XML-schema needed when supporting snapshotting cannot
  * be implemented with it.
- * See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/get-page-ranges for details on the schema. 
+ * See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/get-page-ranges for details on the schema.
  */
 class PageListModel {
   constructor() {
     this.items = [];
   }
 
-  addPageRange(startByte, endByte) {
+  public addPageRange(startByte, endByte) {
     this.items.push(new PageRange(startByte, endByte));
   }
 
-  addClearRange(startByte, endByte) {
+  public addClearRange(startByte, endByte) {
     this.items.push(new ClearRange(startByte, endByte));
   }
 
-  toString() {
+  public toString() {
     let out = `<?xml version="1.0" encoding="utf-8"?>` + os.EOL;
     out += "<PageList>" + os.EOL;
-    for (let item of this.items) {
+    for (const item of this.items) {
       out +=
         item instanceof PageRange
           ? "<PageRange>" + os.EOL

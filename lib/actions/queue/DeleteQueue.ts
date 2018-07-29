@@ -1,10 +1,8 @@
-const QueueManager = require("./../../core/queue/QueueManager"),
-  AzuriteQueueResponse = require("./../../model/queue/AzuriteQueueResponse");
+const QueueManager = from "./../../core/queue/QueueManager"),
+  AzuriteQueueResponse = from "./../../model/queue/AzuriteQueueResponse");
 
 class DeleteQueue {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     QueueManager.delete(request.queueName);
     const response = new AzuriteQueueResponse();
     res.set(response.httpProps);

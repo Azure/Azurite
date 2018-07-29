@@ -1,9 +1,7 @@
-const storageManager = require("./../../core/blob/StorageManager");
+import storageManager from "./../../core/blob/StorageManager";
 
 class PutBlob {
-  constructor() {}
-
-  process(azuriteRequest, res) {
+  public process(azuriteRequest, res) {
     storageManager.putBlob(azuriteRequest).then(response => {
       response.addHttpProperty("x-ms-request-server-encrypted", false);
       res.set(response.httpProps);

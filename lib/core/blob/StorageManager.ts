@@ -1,34 +1,32 @@
-const env = require("./../env"),
-  utils = require("./../utils"),
-  path = require("path"),
-  BbPromise = require("bluebird"),
-  Loki = require("lokijs"),
-  req = require("request"),
-  fs = require("fs-extra"),
-  fsn = BbPromise.promisifyAll(require("fs")),
-  crypto = require("crypto"),
-  StorageTables = require("./../Constants").StorageTables,
-  StorageEntityType = require("./../Constants").StorageEntityType,
-  LeaseActions = require("./../Constants").LeaseActions,
-  LeaseStatus = require("./../Constants").LeaseStatus,
-  CopyStatus = require("./../Constants").CopyStatus,
-  BlockListType = require("./../Constants").BlockListType,
-  StorageEntityGenerator = require("./../../model/blob/StorageEntityGenerator"),
-  AzuriteBlobRequest = require("./../../model/blob/AzuriteBlobRequest"),
-  CombinedStream = require("combined-stream"),
-  ContainerProxy = require("./../../model/blob/ContainerProxy"),
-  BlobProxy = require("./../../model/blob/BlobProxy"),
-  N = require("./../../core/HttpHeaderNames"),
-  ContainerRequest = require("./../../model/blob/AzuriteContainerRequest"),
-  AzuriteResponse = require("./../../model/blob/AzuriteResponse"),
-  SnapshotTimeManager = require("./SnapshotTimeManager"),
-  CopyOperationsManager = require("./CopyOperationsManager"),
-  uuidv4 = require("uuid/v4");
+const env = from "./../env"),
+  utils = from "./../utils"),
+  path = from "path"),
+  BbPromise = from "bluebird"),
+  Loki = from "lokijs"),
+  req = from "request"),
+  fs = from "fs-extra"),
+  fsn = BbPromise.promisifyAll(from "fs")),
+  crypto = from "crypto"),
+  StorageTables = from "./../Constants").StorageTables,
+  StorageEntityType = from "./../Constants").StorageEntityType,
+  LeaseActions = from "./../Constants").LeaseActions,
+  LeaseStatus = from "./../Constants").LeaseStatus,
+  CopyStatus = from "./../Constants").CopyStatus,
+  BlockListType = from "./../Constants").BlockListType,
+  StorageEntityGenerator = from "./../../model/blob/StorageEntityGenerator"),
+  AzuriteBlobRequest = from "./../../model/blob/AzuriteBlobRequest"),
+  CombinedStream = from "combined-stream"),
+  ContainerProxy = from "./../../model/blob/ContainerProxy"),
+  BlobProxy = from "./../../model/blob/BlobProxy"),
+  N = from "./../../core/HttpHeaderNames"),
+  ContainerRequest = from "./../../model/blob/AzuriteContainerRequest"),
+  AzuriteResponse = from "./../../model/blob/AzuriteResponse"),
+  SnapshotTimeManager = from "./SnapshotTimeManager"),
+  CopyOperationsManager = from "./CopyOperationsManager"),
+  uuidv4 = from "uuid/v4");
 
 class StorageManager {
-  constructor() {}
-
-  init() {
+  public init() {
     this.db = BbPromise.promisifyAll(
       new Loki(env.azuriteDBPathBlob, {
         autosave: true,
@@ -75,15 +73,15 @@ class StorageManager {
       });
   }
 
-  flush() {
+  public flush() {
     return this.db.saveDatabaseAsync();
   }
 
-  close() {
+  public close() {
     return this.db.close();
   }
 
-  createContainer(request) {
+  public createContainer(request) {
     const coll = this.db.getCollection(StorageTables.Containers);
     const entity = StorageEntityGenerator.generateStorageEntity(request);
     const containerProxy = new ContainerProxy(coll.insert(entity));
@@ -93,7 +91,7 @@ class StorageManager {
     );
   }
 
-  deleteContainer(request) {
+  public deleteContainer(request) {
     const conColl = this.db.getCollection(StorageTables.Containers);
     conColl
       .chain()
@@ -115,10 +113,10 @@ class StorageManager {
     });
   }
 
-  listContainer(request, prefix, maxresults) {
+  public listContainer(request, prefix, maxresults) {
     maxresults = parseInt(maxresults);
-    let tables = this.db.getCollection(StorageTables.Containers);
-    let result = tables
+    const tables = this.db.getCollection(StorageTables.Containers);
+    const result = tables
       .chain()
       .find({ name: { $regex: `^${prefix}` } })
       .simplesort("name")
@@ -129,7 +127,7 @@ class StorageManager {
     );
   }
 
-  putBlob(request) {
+  public putBlob(request) {
     const coll = this.db.getCollection(request.containerName),
       blobProxy = this._createOrUpdateBlob(coll, request);
     this._clearCopyMetaData(blobProxy);
@@ -142,7 +140,7 @@ class StorageManager {
       });
   }
 
-  putAppendBlock(request) {
+  public putAppendBlock(request) {
     const { coll, blobProxy } = this._getCollectionAndBlob(
       request.containerName,
       request.id
@@ -159,10 +157,10 @@ class StorageManager {
       });
   }
 
-  deleteBlob(request) {
+  public deleteBlob(request) {
     const coll = this.db.getCollection(request.containerName),
       snapshoteDeleteQueryParam = request.httpProps[N.DELETE_SNAPSHOTS];
-    let promises = [];
+    const promises = [];
 
     if (
       snapshoteDeleteQueryParam === "include" ||
@@ -199,7 +197,7 @@ class StorageManager {
     }
   }
 
-  getBlob(request) {
+  public getBlob(request) {
     const coll = this.db.getCollection(request.containerName);
     const blob = coll
       .chain()
@@ -213,7 +211,7 @@ class StorageManager {
     return BbPromise.resolve(response);
   }
 
-  listBlobs(request, query) {
+  public listBlobs(request, query) {
     const condition = [];
     if (query.prefix !== "") {
       condition.push({
@@ -256,7 +254,7 @@ class StorageManager {
     return BbPromise.resolve(response);
   }
 
-  putBlock(request) {
+  public putBlock(request) {
     // We only create the parent blob in DB if it does not already exists.
     const { coll, blobProxy } = this._getCollectionAndBlob(
       request.containerName,
@@ -289,8 +287,8 @@ class StorageManager {
       });
   }
 
-  putBlockList(request) {
-    let blockPaths = [];
+  public putBlockList(request) {
+    const blockPaths = [];
     for (const block of request.payload) {
       const blockId = env.blockId(
         request.containerName,
@@ -350,7 +348,7 @@ class StorageManager {
     });
   }
 
-  getBlockList(request) {
+  public getBlockList(request) {
     const coll = this.db.getCollection(request.containerName),
       blocks = coll
         .chain()
@@ -369,7 +367,7 @@ class StorageManager {
     return BbPromise.resolve(response);
   }
 
-  setBlobMetadata(request) {
+  public setBlobMetadata(request) {
     const { coll, blobProxy } = this._getCollectionAndBlob(
       request.containerName,
       request.id
@@ -383,7 +381,7 @@ class StorageManager {
     return BbPromise.resolve(response);
   }
 
-  getBlobMetadata(request) {
+  public getBlobMetadata(request) {
     const { blobProxy } = this._getCollectionAndBlob(
       request.containerName,
       request.id
@@ -395,7 +393,7 @@ class StorageManager {
     return BbPromise.resolve(response);
   }
 
-  setBlobProperties(request) {
+  public setBlobProperties(request) {
     const { coll, blobProxy } = this._getCollectionAndBlob(
       request.containerName,
       request.id
@@ -430,12 +428,12 @@ class StorageManager {
     return BbPromise.resolve(response);
   }
 
-  getBlobProperties(request) {
+  public getBlobProperties(request) {
     // Same OP, different response headers are filtered and processeed at handler level
     return this.getBlobMetadata(request);
   }
 
-  setContainerMetadata(request) {
+  public setContainerMetadata(request) {
     const { coll, containerProxy } = this._getCollectionAndContainer(
       request.containerName
     );
@@ -448,7 +446,7 @@ class StorageManager {
     return BbPromise.resolve(response);
   }
 
-  getContainerMetadata(request) {
+  public getContainerMetadata(request) {
     const { containerProxy } = this._getCollectionAndContainer(
       request.containerName
     );
@@ -459,7 +457,7 @@ class StorageManager {
     return BbPromise.resolve(response);
   }
 
-  getContainerProperties(request) {
+  public getContainerProperties(request) {
     const { containerProxy } = this._getCollectionAndContainer(
       request.containerName
     );
@@ -470,7 +468,7 @@ class StorageManager {
     return BbPromise.resolve(response);
   }
 
-  putPage(request) {
+  public putPage(request) {
     const parts = request.httpProps[N.RANGE].split("=")[1].split("-"),
       startByte = parseInt(parts[0]),
       endByte = parseInt(parts[1]);
@@ -543,7 +541,7 @@ class StorageManager {
     });
   }
 
-  getPageRanges(request) {
+  public getPageRanges(request) {
     let pageRanges;
     const { coll, blobProxy } = this._getCollectionAndBlob(
       request.containerName,
@@ -598,7 +596,7 @@ class StorageManager {
     return BbPromise.resolve(response);
   }
 
-  setContainerAcl(request) {
+  public setContainerAcl(request) {
     const { coll, containerProxy } = this._getCollectionAndContainer(
       request.containerName
     );
@@ -612,7 +610,7 @@ class StorageManager {
     return BbPromise.resolve(response);
   }
 
-  getContainerAcl(request) {
+  public getContainerAcl(request) {
     const { containerProxy } = this._getCollectionAndContainer(
       request.containerName
     );
@@ -623,7 +621,7 @@ class StorageManager {
     return BbPromise.resolve(response);
   }
 
-  snapshotBlob(request) {
+  public snapshotBlob(request) {
     const { coll, blobProxy } = this._getCollectionAndBlob(
       request.containerName,
       request.id
@@ -664,7 +662,7 @@ class StorageManager {
     });
   }
 
-  leaseContainer(request) {
+  public leaseContainer(request) {
     const leaseAction = request.httpProps[N.LEASE_ACTION],
       proposedLeaseId = request.httpProps[N.PROPOSED_LEASE_ID],
       leaseId = request.httpProps[N.LEASE_ID],
@@ -732,7 +730,7 @@ class StorageManager {
     return BbPromise.resolve(response);
   }
 
-  leaseBlob(request) {
+  public leaseBlob(request) {
     const leaseAction = request.httpProps[N.LEASE_ACTION],
       proposedLeaseId = request.httpProps[N.PROPOSED_LEASE_ID],
       leaseId = request.httpProps[N.LEASE_ID],
@@ -802,7 +800,7 @@ class StorageManager {
     return BbPromise.resolve(response);
   }
 
-  copyBlob(request) {
+  public copyBlob(request) {
     const sourceProxy = this._getCopySourceProxy(request);
     let from = null,
       to = null;
@@ -879,13 +877,13 @@ class StorageManager {
     return BbPromise.resolve(response);
   }
 
-  abortCopyBlob(request) {
+  public abortCopyBlob(request) {
     return CopyOperationsManager.cancel(request.copyId).then(() => {
       return new AzuriteResponse({ cors: request.cors });
     });
   }
 
-  setBlobServiceProperties(request) {
+  public setBlobServiceProperties(request) {
     const coll = this.db.getCollection(StorageTables.ServiceProperties);
     const settings = coll.where(e => {
       return true; // there is always at most one entry in this collection
@@ -917,7 +915,7 @@ class StorageManager {
     return BbPromise.resolve(new AzuriteResponse({ cors: request.cors }));
   }
 
-  getBlobServiceProperties(request) {
+  public getBlobServiceProperties(request) {
     const coll = this.db.getCollection(StorageTables.ServiceProperties);
     const settings = coll.where(e => {
       return true; // there is always at most one entry in this collection
@@ -928,7 +926,7 @@ class StorageManager {
     );
   }
 
-  _createOrUpdateBlob(coll, request) {
+  public _createOrUpdateBlob(coll, request) {
     const blob = coll
       .chain()
       .find({ id: { $eq: request.id } })
@@ -954,7 +952,7 @@ class StorageManager {
    *
    * @memberOf StorageManager
    */
-  _getCollectionAndBlob(containerName, id) {
+  public _getCollectionAndBlob(containerName, id) {
     const coll = this.db.getCollection(containerName);
     if (!coll) {
       return {
@@ -964,10 +962,10 @@ class StorageManager {
     }
     const result = coll
       .chain()
-      .find({ id: id })
+      .find({ id })
       .data();
     return {
-      coll: coll,
+      coll,
       blobProxy:
         result.length === 0
           ? undefined
@@ -983,20 +981,20 @@ class StorageManager {
    *
    * @memberOf StorageManager
    */
-  _getCollectionAndContainer(containerName) {
+  public _getCollectionAndContainer(containerName) {
     const coll = this.db.getCollection(StorageTables.Containers);
     const result = coll
       .chain()
       .find({ name: containerName })
       .data();
     return {
-      coll: coll,
+      coll,
       containerProxy:
         result.length === 0 ? undefined : new ContainerProxy(result[0])
     };
   }
 
-  _updatePageRanges(coll, pageRanges, startByte, endByte, id, isClear) {
+  public _updatePageRanges(coll, pageRanges, startByte, endByte, id, isClear) {
     const startAlignment = startByte / 512,
       endAlignment = (endByte + 1) / 512;
     coll.remove(pageRanges);
@@ -1034,13 +1032,13 @@ class StorageManager {
 
       coll.insert({
         parentId: id,
-        start: start,
-        end: end
+        start,
+        end
       });
     }
   }
 
-  _getCopySourceProxy(request) {
+  public _getCopySourceProxy(request) {
     // const { sourceContainerName, sourceBlobName, date } = request.copySourceName();
     const resp = request.copySourceName(),
       sourceContainerName = resp.sourceContainerName,
@@ -1060,7 +1058,7 @@ class StorageManager {
     return blobProxy;
   }
 
-  _clearCopyMetaData(proxy) {
+  public _clearCopyMetaData(proxy) {
     delete proxy.original.copyId;
     delete proxy.original.copyStatus;
     delete proxy.original.copyCompletionTime;

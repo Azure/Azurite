@@ -1,6 +1,6 @@
-const AError = require("./../../core/AzuriteError"),
-  CopyOperationsManager = require("./../../core/blob/CopyOperationsManager"),
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  CopyOperationsManager = from "./../../core/blob/CopyOperationsManager"),
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 /**
  *  Checks whether there is no pending copy operation.
@@ -8,9 +8,7 @@ const AError = require("./../../core/AzuriteError"),
  * @class AbortCopy
  */
 class AbortCopy {
-  constructor() {}
-
-  validate() {
+  public validate() {
     if (!CopyOperationsManager.isPending()) {
       throw new AError(ErrorCodes.NoPendingCopyOperation);
     }

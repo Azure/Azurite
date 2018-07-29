@@ -1,6 +1,6 @@
-const EntityType = require("./../../core/Constants").StorageEntityType,
-  N = require("./../../core/HttpHeaderNames"),
-  etag = require("./../../core/utils").computeEtag;
+const EntityType = from "./../../core/Constants").StorageEntityType,
+  N = from "./../../core/HttpHeaderNames"),
+  etag = from "./../../core/utils").computeEtag;
 
 /**
  * Generates an according Storage Entity (@type Container or @type Blob) out of a @ref AzuriteRequest object.
@@ -8,15 +8,13 @@ const EntityType = require("./../../core/Constants").StorageEntityType,
  * @class StorageEntityGenerator
  */
 class StorageEntityGenerator {
-  constructor() {}
-
   /**
    * Generates a persistable storage entity respresentation based on a @type AzuriteRequest object
    *
    * @returns
    * @memberof StorageEntityGenerator
    */
-  generateStorageEntity(request) {
+  public generateStorageEntity(request) {
     const entity = {};
     // Common to all entities (containers and blobs)
     entity.metaProps = request.metaProps;
@@ -126,7 +124,7 @@ class StorageEntityGenerator {
     return entity;
   }
 
-  clone(o) {
+  public clone(o) {
     const copy = {};
     copy.metaProps = o.metaProps;
     copy.entityType = o.entityType;

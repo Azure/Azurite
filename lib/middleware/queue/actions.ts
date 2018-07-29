@@ -1,26 +1,28 @@
-const BbPromise = require("bluebird"),
-  Operations = require("./../../core/Constants").Operations,
+const BbPromise = from "bluebird"),
+  Operations = from "./../../core/Constants").Operations,
   // Actions
-  deleteQueue = require("./../../actions/queue/DeleteQueue"),
-  setQueueMetadata = require("./../../actions/queue/SetQueueMetadata"),
-  getQueueMetadata = require("./../../actions/queue/GetQueueMetadata"),
-  putMessage = require("./../../actions/queue/PutMessage"),
-  getMessages = require("./../../actions/queue/GetMessages"),
-  clearMessages = require("./../../actions/queue/ClearMessages"),
-  peekMessages = require("./../../actions/queue/PeekMessages"),
-  deleteMessage = require("./../../actions/queue/DeleteMessage"),
-  updateMessage = require("./../../actions/queue/UpdateMessage"),
-  listQueues = require("./../../actions/queue/ListQueues"),
-  setQueueAcl = require("./../../actions/queue/SetQueueAcl"),
-  getQueueAcl = require("./../../actions/queue/GetQueueAcl"),
-  createQueue = require("./../../actions/queue/CreateQueue");
+  deleteQueue = from "./../../actions/queue/DeleteQueue"),
+  setQueueMetadata = from "./../../actions/queue/SetQueueMetadata"),
+  getQueueMetadata = from "./../../actions/queue/GetQueueMetadata"),
+  putMessage = from "./../../actions/queue/PutMessage"),
+  getMessages = from "./../../actions/queue/GetMessages"),
+  clearMessages = from "./../../actions/queue/ClearMessages"),
+  peekMessages = from "./../../actions/queue/PeekMessages"),
+  deleteMessage = from "./../../actions/queue/DeleteMessage"),
+  updateMessage = from "./../../actions/queue/UpdateMessage"),
+  listQueues = from "./../../actions/queue/ListQueues"),
+  setQueueAcl = from "./../../actions/queue/SetQueueAcl"),
+  getQueueAcl = from "./../../actions/queue/GetQueueAcl"),
+  createQueue = from "./../../actions/queue/CreateQueue");
 
 export default (req, res) => {
   BbPromise.try(() => {
     actions[req.azuriteOperation](req.azuriteRequest, res);
   }).catch(e => {
     res.status(e.statusCode || 500).send(e.message);
-    if (!e.statusCode) throw e;
+    if (!e.statusCode) {
+      throw e;
+    }
   });
 };
 

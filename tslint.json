@@ -60,5 +60,9 @@
       "check-separator",
       "check-type"
     ]
-  }
+  },
+  "extends": [
+    "tslint:latest",
+    "tslint-config-prettier"
+  ]
 }

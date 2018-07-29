@@ -1,11 +1,9 @@
-const storageManager = require("./../../core/blob/StorageManager"),
-  js2xmlparser = require("js2xmlparser"),
-  model = require("./../../xml/blob/ContainerListXmlModel");
+import storageManager from "./../../core/blob/StorageManager";
+(js2xmlparser = from "js2xmlparser")),
+  (model = from "./../../xml/blob/ContainerListXmlModel"));
 
 class ListContainers {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     const prefix = request.query.prefix || "",
       maxresults = request.query.maxresults || "5000",
       includeMetadata = request.query.include === "metadata" ? true : false,
@@ -13,7 +11,7 @@ class ListContainers {
     storageManager.listContainer(request, prefix, maxresults).then(response => {
       response.addHttpProperty("content-type", "application/xml");
       res.set(response.httpProps);
-      let transformedModel = this._transformContainerList(
+      const transformedModel = this._transformContainerList(
         response.payload,
         includeMetadata,
         prefix,
@@ -35,14 +33,14 @@ class ListContainers {
     });
   }
 
-  _transformContainerList(
+  public _transformContainerList(
     containers,
     includeMetadata,
     prefix,
     maxresults,
     marker
   ) {
-    let xmlContainerListModel = new model.ContainerList();
+    const xmlContainerListModel = new model.ContainerList();
     prefix === ""
       ? delete xmlContainerListModel.Prefix
       : (xmlContainerListModel.Prefix = prefix);
@@ -54,11 +52,11 @@ class ListContainers {
       : (xmlContainerListModel.Marker = marker);
     // Fixme: We do not support markers yet
     delete xmlContainerListModel.NextMarker;
-    for (let container of containers) {
+    for (const container of containers) {
       if (container.name === "$logs") {
         continue;
       }
-      let modelContainer = new model.Container(container.name);
+      const modelContainer = new model.Container(container.name);
       xmlContainerListModel.Containers.Container.push(modelContainer);
       if (!includeMetadata || Object.keys(container.metaProps).length === 0) {
         delete modelContainer.Metadata;

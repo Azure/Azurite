@@ -1,16 +1,14 @@
-const AError = require("./../../core/AzuriteError"),
-  LeaseStatus = require("./../../core/Constants").LeaseStatus,
-  Usage = require("./../../core/Constants").Usage,
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  LeaseStatus = from "./../../core/Constants").LeaseStatus,
+  Usage = from "./../../core/Constants").Usage,
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 class BlobLeaseUsage {
-  constructor() {}
-
   /**
    * Checks whether intended lease usage operation is semantically valid as specified
    * at https://docs.microsoft.com/en-us/rest/api/storageservices/lease-blob
    */
-  validate({
+  public validate({
     request = undefined,
     blobProxy = undefined,
     moduleOptions = undefined

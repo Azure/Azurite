@@ -1,13 +1,11 @@
-const QueueManager = require("./../../core/queue/QueueManager"),
-  QueueListXmlModel = require("./../../xml/queue/QueueList").QueueList,
-  QueueXmlModel = require("./../../xml/queue/QueueList").Queue,
-  AzuriteQueueResponse = require("./../../model/queue/AzuriteQueueResponse"),
-  N = require("./../../core/HttpHeaderNames");
+const QueueManager = from "./../../core/queue/QueueManager"),
+  QueueListXmlModel = from "./../../xml/queue/QueueList").QueueList,
+  QueueXmlModel = from "./../../xml/queue/QueueList").Queue,
+  AzuriteQueueResponse = from "./../../model/queue/AzuriteQueueResponse");
+import N from "./../../core/HttpHeaderNames";
 
 class ListQueues {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     const query = request.query;
     const { queues, nextMarker } = QueueManager.listQueues({
       prefix: query.prefix,

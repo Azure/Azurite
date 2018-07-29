@@ -57,7 +57,7 @@ function blobPrefixesToXml(blobPrefixes) {
 }
 
 export default {
-  BlobList: BlobList,
-  Blob: Blob,
-  blobPrefixesToXml: blobPrefixesToXml
+  BlobList,
+  Blob,
+  blobPrefixesToXml
 };

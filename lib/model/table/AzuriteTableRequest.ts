@@ -1,8 +1,8 @@
-const InternalAzuriteError = require("./../../core/InternalAzuriteError"),
-  RequestPayloadParser = require("./RequestPayloadParser"),
-  Constants = require("./../../core/Constants"),
-  ODataMode = require("./../../core/Constants").ODataMode,
-  N = require("./../../core/HttpHeaderNames");
+const InternalAzuriteError = from "./../../core/InternalAzuriteError"),
+  RequestPayloadParser = from "./RequestPayloadParser"),
+  Constants = from "./../../core/Constants"),
+  ODataMode = from "./../../core/Constants").ODataMode;
+import N from "./../../core/HttpHeaderNames";
 
 class AzuriteTableRequest {
   constructor({ req = undefined, payload = undefined }) {
@@ -45,7 +45,7 @@ class AzuriteTableRequest {
     }
   }
 
-  _initHttpProps(httpHeaders) {
+  public _initHttpProps(httpHeaders) {
     this.httpProps[N.DATE] = httpHeaders[N.DATE] || `x-ms-date`;
     this.httpProps[N.CONTENT_TYPE] =
       httpHeaders[N.CONTENT_TYPE] || `application/json`;
@@ -55,15 +55,22 @@ class AzuriteTableRequest {
     this.httpProps[N.IF_MATCH] = httpHeaders[N.IF_MATCH];
   }
 
-  _parseAccept(value) {
-    if (value === undefined) return undefined;
-    if (value.includes(`odata=nometadata`)) return Constants.ODataMode.NONE;
-    if (value.includes(`odata=minimalmetadata`))
+  public _parseAccept(value) {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (value.includes(`odata=nometadata`)) {
+      return Constants.ODataMode.NONE;
+    }
+    if (value.includes(`odata=minimalmetadata`)) {
       return Constants.ODataMode.MINIMAL;
-    if (value.includes(`odata=fullmetadata`)) return Constants.ODataMode.FULL;
+    }
+    if (value.includes(`odata=fullmetadata`)) {
+      return Constants.ODataMode.FULL;
+    }
   }
 
-  _parseEntityKeys(str) {
+  public _parseEntityKeys(str) {
     const empty = {
       partitionKey: undefined,
       rowKey: undefined
@@ -82,7 +89,7 @@ class AzuriteTableRequest {
     };
   }
 
-  _mapFilterQueryString(filter) {
+  public _mapFilterQueryString(filter) {
     filter = filter
       // ignoring these query keywords since we compare simply on a string-level
       .replace(/\bdatetime\b/g, "")

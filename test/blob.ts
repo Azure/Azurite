@@ -1,12 +1,12 @@
 import AzuriteBlob from "../lib/AzuriteBlob";
 import * as chai from "chai";
 import { describe, before, it, after } from "mocha";
-import chaiHttp = require("chai-http");
+import chaiHttp = from "chai-http");
 
 const expect = chai.expect,
-  rp = require("request-promise"),
-  path = require("path"),
-  xml2js = require("xml2js");
+  rp = from "request-promise"),
+  path = from "path"),
+  xml2js = from "xml2js");
 
 chai.use(chaiHttp);
 

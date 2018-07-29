@@ -1,15 +1,13 @@
-const AError = require("./../../core/AzuriteError"),
-  env = require("./../../core/env"),
-  BlobExistsVal = require("./BlobExists"),
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  env = from "./../../core/env"),
+  BlobExistsVal = from "./BlobExists"),
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 class BlockList {
-  constructor() {}
-
   /**
    * Checks whether the blocklist is correct. It is correct if all block ids are existant in the database.
    */
-  validate({ request = undefined, moduleOptions = undefined }) {
+  public validate({ request = undefined, moduleOptions = undefined }) {
     const sm = moduleOptions.storageManager,
       blockList = request.payload;
     for (const block of blockList) {
@@ -23,7 +21,7 @@ class BlockList {
         blobId
       );
       try {
-        BlobExistsVal.validate({ blobProxy: blobProxy });
+        BlobExistsVal.validate({ blobProxy });
       } catch (e) {
         if (e.statusCode === 404) {
           throw new AError(ErrorCodes.InvalidBlockList);

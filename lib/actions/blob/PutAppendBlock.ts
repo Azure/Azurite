@@ -1,10 +1,8 @@
-const storageManager = require("./../../core/blob/StorageManager"),
-  N = require("./../../core/HttpHeaderNames");
+import storageManager from "./../../core/blob/StorageManager";
+import N from "./../../core/HttpHeaderNames";
 
 class PutAppendBlock {
-  constructor() {}
-
-  process(azuriteRequest, res) {
+  public process(azuriteRequest, res) {
     storageManager.putAppendBlock(azuriteRequest).then(response => {
       response.addHttpProperty(N.REQUEST_SERVER_ENCRYPTED, false);
       response.addHttpProperty(

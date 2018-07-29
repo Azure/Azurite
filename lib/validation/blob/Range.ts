@@ -1,14 +1,12 @@
-const AError = require("./../../core/AzuriteError"),
-  N = require("./../../core/HttpHeaderNames"),
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  N = from "./../../core/HttpHeaderNames"),
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 /*
  * Checks whether the range header (and headers depending on it) are valid.
  */
 class Range {
-  constructor() {}
-
-  validate({ request = undefined, blobProxy = undefined }) {
+  public validate({ request = undefined, blobProxy = undefined }) {
     const range = request.httpProps[N.RANGE];
     const x_ms_range_get_content_md5 =
       request.httpProps[N.RANGE_GET_CONTENT_MD5];
@@ -17,10 +15,7 @@ class Range {
     // We are using raw "range" string here since docs at
     // https://docs.microsoft.com/de-de/azure/container-instances/container-instances-orchestrator-relationship
     // do not mention x-ms-range header explictly
-    if (
-      x_ms_range_get_content_md5 &&
-      request.httpProps["range"] === undefined
-    ) {
+    if (x_ms_range_get_content_md5 && request.httpProps.range === undefined) {
       throw new AError(ErrorCodes.InvalidHeaderValue);
     }
     // If this header is set to true _and_ the range exceeds 4 MB in size,
@@ -35,7 +30,7 @@ class Range {
   }
 
   // See http://svn.tools.ietf.org/svn/wg/httpbis/specs/rfc7233.html for spec of HTTP Byte Ranges
-  _withinRange(blobSize, range) {
+  public _withinRange(blobSize, range) {
     if (range === undefined) {
       return true;
     }
@@ -50,7 +45,7 @@ class Range {
      * If there is invalid data in that string, function returns false
      * since boolean expression will contain at least one "NaN"" in any invalid case.
      */
-  _isRangeExceeded(range) {
+  public _isRangeExceeded(range) {
     if (range === undefined) {
       return false;
     }

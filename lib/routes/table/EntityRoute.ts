@@ -1,7 +1,7 @@
-const env = require("./../../core/env"),
-  AzuriteTableRequest = require("./../../model/table/AzuriteTableRequest"),
-  N = require("./../../core/HttpHeaderNames"),
-  Operations = require("./../../core/Constants").Operations.Table;
+const env = from "./../../core/env"),
+  AzuriteTableRequest = from "./../../model/table/AzuriteTableRequest"),
+  N = from "./../../core/HttpHeaderNames"),
+  Operations = from "./../../core/Constants").Operations.Table;
 
 /*
  * Route definitions for all operation on the "message" resource type.
@@ -16,7 +16,7 @@ export default app => {
     .get((req, res, next) => {
       if (req.azuriteOperation === undefined) {
         req.azuriteOperation = Operations.QUERY_ENTITY;
-        req.azuriteRequest = new AzuriteTableRequest({ req: req });
+        req.azuriteRequest = new AzuriteTableRequest({ req });
       }
       next();
     })
@@ -26,7 +26,7 @@ export default app => {
     .put((req, res, next) => {
       if (req.azuriteOperation === undefined) {
         req.azuriteRequest = new AzuriteTableRequest({
-          req: req,
+          req,
           payload: req.payload
         });
         req.azuriteOperation = req.azuriteRequest.httpProps[N.IF_MATCH]
@@ -39,7 +39,7 @@ export default app => {
       if (req.azuriteOperation === undefined) {
         req.azuriteOperation = Operations.INSERT_ENTITY;
         req.azuriteRequest = new AzuriteTableRequest({
-          req: req,
+          req,
           payload: req.payload
         });
       }
@@ -47,12 +47,12 @@ export default app => {
     })
     .delete((req, res, next) => {
       req.azuriteOperation = Operations.DELETE_ENTITY;
-      req.azuriteRequest = new AzuriteTableRequest({ req: req });
+      req.azuriteRequest = new AzuriteTableRequest({ req });
       next();
     })
     .merge((req, res, next) => {
       req.azuriteRequest = new AzuriteTableRequest({
-        req: req,
+        req,
         payload: req.payload
       });
       req.azuriteOperation = req.azuriteRequest.httpProps[N.IF_MATCH]

@@ -1,6 +1,6 @@
-const AError = require("./../../core/AzuriteError"),
-  Operations = require("./../../core/Constants").Operations.Queue,
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  Operations = from "./../../core/Constants").Operations.Queue,
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 /*
  * Checks whether the visibility timeout value adheres to the specifications at
@@ -8,9 +8,7 @@ const AError = require("./../../core/AzuriteError"),
  * and https://docs.microsoft.com/en-us/rest/api/storageservices/get-messages
  */
 class VisibilityTimeoutValue {
-  constructor() {}
-
-  validate({
+  public validate({
     request = undefined,
     operation = undefined,
     message = undefined

@@ -1,15 +1,11 @@
-const BbPromise = require("bluebird"),
-  AError = require("./../../core/AzuriteError"),
-  ErrorCode = require("./../../core/ErrorCodes"),
-  xml2jsAsync = BbPromise.promisify(require("xml2js").parseString),
-  js2xml = require("js2xmlparser");
+const BbPromise = from "bluebird"),
+  AError = from "./../../core/AzuriteError"),
+  ErrorCode = from "./../../core/ErrorCodes"),
+  xml2jsAsync = BbPromise.promisify(from "xml2js").parseString),
+  js2xml = from "js2xmlparser");
 
 class QueueMessageText {
-  constructor(msg = undefined) {
-    this.MessageText = msg;
-  }
-
-  static toJs(body) {
+  public static toJs(body) {
     const xml = body.toString("utf8");
     if (xml.length === 0) {
       return BbPromise.resolve(new QueueMessageText(undefined));
@@ -22,8 +18,11 @@ class QueueMessageText {
         throw new AError(ErrorCode.InvalidXml);
       });
   }
+  constructor(msg = undefined) {
+    this.MessageText = msg;
+  }
 
-  toXml() {
+  public toXml() {
     const xml = js2xml.parse("QueueMessage", this);
     return xml.replace(/\>[\s]+\</g, "><");
   }

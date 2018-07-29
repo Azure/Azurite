@@ -1,11 +1,9 @@
-const storageManager = require("./../../core/blob/StorageManager"),
-  N = require("./../../core/HttpHeaderNames"),
-  js2xmlparser = require("js2xmlparser");
+import storageManager from "./../../core/blob/StorageManager";
+import N from "./../../core/HttpHeaderNames";
+js2xmlparser = from "js2xmlparser");
 
 class GetContainerAcl {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     storageManager.getContainerAcl(request).then(response => {
       if (response.proxy.original.access !== "private") {
         response.addHttpProperty(

@@ -1,4 +1,4 @@
-const BaseProxy = require("./BaseProxy");
+const BaseProxy = from "./BaseProxy");
 
 class TableProxy extends BaseProxy {
   constructor(entity) {

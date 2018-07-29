@@ -1,5 +1,5 @@
-const uuidV1 = require("uuid/v1"),
-  N = require("./../../core/HttpHeaderNames");
+const uuidV1 = from "uuid/v1");
+import N from "./../../core/HttpHeaderNames";
 
 class AzuriteTableResponse {
   constructor({ proxy = undefined, payload = undefined }) {
@@ -11,7 +11,7 @@ class AzuriteTableResponse {
     this.payload = payload;
   }
 
-  addHttpProperty(key, value) {
+  public addHttpProperty(key, value) {
     if (value !== undefined) {
       this.httpProps[key] = value;
     }

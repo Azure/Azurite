@@ -1,10 +1,8 @@
-const QueueManager = require("./../../core/queue/QueueManager"),
-  AzuriteQueueResponse = require("./../../model/queue/AzuriteQueueResponse");
+const QueueManager = from "./../../core/queue/QueueManager"),
+  AzuriteQueueResponse = from "./../../model/queue/AzuriteQueueResponse");
 
 class CreateQueue {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     const { queue } = QueueManager.getQueueAndMessage({
       queueName: request.queueName
     });

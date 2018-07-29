@@ -9,7 +9,7 @@
  * @class ValidationContext
  */
 class ValidationContext {
-  constructor({ request = undefined, table = undefined, entity = undefined }) {
+  constructor({ request, table, entity }) {
     this.request = request;
     this.table = table;
     this.entity = entity;
@@ -25,7 +25,7 @@ class ValidationContext {
    *
    * @memberOf ValidationContext
    */
-  run(valModule, moduleOptions, skip) {
+  public run(valModule, moduleOptions, skip) {
     if (skip) {
       return this;
     }
@@ -35,7 +35,7 @@ class ValidationContext {
         : this.request,
       table: moduleOptions ? moduleOptions.table || this.table : this.table,
       entity: moduleOptions ? moduleOptions.entity || this.entity : this.entity,
-      moduleOptions: moduleOptions
+      moduleOptions
     });
     return this;
   }

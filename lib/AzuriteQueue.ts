@@ -1,11 +1,11 @@
 import * as express from "express";
 import { Server } from "http";
 
-const BbPromise = require("bluebird"),
-  bodyParser = require("body-parser"),
-  env = require("./core/env"),
-  morgan = require("morgan"),
-  cli = require("./core/cli");
+const BbPromise = from "bluebird"),
+  bodyParser = from "body-parser"),
+  env = from "./core/env"),
+  morgan = from "morgan"),
+  cli = from "./core/cli");
 
 class AzuriteQueue {
   private server!: Server;
@@ -25,7 +25,7 @@ class AzuriteQueue {
     }
   }
 
-  init(options) {
+  public init(options) {
     return env.init(options).then(() => {
       const app = express();
       if (!env.silent) {
@@ -35,16 +35,16 @@ class AzuriteQueue {
         bodyParser.raw({
           inflate: true,
           limit: "10000kb",
-          type: function() {
+          type() {
             return true;
           }
         })
       );
-      require("./routes/queue/AccountRoute")(app);
-      require("./routes/queue/QueueRoute")(app);
-      require("./routes/queue/MessageRoute")(app);
-      app.use(require("./middleware/queue/validation"));
-      app.use(require("./middleware/queue/actions"));
+      from "./routes/queue/AccountRoute")(app);
+      from "./routes/queue/QueueRoute")(app);
+      from "./routes/queue/MessageRoute")(app);
+      app.use(from "./middleware/queue/validation"));
+      app.use(from "./middleware/queue/actions"));
       this.server = app.listen(env.queueStoragePort, () => {
         if (!env.silent) {
           cli.queueStorageStatus();
@@ -53,7 +53,7 @@ class AzuriteQueue {
     });
   }
 
-  close() {
+  public close() {
     return BbPromise.try(() => {
       this.server.close();
     });

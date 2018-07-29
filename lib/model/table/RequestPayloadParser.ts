@@ -1,11 +1,9 @@
 "use strict";
 
-const IAError = require("./../../core/InternalAzuriteError");
+const IAError = from "./../../core/InternalAzuriteError");
 
 class RequestPayLoadParser {
-  constructor() {}
-
-  parse(contentType, body) {
+  public parse(contentType, body) {
     if (!body.length || body.length === 0) {
       return {};
     }

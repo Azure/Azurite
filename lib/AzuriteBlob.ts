@@ -1,15 +1,15 @@
 import * as express from "express";
 import { Server } from "http";
 
-const BbPromise = require("bluebird"),
-  bodyParser = require("body-parser"),
-  env = require("./core/env"),
-  storageManager = require("./core/blob/StorageManager"),
-  morgan = require("morgan"),
-  cli = require("./core/cli");
+const BbPromise = from "bluebird"),
+  bodyParser = from "body-parser"),
+  env = from "./core/env"),
+  storageManager = from "./core/blob/StorageManager"),
+  morgan = from "morgan"),
+  cli = from "./core/cli");
 
 class AzuriteBlob {
-  server!: Server;
+  public server!: Server;
   constructor() {
     // Support for PM2 Graceful Shutdown on Windows and Linux/OSX
     // See http://pm2.keymetrics.io/docs/usage/signals-clean-restart/
@@ -26,7 +26,7 @@ class AzuriteBlob {
     }
   }
 
-  init(options) {
+  public init(options) {
     return env
       .init(options)
       .then(() => {
@@ -75,20 +75,20 @@ class AzuriteBlob {
           bodyParser.raw({
             inflate: true,
             limit: "268435kb", // Maximum size of a single PUT Blob operation as per spec.
-            type: function(type) {
+            type(type) {
               return true;
             }
           })
         );
         app.use(`/blobs`, express.static(env.localStoragePath));
-        require("./routes/blob/AccountRoute")(app);
-        require("./routes/blob/ContainerRoute")(app);
-        require("./routes/blob/BlobRoute")(app);
-        require("./routes/blob/NotFoundRoute")(app);
-        app.use(require("./middleware/blob/cors"));
-        app.use(require("./middleware/blob/authentication"));
-        app.use(require("./middleware/blob/validation"));
-        app.use(require("./middleware/blob/actions"));
+        from "./routes/blob/AccountRoute")(app);
+        from "./routes/blob/ContainerRoute")(app);
+        from "./routes/blob/BlobRoute")(app);
+        from "./routes/blob/NotFoundRoute")(app);
+        app.use(from "./middleware/blob/cors"));
+        app.use(from "./middleware/blob/authentication"));
+        app.use(from "./middleware/blob/validation"));
+        app.use(from "./middleware/blob/actions"));
         this.server = app.listen(env.blobStoragePort, () => {
           if (!env.silent) {
             cli.blobStorageStatus();
@@ -97,7 +97,7 @@ class AzuriteBlob {
       });
   }
 
-  close() {
+  public close() {
     return BbPromise.try(() => {
       this.server.close();
       storageManager.flush();

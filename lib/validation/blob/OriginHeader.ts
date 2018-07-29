@@ -1,6 +1,6 @@
-const AError = require("./../../core/AzuriteError"),
-  N = require("./../../core/HttpHeaderNames"),
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  N = from "./../../core/HttpHeaderNames"),
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 /**
  * Validates whether the "Origin" request header is set.
@@ -8,9 +8,7 @@ const AError = require("./../../core/AzuriteError"),
  * @class
  */
 class OriginHeader {
-  constructor() {}
-
-  validate({ request = undefined }) {
+  public validate({ request = undefined }) {
     if (!request.httpProps[N.ORIGIN]) {
       throw new AError(ErrorCodes.MissingRequiredHeader);
     }

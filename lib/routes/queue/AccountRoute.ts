@@ -1,6 +1,6 @@
-const env = require("./../../core/env"),
-  AzuriteQueueRequest = require("../../model/queue/AzuriteQueueRequest"),
-  Operations = require("./../../core/Constants").Operations;
+const env = from "./../../core/env"),
+  AzuriteQueueRequest = from "../../model/queue/AzuriteQueueRequest"),
+  Operations = from "./../../core/Constants").Operations;
 
 /*
  * Route definitions for all operation on the "account" resource type.
@@ -12,7 +12,7 @@ export default app => {
     if (req.query.comp === "list") {
       req.azuriteOperation = Operations.Queue.LIST_QUEUES;
     }
-    req.azuriteRequest = new AzuriteQueueRequest({ req: req });
+    req.azuriteRequest = new AzuriteQueueRequest({ req });
     next();
   });
 };

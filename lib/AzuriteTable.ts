@@ -1,12 +1,12 @@
 import * as express from "express";
 import { Server } from "http";
 
-const BbPromise = require("bluebird"),
-  bodyParser = require("body-parser"),
-  env = require("./core/env"),
-  tableStorageManager = require("./core/table/TableStorageManager"),
-  morgan = require("morgan"),
-  cli = require("./core/cli");
+const BbPromise = from "bluebird"),
+  bodyParser = from "body-parser"),
+  env = from "./core/env"),
+  tableStorageManager = from "./core/table/TableStorageManager"),
+  morgan = from "morgan"),
+  cli = from "./core/cli");
 
 class AzuriteTable {
   private server!: Server;
@@ -26,7 +26,7 @@ class AzuriteTable {
     }
   }
 
-  init(options) {
+  public init(options) {
     return env
       .init(options)
       .then(() => {
@@ -43,15 +43,15 @@ class AzuriteTable {
             // According to https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-the-table-service-data-model
             // maximum size of an entity is 1MB
             limit: "10000kb",
-            type: function(type) {
+            type(type) {
               return true;
             }
           })
         );
-        require("./routes/table/TableRoute")(app);
-        require("./routes/table/EntityRoute")(app);
-        app.use(require("./middleware/table/validation"));
-        app.use(require("./middleware/table/actions"));
+        from "./routes/table/TableRoute")(app);
+        from "./routes/table/EntityRoute")(app);
+        app.use(from "./middleware/table/validation"));
+        app.use(from "./middleware/table/actions"));
         this.server = app.listen(env.tableStoragePort, () => {
           if (!env.silent) {
             cli.tableStorageStatus();
@@ -60,7 +60,7 @@ class AzuriteTable {
       });
   }
 
-  close() {
+  public close() {
     return BbPromise.try(() => {
       this.server.close();
     });

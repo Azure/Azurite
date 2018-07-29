@@ -1,6 +1,6 @@
-const AError = require("./../../core/AzuriteError"),
-  N = require("./../../core/HttpHeaderNames"),
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  N = from "./../../core/HttpHeaderNames"),
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 /*
  * Checks whether the blob to be deleted has any associated snapshots and - if this is true - has according
@@ -8,9 +8,7 @@ const AError = require("./../../core/AzuriteError"),
  * Also checks whether above header is specified on a blob (valid) or a snapshot (not valid).
  */
 class AssociatedSnapshotsDeletion {
-  constructor() {}
-
-  validate({ request = undefined, moduleOptions = undefined }) {
+  public validate({ request = undefined, moduleOptions = undefined }) {
     // If a snapshot is requested to be deleted this validation rule is not relevant
     if (request.isSnapshot()) {
       return;

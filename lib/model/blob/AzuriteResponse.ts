@@ -1,6 +1,6 @@
-const uuidV1 = require("uuid/v1"),
-  N = require("./../../core/HttpHeaderNames"),
-  EntityType = require("./../../core/Constants").StorageEntityType;
+const uuidV1 = from "uuid/v1"),
+  N = from "./../../core/HttpHeaderNames"),
+  EntityType = from "./../../core/Constants").StorageEntityType;
 
 class AzuriteResponse {
   constructor({
@@ -42,13 +42,13 @@ class AzuriteResponse {
     }
   }
 
-  addHttpProperty(key, value) {
+  public addHttpProperty(key, value) {
     if (value !== undefined) {
       this.httpProps[key] = value;
     }
   }
 
-  sasOverrideHeaders(query) {
+  public sasOverrideHeaders(query) {
     this.addHttpProperty(N.CACHE_CONTROL, query.rscc);
     this.addHttpProperty(N.CONTENT_DISPOSITION, query.rscd);
     this.addHttpProperty(N.CONTENT_ENCODING, query.rsce);

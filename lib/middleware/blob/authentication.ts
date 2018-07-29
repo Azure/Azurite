@@ -1,21 +1,24 @@
-const BbPromise = require("bluebird"),
-  crypto = require("crypto"),
-  AError = require("./../../core/AzuriteError"),
-  ErrorCodes = require("./../../core/ErrorCodes"),
-  env = require("./../../core/env"),
-  Keys = require("./../../core/Constants").Keys,
-  Operations = require("./../../core/Constants").Operations;
+const BbPromise = from "bluebird"),
+  crypto = from "crypto"),
+  AError = from "./../../core/AzuriteError"),
+  ErrorCodes = from "./../../core/ErrorCodes"),
+  env = from "./../../core/env"),
+  Keys = from "./../../core/Constants").Keys,
+  Operations = from "./../../core/Constants").Operations;
 
 export default (req, res, next) => {
   BbPromise.try(() => {
     const request = req.azuriteRequest;
     if (env.accountAuth) {
-      if (req.headers.authorization === undefined)
+      if (req.headers.authorization === undefined) {
         throw new AError(ErrorCodes.AuthenticationFailed);
+      }
       const match = /SharedKey devstoreaccount1:(.*)/.exec(
         req.headers.authorization
       );
-      if (match === null) throw new AError(ErrorCodes.AuthenticationFailed);
+      if (match === null) {
+        throw new AError(ErrorCodes.AuthenticationFailed);
+      }
       const sig = _generateAccountSignature(req);
       if (sig.toString() !== match[1].toString()) {
         console.log("ERROR : Signature did not match!");
@@ -57,7 +60,9 @@ export default (req, res, next) => {
     next();
   }).catch(e => {
     res.status(e.statusCode || 500).send(e.message);
-    if (!e.statusCode) throw e;
+    if (!e.statusCode) {
+      throw e;
+    }
   });
 };
 
@@ -84,7 +89,7 @@ function _generateAccountSignature(req) {
     req.headers["content-type"] === undefined
       ? `\n`
       : `${req.headers["content-type"]}\n`;
-  str += req.headers["date"] === undefined ? `\n` : `${req.headers["date"]}\n`;
+  str += req.headers.date === undefined ? `\n` : `${req.headers.date}\n`;
   str +=
     req.headers["if-modified-since"] === undefined
       ? `\n`
@@ -101,26 +106,29 @@ function _generateAccountSignature(req) {
     req.headers["if-unmodified-since"] === undefined
       ? `\n`
       : `${req.headers["if-unmodified-since"]}\n`;
-  str +=
-    req.headers["range"] === undefined ? `\n` : `${req.headers["range"]}\n`;
+  str += req.headers.range === undefined ? `\n` : `${req.headers.range}\n`;
 
   // copy all x-ms-XXX headers
   const xms = {};
   for (const key in req.headers) {
-    if (key.startsWith("x-ms-")) xms[key] = req.headers[key];
+    if (key.startsWith("x-ms-")) {
+      xms[key] = req.headers[key];
+    }
   }
   Object.keys(xms)
     .sort()
     .forEach(function(v, i) {
       str += `${v}:${xms[v]}\n`;
     });
-  str += `/devstoreaccount1${req._parsedUrl["pathname"]}\n`;
+  str += `/devstoreaccount1${req._parsedUrl.pathname}\n`;
 
   Object.keys(req.query)
     .sort()
     .forEach(function(v, i) {
       let qlist = req.query[v];
-      if (Array.isArray(req.query[v])) qlist = req.query[v].sort();
+      if (Array.isArray(req.query[v])) {
+        qlist = req.query[v].sort();
+      }
       str += `${v}:${qlist}\n`;
     });
 

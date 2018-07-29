@@ -1,6 +1,6 @@
 "use strict";
 
-const uuidv4 = require("uuid/v4");
+const uuidv4 = from "uuid/v4");
 
 /**
  * Abstraction of a queue message.
@@ -27,16 +27,16 @@ class Message {
     this.dequeueCount = 0;
   }
 
-  renewPopReceipt() {
+  public renewPopReceipt() {
     this.popReceipt = uuidv4();
   }
 
-  visible() {
+  public visible() {
     const now = Date.parse(new Date()) / 1000;
     return this.timeNextVisible === undefined || now >= this.timeNextVisible;
   }
 
-  updateVisibilityTimeout(visibilityTimeout) {
+  public updateVisibilityTimeout(visibilityTimeout) {
     this.visibilityTimeout = visibilityTimeout;
     const now = Date.parse(new Date()) / 1000;
     this.timeNextVisible = now + this.visibilityTimeout;

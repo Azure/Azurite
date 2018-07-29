@@ -1,43 +1,45 @@
-const BbPromise = require("bluebird"),
-  Operations = require("./../../core/Constants").Operations,
+const BbPromise = from "bluebird"),
+  Operations = from "./../../core/Constants").Operations,
   // Actions
-  createContainer = require("./../../actions/blob/CreateContainer"),
-  deleteBlob = require("./../../actions/blob/DeleteBlob"),
-  deleteContainer = require("./../../actions/blob/DeleteContainer"),
-  getBlob = require("./../../actions/blob/GetBlob"),
-  getBlobMetadata = require("./../../actions/blob/GetBlobMetadata"),
-  getBlobProperties = require("./../../actions/blob/GetBlobProperties"),
-  getBlockList = require("./../../actions/blob/GetBlockList"),
-  getContainerAcl = require("./../../actions/blob/GetContainerAcl"),
-  getContainerMetadata = require("./../../actions/blob/GetContainerMetadata"),
-  getContainerProperties = require("./../../actions/blob/GetContainerProperties"),
-  getPageRanges = require("./../../actions/blob/GetPageRanges"),
-  leaseBlob = require("./../../actions/blob/LeaseBlob"),
-  leaseContainer = require("./../../actions/blob/LeaseContainer"),
-  listBlobs = require("./../../actions/blob/ListBlobs"),
-  listContainers = require("./../../actions/blob/ListContainers"),
-  putAppendBlock = require("./../../actions/blob/PutAppendBlock"),
-  putBlob = require("./../../actions/blob/PutBlob"),
-  putBlock = require("./../../actions/blob/PutBlock"),
-  putBlockList = require("./../../actions/blob/PutBlockList"),
-  putPage = require("./../../actions/blob/PutPage"),
-  setBlobMetadata = require("./../../actions/blob/SetBlobMetadata"),
-  setBlobProperties = require("./../../actions/blob/SetBlobProperties"),
-  setBlobServiceProperties = require("./../../actions/blob/SetBlobServiceProperties"),
-  getBlobServiceProperties = require("./../../actions/blob/GetBlobServiceProperties"),
-  preflightBlobRequest = require("./../../actions/blob/PreflightBlobRequest"),
-  setContainerAcl = require("./../../actions/blob/SetContainerAcl"),
-  setContainerMetadata = require("./../../actions/blob/SetContainerMetadata"),
-  snapshotBlob = require("./../../actions/blob/SnapshotBlob"),
-  copyBlob = require("./../../actions/blob/CopyBlob"),
-  abortCopyBlob = require("./../../actions/blob/AbortCopyBlob");
+  createContainer = from "./../../actions/blob/CreateContainer"),
+  deleteBlob = from "./../../actions/blob/DeleteBlob"),
+  deleteContainer = from "./../../actions/blob/DeleteContainer"),
+  getBlob = from "./../../actions/blob/GetBlob"),
+  getBlobMetadata = from "./../../actions/blob/GetBlobMetadata"),
+  getBlobProperties = from "./../../actions/blob/GetBlobProperties"),
+  getBlockList = from "./../../actions/blob/GetBlockList"),
+  getContainerAcl = from "./../../actions/blob/GetContainerAcl"),
+  getContainerMetadata = from "./../../actions/blob/GetContainerMetadata"),
+  getContainerProperties = from "./../../actions/blob/GetContainerProperties"),
+  getPageRanges = from "./../../actions/blob/GetPageRanges"),
+  leaseBlob = from "./../../actions/blob/LeaseBlob"),
+  leaseContainer = from "./../../actions/blob/LeaseContainer"),
+  listBlobs = from "./../../actions/blob/ListBlobs"),
+  listContainers = from "./../../actions/blob/ListContainers"),
+  putAppendBlock = from "./../../actions/blob/PutAppendBlock"),
+  putBlob = from "./../../actions/blob/PutBlob"),
+  putBlock = from "./../../actions/blob/PutBlock"),
+  putBlockList = from "./../../actions/blob/PutBlockList"),
+  putPage = from "./../../actions/blob/PutPage"),
+  setBlobMetadata = from "./../../actions/blob/SetBlobMetadata"),
+  setBlobProperties = from "./../../actions/blob/SetBlobProperties"),
+  setBlobServiceProperties = from "./../../actions/blob/SetBlobServiceProperties"),
+  getBlobServiceProperties = from "./../../actions/blob/GetBlobServiceProperties"),
+  preflightBlobRequest = from "./../../actions/blob/PreflightBlobRequest"),
+  setContainerAcl = from "./../../actions/blob/SetContainerAcl"),
+  setContainerMetadata = from "./../../actions/blob/SetContainerMetadata"),
+  snapshotBlob = from "./../../actions/blob/SnapshotBlob"),
+  copyBlob = from "./../../actions/blob/CopyBlob"),
+  abortCopyBlob = from "./../../actions/blob/AbortCopyBlob");
 
 export default (req, res) => {
   BbPromise.try(() => {
     actions[req.azuriteOperation](req.azuriteRequest, res);
   }).catch(e => {
     res.status(e.statusCode || 500).send(e.message);
-    if (!e.statusCode) throw e;
+    if (!e.statusCode) {
+      throw e;
+    }
   });
 };
 

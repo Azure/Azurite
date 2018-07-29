@@ -73,11 +73,13 @@
     "cross-var": "^1.1.0",
     "mocha": "5.2.0",
     "pkg": "^4.3.1",
+    "prettier-tslint": "^0.4.0",
     "request-promise": "^4.1.1",
     "rimraf": "2.6.2",
     "ts-lint": "^4.5.1",
     "ts-node": "^7.0.0",
     "tslint": "^5.11.0",
+    "tslint-config-prettier": "^1.14.0",
     "typescript": "^2.9.2"
   }
 }

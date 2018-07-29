@@ -1,11 +1,9 @@
-const AError = require("./../../core/AzuriteError"),
-  ErrorCodes = require("./../../core/ErrorCodes"),
-  EntityType = require("./../../core/Constants").StorageEntityType;
+const AError = from "./../../core/AzuriteError"),
+  ErrorCodes = from "./../../core/ErrorCodes"),
+  EntityType = from "./../../core/Constants").StorageEntityType;
 
 class SupportedBlobType {
-  constructor() {}
-
-  validate({ request = undefined }) {
+  public validate({ request = undefined }) {
     if (
       request.entityType !== EntityType.AppendBlob &&
       request.entityType !== EntityType.BlockBlob &&

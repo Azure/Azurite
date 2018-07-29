@@ -1,10 +1,9 @@
-const storageManager = require("./../../core/blob/StorageManager"),
-  N = require("./../../core/HttpHeaderNames"),
-  LeaseActions = require("./../../core/Constants").LeaseActions;
+import storageManager from "./../../core/blob/StorageManager";
+import N from "./../../core/HttpHeaderNames";
+LeaseActions = from "./../../core/Constants").LeaseActions;
 
 class LeaseBlob {
-  constructor() {}
-  process(request, res) {
+  public process(request, res) {
     storageManager.leaseBlob(request).then(response => {
       response.addHttpProperty(N.LEASE_ID, response.proxy.original.leaseId);
       let statusCode;

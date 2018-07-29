@@ -1,5 +1,5 @@
-const Message = require("./Message"),
-  InternalAzuriteError = require("./../../core/InternalAzuriteError");
+const Message = from "./Message"),
+  InternalAzuriteError = from "./../../core/InternalAzuriteError");
 
 class Queue {
   constructor(metaProps = {}) {
@@ -7,13 +7,13 @@ class Queue {
     this.messages = [];
   }
 
-  put({ now, msg, visibilityTimeout, messageTtl }) {
+  public put({ now, msg, visibilityTimeout, messageTtl }) {
     const message = new Message(now, msg, visibilityTimeout, messageTtl);
     this.messages.push(message);
     return message;
   }
 
-  gett({ numOfMessages = 1, visibilityTimeout = 30 }) {
+  public gett({ numOfMessages = 1, visibilityTimeout = 30 }) {
     const visibleItems = this.messages
       .filter(i => {
         return i.visible();
@@ -31,7 +31,7 @@ class Queue {
     return visibleItems;
   }
 
-  peek(numOfMessages = 1) {
+  public peek(numOfMessages = 1) {
     const visibleItems = this.messages
       .filter(i => {
         return i.visible();
@@ -51,7 +51,7 @@ class Queue {
    * @param {any} popReceipt
    * @memberof Queue
    */
-  delete(messageId, popReceipt) {
+  public delete(messageId, popReceipt) {
     const { index } = this._getMessageAndIndex(messageId, popReceipt);
     this.messages.splice(index, 1);
   }
@@ -61,7 +61,7 @@ class Queue {
    *
    * @memberof Queue
    */
-  clear() {
+  public clear() {
     this.messages = [];
   }
 
@@ -74,7 +74,7 @@ class Queue {
    * @param {any} msg
    * @memberof Queue
    */
-  update({ messageId, popReceipt, visibilityTimeout, msg }) {
+  public update({ messageId, popReceipt, visibilityTimeout, msg }) {
     const { item } = this._getMessageAndIndex(messageId, popReceipt);
     item.updateVisibilityTimeout(visibilityTimeout);
     item.renewPopReceipt();
@@ -91,26 +91,26 @@ class Queue {
    * @returns the according message, undefined if it does not exist.
    * @memberof Queue
    */
-  getMessage(messageId) {
+  public getMessage(messageId) {
     const index = this.messages.findIndex(i => {
       return i.messageId === messageId;
     });
     return this.messages[index];
   }
 
-  addAcl(signedIdentifiers) {
+  public addAcl(signedIdentifiers) {
     this.signedIdentifiers = signedIdentifiers;
   }
 
-  getAcl() {
+  public getAcl() {
     return this.signedIdentifiers;
   }
 
-  getLength() {
+  public getLength() {
     return this.messages.length;
   }
 
-  _getMessageAndIndex(messageId, popReceipt) {
+  public _getMessageAndIndex(messageId, popReceipt) {
     const index = this.messages.findIndex(i => {
       return i.messageId === messageId;
     });
@@ -131,8 +131,8 @@ class Queue {
     }
 
     return {
-      item: item,
-      index: index
+      item,
+      index
     };
   }
 }

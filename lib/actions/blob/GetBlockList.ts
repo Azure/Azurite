@@ -1,13 +1,11 @@
-const storageManager = require("./../../core/blob/StorageManager"),
-  N = require("./../../core/HttpHeaderNames"),
-  BlockListType = require("./../../core/Constants").BlockListType,
-  js2xmlparser = require("js2xmlparser"),
-  Model = require("./../../xml/blob/BlockListXmlModel");
+import js2xmlparser from "js2xmlparser";
+import storageManager from "./../../core/blob/StorageManager";
+import { BlockListType } from "./../../core/Constants";
+import N from "./../../core/HttpHeaderNames";
+import { Block, BlockList } from "./../../xml/blob/BlockListXmlModel";
 
 class GetBlockList {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     storageManager.getBlockList(request).then(response => {
       const xml = this._transformToXml(response.payload, request.blockListType);
       response.addHttpProperty(
@@ -19,24 +17,22 @@ class GetBlockList {
     });
   }
 
-  _transformToXml(blockList, blockListType) {
-    const model = new Model.BlockList(blockListType);
+  public _transformToXml(blockList, blockListType) {
+    const model = new BlockList(blockListType);
     for (const block of blockList) {
       if (
         block.committed &&
         (blockListType === BlockListType.COMMITTED ||
           blockListType === BlockListType.ALL)
       ) {
-        model.CommittedBlocks.Block.push(
-          new Model.Block(block.blockId, block.size)
-        );
+        model.CommittedBlocks.Block.push(new Block(block.blockId, block.size));
       } else if (
         !block.committed &&
         (blockListType === BlockListType.UNCOMMITTED ||
           blockListType === BlockListType.ALL)
       ) {
         model.UncommittedBlocks.Block.push(
-          new Model.Block(block.blockId, block.size)
+          new Block(block.blockId, block.size)
         );
       }
     }

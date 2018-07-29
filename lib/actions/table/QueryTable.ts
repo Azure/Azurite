@@ -1,12 +1,10 @@
-const AzuriteTableResponse = require("./../../model/table/AzuriteTableResponse"),
-  tableStorageManager = require("./../../core/table/TableStorageManager"),
-  ODataMode = require("./../../core/Constants").ODataMode,
-  N = require("./../../core/HttpHeaderNames");
+const AzuriteTableResponse = from "./../../model/table/AzuriteTableResponse"),
+  tableStorageManager = from "./../../core/table/TableStorageManager"),
+  ODataMode = from "./../../core/Constants").ODataMode;
+import N from "./../../core/HttpHeaderNames";
 
 class QueryTable {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     tableStorageManager.queryTable(request).then(response => {
       res.set(response.httpProps);
       const payload = this._createResponsePayload(
@@ -17,7 +15,7 @@ class QueryTable {
     });
   }
 
-  _createResponsePayload(payload, accept) {
+  public _createResponsePayload(payload, accept) {
     const response = {};
     if (accept !== ODataMode.NONE) {
       response[

@@ -1,11 +1,9 @@
-const AError = require("./../../core/AzuriteError"),
-  EntityType = require("./../../core/Constants").StorageEntityType,
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  EntityType = from "./../../core/Constants").StorageEntityType,
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 class BlobCreationSize {
-  constructor() {}
-
-  validate({ request = undefined }) {
+  public validate({ request = undefined }) {
     // Append and Page Blobs must not be larger than 0 bytes
     if (
       (request.entityType === EntityType.AppendBlob ||

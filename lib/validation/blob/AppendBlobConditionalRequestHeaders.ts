@@ -1,6 +1,6 @@
-const AError = require("./../../core/AzuriteError"),
-  N = require("./../../core/HttpHeaderNames"),
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  N = from "./../../core/HttpHeaderNames"),
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 /**
  * Checks whether the following conditional request headers specific to an AppendBlob are satisfied.
@@ -12,9 +12,7 @@ const AError = require("./../../core/AzuriteError"),
  * @class AppendBlobConditionalRequestHeaders
  */
 class AppendBlobConditionalRequestHeaders {
-  constructor() {}
-
-  validate({ request = undefined, blobProxy = undefined }) {
+  public validate({ request = undefined, blobProxy = undefined }) {
     const maxSize = request.httpProps[N.BLOB_CONDITION_MAX_SIZE],
       appendPos = request.httpProps[N.BLOB_CONDITION_APPENDPOS];
 

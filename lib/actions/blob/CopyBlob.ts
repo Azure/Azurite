@@ -1,13 +1,11 @@
-const storageManager = require("./../../core/blob/StorageManager"),
-  N = require("./../../core/HttpHeaderNames");
+import storageManager from "./../../core/blob/StorageManager";
+import N from "./../../core/HttpHeaderNames";
 
 // TODO: - IsPending Validation module (uses CopyOpsManager)
 //       - Copy committed block blocks
 //       - Copy needs to be aborted if ETag changes while copy is pending
 class CopyBlob {
-  constructor() {}
-
-  process(azuriteRequest, res) {
+  public process(azuriteRequest, res) {
     storageManager.copyBlob(azuriteRequest).then(response => {
       response.addHttpProperty(
         N.COPY_STATUS,

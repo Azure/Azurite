@@ -1,4 +1,4 @@
-const Operations = require("./../../core/Constants").Operations.Queue;
+const Operations = from "./../../core/Constants").Operations.Queue;
 
 class AzuriteQueueRequest {
   constructor({ req = undefined, payload = undefined, operation = undefined }) {
@@ -35,7 +35,7 @@ class AzuriteQueueRequest {
   }
 
   // Working on rawHeaders for meta attributes to preserve casing.
-  _initMetaProps(rawHeaders) {
+  public _initMetaProps(rawHeaders) {
     this.metaProps = rawHeaders
       .map((e, i, a) => {
         if (e.indexOf("x-ms-meta-") !== -1) {

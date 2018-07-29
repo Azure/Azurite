@@ -1,6 +1,8 @@
-const BlockListType = require("./../../core/Constants").BlockListType;
+import { BlockListType } from "./../../core/Constants";
 
-class BlockList {
+export class BlockList {
+  public CommittedBlocks: { Block: any[] };
+  public UncommittedBlocks: { Block: any[] };
   constructor(blockListType) {
     this.CommittedBlocks = {
       Block: []
@@ -18,14 +20,12 @@ class BlockList {
   }
 }
 
-class Block {
+// tslint:disable-next-line:max-classes-per-file
+export class Block {
+  public Name: any;
+  public Size: any;
   constructor(name, size) {
     this.Name = name;
     this.Size = size;
   }
 }
-
-export default {
-  BlockList: BlockList,
-  Block: Block
-};

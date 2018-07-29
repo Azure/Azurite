@@ -1,5 +1,5 @@
-const AError = require("./../../core/AzuriteError"),
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 /**
  * Checks whether the operation is authorized by the service signature (if existing).
@@ -7,9 +7,7 @@ const AError = require("./../../core/AzuriteError"),
  * @class ServiceSignature
  */
 class ServiceSignature {
-  constructor() {}
-
-  validate({
+  public validate({
     request = undefined,
     containerProxy = undefined,
     blobProxy = undefined,

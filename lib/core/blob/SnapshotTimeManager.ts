@@ -23,7 +23,7 @@ class SnapshotTimeManager {
    *
    * @memberof SnapshotTimeManager
    */
-  _update(id, date) {
+  public _update(id, date) {
     this.times[id] = date;
   }
 
@@ -36,7 +36,7 @@ class SnapshotTimeManager {
    *
    * @memberof SnapshotTimeManager
    */
-  getDate(id, now) {
+  public getDate(id, now) {
     const date = this.times[id];
     if (date === undefined || now.getTime() - date.getTime() > 1000) {
       this._update(id, now);

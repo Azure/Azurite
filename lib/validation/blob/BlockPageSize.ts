@@ -1,7 +1,7 @@
-const AError = require("./../../core/AzuriteError"),
-  N = require("./../../core/HttpHeaderNames"),
-  EntityType = require("./../../core/Constants").StorageEntityType,
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  N = from "./../../core/HttpHeaderNames"),
+  EntityType = from "./../../core/Constants").StorageEntityType,
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 /**
  * Validates whether PUT Block, PUT AppendBlob, and PUT Page operations adhere
@@ -10,9 +10,7 @@ const AError = require("./../../core/AzuriteError"),
  * @class BlockPageSize
  */
 class BlockPageSize {
-  constructor() {}
-
-  validate({ request = undefined }) {
+  public validate({ request = undefined }) {
     const size = request.body.length || request.httpProps[N.CONTENT_LENGTH];
     switch (request.entityType) {
       case EntityType.BlockBlob:

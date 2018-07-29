@@ -1,12 +1,10 @@
-const AError = require("./../../core/AzuriteError"),
-  ErrorCodes = require("./../../core/ErrorCodes"),
-  EntityType = require("./../../core/Constants").StorageEntityType,
-  N = require("./../../core/HttpHeaderNames"),
-  Usage = require("./../../core/Constants").Usage;
+const AError = from "./../../core/AzuriteError"),
+  ErrorCodes = from "./../../core/ErrorCodes"),
+  EntityType = from "./../../core/Constants").StorageEntityType,
+  N = from "./../../core/HttpHeaderNames"),
+  Usage = from "./../../core/Constants").Usage;
 
 class ConditionalRequestHeaders {
-  constructor() {}
-
   /**
    * Checks whether the following conditional request headers are satisfied.
    * - If-Modified-Since
@@ -14,7 +12,7 @@ class ConditionalRequestHeaders {
    * - If-Match
    * - If-None-Match
    */
-  validate({
+  public validate({
     request = undefined,
     containerProxy = undefined,
     blobProxy = undefined,

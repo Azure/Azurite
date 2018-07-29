@@ -1,11 +1,9 @@
-const storageManager = require("./../../core/blob/StorageManager"),
-  N = require("./../../core/HttpHeaderNames"),
-  AError = require("./../../core/AzuriteError");
+import storageManager from "./../../core/blob/StorageManager";
+import N from "./../../core/HttpHeaderNames";
+AError = from "./../../core/AzuriteError");
 
 class PutBlockList {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     storageManager.putBlockList(request).then(response => {
       response.addHttpProperty(N.CONTENT_MD5, request.calculateContentMd5());
       response.addHttpProperty(N.REQUEST_SERVER_ENCRYPTED, false);

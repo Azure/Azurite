@@ -32,6 +32,6 @@ class Properties {
 }
 
 export default {
-  ContainerList: ContainerList,
-  Container: Container
+  ContainerList,
+  Container
 };

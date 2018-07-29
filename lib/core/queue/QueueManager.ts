@@ -1,4 +1,4 @@
-const Queue = require("./../../model/queue/Queue");
+const Queue = from "./../../model/queue/Queue");
 
 /**
  * Manages the lifecycle of all queues in memory. Queues are not persisted in Azurite.
@@ -6,32 +6,32 @@ const Queue = require("./../../model/queue/Queue");
  * @class QueueManager
  */
 class QueueManager {
-  queues: {};
+  public queues: {};
   constructor() {
     this.queues = {};
   }
 
-  add({ name, metaProps = {} }) {
+  public add({ name, metaProps = {} }) {
     this.queues[name] = new Queue(metaProps);
   }
 
-  delete(name) {
+  public delete(name) {
     delete this.queues[name];
   }
 
-  getQueueAndMessage({ queueName = undefined, messageId = undefined }) {
+  public getQueueAndMessage({ queueName = undefined, messageId = undefined }) {
     const queue = this.queues[queueName];
     let message = undefined;
     if (queue !== undefined && messageId !== undefined) {
       message = queue.getMessage(messageId);
     }
     return {
-      queue: queue,
-      message: message
+      queue,
+      message
     };
   }
 
-  listQueues({ prefix = "", marker = 0, maxresults = 5000 }) {
+  public listQueues({ prefix = "", marker = 0, maxresults = 5000 }) {
     const filteredQueues = Object.keys(this.queues)
       .filter(queueName => {
         return queueName.startsWith(prefix);
@@ -58,7 +58,7 @@ class QueueManager {
     };
   }
 
-  setQueueMetadata(request) {
+  public setQueueMetadata(request) {
     const { queue } = this.getQueueAndMessage({ queueName: request.queueName });
     queue.metaProps = request.metaProps;
   }

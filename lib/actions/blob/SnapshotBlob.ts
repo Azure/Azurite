@@ -1,10 +1,8 @@
-const storageManager = require("./../../core/blob/StorageManager"),
-  N = require("./../../core/HttpHeaderNames");
+import storageManager from "./../../core/blob/StorageManager";
+import N from "./../../core/HttpHeaderNames";
 
 class SnapshotBlob {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     storageManager.snapshotBlob(request).then(response => {
       response.addHttpProperty(
         N.SNAPSHOT_DATE,

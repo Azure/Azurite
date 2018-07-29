@@ -1,19 +1,19 @@
-const BbPromise = require("bluebird"),
-  Operations = require("./../../core/Constants").Operations,
-  AzuriteQueueRequest = require("./../../model/queue/AzuriteQueueRequest"),
-  QueueManager = require("./../../core/queue/QueueManager"),
+const BbPromise = from "bluebird"),
+  Operations = from "./../../core/Constants").Operations,
+  AzuriteQueueRequest = from "./../../model/queue/AzuriteQueueRequest"),
+  QueueManager = from "./../../core/queue/QueueManager"),
   // Validation modules
-  ValidationContext = require("./../../validation/queue/ValidationContext"),
-  QueueCreationValidation = require("./../../validation/queue/QueueCreation"),
-  QueueExistsValidation = require("./../../validation/queue/QueueExists"),
-  QueueMessageSizeValidation = require("./../../validation/queue/QueueMessageSize"),
-  NumOfMessagesValidation = require("./../../validation/queue/NumOfMessages"),
-  QueueNameValidation = require("./../../validation/queue/QueueName"),
-  MessageExistsValidation = require("./../../validation/queue/MessageExists"),
-  PopReceiptValidation = require("./../../validation/queue/PopReceipt"),
-  VisibilityTimeoutValueValidation = require("./../../validation/queue/VisibilityTimeoutValue"),
-  MessageExpired = require("./../../validation/queue/MessageExpired"),
-  NumOfSignedIdentifiersVal = require("./../../validation/NumOfSignedIdentifiers");
+  ValidationContext = from "./../../validation/queue/ValidationContext"),
+  QueueCreationValidation = from "./../../validation/queue/QueueCreation"),
+  QueueExistsValidation = from "./../../validation/queue/QueueExists"),
+  QueueMessageSizeValidation = from "./../../validation/queue/QueueMessageSize"),
+  NumOfMessagesValidation = from "./../../validation/queue/NumOfMessages"),
+  QueueNameValidation = from "./../../validation/queue/QueueName"),
+  MessageExistsValidation = from "./../../validation/queue/MessageExists"),
+  PopReceiptValidation = from "./../../validation/queue/PopReceipt"),
+  VisibilityTimeoutValueValidation = from "./../../validation/queue/VisibilityTimeoutValue"),
+  MessageExpired = from "./../../validation/queue/MessageExpired"),
+  NumOfSignedIdentifiersVal = from "./../../validation/NumOfSignedIdentifiers");
 
 export default (req, res, next) => {
   BbPromise.try(() => {
@@ -23,16 +23,18 @@ export default (req, res, next) => {
       messageId: request.messageId
     });
     const validationContext = new ValidationContext({
-      request: request,
-      queue: queue,
-      message: message,
+      request,
+      queue,
+      message,
       operation: req.azuriteOperation
     });
     validations[req.azuriteOperation](validationContext);
     next();
   }).catch(e => {
     res.status(e.statusCode || 500).send(e.message);
-    if (!e.statusCode) throw e;
+    if (!e.statusCode) {
+      throw e;
+    }
   });
 };
 

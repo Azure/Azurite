@@ -1,15 +1,13 @@
-const QueueManager = require("./../../core/queue/QueueManager"),
-  QueueMessagesListXmlModel = require("./../../xml/queue/QueueMessageList")
+const QueueManager = from "./../../core/queue/QueueManager"),
+  QueueMessagesListXmlModel = from "./../../xml/queue/QueueMessageList")
     .QueueMessageListXmlModel,
-  QueueMessageXmlModel = require("./../../xml/queue/QueueMessageList")
+  QueueMessageXmlModel = from "./../../xml/queue/QueueMessageList")
     .QueueMessageXmlModel,
-  N = require("./../../core/HttpHeaderNames"),
-  AzuriteQueueResponse = require("./../../model/queue/AzuriteQueueResponse");
+  N = from "./../../core/HttpHeaderNames"),
+  AzuriteQueueResponse = from "./../../model/queue/AzuriteQueueResponse");
 
 class UpdateMessage {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     const queue = QueueManager.getQueueAndMessage({
         queueName: request.queueName
       }).queue,

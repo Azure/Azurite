@@ -1,6 +1,6 @@
-const AError = require("./../../core/AzuriteError"),
-  N = require("./../../core/HttpHeaderNames"),
-  ErrorCodes = require("./../../core/ErrorCodes");
+const AError = from "./../../core/AzuriteError"),
+  N = from "./../../core/HttpHeaderNames"),
+  ErrorCodes = from "./../../core/ErrorCodes");
 
 /**
  * Validates the 512-byte alignment of a Page Blob.
@@ -11,9 +11,7 @@ const AError = require("./../../core/AzuriteError"),
  * @class PageAlignment
  */
 class PageAlignment {
-  constructor() {}
-
-  validate({ request = undefined }) {
+  public validate({ request = undefined }) {
     const range = request.httpProps[N.RANGE];
     // Range is optional
     if (!range) {

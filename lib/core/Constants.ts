@@ -1,169 +1,159 @@
-const StorageTables = {
-  Containers: "Containers",
+export const StorageTables = {
   Commits: "Commmits",
+  Containers: "Containers",
   Pages: "Pages",
   ServiceProperties: "ServiceProperties"
 };
 
-const TableStorageTables = {
+export const TableStorageTables = {
   Tables: "Tables"
 };
 
-const StorageEntityType = {
-  Container: "Container",
-  BlockBlob: "BlockBlob",
+export const StorageEntityType = {
   AppendBlob: "AppendBlob",
+  BlockBlob: "BlockBlob",
+  Container: "Container",
   PageBlob: "PageBlob"
 };
 
-const Usage = {
+export const Usage = {
   Read: 1,
   Write: 2,
+  // tslint:disable-next-line:object-literal-sort-keys
   Delete: 4,
   Other: 8
 };
 
-const LeaseStatus = {
+export const LeaseStatus = {
   AVAILABLE: "available",
   BROKEN: "broken",
+  // tslint:disable-next-line:object-literal-sort-keys
   BREAKING: "breaking",
   LEASED: "leased",
   EXPIRED: "expired"
 };
 
-const LeaseActions = {
+export const LeaseActions = {
   ACQUIRE: "acquire",
   RENEW: "renew",
+  // tslint:disable-next-line:object-literal-sort-keys
   CHANGE: "change",
   RELEASE: "release",
   BREAK: "break"
 };
 
-const BlockListType = {
+export const BlockListType = {
+  ALL: "all",
   COMMITTED: "committed",
-  UNCOMMITTED: "uncommitted",
-  ALL: "all"
+  UNCOMMITTED: "uncommitted"
 };
 
-const Operations = {
-  Undefined: "Undefined",
+export const Operations = {
   Account: {
-    LIST_CONTAINERS: "ListContainers",
-    SET_BLOB_SERVICE_PROPERTIES: "SetBlobServiceProperties",
     GET_BLOB_SERVICE_PROPERTIES: "GetBlobServiceProperties",
-    PREFLIGHT_BLOB_REQUEST: "PreflightBlobRequest"
+    LIST_CONTAINERS: "ListContainers",
+    PREFLIGHT_BLOB_REQUEST: "PreflightBlobRequest",
+    SET_BLOB_SERVICE_PROPERTIES: "SetBlobServiceProperties"
+  },
+  Blob: {
+    ABORT_COPY_BLOB: "AbortCopyBlob",
+    APPEND_BLOCK: "AppendBlock",
+    COPY_BLOB: "CopyBlob",
+    DELETE_BLOB: "DeleteBlob",
+    GET_BLOB: "GetBlob",
+    GET_BLOB_METADATA: "GetBlobMetadata",
+    GET_BLOB_PROPERTIES: "GetBlobProperties",
+    GET_BLOCK_LIST: "GetBlockList",
+    GET_PAGE_RANGES: "GetPageRanges",
+    INCREMENTAL_COPY_BLOB: "IncrementalCopyBlob",
+    LEASE_BLOB: "LeaseBlob",
+    PUT_BLOB: "PutBlob",
+    PUT_BLOCK: "PutBlock",
+    PUT_BLOCK_LIST: "PutBlockList",
+    PUT_PAGE: "PutPage",
+    SET_BLOB_METADATA: "SetBlobMetadata",
+    SET_BLOB_PROPERTIES: "SetBlobProperties",
+    SET_BLOB_TIER: "SetBlobTier",
+    SNAPSHOT_BLOB: "SnapshotBlob"
   },
   Container: {
     CREATE_CONTAINER: "CreateContainer",
-    GET_CONTAINER_PROPERTIES: "GetContainerProperties",
-    GET_CONTAINER_METADATA: "GetContainerMetadata",
-    SET_CONTAINER_METADATA: "SetContainerMetadata",
-    GET_CONTAINER_ACL: "GetContainerAcl",
-    SET_CONTAINER_ACL: "SetContainerAcl",
     DELETE_CONTAINER: "DeleteContainer",
+    GET_CONTAINER_ACL: "GetContainerAcl",
+    GET_CONTAINER_METADATA: "GetContainerMetadata",
+    GET_CONTAINER_PROPERTIES: "GetContainerProperties",
     LEASE_CONTAINER: "LeaseContainer",
-    LIST_BLOBS: "ListBlobs"
-  },
-  Blob: {
-    PUT_BLOB: "PutBlob",
-    GET_BLOB: "GetBlob",
-    GET_BLOB_PROPERTIES: "GetBlobProperties",
-    SET_BLOB_PROPERTIES: "SetBlobProperties",
-    GET_BLOB_METADATA: "GetBlobMetadata",
-    SET_BLOB_METADATA: "SetBlobMetadata",
-    LEASE_BLOB: "LeaseBlob",
-    SNAPSHOT_BLOB: "SnapshotBlob",
-    COPY_BLOB: "CopyBlob",
-    ABORT_COPY_BLOB: "AbortCopyBlob",
-    DELETE_BLOB: "DeleteBlob",
-    SET_BLOB_TIER: "SetBlobTier",
-    PUT_BLOCK: "PutBlock",
-    PUT_BLOCK_LIST: "PutBlockList",
-    GET_BLOCK_LIST: "GetBlockList",
-    PUT_PAGE: "PutPage",
-    GET_PAGE_RANGES: "GetPageRanges",
-    INCREMENTAL_COPY_BLOB: "IncrementalCopyBlob",
-    APPEND_BLOCK: "AppendBlock"
+    LIST_BLOBS: "ListBlobs",
+    SET_CONTAINER_ACL: "SetContainerAcl",
+    SET_CONTAINER_METADATA: "SetContainerMetadata"
   },
   Queue: {
-    CREATE_QUEUE: "CreateQueue",
-    DELETE_QUEUE: "DeleteQueue",
-    SET_QUEUE_METADATA: "SetQueueMetadata",
-    GET_QUEUE_METADATA: "GetQueueMetadata",
-    PUT_MESSAGE: "PutMessage",
-    GET_MESSAGE: "GetMessage",
     CLEAR_MESSAGES: "ClearMessages",
-    PEEK_MESSAGES: "PeekMessages",
+    CREATE_QUEUE: "CreateQueue",
     DELETE_MESSAGE: "DeleteMessage",
-    UPDATE_MESSAGE: "UpdateMessage",
+    DELETE_QUEUE: "DeleteQueue",
+    GET_MESSAGE: "GetMessage",
+    GET_QUEUE_ACL: "GetQueueAcl",
+    GET_QUEUE_METADATA: "GetQueueMetadata",
     LIST_QUEUES: "ListQueues",
+    PEEK_MESSAGES: "PeekMessages",
+    PUT_MESSAGE: "PutMessage",
     SET_QUEUE_ACL: "SetQueueAcl",
-    GET_QUEUE_ACL: "GetQueueAcl"
+    SET_QUEUE_METADATA: "SetQueueMetadata",
+    UPDATE_MESSAGE: "UpdateMessage"
   },
   Table: {
     CREATE_TABLE: "CreateTable",
-    INSERT_ENTITY: "InsertEntity",
-    DELETE_TABLE: "DeleteTable",
     DELETE_ENTITY: "DeleteEntity",
-    QUERY_TABLE: "QueryTable",
-    QUERY_ENTITY: "QueryEntity",
-    UPDATE_ENTITY: "UpdateEntity",
+    DELETE_TABLE: "DeleteTable",
+    INSERT_ENTITY: "InsertEntity",
+    INSERT_OR_MERGE_ENTITY: "InsertOrMergeEntity",
     INSERT_OR_REPLACE_ENTITY: "InsertOrReplaceEntity",
     MERGE_ENTITY: "MergeEntity",
-    INSERT_OR_MERGE_ENTITY: "InsertOrMergeEntity"
-  }
+    QUERY_ENTITY: "QueryEntity",
+    QUERY_TABLE: "QueryTable",
+    UPDATE_ENTITY: "UpdateEntity"
+  },
+  Undefined: "Undefined"
 };
 
-const CopyStatus = {
+export const CopyStatus = {
   PENDING: "pending",
   SUCCESS: "success",
+  // tslint:disable-next-line:object-literal-sort-keys
   FAILED: "failed",
   ABORTED: "aborted"
 };
 
 // See allowed operations below in comments
-const ServiceSAS = {
+export const ServiceSAS = {
   Blob: {
-    // Read the content, properties, metadata or block list of any blob in the container. Use any blob in the container as the source of a copy operation.
-    READ: "r",
     // Add a block to any append blob in the container.
     ADD: "a",
     // Write a new blob to the container, snapshot any blob in the container, or copy a blob to a new blob in the container.
     CREATE: "c",
+    // Delete any blob in the container. Note: You cannot grant permissions to delete a container with a service SAS. Use an account SAS instead.
+    DELETE: "d",
+    // Read the content, properties, metadata or block list of any blob in the container. Use any blob in the container as the source of a copy operation.
+    // List blobs in the container.
+    LIST: "l",
+    READ: "r",
     // For any blob in the container, create or write content, properties, metadata, or block list. Snapshot or lease the blob.
     // Resize the blob (page blob only). Use the blob as the destination of a copy operation. Note: You cannot grant permissions
     // to read or write container properties or metadata, nor to lease a container, with a service SAS. Use an account SAS instead.
-    WRITE: "w",
-    // Delete any blob in the container. Note: You cannot grant permissions to delete a container with a service SAS. Use an account SAS instead.
-    DELETE: "d",
-    // List blobs in the container.
-    LIST: "l"
+    WRITE: "w"
   }
 };
 
-const _key = `Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==`;
-const Keys = {
+export const _key = `Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==`;
+export const Keys = {
   AccessKey: _key,
   DecodedAccessKey: Buffer.from(_key, "base64")
 };
 
-const ODataMode = {
+export const ODataMode = {
   NONE: "nometadata",
+  // tslint:disable-next-line:object-literal-sort-keys
   MINIMAL: "minimalmetadata",
   FULL: "fullmetadata"
-};
-
-export default {
-  StorageTables: StorageTables,
-  StorageEntityType: StorageEntityType,
-  LeaseStatus: LeaseStatus,
-  LeaseActions: LeaseActions,
-  Usage: Usage,
-  Operations: Operations,
-  CopyStatus: CopyStatus,
-  BlockListType: BlockListType,
-  ServiceSAS: ServiceSAS,
-  Keys: Keys,
-  ODataMode: ODataMode,
-  TableStorageTables: TableStorageTables
 };

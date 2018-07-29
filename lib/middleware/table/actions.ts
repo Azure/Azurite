@@ -1,22 +1,24 @@
-const BbPromise = require("bluebird"),
-  Operations = require("./../../core/Constants").Operations.Table,
-  insertEntity = require("./../../actions/table/InsertEntity"),
-  deleteTable = require("./../../actions/table/DeleteTable"),
-  deleteEntity = require("./../../actions/table/DeleteEntity"),
-  queryTable = require("./../../actions/table/QueryTable"),
-  queryEntities = require("./../../actions/table/QueryEntities"),
-  updateEntity = require("./../../actions/table/UpdateEntity"),
-  insertOrReplaceEntity = require("./../../actions/table/InsertOrReplaceEntity"),
-  mergeEntity = require("./../../actions/table/MergeEntity"),
-  insertOrMergeEntity = require("./../../actions/table/InsertOrMergeEntity"),
-  createTable = require("./../../actions/table/CreateTable");
+const BbPromise = from "bluebird"),
+  Operations = from "./../../core/Constants").Operations.Table,
+  insertEntity = from "./../../actions/table/InsertEntity"),
+  deleteTable = from "./../../actions/table/DeleteTable"),
+  deleteEntity = from "./../../actions/table/DeleteEntity"),
+  queryTable = from "./../../actions/table/QueryTable"),
+  queryEntities = from "./../../actions/table/QueryEntities"),
+  updateEntity = from "./../../actions/table/UpdateEntity"),
+  insertOrReplaceEntity = from "./../../actions/table/InsertOrReplaceEntity"),
+  mergeEntity = from "./../../actions/table/MergeEntity"),
+  insertOrMergeEntity = from "./../../actions/table/InsertOrMergeEntity"),
+  createTable = from "./../../actions/table/CreateTable");
 
 export default (req, res) => {
   BbPromise.try(() => {
     actions[req.azuriteOperation](req.azuriteRequest, res);
   }).catch(e => {
     res.status(e.statusCode || 500).send(e.message);
-    if (!e.statusCode) throw e;
+    if (!e.statusCode) {
+      throw e;
+    }
   });
 };
 

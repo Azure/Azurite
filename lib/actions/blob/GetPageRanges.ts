@@ -1,11 +1,9 @@
-const storageManager = require("./../../core/blob/StorageManager"),
-  N = require("./../../core/HttpHeaderNames"),
-  PageListXmlModel = require("./../../xml/blob/PageListXmlModel");
+import storageManager from "./../../core/blob/StorageManager";
+import N from "./../../core/HttpHeaderNames";
+PageListXmlModel = from "./../../xml/blob/PageListXmlModel");
 
 class GetPageRanges {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     storageManager.getPageRanges(request).then(response => {
       const model = this._createModel(response.payload);
       response.addHttpProperty(
@@ -16,7 +14,7 @@ class GetPageRanges {
     });
   }
 
-  _createModel(pageRanges) {
+  public _createModel(pageRanges) {
     const model = new PageListXmlModel();
     for (const pr of pageRanges) {
       model.addPageRange(pr.start * 512, pr.end * 512 - 1);

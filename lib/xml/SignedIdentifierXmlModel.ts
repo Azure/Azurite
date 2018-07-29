@@ -3,7 +3,7 @@ class SignedIdentifiers {
     this.SignedIdentifier = [];
   }
 
-  addSignedIdentifier(id, start, expiry, permissionlist) {
+  public addSignedIdentifier(id, start, expiry, permissionlist) {
     this.SignedIdentifier.push({
       Id: id,
       AccessPolicy: {

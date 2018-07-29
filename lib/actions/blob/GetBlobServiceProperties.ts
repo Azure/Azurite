@@ -1,10 +1,8 @@
-const storageManager = require("./../../core/blob/StorageManager"),
-  js2xmlparser = require("js2xmlparser");
+import js2xmlparser from "js2xmlparser";
+import storageManager from "./../../core/blob/StorageManager";
 
 class GetBlobServiceProperties {
-  constructor() {}
-
-  process(request, res) {
+  public process(request, res) {
     storageManager.getBlobServiceProperties(request).then(response => {
       const xml = js2xmlparser.parse(
         "StorageServiceProperties",

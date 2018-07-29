@@ -1,16 +1,16 @@
 import AzuriteRequest from "./AzuriteRequest";
 
-const path = require("path"),
-  env = require("./../../core/env"),
-  EntityType = require("./../../core/Constants").StorageEntityType;
+const path = from "path"),
+  env = from "./../../core/env"),
+  EntityType = from "./../../core/Constants").StorageEntityType;
 
 class AzuriteContainerRequest extends AzuriteRequest {
-  containerName: string;
+  public containerName: string;
   constructor(req, payload?: any) {
     super({
-      req: req,
+      req,
       entityType: EntityType.Container,
-      payload: payload
+      payload
     });
 
     this.containerName = req.params.container;
@@ -23,7 +23,7 @@ class AzuriteContainerRequest extends AzuriteRequest {
    * @returns full path to container
    * @memberof AzuriteContainerRequest
    */
-  fullPath() {
+  public fullPath() {
     return path.join(env.localStoragePath, this.containerName);
   }
 }
