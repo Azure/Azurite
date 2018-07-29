@@ -4,7 +4,9 @@
   "description": "A lightweight server clone of Azure Blob, Queue, and Table Storage that simulates most of the commands supported by it with minimal dependencies.",
   "scripts": {
     "pretest": "npm run clean",
-    "test": "cross-env AZURITE_LOCATION=azurite-testdrive mocha --timeout 10000",
+    "test-js": "cross-env AZURITE_LOCATION=azurite-testdrive mocha --timeout 10000",
+    "test-ts": "cross-env AZURITE_LOCATION=azurite-testdrive mocha -r ts-node/register test/**/*.ts --timeout 10000",
+    "test": "npm run test-js && npm run test-ts",
     "start": "ts-node bin/azurite -l azurite-testdrive",
     "blob": "ts-node bin/blob -l azurite-testdrive",
     "queue": "ts-node bin/queue",
@@ -62,7 +64,10 @@
   },
   "devDependencies": {
     "@types/bluebird": "^3.5.23",
+    "@types/chai": "^4.1.4",
+    "@types/chai-http": "^3.0.5",
     "@types/express": "^4.16.0",
+    "@types/mocha": "^5.2.5",
     "@types/node": "^10.5.4",
     "chai": "^3.5.0",
     "chai-http": "^4.0.0",

@@ -1,4 +1,5 @@
 import * as express from "express";
+import { Server } from "http";
 
 const BbPromise = require("bluebird"),
     bodyParser = require("body-parser"),
@@ -8,7 +9,7 @@ const BbPromise = require("bluebird"),
     cli = require("./core/cli");
 
 class AzuriteBlob {
-    server: express.Application;
+    server: Server;
     constructor() {
         // Support for PM2 Graceful Shutdown on Windows and Linux/OSX
         // See http://pm2.keymetrics.io/docs/usage/signals-clean-restart/
@@ -41,13 +42,25 @@ class AzuriteBlob {
                 // Media Type) if a representation in the request message has a content
                 // coding that is not acceptable.
                 // body-parser, however, throws an error. We thus ignore unsupported content encodings and treat them as 'identity'.
-                app.use((req, res, next) => {
+                app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
                     const encoding = (req.headers["content-encoding"] || "identity").toLowerCase();
-                    if (encoding !== "deflate" ||
-                        encoding !== "gzip" ||
-                        encoding !== "identity") {
+                    let deleteHeader = false;
+
+                    if (encoding === "deflate") {
+                        deleteHeader = true;
+                    }
+
+                    if (encoding !== "gzip") {
+                        deleteHeader = true;
+                    }
+                    if (encoding !== "identity") {
+                        deleteHeader = true;
+                    }
+
+                    if (deleteHeader) {
                         delete req.headers["content-encoding"];
                     }
+
                     next();
                 });
                 app.use(bodyParser.raw({
@@ -83,4 +96,4 @@ class AzuriteBlob {
     }
 }
 
-module.exports = AzuriteBlob;
+export default AzuriteBlob;
