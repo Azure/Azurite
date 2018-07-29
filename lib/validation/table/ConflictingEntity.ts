@@ -1,17 +1,14 @@
-
-
 const AError = require("./../../core/AzuriteError"),
-    ErrorCodes = require("./../../core/ErrorCodes");
+  ErrorCodes = require("./../../core/ErrorCodes");
 
 class ConflictingEntity {
-    constructor() {
-    }
+  constructor() {}
 
-    validate({ entity = undefined }) {
-        if (entity !== undefined) {
-            throw new AError(ErrorCodes.EntityAlreadyExists);
-        }
+  validate({ entity = undefined }) {
+    if (entity !== undefined) {
+      throw new AError(ErrorCodes.EntityAlreadyExists);
     }
+  }
 }
 
-export default new ConflictingEntity;
+export default new ConflictingEntity();

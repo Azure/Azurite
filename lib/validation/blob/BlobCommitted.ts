@@ -1,7 +1,5 @@
-
-
 const AError = require("./../../core/AzuriteError"),
-    ErrorCodes = require("./../../core/ErrorCodes");
+  ErrorCodes = require("./../../core/ErrorCodes");
 
 /*
  * Checks whether the blob has been committed yet as part of PUT BlockList.
@@ -9,18 +7,17 @@ const AError = require("./../../core/AzuriteError"),
  * such as GET Blob.
  */
 class BlobCommitted {
-    constructor() {
+  constructor() {}
+
+  validate({ blobProxy = undefined }) {
+    if (blobProxy === undefined) {
+      throw new AError(ErrorCodes.BlobNotFound);
     }
 
-    validate({ blobProxy = undefined }) {
-        if (blobProxy === undefined) {
-            throw new AError(ErrorCodes.BlobNotFound);
-        }
-
-        if (!blobProxy.original.committed) {
-            throw new AError(ErrorCodes.BlobNotFound);
-        }
+    if (!blobProxy.original.committed) {
+      throw new AError(ErrorCodes.BlobNotFound);
     }
+  }
 }
 
 export default new BlobCommitted();

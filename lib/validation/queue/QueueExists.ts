@@ -1,18 +1,14 @@
-
-
 const AError = require("./../../core/AzuriteError"),
-    ErrorCodes = require("./../../core/ErrorCodes");
-
+  ErrorCodes = require("./../../core/ErrorCodes");
 
 class QueueExists {
-    constructor() {
-    }
+  constructor() {}
 
-    validate({ request = undefined, queue = undefined }) {
-        if (queue === undefined) {
-            throw new AError(ErrorCodes.QueueNotFound);
-        }
+  validate({ request = undefined, queue = undefined }) {
+    if (queue === undefined) {
+      throw new AError(ErrorCodes.QueueNotFound);
     }
+  }
 }
 
-export default new QueueExists;
+export default new QueueExists();

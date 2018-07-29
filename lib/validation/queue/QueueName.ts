@@ -1,26 +1,23 @@
-
-
 const AError = require("./../../core/AzuriteError"),
-    ErrorCodes = require("./../../core/ErrorCodes");
+  ErrorCodes = require("./../../core/ErrorCodes");
 
 /*
  * Checks whether the queue name adheres to the naming convention 
  * as specified at https://docs.microsoft.com/en-us/rest/api/storageservices/naming-queues-and-metadata
  */
 class QueueName {
-    constructor() {
+  constructor() {}
+
+  validate({ request = undefined }) {
+    const name = request.queueName;
+    if (name.length < 3 || name.length > 63) {
+      throw new AError(ErrorCodes.OutOfRangeInput);
     }
 
-    validate({ request = undefined }) {
-        const name = request.queueName;
-        if (name.length < 3 || name.length > 63) {
-            throw new AError(ErrorCodes.OutOfRangeInput);
-        }
-        
-        if (/^([a-z0-9]+)(-[a-z0-9]+)*$/i.test(name) === false) { 
-            throw new AError(ErrorCodes.InvalidInput);
-        }
+    if (/^([a-z0-9]+)(-[a-z0-9]+)*$/i.test(name) === false) {
+      throw new AError(ErrorCodes.InvalidInput);
     }
+  }
 }
 
-export default new QueueName;
+export default new QueueName();

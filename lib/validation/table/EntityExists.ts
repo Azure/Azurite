@@ -1,17 +1,14 @@
-
-
 const AError = require("./../../core/AzuriteError"),
-    ErrorCodes = require("./../../core/ErrorCodes");
+  ErrorCodes = require("./../../core/ErrorCodes");
 
 class EntityExists {
-    constructor() {
-    }
+  constructor() {}
 
-    validate({ entity = undefined }) {
-        if (entity === undefined) {
-            throw new AError(ErrorCodes.ResourceNotFound);
-        }
+  validate({ entity = undefined }) {
+    if (entity === undefined) {
+      throw new AError(ErrorCodes.ResourceNotFound);
     }
+  }
 }
 
-export default new EntityExists;
+export default new EntityExists();

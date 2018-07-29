@@ -1,21 +1,17 @@
-
-
 const AzuriteTableResponse = require("./../../model/table/AzuriteTableResponse"),
-    tableStorageManager = require("./../../core/table/TableStorageManager"),
-    N = require("./../../core/HttpHeaderNames");
+  tableStorageManager = require("./../../core/table/TableStorageManager"),
+  N = require("./../../core/HttpHeaderNames");
 
 class InsertOrMergeEntity {
-    constructor() {
-    }
+  constructor() {}
 
-    process(request, res) {
-        tableStorageManager.insertOrMergeEntity(request)
-            .then((response) => {
-                response.addHttpProperty(N.ETAG, response.proxy.etag);
-                res.set(response.httpProps);
-                res.status(204).send();
-            });
-    }
+  process(request, res) {
+    tableStorageManager.insertOrMergeEntity(request).then(response => {
+      response.addHttpProperty(N.ETAG, response.proxy.etag);
+      res.set(response.httpProps);
+      res.status(204).send();
+    });
+  }
 }
 
-export default new InsertOrMergeEntity;
+export default new InsertOrMergeEntity();

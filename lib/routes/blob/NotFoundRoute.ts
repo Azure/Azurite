@@ -7,17 +7,18 @@
  * handled accordingly later in the validation middleware.
  */
 export default app => {
-    app.route("*").all((req, res, next) => {
-        if (req.azuriteRequest) {
-            next();
-        } else {
-            res.status(501);
-            res.send(
-                `Path or Http-Method does not match any emulated command.\n` + 
-                `Possible causes include\n` + 
-                `  - missing account name path parameter\n` +
-                `  - Unsupported Http-Method on resource\n` + 
-                `  - Unsupported / Not implemented "comp" query parameter on resource`);
-        }
-    });
+  app.route("*").all((req, res, next) => {
+    if (req.azuriteRequest) {
+      next();
+    } else {
+      res.status(501);
+      res.send(
+        `Path or Http-Method does not match any emulated command.\n` +
+          `Possible causes include\n` +
+          `  - missing account name path parameter\n` +
+          `  - Unsupported Http-Method on resource\n` +
+          `  - Unsupported / Not implemented "comp" query parameter on resource`
+      );
+    }
+  });
 };

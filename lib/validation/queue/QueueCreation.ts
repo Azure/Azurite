@@ -1,7 +1,5 @@
-
-
 const AError = require("./../../core/AzuriteError"),
-    ErrorCodes = require("./../../core/ErrorCodes");
+  ErrorCodes = require("./../../core/ErrorCodes");
 
 /*
  * When a queue with the specified name already exists, the Queue service checks the metadata 
@@ -10,20 +8,19 @@ const AError = require("./../../core/AzuriteError"),
  * See https://docs.microsoft.com/rest/api/storageservices/create-queue4 for details.
  */
 class QueueCreation {
-    constructor() {
+  constructor() {}
+
+  validate({ request = undefined, queue = undefined }) {
+    if (queue === undefined) {
+      return;
     }
 
-    validate({ request = undefined, queue = undefined }) {
-        if (queue === undefined) {
-            return;
-        }
-
-        Object.keys(queue.metaProps).forEach((prop) => {
-            if (queue.metaProps[prop] !== request.metaProps[prop]) {
-                throw new AError(ErrorCodes.QueueAlreadyExists);
-            }
-        });
-    }
+    Object.keys(queue.metaProps).forEach(prop => {
+      if (queue.metaProps[prop] !== request.metaProps[prop]) {
+        throw new AError(ErrorCodes.QueueAlreadyExists);
+      }
+    });
+  }
 }
 
-export default new QueueCreation;
+export default new QueueCreation();

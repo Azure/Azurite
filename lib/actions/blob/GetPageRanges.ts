@@ -1,29 +1,28 @@
-
-
 const storageManager = require("./../../core/blob/StorageManager"),
-    N = require("./../../core/HttpHeaderNames"),
-    PageListXmlModel = require("./../../xml/blob/PageListXmlModel");
+  N = require("./../../core/HttpHeaderNames"),
+  PageListXmlModel = require("./../../xml/blob/PageListXmlModel");
 
 class GetPageRanges {
-    constructor() {
-    }
+  constructor() {}
 
-    process(request, res) {
-        storageManager.getPageRanges(request)
-            .then((response) => {
-                const model = this._createModel(response.payload);
-                response.addHttpProperty(N.BLOB_CONTENT_LENGTH, response.proxy.original.size);
-                res.status(200).send(model.toString());
-            });
-    }
+  process(request, res) {
+    storageManager.getPageRanges(request).then(response => {
+      const model = this._createModel(response.payload);
+      response.addHttpProperty(
+        N.BLOB_CONTENT_LENGTH,
+        response.proxy.original.size
+      );
+      res.status(200).send(model.toString());
+    });
+  }
 
-    _createModel(pageRanges) {
-        const model = new PageListXmlModel();
-        for (const pr of pageRanges) {
-            model.addPageRange(pr.start * 512, pr.end * 512 - 1);
-        }
-        return model;
+  _createModel(pageRanges) {
+    const model = new PageListXmlModel();
+    for (const pr of pageRanges) {
+      model.addPageRange(pr.start * 512, pr.end * 512 - 1);
     }
+    return model;
+  }
 }
 
 export default new GetPageRanges();
