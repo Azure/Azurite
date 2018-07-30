@@ -1,4 +1,4 @@
-import BbPromise from "bluebird";
+import * as  BbPromise from "bluebird";
 import * as xml2js from "xml2js";
 import { asyncIt } from "../lib/asyncIt";
 import AzuriteError from "./../core/AzuriteError";

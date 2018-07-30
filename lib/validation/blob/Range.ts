@@ -35,7 +35,7 @@ class Range {
       return true;
     }
     const pair = range.split("=")[1].split("-");
-    const startByte = parseInt(pair[0], null);
+    const startByte = parseInt(pair[0], undefined);
     return isNaN(startByte) || startByte < blobSize;
   }
 
@@ -50,8 +50,8 @@ class Range {
       return false;
     }
     const pair = range.split("=")[1].split("-");
-    const startByte = parseInt(pair[0], null);
-    const endByte = parseInt(pair[1], null);
+    const startByte = parseInt(pair[0], undefined);
+    const endByte = parseInt(pair[1], undefined);
     return endByte - startByte > 4194304;
   }
 }

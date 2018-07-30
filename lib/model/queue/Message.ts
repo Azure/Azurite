@@ -1,4 +1,4 @@
-import uuid from "uuid";
+import * as uuid from "uuid";
 
 /**
  * Abstraction of a queue message.

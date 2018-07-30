@@ -1,4 +1,4 @@
-import js2xmlparser from "js2xmlparser";
+import * as js2xmlparser from "js2xmlparser";
 import storageManager from "./../../core/blob/StorageManager";
 import { BlockListType } from "./../../core/Constants";
 import N from "./../../core/HttpHeaderNames";

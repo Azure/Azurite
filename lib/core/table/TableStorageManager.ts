@@ -1,6 +1,7 @@
-import BbPromise from "bluebird";
-import fs from "fs-extra";
-import Loki from "lokijs";
+import FSStorage from "@lokidb/fs-storage";
+import * as Loki from "@lokidb/loki";
+import * as  BbPromise from "bluebird";
+import * as fs from "fs-extra";
 import { asyncIt } from "../../lib/asyncIt";
 import AzuriteTableResponse from "../../model/table/AzuriteTableResponse";
 import EntityGenerator from "../../model/table/EntityGenerator";
@@ -13,10 +14,7 @@ class TableStorageManager {
   public db: any;
   public init() {
     this.db = BbPromise.promisifyAll(
-      new Loki(env.azuriteDBPathTable, {
-        autosave: true,
-        autosaveInterval: 5000
-      })
+      
     );
     return asyncIt(cb => fs.stat(env.azuriteDBPathTable, cb))
       .then(stat => {
@@ -78,7 +76,7 @@ class TableStorageManager {
 
   public queryTable(request) {
     const coll = this.db.getCollection(TableStorageTables.Tables);
-    const payload = [];
+    const payload: TableProxy[] = [];
     let result;
     if (request.tableName !== undefined) {
       result = coll
@@ -136,7 +134,7 @@ class TableStorageManager {
       });
     }
     const result = chain.limit(request.top).data();
-    const payload = [];
+    const payload: EntityProxy[] = [];
     for (const item of result) {
       payload.push(new EntityProxy(item));
     }

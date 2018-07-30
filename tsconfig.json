@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "allowJs": false,
-    "strict": true,
+    "strict": false,
     "lib": ["es2017"],
     "noImplicitAny": false
   },

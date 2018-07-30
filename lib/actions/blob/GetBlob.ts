@@ -1,6 +1,6 @@
 import * as crypto from "crypto";
-import fs from "fs-extra";
-import req from "request";
+import * as fs from "fs-extra";
+import * as req from "request";
 import storageManager from "./../../core/blob/StorageManager";
 import { StorageEntityType } from "./../../core/Constants";
 import env from "./../../core/env";
@@ -44,8 +44,8 @@ class GetBlob {
       // Otherwise we just pipe the result through to the client which is more performant.
       if (range && request.httpProps[N.RANGE_GET_CONTENT_MD5]) {
         const pair = range.split("=")[1].split("-");
-        const startByte = parseInt(pair[0], null);
-        const endByte = parseInt(pair[1], null);
+        const startByte = parseInt(pair[0], undefined);
+        const endByte = parseInt(pair[1], undefined);
 
         const fullPath = env.diskStorageUri(request.id);
         const readStream = fs.createReadStream(fullPath, {

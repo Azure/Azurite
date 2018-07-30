@@ -1,4 +1,4 @@
-import BbPromise from "bluebird";
+import * as  BbPromise from "bluebird";
 import AzuriteError from "../../core/AzuriteError";
 import StorageManager from "../../core/blob/StorageManager";
 import { Operations } from "../../core/Constants";

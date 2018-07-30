@@ -33,7 +33,7 @@ class EntityGenerator {
       attribs: {
         Timestamp: new Date().toISOString()
       },
-      odata: undefined,
+      odata: {},
       partitionKey: rawEntity.PartitionKey,
       rowKey: rawEntity.RowKey
     };
@@ -47,17 +47,19 @@ class EntityGenerator {
       entity.attribs[key] = rawEntity[key];
     }
 
-    entity.odata = {};
-    entity.odata.metadata = `${_baseUrl}${tableName}$metadata#${tableName}/@Element`;
-    entity.odata.type = `devstoreaccount1.${tableName}`;
-    entity.odata.id = `${_baseUrl}${tableName}(PartitionKey="${
-      rawEntity.PartitionKey
-    }",RowKey="${rawEntity.RowKey}")`;
-    entity.odata.editLink = `${tableName}(PartitionKey="${
-      rawEntity.PartitionKey
-    }",RowKey="${rawEntity.RowKey}")`;
-    entity.odata.etag = computeEtag(JSON.stringify(rawEntity));
-    return entity;
+    const odata = {
+      editLink: `${tableName}(PartitionKey="${
+        rawEntity.PartitionKey
+      }",RowKey="${rawEntity.RowKey}")`,
+      etag: computeEtag(JSON.stringify(rawEntity)),
+      id: `${_baseUrl}${tableName}(PartitionKey="${
+        rawEntity.PartitionKey
+      }",RowKey="${rawEntity.RowKey}")`,
+      metadata: `${_baseUrl}${tableName}$metadata#${tableName}/@Element`,
+      type: `devstoreaccount1.${tableName}`,
+    };
+
+    return { ...entity, ...odata };
   }
 }
 

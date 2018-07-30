@@ -1,4 +1,4 @@
-import uuid from "uuid";
+import * as uuid from "uuid";
 import N from "./../../core/HttpHeaderNames";
 
 class AzuriteTableResponse {

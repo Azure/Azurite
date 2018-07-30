@@ -1,4 +1,4 @@
-import js2xml from "js2xmlparser";
+import * as js2xml from "js2xmlparser";
 
 /*
  * These classes are used as model for XML-Serialization in the "ListQueues" API

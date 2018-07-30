@@ -1,4 +1,4 @@
-import BbPromise from "bluebird";
+import * as  BbPromise from "bluebird";
 import CreateContainer from "../../actions/blob/CreateContainer";
 import { Operations } from "../../core/Constants";
 import AbortCopyBlob from "./../../actions/blob/AbortCopyBlob";

@@ -1,4 +1,4 @@
-import BbPromise from "bluebird";
+import * as  BbPromise from "bluebird";
 import CreateTable from "../../actions/table/CreateTable";
 import DeleteEntity from "../../actions/table/DeleteEntity";
 import DeleteTable from "../../actions/table/DeleteTable";

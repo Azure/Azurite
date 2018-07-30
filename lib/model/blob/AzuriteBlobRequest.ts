@@ -1,5 +1,5 @@
 import * as crypto from "crypto";
-import url from "url";
+import * as url from "url";
 import { BlockListType } from "../../core/Constants";
 import env from "../../core/env";
 import N from "../../core/HttpHeaderNames";

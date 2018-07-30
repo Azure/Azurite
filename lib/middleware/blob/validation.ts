@@ -1,4 +1,4 @@
-import BbPromise from "bluebird";
+import * as  BbPromise from "bluebird";
 import storageManager from "../../core/blob/StorageManager";
 import {
   Operations,

@@ -1,4 +1,4 @@
-import BbPromise from "bluebird";
+import * as  BbPromise from "bluebird";
 import * as fsExtra from "fs-extra";
 import InternalAzuriteError from "./../../core/InternalAzuriteError";
 

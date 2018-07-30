@@ -1,6 +1,7 @@
+import * as  BbPromise from "bluebird";
 import CombinedStream from "combined-stream";
 import * as Loki from "lokijs";
-import uuid from "uuid";
+import * as uuid from "uuid";
 import { asyncIt } from "../../lib/asyncIt";
 import AzuriteBlobRequest from "../../model/blob/AzuriteBlobRequest";
 import AzuriteBlobResponse from "../../model/blob/AzuriteBlobResponse";
@@ -17,20 +18,21 @@ import {
 import env from "../env";
 import N from "./../../core/HttpHeaderNames";
 
-import fs from "fs-extra";
+import * as fs from "fs-extra";
 import CopyOperationsManager from "./CopyOperationsManager";
 import SnapshotTimeManager from "./SnapshotTimeManager";
 
 const fsStat = (path: string) => asyncIt(cb => fs.stat(path, cb));
 class StorageManager {
-  public db;
+  public db!: any;
 
   public init() {
-    this.db = new Loki(env.azuriteDBPathBlob, {
+    this.db = BbPromise.promisifyAll(
+      new Loki(env.azuriteDBPathBlob, {
         autosave: true,
         autosaveInterval: 5000
       })
-    ;
+    );
     return fsStat(env.azuriteDBPathBlob)
       .then(stat => {
         return this.db.loadDatabaseAsync({});
@@ -100,7 +102,7 @@ class StorageManager {
       .chain()
       .find({ name: { $contains: "" } })
       .data(); // get every entity in this collection
-    const promises = [];
+    const promises: Array<Promise<void>> = [];
 
     for (const entity of entities) {
       promises.push(fs.remove(entity.uri));
@@ -112,7 +114,7 @@ class StorageManager {
   }
 
   public listContainer(request, prefix, maxresults) {
-    maxresults = parseInt(maxresults, null);
+    maxresults = parseInt(maxresults, undefined);
     const tables = this.db.getCollection(StorageTables.Containers);
     const result = tables
       .chain()
@@ -148,6 +150,10 @@ class StorageManager {
       request.containerName,
       request.id
     );
+
+    if (!blobProxy) {
+      return;
+    }
     blobProxy.original[N.BLOB_COMMITTED_BLOCK_COUNT] += 1;
     blobProxy.original.size += request.body.length;
     coll.update(blobProxy.release());
@@ -156,14 +162,14 @@ class StorageManager {
         encoding: request.httpProps[N.CONTENT_ENCODING]
       })
     ).then(() => {
-      return new AzuriteBlobResponse({ proxy: blobProxy, cors: request.cors });
+      return new AzuriteBlobResponse(blobProxy, undefined, undefined, request.cors);
     });
   }
 
-  public deleteBlob(request) {
+  public deleteBlob(request): Promise<AzuriteBlobResponse> {
     const coll = this.db.getCollection(request.containerName);
     const snapshoteDeleteQueryParam = request.httpProps[N.DELETE_SNAPSHOTS];
-    const promises = [];
+    const promises: Array<Promise<void>> = [];
 
     if (
       snapshoteDeleteQueryParam === "include" ||
@@ -182,8 +188,8 @@ class StorageManager {
           .remove();
         promises.push(fs.remove(request.uri));
       }
-      return BbPromise.all(promises).then(() => {
-        return new AzuriteBlobResponse({ cors: request.cors });
+      return Promise.all(promises).then(() => {
+        return new AzuriteBlobResponse(undefined, undefined, undefined, request.cors);
       });
     } else {
       coll
@@ -195,7 +201,7 @@ class StorageManager {
         .find({ parentId: { $eq: request.id } })
         .remove(); // Removing (un-)committed blocks
       return fs.remove(request.uri).then(() => {
-        return new AzuriteBlobResponse({ cors: request.cors });
+        return new AzuriteBlobResponse(undefined, undefined, undefined, request.cors);
       });
     }
   }
@@ -215,7 +221,7 @@ class StorageManager {
   }
 
   public listBlobs(request, query) {
-    const condition = [];
+    const condition: any[] = [];
     if (query.prefix !== "") {
       condition.push({
         name: { $regex: `^${query.prefix}` }
@@ -296,7 +302,7 @@ class StorageManager {
   }
 
   public putBlockList(request) {
-    const blockPaths = [];
+    const blockPaths: string[] = [];
     for (const block of request.payload) {
       const blockId = env.blockId(
         request.containerName,
@@ -322,7 +328,7 @@ class StorageManager {
         .on("finish", () => {
           let totalSize = 0;
           // Set Blocks in DB to committed = true, delete blocks not in BlockList
-          const promises = [];
+          const promises: Array<Promise<void>> = [];
           const blocks = coll
             .chain()
             .find({ parentId: request.id })
@@ -381,6 +387,11 @@ class StorageManager {
       request.containerName,
       request.id
     );
+
+    if (!blobProxy) {
+      return;
+    }
+
     blobProxy.original.metaProps = request.metaProps;
     coll.update(blobProxy.release());
     const response = new AzuriteBlobResponse(
@@ -411,6 +422,11 @@ class StorageManager {
       request.containerName,
       request.id
     );
+
+    if (!blobProxy) {
+      return;
+    }
+
     request.httpProps[N.CACHE_CONTROL]
       ? (blobProxy.original.cacheControl = request.httpProps[N.CACHE_CONTROL])
       : delete blobProxy.original.cacheControl;
@@ -491,8 +507,8 @@ class StorageManager {
 
   public putPage(request) {
     const parts = request.httpProps[N.RANGE].split("=")[1].split("-");
-    const startByte = parseInt(parts[0], null);
-    const endByte = parseInt(parts[1], null);
+    const startByte = parseInt(parts[0], undefined);
+    const endByte = parseInt(parts[1], undefined);
     // Getting overlapping pages (sorted by startByte in ascending order)
     const { coll, blobProxy } = this.getCollectionAndBlob(
       request.containerName,
@@ -570,8 +586,8 @@ class StorageManager {
     if (request.httpProps[N.RANGE]) {
       // If range exists it is guaranteed to be well-formed due to PageAlignment validation
       const parts = request.httpProps[N.RANGE].split("=")[1].split("-");
-      const startByte = parseInt(parts[0], null);
-      const endByte = parseInt(parts[1], null);
+      const startByte = parseInt(parts[0], undefined);
+      const endByte = parseInt(parts[1], undefined);
       const startAlignment = startByte / 512;
       const endAlignment = (endByte + 1) / 512;
 

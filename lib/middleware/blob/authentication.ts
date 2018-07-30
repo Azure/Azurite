@@ -1,4 +1,4 @@
-import BbPromise from "bluebird";
+import * as  BbPromise from "bluebird";
 import * as crypto from "crypto";
 import AzuriteError from "../../core/AzuriteError";
 import { Keys } from "../../core/Constants";

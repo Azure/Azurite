@@ -6,7 +6,7 @@ import Queue from "../../model/queue/Queue";
  * @class QueueManager
  */
 class QueueManager {
-  public queues: any[];
+  public queues: any[] = [];
 
   public add({ name, metaProps = {} }) {
     this.queues[name] = new Queue(metaProps);
@@ -33,7 +33,7 @@ class QueueManager {
       .filter(queueName => {
         return queueName.startsWith(prefix);
       })
-      .reduce((list, queueName) => {
+      .reduce((list: any[], queueName) => {
         list.push({
           metaProps: this.queues[queueName].metaProps,
           name: queueName

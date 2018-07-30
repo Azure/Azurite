@@ -1,4 +1,4 @@
-import uuid from "uuid";
+import * as uuid from "uuid";
 import { StorageEntityType } from "../../core/Constants";
 import N from "../../core/HttpHeaderNames";
 

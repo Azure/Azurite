@@ -1,5 +1,5 @@
-import BbPromise from "bluebird";
-import fs from "fs";
+import * as  BbPromise from "bluebird";
+import * as fs from "fs";
 
 class CopyOperationsManager {
   public ops: {};

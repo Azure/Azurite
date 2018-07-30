@@ -1,4 +1,4 @@
-import BbPromise from "bluebird";
+import * as  BbPromise from "bluebird";
 import { Operations } from "../../core/Constants";
 import QueueManager from "./../../core/queue/QueueManager";
 import NumOfSignedIdentifiersVal from "./../../validation/NumOfSignedIdentifiers";

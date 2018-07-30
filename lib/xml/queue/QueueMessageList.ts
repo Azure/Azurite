@@ -1,4 +1,4 @@
-import js2xml from "js2xmlparser";
+import * as js2xml from "js2xmlparser";
 
 export class QueueMessagesListXmlModel {
   public QueueMessage: any[];

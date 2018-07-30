@@ -1,4 +1,4 @@
-import BbPromise from "bluebird";
+import * as  BbPromise from "bluebird";
 import { Operations } from "../../core/Constants";
 
 import ClearMessages from "./../../actions/queue/ClearMessages";

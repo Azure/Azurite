@@ -30,8 +30,8 @@ class PageBlobHeaderSanity {
     // in PageAlignment Validator.
     const parts = range.split("=")[1].split("-");
     if (!isClearSet) {
-      const startByte = parseInt(parts[0], null);
-      const endByte = parseInt(parts[1], null);
+      const startByte = parseInt(parts[0], undefined);
+      const endByte = parseInt(parts[1], undefined);
       if (httpProps[N.CONTENT_LENGTH] !== endByte - startByte + 1) {
         throw new AzuriteError(ErrorCodes.InvalidHeaderValue);
       }

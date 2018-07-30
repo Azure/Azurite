@@ -1,4 +1,4 @@
-import os from "os";
+import * as os from "os";
 
 /*
  * The serialization model for GET PageRanges.
