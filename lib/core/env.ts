@@ -1,22 +1,23 @@
-import BbPromise from "bluebird";
-import crypto from "crypto";
-import fsExtra from "fs-extra";
-import path from "path";
-const fs = BbPromise.promisifyAll(fsExtra);
+import * as crypto from "crypto";
+import * as fsExtra from "fs-extra";
+import * as path from "path";
+import { asyncIt } from "../lib/asyncIt";
 
 let initialized = false;
+const fsMkDirs = (mkDirPath: string) =>
+  asyncIt(cb => fsExtra.mkdirs(mkDirPath, cb));
 
 class Environment {
   public azuriteWorkspacePath: any;
   public azuriteRootPath: any;
   public silent: any;
   public accountAuth: any;
-  public dbNameBlob: string;
-  public dbNameTable: string;
+  public dbNameBlob: string = "__azurite_db_blob__.json";
+  public dbNameTable: string = "__azurite_db_table__.json";
   public localStoragePath: any;
   public azuriteDBPathBlob: any;
   public azuriteDBPathTable: any;
-  public emulatedStorageAccountName: string;
+  public emulatedStorageAccountName: string = "devstoreaccount1";
   public blobStoragePort: any;
   public queueStoragePort: any;
   public tableStoragePort: any;
@@ -26,15 +27,13 @@ class Environment {
 
   public init(options) {
     if (initialized && !options.overwrite) {
-      return BbPromise.resolve();
+      return asyncIt(cb => true);
     }
     initialized = true;
     this.azuriteWorkspacePath = options.l || options.location || process.cwd();
     this.azuriteRootPath = path.join(__dirname, "../..");
     this.silent = options.s || options.silent;
     this.accountAuth = options.a || options.accountAuth;
-    this.dbNameBlob = "__azurite_db_blob__.json";
-    this.dbNameTable = "__azurite_db_table__.json";
     this.localStoragePath = path.join(
       this.azuriteWorkspacePath,
       "__blobstorage__"
@@ -47,14 +46,13 @@ class Environment {
       this.azuriteWorkspacePath,
       this.dbNameTable
     );
-    this.emulatedStorageAccountName = "devstoreaccount1";
     this.blobStoragePort = options.p || options.blobPort || 10000;
     this.queueStoragePort = options.q || options.queuePort || 10001;
     this.tableStoragePort = options.t || options.tablePort || 10002;
     this.blobModulePath = path.join(this.azuriteRootPath, "bin", "blob");
     this.queueModulePath = path.join(this.azuriteRootPath, "bin", "queue");
     this.tableModulePath = path.join(this.azuriteRootPath, "bin", "table");
-    return fs.mkdirsAsync(this.localStoragePath);
+    return fsMkDirs(this.localStoragePath);
   }
 
   /**

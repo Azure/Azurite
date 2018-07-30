@@ -1,4 +1,4 @@
-import path from "path";
+import * as path from "path";
 import { StorageEntityType } from "../../core/Constants";
 import env from "../../core/env";
 import AzuriteRequest from "./AzuriteRequest";

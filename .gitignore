@@ -60,3 +60,4 @@ NOTES
 #IntelliJ
 .idea
 *.iml
+**/*.js

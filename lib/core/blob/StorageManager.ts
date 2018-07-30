@@ -1,4 +1,3 @@
-import BbPromise from "bluebird";
 import CombinedStream from "combined-stream";
 import * as Loki from "lokijs";
 import uuid from "uuid";
@@ -27,12 +26,11 @@ class StorageManager {
   public db;
 
   public init() {
-    this.db = BbPromise.promisifyAll(
-      new Loki(env.azuriteDBPathBlob, {
+    this.db = new Loki(env.azuriteDBPathBlob, {
         autosave: true,
         autosaveInterval: 5000
       })
-    );
+    ;
     return fsStat(env.azuriteDBPathBlob)
       .then(stat => {
         return this.db.loadDatabaseAsync({});

@@ -1,5 +1,5 @@
 export async function asyncIt<T>(
-  call: (serviceCallback: (error: Error, result: T) => void) => void
+  call: (serviceCallback: (error: Error, result?: T) => void) => void
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     try {

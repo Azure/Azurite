@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import * as crypto from "crypto";
 import fs from "fs-extra";
 import req from "request";
 import storageManager from "./../../core/blob/StorageManager";

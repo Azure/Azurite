@@ -1,7 +1,7 @@
 import * as chai from "chai";
 import chaiHttp from "chai-http";
 import { after, before, describe, it } from "mocha";
-import path from "path";
+import * as path from "path";
 import * as rp from "request-promise";
 import * as xml2js from "xml2js";
 import AzuriteBlob from "../lib/AzuriteBlob";

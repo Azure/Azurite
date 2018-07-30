@@ -1,6 +1,6 @@
 import * as chai from "chai";
 import chaiHttp from "chai-http";
-import path from "path";
+import * as path from "path";
 import * as rp from "request-promise";
 import AzuriteBlob from "../lib/AzuriteBlob";
 

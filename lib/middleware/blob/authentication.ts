@@ -1,5 +1,5 @@
 import BbPromise from "bluebird";
-import crypto from "crypto";
+import * as crypto from "crypto";
 import AzuriteError from "../../core/AzuriteError";
 import { Keys } from "../../core/Constants";
 import env from "../../core/env";

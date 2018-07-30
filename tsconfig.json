@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "strict": true,
+    "lib": ["es2017"],
+    "noImplicitAny": false
+  },
+  "include": ["./lib/**/*", "./test/**/*", "./bin/**.*"]
+}
