@@ -1,22 +1,22 @@
-constimport AError from "./../../core/AzuriteError";
-  EntityType  from "./../../core/Constants").StorageEntityType,
-  ErrorCodes  from "./../../core/ErrorCodes");
+import AzuriteError from "../../core/AzuriteError";
+import { StorageEntityType } from "../../core/Constants";
+import ErrorCodes from "../../core/ErrorCodes";
 
 class BlobCreationSize {
-  public validate({ request = undefined }) {
+  public validate(request) {
     // Append and Page Blobs must not be larger than 0 bytes
     if (
-      (request.entityType === EntityType.AppendBlob ||
-        request.entityType === EntityType.PageBlob) &&
+      (request.entityType === StorageEntityType.AppendBlob ||
+        request.entityType === StorageEntityType.PageBlob) &&
       request.body.length > 0
     ) {
-      throw new AError(ErrorCodes.InvalidBlobType);
+      throw new AzuriteError(ErrorCodes.InvalidBlobType);
     }
     if (
-      request.entityType === EntityType.BlockBlob &&
+      request.entityType === StorageEntityType.BlockBlob &&
       request.body.length > 268435456
     ) {
-      throw new AError(ErrorCodes.RequestBodyTooLarge);
+      throw new AzuriteError(ErrorCodes.RequestBodyTooLarge);
     }
   }
 }

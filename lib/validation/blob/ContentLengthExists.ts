@@ -1,11 +1,11 @@
-constimport AError from "./../../core/AzuriteError";
-  N  from "./../../core/HttpHeaderNames"),
-  ErrorCodes  from "./../../core/ErrorCodes");
+import AzuriteError from "../../core/AzuriteError";
+import ErrorCodes from "../../core/ErrorCodes";
+import N from "./../../core/HttpHeaderNames";
 
 class ContentLengthExists {
-  public validate({ request = undefined }) {
+  public validate(request) {
     if (!request.httpProps[N.CONTENT_LENGTH]) {
-      throw new AError(ErrorCodes.MissingContentLengthHeader);
+      throw new AzuriteError(ErrorCodes.MissingContentLengthHeader);
     }
   }
 }

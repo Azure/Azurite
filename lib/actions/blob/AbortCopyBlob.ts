@@ -1,5 +1,4 @@
 import storageManager from "./../../core/blob/StorageManager";
-import N from "./../../core/HttpHeaderNames";
 
 class AbortCopyBlob {
   public process(azuriteRequest, res) {

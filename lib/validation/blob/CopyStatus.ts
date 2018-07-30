@@ -1,19 +1,18 @@
-constimport AError from "./../../core/AzuriteError";
-  ErrorCodes  from "./../../core/ErrorCodes"),
-  CopyStat  from "./../../core/Constants").CopyStatus;
-
+import AzuriteError from "../../core/AzuriteError";
+import ErrorCodes from "../../core/ErrorCodes";
+import * as Constants from "./../../core/Constants";
 /**
  * Checks whether the a pending copy operation already exists at the destination.
  *
  * @class CopyStatus
  */
 class CopyStatus {
-  public validate({ blobProxy = undefined }) {
+  public validate(blobProxy) {
     if (
       blobProxy !== undefined &&
-      blobProxy.original.copyStatus === CopyStat.PENDING
+      blobProxy.original.copyStatus === Constants.CopyStatus.PENDING
     ) {
-      throw new AError(ErrorCodes.PendingCopyOperation);
+      throw new AzuriteError(ErrorCodes.PendingCopyOperation);
     }
   }
 }

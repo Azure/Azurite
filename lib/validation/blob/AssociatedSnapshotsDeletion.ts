@@ -1,6 +1,6 @@
-constimport AError from "./../../core/AzuriteError";
-  N  from "./../../core/HttpHeaderNames"),
-  ErrorCodes  from "./../../core/ErrorCodes");
+import AzuriteError from "../../core/AzuriteError";
+import ErrorCodes from "../../core/ErrorCodes";
+import N from "./../../core/HttpHeaderNames";
 
 /*
  * Checks whether the blob to be deleted has any associated snapshots and - if this is true - has according
@@ -8,7 +8,7 @@ constimport AError from "./../../core/AzuriteError";
  * Also checks whether above header is specified on a blob (valid) or a snapshot (not valid).
  */
 class AssociatedSnapshotsDeletion {
-  public validate({ request = undefined, moduleOptions = undefined }) {
+  public validate(request, moduleOptions) {
     // If a snapshot is requested to be deleted this validation rule is not relevant
     if (request.isSnapshot()) {
       return;
@@ -21,7 +21,7 @@ class AssociatedSnapshotsDeletion {
       request.httpProps[N.DELETE_SNAPSHOTS] !== undefined &&
       request.isSnapshot()
     ) {
-      throw new AError(ErrorCodes.UnsupportedHeader);
+      throw new AzuriteError(ErrorCodes.UnsupportedHeader);
     }
 
     // If this header (x-ms-delete-snapshots) is not specified on the request and the blob has associated snapshots, the Blob service returns status code 409 (Conflict).
@@ -33,14 +33,14 @@ class AssociatedSnapshotsDeletion {
     if (snapshots.length > 0) {
       // return 409 (Conflict) if header (x-ms-delete-snapshots) is not specified on the request
       if (request.httpProps[N.DELETE_SNAPSHOTS] === undefined) {
-        throw new AError(ErrorCodes.SnapshotsPresent);
+        throw new AzuriteError(ErrorCodes.SnapshotsPresent);
       }
       // return 400 (Error) if header (x-ms-delete-snapshots) has invalid values
       if (
         request.httpProps[N.DELETE_SNAPSHOTS] !== "include" &&
         request.httpProps[N.DELETE_SNAPSHOTS] !== "only"
       ) {
-        throw new AError(ErrorCodes.InvalidHeaderValue);
+        throw new AzuriteError(ErrorCodes.InvalidHeaderValue);
       }
     }
   }

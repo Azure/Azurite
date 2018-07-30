@@ -1,15 +1,15 @@
-constimport AError from "./../../core/AzuriteError";
-  env  from "./../../core/env"),
-  BlobExistsVal  from "./BlobExists"),
-  ErrorCodes  from "./../../core/ErrorCodes");
+import AzuriteError from "../../core/AzuriteError";
+import env from "../../core/env";
+import ErrorCodes from "../../core/ErrorCodes";
+import BlobExists from "./BlobExists";
 
 class BlockList {
   /**
    * Checks whether the blocklist is correct. It is correct if all block ids are existant in the database.
    */
-  public validate({ request = undefined, moduleOptions = undefined }) {
-    const sm = moduleOptions.storageManager,
-      blockList = request.payload;
+  public validate(request, moduleOptions) {
+    const sm = moduleOptions.storageManager;
+    const blockList = request.payload;
     for (const block of blockList) {
       const blobId = env.blockId(
         request.containerName,
@@ -21,10 +21,10 @@ class BlockList {
         blobId
       );
       try {
-        BlobExistsVal.validate({ blobProxy });
+        BlobExists.validate({ blobProxy });
       } catch (e) {
         if (e.statusCode === 404) {
-          throw new AError(ErrorCodes.InvalidBlockList);
+          throw new AzuriteError(ErrorCodes.InvalidBlockList);
         } else {
           throw e; // Something unexpected happened
         }

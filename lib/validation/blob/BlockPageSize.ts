@@ -1,7 +1,7 @@
-constimport AError from "./../../core/AzuriteError";
-  N  from "./../../core/HttpHeaderNames"),
-  EntityType  from "./../../core/Constants").StorageEntityType,
-  ErrorCodes  from "./../../core/ErrorCodes");
+import AzuriteError from "../../core/AzuriteError";
+import { StorageEntityType } from "../../core/Constants";
+import ErrorCodes from "../../core/ErrorCodes";
+import N from "./../../core/HttpHeaderNames";
 
 /**
  * Validates whether PUT Block, PUT AppendBlob, and PUT Page operations adhere
@@ -10,32 +10,32 @@ constimport AError from "./../../core/AzuriteError";
  * @class BlockPageSize
  */
 class BlockPageSize {
-  public validate({ request = undefined }) {
+  public validate(request) {
     const size = request.body.length || request.httpProps[N.CONTENT_LENGTH];
     switch (request.entityType) {
-      case EntityType.BlockBlob:
+      case StorageEntityType.BlockBlob:
         // Blocks larger than 100MB are not allowed since API version 2016-05-31
         // see https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/put-block
         if (size > 104857600) {
-          throw new AErro(ErrorCodes.RequestBodyTooLarge);
+          throw new AzuriteError(ErrorCodes.RequestBodyTooLarge);
         }
         break;
-      case EntityType.AppendBlob:
+      case StorageEntityType.AppendBlob:
         // ApppendBlocks larger than 4MB are not allowed as per specification at
         // see https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/append-block
         if (size > 4194304) {
-          throw new AErro(ErrorCodes.RequestBodyTooLarge);
+          throw new AzuriteError(ErrorCodes.RequestBodyTooLarge);
         }
         break;
-      case EntityType.PageBlob:
+      case StorageEntityType.PageBlob:
         // Pages larger than 4MB are not allowed as per specification at
         // https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/put-page
         if (size > 4194304) {
-          throw new AErro(ErrorCodes.RequestBodyTooLarge);
+          throw new AzuriteError(ErrorCodes.RequestBodyTooLarge);
         }
         break;
       default:
-        throw new AError(ErrorCodes.InvalidBlobType);
+        throw new AzuriteError(ErrorCodes.InvalidBlobType);
     }
   }
 }
