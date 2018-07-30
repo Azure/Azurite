@@ -1,11 +1,15 @@
+import * as BbPromise from "bluebird";
+import * as bodyParser from "body-parser";
 import * as express from "express";
 import { Server } from "http";
-
-const BbPromise = from "bluebird"),
-  bodyParser = from "body-parser"),
-  env = from "./core/env"),
-  morgan = from "morgan"),
-  cli = from "./core/cli");
+import * as morgan from "morgan";
+import { queueStorageStatus } from "./core/cli";
+import env from "./core/env";
+import Actions from "./middleware/queue/actions";
+import Validation from "./middleware/queue/validation";
+import AccountRoute from "./routes/queue/AccountRoute";
+import MessageRoute from "./routes/queue/MessageRoute";
+import QueueRoute from "./routes/queue/QueueRoute";
 
 class AzuriteQueue {
   private server!: Server;
@@ -40,14 +44,14 @@ class AzuriteQueue {
           }
         })
       );
-      from "./routes/queue/AccountRoute")(app);
-      from "./routes/queue/QueueRoute")(app);
-      from "./routes/queue/MessageRoute")(app);
-      app.use(from "./middleware/queue/validation"));
-      app.use(from "./middleware/queue/actions"));
+      AccountRoute(app);
+      QueueRoute(app);
+      MessageRoute(app);
+      app.use(Validation);
+      app.use(Actions);
       this.server = app.listen(env.queueStoragePort, () => {
         if (!env.silent) {
-          cli.queueStorageStatus();
+          queueStorageStatus();
         }
       });
     });

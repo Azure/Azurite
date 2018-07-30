@@ -1,6 +1,6 @@
-const ODataMode = from "./../../core/Constants").ODataMode,
-  BaseProxy = from "./BaseProxy"),
-  InternalAzuriteError = from "./../../core/InternalAzuriteError");
+const ODataMode  from "./../../core/Constants").ODataMode,
+  BaseProxy  from "./BaseProxy"),
+  InternalAzuriteError  from "./../../core/InternalAzuriteError");
 
 class EntityProxy extends BaseProxy {
   constructor(entity) {

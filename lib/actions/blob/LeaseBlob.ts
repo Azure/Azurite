@@ -1,6 +1,6 @@
 import storageManager from "./../../core/blob/StorageManager";
+import { LeaseActions } from "./../../core/Constants";
 import N from "./../../core/HttpHeaderNames";
-LeaseActions = from "./../../core/Constants").LeaseActions;
 
 class LeaseBlob {
   public process(request, res) {

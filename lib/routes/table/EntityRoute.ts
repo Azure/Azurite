@@ -1,7 +1,7 @@
-const env = from "./../../core/env"),
-  AzuriteTableRequest = from "./../../model/table/AzuriteTableRequest"),
-  N = from "./../../core/HttpHeaderNames"),
-  Operations = from "./../../core/Constants").Operations.Table;
+const env  from "./../../core/env"),
+  AzuriteTableRequest  from "./../../model/table/AzuriteTableRequest"),
+  N  from "./../../core/HttpHeaderNames"),
+  Operations  from "./../../core/Constants").Operations.Table;
 
 /*
  * Route definitions for all operation on the "message" resource type.

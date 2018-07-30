@@ -1,9 +1,11 @@
-const os = from "os"),
-  chalk = from "chalk"),
-  env = from "./env");
+import chalk from "chalk";
+import os from "os";
+import env from "./env";
 
-exports.asciiGreeting = () => {
-  const version = from "./../../package.json").version;
+export const asciiGreeting = () => {
+  // TODO: const version  from "./../../package.json").version;
+
+  const version = "1.0";
   let art = `
  _______                   _
 (_______)                 (_)  _
@@ -15,10 +17,12 @@ exports.asciiGreeting = () => {
 `;
   art += "Azurite, Version " + version + os.EOL;
   art += "A lightweight server clone of Azure Storage" + os.EOL;
+  // tslint:disable-next-line:no-console
   console.log(chalk.cyan(art));
 };
 
-exports.blobStorageStatus = () => {
+export const blobStorageStatus = () => {
+  // tslint:disable-next-line:no-console
   console.log(
     chalk.cyan(
       `Azure Blob Storage Emulator listening on port ${env.blobStoragePort}`
@@ -26,7 +30,8 @@ exports.blobStorageStatus = () => {
   );
 };
 
-exports.queueStorageStatus = () => {
+export const queueStorageStatus = () => {
+  // tslint:disable-next-line:no-console
   console.log(
     chalk.cyan(
       `Azure Queue Storage Emulator listening on port ${env.queueStoragePort}`
@@ -34,7 +39,8 @@ exports.queueStorageStatus = () => {
   );
 };
 
-exports.tableStorageStatus = () => {
+export const tableStorageStatus = () => {
+  // tslint:disable-next-line:no-console
   console.log(
     chalk.cyan(
       `Azure Table Storage Emulator listening on port ${env.tableStoragePort}`

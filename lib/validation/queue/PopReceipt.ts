@@ -1,6 +1,6 @@
-const AError = from "./../../core/AzuriteError"),
-  ErrorCodes = from "./../../core/ErrorCodes"),
-  QueueManager = from "./../../core/queue/QueueManager");
+constimport AError from "./../../core/AzuriteError";
+  ErrorCodes  from "./../../core/ErrorCodes"),
+  QueueManager  from "./../../core/queue/QueueManager");
 
 /**
  * Validates whether popreceipt of a given message is still valid.

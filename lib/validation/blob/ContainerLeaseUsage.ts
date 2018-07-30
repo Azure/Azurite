@@ -1,7 +1,7 @@
-const AError = from "./../../core/AzuriteError"),
-  ErrorCodes = from "./../../core/ErrorCodes"),
-  Usage = from "./../../core/Constants").Usage,
-  LeaseStatus = from "./../../core/Constants").LeaseStatus;
+constimport AError from "./../../core/AzuriteError";
+  ErrorCodes  from "./../../core/ErrorCodes"),
+  Usage  from "./../../core/Constants").Usage,
+  LeaseStatus  from "./../../core/Constants").LeaseStatus;
 
 /**
  * Checks whether intended lease usage operation is semantically valid as specified

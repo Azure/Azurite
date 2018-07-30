@@ -1,8 +1,8 @@
-const AError = from "./../../core/AzuriteError"),
-  ErrorCodes = from "./../../core/ErrorCodes");
+import AError from "./../../core/AzuriteError";
+import ErrorCodes from "./../../core/ErrorCodes";
 
 class ConflictingTable {
-  public validate({ table = undefined }) {
+  public validate({ table }) {
     if (table !== undefined) {
       throw new AError(ErrorCodes.TableAlreadyExists);
     }

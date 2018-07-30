@@ -1,6 +1,5 @@
-const AzuriteTableResponse = from "./../../model/table/AzuriteTableResponse"),
-  tableStorageManager = from "./../../core/table/TableStorageManager");
 import N from "./../../core/HttpHeaderNames";
+import tableStorageManager from "./../../core/table/TableStorageManager";
 
 class InsertOrReplaceEntity {
   public process(request, res) {

@@ -1,6 +1,6 @@
-const AError = from "./../../core/AzuriteError"),
-  ErrorCodes = from "./../../core/ErrorCodes"),
-  EntityType = from "./../../core/Constants").StorageEntityType;
+constimport AError from "./../../core/AzuriteError";
+  ErrorCodes  from "./../../core/ErrorCodes"),
+  EntityType  from "./../../core/Constants").StorageEntityType;
 
 class SupportedBlobType {
   public validate({ request = undefined }) {

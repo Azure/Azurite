@@ -1,14 +1,12 @@
-const uuidV1 = from "uuid/v1"),
-  N = from "./../../core/HttpHeaderNames"),
-  EntityType = from "./../../core/Constants").StorageEntityType;
+import uuidV1 from "uuid";
+import { StorageEntityType } from "../../core/Constants";
+import N from "../../core/HttpHeaderNames";
 
 class AzuriteResponse {
-  constructor({
-    proxy = undefined,
-    payload = undefined,
-    query = {},
-    cors = undefined
-  } = {}) {
+  public httpProps: any;
+  public proxy: any;
+  public payload: any;
+  constructor({ proxy, payload, query = {}, cors } = {}) {
     this.httpProps = {};
     this.proxy = proxy;
     if (this.proxy) {
@@ -18,18 +16,18 @@ class AzuriteResponse {
         this.httpProps[`x-ms-meta-${key}`] = this.proxy.original.metaProps[key];
       });
 
-      if (proxy.original.entityType === EntityType.AppendBlob) {
+      if (proxy.original.entityType === StorageEntityType.AppendBlob) {
         this.httpProps[N.BLOB_COMMITTED_BLOCK_COUNT] =
           proxy.original[N.BLOB_COMMITTED_BLOCK_COUNT];
         this.httpProps[N.BLOB_APPEND_OFFSET] = proxy.original.size;
       }
 
-      if (proxy.original.entityType === EntityType.PageBlob) {
+      if (proxy.original.entityType === StorageEntityType.PageBlob) {
         this.httpProps[N.SEQUENCE_NUMBER] = proxy.original.sequenceNumber;
       }
     }
     this.httpProps[N.VERSION] = "2016-05-31";
-    this.httpProps[N.DATE] = new Date().toGMTString();
+    this.httpProps[N.DATE] = new Date().toUTCString();
     this.httpProps[N.CONTENT_LENGTH] = 0;
     this.httpProps[N.REQUEST_ID] = uuidV1();
     this.payload = payload;

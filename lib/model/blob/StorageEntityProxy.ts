@@ -1,7 +1,7 @@
-const crypto = from "crypto"),
-  BbPromise = from "bluebird"),
+const crypto  from "crypto"),
+  BbPromise  from "bluebird"),
   fs = BbPromise.promisifyAll(from "fs-extra")),
-  InternalAzuriteError = from "./../../core/InternalAzuriteError");
+  InternalAzuriteError  from "./../../core/InternalAzuriteError");
 
 /**
  * DO NOT INSTANTIATE.

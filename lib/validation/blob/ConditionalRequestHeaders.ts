@@ -1,8 +1,8 @@
-const AError = from "./../../core/AzuriteError"),
-  ErrorCodes = from "./../../core/ErrorCodes"),
-  EntityType = from "./../../core/Constants").StorageEntityType,
-  N = from "./../../core/HttpHeaderNames"),
-  Usage = from "./../../core/Constants").Usage;
+constimport AError from "./../../core/AzuriteError";
+  ErrorCodes  from "./../../core/ErrorCodes"),
+  EntityType  from "./../../core/Constants").StorageEntityType,
+  N  from "./../../core/HttpHeaderNames"),
+  Usage  from "./../../core/Constants").Usage;
 
 class ConditionalRequestHeaders {
   /**

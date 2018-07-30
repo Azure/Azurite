@@ -1,6 +1,6 @@
-const AError = from "./../../core/AzuriteError"),
-  N = from "./../../core/HttpHeaderNames"),
-  ErrorCodes = from "./../../core/ErrorCodes");
+constimport AError from "./../../core/AzuriteError";
+  N  from "./../../core/HttpHeaderNames"),
+  ErrorCodes  from "./../../core/ErrorCodes");
 
 /**
  * Checks whether the following conditional request headers specific to an AppendBlob are satisfied.

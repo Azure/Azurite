@@ -1,12 +1,15 @@
+import * as BbPromise from "bluebird";
+import * as bodyParser from "body-parser";
 import * as express from "express";
 import { Server } from "http";
-
-const BbPromise = from "bluebird"),
-  bodyParser = from "body-parser"),
-  env = from "./core/env"),
-  tableStorageManager = from "./core/table/TableStorageManager"),
-  morgan = from "morgan"),
-  cli = from "./core/cli");
+import * as morgan from "morgan";
+import { tableStorageStatus } from "./core/cli";
+import env from "./core/env";
+import tableStorageManager from "./core/table/TableStorageManager";
+import Actions from "./middleware/queue/actions";
+import Validation from "./middleware/queue/validation";
+import EntityRoute from "./routes/table/EntityRoute";
+import TableRoute from "./routes/table/TableRoute";
 
 class AzuriteTable {
   private server!: Server;
@@ -48,13 +51,13 @@ class AzuriteTable {
             }
           })
         );
-        from "./routes/table/TableRoute")(app);
-        from "./routes/table/EntityRoute")(app);
-        app.use(from "./middleware/table/validation"));
-        app.use(from "./middleware/table/actions"));
+        EntityRoute(app);
+        TableRoute(app);
+        app.use(Validation);
+        app.use(Actions);
         this.server = app.listen(env.tableStoragePort, () => {
           if (!env.silent) {
-            cli.tableStorageStatus();
+            tableStorageStatus();
           }
         });
       });

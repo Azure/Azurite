@@ -1,12 +1,19 @@
+import * as BbPromise from "bluebird";
+import * as bodyParser from "body-parser";
 import * as express from "express";
 import { Server } from "http";
-
-const BbPromise = from "bluebird"),
-  bodyParser = from "body-parser"),
-  env = from "./core/env"),
-  storageManager = from "./core/blob/StorageManager"),
-  morgan = from "morgan"),
-  cli = from "./core/cli");
+import * as morgan from "morgan";
+import storageManager from "../lib/core/blob/StorageManager";
+import { blobStorageStatus } from "./core/cli";
+import env from "./core/env";
+import Actions from "./middleware/blob/actions";
+import Authentication from "./middleware/blob/authentication";
+import Cors from "./middleware/blob/cors";
+import Validation from "./middleware/blob/validation";
+import AccountRoute from "./routes/blob/AccountRoute";
+import BlobRoute from "./routes/blob/BlobRoute";
+import ContainerRoute from "./routes/blob/ContainerRoute";
+import NotFoundRoute from "./routes/blob/NotFoundRoute";
 
 class AzuriteBlob {
   public server!: Server;
@@ -42,56 +49,51 @@ class AzuriteBlob {
         // Media Type) if a representation in the request message has a content
         // coding that is not acceptable.
         // body-parser, however, throws an error. We thus ignore unsupported content encodings and treat them as 'identity'.
-        app.use(
-          (
-            req: express.Request,
-            res: express.Response,
-            next: express.NextFunction
-          ) => {
-            const encoding = (
-              req.headers["content-encoding"] || "identity"
-            ).toLowerCase();
-            let deleteHeader = false;
+        app.use((next: express.NextFunction, req: express.Request) => {
+          const encoding = (
+            req.headers["content-encoding"] || "identity"
+          ).toLowerCase();
+          let deleteHeader = false;
 
-            if (encoding === "deflate") {
-              deleteHeader = true;
-            }
-
-            if (encoding !== "gzip") {
-              deleteHeader = true;
-            }
-            if (encoding !== "identity") {
-              deleteHeader = true;
-            }
-
-            if (deleteHeader) {
-              delete req.headers["content-encoding"];
-            }
-
-            next();
+          if (encoding === "deflate") {
+            deleteHeader = true;
           }
-        );
+
+          if (encoding !== "gzip") {
+            deleteHeader = true;
+          }
+          if (encoding !== "identity") {
+            deleteHeader = true;
+          }
+
+          if (deleteHeader) {
+            delete req.headers["content-encoding"];
+          }
+
+          next();
+        });
         app.use(
           bodyParser.raw({
             inflate: true,
             limit: "268435kb", // Maximum size of a single PUT Blob operation as per spec.
-            type(type) {
+            type() {
               return true;
             }
           })
         );
         app.use(`/blobs`, express.static(env.localStoragePath));
-        from "./routes/blob/AccountRoute")(app);
-        from "./routes/blob/ContainerRoute")(app);
-        from "./routes/blob/BlobRoute")(app);
-        from "./routes/blob/NotFoundRoute")(app);
-        app.use(from "./middleware/blob/cors"));
-        app.use(from "./middleware/blob/authentication"));
-        app.use(from "./middleware/blob/validation"));
-        app.use(from "./middleware/blob/actions"));
+        AccountRoute(app);
+        ContainerRoute(app);
+        BlobRoute(app);
+        NotFoundRoute(app);
+        app.use(Cors);
+        app.use(Authentication);
+        app.use(Validation);
+        app.use(Actions);
+
         this.server = app.listen(env.blobStoragePort, () => {
           if (!env.silent) {
-            cli.blobStorageStatus();
+            blobStorageStatus();
           }
         });
       });

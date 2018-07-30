@@ -1,7 +1,7 @@
-const InternalAzuriteError = from "./../../core/InternalAzuriteError"),
-  RequestPayloadParser = from "./RequestPayloadParser"),
-  Constants = from "./../../core/Constants"),
-  ODataMode = from "./../../core/Constants").ODataMode;
+const InternalAzuriteError  from "./../../core/InternalAzuriteError"),
+  RequestPayloadParser  from "./RequestPayloadParser"),
+  Constants  from "./../../core/Constants"),
+  ODataMode  from "./../../core/Constants").ODataMode;
 import N from "./../../core/HttpHeaderNames";
 
 class AzuriteTableRequest {

@@ -1,4 +1,4 @@
-const etag = from "./../../core/utils").computeEtag;
+const etag  from "./../../core/utils").computeEtag;
 
 const _baseUrl = `http://127.0.0.1:10002/devstoreaccount1/`;
 

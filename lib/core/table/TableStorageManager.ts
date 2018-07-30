@@ -1,13 +1,13 @@
-const Loki = from "lokijs"),
-  BbPromise = from "bluebird"),
-  fs = from "fs-extra"),
+const Loki  from "lokijs"),
+  BbPromise  from "bluebird"),
+  fs  from "fs-extra"),
   fsn = BbPromise.promisifyAll(from "fs")),
-  AzuriteTableResponse = from "./../../model/table/AzuriteTableResponse"),
-  TableProxy = from "./../../model/table/TableProxy"),
-  EntityProxy = from "./../../model/table/EntityProxy"),
-  EntityGenerator = from "./../../model/table/EntityGenerator"),
-  Tables = from "./../Constants").TableStorageTables,
-  env = from "./../../core/env");
+  AzuriteTableResponse  from "./../../model/table/AzuriteTableResponse"),
+  TableProxy  from "./../../model/table/TableProxy"),
+  EntityProxy  from "./../../model/table/EntityProxy"),
+  EntityGenerator  from "./../../model/table/EntityGenerator"),
+  Tables  from "./../Constants").TableStorageTables,
+  env  from "./../../core/env");
 
 class TableStorageManager {
   public init() {

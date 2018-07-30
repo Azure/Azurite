@@ -1,5 +1,5 @@
-const AError = from "./../../core/AzuriteError"),
-  ErrorCodes = from "./../../core/ErrorCodes");
+constimport AError from "./../../core/AzuriteError";
+  ErrorCodes  from "./../../core/ErrorCodes");
 
 /*
  * Checks whether the container that is to be created already exists.

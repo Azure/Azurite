@@ -1,6 +1,6 @@
-const AError = from "./../../core/AzuriteError"),
-  N = from "./../../core/HttpHeaderNames"),
-  ErrorCodes = from "./../../core/ErrorCodes");
+constimport AError from "./../../core/AzuriteError";
+  N  from "./../../core/HttpHeaderNames"),
+  ErrorCodes  from "./../../core/ErrorCodes");
 
 /**
  * Validates the 512-byte alignment of a Page Blob.

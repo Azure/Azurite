@@ -1,6 +1,6 @@
-const AError = from "./../../core/AzuriteError"),
-  ErrorCodes = from "./../../core/ErrorCodes"),
-  CopyStat = from "./../../core/Constants").CopyStatus;
+constimport AError from "./../../core/AzuriteError";
+  ErrorCodes  from "./../../core/ErrorCodes"),
+  CopyStat  from "./../../core/Constants").CopyStatus;
 
 /**
  * Checks whether the a pending copy operation already exists at the destination.

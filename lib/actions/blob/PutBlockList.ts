@@ -1,6 +1,5 @@
 import storageManager from "./../../core/blob/StorageManager";
 import N from "./../../core/HttpHeaderNames";
-AError = from "./../../core/AzuriteError");
 
 class PutBlockList {
   public process(request, res) {

@@ -1,7 +1,7 @@
-const crypto = from "crypto"),
-  N = from "./../../core/HttpHeaderNames"),
-  AError = from "./../../core/AzuriteError"),
-  ErrorCodes = from "./../../core/ErrorCodes");
+const crypto  from "crypto"),
+  N  from "./../../core/HttpHeaderNames"),
+ import AError from "./../../core/AzuriteError";
+  ErrorCodes  from "./../../core/ErrorCodes");
 
 class MD5 {
   public validate({ request = undefined }) {

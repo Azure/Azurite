@@ -1,8 +1,8 @@
-const env = from "./../../core/env"),
-  ContainerRequest = from "./../../model/blob/AzuriteContainerRequest"),
-  Serializers = from "./../../xml/Serializers"),
-  AzuriteRequest = from "./../../model/blob/AzuriteRequest"),
-  Operations = from "./../../core/Constants").Operations;
+import { Operations } from "../../core/Constants";
+import env from "../../core/env";
+import AzuriteRequest from "../../model/blob/AzuriteRequest";
+import ContainerRequest from "./../../model/blob/AzuriteContainerRequest";
+import { parseServiceProperties } from "./../../xml/Serializers";
 
 /*
  * Route definitions for all operation on the "Account" resource type.
@@ -26,10 +26,10 @@ export default app => {
     .put((req, res, next) => {
       if (req.query.comp === "properties" && req.query.restype === "service") {
         req.azuriteOperation = Operations.Account.SET_BLOB_SERVICE_PROPERTIES;
-        Serializers.parseServiceProperties(req.body).then(result => {
+        parseServiceProperties(req.body).then(payload => {
           req.azuriteRequest = new AzuriteRequest({
-            req,
-            payload: result
+            payload,
+            req
           });
           next();
         });

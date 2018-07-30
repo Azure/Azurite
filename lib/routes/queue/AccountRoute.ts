@@ -1,6 +1,6 @@
-const env = from "./../../core/env"),
-  AzuriteQueueRequest = from "../../model/queue/AzuriteQueueRequest"),
-  Operations = from "./../../core/Constants").Operations;
+const env  from "./../../core/env"),
+  AzuriteQueueRequest  from "../../model/queue/AzuriteQueueRequest"),
+  Operations  from "./../../core/Constants").Operations;
 
 /*
  * Route definitions for all operation on the "account" resource type.

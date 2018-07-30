@@ -1,5 +1,5 @@
-const AError = from "./../../core/AzuriteError"),
-  ErrorCodes = from "./../../core/ErrorCodes");
+constimport AError from "./../../core/AzuriteError";
+  ErrorCodes  from "./../../core/ErrorCodes");
 
 /**
  * Validates the correct number space of the number of messages query parameter "numofmessages".

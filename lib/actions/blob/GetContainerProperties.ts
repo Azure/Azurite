@@ -1,10 +1,8 @@
 import storageManager from "./../../core/blob/StorageManager";
-  LeaseStatus = from "./../../core/Constants").LeaseStatus,
-  import N from "./../../core/HttpHeaderNames";
+import { LeaseStatus } from "./../../core/Constants";
+import N from "./../../core/HttpHeaderNames";
 
 class GetContainerProperties {
-  
-
   public process(request, res) {
     storageManager.getContainerProperties(request).then(response => {
       response.addHttpProperty(

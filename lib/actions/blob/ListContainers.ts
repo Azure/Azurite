@@ -1,13 +1,14 @@
+import * as js2xmlparser from "js2xmlparser";
 import storageManager from "./../../core/blob/StorageManager";
-(js2xmlparser = from "js2xmlparser")),
-  (model = from "./../../xml/blob/ContainerListXmlModel"));
+import model from "./../../xml/blob/ContainerListXmlModel";
 
 class ListContainers {
   public process(request, res) {
-    const prefix = request.query.prefix || "",
-      maxresults = request.query.maxresults || "5000",
-      includeMetadata = request.query.include === "metadata" ? true : false,
-      marker = request.query.marker || "";
+    const prefix = request.query.prefix || "";
+    const maxresults = request.query.maxresults || "5000";
+    const includeMetadata = request.query.include === "metadata" ? true : false;
+    const marker = request.query.marker || "";
+
     storageManager.listContainer(request, prefix, maxresults).then(response => {
       response.addHttpProperty("content-type", "application/xml");
       res.set(response.httpProps);

@@ -1,7 +1,6 @@
-const import N from "./../../core/HttpHeaderNames";
+import N from "./../../core/HttpHeaderNames";
 
 class AzuriteRequest {
-
   public static clone(request) {
     const copy = new AzuriteRequest({ req: {} });
     return { ...copy, ...request };
@@ -123,9 +122,9 @@ class AzuriteRequest {
       httpHeaders["x-ms-blob-public-access"] || "private";
     // Append Blobs specific
     this.httpProps[N.BLOB_CONDITION_MAX_SIZE] =
-      parseInt(httpHeaders["x-ms-blob-condition-maxsize"]) || undefined;
+      parseInt(httpHeaders["x-ms-blob-condition-maxsize"], null) || undefined;
     this.httpProps[N.BLOB_CONDITION_APPENDPOS] =
-      parseInt(httpHeaders["x-ms-blob-condition-appendpos"]) || undefined;
+      parseInt(httpHeaders["x-ms-blob-condition-appendpos"], null) || undefined;
     // Page Blobs specific
     this.httpProps[N.BLOB_CONTENT_LENGTH] =
       httpHeaders["x-ms-blob-content-length"];

@@ -1,10 +1,10 @@
-const QueueManager = from "./../../core/queue/QueueManager"),
-  QueueMessagesListXmlModel = from "./../../xml/queue/QueueMessageList")
-    .QueueMessageListXmlModel,
-  QueueMessageXmlModel = from "./../../xml/queue/QueueMessageList")
-    .QueueMessageXmlModel,
-  AzuriteQueueResponse = from "./../../model/queue/AzuriteQueueResponse");
 import N from "./../../core/HttpHeaderNames";
+import QueueManager from "./../../core/queue/QueueManager";
+import AzuriteQueueResponse from "./../../model/queue/AzuriteQueueResponse";
+import {
+  QueueMessagesListXmlModel,
+  QueueMessageXmlModel
+} from "./../../xml/queue/QueueMessageList";
 
 class GetMessages {
   public process(request, res) {
@@ -19,13 +19,13 @@ class GetMessages {
     for (const msg of messages) {
       model.add(
         new QueueMessageXmlModel({
-          messageId: msg.messageId,
+          dequeueCount: msg.dequeueCount,
           expirationTime: new Date(msg.expirationTime * 1000).toUTCString(),
           insertionTime: new Date(msg.insertionTime * 1000).toUTCString(),
+          messageId: msg.messageId,
+          messageText: msg.msg,
           popReceipt: msg.popReceipt,
-          timeNextVisible: new Date(msg.timeNextVisible * 1000).toUTCString(),
-          dequeueCount: msg.dequeueCount,
-          messageText: msg.msg
+          timeNextVisible: new Date(msg.timeNextVisible * 1000).toUTCString()
         })
       );
     }

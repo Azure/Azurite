@@ -1,4 +1,4 @@
-const Operations = from "./../../core/Constants").Operations.Queue;
+const Operations  from "./../../core/Constants").Operations.Queue;
 
 class AzuriteQueueRequest {
   constructor({ req = undefined, payload = undefined, operation = undefined }) {

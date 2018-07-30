@@ -1,7 +1,8 @@
-const uuidV1 = from "uuid/v1");
+const uuidV1  from "uuid/v1");
 import N from "./../../core/HttpHeaderNames";
 
 class AzuriteQueueResponse {
+  httpProps: any;
   constructor() {
     this.httpProps = {};
     this.httpProps[N.VERSION] = "2016-05-31";

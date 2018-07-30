@@ -1,7 +1,7 @@
 import { describe, before, it, after } from "mocha";
 import { expect } from "chai";
 
-const SnapshotManager = from "./../lib/core/blob/SnapshotTimeManager");
+const SnapshotManager  from "./../lib/core/blob/SnapshotTimeManager");
 
 describe("SnapshotTimeManager", () => {
     it("should return a snapshot date that is at least one second greater than previous snapshot of same container-blob", () => {

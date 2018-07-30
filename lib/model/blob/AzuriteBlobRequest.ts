@@ -1,18 +1,23 @@
 import * as crypto from "crypto";
+import url from "url";
+import { BlockListType } from "../../core/Constants";
+import env from "../../core/env";
+import N from "../../core/HttpHeaderNames";
+import InternalAzuriteError from "../../core/InternalAzuriteError";
 import AzuriteRequest from "./AzuriteRequest";
 
-const url = from "url"),
-  BlockListType = from "./../../core/Constants").BlockListType,
-  N = from "./../../core/HttpHeaderNames"),
-  env = from "./../../core/env"),
-  InternalAzuriteError = from "./../../core/InternalAzuriteError");
+// const url  from "url"),
+//   BlockListType  from "./../../core/Constants").BlockListType,
+//   N  from "./../../core/HttpHeaderNames"),
+//   env  from "./../../core/env"),
+//   InternalAzuriteError  from "./../../core/InternalAzuriteError");
 
 class AzuriteBlobRequest extends AzuriteRequest {
   public static clone(request) {
     const copy = new AzuriteBlobRequest({
-      req: { rawHeaders: [], headers: {}, params: {}, query: {} },
       entityType: request.entityType,
-      payload: request.payload
+      payload: request.payload,
+      req: { rawHeaders: [], headers: {}, params: {}, query: {} }
     });
 
     return { ...copy, ...request };
@@ -33,9 +38,9 @@ class AzuriteBlobRequest extends AzuriteRequest {
   public uri: any;
   constructor(req, entityType?: any, payload?: any) {
     super({
-      req,
       entityType: entityType || req.headers["x-ms-blob-type"],
-      payload
+      payload,
+      req
     });
 
     this.containerName = req.params.container;
@@ -97,8 +102,8 @@ class AzuriteBlobRequest extends AzuriteRequest {
     }
     const source = match[1];
     const pathname = url.parse(source).pathname;
-    const parts = pathname.split("/"),
-      containerName = parts[0];
+    const parts = pathname.split("/");
+    const containerName = parts[0];
     parts.splice(0, 1);
     const blobName = decodeURIComponent(parts.join("/")); // unicode characters in http headers are encoded!
     const query = url.parse(source).query;
@@ -110,9 +115,9 @@ class AzuriteBlobRequest extends AzuriteRequest {
       date = new Date(decodeURIComponent(dateStr)).toUTCString();
     }
     return {
-      sourceContainerName: containerName,
+      date,
       sourceBlobName: blobName,
-      date
+      sourceContainerName: containerName
     };
   }
 }

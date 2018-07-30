@@ -1,6 +1,6 @@
 import storageManager from "./../../core/blob/StorageManager";
 import N from "./../../core/HttpHeaderNames";
-PageListXmlModel = from "./../../xml/blob/PageListXmlModel");
+import PageListXmlModel from "./../../xml/blob/PageListXmlModel";
 
 class GetPageRanges {
   public process(request, res) {

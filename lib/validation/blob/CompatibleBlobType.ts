@@ -1,5 +1,5 @@
-const AError = from "./../../core/AzuriteError"),
-  ErrorCodes = from "./../../core/ErrorCodes");
+constimport AError from "./../../core/AzuriteError";
+  ErrorCodes  from "./../../core/ErrorCodes");
 
 class CompatibleBlobType {
   public validate({ request = undefined, blobProxy = undefined }) {

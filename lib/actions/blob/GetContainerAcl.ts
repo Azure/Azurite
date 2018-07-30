@@ -1,6 +1,6 @@
+import js2xmlparser from "js2xmlparser";
 import storageManager from "./../../core/blob/StorageManager";
 import N from "./../../core/HttpHeaderNames";
-js2xmlparser = from "js2xmlparser");
 
 class GetContainerAcl {
   public process(request, res) {

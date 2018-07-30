@@ -1,6 +1,6 @@
-const crypto = from "crypto"),
-  etag = from "./../../core/utils").computeEtag,
-  StorageEntityProxy = from "./StorageEntityProxy");
+const crypto  from "crypto"),
+  etag  from "./../../core/utils").computeEtag,
+  StorageEntityProxy  from "./StorageEntityProxy");
 
 /**
  * Serves as a container proxy to the corresponding LokiJS object.

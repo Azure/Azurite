@@ -1,19 +1,19 @@
-const BbPromise = from "bluebird"),
-  Operations = from "./../../core/Constants").Operations,
-  AzuriteQueueRequest = from "./../../model/queue/AzuriteQueueRequest"),
-  QueueManager = from "./../../core/queue/QueueManager"),
+import BbPromise from "bluebird";
+  Operations  from "./../../core/Constants").Operations,
+  AzuriteQueueRequest  from "./../../model/queue/AzuriteQueueRequest"),
+  QueueManager  from "./../../core/queue/QueueManager"),
   // Validation modules
-  ValidationContext = from "./../../validation/queue/ValidationContext"),
-  QueueCreationValidation = from "./../../validation/queue/QueueCreation"),
-  QueueExistsValidation = from "./../../validation/queue/QueueExists"),
-  QueueMessageSizeValidation = from "./../../validation/queue/QueueMessageSize"),
-  NumOfMessagesValidation = from "./../../validation/queue/NumOfMessages"),
-  QueueNameValidation = from "./../../validation/queue/QueueName"),
-  MessageExistsValidation = from "./../../validation/queue/MessageExists"),
-  PopReceiptValidation = from "./../../validation/queue/PopReceipt"),
-  VisibilityTimeoutValueValidation = from "./../../validation/queue/VisibilityTimeoutValue"),
-  MessageExpired = from "./../../validation/queue/MessageExpired"),
-  NumOfSignedIdentifiersVal = from "./../../validation/NumOfSignedIdentifiers");
+  ValidationContext  from "./../../validation/queue/ValidationContext"),
+  QueueCreationValidation  from "./../../validation/queue/QueueCreation"),
+  QueueExistsValidation  from "./../../validation/queue/QueueExists"),
+  QueueMessageSizeValidation  from "./../../validation/queue/QueueMessageSize"),
+  NumOfMessagesValidation  from "./../../validation/queue/NumOfMessages"),
+  QueueNameValidation  from "./../../validation/queue/QueueName"),
+  MessageExistsValidation  from "./../../validation/queue/MessageExists"),
+  PopReceiptValidation  from "./../../validation/queue/PopReceipt"),
+  VisibilityTimeoutValueValidation  from "./../../validation/queue/VisibilityTimeoutValue"),
+  MessageExpired  from "./../../validation/queue/MessageExpired"),
+  NumOfSignedIdentifiersVal  from "./../../validation/NumOfSignedIdentifiers");
 
 export default (req, res, next) => {
   BbPromise.try(() => {

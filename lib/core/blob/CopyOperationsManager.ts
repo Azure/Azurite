@@ -1,7 +1,8 @@
-const BbPromise = from "bluebird"),
-  fs = from "fs");
+import BbPromise from "bluebird";
+import fs from "fs";
 
 class CopyOperationsManager {
+  public ops: {};
   constructor() {
     this.ops = {};
   }
@@ -9,8 +10,8 @@ class CopyOperationsManager {
   public add(copyId, readStream, writeStream, toFilename) {
     this.ops[copyId] = {
       readStream,
-      writeStream,
-      toFilename
+      toFilename,
+      writeStream
     };
   }
 
@@ -22,7 +23,7 @@ class CopyOperationsManager {
           err ? reject(err) : resolve();
         });
       });
-      this.ops[copyId].readStream.unpipe(writeStream);
+      this.ops[copyId].readStream.unpipe(this.ops[copyId].writeStream);
     });
   }
 

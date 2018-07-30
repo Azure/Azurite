@@ -1,9 +1,9 @@
-const BbPromise = from "bluebird"),
-  AError = from "./../../core/AzuriteError"),
-  ErrorCodes = from "./../../core/ErrorCodes"),
-  N = from "./../../core/HttpHeaderNames"),
-  Operations = from "./../../core/Constants").Operations,
-  sm = from "./../../core/blob/StorageManager");
+import BbPromise from "bluebird";
+ import AError from "./../../core/AzuriteError";
+  ErrorCodes  from "./../../core/ErrorCodes"),
+  N  from "./../../core/HttpHeaderNames"),
+  Operations  from "./../../core/Constants").Operations,
+  sm  from "./../../core/blob/StorageManager");
 
 // Performs CORS rule-validation iff CORS is enabled and request header "origin" is set.
 export default (req, res, next) => {

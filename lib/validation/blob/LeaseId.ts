@@ -1,7 +1,7 @@
-const AError = from "./../../core/AzuriteError"),
-  N = from "./../../core/HttpHeaderNames"),
-  ErrorCodes = from "./../../core/ErrorCodes"),
-  isUUID = from "validator/lib/isUUID");
+constimport AError from "./../../core/AzuriteError";
+  N  from "./../../core/HttpHeaderNames"),
+  ErrorCodes  from "./../../core/ErrorCodes"),
+  isUUID  from "validator/lib/isUUID");
 
 /**
  * Checks whether leaseId complies to RFC4122 (UUID) version 3-5.

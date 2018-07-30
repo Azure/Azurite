@@ -1,23 +1,19 @@
-const QueueManager = from "./../../core/queue/QueueManager"),
-  QueueMessagesListXmlModel = from "./../../xml/queue/QueueMessageList")
-    .QueueMessageListXmlModel,
-  QueueMessageXmlModel = from "./../../xml/queue/QueueMessageList")
-    .QueueMessageXmlModel,
-  N = from "./../../core/HttpHeaderNames"),
-  AzuriteQueueResponse = from "./../../model/queue/AzuriteQueueResponse");
+import N from "./../../core/HttpHeaderNames";
+import QueueManager from "./../../core/queue/QueueManager";
+import AzuriteQueueResponse from "./../../model/queue/AzuriteQueueResponse";
 
 class UpdateMessage {
   public process(request, res) {
     const queue = QueueManager.getQueueAndMessage({
-        queueName: request.queueName
-      }).queue,
-      message = queue.update({
-        messageId: request.messageId,
-        popReceipt: request.popReceipt,
-        visibilityTimeout: request.visibilityTimeout,
-        msg: request.payload.MessageText
-      }),
-      response = new AzuriteQueueResponse();
+      queueName: request.queueName
+    }).queue;
+    const message = queue.update({
+      messageId: request.messageId,
+      msg: request.payload.MessageText,
+      popReceipt: request.popReceipt,
+      visibilityTimeout: request.visibilityTimeout
+    });
+    const response = new AzuriteQueueResponse();
 
     response.addHttpProperty(N.POP_RECEIPT, message.popReceipt);
     response.addHttpProperty(

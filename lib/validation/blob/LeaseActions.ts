@@ -1,9 +1,9 @@
-const AError = from "./../../core/AzuriteError"),
-  N = from "./../../core/HttpHeaderNames"),
-  LeaseAction = from "./../../core/Constants").LeaseActions,
-  LeaseStatus = from "./../../core/Constants").LeaseStatus,
-  AzuriteBlobRequest = from "./../../model/blob/AzuriteBlobRequest"),
-  ErrorCodes = from "./../../core/ErrorCodes");
+constimport AError from "./../../core/AzuriteError";
+  N  from "./../../core/HttpHeaderNames"),
+  LeaseAction  from "./../../core/Constants").LeaseActions,
+  LeaseStatus  from "./../../core/Constants").LeaseStatus,
+  AzuriteBlobRequest  from "./../../model/blob/AzuriteBlobRequest"),
+  ErrorCodes  from "./../../core/ErrorCodes");
 
 /**
  * Checks whether intended lease operation is semantically valid as specified

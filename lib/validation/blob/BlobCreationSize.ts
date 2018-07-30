@@ -1,6 +1,6 @@
-const AError = from "./../../core/AzuriteError"),
-  EntityType = from "./../../core/Constants").StorageEntityType,
-  ErrorCodes = from "./../../core/ErrorCodes");
+constimport AError from "./../../core/AzuriteError";
+  EntityType  from "./../../core/Constants").StorageEntityType,
+  ErrorCodes  from "./../../core/ErrorCodes");
 
 class BlobCreationSize {
   public validate({ request = undefined }) {

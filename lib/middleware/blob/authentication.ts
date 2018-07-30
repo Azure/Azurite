@@ -1,10 +1,10 @@
-const BbPromise = from "bluebird"),
-  crypto = from "crypto"),
-  AError = from "./../../core/AzuriteError"),
-  ErrorCodes = from "./../../core/ErrorCodes"),
-  env = from "./../../core/env"),
-  Keys = from "./../../core/Constants").Keys,
-  Operations = from "./../../core/Constants").Operations;
+import BbPromise from "bluebird";
+  crypto  from "crypto"),
+ import AError from "./../../core/AzuriteError";
+  ErrorCodes  from "./../../core/ErrorCodes"),
+  env  from "./../../core/env"),
+  Keys  from "./../../core/Constants").Keys,
+  Operations  from "./../../core/Constants").Operations;
 
 export default (req, res, next) => {
   BbPromise.try(() => {

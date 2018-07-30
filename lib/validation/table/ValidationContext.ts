@@ -9,6 +9,9 @@
  * @class ValidationContext
  */
 class ValidationContext {
+  public request: any;
+  public table: any;
+  public entity: any;
   constructor({ request, table, entity }) {
     this.request = request;
     this.table = table;
@@ -30,12 +33,12 @@ class ValidationContext {
       return this;
     }
     valModule.validate({
+      entity: moduleOptions ? moduleOptions.entity || this.entity : this.entity,
+      moduleOptions,
       request: moduleOptions
         ? moduleOptions.request || this.request
         : this.request,
-      table: moduleOptions ? moduleOptions.table || this.table : this.table,
-      entity: moduleOptions ? moduleOptions.entity || this.entity : this.entity,
-      moduleOptions
+      table: moduleOptions ? moduleOptions.table || this.table : this.table
     });
     return this;
   }

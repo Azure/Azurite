@@ -1,14 +1,15 @@
-const QueueManager = from "./../../core/queue/QueueManager"),
-  js2xmlparser = from "js2xmlparser"),
-  AzuriteQueueResponse = from "./../../model/queue/AzuriteQueueResponse");
+import * as js2xmlparser from "js2xmlparser";
 import N from "./../../core/HttpHeaderNames";
+import QueueManager from "./../../core/queue/QueueManager";
+import AzuriteQueueResponse from "./../../model/queue/AzuriteQueueResponse";
 
 class GetQueueAcl {
   public process(request, res) {
     const queue = QueueManager.getQueueAndMessage({
-        queueName: request.queueName
-      }).queue,
-      signedIdentifiers = queue.getAcl();
+      queueName: request.queueName
+    }).queue;
+
+    const signedIdentifiers = queue.getAcl();
     let xml = js2xmlparser.parse("SignedIdentifiers", signedIdentifiers || {});
     xml = xml.replace(
       `<?xml version="1.0"?>`,

@@ -1,35 +1,35 @@
-const BbPromise = from "bluebird"),
-  N = from "./../../core/HttpHeaderNames"),
-  AError = from "./../../core/AzuriteError"),
-  ErrorCodes = from "./../../core/ErrorCodes"),
-  Operations = from "./../../core/Constants").Operations.Table,
-  tsm = from "./../../core/table/TableStorageManager"),
-  ValidationContext = from "./../../validation/table/ValidationContext"),
-  TableExistsVal = from "./../../validation/table/TableExists"),
-  ConflictingEntityVal = from "./../../validation/table/ConflictingEntity"),
-  TableNameVal = from "./../../validation/table/TableName"),
-  EntityExistsVal = from "./../../validation/table/EntityExists"),
-  EntityIfMatchVal = from "./../../validation/table/EntityIfMatch"),
-  ConflictingTableVal = from "./../../validation/table/ConflictingTable");
+import BbPromise from "bluebird";
+import AzuriteError from "../../core/AzuriteError";
+import { Operations } from "../../core/Constants";
+import ErrorCodes from "../../core/ErrorCodes";
+import N from "../../core/HttpHeaderNames";
+import TableStorageManager from "../../core/table/TableStorageManager";
+import ConflictingEntity from "../../validation/table/ConflictingEntity";
+import ConflictingTable from "../../validation/table/ConflictingTable";
+import EntityExists from "../../validation/table/EntityExists";
+import EntityIfMatch from "../../validation/table/EntityIfMatch";
+import TableExists from "../../validation/table/TableExists";
+import TableName from "../../validation/table/TableName";
+import ValidationContext from "../../validation/table/ValidationContext";
 
 export default (req, res, next) => {
   BbPromise.try(() => {
     // Azurite currently does not support XML-Atom responses, only supports JSON-based responses.
     if (req.headers[N.CONTENT_TYPE] === `application/atom+xml`) {
-      throw new AError(ErrorCodes.AtomXmlNotSupported);
+      throw new AzuriteError(ErrorCodes.AtomXmlNotSupported);
     }
-    const request = req.azuriteRequest,
-      tableProxy = tsm._getTable(request.tableName),
-      entityProxy = tsm._getEntity(
-        request.tableName,
-        request.partitionKey,
-        request.rowKey
-      ),
-      validationContext = new ValidationContext({
-        request,
-        table: tableProxy,
-        entity: entityProxy
-      });
+    const request = req.azuriteRequest;
+    const tableProxy = TableStorageManager._getTable(request.tableName);
+    const entityProxy = TableStorageManager._getEntity(
+      request.tableName,
+      request.partitionKey,
+      request.rowKey
+    );
+    const validationContext = new ValidationContext({
+      entity: entityProxy,
+      request,
+      table: tableProxy
+    });
     validations[req.azuriteOperation](validationContext);
     next();
   }).catch(e => {
@@ -41,55 +41,51 @@ export default (req, res, next) => {
 
 const validations = {};
 
-validations[undefined] = () => {
-  // NO VALIDATIONS (this is an unimplemented call)
+validations[Operations.Table.CREATE_TABLE] = valContext => {
+  valContext.run(ConflictingTable).run(TableName);
 };
 
-validations[Operations.CREATE_TABLE] = valContext => {
-  valContext.run(ConflictingTableVal).run(TableNameVal);
+validations[Operations.Table.INSERT_ENTITY] = valContext => {
+  valContext.run(TableExists).run(ConflictingEntity);
 };
 
-validations[Operations.INSERT_ENTITY] = valContext => {
-  valContext.run(TableExistsVal).run(ConflictingEntityVal);
+validations[Operations.Table.DELETE_TABLE] = valContext => {
+  valContext.run(TableExists);
 };
 
-validations[Operations.DELETE_TABLE] = valContext => {
-  valContext.run(TableExistsVal);
-};
-
-validations[Operations.DELETE_ENTITY] = valContext => {
+validations[Operations.Table.DELETE_ENTITY] = valContext => {
   valContext
-    .run(TableExistsVal)
-    .run(EntityExistsVal)
-    .run(EntityIfMatchVal);
+    .run(TableExists)
+    .run(EntityExists)
+    .run(EntityIfMatch);
 };
 
-validations[Operations.QUERY_TABLE] = valContext => {
-  valContext.run(TableExistsVal);
+validations[Operations.Table.QUERY_TABLE] = valContext => {
+  valContext.run(TableExists);
 };
 
-validations[Operations.QUERY_ENTITY] = valContext => {
-  valContext.run(TableExistsVal);
+validations[Operations.Table.QUERY_ENTITY] = valContext => {
+  valContext.run(TableExists);
 };
 
-validations[Operations.UPDATE_ENTITY] = valContext => {
+validations[Operations.Table.UPDATE_ENTITY] = valContext => {
   valContext
-    .run(TableExistsVal)
-    .run(EntityExistsVal)
-    .run(EntityIfMatchVal);
+    .run(TableExists)
+    .run(EntityExists)
+    .run(EntityIfMatch);
 };
 
-validations[Operations.INSERT_OR_REPLACE_ENTITY] = valContext => {
-  valContext.run(TableExistsVal);
+validations[Operations.Table.INSERT_OR_REPLACE_ENTITY] = valContext => {
+  valContext.run(TableExists);
 };
 
-validations[Operations.MERGE_ENTITY] = valContext => {
+validations[Operations.Table.MERGE_ENTITY] = valContext => {
   valContext
-    .run(TableExistsVal)
-    .run(EntityExistsVal)
-    .run(EntityIfMatchVal);
+    .run(TableExists)
+    .run(EntityExists)
+    .run(EntityIfMatch);
 };
 
-validations[Operations.INSERT_OR_MERGE_ENTITY] = valContext => {
-  valContext.run(TableExistsVal);
+validations[Operations.Table.INSERT_OR_MERGE_ENTITY] = valContext => {
+  valContext.run(TableExists);
 };

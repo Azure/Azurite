@@ -1,4 +1,4 @@
-const uuidV1 = from "uuid/v1");
+const uuidV1  from "uuid/v1");
 import N from "./../../core/HttpHeaderNames";
 
 class AzuriteTableResponse {

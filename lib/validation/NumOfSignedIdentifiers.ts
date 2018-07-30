@@ -1,5 +1,5 @@
-const AError = from "./../core/AzuriteError"),
-  ErrorCodes = from "./../core/ErrorCodes");
+const AError  from "./../core/AzuriteError"),
+  ErrorCodes  from "./../core/ErrorCodes");
 
 /**
  * Checks whether the number of signed identifiers is at most 5.

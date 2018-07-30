@@ -1,17 +1,18 @@
-const BbPromise = from "bluebird"),
-  xml2js = from "xml2js"),
-  SignedIdentifiers = from "./SignedIdentifierXmlModel"),
-  AError = from "./../core/AzuriteError"),
-  parseStringAsync = BbPromise.promisify(
-    new xml2js.Parser({ explicitArray: true }).parseString
-  ),
-  parseStringAsyncNoArray = BbPromise.promisify(
-    new xml2js.Parser({ explicitArray: false }).parseString
-  ),
-  xml2jsAsync = BbPromise.promisify(from "xml2js").parseString);
+import BbPromise from "bluebird";
+import * as xml2js from "xml2js";
+import AError from "./../core/AzuriteError";
+import SignedIdentifiers from "./SignedIdentifierXmlModel";
+
+const xml2jsAsync = BbPromise.promisify(xml2js.parseString);
+const parseStringAsync = BbPromise.promisify(
+  new xml2js.Parser({ explicitArray: true }).parseString);
+);
+const parseStringAsyncNoArray = BbPromise.promisify(
+  new xml2js.Parser({ explicitArray: false }).parseString);
+);
 
 // see https://docs.microsoft.com/en-us/rest/api/storageservices/Set-Container-ACL?redirectedfrom=MSDN
-exports.parseSignedIdentifiers = body => {
+export const parseSignedIdentifiers = body => {
   body = body.toString("utf8");
   return parseStringAsync(body).then(temp => {
     if (temp === null) {
@@ -69,7 +70,7 @@ exports.parseSignedIdentifiers = body => {
   });
 };
 
-exports.deserializeBlockList = body => {
+export const deserializeBlockList = body => {
   const txt = body.toString("utf8");
   return xml2jsAsync(txt)
     .then(result => {
@@ -93,7 +94,7 @@ exports.deserializeBlockList = body => {
     });
 };
 
-exports.parseServiceProperties = body => {
+export const parseServiceProperties = body => {
   const xml = body.toString("utf8");
   return parseStringAsyncNoArray(xml)
     .then(result => {

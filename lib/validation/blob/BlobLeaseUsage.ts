@@ -1,7 +1,7 @@
-const AError = from "./../../core/AzuriteError"),
-  LeaseStatus = from "./../../core/Constants").LeaseStatus,
-  Usage = from "./../../core/Constants").Usage,
-  ErrorCodes = from "./../../core/ErrorCodes");
+constimport AError from "./../../core/AzuriteError";
+  LeaseStatus  from "./../../core/Constants").LeaseStatus,
+  Usage  from "./../../core/Constants").Usage,
+  ErrorCodes  from "./../../core/ErrorCodes");
 
 class BlobLeaseUsage {
   /**

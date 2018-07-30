@@ -1,19 +1,19 @@
-const BbPromise = from "bluebird"),
-  Operations = from "./../../core/Constants").Operations,
+import BbPromise from "bluebird";
+  Operations  from "./../../core/Constants").Operations,
   // Actions
-  deleteQueue = from "./../../actions/queue/DeleteQueue"),
-  setQueueMetadata = from "./../../actions/queue/SetQueueMetadata"),
-  getQueueMetadata = from "./../../actions/queue/GetQueueMetadata"),
-  putMessage = from "./../../actions/queue/PutMessage"),
-  getMessages = from "./../../actions/queue/GetMessages"),
-  clearMessages = from "./../../actions/queue/ClearMessages"),
-  peekMessages = from "./../../actions/queue/PeekMessages"),
-  deleteMessage = from "./../../actions/queue/DeleteMessage"),
-  updateMessage = from "./../../actions/queue/UpdateMessage"),
-  listQueues = from "./../../actions/queue/ListQueues"),
-  setQueueAcl = from "./../../actions/queue/SetQueueAcl"),
-  getQueueAcl = from "./../../actions/queue/GetQueueAcl"),
-  createQueue = from "./../../actions/queue/CreateQueue");
+  deleteQueue  from "./../../actions/queue/DeleteQueue"),
+  setQueueMetadata  from "./../../actions/queue/SetQueueMetadata"),
+  getQueueMetadata  from "./../../actions/queue/GetQueueMetadata"),
+  putMessage  from "./../../actions/queue/PutMessage"),
+  getMessages  from "./../../actions/queue/GetMessages"),
+  clearMessages  from "./../../actions/queue/ClearMessages"),
+  peekMessages  from "./../../actions/queue/PeekMessages"),
+  deleteMessage  from "./../../actions/queue/DeleteMessage"),
+  updateMessage  from "./../../actions/queue/UpdateMessage"),
+  listQueues  from "./../../actions/queue/ListQueues"),
+  setQueueAcl  from "./../../actions/queue/SetQueueAcl"),
+  getQueueAcl  from "./../../actions/queue/GetQueueAcl"),
+  createQueue  from "./../../actions/queue/CreateQueue");
 
 export default (req, res) => {
   BbPromise.try(() => {

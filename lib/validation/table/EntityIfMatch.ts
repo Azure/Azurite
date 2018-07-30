@@ -1,6 +1,6 @@
-const AError = from "./../../core/AzuriteError"),
-  N = from "./../../core/HttpHeaderNames"),
-  ErrorCodes = from "./../../core/ErrorCodes");
+constimport AError from "./../../core/AzuriteError";
+  N  from "./../../core/HttpHeaderNames"),
+  ErrorCodes  from "./../../core/ErrorCodes");
 
 class EntityIfMatch {
   public validate({ request = undefined, entity = undefined }) {

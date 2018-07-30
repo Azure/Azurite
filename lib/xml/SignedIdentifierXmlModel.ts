@@ -1,16 +1,17 @@
 class SignedIdentifiers {
+  public SignedIdentifier: any[];
   constructor() {
     this.SignedIdentifier = [];
   }
 
   public addSignedIdentifier(id, start, expiry, permissionlist) {
     this.SignedIdentifier.push({
-      Id: id,
       AccessPolicy: {
-        Start: start,
         Expiry: expiry,
-        Permission: permissionlist
-      }
+        Permission: permissionlist,
+        Start: start
+      },
+      Id: id
     });
   }
 }

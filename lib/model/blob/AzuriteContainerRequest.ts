@@ -1,16 +1,15 @@
+import path from "path";
+import { StorageEntityType } from "../../core/Constants";
+import env from "../../core/env";
 import AzuriteRequest from "./AzuriteRequest";
-
-const path = from "path"),
-  env = from "./../../core/env"),
-  EntityType = from "./../../core/Constants").StorageEntityType;
 
 class AzuriteContainerRequest extends AzuriteRequest {
   public containerName: string;
   constructor(req, payload?: any) {
     super({
-      req,
-      entityType: EntityType.Container,
-      payload
+      entityType: StorageEntityType.Container,
+      payload,
+      req
     });
 
     this.containerName = req.params.container;

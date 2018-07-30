@@ -1,8 +1,8 @@
-const utils = from "./utils"),
-  path = from "path"),
-  BbPromise = from "bluebird"),
-  crypto = from "crypto"),
-  fs = BbPromise.promisifyAll(from "fs-extra"));
+import BbPromise from "bluebird";
+import crypto from "crypto";
+import fsExtra from "fs-extra";
+import path from "path";
+const fs = BbPromise.promisifyAll(fsExtra);
 
 let initialized = false;
 
@@ -66,7 +66,8 @@ class Environment {
    * @param {string} id of the blob
    *
    * @memberof Environment
-   * */
+   */
+
   public webStorageUri(id) {
     const hash = crypto
       .createHash("sha1")

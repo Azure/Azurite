@@ -1,15 +1,16 @@
-const QueueManager = from "./../../core/queue/QueueManager"),
-  N = from "./../../core/HttpHeaderNames"),
-  AzuriteQueueResponse = from "./../../model/queue/AzuriteQueueResponse");
+import N from "./../../core/HttpHeaderNames";
+import QueueManager from "./../../core/queue/QueueManager";
+import AzuriteQueueResponse from "./../../model/queue/AzuriteQueueResponse";
 
 class GetQueueMetadata {
   public process(request, res) {
     const queue = QueueManager.getQueueAndMessage({
-        queueName: request.queueName
-      }).queue,
-      metaProps = queue.metaProps,
-      queueLength = queue.getLength(),
-      response = new AzuriteQueueResponse();
+      queueName: request.queueName
+    }).queue;
+
+    const metaProps = queue.metaProps;
+    const queueLength = queue.getLength();
+    const response = new AzuriteQueueResponse();
     response.addMetaProps(metaProps);
     response.addHttpProperty(N.APPROXIMATE_MESSAGES_COUNT, queueLength);
     res.set(response.httpProps);

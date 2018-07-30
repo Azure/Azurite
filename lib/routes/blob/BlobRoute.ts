@@ -1,10 +1,8 @@
-const env = from "./../../core/env"),
-  BlobRequest = from "./../../model/blob/AzuriteBlobRequest"),
-  AzuriteRequest = from "./../../model/blob/AzuriteRequest"),
-  EntityType = from "./../../core/Constants").StorageEntityType,
-  Serializers = from "./../../xml/Serializers"),
-  Operations = from "./../../core/Constants").Operations;
-
+import { Operations, StorageEntityType } from "../../core/Constants";
+import env from "../../core/env";
+import AzuriteRequest from "../../model/blob/AzuriteRequest";
+import BlobRequest from "./../../model/blob/AzuriteBlobRequest";
+import { deserializeBlockList } from "./../../xml/Serializers";
 /*
  * Route definitions for all operation on the "Blob" resource type.
  * See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/blob-service-rest-api
@@ -35,24 +33,24 @@ export default app => {
       let entityType = null;
       if (req.query.comp === "block") {
         req.azuriteOperation = Operations.Blob.PUT_BLOCK;
-        entityType = EntityType.BlockBlob;
+        entityType = StorageEntityType.BlockBlob;
       } else if (req.query.comp === "blocklist") {
         req.azuriteOperation = Operations.Blob.PUT_BLOCK_LIST;
-        Serializers.deserializeBlockList(req.body).then(blocklist => {
+        deserializeBlockList(req.body).then(payload => {
           req.azuriteRequest = new BlobRequest({
-            req,
-            entityType: EntityType.BlockBlob,
-            payload: blocklist
+            entityType: StorageEntityType.BlockBlob,
+            payload,
+            req
           });
           next();
         });
         return;
       } else if (req.query.comp === "page") {
         req.azuriteOperation = Operations.Blob.PUT_PAGE;
-        entityType = EntityType.PageBlob;
+        entityType = StorageEntityType.PageBlob;
       } else if (req.query.comp === "appendblock") {
         req.azuriteOperation = Operations.Blob.APPEND_BLOCK;
-        entityType = EntityType.AppendBlob;
+        entityType = StorageEntityType.AppendBlob;
       } else if (req.query.comp === "snapshot") {
         req.azuriteOperation = Operations.Blob.SNAPSHOT_BLOB;
       } else if (req.query.comp === "lease") {

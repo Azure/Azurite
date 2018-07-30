@@ -1,5 +1,5 @@
-const QueueManager = from "./../../core/queue/QueueManager"),
-  AzuriteQueueResponse = from "./../../model/queue/AzuriteQueueResponse");
+import QueueManager from "./../../core/queue/QueueManager";
+import AzuriteQueueResponse from "./../../model/queue/AzuriteQueueResponse";
 
 class ClearMessages {
   public process(request, res) {

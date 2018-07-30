@@ -1,10 +1,8 @@
 import storageManager from "./../../core/blob/StorageManager";
-  AzuriteResponse = from "./../../model/blob/AzuriteResponse"),
-  import N from "./../../core/HttpHeaderNames";
+import N from "./../../core/HttpHeaderNames";
+import AzuriteResponse from "./../../model/blob/AzuriteResponse";
 
 class PreflightBlobRequest {
-  
-
   public process(req, res) {
     const response = new AzuriteResponse(); // Add Access-Control-Expose-Headers
     response.addHttpProperty(

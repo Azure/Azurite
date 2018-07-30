@@ -1,7 +1,7 @@
-const crypto = from "crypto"),
-  StorageEntityProxy = from "./StorageEntityProxy"),
-  etag = from "./../../core/utils").computeEtag,
-  InternalAzuriteError = from "./../../core/InternalAzuriteError");
+const crypto  from "crypto"),
+  StorageEntityProxy  from "./StorageEntityProxy"),
+  etag  from "./../../core/utils").computeEtag,
+  InternalAzuriteError  from "./../../core/InternalAzuriteError");
 
 /**
  * Serves as a blob proxy to the corresponding LokiJS object.

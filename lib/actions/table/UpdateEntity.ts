@@ -1,7 +1,4 @@
-const AzuriteTableResponse = from "./../../model/table/AzuriteTableResponse"),
-  tableStorageManager = from "./../../core/table/TableStorageManager"),
-  ODataMode = from "./../../core/Constants").ODataMode;
-import N from "./../../core/HttpHeaderNames";
+import tableStorageManager from "./../../core/table/TableStorageManager";
 
 class UpdateEntity {
   public process(request, res) {

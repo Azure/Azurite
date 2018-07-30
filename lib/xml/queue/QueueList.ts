@@ -1,10 +1,15 @@
-const js2xml = from "js2xmlparser");
+import js2xml from "js2xmlparser";
 
 /*
  * These classes are used as model for XML-Serialization in the "ListQueues" API
  * as specified at https://docs.microsoft.com/en-us/rest/api/storageservices/list-queues1
 */
-class QueueList {
+export class QueueListXmlModel {
+  public Prefix: any;
+  public Marker: any;
+  public MaxResults: any;
+  public Queues: { Queue: any[] };
+  public NextMarker: {};
   constructor() {
     this.Prefix = undefined;
     this.Marker = undefined;
@@ -43,7 +48,9 @@ class QueueList {
   }
 }
 
-class Queue {
+export class QueueXmlModel {
+  public Name: any;
+  public Metadata: any;
   constructor(name) {
     this.Name = name;
   }
@@ -52,8 +59,3 @@ class Queue {
     this.Metadata = metaProps;
   }
 }
-
-export default {
-  QueueList,
-  Queue
-};

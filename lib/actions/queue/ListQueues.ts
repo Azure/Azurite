@@ -1,16 +1,15 @@
-const QueueManager = from "./../../core/queue/QueueManager"),
-  QueueListXmlModel = from "./../../xml/queue/QueueList").QueueList,
-  QueueXmlModel = from "./../../xml/queue/QueueList").Queue,
-  AzuriteQueueResponse = from "./../../model/queue/AzuriteQueueResponse");
 import N from "./../../core/HttpHeaderNames";
+import QueueManager from "./../../core/queue/QueueManager";
+import AzuriteQueueResponse from "./../../model/queue/AzuriteQueueResponse";
+import { QueueListXmlModel, QueueXmlModel } from "./../../xml/queue/QueueList";
 
 class ListQueues {
   public process(request, res) {
     const query = request.query;
     const { queues, nextMarker } = QueueManager.listQueues({
-      prefix: query.prefix,
       marker: query.marker,
-      maxresults: query.maxresults
+      maxresults: query.maxresults,
+      prefix: query.prefix
     });
 
     const xmlModel = new QueueListXmlModel();

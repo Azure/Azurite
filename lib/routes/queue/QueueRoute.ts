@@ -1,7 +1,7 @@
-const env = from "./../../core/env"),
-  AzuriteQueueRequest = from "../../model/queue/AzuriteQueueRequest"),
-  Serializers = from "./../../xml/Serializers"),
-  Operations = from "./../../core/Constants").Operations;
+const env  from "./../../core/env"),
+  AzuriteQueueRequest  from "../../model/queue/AzuriteQueueRequest"),
+  Serializers  from "./../../xml/Serializers"),
+  Operations  from "./../../core/Constants").Operations;
 
 /*
  * Route definitions for all operation on the "queue" resource type.

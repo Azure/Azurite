@@ -1,6 +1,6 @@
 "use strict";
 
-const IAError = from "./../../core/InternalAzuriteError");
+const IAError  from "./../../core/InternalAzuriteError");
 
 class RequestPayLoadParser {
   public parse(contentType, body) {

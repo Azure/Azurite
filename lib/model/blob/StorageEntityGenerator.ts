@@ -1,6 +1,6 @@
-const EntityType = from "./../../core/Constants").StorageEntityType,
-  N = from "./../../core/HttpHeaderNames"),
-  etag = from "./../../core/utils").computeEtag;
+const EntityType  from "./../../core/Constants").StorageEntityType,
+  N  from "./../../core/HttpHeaderNames"),
+  etag  from "./../../core/utils").computeEtag;
 
 /**
  * Generates an according Storage Entity (@type Container or @type Blob) out of a @ref AzuriteRequest object.

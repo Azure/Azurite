@@ -3,6 +3,9 @@
  * https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/status-and-error-codes2
  */
 class ErrorCode {
+  public errorCode: any;
+  public httpErrorCode: any;
+  public userMessage: any;
   constructor(errorCode, httpErrorCode, userMessage) {
     this.errorCode = errorCode;
     this.httpErrorCode = httpErrorCode;
@@ -22,6 +25,7 @@ export default {
     400,
     "The request body’s XML was invalid or not correctly specified."
   ),
+  // tslint:disable-next-line:object-literal-sort-keys
   AuthenticationFailed: new ErrorCode(
     "AuthenticationFailed",
     403,

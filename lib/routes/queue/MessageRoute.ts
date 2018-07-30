@@ -1,7 +1,7 @@
-const env = from "./../../core/env"),
-  QueueMessageTextXmlModel = from "./../../xml/queue/QueueMessageText"),
-  AzuriteQueueRequest = from "../../model/queue/AzuriteQueueRequest"),
-  Operations = from "./../../core/Constants").Operations;
+const env  from "./../../core/env"),
+  QueueMessageTextXmlModel  from "./../../xml/queue/QueueMessageText"),
+  AzuriteQueueRequest  from "../../model/queue/AzuriteQueueRequest"),
+  Operations  from "./../../core/Constants").Operations;
 
 /*
  * Route definitions for all operation on the "message" resource type.

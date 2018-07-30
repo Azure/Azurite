@@ -1,6 +1,6 @@
-const AError = from "./../../core/AzuriteError"),
-  CopyOperationsManager = from "./../../core/blob/CopyOperationsManager"),
-  ErrorCodes = from "./../../core/ErrorCodes");
+constimport AError from "./../../core/AzuriteError";
+  CopyOperationsManager  from "./../../core/blob/CopyOperationsManager"),
+  ErrorCodes  from "./../../core/ErrorCodes");
 
 /**
  *  Checks whether there is no pending copy operation.

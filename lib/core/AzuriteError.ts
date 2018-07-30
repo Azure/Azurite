@@ -3,6 +3,7 @@ function generateErrorMessage(errorCode, userMessage) {
 }
 
 class AzuriteError extends Error {
+  public statusCode: any;
   constructor(e) {
     super(e.errorCode);
     this.message = generateErrorMessage(e.errorCode, e.userMessage || "");

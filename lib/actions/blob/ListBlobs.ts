@@ -1,18 +1,18 @@
+import * as js2xmlparser from "js2xmlparser";
 import storageManager from "./../../core/blob/StorageManager";
-(LeaseStatus = from "./../../core/Constants").LeaseStatus),
-  import N from "./../../core/HttpHeaderNames";
-  (js2xmlparser = from "js2xmlparser")),
-  (utils = from "./../../core/utils")),
-  (model = from "./../../xml/blob/BlobListXmlModel"));
+import { LeaseStatus } from "./../../core/Constants";
+import N from "./../../core/HttpHeaderNames";
+import utils from "./../../core/utils";
+import model from "./../../xml/blob/BlobListXmlModel";
 
 class ListBlobs {
   public process(request, res) {
     const query = {
-      prefix: request.query.prefix || "",
       delimiter: request.query.delimiter,
-      marker: parseInt(request.query.marker) || 0,
-      maxresults: parseInt(request.query.maxresults) || 5000,
-      include: request.query.include
+      include: request.query.include,
+      marker: parseInt(request.query.marker, null) || 0,
+      maxresults: parseInt(request.query.maxresults, null) || 5000,
+      prefix: request.query.prefix || ""
     };
     storageManager.listBlobs(request, query).then(response => {
       response.addHttpProperty(N.CONTENT_TYPE, "application/xml");

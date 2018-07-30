@@ -1,9 +1,9 @@
-const ContainerRequest = from "./../../model/blob/AzuriteContainerRequest"),
-  StorageManager = from "./../../core/blob/StorageManager"),
-  Usage = from "./../../core/Constants").Usage,
-  env = from "./../../core/env"),
-  Serializers = from "./../../xml/Serializers"),
-  Operations = from "./../../core/Constants").Operations;
+const ContainerRequest  from "./../../model/blob/AzuriteContainerRequest"),
+  StorageManager  from "./../../core/blob/StorageManager"),
+  Usage  from "./../../core/Constants").Usage,
+  env  from "./../../core/env"),
+  Serializers  from "./../../xml/Serializers"),
+  Operations  from "./../../core/Constants").Operations;
 
 // Possibly implicit call to blob in $root container
 const REWRITE_URL_AND_FORWARD_TO_BLOB_ROUTE = (req, next) => {

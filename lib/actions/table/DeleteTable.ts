@@ -1,6 +1,4 @@
-const AzuriteTableResponse = from "./../../model/table/AzuriteTableResponse"),
-  tableStorageManager = from "./../../core/table/TableStorageManager");
-import N from "./../../core/HttpHeaderNames";
+import tableStorageManager from "./../../core/table/TableStorageManager";
 
 class DeleteTable {
   public process(request, res) {

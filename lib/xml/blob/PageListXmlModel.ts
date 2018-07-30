@@ -1,4 +1,4 @@
-const os = from "os");
+import os from "os";
 
 /*
  * The serialization model for GET PageRanges.
@@ -6,7 +6,8 @@ const os = from "os");
  * be implemented with it.
  * See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/get-page-ranges for details on the schema.
  */
-class PageListModel {
+class PageListXmlModel {
+  public items: any[];
   constructor() {
     this.items = [];
   }
@@ -40,6 +41,8 @@ class PageListModel {
 }
 
 class PageRange {
+  public start: any;
+  public end: any;
   constructor(startByte, endByte) {
     this.start = startByte;
     this.end = endByte;
@@ -47,10 +50,12 @@ class PageRange {
 }
 
 class ClearRange {
+  public start: any;
+  public end: any;
   constructor(startByte, endByte) {
     this.start = startByte;
     this.end = endByte;
   }
 }
 
-export default PageListModel;
+export default PageListXmlModel;

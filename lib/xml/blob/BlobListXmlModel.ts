@@ -2,6 +2,12 @@
  * These classes are used as model for XML-Serialization in the "ListBlobs" API.
  */
 class BlobList {
+  Prefix: any;
+  MaxResults: any;
+  Delimiter: any;
+  NextMarker: any;
+  Marker: any;
+  Blobs: any;
   constructor() {
     this.Prefix = "";
     this.Marker = "";
@@ -16,6 +22,9 @@ class BlobList {
 }
 
 class Blob {
+  Metadata: any;
+  Snapshot: any;
+  Properties: any;
   constructor(name, blobType) {
     this.Name = name;
     this.Snapshot;

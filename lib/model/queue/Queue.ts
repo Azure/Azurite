@@ -1,5 +1,5 @@
-const Message = from "./Message"),
-  InternalAzuriteError = from "./../../core/InternalAzuriteError");
+const Message  from "./Message"),
+  InternalAzuriteError  from "./../../core/InternalAzuriteError");
 
 class Queue {
   constructor(metaProps = {}) {

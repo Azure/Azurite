@@ -1,6 +1,5 @@
-const AzuriteTableResponse = from "./../../model/table/AzuriteTableResponse"),
-  ODataMode = from "./../../core/Constants").ODataMode,
-  tableStorageManager = from "./../../core/table/TableStorageManager");
+import { ODataMode } from "../../core/Constants";
+import tableStorageManager from "./../../core/table/TableStorageManager";
 
 class QueryEntities {
   public process(request, res) {
@@ -16,13 +15,16 @@ class QueryEntities {
   }
 
   public _createResponsePayload(payload, tableName, accept) {
-    const response = {};
+    const response = {
+      value: []
+    };
+
     if (accept !== ODataMode.NONE) {
       response[
         "odata.metadata"
       ] = `http://127.0.0.1:10002/devstoreaccount1/$metadata#${tableName}`;
     }
-    response.value = [];
+
     let i = 0;
     for (const item of payload) {
       response.value.push(item.attribs(accept));

@@ -1,10 +1,10 @@
-import storageManager from "./../../core/blob/StorageManager";
-import N from "./../../core/HttpHeaderNames";
-const EntityType = from "./../../core/Constants").StorageEntityType;
 import crypto from "crypto";
 import fs from "fs-extra";
 import req from "request";
+import storageManager from "./../../core/blob/StorageManager";
+import { StorageEntityType } from "./../../core/Constants";
 import env from "./../../core/env";
+import N from "./../../core/HttpHeaderNames";
 
 class GetBlob {
   public process(request, res) {
@@ -43,16 +43,16 @@ class GetBlob {
       // anymore once the response stream has started to get delivered.
       // Otherwise we just pipe the result through to the client which is more performant.
       if (range && request.httpProps[N.RANGE_GET_CONTENT_MD5]) {
-        const pair = range.split("=")[1].split("-"),
-          startByte = parseInt(pair[0]),
-          endByte = parseInt(pair[1]);
+        const pair = range.split("=")[1].split("-");
+        const startByte = parseInt(pair[0], null);
+        const endByte = parseInt(pair[1], null);
 
         const fullPath = env.diskStorageUri(request.id);
         const readStream = fs.createReadStream(fullPath, {
-          flags: "r",
-          start: startByte,
+          encoding: "utf8",
           end: endByte,
-          encoding: "utf8"
+          flags: "r",
+          start: startByte
         });
         readStream.read();
         const data = [];

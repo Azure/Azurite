@@ -1,7 +1,7 @@
-const AError = from "./../../core/AzuriteError"),
-  N = from "./../../core/HttpHeaderNames"),
-  LeaseAction = from "./../../core/Constants").LeaseActions,
-  ErrorCodes = from "./../../core/ErrorCodes");
+constimport AError from "./../../core/AzuriteError";
+  N  from "./../../core/HttpHeaderNames"),
+  LeaseAction  from "./../../core/Constants").LeaseActions,
+  ErrorCodes  from "./../../core/ErrorCodes");
 
 /**
  * Checks whether lease duration and lease break period conforms to specification

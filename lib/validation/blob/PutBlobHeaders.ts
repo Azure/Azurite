@@ -1,7 +1,7 @@
-const AError = from "./../../core/AzuriteError"),
-  N = from "./../../core/HttpHeaderNames"),
-  EntityType = from "./../../core/Constants").StorageEntityType,
-  ErrorCodes = from "./../../core/ErrorCodes");
+constimport AError from "./../../core/AzuriteError";
+  N  from "./../../core/HttpHeaderNames"),
+  EntityType  from "./../../core/Constants").StorageEntityType,
+  ErrorCodes  from "./../../core/ErrorCodes");
 
 class PutBlobHeaders {
   public validate({ request = undefined }) {

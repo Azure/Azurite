@@ -1,7 +1,7 @@
-const AError = from "./../../core/AzuriteError"),
-  env = from "./../../core/env"),
-  BlobExistsVal = from "./BlobExists"),
-  ErrorCodes = from "./../../core/ErrorCodes");
+constimport AError from "./../../core/AzuriteError";
+  env  from "./../../core/env"),
+  BlobExistsVal  from "./BlobExists"),
+  ErrorCodes  from "./../../core/ErrorCodes");
 
 class BlockList {
   /**

@@ -1,4 +1,4 @@
-const Queue = from "./../../model/queue/Queue");
+const Queue  from "./../../model/queue/Queue");
 
 /**
  * Manages the lifecycle of all queues in memory. Queues are not persisted in Azurite.

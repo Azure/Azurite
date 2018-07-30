@@ -1,6 +1,6 @@
 "use strict";
 
-const uuidv4 = from "uuid/v4");
+const uuidv4  from "uuid/v4");
 
 /**
  * Abstraction of a queue message.
