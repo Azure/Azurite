@@ -1,4 +1,4 @@
-import uuidV1 from "uuid";
+import uuid from "uuid";
 import { StorageEntityType } from "../../core/Constants";
 import N from "../../core/HttpHeaderNames";
 
@@ -29,7 +29,7 @@ class AzuriteResponse {
     this.httpProps[N.VERSION] = "2016-05-31";
     this.httpProps[N.DATE] = new Date().toUTCString();
     this.httpProps[N.CONTENT_LENGTH] = 0;
-    this.httpProps[N.REQUEST_ID] = uuidV1();
+    this.httpProps[N.REQUEST_ID] = uuid.v1();
     this.payload = payload;
 
     if (cors !== undefined) {

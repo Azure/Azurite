@@ -1,13 +1,13 @@
-const uuidV1  from "uuid/v1");
+import uuid from "uuid";
 import N from "./../../core/HttpHeaderNames";
 
 class AzuriteQueueResponse {
-  httpProps: any;
+  public httpProps: any;
   constructor() {
     this.httpProps = {};
     this.httpProps[N.VERSION] = "2016-05-31";
-    this.httpProps[N.DATE] = new Date().toGMTString();
-    this.httpProps[N.REQUEST_ID] = uuidV1();
+    this.httpProps[N.DATE] = new Date().toUTCString();
+    this.httpProps[N.REQUEST_ID] = uuid.v1();
   }
 
   public addHttpProperty(key, value) {

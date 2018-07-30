@@ -1,18 +1,17 @@
-constimport AError from "./../../core/AzuriteError";
-  ErrorCodes  from "./../../core/ErrorCodes"),
-  QueueManager  from "./../../core/queue/QueueManager");
-
+import AzuriteError from "../../core/AzuriteError";
+import ErrorCodes from "../../core/ErrorCodes";
+import QueueManager from "../../core/queue/QueueManager";
 /**
  * Validates whether popreceipt of a given message is still valid.
  */
 class PopReceipt {
-  public validate({ request = undefined }) {
-    const msg = QueueManager.getQueueAndMessage({
-      queueName: request.queueName,
-      messageId: request.messageId
-    }).message;
+  public validate(request) {
+    const msg = QueueManager.getQueueAndMessage(
+      request.queueName,
+      request.messageId
+    ).message;
     if (msg.popReceipt !== request.popReceipt) {
-      throw new AError(ErrorCodes.PopReceiptMismatch);
+      throw new AzuriteError(ErrorCodes.PopReceiptMismatch);
     }
   }
 }

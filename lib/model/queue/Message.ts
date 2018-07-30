@@ -1,6 +1,4 @@
-"use strict";
-
-const uuidv4  from "uuid/v4");
+import uuid from "uuid";
 
 /**
  * Abstraction of a queue message.
@@ -8,6 +6,14 @@ const uuidv4  from "uuid/v4");
  * @class Message
  */
 class Message {
+  public msg: any;
+  public expirationTime: any;
+  public visibilityTimeout: any;
+  public timeNextVisible: any;
+  public messageId: string;
+  public insertionTime: any;
+  public popReceipt: string;
+  public dequeueCount: number;
   /**
    * Creates an instance of message.
    * @param {String} msg the queue message.
@@ -21,24 +27,24 @@ class Message {
     this.expirationTime = now + messageTtl;
     this.visibilityTimeout = visibilityTimeout;
     this.timeNextVisible = now + visibilityTimeout;
-    this.messageId = uuidv4();
+    this.messageId = uuid.v4();
     this.insertionTime = now;
-    this.popReceipt = uuidv4();
+    this.popReceipt = uuid.v4();
     this.dequeueCount = 0;
   }
 
   public renewPopReceipt() {
-    this.popReceipt = uuidv4();
+    this.popReceipt = uuid.v4();
   }
 
   public visible() {
-    const now = Date.parse(new Date()) / 1000;
+    const now = new Date().getTime() / 1000;
     return this.timeNextVisible === undefined || now >= this.timeNextVisible;
   }
 
   public updateVisibilityTimeout(visibilityTimeout) {
     this.visibilityTimeout = visibilityTimeout;
-    const now = Date.parse(new Date()) / 1000;
+    const now = new Date().getTime() / 1000;
     this.timeNextVisible = now + this.visibilityTimeout;
   }
 }

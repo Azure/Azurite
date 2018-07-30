@@ -1,4 +1,3 @@
-import storageManager from "./../../core/blob/StorageManager";
 import N from "./../../core/HttpHeaderNames";
 import AzuriteResponse from "./../../model/blob/AzuriteResponse";
 

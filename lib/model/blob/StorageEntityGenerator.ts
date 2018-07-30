@@ -1,12 +1,13 @@
-const EntityType  from "./../../core/Constants").StorageEntityType,
-  N  from "./../../core/HttpHeaderNames"),
-  etag  from "./../../core/utils").computeEtag;
+import { StorageEntityType } from "../../core/Constants";
+import N from "./../../core/HttpHeaderNames";
+import computeEtag from "./../../core/utils";
 
 /**
  * Generates an according Storage Entity (@type Container or @type Blob) out of a @ref AzuriteRequest object.
  *
  * @class StorageEntityGenerator
  */
+
 class StorageEntityGenerator {
   /**
    * Generates a persistable storage entity respresentation based on a @type AzuriteRequest object
@@ -15,153 +16,79 @@ class StorageEntityGenerator {
    * @memberof StorageEntityGenerator
    */
   public generateStorageEntity(request) {
-    const entity = {};
-    // Common to all entities (containers and blobs)
-    entity.metaProps = request.metaProps;
-    entity.entityType = request.entityType;
-    entity.leaseState = "available";
-    entity.access = "private";
+    const entity = this.createEntity(request);
 
-    if (request.entityType === EntityType.Container) {
-      entity.name = request.containerName;
-      entity.access = request.httpProps[N.BLOB_PUBLIC_ACCESS];
-      entity.etag = etag(
-        `${Date.parse(new Date())}${JSON.stringify(entity.metaProps)}${
-          request.containerName
-        }`
-      );
-    } else {
-      // Common to all blobs
-      entity.name = request.blobName;
-      entity.id = request.id;
-      // Parent ID refers to the blob a block belongs to
-      entity.parentId = request.parentId;
-      entity.parentId === undefined
-        ? delete entity.parentId
-        : () => {
-            /*NOOP*/
-          };
-      // Origin ID refers to the blob a snapshot belongs to
-      entity.originId = request.originId;
-      entity.originId === undefined
-        ? delete entity.originId
-        : () => {
-            /*NOOP*/
-          };
-      entity.uri = request.uri;
-      entity.snapshot = false;
-      entity.committed = request.commit; // this is true per default
-      entity.md5 =
-        request.httpProps[N.CONTENT_MD5] || request.calculateContentMd5();
-      entity.size = request.body ? request.body.length : 0;
-      entity.etag = etag(
-        `${Date.parse(new Date())}${JSON.stringify(entity.metaProps)}${
-          request.id
-        }`
-      );
-      // The following attributes are deleted if they are undefined
-      entity.cacheControl = request.httpProps[N.CACHE_CONTROL];
-      entity.cacheControl === undefined
-        ? delete entity.cacheControl
-        : () => {
-            /*NOOP*/
-          };
-      entity.contentType = request.httpProps[N.CONTENT_TYPE];
-      entity.contentType === undefined
-        ? delete entity.contentType
-        : () => {
-            /*NOOP*/
-          };
-      entity.contentEncoding = request.httpProps[N.CONTENT_ENCODING];
-      entity.contentEncoding === undefined
-        ? delete entity.contentEncoding
-        : () => {
-            /*NOOP*/
-          };
-      entity.contentLanguage = request.httpProps[N.CONTENT_LANGUAGE];
-      entity.contentLanguage === undefined
-        ? delete entity.contentLanguage
-        : () => {
-            /*NOOP*/
-          };
-      entity.contentDisposition = request.httpProps[N.CONTENT_DISPOSITION];
-      entity.contentDisposition === undefined
-        ? delete entity.contentDisposition
-        : () => {
-            /*NOOP*/
-          };
-      entity.md5 = request.httpProps[N.CONTENT_MD5];
-      entity.md5 === undefined
-        ? delete entity.md5
-        : () => {
-            /*NOOP*/
-          };
+    if (request.entityType === StorageEntityType.Container) {
+      const container = {
+        access: request.httpProps[N.BLOB_PUBLIC_ACCESS],
+        etag: computeEtag(
+          `${new Date()}${JSON.stringify(entity.metaProps)}${
+            request.containerName
+          }`
+        ),
+        name: request.containerName
+      };
+      return { ...entity, container };
     }
+    // Common to all blobs
+    const blob = {
+      cacheControl: request.httpProps[N.CACHE_CONTROL],
+      contentDisposition: request.httpProps[N.CONTENT_DISPOSITION],
+      contentEncoding: request.httpProps[N.CONTENT_ENCODING],
+      contentLanguage: request.httpProps[N.CONTENT_LANGUAGE],
+      contentType: request.httpProps[N.CONTENT_TYPE],
+      id: request.id,
+      md5: request.httpProps[N.CONTENT_MD5] || request.calculateContentMd5(),
+      name: request.blobName,
+      originId: request.originId,
+      // Parent ID refers to the blob a block belongs to
+      parentId: request.parentId,
+      // Origin ID refers to the blob a snapshot belongs to
+      size: request.body ? request.body.length : 0,
+      snapshot: false,
+      uri: request.uri
+    };
+
     // Specific to Append Blobs
-    if (request.entityType === EntityType.AppendBlob) {
+    if (request.entityType === StorageEntityType.AppendBlob) {
       entity[N.BLOB_COMMITTED_BLOCK_COUNT] = 0;
       // According to https://docs.microsoft.com/en-us/rest/api/storageservices/append-block the MD5 hash which is
       // optionally set in Content-MD5 header is not stored with the blob, thus we delete it.
-      delete entity.md5;
+      delete blob.md5;
     }
     // Specific to Block Blobs that are potentially part of a commit
     else if (
-      request.entityType === EntityType.BlockBlob &&
+      request.entityType === StorageEntityType.BlockBlob &&
       request.blockId !== undefined
     ) {
-      entity.blockId = request.blockId;
+      blob[`blockId`] = request.blockId;
       // entity.parent = `${request.containerName}-${request.blobName}`;
       // entity.name = `${entity.parent}-${entity.blockId}`;
-      entity.committed = false;
+      blob[`committed`] = false;
     }
     // Specific to Page Blobs
-    else if (request.entityType === EntityType.PageBlob) {
-      entity.size = request.httpProps[N.BLOB_CONTENT_LENGTH];
-      entity.sequenceNumber = 0;
+    else if (request.entityType === StorageEntityType.PageBlob) {
+      blob.size = request.httpProps[N.BLOB_CONTENT_LENGTH];
+      blob[`sequenceNumber`] = 0;
       // MD5 calculation of a page blob seems to be wrong, thus deleting it for now...
-      delete entity.md5;
+      delete blob.md5;
     }
-    return entity;
+    return { ...entity, blob };
   }
 
   public clone(o) {
-    const copy = {};
-    copy.metaProps = o.metaProps;
-    copy.entityType = o.entityType;
-    copy.leaseState = o.leaseState;
-    copy.access = o.access;
-    copy.name = o.name;
-    copy.etag = o.etag;
-    if (o.entityType !== EntityType.Container) {
-      copy.snapshot = o.snapshot;
-      copy.committed = o.committed;
-      copy.md5 = o.md5;
-      copy.size = o.size;
-      if (o.cacheControl) {
-        copy.cacheControl = o.cacheControl;
-      }
-      if (o.contentType) {
-        copy.contentType = o.contentType;
-      }
-      if (o.contentEncoding) {
-        copy.contentEncoding = o.contentEncoding;
-      }
-      if (o.contentLanguage) {
-        copy.contentLanguage = o.contentLanguage;
-      }
-      if (o.entityType === EntityType.AppendBlob) {
-        copy[N.BLOB_COMMITTED_BLOCK_COUNT] = o[N.BLOB_COMMITTED_BLOCK_COUNT];
-      }
-      if (o.entityType === EntityType.BlockBlob && o.blockId !== null) {
-        copy.blockId = o.blockId;
-        copy.parent = o.parent;
-      }
-      if (o.entityType === EntityType.PageBlob) {
-        copy.size = o.size;
-        copy.sequenceNumber = o.sequenceNumber;
-      }
-    }
-    return copy;
+    return { ...o };
+  }
+
+  private createEntity(request: any) {
+    return {
+      access: "private",
+      blob: undefined,
+      container: undefined,
+      entityType: request.entityType,
+      leaseState: "available",
+      metaProps: request.metaProps
+    };
   }
 }
 

@@ -1,13 +1,13 @@
 /*
  * These classes are used as model for XML-Serialization in the "ListBlobs" API.
  */
-class BlobList {
-  Prefix: any;
-  MaxResults: any;
-  Delimiter: any;
-  NextMarker: any;
-  Marker: any;
-  Blobs: any;
+export class BlobList {
+  public Prefix: any;
+  public MaxResults: any;
+  public Delimiter: any;
+  public NextMarker: any;
+  public Marker: any;
+  public Blobs: any;
   constructor() {
     this.Prefix = "";
     this.Marker = "";
@@ -21,13 +21,11 @@ class BlobList {
   }
 }
 
-class Blob {
-  Metadata: any;
-  Snapshot: any;
-  Properties: any;
-  constructor(name, blobType) {
-    this.Name = name;
-    this.Snapshot;
+export class Blob {
+  public Metadata: any;
+  public Snapshot: any;
+  public Properties: any;
+  constructor(private name, blobType) {
     this.Properties = new Properties(blobType);
     this.Metadata = {};
   }
@@ -57,16 +55,10 @@ class Properties {
   }
 }
 
-function blobPrefixesToXml(blobPrefixes) {
+export function blobPrefixesToXml(blobPrefixes) {
   let xml = "";
   for (const prefix of blobPrefixes) {
     xml += `<BlobPrefix><Name>${prefix}</Name></BlobPrefix>`;
   }
   return xml;
 }
-
-export default {
-  BlobList,
-  Blob,
-  blobPrefixesToXml
-};

@@ -1,7 +1,7 @@
-const env  from "./../../core/env"),
-  QueueMessageTextXmlModel  from "./../../xml/queue/QueueMessageText"),
-  AzuriteQueueRequest  from "../../model/queue/AzuriteQueueRequest"),
-  Operations  from "./../../core/Constants").Operations;
+import { Operations } from "../../core/Constants";
+import env from "../../core/env";
+import AzuriteQueueRequest from "../../model/queue/AzuriteQueueRequest";
+import QueueMessageText from "../../xml/queue/QueueMessageText";
 
 /*
  * Route definitions for all operation on the "message" resource type.
@@ -17,10 +17,11 @@ export default app => {
         req.azuriteRequest = new AzuriteQueueRequest({ req });
       } else {
         req.azuriteOperation = Operations.Queue.GET_MESSAGE;
-        req.azuriteRequest = new AzuriteQueueRequest({
+        req.azuriteRequest = new AzuriteQueueRequest(
           req,
-          operation: Operations.Queue.GET_MESSAGE
-        });
+          undefined,
+          Operations.Queue.GET_MESSAGE
+        );
       }
       next();
     })
@@ -29,31 +30,23 @@ export default app => {
     })
     .put((req, res, next) => {
       req.azuriteOperation = Operations.Queue.UPDATE_MESSAGE;
-      QueueMessageTextXmlModel.toJs(req.body).then(payload => {
-        req.azuriteRequest = new AzuriteQueueRequest({
-          req,
-          payload
-        });
+      QueueMessageText.toJs(req.body).then(payload => {
+        req.azuriteRequest = new AzuriteQueueRequest(req, payload);
         next();
       });
     })
     .post((req, res, next) => {
       req.azuriteOperation = Operations.Queue.PUT_MESSAGE;
-      QueueMessageTextXmlModel.toJs(req.body).then(payload => {
-        req.azuriteRequest = new AzuriteQueueRequest({
-          req,
-          payload
-        });
+      QueueMessageText.toJs(req.body).then(payload => {
+        req.azuriteRequest = new AzuriteQueueRequest(req, payload);
         next();
       });
     })
     .delete((req, res, next) => {
-      if (req.params.messageId) {
-        req.azuriteOperation = Operations.Queue.DELETE_MESSAGE;
-      } else {
-        req.azuriteOperation = Operations.Queue.CLEAR_MESSAGES;
-      }
-      req.azuriteRequest = new AzuriteQueueRequest({ req });
+      req.azuriteOperation = req.params.messageId
+        ? Operations.Queue.DELETE_MESSAGE
+        : Operations.Queue.CLEAR_MESSAGES;
+      req.azuriteRequest = new AzuriteQueueRequest(req);
       next();
     });
 };

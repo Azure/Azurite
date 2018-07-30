@@ -1,6 +1,6 @@
-constimport AError from "./../../core/AzuriteError";
-  CopyOperationsManager  from "./../../core/blob/CopyOperationsManager"),
-  ErrorCodes  from "./../../core/ErrorCodes");
+import AzuriteError from "../../core/AzuriteError";
+import CopyOperationsManager from "../../core/blob/CopyOperationsManager";
+import ErrorCodes from "../../core/ErrorCodes";
 
 /**
  *  Checks whether there is no pending copy operation.
@@ -10,7 +10,7 @@ constimport AError from "./../../core/AzuriteError";
 class AbortCopy {
   public validate() {
     if (!CopyOperationsManager.isPending()) {
-      throw new AError(ErrorCodes.NoPendingCopyOperation);
+      throw new AzuriteError(ErrorCodes.NoPendingCopyOperation);
     }
   }
 }

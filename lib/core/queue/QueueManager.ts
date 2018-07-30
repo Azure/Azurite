@@ -1,4 +1,4 @@
-const Queue  from "./../../model/queue/Queue");
+import Queue from "../../model/queue/Queue";
 
 /**
  * Manages the lifecycle of all queues in memory. Queues are not persisted in Azurite.
@@ -6,10 +6,7 @@ const Queue  from "./../../model/queue/Queue");
  * @class QueueManager
  */
 class QueueManager {
-  public queues: {};
-  constructor() {
-    this.queues = {};
-  }
+  public queues: any[];
 
   public add({ name, metaProps = {} }) {
     this.queues[name] = new Queue(metaProps);
@@ -19,15 +16,15 @@ class QueueManager {
     delete this.queues[name];
   }
 
-  public getQueueAndMessage({ queueName = undefined, messageId = undefined }) {
+  public getQueueAndMessage(queueName, messageId?: any) {
     const queue = this.queues[queueName];
-    let message = undefined;
+    let message;
     if (queue !== undefined && messageId !== undefined) {
       message = queue.getMessage(messageId);
     }
     return {
-      queue,
-      message
+      message,
+      queue
     };
   }
 
@@ -38,8 +35,8 @@ class QueueManager {
       })
       .reduce((list, queueName) => {
         list.push({
-          name: queueName,
-          metaProps: this.queues[queueName].metaProps
+          metaProps: this.queues[queueName].metaProps,
+          name: queueName
         });
         return list;
       }, [])
@@ -52,14 +49,14 @@ class QueueManager {
       (marker + 1) * maxresults
     );
     return {
-      queues: paginatedQueues,
       nextMarker:
-        this.queues.length > (marker + 1) * maxresults ? marker + 1 : undefined
+        this.queues.length > (marker + 1) * maxresults ? marker + 1 : undefined,
+      queues: paginatedQueues
     };
   }
 
   public setQueueMetadata(request) {
-    const { queue } = this.getQueueAndMessage({ queueName: request.queueName });
+    const { queue } = this.getQueueAndMessage(request.queueName);
     queue.metaProps = request.metaProps;
   }
 }

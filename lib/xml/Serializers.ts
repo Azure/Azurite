@@ -2,11 +2,12 @@ import BbPromise from "bluebird";
 import * as xml2js from "xml2js";
 import AError from "./../core/AzuriteError";
 import SignedIdentifiers from "./SignedIdentifierXmlModel";
+import AzuriteError from "./../core/AzuriteError";
 
 const xml2jsAsync = BbPromise.promisify(xml2js.parseString);
 const parseStringAsync = BbPromise.promisify(
   new xml2js.Parser({ explicitArray: true }).parseString);
-);
+)
 const parseStringAsyncNoArray = BbPromise.promisify(
   new xml2js.Parser({ explicitArray: false }).parseString);
 );
@@ -29,9 +30,10 @@ export const parseSignedIdentifiers = body => {
           if (typeof si.AccessPolicy.Start != "undefined") {
             start = si.AccessPolicy.Start[0];
           } else {
+            // tslint:disable-next-line:no-console
             console.log(
               new Date().toISOString(),
-              ' INFO ACCESS_POLICY_START_UNDEFINED "',
+              " INFO ACCESS_POLICY_START_UNDEFINED \"",
               si,
               '"'
             );
@@ -41,11 +43,12 @@ export const parseSignedIdentifiers = body => {
             expiry = si.AccessPolicy.Expiry[0];
           } else {
             // if you have no expiry set on your SAS Key, you are doing something wrong
+            // tslint:disable-next-line:no-console
             console.log(
               new Date().toISOString(),
-              ' ERROR ACCESS_POLICY_EXPIRY_UNDEFINED "',
+              " ERROR ACCESS_POLICY_EXPIRY_UNDEFINED \"",
               si,
-              '"'
+              "\""
             );
             const MAX_TIMESTAMP = 8640000000000000;
             expiry = new Date(MAX_TIMESTAMP).toISOString();
@@ -57,11 +60,12 @@ export const parseSignedIdentifiers = body => {
           model.addSignedIdentifier(si.Id[0], start, expiry, permission);
         } else {
           // as Azurite is a tool to aid development, we should notify developers that a mistake has been made
+          // tslint:disable-next-line:no-console
           console.log(
             new Date().toISOString(),
-            ' ERROR ACCESS_POLICY_UNDEFINED "',
+            " ERROR ACCESS_POLICY_UNDEFINED \"",
             si,
-            '"'
+            "\""
           );
         }
       }
@@ -86,7 +90,7 @@ export const deserializeBlockList = body => {
       return blockIds;
     })
     .catch(err => {
-      throw new AError(
+      throw new AzuriteError(
         "Invalid XML.",
         400,
         "One of the XML nodes specified in the request body is not supported."

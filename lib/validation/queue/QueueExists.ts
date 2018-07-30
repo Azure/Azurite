@@ -1,10 +1,10 @@
-constimport AError from "./../../core/AzuriteError";
-  ErrorCodes  from "./../../core/ErrorCodes");
+import AzuriteError from "../../core/AzuriteError";
+import ErrorCodes from "../../core/ErrorCodes";
 
 class QueueExists {
-  public validate({ request = undefined, queue = undefined }) {
+  public validate(request, queue) {
     if (queue === undefined) {
-      throw new AError(ErrorCodes.QueueNotFound);
+      throw new AzuriteError(ErrorCodes.QueueNotFound);
     }
   }
 }

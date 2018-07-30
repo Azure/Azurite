@@ -1,5 +1,5 @@
-constimport AError from "./../../core/AzuriteError";
-  ErrorCodes  from "./../../core/ErrorCodes");
+import AzuriteError from "../../core/AzuriteError";
+import ErrorCodes from "../../core/ErrorCodes";
 
 /*
  * When a queue with the specified name already exists, the Queue service checks the metadata
@@ -8,14 +8,10 @@ constimport AError from "./../../core/AzuriteError";
  * See https://docs.microsoft.com/rest/api/storageservices/create-queue4 for details.
  */
 class QueueCreation {
-  public validate({ request = undefined, queue = undefined }) {
-    if (queue === undefined) {
-      return;
-    }
-
+  public validate(request, queue) {
     Object.keys(queue.metaProps).forEach(prop => {
       if (queue.metaProps[prop] !== request.metaProps[prop]) {
-        throw new AError(ErrorCodes.QueueAlreadyExists);
+        throw new AzuriteError(ErrorCodes.QueueAlreadyExists);
       }
     });
   }

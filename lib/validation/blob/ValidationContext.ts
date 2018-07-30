@@ -9,11 +9,11 @@
  * @class ValidationContext
  */
 class ValidationContext {
-  constructor({ request, containerProxy, blobProxy }) {
-    this.request = request;
-    this.containerProxy = containerProxy;
-    this.blobProxy = blobProxy;
-  }
+  constructor(
+    public request: any,
+    public containerProxy: any,
+    public blobProxy: any
+  ) {}
 
   /**
    * Runs a validation module.
@@ -30,16 +30,16 @@ class ValidationContext {
       return this;
     }
     valModule.validate({
-      request: moduleOptions
-        ? moduleOptions.request || this.request
-        : this.request,
-      containerProxy: moduleOptions
-        ? moduleOptions.containerProxy || this.containerProxy
-        : this.containerProxy,
       blobProxy: moduleOptions
         ? moduleOptions.blobProxy || this.blobProxy
         : this.blobProxy,
-      moduleOptions
+      containerProxy: moduleOptions
+        ? moduleOptions.containerProxy || this.containerProxy
+        : this.containerProxy,
+      moduleOptions,
+      request: moduleOptions
+        ? moduleOptions.request || this.request
+        : this.request
     });
     return this;
   }

@@ -1,4 +1,4 @@
-const etag  from "./../../core/utils").computeEtag;
+import computeEtag from "../../core/utils";
 
 const _baseUrl = `http://127.0.0.1:10002/devstoreaccount1/`;
 
@@ -16,23 +16,30 @@ class EntityGenerator {
    * @memberof TableGenerator
    */
   public generateTable(name) {
-    const entity = {};
-    entity.name = name;
-    entity.odata = {};
-    entity.odata.metadata = `${_baseUrl}$metadata#Tables/@Element`;
-    entity.odata.type = `devstoreaccount1.Tables`;
-    entity.odata.id = `${_baseUrl}Tables("${name}")`;
-    entity.odata.editLink = `Tables("${name}")`;
-    return entity;
+    return {
+      name,
+      odata: {
+        editLink: `Tables("${name}")`,
+        id: `${_baseUrl}Tables("${name}")`,
+        metadata: `${_baseUrl}$metadata#Tables/@Element`,
+        type: `devstoreaccount1.Tables`
+      }
+    };
   }
 
   public generateEntity(rawEntity, tableName) {
     // Enriching raw entity from payload with odata attributes
-    const entity = { attribs: {} };
-    entity.partitionKey = rawEntity.PartitionKey;
-    entity.rowKey = rawEntity.RowKey;
-    entity.attribs.Timestamp = new Date().toISOString();
+    const entity = {
+      attribs: {
+        Timestamp: new Date().toISOString()
+      },
+      odata: undefined,
+      partitionKey: rawEntity.PartitionKey,
+      rowKey: rawEntity.RowKey
+    };
+
     entity.attribs["Timestamp@odata.type"] = "Edm.DateTime";
+
     for (const key of Object.keys(rawEntity)) {
       if (key === "PartitionKey" || key === "RowKey" || key === "Timestamp") {
         continue;
@@ -49,7 +56,7 @@ class EntityGenerator {
     entity.odata.editLink = `${tableName}(PartitionKey="${
       rawEntity.PartitionKey
     }",RowKey="${rawEntity.RowKey}")`;
-    entity.odata.etag = etag(JSON.stringify(rawEntity));
+    entity.odata.etag = computeEtag(JSON.stringify(rawEntity));
     return entity;
   }
 }

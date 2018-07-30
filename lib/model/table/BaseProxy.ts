@@ -1,10 +1,8 @@
-const ODataMode  from "./../../core/Constants").ODataMode,
-  InternalAzuriteError  from "./../../core/InternalAzuriteError");
+import { ODataMode } from "../../core/Constants";
+import InternalAzuriteError from "../../core/InternalAzuriteError";
 
 class BaseProxy {
-  constructor(entity) {
-    this._ = entity;
-  }
+  constructor(private entity: any) {}
 
   /**
    * Returns the odata representation of the any (Table, Entity) entity.
@@ -17,22 +15,22 @@ class BaseProxy {
     switch (mode) {
       case ODataMode.NONE:
         return {
-          TableName: this._.name
+          TableName: this.entity.name
         };
         break;
       case ODataMode.MINIMAL:
         return {
-          "odata.metadata": this._.odata.metadata,
-          TableName: this._.name
+          TableName: this.entity.name,
+          "odata.metadata": this.entity.odata.metadata
         };
         break;
       case ODataMode.FULL:
         return {
-          "odata.metadata": this._.odata.metadata,
-          "odata.type": this._.odata.type,
-          "odata.id": this._.odata.id,
-          "odata.editLink": this._.odata.editLink,
-          TableName: this._.name
+          TableName: this.entity.name,
+          "odata.editLink": this.entity.odata.editLink,
+          "odata.id": this.entity.odata.id,
+          "odata.metadata": this.entity.odata.metadata,
+          "odata.type": this.entity.odata.type
         };
         break;
       default:

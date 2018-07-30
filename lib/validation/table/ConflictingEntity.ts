@@ -1,10 +1,10 @@
-constimport AError from "./../../core/AzuriteError";
-  ErrorCodes  from "./../../core/ErrorCodes");
+import AzuriteError from "../../core/AzuriteError";
+import ErrorCodes from "../../core/ErrorCodes";
 
 class ConflictingEntity {
-  public validate({ entity = undefined }) {
+  public validate(entity) {
     if (entity !== undefined) {
-      throw new AError(ErrorCodes.EntityAlreadyExists);
+      throw new AzuriteError(ErrorCodes.EntityAlreadyExists);
     }
   }
 }

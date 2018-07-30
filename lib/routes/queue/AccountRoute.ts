@@ -1,6 +1,6 @@
-const env  from "./../../core/env"),
-  AzuriteQueueRequest  from "../../model/queue/AzuriteQueueRequest"),
-  Operations  from "./../../core/Constants").Operations;
+import { Operations } from "../../core/Constants";
+import env from "../../core/env";
+import AzuriteQueueRequest from "../../model/queue/AzuriteQueueRequest";
 
 /*
  * Route definitions for all operation on the "account" resource type.
@@ -12,7 +12,11 @@ export default app => {
     if (req.query.comp === "list") {
       req.azuriteOperation = Operations.Queue.LIST_QUEUES;
     }
-    req.azuriteRequest = new AzuriteQueueRequest({ req });
+    req.azuriteRequest = new AzuriteQueueRequest({
+      operation: undefined,
+      payload: undefined,
+      req
+    });
     next();
   });
 };

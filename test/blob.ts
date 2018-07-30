@@ -1,12 +1,10 @@
-import AzuriteBlob from "../lib/AzuriteBlob";
 import * as chai from "chai";
-import { describe, before, it, after } from "mocha";
-import chaiHttp  from "chai-http");
-
-const expect = chai.expect,
-  rp  from "request-promise"),
-  path  from "path"),
-  xml2js  from "xml2js");
+import chaiHttp from "chai-http";
+import { after, before, describe, it } from "mocha";
+import path from "path";
+import * as rp from "request-promise";
+import AzuriteBlob from "../lib/AzuriteBlob";
+import xml2js from "xml2js";
 
 chai.use(chaiHttp);
 
@@ -20,18 +18,18 @@ const urlPath = `/devstoreaccount1`;
 function createBlob(containerNamex, blobNamex, payload, blobType) {
   // Make sure there is an existing container 'testcontainer'
   const optionsContainer = {
+    body: "",
     method: "PUT",
-    uri: `http://localhost:10000/devstoreaccount1/${containerNamex}?restype=container`,
-    body: ""
+    uri: `http://localhost:10000/devstoreaccount1/${containerNamex}?restype=container`
   };
   const optionsBlob = {
-    method: "PUT",
+    body: payload,
     headers: {
-      "x-ms-blob-type": blobType,
-      "Content-Type": "application/octet-stream"
+      "Content-Type": "application/octet-stream",
+      "x-ms-blob-type": blobType
     },
-    uri: `http://localhost:10000/devstoreaccount1/${containerNamex}/${blobNamex}`,
-    body: payload
+    method: "PUT",
+    uri: `http://localhost:10000/devstoreaccount1/${containerNamex}/${blobNamex}`
   };
 
   return rp(optionsContainer).then(() => {
@@ -49,36 +47,36 @@ describe("Blob HTTP API", () => {
       .then(() => {
         // Make sure there is an existing container 'testcontainer'
         const optionsContainer = {
+          body: "",
           method: "PUT",
-          uri: `http://localhost:10000/devstoreaccount1/${containerName}?restype=container`,
-          body: ""
+          uri: `http://localhost:10000/devstoreaccount1/${containerName}?restype=container`
         };
         const optionsBlockBlob = {
-          method: "PUT",
+          body: "abc123",
           headers: {
-            "x-ms-blob-type": "BlockBlob",
-            "Content-Type": "application/octet-stream"
+            "Content-Type": "application/octet-stream",
+            "x-ms-blob-type": "BlockBlob"
           },
-          uri: `http://localhost:10000/devstoreaccount1/${containerName}/${blockBlobName}`,
-          body: "abc123"
+          method: "PUT",
+          uri: `http://localhost:10000/devstoreaccount1/${containerName}/${blockBlobName}`
         };
         const optionsAppendBlob = {
-          method: "PUT",
+          body: "",
           headers: {
-            "x-ms-blob-type": "AppendBlob",
-            "Content-Type": "application/octet-stream"
+            "Content-Type": "application/octet-stream",
+            "x-ms-blob-type": "AppendBlob"
           },
-          uri: `http://localhost:10000/devstoreaccount1/${containerName}/${appendBlobName}`,
-          body: ""
+          method: "PUT",
+          uri: `http://localhost:10000/devstoreaccount1/${containerName}/${appendBlobName}`
         };
         const optionsPageBlob = {
-          method: "PUT",
+          body: "",
           headers: {
-            "x-ms-blob-type": "PageBlob",
-            "Content-Type": "application/octet-stream"
+            "Content-Type": "application/octet-stream",
+            "x-ms-blob-type": "PageBlob"
           },
-          uri: `http://localhost:10000/devstoreaccount1/${containerName}/${pageBlobName}`,
-          body: ""
+          method: "PUT",
+          uri: `http://localhost:10000/devstoreaccount1/${containerName}/${pageBlobName}`
         };
         return rp(optionsContainer)
           .then(() => {
@@ -137,17 +135,17 @@ describe("Blob HTTP API", () => {
     const putBlockListBlobName = "dir/putBlockListBlobName";
     it("should create a block blob from a list of blocks", () => {
       const optionsBlockBlob = {
-        method: "PUT",
+        body: "AAAAAA",
         headers: {
-          "Content-Type": "application/octet-stream",
-          "Content-Length": 6
+          "Content-Length": 6,
+          "Content-Type": "application/octet-stream"
         },
+        method: "PUT",
         qs: {
-          comp: "block",
-          blockid: "AAAAAA=="
+          blockid: "AAAAAA==",
+          comp: "block"
         },
-        uri: `http://localhost:10000/devstoreaccount1/${containerName}/${putBlockListBlobName}`,
-        body: "AAAAAA"
+        uri: `http://localhost:10000/devstoreaccount1/${containerName}/${putBlockListBlobName}`
       };
 
       return rp(optionsBlockBlob)

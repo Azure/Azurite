@@ -2,11 +2,11 @@
  * These classes are used as model for XML-Serialization in the "ListContainer" API.
 */
 class ContainerList {
-  Prefix: any;
-  MaxResults: any;
-  Marker: any;
-  NextMarker: any;
-  Containers: any;
+  public Prefix: any;
+  public MaxResults: any;
+  public Marker: any;
+  public NextMarker: any;
+  public Containers: any;
   constructor() {
     this.Prefix = "";
     this.Marker = "";
@@ -19,8 +19,8 @@ class ContainerList {
 }
 
 class Container {
-  Metadata: any;
-  Properties: any;
+  public Metadata: any;
+  public Properties: any;
   constructor(name) {
     this.Name = name || "";
     this.Properties = new Properties();

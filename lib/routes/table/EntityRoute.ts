@@ -1,7 +1,7 @@
-const env  from "./../../core/env"),
-  AzuriteTableRequest  from "./../../model/table/AzuriteTableRequest"),
-  N  from "./../../core/HttpHeaderNames"),
-  Operations  from "./../../core/Constants").Operations.Table;
+import { Operations } from "../../core/Constants";
+import env from "../../core/env";
+import AzuriteTableRequest from "../../model/table/AzuriteTableRequest";
+import N from "./../../core/HttpHeaderNames";
 
 /*
  * Route definitions for all operation on the "message" resource type.
@@ -15,8 +15,8 @@ export default app => {
     )
     .get((req, res, next) => {
       if (req.azuriteOperation === undefined) {
-        req.azuriteOperation = Operations.QUERY_ENTITY;
-        req.azuriteRequest = new AzuriteTableRequest({ req });
+        req.azuriteOperation = Operations.Table.QUERY_ENTITY;
+        req.azuriteRequest = new AzuriteTableRequest(req);
       }
       next();
     })
@@ -25,39 +25,30 @@ export default app => {
     })
     .put((req, res, next) => {
       if (req.azuriteOperation === undefined) {
-        req.azuriteRequest = new AzuriteTableRequest({
-          req,
-          payload: req.payload
-        });
+        req.azuriteRequest = new AzuriteTableRequest(req, req.payload);
         req.azuriteOperation = req.azuriteRequest.httpProps[N.IF_MATCH]
-          ? Operations.UPDATE_ENTITY
-          : Operations.INSERT_OR_REPLACE_ENTITY;
+          ? Operations.Table.UPDATE_ENTITY
+          : Operations.Table.INSERT_OR_REPLACE_ENTITY;
       }
       next();
     })
     .post((req, res, next) => {
       if (req.azuriteOperation === undefined) {
-        req.azuriteOperation = Operations.INSERT_ENTITY;
-        req.azuriteRequest = new AzuriteTableRequest({
-          req,
-          payload: req.payload
-        });
+        req.azuriteOperation = Operations.Table.INSERT_ENTITY;
+        req.azuriteRequest = new AzuriteTableRequest(req, req.payload);
       }
       next();
     })
     .delete((req, res, next) => {
-      req.azuriteOperation = Operations.DELETE_ENTITY;
-      req.azuriteRequest = new AzuriteTableRequest({ req });
+      req.azuriteOperation = Operations.Table.DELETE_ENTITY;
+      req.azuriteRequest = new AzuriteTableRequest(req);
       next();
     })
     .merge((req, res, next) => {
-      req.azuriteRequest = new AzuriteTableRequest({
-        req,
-        payload: req.payload
-      });
+      req.azuriteRequest = new AzuriteTableRequest(req, req.payload);
       req.azuriteOperation = req.azuriteRequest.httpProps[N.IF_MATCH]
-        ? Operations.MERGE_ENTITY
-        : Operations.INSERT_OR_MERGE_ENTITY;
+        ? Operations.Table.MERGE_ENTITY
+        : Operations.Table.INSERT_OR_MERGE_ENTITY;
       next();
     });
 };

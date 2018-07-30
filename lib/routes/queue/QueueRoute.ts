@@ -1,7 +1,7 @@
-const env  from "./../../core/env"),
-  AzuriteQueueRequest  from "../../model/queue/AzuriteQueueRequest"),
-  Serializers  from "./../../xml/Serializers"),
-  Operations  from "./../../core/Constants").Operations;
+import { Operations } from "../../core/Constants";
+import env from "../../core/env";
+import AzuriteQueueRequest from "../../model/queue/AzuriteQueueRequest";
+import { parseSignedIdentifiers } from "../../xml/Serializers";
 
 /*
  * Route definitions for all operation on the "queue" resource type.
@@ -17,7 +17,7 @@ export default app => {
       } else if (req.query.comp === "acl") {
         req.azuriteOperation = Operations.Queue.GET_QUEUE_ACL;
       }
-      req.azuriteRequest = new AzuriteQueueRequest({ req });
+      req.azuriteRequest = new AzuriteQueueRequest(req);
       next();
     })
     .head((req, res, next) => {
@@ -26,7 +26,7 @@ export default app => {
       } else if (req.query.comp === "acl") {
         req.azuriteOperation = Operations.Queue.GET_QUEUE_ACL;
       }
-      req.azuriteRequest = new AzuriteQueueRequest({ req });
+      req.azuriteRequest = new AzuriteQueueRequest(req);
       next();
     })
     .put((req, res, next) => {
@@ -34,23 +34,20 @@ export default app => {
         req.azuriteOperation = Operations.Queue.SET_QUEUE_METADATA;
       } else if (req.query.comp === "acl") {
         req.azuriteOperation = Operations.Queue.SET_QUEUE_ACL;
-        Serializers.parseSignedIdentifiers(req.body).then(signedIdentifiers => {
-          req.azuriteRequest = new AzuriteQueueRequest({
-            req,
-            payload: signedIdentifiers
-          });
+        parseSignedIdentifiers(req.body).then(signedIdentifiers => {
+          req.azuriteRequest = new AzuriteQueueRequest(req, signedIdentifiers);
           next();
         });
         return;
       } else {
         req.azuriteOperation = Operations.Queue.CREATE_QUEUE;
       }
-      req.azuriteRequest = new AzuriteQueueRequest({ req });
+      req.azuriteRequest = new AzuriteQueueRequest(req);
       next();
     })
     .delete((req, res, next) => {
       req.azuriteOperation = Operations.Queue.DELETE_QUEUE;
-      req.azuriteRequest = new AzuriteQueueRequest({ req });
+      req.azuriteRequest = new AzuriteQueueRequest(req);
       next();
     });
 };

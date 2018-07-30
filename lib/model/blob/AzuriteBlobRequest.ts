@@ -6,12 +6,6 @@ import N from "../../core/HttpHeaderNames";
 import InternalAzuriteError from "../../core/InternalAzuriteError";
 import AzuriteRequest from "./AzuriteRequest";
 
-// const url  from "url"),
-//   BlockListType  from "./../../core/Constants").BlockListType,
-//   N  from "./../../core/HttpHeaderNames"),
-//   env  from "./../../core/env"),
-//   InternalAzuriteError  from "./../../core/InternalAzuriteError");
-
 class AzuriteBlobRequest extends AzuriteRequest {
   public static clone(request) {
     const copy = new AzuriteBlobRequest({

@@ -1,5 +1,5 @@
 const Loki  from "lokijs"),
-  BbPromise  from "bluebird"),
+  import BbPromise from "bluebird";
   fs  from "fs-extra"),
   fsn = BbPromise.promisifyAll(from "fs")),
   AzuriteTableResponse  from "./../../model/table/AzuriteTableResponse"),

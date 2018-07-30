@@ -1,11 +1,18 @@
-const InternalAzuriteError  from "./../../core/InternalAzuriteError"),
-  RequestPayloadParser  from "./RequestPayloadParser"),
-  Constants  from "./../../core/Constants"),
-  ODataMode  from "./../../core/Constants").ODataMode;
+import { ODataMode } from "../../core/Constants";
+import InternalAzuriteError from "../../core/InternalAzuriteError";
 import N from "./../../core/HttpHeaderNames";
+import RequestPayloadParser from "./RequestPayloadParser";
 
 class AzuriteTableRequest {
-  constructor({ req = undefined, payload = undefined }) {
+  public httpProps: {};
+  public accept: any;
+  public payload: any;
+  public tableName: any;
+  public partitionKey: any;
+  public rowKey: any;
+  public filter: string;
+  public top: any;
+  constructor(req, payload?: any) {
     if (req === undefined) {
       throw new InternalAzuriteError(
         "AzuriteTableRequest: req must not be undefined!"
@@ -24,9 +31,9 @@ class AzuriteTableRequest {
       req.params[0].replace(/[\("\)]/g, "") ||
       undefined;
 
-    const res = this._parseEntityKeys(req.params[1] || ""),
-      partitionKey = res.partitionKey,
-      rowKey = res.rowKey;
+    const res = this._parseEntityKeys(req.params[1] || "");
+    const partitionKey = res.partitionKey;
+    const rowKey = res.rowKey;
     this.partitionKey = this.payload.PartitionKey || partitionKey;
     this.rowKey = this.payload.RowKey || rowKey;
 
@@ -41,7 +48,7 @@ class AzuriteTableRequest {
       Object.keys(this.payload).length === 0 &&
       this.payload.constructor === Object
     ) {
-      this.payload === undefined;
+      delete this.payload;
     }
   }
 
@@ -60,13 +67,13 @@ class AzuriteTableRequest {
       return undefined;
     }
     if (value.includes(`odata=nometadata`)) {
-      return Constants.ODataMode.NONE;
+      return ODataMode.NONE;
     }
     if (value.includes(`odata=minimalmetadata`)) {
-      return Constants.ODataMode.MINIMAL;
+      return ODataMode.MINIMAL;
     }
     if (value.includes(`odata=fullmetadata`)) {
-      return Constants.ODataMode.FULL;
+      return ODataMode.FULL;
     }
   }
 

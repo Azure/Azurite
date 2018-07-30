@@ -1,46 +1,6 @@
 import BbPromise from "bluebird";
-  Operations  from "./../../core/Constants").Operations,
-  Usage  from "./../../core/Constants").Usage,
-  StorageEntityType  from "./../../core/Constants").StorageEntityType,
-  SasOperation  from "./../../core/Constants").ServiceSAS,
-  AzuriteContainerRequest  from "./../../model/blob/AzuriteContainerRequest"),
-  AzuriteBlobRequest  from "./../../model/blob/AzuriteBlobRequest"),
-  sm  from "./../../core/blob/StorageManager"),
-  // Validation modules
-  ValidationContext  from "./../../validation/blob/ValidationContext"),
-  AppendMaxBlobCommittedBlocksVal  from "./../../validation/blob/AppendMaxBlobCommittedBlocks"),
-  BlobCreationSizeVal  from "./../../validation/blob/BlobCreationSize"),
-  BlockPageSizeVal  from "./../../validation/blob/BlockPageSize"),
-  SupportedBlobTypeVal  from "./../../validation/blob/SupportedBlobType"),
-  CompatibleBlobTypeVal  from "./../../validation/blob/CompatibleBlobType"),
-  MD5Val  from "./../../validation/blob/MD5"),
-  ContentLengthExistsVal  from "./../../validation/blob/ContentLengthExists"),
-  ContainerExistsVal  from "./../../validation/blob/ContainerExists"),
-  BlobExistsVal  from "./../../validation/blob/BlobExists"),
-  BlobNameVal  from "./../../validation/blob/BlobName"),
-  BlobCommittedVal  from "./../../validation/blob/BlobCommitted"),
-  IsOfBlobTypeVal  from "./../../validation/blob/IsOfBlobType"),
-  RangeVal  from "./../../validation/blob/Range"),
-  PageAlignmentVal  from "./../../validation/blob/PageAlignment"),
-  NumOfSignedIdentifiersVal  from "./../../validation/NumOfSignedIdentifiers"),
-  PutBlobHeaderVal  from "./../../validation/blob/PutBlobHeaders"),
-  OriginHeaderVal  from "./../../validation/blob/OriginHeader"),
-  ConditionalRequestHeadersVal  from "./../../validation/blob/ConditionalRequestHeaders"),
-  AppendBlobConditionalRequestHeadersVal  from "./../../validation/blob/AppendBlobConditionalRequestHeaders"),
-  PageBlobHeaderSanityVal  from "./../../validation/blob/PageBlobHeaderSanity"),
-  AssociatedSnapshotDeletion  from "./../../validation/blob/AssociatedSnapshotsDeletion"),
-  LeaseActionsValidation  from "./../../validation/blob/LeaseActions"),
-  LeaseDurationValidation  from "./../../validation/blob/LeaseDuration"),
-  LeaseIdValidation  from "./../../validation/blob/LeaseId"),
-  ContainerLeaseUsageValidation  from "./../../validation/blob/ContainerLeaseUsage"),
-  ConflictingContainerVal  from "./../../validation/blob/ConflictingContainer"),
-  BlobLeaseUsageValidation  from "./../../validation/blob/BlobLeaseUsage"),
-  BlockListValidation  from "./../../validation/blob/BlockList"),
-  AbortCopyValidation  from "./../../validation/blob/AbortCopy"),
-  ServiceSignatureValidation  from "./../../validation/blob/ServiceSignature"),
-  ServicePropertiesValidation  from "./../../validation/blob/ServiceProperties"),
-  ContainerNameValidation  from "./../../validation/blob/ContainerName"),
-  CopyStatusValidation  from "./../../validation/blob/CopyStatus");
+import { Operations } from "../../core/Constants";
+import OriginHeader from "../../validation/blob/OriginHeader";
 
 export default (req, res, next) => {
   BbPromise.try(() => {
@@ -71,15 +31,11 @@ export default (req, res, next) => {
 
 const validations = {};
 
-validations[undefined] = () => {
-  // NO VALIDATIONS (this is an unimplemented call)
-};
-
 validations[Operations.Account.PREFLIGHT_BLOB_REQUEST] = (
   request,
   valContext
 ) => {
-  valContext.run(OriginHeaderVal);
+  valContext.run(OriginHeader);
 };
 
 validations[Operations.Account.SET_BLOB_SERVICE_PROPERTIES] = (

@@ -1,6 +1,5 @@
-const crypto  from "crypto"),
-  etag  from "./../../core/utils").computeEtag,
-  StorageEntityProxy  from "./StorageEntityProxy");
+import computeEtag from "../../core/utils";
+import StorageEntityProxy from "./StorageEntityProxy";
 
 /**
  * Serves as a container proxy to the corresponding LokiJS object.
@@ -19,7 +18,7 @@ class ContainerProxy extends StorageEntityProxy {
    * @memberof ContainerProxy
    */
   public updateETag() {
-    const etagValue = etag(
+    const etagValue = computeEtag(
       `${this.lastModified()}${JSON.stringify(this.original.metaProps)}${
         this.original.name
       }${this.original.meta.revision}`

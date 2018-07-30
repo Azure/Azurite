@@ -1,8 +1,11 @@
-const ODataMode  from "./../../core/Constants").ODataMode,
-  BaseProxy  from "./BaseProxy"),
-  InternalAzuriteError  from "./../../core/InternalAzuriteError");
+import { ODataMode } from "../../core/Constants";
+import BaseProxy from "./BaseProxy";
 
 class EntityProxy extends BaseProxy {
+  public partitionKey: any;
+  public rowKey: any;
+  public etag: string;
+  public _: any;
   constructor(entity) {
     super(entity);
     this.partitionKey = entity.partitionKey;

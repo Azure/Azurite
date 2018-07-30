@@ -1,36 +1,13 @@
 import BbPromise from "bluebird";
-  Operations  from "./../../core/Constants").Operations,
-  // Actions
-  createContainer  from "./../../actions/blob/CreateContainer"),
-  deleteBlob  from "./../../actions/blob/DeleteBlob"),
-  deleteContainer  from "./../../actions/blob/DeleteContainer"),
-  getBlob  from "./../../actions/blob/GetBlob"),
-  getBlobMetadata  from "./../../actions/blob/GetBlobMetadata"),
-  getBlobProperties  from "./../../actions/blob/GetBlobProperties"),
-  getBlockList  from "./../../actions/blob/GetBlockList"),
-  getContainerAcl  from "./../../actions/blob/GetContainerAcl"),
-  getContainerMetadata  from "./../../actions/blob/GetContainerMetadata"),
-  getContainerProperties  from "./../../actions/blob/GetContainerProperties"),
-  getPageRanges  from "./../../actions/blob/GetPageRanges"),
-  leaseBlob  from "./../../actions/blob/LeaseBlob"),
-  leaseContainer  from "./../../actions/blob/LeaseContainer"),
-  listBlobs  from "./../../actions/blob/ListBlobs"),
-  listContainers  from "./../../actions/blob/ListContainers"),
-  putAppendBlock  from "./../../actions/blob/PutAppendBlock"),
-  putBlob  from "./../../actions/blob/PutBlob"),
-  putBlock  from "./../../actions/blob/PutBlock"),
-  putBlockList  from "./../../actions/blob/PutBlockList"),
-  putPage  from "./../../actions/blob/PutPage"),
-  setBlobMetadata  from "./../../actions/blob/SetBlobMetadata"),
-  setBlobProperties  from "./../../actions/blob/SetBlobProperties"),
-  setBlobServiceProperties  from "./../../actions/blob/SetBlobServiceProperties"),
-  getBlobServiceProperties  from "./../../actions/blob/GetBlobServiceProperties"),
-  preflightBlobRequest  from "./../../actions/blob/PreflightBlobRequest"),
-  setContainerAcl  from "./../../actions/blob/SetContainerAcl"),
-  setContainerMetadata  from "./../../actions/blob/SetContainerMetadata"),
-  snapshotBlob  from "./../../actions/blob/SnapshotBlob"),
-  copyBlob  from "./../../actions/blob/CopyBlob"),
-  abortCopyBlob  from "./../../actions/blob/AbortCopyBlob");
+import CreateContainer from "../../actions/blob/CreateContainer";
+import DeleteContainer from "../../actions/blob/DeleteContainer";
+import PreflightBlobRequest from "../../actions/blob/PreflightBlobRequest";
+import PutAppendBlock from "../../actions/blob/PutAppendBlock";
+import PutBlob from "../../actions/blob/PutBlob";
+import SetBlobServiceProperties from "../../actions/blob/SetBlobServiceProperties";
+import { Operations } from "../../core/Constants";
+import GetBlobServiceProperties from "../../actions/blob/GetBlobServiceProperties";
+import ListContainers from "../../actions/blob/ListContainers";
 
 export default (req, res) => {
   BbPromise.try(() => {
@@ -45,126 +22,122 @@ export default (req, res) => {
 
 const actions = {};
 
-actions[undefined] = (request, res) => {
-  res.status(501).send("Not Implemented yet.");
-};
-
 actions[Operations.Account.PREFLIGHT_BLOB_REQUEST] = (request, res) => {
-  preflightBlobRequest.process(request, res);
+  PreflightBlobRequest.process(request, res);
 };
 
 actions[Operations.Account.SET_BLOB_SERVICE_PROPERTIES] = (request, res) => {
-  setBlobServiceProperties.process(request, res);
+  SetBlobServiceProperties.process(request, res);
 };
 
 actions[Operations.Account.GET_BLOB_SERVICE_PROPERTIES] = (request, res) => {
-  getBlobServiceProperties.process(request, res);
+  GetBlobServiceProperties.process(request, res);
 };
 
 actions[Operations.Account.LIST_CONTAINERS] = (request, res) => {
-  listContainers.process(request, res);
+  ListContainers.process(request, res);
 };
 
 actions[Operations.Container.CREATE_CONTAINER] = (request, res) => {
-  createContainer.process(request, res);
+  CreateContainer.process(request, res);
 };
 
 actions[Operations.Container.DELETE_CONTAINER] = (request, res) => {
-  deleteContainer.process(request, res);
+  DeleteContainer.process(request, res);
 };
 
 actions[Operations.Blob.PUT_BLOB] = (request, res) => {
-  putBlob.process(request, res);
+  PutBlob.process(request, res);
 };
 
 actions[Operations.Blob.APPEND_BLOCK] = (request, res) => {
-  putAppendBlock.process(request, res);
+  PutAppendBlock.process(request, res);
 };
 
 actions[Operations.Blob.DELETE_BLOB] = (request, res) => {
-  deleteBlob.process(request, res);
+  DeleteBlob.process(request, res);
 };
 
 actions[Operations.Blob.GET_BLOB] = (request, res) => {
-  getBlob.process(request, res);
+  GetBlob.process(request, res);
 };
 
 actions[Operations.Container.LIST_BLOBS] = (request, res) => {
-  listBlobs.process(request, res);
+  ListBlobs.process(request, res);
 };
 
 actions[Operations.Blob.PUT_BLOCK] = (request, res) => {
-  putBlock.process(request, res);
+  PutBlock.process(request, res);
 };
 
 actions[Operations.Blob.PUT_BLOCK_LIST] = (request, res) => {
-  putBlockList.process(request, res);
+  PutBlockList.process(request, res);
 };
 
 actions[Operations.Blob.GET_BLOCK_LIST] = (request, res) => {
-  getBlockList.process(request, res);
+  GetBlockList.process(request, res);
 };
 
 actions[Operations.Blob.SET_BLOB_METADATA] = (request, res) => {
-  setBlobMetadata.process(request, res);
+  SetBlobMetadata.process(request, res);
 };
 
 actions[Operations.Blob.GET_BLOB_METADATA] = (request, res) => {
-  getBlobMetadata.process(request, res);
+  GetBlobMetadata.process(request, res);
 };
 
 actions[Operations.Blob.GET_BLOB_PROPERTIES] = (request, res) => {
-  getBlobProperties.process(request, res);
+  GetBlobProperties.process(request, res);
 };
 
 actions[Operations.Blob.SET_BLOB_PROPERTIES] = (request, res) => {
-  setBlobProperties.process(request, res);
+  SetBlobProperties.process(request, res);
 };
 
 actions[Operations.Container.SET_CONTAINER_METADATA] = (request, res) => {
-  setContainerMetadata.process(request, res);
+  SetContainerMetadata.process(request, res);
 };
 
 actions[Operations.Container.GET_CONTAINER_METADATA] = (request, res) => {
-  getContainerMetadata.process(request, res);
+  GetContainerMetadata.process(request, res);
 };
 
 actions[Operations.Container.GET_CONTAINER_PROPERTIES] = (request, res) => {
-  getContainerProperties.process(request, res);
+  GetContainerProperties.process(request, res);
 };
 
 actions[Operations.Blob.PUT_PAGE] = (request, res) => {
-  putPage.process(request, res);
+  PutPage.process(request, res);
 };
 
 actions[Operations.Blob.GET_PAGE_RANGES] = (request, res) => {
-  getPageRanges.process(request, res);
+  GetPageRanges.process(request, res);
 };
 
 actions[Operations.Container.SET_CONTAINER_ACL] = (request, res) => {
-  setContainerAcl.process(request, res);
+  GetContainerAcl.process(request, res);
 };
 
 actions[Operations.Container.GET_CONTAINER_ACL] = (request, res) => {
-  getContainerAcl.process(request, res);
+  GetContainerAcl.process(request, res);
 };
 
 actions[Operations.Blob.SNAPSHOT_BLOB] = (request, res) => {
-  snapshotBlob.process(request, res);
+  SnapshotBlob.process(request, res);
 };
 
 actions[Operations.Container.LEASE_CONTAINER] = (request, res) => {
-  leaseContainer.process(request, res);
+  LeaseContainer.process(request, res);
 };
 
 actions[Operations.Blob.LEASE_BLOB] = (request, res) => {
-  leaseBlob.process(request, res);
+  LeaseBlob.process(request, res);
 };
 
 actions[Operations.Blob.COPY_BLOB] = (request, res) => {
-  copyBlob.process(request, res);
+  CopyBlob.process(request, res);
 };
 
 actions[Operations.Blob.ABORT_COPY_BLOB] = (request, res) => {
-  abortCopyBlob.process(request, res);
+  AbortCopyBlob.process(request, res);
 };

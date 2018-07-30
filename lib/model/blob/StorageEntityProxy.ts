@@ -1,7 +1,8 @@
-const crypto  from "crypto"),
-  BbPromise  from "bluebird"),
-  fs = BbPromise.promisifyAll(from "fs-extra")),
-  InternalAzuriteError  from "./../../core/InternalAzuriteError");
+import BbPromise from "bluebird";
+import * as fsExtra from "fs-extra";
+import InternalAzuriteError from "./../../core/InternalAzuriteError";
+
+const fs = BbPromise.promisifyAll(fsExtra);
 
 /**
  * DO NOT INSTANTIATE.
@@ -10,6 +11,7 @@ const crypto  from "crypto"),
  * @class StorageEntityProxy
  */
 class StorageEntityProxy {
+  public original: any;
   constructor(original) {
     if (!original) {
       throw new InternalAzuriteError("StorageEntityProxy: missing original");
@@ -41,12 +43,12 @@ class StorageEntityProxy {
       // Has lease expired?
       case "leased":
         // Infinite Lease
-        if (this.original.leaseExpiredAt === -1) {
-          this.original.leaseState = "leased";
-        } else {
-          this.original.leaseState =
-            this.original.leaseExpiredAt <= now ? "expired" : "leased";
-        }
+        this.original.leaseState =
+          this.original.leaseExpiredAt === -1
+            ? "leased"
+            : this.original.leaseExpiredAt <= now
+              ? "expired"
+              : "leased";
         break;
       default:
         this.original.leaseState = this.original.leaseState || "available";

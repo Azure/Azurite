@@ -1,7 +1,10 @@
-const Message  from "./Message"),
-  InternalAzuriteError  from "./../../core/InternalAzuriteError");
+import InternalAzuriteError from "../../core/InternalAzuriteError";
+import Message from "./Message";
 
 class Queue {
+  public metaProps: {};
+  public messages: any[];
+  public signedIdentifiers: any;
   constructor(metaProps = {}) {
     this.metaProps = metaProps;
     this.messages = [];
@@ -131,8 +134,8 @@ class Queue {
     }
 
     return {
-      item,
-      index
+      index,
+      item
     };
   }
 }

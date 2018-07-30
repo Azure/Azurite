@@ -1,4 +1,4 @@
-const crypto  from "crypto"),
+import crypto from "crypto";
   N  from "./../../core/HttpHeaderNames"),
  import AError from "./../../core/AzuriteError";
   ErrorCodes  from "./../../core/ErrorCodes");
