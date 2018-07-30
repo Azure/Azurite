@@ -41,7 +41,7 @@ class QueueManager {
         return list;
       }, [])
       .sort((lhs, rhs) => {
-        return lhs.name > rhs.name;
+        return rhs.name - lhs.name;
       });
 
     const paginatedQueues = filteredQueues.slice(

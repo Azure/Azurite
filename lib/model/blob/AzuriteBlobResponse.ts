@@ -2,11 +2,12 @@ import uuid from "uuid";
 import { StorageEntityType } from "../../core/Constants";
 import N from "../../core/HttpHeaderNames";
 
-class AzuriteResponse {
+class AzuriteBlobResponse {
   public httpProps: any;
   public proxy: any;
   public payload: any;
-  constructor({ proxy, payload, query = {}, cors } = {}) {
+  public nextMarker: any;
+  constructor(proxy?: any, payload?: any, query?: any, cors?: any) {
     this.httpProps = {};
     this.proxy = proxy;
     if (this.proxy) {
@@ -55,4 +56,4 @@ class AzuriteResponse {
   }
 }
 
-export default AzuriteResponse;
+export default AzuriteBlobResponse;

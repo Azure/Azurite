@@ -30,17 +30,15 @@ export default app => {
     })
     .put((req, res, next) => {
       req.azuriteOperation = Operations.Queue.UPDATE_MESSAGE;
-      QueueMessageText.toJs(req.body).then(payload => {
-        req.azuriteRequest = new AzuriteQueueRequest(req, payload);
-        next();
-      });
+      const payload = QueueMessageText.toJs(req.body);
+      req.azuriteRequest = new AzuriteQueueRequest(req, payload);
+      next();
     })
     .post((req, res, next) => {
       req.azuriteOperation = Operations.Queue.PUT_MESSAGE;
-      QueueMessageText.toJs(req.body).then(payload => {
-        req.azuriteRequest = new AzuriteQueueRequest(req, payload);
-        next();
-      });
+      const payload = QueueMessageText.toJs(req.body);
+      req.azuriteRequest = new AzuriteQueueRequest(req, payload);
+      next();
     })
     .delete((req, res, next) => {
       req.azuriteOperation = req.params.messageId

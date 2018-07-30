@@ -32,26 +32,32 @@ export class Blob {
 }
 
 class Properties {
+  public ETag: any;
+  public BlobType: any;
+  public LeaseStatus: string;
+  public LeaseState: string;
+  public LeaseDuration: string;
+  public ServerEncrypted: boolean;
+  public CopyId: any;
+  public CopyStatus: any;
+  public CopySource: any;
+  public CopyProgress: any;
+  public CopyCompletionTime: any;
+  public CopyStatusDescription: any;
   constructor(blobType) {
-    this["Last-Modified"];
-    this.ETag;
-    this["Content-Length"];
-    this["Content-Type"];
-    this["Content-Encoding"];
-    this["Content-Language"];
-    this["Content-MD5"];
-    this["Cache-Control"];
+    // this["Last-Modified"];
+
+    // this["Content-Length"];
+    // this["Content-Type"];
+    // this["Content-Encoding"];
+    // this["Content-Language"];
+    // this["Content-MD5"];
+    // this["Cache-Control"];
     this.BlobType = blobType;
     this.LeaseStatus = "unlocked";
     this.LeaseState = "available";
     this.LeaseDuration = "infinite";
     this.ServerEncrypted = false;
-    this.CopyId;
-    this.CopyStatus;
-    this.CopySource;
-    this.CopyProgress;
-    this.CopyCompletionTime;
-    this.CopyStatusDescription;
   }
 }
 

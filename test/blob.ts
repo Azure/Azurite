@@ -3,11 +3,12 @@ import chaiHttp from "chai-http";
 import { after, before, describe, it } from "mocha";
 import path from "path";
 import * as rp from "request-promise";
+import * as xml2js from "xml2js";
 import AzuriteBlob from "../lib/AzuriteBlob";
-import xml2js from "xml2js";
 
 chai.use(chaiHttp);
 
+const expect = chai.expect;
 const containerName = "testcontainer";
 const blockBlobName = "testblockblob";
 const appendBlobName = "testappendblob";
@@ -255,7 +256,7 @@ describe("Blob HTTP API", () => {
         .query({ comp: "pagelist" })
         .then(res => {
           res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(result) {
+          xml2js.parseString(res.text, result => {
             expect(result.PageList).to.not.have.any.keys("PageRange");
           });
         });
@@ -309,10 +310,11 @@ describe("Blob HTTP API", () => {
         .query({ comp: "pagelist" })
         .then(res => {
           res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(result) {
+          xml2js.parseString(res.text, result => {
             expect(result.PageList.PageRange.length).to.equal(1);
             expect(result.PageList.PageRange[0]).to.deep.equal({
               Start: ["0"],
+              // tslint:disable-next-line:object-literal-sort-keys
               End: ["511"]
             });
           });
@@ -326,10 +328,11 @@ describe("Blob HTTP API", () => {
         .set("x-ms-range", "bytes=0-1023")
         .then(res => {
           res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(result) {
+          xml2js.parseString(res.text, result => {
             expect(result.PageList.PageRange.length).to.equal(1);
             expect(result.PageList.PageRange[0]).to.deep.equal({
               Start: ["0"],
+              // tslint:disable-next-line:object-literal-sort-keys
               End: ["511"]
             });
           });
@@ -366,14 +369,16 @@ describe("Blob HTTP API", () => {
         .query({ comp: "pagelist" })
         .then(res => {
           res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(result) {
+          xml2js.parseString(res.text, result => {
             expect(result.PageList.PageRange.length).to.equal(2);
             expect(result.PageList.PageRange[0]).to.deep.equal({
               Start: ["0"],
+              // tslint:disable-next-line:object-literal-sort-keys
               End: ["511"]
             });
             expect(result.PageList.PageRange[1]).to.deep.equal({
               Start: ["1024"],
+              // tslint:disable-next-line:object-literal-sort-keys
               End: ["1535"]
             });
           });
@@ -400,10 +405,11 @@ describe("Blob HTTP API", () => {
         .query({ comp: "pagelist" })
         .then(res => {
           res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(result) {
+          xml2js.parseString(res.text, result => {
             expect(result.PageList.PageRange.length).to.equal(1);
             expect(result.PageList.PageRange[0]).to.deep.equal({
               Start: ["0"],
+              // tslint:disable-next-line:object-literal-sort-keys
               End: ["1535"]
             });
           });
@@ -427,14 +433,16 @@ describe("Blob HTTP API", () => {
         .query({ comp: "pagelist" })
         .then(res => {
           res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(result) {
+          xml2js.parseString(res.text, result => {
             expect(result.PageList.PageRange.length).to.equal(2);
             expect(result.PageList.PageRange[0]).to.deep.equal({
               Start: ["0"],
+              // tslint:disable-next-line:object-literal-sort-keys
               End: ["511"]
             });
             expect(result.PageList.PageRange[1]).to.deep.equal({
               Start: ["1024"],
+              // tslint:disable-next-line:object-literal-sort-keys
               End: ["1535"]
             });
           });
@@ -445,10 +453,10 @@ describe("Blob HTTP API", () => {
   describe("GET Blob", () => {
     it("should get the correct content of the Block Blob", () => {
       const optionsBlockBlobGet = {
-        method: "GET",
         headers: {
           "Content-Type": "application/octet-stream"
         },
+        method: "GET",
         uri: `http://localhost:10000/devstoreaccount1/${containerName}/${blockBlobName}`
       };
       return rp(optionsBlockBlobGet).then(res => {

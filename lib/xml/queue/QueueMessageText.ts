@@ -1,22 +1,23 @@
-import BbPromise from "bluebird";
 import * as js2xml from "js2xmlparser";
 import * as xml2js from "xml2js";
-import AError from "./../../core/AzuriteError";
+import { asyncIt } from "../../lib/asyncIt";
+import AzuriteError from "./../../core/AzuriteError";
 import ErrorCode from "./../../core/ErrorCodes";
 
-const xml2jsAsync = BbPromise.promisify(xml2js.parseString);
+const xml2jsAsync = (str: string) =>
+  asyncIt(cb => new xml2js.parseString(str, cb));
 class QueueMessageText {
   public static toJs(body) {
     const xml = body.toString("utf8");
     if (xml.length === 0) {
-      return BbPromise.resolve(new QueueMessageText(undefined));
+      return new QueueMessageText(undefined);
     }
     return xml2jsAsync(xml)
-      .then(result => {
+      .then((result: any) => {
         return new QueueMessageText(result.QueueMessage.MessageText[0]);
       })
-      .catch(err => {
-        throw new AError(ErrorCode.InvalidXml);
+      .catch(error => {
+        throw new AzuriteError(ErrorCode.InvalidXml);
       });
   }
   public MessageText: any;

@@ -31,7 +31,7 @@ class CopyOperationsManager {
     delete this.ops[copyId];
   }
 
-  public isPending(copyId) {
+  public isPending(copyId?: any) {
     return this.ops[copyId] !== undefined;
   }
 }

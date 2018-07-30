@@ -3,7 +3,11 @@ import storageManager from "./../../core/blob/StorageManager";
 import { LeaseStatus } from "./../../core/Constants";
 import N from "./../../core/HttpHeaderNames";
 import utils from "./../../core/utils";
-import model from "./../../xml/blob/BlobListXmlModel";
+import {
+  Blob,
+  BlobList,
+  blobPrefixesToXml
+} from "./../../xml/blob/BlobListXmlModel";
 
 class ListBlobs {
   public process(request, res) {
@@ -33,7 +37,7 @@ class ListBlobs {
       if (blobPrefixes.length > 0) {
         xmlDoc = xmlDoc.replace(
           `<BlobPrefix></BlobPrefix>`,
-          model.blobPrefixesToXml(blobPrefixes)
+          blobPrefixesToXml(blobPrefixes)
         );
       } else {
         xmlDoc = xmlDoc.replace(`<BlobPrefix></BlobPrefix>`, "");
@@ -45,7 +49,7 @@ class ListBlobs {
   }
 
   public _transformBlobList(blobList, query, blobPrefixes, nextMarker) {
-    const xmlBlobListModel = new model.BlobList();
+    const xmlBlobListModel = new BlobList();
     query.prefix === undefined
       ? delete xmlBlobListModel.Prefix
       : (xmlBlobListModel.Prefix = query.prefix);
@@ -90,10 +94,7 @@ class ListBlobs {
     }
 
     for (const blob of blobList) {
-      const modelBlob = new model.Blob(
-        blob.original.name,
-        blob.original.blobType
-      );
+      const modelBlob = new Blob(blob.original.name, blob.original.blobType);
       xmlBlobListModel.Blobs.Blob.push(modelBlob);
       if (query.include !== "metadata") {
         delete modelBlob.Metadata;

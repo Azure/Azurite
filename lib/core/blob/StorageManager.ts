@@ -1,34 +1,31 @@
-import { StorageTables } from "../Constants";
 import BbPromise from "bluebird";
+import CombinedStream from "combined-stream";
+import * as Loki from "lokijs";
+import uuid from "uuid";
+import { asyncIt } from "../../lib/asyncIt";
+import AzuriteBlobRequest from "../../model/blob/AzuriteBlobRequest";
+import AzuriteBlobResponse from "../../model/blob/AzuriteBlobResponse";
+import BlobProxy from "../../model/blob/BlobProxy";
+import ContainerProxy from "../../model/blob/ContainerProxy";
+import StorageEntityGenerator from "../../model/blob/StorageEntityGenerator";
+import {
+  CopyStatus,
+  LeaseActions,
+  LeaseStatus,
+  StorageEntityType,
+  StorageTables
+} from "../Constants";
 import env from "../env";
-// const env  from "./../env"),
-//   utils  from "./../utils"),
-//   path  from "path"),
+import N from "./../../core/HttpHeaderNames";
 
-//   Loki  from "lokijs"),
-//   req  from "request"),
-//   fs  from "fs-extra"),
-//   fsn = BbPromise.promisifyAll(from "fs")),
-//   crypto  from "crypto"),
-//   StorageTables  from "./../Constants").StorageTables,
-//   StorageEntityType  from "./../Constants").StorageEntityType,
-//   LeaseActions  from "./../Constants").LeaseActions,
-//   LeaseStatus  from "./../Constants").LeaseStatus,
-//   CopyStatus  from "./../Constants").CopyStatus,
-//   BlockListType  from "./../Constants").BlockListType,
-//   StorageEntityGenerator  from "./../../model/blob/StorageEntityGenerator"),
-//   AzuriteBlobRequest  from "./../../model/blob/AzuriteBlobRequest"),
-//   CombinedStream  from "combined-stream"),
-//   ContainerProxy  from "./../../model/blob/ContainerProxy"),
-//   BlobProxy  from "./../../model/blob/BlobProxy"),
-//   N  from "./../../core/HttpHeaderNames"),
-//   ContainerRequest  from "./../../model/blob/AzuriteContainerRequest"),
-//   AzuriteResponse  from "./../../model/blob/AzuriteResponse"),
-//   SnapshotTimeManager  from "./SnapshotTimeManager"),
-//   CopyOperationsManager  from "./CopyOperationsManager"),
-//   uuidv4  from "uuid/v4");
+import fs from "fs-extra";
+import CopyOperationsManager from "./CopyOperationsManager";
+import SnapshotTimeManager from "./SnapshotTimeManager";
 
+const fsStat = (path: string) => asyncIt(cb => fs.stat(path, cb));
 class StorageManager {
+  public db;
+
   public init() {
     this.db = BbPromise.promisifyAll(
       new Loki(env.azuriteDBPathBlob, {
@@ -36,8 +33,7 @@ class StorageManager {
         autosaveInterval: 5000
       })
     );
-    return fsn
-      .statAsync(env.azuriteDBPathBlob)
+    return fsStat(env.azuriteDBPathBlob)
       .then(stat => {
         return this.db.loadDatabaseAsync({});
       })
@@ -58,10 +54,10 @@ class StorageManager {
           // See https://github.com/arafato/azurite/issues/155:
           // Azure Storage Explorer expects an existing $logs folder at initial start.
           const logsStub = {
-            metaProps: {},
-            entityType: StorageEntityType.Container,
             containerName: "$logs",
-            httpProps: {}
+            entityType: StorageEntityType.Container,
+            httpProps: {},
+            metaProps: {}
           };
           logsStub.httpProps[N.BLOB_PUBLIC_ACCESS] = "private";
           return this.createContainer(logsStub).then(() => {
@@ -69,6 +65,7 @@ class StorageManager {
           });
         }
         // This should never happen!
+        // tslint:disable-next-line:no-console
         console.error(
           `Failed to initialize database at "${env.azuriteDBPathBlob}"`
         );
@@ -88,9 +85,9 @@ class StorageManager {
     const coll = this.db.getCollection(StorageTables.Containers);
     const entity = StorageEntityGenerator.generateStorageEntity(request);
     const containerProxy = new ContainerProxy(coll.insert(entity));
-    this.db.addCollection(entity.name);
+    this.db.addCollection(entity.blob.name);
     return BbPromise.resolve(
-      new AzuriteResponse({ proxy: containerProxy, cors: request.cors })
+      new AzuriteBlobResponse({ proxy: containerProxy, cors: request.cors })
     );
   }
 
@@ -112,12 +109,12 @@ class StorageManager {
     }
     return BbPromise.all(promises).then(() => {
       this.db.removeCollection(request.containerName);
-      return new AzuriteResponse({ cors: request.cors });
+      return new AzuriteBlobResponse({ cors: request.cors });
     });
   }
 
   public listContainer(request, prefix, maxresults) {
-    maxresults = parseInt(maxresults);
+    maxresults = parseInt(maxresults, null);
     const tables = this.db.getCollection(StorageTables.Containers);
     const result = tables
       .chain()
@@ -126,43 +123,48 @@ class StorageManager {
       .limit(maxresults)
       .data();
     return BbPromise.resolve(
-      new AzuriteResponse({ payload: result, cors: request.cors })
+      new AzuriteBlobResponse({ payload: result, cors: request.cors })
     );
   }
 
   public putBlob(request) {
-    const coll = this.db.getCollection(request.containerName),
-      blobProxy = this._createOrUpdateBlob(coll, request);
-    this._clearCopyMetaData(blobProxy);
+    const coll = this.db.getCollection(request.containerName);
+    const blobProxy = this.createOrUpdateBlob(coll, request);
+    this.clearCopyMetaData(blobProxy);
     return fs
       .outputFile(request.uri, request.body, {
         encoding: request.httpProps[N.CONTENT_ENCODING]
       })
       .then(() => {
-        return new AzuriteResponse({ proxy: blobProxy, cors: request.cors });
+        return new AzuriteBlobResponse(
+          blobProxy,
+          undefined,
+          undefined,
+          request.cors
+        );
       });
   }
 
   public putAppendBlock(request) {
-    const { coll, blobProxy } = this._getCollectionAndBlob(
+    const { coll, blobProxy } = this.getCollectionAndBlob(
       request.containerName,
       request.id
     );
     blobProxy.original[N.BLOB_COMMITTED_BLOCK_COUNT] += 1;
     blobProxy.original.size += request.body.length;
     coll.update(blobProxy.release());
-    return fsn
-      .appendFileAsync(request.uri, request.body, {
+    return asyncIt(cb =>
+      fs.appendFile(request.uri, request.body, {
         encoding: request.httpProps[N.CONTENT_ENCODING]
       })
-      .then(() => {
-        return new AzuriteResponse({ proxy: blobProxy, cors: request.cors });
-      });
+    ).then(() => {
+      return new AzuriteBlobResponse({ proxy: blobProxy, cors: request.cors });
+    });
   }
 
   public deleteBlob(request) {
-    const coll = this.db.getCollection(request.containerName),
-      snapshoteDeleteQueryParam = request.httpProps[N.DELETE_SNAPSHOTS];
+    const coll = this.db.getCollection(request.containerName);
+    const snapshoteDeleteQueryParam = request.httpProps[N.DELETE_SNAPSHOTS];
     const promises = [];
 
     if (
@@ -183,7 +185,7 @@ class StorageManager {
         promises.push(fs.remove(request.uri));
       }
       return BbPromise.all(promises).then(() => {
-        return new AzuriteResponse({ cors: request.cors });
+        return new AzuriteBlobResponse({ cors: request.cors });
       });
     } else {
       coll
@@ -195,7 +197,7 @@ class StorageManager {
         .find({ parentId: { $eq: request.id } })
         .remove(); // Removing (un-)committed blocks
       return fs.remove(request.uri).then(() => {
-        return new AzuriteResponse({ cors: request.cors });
+        return new AzuriteBlobResponse({ cors: request.cors });
       });
     }
   }
@@ -207,9 +209,9 @@ class StorageManager {
       .find({ id: { $eq: request.id } })
       .data()[0];
 
-    const response = new AzuriteResponse({
-      proxy: new BlobProxy(blob, request.containerName),
-      cors: request.cors
+    const response = new AzuriteBlobResponse({
+      cors: request.cors,
+      proxy: new BlobProxy(blob, request.containerName)
     });
     return BbPromise.resolve(response);
   }
@@ -245,12 +247,12 @@ class StorageManager {
     const totalHits = blobs.count();
     const offset = query.marker !== undefined ? query.marker : 0;
     blobs = blobs.offset(offset);
-    const response = new AzuriteResponse({
+    const response = new AzuriteBlobResponse({
+      cors: request.cors,
       payload: BlobProxy.createFromArray(
         blobs.limit(query.maxresults).data(),
         request.containerName
-      ),
-      cors: request.cors
+      )
     });
     response.nextMarker =
       totalHits > query.maxresults + offset ? query.maxresults + offset : 0;
@@ -259,24 +261,24 @@ class StorageManager {
 
   public putBlock(request) {
     // We only create the parent blob in DB if it does not already exists.
-    const { coll, blobProxy } = this._getCollectionAndBlob(
+    const { coll, blobProxy } = this.getCollectionAndBlob(
       request.containerName,
       request.parentId
     );
     if (blobProxy === undefined) {
       // If blockId is set we would generate a commit storage entity, thus we
       // clone the original request and set blockId to undefined
-      const parentBlobRequest = AzuriteBlobRequest.default.clone(request);
+      const parentBlobRequest = AzuriteBlobRequest.clone(request);
       parentBlobRequest.id = parentBlobRequest.parentId;
       parentBlobRequest.uri = env.diskStorageUri(parentBlobRequest.id);
       delete parentBlobRequest.parentId;
       delete parentBlobRequest.blockId;
       parentBlobRequest.commit = false;
       parentBlobRequest.body = undefined;
-      this._createOrUpdateBlob(coll, parentBlobRequest);
+      this.createOrUpdateBlob(coll, parentBlobRequest);
     }
     // Storing block information in DB.
-    const blockProxy = this._createOrUpdateBlob(coll, request);
+    const blockProxy = this.createOrUpdateBlob(coll, request);
     // Make sure that the parent blob exists on storage.
     return fs
       .ensureFile(request.parentUri)
@@ -286,7 +288,12 @@ class StorageManager {
         });
       })
       .then(() => {
-        return new AzuriteResponse({ proxy: blockProxy, cors: request.cors });
+        return new AzuriteBlobResponse(
+          blockProxy,
+          undefined,
+          undefined,
+          request.cors
+        );
       });
   }
 
@@ -302,7 +309,7 @@ class StorageManager {
     }
     // Updating properties of blob
     const coll = this.db.getCollection(request.containerName);
-    const blobProxy = this._createOrUpdateBlob(coll, request);
+    const blobProxy = this.createOrUpdateBlob(coll, request);
     // Writing multiple blocks to one blob
     const combinedStream = CombinedStream.create();
     for (const path of blockPaths) {
@@ -340,10 +347,10 @@ class StorageManager {
           }
           return BbPromise.all(promises).then(() => {
             blobProxy.original.size = totalSize;
-            this._clearCopyMetaData(blobProxy);
+            this.clearCopyMetaData(blobProxy);
             coll.update(blobProxy.release());
             resolve(
-              new AzuriteResponse({ proxy: blobProxy, cors: request.cors })
+              new AzuriteBlobResponse({ proxy: blobProxy, cors: request.cors })
             );
           });
         });
@@ -352,52 +359,57 @@ class StorageManager {
   }
 
   public getBlockList(request) {
-    const coll = this.db.getCollection(request.containerName),
-      blocks = coll
-        .chain()
-        .find({ parentId: request.id })
-        .data();
+    const coll = this.db.getCollection(request.containerName);
+    const blocks = coll
+      .chain()
+      .find({ parentId: request.id })
+      .data();
 
-    const { blobProxy } = this._getCollectionAndBlob(
+    const { blobProxy } = this.getCollectionAndBlob(
       request.containerName,
       request.id
     );
-    const response = new AzuriteResponse({
-      proxy: blobProxy,
-      payload: blocks,
-      cors: request.cors
-    });
+    const response = new AzuriteBlobResponse(
+      blobProxy,
+      blocks,
+      undefined,
+      request.cors
+    );
     return BbPromise.resolve(response);
   }
 
   public setBlobMetadata(request) {
-    const { coll, blobProxy } = this._getCollectionAndBlob(
+    const { coll, blobProxy } = this.getCollectionAndBlob(
       request.containerName,
       request.id
     );
     blobProxy.original.metaProps = request.metaProps;
     coll.update(blobProxy.release());
-    const response = new AzuriteResponse({
-      proxy: blobProxy,
-      cors: request.cors
-    });
+    const response = new AzuriteBlobResponse(
+      blobProxy,
+      undefined,
+      undefined,
+      request.cors
+    );
     return BbPromise.resolve(response);
   }
 
   public getBlobMetadata(request) {
-    const { blobProxy } = this._getCollectionAndBlob(
+    const { blobProxy } = this.getCollectionAndBlob(
       request.containerName,
       request.id
     );
-    const response = new AzuriteResponse({
-      proxy: blobProxy,
-      cors: request.cors
-    });
+    const response = new AzuriteBlobResponse(
+      blobProxy,
+      undefined,
+      undefined,
+      request.cors
+    );
     return BbPromise.resolve(response);
   }
 
   public setBlobProperties(request) {
-    const { coll, blobProxy } = this._getCollectionAndBlob(
+    const { coll, blobProxy } = this.getCollectionAndBlob(
       request.containerName,
       request.id
     );
@@ -422,12 +434,14 @@ class StorageManager {
     request.httpProps[N.CONTENT_MD5]
       ? (blobProxy.original.md5 = request.httpProps[N.CONTENT_MD5])
       : request.calculateContentMd5();
-    this._clearCopyMetaData(blobProxy);
+    this.clearCopyMetaData(blobProxy);
     coll.update(blobProxy.release());
-    const response = new AzuriteResponse({
-      proxy: blobProxy,
-      cors: request.cors
-    });
+    const response = new AzuriteBlobResponse(
+      blobProxy,
+      undefined,
+      undefined,
+      request.cors
+    );
     return BbPromise.resolve(response);
   }
 
@@ -437,46 +451,52 @@ class StorageManager {
   }
 
   public setContainerMetadata(request) {
-    const { coll, containerProxy } = this._getCollectionAndContainer(
+    const { coll, containerProxy } = this.getCollectionAndContainer(
       request.containerName
     );
     containerProxy.original.metaProps = request.metaProps;
     coll.update(containerProxy.release());
-    const response = new AzuriteResponse({
-      proxy: containerProxy,
-      cors: request.cors
-    });
+    const response = new AzuriteBlobResponse(
+      containerProxy,
+      undefined,
+      undefined,
+      request.cors
+    );
     return BbPromise.resolve(response);
   }
 
   public getContainerMetadata(request) {
-    const { containerProxy } = this._getCollectionAndContainer(
+    const { containerProxy } = this.getCollectionAndContainer(
       request.containerName
     );
-    const response = new AzuriteResponse({
-      proxy: containerProxy,
-      cors: request.cors
-    });
+    const response = new AzuriteBlobResponse(
+      containerProxy,
+      undefined,
+      undefined,
+      request.cors
+    );
     return BbPromise.resolve(response);
   }
 
   public getContainerProperties(request) {
-    const { containerProxy } = this._getCollectionAndContainer(
+    const { containerProxy } = this.getCollectionAndContainer(
       request.containerName
     );
-    const response = new AzuriteResponse({
-      proxy: containerProxy,
-      cors: request.cors
-    });
+    const response = new AzuriteBlobResponse(
+      containerProxy,
+      undefined,
+      undefined,
+      request.cors
+    );
     return BbPromise.resolve(response);
   }
 
   public putPage(request) {
-    const parts = request.httpProps[N.RANGE].split("=")[1].split("-"),
-      startByte = parseInt(parts[0]),
-      endByte = parseInt(parts[1]);
+    const parts = request.httpProps[N.RANGE].split("=")[1].split("-");
+    const startByte = parseInt(parts[0], null);
+    const endByte = parseInt(parts[1], null);
     // Getting overlapping pages (sorted by startByte in ascending order)
-    const { coll, blobProxy } = this._getCollectionAndBlob(
+    const { coll, blobProxy } = this.getCollectionAndBlob(
       request.containerName,
       request.id
     );
@@ -497,7 +517,7 @@ class StorageManager {
     const pageWriteMode = request.httpProps[N.PAGE_WRITE];
     const isClear = pageWriteMode.toLowerCase() === "clear";
 
-    this._updatePageRanges(
+    this.updatePageRanges(
       coll,
       pageRanges,
       startByte,
@@ -507,21 +527,18 @@ class StorageManager {
     );
 
     const writeStream = fs.createWriteStream(request.uri, {
+      encoding: "utf8",
       flags: "r+",
-      start: startByte,
-      defaultEncoding: "utf8"
+      start: startByte
     });
 
-    let pageContent;
-    if (isClear) {
-      // Zeroes will be written to the file to scrub the data
-      pageContent = new Array(endByte - startByte + 1).fill("\0").join("");
-    } else {
-      // Must be an update operation because it has already been verified in
-      // PageBlobHeaderSanity that the write mode is either "clear" or "update".
-      // The request data will be written to the file
-      pageContent = request.body;
-    }
+    // Zeroes will be written to the file to scrub the data
+    const pageContent = isClear
+      ? new Array(endByte - startByte + 1).fill("\0").join("")
+      : request.body;
+    // Must be an update operation because it has already been verified in
+    // PageBlobHeaderSanity that the write mode is either "clear" or "update".
+    // The request data will be written to the file
 
     return new BbPromise((resolve, reject) => {
       writeStream
@@ -530,13 +547,15 @@ class StorageManager {
         })
         .on("finish", () => {
           // Fixme: Use async / non-blocking method instead
-          blobProxy.original.size = fsn.statSync(request.uri).size;
+          blobProxy.original.size = fs.statSync(request.uri).size;
           blobProxy.original.sequenceNumber++;
           coll.update(blobProxy.release());
-          const response = new AzuriteResponse({
-            proxy: blobProxy,
-            cors: request.cors
-          });
+          const response = new AzuriteBlobResponse(
+            blobProxy,
+            undefined,
+            undefined,
+            request.cors
+          );
           resolve(response);
         });
       writeStream.write(pageContent);
@@ -546,17 +565,17 @@ class StorageManager {
 
   public getPageRanges(request) {
     let pageRanges;
-    const { coll, blobProxy } = this._getCollectionAndBlob(
+    const { coll, blobProxy } = this.getCollectionAndBlob(
       request.containerName,
       request.id
     );
     if (request.httpProps[N.RANGE]) {
       // If range exists it is guaranteed to be well-formed due to PageAlignment validation
-      const parts = request.httpProps[N.RANGE].split("=")[1].split("-"),
-        startByte = parseInt(parts[0]),
-        endByte = parseInt(parts[1]),
-        startAlignment = startByte / 512,
-        endAlignment = (endByte + 1) / 512;
+      const parts = request.httpProps[N.RANGE].split("=")[1].split("-");
+      const startByte = parseInt(parts[0], null);
+      const endByte = parseInt(parts[1], null);
+      const startAlignment = startByte / 512;
+      const endAlignment = (endByte + 1) / 512;
 
       pageRanges = coll
         .chain()
@@ -591,41 +610,46 @@ class StorageManager {
         .data();
     }
 
-    const response = new AzuriteResponse({
-      proxy: blobProxy,
-      payload: pageRanges,
-      cors: request.cors
-    });
+    const response = new AzuriteBlobResponse(
+      blobProxy,
+      pageRanges,
+      undefined,
+      request.cors
+    );
     return BbPromise.resolve(response);
   }
 
   public setContainerAcl(request) {
-    const { coll, containerProxy } = this._getCollectionAndContainer(
+    const { coll, containerProxy } = this.getCollectionAndContainer(
       request.containerName
     );
     containerProxy.original.signedIdentifiers = request.payload;
     containerProxy.original.access = request.httpProps[N.BLOB_PUBLIC_ACCESS];
     coll.update(containerProxy.release());
-    const response = new AzuriteResponse({
-      proxy: containerProxy,
-      cors: request.cors
-    });
+    const response = new AzuriteBlobResponse(
+      containerProxy,
+      undefined,
+      undefined,
+      request.cors
+    );
     return BbPromise.resolve(response);
   }
 
   public getContainerAcl(request) {
-    const { containerProxy } = this._getCollectionAndContainer(
+    const { containerProxy } = this.getCollectionAndContainer(
       request.containerName
     );
-    const response = new AzuriteResponse({
-      proxy: containerProxy,
-      cors: request.cors
-    });
+    const response = new AzuriteBlobResponse(
+      containerProxy,
+      undefined,
+      undefined,
+      request.cors
+    );
     return BbPromise.resolve(response);
   }
 
   public snapshotBlob(request) {
-    const { coll, blobProxy } = this._getCollectionAndBlob(
+    const { coll, blobProxy } = this.getCollectionAndBlob(
       request.containerName,
       request.id
     );
@@ -657,32 +681,34 @@ class StorageManager {
       snapshotProxy.original.meta.created = blobProxy.original.meta.created;
     }
     return fs.copy(request.uri, snapshotProxy.original.uri).then(() => {
-      const response = new AzuriteResponse({
-        proxy: snapshotProxy,
-        cors: request.cors
-      });
+      const response = new AzuriteBlobResponse(
+        snapshotProxy,
+        undefined,
+        undefined,
+        request.cors
+      );
       return response;
     });
   }
 
   public leaseContainer(request) {
-    const leaseAction = request.httpProps[N.LEASE_ACTION],
-      proposedLeaseId = request.httpProps[N.PROPOSED_LEASE_ID],
-      leaseId = request.httpProps[N.LEASE_ID],
-      leaseBreakPeriod = request.httpProps[N.LEASE_BREAK_PERIOD]
-        ? parseInt(request.httpProps[N.LEASE_BREAK_PERIOD])
-        : undefined,
-      leaseDuration = request.httpProps[N.LEASE_DURATION]
-        ? parseInt(request.httpProps[N.LEASE_DURATION])
-        : undefined;
-    const { coll, containerProxy } = this._getCollectionAndContainer(
+    const leaseAction = request.httpProps[N.LEASE_ACTION];
+    const proposedLeaseId = request.httpProps[N.PROPOSED_LEASE_ID];
+    const leaseId = request.httpProps[N.LEASE_ID];
+    const leaseBreakPeriod = request.httpProps[N.LEASE_BREAK_PERIOD]
+      ? parseInt(request.httpProps[N.LEASE_BREAK_PERIOD], null)
+      : undefined;
+    const leaseDuration = request.httpProps[N.LEASE_DURATION]
+      ? parseInt(request.httpProps[N.LEASE_DURATION], null)
+      : undefined;
+    const { coll, containerProxy } = this.getCollectionAndContainer(
       request.containerName
     );
     const now = request.now;
 
     switch (leaseAction) {
       case LeaseActions.ACQUIRE:
-        containerProxy.original.leaseId = proposedLeaseId || uuidv4();
+        containerProxy.original.leaseId = proposedLeaseId || uuid.v4();
         containerProxy.original.leaseExpiredAt =
           leaseDuration === -1 ? -1 : now + leaseDuration * 1000;
         containerProxy.original.leaseDuration = leaseDuration;
@@ -726,24 +752,26 @@ class StorageManager {
         );
     }
     coll.update(containerProxy.release());
-    const response = new AzuriteResponse({
-      proxy: containerProxy,
-      cors: request.cors
-    });
+    const response = new AzuriteBlobResponse(
+      containerProxy,
+      undefined,
+      undefined,
+      request.cors
+    );
     return BbPromise.resolve(response);
   }
 
   public leaseBlob(request) {
-    const leaseAction = request.httpProps[N.LEASE_ACTION],
-      proposedLeaseId = request.httpProps[N.PROPOSED_LEASE_ID],
-      leaseId = request.httpProps[N.LEASE_ID],
-      leaseBreakPeriod = request.httpProps[N.LEASE_BREAK_PERIOD]
-        ? parseInt(request.httpProps[N.LEASE_BREAK_PERIOD])
-        : undefined,
-      leaseDuration = request.httpProps[N.LEASE_DURATION]
-        ? parseInt(request.httpProps[N.LEASE_DURATION])
-        : undefined;
-    const { coll, blobProxy } = this._getCollectionAndBlob(
+    const leaseAction = request.httpProps[N.LEASE_ACTION];
+    const proposedLeaseId = request.httpProps[N.PROPOSED_LEASE_ID];
+    const leaseId = request.httpProps[N.LEASE_ID];
+    const leaseBreakPeriod = request.httpProps[N.LEASE_BREAK_PERIOD]
+      ? parseInt(request.httpProps[N.LEASE_BREAK_PERIOD], null)
+      : undefined;
+    const leaseDuration = request.httpProps[N.LEASE_DURATION]
+      ? parseInt(request.httpProps[N.LEASE_DURATION], null)
+      : undefined;
+    const { coll, blobProxy } = this.getCollectionAndBlob(
       request.containerName,
       request.id
     );
@@ -751,7 +779,7 @@ class StorageManager {
 
     switch (leaseAction) {
       case LeaseActions.ACQUIRE:
-        blobProxy.original.leaseId = proposedLeaseId || uuidv4();
+        blobProxy.original.leaseId = proposedLeaseId || uuid.v4();
         blobProxy.original.leaseExpiredAt =
           leaseDuration === -1 ? -1 : now + leaseDuration * 1000;
         blobProxy.original.leaseDuration = leaseDuration;
@@ -796,28 +824,28 @@ class StorageManager {
         );
     }
     coll.update(blobProxy.release());
-    const response = new AzuriteResponse({
-      proxy: blobProxy,
-      cors: request.cors
-    });
+    const response = new AzuriteBlobResponse(
+      blobProxy,
+      undefined,
+      undefined,
+      request.cors
+    );
     return BbPromise.resolve(response);
   }
 
   public copyBlob(request) {
-    const sourceProxy = this._getCopySourceProxy(request);
-    let from = null,
-      to = null;
+    const sourceProxy = this.getCopySourceProxy(request);
 
-    from = fs.createReadStream(sourceProxy.original.uri);
+    const from = fs.createReadStream(sourceProxy.original.uri);
     // TODO: if blob type is block also copy committed blocks
-    to = fs.createWriteStream(env.diskStorageUri(request.id));
+    const to = fs.createWriteStream(env.diskStorageUri(request.id));
     from.pipe(to);
 
     request.entityType = sourceProxy.original.entityType;
 
-    const coll = this.db.getCollection(request.containerName),
-      blobProxyDestination = this._createOrUpdateBlob(coll, request),
-      copyId = uuidv4();
+    const coll = this.db.getCollection(request.containerName);
+    const blobProxyDestination = this.createOrUpdateBlob(coll, request);
+    const copyId = uuid.v4();
 
     blobProxyDestination.original.copyStatus = CopyStatus.PENDING;
     blobProxyDestination.original.copyStatusDescription = "";
@@ -826,7 +854,7 @@ class StorageManager {
     let bytesCopied = 0;
     to.on("finish", () => {
       if (blobProxyDestination.original.copyStatus !== CopyStatus.FAILED) {
-        blobProxyDestination.original.copyCompletionTime = new Date().toGMTString();
+        blobProxyDestination.original.copyCompletionTime = new Date().toUTCString();
         blobProxyDestination.original.copyStatus = CopyStatus.SUCCESS;
         delete blobProxyDestination.original.copyStatusDescription;
         blobProxyDestination.original.copySource = sourceProxy.original.uri;
@@ -868,21 +896,23 @@ class StorageManager {
     to.on("error", err => {
       blobProxyDestination.original.copyStatus = CopyStatus.FAILED;
       blobProxyDestination.original.copyStatusDescription = err.message;
-      blobProxyDestination.original.completionTime = new Date().toGMTString();
+      blobProxyDestination.original.completionTime = new Date().toUTCString();
       CopyOperationsManager.clear(copyId);
       to.end();
     });
 
-    const response = new AzuriteResponse({
-      proxy: blobProxyDestination,
-      cors: request.cors
-    });
+    const response = new AzuriteBlobResponse(
+      blobProxyDestination,
+      undefined,
+      undefined,
+      request.cors
+    );
     return BbPromise.resolve(response);
   }
 
   public abortCopyBlob(request) {
     return CopyOperationsManager.cancel(request.copyId).then(() => {
-      return new AzuriteResponse({ cors: request.cors });
+      return new AzuriteBlobResponse({ cors: request.cors });
     });
   }
 
@@ -915,7 +945,7 @@ class StorageManager {
       }
       coll.update(settings);
     }
-    return BbPromise.resolve(new AzuriteResponse({ cors: request.cors }));
+    return BbPromise.resolve(new AzuriteBlobResponse({ cors: request.cors }));
   }
 
   public getBlobServiceProperties(request) {
@@ -925,11 +955,11 @@ class StorageManager {
     })[0];
 
     return BbPromise.resolve(
-      new AzuriteResponse({ payload: settings || {}, cors: request.cors })
+      new AzuriteBlobResponse({ payload: settings || {}, cors: request.cors })
     );
   }
 
-  public _createOrUpdateBlob(coll, request) {
+  public createOrUpdateBlob(coll, request) {
     const blob = coll
       .chain()
       .find({ id: { $eq: request.id } })
@@ -959,8 +989,8 @@ class StorageManager {
     const coll = this.db.getCollection(containerName);
     if (!coll) {
       return {
-        coll: undefined,
-        blobProxy: undefined
+        blobProxy: undefined,
+        coll: undefined
       };
     }
     const result = coll
@@ -968,11 +998,11 @@ class StorageManager {
       .find({ id })
       .data();
     return {
-      coll,
       blobProxy:
         result.length === 0
           ? undefined
-          : new BlobProxy(result[0], containerName)
+          : new BlobProxy(result[0], containerName),
+      coll
     };
   }
 
@@ -997,9 +1027,9 @@ class StorageManager {
     };
   }
 
-  public _updatePageRanges(coll, pageRanges, startByte, endByte, id, isClear) {
-    const startAlignment = startByte / 512,
-      endAlignment = (endByte + 1) / 512;
+  public updatePageRanges(coll, pageRanges, startByte, endByte, id, isClear) {
+    const startAlignment = startByte / 512;
+    const endAlignment = (endByte + 1) / 512;
     coll.remove(pageRanges);
     const firstPage = pageRanges[0];
     const lastPage = pageRanges[pageRanges.length - 1];
@@ -1009,6 +1039,7 @@ class StorageManager {
         coll.insert({
           parentId: id,
           start: firstPage.start,
+          // tslint:disable-next-line:object-literal-sort-keys
           end: startAlignment
         });
       }
@@ -1016,52 +1047,49 @@ class StorageManager {
         coll.insert({
           parentId: id,
           start: endAlignment,
+          // tslint:disable-next-line:object-literal-sort-keys
           end: lastPage.end
         });
       }
     } else {
       // it must be an update operation
-      let start, end;
-      if (firstPage && startAlignment > firstPage.start) {
-        start = firstPage.start;
-      } else {
-        start = startAlignment;
-      }
-      if (lastPage && endAlignment < lastPage.end) {
-        end = lastPage.end;
-      } else {
-        end = endAlignment;
-      }
+      const start =
+        firstPage && startAlignment > firstPage.start
+          ? firstPage.start
+          : startAlignment;
+
+      const end =
+        lastPage && endAlignment < lastPage.end ? lastPage.end : endAlignment;
 
       coll.insert({
         parentId: id,
         start,
+        // tslint:disable-next-line:object-literal-sort-keys
         end
       });
     }
   }
 
   public getCopySourceProxy(request) {
-    // const { sourceContainerName, sourceBlobName, date } = request.copySourceName();
-    const resp = request.copySourceName(),
-      sourceContainerName = resp.sourceContainerName,
-      sourceBlobName = resp.sourceBlobName,
-      date = resp.date;
+    const {
+      sourceContainerName,
+      sourceBlobName,
+      date
+    } = request.copySourceName();
+
     if (date !== undefined) {
-      const blobProxy = this._getCollectionAndBlob(
+      return this.getCollectionAndBlob(
         sourceContainerName,
         env.snapshotId(sourceContainerName, sourceBlobName, date)
       ).blobProxy;
-      return blobProxy;
     }
-    const blobProxy = this._getCollectionAndBlob(
+    return this.getCollectionAndBlob(
       sourceContainerName,
       env.blobId(sourceContainerName, sourceBlobName)
     ).blobProxy;
-    return blobProxy;
   }
 
-  public _clearCopyMetaData(proxy) {
+  public clearCopyMetaData(proxy) {
     delete proxy.original.copyId;
     delete proxy.original.copyStatus;
     delete proxy.original.copyCompletionTime;

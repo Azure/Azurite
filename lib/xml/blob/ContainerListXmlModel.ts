@@ -1,7 +1,7 @@
 /*
  * These classes are used as model for XML-Serialization in the "ListContainer" API.
 */
-class ContainerList {
+export class ContainerList {
   public Prefix: any;
   public MaxResults: any;
   public Marker: any;
@@ -14,13 +14,13 @@ class ContainerList {
     this.Containers = {
       Container: []
     };
-    this.NextMarker;
   }
 }
 
-class Container {
+export class Container {
   public Metadata: any;
   public Properties: any;
+  public Name: any;
   constructor(name) {
     this.Name = name || "";
     this.Properties = new Properties();
@@ -29,16 +29,14 @@ class Container {
 }
 
 class Properties {
+  public ETag: any;
+  public LeaseStatus: string;
+  public LeaseState: string;
+  public LeaseDuration: string;
+  public LastModified: any;
   constructor() {
-    this["Last-Modified"];
-    this.ETag;
     this.LeaseStatus = "unlocked";
     this.LeaseState = "available";
     this.LeaseDuration = "infinite";
   }
 }
-
-export default {
-  ContainerList,
-  Container
-};

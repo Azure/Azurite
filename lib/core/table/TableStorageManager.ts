@@ -1,15 +1,16 @@
-const Loki  from "lokijs"),
-  import BbPromise from "bluebird";
-  fs  from "fs-extra"),
-  fsn = BbPromise.promisifyAll(from "fs")),
-  AzuriteTableResponse  from "./../../model/table/AzuriteTableResponse"),
-  TableProxy  from "./../../model/table/TableProxy"),
-  EntityProxy  from "./../../model/table/EntityProxy"),
-  EntityGenerator  from "./../../model/table/EntityGenerator"),
-  Tables  from "./../Constants").TableStorageTables,
-  env  from "./../../core/env");
+import BbPromise from "bluebird";
+import fs from "fs-extra";
+import Loki from "lokijs";
+import { asyncIt } from "../../lib/asyncIt";
+import AzuriteTableResponse from "../../model/table/AzuriteTableResponse";
+import EntityGenerator from "../../model/table/EntityGenerator";
+import EntityProxy from "../../model/table/EntityProxy";
+import TableProxy from "../../model/table/TableProxy";
+import { TableStorageTables } from "../Constants";
+import env from "../env";
 
 class TableStorageManager {
+  public db: any;
   public init() {
     this.db = BbPromise.promisifyAll(
       new Loki(env.azuriteDBPathTable, {
@@ -17,24 +18,24 @@ class TableStorageManager {
         autosaveInterval: 5000
       })
     );
-    return fsn
-      .statAsync(env.azuriteDBPathTable)
+    return asyncIt(cb => fs.stat(env.azuriteDBPathTable, cb))
       .then(stat => {
         return this.db.loadDatabaseAsync({});
       })
       .then(data => {
-        if (!this.db.getCollection(Tables.Tables)) {
-          this.db.addCollection(Tables.Tables);
+        if (!this.db.getCollection(TableStorageTables.Tables)) {
+          this.db.addCollection(TableStorageTables.Tables);
         }
         return this.db.saveDatabaseAsync();
       })
       .catch(e => {
         if (e.code === "ENOENT") {
           // No DB has been persisted / initialized yet.
-          this.db.addCollection(Tables.Tables);
+          this.db.addCollection(TableStorageTables.Tables);
           return this.db.saveDatabaseAsync();
         }
         // This should never happen!
+        // tslint:disable-next-line:no-console
         console.error(
           `Failed to initialize database at "${env.azuriteDBPathTable}"`
         );
@@ -44,10 +45,10 @@ class TableStorageManager {
 
   public createTable(request) {
     this.db.addCollection(request.tableName);
-    const coll = this.db.getCollection(Tables.Tables);
+    const coll = this.db.getCollection(TableStorageTables.Tables);
     const tableEntity = EntityGenerator.generateTable(request.tableName);
     const proxy = new TableProxy(coll.insert(tableEntity));
-    return BbPromise.resolve(new AzuriteTableResponse({ proxy }));
+    return BbPromise.resolve(new AzuriteTableResponse(proxy));
   }
 
   public insertEntity(request) {
@@ -57,11 +58,11 @@ class TableStorageManager {
       request.tableName,
       request.payload
     );
-    return BbPromise.resolve(new AzuriteTableResponse({ proxy }));
+    return BbPromise.resolve(new AzuriteTableResponse(proxy));
   }
 
   public deleteTable(request) {
-    const coll = this.db.getCollection(Tables.Tables);
+    const coll = this.db.getCollection(TableStorageTables.Tables);
     coll
       .chain()
       .find({ name: { $eq: request.tableName } })
@@ -76,10 +77,11 @@ class TableStorageManager {
   }
 
   public queryTable(request) {
-    const coll = this.db.getCollection(Tables.Tables);
+    const coll = this.db.getCollection(TableStorageTables.Tables);
     const payload = [];
+    let result;
     if (request.tableName !== undefined) {
-      const result = coll
+      result = coll
         .chain()
         .find({ name: request.tableName })
         .limit(request.top)
@@ -89,11 +91,11 @@ class TableStorageManager {
       return BbPromise.resolve(new AzuriteTableResponse({ payload }));
     }
 
-    let result;
     if (request.filter !== undefined) {
       result = coll
         .chain()
         .where(item => {
+          // tslint:disable-next-line:no-eval
           return eval(request.filter);
         })
         .limit(request.top)
@@ -114,7 +116,11 @@ class TableStorageManager {
 
   public queryEntities(request) {
     const coll = this.db.getCollection(request.tableName);
-    const findExpr = {};
+    const findExpr = {
+      partitionKey: undefined,
+      rowKey: undefined
+    };
+
     if (request.partitionKey) {
       findExpr.partitionKey = request.partitionKey;
     }
@@ -125,6 +131,7 @@ class TableStorageManager {
     const chain = coll.chain().find(findExpr);
     if (request.filter) {
       chain.where(item => {
+        // tslint:disable-next-line:no-eval
         return eval(request.filter);
       });
     }
@@ -178,7 +185,7 @@ class TableStorageManager {
   }
 
   public _getTable(name) {
-    const coll = this.db.getCollection(Tables.Tables);
+    const coll = this.db.getCollection(TableStorageTables.Tables);
     const result = coll
       .chain()
       .find({ name })
@@ -187,20 +194,20 @@ class TableStorageManager {
   }
 
   public _deleteEntity(tableName, partitionKey, rowKey) {
-    const coll = this.db.getCollection(tableName),
-      result = coll
-        .chain()
-        .find({
-          $and: [
-            {
-              partitionKey: { $eq: partitionKey }
-            },
-            {
-              rowKey: { $eq: rowKey }
-            }
-          ]
-        })
-        .remove();
+    const coll = this.db.getCollection(tableName);
+    coll
+      .chain()
+      .find({
+        $and: [
+          {
+            partitionKey: { $eq: partitionKey }
+          },
+          {
+            rowKey: { $eq: rowKey }
+          }
+        ]
+      })
+      .remove();
   }
 
   public _getEntity(tableName, partitionKey, rowKey) {
@@ -225,9 +232,9 @@ class TableStorageManager {
   }
 
   public _createOrUpdateEntity(partitionKey, rowKey, tableName, rawEntity) {
-    const coll = this.db.getCollection(tableName),
-      entity = EntityGenerator.generateEntity(rawEntity, tableName),
-      res = coll.findOne({ partitionKey, rowKey });
+    const coll = this.db.getCollection(tableName);
+    const entity = EntityGenerator.generateEntity(rawEntity, tableName);
+    const res = coll.findOne({ partitionKey, rowKey });
 
     if (res !== null) {
       res.attribs = entity.attribs;
@@ -240,9 +247,9 @@ class TableStorageManager {
   }
 
   public _insertOrMergeEntity(partitionKey, rowKey, tableName, rawEntity) {
-    const coll = this.db.getCollection(tableName),
-      entity = EntityGenerator.generateEntity(rawEntity, tableName),
-      res = coll.findOne({ partitionKey, rowKey });
+    const coll = this.db.getCollection(tableName);
+    const entity = EntityGenerator.generateEntity(rawEntity, tableName);
+    const res = coll.findOne({ partitionKey, rowKey });
 
     if (res !== null) {
       // A property cannot be removed with a Merge Entity operation (in contrast to an update operation).
