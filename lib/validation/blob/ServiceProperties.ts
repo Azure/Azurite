@@ -1,6 +1,5 @@
-constimport AError from "./../../core/AzuriteError";
-  ErrorCodes  from "./../../core/ErrorCodes");
-
+import AzuriteError from "../../core/AzuriteError";
+import ErrorCodes from "../../core/ErrorCodes";
 const allowedMethods = [
   "delete",
   "get",
@@ -12,7 +11,7 @@ const allowedMethods = [
 ];
 
 class ServiceProperties {
-  public validate({ request = undefined }) {
+  public validate(request) {
     const serviceProps = request.payload.StorageServiceProperties;
 
     //////////////////////////
@@ -21,7 +20,7 @@ class ServiceProperties {
 
     // A minimum of five rules can be stored
     if (rules.length > 5) {
-      throw new AError(ErrorCodes.InvalidXmlRequest);
+      throw new AzuriteError(ErrorCodes.InvalidXmlRequest);
     }
 
     for (const rule of rules) {
@@ -29,7 +28,7 @@ class ServiceProperties {
       if (
         !(rule.AllowedMethods && rule.AllowedHeaders && rule.ExposedHeaders)
       ) {
-        throw new AError(ErrorCodes.InvalidXmlRequest);
+        throw new AzuriteError(ErrorCodes.InvalidXmlRequest);
       }
       // Allowed Methods
       rule.AllowedMethods.split(",")
@@ -38,20 +37,20 @@ class ServiceProperties {
         })
         .forEach(e => {
           if (!allowedMethods.includes(e)) {
-            throw new AError(ErrorCodes.InvalidXmlRequest);
+            throw new AzuriteError(ErrorCodes.InvalidXmlRequest);
           }
         });
 
       // Allowed Headers
-      let numHeader = 0,
-        numPrefixHeader = 0;
+      let numHeader = 0;
+      let numPrefixHeader = 0;
       rule.AllowedHeaders.split(",").forEach(e => {
         e.includes(`\*`) ? ++numPrefixHeader : ++numHeader;
         if (numPrefixHeader > 2 || numHeader > 64) {
-          throw new AError(ErrorCodes.InvalidXmlRequest);
+          throw new AzuriteError(ErrorCodes.InvalidXmlRequest);
         }
         if (e.length > 256) {
-          throw new AError(ErrorCodes.InvalidXmlRequest);
+          throw new AzuriteError(ErrorCodes.InvalidXmlRequest);
         }
       });
 
@@ -61,10 +60,10 @@ class ServiceProperties {
       rule.ExposedHeaders.split(",").forEach(e => {
         e.includes(`\*`) ? ++numPrefixHeader : ++numHeader;
         if (numPrefixHeader > 2 || numHeader > 64) {
-          throw new AError(ErrorCodes.InvalidXmlRequest);
+          throw new AzuriteError(ErrorCodes.InvalidXmlRequest);
         }
         if (e.length > 256) {
-          throw new AError(ErrorCodes.InvalidXmlRequest);
+          throw new AzuriteError(ErrorCodes.InvalidXmlRequest);
         }
       });
     }

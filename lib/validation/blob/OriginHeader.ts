@@ -1,6 +1,6 @@
-constimport AError from "./../../core/AzuriteError";
-  N  from "./../../core/HttpHeaderNames"),
-  ErrorCodes  from "./../../core/ErrorCodes");
+import AzuriteError from "../../core/AzuriteError";
+import ErrorCodes from "../../core/ErrorCodes";
+import N from "./../../core/HttpHeaderNames";
 
 /**
  * Validates whether the "Origin" request header is set.
@@ -8,9 +8,9 @@ constimport AError from "./../../core/AzuriteError";
  * @class
  */
 class OriginHeader {
-  public validate({ request = undefined }) {
+  public validate(request) {
     if (!request.httpProps[N.ORIGIN]) {
-      throw new AError(ErrorCodes.MissingRequiredHeader);
+      throw new AzuriteError(ErrorCodes.MissingRequiredHeader);
     }
   }
 }

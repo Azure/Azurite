@@ -69,6 +69,7 @@
     "@types/node": "^10.5.4",
     "@types/request-promise": "^4.1.42",
     "@types/uuid": "^3.4.3",
+    "@types/validator": "^9.4.1",
     "@types/xml2js": "^0.4.3",
     "chai": "^3.5.0",
     "chai-http": "^4.0.0",

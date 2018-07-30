@@ -1,6 +1,6 @@
-constimport AError from "./../../core/AzuriteError";
-  N  from "./../../core/HttpHeaderNames"),
-  ErrorCodes  from "./../../core/ErrorCodes");
+import AzuriteError from "../../core/AzuriteError";
+import ErrorCodes from "../../core/ErrorCodes";
+import N from "./../../core/HttpHeaderNames";
 
 /**
  * Validates the 512-byte alignment of a Page Blob.
@@ -11,7 +11,7 @@ constimport AError from "./../../core/AzuriteError";
  * @class PageAlignment
  */
 class PageAlignment {
-  public validate({ request = undefined }) {
+  public validate(request) {
     const range = request.httpProps[N.RANGE];
     // Range is optional
     if (!range) {
@@ -19,13 +19,13 @@ class PageAlignment {
     }
     const re = new RegExp(/bytes=[0-9]+-[0-9]+/);
     if (!re.test(range)) {
-      throw new AError(ErrorCodes.InvalidHeaderValue);
+      throw new AzuriteError(ErrorCodes.InvalidHeaderValue);
     }
     const parts = range.split("=")[1].split("-");
-    const startByte = parseInt(parts[0]),
-      endByte = parseInt(parts[1]);
+    const startByte = parseInt(parts[0], null);
+    const endByte = parseInt(parts[1], null);
     if (startByte % 512 !== 0 || (endByte + 1 - startByte) % 512 !== 0) {
-      throw new AError(ErrorCodes.InvalidPageRange);
+      throw new AzuriteError(ErrorCodes.InvalidPageRange);
     }
   }
 }

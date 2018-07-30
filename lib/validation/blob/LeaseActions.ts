@@ -1,9 +1,8 @@
-constimport AError from "./../../core/AzuriteError";
-  N  from "./../../core/HttpHeaderNames"),
-  LeaseAction  from "./../../core/Constants").LeaseActions,
-  LeaseStatus  from "./../../core/Constants").LeaseStatus,
-  AzuriteBlobRequest  from "./../../model/blob/AzuriteBlobRequest"),
-  ErrorCodes  from "./../../core/ErrorCodes");
+import AzuriteError from "../../core/AzuriteError";
+import * as Constants from "../../core/Constants";
+import ErrorCodes from "../../core/ErrorCodes";
+import AzuriteBlobRequest from "../../model/blob/AzuriteBlobRequest";
+import N from "./../../core/HttpHeaderNames";
 
 /**
  * Checks whether intended lease operation is semantically valid as specified
@@ -12,119 +11,132 @@ constimport AError from "./../../core/AzuriteError";
  * @class LeaseActions
  */
 class LeaseActions {
-  public validate({
-    request = undefined,
-    containerProxy = undefined,
-    blobProxy = undefined
-  }) {
-    const leaseAction = request.httpProps[N.LEASE_ACTION],
-      leaseId =
-        request.httpProps[N.LEASE_ID] || request.httpProps[N.PROPOSED_LEASE_ID],
-      proxy =
-        request instanceof AzuriteBlobRequest ? blobProxy : containerProxy;
+  public validate(request, containerProxy, blobProxy) {
+    const leaseAction = request.httpProps[N.LEASE_ACTION];
+    const leaseId =
+      request.httpProps[N.LEASE_ID] || request.httpProps[N.PROPOSED_LEASE_ID];
+    const proxy =
+      request instanceof AzuriteBlobRequest ? blobProxy : containerProxy;
 
     if (
       ![
-        LeaseAction.ACQUIRE,
-        LeaseAction.RENEW,
-        LeaseAction.CHANGE,
-        LeaseAction.RELEASE,
-        LeaseAction.BREAK
+        Constants.LeaseActions.ACQUIRE,
+        Constants.LeaseActions.RENEW,
+        Constants.LeaseActions.CHANGE,
+        Constants.LeaseActions.RELEASE,
+        Constants.LeaseActions.BREAK
       ].includes(leaseAction)
     ) {
-      throw new AError(ErrorCodes.InvalidHeaderValue);
+      throw new AzuriteBlobRequest(ErrorCodes.InvalidHeaderValue);
     }
 
     proxy.updateLeaseState();
 
     switch (proxy.original.leaseState) {
-      case LeaseStatus.AVAILABLE:
-        if (leaseAction === LeaseAction.RELEASE) {
-          throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+      case Constants.LeaseStatus.AVAILABLE:
+        if (leaseAction === Constants.LeaseActions.RELEASE) {
+          throw new AzuriteBlobRequest(
+            ErrorCodes.LeaseIdMismatchWithLeaseOperation
+          );
         }
-        if (leaseAction !== LeaseAction.ACQUIRE) {
-          throw new AError(ErrorCodes.LeaseNotPresentWithLeaseOperation);
+        if (leaseAction !== Constants.LeaseActions.ACQUIRE) {
+          throw new AzuriteBlobRequest(
+            ErrorCodes.LeaseNotPresentWithLeaseOperation
+          );
         }
         break;
-      case LeaseStatus.LEASED:
+      case Constants.LeaseStatus.LEASED:
         if (
-          leaseAction === LeaseAction.ACQUIRE &&
+          leaseAction === Constants.LeaseActions.ACQUIRE &&
           leaseId !== proxy.original.leaseId
         ) {
-          throw new AError(ErrorCodes.LeaseAlreadyPresent);
+          throw new AzuriteBlobRequest(ErrorCodes.LeaseAlreadyPresent);
         }
-        if (leaseAction === LeaseAction.CHANGE) {
+        if (leaseAction === Constants.LeaseActions.CHANGE) {
           if (request.httpProps[N.PROPOSED_LEASE_ID] === undefined) {
-            throw new AError(ErrorCodes.MissingRequiredHeader);
+            throw new AzuriteBlobRequest(ErrorCodes.MissingRequiredHeader);
           }
           if (
             request.httpProps[N.PROPOSED_LEASE_ID] !== proxy.original.leaseId &&
             request.httpProps[N.LEASE_ID] !== proxy.original.leaseId
           ) {
-            throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+            throw new AzuriteError(
+              ErrorCodes.LeaseIdMismatchWithLeaseOperation
+            );
           }
         }
         if (
-          [LeaseAction.RENEW, LeaseAction.RELEASE].includes(leaseAction) &&
+          [
+            Constants.LeaseActions.RENEW,
+            Constants.LeaseActions.RELEASE
+          ].includes(leaseAction) &&
           leaseId !== proxy.original.leaseId
         ) {
-          throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+          throw new AzuriteError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
         }
         break;
-      case LeaseStatus.EXPIRED:
-        if (leaseAction === LeaseAction.CHANGE) {
-          throw new AError(ErrorCodes.LeaseNotPresentWithLeaseOperation);
+      case Constants.LeaseStatus.EXPIRED:
+        if (leaseAction === Constants.LeaseActions.CHANGE) {
+          throw new AzuriteError(ErrorCodes.LeaseNotPresentWithLeaseOperation);
           // This is the only validation check specific to Blobs
         } else if (
-          leaseAction === LeaseAction.RENEW &&
+          leaseAction === Constants.LeaseActions.RENEW &&
           request instanceof AzuriteBlobRequest &&
           leaseId === proxy.original.leaseId &&
           proxy.original.leaseETag !== proxy.original.etag
         ) {
-          throw new AError(ErrorCodes.LeaseNotPresentWithLeaseOperation);
+          throw new AzuriteError(ErrorCodes.LeaseNotPresentWithLeaseOperation);
         } else if (
-          (leaseAction === LeaseAction.RENEW ||
-            leaseAction === LeaseAction.RELEASE) &&
+          (leaseAction === Constants.LeaseActions.RENEW ||
+            leaseAction === Constants.LeaseActions.RELEASE) &&
           leaseId !== proxy.original.leaseId
         ) {
-          throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+          throw new AzuriteError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
         }
         break;
-      case LeaseStatus.BREAKING:
+      case Constants.LeaseStatus.BREAKING:
         if (leaseId === proxy.original.leaseId) {
-          if (leaseAction === LeaseAction.ACQUIRE) {
-            throw new AError(ErrorCodes.LeaseIsBreakingAndCannotBeAcquired);
+          if (leaseAction === Constants.LeaseActions.ACQUIRE) {
+            throw new AzuriteError(
+              ErrorCodes.LeaseIsBreakingAndCannotBeAcquired
+            );
           }
-          if (leaseAction === LeaseAction.CHANGE) {
-            throw new AError(ErrorCodes.LeaseIsBreakingAndCannotBeChanged);
+          if (leaseAction === Constants.LeaseActions.CHANGE) {
+            throw new AzuriteError(
+              ErrorCodes.LeaseIsBreakingAndCannotBeChanged
+            );
           }
         } else {
-          if (leaseAction === LeaseAction.RELEASE) {
-            throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+          if (leaseAction === Constants.LeaseActions.RELEASE) {
+            throw new AzuriteError(
+              ErrorCodes.LeaseIdMismatchWithLeaseOperation
+            );
           }
-          if (leaseAction === LeaseAction.CHANGE) {
-            throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+          if (leaseAction === Constants.LeaseActions.CHANGE) {
+            throw new AzuriteError(
+              ErrorCodes.LeaseIdMismatchWithLeaseOperation
+            );
           }
           if (
-            leaseAction === LeaseAction.ACQUIRE ||
-            leaseAction === LeaseAction.RENEW
+            leaseAction === Constants.LeaseActions.ACQUIRE ||
+            leaseAction === Constants.LeaseActions.RENEW
           ) {
-            throw new AError(ErrorCodes.LeaseAlreadyPresent);
+            throw new AzuriteError(ErrorCodes.LeaseAlreadyPresent);
           }
         }
         break;
-      case LeaseStatus.BROKEN:
-        if (leaseAction === LeaseAction.RENEW) {
-          throw new AError(ErrorCodes.LeaseIsBrokenAndCannotBeRenewed);
+      case Constants.LeaseStatus.BROKEN:
+        if (leaseAction === Constants.LeaseActions.RENEW) {
+          throw new AzuriteError(ErrorCodes.LeaseIsBrokenAndCannotBeRenewed);
         }
-        if (leaseAction === LeaseAction.CHANGE) {
-          throw new AError(ErrorCodes.LeaseNotPresentWithLeaseOperation);
+        if (leaseAction === Constants.LeaseActions.CHANGE) {
+          throw new AzuriteError(ErrorCodes.LeaseNotPresentWithLeaseOperation);
         }
         if (
-          leaseAction === LeaseAction.RELEASE &&
+          leaseAction === Constants.LeaseActions.RELEASE &&
           leaseId !== proxy.original.leaseId
         ) {
-          throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+          throw new AzuriteError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
         }
         break;
     }

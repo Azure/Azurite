@@ -1,19 +1,19 @@
 import BbPromise from "bluebird";
-  Operations  from "./../../core/Constants").Operations,
-  // Actions
-  deleteQueue  from "./../../actions/queue/DeleteQueue"),
-  setQueueMetadata  from "./../../actions/queue/SetQueueMetadata"),
-  getQueueMetadata  from "./../../actions/queue/GetQueueMetadata"),
-  putMessage  from "./../../actions/queue/PutMessage"),
-  getMessages  from "./../../actions/queue/GetMessages"),
-  clearMessages  from "./../../actions/queue/ClearMessages"),
-  peekMessages  from "./../../actions/queue/PeekMessages"),
-  deleteMessage  from "./../../actions/queue/DeleteMessage"),
-  updateMessage  from "./../../actions/queue/UpdateMessage"),
-  listQueues  from "./../../actions/queue/ListQueues"),
-  setQueueAcl  from "./../../actions/queue/SetQueueAcl"),
-  getQueueAcl  from "./../../actions/queue/GetQueueAcl"),
-  createQueue  from "./../../actions/queue/CreateQueue");
+import { Operations } from "../../core/Constants";
+
+import ClearMessages from "./../../actions/queue/ClearMessages";
+import CreateQueue from "./../../actions/queue/CreateQueue";
+import DeleteMessage from "./../../actions/queue/DeleteMessage";
+import DeleteQueue from "./../../actions/queue/DeleteQueue";
+import GetMessages from "./../../actions/queue/GetMessages";
+import GetQueueAcl from "./../../actions/queue/GetQueueAcl";
+import GetQueueMetadata from "./../../actions/queue/GetQueueMetadata";
+import ListQueues from "./../../actions/queue/ListQueues";
+import PeekMessages from "./../../actions/queue/PeekMessages";
+import PutMessage from "./../../actions/queue/PutMessage";
+import SetQueueAcl from "./../../actions/queue/SetQueueAcl";
+import SetQueueMetadata from "./../../actions/queue/SetQueueMetadata";
+import UpdateMessage from "./../../actions/queue/UpdateMessage";
 
 export default (req, res) => {
   BbPromise.try(() => {
@@ -28,58 +28,54 @@ export default (req, res) => {
 
 const actions = {};
 
-actions[undefined] = (request, res) => {
-  res.status(501).send("Not Implemented yet.");
-};
-
 actions[Operations.Queue.LIST_QUEUES] = (request, res) => {
-  listQueues.process(request, res);
+  ListQueues.process(request, res);
 };
 
 actions[Operations.Queue.CREATE_QUEUE] = (request, res) => {
-  createQueue.process(request, res);
+  CreateQueue.process(request, res);
 };
 
 actions[Operations.Queue.DELETE_QUEUE] = (request, res) => {
-  deleteQueue.process(request, res);
+  DeleteQueue.process(request, res);
 };
 
 actions[Operations.Queue.SET_QUEUE_METADATA] = (request, res) => {
-  setQueueMetadata.process(request, res);
+  SetQueueMetadata.process(request, res);
 };
 
 actions[Operations.Queue.GET_QUEUE_METADATA] = (request, res) => {
-  getQueueMetadata.process(request, res);
+  GetQueueMetadata.process(request, res);
 };
 
 actions[Operations.Queue.PUT_MESSAGE] = (request, res) => {
-  putMessage.process(request, res);
+  PutMessage.process(request, res);
 };
 
 actions[Operations.Queue.GET_MESSAGE] = (request, res) => {
-  getMessages.process(request, res);
+  GetMessages.process(request, res);
 };
 
 actions[Operations.Queue.CLEAR_MESSAGES] = (request, res) => {
-  clearMessages.process(request, res);
+  ClearMessages.process(request, res);
 };
 
 actions[Operations.Queue.PEEK_MESSAGES] = (request, res) => {
-  peekMessages.process(request, res);
+  PeekMessages.process(request, res);
 };
 
 actions[Operations.Queue.DELETE_MESSAGE] = (request, res) => {
-  deleteMessage.process(request, res);
+  DeleteMessage.process(request, res);
 };
 
 actions[Operations.Queue.UPDATE_MESSAGE] = (request, res) => {
-  updateMessage.process(request, res);
+  UpdateMessage.process(request, res);
 };
 
 actions[Operations.Queue.SET_QUEUE_ACL] = (request, res) => {
-  setQueueAcl.process(request, res);
+  SetQueueAcl.process(request, res);
 };
 
 actions[Operations.Queue.GET_QUEUE_ACL] = (request, res) => {
-  getQueueAcl.process(request, res);
+  GetQueueAcl.process(request, res);
 };

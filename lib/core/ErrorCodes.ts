@@ -3,14 +3,11 @@
  * https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/status-and-error-codes2
  */
 class ErrorCode {
-  public errorCode: any;
-  public httpErrorCode: any;
-  public userMessage: any;
-  constructor(errorCode, httpErrorCode, userMessage) {
-    this.errorCode = errorCode;
-    this.httpErrorCode = httpErrorCode;
-    this.userMessage = userMessage;
-  }
+  constructor(
+    public errorCode: any,
+    public httpErrorCode: any,
+    public userMessage: any
+  ) {}
 }
 
 export default {

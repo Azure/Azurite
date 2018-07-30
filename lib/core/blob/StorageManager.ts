@@ -955,7 +955,7 @@ class StorageManager {
    *
    * @memberOf StorageManager
    */
-  public _getCollectionAndBlob(containerName, id) {
+  public getCollectionAndBlob(containerName, id) {
     const coll = this.db.getCollection(containerName);
     if (!coll) {
       return {
@@ -984,7 +984,7 @@ class StorageManager {
    *
    * @memberOf StorageManager
    */
-  public _getCollectionAndContainer(containerName) {
+  public getCollectionAndContainer(containerName) {
     const coll = this.db.getCollection(StorageTables.Containers);
     const result = coll
       .chain()
@@ -1041,7 +1041,7 @@ class StorageManager {
     }
   }
 
-  public _getCopySourceProxy(request) {
+  public getCopySourceProxy(request) {
     // const { sourceContainerName, sourceBlobName, date } = request.copySourceName();
     const resp = request.copySourceName(),
       sourceContainerName = resp.sourceContainerName,

@@ -1,15 +1,15 @@
 import BbPromise from "bluebird";
- import AError from "./../../core/AzuriteError";
-  ErrorCodes  from "./../../core/ErrorCodes"),
-  N  from "./../../core/HttpHeaderNames"),
-  Operations  from "./../../core/Constants").Operations,
-  sm  from "./../../core/blob/StorageManager");
+import AzuriteError from "../../core/AzuriteError";
+import StorageManager from "../../core/blob/StorageManager";
+import { Operations } from "../../core/Constants";
+import ErrorCodes from "../../core/ErrorCodes";
+import N from "./../../core/HttpHeaderNames";
 
 // Performs CORS rule-validation iff CORS is enabled and request header "origin" is set.
 export default (req, res, next) => {
   BbPromise.try(() => {
     const request = req.azuriteRequest;
-    sm.getBlobServiceProperties(request).then(response => {
+    StorageManager.getBlobServiceProperties(request).then(response => {
       if (
         response.payload.StorageServiceProperties &&
         request.httpProps[N.ORIGIN]
@@ -50,11 +50,10 @@ export default (req, res, next) => {
 
           rule.AllowedHeaders.split(",").forEach(e => {
             Object.keys(allowedHeaders).forEach(requestHeader => {
-              if (e.charAt(e.length - 1) === "*") {
-                valid = requestHeader.includes(e.slice(0, -1));
-              } else {
-                valid = e === requestHeader;
-              }
+              valid =
+                e.charAt(e.length - 1) === "*"
+                  ? requestHeader.includes(e.slice(0, -1))
+                  : e === requestHeader;
             });
           });
 
@@ -70,7 +69,7 @@ export default (req, res, next) => {
           !valid &&
           req.azuriteOperation === Operations.Account.PREFLIGHT_BLOB_REQUEST
         ) {
-          throw new AError(ErrorCodes.CorsForbidden);
+          throw new AzuriteError(ErrorCodes.CorsForbidden);
         }
       }
       next();

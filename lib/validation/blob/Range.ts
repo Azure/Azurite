@@ -1,12 +1,12 @@
-constimport AError from "./../../core/AzuriteError";
-  N  from "./../../core/HttpHeaderNames"),
-  ErrorCodes  from "./../../core/ErrorCodes");
+import AzuriteError from "../../core/AzuriteError";
+import ErrorCodes from "../../core/ErrorCodes";
+import N from "./../../core/HttpHeaderNames";
 
 /*
  * Checks whether the range header (and headers depending on it) are valid.
  */
 class Range {
-  public validate({ request = undefined, blobProxy = undefined }) {
+  public validate(request, blobProxy) {
     const range = request.httpProps[N.RANGE];
     const x_ms_range_get_content_md5 =
       request.httpProps[N.RANGE_GET_CONTENT_MD5];
@@ -16,16 +16,16 @@ class Range {
     // https://docs.microsoft.com/de-de/azure/container-instances/container-instances-orchestrator-relationship
     // do not mention x-ms-range header explictly
     if (x_ms_range_get_content_md5 && request.httpProps.range === undefined) {
-      throw new AError(ErrorCodes.InvalidHeaderValue);
+      throw new AzuriteError(ErrorCodes.InvalidHeaderValue);
     }
     // If this header is set to true _and_ the range exceeds 4 MB in size,
     // the service returns status code 400 (Bad Request).
     if (x_ms_range_get_content_md5 && this._isRangeExceeded(range)) {
-      throw new AError(ErrorCodes.InvalidHeaderValue);
+      throw new AzuriteError(ErrorCodes.InvalidHeaderValue);
     }
 
     if (!this._withinRange(blobProxy.original.size, range)) {
-      throw new AError(ErrorCodes.InvalidRange);
+      throw new AzuriteError(ErrorCodes.InvalidRange);
     }
   }
 
@@ -35,7 +35,7 @@ class Range {
       return true;
     }
     const pair = range.split("=")[1].split("-");
-    const startByte = parseInt(pair[0]);
+    const startByte = parseInt(pair[0], null);
     return isNaN(startByte) || startByte < blobSize;
   }
 
@@ -50,8 +50,8 @@ class Range {
       return false;
     }
     const pair = range.split("=")[1].split("-");
-    const startByte = parseInt(pair[0]);
-    const endByte = parseInt(pair[1]);
+    const startByte = parseInt(pair[0], null);
+    const endByte = parseInt(pair[1], null);
     return endByte - startByte > 4194304;
   }
 }

@@ -1,13 +1,34 @@
 import BbPromise from "bluebird";
 import CreateContainer from "../../actions/blob/CreateContainer";
-import DeleteContainer from "../../actions/blob/DeleteContainer";
-import PreflightBlobRequest from "../../actions/blob/PreflightBlobRequest";
-import PutAppendBlock from "../../actions/blob/PutAppendBlock";
-import PutBlob from "../../actions/blob/PutBlob";
-import SetBlobServiceProperties from "../../actions/blob/SetBlobServiceProperties";
 import { Operations } from "../../core/Constants";
-import GetBlobServiceProperties from "../../actions/blob/GetBlobServiceProperties";
-import ListContainers from "../../actions/blob/ListContainers";
+import AbortCopyBlob from "./../../actions/blob/AbortCopyBlob";
+import CopyBlob from "./../../actions/blob/CopyBlob";
+import DeleteBlob from "./../../actions/blob/DeleteBlob";
+import DeleteContainer from "./../../actions/blob/DeleteContainer";
+import GetBlob from "./../../actions/blob/GetBlob";
+import GetBlobMetadata from "./../../actions/blob/GetBlobMetadata";
+import GetBlobProperties from "./../../actions/blob/GetBlobProperties";
+import GetBlobServiceProperties from "./../../actions/blob/GetBlobServiceProperties";
+import GetBlockList from "./../../actions/blob/GetBlockList";
+import GetContainerAcl from "./../../actions/blob/GetContainerAcl";
+import GetContainerMetadata from "./../../actions/blob/GetContainerMetadata";
+import GetContainerProperties from "./../../actions/blob/GetContainerProperties";
+import GetPageRanges from "./../../actions/blob/GetPageRanges";
+import LeaseBlob from "./../../actions/blob/LeaseBlob";
+import LeaseContainer from "./../../actions/blob/LeaseContainer";
+import ListBlobs from "./../../actions/blob/ListBlobs";
+import ListContainers from "./../../actions/blob/ListContainers";
+import PreflightBlobRequest from "./../../actions/blob/PreflightBlobRequest";
+import PutAppendBlock from "./../../actions/blob/PutAppendBlock";
+import PutBlob from "./../../actions/blob/PutBlob";
+import PutBlock from "./../../actions/blob/PutBlock";
+import PutBlockList from "./../../actions/blob/PutBlockList";
+import PutPage from "./../../actions/blob/PutPage";
+import SetBlobMetadata from "./../../actions/blob/SetBlobMetadata";
+import SetBlobProperties from "./../../actions/blob/SetBlobProperties";
+import SetBlobServiceProperties from "./../../actions/blob/SetBlobServiceProperties";
+import SetContainerMetadata from "./../../actions/blob/SetContainerMetadata";
+import SnapshotBlob from "./../../actions/blob/SnapshotBlob";
 
 export default (req, res) => {
   BbPromise.try(() => {

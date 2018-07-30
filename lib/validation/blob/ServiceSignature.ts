@@ -1,34 +1,29 @@
-constimport AError from "./../../core/AzuriteError";
-  ErrorCodes  from "./../../core/ErrorCodes");
-
+import AzuriteError from "../../core/AzuriteError";
+import ErrorCodes from "../../core/ErrorCodes";
+import N from "./../../core/HttpHeaderNames";
 /**
  * Checks whether the operation is authorized by the service signature (if existing).
  *
  * @class ServiceSignature
  */
 class ServiceSignature {
-  public validate({
-    request = undefined,
-    containerProxy = undefined,
-    blobProxy = undefined,
-    moduleOptions = undefined
-  }) {
+  public validate(request, containerProxy, blobProxy, moduleOptions) {
     if (request.auth === undefined) {
       // NOOP: No Service Signature signature was defined in the request
       return;
     }
 
     if (!request.auth.sasValid) {
-      throw new AError(ErrorCodes.AuthenticationFailed);
+      throw new AzuriteError(ErrorCodes.AuthenticationFailed);
     }
 
-    const operation = moduleOptions.sasOperation,
-      accessPolicy = request.auth.accessPolicy,
-      resource = request.auth.resource;
+    const operation = moduleOptions.sasOperation;
+    const accessPolicy = request.auth.accessPolicy;
+    const resource = request.auth.resource;
 
-    let start = undefined,
-      expiry = undefined,
-      permissions = undefined;
+    let start;
+    let expiry;
+    let permissions;
 
     if (request.auth.accessPolicy.id !== undefined) {
       const si =
@@ -40,7 +35,7 @@ class ServiceSignature {
             )[0]
           : undefined;
       if (si === undefined) {
-        throw new AError(ErrorCodes.AuthenticationFailed);
+        throw new AzuriteError(ErrorCodes.AuthenticationFailed);
       }
       start = Date.parse(si.AccessPolicy.Start);
       expiry = Date.parse(si.AccessPolicy.Expiry);
@@ -53,12 +48,12 @@ class ServiceSignature {
 
     // Time Validation
     if (isNaN(expiry) || request.now < start || request.now > expiry) {
-      throw new AError(ErrorCodes.AuthenticationFailed);
+      throw new AzuriteError(ErrorCodes.AuthenticationFailed);
     }
 
     // Permission Validation
     if (!permissions.includes(operation)) {
-      throw new AError(ErrorCodes.AuthorizationPermissionMismatch);
+      throw new AzuriteError(ErrorCodes.AuthorizationPermissionMismatch);
     }
   }
 }

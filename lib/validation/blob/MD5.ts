@@ -1,14 +1,13 @@
-import crypto from "crypto";
-  N  from "./../../core/HttpHeaderNames"),
- import AError from "./../../core/AzuriteError";
-  ErrorCodes  from "./../../core/ErrorCodes");
+import AzuriteError from "../../core/AzuriteError";
+import ErrorCodes from "../../core/ErrorCodes";
+import N from "./../../core/HttpHeaderNames";
 
 class MD5 {
-  public validate({ request = undefined }) {
+  public validate(request) {
     const sourceMd5 = request.httpProps[N.CONTENT_MD5];
     const targetMd5 = request.calculateContentMd5();
     if (sourceMd5 && targetMd5 !== sourceMd5) {
-      throw new AError(ErrorCodes.Md5Mismatch);
+      throw new AzuriteError(ErrorCodes.Md5Mismatch);
     }
   }
 }

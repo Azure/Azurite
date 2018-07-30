@@ -1,28 +1,28 @@
-constimport AError from "./../../core/AzuriteError";
-  N  from "./../../core/HttpHeaderNames"),
-  ErrorCodes  from "./../../core/ErrorCodes");
+import AzuriteError from "../../core/AzuriteError";
+import ErrorCodes from "../../core/ErrorCodes";
+import N from "./../../core/HttpHeaderNames";
 
 class PageBlobHeaderSanity {
-  public validate({ request = undefined }) {
+  public validate(request) {
     const httpProps = request.httpProps;
     let pageWrite = httpProps[N.PAGE_WRITE];
 
     if (!pageWrite) {
-      throw new AError(ErrorCodes.InvalidHeaderValue);
+      throw new AzuriteError(ErrorCodes.InvalidHeaderValue);
     }
 
     pageWrite = pageWrite.toLowerCase();
 
     if (!(pageWrite === "clear" || pageWrite === "update")) {
-      throw new AError(ErrorCodes.InvalidHeaderValue);
+      throw new AzuriteError(ErrorCodes.InvalidHeaderValue);
     }
 
     const isClearSet = pageWrite === "clear";
-    if (isClearSet && httpProps[N.CONTENT_LENGTH] != 0) {
-      throw new AError(ErrorCodes.InvalidHeaderValue);
+    if (isClearSet && httpProps[N.CONTENT_LENGTH] !== 0) {
+      throw new AzuriteError(ErrorCodes.InvalidHeaderValue);
     }
     if (isClearSet && httpProps[N.CONTENT_MD5]) {
-      throw new AError(ErrorCodes.InvalidHeaderValue);
+      throw new AzuriteError(ErrorCodes.InvalidHeaderValue);
     }
 
     const range = httpProps[N.RANGE];
@@ -30,10 +30,10 @@ class PageBlobHeaderSanity {
     // in PageAlignment Validator.
     const parts = range.split("=")[1].split("-");
     if (!isClearSet) {
-      const startByte = parseInt(parts[0]),
-        endByte = parseInt(parts[1]);
-      if (httpProps[N.CONTENT_LENGTH] != endByte - startByte + 1) {
-        throw new AError(ErrorCodes.InvalidHeaderValue);
+      const startByte = parseInt(parts[0], null);
+      const endByte = parseInt(parts[1], null);
+      if (httpProps[N.CONTENT_LENGTH] !== endByte - startByte + 1) {
+        throw new AzuriteError(ErrorCodes.InvalidHeaderValue);
       }
     }
   }

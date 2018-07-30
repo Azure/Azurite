@@ -1,7 +1,7 @@
-constimport AError from "./../../core/AzuriteError";
-  N  from "./../../core/HttpHeaderNames"),
-  LeaseAction  from "./../../core/Constants").LeaseActions,
-  ErrorCodes  from "./../../core/ErrorCodes");
+import AzuriteError from "../../core/AzuriteError";
+import { LeaseActions } from "../../core/Constants";
+import ErrorCodes from "../../core/ErrorCodes";
+import N from "./../../core/HttpHeaderNames";
 
 /**
  * Checks whether lease duration and lease break period conforms to specification
@@ -12,28 +12,28 @@ constimport AError from "./../../core/AzuriteError";
  * @class LeaseDuration
  */
 class LeaseDuration {
-  public validate({ request = undefined }) {
-    const leaseAction = request.httpProps[N.LEASE_ACTION],
-      leaseBreakPeriod = request.httpProps[N.LEASE_BREAK_PERIOD]
-        ? parseInt(request.httpProps[N.LEASE_BREAK_PERIOD])
-        : undefined,
-      leaseDuration = request.httpProps[N.LEASE_DURATION]
-        ? parseInt(request.httpProps[N.LEASE_DURATION])
-        : undefined;
+  public validate(request) {
+    const leaseAction = request.httpProps[N.LEASE_ACTION];
+    const leaseBreakPeriod = request.httpProps[N.LEASE_BREAK_PERIOD]
+      ? parseInt(request.httpProps[N.LEASE_BREAK_PERIOD], null)
+      : undefined;
+    const leaseDuration = request.httpProps[N.LEASE_DURATION]
+      ? parseInt(request.httpProps[N.LEASE_DURATION], null)
+      : undefined;
 
     // x-ms-lease-duration is only required and processed for lease action "acquire"
-    if (leaseAction === LeaseAction.ACQUIRE) {
+    if (leaseAction === LeaseActions.ACQUIRE) {
       if (
         !(leaseDuration === -1 || (leaseDuration >= 15 && leaseDuration <= 60))
       ) {
-        throw new AError(ErrorCodes.InvalidHeaderValue);
+        throw new AzuriteError(ErrorCodes.InvalidHeaderValue);
       }
     }
 
     // x-ms-lease-break-period is optional
     if (leaseBreakPeriod) {
       if (!(leaseBreakPeriod >= 0 && leaseBreakPeriod <= 60)) {
-        throw new AError(ErrorCodes.InvalidHeaderValue);
+        throw new AzuriteError(ErrorCodes.InvalidHeaderValue);
       }
     }
   }

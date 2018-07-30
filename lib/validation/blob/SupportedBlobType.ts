@@ -1,15 +1,15 @@
-constimport AError from "./../../core/AzuriteError";
-  ErrorCodes  from "./../../core/ErrorCodes"),
-  EntityType  from "./../../core/Constants").StorageEntityType;
+import AzuriteError from "../../core/AzuriteError";
+import { StorageEntityType } from "../../core/Constants";
+import ErrorCodes from "../../core/ErrorCodes";
 
 class SupportedBlobType {
-  public validate({ request = undefined }) {
+  public validate(request) {
     if (
-      request.entityType !== EntityType.AppendBlob &&
-      request.entityType !== EntityType.BlockBlob &&
-      request.entityType !== EntityType.PageBlob
+      request.entityType !== StorageEntityType.AppendBlob &&
+      request.entityType !== StorageEntityType.BlockBlob &&
+      request.entityType !== StorageEntityType.PageBlob
     ) {
-      throw new AError(ErrorCodes.UnsupportedBlobType);
+      throw new AzuriteError(ErrorCodes.UnsupportedBlobType);
     }
   }
 }

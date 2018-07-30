@@ -9,4 +9,4 @@ class DeleteBlob {
   }
 }
 
-module.exports = new DeleteBlob();
+export default new DeleteBlob();

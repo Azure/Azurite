@@ -1,28 +1,29 @@
 import BbPromise from "bluebird";
-  crypto  from "crypto"),
- import AError from "./../../core/AzuriteError";
-  ErrorCodes  from "./../../core/ErrorCodes"),
-  env  from "./../../core/env"),
-  Keys  from "./../../core/Constants").Keys,
-  Operations  from "./../../core/Constants").Operations;
+import crypto from "crypto";
+import AzuriteError from "../../core/AzuriteError";
+import { Keys } from "../../core/Constants";
+import env from "../../core/env";
+import ErrorCodes from "../../core/ErrorCodes";
 
 export default (req, res, next) => {
   BbPromise.try(() => {
+    let sig;
     const request = req.azuriteRequest;
     if (env.accountAuth) {
       if (req.headers.authorization === undefined) {
-        throw new AError(ErrorCodes.AuthenticationFailed);
+        throw new AzuriteError(ErrorCodes.AuthenticationFailed);
       }
       const match = /SharedKey devstoreaccount1:(.*)/.exec(
         req.headers.authorization
       );
       if (match === null) {
-        throw new AError(ErrorCodes.AuthenticationFailed);
+        throw new AzuriteError(ErrorCodes.AuthenticationFailed);
       }
-      const sig = _generateAccountSignature(req);
+      sig = _generateAccountSignature(req);
       if (sig.toString() !== match[1].toString()) {
+        // tslint:disable-next-line:no-console
         console.log("ERROR : Signature did not match!");
-        throw new AError(ErrorCodes.AuthenticationFailed);
+        throw new AzuriteError(ErrorCodes.AuthenticationFailed);
       }
     }
 
@@ -32,27 +33,27 @@ export default (req, res, next) => {
     }
 
     const accessPolicy = {
-      permissions: request.query.sp,
-      start: request.query.st,
-      expiry: request.query.se,
       canonicalizedResource:
         request.query.sr === "c"
           ? `/blob/devstoreaccount1/${request.containerName}`
           : `/blob/devstoreaccount1/${request.containerName}/${
               request.blobName
             }`,
+      expiry: request.query.se,
       id: request.query.si,
       ipAddressOrRange: request.query.sip,
+      permissions: request.query.sp,
       protocols: request.query.spr,
-      version: request.query.sv,
       rscc: request.query.rscc,
       rscd: request.query.rscd,
       rsce: request.query.rsce,
       rscl: request.query.rscl,
-      rsct: request.query.rsct
+      rsct: request.query.rsct,
+      start: request.query.st,
+      version: request.query.sv
     };
 
-    const sig = _generateSignature(accessPolicy);
+    sig = _generateSignature(accessPolicy);
     request.auth = {};
     request.auth.sasValid = sig === request.query.sig;
     request.auth.accessPolicy = accessPolicy;
@@ -117,14 +118,14 @@ function _generateAccountSignature(req) {
   }
   Object.keys(xms)
     .sort()
-    .forEach(function(v, i) {
+    .forEach((v, i) => {
       str += `${v}:${xms[v]}\n`;
     });
   str += `/devstoreaccount1${req._parsedUrl.pathname}\n`;
 
   Object.keys(req.query)
     .sort()
-    .forEach(function(v, i) {
+    .forEach((v, i) => {
       let qlist = req.query[v];
       if (Array.isArray(req.query[v])) {
         qlist = req.query[v].sort();
@@ -145,7 +146,9 @@ function _generateAccountSignature(req) {
 function _generateSignature(ap) {
   let str = "";
   for (const key in ap) {
-    str += ap[key] === undefined ? `\n` : `${ap[key]}\n`;
+    if (ap.hasOwnProperty(key)) {
+      str += ap[key] === undefined ? `\n` : `${ap[key]}\n`;
+    }
   }
   str = str.slice(0, str.length - 1);
   str = decodeURIComponent(str);

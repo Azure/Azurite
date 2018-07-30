@@ -1,23 +1,61 @@
 import BbPromise from "bluebird";
-import { Operations } from "../../core/Constants";
+import storageManager from "../../core/blob/StorageManager";
+import {
+  Operations,
+  ServiceSAS,
+  StorageEntityType,
+  Usage
+} from "../../core/Constants";
+import AbortCopy from "../../validation/blob/AbortCopy";
+import AppendBlobConditionalRequestHeaders from "../../validation/blob/AppendBlobConditionalRequestHeaders";
+import AppendMaxBlobCommittedBlocks from "../../validation/blob/AppendMaxBlobCommittedBlocks";
+import AssociatedSnapshotsDeletion from "../../validation/blob/AssociatedSnapshotsDeletion";
+import BlobCommitted from "../../validation/blob/BlobCommitted";
+import BlobCreationSize from "../../validation/blob/BlobCreationSize";
+import BlobExists from "../../validation/blob/BlobExists";
+import BlobLeaseUsage from "../../validation/blob/BlobLeaseUsage";
+import BlobName from "../../validation/blob/BlobName";
+import BlockList from "../../validation/blob/BlockList";
+import BlockPageSize from "../../validation/blob/BlockPageSize";
+import CompatibleBlobType from "../../validation/blob/CompatibleBlobType";
+import ConditionalRequestHeaders from "../../validation/blob/ConditionalRequestHeaders";
+import ConflictingContainer from "../../validation/blob/ConflictingContainer";
+import ContainerExists from "../../validation/blob/ContainerExists";
+import ContainerLeaseUsage from "../../validation/blob/ContainerLeaseUsage";
+import ContainerName from "../../validation/blob/ContainerName";
+import ContentLengthExists from "../../validation/blob/ContentLengthExists";
+import CopyStatus from "../../validation/blob/CopyStatus";
+import IsOfBlobType from "../../validation/blob/IsOfBlobType";
+import LeaseActions from "../../validation/blob/LeaseActions";
+import LeaseDuration from "../../validation/blob/LeaseDuration";
+import LeaseId from "../../validation/blob/LeaseId";
+import MD5 from "../../validation/blob/MD5";
 import OriginHeader from "../../validation/blob/OriginHeader";
+import PageAlignment from "../../validation/blob/PageAlignment";
+import PageBlobHeaderSanity from "../../validation/blob/PageBlobHeaderSanity";
+import PutBlobHeaders from "../../validation/blob/PutBlobHeaders";
+import ServiceProperties from "../../validation/blob/ServiceProperties";
+import ServiceSignature from "../../validation/blob/ServiceSignature";
+import SupportedBlobType from "../../validation/blob/SupportedBlobType";
+import ValidationContext from "../../validation/blob/ValidationContext";
+import NumOfSignedIdentifiers from "../../validation/NumOfSignedIdentifiers";
 
 export default (req, res, next) => {
   BbPromise.try(() => {
     const request = req.azuriteRequest || {};
-    // const { containerProxy } = sm._getCollectionAndContainer(request.containerName);
-    const o = sm._getCollectionAndContainer(request.containerName);
+    // const { containerProxy } = storageManager._getCollectionAndContainer(request.containerName);
+    const o = storageManager.getCollectionAndContainer(request.containerName);
     const containerProxy = o.containerProxy;
     const blobId = request.parentId || request.id;
-    const { blobProxy } = sm._getCollectionAndBlob(
+    const { blobProxy } = storageManager.getCollectionAndBlob(
       request.containerName,
       blobId
     );
-    const validationContext = new ValidationContext({
+    const validationContext = new ValidationContext(
       request,
       containerProxy,
       blobProxy
-    });
+    );
     validations[req.azuriteOperation](request, validationContext);
     next();
     // Refactor me: Move this to bin/azurite (exception needs to carry res object), and handle entire exception handling there
@@ -42,7 +80,7 @@ validations[Operations.Account.SET_BLOB_SERVICE_PROPERTIES] = (
   request,
   valContext
 ) => {
-  valContext.run(ServicePropertiesValidation);
+  valContext.run(ServiceProperties);
 };
 
 validations[Operations.Account.GET_BLOB_SERVICE_PROPERTIES] = (
@@ -57,136 +95,136 @@ validations[Operations.Account.LIST_CONTAINERS] = (request, valContext) => {
 };
 
 validations[Operations.Container.CREATE_CONTAINER] = (request, valContext) => {
-  valContext.run(ConflictingContainerVal).run(ContainerNameValidation);
+  valContext.run(ConflictingContainer).run(ContainerName);
 };
 
 validations[Operations.Container.DELETE_CONTAINER] = (request, valContext) => {
   valContext
-    .run(ContainerExistsVal)
-    .run(ContainerLeaseUsageValidation, { usage: Usage.Delete });
+    .run(ContainerExists)
+    .run(ContainerLeaseUsage, { usage: Usage.Delete });
 };
 
 validations[Operations.Blob.PUT_BLOB] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.WRITE })
-    .run(MD5Val)
-    .run(ContainerExistsVal)
-    .run(BlobNameVal)
-    .run(CompatibleBlobTypeVal)
-    .run(SupportedBlobTypeVal)
-    .run(PutBlobHeaderVal)
-    .run(BlobCreationSizeVal)
-    .run(BlobLeaseUsageValidation, { usage: Usage.Write })
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Write });
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.WRITE })
+    .run(MD5)
+    .run(ContainerExists)
+    .run(BlobName)
+    .run(CompatibleBlobType)
+    .run(SupportedBlobType)
+    .run(PutBlobHeaders)
+    .run(BlobCreationSize)
+    .run(BlobLeaseUsage, { usage: Usage.Write })
+    .run(ConditionalRequestHeaders, { usage: Usage.Write });
 };
 
 validations[Operations.Blob.APPEND_BLOCK] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.ADD })
-    .run(BlobExistsVal)
-    .run(ContentLengthExistsVal)
-    .run(BlockPageSizeVal)
-    .run(MD5Val)
-    .run(AppendMaxBlobCommittedBlocksVal)
-    .run(CompatibleBlobTypeVal)
-    .run(BlobLeaseUsageValidation, { usage: Usage.Write })
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Write })
-    .run(AppendBlobConditionalRequestHeadersVal);
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.ADD })
+    .run(BlobExists)
+    .run(ContentLengthExists)
+    .run(BlockPageSize)
+    .run(MD5)
+    .run(AppendMaxBlobCommittedBlocks)
+    .run(CompatibleBlobType)
+    .run(BlobLeaseUsage, { usage: Usage.Write })
+    .run(ConditionalRequestHeaders, { usage: Usage.Write })
+    .run(AppendBlobConditionalRequestHeaders);
 };
 
 validations[Operations.Blob.DELETE_BLOB] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.DELETE })
-    .run(BlobExistsVal)
-    .run(AssociatedSnapshotDeletion, {
-      collection: sm.db.getCollection(request.containerName)
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.DELETE })
+    .run(BlobExists)
+    .run(AssociatedSnapshotsDeletion, {
+      collection: storageManager.db.getCollection(request.containerName)
     })
-    .run(BlobLeaseUsageValidation, { usage: Usage.Write })
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Write });
+    .run(BlobLeaseUsage, { usage: Usage.Write })
+    .run(ConditionalRequestHeaders, { usage: Usage.Write });
 };
 
 validations[Operations.Blob.GET_BLOB] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.READ })
-    .run(BlobExistsVal)
-    .run(BlobCommittedVal)
-    .run(RangeVal)
-    .run(BlobLeaseUsageValidation, { usage: Usage.Read })
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Read });
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.READ })
+    .run(BlobExists)
+    .run(BlobCommitted)
+    .run(Range)
+    .run(BlobLeaseUsage, { usage: Usage.Read })
+    .run(ConditionalRequestHeaders, { usage: Usage.Read });
 };
 
 validations[Operations.Container.LIST_BLOBS] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.LIST })
-    .run(ContainerExistsVal);
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.LIST })
+    .run(ContainerExists);
 };
 
 validations[Operations.Blob.PUT_BLOCK] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.WRITE })
-    .run(ContainerExistsVal)
-    .run(ContentLengthExistsVal)
-    .run(BlockPageSizeVal)
-    .run(MD5Val)
-    .run(CompatibleBlobTypeVal)
-    .run(BlobLeaseUsageValidation, { usage: Usage.Write });
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.WRITE })
+    .run(ContainerExists)
+    .run(ContentLengthExists)
+    .run(BlockPageSize)
+    .run(MD5)
+    .run(CompatibleBlobType)
+    .run(BlobLeaseUsage, { usage: Usage.Write });
 };
 
 validations[Operations.Blob.PUT_BLOCK_LIST] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.WRITE })
-    .run(ContainerExistsVal)
-    .run(CompatibleBlobTypeVal)
-    .run(BlockListValidation, { storageManager: sm })
-    .run(BlobLeaseUsageValidation, { usage: Usage.Write })
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Write });
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.WRITE })
+    .run(ContainerExists)
+    .run(CompatibleBlobType)
+    .run(BlockList, { storageManager })
+    .run(BlobLeaseUsage, { usage: Usage.Write })
+    .run(ConditionalRequestHeaders, { usage: Usage.Write });
 };
 
 validations[Operations.Blob.GET_BLOCK_LIST] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.READ })
-    .run(ContainerExistsVal)
-    .run(BlobExistsVal)
-    .run(IsOfBlobTypeVal, { entityType: StorageEntityType.BlockBlob })
-    .run(BlobLeaseUsageValidation, { usage: Usage.Read });
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.READ })
+    .run(ContainerExists)
+    .run(BlobExists)
+    .run(IsOfBlobType, { entityType: StorageEntityType.BlockBlob })
+    .run(BlobLeaseUsage, { usage: Usage.Read });
 };
 
 validations[Operations.Blob.SET_BLOB_METADATA] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.WRITE })
-    .run(ContainerExistsVal)
-    .run(BlobExistsVal)
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Write })
-    .run(BlobLeaseUsageValidation, { usage: Usage.Write });
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.WRITE })
+    .run(ContainerExists)
+    .run(BlobExists)
+    .run(ConditionalRequestHeaders, { usage: Usage.Write })
+    .run(BlobLeaseUsage, { usage: Usage.Write });
 };
 
 validations[Operations.Blob.GET_BLOB_METADATA] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.READ })
-    .run(ContainerExistsVal)
-    .run(BlobExistsVal)
-    .run(BlobCommittedVal)
-    .run(BlobLeaseUsageValidation, { usage: Usage.Read })
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Read });
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.READ })
+    .run(ContainerExists)
+    .run(BlobExists)
+    .run(BlobCommitted)
+    .run(BlobLeaseUsage, { usage: Usage.Read })
+    .run(ConditionalRequestHeaders, { usage: Usage.Read });
 };
 
 validations[Operations.Blob.GET_BLOB_PROPERTIES] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.READ })
-    .run(ContainerExistsVal)
-    .run(BlobExistsVal)
-    .run(BlobCommittedVal)
-    .run(BlobLeaseUsageValidation, { usage: Usage.Read })
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Read });
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.READ })
+    .run(ContainerExists)
+    .run(BlobExists)
+    .run(BlobCommitted)
+    .run(BlobLeaseUsage, { usage: Usage.Read })
+    .run(ConditionalRequestHeaders, { usage: Usage.Read });
 };
 
 validations[Operations.Blob.SET_BLOB_PROPERTIES] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.WRITE })
-    .run(ContainerExistsVal)
-    .run(BlobExistsVal)
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Write })
-    .run(BlobLeaseUsageValidation, { usage: Usage.Write });
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.WRITE })
+    .run(ContainerExists)
+    .run(BlobExists)
+    .run(ConditionalRequestHeaders, { usage: Usage.Write })
+    .run(BlobLeaseUsage, { usage: Usage.Write });
 };
 
 validations[Operations.Container.SET_CONTAINER_METADATA] = (
@@ -194,9 +232,9 @@ validations[Operations.Container.SET_CONTAINER_METADATA] = (
   valContext
 ) => {
   valContext
-    .run(ContainerExistsVal)
-    .run(ContainerLeaseUsageValidation, { usage: Usage.Other })
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Write });
+    .run(ContainerExists)
+    .run(ContainerLeaseUsage, { usage: Usage.Other })
+    .run(ConditionalRequestHeaders, { usage: Usage.Write });
 };
 
 validations[Operations.Container.GET_CONTAINER_METADATA] = (
@@ -204,8 +242,8 @@ validations[Operations.Container.GET_CONTAINER_METADATA] = (
   valContext
 ) => {
   valContext
-    .run(ContainerExistsVal)
-    .run(ContainerLeaseUsageValidation, { usage: Usage.Other });
+    .run(ContainerExists)
+    .run(ContainerLeaseUsage, { usage: Usage.Other });
 };
 
 validations[Operations.Container.GET_CONTAINER_PROPERTIES] = (
@@ -213,103 +251,103 @@ validations[Operations.Container.GET_CONTAINER_PROPERTIES] = (
   valContext
 ) => {
   valContext
-    .run(ContainerExistsVal)
-    .run(ContainerLeaseUsageValidation, { usage: Usage.Other });
+    .run(ContainerExists)
+    .run(ContainerLeaseUsage, { usage: Usage.Other });
 };
 
 validations[Operations.Blob.PUT_PAGE] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.WRITE })
-    .run(ContainerExistsVal)
-    .run(BlobExistsVal)
-    .run(ContentLengthExistsVal)
-    .run(IsOfBlobTypeVal, { entityType: StorageEntityType.PageBlob })
-    .run(MD5Val)
-    .run(BlockPageSizeVal)
-    .run(PageAlignmentVal)
-    .run(PageBlobHeaderSanityVal)
-    .run(CompatibleBlobTypeVal)
-    .run(BlobLeaseUsageValidation, { usage: Usage.Write })
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Write });
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.WRITE })
+    .run(ContainerExists)
+    .run(BlobExists)
+    .run(ContentLengthExists)
+    .run(IsOfBlobType, { entityType: StorageEntityType.PageBlob })
+    .run(MD5)
+    .run(BlockPageSize)
+    .run(PageAlignment)
+    .run(PageBlobHeaderSanity)
+    .run(CompatibleBlobType)
+    .run(BlobLeaseUsage, { usage: Usage.Write })
+    .run(ConditionalRequestHeaders, { usage: Usage.Write });
 };
 
 validations[Operations.Blob.GET_PAGE_RANGES] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.READ })
-    .run(ContainerExistsVal)
-    .run(BlobExistsVal)
-    .run(PageAlignmentVal)
-    .run(BlobLeaseUsageValidation, { usage: Usage.Read })
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Write });
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.READ })
+    .run(ContainerExists)
+    .run(BlobExists)
+    .run(PageAlignment)
+    .run(BlobLeaseUsage, { usage: Usage.Read })
+    .run(ConditionalRequestHeaders, { usage: Usage.Write });
 };
 
 validations[Operations.Container.SET_CONTAINER_ACL] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.WRITE })
-    .run(ContainerExistsVal)
-    .run(NumOfSignedIdentifiersVal)
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Write })
-    .run(ContainerLeaseUsageValidation, { usage: Usage.Other });
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.WRITE })
+    .run(ContainerExists)
+    .run(NumOfSignedIdentifiers)
+    .run(ConditionalRequestHeaders, { usage: Usage.Write })
+    .run(ContainerLeaseUsage, { usage: Usage.Other });
 };
 
 validations[Operations.Container.GET_CONTAINER_ACL] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.READ })
-    .run(ContainerExistsVal)
-    .run(ContainerLeaseUsageValidation, { usage: Usage.Other });
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.READ })
+    .run(ContainerExists)
+    .run(ContainerLeaseUsage, { usage: Usage.Other });
 };
 
 validations[Operations.Blob.SNAPSHOT_BLOB] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.CREATE })
-    .run(ContainerExistsVal)
-    .run(BlobExistsVal)
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Write })
-    .run(BlobLeaseUsageValidation, { usage: Usage.Read });
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.CREATE })
+    .run(ContainerExists)
+    .run(BlobExists)
+    .run(ConditionalRequestHeaders, { usage: Usage.Write })
+    .run(BlobLeaseUsage, { usage: Usage.Read });
 };
 
 validations[Operations.Container.LEASE_CONTAINER] = (request, valContext) => {
   valContext
-    .run(ContainerExistsVal)
-    .run(LeaseActionsValidation)
-    .run(LeaseDurationValidation)
-    .run(LeaseIdValidation)
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Write });
+    .run(ContainerExists)
+    .run(LeaseActions)
+    .run(LeaseDuration)
+    .run(LeaseId)
+    .run(ConditionalRequestHeaders, { usage: Usage.Write });
 };
 
 validations[Operations.Blob.LEASE_BLOB] = (request, valContext) => {
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.WRITE })
-    .run(ContainerExistsVal)
-    .run(BlobExistsVal)
-    .run(LeaseDurationValidation)
-    .run(LeaseIdValidation)
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Write })
-    .run(LeaseActionsValidation);
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.WRITE })
+    .run(ContainerExists)
+    .run(BlobExists)
+    .run(LeaseDuration)
+    .run(LeaseId)
+    .run(ConditionalRequestHeaders, { usage: Usage.Write })
+    .run(LeaseActions);
 };
 
 validations[Operations.Blob.COPY_BLOB] = (request, valContext) => {
   // Source Validation
-  const sourceBlobProxy = sm._getCopySourceProxy(request);
-  const ret = sm._getCollectionAndContainer(
-      request.copySourceName().sourceContainerName
-    ),
-    sourceContainerProxy = ret.containerProxy;
+  const sourceBlobProxy = storageManager.getCopySourceProxy(request);
+  const ret = storageManager.getCollectionAndContainer(
+    request.copySourceName().sourceContainerName
+  );
+  const sourceContainerProxy = ret.containerProxy;
   valContext
-    .run(ServiceSignatureValidation, { sasOperation: SasOperation.Blob.WRITE })
-    .run(ContainerExistsVal, { containerProxy: sourceContainerProxy })
-    .run(BlobExistsVal, { blobProxy: sourceBlobProxy });
+    .run(ServiceSignature, { ServiceSAS: ServiceSAS.Blob.WRITE })
+    .run(ContainerExists, { containerProxy: sourceContainerProxy })
+    .run(BlobExists, { blobProxy: sourceBlobProxy });
 
   // Target Validation
   valContext
-    .run(ContainerExistsVal)
-    .run(CompatibleBlobTypeVal, {
+    .run(ContainerExists)
+    .run(CompatibleBlobType, {
       request: { entityType: sourceBlobProxy.original.entityType }
     })
-    .run(ConditionalRequestHeadersVal, { usage: Usage.Write })
-    .run(CopyStatusValidation);
+    .run(ConditionalRequestHeaders, { usage: Usage.Write })
+    .run(CopyStatus);
 };
 
 validations[Operations.Blob.ABORT_COPY_BLOB] = (request, valContext) => {
-  valContext.run(AbortCopyValidation);
+  valContext.run(AbortCopy);
 };
