@@ -3,7 +3,7 @@ import * as fs from "fs-extra";
 import * as req from "request";
 import storageManager from "./../../core/blob/StorageManager";
 import { StorageEntityType } from "./../../core/Constants";
-import env from "./../../core/env";
+import Environment from "./../../core/env";
 import N from "./../../core/HttpHeaderNames";
 
 class GetBlob {
@@ -47,7 +47,7 @@ class GetBlob {
         const startByte = parseInt(pair[0], undefined);
         const endByte = parseInt(pair[1], undefined);
 
-        const fullPath = env.diskStorageUri(request.id);
+        const fullPath = Environment.diskStorageUri(request.id);
         const readStream = fs.createReadStream(fullPath, {
           encoding: "utf8",
           end: endByte,
@@ -70,7 +70,7 @@ class GetBlob {
           res.status(206).send(body);
         });
       } else {
-        req(this._createRequestHeader(env.webStorageUri(request.id), range))
+        req(this._createRequestHeader(Environment.webStorageUri(request.id), range))
           .on("response", staticResponse => {
             response.addHttpProperty(
               N.CONTENT_LENGTH,

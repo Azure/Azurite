@@ -8,9 +8,7 @@ import {
 
 class PutMessage {
   public process(request, res) {
-    const { queue } = QueueManager.getQueueAndMessage({
-      queueName: request.queueName
-    });
+    const { queue } = QueueManager.getQueueAndMessage(request.queueName);
     const message = queue.put({
       messageTtl: request.messageTtl,
       msg: request.payload.MessageText,

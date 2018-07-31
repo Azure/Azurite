@@ -1,9 +1,8 @@
+import AzuriteBlobResponse from "../../model/blob/AzuriteBlobResponse";
 import N from "./../../core/HttpHeaderNames";
-import AzuriteResponse from "./../../model/blob/AzuriteResponse";
-
 class PreflightBlobRequest {
   public process(req, res) {
-    const response = new AzuriteResponse(); // Add Access-Control-Expose-Headers
+    const response = new AzuriteBlobResponse(); // Add Access-Control-Expose-Headers
     response.addHttpProperty(
       N.ACCESS_CONTROL_ALLOW_ORIGIN,
       req.httpProps[N.ORIGIN]

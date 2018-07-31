@@ -4,10 +4,7 @@ import AzuriteQueueResponse from "./../../model/queue/AzuriteQueueResponse";
 
 class GetQueueMetadata {
   public process(request, res) {
-    const queue = QueueManager.getQueueAndMessage({
-      queueName: request.queueName
-    }).queue;
-
+    const { queue } = QueueManager.getQueueAndMessage(request.queueName);
     const metaProps = queue.metaProps;
     const queueLength = queue.getLength();
     const response = new AzuriteQueueResponse();

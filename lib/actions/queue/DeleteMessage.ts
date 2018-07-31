@@ -3,9 +3,7 @@ import AzuriteQueueResponse from "./../../model/queue/AzuriteQueueResponse";
 
 class DeleteMessage {
   public process(request, res) {
-    const queue = QueueManager.getQueueAndMessage({
-      queueName: request.queueName
-    }).queue;
+    const { queue } = QueueManager.getQueueAndMessage(request.queueName);
     queue.delete(request.messageId, request.popReceipt);
     const response = new AzuriteQueueResponse();
     res.set(response.httpProps);

@@ -1,6 +1,7 @@
 import AzuriteError from "../../core/AzuriteError";
 import { LeaseStatus, Usage } from "../../core/Constants";
 import ErrorCodes from "../../core/ErrorCodes";
+import AzuriteContainerRequest from "../../model/blob/AzuriteContainerRequest";
 import N from "./../../core/HttpHeaderNames";
 
 /**
@@ -10,7 +11,11 @@ import N from "./../../core/HttpHeaderNames";
  * @class ContainerLeaseUsage
  */
 class ContainerLeaseUsage {
-  public validate(request, containerProxy, moduleOptions) {
+  public validate(
+    request: AzuriteContainerRequest,
+    containerProxy,
+    moduleOptions
+  ) {
     const leaseId = request.leaseId();
     const usage = moduleOptions.usage;
 

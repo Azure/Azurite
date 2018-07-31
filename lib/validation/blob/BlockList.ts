@@ -1,5 +1,5 @@
 import AzuriteError from "../../core/AzuriteError";
-import env from "../../core/env";
+import Environment from "../../core/env";
 import ErrorCodes from "../../core/ErrorCodes";
 import BlobExists from "./BlobExists";
 
@@ -11,7 +11,7 @@ class BlockList {
     const sm = moduleOptions.storageManager;
     const blockList = request.payload;
     for (const block of blockList) {
-      const blobId = env.blockId(
+      const blobId = Environment.blockId(
         request.containerName,
         request.blobName,
         block.id

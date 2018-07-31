@@ -3,9 +3,7 @@ import AzuriteQueueResponse from "./../../model/queue/AzuriteQueueResponse";
 
 class CreateQueue {
   public process(request, res) {
-    const { queue } = QueueManager.getQueueAndMessage({
-      queueName: request.queueName
-    });
+    const { queue } = QueueManager.getQueueAndMessage(request.queueName);
     const response = new AzuriteQueueResponse();
     res.set(response.httpProps);
     if (queue !== undefined) {

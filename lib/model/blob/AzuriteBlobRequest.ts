@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import * as url from "url";
 import { BlockListType } from "../../core/Constants";
-import env from "../../core/env";
+import Environment from "../../core/env";
 import N from "../../core/HttpHeaderNames";
 import InternalAzuriteError from "../../core/InternalAzuriteError";
 import AzuriteRequest from "./AzuriteRequest";
@@ -49,21 +49,21 @@ class AzuriteBlobRequest extends AzuriteRequest {
     if (this.query.snapshot) {
       this.snapshotDate = new Date(this.query.snapshot).toUTCString();
       this.snapshot = true;
-      this.id = env.snapshotId(
+      this.id = Environment.snapshotId(
         this.containerName,
         this.blobName,
         this.snapshotDate
       );
-      this.originId = env.blobId(this.containerName, this.blobName);
-      this.originUri = env.diskStorageUri(this.originId);
+      this.originId = Environment.blobId(this.containerName, this.blobName);
+      this.originUri = Environment.diskStorageUri(this.originId);
     } else if (this.blockId) {
-      this.id = env.blockId(this.containerName, this.blobName, this.blockId);
-      this.parentId = env.blobId(this.containerName, this.blobName);
-      this.parentUri = env.diskStorageUri(this.parentId);
+      this.id = Environment.blockId(this.containerName, this.blobName, this.blockId);
+      this.parentId = Environment.blobId(this.containerName, this.blobName);
+      this.parentUri = Environment.diskStorageUri(this.parentId);
     } else {
-      this.id = env.blobId(this.containerName, this.blobName);
+      this.id = Environment.blobId(this.containerName, this.blobName);
     }
-    this.uri = env.diskStorageUri(this.id);
+    this.uri = Environment.diskStorageUri(this.id);
   }
 
   public calculateContentMd5() {

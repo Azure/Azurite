@@ -1,5 +1,5 @@
 import { Operations } from "../../core/Constants";
-import env from "../../core/env";
+import Environment from "../../core/env";
 import AzuriteTableRequest from "../../model/table/AzuriteTableRequest";
 
 /*
@@ -9,7 +9,7 @@ import AzuriteTableRequest from "../../model/table/AzuriteTableRequest";
  */
 export default app => {
   app
-    .route(new RegExp(`\/${env.emulatedStorageAccountName}\/Tables(.*)`))
+    .route(new RegExp(`\/${Environment.emulatedStorageAccountName}\/Tables(.*)`))
     .get((req, res, next) => {
       req.azuriteOperation = Operations.Table.QUERY_TABLE;
       req.azuriteRequest = new AzuriteTableRequest(req);

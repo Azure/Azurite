@@ -1,5 +1,5 @@
 import { Operations } from "../../core/Constants";
-import env from "../../core/env";
+import Environment from "../../core/env";
 import AzuriteQueueRequest from "../../model/queue/AzuriteQueueRequest";
 
 /*
@@ -8,7 +8,7 @@ import AzuriteQueueRequest from "../../model/queue/AzuriteQueueRequest";
  * for details on specification.
  */
 export default app => {
-  app.route(`/${env.emulatedStorageAccountName}`).get((req, res, next) => {
+  app.route(`/${Environment.emulatedStorageAccountName}`).get((req, res, next) => {
     if (req.query.comp === "list") {
       req.azuriteOperation = Operations.Queue.LIST_QUEUES;
     }

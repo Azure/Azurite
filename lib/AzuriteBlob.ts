@@ -5,7 +5,7 @@ import { Server } from "http";
 import * as morgan from "morgan";
 import storageManager from "../lib/core/blob/StorageManager";
 import { blobStorageStatus } from "./core/cli";
-import env from "./core/env";
+import Environment from "./core/env";
 import Actions from "./middleware/blob/actions";
 import Authentication from "./middleware/blob/authentication";
 import Cors from "./middleware/blob/cors";
@@ -34,14 +34,13 @@ class AzuriteBlob {
   }
 
   public init(options) {
-    return env
-      .init(options)
+    return Environment.init(options)
       .then(() => {
         return storageManager.init();
       })
       .then(() => {
         const app = express();
-        if (!env.silent) {
+        if (!Environment.silent) {
           app.use(morgan("dev"));
         }
         // According to RFC 7231:
@@ -49,29 +48,35 @@ class AzuriteBlob {
         // Media Type) if a representation in the request message has a content
         // coding that is not acceptable.
         // body-parser, however, throws an error. We thus ignore unsupported content encodings and treat them as 'identity'.
-        app.use((next: express.NextFunction, req: express.Request) => {
-          const encoding = (
-            req.headers["content-encoding"] || "identity"
-          ).toLowerCase();
-          let deleteHeader = false;
+        app.use(
+          (
+            req: express.Request,
+            res: express.Response,
+            next: express.NextFunction
+          ) => {
+            const encoding = (
+              req.headers["content-encoding"] || "identity"
+            ).toLowerCase();
+            let deleteHeader = false;
 
-          if (encoding === "deflate") {
-            deleteHeader = true;
-          }
+            if (encoding === "deflate") {
+              deleteHeader = true;
+            }
 
-          if (encoding !== "gzip") {
-            deleteHeader = true;
-          }
-          if (encoding !== "identity") {
-            deleteHeader = true;
-          }
+            if (encoding !== "gzip") {
+              deleteHeader = true;
+            }
+            if (encoding !== "identity") {
+              deleteHeader = true;
+            }
 
-          if (deleteHeader) {
-            delete req.headers["content-encoding"];
-          }
+            if (deleteHeader) {
+              delete req.headers["content-encoding"];
+            }
 
-          next();
-        });
+            next();
+          }
+        );
         app.use(
           bodyParser.raw({
             inflate: true,
@@ -81,7 +86,7 @@ class AzuriteBlob {
             }
           })
         );
-        app.use(`/blobs`, express.static(env.localStoragePath));
+        app.use(`/blobs`, express.static(Environment.localStoragePath));
         AccountRoute(app);
         ContainerRoute(app);
         BlobRoute(app);
@@ -91,8 +96,8 @@ class AzuriteBlob {
         app.use(Validation);
         app.use(Actions);
 
-        this.server = app.listen(env.blobStoragePort, () => {
-          if (!env.silent) {
+        this.server = app.listen(Environment.blobStoragePort, () => {
+          if (!Environment.silent) {
             blobStorageStatus();
           }
         });

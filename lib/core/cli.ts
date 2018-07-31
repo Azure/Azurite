@@ -1,6 +1,6 @@
 import * as chalk from "chalk";
 import * as os from "os";
-import env from "./env";
+import Environment from "./env";
 
 export const asciiGreeting = () => {
   // TODO: const version  from "./../../package.json").version;
@@ -25,7 +25,7 @@ export const blobStorageStatus = () => {
   // tslint:disable-next-line:no-console
   console.log(
     chalk.cyan(
-      `Azure Blob Storage Emulator listening on port ${env.blobStoragePort}`
+      `Azure Blob Storage Emulator listening on port ${Environment.blobStoragePort}`
     )
   );
 };
@@ -34,7 +34,7 @@ export const queueStorageStatus = () => {
   // tslint:disable-next-line:no-console
   console.log(
     chalk.cyan(
-      `Azure Queue Storage Emulator listening on port ${env.queueStoragePort}`
+      `Azure Queue Storage Emulator listening on port ${Environment.queueStoragePort}`
     )
   );
 };
@@ -43,7 +43,7 @@ export const tableStorageStatus = () => {
   // tslint:disable-next-line:no-console
   console.log(
     chalk.cyan(
-      `Azure Table Storage Emulator listening on port ${env.tableStoragePort}`
+      `Azure Table Storage Emulator listening on port ${Environment.tableStoragePort}`
     )
   );
 };

@@ -3,9 +3,7 @@ import AzuriteQueueResponse from "./../../model/queue/AzuriteQueueResponse";
 
 class ClearMessages {
   public process(request, res) {
-    const queue = QueueManager.getQueueAndMessage({
-      queueName: request.queueName
-    }).queue;
+    const queue = QueueManager.getQueueAndMessage(request.queueName).queue;
     queue.clear();
     const response = new AzuriteQueueResponse();
     res.set(response.httpProps);

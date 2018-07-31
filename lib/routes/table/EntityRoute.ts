@@ -1,5 +1,5 @@
 import { Operations } from "../../core/Constants";
-import env from "../../core/env";
+import Environment from "../../core/env";
 import AzuriteTableRequest from "../../model/table/AzuriteTableRequest";
 import N from "./../../core/HttpHeaderNames";
 
@@ -11,7 +11,7 @@ import N from "./../../core/HttpHeaderNames";
 export default app => {
   app
     .route(
-      new RegExp(`\/${env.emulatedStorageAccountName}\/([A-Za-z0-9]+)(.*)`)
+      new RegExp(`\/${Environment.emulatedStorageAccountName}\/([A-Za-z0-9]+)(.*)`)
     )
     .get((req, res, next) => {
       if (req.azuriteOperation === undefined) {

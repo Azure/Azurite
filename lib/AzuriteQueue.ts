@@ -4,7 +4,7 @@ import * as express from "express";
 import { Server } from "http";
 import * as morgan from "morgan";
 import { queueStorageStatus } from "./core/cli";
-import env from "./core/env";
+import Environment from "./core/env";
 import Actions from "./middleware/queue/actions";
 import Validation from "./middleware/queue/validation";
 import AccountRoute from "./routes/queue/AccountRoute";
@@ -30,9 +30,9 @@ class AzuriteQueue {
   }
 
   public init(options) {
-    return env.init(options).then(() => {
+    return Environment.init(options).then(() => {
       const app = express();
-      if (!env.silent) {
+      if (!Environment.silent) {
         app.use(morgan("dev"));
       }
       app.use(
@@ -49,8 +49,8 @@ class AzuriteQueue {
       MessageRoute(app);
       app.use(Validation);
       app.use(Actions);
-      this.server = app.listen(env.queueStoragePort, () => {
-        if (!env.silent) {
+      this.server = app.listen(Environment.queueStoragePort, () => {
+        if (!Environment.silent) {
           queueStorageStatus();
         }
       });

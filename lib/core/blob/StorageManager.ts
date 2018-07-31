@@ -1,6 +1,7 @@
-import * as  BbPromise from "bluebird";
+import { FSStorage } from "@lokidb/fs-storage";
+import { Loki } from "@lokidb/loki";
+import * as BbPromise from "bluebird";
 import CombinedStream from "combined-stream";
-import * as Loki from "lokijs";
 import * as uuid from "uuid";
 import { asyncIt } from "../../lib/asyncIt";
 import AzuriteBlobRequest from "../../model/blob/AzuriteBlobRequest";
@@ -15,7 +16,7 @@ import {
   StorageEntityType,
   StorageTables
 } from "../Constants";
-import env from "../env";
+import Environment from "../env";
 import N from "./../../core/HttpHeaderNames";
 
 import * as fs from "fs-extra";
@@ -24,57 +25,45 @@ import SnapshotTimeManager from "./SnapshotTimeManager";
 
 const fsStat = (path: string) => asyncIt(cb => fs.stat(path, cb));
 class StorageManager {
-  public db!: any;
+  public db: Loki;
 
   public init() {
-    this.db = BbPromise.promisifyAll(
-      new Loki(env.azuriteDBPathBlob, {
-        autosave: true,
-        autosaveInterval: 5000
-      })
-    );
-    return fsStat(env.azuriteDBPathBlob)
-      .then(stat => {
-        return this.db.loadDatabaseAsync({});
-      })
-      .then(data => {
-        if (!this.db.getCollection(StorageTables.Containers)) {
-          this.db.addCollection(StorageTables.Containers);
-        }
-        if (!this.db.getCollection(StorageTables.ServiceProperties)) {
-          this.db.addCollection(StorageTables.ServiceProperties);
-        }
-        return this.db.saveDatabaseAsync();
+    this.db = new Loki(Environment.azuriteDBPathBlob, {
+      autosave: true,
+      autosaveInterval: 5000
+    });
+
+    const adapter = { adapter: new FSStorage() };
+    return this.db
+      .initializePersistence(adapter)
+      .then(() => {
+        this.db.addCollection(StorageTables.Containers);
+        this.db.addCollection(StorageTables.ServiceProperties);
+        // See https://github.com/arafato/azurite/issues/155:
+        // Azure Storage Explorer expects an existing $logs folder at initial start.
+        const logsStub = {
+          containerName: "$logs",
+          entityType: StorageEntityType.Container,
+          httpProps: {},
+          metaProps: {}
+        };
+        logsStub.httpProps[N.BLOB_PUBLIC_ACCESS] = "private";
+        return this.createContainer(logsStub).then(() => {
+          return this.db.saveDatabase();
+        });
       })
       .catch(e => {
-        if (e.code === "ENOENT") {
-          // No DB has been persisted / initialized yet.
-          this.db.addCollection(StorageTables.Containers);
-          this.db.addCollection(StorageTables.ServiceProperties);
-          // See https://github.com/arafato/azurite/issues/155:
-          // Azure Storage Explorer expects an existing $logs folder at initial start.
-          const logsStub = {
-            containerName: "$logs",
-            entityType: StorageEntityType.Container,
-            httpProps: {},
-            metaProps: {}
-          };
-          logsStub.httpProps[N.BLOB_PUBLIC_ACCESS] = "private";
-          return this.createContainer(logsStub).then(() => {
-            return this.db.saveDatabaseAsync();
-          });
-        }
         // This should never happen!
         // tslint:disable-next-line:no-console
         console.error(
-          `Failed to initialize database at "${env.azuriteDBPathBlob}"`
+          `Failed to initialize database at "${Environment.azuriteDBPathBlob}"`
         );
         throw e;
       });
   }
 
   public flush() {
-    return this.db.saveDatabaseAsync();
+    return this.db.saveDatabase();
   }
 
   public close() {
@@ -85,9 +74,14 @@ class StorageManager {
     const coll = this.db.getCollection(StorageTables.Containers);
     const entity = StorageEntityGenerator.generateStorageEntity(request);
     const containerProxy = new ContainerProxy(coll.insert(entity));
-    this.db.addCollection(entity.blob.name);
+    this.db.addCollection(entity.container.name);
     return BbPromise.resolve(
-      new AzuriteBlobResponse({ proxy: containerProxy, cors: request.cors })
+      new AzuriteBlobResponse(
+        containerProxy,
+        undefined,
+        undefined,
+        request.cors
+      )
     );
   }
 
@@ -109,7 +103,12 @@ class StorageManager {
     }
     return BbPromise.all(promises).then(() => {
       this.db.removeCollection(request.containerName);
-      return new AzuriteBlobResponse({ cors: request.cors });
+      return new AzuriteBlobResponse(
+        undefined,
+        undefined,
+        undefined,
+        request.cors
+      );
     });
   }
 
@@ -123,7 +122,7 @@ class StorageManager {
       .limit(maxresults)
       .data();
     return BbPromise.resolve(
-      new AzuriteBlobResponse({ payload: result, cors: request.cors })
+      new AzuriteBlobResponse(undefined, result, undefined, request.cors)
     );
   }
 
@@ -162,7 +161,12 @@ class StorageManager {
         encoding: request.httpProps[N.CONTENT_ENCODING]
       })
     ).then(() => {
-      return new AzuriteBlobResponse(blobProxy, undefined, undefined, request.cors);
+      return new AzuriteBlobResponse(
+        blobProxy,
+        undefined,
+        undefined,
+        request.cors
+      );
     });
   }
 
@@ -189,7 +193,12 @@ class StorageManager {
         promises.push(fs.remove(request.uri));
       }
       return Promise.all(promises).then(() => {
-        return new AzuriteBlobResponse(undefined, undefined, undefined, request.cors);
+        return new AzuriteBlobResponse(
+          undefined,
+          undefined,
+          undefined,
+          request.cors
+        );
       });
     } else {
       coll
@@ -201,7 +210,12 @@ class StorageManager {
         .find({ parentId: { $eq: request.id } })
         .remove(); // Removing (un-)committed blocks
       return fs.remove(request.uri).then(() => {
-        return new AzuriteBlobResponse(undefined, undefined, undefined, request.cors);
+        return new AzuriteBlobResponse(
+          undefined,
+          undefined,
+          undefined,
+          request.cors
+        );
       });
     }
   }
@@ -213,10 +227,12 @@ class StorageManager {
       .find({ id: { $eq: request.id } })
       .data()[0];
 
-    const response = new AzuriteBlobResponse({
-      cors: request.cors,
-      proxy: new BlobProxy(blob, request.containerName)
-    });
+    const response = new AzuriteBlobResponse(
+      new BlobProxy(blob, request.containerName),
+      undefined,
+      undefined,
+      request.cors
+    );
     return BbPromise.resolve(response);
   }
 
@@ -251,13 +267,15 @@ class StorageManager {
     const totalHits = blobs.count();
     const offset = query.marker !== undefined ? query.marker : 0;
     blobs = blobs.offset(offset);
-    const response = new AzuriteBlobResponse({
-      cors: request.cors,
-      payload: BlobProxy.createFromArray(
+    const response = new AzuriteBlobResponse(
+      undefined,
+      BlobProxy.createFromArray(
         blobs.limit(query.maxresults).data(),
         request.containerName
-      )
-    });
+      ),
+      undefined,
+      request.cors
+    );
     response.nextMarker =
       totalHits > query.maxresults + offset ? query.maxresults + offset : 0;
     return BbPromise.resolve(response);
@@ -274,7 +292,7 @@ class StorageManager {
       // clone the original request and set blockId to undefined
       const parentBlobRequest = AzuriteBlobRequest.clone(request);
       parentBlobRequest.id = parentBlobRequest.parentId;
-      parentBlobRequest.uri = env.diskStorageUri(parentBlobRequest.id);
+      parentBlobRequest.uri = Environment.diskStorageUri(parentBlobRequest.id);
       delete parentBlobRequest.parentId;
       delete parentBlobRequest.blockId;
       parentBlobRequest.commit = false;
@@ -304,12 +322,12 @@ class StorageManager {
   public putBlockList(request) {
     const blockPaths: string[] = [];
     for (const block of request.payload) {
-      const blockId = env.blockId(
+      const blockId = Environment.blockId(
         request.containerName,
         request.blobName,
         block.id
       );
-      blockPaths.push(env.diskStorageUri(blockId));
+      blockPaths.push(Environment.diskStorageUri(blockId));
     }
     // Updating properties of blob
     const coll = this.db.getCollection(request.containerName);
@@ -354,7 +372,12 @@ class StorageManager {
             this.clearCopyMetaData(blobProxy);
             coll.update(blobProxy.release());
             resolve(
-              new AzuriteBlobResponse({ proxy: blobProxy, cors: request.cors })
+              new AzuriteBlobResponse(
+                blobProxy,
+                undefined,
+                undefined,
+                request.cors
+              )
             );
           });
         });
@@ -676,12 +699,12 @@ class StorageManager {
     snapshotEntity.snapshotDate = snapshotDate.toUTCString();
     snapshotEntity.originId = request.id;
     snapshotEntity.originUri = request.uri;
-    snapshotEntity.id = env.snapshotId(
+    snapshotEntity.id = Environment.snapshotId(
       request.containerName,
       request.blobName,
       snapshotEntity.snapshotDate
     ); // Updating ID due to possibly changed snapshot date
-    snapshotEntity.uri = env.diskStorageUri(snapshotEntity.id);
+    snapshotEntity.uri = Environment.diskStorageUri(snapshotEntity.id);
     const snapshotProxy = new BlobProxy(
       coll.insert(snapshotEntity),
       request.containerName
@@ -852,7 +875,7 @@ class StorageManager {
 
     const from = fs.createReadStream(sourceProxy.original.uri);
     // TODO: if blob type is block also copy committed blocks
-    const to = fs.createWriteStream(env.diskStorageUri(request.id));
+    const to = fs.createWriteStream(Environment.diskStorageUri(request.id));
     from.pipe(to);
 
     request.entityType = sourceProxy.original.entityType;
@@ -864,7 +887,12 @@ class StorageManager {
     blobProxyDestination.original.copyStatus = CopyStatus.PENDING;
     blobProxyDestination.original.copyStatusDescription = "";
     blobProxyDestination.original.copyId = copyId;
-    CopyOperationsManager.add(copyId, from, to, env.diskStorageUri(request.id));
+    CopyOperationsManager.add(
+      copyId,
+      from,
+      to,
+      Environment.diskStorageUri(request.id)
+    );
     let bytesCopied = 0;
     to.on("finish", () => {
       if (blobProxyDestination.original.copyStatus !== CopyStatus.FAILED) {
@@ -926,7 +954,12 @@ class StorageManager {
 
   public abortCopyBlob(request) {
     return CopyOperationsManager.cancel(request.copyId).then(() => {
-      return new AzuriteBlobResponse({ cors: request.cors });
+      return new AzuriteBlobResponse(
+        undefined,
+        undefined,
+        undefined,
+        request.cors
+      );
     });
   }
 
@@ -959,7 +992,9 @@ class StorageManager {
       }
       coll.update(settings);
     }
-    return BbPromise.resolve(new AzuriteBlobResponse({ cors: request.cors }));
+    return BbPromise.resolve(
+      new AzuriteBlobResponse(undefined, undefined, undefined, request.cors)
+    );
   }
 
   public getBlobServiceProperties(request) {
@@ -969,7 +1004,12 @@ class StorageManager {
     })[0];
 
     return BbPromise.resolve(
-      new AzuriteBlobResponse({ payload: settings || {}, cors: request.cors })
+      new AzuriteBlobResponse(
+        undefined,
+        settings || {},
+        undefined,
+        request.cors
+      )
     );
   }
 
@@ -1032,7 +1072,8 @@ class StorageManager {
     const coll = this.db.getCollection(StorageTables.Containers);
     const result = coll
       .chain()
-      .find({ name: containerName })
+      .find({ entityType: "Container" })
+      .where(entity => entity.container.name === containerName)
       .data();
     return {
       coll,
@@ -1094,12 +1135,12 @@ class StorageManager {
     if (date !== undefined) {
       return this.getCollectionAndBlob(
         sourceContainerName,
-        env.snapshotId(sourceContainerName, sourceBlobName, date)
+        Environment.snapshotId(sourceContainerName, sourceBlobName, date)
       ).blobProxy;
     }
     return this.getCollectionAndBlob(
       sourceContainerName,
-      env.blobId(sourceContainerName, sourceBlobName)
+      Environment.blobId(sourceContainerName, sourceBlobName)
     ).blobProxy;
   }
 

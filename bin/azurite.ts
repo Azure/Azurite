@@ -1,6 +1,6 @@
 import * as minimist from "minimist";
 import * as cli from "./../lib/core/cli";
-import env from "./../lib/core/env";
+import Environment from "./../lib/core/env";
 
 process.on("unhandledRejection", e => {
   // tslint:disable-next-line:no-console
@@ -17,10 +17,9 @@ process.on("unhandledRejection", e => {
     // during require, it will be caught.
     const argv = minimist(process.argv.slice(2));
 
-    return env
-      .init(argv)
+    return Environment.init(argv)
       .then(() => {
-        if (!env.silent) {
+        if (!Environment.silent) {
           cli.asciiGreeting();
         }
       })
@@ -30,15 +29,15 @@ process.on("unhandledRejection", e => {
         const fork = require("child_process").fork;
 
         (function forkBlobModule(code, signal) {
-          const mod = fork(env.blobModulePath, process.argv);
+          const mod = fork(Environment.blobModulePath, process.argv);
           mod.on("exit", forkBlobModule);
         })();
         (function forkQueueModule(code, signal) {
-          const mod = fork(env.queueModulePath, process.argv);
+          const mod = fork(Environment.queueModulePath, process.argv);
           mod.on("exit", forkQueueModule);
         })();
         (function forkTableModule(code, signal) {
-          const mod = fork(env.tableModulePath, process.argv);
+          const mod = fork(Environment.tableModulePath, process.argv);
           mod.on("exit", forkTableModule);
         })();
       });

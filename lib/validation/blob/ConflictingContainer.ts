@@ -5,7 +5,7 @@ import ErrorCodes from "../../core/ErrorCodes";
  * Source of truth is the in-memory DB, not the filesystem.
  */
 class ConflictingContainer {
-  public validate(containerProxy) {
+  public validate(request, containerProxy, moduleOptions) {
     if (containerProxy !== undefined) {
       throw new AzuriteError(ErrorCodes.ContainerAlreadyExists);
     }

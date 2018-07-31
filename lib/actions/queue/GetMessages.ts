@@ -8,10 +8,8 @@ import {
 
 class GetMessages {
   public process(request, res) {
-    const queue = QueueManager.getQueueAndMessage({
-      queueName: request.queueName
-    }).queue;
-    const messages = queue.gett({
+    const { queue } = QueueManager.getQueueAndMessage(request.queueName);
+    const messages = queue.get({
       numOfMessages: request.numOfMessages,
       visibilityTimeout: request.visibilityTimeout
     });

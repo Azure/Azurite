@@ -4,9 +4,7 @@ import AzuriteQueueResponse from "./../../model/queue/AzuriteQueueResponse";
 
 class UpdateMessage {
   public process(request, res) {
-    const queue = QueueManager.getQueueAndMessage({
-      queueName: request.queueName
-    }).queue;
+    const { queue } = QueueManager.getQueueAndMessage(request.queueName);
     const message = queue.update({
       messageId: request.messageId,
       msg: request.payload.MessageText,

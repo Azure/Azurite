@@ -1,5 +1,5 @@
 import { Operations } from "../../core/Constants";
-import env from "../../core/env";
+import Environment from "../../core/env";
 import AzuriteQueueRequest from "../../model/queue/AzuriteQueueRequest";
 import { parseSignedIdentifiers } from "../../xml/Serializers";
 
@@ -10,7 +10,7 @@ import { parseSignedIdentifiers } from "../../xml/Serializers";
  */
 export default app => {
   app
-    .route(`/${env.emulatedStorageAccountName}/:queue/`)
+    .route(`/${Environment.emulatedStorageAccountName}/:queue/`)
     .get((req, res, next) => {
       if (req.query.comp === "metadata") {
         req.azuriteOperation = Operations.Queue.GET_QUEUE_METADATA;

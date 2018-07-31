@@ -2,14 +2,14 @@ import * as  BbPromise from "bluebird";
 import * as crypto from "crypto";
 import AzuriteError from "../../core/AzuriteError";
 import { Keys } from "../../core/Constants";
-import env from "../../core/env";
+import Environment from "../../core/env";
 import ErrorCodes from "../../core/ErrorCodes";
 
 export default (req, res, next) => {
   BbPromise.try(() => {
     let sig;
     const request = req.azuriteRequest;
-    if (env.accountAuth) {
+    if (Environment.accountAuth) {
       if (req.headers.authorization === undefined) {
         throw new AzuriteError(ErrorCodes.AuthenticationFailed);
       }

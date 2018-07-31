@@ -5,10 +5,7 @@ import AzuriteQueueResponse from "./../../model/queue/AzuriteQueueResponse";
 
 class GetQueueAcl {
   public process(request, res) {
-    const queue = QueueManager.getQueueAndMessage({
-      queueName: request.queueName
-    }).queue;
-
+    const { queue } = QueueManager.getQueueAndMessage(request.queueName);
     const signedIdentifiers = queue.getAcl();
     let xml = js2xmlparser.parse("SignedIdentifiers", signedIdentifiers || {});
     xml = xml.replace(

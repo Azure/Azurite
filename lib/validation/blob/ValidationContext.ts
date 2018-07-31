@@ -29,18 +29,18 @@ class ValidationContext {
     if (skip) {
       return this;
     }
-    valModule.validate({
-      blobProxy: moduleOptions
-        ? moduleOptions.blobProxy || this.blobProxy
-        : this.blobProxy,
-      containerProxy: moduleOptions
-        ? moduleOptions.containerProxy || this.containerProxy
-        : this.containerProxy,
-      moduleOptions,
-      request: moduleOptions
-        ? moduleOptions.request || this.request
-        : this.request
-    });
+    const blobProxy = moduleOptions
+      ? moduleOptions.blobProxy || this.blobProxy
+      : this.blobProxy;
+    const containerProxy = moduleOptions
+      ? moduleOptions.containerProxy || this.containerProxy
+      : this.containerProxy;
+
+    const request = moduleOptions
+      ? moduleOptions.request || this.request
+      : this.request;
+
+    valModule.validate(request, blobProxy || containerProxy, moduleOptions);
     return this;
   }
 }

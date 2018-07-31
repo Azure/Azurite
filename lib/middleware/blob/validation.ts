@@ -34,6 +34,7 @@ import OriginHeader from "../../validation/blob/OriginHeader";
 import PageAlignment from "../../validation/blob/PageAlignment";
 import PageBlobHeaderSanity from "../../validation/blob/PageBlobHeaderSanity";
 import PutBlobHeaders from "../../validation/blob/PutBlobHeaders";
+import Range from "../../validation/blob/Range";
 import ServiceProperties from "../../validation/blob/ServiceProperties";
 import ServiceSignature from "../../validation/blob/ServiceSignature";
 import SupportedBlobType from "../../validation/blob/SupportedBlobType";

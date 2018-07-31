@@ -1,44 +1,48 @@
-import FSStorage from "@lokidb/fs-storage";
-import * as Loki from "@lokidb/loki";
-import * as  BbPromise from "bluebird";
-import * as fs from "fs-extra";
+import { FSStorage } from "@lokidb/fs-storage";
+import { Loki } from "@lokidb/loki";
+import * as BbPromise from "bluebird";
 import { asyncIt } from "../../lib/asyncIt";
 import AzuriteTableResponse from "../../model/table/AzuriteTableResponse";
 import EntityGenerator from "../../model/table/EntityGenerator";
 import EntityProxy from "../../model/table/EntityProxy";
 import TableProxy from "../../model/table/TableProxy";
 import { TableStorageTables } from "../Constants";
-import env from "../env";
+import Environment from "../env";
 
 class TableStorageManager {
-  public db: any;
+  public db: Loki;
+  constructor() {
+    this.db = new Loki(Environment.azuriteDBPathTable, {
+      autosave: true,
+      autosaveinterval: 5000
+    });
+  }
   public init() {
-    this.db = BbPromise.promisifyAll(
-      
+    const adapter = { adapter: new FSStorage() };
+    return (
+      this.db
+        .initializePersistence(adapter)
+        // .then(() => {
+        //   return this.db.loadDatabase();
+        // })
+        .then(() => {
+          this.db.addCollection(TableStorageTables.Tables);
+          return this.db.saveDatabase();
+        })
+        .catch(e => {
+          if (e.code === "ENOENT") {
+            // No DB has been persisted / initialized yet.
+            this.db.addCollection(TableStorageTables.Tables);
+            return this.db.saveDatabase();
+          }
+          // This should never happen!
+          // tslint:disable-next-line:no-console
+          console.error(
+            `Failed to initialize database at "${Environment.azuriteDBPathTable}"`
+          );
+          throw e;
+        })
     );
-    return asyncIt(cb => fs.stat(env.azuriteDBPathTable, cb))
-      .then(stat => {
-        return this.db.loadDatabaseAsync({});
-      })
-      .then(data => {
-        if (!this.db.getCollection(TableStorageTables.Tables)) {
-          this.db.addCollection(TableStorageTables.Tables);
-        }
-        return this.db.saveDatabaseAsync();
-      })
-      .catch(e => {
-        if (e.code === "ENOENT") {
-          // No DB has been persisted / initialized yet.
-          this.db.addCollection(TableStorageTables.Tables);
-          return this.db.saveDatabaseAsync();
-        }
-        // This should never happen!
-        // tslint:disable-next-line:no-console
-        console.error(
-          `Failed to initialize database at "${env.azuriteDBPathTable}"`
-        );
-        throw e;
-      });
   }
 
   public createTable(request) {

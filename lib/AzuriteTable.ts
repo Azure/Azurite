@@ -4,7 +4,7 @@ import * as express from "express";
 import { Server } from "http";
 import * as morgan from "morgan";
 import { tableStorageStatus } from "./core/cli";
-import env from "./core/env";
+import Environment from "./core/env";
 import tableStorageManager from "./core/table/TableStorageManager";
 import Actions from "./middleware/queue/actions";
 import Validation from "./middleware/queue/validation";
@@ -30,14 +30,13 @@ class AzuriteTable {
   }
 
   public init(options) {
-    return env
-      .init(options)
+    return Environment.init(options)
       .then(() => {
         return tableStorageManager.init();
       })
       .then(() => {
         const app = express();
-        if (!env.silent) {
+        if (!Environment.silent) {
           app.use(morgan("dev"));
         }
         app.use(
@@ -55,8 +54,8 @@ class AzuriteTable {
         TableRoute(app);
         app.use(Validation);
         app.use(Actions);
-        this.server = app.listen(env.tableStoragePort, () => {
-          if (!env.silent) {
+        this.server = app.listen(Environment.tableStoragePort, () => {
+          if (!Environment.silent) {
             tableStorageStatus();
           }
         });

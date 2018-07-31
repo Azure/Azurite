@@ -1,5 +1,5 @@
 import { Operations, StorageEntityType } from "../../core/Constants";
-import env from "../../core/env";
+import Environment from "../../core/env";
 import AzuriteRequest from "../../model/blob/AzuriteRequest";
 import BlobRequest from "./../../model/blob/AzuriteBlobRequest";
 import { deserializeBlockList } from "./../../xml/Serializers";
@@ -10,7 +10,7 @@ import { deserializeBlockList } from "./../../xml/Serializers";
  */
 export default app => {
   app
-    .route(`/${env.emulatedStorageAccountName}/:container/*?`)
+    .route(`/${Environment.emulatedStorageAccountName}/:container/*?`)
     .get((req, res, next) => {
       if (req.query.comp === "blocklist") {
         req.azuriteOperation = Operations.Blob.GET_BLOCK_LIST;
@@ -21,12 +21,12 @@ export default app => {
       } else {
         req.azuriteOperation = Operations.Blob.GET_BLOB;
       }
-      req.azuriteRequest = new BlobRequest({ req });
+      req.azuriteRequest = new BlobRequest(req);
       next();
     })
     .head((req, res, next) => {
       req.azuriteOperation = Operations.Blob.GET_BLOB_PROPERTIES;
-      req.azuriteRequest = new BlobRequest({ req });
+      req.azuriteRequest = new BlobRequest(req);
       next();
     })
     .put((req, res, next) => {
@@ -66,20 +66,17 @@ export default app => {
       } else {
         req.azuriteOperation = Operations.Blob.PUT_BLOB;
       }
-      req.azuriteRequest = new BlobRequest({
-        req,
-        entityType
-      });
+      req.azuriteRequest = new BlobRequest(req, entityType);
       next();
     })
     .delete((req, res, next) => {
       req.azuriteOperation = Operations.Blob.DELETE_BLOB;
-      req.azuriteRequest = new BlobRequest({ req });
+      req.azuriteRequest = new BlobRequest(req);
       next();
     })
     .options((req, res, next) => {
       req.azuriteOperation = Operations.Account.PREFLIGHT_BLOB_REQUEST;
-      req.azuriteRequest = new AzuriteRequest({ req });
+      req.azuriteRequest = new AzuriteRequest(req);
       next();
     });
 };

@@ -1,6 +1,9 @@
 import * as js2xmlparser from "js2xmlparser";
 import storageManager from "./../../core/blob/StorageManager";
-import model from "./../../xml/blob/ContainerListXmlModel";
+import {
+  Container,
+  ContainerList
+} from "./../../xml/blob/ContainerListXmlModel";
 
 class ListContainers {
   public process(request, res) {
@@ -35,13 +38,13 @@ class ListContainers {
   }
 
   public _transformContainerList(
-    containers,
+    entities,
     includeMetadata,
     prefix,
     maxresults,
     marker
   ) {
-    const xmlContainerListModel = new model.ContainerList();
+    const xmlContainerListModel = new ContainerList();
     prefix === ""
       ? delete xmlContainerListModel.Prefix
       : (xmlContainerListModel.Prefix = prefix);
@@ -53,32 +56,35 @@ class ListContainers {
       : (xmlContainerListModel.Marker = marker);
     // Fixme: We do not support markers yet
     delete xmlContainerListModel.NextMarker;
-    for (const container of containers) {
-      if (container.name === "$logs") {
+    for (const entity of entities) {
+      if (entity.container.name === "$logs") {
         continue;
       }
-      const modelContainer = new model.Container(container.name);
+      const modelContainer = new Container(entity.container.name);
       xmlContainerListModel.Containers.Container.push(modelContainer);
-      if (!includeMetadata || Object.keys(container.metaProps).length === 0) {
+      if (
+        !includeMetadata ||
+        Object.keys(entity.container.metaProps).length === 0
+      ) {
         delete modelContainer.Metadata;
       } else {
-        modelContainer.Metadata = container.metaProps;
+        modelContainer.Metadata = entity.container.metaProps;
       }
       modelContainer.Properties["Last-Modified"] = new Date(
-        container.meta.updated || container.meta.created
+        entity.meta.updated || entity.meta.created
       ).toUTCString();
-      modelContainer.Properties.ETag = container.etag;
+      modelContainer.Properties.ETag = entity.container.etag;
       modelContainer.Properties.LeaseStatus = [
         "available",
         "broken",
         "expired"
-      ].includes(container.leaseState)
+      ].includes(entity.container.leaseState)
         ? "unlocked"
         : "locked";
-      modelContainer.Properties.LeaseState = container.leaseState;
-      if (container.leaseState === "leased") {
+      modelContainer.Properties.LeaseState = entity.container.leaseState;
+      if (entity.container.leaseState === "leased") {
         modelContainer.Properties.LeaseDuration =
-          container.leaseDuration === -1 ? "infinite" : "fixed";
+          entity.container.leaseDuration === -1 ? "infinite" : "fixed";
       } else {
         delete modelContainer.Properties.LeaseDuration;
       }
