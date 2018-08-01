@@ -1,6 +1,9 @@
 /** @format */
 
-"use strict";
+import chai from 'chai';
+import SnapshotManager from './../lib/core/blob/SnapshotTimeManager';
+
+const expect = chai.expect;
 
 const chai = require("chai"),
   expect = chai.expect,

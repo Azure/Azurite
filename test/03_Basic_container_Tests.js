@@ -1,4 +1,13 @@
-/** @format */
+import chai from 'chai';
+import chaiHttp from 'chai-http';
+import Azurite from './../lib/AzuriteBlob';
+import rp from 'request-promise';
+import path from 'path';
+import * as BbPromise from 'bluebird';
+import fsextra from 'fs-extra';
+
+const fs = BbPromise.promisifyAll(fsextra);
+const should = chai.should();
 
 const chai = require("chai"),
   chaiHttp = require("chai-http"),

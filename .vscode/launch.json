@@ -36,6 +36,9 @@
             ],
             "skipFiles": [
                 "node_modules/**/*.js"
+            ],
+            "runtimeArgs": [
+                "-r", "ts-node/register"
             ]
         },
         {
@@ -43,7 +46,7 @@
             "request": "launch",
             "protocol": "auto",
             "name": "Launch Blob only",
-            "program": "${workspaceRoot}/bin/blob",
+            "program": "${workspaceRoot}/bin/blob.js",
             "cwd": "${workspaceRoot}",
             "args": [
                 "-l",
@@ -51,6 +54,9 @@
             ],
             "skipFiles": [
                 "node_modules/**/*.js"
+            ],
+            "runtimeArgs": [
+                "-r", "ts-node/register"
             ]
         },
         {
@@ -58,7 +64,7 @@
             "request": "launch",
             "protocol": "auto",
             "name": "Launch Queue only",
-            "program": "${workspaceRoot}/bin/queue",
+            "program": "${workspaceRoot}/bin/queue.js",
             "cwd": "${workspaceRoot}",
             "args": [
                 "-l",
@@ -66,6 +72,9 @@
             ],
             "skipFiles": [
                 "node_modules/**/*.js"
+            ],
+            "runtimeArgs": [
+                "-r", "ts-node/register"
             ]
         },
         {
@@ -73,7 +82,7 @@
             "request": "launch",
             "protocol": "auto",
             "name": "Launch Table only",
-            "program": "${workspaceRoot}/bin/table",
+            "program": "${workspaceRoot}/bin/table.js",
             "cwd": "${workspaceRoot}",
             "args": [
                 "-l",
@@ -81,6 +90,9 @@
             ],
             "skipFiles": [
                 "node_modules/**/*.js"
+            ],
+            "runtimeArgs": [
+                "-r", "ts-node/register"
             ]
         },
         {
