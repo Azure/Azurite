@@ -1,13 +1,14 @@
-const chai = require('chai'),
-    chaiHttp = require('chai-http'),
-    should = chai.should(),
-    expect = chai.expect,
-    BbPromise = require('bluebird'),
-    fs = BbPromise.promisifyAll(require("fs-extra")),
-    Azurite = require('../lib/AzuriteBlob'),
-    rp = require('request-promise'),
-    path = require('path'),
-    xml2js = require('xml2js');
+import chai from 'chai';
+import chaiHttp from 'chai-http';
+import Azurite from './../lib/AzuriteBlob';
+import rp from 'request-promise';
+import path from 'path';
+import xml2js from 'xml2js';
+import * as BbPromise from 'bluebird';
+import fsextra from 'fs-extra';
+
+const fs = BbPromise.promisifyAll(fsextra);
+const should = chai.should(), expect = chai.expect;
 
 chai.use(chaiHttp);
 

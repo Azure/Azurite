@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 'use strict';
-
-const BbPromise = require('bluebird');
+import minimist from 'minimist';
+import AzuriteQueue from '../lib/AzuriteQueue';
+import * as BbPromise from 'bluebird';
 
 process.on('unhandledRejection', (e) => {
 	console.error('**PANIC** Something unexpected happened! Queue Storage Emulator may be in an inconsistent state!');
@@ -13,9 +14,8 @@ process.noDeprecation = true;
 (() => BbPromise.resolve().then(() => {
 	// requiring here so that if anything went wrong,
 	// during require, it will be caught.
-	const argv = require('minimist')(process.argv.slice(2));
-	const A = require('../lib/AzuriteQueue'),
-		azurite = new A();
+	const argv = minimist(process.argv.slice(2));
+	const azurite = new AzuriteQueue();
 	azurite.init(argv);
 }).catch(e => {
 	process.exitCode = 1;

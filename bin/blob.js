@@ -2,7 +2,9 @@
 
 'use strict';
 
-const BbPromise = require('bluebird');
+import minimist from 'minimist';
+import AzuriteBlob from '../lib/AzuriteBlob';
+import * as BbPromise from 'bluebird';
 
 process.on('unhandledRejection', (e) => {
 	console.error('**PANIC** Something unexpected happened! Blob Storage Emulator may be in an inconsistent state!');
@@ -13,9 +15,8 @@ process.noDeprecation = true;
 (() => BbPromise.resolve().then(() => {
 	// requiring here so that if anything went wrong,
 	// during require, it will be caught.
-	const argv = require('minimist')(process.argv.slice(2));
-	const A = require('../lib/AzuriteBlob'),
-		azurite = new A();
+	const argv = minimist(process.argv.slice(2));
+	const azurite = new AzuriteBlob();
 	azurite.init(argv);
 }).catch(e => {
 	process.exitCode = 1;
