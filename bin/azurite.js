@@ -12,14 +12,12 @@ process.on("unhandledRejection", (e) => {
 });
 process.noDeprecation = true;
 
-(() =>
-  BbPromise.resolve()
-    .then(() => {
-      // requiring here so that if anything went wrong,
-      // during require, it will be caught.
-      const argv = require("minimist")(process.argv.slice(2)),
-        env = require("./../lib/core/env"),
-        cli = require("./../lib/core/cli");
+(() => BbPromise.resolve().then(() => {
+    // requiring here so that if anything went wrong,
+    // during require, it will be caught.
+    const argv = require('minimist')(process.argv.slice(2)),
+        env = require('../lib/core/env'),
+        cli = require('../lib/core/cli');
 
       return env
         .init(argv)
