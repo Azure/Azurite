@@ -7,6 +7,7 @@ RUN npm install
 
 COPY bin /opt/azurite/bin
 COPY lib /opt/azurite/lib
+COPY test /opt/azurite/test
 
 VOLUME /opt/azurite/folder
 
