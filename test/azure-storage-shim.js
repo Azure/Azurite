@@ -18,7 +18,7 @@ function requireTestDir(dir) {
 describe('azure-storage-node tests', () => {
     const azurite = new Azurite();
     before(() => {
-        const location = path.join(process.env.AZURITE_LOCATION, 'BLOB');
+        const location = path.join(process.env.AZURITE_LOCATION, 'AZURE-STORAGE');
         return azurite.init({ l: location, silent: 'true', overwrite: 'true' });
     });
 
