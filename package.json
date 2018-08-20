@@ -4,7 +4,7 @@
   "description": "A lightweight server clone of Azure Blob, Queue, and Table Storage that simulates most of the commands supported by it with minimal dependencies.",
   "scripts": {
     "pretest": "npm run clean",
-    "test": "env-cmd ./test/.env mocha --timeout 50000",
+    "test": "env-cmd ./test/.env mocha",
     "start": "node bin/azurite -l azurite-testdrive",
     "blob": "node bin/blob -l azurite-testdrive",
     "queue": "node bin/queue",

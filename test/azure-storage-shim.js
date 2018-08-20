@@ -22,9 +22,9 @@ describe('azure-storage-node tests', () => {
         return azurite.init({ l: location, silent: 'true', overwrite: 'true' });
     });
 
-    requireTestDir('');
-    requireTestDir('/services/blob');
-    requireTestDir('/services/queue');
+    //requireTestDir('');
+    //requireTestDir('/services/blob');
+    require('./azure-storage-node/test/services/blob/blobservice-tests');
 
     after(() => {
         return azurite.close();
