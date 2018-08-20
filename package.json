@@ -5,6 +5,7 @@
   "scripts": {
     "pretest": "npm run clean",
     "test": "env-cmd ./test/.env mocha",
+    "externaltests" : "env-cmd ./externaltest/.env mocha",
     "start": "node bin/azurite -l azurite-testdrive",
     "blob": "node bin/blob -l azurite-testdrive",
     "queue": "node bin/queue",
