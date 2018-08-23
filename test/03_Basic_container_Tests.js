@@ -3,7 +3,7 @@ const chai = require('chai'),
     should = chai.should(),
     BbPromise = require('bluebird'),
     fs = BbPromise.promisifyAll(require("fs-extra")),
-    Azurite = require('./../lib/AzuriteBlob'),
+    Azurite = require('../lib/AzuriteBlob'),
     rp = require('request-promise'),
     path = require('path');
 
@@ -13,12 +13,13 @@ const containerName = 'containertestcontainer';
 const propContainer = 'propTestcontainer';
 const url = 'http://localhost:10000';
 const urlPath = '/devstoreaccount1';
+const testPath = new Date().toISOString().replace(/:/g, "").replace(/\./g, "") + "_CONTAINER_TESTS";
 
 describe('Container HTTP API', () => {
     const azurite = new Azurite();
 
     before(() => {
-        const location = path.join('.', process.env.AZURITE_LOCATION, 'CONTAINER');
+        const location = path.join('.', process.env.AZURITE_LOCATION, testPath);
         return azurite.init({ l: location, silent: 'true', overwrite: 'true' })
             .then(() => {
                 // Make sure there is an existing container 'metadatatestcontainer'
