@@ -41,7 +41,6 @@ describe('Table HTTP Api tests', () => {
     };
 
     var entity1Created = false;
-    var entity2Created = false;
 
     // set us up the tests!
     const testDBLocation = path.join(process.env.AZURITE_LOCATION, tableTestPath);
@@ -56,7 +55,6 @@ describe('Table HTTP Api tests', () => {
                         entity1Created = true;
                         tableService.insertEntity(tableName, tableEntity2, function (error, result, response) {
                             if (error === null) {
-                                entity2Created = true;
                             }
                         });
                     }
@@ -87,21 +85,28 @@ describe('Table HTTP Api tests', () => {
             // to error. 
             if (entity1Created === false) {
                 var getE1 = setTimeout(() => {
-                    // I create a new tableService, as the oringal above was erroring out, with a socket close if I reuse it
-                    let retrievalTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
-                    retrievalTableService.retrieveEntity(tableName, partitionKeyForTest, rowKeyForTestEntity1, function (error, result, response) {
-                        expect(error).to.equal(null);
-                        expect(result).to.not.equal(undefined);
-                        expect(result).to.not.equal(null);
-                        expect(result.PartitionKey._).to.equal(partitionKeyForTest);
-                        expect(result.RowKey._).to.equal(rowKeyForTestEntity1);
-                        expect(result.description._).to.equal(tableEntity1.description._);
-                        expect(result.dueDate._.toISOString().split('.')[0] + "Z").to.equal(new Date(Date.UTC(2018, 12, 25)).toISOString().split('.')[0] + "Z");
-                        done();
-                    });
+                    singleEntityTest(done);
                 }, 500);
             }
+            else {
+                singleEntityTest(done);
+            }
         });
+
+        function singleEntityTest(cb) {
+            // I create a new tableService, as the oringal above was erroring out, with a socket close if I reuse it
+            let retrievalTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
+            retrievalTableService.retrieveEntity(tableName, partitionKeyForTest, rowKeyForTestEntity1, function (error, result, response) {
+                expect(error).to.equal(null);
+                expect(result).to.not.equal(undefined);
+                expect(result).to.not.equal(null);
+                expect(result.PartitionKey._).to.equal(partitionKeyForTest);
+                expect(result.RowKey._).to.equal(rowKeyForTestEntity1);
+                expect(result.description._).to.equal(tableEntity1.description._);
+                expect(result.dueDate._.toISOString().split('.')[0] + "Z").to.equal(new Date(Date.UTC(2018, 12, 25)).toISOString().split('.')[0] + "Z");
+                cb();
+            });
+        }
 
         it('should retrieve all Entities', (done) => {
             const query = new azureStorage.TableQuery();
