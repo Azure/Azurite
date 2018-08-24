@@ -1,5 +1,6 @@
 # 2.0  
 ## 2.6.7  
+- updated testing using azure-storage-node tests in submodule  
 - fixes [#47](https://github.com/Azure/Azurite/issues/47) - Copied blob has incorrect content type  
 - merged PR [#32](https://github.com/Azure/Azurite/pull/32) -> thanks to @trekawek   
 - merged PR [#30](https://github.com/Azure/Azurite/pull/30) -> thanks to @julienr    
