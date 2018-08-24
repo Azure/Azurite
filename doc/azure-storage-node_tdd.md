@@ -5,7 +5,7 @@ We have added the Azure Storage Node package as a submodule under ./externaltest
 To run these tests, you need to open your git console and run the following command in your Azurite repo:
 
 ```shell
-git submodule update
+git submodule update --init
 ```
 
 Once the submodule has been cloned, you need to change to the **./externaltests/azure-storage-node** folder and run 
