@@ -13,6 +13,7 @@ chai.use(chaiHttp);
 
 const containerName = 'testcontainer';
 const blockBlobName = 'testblockblob';
+const blockBlobCopiedName = 'testblockblob_copied';
 const appendBlobName = 'testappendblob';
 const pageBlobName = 'testpageblob';
 const url = `http://localhost:10000`;
@@ -499,6 +500,53 @@ describe('Blob HTTP API', () => {
                     res.should.have.header('Content-Language', 'ContentLanguage');
                     res.should.have.header('Cache-Control', 'true');
                     res.should.have.header('x-ms-blob-type', 'BlockBlob');
+                });
+        });
+    });
+
+    describe('Copy Blob', () => {
+        it('should copy a blob with same properties with source blob', () => {
+            const optionsProperties = {
+                method: 'PUT',
+                headers: {
+                    'x-ms-blob-content-type': 'Content-Type',
+                    'x-ms-blob-content-encoding': 'Content-Encoding',
+                    'x-ms-blob-content-language': 'Content-Language',
+                    'x-ms-blob-cache-control': 'true',
+                    'x-ms-blob-content-md5': 'Content-MD5',
+                    'x-ms-blob-content-disposition': 'Content-Disposition',
+                },
+                qs: {
+                    'comp': 'properties'
+                },
+                uri: `http://localhost:10000/devstoreaccount1/${containerName}/${blockBlobName}`
+            }
+
+            const optionsCopyBlob = {
+                method: 'PUT',
+                headers: {
+                    'x-ms-copy-source': `http://localhost:10000/devstoreaccount1/${containerName}/${blockBlobName}`
+                },
+                uri: `http://localhost:10000/devstoreaccount1/${containerName}/${blockBlobCopiedName}`
+            }
+
+            return rp(optionsProperties)
+                .then(() => {
+                    return rp(optionsCopyBlob);
+                })
+                .then(() => {
+                    return chai.request(url)
+                        .head(`${urlPath}/${containerName}/${blockBlobCopiedName}`)
+                        .then((res) => {
+                            res.should.have.status(200);
+                            res.should.have.header('Content-Type', 'Content-Type');
+                            res.should.have.header('Content-Encoding', 'Content-Encoding');
+                            res.should.have.header('Content-MD5', 'Content-MD5');
+                            res.should.have.header('Content-Language', 'Content-Language');
+                            res.should.have.header('Cache-Control', 'true');
+                            res.should.have.header('Content-Disposition', 'Content-Disposition');
+                            res.should.have.header('x-ms-blob-type', 'BlockBlob');
+                        });
                 });
         });
     });
