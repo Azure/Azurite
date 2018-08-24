@@ -13,7 +13,9 @@ After installation you can install Azurite simply with `npm` which is Node.js pa
 
 `$ npm install -g azurite`
 
-Then simply start it with the following command: 
+## Running Azurite
+
+Simply start it with the following command: 
 
 `$ azurite -l path/to/localfolder`
 
@@ -31,6 +33,7 @@ For Queue Storage Emulator only:
 For Table Storage Emulator only:
 
 `$ azurite-table -l path/to/azurite/workspace`
+
 
 ## Nuget
 Azurite is also available as Nuget package at [https://www.nuget.org/packages/Azurite/](https://www.nuget.org/packages/Azurite/).
@@ -89,6 +92,31 @@ $ az storage container create --name 'test' --connection-string 'DefaultEndpoint
   "created": true
 }
 ```
+
+## Current List of Command Line Options
+
+```
+-a
+``` 
+Enables sharedkey authentication check
+```
+-l c:\tmp\emulatorPath
+--location c:\tmp\emulatorPath
+```
+Allows the specification of a path
+```
+--blobPort 101000
+```
+Sets the TCP Port for blob storage to the value following the argument.
+```
+--queuePort 10001
+```
+Sets the TCP Port for queue storage to the value following the argument.
+```
+--tablePort 10002
+```
+Sets the TCP Port for table storage to the value following the argument.
+
 
 
 # Contributions

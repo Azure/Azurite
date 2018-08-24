@@ -4,7 +4,7 @@ const chai = require('chai'),
     expect = chai.expect,
     BbPromise = require('bluebird'),
     fs = BbPromise.promisifyAll(require("fs-extra")),
-    Azurite = require('./../lib/AzuriteBlob'),
+    Azurite = require('../lib/AzuriteBlob'),
     rp = require('request-promise'),
     path = require('path'),
     xml2js = require('xml2js');
@@ -18,7 +18,7 @@ const appendBlobName = 'testappendblob';
 const pageBlobName = 'testpageblob';
 const url = `http://localhost:10000`;
 const urlPath = `/devstoreaccount1`;
-
+const testPath = new Date().toISOString().replace(/:/g, "").replace(/\./g, "") + "_BLOB_TESTS";
 
 function createBlob(containerNamex, blobNamex, payload, blobType) {
     // Make sure there is an existing container 'testcontainer'
@@ -47,7 +47,7 @@ describe('Blob HTTP API', () => {
     const azurite = new Azurite();
 
     before(() => {
-        const location = path.join(process.env.AZURITE_LOCATION, 'BLOB');
+        const location = path.join(process.env.AZURITE_LOCATION, testPath);
         return azurite.init({ l: location, silent: 'true', overwrite: 'true' })
             .then(() => {
                 // Make sure there is an existing container 'testcontainer'
