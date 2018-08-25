@@ -5,9 +5,9 @@
  * this is automatically handled via env-cmd in the package.json for npm run test
  */
 
-const fs = require('fs'),
-    path = require('path'),
-    Azurite = require('./../lib/AzuriteBlob');
+import fs from 'fs';
+import path from 'path';
+import  Azurite from ('./../lib/AzuriteBlob');
 
 function requireTestDir(dir) {
     fs.readdirSync('./externaltests/azure-storage-node/test' + dir).map((file) => {
