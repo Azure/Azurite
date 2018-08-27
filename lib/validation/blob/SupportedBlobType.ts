@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 import { StorageEntityType as EntityType } from './../../core/Constants';
 
 class SupportedBlobType {
@@ -12,7 +12,7 @@ class SupportedBlobType {
         if (request.entityType !== EntityType.AppendBlob &&
             request.entityType !== EntityType.BlockBlob &&
             request.entityType !== EntityType.PageBlob) {
-            throw new AError(ErrorCodes.UnsupportedBlobType);
+            throw ErrorCodes.UnsupportedBlobType;
         }
     }
 }

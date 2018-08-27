@@ -5,6 +5,9 @@ import BaseProxy from './BaseProxy';
 import InternalAzuriteError from './../../core/InternalAzuriteError';
 
 class EntityProxy extends BaseProxy {
+    partitionKey: any;
+    rowKey: any;
+    etag: string;
     constructor(entity) {
         super(entity);
         this.partitionKey = entity.partitionKey;
@@ -19,7 +22,7 @@ class EntityProxy extends BaseProxy {
      * @returns 
      * @memberof EntityProxy
      */
-    odata(mode) {
+    odata(mode: any) {
         const odata = super.odata(mode);
         if (mode === ODataMode.FULL) {
             odata['odata.etag'] = this._.odata.etag;
@@ -35,7 +38,7 @@ class EntityProxy extends BaseProxy {
      * @returns 
      * @memberof EntityProxy
      */
-    attribs(mode) {
+    attribs(mode: any) {
         // this is described here:
         // https://docs.microsoft.com/en-us/rest/api/storageservices/payload-format-for-table-service-operations
         let filteredAttribs = {};

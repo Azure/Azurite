@@ -3,13 +3,13 @@
 'use strict';
 import minimist from 'minimist';
 import AzuriteQueue from '../lib/AzuriteQueue';
-import * as BbPromise from 'bluebird';
+import BbPromise from 'bluebird';
 
 process.on('unhandledRejection', (e) => {
 	console.error('**PANIC** Something unexpected happened! Queue Storage Emulator may be in an inconsistent state!');
 	console.error(e);
 });
-process.noDeprecation = true;
+// process.noDeprecation = true;
 
 (() => BbPromise.resolve().then(() => {
 	// requiring here so that if anything went wrong,

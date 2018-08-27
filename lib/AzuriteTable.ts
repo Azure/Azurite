@@ -6,13 +6,14 @@ import bodyParser from 'body-parser';
 import morgan from 'morgan';
 import tableStorageManager from './core/table/TableStorageManager';
 import * as cli from './core/cli';
-import * as BbPromise from 'bluebird';
+import BbPromise from 'bluebird';
 import TableRoute from './routes/table/TableRoute';
 import EntityRoute from './routes/table/EntityRoute';
 import validation from './middleware/table/validation';
 import actions from './middleware/table/actions';
 
 class AzuriteTable {
+    server: any;
     constructor() {
         this.server;
         // Support for PM2 Graceful Shutdown on Windows and Linux/OSX

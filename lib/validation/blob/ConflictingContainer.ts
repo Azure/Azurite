@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /*
  * Checks whether the container that is to be created already exists.
@@ -13,7 +13,7 @@ class ConflictingContainer {
 
     validate({ containerProxy = undefined }) {
         if (containerProxy !== undefined) {
-            throw new AError(ErrorCodes.ContainerAlreadyExists);
+            throw ErrorCodes.ContainerAlreadyExists;
         }
     }
 }

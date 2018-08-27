@@ -1,8 +1,8 @@
 'use strict';
 
 import BbPromise from 'bluebird';
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 import N from './../../core/HttpHeaderNames';
 import { Operations } from './../../core/Constants';
 import sm from './../../core/blob/StorageManager';
@@ -73,7 +73,7 @@ export default (req, res, next) => {
                         }
                     }
                     if (!valid && req.azuriteOperation === Operations.Account.PREFLIGHT_BLOB_REQUEST) {
-                        throw new AError(ErrorCodes.CorsForbidden);
+                        throw ErrorCodes.CorsForbidden;
                     }
                 }
                 next();

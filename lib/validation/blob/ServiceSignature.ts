@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /**
  * Checks whether the operation is authorized by the service signature (if existing). 
@@ -19,7 +19,7 @@ class ServiceSignature {
         }
 
         if (!request.auth.sasValid) {
-            throw new AError(ErrorCodes.AuthenticationFailed);
+            throw ErrorCodes.AuthenticationFailed;
         }
 
         const operation = moduleOptions.sasOperation,
@@ -37,7 +37,7 @@ class ServiceSignature {
                 })[0]
                 : undefined;
             if (si === undefined) {
-                throw new AError(ErrorCodes.AuthenticationFailed);
+                throw ErrorCodes.AuthenticationFailed;
             }
             start = Date.parse(si.AccessPolicy.Start);
             expiry = Date.parse(si.AccessPolicy.Expiry);
@@ -50,12 +50,12 @@ class ServiceSignature {
 
         // Time Validation
         if (isNaN(expiry) || request.now < start || request.now > expiry) {
-            throw new AError(ErrorCodes.AuthenticationFailed);
+            throw ErrorCodes.AuthenticationFailed;
         }
 
         // Permission Validation 
         if (!permissions.includes(operation)) {
-            throw new AError(ErrorCodes.AuthorizationPermissionMismatch);
+            throw ErrorCodes.AuthorizationPermissionMismatch;
         }
     }
 }

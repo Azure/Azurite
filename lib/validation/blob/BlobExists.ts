@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /*
  * Checks whether the blob exists.
@@ -13,7 +13,7 @@ class BlobExists {
 
     validate({ blobProxy = undefined }) {
         if (blobProxy === undefined) {
-            throw new AError(ErrorCodes.BlobNotFound);
+            throw ErrorCodes.BlobNotFound;
         }
     }
 }

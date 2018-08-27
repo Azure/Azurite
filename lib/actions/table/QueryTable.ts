@@ -19,7 +19,7 @@ class QueryTable {
     }
 
     _createResponsePayload(payload, accept) {
-        const response = {};
+        const response: any = {};
         if (accept !== ODataMode.NONE) {
             response['odata.metadata'] = `http://127.0.0.1:10002/devstoreaccount1/$metadata#Tables`;
         }

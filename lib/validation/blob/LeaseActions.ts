@@ -1,11 +1,11 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
+import { AzuriteError }from './../../core/AzuriteError';
 import N from './../../core/HttpHeaderNames';
 import { LeaseActions as LeaseAction } from './../../core/Constants';
 import { LeaseStatus } from './../../core/Constants';
 import BlobRequest from './../../model/blob/AzuriteBlobRequest';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /**
  * Checks whether intended lease operation is semantically valid as specified
@@ -23,7 +23,7 @@ class LeaseActions {
             proxy = (request instanceof BlobRequest) ? blobProxy : containerProxy;
 
         if (![LeaseAction.ACQUIRE, LeaseAction.RENEW, LeaseAction.CHANGE, LeaseAction.RELEASE, LeaseAction.BREAK].includes(leaseAction)) {
-            throw new AError(ErrorCodes.InvalidHeaderValue);
+            throw ErrorCodes.InvalidHeaderValue;
         }
 
         proxy.updateLeaseState();
@@ -31,71 +31,71 @@ class LeaseActions {
         switch (proxy.original.leaseState) {
             case LeaseStatus.AVAILABLE:
                 if (leaseAction === LeaseAction.RELEASE) {
-                    throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+                    throw ErrorCodes.LeaseIdMismatchWithLeaseOperation;
                 }
                 if (leaseAction !== LeaseAction.ACQUIRE) {
-                    throw new AError(ErrorCodes.LeaseNotPresentWithLeaseOperation);
+                    throw ErrorCodes.LeaseNotPresentWithLeaseOperation;
                 }
                 break;
             case LeaseStatus.LEASED:
                 if (leaseAction === LeaseAction.ACQUIRE && leaseId !== proxy.original.leaseId) {
-                    throw new AError(ErrorCodes.LeaseAlreadyPresent);
+                    throw ErrorCodes.LeaseAlreadyPresent;
                 }
                 if (leaseAction === LeaseAction.CHANGE) {
                     if (request.httpProps[N.PROPOSED_LEASE_ID] === undefined) {
-                        throw new AError(ErrorCodes.MissingRequiredHeader);
+                        throw ErrorCodes.MissingRequiredHeader;
                     }
                     if (request.httpProps[N.PROPOSED_LEASE_ID] !== proxy.original.leaseId && request.httpProps[N.LEASE_ID] !== proxy.original.leaseId) {
-                        throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+                        throw ErrorCodes.LeaseIdMismatchWithLeaseOperation;
                     }
                 }
                 if ([LeaseAction.RENEW, LeaseAction.RELEASE].includes(leaseAction) &&
                     leaseId !== proxy.original.leaseId) {
-                    throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+                    throw ErrorCodes.LeaseIdMismatchWithLeaseOperation;
                 }
                 break;
             case LeaseStatus.EXPIRED:
                 if (leaseAction === LeaseAction.CHANGE) {
-                    throw new AError(ErrorCodes.LeaseNotPresentWithLeaseOperation);
+                    throw ErrorCodes.LeaseNotPresentWithLeaseOperation;
                     // This is the only validation check specific to Blobs
                 } else if (leaseAction === LeaseAction.RENEW && request instanceof BlobRequest && leaseId === proxy.original.leaseId && proxy.original.leaseETag !== proxy.original.etag) {
-                    throw new AError(ErrorCodes.LeaseNotPresentWithLeaseOperation)
+                    throw ErrorCodes.LeaseNotPresentWithLeaseOperation;
                 }
                 else if ((leaseAction === LeaseAction.RENEW || leaseAction === LeaseAction.RELEASE) &&
                     leaseId !== proxy.original.leaseId) {
-                    throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+                    throw ErrorCodes.LeaseIdMismatchWithLeaseOperation;
                 }
                 break;
             case LeaseStatus.BREAKING:
                 if (leaseId === proxy.original.leaseId) {
                     if (leaseAction === LeaseAction.ACQUIRE) {
-                        throw new AError(ErrorCodes.LeaseIsBreakingAndCannotBeAcquired);
+                        throw ErrorCodes.LeaseIsBreakingAndCannotBeAcquired;
                     }
                     if (leaseAction === LeaseAction.CHANGE) {
-                        throw new AError(ErrorCodes.LeaseIsBreakingAndCannotBeChanged);
+                        throw ErrorCodes.LeaseIsBreakingAndCannotBeChanged;
                     }
                 } else {
                     if (leaseAction === LeaseAction.RELEASE) {
-                        throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+                        throw ErrorCodes.LeaseIdMismatchWithLeaseOperation;
                     }
                     if (leaseAction === LeaseAction.CHANGE) {
-                        throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+                        throw ErrorCodes.LeaseIdMismatchWithLeaseOperation;
                     }
                     if (leaseAction === LeaseAction.ACQUIRE ||
                         leaseAction === LeaseAction.RENEW) {
-                        throw new AError(ErrorCodes.LeaseAlreadyPresent);
+                        throw ErrorCodes.LeaseAlreadyPresent;
                     }
                 }
                 break;
             case LeaseStatus.BROKEN:
                 if (leaseAction === LeaseAction.RENEW) {
-                    throw new AError(ErrorCodes.LeaseIsBrokenAndCannotBeRenewed);
+                    throw ErrorCodes.LeaseIsBrokenAndCannotBeRenewed;
                 }
                 if (leaseAction === LeaseAction.CHANGE) {
-                    throw new AError(ErrorCodes.LeaseNotPresentWithLeaseOperation);
+                    throw ErrorCodes.LeaseNotPresentWithLeaseOperation;
                 }
                 if (leaseAction === LeaseAction.RELEASE && leaseId !== proxy.original.leaseId) {
-                    throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+                    throw ErrorCodes.LeaseIdMismatchWithLeaseOperation;
                 }
                 break;
         }

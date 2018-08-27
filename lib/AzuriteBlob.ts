@@ -17,6 +17,7 @@ import validation from './middleware/blob/validation';
 import actions from './middleware/blob/actions';
 
 class AzuriteBlob {
+    server: any;
     constructor() {
         this.server;
         // Support for PM2 Graceful Shutdown on Windows and Linux/OSX

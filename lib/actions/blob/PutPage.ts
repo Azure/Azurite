@@ -9,7 +9,7 @@ class PutPage {
 
     process(request, res) {
         storageManager.putPage(request)
-            .then((response) => {
+            .then((response: any) => {
                 response.addHttpProperty(N.REQUEST_SERVER_ENCRYPTED, false);
                 res.set(response.httpProps);
                 res.status(201).send();

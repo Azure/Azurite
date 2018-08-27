@@ -10,6 +10,23 @@ import env from './../../core/env';
 import InternalAzuriteError from './../../core/InternalAzuriteError';
 
 class AzuriteBlobRequest extends AzuriteRequest {
+    id: any;
+    parentId: any;
+    uri: string;
+    blockId: any;
+    commit: boolean;
+    body: any;
+    containerName: any;
+    blobName: any;
+    snapshot: boolean;
+    copyId: any;
+    blockListType: any;
+    query: any;
+    snapshotDate: string;
+    originId: string;
+    originUri: string;
+    parentUri: string;
+    httpProps: any;
     constructor({
         req = undefined,
         entityType = undefined,
@@ -64,9 +81,10 @@ class AzuriteBlobRequest extends AzuriteRequest {
     }
 
     copySourceName() {
-        if (this.httpProps[N.COPY_SOURCE === undefined]) {
-            throw new InternalAzuriteError('Request: copySourceUrl was called without copy-source header set.')
-        }
+        // TODO
+        // if (this.httpProps[undefined]) {
+        //     throw new InternalAzuriteError('Request: copySourceUrl was called without copy-source header set.')
+        // }
         const match = /devstoreaccount1\/(.*)/.exec(this.httpProps[N.COPY_SOURCE]);
         if (match === null) {
             throw new InternalAzuriteError(`Request: x-ms-copy-source was not in the expected format (was "${this.httpProps[N.COPY_SOURCE]}".`);

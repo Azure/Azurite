@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 class EntityExists {
     constructor() {
@@ -9,7 +9,7 @@ class EntityExists {
 
     validate({ entity = undefined }) {
         if (entity === undefined) {
-            throw new AError(ErrorCodes.ResourceNotFound);
+            throw ErrorCodes.ResourceNotFound;
         }
     }
 }

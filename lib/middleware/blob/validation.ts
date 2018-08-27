@@ -70,9 +70,10 @@ export default (req, res, next) => {
 
 const validations = {};
 
-validations[undefined] = () => {
-    // NO VALIDATIONS (this is an unimplemented call)
-}
+// TODO
+// validations[undefined] = () => {
+//     // NO VALIDATIONS (this is an unimplemented call)
+// }
 
 validations[Operations.Account.PREFLIGHT_BLOB_REQUEST] = (request, valContext) => {
     valContext

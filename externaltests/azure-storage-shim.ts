@@ -7,7 +7,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import  Azurite from ('./../lib/AzuriteBlob');
+import AzuriteBlob from './../lib/AzuriteBlob';
 
 function requireTestDir(dir) {
     fs.readdirSync('./externaltests/azure-storage-node/test' + dir).map((file) => {
@@ -16,7 +16,7 @@ function requireTestDir(dir) {
 }
 
 describe('azure-storage-node tests', () => {
-    const azurite = new Azurite();
+    const azurite = new AzuriteBlob();
     before(() => {
         const location = path.join(process.env.AZURITE_LOCATION, 'AZURE-STORAGE');
         return azurite.init({ l: location, silent: 'true', overwrite: 'true' });

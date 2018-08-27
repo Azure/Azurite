@@ -2,8 +2,8 @@
 
 import BbPromise from 'bluebird';
 import N from './../../core/HttpHeaderNames';
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 import tsm from './../../core/table/TableStorageManager';
 import ValidationContext from './../../validation/table/ValidationContext';
 import TableExistsVal from './../../validation/table/TableExists';
@@ -20,7 +20,7 @@ export default (req, res, next) => {
     BbPromise.try(() => {
         // Azurite currently does not support XML-Atom responses, only supports JSON-based responses.
         if (req.headers[N.CONTENT_TYPE] === `application/atom+xml`) {
-            throw new AError(ErrorCodes.AtomXmlNotSupported);
+            throw ErrorCodes.AtomXmlNotSupported;
         }
         const request = req.azuriteRequest,
             tableProxy = tsm._getTable(request.tableName),
@@ -41,9 +41,10 @@ export default (req, res, next) => {
 
 const validations = {};
 
-validations[undefined] = () => {
-    // NO VALIDATIONS (this is an unimplemented call)
-}
+// TODO
+// validations[undefined] = () => {
+//     // NO VALIDATIONS (this is an unimplemented call)
+// }
 
 validations[Operations.CREATE_TABLE] = (valContext) => {
     valContext

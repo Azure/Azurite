@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 import * as Operation from './../../core/Constants';
 const Operations = Operation.Operations.Queue;
@@ -18,21 +18,21 @@ class VisibilityTimeoutValue {
     validate({ request = undefined, operation = undefined, message = undefined }) {
         if (operation === Operations.GET_MESSAGE) {
             if (request.visibilityTimeout < 1 || request.visibilityTimeout > 60 * 60 * 24 * 7) {
-                throw new AError(ErrorCodes.OutOfRangeInput);
+                throw ErrorCodes.OutOfRangeInput;
             }
         }
         else {
             if (request.visibilityTimeout < 0 || request.visibilityTimeout > 60 * 60 * 24 * 7) {
-                throw new AError(ErrorCodes.OutOfRangeInput);
+                throw ErrorCodes.OutOfRangeInput;
             }
             if (operation === Operations.PUT_MESSAGE) {
                 if (request.now + request.visibilityTimeout > request.now + request.messageTtl) {
-                    throw new AError(ErrorCodes.OutOfRangeInput);
+                    throw ErrorCodes.OutOfRangeInput;
                 }
             }
             if (operation === Operations.UPDATE_MESSAGE) {
                 if (request.now + request.visibilityTimeout > message.expirationTime) {
-                    throw new AError(ErrorCodes.OutOfRangeInput);
+                    throw ErrorCodes.OutOfRangeInput;
                 }
             }
             

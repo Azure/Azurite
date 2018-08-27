@@ -49,7 +49,7 @@ class GetBlob {
                         data.push(chunk);
                     });
                     readStream.on('end', () => {
-                        const body = new Buffer(data, 'utf8');
+                        const body = Buffer.from(data);
                         const hash = crypto.createHash('md5')
                             .update(body)
                             .digest('base64');
@@ -75,7 +75,7 @@ class GetBlob {
     }
 
     _createRequestHeader(url, range) {
-        const request = {};
+        const request: any = {};
         request.headers = {};
         request.url = url;
         if (range) {

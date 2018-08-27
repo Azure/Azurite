@@ -1,15 +1,19 @@
 'use strict';
 
 import BbPromise from 'bluebird';
-import fs from 'fs';
+import fs, { write } from 'fs';
 
 class CopyOperationsManager {
+    ops: {};
+    writeStream: {};
+
     constructor() {
         this.ops = {};
     }
 
     add(copyId, readStream, writeStream, toFilename) {
         this.ops[copyId] = { readStream: readStream, writeStream: writeStream, toFilename: toFilename };
+        this.writeStream = writeStream;
     }
 
     cancel(copyId) {
@@ -20,7 +24,7 @@ class CopyOperationsManager {
                     err ? reject(err) : resolve();
                 });
             });
-            this.ops[copyId].readStream.unpipe(writeStream);
+            this.ops[copyId].readStream.unpipe(this.writeStream);
         });
     }
 

@@ -48,9 +48,10 @@ export default (req, res) => {
 
 const actions = {};
 
-actions[undefined] = (request, res) => {
-    res.status(501).send('Not Implemented yet.');
-}
+// TODO
+// actions[undefined] = (request, res) => {
+//     res.status(501).send('Not Implemented yet.');
+// }
 
 actions[Operations.Account.PREFLIGHT_BLOB_REQUEST] = (request, res) => {
     preflightBlobRequest.process(request, res);

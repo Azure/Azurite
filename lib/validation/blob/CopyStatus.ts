@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 import { CopyStatus as CopyStat } from './../../core/Constants';
 
 /**
@@ -15,7 +15,7 @@ class CopyStatus {
 
     validate({ blobProxy = undefined }) {
         if (blobProxy !== undefined && blobProxy.original.copyStatus === CopyStat.PENDING) {
-            throw new AError(ErrorCodes.PendingCopyOperation);
+            throw ErrorCodes.PendingCopyOperation;
         }        
     }
 }

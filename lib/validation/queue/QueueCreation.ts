@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /*
  * When a queue with the specified name already exists, the Queue service checks the metadata 
@@ -20,7 +20,7 @@ class QueueCreation {
 
         Object.keys(queue.metaProps).forEach((prop) => {
             if (queue.metaProps[prop] !== request.metaProps[prop]) {
-                throw new AError(ErrorCodes.QueueAlreadyExists);
+                throw ErrorCodes.QueueAlreadyExists;
             }
         });
     }

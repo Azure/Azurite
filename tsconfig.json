@@ -4,11 +4,14 @@
         "allowJs": true,
         "allowSyntheticDefaultImports": true,
         "esModuleInterop": true,
+        "lib": [
+            "es7"
+        ]
     },
     "exclude": [
         "node_modules"
     ],
     "include": [
-        "**/*.js"
+        "**/*.ts"
     ]
 }

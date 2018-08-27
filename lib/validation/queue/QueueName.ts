@@ -1,7 +1,6 @@
 'use strict';
-
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
+import { AzuriteError }from './../../core/AzuriteError';
 
 /*
  * Checks whether the queue name adheres to the naming convention 
@@ -14,11 +13,11 @@ class QueueName {
     validate({ request = undefined }) {
         const name = request.queueName;
         if (name.length < 3 || name.length > 63) {
-            throw new AError(ErrorCodes.OutOfRangeInput);
+            throw ErrorCodes.OutOfRangeInput;
         }
         
         if (/^([a-z0-9]+)(-[a-z0-9]+)*$/i.test(name) === false) { 
-            throw new AError(ErrorCodes.InvalidInput);
+            throw ErrorCodes.InvalidInput;
         }
     }
 }

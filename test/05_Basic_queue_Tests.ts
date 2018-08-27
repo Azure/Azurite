@@ -1,7 +1,7 @@
 import QueueName from '../lib/validation/queue/QueueName';
-import AError from '../lib/core/AzuriteError';
-import ErrorCodes from '../lib/core/ErrorCodes';
+import { ErrorCodes } from '../lib/core/AzuriteError';
 import chai from 'chai';
+import { AzuriteError }from '../lib/core/AzuriteError';
 
 const expect = chai.expect;
 

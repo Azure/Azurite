@@ -1,8 +1,8 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
+import { AzuriteError }from './../../core/AzuriteError';
 import N from './../../core/HttpHeaderNames';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /**
  * Validates the 512-byte alignment of a Page Blob.
@@ -24,13 +24,13 @@ class PageAlignment {
         }
         const re = new RegExp(/bytes=[0-9]+-[0-9]+/);
         if (!re.test(range)) {
-            throw new AError(ErrorCodes.InvalidHeaderValue);
+            throw ErrorCodes.InvalidHeaderValue;
         }
         const parts = range.split('=')[1].split('-');
         const startByte = parseInt(parts[0]),
             endByte = parseInt(parts[1]);
         if (startByte % 512 !== 0 || ((endByte + 1) - startByte) % 512 !== 0) {
-            throw new AError(ErrorCodes.InvalidPageRange);
+            throw ErrorCodes.InvalidPageRange;
         }
     }
 }

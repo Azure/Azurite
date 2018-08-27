@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 class ConflictingTable {
     constructor() {
@@ -9,7 +9,7 @@ class ConflictingTable {
 
     validate({ table = undefined }) {
         if (table !== undefined) {
-            throw new AError(ErrorCodes.TableAlreadyExists);
+            throw ErrorCodes.TableAlreadyExists;
         }
     }
 }

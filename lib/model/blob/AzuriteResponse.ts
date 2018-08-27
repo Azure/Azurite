@@ -5,6 +5,10 @@ import N from './../../core/HttpHeaderNames';
 import { StorageEntityType as EntityType } from './../../core/Constants';
 
 class AzuriteResponse {
+    nextMarker: any;
+    httpProps: {};
+    proxy: any;
+    payload: any;
     constructor({ proxy = undefined, payload = undefined, query = {}, cors = undefined } = {}) {
         this.httpProps = {};
         this.proxy = proxy;
@@ -25,7 +29,7 @@ class AzuriteResponse {
             }
         }
         this.httpProps[N.VERSION] = '2016-05-31';
-        this.httpProps[N.DATE] = new Date().toGMTString();
+        this.httpProps[N.DATE] = new Date().toUTCString();
         this.httpProps[N.CONTENT_LENGTH] = 0;
         this.httpProps[N.REQUEST_ID] = uuidV1();
         this.payload = payload;

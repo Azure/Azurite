@@ -1,8 +1,8 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
+import { AzuriteError }from './../../core/AzuriteError';
 import { StorageEntityType as EntityType } from './../../core/Constants';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 class BlobCreationSize {
     constructor() {
@@ -13,11 +13,11 @@ class BlobCreationSize {
         if ((request.entityType === EntityType.AppendBlob ||
             request.entityType === EntityType.PageBlob) &&
             request.body.length > 0) {
-            throw new AError(ErrorCodes.InvalidBlobType);
+            throw ErrorCodes.InvalidBlobType;
         }
         if (request.entityType === EntityType.BlockBlob &&
             request.body.length > 268435456) {
-            throw new AError(ErrorCodes.RequestBodyTooLarge);
+            throw ErrorCodes.RequestBodyTooLarge;
         }
     }
 }

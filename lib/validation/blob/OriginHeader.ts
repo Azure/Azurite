@@ -1,8 +1,8 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
+import { AzuriteError }from './../../core/AzuriteError';
 import N from './../../core/HttpHeaderNames';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /**
  * Validates whether the 'Origin' request header is set. 
@@ -15,7 +15,7 @@ class OriginHeader {
 
     validate({ request = undefined }) {
         if(!request.httpProps[N.ORIGIN]) {
-            throw new AError(ErrorCodes.MissingRequiredHeader);
+            throw ErrorCodes.MissingRequiredHeader;
         }
     }
 }

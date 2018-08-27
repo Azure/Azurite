@@ -1,12 +1,11 @@
 import chai from 'chai';
 import chaiHttp from 'chai-http';
-import Azurite from './../lib/AzuriteBlob';
+import AzuriteBlob from './../lib/AzuriteBlob';
 import rp from 'request-promise';
 import path from 'path';
-import * as BbPromise from 'bluebird';
-import fsextra from 'fs-extra';
+import xml2js from 'xml2js';
 
-const fs = BbPromise.promisifyAll(fsextra);
+const expect = chai.expect;
 const should = chai.should();
 
 chai.use(chaiHttp);
@@ -18,7 +17,7 @@ const urlPath = '/devstoreaccount1';
 const testPath = new Date().toISOString().replace(/:/g, "").replace(/\./g, "") + "_CONTAINER_TESTS";
 
 describe('Container HTTP API', () => {
-    const azurite = new Azurite();
+    const azurite = new AzuriteBlob();
 
     before(() => {
         const location = path.join('.', process.env.AZURITE_LOCATION, testPath);
@@ -61,7 +60,7 @@ describe('Container HTTP API', () => {
     describe('DELETE Simple Container', () => {
         it('successfully deletes the container', () => {
             return chai.request(url)
-                .delete(`${urlPath}/${containerName}`)
+                .del(`${urlPath}/${containerName}`)
                 .query({ restype: 'container' })
                 .then((res) => {
                     res.should.have.status(202);
@@ -69,7 +68,7 @@ describe('Container HTTP API', () => {
         });
         it('deleting a non-existant container fails', () => {
             return chai.request(url)
-                .delete(`${urlPath}/DOESNOTEXIST`)
+                .del(`${urlPath}/DOESNOTEXIST`)
                 .query({ restype: 'container' })
                 .catch((e) => {
                     e.should.have.status(404);

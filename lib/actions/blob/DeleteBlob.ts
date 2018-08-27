@@ -8,7 +8,7 @@ class DeleteBlob {
 
     process(azuriteRequest, res) {
         storageManager.deleteBlob(azuriteRequest)
-            .then((response) => {
+            .then((response: any) => {
                 res.set(response.httpProps);
                 res.status(202).send();
             });

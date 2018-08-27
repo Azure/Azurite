@@ -11,6 +11,7 @@ import StorageEntityProxy from './StorageEntityProxy';
  * @class ContainerProxy
  */
 class ContainerProxy extends StorageEntityProxy {
+    original: any;
     constructor(original) {
         super(original);
     }

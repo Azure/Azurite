@@ -1,9 +1,9 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
+import { AzuriteError }from './../../core/AzuriteError';
 import N from './../../core/HttpHeaderNames';
 import { StorageEntityType as EntityType } from './../../core/Constants';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 class PutBlobHeaders {
     constructor() {
@@ -13,11 +13,11 @@ class PutBlobHeaders {
         const length = request.httpProps[N.BLOB_CONTENT_LENGTH];
         if (request.entityType === EntityType.PageBlob) {
             if (length && (length < 0 || length % 512 != 0)) {
-                throw new AError(ErrorCodes.InvalidHeaderValue);
+                throw ErrorCodes.InvalidHeaderValue;
             }
         } else {
             if (length) {
-                throw new AError(ErrorCodes.UnsupportedHeader);
+                throw ErrorCodes.UnsupportedHeader;
             }
         }
     }

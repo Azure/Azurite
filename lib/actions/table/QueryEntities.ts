@@ -19,7 +19,7 @@ class QueryEntities {
 
     _createResponsePayload(payload, tableName, accept, singleEntity) {
 
-        let response = {};
+        let response: any = {};
 
         if (accept !== ODataMode.NONE) {
             response['odata.metadata'] = `http://127.0.0.1:10002/devstoreaccount1/$metadata#${tableName}`;

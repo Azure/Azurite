@@ -1,9 +1,8 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
 import { LeaseStatus } from './../../core/Constants';
 import { Usage } from './../../core/Constants';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 class BlobLeaseUsage {
     constructor() {
@@ -26,39 +25,39 @@ class BlobLeaseUsage {
         switch (blobProxy.original.leaseState) {
             case LeaseStatus.AVAILABLE:
                 if (leaseId) {
-                    throw new AError(ErrorCodes.LeaseNotPresentWithBlobOperation);
+                    throw ErrorCodes.LeaseNotPresentWithBlobOperation;
                 }
                 break;
             case LeaseStatus.LEASED:
                 if (usage === Usage.Write && leaseId === undefined) {
-                    throw new AError(ErrorCodes.LeaseIdMissing);
+                    throw ErrorCodes.LeaseIdMissing;
                 }
                 if (usage === Usage.Write && leaseId !== blobProxy.original.leaseId) {
-                    throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+                    throw ErrorCodes.LeaseIdMismatchWithLeaseOperation;
                 }
                 if (usage === Usage.Read && leaseId !== blobProxy.original.leaseId && leaseId !== undefined) {
-                    throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+                    throw ErrorCodes.LeaseIdMismatchWithLeaseOperation;
                 }
                 break;
             case LeaseStatus.BREAKING:
                 if (usage === Usage.Write && leaseId === undefined) {
-                    throw new AError(ErrorCodes.LeaseIdMissing);
+                    throw ErrorCodes.LeaseIdMissing;
                 }
                 if (usage === Usage.Write && leaseId !== blobProxy.original.leaseId) {
-                    throw new AError(ErrorCodes.LeaseIdMismatchWithBlobOperation);
+                    throw ErrorCodes.LeaseIdMismatchWithBlobOperation;
                 }
                 if (usage === Usage.Read && leaseId !== undefined && leaseId !== blobProxy.original.leaseId) {
-                    throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
+                    throw ErrorCodes.LeaseIdMismatchWithLeaseOperation;
                 }
                 break;
             case LeaseStatus.BROKEN:
                 if (leaseId) {
-                    throw new AError(ErrorCodes.LeaseNotPresentWithBlobOperation);
+                    throw ErrorCodes.LeaseNotPresentWithBlobOperation;
                 }
                 break;
             case LeaseStatus.EXPIRED:
                 if (leaseId) {
-                    throw new AError(ErrorCodes.LeaseNotPresentWithBlobOperation);
+                    throw ErrorCodes.LeaseNotPresentWithBlobOperation;
                 }
                 break;
         }

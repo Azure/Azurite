@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 const allowedMethods = ['delete', 'get', 'head', 'merge', 'post', 'options', 'put'];
 
@@ -18,13 +18,13 @@ class ServiceProperties {
 
         // A minimum of five rules can be stored
         if (rules.length > 5) {
-            throw new AError(ErrorCodes.InvalidXmlRequest);
+            throw ErrorCodes.InvalidXmlRequest;
         }
 
         for (const rule of rules) {
             // These elements are required
             if (!(rule.AllowedMethods && rule.AllowedHeaders && rule.ExposedHeaders)) {
-                throw new AError(ErrorCodes.InvalidXmlRequest);
+                throw ErrorCodes.InvalidXmlRequest;
             }
             // Allowed Methods
             rule.AllowedMethods.split(',')
@@ -33,7 +33,7 @@ class ServiceProperties {
                 })
                 .forEach((e) => {
                     if (!allowedMethods.includes(e)) {
-                        throw new AError(ErrorCodes.InvalidXmlRequest);
+                        throw ErrorCodes.InvalidXmlRequest;
                     }
                 });
 
@@ -44,10 +44,10 @@ class ServiceProperties {
                 .forEach((e) => {
                     (e.includes(`\*`)) ? ++numPrefixHeader : ++numHeader;
                     if (numPrefixHeader > 2 || numHeader > 64) {
-                        throw new AError(ErrorCodes.InvalidXmlRequest);
+                        throw ErrorCodes.InvalidXmlRequest;
                     }
                     if (e.length > 256) {
-                        throw new AError(ErrorCodes.InvalidXmlRequest);
+                        throw ErrorCodes.InvalidXmlRequest;
                     }
                 });
 
@@ -58,10 +58,10 @@ class ServiceProperties {
                 .forEach((e) => {
                     (e.includes(`\*`)) ? ++numPrefixHeader : ++numHeader;
                     if (numPrefixHeader > 2 || numHeader > 64) {
-                        throw new AError(ErrorCodes.InvalidXmlRequest);
+                        throw ErrorCodes.InvalidXmlRequest;
                     }
                     if (e.length > 256) {
-                        throw new AError(ErrorCodes.InvalidXmlRequest);
+                        throw ErrorCodes.InvalidXmlRequest;
                     }
                 });
         }

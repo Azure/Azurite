@@ -1,11 +1,11 @@
-import * as BbPromise from 'bluebird';
-import xml2js from 'xml2js';
+import BbPromise from 'bluebird';
 import SignedIdentifiers from './SignedIdentifierXmlModel';
-import AError from './../core/AzuriteError';
 import xml2js from 'xml2js';
+import { ErrorCodes, AzuriteError } from '../core/AzuriteError';
 
-const xml2jsAsync = BbPromise.promisify(xml2js.parseString);
-const parseStringAsync = BbPromise.promisify(new xml2js.Parser({ explicitArray: true }).parseString), parseStringAsyncNoArray = BbPromise.promisify(new xml2js.Parser({ explicitArray: false }).parseString);
+const xml2jsAsync: any = BbPromise.promisify(xml2js.parseString);
+const parseStringAsync: any = BbPromise.promisify(new xml2js.Parser({ explicitArray: true }).parseString)
+const parseStringAsyncNoArray: any = BbPromise.promisify(new xml2js.Parser({ explicitArray: false }).parseString);
 
 // see https://docs.microsoft.com/en-us/rest/api/storageservices/Set-Container-ACL?redirectedfrom=MSDN
 export const parseSignedIdentifiers = (body) => {
@@ -73,7 +73,7 @@ export const deserializeBlockList = (body) => {
             return blockIds;
         })
         .catch((err) => {
-            throw new AError('Invalid XML.', 400, 'One of the XML nodes specified in the request body is not supported.');
+            throw new AzuriteError('Invalid XML.', 400, 'One of the XML nodes specified in the request body is not supported.');
         });
 };
 
@@ -92,6 +92,6 @@ export const parseServiceProperties = (body) => {
             return result;
         })
         .catch((err) => {
-            throw new AError('Invalid XML.', 400, 'One of the XML nodes specified in the request body is not supported.');
+            throw new AzuriteError('Invalid XML.', 400, 'One of the XML nodes specified in the request body is not supported.');
         });
 };

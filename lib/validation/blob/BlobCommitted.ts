@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /*
  * Checks whether the blob has been committed yet as part of PUT BlockList.
@@ -14,11 +14,11 @@ class BlobCommitted {
 
     validate({ blobProxy = undefined }) {
         if (blobProxy === undefined) {
-            throw new AError(ErrorCodes.BlobNotFound);
+            throw ErrorCodes.BlobNotFound;
         }
 
         if (!blobProxy.original.committed) {
-            throw new AError(ErrorCodes.BlobNotFound);
+            throw ErrorCodes.BlobNotFound;
         }
     }
 }

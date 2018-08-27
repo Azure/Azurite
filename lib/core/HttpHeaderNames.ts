@@ -36,7 +36,6 @@ export default {
     REQUEST_SERVER_ENCRYPTED: 'x-ms-request-server-encrypted',
     LEASE_STATUS: 'x-ms-lease-status',
     LEASE_STATE: 'x-ms-lease-state',
-    LEASE_DURATION: 'x-ms-lease-duration',
     COPY_SOURCE: 'x-ms-copy-source',
     COPY_COMPLETION_TIME: 'x-ms-copy-completion-time',
     COPY_STATUS: 'x-ms-copy-status',

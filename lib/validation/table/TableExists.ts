@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 class TableExists {
     constructor() {
@@ -9,7 +9,7 @@ class TableExists {
 
     validate({ request = undefined, table = undefined }) {
         if (request.tableName !== undefined && table === undefined) {
-            throw new AError(ErrorCodes.TableNotFound);
+            throw ErrorCodes.TableNotFound;
         }
     }
 }

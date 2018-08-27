@@ -21,7 +21,7 @@ class EntityGenerator {
      * @memberof TableGenerator
      */
     generateTable(name) {
-        const entity = {};
+        const entity: any = {};
         entity.name = name;
         entity.odata = {};
         entity.odata.metadata = `${_baseUrl}$metadata#Tables/@Element`;
@@ -33,7 +33,7 @@ class EntityGenerator {
 
     generateEntity(rawEntity, tableName, partitionKey = undefined, rowKey = undefined) {
         // Enriching raw entity from payload with odata attributes
-        const entity = { attribs: {} };
+        const entity: any = { attribs: {} };
         entity.partitionKey = partitionKey || rawEntity.PartitionKey;
         entity.rowKey = rowKey || rawEntity.RowKey;
         entity.attribs.Timestamp = new Date().toISOString();

@@ -1,6 +1,6 @@
 'use strict';
 
-export export const StorageTables = {
+export const StorageTables = {
     Containers: 'Containers',
     Commits: 'Commmits',
     Pages: 'Pages',
@@ -85,9 +85,7 @@ export const Operations = {
         PUT_PAGE: 'PutPage',
         GET_PAGE_RANGES: 'GetPageRanges',
         INCREMENTAL_COPY_BLOB: 'IncrementalCopyBlob',
-        APPEND_BLOCK: 'AppendBlock',
-        COPY_BLOB: 'CopyBlob',
-        ABORT_COPY_BLOB: 'AbortCopyBlob'
+        APPEND_BLOCK: 'AppendBlock'
     },
     Queue: {
         CREATE_QUEUE: 'CreateQueue',

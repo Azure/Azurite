@@ -20,7 +20,7 @@ class StorageEntityGenerator {
      * @memberof StorageEntityGenerator
      */
     generateStorageEntity(request) {
-        const entity = {};
+        const entity: any = {};
         // Common to all entities (containers and blobs)
         entity.metaProps = request.metaProps;
         entity.entityType = request.entityType;
@@ -30,7 +30,7 @@ class StorageEntityGenerator {
         if (request.entityType === EntityType.Container) {
             entity.name = request.containerName;
             entity.access = request.httpProps[N.BLOB_PUBLIC_ACCESS];
-            entity.etag = etag(`${Date.parse(new Date())}${JSON.stringify(entity.metaProps)}${request.containerName}`);
+            entity.etag = etag(`${Date.parse(new Date().toUTCString())}${JSON.stringify(entity.metaProps)}${request.containerName}`);
         } else {
             // Common to all blobs
             entity.name = request.blobName;
@@ -44,7 +44,7 @@ class StorageEntityGenerator {
             entity.committed = request.commit; // this is true per default
             entity.md5 = request.httpProps[N.CONTENT_MD5] || request.calculateContentMd5();
             entity.size = request.body ? request.body.length : 0;
-            entity.etag = etag(`${Date.parse(new Date())}${JSON.stringify(entity.metaProps)}${request.id}`);
+            entity.etag = etag(`${Date.parse(new Date().toUTCString())}${JSON.stringify(entity.metaProps)}${request.id}`);
             // The following attributes are deleted if they are undefined
             entity.cacheControl = request.httpProps[N.CACHE_CONTROL]; entity.cacheControl === undefined ? delete entity.cacheControl : (() => {/*NOOP*/ });
             entity.contentType = request.httpProps[N.CONTENT_TYPE]; entity.contentType === undefined ? delete entity.contentType : (() => {/*NOOP*/ });
@@ -78,7 +78,7 @@ class StorageEntityGenerator {
     }
 
     clone(o) {
-        const copy = {};
+        const copy: any = {};
         copy.metaProps = o.metaProps;
         copy.entityType = o.entityType;
         copy.leaseState = o.leaseState;

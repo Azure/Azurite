@@ -1,16 +1,33 @@
 'use strict';
 
-import utils from './utils';
 import path from 'path';
 import BbPromise from 'bluebird';
 import crypto from 'crypto';
 import fsextra from 'fs-extra';
 
-const fs = BbPromise.promisifyAll(fsextra);
+const fs: any = BbPromise.promisifyAll(fsextra);
 
 let initialized = false;
 
 class Environment {
+    silent: any;
+    azuriteWorkspacePath: any;
+    azuriteRootPath: string;
+    accountAuth: any;
+    dbNameBlob: string;
+    dbNameTable: string;
+    localStoragePath: string;
+    azuriteDBPathBlob: string;
+    azuriteDBPathTable: string;
+    emulatedStorageAccountName: string;
+    blobStoragePort: any;
+    queueStoragePort: any;
+    blobModulePath: string;
+    queueModulePath: string;
+    tableModulePath: string;
+    tableStoragePort(tableStoragePort: any, arg1: () => void): any {
+        throw new Error("Method not implemented.");
+    }
     constructor() {
     }
 

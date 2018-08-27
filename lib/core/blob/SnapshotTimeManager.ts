@@ -13,6 +13,7 @@
  * @class SnapshotTimeManager
  */
 class SnapshotTimeManager {
+    times: {};
     constructor() {
         this.times = {};
     }

@@ -1,6 +1,7 @@
 'use strict';
 
 class SignedIdentifiers {
+    SignedIdentifier: any[];
     constructor() {
         this.SignedIdentifier = [];
     }

@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 class CompatibleBlobType {
     constructor() {
@@ -13,7 +13,7 @@ class CompatibleBlobType {
             return;
         }
         if (request.entityType !== blobProxy.original.entityType) {
-            throw new AError(ErrorCodes.InvalidBlobType);
+            throw ErrorCodes.InvalidBlobType;
         }
     }
 }

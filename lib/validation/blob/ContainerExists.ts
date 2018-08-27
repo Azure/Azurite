@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /*
  * Checks whether the container exists.
@@ -13,7 +13,7 @@ class ContainerExists {
 
     validate({ containerProxy = undefined }) {
         if (containerProxy === undefined) {
-            throw new AError(ErrorCodes.ContainerNotFound);
+            throw ErrorCodes.ContainerNotFound;
         }
     }
 }

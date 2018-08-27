@@ -1,12 +1,16 @@
 'use strict';
 
-import crypto from 'crypto';
 import N from './../../core/HttpHeaderNames';
-import { StorageEntityType as EntityType } from './../../core/Constants';
-import etag from './../../core/utils';
 import InternalAzuriteError from './../../core/InternalAzuriteError';
 
 class AzuriteRequest {
+    httpProps: {};
+    metaProps: {};
+    body: any;
+    entityType: any;
+    query: any;
+    now: number;
+    payload: any;
     constructor({
         req = undefined,
         entityType = undefined,
@@ -28,7 +32,7 @@ class AzuriteRequest {
     }
 
     static clone(request) {
-        const copy = new AzuriteRequest();
+        const copy = new AzuriteRequest({});
         Object.assign(copy, request);
         return copy;
     }

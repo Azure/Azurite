@@ -4,13 +4,13 @@
 
 import minimist from 'minimist';
 import AzuriteBlob from '../lib/AzuriteBlob';
-import * as BbPromise from 'bluebird';
+import BbPromise from 'bluebird';
 
 process.on('unhandledRejection', (e) => {
 	console.error('**PANIC** Something unexpected happened! Blob Storage Emulator may be in an inconsistent state!');
 	console.error(e);
 });
-process.noDeprecation = true;
+// process.noDeprecation = true;
 
 (() => BbPromise.resolve().then(() => {
 	// requiring here so that if anything went wrong,

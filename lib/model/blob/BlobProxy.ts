@@ -11,6 +11,8 @@ import InternalAzuriteError from './../../core/InternalAzuriteError';
  * @class BlobProxy
  */
 class BlobProxy extends StorageEntityProxy {
+    original: any;
+    containerName: any;
     constructor(original, containerName) {
         super(original);
         if (!containerName) {

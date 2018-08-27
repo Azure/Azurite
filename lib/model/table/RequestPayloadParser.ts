@@ -1,6 +1,6 @@
 'use strict'
 
-import IAError from './../../core/InternalAzuriteError';
+import IAzuriteError from './../../core/InternalAzuriteError';
 
 class RequestPayLoadParser {
     constructor() {
@@ -13,7 +13,7 @@ class RequestPayLoadParser {
         switch (contentType) {
             case 'application/atom+xml':
             case 'application/atom+xml;':
-                throw new IAError(`accept value of 'atom+xml' is currently not supported by Azurite`);
+                throw new IAzuriteError(`accept value of 'atom+xml' is currently not supported by Azurite`);
                 break;
             case 'application/json':
             case 'application/json;':
@@ -22,7 +22,7 @@ class RequestPayLoadParser {
                 break;
             default:
                 // This should never happen! (should be catched by validation pipeline)
-                throw new IAError(`content-type value ${contentType} is not supported by Azurite.`)
+                throw new IAzuriteError(`content-type value ${contentType} is not supported by Azurite.`)
         }
     }
 }

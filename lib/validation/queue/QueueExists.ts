@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 
 class QueueExists {
@@ -10,7 +10,7 @@ class QueueExists {
 
     validate({ request = undefined, queue = undefined }) {
         if (queue === undefined) {
-            throw new AError(ErrorCodes.QueueNotFound);
+            throw ErrorCodes.QueueNotFound;
         }
     }
 }

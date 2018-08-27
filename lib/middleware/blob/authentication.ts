@@ -2,23 +2,21 @@
 
 import BbPromise from 'bluebird';
 import crypto from 'crypto';
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
 import env from './../../core/env';
 import { Keys } from './../../core/Constants';
-import { Operations } from './../../core/Constants';
 
 export default (req, res, next) => {
     BbPromise.try(() => {
         const request = req.azuriteRequest;
         if (env.accountAuth) {
-            if (req.headers.authorization === undefined) throw new AError(ErrorCodes.AuthenticationFailed);
+            if (req.headers.authorization === undefined) throw ErrorCodes.AuthenticationFailed;
             const match = /SharedKey devstoreaccount1:(.*)/.exec(req.headers.authorization);
-            if (match === null) throw new AError(ErrorCodes.AuthenticationFailed);
+            if (match === null) throw ErrorCodes.AuthenticationFailed;
             const sig = _generateAccountSignature(req);
             if (sig.toString() != match[1].toString()){
                 console.log("ERROR : Signature did not match!");
-                throw new AError(ErrorCodes.AuthenticationFailed);
+                throw ErrorCodes.AuthenticationFailed;
             }
 
         }
@@ -79,14 +77,14 @@ function _generateAccountSignature(req) {
     }
     Object.keys(xms)
         .sort()
-        .forEach(function(v, i) {
+        .forEach(function(v) {
             str += `${v}:${xms[v]}\n`
         })
     str += `/devstoreaccount1${req._parsedUrl['pathname']}\n`
 
     Object.keys(req.query)
         .sort()
-        .forEach(function(v, i) {
+        .forEach(function(v) {
             var qlist = req.query[v]
             if (Array.isArray(req.query[v]))
                 qlist = req.query[v].sort()

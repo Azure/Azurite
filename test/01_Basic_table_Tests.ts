@@ -1,14 +1,7 @@
-import chai from 'chai';
-import chaiHttp from 'chai-http';
-import Azurite from './../lib/AzuriteTable';
 import path from 'path';
-import * as BbPromise from 'bluebird';
-import fsextra from 'fs-extra';
 import azureStorage from 'azure-storage';
-
-const fs = BbPromise.promisifyAll(fsextra);
-const should = chai.should(), expect = chai.expect;
-chai.use(chaiHttp);
+import { expect } from 'chai';
+import AzuriteTable from './../lib/AzuriteTable';
 
 const tableName = 'testtable';
 // after testing, we need to clean up the DB files etc that we create.
@@ -24,7 +17,7 @@ const EntityNotFoundErrorMessage = '<?xml version="1.0" encoding="utf-8"?><Error
 
 
 describe('Table HTTP Api tests', () => {
-    const azurite = new Azurite();
+    const azurite = new AzuriteTable();
     const tableEntity1 = {
         PartitionKey: entGen.String(partitionKeyForTest),
         RowKey: entGen.String(rowKeyForTestEntity1),
@@ -54,6 +47,7 @@ describe('Table HTTP Api tests', () => {
                         entity1Created = true;
                         tableService.insertEntity(tableName, tableEntity2, function (error, result, response) {
                             if (error === null) {
+                                
                             }
                         });
                     }
@@ -83,8 +77,8 @@ describe('Table HTTP Api tests', () => {
             // even though  the initialization of Azurite should be promisified already, this is prone
             // to error. 
             if (entity1Created === false) {
-                const getE1 = setTimeout(() => {
-                    singleEntityTest(done);
+                var getE1 = setTimeout(() => {	
+                    singleEntityTest(done);	
                 }, 500);
             }
             else {
@@ -95,7 +89,7 @@ describe('Table HTTP Api tests', () => {
         function singleEntityTest(cb) {
             // I create a new tableService, as the oringal above was erroring out, with a socket close if I reuse it
             const retrievalTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
-            retrievalTableService.retrieveEntity(tableName, partitionKeyForTest, rowKeyForTestEntity1, function (error, result, response) {
+            retrievalTableService.retrieveEntity(tableName, partitionKeyForTest, rowKeyForTestEntity1, function (error, result: any, response) {
                 expect(error).to.equal(null);
                 expect(result).to.not.equal(undefined);
                 expect(result).to.not.equal(null);
@@ -110,7 +104,8 @@ describe('Table HTTP Api tests', () => {
         it('should retrieve all Entities', (done) => {
             const query = new azureStorage.TableQuery();
             const retrievalTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
-            retrievalTableService.queryEntities(tableName, query, null, function (error, results, response) {
+            retrievalTableService.queryEntities(tableName, query, null, function (error, results: any, response) {
+
                 expect(error).to.equal(null);
                 expect(results.entries.length).to.equal(2);
                 const sortedResults = results.entries.sort();

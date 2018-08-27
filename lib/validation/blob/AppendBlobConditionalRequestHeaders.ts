@@ -1,8 +1,8 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
+import { AzuriteError }from './../../core/AzuriteError';
 import N from './../../core/HttpHeaderNames';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /**
  * Checks whether the following conditional request headers specific to an AppendBlob are satisfied.
@@ -22,10 +22,10 @@ class AppendBlobConditionalRequestHeaders {
             appendPos = request.httpProps[N.BLOB_CONDITION_APPENDPOS];
 
         if (maxSize !== undefined && (blobProxy.original.size > maxSize || (blobProxy.original.size + request.body.length) > maxSize)) {
-            throw new AError(ErrorCodes.MaxBlobSizeConditionNotMet);
+            throw ErrorCodes.MaxBlobSizeConditionNotMet;
         }
         if (appendPos !== undefined && blobProxy.original.size !== appendPos) {
-            throw new AError(ErrorCodes.AppendPositionConditionNotMet);
+            throw ErrorCodes.AppendPositionConditionNotMet;
         }
     }
 }

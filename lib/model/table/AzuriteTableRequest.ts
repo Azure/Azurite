@@ -7,6 +7,15 @@ import { ODataMode } from './../../core/Constants';
 import N from './../../core/HttpHeaderNames';
 
 class AzuriteTableRequest {
+    httpProps: {};
+    accept: string;
+    payload: any;
+    tableName: any;
+    partitionKey: any;
+    rowKey: any;
+    singleEntity: boolean;
+    filter: string;
+    top: any;
     constructor({
         req = undefined,
         payload = undefined }) {

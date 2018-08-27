@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 
 /*
@@ -13,7 +13,7 @@ class IsOfBlobType {
 
     validate({ blobProxy = undefined, moduleOptions = undefined }) {
         if (blobProxy.original.entityType !== moduleOptions.entityType) {
-            throw new AError(ErrorCodes.InvalidBlobType);
+            throw ErrorCodes.InvalidBlobType;
         }
     }
 }

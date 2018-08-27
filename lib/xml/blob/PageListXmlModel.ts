@@ -9,6 +9,7 @@ import os from 'os';
  * See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/get-page-ranges for details on the schema. 
  */
 class PageListModel {
+    items: any[];
     constructor() {
         this.items = [];
     }
@@ -36,6 +37,8 @@ class PageListModel {
 }
 
 class PageRange {
+    start: any;
+    end: any;
     constructor(startByte, endByte) {
         this.start = startByte;
         this.end = endByte;
@@ -43,6 +46,8 @@ class PageRange {
 }
 
 class ClearRange {
+    start: any;
+    end: any;
     constructor(startByte, endByte) {
         this.start = startByte;
         this.end = endByte;

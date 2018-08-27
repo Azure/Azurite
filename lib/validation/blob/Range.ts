@@ -1,8 +1,8 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
+import { AzuriteError }from './../../core/AzuriteError';
 import N from './../../core/HttpHeaderNames';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /*
  * Checks whether the range header (and headers depending on it) are valid.
@@ -20,16 +20,16 @@ class Range {
         // https://docs.microsoft.com/de-de/azure/container-instances/container-instances-orchestrator-relationship
         // do not mention x-ms-range header explictly
         if (x_ms_range_get_content_md5 && request.httpProps['range'] === undefined) {
-            throw new AError(ErrorCodes.InvalidHeaderValue);
+            throw ErrorCodes.InvalidHeaderValue;
         }
         // If this header is set to true _and_ the range exceeds 4 MB in size,
         // the service returns status code 400 (Bad Request).
         if (x_ms_range_get_content_md5 && this._isRangeExceeded(range)) {
-            throw new AError(ErrorCodes.InvalidHeaderValue);
+            throw ErrorCodes.InvalidHeaderValue;
         }
 
         if (!this._withinRange(blobProxy.original.size, range)) {
-            throw new AError(ErrorCodes.InvalidRange);
+            throw ErrorCodes.InvalidRange;
         }
     }
 

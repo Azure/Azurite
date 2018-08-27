@@ -1,9 +1,9 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
+import { AzuriteError }from './../../core/AzuriteError';
 import N from './../../core/HttpHeaderNames';
 import { StorageEntityType as EntityType } from './../../core/Constants';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /**
  * Validates whether PUT Block, PUT AppendBlob, and PUT Page operations adhere
@@ -22,25 +22,25 @@ class BlockPageSize {
                 // Blocks larger than 100MB are not allowed since API version 2016-05-31
                 // see https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/put-block
                 if (size > 104857600) {
-                    throw new AErro(ErrorCodes.RequestBodyTooLarge);
+                    throw ErrorCodes.RequestBodyTooLarge;
                 }
                 break;
             case EntityType.AppendBlob:
                 // ApppendBlocks larger than 4MB are not allowed as per specification at
                 // see https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/append-block
                 if (size > 4194304) {
-                    throw new AErro(ErrorCodes.RequestBodyTooLarge);
+                    throw ErrorCodes.RequestBodyTooLarge;
                 }
                 break;
             case EntityType.PageBlob:
                 // Pages larger than 4MB are not allowed as per specification at
                 // https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/put-page
                 if (size > 4194304) {
-                    throw new AErro(ErrorCodes.RequestBodyTooLarge);
+                    throw ErrorCodes.RequestBodyTooLarge;
                 }
                 break;
             default:
-                throw new AError(ErrorCodes.InvalidBlobType);
+                throw ErrorCodes.InvalidBlobType;
         }
     }
 }

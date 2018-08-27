@@ -6,6 +6,7 @@ import { StorageEntityType as EntityType } from './../../core/Constants';
 import AzuriteRequest from './AzuriteRequest';
 
 class AzuriteContainerRequest extends AzuriteRequest {
+    containerName: any;
     constructor({
         req = null,
         payload = undefined }) {

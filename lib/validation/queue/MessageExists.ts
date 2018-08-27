@@ -1,7 +1,7 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 import QueueManager from './../../core/queue/QueueManager';
 
 /**
@@ -13,7 +13,7 @@ class MessageExists {
 
     validate({ request = undefined }) {
         if (QueueManager.getQueueAndMessage({ queueName: request.queueName, messageId: request.messageId }).message === undefined) {
-            throw new AError(ErrorCodes.MessageNotFound);
+            throw ErrorCodes.MessageNotFound;
         }
     }
 }

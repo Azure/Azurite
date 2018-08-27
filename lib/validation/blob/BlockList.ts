@@ -1,9 +1,9 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
+import { AzuriteError }from './../../core/AzuriteError';
 import env from './../../core/env';
 import BlobExistsVal from './BlobExists';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 class BlockList {
     constructor() {
@@ -22,7 +22,7 @@ class BlockList {
                 BlobExistsVal.validate({ blobProxy: blobProxy });
             } catch (e) {
                 if (e.statusCode === 404) {
-                    throw new AError(ErrorCodes.InvalidBlockList);
+                    throw ErrorCodes.InvalidBlockList;
                 } else {
                     throw e; // Something unexpected happened
                 }

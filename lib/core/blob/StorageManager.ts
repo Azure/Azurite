@@ -1,54 +1,47 @@
 'use strict';
 
 import env from './../env';
-import utils from './../utils';
-import path from 'path';
 import BbPromise from 'bluebird';
 import Loki from 'lokijs';
-import req from 'request';
 import fs from 'fs-extra';
-import crypto from 'crypto';
 import { StorageTables } from './../Constants';
 import { StorageEntityType } from './../Constants';
 import { LeaseActions } from './../Constants';
 import { LeaseStatus } from './../Constants';
 import { CopyStatus } from './../Constants';
-import { BlockListType } from './../Constants';
 import StorageEntityGenerator from './../../model/blob/StorageEntityGenerator';
 import AzuriteBlobRequest from './../../model/blob/AzuriteBlobRequest';
 import CombinedStream from 'combined-stream';
 import ContainerProxy from './../../model/blob/ContainerProxy';
 import BlobProxy from './../../model/blob/BlobProxy';
 import N from './../../core/HttpHeaderNames';
-import ContainerRequest from './../../model/blob/AzuriteContainerRequest';
 import AzuriteResponse from './../../model/blob/AzuriteResponse';
-import BlobRequest from './../../model/blob/AzuriteBlobRequest';
 import SnapshotTimeManager from './SnapshotTimeManager';
 import CopyOperationsManager from './CopyOperationsManager';
 import uuidv4 from 'uuid/v4';
-import fs from 'fs';
 
-const fsn = BbPromise.promisifyAll(fs);
+const fsn: any = BbPromise.promisifyAll(fs);
 
 class StorageManager {
+    db: any;
     constructor() {
     }
 
     init() {
         this.db = BbPromise.promisifyAll(new Loki(env.azuriteDBPathBlob, { autosave: true, autosaveInterval: 5000 }));
         return fsn.statAsync(env.azuriteDBPathBlob)
-            .then((stat) => {
-                return this.db.loadDatabaseAsync({});
-            })
-            .then((data) => {
-                if (!this.db.getCollection(StorageTables.Containers)) {
-                    this.db.addCollection(StorageTables.Containers);
-                }
-                if (!this.db.getCollection(StorageTables.ServiceProperties)) {
-                    this.db.addCollection(StorageTables.ServiceProperties);
-                }
-                return this.db.saveDatabaseAsync();
-            })
+            .then(() => {
+                    return this.db.loadDatabaseAsync({});
+                })
+            .then(() => {
+                    if (!this.db.getCollection(StorageTables.Containers)) {
+                        this.db.addCollection(StorageTables.Containers);
+                    }
+                    if (!this.db.getCollection(StorageTables.ServiceProperties)) {
+                        this.db.addCollection(StorageTables.ServiceProperties);
+                    }
+                    return this.db.saveDatabaseAsync();
+                })
             .catch((e) => {
                 if (e.code === 'ENOENT') {
                     // No DB has been persisted / initialized yet.
@@ -84,7 +77,7 @@ class StorageManager {
 
     createContainer(request) {
         const coll = this.db.getCollection(StorageTables.Containers);
-        const entity = StorageEntityGenerator.generateStorageEntity(request);
+        const entity: any = StorageEntityGenerator.generateStorageEntity(request);
         const containerProxy = new ContainerProxy(coll.insert(entity));
         this.db.addCollection(entity.name);
         return BbPromise.resolve(new AzuriteResponse({ proxy: containerProxy, cors: request.cors }));
@@ -139,7 +132,7 @@ class StorageManager {
             });
     }
 
-    deleteBlob(request) {
+    deleteBlob(request): any {
         const coll = this.db.getCollection(request.containerName),
             snapshoteDeleteQueryParam = request.httpProps[N.DELETE_SNAPSHOTS];
         let promises = [];
@@ -380,7 +373,7 @@ class StorageManager {
         const writeStream = fs.createWriteStream(request.uri, {
             flags: 'r+',
             start: startByte,
-            defaultEncoding: 'utf8'
+            encoding: 'utf8'
         });
 
         let pageContent;
@@ -474,7 +467,7 @@ class StorageManager {
 
     snapshotBlob(request) {
         const { coll, blobProxy } = this._getCollectionAndBlob(request.containerName, request.id);
-        const snapshotEntity = StorageEntityGenerator.clone(blobProxy.original);
+        const snapshotEntity: any = StorageEntityGenerator.clone(blobProxy.original);
         const snapshotDate = SnapshotTimeManager.getDate(request.id, new Date(request.now));
         snapshotEntity.snapshot = true;
         snapshotEntity.snapshotDate = snapshotDate.toUTCString();
@@ -501,7 +494,6 @@ class StorageManager {
     leaseContainer(request) {
         const leaseAction = request.httpProps[N.LEASE_ACTION],
             proposedLeaseId = request.httpProps[N.PROPOSED_LEASE_ID],
-            leaseId = request.httpProps[N.LEASE_ID],
             leaseBreakPeriod = (request.httpProps[N.LEASE_BREAK_PERIOD]) ? parseInt(request.httpProps[N.LEASE_BREAK_PERIOD]) : undefined,
             leaseDuration = (request.httpProps[N.LEASE_DURATION]) ? parseInt(request.httpProps[N.LEASE_DURATION]) : undefined;
         const { coll, containerProxy } = this._getCollectionAndContainer(request.containerName);
@@ -548,7 +540,6 @@ class StorageManager {
     leaseBlob(request) {
         const leaseAction = request.httpProps[N.LEASE_ACTION],
             proposedLeaseId = request.httpProps[N.PROPOSED_LEASE_ID],
-            leaseId = request.httpProps[N.LEASE_ID],
             leaseBreakPeriod = (request.httpProps[N.LEASE_BREAK_PERIOD]) ? parseInt(request.httpProps[N.LEASE_BREAK_PERIOD]) : undefined,
             leaseDuration = (request.httpProps[N.LEASE_DURATION]) ? parseInt(request.httpProps[N.LEASE_DURATION]) : undefined;
         const { coll, blobProxy } = this._getCollectionAndBlob(request.containerName, request.id);
@@ -618,7 +609,7 @@ class StorageManager {
         to.on('finish', () => {
             if (blobProxyDestination.original.copyStatus !== CopyStatus.FAILED) {
                 blobProxyDestination.original.copyProgress = `${sourceProxy.original.size}/${sourceProxy.original.size}`;
-                blobProxyDestination.original.copyCompletionTime = new Date().toGMTString();
+                blobProxyDestination.original.copyCompletionTime = new Date().toUTCString();
                 blobProxyDestination.original.copyStatus = CopyStatus.SUCCESS;
                 delete blobProxyDestination.original.copyStatusDescription;
                 blobProxyDestination.original.copySource = sourceProxy.original.uri;
@@ -654,7 +645,7 @@ class StorageManager {
         to.on('error', (err) => {
             blobProxyDestination.original.copyStatus = CopyStatus.FAILED;
             blobProxyDestination.original.copyStatusDescription = err.message;
-            blobProxyDestination.original.completionTime = new Date().toGMTString();
+            blobProxyDestination.original.completionTime = new Date().toUTCString();
             CopyOperationsManager.clear(copyId);
             to.end();
         });
@@ -672,8 +663,8 @@ class StorageManager {
 
     setBlobServiceProperties(request) {
         const coll = this.db.getCollection(StorageTables.ServiceProperties);
-        const settings = coll.where((e) => {
-            return true; // there is always at most one entry in this collection
+        const settings = coll.where(() => {
+            return true;
         })[0];
         const updatedSettings = request.payload.StorageServiceProperties;
         if (!settings) {
@@ -701,8 +692,8 @@ class StorageManager {
 
     getBlobServiceProperties(request) {
         const coll = this.db.getCollection(StorageTables.ServiceProperties);
-        const settings = coll.where((e) => {
-            return true; // there is always at most one entry in this collection
+        const settings = coll.where(() => {
+            return true;
         })[0];
 
         return BbPromise.resolve(new AzuriteResponse({ payload: settings || {}, cors: request.cors }));

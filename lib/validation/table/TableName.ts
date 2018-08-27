@@ -2,8 +2,8 @@
 
 'use strict';
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 class TableName {
     constructor() {
@@ -15,10 +15,10 @@ class TableName {
         }
 
         if (/^tables$/i.test(table.name)) {
-            throw new AError(ErrorCodes.ReservedTableName);
+            throw ErrorCodes.ReservedTableName;
         }
         if (/[A-Za-z][A-Za-z0-9]{2,62}/i.test(table.name) === false) {
-            throw new AError(ErrorCodes.InvalidInput);
+            throw ErrorCodes.InvalidInput;
         }
     }
 }

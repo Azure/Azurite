@@ -9,12 +9,12 @@ import EntityProxy from './../../model/table/EntityProxy';
 import EntityGenerator from './../../model/table/EntityGenerator';
 import { TableStorageTables as Tables } from './../Constants';
 import env from './../../core/env';
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from './../../core/AzuriteError';
 
-const fsn = BbPromise.promisifyAll(fs);
+const fsn: any = BbPromise.promisifyAll(fs);
 
 class TableStorageManager {
+    db: any;
     constructor() {
     }
 
@@ -121,7 +121,7 @@ class TableStorageManager {
         }
 
         if(find.length == 0){
-            throw new AError(ErrorCodes.EntityNotFound);
+            throw ErrorCodes.EntityNotFound;
         }
         
         let payload = [];
@@ -200,7 +200,7 @@ class TableStorageManager {
 
     _createOrUpdateEntity(partitionKey, rowKey, tableName, rawEntity) {
         const coll = this.db.getCollection(tableName),
-            entity = EntityGenerator.generateEntity(rawEntity, tableName, partitionKey, rowKey),
+            entity: any = EntityGenerator.generateEntity(rawEntity, tableName, partitionKey, rowKey),
             res = coll.findOne({ partitionKey: partitionKey, rowKey: rowKey });
 
         if (res !== null) {
@@ -215,7 +215,7 @@ class TableStorageManager {
 
     _insertOrMergeEntity(partitionKey, rowKey, tableName, rawEntity) {
         const coll = this.db.getCollection(tableName),
-            entity = EntityGenerator.generateEntity(rawEntity, tableName, partitionKey, rowKey),
+            entity: any = EntityGenerator.generateEntity(rawEntity, tableName, partitionKey, rowKey),
             res = coll.findOne({ partitionKey: partitionKey, rowKey: rowKey });
 
         if (res !== null) {

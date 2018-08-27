@@ -1,8 +1,8 @@
 'use strict';
 
-import AError from './../../core/AzuriteError';
+import { AzuriteError }from './../../core/AzuriteError';
 import N from './../../core/HttpHeaderNames';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
 import isUUID from 'validator/lib/isUUID';
 
 /**
@@ -19,10 +19,10 @@ class LeaseId {
             proposedLeaseId = request.httpProps[N.PROPOSED_LEASE_ID];
 
         if (leaseId && !isUUID(leaseId, 'all')) {
-            throw new AError(ErrorCodes.InvalidHeaderValue);
+            throw ErrorCodes.InvalidHeaderValue;
         }
         if (proposedLeaseId && !isUUID(proposedLeaseId, 'all')) {
-            throw new AError(ErrorCodes.InvalidHeaderValue);
+            throw ErrorCodes.InvalidHeaderValue;
         }
     }
 }
