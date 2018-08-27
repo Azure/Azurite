@@ -1,0 +1,45 @@
+{
+  "rules": {
+    "class-name": true,
+    "comment-format": [true, "check-space"],
+    "indent": [true, "spaces"],
+    "prefer-const": true,
+    "no-eval": true,
+    "no-internal-module": true,
+    "no-unsafe-finally": true,
+    "no-var-keyword": true,
+    "no-trailing-whitespace": true,
+    "no-floating-promises": true,
+    "no-unused-expression": true,
+    // "promise-function-async": true,
+    "no-invalid-template-strings": true,
+    // "await-promise": true,
+    "no-return-await": true,
+    "one-line": [true, "check-open-brace", "check-whitespace"],
+    "quotemark": [true, "double"],
+    "semicolon": [true, "always"],
+    "triple-equals": [true, "allow-null-check"],
+    "typedef-whitespace": [
+      true,
+      {
+        "call-signature": "nospace",
+        "index-signature": "nospace",
+        "parameter": "nospace",
+        "property-declaration": "nospace",
+        "variable-declaration": "nospace"
+      }
+    ],
+    "variable-name": [true, "ban-keywords"],
+    "whitespace": [
+      true,
+      "check-branch",
+      "check-decl",
+      "check-operator",
+      "check-separator",
+      "check-type"
+    ],
+    "max-classes-per-file": false,
+    "no-implicit-dependencies": [true, "dev"]
+  },
+  "extends": ["tslint:latest", "tslint-config-prettier"]
+}
