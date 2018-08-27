@@ -1,7 +1,7 @@
 /** @format */
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /*
  * Checks whether the blob exists.
@@ -10,9 +10,10 @@ import ErrorCodes from './../../core/ErrorCodes';
 class BlobExists {
   constructor() {}
 
-  validate({ blobProxy = undefined }) {
-    if (blobProxy === undefined) {
-      throw new AError(ErrorCodes.BlobNotFound);
+    validate({ blobProxy = undefined }) {
+        if (blobProxy === undefined) {
+            throw ErrorCodes.BlobNotFound;
+        }
     }
   }
 }

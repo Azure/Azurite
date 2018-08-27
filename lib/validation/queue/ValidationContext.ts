@@ -8,21 +8,21 @@
  * application before and after @see ValidationContext exits.
  *
  * In case a validation fails an according @see AzuriteException is thrown which is then processed
- * by the validation middleware module middleware/queue/validation.js
- *
+ * by the validation middleware module middleware/queue/validation.ts
+ * 
  * @class ValidationContext
  */
 class ValidationContext {
-  constructor({
-    request = undefined,
-    queue = undefined,
-    message = undefined,
-    operation = undefined,
-  }) {
-    this.request = request;
-    this.queue = queue;
-    (this.message = message), (this.operation = operation);
-  }
+    request: any;
+    queue: any;
+    message: any;
+    operation: any;
+    constructor({ request = undefined, queue = undefined, message = undefined, operation = undefined }) {
+        this.request = request;
+        this.queue = queue;
+        this.message = message,
+        this.operation = operation;
+    }
 
   /**
    * Runs a validation module.

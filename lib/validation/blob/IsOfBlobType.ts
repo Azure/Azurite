@@ -1,7 +1,7 @@
 /** @format */
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 const AError = require("./../../core/AzuriteError"),
   ErrorCodes = require("./../../core/ErrorCodes");
@@ -12,9 +12,10 @@ const AError = require("./../../core/AzuriteError"),
 class IsOfBlobType {
   constructor() {}
 
-  validate({ blobProxy = undefined, moduleOptions = undefined }) {
-    if (blobProxy.original.entityType !== moduleOptions.entityType) {
-      throw new AError(ErrorCodes.InvalidBlobType);
+    validate({ blobProxy = undefined, moduleOptions = undefined }) {
+        if (blobProxy.original.entityType !== moduleOptions.entityType) {
+            throw ErrorCodes.InvalidBlobType;
+        }
     }
   }
 }

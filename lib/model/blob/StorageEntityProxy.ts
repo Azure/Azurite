@@ -13,9 +13,12 @@ const fs = BbPromise.promisifyAll(fsextra);
  * @class StorageEntityProxy
  */
 class StorageEntityProxy {
-  constructor(original) {
-    if (!original) {
-      throw new InternalAzuriteError("StorageEntityProxy: missing original");
+    original: any;
+    constructor(original) {
+        if (!original) {
+            throw new InternalAzuriteError('StorageEntityProxy: missing original');
+        }
+        this.original = original;
     }
     this.original = original;
   }

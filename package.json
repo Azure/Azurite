@@ -4,12 +4,12 @@
   "description": "A lightweight server clone of Azure Blob, Queue, and Table Storage that simulates most of the commands supported by it with minimal dependencies.",
   "scripts": {
     "pretest": "npm run clean",
-    "test": "env-cmd ./test/.env mocha -r ts-node/register test/**/*.js --timeout 10000",
+    "test": "env-cmd ./test/.env mocha -r ts-node/register test/**/*.ts --timeout 10000",
     "externaltests": "env-cmd ./externaltest/.env mocha",
     "start": "ts-node bin/azurite -l azurite-testdrive",
-    "blob": "ts-node bin/blob.js -l azurite-testdrive",
-    "queue": "ts-node bin/queue.js",
-    "table": "ts-node bin/table.js",
+    "blob": "ts-node bin/blob.ts -l azurite-testdrive",
+    "queue": "ts-node bin/queue.ts",
+    "table": "ts-node bin/table.ts",
     "clean": "rimraf azurite-testdrive *.nupkg blob.exe queue.exe table.exe",
     "nuget": "cross-var \"npm run clean && pkg -t node6-win --output blob bin/blob && pkg -t node6-win --output queue bin/queue && pkg -t node6-win --output table bin/table && nuget pack -Version $npm_package_version && nuget push *.nupkg  -Source https://www.nuget.org/api/v2/package\"",
     "docker": "cross-var \"docker build -t arafato/azurite:$npm_package_version . && docker build -t arafato/azurite:latest . && docker push arafato/azurite:$npm_package_version && docker push arafato/azurite:latest\""
@@ -17,12 +17,12 @@
   "engines": {
     "node": ">=8.11.3"
   },
-  "main": "./bin/azurite.js",
+  "main": "./bin/azurite.ts",
   "bin": {
-    "azurite": "./bin/azurite.js",
-    "azurite-blob": "./bin/blob.js",
-    "azurite-queue": "./bin/queue.js",
-    "azurite-table": "./bin/table.js"
+    "azurite": "./bin/azurite.ts",
+    "azurite-blob": "./bin/blob.ts",
+    "azurite-queue": "./bin/queue.ts",
+    "azurite-table": "./bin/table.ts"
   },
   "preferGlobal": true,
   "repository": {
@@ -46,7 +46,6 @@
   },
   "homepage": "https://github.com/arafato/azurite#readme",
   "dependencies": {
-    "@types/bluebird": "^3.5.23",
     "@types/node": "^10.5.5",
     "bluebird": "^3.4.6",
     "body-parser": "^1.15.2",
@@ -66,6 +65,13 @@
     "xml2js": "^0.4.17"
   },
   "devDependencies": {
+    "@types/bluebird": "^3.5.23",
+    "@types/chai": "^4.1.4",
+    "@types/chai-http": "^3.0.5",
+    "@types/fs-extra": "^5.0.4",
+    "@types/mocha": "^5.2.5",
+    "@types/request-promise": "^4.1.42",
+    "@types/xml2js": "^0.4.3",
     "azure-storage": "^2.10.1",
     "chai": "^3.5.0",
     "chai-http": "^4.0.0",
@@ -75,6 +81,7 @@
     "pkg": "^4.3.1",
     "prettier": "1.14.2",
     "request-promise": "^4.1.1",
-    "rimraf": "2.6.2"
+    "rimraf": "2.6.2",
+    "tslint": "^5.11.0"
   }
 }

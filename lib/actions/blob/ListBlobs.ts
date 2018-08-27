@@ -4,7 +4,6 @@ import storageManager from './../../core/blob/StorageManager';
 import { LeaseStatus } from './../../core/Constants';
 import N from './../../core/HttpHeaderNames';
 import js2xmlparser from 'js2xmlparser';
-import utils from './../../core/utils';
 import model from './../../xml/blob/BlobListXmlModel';
 
 class ListBlobs {

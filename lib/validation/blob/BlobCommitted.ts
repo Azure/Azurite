@@ -1,7 +1,7 @@
 /** @format */
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /*
  * Checks whether the blob has been committed yet as part of PUT BlockList.
@@ -11,13 +11,14 @@ import ErrorCodes from './../../core/ErrorCodes';
 class BlobCommitted {
   constructor() {}
 
-  validate({ blobProxy = undefined }) {
-    if (blobProxy === undefined) {
-      throw new AError(ErrorCodes.BlobNotFound);
-    }
+    validate({ blobProxy = undefined }) {
+        if (blobProxy === undefined) {
+            throw ErrorCodes.BlobNotFound;
+        }
 
-    if (!blobProxy.original.committed) {
-      throw new AError(ErrorCodes.BlobNotFound);
+        if (!blobProxy.original.committed) {
+            throw ErrorCodes.BlobNotFound;
+        }
     }
   }
 }

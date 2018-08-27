@@ -1,7 +1,7 @@
 /** @format */
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /*
  * Checks whether the queue name adheres to the naming convention 
@@ -10,9 +10,10 @@ import ErrorCodes from './../../core/ErrorCodes';
 class QueueMessageSize {
   constructor() {}
 
-  validate({ request = undefined }) {
-    if (request.bodyLength > 64000) {
-      throw new AError(ErrorCodes.MessageTooLarge);
+    validate({ request = undefined }) {
+        if (request.bodyLength > 64000) {
+            throw ErrorCodes.MessageTooLarge;
+        }
     }
   }
 }

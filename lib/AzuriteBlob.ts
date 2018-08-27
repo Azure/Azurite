@@ -17,14 +17,17 @@ import validation from './middleware/blob/validation';
 import actions from './middleware/blob/actions';
 
 class AzuriteBlob {
-  constructor() {
-    this.server;
-    // Support for PM2 Graceful Shutdown on Windows and Linux/OSX
-    // See http://pm2.keymetrics.io/docs/usage/signals-clean-restart/
-    if (process.platform === "win32") {
-      process.on("message", function(msg) {
-        if (msg == "shutdown") {
-          this.close();
+    server: any;
+    constructor() {
+        this.server;
+        // Support for PM2 Graceful Shutdown on Windows and Linux/OSX
+        // See http://pm2.keymetrics.io/docs/usage/signals-clean-restart/
+        if (process.platform === 'win32') {
+            process.on('message', function (msg) {
+                if (msg == 'shutdown') {
+                    this.close();
+                }
+            });
         }
         else {
             process.on('SIGINT', function () {

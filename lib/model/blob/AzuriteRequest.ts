@@ -1,16 +1,24 @@
 /** @format */
 
-import crypto from 'crypto';
 import N from './../../core/HttpHeaderNames';
-import { StorageEntityType as EntityType } from './../../core/Constants';
-import etag from './../../core/utils';
 import InternalAzuriteError from './../../core/InternalAzuriteError';
 
-const crypto = require("crypto"),
-  N = require("./../../core/HttpHeaderNames"),
-  EntityType = require("./../../core/Constants").StorageEntityType,
-  etag = require("./../../core/utils"),
-  InternalAzuriteError = require("./../../core/InternalAzuriteError");
+class AzuriteRequest {
+    httpProps: {};
+    metaProps: {};
+    body: any;
+    entityType: any;
+    query: any;
+    now: number;
+    payload: any;
+    constructor({
+        req = undefined,
+        entityType = undefined,
+        payload = undefined }) {
+
+        if (req === undefined) {
+            throw new InternalAzuriteError('AzuriteRequest: req cannot be undefined!');
+        }
 
 class AzuriteRequest {
   constructor({
@@ -24,16 +32,11 @@ class AzuriteRequest {
       );
     }
 
-    this.httpProps = {};
-    this.metaProps = {};
-    this.body = req.body;
-    this.entityType = entityType;
-    this.query = req.query;
-    this.now = Date.now();
-    this.payload = payload;
-    this._initMetaProps(req.rawHeaders);
-    this._initHttpProps(req.headers);
-  }
+    static clone(request) {
+        const copy = new AzuriteRequest({});
+        Object.assign(copy, request);
+        return copy;
+    }
 
   static clone(request) {
     const copy = new AzuriteRequest();

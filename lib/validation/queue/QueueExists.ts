@@ -1,7 +1,7 @@
 /** @format */
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 const AError = require("./../../core/AzuriteError"),
   ErrorCodes = require("./../../core/ErrorCodes");
@@ -9,9 +9,10 @@ const AError = require("./../../core/AzuriteError"),
 class QueueExists {
   constructor() {}
 
-  validate({ request = undefined, queue = undefined }) {
-    if (queue === undefined) {
-      throw new AError(ErrorCodes.QueueNotFound);
+    validate({ request = undefined, queue = undefined }) {
+        if (queue === undefined) {
+            throw ErrorCodes.QueueNotFound;
+        }
     }
   }
 }

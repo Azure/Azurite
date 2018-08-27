@@ -3,13 +3,15 @@
 import { BlockListType } from './../../core/Constants';
 
 class BlockList {
-  constructor(blockListType) {
-    this.CommittedBlocks = {
-      Block: [],
-    };
-    this.UncommittedBlocks = {
-      Block: [],
-    };
+    CommittedBlocks: any;
+    UncommittedBlocks: any;
+    constructor(blockListType) {
+        this.CommittedBlocks = {
+            Block: []
+        }
+        this.UncommittedBlocks = {
+            Block: []
+        }
 
     if (blockListType === BlockListType.COMMITTED) {
       delete this.UncommittedBlocks;
@@ -21,10 +23,12 @@ class BlockList {
 }
 
 class Block {
-  constructor(name, size) {
-    this.Name = name;
-    this.Size = size;
-  }
+    Name: any;
+    Size: any;
+    constructor(name, size) {
+        this.Name = name;
+        this.Size = size;
+    }
 }
 
 export default {

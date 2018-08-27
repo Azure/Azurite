@@ -4,9 +4,10 @@ import { ODataMode } from './../../core/Constants';
 import InternalAzuriteError from './../../core/InternalAzuriteError';
 
 class BaseProxy {
-  constructor(entity) {
-    this._ = entity;
-  }
+    _: any;
+    constructor(entity) {
+        this._ = entity;
+    }
 
   /**
    * Returns the odata representation of the any (Table, Entity) entity.

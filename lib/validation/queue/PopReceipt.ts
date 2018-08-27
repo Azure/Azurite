@@ -1,7 +1,7 @@
 /** @format */
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 import QueueManager from './../../core/queue/QueueManager';
 
 /**
@@ -10,13 +10,11 @@ import QueueManager from './../../core/queue/QueueManager';
 class PopReceipt {
   constructor() {}
 
-  validate({ request = undefined }) {
-    const msg = QueueManager.getQueueAndMessage({
-      queueName: request.queueName,
-      messageId: request.messageId,
-    }).message;
-    if (msg.popReceipt !== request.popReceipt) {
-      throw new AError(ErrorCodes.PopReceiptMismatch);
+    validate({ request = undefined }) {
+        const msg = QueueManager.getQueueAndMessage({ queueName: request.queueName, messageId: request.messageId }).message;
+        if (msg.popReceipt !== request.popReceipt) {
+            throw ErrorCodes.PopReceiptMismatch;
+        }
     }
   }
 }

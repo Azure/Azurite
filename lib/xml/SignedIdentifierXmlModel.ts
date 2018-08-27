@@ -3,9 +3,10 @@
 "use strict";
 
 class SignedIdentifiers {
-  constructor() {
-    this.SignedIdentifier = [];
-  }
+    SignedIdentifier: any[];
+    constructor() {
+        this.SignedIdentifier = [];
+    }
 
   addSignedIdentifier(id, start, expiry, permissionlist) {
     this.SignedIdentifier.push({

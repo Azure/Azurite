@@ -28,7 +28,7 @@
             "request": "launch",
             "protocol": "auto",
             "name": "Launch Azurite",
-            "program": "${workspaceRoot}/bin/azurite",
+            "program": "${workspaceRoot}/bin/azurite.ts",
             "cwd": "${workspaceRoot}",
             "args": [
                 "-l",
@@ -46,7 +46,7 @@
             "request": "launch",
             "protocol": "auto",
             "name": "Launch Blob only",
-            "program": "${workspaceRoot}/bin/blob.js",
+            "program": "${workspaceRoot}/bin/blob.ts",
             "cwd": "${workspaceRoot}",
             "args": [
                 "-l",
@@ -64,7 +64,7 @@
             "request": "launch",
             "protocol": "auto",
             "name": "Launch Queue only",
-            "program": "${workspaceRoot}/bin/queue.js",
+            "program": "${workspaceRoot}/bin/queue.ts",
             "cwd": "${workspaceRoot}",
             "args": [
                 "-l",
@@ -82,7 +82,7 @@
             "request": "launch",
             "protocol": "auto",
             "name": "Launch Table only",
-            "program": "${workspaceRoot}/bin/table.js",
+            "program": "${workspaceRoot}/bin/table.ts",
             "cwd": "${workspaceRoot}",
             "args": [
                 "-l",

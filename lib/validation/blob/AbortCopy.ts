@@ -1,8 +1,8 @@
 /** @format */
 
-import AError from './../../core/AzuriteError';
+import { AzuriteError }from './../../core/AzuriteError';
 import CopyOperationsManager from './../../core/blob/CopyOperationsManager';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /**
  *  Checks whether there is no pending copy operation.
@@ -12,9 +12,11 @@ import ErrorCodes from './../../core/ErrorCodes';
 class AbortCopy {
   constructor() {}
 
-  validate() {
-    if (!CopyOperationsManager.isPending()) {
-      throw new AError(ErrorCodes.NoPendingCopyOperation);
+    validate() {
+        // TODO
+        // if (!CopyOperationsManager.isPending()) {
+        //     throw ErrorCodes.NoPendingCopyOperation);
+        // }
     }
   }
 }

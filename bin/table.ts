@@ -3,7 +3,7 @@
 'use strict';
 import minimist from 'minimist';
 import AzuriteTable from '../lib/AzuriteTable';
-import * as BbPromise from 'bluebird';
+import BbPromise from 'bluebird';
 
 process.on("unhandledRejection", (e) => {
   console.error(
@@ -11,7 +11,7 @@ process.on("unhandledRejection", (e) => {
   );
   console.error(e);
 });
-process.noDeprecation = true;
+// process.noDeprecation = true;
 
 (() => BbPromise.resolve().then(() => {
 	// requiring here so that if anything went wrong,

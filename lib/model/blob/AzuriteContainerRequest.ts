@@ -5,10 +5,11 @@ import env from './../../core/env';
 import { StorageEntityType as EntityType } from './../../core/Constants';
 import AzuriteRequest from './AzuriteRequest';
 
-const path = require("path"),
-  env = require("./../../core/env"),
-  EntityType = require("./../../core/Constants").StorageEntityType,
-  AzuriteRequest = require("./AzuriteRequest");
+class AzuriteContainerRequest extends AzuriteRequest {
+    containerName: any;
+    constructor({
+        req = null,
+        payload = undefined }) {
 
 class AzuriteContainerRequest extends AzuriteRequest {
   constructor({ req = null, payload = undefined }) {

@@ -1,7 +1,7 @@
 /** @format */
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 import { Usage } from './../../core/Constants';
 import { LeaseStatus } from './../../core/Constants';
 
@@ -24,56 +24,44 @@ class ContainerLeaseUsage {
 
     containerProxy.updateLeaseState();
 
-    switch (containerProxy.original.leaseState) {
-      case LeaseStatus.AVAILABLE:
-        if (leaseId) {
-          throw new AError(ErrorCodes.LeaseNotPresentWithContainerOperation);
-        }
-        break;
-      case LeaseStatus.LEASED:
-        if (usage === Usage.Delete && !leaseId) {
-          throw new AError(ErrorCodes.LeaseIdMissing);
-        }
-        if (
-          usage === Usage.Delete &&
-          leaseId !== containerProxy.original.leaseId
-        ) {
-          throw new AError(ErrorCodes.LeaseIdMismatchWithContainerOperation);
-        }
-        if (
-          usage === Usage.Other &&
-          leaseId !== containerProxy.original.leaseId &&
-          leaseId !== undefined
-        ) {
-          throw new AError(ErrorCodes.LeaseIdMismatchWithContainerOperation);
-        }
-        break;
-      case LeaseStatus.BREAKING:
-        if (
-          usage === Usage.Delete &&
-          leaseId !== containerProxy.original.leaseId
-        ) {
-          throw new AError(ErrorCodes.LeaseIdMismatchWithContainerOperation);
-        }
-        if (usage === Usage.Delete && !leaseId) {
-          throw new AError(ErrorCodes.LeaseIdMissing);
-        }
-        if (
-          usage === Usage.Other &&
-          leaseId !== containerProxy.original.leaseId &&
-          leaseId !== undefined
-        ) {
-          throw new AError(ErrorCodes.LeaseIdMismatchWithLeaseOperation);
-        }
-        break;
-      case LeaseStatus.BROKEN:
-        if (leaseId) {
-          throw new AError(ErrorCodes.LeaseNotPresentWithContainerOperation);
-        }
-        break;
-      case LeaseStatus.EXPIRED:
-        if (leaseId) {
-          throw new AError(ErrorCodes.LeaseNotPresentWithContainerOperation);
+        switch (containerProxy.original.leaseState) {
+            case LeaseStatus.AVAILABLE:
+                if (leaseId) {
+                    throw ErrorCodes.LeaseNotPresentWithContainerOperation;
+                }
+                break;
+            case LeaseStatus.LEASED:
+                if (usage === Usage.Delete && !leaseId) {
+                    throw ErrorCodes.LeaseIdMissing;
+                }
+                if (usage === Usage.Delete && leaseId !== containerProxy.original.leaseId) {
+                    throw ErrorCodes.LeaseIdMismatchWithContainerOperation;
+                }
+                if (usage === Usage.Other && leaseId !== containerProxy.original.leaseId && leaseId !== undefined) {
+                    throw ErrorCodes.LeaseIdMismatchWithContainerOperation;
+                }
+                break;
+            case LeaseStatus.BREAKING:
+                if (usage === Usage.Delete && leaseId !== containerProxy.original.leaseId) {
+                    throw ErrorCodes.LeaseIdMismatchWithContainerOperation;
+                }
+                if (usage === Usage.Delete && !leaseId) {
+                    throw ErrorCodes.LeaseIdMissing;
+                }
+                if (usage === Usage.Other && leaseId !== containerProxy.original.leaseId && leaseId !== undefined) {
+                    throw ErrorCodes.LeaseIdMismatchWithLeaseOperation;
+                }
+                break;
+            case LeaseStatus.BROKEN:
+                if (leaseId) {
+                    throw ErrorCodes.LeaseNotPresentWithContainerOperation;
+                }
+                break;
+            case LeaseStatus.EXPIRED:
+                if (leaseId) {
+                    throw ErrorCodes.LeaseNotPresentWithContainerOperation;
+                }
+                break;
         }
         break;
     }

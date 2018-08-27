@@ -1,8 +1,8 @@
 /** @format */
 
 import BbPromise from 'bluebird';
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 import N from './../../core/HttpHeaderNames';
 import { Operations } from './../../core/Constants';
 import sm from './../../core/blob/StorageManager';
@@ -59,15 +59,19 @@ export default (req, res, next) => {
             continue;
           }
 
-          // Start at true to handle the case where allowedHeaders is an empty list
-          valid = true;
-          rule.AllowedHeaders.split(",").forEach((e) => {
-            Object.keys(allowedHeaders).forEach((requestHeader) => {
-              if (e.charAt(e.length - 1) === "*") {
-                valid = requestHeader.includes(e.slice(0, -1));
-              } else {
-                valid = e === requestHeader;
-              }
+                        if (valid) {
+                            req.azuriteRequest.cors = {};
+                            req.azuriteRequest.cors.maxAgeInSeconds = rule.MaxAgeInSeconds;
+                            req.azuriteRequest.cors.origin = request.httpProps[N.ORIGIN];
+                            req.azuriteRequest.cors.exposedHeaders = rule.ExposedHeaders;
+                            break;
+                        }
+                    }
+                    if (!valid && req.azuriteOperation === Operations.Account.PREFLIGHT_BLOB_REQUEST) {
+                        throw ErrorCodes.CorsForbidden;
+                    }
+                }
+                next();
             });
           });
 

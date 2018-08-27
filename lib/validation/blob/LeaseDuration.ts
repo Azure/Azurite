@@ -1,9 +1,9 @@
 /** @format */
 
-import AError from './../../core/AzuriteError';
+import { AzuriteError }from './../../core/AzuriteError';
 import N from './../../core/HttpHeaderNames';
 import { LeaseActions as LeaseAction } from './../../core/Constants';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /**
  * Checks whether lease duration and lease break period conforms to specification
@@ -16,23 +16,19 @@ import ErrorCodes from './../../core/ErrorCodes';
 class LeaseDuration {
   constructor() {}
 
-  validate({ request = undefined }) {
-    const leaseAction = request.httpProps[N.LEASE_ACTION],
-      leaseBreakPeriod = request.httpProps[N.LEASE_BREAK_PERIOD]
-        ? parseInt(request.httpProps[N.LEASE_BREAK_PERIOD])
-        : undefined,
-      leaseDuration = request.httpProps[N.LEASE_DURATION]
-        ? parseInt(request.httpProps[N.LEASE_DURATION])
-        : undefined;
+        // x-ms-lease-duration is only required and processed for lease action 'acquire' 
+        if (leaseAction === LeaseAction.ACQUIRE) {
+            if (!(leaseDuration === -1 || leaseDuration >= 15 && leaseDuration <= 60)) {
+                throw ErrorCodes.InvalidHeaderValue;
+            }
+        }
 
-    // x-ms-lease-duration is only required and processed for lease action 'acquire'
-    if (leaseAction === LeaseAction.ACQUIRE) {
-      if (
-        !(leaseDuration === -1 || (leaseDuration >= 15 && leaseDuration <= 60))
-      ) {
-        throw new AError(ErrorCodes.InvalidHeaderValue);
-      }
-    }
+        // x-ms-lease-break-period is optional
+        if (leaseBreakPeriod) {
+            if (!(leaseBreakPeriod >= 0 && leaseBreakPeriod <= 60)) {
+                throw ErrorCodes.InvalidHeaderValue;
+            }
+        }
 
     // x-ms-lease-break-period is optional
     if (leaseBreakPeriod) {

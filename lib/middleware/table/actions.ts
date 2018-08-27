@@ -25,9 +25,10 @@ export default (req, res) => {
 
 const actions = {};
 
-actions[undefined] = (request, res) => {
-  res.status(501).send("Not Implemented yet.");
-};
+// TODO
+// actions[undefined] = (request, res) => {
+//     res.status(501).send('Not Implemented yet.');
+// }
 
 actions[Operations.CREATE_TABLE] = (request, res) => {
   createTable.process(request, res);

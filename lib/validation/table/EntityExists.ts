@@ -1,14 +1,15 @@
 /** @format */
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 class EntityExists {
   constructor() {}
 
-  validate({ entity = undefined }) {
-    if (entity === undefined) {
-      throw new AError(ErrorCodes.ResourceNotFound);
+    validate({ entity = undefined }) {
+        if (entity === undefined) {
+            throw ErrorCodes.ResourceNotFound;
+        }
     }
   }
 }

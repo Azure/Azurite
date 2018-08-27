@@ -1,8 +1,8 @@
 /** @format */
 
-import AError from './../../core/AzuriteError';
+import { AzuriteError }from './../../core/AzuriteError';
 import N from './../../core/HttpHeaderNames';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /**
  * Checks whether the following conditional request headers specific to an AppendBlob are satisfied.
@@ -20,15 +20,12 @@ class AppendBlobConditionalRequestHeaders {
     const maxSize = request.httpProps[N.BLOB_CONDITION_MAX_SIZE],
       appendPos = request.httpProps[N.BLOB_CONDITION_APPENDPOS];
 
-    if (
-      maxSize !== undefined &&
-      (blobProxy.original.size > maxSize ||
-        blobProxy.original.size + request.body.length > maxSize)
-    ) {
-      throw new AError(ErrorCodes.MaxBlobSizeConditionNotMet);
-    }
-    if (appendPos !== undefined && blobProxy.original.size !== appendPos) {
-      throw new AError(ErrorCodes.AppendPositionConditionNotMet);
+        if (maxSize !== undefined && (blobProxy.original.size > maxSize || (blobProxy.original.size + request.body.length) > maxSize)) {
+            throw ErrorCodes.MaxBlobSizeConditionNotMet;
+        }
+        if (appendPos !== undefined && blobProxy.original.size !== appendPos) {
+            throw ErrorCodes.AppendPositionConditionNotMet;
+        }
     }
   }
 }

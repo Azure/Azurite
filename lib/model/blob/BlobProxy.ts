@@ -11,10 +11,14 @@ import InternalAzuriteError from './../../core/InternalAzuriteError';
  * @class BlobProxy
  */
 class BlobProxy extends StorageEntityProxy {
-  constructor(original, containerName) {
-    super(original);
-    if (!containerName) {
-      throw new InternalAzuriteError("BlobProxy: missing containerName");
+    original: any;
+    containerName: any;
+    constructor(original, containerName) {
+        super(original);
+        if (!containerName) {
+            throw new InternalAzuriteError('BlobProxy: missing containerName');
+        }
+        this.containerName = containerName;
     }
     this.containerName = containerName;
   }

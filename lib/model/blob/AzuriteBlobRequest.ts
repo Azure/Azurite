@@ -9,14 +9,28 @@ import N from './../../core/HttpHeaderNames';
 import env from './../../core/env';
 import InternalAzuriteError from './../../core/InternalAzuriteError';
 
-const crypto = require("crypto"),
-  url = require("url"),
-  EntityType = require("./../../core/Constants").StorageEntityType,
-  BlockListType = require("./../../core/Constants").BlockListType,
-  AzuriteRequest = require("./AzuriteRequest"),
-  N = require("./../../core/HttpHeaderNames"),
-  env = require("./../../core/env"),
-  InternalAzuriteError = require("./../../core/InternalAzuriteError");
+class AzuriteBlobRequest extends AzuriteRequest {
+    id: any;
+    parentId: any;
+    uri: string;
+    blockId: any;
+    commit: boolean;
+    body: any;
+    containerName: any;
+    blobName: any;
+    snapshot: boolean;
+    copyId: any;
+    blockListType: any;
+    query: any;
+    snapshotDate: string;
+    originId: string;
+    originUri: string;
+    parentUri: string;
+    httpProps: any;
+    constructor({
+        req = undefined,
+        entityType = undefined,
+        payload = undefined }) {
 
 class AzuriteBlobRequest extends AzuriteRequest {
   constructor({
@@ -81,33 +95,34 @@ class AzuriteBlobRequest extends AzuriteRequest {
     return this.snapshot;
   }
 
-  copySourceName() {
-    if (this.httpProps[N.COPY_SOURCE === undefined]) {
-      throw new InternalAzuriteError(
-        "Request: copySourceUrl was called without copy-source header set."
-      );
-    }
-    const match = /devstoreaccount1\/(.*)/.exec(this.httpProps[N.COPY_SOURCE]);
-    if (match === null) {
-      throw new InternalAzuriteError(
-        `Request: x-ms-copy-source was not in the expected format (was "${
-          this.httpProps[N.COPY_SOURCE]
-        }".`
-      );
-    }
-    const source = match[1];
-    const pathname = url.parse(source).pathname;
-    const parts = pathname.split("/"),
-      containerName = parts[0];
-    parts.splice(0, 1);
-    const blobName = decodeURIComponent(parts.join("/")); // unicode characters in http headers are encoded!
-    const query = url.parse(source).query;
-    let date = undefined;
-    const regex = /snapshot=([^&]*)/;
-    const ssMatch = regex.exec(query);
-    if (ssMatch !== null) {
-      const dateStr = ssMatch[1];
-      date = new Date(decodeURIComponent(dateStr)).toUTCString();
+    copySourceName() {
+        // TODO
+        // if (this.httpProps[undefined]) {
+        //     throw new InternalAzuriteError('Request: copySourceUrl was called without copy-source header set.')
+        // }
+        const match = /devstoreaccount1\/(.*)/.exec(this.httpProps[N.COPY_SOURCE]);
+        if (match === null) {
+            throw new InternalAzuriteError(`Request: x-ms-copy-source was not in the expected format (was "${this.httpProps[N.COPY_SOURCE]}".`);
+        }
+        const source = match[1];
+        const pathname = url.parse(source).pathname;
+        const parts = pathname.split('/'),
+            containerName = parts[0];
+        parts.splice(0, 1);
+        const blobName = decodeURIComponent(parts.join('/')); // unicode characters in http headers are encoded!
+        const query = url.parse(source).query;
+        let date = undefined;
+        const regex = /snapshot=([^&]*)/;
+        const ssMatch = regex.exec(query);
+        if (ssMatch !== null) {
+            const dateStr = ssMatch[1];
+            date = new Date(decodeURIComponent(dateStr)).toUTCString();
+        }
+        return {
+            sourceContainerName: containerName,
+            sourceBlobName: blobName,
+            date: date
+        };
     }
     return {
       sourceContainerName: containerName,

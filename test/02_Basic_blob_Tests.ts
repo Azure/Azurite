@@ -1,14 +1,12 @@
 import chai from 'chai';
 import chaiHttp from 'chai-http';
-import Azurite from './../lib/AzuriteBlob';
+import AzuriteBlob from './../lib/AzuriteBlob';
 import rp from 'request-promise';
 import path from 'path';
 import xml2js from 'xml2js';
-import * as BbPromise from 'bluebird';
-import fsextra from 'fs-extra';
 
-const fs = BbPromise.promisifyAll(fsextra);
-const should = chai.should(), expect = chai.expect;
+const expect = chai.expect;
+const should = chai.should();
 
 chai.use(chaiHttp);
 
@@ -47,8 +45,8 @@ function createBlob(containerNamex, blobNamex, payload, blobType) {
   });
 }
 
-describe("Blob HTTP API", () => {
-  const azurite = new Azurite();
+describe('Blob HTTP API', () => {
+    const azurite = new AzuriteBlob();
 
   before(() => {
     const location = path.join(process.env.AZURITE_LOCATION, testPath);
@@ -193,30 +191,30 @@ describe("Blob HTTP API", () => {
     });
   });
 
-  describe("Delete Blob", () => {
-    it("should delete an existing Block Blob", () => {
-      return createBlob("deleteblobtest", "blob", "abc123", "BlockBlob")
-        .then(() => {
-          return chai.request(url).delete(`${urlPath}/deleteblobtest/blob`);
-        })
-        .then((res) => {
-          res.should.have.status(202);
+    describe('Delete Blob', () => {
+        it('should delete an existing Block Blob', () => {
+            return createBlob('deleteblobtest', 'blob', 'abc123', 'BlockBlob')
+                .then(() => {
+                    return chai.request(url)
+                        .del(`${urlPath}/deleteblobtest/blob`);
+                })
+                .then((res) => {
+                    res.should.have.status(202);
+                })
         });
-    });
-    it("should fail when deleting a non-existant blob", () => {
-      return chai
-        .request(url)
-        .delete(`${urlPath}/deleteblobtest/DOESNOTEXIST`)
-        .catch((e) => {
-          e.should.have.status(404);
+        it('should fail when deleting a non-existant blob', () => {
+            return chai.request(url)
+                .del(`${urlPath}/deleteblobtest/DOESNOTEXIST`)
+                .catch((e) => {
+                    e.should.have.status(404);
+                });
         });
-    });
-    it("should fail when deleting from a non-existant container", () => {
-      return chai
-        .request(url)
-        .delete(`${urlPath}/DOESNOTEXIST/DOESNOTEXIST`)
-        .catch((e) => {
-          e.should.have.status(404);
+        it('should fail when deleting from a non-existant container', () => {
+            return chai.request(url)
+                .del(`${urlPath}/DOESNOTEXIST/DOESNOTEXIST`)
+                .catch((e) => {
+                    e.should.have.status(404);
+                });
         });
     });
   });
@@ -257,17 +255,17 @@ describe("Blob HTTP API", () => {
     });
   });
 
-  describe("Page Blobs", () => {
-    it("should get an empty page list from the page blob", () => {
-      return chai
-        .request(url)
-        .get(`${urlPath}/${containerName}/${pageBlobName}`)
-        .query({ comp: "pagelist" })
-        .then((res) => {
-          res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(err, result) {
-            expect(result.PageList).to.not.have.any.keys("PageRange");
-          });
+    describe('Page Blobs', () => {
+        it('should get an empty page list from the page blob', () => {
+            return chai.request(url)
+                .get(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'pagelist' })
+                .then((res) => {
+                    res.should.have.status(200);
+                    new xml2js.Parser().parseString(res.text, function(err, result) {
+			            expect(result.PageList).to.not.have.any.keys('PageRange');
+		            });
+                });
         });
     });
     it("should write data to the page blob range [0-511]", () => {
@@ -311,38 +309,30 @@ describe("Blob HTTP API", () => {
         .catch((e) => {
           e.should.have.status(400);
         });
-    });
-    it("should get the page range [0-511] from the page blob", () => {
-      return chai
-        .request(url)
-        .get(`${urlPath}/${containerName}/${pageBlobName}`)
-        .query({ comp: "pagelist" })
-        .then((res) => {
-          res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(err, result) {
-            expect(result.PageList.PageRange.length).to.equal(1);
-            expect(result.PageList.PageRange[0]).to.deep.equal({
-              Start: ["0"],
-              End: ["511"],
-            });
-          });
+        it('should get the page range [0-511] from the page blob', () => {
+            return chai.request(url)
+                .get(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'pagelist' })
+                .then((res) => {
+                    res.should.have.status(200);
+                    new xml2js.Parser().parseString(res.text, function(err, result) {
+                        expect(result.PageList.PageRange.length).to.equal(1);
+                        expect(result.PageList.PageRange[0]).to.deep.equal({"Start":["0"],"End":["511"]});
+                    });
+                });
         });
-    });
-    it("should get the page range [0-511] from the page blob within range [0-1023]", () => {
-      return chai
-        .request(url)
-        .get(`${urlPath}/${containerName}/${pageBlobName}`)
-        .query({ comp: "pagelist" })
-        .set("x-ms-range", "bytes=0-1023")
-        .then((res) => {
-          res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(err, result) {
-            expect(result.PageList.PageRange.length).to.equal(1);
-            expect(result.PageList.PageRange[0]).to.deep.equal({
-              Start: ["0"],
-              End: ["511"],
-            });
-          });
+        it('should get the page range [0-511] from the page blob within range [0-1023]', () => {
+            return chai.request(url)
+                .get(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'pagelist' })
+                .set('x-ms-range', 'bytes=0-1023')
+                .then((res) => {
+                    res.should.have.status(200);
+                    new xml2js.Parser().parseString(res.text, function(err, result) {
+                        expect(result.PageList.PageRange.length).to.equal(1);
+                        expect(result.PageList.PageRange[0]).to.deep.equal({"Start":["0"],"End":["511"]});
+                    });
+                });
         });
     });
     it("should fail to get the page list from the page blob within an invalid range", () => {
@@ -368,25 +358,18 @@ describe("Blob HTTP API", () => {
         .then((res) => {
           res.should.have.status(201);
         });
-    });
-    it("should get the page ranges [0-511],[1024-1535] from the page blob", () => {
-      return chai
-        .request(url)
-        .get(`${urlPath}/${containerName}/${pageBlobName}`)
-        .query({ comp: "pagelist" })
-        .then((res) => {
-          res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(err, result) {
-            expect(result.PageList.PageRange.length).to.equal(2);
-            expect(result.PageList.PageRange[0]).to.deep.equal({
-              Start: ["0"],
-              End: ["511"],
-            });
-            expect(result.PageList.PageRange[1]).to.deep.equal({
-              Start: ["1024"],
-              End: ["1535"],
-            });
-          });
+        it('should get the page ranges [0-511],[1024-1535] from the page blob', () => {
+            return chai.request(url)
+                .get(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'pagelist' })
+                .then((res) => {
+                    res.should.have.status(200);
+                    new xml2js.Parser().parseString(res.text, function(err, result) {
+                        expect(result.PageList.PageRange.length).to.equal(2);
+                        expect(result.PageList.PageRange[0]).to.deep.equal({"Start":["0"],"End":["511"]});
+                        expect(result.PageList.PageRange[1]).to.deep.equal({"Start":["1024"],"End":["1535"]});
+                    });
+                });
         });
     });
     it("should write data to the page blob range [512-1023]", () => {
@@ -402,21 +385,17 @@ describe("Blob HTTP API", () => {
         .then((res) => {
           res.should.have.status(201);
         });
-    });
-    it("should get the page range [0-1535] from the page blob", () => {
-      return chai
-        .request(url)
-        .get(`${urlPath}/${containerName}/${pageBlobName}`)
-        .query({ comp: "pagelist" })
-        .then((res) => {
-          res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(err, result) {
-            expect(result.PageList.PageRange.length).to.equal(1);
-            expect(result.PageList.PageRange[0]).to.deep.equal({
-              Start: ["0"],
-              End: ["1535"],
-            });
-          });
+        it('should get the page range [0-1535] from the page blob', () => {
+            return chai.request(url)
+                .get(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'pagelist' })
+                .then((res) => {
+                    res.should.have.status(200);
+                    new xml2js.Parser().parseString(res.text, function(err, result) {
+                        expect(result.PageList.PageRange.length).to.equal(1);
+                        expect(result.PageList.PageRange[0]).to.deep.equal({"Start":["0"],"End":["1535"]});
+                    });
+                });
         });
     });
     it("should clear data in the page blob range [512-1023]", () => {
@@ -429,25 +408,18 @@ describe("Blob HTTP API", () => {
         .then((res) => {
           res.should.have.status(201);
         });
-    });
-    it("should get the page ranges [0-511],[1024-1535] from the page blob", () => {
-      return chai
-        .request(url)
-        .get(`${urlPath}/${containerName}/${pageBlobName}`)
-        .query({ comp: "pagelist" })
-        .then((res) => {
-          res.should.have.status(200);
-          xml2js.Parser().parseString(res.text, function(err, result) {
-            expect(result.PageList.PageRange.length).to.equal(2);
-            expect(result.PageList.PageRange[0]).to.deep.equal({
-              Start: ["0"],
-              End: ["511"],
-            });
-            expect(result.PageList.PageRange[1]).to.deep.equal({
-              Start: ["1024"],
-              End: ["1535"],
-            });
-          });
+        it('should get the page ranges [0-511],[1024-1535] from the page blob', () => {
+            return chai.request(url)
+                .get(`${urlPath}/${containerName}/${pageBlobName}`)
+                .query({ comp: 'pagelist' })
+                .then((res) => {
+                    res.should.have.status(200);
+                    new xml2js.Parser().parseString(res.text, function(err, result) {
+                        expect(result.PageList.PageRange.length).to.equal(2);
+                        expect(result.PageList.PageRange[0]).to.deep.equal({"Start":["0"],"End":["511"]});
+                        expect(result.PageList.PageRange[1]).to.deep.equal({"Start":["1024"],"End":["1535"]});
+                    });
+                });
         });
     });
   });

@@ -7,19 +7,18 @@ import { ODataMode } from './../../core/Constants';
 import N from './../../core/HttpHeaderNames';
 
 class AzuriteTableRequest {
-  constructor({ req = undefined, payload = undefined }) {
-    if (req === undefined) {
-      throw new InternalAzuriteError(
-        "AzuriteTableRequest: req must not be undefined!"
-      );
-    }
-    this.httpProps = {};
-    this._initHttpProps(req.headers);
-    this.accept = this._parseAccept(this.httpProps[N.ACCEPT]) || ODataMode.NONE;
-    this.payload = RequestPayloadParser.parse(
-      this.httpProps[N.CONTENT_TYPE],
-      req.body
-    );
+    httpProps: {};
+    accept: string;
+    payload: any;
+    tableName: any;
+    partitionKey: any;
+    rowKey: any;
+    singleEntity: boolean;
+    filter: string;
+    top: any;
+    constructor({
+        req = undefined,
+        payload = undefined }) {
 
     this.tableName =
       this.payload.TableName ||

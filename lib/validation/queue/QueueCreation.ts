@@ -1,7 +1,7 @@
 /** @format */
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /*
  * When a queue with the specified name already exists, the Queue service checks the metadata 
@@ -12,9 +12,11 @@ import ErrorCodes from './../../core/ErrorCodes';
 class QueueCreation {
   constructor() {}
 
-  validate({ request = undefined, queue = undefined }) {
-    if (queue === undefined) {
-      return;
+        Object.keys(queue.metaProps).forEach((prop) => {
+            if (queue.metaProps[prop] !== request.metaProps[prop]) {
+                throw ErrorCodes.QueueAlreadyExists;
+            }
+        });
     }
 
     Object.keys(queue.metaProps).forEach((prop) => {

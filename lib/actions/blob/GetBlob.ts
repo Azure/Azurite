@@ -49,56 +49,52 @@ class GetBlob {
           startByte = parseInt(pair[0]),
           endByte = parseInt(pair[1]);
 
-        const fullPath = env.diskStorageUri(request.id);
-        const readStream = fs.createReadStream(fullPath, {
-          flags: "r",
-          start: startByte,
-          end: endByte,
-          encoding: "utf8",
-        });
-        readStream.read();
-        const data = [];
-        readStream.on("data", (chunk) => {
-          data.push(chunk);
-        });
-        readStream.on("end", () => {
-          const body = new Buffer(data, "utf8");
-          const hash = crypto
-            .createHash("md5")
-            .update(body)
-            .digest("base64");
-          response.addHttpProperty(N.CONTENT_MD5, hash);
-          res.set(response.httpProps);
-          res.status(206).send(body);
-        });
-      } else {
-        req(this._createRequestHeader(env.webStorageUri(request.id), range))
-          .on("response", (staticResponse) => {
-            response.addHttpProperty(
-              N.CONTENT_LENGTH,
-              staticResponse.headers[N.CONTENT_LENGTH]
-            );
-            if (range) {
-              response.httpProps[N.BLOB_CONTENT_MD5] =
-                response.httpProps[N.CONTENT_MD5];
-              delete response.httpProps[N.CONTENT_MD5];
-              response.httpProps[N.CONTENT_RANGE] =
-                staticResponse.headers[N.CONTENT_RANGE];
-            }
-            res.set(response.httpProps);
-            range ? res.writeHead(206) : res.writeHead(200);
-          })
-          .pipe(res);
-      }
-    });
-  }
+                    const fullPath = env.diskStorageUri(request.id);
+                    const readStream = fs.createReadStream(fullPath, {
+                        flags: 'r',
+                        start: startByte,
+                        end: endByte,
+                        encoding: 'utf8'
+                    });
+                    readStream.read();
+                    const data = [];
+                    readStream.on('data', (chunk) => {
+                        data.push(chunk);
+                    });
+                    readStream.on('end', () => {
+                        const body = Buffer.from(data);
+                        const hash = crypto.createHash('md5')
+                            .update(body)
+                            .digest('base64');
+                        response.addHttpProperty(N.CONTENT_MD5, hash);
+                        res.set(response.httpProps);
+                        res.status(206).send(body);
+                    });
+                } else {
+                    req(this._createRequestHeader(env.webStorageUri(request.id), range))
+                        .on('response', (staticResponse) => {
+                            response.addHttpProperty(N.CONTENT_LENGTH, staticResponse.headers[N.CONTENT_LENGTH]);
+                            if (range) {
+                                response.httpProps[N.BLOB_CONTENT_MD5] = response.httpProps[N.CONTENT_MD5];
+                                delete response.httpProps[N.CONTENT_MD5];
+                                response.httpProps[N.CONTENT_RANGE] = staticResponse.headers[N.CONTENT_RANGE];
+                            }
+                            res.set(response.httpProps);
+                            (range) ? res.writeHead(206) : res.writeHead(200);
+                        })
+                        .pipe(res);
+                }
+            });
+    }
 
-  _createRequestHeader(url, range) {
-    const request = {};
-    request.headers = {};
-    request.url = url;
-    if (range) {
-      request.headers.Range = range;
+    _createRequestHeader(url, range) {
+        const request: any = {};
+        request.headers = {};
+        request.url = url;
+        if (range) {
+            request.headers.Range = range
+        }
+        return request;
     }
     return request;
   }

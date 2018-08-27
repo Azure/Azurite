@@ -1,7 +1,7 @@
 /** @format */
 
-import AError from './../core/AzuriteError';
-import ErrorCodes from './../core/ErrorCodes';
+import { AzuriteError }from './../core/AzuriteError';
+import { ErrorCodes } from '../core/AzuriteError';
 
 /**
  * Checks whether the number of signed identifiers is at most 5.
@@ -10,10 +10,11 @@ import ErrorCodes from './../core/ErrorCodes';
 class NumOfSignedIdentifiers {
   constructor() {}
 
-  validate({ request = undefined }) {
-    const si = request.payload;
-    if ((si !== null || si !== undefined) && si.length > 5) {
-      throw new AError(ErrorCodes.InvalidInput);
+    validate({ request = undefined }) {
+        const si = request.payload;
+        if ((si !== null || si !== undefined) && si.length > 5) {
+            throw ErrorCodes.InvalidInput;
+        }
     }
   }
 }

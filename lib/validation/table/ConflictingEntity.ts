@@ -1,14 +1,15 @@
 /** @format */
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 class ConflictingEntity {
   constructor() {}
 
-  validate({ entity = undefined }) {
-    if (entity !== undefined) {
-      throw new AError(ErrorCodes.EntityAlreadyExists);
+    validate({ entity = undefined }) {
+        if (entity !== undefined) {
+            throw ErrorCodes.EntityAlreadyExists;
+        }
     }
   }
 }

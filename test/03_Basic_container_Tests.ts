@@ -1,12 +1,11 @@
 import chai from 'chai';
 import chaiHttp from 'chai-http';
-import Azurite from './../lib/AzuriteBlob';
+import AzuriteBlob from './../lib/AzuriteBlob';
 import rp from 'request-promise';
 import path from 'path';
-import * as BbPromise from 'bluebird';
-import fsextra from 'fs-extra';
+import xml2js from 'xml2js';
 
-const fs = BbPromise.promisifyAll(fsextra);
+const expect = chai.expect;
 const should = chai.should();
 
 const chai = require("chai"),
@@ -18,7 +17,8 @@ const chai = require("chai"),
   rp = require("request-promise"),
   path = require("path");
 
-chai.use(chaiHttp);
+describe('Container HTTP API', () => {
+    const azurite = new AzuriteBlob();
 
 const containerName = "containertestcontainer";
 const propContainer = "propTestcontainer";
@@ -71,24 +71,22 @@ describe("Container HTTP API", () => {
           e.should.have.status(409);
         });
     });
-  });
-  describe("DELETE Simple Container", () => {
-    it("successfully deletes the container", () => {
-      return chai
-        .request(url)
-        .delete(`${urlPath}/${containerName}`)
-        .query({ restype: "container" })
-        .then((res) => {
-          res.should.have.status(202);
+    describe('DELETE Simple Container', () => {
+        it('successfully deletes the container', () => {
+            return chai.request(url)
+                .del(`${urlPath}/${containerName}`)
+                .query({ restype: 'container' })
+                .then((res) => {
+                    res.should.have.status(202);
+                });
         });
-    });
-    it("deleting a non-existant container fails", () => {
-      return chai
-        .request(url)
-        .delete(`${urlPath}/DOESNOTEXIST`)
-        .query({ restype: "container" })
-        .catch((e) => {
-          e.should.have.status(404);
+        it('deleting a non-existant container fails', () => {
+            return chai.request(url)
+                .del(`${urlPath}/DOESNOTEXIST`)
+                .query({ restype: 'container' })
+                .catch((e) => {
+                    e.should.have.status(404);
+                });
         });
     });
   });

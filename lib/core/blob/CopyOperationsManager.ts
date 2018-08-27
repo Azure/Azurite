@@ -1,27 +1,30 @@
 /** @format */
 
 import BbPromise from 'bluebird';
-import fs from 'fs';
+import fs, { write } from 'fs';
 
 class CopyOperationsManager {
-  constructor() {
-    this.ops = {};
-  }
+    ops: {};
+    writeStream: {};
 
-  add(copyId, readStream, writeStream, toFilename) {
-    this.ops[copyId] = {
-      readStream: readStream,
-      writeStream: writeStream,
-      toFilename: toFilename,
-    };
-  }
+    constructor() {
+        this.ops = {};
+    }
 
-  cancel(copyId) {
-    return new BbPromise((resolve, reject) => {
-      this.ops[copyId].writeStream.on("unpipe", () => {
-        fs.unlink(this.ops[copyId].toFilename, (err) => {
-          this.clear(copyId);
-          err ? reject(err) : resolve();
+    add(copyId, readStream, writeStream, toFilename) {
+        this.ops[copyId] = { readStream: readStream, writeStream: writeStream, toFilename: toFilename };
+        this.writeStream = writeStream;
+    }
+
+    cancel(copyId) {
+        return new BbPromise((resolve, reject) => {
+            this.ops[copyId].writeStream.on('unpipe', () => {
+                fs.unlink(this.ops[copyId].toFilename, (err) => {
+                    this.clear(copyId);
+                    err ? reject(err) : resolve();
+                });
+            });
+            this.ops[copyId].readStream.unpipe(this.writeStream);
         });
       });
       this.ops[copyId].readStream.unpipe(writeStream);

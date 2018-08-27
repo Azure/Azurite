@@ -19,19 +19,19 @@ class QueryTable {
     });
   }
 
-  _createResponsePayload(payload, accept) {
-    const response = {};
-    if (accept !== ODataMode.NONE) {
-      response[
-        "odata.metadata"
-      ] = `http://127.0.0.1:10002/devstoreaccount1/$metadata#Tables`;
-    }
-    response.value = [];
-    let i = 0;
-    for (const item of payload) {
-      response.value.push(item.odata(accept));
-      delete response.value[i]["odata.metadata"];
-      ++i;
+    _createResponsePayload(payload, accept) {
+        const response: any = {};
+        if (accept !== ODataMode.NONE) {
+            response['odata.metadata'] = `http://127.0.0.1:10002/devstoreaccount1/$metadata#Tables`;
+        }
+        response.value = [];
+        let i = 0;
+        for (const item of payload) {
+            response.value.push(item.odata(accept))
+            delete response.value[i]['odata.metadata'];
+            ++i;
+        }
+        return response;
     }
     return response;
   }

@@ -14,9 +14,10 @@ const crypto = require("crypto"),
  * @class ContainerProxy
  */
 class ContainerProxy extends StorageEntityProxy {
-  constructor(original) {
-    super(original);
-  }
+    original: any;
+    constructor(original) {
+        super(original);
+    }
 
   /**
    * Updates and returns the strong ETag of the underlying container.

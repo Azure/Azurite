@@ -9,12 +9,46 @@ import EntityProxy from './../../model/table/EntityProxy';
 import EntityGenerator from './../../model/table/EntityGenerator';
 import { TableStorageTables as Tables } from './../Constants';
 import env from './../../core/env';
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from './../../core/AzuriteError';
 
-const fsn = BbPromise.promisifyAll(fs);
+const fsn: any = BbPromise.promisifyAll(fs);
 
-"use strict";
+class TableStorageManager {
+    db: any;
+    constructor() {
+    }
+
+    init() {
+        this.db = BbPromise.promisifyAll(new Loki(env.azuriteDBPathTable, { autosave: true, autosaveInterval: 5000 }));
+        return fsn.statAsync(env.azuriteDBPathTable)
+            .then((stat) => {
+                return this.db.loadDatabaseAsync({});
+            })
+            .then((data) => {
+                if (!this.db.getCollection(Tables.Tables)) {
+                    this.db.addCollection(Tables.Tables);
+                }
+                return this.db.saveDatabaseAsync();
+            })
+            .catch((e) => {
+                if (e.code === 'ENOENT') {
+                    // No DB has been persisted / initialized yet.
+                    this.db.addCollection(Tables.Tables);
+                    return this.db.saveDatabaseAsync();
+                }
+                // This should never happen!
+                console.error(`Failed to initialize database at "${env.azuriteDBPathTable}"`);
+                throw e;
+            });
+    }
+
+    createTable(request) {
+        this.db.addCollection(request.tableName);
+        const coll = this.db.getCollection(Tables.Tables);
+        const tableEntity = EntityGenerator.generateTable(request.tableName);
+        const proxy = new TableProxy(coll.insert(tableEntity));
+        return BbPromise.resolve(new AzuriteTableResponse({ proxy: proxy }));
+    }
 
 const Loki = require("lokijs"),
   BbPromise = require("bluebird"),
@@ -82,15 +116,14 @@ class TableStorageManager {
     return BbPromise.resolve(new AzuriteTableResponse({ proxy: proxy }));
   }
 
-  deleteTable(request) {
-    const coll = this.db.getCollection(Tables.Tables);
-    coll
-      .chain()
-      .find({ name: { $eq: request.tableName } })
-      .remove();
-    this.db.removeCollection(request.tableName);
-    return BbPromise.resolve(new AzuriteTableResponse({}));
-  }
+        if(find.length == 0){
+            throw ErrorCodes.EntityNotFound;
+        }
+        
+        let payload = [];
+        for (const item of find) {
+            payload.push(new EntityProxy(item));
+        }
 
   deleteEntity(request) {
     this._deleteEntity(request.tableName, request.partitionKey, request.rowKey);
@@ -258,15 +291,10 @@ class TableStorageManager {
     return result.length === 0 ? undefined : new EntityProxy(result[0]);
   }
 
-  _createOrUpdateEntity(partitionKey, rowKey, tableName, rawEntity) {
-    const coll = this.db.getCollection(tableName),
-      entity = EntityGenerator.generateEntity(
-        rawEntity,
-        tableName,
-        partitionKey,
-        rowKey
-      ),
-      res = coll.findOne({ partitionKey: partitionKey, rowKey: rowKey });
+    _createOrUpdateEntity(partitionKey, rowKey, tableName, rawEntity) {
+        const coll = this.db.getCollection(tableName),
+            entity: any = EntityGenerator.generateEntity(rawEntity, tableName, partitionKey, rowKey),
+            res = coll.findOne({ partitionKey: partitionKey, rowKey: rowKey });
 
     if (res !== null) {
       res.attribs = entity.attribs;
@@ -278,21 +306,21 @@ class TableStorageManager {
     return entityProxy;
   }
 
-  _insertOrMergeEntity(partitionKey, rowKey, tableName, rawEntity) {
-    const coll = this.db.getCollection(tableName),
-      entity = EntityGenerator.generateEntity(
-        rawEntity,
-        tableName,
-        partitionKey,
-        rowKey
-      ),
-      res = coll.findOne({ partitionKey: partitionKey, rowKey: rowKey });
+    _insertOrMergeEntity(partitionKey, rowKey, tableName, rawEntity) {
+        const coll = this.db.getCollection(tableName),
+            entity: any = EntityGenerator.generateEntity(rawEntity, tableName, partitionKey, rowKey),
+            res = coll.findOne({ partitionKey: partitionKey, rowKey: rowKey });
 
-    if (res !== null) {
-      // A property cannot be removed with a Merge Entity operation (in contrast to an update operation).
-      for (const key of Object.keys(entity.attribs)) {
-        if (entity.attribs[key]) {
-          res.attribs[key] = entity.attribs[key];
+        if (res !== null) {
+            // A property cannot be removed with a Merge Entity operation (in contrast to an update operation).
+            for (const key of Object.keys(entity.attribs)) {
+                if (entity.attribs[key]) {
+                    res.attribs[key] = entity.attribs[key];
+                }
+            }
+            res.odata = entity.odata;
+            coll.update(res);
+            return new EntityProxy(res);
         }
       }
       res.odata = entity.odata;

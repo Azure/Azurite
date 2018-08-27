@@ -15,9 +15,10 @@
  * @class SnapshotTimeManager
  */
 class SnapshotTimeManager {
-  constructor() {
-    this.times = {};
-  }
+    times: {};
+    constructor() {
+        this.times = {};
+    }
 
   /**
    * Updates / Adds the date of the latest snapshot of a particular blob.

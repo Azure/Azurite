@@ -1,8 +1,8 @@
 /** @format */
 
-import AError from './../../core/AzuriteError';
+import { AzuriteError }from './../../core/AzuriteError';
 import N from './../../core/HttpHeaderNames';
-import ErrorCodes from './../../core/ErrorCodes';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /*
  * Checks whether the range header (and headers depending on it) are valid.
@@ -10,29 +10,26 @@ import ErrorCodes from './../../core/ErrorCodes';
 class Range {
   constructor() {}
 
-  validate({ request = undefined, blobProxy = undefined }) {
-    const range = request.httpProps[N.RANGE];
-    const x_ms_range_get_content_md5 =
-      request.httpProps[N.RANGE_GET_CONTENT_MD5];
-    // If this header is specified without the Range header,
-    // the service returns status code 400 (Bad Request).
-    // We are using raw 'range' string here since docs at
-    // https://docs.microsoft.com/de-de/azure/container-instances/container-instances-orchestrator-relationship
-    // do not mention x-ms-range header explictly
-    if (
-      x_ms_range_get_content_md5 &&
-      request.httpProps["range"] === undefined
-    ) {
-      throw new AError(ErrorCodes.InvalidHeaderValue);
-    }
-    // If this header is set to true _and_ the range exceeds 4 MB in size,
-    // the service returns status code 400 (Bad Request).
-    if (x_ms_range_get_content_md5 && this._isRangeExceeded(range)) {
-      throw new AError(ErrorCodes.InvalidHeaderValue);
-    }
+    validate({ request = undefined, blobProxy = undefined }) {
+        const range = request.httpProps[N.RANGE];
+        const x_ms_range_get_content_md5 = request.httpProps[N.RANGE_GET_CONTENT_MD5];
+        // If this header is specified without the Range header,
+        // the service returns status code 400 (Bad Request).
+        // We are using raw 'range' string here since docs at
+        // https://docs.microsoft.com/de-de/azure/container-instances/container-instances-orchestrator-relationship
+        // do not mention x-ms-range header explictly
+        if (x_ms_range_get_content_md5 && request.httpProps['range'] === undefined) {
+            throw ErrorCodes.InvalidHeaderValue;
+        }
+        // If this header is set to true _and_ the range exceeds 4 MB in size,
+        // the service returns status code 400 (Bad Request).
+        if (x_ms_range_get_content_md5 && this._isRangeExceeded(range)) {
+            throw ErrorCodes.InvalidHeaderValue;
+        }
 
-    if (!this._withinRange(blobProxy.original.size, range)) {
-      throw new AError(ErrorCodes.InvalidRange);
+        if (!this._withinRange(blobProxy.original.size, range)) {
+            throw ErrorCodes.InvalidRange;
+        }
     }
   }
 

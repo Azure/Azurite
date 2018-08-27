@@ -1,7 +1,7 @@
 /** @format */
 
-import AError from './../../core/AzuriteError';
-import ErrorCodes from './../../core/ErrorCodes';
+import { AzuriteError }from './../../core/AzuriteError';
+import { ErrorCodes } from '../../core/AzuriteError';
 
 /*
  * Checks whether the container name adheres to the naming convention 
@@ -10,16 +10,17 @@ import ErrorCodes from './../../core/ErrorCodes';
 class ContainerName {
   constructor() {}
 
-  validate({ request = undefined }) {
-    const name = request.containerName;
-    if (name === "$root") {
-      return;
-    }
-    if (name.length < 3 || name.length > 63) {
-      throw new AError(ErrorCodes.OutOfRangeInput);
-    }
-    if (/^([a-z0-9]+)(-[a-z0-9]+)*$/i.test(name) === false) {
-      throw new AError(ErrorCodes.InvalidInput);
+    validate({ request = undefined }) {
+        const name = request.containerName;
+        if (name === '$root') {
+            return;
+        }
+        if (name.length < 3 || name.length > 63) {
+            throw ErrorCodes.OutOfRangeInput;
+        }
+        if (/^([a-z0-9]+)(-[a-z0-9]+)*$/i.test(name) === false) { 
+            throw ErrorCodes.InvalidInput;
+        }
     }
   }
 }
