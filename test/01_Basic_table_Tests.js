@@ -167,6 +167,22 @@ describe('Table HTTP Api tests', () => {
                 cb();
             });
         }
+
+        it('should return a valid object in the result object when creating an Entity in TableStorage', (done) => {
+            let insertEntityTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
+            let insertionEntity = {
+                PartitionKey: entGen.String(partitionKeyForTest),
+                RowKey: entGen.String('3'),
+                description: entGen.String('qux'),
+                dueDate: entGen.DateTime(new Date(Date.UTC(2018, 12, 26)))
+            };
+            insertEntityTableService.insertEntity(tableName, insertionEntity, function (error, result, response) {
+                expect(response.statusCode).to.equal(201);
+                expect(result).to.not.equal(undefined);
+                expect(result['.metadata'].etag).to.not.equal(undefined);
+                done();
+            });
+        })
     });
 
     after(() => azurite.close());
