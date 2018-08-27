@@ -110,7 +110,7 @@ describe('Table HTTP Api tests', () => {
         }
 
         it('should retrieve all Entities', (done) => {
-            const query = new azureStorage.TableQuery();
+            let query = new azureStorage.TableQuery();
             let retrievalTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
             retrievalTableService.queryEntities(tableName, query, null, function (error, results, response) {
                 expect(error).to.equal(null);
