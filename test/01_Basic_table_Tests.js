@@ -122,6 +122,47 @@ describe('Table HTTP Api tests', () => {
                 done();
             });
         });
+
+        it('should fail to retrieve a non-existing row with 404', (done) => {
+            if (entity1Created === false) {
+                var getE1 = setTimeout(() => {
+                    missingEntityTest(done);
+                }, 500);
+            } else {
+                missingEntityTest(done);
+            }
+
+        });
+
+        function missingEntityTest(cb) {
+            let faillingLookupTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
+            faillingLookupTableService.retrieveEntity(tableName, partitionKeyForTest, 'unknownRowKey', function (error, result, response) {
+                expect(response.statusCode).to.equal(404);
+                cb();
+            });
+        }
+
+        it('should fail to find a non-existing entity with 404', (done) => {
+            if (entity1Created === false) {
+                var getE1 = setTimeout(() => {
+                    missingEntityFindTest(done);
+                }, 500);
+            } else {
+                missingEntityFindTest(done);
+            }
+
+        });
+
+        function missingEntityFindTest(cb) {
+            let query = new azureStorage.TableQuery().top(5)
+            .where('RowKey eq ?', 'unknownRowKeyForFindError');
+            
+            let faillingLookupTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
+            faillingLookupTableService.queryEntities(tableName, query, null, function (error, result, response) {
+                expect(response.statusCode).to.equal(404);
+                cb();
+            });
+        }
     });
 
     after(() => azurite.close());
