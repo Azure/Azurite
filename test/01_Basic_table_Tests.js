@@ -22,6 +22,7 @@ const entGen = azureStorage.TableUtilities.entityGenerator;
 const partitionKeyForTest = 'azurite';
 const rowKeyForTestEntity1 = '1';
 const rowKeyForTestEntity2 = '2';
+const EntityNotFoundErrorMessage = '<?xml version="1.0" encoding="utf-8"?><Error><Code>EntityNotFound</Code><Message>The specified entity does not exist.</Message></Error>';
 
 
 describe('Table HTTP Api tests', () => {
@@ -123,7 +124,7 @@ describe('Table HTTP Api tests', () => {
             });
         });
 
-        it('should fail to retrieve a non-existing row with 404', (done) => {
+        it('should fail to retrieve a non-existing row with 404 EntityNotFound', (done) => {
             if (entity1Created === false) {
                 var getE1 = setTimeout(() => {
                     missingEntityTest(done);
@@ -137,12 +138,15 @@ describe('Table HTTP Api tests', () => {
         function missingEntityTest(cb) {
             let faillingLookupTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
             faillingLookupTableService.retrieveEntity(tableName, partitionKeyForTest, 'unknownRowKey', function (error, result, response) {
+                expect(error.message).to.equal(EntityNotFoundErrorMessage);
                 expect(response.statusCode).to.equal(404);
                 cb();
             });
         }
 
-        it('should fail to find a non-existing entity with 404', (done) => {
+        // this test performs a query, rather than a retrieve (which is just a different implementation via
+        // the SDK, but currently lands in the same place in our implementation which is using LokiJs)
+        it('should fail to find a non-existing entity with 404 EntityNotFound', (done) => {
             if (entity1Created === false) {
                 var getE1 = setTimeout(() => {
                     missingEntityFindTest(done);
@@ -155,10 +159,10 @@ describe('Table HTTP Api tests', () => {
 
         function missingEntityFindTest(cb) {
             let query = new azureStorage.TableQuery().top(5)
-            .where('RowKey eq ?', 'unknownRowKeyForFindError');
-            
-            let faillingLookupTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
-            faillingLookupTableService.queryEntities(tableName, query, null, function (error, result, response) {
+            .where('RowKey eq ?', 'unknownRowKeyForFindError');            
+            let faillingFindTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
+            faillingFindTableService.queryEntities(tableName, query, null, function (error, result, response) {
+                expect(error.message).to.equal(EntityNotFoundErrorMessage);
                 expect(response.statusCode).to.equal(404);
                 cb();
             });
