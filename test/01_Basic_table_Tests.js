@@ -16,7 +16,7 @@ const tableName = 'testtable';
 // after testing, we need to clean up the DB files etc that we create.
 // I wanted to shorten the cycles while debugging so create a new path 
 // with each pass of the debugger
-var tableTestPath = new Date().toISOString().replace(/:/g, "").replace(/\./g, "") + '_TABLE_TESTS';
+const tableTestPath = new Date().toISOString().replace(/:/g, "").replace(/\./g, "") + '_TABLE_TESTS';
 const tableService = azureStorage.createTableService("UseDevelopmentStorage=true");
 const entGen = azureStorage.TableUtilities.entityGenerator;
 const partitionKeyForTest = 'azurite';
@@ -41,7 +41,7 @@ describe('Table HTTP Api tests', () => {
         dueDate: entGen.DateTime(new Date(Date.UTC(2018, 12, 26)))
     };
 
-    var entity1Created = false;
+    let entity1Created = false;
 
     // set us up the tests!
     const testDBLocation = path.join(process.env.AZURITE_LOCATION, tableTestPath);
@@ -85,7 +85,7 @@ describe('Table HTTP Api tests', () => {
             // even though  the initialization of Azurite should be promisified already, this is prone
             // to error. 
             if (entity1Created === false) {
-                var getE1 = setTimeout(() => {
+                const getE1 = setTimeout(() => {
                     singleEntityTest(done);
                 }, 500);
             }
@@ -96,7 +96,7 @@ describe('Table HTTP Api tests', () => {
 
         function singleEntityTest(cb) {
             // I create a new tableService, as the oringal above was erroring out, with a socket close if I reuse it
-            let retrievalTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
+            const retrievalTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
             retrievalTableService.retrieveEntity(tableName, partitionKeyForTest, rowKeyForTestEntity1, function (error, result, response) {
                 expect(error).to.equal(null);
                 expect(result).to.not.equal(undefined);
@@ -110,12 +110,12 @@ describe('Table HTTP Api tests', () => {
         }
 
         it('should retrieve all Entities', (done) => {
-            let query = new azureStorage.TableQuery();
-            let retrievalTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
+            const query = new azureStorage.TableQuery();
+            const retrievalTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
             retrievalTableService.queryEntities(tableName, query, null, function (error, results, response) {
                 expect(error).to.equal(null);
                 expect(results.entries.length).to.equal(2);
-                let sortedResults = results.entries.sort();
+                const sortedResults = results.entries.sort();
                 expect(sortedResults[0].description._).to.equal(tableEntity1.description._);
                 expect(sortedResults[1].description._).to.equal(tableEntity2.description._);
                 expect(sortedResults[0].RowKey._).to.equal(rowKeyForTestEntity1);
@@ -126,7 +126,7 @@ describe('Table HTTP Api tests', () => {
 
         it('should fail to retrieve a non-existing row with 404 EntityNotFound', (done) => {
             if (entity1Created === false) {
-                var getE1 = setTimeout(() => {
+                const getE1 = setTimeout(() => {
                     missingEntityTest(done);
                 }, 500);
             } else {
@@ -136,7 +136,7 @@ describe('Table HTTP Api tests', () => {
         });
 
         function missingEntityTest(cb) {
-            let faillingLookupTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
+            const faillingLookupTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
             faillingLookupTableService.retrieveEntity(tableName, partitionKeyForTest, 'unknownRowKey', function (error, result, response) {
                 expect(error.message).to.equal(EntityNotFoundErrorMessage);
                 expect(response.statusCode).to.equal(404);
@@ -148,7 +148,7 @@ describe('Table HTTP Api tests', () => {
         // the SDK, but currently lands in the same place in our implementation which is using LokiJs)
         it('should fail to find a non-existing entity with 404 EntityNotFound', (done) => {
             if (entity1Created === false) {
-                var getE1 = setTimeout(() => {
+                const getE1 = setTimeout(() => {
                     missingEntityFindTest(done);
                 }, 500);
             } else {
@@ -158,9 +158,9 @@ describe('Table HTTP Api tests', () => {
         });
 
         function missingEntityFindTest(cb) {
-            let query = new azureStorage.TableQuery().top(5)
+            const query = new azureStorage.TableQuery().top(5)
             .where('RowKey eq ?', 'unknownRowKeyForFindError');            
-            let faillingFindTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
+            const faillingFindTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
             faillingFindTableService.queryEntities(tableName, query, null, function (error, result, response) {
                 expect(error.message).to.equal(EntityNotFoundErrorMessage);
                 expect(response.statusCode).to.equal(404);
@@ -169,8 +169,8 @@ describe('Table HTTP Api tests', () => {
         }
 
         it('should return a valid object in the result object when creating an Entity in TableStorage', (done) => {
-            let insertEntityTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
-            let insertionEntity = {
+            const insertEntityTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
+            const insertionEntity = {
                 PartitionKey: entGen.String(partitionKeyForTest),
                 RowKey: entGen.String('3'),
                 description: entGen.String('qux'),
