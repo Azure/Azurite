@@ -1,0 +1,14 @@
+{
+    "printWidth": 80,
+    "parser": "typescript",
+    "arrowParens" : "always",
+    "tabWidth": 2,
+    "useTabs":false,
+    "semi":true,
+    "singleQuote": false,
+    "trailingComma": "es5",
+    "bracketSpacing": true,
+    "requirePragma": true,
+    "insertPragma": false,
+    "proseWrap": "never"
+}
