@@ -72,7 +72,7 @@ export default {
 
     // Table specific
     PREFERENCE_APPLIED: 'preference-applied',
-    PREFER: 'Prefer',
+    PREFER: 'prefer',
     ACCEPT: 'accept',
 
     VERSION: 'x-ms-version',

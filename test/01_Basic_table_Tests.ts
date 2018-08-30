@@ -2,18 +2,26 @@ import path from 'path';
 import azureStorage from 'azure-storage';
 import { expect } from 'chai';
 import AzuriteTable from './../lib/AzuriteTable';
+import AzureStorage from 'azure-storage';
 
-const tableName = 'testtable';
+const tableName = "testtable";
 // after testing, we need to clean up the DB files etc that we create.
-// I wanted to shorten the cycles while debugging so create a new path 
+// I wanted to shorten the cycles while debugging so create a new path
 // with each pass of the debugger
-const tableTestPath = new Date().toISOString().replace(/:/g, "").replace(/\./g, "") + '_TABLE_TESTS';
-const tableService = azureStorage.createTableService("UseDevelopmentStorage=true");
+const tableTestPath =
+    new Date()
+    .toISOString()
+    .replace(/:/g, "")
+    .replace(/\./g, "") + "_TABLE_TESTS";
+const tableService = azureStorage.createTableService(
+    "UseDevelopmentStorage=true"
+);
 const entGen = azureStorage.TableUtilities.entityGenerator;
-const partitionKeyForTest = 'azurite';
-const rowKeyForTestEntity1 = '1';
-const rowKeyForTestEntity2 = '2';
-const EntityNotFoundErrorMessage = '<?xml version="1.0" encoding="utf-8"?><Error><Code>EntityNotFound</Code><Message>The specified entity does not exist.</Message></Error>';
+const partitionKeyForTest = "azurite";
+const rowKeyForTestEntity1 = "1";
+const rowKeyForTestEntity2 = "2";
+const EntityNotFoundErrorMessage =
+    '<?xml version="1.0" encoding="utf-8"?><Error><Code>EntityNotFound</Code><Message>The specified entity does not exist.</Message></Error>';
 
 
 describe('Table HTTP Api tests', () => {
@@ -21,14 +29,14 @@ describe('Table HTTP Api tests', () => {
     const tableEntity1 = {
         PartitionKey: entGen.String(partitionKeyForTest),
         RowKey: entGen.String(rowKeyForTestEntity1),
-        description: entGen.String('foo'),
+        description: entGen.String("foo"),
         dueDate: entGen.DateTime(new Date(Date.UTC(2018, 12, 25)))
     };
 
     const tableEntity2 = {
         PartitionKey: entGen.String(partitionKeyForTest),
         RowKey: entGen.String(rowKeyForTestEntity2),
-        description: entGen.String('bar'),
+        description: entGen.String("bar"),
         dueDate: entGen.DateTime(new Date(Date.UTC(2018, 12, 26)))
     };
 
@@ -38,35 +46,48 @@ describe('Table HTTP Api tests', () => {
     const testDBLocation = path.join(process.env.AZURITE_LOCATION, tableTestPath);
 
     before(() => {
-        azurite.init({ l: testDBLocation, silent: 'true', overwrite: 'true' })
+        azurite
+            .init({
+                l: testDBLocation,
+                silent: "true",
+                overwrite: "true"
+            })
             //.then(() => tableService.createTableIfNotExists(tableName, function (error, result, response) {
             // would be better to use "createTableIfNotExists" but we may need to make changes server side for this to work
-            .then(() => tableService.createTable(tableName, function (error, result, response) {
-                tableService.insertEntity(tableName, tableEntity1, function (error, result, response) {
-                    if (error === null) {
-                        entity1Created = true;
-                        tableService.insertEntity(tableName, tableEntity2, function (error, result, response) {
-                            if (error === null) {
-                                
-                            }
-                        });
-                    }
-                });
-
-            })
+            .then(() =>
+                tableService.createTable(tableName, function (error, result, response) {
+                    tableService.insertEntity(tableName, tableEntity1, function (
+                        error,
+                        result,
+                        response
+                    ) {
+                        if (error === null) {
+                            entity1Created = true;
+                            tableService.insertEntity(tableName, tableEntity2, function (
+                                error,
+                                result,
+                                response
+                            ) {
+                                if (error === null) {}
+                            });
+                        } else {
+                            throw error;
+                        }
+                    });
+                })
             );
     });
 
     // JSON response described here (but we are using storage SDK)
     // https://docs.microsoft.com/en-us/rest/api/storageservices/query-entities
     /*
-    { "value":[  
-        {  
-            "PartitionKey":"Customer",  
-            "RowKey":"Name",  
-            "Timestamp":"2013-08-22T00:20:16.3134645Z",  
-            etc...
-    */
+      { "value":[  
+          {  
+              "PartitionKey":"Customer",  
+              "RowKey":"Name",  
+              "Timestamp":"2013-08-22T00:20:16.3134645Z",  
+              etc...
+      */
     // The value validation below works for both Azure Cloud Table Storage and Azurite's API
     // if you make changes, please ensure that you test against both
     describe('GET Table Entities', () => {
@@ -75,19 +96,19 @@ describe('Table HTTP Api tests', () => {
             // currently this delay solves it, until I can fix the before statement to deal
             // with a promise for DB creation, and wrap test entity creation in said promise
             // even though  the initialization of Azurite should be promisified already, this is prone
-            // to error. 
+            // to error.
             if (entity1Created === false) {
                 var getE1 = setTimeout(() => {	
                     singleEntityTest(done);	
                 }, 500);
-            }
-            else {
+            } else {
                 singleEntityTest(done);
             }
         });
 
         function singleEntityTest(cb) {
-            // I create a new tableService, as the oringal above was erroring out, with a socket close if I reuse it
+            // I create a new tableService, as the oringal above was erroring out
+            //  with a socket close if I reuse it
             const retrievalTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
             retrievalTableService.retrieveEntity(tableName, partitionKeyForTest, rowKeyForTestEntity1, function (error, result: any, response) {
                 expect(error).to.equal(null);
@@ -152,7 +173,7 @@ describe('Table HTTP Api tests', () => {
 
         function missingEntityFindTest(cb) {
             const query = new azureStorage.TableQuery().top(5)
-            .where('RowKey eq ?', 'unknownRowKeyForFindError');            
+                .where('RowKey eq ?', 'unknownRowKeyForFindError');
             const faillingFindTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
             faillingFindTableService.queryEntities(tableName, query, null, function (error, result, response) {
                 expect(error.message).to.equal(EntityNotFoundErrorMessage);
@@ -161,21 +182,35 @@ describe('Table HTTP Api tests', () => {
             });
         }
 
-        it('should return a valid object in the result object when creating an Entity in TableStorage', (done) => {
-            const insertEntityTableService = azureStorage.createTableService("UseDevelopmentStorage=true");
+    });
+
+    describe("PUT and Insert Table Entites", () => {
+        it("should return a valid object in the result object when creating an Entity in TableStorage using return no content", done => {
+            const insertEntityTableService = azureStorage.createTableService(
+                "UseDevelopmentStorage=true"
+            );
             const insertionEntity = {
                 PartitionKey: entGen.String(partitionKeyForTest),
-                RowKey: entGen.String('3'),
-                description: entGen.String('qux'),
+                RowKey: entGen.String("3"),
+                description: entGen.String("qux"),
                 dueDate: entGen.DateTime(new Date(Date.UTC(2018, 12, 26)))
             };
-            insertEntityTableService.insertEntity(tableName, insertionEntity, function (error, result, response) {
-                expect(response.statusCode).to.equal(201);
-                expect(result).to.not.equal(undefined);
-                expect(result['.metadata'].etag).to.not.equal(undefined);
-                done();
-            });
-        })
+
+            // Request is made by default with "return-no-content" when using the storage-sdk
+            insertEntityTableService.insertEntity(
+                tableName,
+                insertionEntity, {
+                    echoContent: false,
+                },
+                function (error, result, response) {
+                    // etag format is currently different to that returned from Azure and x-ms-version 2018-03-28
+                    expect(response.statusCode).to.equal(204);
+                    expect(result).to.not.equal(undefined);
+                    expect(result['.metadata'].etag).to.not.equal(undefined);
+                    done();
+                }
+            );
+        });
     });
 
     after(() => azurite.close());

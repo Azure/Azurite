@@ -53,7 +53,7 @@ class AzuriteTableRequest {
     }
 
     _initHttpProps(httpHeaders) {
-        this.httpProps[N.DATE] = httpHeaders[N.DATE] || `x-ms-date`;
+        this.httpProps[N.DATE] = httpHeaders[N.DATE] ? httpHeaders[N.DATE] : httpHeaders['x-ms-date'];
         this.httpProps[N.CONTENT_TYPE] = httpHeaders[N.CONTENT_TYPE] || `application/json`;
         this.httpProps[N.ACCEPT] = httpHeaders[N.ACCEPT] || `application/json;odata=nometadata`;
         this.httpProps[N.PREFER] = httpHeaders[N.PREFER] || `return-content`;
