@@ -1,6 +1,6 @@
 {
     "printWidth": 80,
-    "parser": "typescript",
+    "parser": "flow",
     "arrowParens" : "always",
     "tabWidth": 2,
     "useTabs":false,
@@ -8,7 +8,7 @@
     "singleQuote": false,
     "trailingComma": "es5",
     "bracketSpacing": true,
-    "requirePragma": true,
+    "requirePragma": false,
     "insertPragma": true,
     "proseWrap": "never"
 }
