@@ -7,9 +7,9 @@
     "test": "env-cmd ./test/.env mocha",
     "externaltests": "env-cmd ./externaltests/.env mocha externaltests",
     "start": "node bin/azurite -l azurite-testdrive",
-    "blob": "node bin/blob -l azurite-testdrive",
-    "queue": "node bin/queue",
-    "table": "node bin/table",
+    "blob": "node bin/blob.js -l azurite-testdrive",
+    "queue": "node bin/queue.js",
+    "table": "node bin/table.js",
     "clean": "rimraf azurite-testdrive *.nupkg blob.exe queue.exe table.exe",
     "nuget": "cross-var \"npm run clean && pkg -t node6-win --output blob bin/blob && pkg -t node6-win --output queue bin/queue && pkg -t node6-win --output table bin/table && nuget pack -Version $npm_package_version && nuget push *.nupkg  -Source https://www.nuget.org/api/v2/package\"",
     "docker": "cross-var \"docker build -t arafato/azurite:$npm_package_version . && docker build -t arafato/azurite:latest . && docker push arafato/azurite:$npm_package_version && docker push arafato/azurite:latest\""
@@ -19,10 +19,10 @@
   },
   "main": "./bin/azurite",
   "bin": {
-    "azurite": "./bin/azurite",
-    "azurite-blob": "./bin/blob",
-    "azurite-queue": "./bin/queue",
-    "azurite-table": "./bin/table"
+    "azurite": "./bin/azurite.js",
+    "azurite-blob": "./bin/blob.js",
+    "azurite-queue": "./bin/queue.js",
+    "azurite-table": "./bin/table,js"
   },
   "preferGlobal": true,
   "repository": {
