@@ -1,5 +1,5 @@
 # 2.0  
-## 2.6.7  
+## 2.6.6  
 - updated testing using azure-storage-node tests in submodule  
 - application of jshint and prettier rule sets  
 - multiple fixes for issues in table storage
@@ -7,8 +7,7 @@
 - merged PR [#32](https://github.com/Azure/Azurite/pull/32) -> thanks to @trekawek   
 - merged PR [#30](https://github.com/Azure/Azurite/pull/30) -> thanks to @julienr    
 - merged PR [#46](https://github.com/Azure/Azurite/pull/46) -> thanks to @Fanarito  
-- merged PR [#47](https://github.com/Azure/Azurite/pull/47) -> thanks to @kalleep    
-## 2.6.6  
+- merged PR [#47](https://github.com/Azure/Azurite/pull/47) -> thanks to @kalleep  
 - fixes [#12](https://github.com/Azure/Azurite/issues/12)  
 - merged PR [#28](https://github.com/Azure/Azurite/pull/28) fixes [#26](https://github.com/Azure/Azurite/issues/26) -> thanks to @kalleep  
 - merged PR [#25](BLOB shared key authentication) -> thanks to @vitaly-goot  
