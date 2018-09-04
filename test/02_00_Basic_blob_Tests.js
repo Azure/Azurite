@@ -1,15 +1,19 @@
 /** @format */
 
-const chai = require("chai"),
-  chaiHttp = require("chai-http"),
-  should = chai.should(),
-  expect = chai.expect,
-  BbPromise = require("bluebird"),
-  fs = BbPromise.promisifyAll(require("fs-extra")),
-  Azurite = require("../lib/AzuriteBlob"),
-  rp = require("request-promise"),
-  path = require("path"),
-  xml2js = require("xml2js");
+import chai from "chai";
+
+import chaiHttp from "chai-http";
+import BbPromise from "bluebird";
+import Azurite from "../lib/AzuriteBlob";
+import rp from "request-promise";
+import path from "path";
+import xml2js from "xml2js";
+import fs_extra from "fs-extra";
+
+/** @format */
+const should = chai.should();
+const expect = chai.expect;
+const fs = BbPromise.promisifyAll(fs_extra);
 
 chai.use(chaiHttp);
 
@@ -51,7 +55,7 @@ function createBlob(containerNamex, blobNamex, payload, blobType) {
 describe("Blob HTTP API", () => {
   const azurite = new Azurite();
 
-  before(() => {
+  beforeAll(() => {
     const location = path.join(process.env.AZURITE_LOCATION, testPath);
     return azurite
       .init({ l: location, silent: "true", overwrite: "true" })
@@ -102,7 +106,7 @@ describe("Blob HTTP API", () => {
       });
   });
 
-  after(() => {
+  afterAll(() => {
     return azurite.close();
   });
 
@@ -137,7 +141,7 @@ describe("Blob HTTP API", () => {
         .set("Content-Type", "application/octet-stream")
         .send("abcdefghijklmn")
         .then((res) => {
-          res.should.have.status(201);
+          expect(res.status).to.equal(201);
         });
     });
   });
@@ -188,7 +192,7 @@ describe("Blob HTTP API", () => {
             .query({ comp: "blocklist" })
             .send(xmlBody)
             .then((res) => {
-              res.should.have.status(201);
+              expect(res.status).to.equal(201);
             });
         });
     });
@@ -201,7 +205,7 @@ describe("Blob HTTP API", () => {
           return chai.request(url).delete(`${urlPath}/deleteblobtest/blob`);
         })
         .then((res) => {
-          res.should.have.status(202);
+          expect(res.status).to.equal(202);
         });
     });
     it("should fail when deleting a non-existant blob", () => {
@@ -230,7 +234,7 @@ describe("Blob HTTP API", () => {
         .set("x-ms-blob-type", "AppendBlob")
         .set("Content-Type", "application/octet-stream")
         .then((res) => {
-          res.should.have.status(201);
+          expect(res.status).to.equal(201);
         });
     });
     it("should append data to the append blob", () => {
@@ -242,7 +246,7 @@ describe("Blob HTTP API", () => {
         .set("Content-Type", "application/octet-stream")
         .send("abcdefghi")
         .then((res) => {
-          res.should.have.status(201);
+          expect(res.status).to.equal(201);
         });
     });
     it("should fail to create an append blob with size > 0", () => {
@@ -265,7 +269,7 @@ describe("Blob HTTP API", () => {
         .get(`${urlPath}/${containerName}/${pageBlobName}`)
         .query({ comp: "pagelist" })
         .then((res) => {
-          res.should.have.status(200);
+          expect(res.status).to.equal(200);
           xml2js.Parser().parseString(res.text, function(err, result) {
             expect(result.PageList).to.not.have.any.keys("PageRange");
           });
@@ -282,7 +286,7 @@ describe("Blob HTTP API", () => {
         .set("Content-Type", "application/octet-stream")
         .send(bodydata)
         .then((res) => {
-          res.should.have.status(201);
+          expect(res.status).to.equal(201);
         });
     });
     it("should fail to write data to the page blob with an invalid range", () => {
@@ -319,7 +323,7 @@ describe("Blob HTTP API", () => {
         .get(`${urlPath}/${containerName}/${pageBlobName}`)
         .query({ comp: "pagelist" })
         .then((res) => {
-          res.should.have.status(200);
+          expect(res.status).to.equal(200);
           xml2js.Parser().parseString(res.text, function(err, result) {
             expect(result.PageList.PageRange.length).to.equal(1);
             expect(result.PageList.PageRange[0]).to.deep.equal({
@@ -336,7 +340,7 @@ describe("Blob HTTP API", () => {
         .query({ comp: "pagelist" })
         .set("x-ms-range", "bytes=0-1023")
         .then((res) => {
-          res.should.have.status(200);
+          expect(res.status).to.equal(200);
           xml2js.Parser().parseString(res.text, function(err, result) {
             expect(result.PageList.PageRange.length).to.equal(1);
             expect(result.PageList.PageRange[0]).to.deep.equal({
@@ -367,7 +371,7 @@ describe("Blob HTTP API", () => {
         .set("Content-Type", "application/octet-stream")
         .send(bodydata)
         .then((res) => {
-          res.should.have.status(201);
+          expect(res.status).to.equal(201);
         });
     });
     it("should get the page ranges [0-511],[1024-1535] from the page blob", () => {
@@ -376,7 +380,7 @@ describe("Blob HTTP API", () => {
         .get(`${urlPath}/${containerName}/${pageBlobName}`)
         .query({ comp: "pagelist" })
         .then((res) => {
-          res.should.have.status(200);
+          expect(res.status).to.equal(200);
           xml2js.Parser().parseString(res.text, function(err, result) {
             expect(result.PageList.PageRange.length).to.equal(2);
             expect(result.PageList.PageRange[0]).to.deep.equal({
@@ -401,7 +405,7 @@ describe("Blob HTTP API", () => {
         .set("Content-Type", "application/octet-stream")
         .send(bodydata)
         .then((res) => {
-          res.should.have.status(201);
+          expect(res.status).to.equal(201);
         });
     });
     it("should get the page range [0-1535] from the page blob", () => {
@@ -410,7 +414,7 @@ describe("Blob HTTP API", () => {
         .get(`${urlPath}/${containerName}/${pageBlobName}`)
         .query({ comp: "pagelist" })
         .then((res) => {
-          res.should.have.status(200);
+          expect(res.status).to.equal(200);
           xml2js.Parser().parseString(res.text, function(err, result) {
             expect(result.PageList.PageRange.length).to.equal(1);
             expect(result.PageList.PageRange[0]).to.deep.equal({
@@ -428,7 +432,7 @@ describe("Blob HTTP API", () => {
         .set("x-ms-page-write", "clear")
         .set("x-ms-range", "bytes=512-1023")
         .then((res) => {
-          res.should.have.status(201);
+          expect(res.status).to.equal(201);
         });
     });
     it("should get the page ranges [0-511],[1024-1535] from the page blob", () => {
@@ -437,7 +441,7 @@ describe("Blob HTTP API", () => {
         .get(`${urlPath}/${containerName}/${pageBlobName}`)
         .query({ comp: "pagelist" })
         .then((res) => {
-          res.should.have.status(200);
+          expect(res.status).to.equal(200);
           xml2js.Parser().parseString(res.text, function(err, result) {
             expect(result.PageList.PageRange.length).to.equal(2);
             expect(result.PageList.PageRange[0]).to.deep.equal({
@@ -471,8 +475,8 @@ describe("Blob HTTP API", () => {
         .request(url)
         .get(`${urlPath}/${containerName}/${appendBlobName}`)
         .then((res) => {
-          res.should.have.status(200);
-          res.should.have.header("x-ms-blob-type", "AppendBlob");
+          expect(res.status).to.equal(200);
+          expect(res.header["x-ms-blob-type"]).to.equal("AppendBlob");
         });
     });
   });
@@ -487,7 +491,7 @@ describe("Blob HTTP API", () => {
         .set("x-ms-meta-test2", "value2")
         .set("x-ms-meta-meta1", "meta1Value")
         .then((res) => {
-          res.should.have.status(200);
+          expect(res.status).to.equal(200);
         });
     });
     it("should get the correct metadata", () => {
@@ -496,12 +500,12 @@ describe("Blob HTTP API", () => {
         .get(`${urlPath}/${containerName}/${blockBlobName}`)
         .query({ comp: "metadata" })
         .then((res) => {
-          res.should.have.status(200);
-          res.should.have.header("x-ms-meta-test1", "value1");
-          res.should.have.header("x-ms-meta-test2", "value2");
-          res.should.have.header("x-ms-meta-meta1", "meta1Value");
-          res.should.have.header("Last-Modified");
-          res.should.have.header("ETag");
+          expect(res.status).to.equal(200);
+          expect(res.header["x-ms-meta-test1"]).to.equal("value1");
+          expect(res.header["x-ms-meta-test2"]).to.equal("value2");
+          expect(res.header["x-ms-meta-meta1"]).to.equal("meta1Value");
+          expect(res.header["Last-Modified"]).to.not.be.null;
+          expect(res.header["ETag"]).to.not.be.null;
         });
     });
     it("should fail to get metadata of a non-existant blob", () => {
@@ -510,7 +514,7 @@ describe("Blob HTTP API", () => {
         .get(`${urlPath}/${containerName}/BLOB_DOESNOTEXISTS`)
         .query({ comp: "metadata" })
         .catch((e) => {
-          e.should.have.status(404);
+          e.status.should.have.status(404);
         });
     });
     it("should fail to get metadata of a blob in a non-existant container", () => {
@@ -536,7 +540,7 @@ describe("Blob HTTP API", () => {
         .set("x-ms-blob-content-language", "ContentLanguage")
         .query({ comp: "properties" })
         .then((res) => {
-          res.should.have.status(200);
+          expect(res.status).to.equal(200);
         });
     });
     it("should get all previously set system properties", () => {
@@ -544,15 +548,15 @@ describe("Blob HTTP API", () => {
         .request(url)
         .head(`${urlPath}/${containerName}/${blockBlobName}`)
         .then((res) => {
-          res.should.have.status(200);
-          res.should.have.header("ETag");
-          res.should.have.header("Last-Modified");
-          res.should.have.header("Content-Type", "ContentType");
-          res.should.have.header("Content-Encoding", "ContentEncoding");
-          res.should.have.header("Content-MD5", "ContentMD5");
-          res.should.have.header("Content-Language", "ContentLanguage");
-          res.should.have.header("Cache-Control", "true");
-          res.should.have.header("x-ms-blob-type", "BlockBlob");
+          expect(res.status).to.equal(200);
+          expect(res.header["etag"]).to.not.be.null;
+          expect(res.header["last-modified"]).to.not.be.null;
+          expect(res.header["content-type"]).to.equal("ContentType");
+          expect(res.header["content-encoding"]).to.equal("ContentEncoding");
+          expect(res.header["content-md5"]).to.equal("ContentMD5");
+          expect(res.header["content-language"]).to.equal("ContentLanguage");
+          expect(res.header["cache-control"]).to.equal("true");
+          expect(res.header["x-ms-blob-type"]).to.equal("BlockBlob");
         });
     });
   });
@@ -592,17 +596,20 @@ describe("Blob HTTP API", () => {
             .request(url)
             .head(`${urlPath}/${containerName}/${blockBlobCopiedName}`)
             .then((res) => {
-              res.should.have.status(200);
-              res.should.have.header("Content-Type", "Content-Type");
-              res.should.have.header("Content-Encoding", "Content-Encoding");
-              res.should.have.header("Content-MD5", "Content-MD5");
-              res.should.have.header("Content-Language", "Content-Language");
-              res.should.have.header("Cache-Control", "true");
-              res.should.have.header(
-                "Content-Disposition",
+              expect(res.status).to.equal(200);
+              expect(res.header["content-type"]).to.equal("Content-Type");
+              expect(res.header["content-encoding"]).to.equal(
+                "Content-Encoding"
+              );
+              expect(res.header["content-md5"]).to.equal("Content-MD5");
+              expect(res.header["content-language"]).to.equal(
+                "Content-Language"
+              );
+              expect(res.header["cache-control"]).to.equal("true");
+              expect(res.header["content-disposition"]).to.equal(
                 "Content-Disposition"
               );
-              res.should.have.header("x-ms-blob-type", "BlockBlob");
+              expect(res.header["x-ms-blob-type"]).to.equal("BlockBlob");
             });
         });
     });

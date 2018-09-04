@@ -50,7 +50,7 @@ i.e:
 ```javascript
 describe('azure-storage-node tests', () => {
     const azurite = new Azurite();
-    before(() => {
+    beforeAll(() => {
         const location = path.join(process.env.AZURITE_LOCATION, 'AZURE-STORAGE');
         return azurite.init({ l: location, silent: 'true', overwrite: 'true' });
     });

@@ -1,13 +1,18 @@
 /** @format */
 
-const chai = require("chai"),
-  chaiHttp = require("chai-http"),
-  should = chai.should(),
-  BbPromise = require("bluebird"),
-  fs = BbPromise.promisifyAll(require("fs-extra")),
-  Azurite = require("../lib/AzuriteBlob"),
-  rp = require("request-promise"),
-  path = require("path");
+import chai, { expect } from "chai";
+
+import chaiHttp from "chai-http";
+import BbPromise from "bluebird";
+import Azurite from "../lib/AzuriteBlob";
+import rp from "request-promise";
+import path from "path";
+
+import fs_extra from "fs-extra";
+
+/** @format */
+const should = chai.should();
+const fs = BbPromise.promisifyAll(fs_extra);
 
 chai.use(chaiHttp);
 
@@ -24,8 +29,9 @@ const testPath =
 describe("Container HTTP API", () => {
   const azurite = new Azurite();
 
-  before(() => {
-    const location = path.join(".", process.env.AZURITE_LOCATION, testPath);
+  beforeAll(() => {
+    const azureitLocation = process.env.AZURITE_LOCATION;
+    const location = path.join(".", azureitLocation, testPath);
     return azurite
       .init({ l: location, silent: "true", overwrite: "true" })
       .then(() => {
@@ -39,7 +45,7 @@ describe("Container HTTP API", () => {
       });
   });
 
-  after(() => {
+  afterAll(() => {
     return azurite.close();
   });
 
@@ -50,7 +56,7 @@ describe("Container HTTP API", () => {
         .put(`${urlPath}/${containerName}`)
         .query({ restype: "container" })
         .then((res) => {
-          res.should.have.status(201);
+          expect(res.status).to.equal(201);
         });
     });
     it("and a second with the same name that fails", () => {
@@ -70,7 +76,7 @@ describe("Container HTTP API", () => {
         .delete(`${urlPath}/${containerName}`)
         .query({ restype: "container" })
         .then((res) => {
-          res.should.have.status(202);
+          expect(res.status).to.equal(202);
         });
     });
     it("deleting a non-existant container fails", () => {
@@ -93,7 +99,7 @@ describe("Container HTTP API", () => {
         .set("x-ms-meta-test2", "value2")
         .set("x-ms-meta-meta1", "meta1Value")
         .then((res) => {
-          res.should.have.status(200);
+          expect(res.status).to.equal(200);
         });
     });
     it("should get the correct metadata. (GET)", () => {
@@ -102,12 +108,12 @@ describe("Container HTTP API", () => {
         .get(`${urlPath}/${propContainer}`)
         .query({ restype: "container", comp: "metadata" })
         .then((res) => {
-          res.should.have.status(200);
-          res.should.have.header("x-ms-meta-test1", "value1");
-          res.should.have.header("x-ms-meta-test2", "value2");
-          res.should.have.header("x-ms-meta-meta1", "meta1Value");
-          res.should.have.header("Last-Modified");
-          res.should.have.header("ETag");
+          expect(res.status).to.equal(200);
+          expect(res.header["x-ms-meta-test1"]).to.equal("value1");
+          expect(res.header["x-ms-meta-test2"]).to.equal("value2");
+          expect(res.header["x-ms-meta-meta1"]).to.equal("meta1Value");
+          expect(res.header["last-modified"]).to.not.be.null;
+          expect(res.header["etag"]).to.not.be.null;
         });
     });
     it("should get the correct metadata. (HEAD)", () => {
@@ -116,12 +122,12 @@ describe("Container HTTP API", () => {
         .head(`${urlPath}/${propContainer}`)
         .query({ restype: "container", comp: "metadata" })
         .then((res) => {
-          res.should.have.status(200);
-          res.should.have.header("x-ms-meta-test1", "value1");
-          res.should.have.header("x-ms-meta-test2", "value2");
-          res.should.have.header("x-ms-meta-meta1", "meta1Value");
-          res.should.have.header("Last-Modified");
-          res.should.have.header("ETag");
+          expect(res.status).to.equal(200);
+          expect(res.header["x-ms-meta-test1"]).to.equal("value1");
+          expect(res.header["x-ms-meta-test2"]).to.equal("value2");
+          expect(res.header["x-ms-meta-meta1"]).to.equal("meta1Value");
+          expect(res.header["last-modified"]).to.not.be.null;
+          expect(res.header["etag"]).to.not.be.null;
         });
     });
     it("should fail to get metadata of a non-existant container (GET)", () => {
@@ -153,7 +159,7 @@ describe("Container HTTP API", () => {
         .set("x-ms-meta-test2", "value2")
         .set("x-ms-meta-meta1", "meta1Value")
         .then((res) => {
-          res.should.have.status(200);
+          expect(res.status).to.equal(200);
         });
     });
     it("should get the correct metadata. (GET)", () => {
@@ -162,12 +168,12 @@ describe("Container HTTP API", () => {
         .get(`${urlPath}/${propContainer}`)
         .query({ restype: "container" })
         .then((res) => {
-          res.should.have.status(200);
-          res.should.have.header("x-ms-meta-test1", "value1");
-          res.should.have.header("x-ms-meta-test2", "value2");
-          res.should.have.header("x-ms-meta-meta1", "meta1Value");
-          res.should.have.header("Last-Modified");
-          res.should.have.header("ETag");
+          expect(res.status).to.equal(200);
+          expect(res.header["x-ms-meta-test1"]).to.equal("value1");
+          expect(res.header["x-ms-meta-test2"]).to.equal("value2");
+          expect(res.header["x-ms-meta-meta1"]).to.equal("meta1Value");
+          expect(res.header["last-modified"]).to.not.be.null;
+          expect(res.header["etag"]).to.not.be.null;
         });
     });
     it("should get the correct metadata. (HEAD)", () => {
@@ -176,12 +182,12 @@ describe("Container HTTP API", () => {
         .head(`${urlPath}/${propContainer}`)
         .query({ restype: "container" })
         .then((res) => {
-          res.should.have.status(200);
-          res.should.have.header("x-ms-meta-test1", "value1");
-          res.should.have.header("x-ms-meta-test2", "value2");
-          res.should.have.header("x-ms-meta-meta1", "meta1Value");
-          res.should.have.header("Last-Modified");
-          res.should.have.header("ETag");
+          expect(res.status).to.equal(200);
+          expect(res.header["x-ms-meta-test1"]).to.equal("value1");
+          expect(res.header["x-ms-meta-test2"]).to.equal("value2");
+          expect(res.header["x-ms-meta-meta1"]).to.equal("meta1Value");
+          expect(res.header["last-modified"]).to.not.be.null;
+          expect(res.header["etag"]).to.not.be.null;
         });
     });
     it("should fail to get metadata of a non-existant container (GET)", () => {

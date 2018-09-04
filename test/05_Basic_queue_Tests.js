@@ -1,9 +1,11 @@
 /** @format */
 
-const QueueName = require("../lib/validation/queue/QueueName"),
-  AError = require("../lib/core/AzuriteError");
-ErrorCodes = require("../lib/core/ErrorCodes");
-expect = require("chai").expect;
+import QueueName from "../lib/validation/queue/QueueName";
+
+import AError from "../lib/core/AzuriteError";
+import ErrorCodes from "../lib/core/ErrorCodes";
+
+import { expect } from "chai";
 
 describe("validation", () => {
   describe("QueueName", () => {

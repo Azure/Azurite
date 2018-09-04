@@ -2,7 +2,18 @@
 
 "use strict";
 
-const BbPromise = require("bluebird");
+import BbPromise from 'bluebird';
+
+import minimist from "minimist";
+
+import env from "../lib/core/env";
+
+import cli from "../lib/core/cli";
+
+
+// Forking individual modules to spread them across different cores if possible
+// and restarting them automatically in case of a crash.
+import { fork } from "child_process";
 
 process.on("unhandledRejection", (e) => {
   console.error(
@@ -17,9 +28,7 @@ process.noDeprecation = true;
     .then(() => {
       // requiring here so that if anything went wrong,
       // during require, it will be caught.
-      const argv = require("minimist")(process.argv.slice(2)),
-        env = require("../lib/core/env"),
-        cli = require("../lib/core/cli");
+      const argv = minimist(process.argv.slice(2));
 
       return env
         .init(argv)
@@ -29,10 +38,6 @@ process.noDeprecation = true;
           }
         })
         .then(() => {
-          // Forking individual modules to spread them across different cores if possible
-          // and restarting them automatically in case of a crash.
-          const fork = require("child_process").fork;
-
           (function forkBlobModule(code, signal) {
             const mod = fork(env.blobModulePath, process.argv);
             mod.on("exit", forkBlobModule);

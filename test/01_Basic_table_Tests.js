@@ -1,18 +1,9 @@
 /** @format */
 
-const chai = require("chai"),
-  chaiHttp = require("chai-http"),
-  should = chai.should(),
-  expect = chai.expect,
-  BbPromise = require("bluebird"),
-  fs = BbPromise.promisifyAll(require("fs-extra")),
-  Azurite = require("./../../Azurite/lib/AzuriteTable"),
-  rp = require("request-promise"),
-  path = require("path"),
-  xml2js = require("xml2js"),
-  azureStorage = require("azure-storage");
-
-chai.use(chaiHttp);
+import { expect } from "chai";
+import Azurite from "./../../Azurite/lib/AzuriteTable";
+import path from "path";
+import azureStorage from "azure-storage";
 
 const tableName = "testtable";
 // after testing, we need to clean up the DB files etc that we create.
@@ -52,9 +43,10 @@ describe("Table HTTP Api tests", () => {
   let entity1Created = false;
 
   // set us up the tests!
-  const testDBLocation = path.join(process.env.AZURITE_LOCATION, tableTestPath);
+  const azureiteLocation = process.env.AZURITE_LOCATION;
+  const testDBLocation = path.join(azureiteLocation, tableTestPath);
 
-  before(() => {
+  beforeAll(() => {
     azurite
       .init({
         l: testDBLocation,
@@ -257,5 +249,5 @@ describe("Table HTTP Api tests", () => {
     });
   });
 
-  after(() => azurite.close());
+  afterAll(() => azurite.close());
 });

@@ -2,7 +2,11 @@
 
 "use strict";
 
-const BbPromise = require("bluebird");
+import BbPromise from 'bluebird';
+
+import minimist from "minimist";
+
+import A from "../lib/AzuriteBlob";
 
 process.on("unhandledRejection", (e) => {
   console.error(
@@ -17,9 +21,8 @@ process.noDeprecation = true;
     .then(() => {
       // requiring here so that if anything went wrong,
       // during require, it will be caught.
-      const argv = require("minimist")(process.argv.slice(2));
-      const A = require("../lib/AzuriteBlob"),
-        azurite = new A();
+      const argv = minimist(process.argv.slice(2));
+      const azurite = new A();
       azurite.init(argv);
     })
     .catch((e) => {

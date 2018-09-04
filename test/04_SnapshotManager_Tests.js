@@ -2,9 +2,10 @@
 
 "use strict";
 
-const chai = require("chai"),
-  expect = chai.expect,
-  SnapshotManager = require("../lib/core/blob/SnapshotTimeManager");
+import chai from 'chai';
+import SnapshotManager from '../lib/core/blob/SnapshotTimeManager';
+
+const expect = chai.expect;
 
 describe("SnapshotTimeManager", () => {
   it("should return a snapshot date that is at least one second greater than previous snapshot of same container-blob", () => {
