@@ -27,6 +27,22 @@
             "type": "node",
             "request": "launch",
             "protocol": "auto",
+            "name": "Launch Azurite with AuthEnabled",
+            "program": "${workspaceRoot}/bin/azurite",
+            "cwd": "${workspaceRoot}",
+            "args": [
+                "-l",
+                "${workspaceRoot}/azurite-testdrive",
+                "-a"
+            ],
+            "skipFiles": [
+                "node_modules/**/*.js"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "protocol": "auto",
             "name": "Launch Azurite",
             "program": "${workspaceRoot}/bin/azurite",
             "cwd": "${workspaceRoot}",
@@ -47,7 +63,8 @@
             "cwd": "${workspaceRoot}",
             "args": [
                 "-l",
-                "${workspaceRoot}/azurite-testdrive"
+                "${workspaceRoot}/azurite-testdrive",
+                "-a"
             ],
             "skipFiles": [
                 "node_modules/**/*.js"
