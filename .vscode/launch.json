@@ -33,7 +33,7 @@
             "args": [
                 "-l",
                 "${workspaceRoot}/azurite-testdrive",
-                "-a"
+                "-accountAuth"
             ],
             "skipFiles": [
                 "node_modules/**/*.js"
@@ -63,8 +63,7 @@
             "cwd": "${workspaceRoot}",
             "args": [
                 "-l",
-                "${workspaceRoot}/azurite-testdrive",
-                "-a"
+                "${workspaceRoot}/azurite-testdrive"
             ],
             "skipFiles": [
                 "node_modules/**/*.js"
