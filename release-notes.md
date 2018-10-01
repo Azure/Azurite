@@ -1,5 +1,5 @@
 # 2.0  
-## 2.6.7  
+## 2.7.0  
 - updated SAS Authentication   
 - updated Error & response handling  
 - fixes for blob service properties to be set on start  
