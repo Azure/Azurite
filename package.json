@@ -1,10 +1,11 @@
 {
   "name": "azurite",
-  "version": "2.6.5",
+  "version": "2.7.0",
   "description": "A lightweight server clone of Azure Blob, Queue, and Table Storage that simulates most of the commands supported by it with minimal dependencies.",
   "scripts": {
     "pretest": "npm run clean",
-    "test": "cross-env AZURITE_LOCATION=azurite-testdrive mocha --timeout 10000",
+    "test": "env-cmd ./test/.env mocha",
+    "externaltests": "env-cmd ./externaltests/.env mocha externaltests",
     "start": "node bin/azurite -l azurite-testdrive",
     "blob": "node bin/blob -l azurite-testdrive",
     "queue": "node bin/queue",
@@ -55,19 +56,21 @@
     "lokijs": "^1.4.1",
     "minimist": "^1.2.0",
     "morgan": "^1.7.0",
-    "request": "^2.79.0",
+    "request": "2.87.0",
     "uuid": "^3.0.1",
     "validator": "^8.0.0",
     "xml2js": "^0.4.17"
   },
   "devDependencies": {
+    "azure-storage": "^2.10.1",
     "chai": "^3.5.0",
-    "chai-http": "^3.0.0",
-    "cross-env": "^3.1.3",
-    "cross-var": "^1.0.3",
-    "mocha": "^3.2.0",
-    "pkg": "^4.2.2",
+    "chai-http": "^4.0.0",
+    "cross-var": "^1.1.0",
+    "env-cmd": "^8.0.2",
+    "mocha": "5.2.0",
+    "pkg": "^4.3.1",
+    "prettier": "1.14.2",
     "request-promise": "^4.1.1",
-    "rimraf": "^2.5.4"
+    "rimraf": "2.6.2"
   }
 }

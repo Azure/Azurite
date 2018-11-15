@@ -1,7 +1,7 @@
 # Azurite
 [![npm version](https://badge.fury.io/js/azurite.svg)](https://badge.fury.io/js/azurite)
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)]()
-[![Build Status](https://travis-ci.org/arafato/azurite.svg?branch=master)](https://travis-ci.org/arafato/azurite)
+[![Build Status](https://travis-ci.org/Azure/Azurite.svg?branch=master)](https://travis-ci.org/Azure/Azurite)
 
 A lightweight server clone of Azure Blob, Queue, and Table Storage that simulates most of the commands supported by it with minimal dependencies.
 
@@ -13,7 +13,9 @@ After installation you can install Azurite simply with `npm` which is Node.js pa
 
 `$ npm install -g azurite`
 
-Then simply start it with the following command: 
+## Running Azurite
+
+Simply start it with the following command: 
 
 `$ azurite -l path/to/localfolder`
 
@@ -31,6 +33,7 @@ For Queue Storage Emulator only:
 For Table Storage Emulator only:
 
 `$ azurite-table -l path/to/azurite/workspace`
+
 
 ## Nuget
 Azurite is also available as Nuget package at [https://www.nuget.org/packages/Azurite/](https://www.nuget.org/packages/Azurite/).
@@ -59,7 +62,7 @@ $ docker build -t arafato/azurite .
 ### Run the Docker image
 To run the Docker image, execute the following command:
 ```bash
-$ docker run -d -t -p 10000:10000 -p 10001:10001 -v /path/to/folder:/opt/azurite/folder arafato/azurite
+$ docker run -d -t -p 10000:10000 -p 10001:10001 -p 10002:10002 -v /path/to/folder:/opt/azurite/folder arafato/azurite
 ```
 
 #### Configure the executable when running the container
@@ -90,6 +93,31 @@ $ az storage container create --name 'test' --connection-string 'DefaultEndpoint
 }
 ```
 
+## Current List of Command Line Options
+
+```
+-a
+``` 
+Enables sharedkey authentication check
+```
+-l c:\tmp\emulatorPath
+--location c:\tmp\emulatorPath
+```
+Allows the specification of a path
+```
+--blobPort 101000
+```
+Sets the TCP Port for blob storage to the value following the argument.
+```
+--queuePort 10001
+```
+Sets the TCP Port for queue storage to the value following the argument.
+```
+--tablePort 10002
+```
+Sets the TCP Port for table storage to the value following the argument.
+
+
 
 # Contributions
 ## What do I need to know to help?
@@ -101,43 +129,40 @@ If you are interested in making a code contribution and would like to learn more
 - Azurite makes heavy use of [Bluebird](http://bluebirdjs.com/docs/getting-started.html) which is a fully featured promises library with unmatched performance.  
 
 ## What TODOs are there?
-The current status of Azurite's support of the [Official Blob Storage REST API Specification](https://docs.microsoft.com/rest/api/storageservices/blob-service-rest-api) is listed in below section [API Support](https://github.com/arafato/azurite/#api-support). Features that are still unimplemented are marked with `[TODO]`. Features that are currently being worked on are marked with `[IN-PROGRESS]`.
+We are using a combination of community feedback, and the Azure Storage Node package tests to validate  Azurite's support of the [Official Blob Storage REST API Specification](https://docs.microsoft.com/rest/api/storageservices/blob-service-rest-api).  
+We shall create issues based on failing tests to help direct and prioritize our development efforts.  
+See also section below: [API Support](https://github.com/Azure/Azurite/#api-support).
 
-Current bugs that need to be fixed are listed at our [issues site on Github](https://github.com/arafato/azurite/issues) and tagged with a red label `bug`.
+Current bugs that need to be fixed are listed at our [issues site on Github](https://github.com/Azure/Azurite/issues) and tagged with a red label `bug`.
 
-## How do I make a contribution?
+Issues which we think might  be a good place for newcomers to start, are tagged with [**"good first issue"**](https://github.com/Azure/Azurite/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
-Never made an open source contribution before? Wondering how contributions work in Azurite? Here's a quick rundown!
+Details on how to setup tests with the Azure Storage submodule, can be found under [Testing with Azure Storage Node](./doc/azure-storage-node_tdd.md).  
 
-1. Find an issue that you are interested in addressing or a feature that you would like to add.
+## Need Help?
+Be sure to check out the Microsoft Azure Developer Forums on MSDN or the Developer Forums on Stack Overflow if you have trouble with the provided code.
 
-2. Fork the Azurite repository to your local GitHub organization. This means that you will have a copy of the repository under `your-GitHub-username/azurite`.
+## Contribute Code or Provide Feedback
+If you would like to become an active contributor to this project please follow the instructions provided in Azure Projects [Contribution Guidelines](https://azure.github.io/guidelines/).
 
-3. Clone the repository to your local machine using git clone `https://github.com/github-username/azurite.git`.
+If you encounter any bugs with the library please file an issue in the [Issues](https://github.com/Azure/Azurite/issues) section of the project.
 
-4. Create a new branch for your fix using `git checkout -b branch-name-here`.
-Make the appropriate changes for the issue you are trying to address or the feature that you want to add.
+When sending pull requests, please send **non-breaking PRs** to the dev branch and breaking changes to the **dev_breaking** branch. Please do not make PRs against master.
 
-5. Use `git add insert-paths-of-changed-files-here` to add the file contents of the changed files to the "snapshot" git uses to manage the state of the project, also known as the index.
-
-6. Use `git commit -m "Insert a short message of the changes made here"` to store the contents of the index with a descriptive message.
-
-7. Push the changes to the remote repository using `git push origin branch-name-here`.
-
-8. Submit a pull request to the upstream repository.
-Title the pull request with a short description of the changes made and the issue or bug number associated with your change. For example, you can title an issue like so "Added more log outputting to resolve #4352".
-In the description of the pull request, explain the changes that you made, any issues you think exist with the pull request you made, and any questions you have for the maintainer. It's OK if your pull request is not perfect (no pull request is), the reviewer will be able to help you fix any problems and improve it!
-
-9. Wait for the pull request to be reviewed by a maintainer.
-Make changes to the pull request if the reviewing maintainer recommends them.
-
-10. Celebrate your success after your pull request is merged!
+- **Please include a Unit or Integration test with any code submission, this is a significant help when validating changes and helps reduce the time we need to spend on pull requests.**  
 
 ## Where can I go for help?
-If you need help, you can ask questions directly at our [issues site on Github](https://github.com/arafato/azurite/issues).
+
+If you need help, you can ask questions directly at our [issues site on Github](https://github.com/Azure/Azurite/issues).  
+Alternatively, check out the following links:  
+  
+[Azure Developer Center](https://azure.microsoft.com/en-us/develop/)  
+[Azure Storage Service](https://azure.microsoft.com/en-us/documentation/services/storage/)  
+[Azure Storage Team Blog](https://blogs.msdn.com/b/windowsazurestorage/)  
 
 # API Support
-Currently, Azurite only supports the [Blob Storage APIs](https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/blob-service-rest-api), the [Queue Storage API](https://docs.microsoft.com/en-us/rest/api/storageservices/queue-service-rest-api), and the [Table Storage API](https://docs.microsoft.com/en-us/rest/api/storageservices/table-service-rest-api). Support for Azure Storage Files is planned, but currently not available. 
+Currently, Azurite only supports the [Blob Storage APIs](https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/blob-service-rest-api), the [Queue Storage API](https://docs.microsoft.com/en-us/rest/api/storageservices/queue-service-rest-api), and the [Table Storage API](https://docs.microsoft.com/en-us/rest/api/storageservices/table-service-rest-api).  
+Support for Azure Storage Files is planned, but currently not available. 
 
 The Standard Emulator Connection String is the same as required by [Microsoft's Official Storage Emulator](https://go.microsoft.com/fwlink/?LinkId=717179):
 
@@ -167,3 +192,4 @@ ALL DONE except:
 - Get Table ACL [TODO]
 - Set Table ACL [TODO]
 - Entity Group Transaction (Batch Operation) [TODO]
+

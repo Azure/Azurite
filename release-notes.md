@@ -1,4 +1,24 @@
-# 2.0
+# 2.0  
+## 2.7.0  
+- updated SAS Authentication   
+- updated Error & response handling  
+- fixes for blob service properties to be set on start  
+- fixes [#70](https://github.com/Azure/Azurite/issues/70) 
+- enabled external integration tests from Azure-storage-node  
+## 2.6.6  
+- updated testing using azure-storage-node tests in submodule  
+- application of jshint and prettier rule sets  
+- multiple fixes for issues in table storage
+- fixes [#47](https://github.com/Azure/Azurite/issues/47) - Copied blob has incorrect content type  
+- merged PR [#32](https://github.com/Azure/Azurite/pull/32) -> thanks to @trekawek   
+- merged PR [#30](https://github.com/Azure/Azurite/pull/30) -> thanks to @julienr    
+- merged PR [#46](https://github.com/Azure/Azurite/pull/46) -> thanks to @Fanarito  
+- merged PR [#47](https://github.com/Azure/Azurite/pull/47) -> thanks to @kalleep  
+- fixes [#12](https://github.com/Azure/Azurite/issues/12)  
+- merged PR [#28](https://github.com/Azure/Azurite/pull/28) fixes [#26](https://github.com/Azure/Azurite/issues/26) -> thanks to @kalleep  
+- merged PR [#25](BLOB shared key authentication) -> thanks to @vitaly-goot  
+- merged PR [#15](https://github.com/Azure/Azurite/pull/15) fixes [#19](https://github.com/Azure/Azurite/issues/19) -> thanks to @david-driscoll  
+
 ## 2.6.5 (moved to github.com/azure/azurite)
 - merged PR [#4](https://github.com/Azure/Azurite/pull/4) -> thanks to @trekawek
 - merged PR [#2](https://github.com/Azure/Azurite/pull/2) -> thanks to @trekawek
