@@ -225,6 +225,34 @@ describe("Table HTTP Api tests", () => {
         cb();
       });
     }
+
+    it("should not fail when a query contains a backtick", (done) => {
+      if (entity1Created === false) {
+        setTimeout(() => {
+          backtickEntityFindTest(done);
+        }, 500);
+      } else {
+        backtickEntityFindTest(done);
+      }
+    });
+
+    function backtickEntityFindTest(cb) {
+      const query = new azureStorage.TableQuery()
+        .where("RowKey eq ?", "`");
+      const retrievalTableService = azureStorage.createTableService(
+        "UseDevelopmentStorage=true"
+      );
+      retrievalTableService.queryEntities(tableName, query, null, function(
+        error,
+        results,
+        response
+      ) {
+        expect(error).to.equal(null);
+        expect(results.entries.length).to.equal(0);
+        expect(response.statusCode).to.equal(200);
+        cb();
+      });
+    }
   });
 
   describe("PUT and Insert Table Entites", () => {
