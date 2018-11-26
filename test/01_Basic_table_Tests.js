@@ -30,8 +30,7 @@ const entGen = azureStorage.TableUtilities.entityGenerator;
 const partitionKeyForTest = "azurite";
 const rowKeyForTestEntity1 = "1";
 const rowKeyForTestEntity2 = "2";
-const EntityNotFoundErrorMessage =
-  '<?xml version="1.0" encoding="utf-8"?><Error><Code>EntityNotFound</Code><Message>The specified entity does not exist.</Message></Error>';
+const EntityNotFoundErrorMessage = 'The specified entity does not exist.';
 
 describe("Table HTTP Api tests", () => {
   const azurite = new Azurite();
