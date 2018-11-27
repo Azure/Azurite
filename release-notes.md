@@ -1,4 +1,10 @@
 # 2.0  
+## 2.7.0  
+- updated SAS Authentication   
+- updated Error & response handling  
+- fixes for blob service properties to be set on start  
+- fixes [#70](https://github.com/Azure/Azurite/issues/70) 
+- enabled external integration tests from Azure-storage-node  
 ## 2.6.6  
 - updated testing using azure-storage-node tests in submodule  
 - application of jshint and prettier rule sets  
