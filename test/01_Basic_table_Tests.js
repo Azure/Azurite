@@ -225,6 +225,33 @@ describe("Table HTTP Api tests", () => {
         cb();
       });
     }
+
+    it("should return correct metadata for multiple entities result", (done) => {
+      const query = new azureStorage.TableQuery()
+      .top(5);
+       const multipleResultsTableService = azureStorage.createTableService(azureStorage.generateDevelopmentStorageCredentials());
+       multipleResultsTableService.queryEntities(tableName, query, null, function(
+        error,
+        result,
+        response
+      ) {
+        expect(result.entries.length).to.equal(2);
+        expect(response.body["odata.metadata"]).to.equal(`http://127.0.0.1:10002/devstoreaccount1/$metadata#${tableName}`)
+        done();
+      })
+    });
+    
+    it("should return correct metadata for single entity result", (done) => {
+       const multipleResultsTableService = azureStorage.createTableService(azureStorage.generateDevelopmentStorageCredentials());
+       multipleResultsTableService.retrieveEntity(tableName, partitionKeyForTest, rowKeyForTestEntity1, null, function(
+        error,
+        result,
+        response
+      ) {
+        expect(response.body["odata.metadata"]).to.equal(`http://127.0.0.1:10002/devstoreaccount1/$metadata#${tableName}/@Element`)
+        done();
+      })
+    });
   });
 
   describe("PUT and Insert Table Entites", () => {
