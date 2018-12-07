@@ -23,9 +23,7 @@ const tableTestPath =
     .toISOString()
     .replace(/:/g, "")
     .replace(/\./g, "") + "_TABLE_TESTS";
-const tableService = azureStorage.createTableService(
-  "UseDevelopmentStorage=true"
-);
+const tableService = azureStorage.createTableService(azureStorage.generateDevelopmentStorageCredentials());
 const entGen = azureStorage.TableUtilities.entityGenerator;
 const partitionKeyForTest = "azurite";
 const rowKeyForTestEntity1 = "1";
@@ -119,9 +117,7 @@ describe("Table HTTP Api tests", () => {
     function singleEntityTest(cb) {
       // I create a new tableService, as the oringal above was erroring out
       //  with a socket close if I reuse it
-      const retrievalTableService = azureStorage.createTableService(
-        "UseDevelopmentStorage=true"
-      );
+      const retrievalTableService = azureStorage.createTableService(azureStorage.generateDevelopmentStorageCredentials());
       retrievalTableService.retrieveEntity(
         tableName,
         partitionKeyForTest,
@@ -143,9 +139,7 @@ describe("Table HTTP Api tests", () => {
 
     it("should retrieve all Entities", (done) => {
       const query = new azureStorage.TableQuery();
-      const retrievalTableService = azureStorage.createTableService(
-        "UseDevelopmentStorage=true"
-      );
+      const retrievalTableService = azureStorage.createTableService(azureStorage.generateDevelopmentStorageCredentials());
       retrievalTableService.queryEntities(tableName, query, null, function(
         error,
         results,
@@ -181,9 +175,7 @@ describe("Table HTTP Api tests", () => {
     });
 
     function missingEntityTest(cb) {
-      const faillingLookupTableService = azureStorage.createTableService(
-        "UseDevelopmentStorage=true"
-      );
+      const faillingLookupTableService = azureStorage.createTableService(azureStorage.generateDevelopmentStorageCredentials());
       faillingLookupTableService.retrieveEntity(
         tableName,
         partitionKeyForTest,
@@ -212,9 +204,7 @@ describe("Table HTTP Api tests", () => {
       const query = new azureStorage.TableQuery()
         .top(5)
         .where("RowKey eq ?", "unknownRowKeyForFindError");
-      const faillingFindTableService = azureStorage.createTableService(
-        "UseDevelopmentStorage=true"
-      );
+      const faillingFindTableService = azureStorage.createTableService(azureStorage.generateDevelopmentStorageCredentials());
       faillingFindTableService.queryEntities(tableName, query, null, function(
         error,
         result,
@@ -256,9 +246,7 @@ describe("Table HTTP Api tests", () => {
 
   describe("PUT and Insert Table Entites", () => {
     it("should return a valid object in the result object when creating an Entity in TableStorage using return no content", (done) => {
-      const insertEntityTableService = azureStorage.createTableService(
-        "UseDevelopmentStorage=true"
-      );
+      const insertEntityTableService = azureStorage.createTableService(azureStorage.generateDevelopmentStorageCredentials());
       const insertionEntity = {
         PartitionKey: entGen.String(partitionKeyForTest),
         RowKey: entGen.String("3"),
