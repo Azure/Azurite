@@ -41,5 +41,30 @@ describe("Core", () => {
         });
       }));
     });
+
+    it('should allow 0 as a valid port number', () => {
+      const tests = [
+        {
+          p: 0,
+          q: 0,
+          t: 0
+        },
+        {
+          blobPort: 0,
+          queuePort: 0,
+          tablePort: 0
+        }
+      ]
+
+      return BbPromise.all(tests.map((options) => {
+        const env = new Environment();
+
+        return env.init(options).then(() => {
+          expect(env.blobStoragePort).to.equal(0);
+          expect(env.queueStoragePort).to.equal(0);
+          expect(env.tableStoragePort).to.equal(0);
+        });
+      }));
+    });
   });
 });
