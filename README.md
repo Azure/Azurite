@@ -18,6 +18,8 @@ The plan is to implement blob storage, followed by table storage, then queues.  
 
 Contributors and maintainers can then focus on emulation and simulation of storage behaviour, rather than reverse engineering our APIs and API documenation.  
 
+The blob API work should be completed in the next couple of months, with the rest following on close behind.
+
 # Installation and Usage
 ## NPM
 In order to run Azurite you need [Node.js](https://nodejs.org/) >= 6.0 installed on your system. Azurite works cross-platform on Windows, Linux, and OS X. 
