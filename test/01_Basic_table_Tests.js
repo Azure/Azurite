@@ -23,14 +23,15 @@ const tableTestPath =
     .toISOString()
     .replace(/:/g, "")
     .replace(/\./g, "") + "_TABLE_TESTS";
-const tableService = azureStorage.createTableService(
-  "UseDevelopmentStorage=true"
-);
+const tableService = createDevTableService();
 const entGen = azureStorage.TableUtilities.entityGenerator;
 const partitionKeyForTest = "azurite";
 const rowKeyForTestEntity1 = "1";
 const rowKeyForTestEntity2 = "2";
 const EntityNotFoundErrorMessage = 'The specified entity does not exist.';
+
+// use this to tune for the storage API response time on write.
+const tableWriteTimeout = 250;
 
 describe("Table HTTP Api tests", () => {
   const azurite = new Azurite();
@@ -109,7 +110,7 @@ describe("Table HTTP Api tests", () => {
       if (entity1Created === false) {
         const getE1 = setTimeout(() => {
           singleEntityTest(done);
-        }, 500);
+        }, tableWriteTimeout);
       } else {
         singleEntityTest(done);
       }
@@ -118,9 +119,7 @@ describe("Table HTTP Api tests", () => {
     function singleEntityTest(cb) {
       // I create a new tableService, as the oringal above was erroring out
       //  with a socket close if I reuse it
-      const retrievalTableService = azureStorage.createTableService(
-        "UseDevelopmentStorage=true"
-      );
+      const retrievalTableService = createDevTableService();
       retrievalTableService.retrieveEntity(
         tableName,
         partitionKeyForTest,
@@ -142,10 +141,8 @@ describe("Table HTTP Api tests", () => {
 
     it("should retrieve all Entities", (done) => {
       const query = new azureStorage.TableQuery();
-      const retrievalTableService = azureStorage.createTableService(
-        "UseDevelopmentStorage=true"
-      );
-      retrievalTableService.queryEntities(tableName, query, null, function (
+      const retrievalTableService = createDevTableService();
+      retrievalTableService.queryEntities(tableName, query, null, function(
         error,
         results,
         response
@@ -173,16 +170,14 @@ describe("Table HTTP Api tests", () => {
       if (entity1Created === false) {
         const getE1 = setTimeout(() => {
           missingEntityTest(done);
-        }, 500);
+        }, tableWriteTimeout);
       } else {
         missingEntityTest(done);
       }
     });
 
     function missingEntityTest(cb) {
-      const faillingLookupTableService = azureStorage.createTableService(
-        "UseDevelopmentStorage=true"
-      );
+      const faillingLookupTableService = createDevTableService();
       faillingLookupTableService.retrieveEntity(
         tableName,
         partitionKeyForTest,
@@ -201,7 +196,7 @@ describe("Table HTTP Api tests", () => {
       if (entity1Created === false) {
         const getE1 = setTimeout(() => {
           missingEntityFindTest(done);
-        }, 500);
+        }, tableWriteTimeout);
       } else {
         missingEntityFindTest(done);
       }
@@ -211,10 +206,8 @@ describe("Table HTTP Api tests", () => {
       const query = new azureStorage.TableQuery()
         .top(5)
         .where("RowKey eq ?", "unknownRowKeyForFindError");
-      const faillingFindTableService = azureStorage.createTableService(
-        "UseDevelopmentStorage=true"
-      );
-      faillingFindTableService.queryEntities(tableName, query, null, function (
+      const faillingFindTableService = createDevTableService();
+      faillingFindTableService.queryEntities(tableName, query, null, function(
         error,
         result,
         response
@@ -250,9 +243,7 @@ describe("Table HTTP Api tests", () => {
 
   describe("PUT and Insert Table Entites", () => {
     it("should have an ETag response header", (done) => {
-      const insertEntityTableService = azureStorage.createTableService(
-        "UseDevelopmentStorage=true"
-      );
+      const insertEntityTableService = createDevTableService();
       const insertionEntity = {
         PartitionKey: entGen.String(partitionKeyForTest),
         RowKey: entGen.String("3"),
@@ -490,3 +481,14 @@ describe("Table HTTP Api tests", () => {
 
   after(() => azurite.close());
 });
+
+function createDevTableService() {
+  const svc = azureStorage.createTableService(
+    "UseDevelopmentStorage=true"
+  );
+
+  // Disable keep-alive connections
+  svc.enableGlobalHttpAgent = true;
+
+  return svc;
+}
