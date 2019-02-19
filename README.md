@@ -5,6 +5,21 @@
 
 A lightweight server clone of Azure Blob, Queue, and Table Storage that simulates most of the commands supported by it with minimal dependencies.
 
+# Important Update on Azurite Direction & Future Work
+
+Dear Azurite community, many thanks for your interest and support.  
+We thought we might be able to reduce some of our testing overhead by incorporating the Azure Storage Node tests in the dev pipeline, but that just showed us how far we really had to go.
+
+We were struggling to maintain parity with our APIs, community contributions were growing, as was our number of issues.  
+
+**To fix this**, we have been focusing on the completion of a new more easily maintainable architecture for Azurite, using Typescript and automatically generated interfaces.
+
+The plan is to implement blob storage, followed by table storage, then queues.  Each with persistent storage.  
+
+Contributors and maintainers can then focus on emulation and simulation of storage behaviour, rather than reverse engineering our APIs and API documenation.  
+
+The blob API work should be completed in the next couple of months, with the rest following on close behind.
+
 # Installation and Usage
 ## NPM
 In order to run Azurite you need [Node.js](https://nodejs.org/) >= 6.0 installed on your system. Azurite works cross-platform on Windows, Linux, and OS X. 
