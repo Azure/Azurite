@@ -6,7 +6,7 @@ const chai = require("chai"),
   expect = chai.expect,
   BbPromise = require("bluebird"),
   fs = BbPromise.promisifyAll(require("fs-extra")),
-  Azurite = require("./../../Azurite/lib/AzuriteTable"),
+  Azurite = require("../lib/AzuriteTable"),
   rp = require("request-promise"),
   path = require("path"),
   xml2js = require("xml2js"),
@@ -63,15 +63,15 @@ describe("Table HTTP Api tests", () => {
       //.then(() => tableService.createTableIfNotExists(tableName, function (error, result, response) {
       // would be better to use "createTableIfNotExists" but we may need to make changes server side for this to work
       .then(() =>
-        tableService.createTable(tableName, function(error, result, response) {
-          tableService.insertEntity(tableName, tableEntity1, function(
+        tableService.createTable(tableName, function (error, result, response) {
+          tableService.insertEntity(tableName, tableEntity1, function (
             error,
             result,
             response
           ) {
             if (error === null) {
               entity1Created = true;
-              tableService.insertEntity(tableName, tableEntity2, function(
+              tableService.insertEntity(tableName, tableEntity2, function (
                 error,
                 result,
                 response
@@ -125,7 +125,7 @@ describe("Table HTTP Api tests", () => {
         tableName,
         partitionKeyForTest,
         rowKeyForTestEntity1,
-        function(error, result, response) {
+        function (error, result, response) {
           expect(error).to.equal(null);
           expect(result).to.not.equal(undefined);
           expect(result).to.not.equal(null);
@@ -145,7 +145,7 @@ describe("Table HTTP Api tests", () => {
       const retrievalTableService = azureStorage.createTableService(
         "UseDevelopmentStorage=true"
       );
-      retrievalTableService.queryEntities(tableName, query, null, function(
+      retrievalTableService.queryEntities(tableName, query, null, function (
         error,
         results,
         response
@@ -187,7 +187,7 @@ describe("Table HTTP Api tests", () => {
         tableName,
         partitionKeyForTest,
         "unknownRowKey",
-        function(error, result, response) {
+        function (error, result, response) {
           expect(error.message).to.equal(EntityNotFoundErrorMessage);
           expect(response.statusCode).to.equal(404);
           cb();
@@ -214,7 +214,7 @@ describe("Table HTTP Api tests", () => {
       const faillingFindTableService = azureStorage.createTableService(
         "UseDevelopmentStorage=true"
       );
-      faillingFindTableService.queryEntities(tableName, query, null, function(
+      faillingFindTableService.queryEntities(tableName, query, null, function (
         error,
         result,
         response
@@ -224,10 +224,32 @@ describe("Table HTTP Api tests", () => {
         cb();
       });
     }
+
+    it("should not have an ETag header", (done) => {
+      const retrievalTableService = azureStorage.createTableService(
+        "UseDevelopmentStorage=true"
+      );
+      retrievalTableService.retrieveEntity(
+        tableName,
+        partitionKeyForTest,
+        rowKeyForTestEntity1,
+        function (error, result, response) {
+          expect(response.headers).not.to.have.property("etag");
+          const query = new azureStorage.TableQuery();
+          retrievalTableService.queryEntities(tableName, query, null, function (
+            error,
+            results,
+            response
+          ) {
+            expect(response.headers).not.to.have.property("etag");
+            done();
+          });
+        });
+    });
   });
 
   describe("PUT and Insert Table Entites", () => {
-    it("should return a valid object in the result object when creating an Entity in TableStorage using return no content", (done) => {
+    it("should have an ETag response header", (done) => {
       const insertEntityTableService = azureStorage.createTableService(
         "UseDevelopmentStorage=true"
       );
@@ -245,12 +267,222 @@ describe("Table HTTP Api tests", () => {
         {
           echoContent: false,
         },
-        function(error, result, response) {
+        function (error, result, response) {
+          expect(response.headers).to.have.property("etag");
+          done();
+        }
+      );
+    });
+
+    it("should return a valid object in the result object when creating an Entity in TableStorage using return no content", (done) => {
+      const insertEntityTableService = azureStorage.createTableService(
+        "UseDevelopmentStorage=true"
+      );
+      const insertionEntity = {
+        PartitionKey: entGen.String(partitionKeyForTest),
+        RowKey: entGen.String("5"),
+        description: entGen.String("qux"),
+        dueDate: entGen.DateTime(new Date(Date.UTC(2018, 12, 26))),
+      };
+
+      // Request is made by default with "return-no-content" when using the storage-sdk
+      insertEntityTableService.insertEntity(
+        tableName,
+        insertionEntity,
+        {
+          echoContent: false,
+        },
+        function (error, result, response) {
+          if (error !== null) {
+            throw error;
+          }
           // etag format is currently different to that returned from Azure and x-ms-version 2018-03-28
           expect(response.statusCode).to.equal(204);
           expect(result).to.not.equal(undefined);
-          expect(result[".metadata"].etag).to.not.equal(undefined);
+          expect(result).to.have.property(".metadata");
+          expect(result[".metadata"]).to.have.property("etag");
           done();
+        }
+      );
+    });
+  });
+
+  describe("PUT and Replace Entity operations", (done) => {
+    it("should have an ETag response header", (done) => {
+      const retrievalTableService = azureStorage.createTableService(
+        "UseDevelopmentStorage=true"
+      );
+      retrievalTableService.retrieveEntity(
+        tableName,
+        partitionKeyForTest,
+        rowKeyForTestEntity1,
+        function (error, result, response) {
+          if (error !== null) {
+            throw error;
+          }
+          retrievalTableService.replaceEntity(
+            tableName,
+            result,
+            function (error, result, response) {
+              if (error !== null) {
+                throw error;
+              }
+              expect(response.statusCode).to.be.equal(204);
+              expect(response.headers).to.have.property("etag");
+              done();
+            }
+          );
+        });
+    });
+    it("should fail if If-Match header doesn't match entity's etag", (done) => {
+      const updateEntityTableService = azureStorage.createTableService(
+        "UseDevelopmentStorage=true"
+      );
+
+      updateEntityTableService.retrieveEntity(
+        tableName,
+        partitionKeyForTest,
+        rowKeyForTestEntity1,
+        function (error, result, response) {
+          expect(error).to.equal(null);
+
+          result[".metadata"].etag = "W/\"newvalue\"";
+
+          updateEntityTableService.replaceEntity(
+            tableName,
+            result,
+            function (error, result, response) {
+              expect(response.statusCode).to.equal(412); // invalid pre-condition
+              done();
+            }
+          )
+        }
+      )
+    });
+    it("should return 204 if If-Match header matches entity's etag", (done) => {
+      const updateEntityTableService = azureStorage.createTableService(
+        "UseDevelopmentStorage=true"
+      );
+
+      updateEntityTableService.retrieveEntity(
+        tableName,
+        partitionKeyForTest,
+        rowKeyForTestEntity1,
+        function (error, result, response) {
+          expect(error).to.equal(null);
+          updateEntityTableService.replaceEntity(
+            tableName,
+            result,
+            function (error, result, response) {
+              expect(response.statusCode).to.equal(204); // no-content
+              done();
+            }
+          )
+        }
+      )
+    });
+  });
+
+  describe("PUT and Insert Or Replace Entity", (done) => {
+    it("should have an ETag response header", (done) => {
+      const retrievalTableService = azureStorage.createTableService(
+        "UseDevelopmentStorage=true"
+      );
+      retrievalTableService.retrieveEntity(
+        tableName,
+        partitionKeyForTest,
+        rowKeyForTestEntity1,
+        function (error, result, response) {
+          retrievalTableService.insertOrReplaceEntity(
+            tableName,
+            result,
+            function (error, result, response) {
+              expect(response.headers).to.have.property("etag");
+              done();
+            }
+          );
+        });
+    });
+  });
+
+  describe("MERGE and Merge Entity operations", (done) => {
+    it("should have an ETag response header", (done) => {
+      const mergeTableService = azureStorage.createTableService(
+        "UseDevelopmentStorage=true"
+      );
+      mergeTableService.retrieveEntity(
+        tableName,
+        partitionKeyForTest,
+        rowKeyForTestEntity1,
+        function (error, result, response) {
+          mergeTableService.mergeEntity(
+            tableName,
+            result,
+            function (error, result, response) {
+              expect(response.headers).to.have.property("etag");
+              done();
+            }
+          );
+        });
+    });
+  });
+
+  describe("MERGE and Merge Or Replace Entity", (done) => {
+    it("should have an ETag response header", (done) => {
+      const mergeTableService = azureStorage.createTableService(
+        "UseDevelopmentStorage=true"
+      );
+      mergeTableService.retrieveEntity(
+        tableName,
+        partitionKeyForTest,
+        rowKeyForTestEntity1,
+        function (error, result, response) {
+          mergeTableService.insertOrMergeEntity(
+            tableName,
+            result,
+            function (error, result, response) {
+              expect(response.headers).to.have.property("etag");
+              done();
+            }
+          );
+        });
+    });
+  });
+
+  describe("DELETE and Delete Entity operations", (done) => {
+    it("should not have an ETag response header", (done) => {
+      const deleteTableService = azureStorage.createTableService(
+        "UseDevelopmentStorage=true"
+      );
+
+      const tempEntity = {
+        PartitionKey: entGen.String(partitionKeyForTest),
+        RowKey: entGen.String("4"),
+        description: entGen.String("qux"),
+        dueDate: entGen.DateTime(new Date(Date.UTC(2018, 12, 26))),
+      };
+
+      // Request is made by default with "return-no-content" when using the storage-sdk
+      deleteTableService.insertEntity(
+        tableName,
+        tempEntity,
+        {
+          echoContent: false,
+        },
+        function (error, result, response) {
+          if (error !== null) {
+            throw error;
+          }
+          deleteTableService.deleteEntity(
+            tableName,
+            tempEntity,
+            function (error, response) {
+              if (error !== null) {
+                throw error;
+              }
+              expect(response.headers).to.not.have.property("etag");
+              done();
+            });
         }
       );
     });
