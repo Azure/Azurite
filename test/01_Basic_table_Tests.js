@@ -30,8 +30,21 @@ const rowKeyForTestEntity1 = "1";
 const rowKeyForTestEntity2 = "2";
 const EntityNotFoundErrorMessage = 'The specified entity does not exist.';
 
+function createDevTableService() {
+  const svc = azureStorage.createTableService(
+    "UseDevelopmentStorage=true"
+  );
+
+  // Disable keep-alive connections
+  svc.enableGlobalHttpAgent = true;
+
+  return svc;
+}
+
 describe("Table HTTP Api tests", () => {
+  
   const azurite = new Azurite();
+
   const tableEntity1 = {
     PartitionKey: entGen.String(partitionKeyForTest),
     RowKey: entGen.String(rowKeyForTestEntity1),
@@ -116,6 +129,7 @@ describe("Table HTTP Api tests", () => {
         }
       );
     });
+  
 
     it("should retrieve all Entities", (done) => {
       const query = new azureStorage.TableQuery();
@@ -162,18 +176,38 @@ describe("Table HTTP Api tests", () => {
 
     // this test performs a query, rather than a retrieve (which is just a different implementation via
     // the SDK, but currently lands in the same place in our implementation which is using LokiJs)
-    it("should fail to find a non-existing entity with 404 EntityNotFound", (done) => {
+    it("should fail to find a non-existing entity with an empty result", (done) => {
       const query = new azureStorage.TableQuery()
         .top(5)
         .where("RowKey eq ?", "unknownRowKeyForFindError");
       const faillingFindTableService = createDevTableService();
       faillingFindTableService.queryEntities(tableName, query, null, function(
         error,
-        result,
+        results,
         response
       ) {
-        expect(error.message).to.equal(EntityNotFoundErrorMessage);
-        expect(response.statusCode).to.equal(404);
+        expect(error).to.equal(null);
+        expect(results.entries.length).to.equal(0);
+        expect(response.statusCode).to.equal(200);
+        done();
+      });
+    });
+
+    it("should not fail when a query contains a backtick", (done) => {
+
+      const query = new azureStorage.TableQuery()
+        .where("RowKey eq ?", "`");
+      const retrievalTableService = azureStorage.createTableService(
+        "UseDevelopmentStorage=true"
+      );
+      retrievalTableService.queryEntities(tableName, query, null, function (
+        error,
+        results,
+        response
+      ) {
+        expect(error).to.equal(null);
+        expect(results.entries.length).to.equal(0);
+        expect(response.statusCode).to.equal(200);
         done();
       });
     });
@@ -418,15 +452,5 @@ describe("Table HTTP Api tests", () => {
   });
 
   after(() => azurite.close());
+
 });
-
-function createDevTableService() {
-  const svc = azureStorage.createTableService(
-    "UseDevelopmentStorage=true"
-  );
-
-  // Disable keep-alive connections
-  svc.enableGlobalHttpAgent = true;
-
-  return svc;
-}
