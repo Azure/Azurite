@@ -48,12 +48,10 @@ describe("Table HTTP Api tests", () => {
     dueDate: entGen.DateTime(new Date(Date.UTC(2018, 12, 26))),
   };
 
-  let entity1Created = false;
-
   // set us up the tests!
   const testDBLocation = path.join(process.env.AZURITE_LOCATION, tableTestPath);
 
-  before(() => {
+  before(done => {
     azurite
       .init({
         l: testDBLocation,
@@ -70,17 +68,15 @@ describe("Table HTTP Api tests", () => {
             response
           ) {
             if (error === null) {
-              entity1Created = true;
               tableService.insertEntity(tableName, tableEntity2, function(
                 error,
                 result,
                 response
               ) {
-                if (error === null) {
-                }
+                done(error);
               });
             } else {
-              throw error;
+              done(error);
             }
           });
         })
@@ -90,32 +86,17 @@ describe("Table HTTP Api tests", () => {
   // JSON response described here (but we are using storage SDK)
   // https://docs.microsoft.com/en-us/rest/api/storageservices/query-entities
   /*
-      { "value":[  
-          {  
-              "PartitionKey":"Customer",  
-              "RowKey":"Name",  
-              "Timestamp":"2013-08-22T00:20:16.3134645Z",  
+      { "value":[
+          {
+              "PartitionKey":"Customer",
+              "RowKey":"Name",
+              "Timestamp":"2013-08-22T00:20:16.3134645Z",
               etc...
       */
   // The value validation below works for both Azure Cloud Table Storage and Azurite's API
   // if you make changes, please ensure that you test against both
   describe("GET Table Entities", () => {
     it("should retrieve Entity 1 by PartitionKey and RowKey", (done) => {
-      // there is some race condition sometimes, depending on the speed of the testing system
-      // currently this delay solves it, until I can fix the before statement to deal
-      // with a promise for DB creation, and wrap test entity creation in said promise
-      // even though  the initialization of Azurite should be promisified already, this is prone
-      // to error.
-      if (entity1Created === false) {
-        const getE1 = setTimeout(() => {
-          singleEntityTest(done);
-        }, 500);
-      } else {
-        singleEntityTest(done);
-      }
-    });
-
-    function singleEntityTest(cb) {
       // I create a new tableService, as the oringal above was erroring out
       //  with a socket close if I reuse it
       const retrievalTableService = azureStorage.createTableService(
@@ -135,10 +116,10 @@ describe("Table HTTP Api tests", () => {
           expect(result.dueDate._.toISOString().split(".")[0] + "Z").to.equal(
             new Date(Date.UTC(2018, 12, 25)).toISOString().split(".")[0] + "Z"
           );
-          cb();
+          done();
         }
       );
-    }
+    });
 
     it("should retrieve all Entities", (done) => {
       const query = new azureStorage.TableQuery();
@@ -170,16 +151,6 @@ describe("Table HTTP Api tests", () => {
     });
 
     it("should fail to retrieve a non-existing row with 404 EntityNotFound", (done) => {
-      if (entity1Created === false) {
-        const getE1 = setTimeout(() => {
-          missingEntityTest(done);
-        }, 500);
-      } else {
-        missingEntityTest(done);
-      }
-    });
-
-    function missingEntityTest(cb) {
       const faillingLookupTableService = azureStorage.createTableService(
         "UseDevelopmentStorage=true"
       );
@@ -190,24 +161,14 @@ describe("Table HTTP Api tests", () => {
         function(error, result, response) {
           expect(error.message).to.equal(EntityNotFoundErrorMessage);
           expect(response.statusCode).to.equal(404);
-          cb();
+          done();
         }
       );
-    }
+    });
 
     // this test performs a query, rather than a retrieve (which is just a different implementation via
     // the SDK, but currently lands in the same place in our implementation which is using LokiJs)
     it("should fail to find a non-existing entity with 404 EntityNotFound", (done) => {
-      if (entity1Created === false) {
-        const getE1 = setTimeout(() => {
-          missingEntityFindTest(done);
-        }, 500);
-      } else {
-        missingEntityFindTest(done);
-      }
-    });
-
-    function missingEntityFindTest(cb) {
       const query = new azureStorage.TableQuery()
         .top(5)
         .where("RowKey eq ?", "unknownRowKeyForFindError");
@@ -221,9 +182,9 @@ describe("Table HTTP Api tests", () => {
       ) {
         expect(error.message).to.equal(EntityNotFoundErrorMessage);
         expect(response.statusCode).to.equal(404);
-        cb();
+        done();
       });
-    }
+    });
   });
 
   describe("PUT and Insert Table Entites", () => {
