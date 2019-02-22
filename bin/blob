@@ -11,6 +11,7 @@ process.on("unhandledRejection", (e) => {
   console.error(e);
 });
 process.noDeprecation = true;
+process.env.UV_THREADPOOL_SIZE = 128;
 
 (() =>
   BbPromise.resolve()
