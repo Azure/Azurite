@@ -1,7 +1,5 @@
 # Azurite V3
 
-* azurite [![npm version](https://badge.fury.io/js/azurite)](https://badge.fury.io/js/azurite)
-
 ## Introduction
 
 A lightweight server compatible with Azure Blob and Queue Storage REST APIs. Azurite simulates most of the commands supported by it with minimal dependencies.
@@ -10,18 +8,18 @@ Azurite V3 leverages next generation architecture based on TypeScript and auto g
 
 ## Features
 
-* Blob Storage Features align with Azure Storage API Version 2018-03-28 (still under development)
-  * SharedKey Authentication
-  * Get/Set Blob Service Properties
-  * Create/List/Delete Containers
-  * Create/Read/List/Update/Delete Block Blobs
-  * Create/Read/List/Update/Delete Page Blobs
-  * Create/Read/List/Update/Delete Append Blobs
-* Features New
-  * ES6 native promise and async methods, less dependencies
-  * Auto generated protocol layer, models, serializer, deserializer and handler interfaces from swagger
-  * Flexible structure to inject customized middlewares with generated middleware
-  * Able to create different logical implementations by implementing generated handler interfaces
+- Blob Storage Features align with Azure Storage API Version 2018-03-28 (still under development)
+  - SharedKey Authentication
+  - Get/Set Blob Service Properties
+  - Create/List/Delete Containers
+  - Create/Read/List/Update/Delete Block Blobs
+  - Create/Read/List/Update/Delete Page Blobs
+  - Create/Read/List/Update/Delete Append Blobs
+- Features New on V3
+  - ES6 native promise and async methods, less dependencies
+  - Auto generated protocol layer, models, serializer, deserializer and handler interfaces from swagger
+  - Flexible structure to inject customized middlewares with generated middleware
+  - Able to create different logical implementations by implementing generated handler interfaces
 
 ## Differences between Azurite and Azure Storage Service (TODO)
 
@@ -83,13 +81,13 @@ $ docker run -d -t -p 10000:10000 -p 10001:10001 -p 10002:10002 -v /path/to/fold
 
 We are currently working on Azurite V3 to implement Azure Storage REST APIs. Following are the major items need to be done for Azurite V3 new architecture. The detailed working items are also tracked in GitHub projects.
 
-* Azure Storage Blob features implementation to 2018-03-28 API version
-  * SharedKey Authentication
-  * Shared Access Signature (SAS) Authentication
-  * Key features for Service/Container/BlockBlob/PageBlob/AppendBlob
-  * Other features
-* Commandline parameters configuration align with legacy Azurite
-* Logging support
+- Azure Storage Blob features implementation to 2018-03-28 API version
+  - SharedKey Authentication
+  - Shared Access Signature (SAS) Authentication
+  - Key features for Service/Container/BlockBlob/PageBlob/AppendBlob
+  - Other features
+- Commandline parameters configuration align with legacy Azurite
+- Logging support
 
 Any contribution to Azurite V3 is welcome, please goto `CONTRIBUTION.md` for detailed contribution guideline.
 
