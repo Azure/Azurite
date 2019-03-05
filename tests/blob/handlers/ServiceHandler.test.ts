@@ -1,15 +1,9 @@
+import { Aborter, AnonymousCredential, ServiceURL, StorageURL } from "@azure/storage-blob";
 import * as assert from "assert";
 import { rmdirSync, unlinkSync } from "fs";
 
-import {
-  Aborter,
-  AnonymousCredential,
-  ServiceURL,
-  StorageURL,
-} from "@azure/storage-blob";
-
+import Server from "../../../src/blob/BlobServer";
 import Configuration from "../../../src/blob/Configuration";
-import Server from "../../../src/blob/Server";
 
 // TODO: Create a server factory as tests utils
 const host = "127.0.0.1";
@@ -32,7 +26,6 @@ let server: Server;
 describe("ServiceHandler", () => {
   before(async () => {
     server = new Server(config);
-    await server.init();
     await server.start();
   });
 

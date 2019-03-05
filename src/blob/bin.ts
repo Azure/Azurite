@@ -1,10 +1,10 @@
+import Server from "../common/IServer";
+import BlobServer from "./BlobServer";
 import Configuration from "./Configuration";
-import Server from "./Server";
 
 async function main() {
   const config = new Configuration();
-  const server = new Server(config);
-  await server.init();
+  const server: Server = new BlobServer(config);
   await server.start();
 
   process.on("message", (msg) => {
