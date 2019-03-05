@@ -1,6 +1,19 @@
 import * as Models from "../generated/artifacts/models";
 import { IDataStore } from "./IDataStore";
 
+export interface IBlobPrivateProperties {
+  isCommitted: boolean;
+}
+
+export type IBlobModel = IBlobPrivateProperties & Models.BlobItem;
+
+/**
+ * Persistency layer data store interface.
+ *
+ * @export
+ * @interface IBlobDataStore
+ * @extends {IDataStore}
+ */
 export interface IBlobDataStore extends IDataStore {
   setServiceProperties<T extends Models.StorageServiceProperties>(
     serviceProperties: T
@@ -20,9 +33,9 @@ export interface IBlobDataStore extends IDataStore {
     marker?: number
   ): Promise<[T[], number | undefined]>;
 
-  updateBlob<T extends Models.BlobItem>(container: string, blob: T): Promise<T>;
+  updateBlob<T extends IBlobModel>(container: string, blob: T): Promise<T>;
 
-  getBlob<T extends Models.BlobItem>(container: string, blob: string): Promise<T | undefined>;
+  getBlob<T extends IBlobModel>(container: string, blob: string): Promise<T | undefined>;
 
   deleteBlob(container: string, blob: string): Promise<void>;
 
