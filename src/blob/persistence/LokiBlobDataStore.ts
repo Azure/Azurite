@@ -7,15 +7,6 @@ import * as Models from "../generated/artifacts/models";
 import { API_VERSION } from "../utils/constants";
 import { IBlobDataStore } from "./IBlobDataStore";
 
-// function cloneToDoc<T extends any>(doc: T, updated: T) {
-//   for (const key in updated) {
-//     if (updated.hasOwnProperty(key)) {
-//       const element = updated[key];
-//       doc.key = element;
-//     }
-//   }
-// }
-
 /**
  * This is a persistency layer data source implementation based on loki DB.
  *
@@ -203,23 +194,6 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
-   * Create a new container to DB.
-   * Assumes the container with same name doesn't exist.
-   *
-   * @template T
-   * @param {T} container
-   * @returns {Promise<T>}
-   * @memberof LokiBlobDataStore
-   */
-  public async createContainer<T extends Models.ContainerItem>(
-    container: T
-  ): Promise<T> {
-    this.db.addCollection(container.name, { unique: ["name"] });
-    const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
-    return coll.insert(container);
-  }
-
-  /**
    * Get a container item from DB by container name.
    *
    * @template T
@@ -341,6 +315,15 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     }
   }
 
+  /**
+   * Gets a blob item from persistency layer by container name and blob name.
+   *
+   * @template T
+   * @param {string} container
+   * @param {string} blob
+   * @returns {(Promise<T | undefined>)}
+   * @memberof IBlobDataStore
+   */
   public async getBlob<T extends Models.BlobItem>(
     container: string,
     blob: string
@@ -379,6 +362,15 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     }
   }
 
+  /**
+   * Persist blob payload.
+   *
+   * @param {string} container
+   * @param {string} blob
+   * @param {NodeJS.ReadableStream} payload
+   * @returns {Promise<void>}
+   * @memberof IBlobDataStore
+   */
   public async writeBlobPayload(
     container: string,
     blob: string,
@@ -395,6 +387,14 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     });
   }
 
+  /**
+   * Read blob payload.
+   *
+   * @param {string} container
+   * @param {string} blob
+   * @returns {Promise<NodeJS.ReadableStream>}
+   * @memberof IBlobDataStore
+   */
   public async readBlobPayload(
     container: string,
     blob: string
