@@ -1,3 +1,5 @@
+import { configDebugLog } from "../common/Logger";
+import BlobConfiguration from "./BlobConfiguration";
 import BlobServer from "./BlobServer";
 
 /**
@@ -5,7 +7,12 @@ import BlobServer from "./BlobServer";
  *
  */
 async function main() {
-  const server = new BlobServer();
+  const config = new BlobConfiguration();
+
+  // Config debug logger singleton instance
+  configDebugLog(config.enableDebugLog, config.debugLogFilePath);
+
+  const server = new BlobServer(config);
   await server.start();
 
   process

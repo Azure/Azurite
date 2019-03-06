@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "@azure/ms-rest-js": "^1.5.0",
+    "@types/morgan": "^1.7.35",
     "express": "^4.16.4",
     "lokijs": "^1.5.6",
+    "morgan": "^1.9.1",
     "tslib": "^1.9.3",
     "uri-templates": "^0.2.0",
     "winston": "^3.1.0",

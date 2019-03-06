@@ -1,23 +1,27 @@
 import { createLogger, format, Logger as IWinstonLogger, transports } from "winston";
 
-import ILoggerStrategy from "./ILoggerStrategy";
+import ILoggerStrategy, { LogLevels } from "./ILoggerStrategy";
 
-export enum LogLevels {
-  Error = "error",
-  Warn = "warn",
-  Info = "info",
-  Verbose = "verbose",
-  Debug = "debug"
-}
-
+/**
+ * A logger strategy can log to console or file.
+ *
+ * @export
+ * @class WinstonLoggerStrategy
+ * @implements {ILoggerStrategy}
+ */
 export default class WinstonLoggerStrategy implements ILoggerStrategy {
-  private winstonLogger: IWinstonLogger;
+  private readonly winstonLogger: IWinstonLogger;
+  private readonly consoleTransport?: transports.ConsoleTransportInstance;
+  private readonly fileTransport?: transports.FileTransportInstance;
 
-  public constructor(
-    level: LogLevels = LogLevels.Debug,
-    outputConsole: boolean = true,
-    logfile?: string
-  ) {
+  /**
+   * Creates an instance of WinstonLoggerStrategy.
+   *
+   * @param {LogLevels} [level=LogLevels.Debug]
+   * @param {string} [logfile] Log to specific file, otherwise to console.
+   * @memberof WinstonLoggerStrategy
+   */
+  public constructor(level: LogLevels = LogLevels.Debug, logfile?: string) {
     this.winstonLogger = createLogger({
       format: format.combine(
         format.timestamp(),
@@ -29,18 +33,20 @@ export default class WinstonLoggerStrategy implements ILoggerStrategy {
       level
     });
 
-    if (outputConsole) {
-      this.winstonLogger.transports.push(new transports.Console());
-    }
-
     if (logfile) {
-      this.winstonLogger.transports.push(
-        new transports.File({ filename: logfile })
-      );
+      this.fileTransport = new transports.File({ filename: logfile });
+      this.winstonLogger.add(this.fileTransport);
+    } else {
+      this.consoleTransport = new transports.Console();
+      this.winstonLogger.add(this.consoleTransport);
     }
   }
 
-  public log(level: string, message: string, contextID: string = "\t"): void {
+  public log(
+    level: LogLevels,
+    message: string,
+    contextID: string = "\t"
+  ): void {
     this.winstonLogger.log({ level, message, contextID });
   }
 }

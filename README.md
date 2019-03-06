@@ -20,6 +20,7 @@ Azurite V3 leverages next generation architecture based on TypeScript and auto g
   - Auto generated protocol layer, models, serializer, deserializer and handler interfaces from swagger
   - Flexible structure to inject customized middlewares with generated middleware
   - Able to create different logical implementations by implementing generated handler interfaces
+  - Detailed debugging log
 
 ## Differences between Azurite and Azure Storage Service (TODO)
 

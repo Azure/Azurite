@@ -1,7 +1,8 @@
 import express from "express";
+import morgan = require("morgan");
 
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
-import logger from "../common/Logger";
+import debugLogger from "../common/Logger";
 import { RequestListener } from "../common/ServerBase";
 import blobStorageContextMiddleware from "./context/blobStorageContext.middleware";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
@@ -28,31 +29,39 @@ import { DEFAULT_CONTEXT_PATH } from "./utils/constants";
  */
 export default class BlobRequestListenerFactory
   implements IRequestListenerFactory {
-  public constructor(private readonly dataStore: IBlobDataStore) {}
+  public constructor(
+    private readonly dataStore: IBlobDataStore,
+    private readonly enableAccessLog: boolean
+  ) {}
 
   public createRequestListener(): RequestListener {
     const app = express().disable("x-powered-by");
 
     // MiddlewareFactory is a factory to create auto-generated middleware
     const middlewareFactory: MiddlewareFactory = new ExpressMiddlewareFactory(
-      logger,
+      debugLogger,
       DEFAULT_CONTEXT_PATH
     );
 
     // Create handlers into handler middleware factory
     const handlers: IHandlers = {
-      appendBlobHandler: new AppendBlobHandler(this.dataStore, logger),
-      blobHandler: new BlobHandler(this.dataStore, logger),
-      blockBlobHandler: new BlockBlobHandler(this.dataStore, logger),
-      containerHandler: new ContainerHandler(this.dataStore, logger),
-      pageBlobHandler: new PageBlobHandler(this.dataStore, logger),
-      serviceHandler: new ServiceHandler(this.dataStore, logger)
+      appendBlobHandler: new AppendBlobHandler(this.dataStore, debugLogger),
+      blobHandler: new BlobHandler(this.dataStore, debugLogger),
+      blockBlobHandler: new BlockBlobHandler(this.dataStore, debugLogger),
+      containerHandler: new ContainerHandler(this.dataStore, debugLogger),
+      pageBlobHandler: new PageBlobHandler(this.dataStore, debugLogger),
+      serviceHandler: new ServiceHandler(this.dataStore, debugLogger)
     };
 
     /*
      * Generated middleware should follow strict orders
      * Manually created middleware can be injected into any points
      */
+
+    // Access log per request
+    if (this.enableAccessLog) {
+      app.use(morgan("common"));
+    }
 
     // Manually created middleware to deserialize feature related context which swagger doesn't know
     app.use(blobStorageContextMiddleware);
