@@ -1,9 +1,4 @@
-import {
-  Aborter,
-  AnonymousCredential,
-  ServiceURL,
-  StorageURL,
-} from "@azure/storage-blob";
+import { Aborter, AnonymousCredential, ServiceURL, StorageURL } from "@azure/storage-blob";
 import * as assert from "assert";
 import { rmdirSync, unlinkSync } from "fs";
 
@@ -22,8 +17,8 @@ const baseURL = `http://${host}:${port}/devaccount`;
 const serviceURL = new ServiceURL(
   baseURL,
   StorageURL.newPipeline(new AnonymousCredential(), {
-    retryOptions: { maxTries: 1 },
-  }),
+    retryOptions: { maxTries: 1 }
+  })
 );
 
 let server: Server;
@@ -65,10 +60,10 @@ describe("ServiceHandler", () => {
       read: true,
       retentionPolicy: {
         days: 5,
-        enabled: true,
+        enabled: true
       },
       version: "1.0",
-      write: true,
+      write: true
     };
 
     serviceProperties.minuteMetrics = {
@@ -76,9 +71,9 @@ describe("ServiceHandler", () => {
       includeAPIs: true,
       retentionPolicy: {
         days: 4,
-        enabled: true,
+        enabled: true
       },
-      version: "1.0",
+      version: "1.0"
     };
 
     serviceProperties.hourMetrics = {
@@ -86,9 +81,9 @@ describe("ServiceHandler", () => {
       includeAPIs: true,
       retentionPolicy: {
         days: 3,
-        enabled: true,
+        enabled: true
       },
-      version: "1.0",
+      version: "1.0"
     };
 
     const newCORS = {
@@ -96,7 +91,7 @@ describe("ServiceHandler", () => {
       allowedMethods: "GET",
       allowedOrigins: "example.com",
       exposedHeaders: "*",
-      maxAgeInSeconds: 8888,
+      maxAgeInSeconds: 8888
     };
     if (!serviceProperties.cors) {
       serviceProperties.cors = [newCORS];
@@ -107,7 +102,7 @@ describe("ServiceHandler", () => {
     if (!serviceProperties.deleteRetentionPolicy) {
       serviceProperties.deleteRetentionPolicy = {
         days: 2,
-        enabled: false,
+        enabled: false
       };
     }
 

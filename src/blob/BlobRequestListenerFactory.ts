@@ -1,7 +1,8 @@
 import express from "express";
 
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
-import { RequestListener } from "../common/Server";
+import logger from "../common/Logger";
+import { RequestListener } from "../common/ServerBase";
 import blobStorageContextMiddleware from "./context/blobStorageContext.middleware";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
 import IHandlers from "./generated/handlers/IHandlers";
@@ -14,9 +15,18 @@ import PageBlobHandler from "./handlers/PageBlobHandler";
 import ServiceHandler from "./handlers/ServiceHandler";
 import { IBlobDataStore } from "./persistence/IBlobDataStore";
 import { DEFAULT_CONTEXT_PATH } from "./utils/constants";
-import logger from "./utils/log/Logger";
 
-export default class BlobExpressRequestListenerFactory
+/**
+ * Default RequestListenerFactory based on express framework.
+ *
+ * When creating other server implementations, such as based on Koa. Should also create a NEW
+ * corresponding BlobKoaRequestListenerFactory class by extending IRequestListenerFactory.
+ *
+ * @export
+ * @class BlobRequestListenerFactory
+ * @implements {IRequestListenerFactory}
+ */
+export default class BlobRequestListenerFactory
   implements IRequestListenerFactory {
   public constructor(private readonly dataStore: IBlobDataStore) {}
 
@@ -26,7 +36,7 @@ export default class BlobExpressRequestListenerFactory
     // MiddlewareFactory is a factory to create auto-generated middleware
     const middlewareFactory: MiddlewareFactory = new ExpressMiddlewareFactory(
       logger,
-      DEFAULT_CONTEXT_PATH,
+      DEFAULT_CONTEXT_PATH
     );
 
     // Create handlers into handler middleware factory
@@ -36,7 +46,7 @@ export default class BlobExpressRequestListenerFactory
       blockBlobHandler: new BlockBlobHandler(this.dataStore, logger),
       containerHandler: new ContainerHandler(this.dataStore, logger),
       pageBlobHandler: new PageBlobHandler(this.dataStore, logger),
-      serviceHandler: new ServiceHandler(this.dataStore, logger),
+      serviceHandler: new ServiceHandler(this.dataStore, logger)
     };
 
     /*
@@ -53,7 +63,7 @@ export default class BlobExpressRequestListenerFactory
     // Exclude account name from req.path for dispatchMiddleware
     app.use(
       "/:account",
-      express.Router().use(middlewareFactory.createDispatchMiddleware()),
+      express.Router().use(middlewareFactory.createDispatchMiddleware())
     );
 
     // TODO: AuthN middleware, like shared key auth or SAS auth

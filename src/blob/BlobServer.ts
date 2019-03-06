@@ -1,56 +1,60 @@
 import * as http from "http";
 
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
-import Server from "../common/Server";
+import logger from "../common/Logger";
+import ServerBase from "../common/ServerBase";
 import BlobConfiguration from "./BlobConfiguration";
-import BlobExpressRequestListenerFactory from "./BlobExpressRequestListenerFactory";
-import { IDataStore } from "./persistence/IDataStore";
+import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
+import IBlobDataStore from "./persistence/IBlobDataStore";
 import LokiBlobDataStore from "./persistence/LokiBlobDataStore";
-import {
-  DEFAULT_BLOB_PERSISTENCE_PATH,
-  DEFAULT_LOKI_DB_PATH,
-} from "./utils/constants";
-import logger from "./utils/log/Logger";
-
-// Decouple server & app layer
-// Server layer should only care about sever related configurations, like listening port etc.
-// App layer will handle middleware related things
 
 /**
- * Azurite HTTP server.
+ * Default implementation of Azurite Blob HTTP server.
+ * This implementation provides a HTTP service based on express framework and LokiJS in memory database.
+ *
+ * We can create other blob servers by extending abstract Server class and initialize different httpServer,
+ * dataStore or requestListenerFactory fields.
+ *
+ * For example, creating a HTTPS server to accept HTTPS requests, or using other
+ * Node.js HTTP frameworks like Koa, or just using another SQL database.
  *
  * @export
  * @class Server
  */
-export default class BlobServer extends Server {
-  private readonly dataStore: IDataStore;
-
+export default class BlobServer extends ServerBase {
   /**
    * Creates an instance of Server.
    *
    * @param {BlobConfiguration} configuration
    * @memberof Server
    */
-  constructor(configuration: BlobConfiguration) {
+  constructor(configuration?: BlobConfiguration) {
+    if (configuration === undefined) {
+      configuration = new BlobConfiguration();
+    }
+
     const host = configuration.host;
     const port = configuration.port;
-    const dataStore = new LokiBlobDataStore(
-      configuration.dbPath || DEFAULT_LOKI_DB_PATH,
-      configuration.persistencePath || DEFAULT_BLOB_PERSISTENCE_PATH,
-    );
+
+    // We can crate a HTTP server or a HTTPS server here
     const httpServer = http.createServer();
 
-    const requestListenerFactory: IRequestListenerFactory = new BlobExpressRequestListenerFactory(
-      dataStore,
+    // We can change the persistency layer implementation by
+    // creating a new XXXDataStore class implementing IBlobDataStore interface
+    // and replace the default LokiBlobDataStore
+    const dataStore: IBlobDataStore = new LokiBlobDataStore(
+      configuration.dbPath,
+      configuration.persistencePath
     );
-    const requestListener = requestListenerFactory.createRequestListener();
 
-    super(host, port, httpServer, requestListener);
-    this.dataStore = dataStore;
-  }
+    // We can also change the HTTP framework here by
+    // creating a new XXXListenerFactory implementing IRequestListenerFactory interface
+    // and replace the default Express based request listener
+    const requestListenerFactory: IRequestListenerFactory = new BlobRequestListenerFactory(
+      dataStore
+    );
 
-  protected async beforeStart(): Promise<void> {
-    await this.dataStore.init();
+    super(host, port, httpServer, requestListenerFactory, dataStore);
   }
 
   protected async afterStart(): Promise<void> {
@@ -60,16 +64,13 @@ export default class BlobServer extends Server {
     }
 
     logger.info(
-      `Azurite Blob service successfully listens on ${address}:${this.port}`,
-    );
-  }
-  protected async beforeClose(): Promise<void> {
-    logger.info(
-      `Azurite Blob service is shutdown... Waiting for existing keep-alive connections timeout...`,
+      `Azurite Blob service successfully listens on ${address}:${this.port}`
     );
   }
 
-  protected async afterClose(): Promise<void> {
-    await this.dataStore.close();
+  protected async beforeClose(): Promise<void> {
+    logger.info(
+      `Azurite Blob service is shutdown... Waiting for existing keep-alive connections timeout...`
+    );
   }
 }

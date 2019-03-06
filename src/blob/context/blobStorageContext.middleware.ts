@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 
+import logger from "../../common/Logger";
 import StorageError from "../errors/StorageError";
 import { DEFAULT_CONTEXT_PATH } from "../utils/constants";
-import logger from "../utils/log/Logger";
 import BlobStorageContext from "./BlobStorageContext";
 
 /**
@@ -26,17 +26,19 @@ export default function blobStorageContextMiddleware(
   blobContext.startTime = new Date();
 
   logger.info(
-    `BlobStorageContextMiddleware: RequestMethod=${req.method} RequestURL=${req.protocol}://${req.hostname}${
-      req.url
-    } RequestHeaders:${JSON.stringify(req.headers)} ClientIP=${
-      req.ip
-    } Protocol=${req.protocol} HTTPVersion=${req.httpVersion}`,
+    `BlobStorageContextMiddleware: RequestMethod=${req.method} RequestURL=${
+      req.protocol
+    }://${req.hostname}${req.url} RequestHeaders:${JSON.stringify(
+      req.headers
+    )} ClientIP=${req.ip} Protocol=${req.protocol} HTTPVersion=${
+      req.httpVersion
+    }`,
     requestID
   );
 
   // TODO: Optimize container/blob name extraction algorithm,
   // because blob names may contain special characters
-  const paths = req.path.split("/").filter((value) => value.length > 0);
+  const paths = req.path.split("/").filter(value => value.length > 0);
 
   const account = paths[0];
   const container = paths[1];

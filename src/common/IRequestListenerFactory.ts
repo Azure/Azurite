@@ -1,7 +1,7 @@
-import { RequestListener } from "./Server";
+import { RequestListener } from "./ServerBase";
 
 /**
- * Factory to create HTTP or HTTPS server request listeners, like using express().
+ * Factory interface to create HTTP or HTTPS server request listeners, like using express().
  *
  * @export
  * @interface IRequestListenerFactory

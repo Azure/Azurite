@@ -1,3 +1,4 @@
+import Mutex from "../../common/Mutex";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -5,7 +6,6 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IContainerHandler from "../generated/handlers/IContainerHandler";
 import { API_VERSION } from "../utils/constants";
-import Mutex from "../utils/Mutex";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 

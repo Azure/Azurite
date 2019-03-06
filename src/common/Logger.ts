@@ -1,9 +1,8 @@
-import ILogger from "../../generated/utils/ILogger";
 import ILoggerStrategy from "./ILoggerStrategy";
 import WinstonLoggerStrategy from "./WinstonLoggerStrategy";
 
-export class Logger implements ILogger {
-  public constructor(private strategy: ILoggerStrategy) {}
+export class Logger {
+  public constructor(public strategy: ILoggerStrategy) {}
 
   public error(message: string, contextID?: string) {
     this.strategy.log("error", message, contextID);
@@ -22,5 +21,9 @@ export class Logger implements ILogger {
   }
 }
 
+// A singleton logger instance
+// Could customized logger strategy by assigning a new logger.strategy
+// Default WinstonLoggerStrategy will display all levels logs to console STD
 const logger = new Logger(new WinstonLoggerStrategy());
+
 export default logger;

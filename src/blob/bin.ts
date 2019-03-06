@@ -1,10 +1,11 @@
-import Server from "../common/Server";
-import BlobConfiguration from "./BlobConfiguration";
 import BlobServer from "./BlobServer";
 
+/**
+ * Entry for the blob service.
+ *
+ */
 async function main() {
-  const config = new BlobConfiguration();
-  const server: Server = new BlobServer(config);
+  const server = new BlobServer();
   await server.start();
 
   process
