@@ -79,6 +79,9 @@ export default abstract class ServerBase {
   public async close(): Promise<void> {
     await this.beforeClose();
 
+    // Remove request listener to reject incoming requests
+    this.httpServer.removeAllListeners("request");
+
     // Close HTTP server first to deny incoming connections
     // You will find this will not close server immediately because there maybe existing keep-alive connections
     // Calling httpServer.close will only stop accepting incoming requests
@@ -91,7 +94,7 @@ export default abstract class ServerBase {
     });
 
     if (this.dataStore !== undefined) {
-      await this.dataStore.init();
+      await this.dataStore.close();
     }
 
     await this.afterClose();

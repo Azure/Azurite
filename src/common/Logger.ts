@@ -1,4 +1,3 @@
-import ConfigurationBase from "./ConfigurationBase";
 import ILoggerStrategy, { LogLevels } from "./ILoggerStrategy";
 import NoLoggerStrategy from "./NoLoggerStrategy";
 import WinstonLoggerStrategy from "./WinstonLoggerStrategy";
@@ -39,7 +38,7 @@ const debugLogger = new Logger(new WinstonLoggerStrategy());
  * @param {ConfigurationBase} config
  * @returns {ConfigurationBase}
  */
-export function configDebugLog(
+export function configDebugLogger(
   enableDebugLog: boolean,
   debugLogFilePath?: string
 ) {
