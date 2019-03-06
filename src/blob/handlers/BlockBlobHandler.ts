@@ -4,6 +4,7 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IBlockBlobHandler from "../generated/handlers/IBlockBlobHandler";
+import { BlobModel } from "../persistence/IBlobDataStore";
 import { API_VERSION } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -16,7 +17,7 @@ export default class BlockBlobHandler extends BaseHandler
     body: NodeJS.ReadableStream,
     contentLength: number,
     options: Models.BlockBlobUploadOptionalParams,
-    context: Context
+    context: Context,
   ): Promise<Models.BlockBlobUploadResponse> {
     const blobCtx = new BlobStorageContext(context);
     const containerName = blobCtx.container!;
@@ -32,7 +33,7 @@ export default class BlockBlobHandler extends BaseHandler
     const date = new Date();
     const etag = newEtag();
     options.blobHTTPHeaders = options.blobHTTPHeaders || {};
-    const blob: Models.BlobItem = {
+    const blob: BlobModel = {
       deleted: false,
       metadata: options.metadata,
       name: blobName,
@@ -50,6 +51,7 @@ export default class BlockBlobHandler extends BaseHandler
         blobType: Models.BlobType.BlockBlob,
       },
       snapshot: "",
+      isCommitted: true,
     };
 
     await this.dataStore.updateBlob(containerName, blob);
@@ -72,7 +74,7 @@ export default class BlockBlobHandler extends BaseHandler
     contentLength: number,
     body: NodeJS.ReadableStream,
     options: Models.BlockBlobStageBlockOptionalParams,
-    context: Context
+    context: Context,
   ): Promise<Models.BlockBlobStageBlockResponse> {
     throw new NotImplementedError(context.contextID);
   }
@@ -82,7 +84,7 @@ export default class BlockBlobHandler extends BaseHandler
     contentLength: number,
     sourceUrl: string,
     options: Models.BlockBlobStageBlockFromURLOptionalParams,
-    context: Context
+    context: Context,
   ): Promise<Models.BlockBlobStageBlockFromURLResponse> {
     throw new NotImplementedError(context.contextID);
   }
@@ -90,7 +92,7 @@ export default class BlockBlobHandler extends BaseHandler
   public async commitBlockList(
     blocks: Models.BlockLookupList,
     options: Models.BlockBlobCommitBlockListOptionalParams,
-    context: Context
+    context: Context,
   ): Promise<Models.BlockBlobCommitBlockListResponse> {
     throw new NotImplementedError(context.contextID);
   }
@@ -98,7 +100,7 @@ export default class BlockBlobHandler extends BaseHandler
   public async getBlockList(
     listType: Models.BlockListType,
     options: Models.BlockBlobGetBlockListOptionalParams,
-    context: Context
+    context: Context,
   ): Promise<Models.BlockBlobGetBlockListResponse> {
     throw new NotImplementedError(context.contextID);
   }

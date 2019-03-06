@@ -1,4 +1,10 @@
 import * as http from "http";
+import * as https from "https";
+
+export type RequestListener = (
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+) => void;
 
 /**
  * Abstract Server class for Azurite Servers.
@@ -9,18 +15,23 @@ import * as http from "http";
  */
 export default abstract class Server {
   /**
-   * Creates an instance of Server.
+   * Creates an instance of HTTP or HTTPS server.
    *
-   * @param {string} host
-   * @param {number} port
-   * @param {http.Server} httpServer
+   * @param {string} host Server host,for example, "127.0.0.1"
+   * @param {number} port Server port, for example, 10000
+   * @param {http.Server | https.Server} httpServer A HTTP or HTTPS server instance without request listener binded
    * @memberof Server
    */
   public constructor(
     public readonly host: string,
     public readonly port: number,
-    protected readonly httpServer: http.Server
-  ) {}
+    protected readonly httpServer: http.Server | https.Server,
+    protected readonly requestListener: RequestListener,
+  ) {
+    // Remove predefined request listeners to avoid double request handling
+    this.httpServer.removeAllListeners("request");
+    this.httpServer.on("request", requestListener);
+  }
 
   /**
    * Initialize and start the server to service incoming HTTP requests.
@@ -33,9 +44,7 @@ export default abstract class Server {
     await this.beforeStart();
 
     await new Promise<void>((resolve, reject) => {
-      this.httpServer
-        .listen(this.port, this.host, resolve)
-        .on("error", reject);
+      this.httpServer.listen(this.port, this.host, resolve).on("error", reject);
     });
 
     await this.afterStart();

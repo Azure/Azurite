@@ -1,16 +1,21 @@
-import { Aborter, AnonymousCredential, ServiceURL, StorageURL } from "@azure/storage-blob";
+import {
+  Aborter,
+  AnonymousCredential,
+  ServiceURL,
+  StorageURL,
+} from "@azure/storage-blob";
 import * as assert from "assert";
 import { rmdirSync, unlinkSync } from "fs";
 
+import BlobConfiguration from "../../../src/blob/BlobConfiguration";
 import Server from "../../../src/blob/BlobServer";
-import Configuration from "../../../src/blob/Configuration";
 
 // TODO: Create a server factory as tests utils
 const host = "127.0.0.1";
 const port = 11000;
 const dbPath = "__testsstorage__";
 const persistencePath = "__testspersistence__";
-const config = new Configuration(host, port, dbPath, persistencePath);
+const config = new BlobConfiguration(host, port, dbPath, persistencePath);
 
 // TODO: Create serviceURL factory as tests utils
 const baseURL = `http://${host}:${port}/devaccount`;
@@ -18,7 +23,7 @@ const serviceURL = new ServiceURL(
   baseURL,
   StorageURL.newPipeline(new AnonymousCredential(), {
     retryOptions: { maxTries: 1 },
-  })
+  }),
 );
 
 let server: Server;

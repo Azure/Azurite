@@ -1,19 +1,21 @@
-import Server from "../common/IServer";
+import Server from "../common/Server";
+import BlobConfiguration from "./BlobConfiguration";
 import BlobServer from "./BlobServer";
-import Configuration from "./Configuration";
 
 async function main() {
-  const config = new Configuration();
+  const config = new BlobConfiguration();
   const server: Server = new BlobServer(config);
   await server.start();
 
-  process.on("message", (msg) => {
-    if (msg === "shutdown") {
+  process
+    .on("message", msg => {
+      if (msg === "shutdown") {
+        server.close();
+      }
+    })
+    .on("SIGINT", () => {
       server.close();
-    }
-  }).on("SIGINT", () => {
-    server.close();
-  });
+    });
 }
 
 main();

@@ -11,7 +11,7 @@ import {
  * @export
  * @class Configuration
  */
-export default class Configuration {
+export default class BlobConfiguration {
   public readonly host: string;
   public readonly port: number;
   public readonly dbPath?: string;
@@ -22,7 +22,7 @@ export default class Configuration {
     host?: string,
     port?: number,
     dbPath?: string,
-    persistencePath?: string
+    persistencePath?: string,
   ) {
     this.host = host || DEFAULT_SERVER_HOST_NAME;
     this.port = port || DEFAULT_SERVER_LISTENING_PORT;

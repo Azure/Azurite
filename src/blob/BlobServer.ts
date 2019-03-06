@@ -1,11 +1,15 @@
 import * as http from "http";
 
-import Server from "../common/IServer";
-import getAPP from "./app";
-import Configuration from "./Configuration";
+import IRequestListenerFactory from "../common/IRequestListenerFactory";
+import Server from "../common/Server";
+import BlobConfiguration from "./BlobConfiguration";
+import BlobExpressRequestListenerFactory from "./BlobExpressRequestListenerFactory";
 import { IDataStore } from "./persistence/IDataStore";
 import LokiBlobDataStore from "./persistence/LokiBlobDataStore";
-import { DEFAULT_BLOB_PERSISTENCE_PATH, DEFAULT_LOKI_DB_PATH } from "./utils/constants";
+import {
+  DEFAULT_BLOB_PERSISTENCE_PATH,
+  DEFAULT_LOKI_DB_PATH,
+} from "./utils/constants";
 import logger from "./utils/log/Logger";
 
 // Decouple server & app layer
@@ -24,19 +28,24 @@ export default class BlobServer extends Server {
   /**
    * Creates an instance of Server.
    *
-   * @param {Configuration} configuration
+   * @param {BlobConfiguration} configuration
    * @memberof Server
    */
-  constructor(configuration: Configuration) {
+  constructor(configuration: BlobConfiguration) {
     const host = configuration.host;
     const port = configuration.port;
     const dataStore = new LokiBlobDataStore(
       configuration.dbPath || DEFAULT_LOKI_DB_PATH,
-      configuration.persistencePath || DEFAULT_BLOB_PERSISTENCE_PATH
+      configuration.persistencePath || DEFAULT_BLOB_PERSISTENCE_PATH,
     );
-    const httpServer = http.createServer(getAPP(dataStore));
+    const httpServer = http.createServer();
 
-    super(host, port, httpServer);
+    const requestListenerFactory: IRequestListenerFactory = new BlobExpressRequestListenerFactory(
+      dataStore,
+    );
+    const requestListener = requestListenerFactory.createRequestListener();
+
+    super(host, port, httpServer, requestListener);
     this.dataStore = dataStore;
   }
 
@@ -51,12 +60,12 @@ export default class BlobServer extends Server {
     }
 
     logger.info(
-      `Azurite Blob service successfully listens on ${address}:${this.port}`
+      `Azurite Blob service successfully listens on ${address}:${this.port}`,
     );
   }
   protected async beforeClose(): Promise<void> {
     logger.info(
-      `Azurite Blob service is shutdown... Waiting for existing keep-alive connections timeout...`
+      `Azurite Blob service is shutdown... Waiting for existing keep-alive connections timeout...`,
     );
   }
 
