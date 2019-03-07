@@ -15,7 +15,7 @@ export default class BlockBlobHandler extends BaseHandler
     body: NodeJS.ReadableStream,
     contentLength: number,
     options: Models.BlockBlobUploadOptionalParams,
-    context: Context
+    context: Context,
   ): Promise<Models.BlockBlobUploadResponse> {
     const blobCtx = new BlobStorageContext(context);
     const containerName = blobCtx.container!;
@@ -50,11 +50,11 @@ export default class BlockBlobHandler extends BaseHandler
         contentMD5: options.blobHTTPHeaders.blobContentMD5,
         contentDisposition: options.blobHTTPHeaders.blobContentDisposition,
         cacheControl: options.blobHTTPHeaders.blobCacheControl,
-        blobType: Models.BlobType.BlockBlob
+        blobType: Models.BlobType.BlockBlob,
       },
       snapshot: "",
       isCommitted: true,
-      persistencyID
+      persistencyID,
     };
 
     // TODO: Need a lock for multi keys
@@ -72,7 +72,7 @@ export default class BlockBlobHandler extends BaseHandler
       contentMD5: blob.properties.contentMD5,
       requestId: blobCtx.contextID,
       version: API_VERSION,
-      date
+      date,
     };
 
     return response;
@@ -83,7 +83,7 @@ export default class BlockBlobHandler extends BaseHandler
     contentLength: number,
     body: NodeJS.ReadableStream,
     options: Models.BlockBlobStageBlockOptionalParams,
-    context: Context
+    context: Context,
   ): Promise<Models.BlockBlobStageBlockResponse> {
     const blobCtx = new BlobStorageContext(context);
     const containerName = blobCtx.container!;
@@ -98,7 +98,7 @@ export default class BlockBlobHandler extends BaseHandler
     const existingBlock = await this.dataStore.getBlock(
       containerName,
       blobName,
-      blockId
+      blockId,
     );
 
     const persistencyID = await this.dataStore.writePayload(body);
@@ -108,7 +108,7 @@ export default class BlockBlobHandler extends BaseHandler
       isCommitted: false,
       name: blockId,
       size: contentLength,
-      persistencyID
+      persistencyID,
     };
     await this.dataStore.updateBlock(block);
 
@@ -125,10 +125,10 @@ export default class BlockBlobHandler extends BaseHandler
           lastModified: date,
           etag,
           contentLength,
-          blobType: Models.BlobType.BlockBlob
+          blobType: Models.BlobType.BlockBlob,
         },
         snapshot: "",
-        isCommitted: false
+        isCommitted: false,
       };
       await this.dataStore.updateBlob(containerName, blob);
     }
@@ -145,7 +145,7 @@ export default class BlockBlobHandler extends BaseHandler
       requestId: blobCtx.contextID,
       version: API_VERSION,
       date,
-      isServerEncrypted: true
+      isServerEncrypted: true,
     };
 
     return response;
@@ -156,7 +156,7 @@ export default class BlockBlobHandler extends BaseHandler
     contentLength: number,
     sourceUrl: string,
     options: Models.BlockBlobStageBlockFromURLOptionalParams,
-    context: Context
+    context: Context,
   ): Promise<Models.BlockBlobStageBlockFromURLResponse> {
     throw new NotImplementedError(context.contextID);
   }
@@ -164,15 +164,14 @@ export default class BlockBlobHandler extends BaseHandler
   public async commitBlockList(
     blocks: Models.BlockLookupList,
     options: Models.BlockBlobCommitBlockListOptionalParams,
-    context: Context
+    context: Context,
   ): Promise<Models.BlockBlobCommitBlockListResponse> {
     throw new NotImplementedError(context.contextID);
   }
 
   public async getBlockList(
-    listType: Models.BlockListType,
     options: Models.BlockBlobGetBlockListOptionalParams,
-    context: Context
+    context: Context,
   ): Promise<Models.BlockBlobGetBlockListResponse> {
     const blobCtx = new BlobStorageContext(context);
     const containerName = blobCtx.container!;
@@ -200,19 +199,19 @@ export default class BlockBlobHandler extends BaseHandler
       version: API_VERSION,
       date,
       committedBlocks: [],
-      uncommittedBlocks: []
+      uncommittedBlocks: [],
     };
 
     for (const block of blockList) {
       if (block.isCommitted) {
         response.committedBlocks!.push({
           name: block.name,
-          size: block.size
+          size: block.size,
         });
       } else {
         response.uncommittedBlocks!.push({
           name: block.name,
-          size: block.size
+          size: block.size,
         });
       }
     }

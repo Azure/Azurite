@@ -50,7 +50,7 @@ export interface IBlobDataStore extends IDataStore {
    * @memberof IBlobDataStore
    */
   setServiceProperties<T extends ServicePropertiesModel>(
-    serviceProperties: T
+    serviceProperties: T,
   ): Promise<T>;
 
   /**
@@ -72,7 +72,7 @@ export interface IBlobDataStore extends IDataStore {
    * @memberof IBlobDataStore
    */
   getContainer<T extends ContainerModel>(
-    container: string
+    container: string,
   ): Promise<T | undefined>;
 
   /**
@@ -111,7 +111,7 @@ export interface IBlobDataStore extends IDataStore {
   listContainers<T extends ContainerModel>(
     prefix?: string,
     maxResults?: number,
-    marker?: number
+    marker?: number,
   ): Promise<[T[], number | undefined]>;
 
   /**
@@ -138,7 +138,7 @@ export interface IBlobDataStore extends IDataStore {
    */
   getBlob<T extends BlobModel>(
     container: string,
-    blob: string
+    blob: string,
   ): Promise<T | undefined>;
 
   /**
@@ -169,15 +169,26 @@ export interface IBlobDataStore extends IDataStore {
    * @template T
    * @param {string} container
    * @param {string} blob
-   * @param {T[]} blocks
    * @returns {Promise<T[]>}
    * @memberof IBlobDataStore
    */
   deleteBlocks<T extends BlockModel>(
     container: string,
     blob: string,
-    blocks: T[]
   ): Promise<T[]>;
+
+  /**
+   * Insert blocks for a blob in persistency layer. Order of blocks should be saved too when
+   * getBlocks(). Existing blocks with same name will be replaced.
+   *
+   * @template T
+   * @param {string} container
+   * @param {string} blob
+   * @param {T[]} blocks
+   * @returns {Promise<T[]>}
+   * @memberof IBlobDataStore
+   */
+  insertBlocks<T extends BlockModel>(blocks: T[]): Promise<T[]>;
 
   /**
    * Gets block for a blob from persistency layer by
@@ -193,7 +204,7 @@ export interface IBlobDataStore extends IDataStore {
   getBlock<T extends BlockModel>(
     container: string,
     blob: string,
-    block: string
+    block: string,
   ): Promise<T | undefined>;
 
   /**
@@ -207,7 +218,7 @@ export interface IBlobDataStore extends IDataStore {
    */
   getBlocks<T extends BlockModel>(
     container: string,
-    blob: string
+    blob: string,
   ): Promise<T[]>;
 
   /**
@@ -231,7 +242,7 @@ export interface IBlobDataStore extends IDataStore {
   readPayload(
     persistencyID?: string,
     offset?: number,
-    count?: number
+    count?: number,
   ): Promise<NodeJS.ReadableStream>;
 
   /**
@@ -246,7 +257,7 @@ export interface IBlobDataStore extends IDataStore {
   readPayloads(
     persistencyIDs: string[],
     offset?: number,
-    count?: number
+    count?: number,
   ): Promise<NodeJS.ReadableStream>;
 
   /**

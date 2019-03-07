@@ -7,7 +7,13 @@ import { promisify } from "util";
 import uuid from "uuid/v4";
 
 import { API_VERSION } from "../utils/constants";
-import { BlobModel, BlockModel, ContainerModel, IBlobDataStore, ServicePropertiesModel } from "./IBlobDataStore";
+import {
+  BlobModel,
+  BlockModel,
+  ContainerModel,
+  IBlobDataStore,
+  ServicePropertiesModel,
+} from "./IBlobDataStore";
 
 /**
  * This is a persistency layer data source implementation based on loki DB.
@@ -55,38 +61,38 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     hourMetrics: {
       enabled: false,
       retentionPolicy: {
-        enabled: false
+        enabled: false,
       },
-      version: "1.0"
+      version: "1.0",
     },
     logging: {
       deleteProperty: true,
       read: true,
       retentionPolicy: {
-        enabled: false
+        enabled: false,
       },
       version: "1.0",
-      write: true
+      write: true,
     },
     minuteMetrics: {
       enabled: false,
       retentionPolicy: {
-        enabled: false
+        enabled: false,
       },
-      version: "1.0"
+      version: "1.0",
     },
     staticWebsite: {
-      enabled: false
-    }
+      enabled: false,
+    },
   };
 
   public constructor(
     private readonly lokiDBPath: string,
-    private readonly persistencePath: string // private readonly logger: ILogger
+    private readonly persistencePath: string, // private readonly logger: ILogger
   ) {
     this.db = new Loki(lokiDBPath, {
       autosave: true,
-      autosaveInterval: 5000
+      autosaveInterval: 5000,
     });
   }
 
@@ -120,25 +126,24 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     // In loki DB implementation, these operations are all sync. Doesn't need an async lock
     // Create containers collection if not exists
     if (this.db.getCollection(this.CONTAINERS_COLLECTION) === null) {
-      this.db.addCollection(this.CONTAINERS_COLLECTION, { unique: ["name"] });
+      this.db.addCollection(this.CONTAINERS_COLLECTION, { unique: ["name"] }); // Optimize for coll.by operation
     }
 
     if (this.db.getCollection(this.BLOCKS_COLLECTION) === null) {
       this.db.addCollection(this.BLOCKS_COLLECTION, {
         // Optimization for indexing and searching
         // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
-        unique: ["containerName", "blobName", "name"], // Optimize for coll.by operation
-        indices: ["containerName", "blobName", "name"] // Optimize for find operation
+        indices: ["containerName", "blobName", "name"], // Optimize for find operation
       });
     }
 
     // Create service properties collection if not exists
     let servicePropertiesColl = this.db.getCollection(
-      this.SERVICE_PROPERTIES_COLLECTION
+      this.SERVICE_PROPERTIES_COLLECTION,
     );
     if (servicePropertiesColl === null) {
       servicePropertiesColl = this.db.addCollection(
-        this.SERVICE_PROPERTIES_COLLECTION
+        this.SERVICE_PROPERTIES_COLLECTION,
       );
     }
 
@@ -151,7 +156,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       this.servicePropertiesDocumentID = servicePropertiesDocs[0].$loki;
     } else {
       throw new Error(
-        "LokiDB initialization error: Service properties collection has more than one document."
+        "LokiDB initialization error: Service properties collection has more than one document.",
       );
     }
 
@@ -194,7 +199,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @memberof LokiBlobDataStore
    */
   public async setServiceProperties<T extends ServicePropertiesModel>(
-    serviceProperties: T
+    serviceProperties: T,
   ): Promise<T> {
     const coll = this.db.getCollection(this.SERVICE_PROPERTIES_COLLECTION);
     if (this.servicePropertiesDocumentID !== undefined) {
@@ -231,7 +236,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @memberof LokiBlobDataStore
    */
   public async getContainer<T extends ContainerModel>(
-    container: string
+    container: string,
   ): Promise<T | undefined> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = coll.by("name", container);
@@ -270,7 +275,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @memberof LokiBlobDataStore
    */
   public async updateContainer<T extends ContainerModel>(
-    container: T
+    container: T,
   ): Promise<T> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = coll.by("name", container.name);
@@ -297,7 +302,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   public async listContainers<T extends ContainerModel>(
     prefix: string = "",
     maxResults: number = 2000,
-    marker: number = 0
+    marker: number = 0,
   ): Promise<[T[], number | undefined]> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
 
@@ -331,7 +336,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    */
   public async updateBlob<T extends BlobModel>(
     container: string,
-    blob: T
+    blob: T,
   ): Promise<T> {
     const coll = this.db.getCollection(container);
     const blobDoc = coll.findOne({ name: { $eq: blob.name } });
@@ -352,7 +357,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    */
   public async getBlob<T extends BlobModel>(
     container: string,
-    blob: string
+    blob: string,
   ): Promise<T | undefined> {
     const containerItem = await this.getContainer(container);
     if (!containerItem) {
@@ -401,7 +406,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     const blockDoc = coll.findOne({
       containerName: block.containerName,
       blobName: block.blobName,
-      name: block.name
+      name: block.name,
     });
 
     if (blockDoc !== undefined && blockDoc !== null) {
@@ -410,10 +415,13 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     return coll.insert(block);
   }
 
+  public insertBlocks<T extends BlockModel>(blocks: T[]): Promise<T[]> {
+    throw new Error("Method not implemented.");
+  }
+
   public async deleteBlocks<T extends BlockModel>(
     container: string,
     blob: string,
-    blocks: T[]
   ): Promise<T[]> {
     throw new Error("Method not implemented.");
   }
@@ -432,13 +440,13 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   public async getBlock<T extends BlockModel>(
     container: string,
     blob: string,
-    block: string
+    block: string,
   ): Promise<T | undefined> {
     const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
     const blockDoc = coll.findOne({
       containerName: container,
       blobName: blob,
-      name: block
+      name: block,
     });
 
     return blockDoc;
@@ -455,13 +463,17 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    */
   public async getBlocks<T extends BlockModel>(
     container: string,
-    blob: string
+    blob: string,
   ): Promise<T[]> {
     const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
-    const blockDocs = coll.find({
-      containerName: container,
-      blobName: blob
-    });
+    const blockDocs = coll
+      .chain()
+      .find({
+        containerName: container,
+        blobName: blob,
+      })
+      .simplesort("$loki") // We assume blocks in a blocks are in order stored
+      .data();
 
     return blockDocs;
   }
@@ -500,7 +512,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   public async readPayload(
     persistencyID?: string,
     offset: number = 0,
-    count: number = Infinity
+    count: number = Infinity,
   ): Promise<NodeJS.ReadableStream> {
     if (persistencyID === undefined) {
       const emptyStream = new Duplex();
@@ -525,7 +537,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   public async readPayloads(
     persistencyIDs: string[],
     offset: number = 0,
-    count: number = Infinity
+    count: number = Infinity,
   ): Promise<NodeJS.ReadableStream> {
     const start = offset; // Start inclusive position in the merged stream
     const end = offset + count; // End exclusive position in the merged stream
@@ -560,7 +572,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
         }
 
         streams.push(
-          createReadStream(path, { start: payloadStart, end: payloadEnd })
+          createReadStream(path, { start: payloadStart, end: payloadEnd }),
         );
         payloadOffset = nextPayloadOffset;
       }
@@ -571,7 +583,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     if (payloadOffset < end) {
       throw new RangeError(
         // tslint:disable-next-line:max-line-length
-        `Not enough payload data error. Total length of payloads is ${payloadOffset}, while required data offset is ${offset}, count is ${count}.`
+        `Not enough payload data error. Total length of payloads is ${payloadOffset}, while required data offset is ${offset}, count is ${count}.`,
       );
     }
 
