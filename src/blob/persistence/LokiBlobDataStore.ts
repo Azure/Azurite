@@ -1,34 +1,37 @@
 import { createReadStream, createWriteStream, mkdir, stat } from "fs";
 import Loki from "lokijs";
 import { join } from "path";
-
 import { promisify } from "util";
+
 import * as Models from "../generated/artifacts/models";
 import { API_VERSION } from "../utils/constants";
 import { IBlobDataStore } from "./IBlobDataStore";
 
-// function cloneToDoc<T extends any>(doc: T, updated: T) {
-//   for (const key in updated) {
-//     if (updated.hasOwnProperty(key)) {
-//       const element = updated[key];
-//       doc.key = element;
-//     }
-//   }
-// }
-
 /**
  * This is a persistency layer data source implementation based on loki DB.
  *
- * Loki DB includes following collections and documents
+ * Notice that, following design is for emulator purpose only,
+ * and doesn't design for best performance. We may want to optimize the collection design according to different
+ * access frequency and data size.
+ *
+ * Loki DB includes following collections and documents:
+ *
  * -- SERVICE_PROPERTIES_COLLECTION // Collection contains service properties
- *                                  // Only 1 document
+ *                                  // Only 1 document will be kept
+ *                                  // Default collection name is $SERVICE_PROPERTIES_COLLECTION$
  * -- CONTAINERS_COLLECTION // Collection contains all container items
+ *                          // Default collection name is $CONTAINERS_COLLECTION$
  *                          // Each document maps to 1 container
- *                          // Unique name
- * -- CONTAINER_COLLECTION // Every container maps to a container collection
- *                         // Container collection contains all blobs under a container
- *                         // Each document maps to 1 blob
- *                         // Unique name
+ *                          // Unique document properties: name
+ * -- <CONTAINER_COLLECTION> // Every container collection 1:1 maps to a container
+ *                           // Container collection contains all blobs under a container
+ *                           // Collection name equals to a container name
+ *                           // Each document 1:1 maps to a blob
+ *                           // Unique document properties: name
+ * -- <BLOCK_BLOB_BLOCKS_COLLECTION>    // Block blob blocks collection includes all blocks
+ *                                      // Unique document properties: (blob)name, blockID
+ * -- <PAGE_BLOB_PAGES_COLLECTION>      // Page blob pages collection includes all pages
+ * -- <APPEND_BLOB_BLOCKS_COLLECTION>   // Append blob blocks collection includes all append blob blocks
  *
  * @export
  * @class LokiBlobDataStore
@@ -36,8 +39,9 @@ import { IBlobDataStore } from "./IBlobDataStore";
 export default class LokiBlobDataStore implements IBlobDataStore {
   private readonly db: Loki;
 
-  private readonly CONTAINERS_COLLECTION = "$containers$";
-  private readonly SERVICE_PROPERTIES_COLLECTION = "$serviceproperties$";
+  private readonly CONTAINERS_COLLECTION = "$CONTAINERS_COLLECTION$";
+  private readonly SERVICE_PROPERTIES_COLLECTION =
+    "$SERVICE_PROPERTIES_COLLECTION$";
 
   private SERVICE_PROPERTIES_DOCUMENT_LOKI_ID?: number;
 
@@ -47,29 +51,29 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     hourMetrics: {
       enabled: false,
       retentionPolicy: {
-        enabled: false,
+        enabled: false
       },
-      version: "1.0",
+      version: "1.0"
     },
     logging: {
       deleteProperty: true,
       read: true,
       retentionPolicy: {
-        enabled: false,
+        enabled: false
       },
       version: "1.0",
-      write: true,
+      write: true
     },
     minuteMetrics: {
       enabled: false,
       retentionPolicy: {
-        enabled: false,
+        enabled: false
       },
-      version: "1.0",
+      version: "1.0"
     },
     staticWebsite: {
-      enabled: false,
-    },
+      enabled: false
+    }
   };
 
   public constructor(
@@ -78,7 +82,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   ) {
     this.db = new Loki(lokiDBPath, {
       autosave: true,
-      autosaveInterval: 5000,
+      autosaveInterval: 5000
     });
   }
 
@@ -87,7 +91,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     await new Promise<void>((resolve, reject) => {
       stat(this.lokiDBPath, (statError, stats) => {
         if (!statError) {
-          this.db.loadDatabase({}, (dbError) => {
+          this.db.loadDatabase({}, dbError => {
             if (dbError) {
               reject(dbError);
             } else {
@@ -139,7 +143,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     }
 
     await new Promise((resolve, reject) => {
-      this.db.saveDatabase((err) => {
+      this.db.saveDatabase(err => {
         if (err) {
           reject(err);
         } else {
@@ -190,23 +194,6 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
-   * Create a new container to DB.
-   * Assumes the container with same name doesn't exist.
-   *
-   * @template T
-   * @param {T} container
-   * @returns {Promise<T>}
-   * @memberof LokiBlobDataStore
-   */
-  public async createContainer<T extends Models.ContainerItem>(
-    container: T
-  ): Promise<T> {
-    this.db.addCollection(container.name, { unique: ["name"] });
-    const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
-    return coll.insert(container);
-  }
-
-  /**
    * Get a container item from DB by container name.
    *
    * @template T
@@ -234,7 +221,10 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   public async deleteContainer(container: string): Promise<void> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = coll.by("name", container);
-    coll.remove(doc);
+
+    if (doc) {
+      coll.remove(doc);
+    }
 
     // Following line will remove all blobs documents under that container
     this.db.removeCollection(container);
@@ -325,6 +315,15 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     }
   }
 
+  /**
+   * Gets a blob item from persistency layer by container name and blob name.
+   *
+   * @template T
+   * @param {string} container
+   * @param {string} blob
+   * @returns {(Promise<T | undefined>)}
+   * @memberof IBlobDataStore
+   */
   public async getBlob<T extends Models.BlobItem>(
     container: string,
     blob: string
@@ -363,6 +362,15 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     }
   }
 
+  /**
+   * Persist blob payload.
+   *
+   * @param {string} container
+   * @param {string} blob
+   * @param {NodeJS.ReadableStream} payload
+   * @returns {Promise<void>}
+   * @memberof IBlobDataStore
+   */
   public async writeBlobPayload(
     container: string,
     blob: string,
@@ -379,6 +387,14 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     });
   }
 
+  /**
+   * Read blob payload.
+   *
+   * @param {string} container
+   * @param {string} blob
+   * @returns {Promise<NodeJS.ReadableStream>}
+   * @memberof IBlobDataStore
+   */
   public async readBlobPayload(
     container: string,
     blob: string
@@ -395,7 +411,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    */
   public async close(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      this.db.close((err) => {
+      this.db.close(err => {
         if (err) {
           reject(err);
         } else {

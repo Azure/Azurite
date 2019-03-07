@@ -1,3 +1,4 @@
+import Mutex from "../../common/Mutex";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -5,7 +6,6 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IContainerHandler from "../generated/handlers/IContainerHandler";
 import { API_VERSION } from "../utils/constants";
-import Mutex from "../utils/Mutex";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
@@ -39,8 +39,8 @@ export default class ContainerHandler extends BaseHandler
       name: containerName,
       properties: {
         etag,
-        lastModified,
-      },
+        lastModified
+      }
     });
 
     const response: Models.ContainerCreateResponse = {
@@ -48,7 +48,7 @@ export default class ContainerHandler extends BaseHandler
       lastModified,
       requestId: blobCtx.contextID,
       statusCode: 201,
-      version: API_VERSION,
+      version: API_VERSION
     };
 
     return response;
@@ -59,11 +59,9 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerGetPropertiesResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const containerName = blobCtx.container!;
 
-    const container = await this.dataStore.getContainer<Models.ContainerItem>(
-      blobCtx.container!
-    );
-
+    const container = await this.dataStore.getContainer(containerName);
     if (!container) {
       throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
     }
@@ -73,7 +71,7 @@ export default class ContainerHandler extends BaseHandler
       ...container.properties,
       metadata: container.metadata,
       requestId: blobCtx.contextID,
-      statusCode: 200,
+      statusCode: 200
     };
 
     return response;
@@ -93,7 +91,8 @@ export default class ContainerHandler extends BaseHandler
     const blobCtx = new BlobStorageContext(context);
     const containerName = blobCtx.container!;
 
-    if (this.dataStore.getContainer(containerName) === undefined) {
+    const container = await this.dataStore.getContainer(containerName);
+    if (container === undefined) {
       throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
     }
 
@@ -107,7 +106,7 @@ export default class ContainerHandler extends BaseHandler
       date: new Date(),
       requestId: blobCtx.contextID,
       statusCode: 202,
-      version: API_VERSION,
+      version: API_VERSION
     };
 
     return response;
@@ -141,7 +140,7 @@ export default class ContainerHandler extends BaseHandler
       eTag: newEtag(),
       lastModified: container.properties.lastModified,
       requestId: blobCtx.contextID,
-      statusCode: 200,
+      statusCode: 200
     };
 
     return response;

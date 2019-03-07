@@ -1,6 +1,5 @@
 /**
- * TODO: Make this share cross blob and queue implementations.
- * Persistence layer data storage interface.
+ * Persistency layer data store interface.
  *
  * @export
  * @interface IDataStore

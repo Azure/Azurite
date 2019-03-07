@@ -1,29 +1,23 @@
+import { Aborter, AnonymousCredential, ServiceURL, StorageURL } from "@azure/storage-blob";
 import * as assert from "assert";
 import { rmdirSync, unlinkSync } from "fs";
 
-import {
-  Aborter,
-  AnonymousCredential,
-  ServiceURL,
-  StorageURL,
-} from "@azure/storage-blob";
-
-import Configuration from "../../../src/blob/Configuration";
-import Server from "../../../src/blob/Server";
+import BlobConfiguration from "../../../src/blob/BlobConfiguration";
+import Server from "../../../src/blob/BlobServer";
 
 // TODO: Create a server factory as tests utils
 const host = "127.0.0.1";
 const port = 11000;
 const dbPath = "__testsstorage__";
 const persistencePath = "__testspersistence__";
-const config = new Configuration(host, port, dbPath, persistencePath);
+const config = new BlobConfiguration(host, port, dbPath, persistencePath);
 
 // TODO: Create serviceURL factory as tests utils
 const baseURL = `http://${host}:${port}/devaccount`;
 const serviceURL = new ServiceURL(
   baseURL,
   StorageURL.newPipeline(new AnonymousCredential(), {
-    retryOptions: { maxTries: 1 },
+    retryOptions: { maxTries: 1 }
   })
 );
 
@@ -32,7 +26,6 @@ let server: Server;
 describe("ServiceHandler", () => {
   before(async () => {
     server = new Server(config);
-    await server.init();
     await server.start();
   });
 
@@ -67,10 +60,10 @@ describe("ServiceHandler", () => {
       read: true,
       retentionPolicy: {
         days: 5,
-        enabled: true,
+        enabled: true
       },
       version: "1.0",
-      write: true,
+      write: true
     };
 
     serviceProperties.minuteMetrics = {
@@ -78,9 +71,9 @@ describe("ServiceHandler", () => {
       includeAPIs: true,
       retentionPolicy: {
         days: 4,
-        enabled: true,
+        enabled: true
       },
-      version: "1.0",
+      version: "1.0"
     };
 
     serviceProperties.hourMetrics = {
@@ -88,9 +81,9 @@ describe("ServiceHandler", () => {
       includeAPIs: true,
       retentionPolicy: {
         days: 3,
-        enabled: true,
+        enabled: true
       },
-      version: "1.0",
+      version: "1.0"
     };
 
     const newCORS = {
@@ -98,7 +91,7 @@ describe("ServiceHandler", () => {
       allowedMethods: "GET",
       allowedOrigins: "example.com",
       exposedHeaders: "*",
-      maxAgeInSeconds: 8888,
+      maxAgeInSeconds: 8888
     };
     if (!serviceProperties.cors) {
       serviceProperties.cors = [newCORS];
@@ -109,7 +102,7 @@ describe("ServiceHandler", () => {
     if (!serviceProperties.deleteRetentionPolicy) {
       serviceProperties.deleteRetentionPolicy = {
         days: 2,
-        enabled: false,
+        enabled: false
       };
     }
 
