@@ -6180,7 +6180,7 @@
         "BlobItems": {
           "type": "array",
           "items": {
-          "$ref": "#/definitions/BlobItem"
+            "$ref": "#/definitions/BlobItem"
           }
         }
       }
@@ -7269,21 +7269,21 @@
       "x-ms-parameter-location": "method",
       "description": "Include this parameter to specify one or more datasets to include in the response."
     },
-    "ListContainersInclude": { 
-      "name": "include", 
-      "in": "query", 
-      "required": false, 
-      "type": "string", 
-      "enum": [ 
-        "metadata" 
-      ], 
-      "x-ms-enum": { 
-        "name": "ListContainersIncludeType", 
-        "modelAsString": false 
-      }, 
-      "x-ms-parameter-location": "method", 
-      "description": "Include this parameter to specify that the container's metadata be returned as part of the response body." 
-    }, 
+    "ListContainersInclude": {
+      "name": "include",
+      "in": "query",
+      "required": false,
+      "type": "string",
+      "enum": [
+        "metadata"
+      ],
+      "x-ms-enum": {
+        "name": "ListContainersIncludeType",
+        "modelAsString": false
+      },
+      "x-ms-parameter-location": "method",
+      "description": "Include this parameter to specify that the container's metadata be returned as part of the response body."
+    },
     "LeaseBreakPeriod": {
       "name": "x-ms-lease-break-period",
       "x-ms-client-name": "breakPeriod",

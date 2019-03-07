@@ -110,7 +110,7 @@ function isRequestAgainstOperation(
 
       if (
         queryParameter.mapper.type.name === "Enum" &&
-        queryParameter.mapper.type.allowedValues.findIndex((val) => {
+        queryParameter.mapper.type.allowedValues.findIndex(val => {
           return val === queryValue;
         }) < 0
       ) {
@@ -140,7 +140,7 @@ function isRequestAgainstOperation(
 
       if (
         headerParameter.mapper.type.name === "Enum" &&
-        headerParameter.mapper.type.allowedValues.findIndex((val) => {
+        headerParameter.mapper.type.allowedValues.findIndex(val => {
           return val === headerValue;
         }) < 0
       ) {

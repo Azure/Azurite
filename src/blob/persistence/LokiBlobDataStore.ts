@@ -1,11 +1,13 @@
-import { createReadStream, createWriteStream, mkdir, stat } from "fs";
+import { createReadStream, createWriteStream, mkdir, stat, unlink } from "fs";
 import Loki from "lokijs";
+import multistream = require("multistream");
 import { join } from "path";
+import { Duplex } from "stream";
 import { promisify } from "util";
+import uuid from "uuid/v4";
 
-import * as Models from "../generated/artifacts/models";
 import { API_VERSION } from "../utils/constants";
-import { IBlobDataStore } from "./IBlobDataStore";
+import { BlobModel, BlockModel, ContainerModel, IBlobDataStore, ServicePropertiesModel } from "./IBlobDataStore";
 
 /**
  * This is a persistency layer data source implementation based on loki DB.
@@ -28,10 +30,11 @@ import { IBlobDataStore } from "./IBlobDataStore";
  *                           // Collection name equals to a container name
  *                           // Each document 1:1 maps to a blob
  *                           // Unique document properties: name
- * -- <BLOCK_BLOB_BLOCKS_COLLECTION>    // Block blob blocks collection includes all blocks
- *                                      // Unique document properties: (blob)name, blockID
- * -- <PAGE_BLOB_PAGES_COLLECTION>      // Page blob pages collection includes all pages
- * -- <APPEND_BLOB_BLOCKS_COLLECTION>   // Append blob blocks collection includes all append blob blocks
+ * -- <BLOCKS_COLLECTION>    // Block blob blocks collection includes all blocks
+ *                           // Unique document properties: (blob)name, blockID
+ *
+ * TODO:
+ * 1. Create an async task to GC persistency files
  *
  * @export
  * @class LokiBlobDataStore
@@ -42,8 +45,9 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   private readonly CONTAINERS_COLLECTION = "$CONTAINERS_COLLECTION$";
   private readonly SERVICE_PROPERTIES_COLLECTION =
     "$SERVICE_PROPERTIES_COLLECTION$";
+  private readonly BLOCKS_COLLECTION = "$BLOCKS_COLLECTION$";
 
-  private SERVICE_PROPERTIES_DOCUMENT_LOKI_ID?: number;
+  private servicePropertiesDocumentID?: number;
 
   private readonly defaultServiceProperties = {
     cors: [],
@@ -87,6 +91,14 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   public async init(): Promise<void> {
+    const statAsync = promisify(stat);
+    const mkdirAsync = promisify(mkdir);
+    try {
+      await statAsync(this.persistencePath);
+    } catch {
+      await mkdirAsync(this.persistencePath);
+    }
+
     // TODO: Native Promise doesn't have promisifyAll method. Create it as utility manually
     await new Promise<void>((resolve, reject) => {
       stat(this.lokiDBPath, (statError, stats) => {
@@ -105,18 +117,19 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       });
     });
 
-    const statAsync = promisify(stat);
-    const mkdirAsync = promisify(mkdir);
-    try {
-      await statAsync(this.persistencePath);
-    } catch {
-      await mkdirAsync(this.persistencePath);
-    }
-
     // In loki DB implementation, these operations are all sync. Doesn't need an async lock
     // Create containers collection if not exists
     if (this.db.getCollection(this.CONTAINERS_COLLECTION) === null) {
       this.db.addCollection(this.CONTAINERS_COLLECTION, { unique: ["name"] });
+    }
+
+    if (this.db.getCollection(this.BLOCKS_COLLECTION) === null) {
+      this.db.addCollection(this.BLOCKS_COLLECTION, {
+        // Optimization for indexing and searching
+        // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
+        unique: ["containerName", "blobName", "name"], // Optimize for coll.by operation
+        indices: ["containerName", "blobName", "name"] // Optimize for find operation
+      });
     }
 
     // Create service properties collection if not exists
@@ -135,7 +148,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     if (servicePropertiesDocs.length === 0) {
       await this.setServiceProperties(this.defaultServiceProperties);
     } else if (servicePropertiesDocs.length === 1) {
-      this.SERVICE_PROPERTIES_DOCUMENT_LOKI_ID = servicePropertiesDocs[0].$loki;
+      this.servicePropertiesDocumentID = servicePropertiesDocs[0].$loki;
     } else {
       throw new Error(
         "LokiDB initialization error: Service properties collection has more than one document."
@@ -154,6 +167,24 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
+   * Close loki DB.
+   *
+   * @returns {Promise<void>}
+   * @memberof LokiBlobDataStore
+   */
+  public async close(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.db.close(err => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  /**
    * Update blob service properties. Create service properties document if not exists in DB.
    * Assume service properties collection has been created.
    *
@@ -162,19 +193,17 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @returns {Promise<T>}
    * @memberof LokiBlobDataStore
    */
-  public async setServiceProperties<T extends Models.StorageServiceProperties>(
+  public async setServiceProperties<T extends ServicePropertiesModel>(
     serviceProperties: T
   ): Promise<T> {
     const coll = this.db.getCollection(this.SERVICE_PROPERTIES_COLLECTION);
-    if (this.SERVICE_PROPERTIES_DOCUMENT_LOKI_ID !== undefined) {
-      const existingDocument = coll.get(
-        this.SERVICE_PROPERTIES_DOCUMENT_LOKI_ID
-      );
+    if (this.servicePropertiesDocumentID !== undefined) {
+      const existingDocument = coll.get(this.servicePropertiesDocumentID);
       coll.remove(existingDocument);
     }
 
     const doc = coll.insert(serviceProperties);
-    this.SERVICE_PROPERTIES_DOCUMENT_LOKI_ID = doc.$loki;
+    this.servicePropertiesDocumentID = doc.$loki;
     return doc;
   }
 
@@ -187,10 +216,10 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @memberof LokiBlobDataStore
    */
   public async getServiceProperties<
-    T extends Models.StorageServiceProperties
+    T extends ServicePropertiesModel
   >(): Promise<T> {
     const coll = this.db.getCollection(this.SERVICE_PROPERTIES_COLLECTION);
-    return coll.get(this.SERVICE_PROPERTIES_DOCUMENT_LOKI_ID!); // Only 1 document in service properties collection
+    return coll.get(this.servicePropertiesDocumentID!); // Only 1 document in service properties collection
   }
 
   /**
@@ -201,7 +230,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @returns {Promise<T>}
    * @memberof LokiBlobDataStore
    */
-  public async getContainer<T extends Models.ContainerItem>(
+  public async getContainer<T extends ContainerModel>(
     container: string
   ): Promise<T | undefined> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
@@ -240,7 +269,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @returns {Promise<T>}
    * @memberof LokiBlobDataStore
    */
-  public async updateContainer<T extends Models.ContainerItem>(
+  public async updateContainer<T extends ContainerModel>(
     container: T
   ): Promise<T> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
@@ -265,7 +294,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @returns {(Promise<[T[], number | undefined]>)} Return a tuple with [LIST_CONTAINERS, NEXT_MARKER]
    * @memberof LokiBlobDataStore
    */
-  public async listContainers<T extends Models.ContainerItem>(
+  public async listContainers<T extends ContainerModel>(
     prefix: string = "",
     maxResults: number = 2000,
     marker: number = 0
@@ -293,8 +322,6 @@ export default class LokiBlobDataStore implements IBlobDataStore {
 
   /**
    * Update blob item in DB. Will create if blob doesn't exist.
-   * For a update operation, blob item should be a valid loki DB document object
-   * retrieved by calling getBlob().
    *
    * @template T A BlobItem model compatible object
    * @param {string} container Container name
@@ -302,17 +329,16 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @returns {Promise<T>}
    * @memberof LokiBlobDataStore
    */
-  public async updateBlob<T extends Models.BlobItem>(
+  public async updateBlob<T extends BlobModel>(
     container: string,
     blob: T
   ): Promise<T> {
     const coll = this.db.getCollection(container);
     const blobDoc = coll.findOne({ name: { $eq: blob.name } });
     if (blobDoc !== undefined && blobDoc !== null) {
-      return coll.update(blob);
-    } else {
-      return coll.insert(blob);
+      coll.remove(blobDoc);
     }
+    return coll.insert(blob);
   }
 
   /**
@@ -324,7 +350,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @returns {(Promise<T | undefined>)}
    * @memberof IBlobDataStore
    */
-  public async getBlob<T extends Models.BlobItem>(
+  public async getBlob<T extends BlobModel>(
     container: string,
     blob: string
   ): Promise<T | undefined> {
@@ -363,61 +389,241 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
-   * Persist blob payload.
+   * Update block in DB. Will create if block doesn't exist.
    *
-   * @param {string} container
-   * @param {string} blob
-   * @param {NodeJS.ReadableStream} payload
-   * @returns {Promise<void>}
-   * @memberof IBlobDataStore
+   * @template T
+   * @param {T} block
+   * @returns {Promise<T>}
+   * @memberof LokiBlobDataStore
    */
-  public async writeBlobPayload(
+  public async updateBlock<T extends BlockModel>(block: T): Promise<T> {
+    const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
+    const blockDoc = coll.findOne({
+      containerName: block.containerName,
+      blobName: block.blobName,
+      name: block.name
+    });
+
+    if (blockDoc !== undefined && blockDoc !== null) {
+      coll.remove(blockDoc);
+    }
+    return coll.insert(block);
+  }
+
+  public async deleteBlocks<T extends BlockModel>(
     container: string,
     blob: string,
-    payload: NodeJS.ReadableStream
-  ): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      // TODO: Create a class for mapping between blob with local disk file path
-      const path = join(this.persistencePath, `${container}_${blob}`);
-      const ws = createWriteStream(path);
+    blocks: T[]
+  ): Promise<T[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  /**
+   * Gets block for a blob from persistency layer by
+   * container name, blob name and block name.
+   *
+   * @template T
+   * @param {string} container
+   * @param {string} blob
+   * @param {string} block
+   * @returns {Promise<T | undefined>}
+   * @memberof LokiBlobDataStore
+   */
+  public async getBlock<T extends BlockModel>(
+    container: string,
+    blob: string,
+    block: string
+  ): Promise<T | undefined> {
+    const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
+    const blockDoc = coll.findOne({
+      containerName: container,
+      blobName: blob,
+      name: block
+    });
+
+    return blockDoc;
+  }
+
+  /**
+   * Gets blocks list for a blob from persistency layer by container name and blob name.
+   *
+   * @template T
+   * @param {string} container
+   * @param {string} blob
+   * @returns {Promise<T[]>}
+   * @memberof LokiBlobDataStore
+   */
+  public async getBlocks<T extends BlockModel>(
+    container: string,
+    blob: string
+  ): Promise<T[]> {
+    const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
+    const blockDocs = coll.find({
+      containerName: container,
+      blobName: blob
+    });
+
+    return blockDocs;
+  }
+
+  /**
+   * Persist payload and return a unique persistency ID for tracking.
+   *
+   * @param {NodeJS.ReadableStream} payload
+   * @returns {Promise<string>}
+   * @memberof LokiBlobDataStore
+   */
+  public async writePayload(payload: NodeJS.ReadableStream): Promise<string> {
+    const persistencyID = this.getPersistencyID();
+    const persistencyPath = this.getPersistencyPath(persistencyID);
+
+    return new Promise<string>((resolve, reject) => {
+      const ws = createWriteStream(persistencyPath);
       payload
         .pipe(ws)
-        .on("close", resolve)
+        .on("close", () => {
+          resolve(persistencyID);
+        })
         .on("error", reject);
     });
   }
 
   /**
-   * Read blob payload.
+   * Reads a persistency layer payload with a persistency ID.
    *
-   * @param {string} container
-   * @param {string} blob
+   * @param {string} [persistencyID] Persistency payload ID
+   * @param {number} [offset] Optional. Payload reads offset. Default is 0.
+   * @param {number} [count] Optional. Payload reads count. Default is Infinity.
    * @returns {Promise<NodeJS.ReadableStream>}
-   * @memberof IBlobDataStore
+   * @memberof LokiBlobDataStore
    */
-  public async readBlobPayload(
-    container: string,
-    blob: string
+  public async readPayload(
+    persistencyID?: string,
+    offset: number = 0,
+    count: number = Infinity
   ): Promise<NodeJS.ReadableStream> {
-    const path = join(this.persistencePath, `${container}_${blob}`);
-    return createReadStream(path);
+    if (persistencyID === undefined) {
+      const emptyStream = new Duplex();
+      emptyStream.end();
+      return emptyStream;
+    }
+
+    const path = this.getPersistencyPath(persistencyID);
+    return createReadStream(path, { start: offset, end: offset + count });
   }
 
   /**
-   * Close loki DB.
+   * Merge persistency payloads into a single payload and return a ReadableStream
+   * from the merged stream according to the offset and count.
    *
+   * @param {string[]} persistencyIDs Persistency payload ID list
+   * @param {number} [offset] Optional. Payload reads offset. Default is 0.
+   * @param {number} [count] Optional. Payload reads count. Default is Infinity.
+   * @returns {Promise<NodeJS.ReadableStream>}
+   * @memberof LokiBlobDataStore
+   */
+  public async readPayloads(
+    persistencyIDs: string[],
+    offset: number = 0,
+    count: number = Infinity
+  ): Promise<NodeJS.ReadableStream> {
+    const start = offset; // Start inclusive position in the merged stream
+    const end = offset + count; // End exclusive position in the merged stream
+
+    const streams: NodeJS.ReadableStream[] = [];
+    const statAsync = promisify(stat);
+
+    let payloadOffset = 0; // Current payload offset in the merged stream
+
+    for (const id of persistencyIDs) {
+      const path = this.getPersistencyPath(id);
+      // TODO: Add a path size cache, we assume different payloads will always has different persistency
+      // ID and path. So the cache will always align with the persisted files.
+      const payloadSize = (await statAsync(path)).size;
+      const nextPayloadOffset = payloadOffset + payloadSize;
+
+      if (nextPayloadOffset <= start) {
+        payloadOffset = nextPayloadOffset;
+        continue;
+      } else if (end <= payloadOffset) {
+        // Nothing to read anymore
+        break;
+      } else {
+        let payloadStart = 0;
+        if (start > payloadOffset) {
+          payloadStart = payloadOffset - start;
+        }
+
+        let payloadEnd = Infinity;
+        if (end <= nextPayloadOffset) {
+          payloadEnd = end - payloadOffset - 1;
+        }
+
+        streams.push(
+          createReadStream(path, { start: payloadStart, end: payloadEnd })
+        );
+        payloadOffset = nextPayloadOffset;
+      }
+    }
+
+    // TODO: What happens when count exceeds merged payload length?
+    // throw an error of just return as much data as we can?
+    if (payloadOffset < end) {
+      throw new RangeError(
+        // tslint:disable-next-line:max-line-length
+        `Not enough payload data error. Total length of payloads is ${payloadOffset}, while required data offset is ${offset}, count is ${count}.`
+      );
+    }
+
+    return multistream(streams);
+  }
+
+  /**
+   * Remove payloads from persistency layer.
+   *
+   * @param {string[]} persistencyIDs
    * @returns {Promise<void>}
    * @memberof LokiBlobDataStore
    */
-  public async close(): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      this.db.close(err => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
-    });
+  public async deletePayloads(persistencyIDs: string[]): Promise<void> {
+    const unlinkAsync = promisify(unlink);
+
+    // TODO: Throw exceptions or skip exceptions?
+    for (const id of persistencyIDs) {
+      const path = this.getPersistencyPath(id);
+      try {
+        await unlinkAsync(path);
+      } catch {
+        /** NOOP */
+      }
+    }
+  }
+
+  /**
+   * Get persistency file path for a resource with persistencyID provided.
+   * Warning: Modify this method may result existing payloads cannot be found.
+   *
+   * @private
+   * @param {string} persistencyID
+   * @returns {string}
+   * @memberof LokiBlobDataStore
+   */
+  private getPersistencyPath(persistencyID: string): string {
+    return join(this.persistencePath, persistencyID);
+  }
+
+  /**
+   * Maps a blob or block to a unique ID used as persisted local file name.
+   * Note that, this method is only used to calculate persistency IDs for new blob or blocks.
+   *
+   * DO NOT use this method for existing blobs or blocks, as the calculation algorithm may
+   * change without warning.
+   *
+   * @private
+   * @returns {string} Unique persistency ID
+   * @memberof LokiBlobDataStore
+   */
+  private getPersistencyID(): string {
+    return uuid();
   }
 }

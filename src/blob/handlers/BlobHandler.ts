@@ -30,7 +30,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
     }
 
-    const body = await this.dataStore.readBlobPayload(containerName, blobName);
+    const body = await this.dataStore.readPayload(blob.persistencyID);
     const response: Models.BlobDownloadResponse = {
       statusCode: 200,
       body,
@@ -39,7 +39,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       eTag: blob.properties.etag,
       requestId: blobCtx.contextID,
       date: new Date(),
-      version: API_VERSION,
+      version: API_VERSION
     };
 
     return response;
@@ -76,7 +76,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       statusCode: 202,
       requestId: blobCtx.contextID,
       date: new Date(),
-      version: API_VERSION,
+      version: API_VERSION
     };
 
     return response;
