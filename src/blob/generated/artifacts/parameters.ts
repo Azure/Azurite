@@ -684,9 +684,11 @@ export const leaseId1: msRest.OperationParameter = {
   }
 };
 export const listType: msRest.OperationQueryParameter = {
-  parameterPath: "listType",
+  parameterPath: [
+    "options",
+    "listType"
+  ],
   mapper: {
-    required: true,
     serializedName: "blocklisttype",
     defaultValue: 'committed',
     type: {

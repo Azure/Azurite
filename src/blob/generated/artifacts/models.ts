@@ -1974,6 +1974,12 @@ export interface BlockBlobGetBlockListOptionalParams {
    */
   snapshot?: string;
   /**
+   * Specifies whether to return the list of committed blocks, the list of uncommitted blocks, or
+   * both lists together. Possible values include: 'committed', 'uncommitted', 'all'. Default
+   * value: 'committed'.
+   */
+  listType?: BlockListType;
+  /**
    * The timeout parameter is expressed in seconds. For more information, see <a
    * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>

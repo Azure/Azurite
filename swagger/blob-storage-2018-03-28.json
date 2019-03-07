@@ -7032,7 +7032,7 @@
       "name": "blocklisttype",
       "x-ms-client-name": "listType",
       "in": "query",
-      "required": true,
+      "required": false,
       "default": "committed",
       "x-ms-parameter-location": "method",
       "description": "Specifies whether to return the list of committed blocks, the list of uncommitted blocks, or both lists together.",
