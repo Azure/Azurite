@@ -1,6 +1,6 @@
 import * as msRest from "@azure/ms-rest-js";
 
-import Operation from "../artifacts/Operation";
+import Operation from "../artifacts/operation";
 import Specifications from "../artifacts/specifications";
 import Context from "../Context";
 import UnsupportedRequestError from "../errors/UnsupportedRequestError";

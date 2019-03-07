@@ -1,4 +1,4 @@
-import Operation from "../artifacts/Operation";
+import Operation from "../artifacts/operation";
 import Specifications from "../artifacts/specifications";
 import Context from "../Context";
 import DeserializationError from "../errors/DeserializationError";
