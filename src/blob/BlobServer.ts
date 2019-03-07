@@ -1,7 +1,7 @@
 import * as http from "http";
 
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
-import debugLogger from "../common/Logger";
+import logger from "../common/Logger";
 import ServerBase from "../common/ServerBase";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
@@ -52,7 +52,7 @@ export default class BlobServer extends ServerBase {
     // and replace the default Express based request listener
     const requestListenerFactory: IRequestListenerFactory = new BlobRequestListenerFactory(
       dataStore,
-      configuration.enableAccessLog
+      configuration.enableAccessLog // Access log will display every request served
     );
 
     super(host, port, httpServer, requestListenerFactory, dataStore);
@@ -64,13 +64,13 @@ export default class BlobServer extends ServerBase {
       address = address.address;
     }
 
-    debugLogger.info(
+    logger.info(
       `Azurite Blob service successfully listens on ${address}:${this.port}`
     );
   }
 
   protected async beforeClose(): Promise<void> {
-    debugLogger.info(
+    logger.info(
       `Azurite Blob service is shutdown... Waiting for existing keep-alive connections timeout...`
     );
   }

@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 
-import debugLogger from "../../common/Logger";
+import logger from "../../common/Logger";
 import StorageError from "../errors/StorageError";
 import { DEFAULT_CONTEXT_PATH } from "../utils/constants";
 import BlobStorageContext from "./BlobStorageContext";
@@ -25,7 +25,7 @@ export default function blobStorageContextMiddleware(
   blobContext.xMsRequestID = requestID;
   blobContext.startTime = new Date();
 
-  debugLogger.info(
+  logger.info(
     `BlobStorageContextMiddleware: RequestMethod=${req.method} RequestURL=${
       req.protocol
     }://${req.hostname}${req.url} RequestHeaders:${JSON.stringify(
@@ -56,7 +56,7 @@ export default function blobStorageContextMiddleware(
       blobContext.contextID!
     );
 
-    debugLogger.error(
+    logger.error(
       `BlobStorageContextMiddleware: BlobStorageContextMiddleware: ${
         handlerError.message
       }`,
@@ -66,7 +66,7 @@ export default function blobStorageContextMiddleware(
     return next(handlerError);
   }
 
-  debugLogger.info(
+  logger.info(
     `BlobStorageContextMiddleware: Account:=${account} Container=${container} Blob=${blob}`,
     requestID
   );

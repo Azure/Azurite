@@ -1,4 +1,4 @@
-import { configDebugLogger } from "../common/Logger";
+import * as Logger from "../common/Logger";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobServer from "./BlobServer";
 
@@ -9,9 +9,8 @@ import BlobServer from "./BlobServer";
 async function main() {
   const config = new BlobConfiguration();
 
-  // Config debug logger singleton instance
-  // TODO: better design for debugger log?
-  configDebugLogger(config.enableDebugLog, config.debugLogFilePath);
+  // We use logger singleton as global debugger logger to track details outputs cross layers
+  Logger.configLogger(config.enableDebugLog, config.debugLogFilePath);
 
   const server = new BlobServer(config);
   await server.start();
