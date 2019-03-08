@@ -1,6 +1,6 @@
 import { inspect } from "util";
 
-import Operation from "../artifacts/Operation";
+import Operation from "../artifacts/operation";
 import Specifications from "../artifacts/specifications";
 import Context from "../Context";
 import OperationMismatchError from "../errors/OperationMismatchError";

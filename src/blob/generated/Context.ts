@@ -1,4 +1,4 @@
-import Operation from "./artifacts/Operation";
+import Operation from "./artifacts/operation";
 
 export interface IHandlerParameters {
   [key: string]: any;
