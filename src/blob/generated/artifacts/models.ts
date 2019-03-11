@@ -105,7 +105,7 @@ export interface BlobProperties {
  */
 export interface BlobItem {
   name: string;
-  deleted: boolean;
+  deleted?: boolean;
   snapshot: string;
   properties: BlobProperties;
   metadata?: { [propertyName: string]: string };

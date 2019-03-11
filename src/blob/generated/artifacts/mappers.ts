@@ -326,7 +326,6 @@ export const BlobItem: msRest.CompositeMapper = {
       },
       deleted: {
         xmlName: "Deleted",
-        required: true,
         serializedName: "Deleted",
         type: {
           name: "Boolean"

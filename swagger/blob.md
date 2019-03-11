@@ -21,3 +21,5 @@ enum-types: true
 1. Get container properties can both use get/head, however client swagger only supports get; We can fork a server swagger, rebase to client swagger periodic.
 
 2. Updated blocklisttype for list blob blocks from required to optional.
+
+3. Make "Deleted" from required to optional for BlobItem model.

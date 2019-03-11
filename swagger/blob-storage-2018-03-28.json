@@ -5925,7 +5925,6 @@
       "type": "object",
       "required": [
         "Name",
-        "Deleted",
         "Snapshot",
         "Properties"
       ],
