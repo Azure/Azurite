@@ -106,15 +106,15 @@ export async function deserialize(
     const contentType = req.getHeader("content-type") || "";
     const contentComponents = !contentType
       ? []
-      : contentType.split(";").map((component) => component.toLowerCase());
+      : contentType.split(";").map(component => component.toLowerCase());
 
     const isRequestWithJSON = contentComponents.some(
-      (component) => jsonContentTypes.indexOf(component) !== -1
+      component => jsonContentTypes.indexOf(component) !== -1
     ); // TODO
     const isRequestWithXML =
       spec.isXML ||
       contentComponents.some(
-        (component) => xmlContentTypes.indexOf(component) !== -1
+        component => xmlContentTypes.indexOf(component) !== -1
       );
     // const isRequestWithStream = false;
 
@@ -160,7 +160,7 @@ async function readRequestIntoText(req: IRequest): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const segments: string[] = [];
     const bodyStream = req.getBodyStream();
-    bodyStream.on("data", (buffer) => {
+    bodyStream.on("data", buffer => {
       segments.push(buffer);
     });
     bodyStream.on("error", reject);
@@ -271,7 +271,7 @@ export async function serialize(
     const xmlBody = stringifyXML(body, {
       rootName:
         responseSpec.bodyMapper!.xmlName ||
-        responseSpec.bodyMapper!.serializedName,
+        responseSpec.bodyMapper!.serializedName
     });
     res.setContentType(`application/xml`);
 
@@ -286,11 +286,23 @@ export async function serialize(
     responseSpec.bodyMapper.type.name === "Stream"
   ) {
     await new Promise((resolve, reject) => {
-      (handlerResponse.body as NodeJS.ReadableStream)
-        .on("error", reject)
-        .pipe(res.getBodyStream())
-        .on("error", reject)
-        .on("close", resolve);
+      const body = handlerResponse.body as NodeJS.ReadableStream;
+      const ws = res.getBodyStream();
+
+      body.on("data", data => {
+        console.log(data.toString());
+        if (!ws.write(data)) {
+          body.pause();
+        }
+      });
+
+      ws.on("drain", () => {
+        body.resume();
+      });
+
+      body.on("end", resolve);
+      body.on("error", reject);
+      ws.on("error", reject);
     });
   }
 }

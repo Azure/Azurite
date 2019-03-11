@@ -7,13 +7,7 @@ import { promisify } from "util";
 import uuid from "uuid/v4";
 
 import { API_VERSION } from "../utils/constants";
-import {
-  BlobModel,
-  BlockModel,
-  ContainerModel,
-  IBlobDataStore,
-  ServicePropertiesModel,
-} from "./IBlobDataStore";
+import { BlobModel, BlockModel, ContainerModel, IBlobDataStore, ServicePropertiesModel } from "./IBlobDataStore";
 
 /**
  * This is a persistency layer data source implementation based on loki DB.
@@ -36,7 +30,7 @@ import {
  *                           // Collection name equals to a container name
  *                           // Each document 1:1 maps to a blob
  *                           // Unique document properties: name
- * -- <BLOCKS_COLLECTION>    // Block blob blocks collection includes all blocks
+ * -- <BLOCKS_COLLECTION>    // Block blob blocks collection includes all UNCOMMITTED blocks
  *                           // Unique document properties: (blob)name, blockID
  *
  * TODO:
@@ -61,38 +55,38 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     hourMetrics: {
       enabled: false,
       retentionPolicy: {
-        enabled: false,
+        enabled: false
       },
-      version: "1.0",
+      version: "1.0"
     },
     logging: {
       deleteProperty: true,
       read: true,
       retentionPolicy: {
-        enabled: false,
+        enabled: false
       },
       version: "1.0",
-      write: true,
+      write: true
     },
     minuteMetrics: {
       enabled: false,
       retentionPolicy: {
-        enabled: false,
+        enabled: false
       },
-      version: "1.0",
+      version: "1.0"
     },
     staticWebsite: {
-      enabled: false,
-    },
+      enabled: false
+    }
   };
 
   public constructor(
     private readonly lokiDBPath: string,
-    private readonly persistencePath: string, // private readonly logger: ILogger
+    private readonly persistencePath: string // private readonly logger: ILogger
   ) {
     this.db = new Loki(lokiDBPath, {
       autosave: true,
-      autosaveInterval: 5000,
+      autosaveInterval: 5000
     });
   }
 
@@ -133,17 +127,17 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       this.db.addCollection(this.BLOCKS_COLLECTION, {
         // Optimization for indexing and searching
         // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
-        indices: ["containerName", "blobName", "name"], // Optimize for find operation
+        indices: ["containerName", "blobName", "name", "isCommitted"] // Optimize for find operation
       });
     }
 
     // Create service properties collection if not exists
     let servicePropertiesColl = this.db.getCollection(
-      this.SERVICE_PROPERTIES_COLLECTION,
+      this.SERVICE_PROPERTIES_COLLECTION
     );
     if (servicePropertiesColl === null) {
       servicePropertiesColl = this.db.addCollection(
-        this.SERVICE_PROPERTIES_COLLECTION,
+        this.SERVICE_PROPERTIES_COLLECTION
       );
     }
 
@@ -156,7 +150,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       this.servicePropertiesDocumentID = servicePropertiesDocs[0].$loki;
     } else {
       throw new Error(
-        "LokiDB initialization error: Service properties collection has more than one document.",
+        "LokiDB initialization error: Service properties collection has more than one document."
       );
     }
 
@@ -199,7 +193,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @memberof LokiBlobDataStore
    */
   public async setServiceProperties<T extends ServicePropertiesModel>(
-    serviceProperties: T,
+    serviceProperties: T
   ): Promise<T> {
     const coll = this.db.getCollection(this.SERVICE_PROPERTIES_COLLECTION);
     if (this.servicePropertiesDocumentID !== undefined) {
@@ -236,7 +230,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @memberof LokiBlobDataStore
    */
   public async getContainer<T extends ContainerModel>(
-    container: string,
+    container: string
   ): Promise<T | undefined> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = coll.by("name", container);
@@ -275,7 +269,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @memberof LokiBlobDataStore
    */
   public async updateContainer<T extends ContainerModel>(
-    container: T,
+    container: T
   ): Promise<T> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = coll.by("name", container.name);
@@ -302,7 +296,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   public async listContainers<T extends ContainerModel>(
     prefix: string = "",
     maxResults: number = 2000,
-    marker: number = 0,
+    marker: number = 0
   ): Promise<[T[], number | undefined]> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
 
@@ -336,13 +330,15 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    */
   public async updateBlob<T extends BlobModel>(
     container: string,
-    blob: T,
+    blob: T
   ): Promise<T> {
     const coll = this.db.getCollection(container);
     const blobDoc = coll.findOne({ name: { $eq: blob.name } });
     if (blobDoc !== undefined && blobDoc !== null) {
       coll.remove(blobDoc);
     }
+
+    delete (blob as any).$loki;
     return coll.insert(blob);
   }
 
@@ -357,7 +353,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    */
   public async getBlob<T extends BlobModel>(
     container: string,
-    blob: string,
+    blob: string
   ): Promise<T | undefined> {
     const containerItem = await this.getContainer(container);
     if (!containerItem) {
@@ -407,23 +403,37 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       containerName: block.containerName,
       blobName: block.blobName,
       name: block.name,
+      isCommitted: block.isCommitted
     });
 
     if (blockDoc !== undefined && blockDoc !== null) {
       coll.remove(blockDoc);
     }
+
+    delete (block as any).$loki;
     return coll.insert(block);
   }
 
   public insertBlocks<T extends BlockModel>(blocks: T[]): Promise<T[]> {
-    throw new Error("Method not implemented.");
+    for (const block of blocks) {
+      delete (block as any).$loki;
+    }
+    const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
+    return coll.insert(blocks);
   }
 
   public async deleteBlocks<T extends BlockModel>(
     container: string,
-    blob: string,
-  ): Promise<T[]> {
-    throw new Error("Method not implemented.");
+    blob: string
+  ): Promise<void> {
+    const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
+    coll
+      .chain()
+      .find({
+        containerName: container,
+        blobName: blob
+      })
+      .remove();
   }
 
   /**
@@ -434,6 +444,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @param {string} container
    * @param {string} blob
    * @param {string} block
+   * @param {boolean} isCommitted
    * @returns {Promise<T | undefined>}
    * @memberof LokiBlobDataStore
    */
@@ -441,12 +452,14 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     container: string,
     blob: string,
     block: string,
+    isCommitted: boolean
   ): Promise<T | undefined> {
     const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
     const blockDoc = coll.findOne({
       containerName: container,
       blobName: blob,
       name: block,
+      isCommitted
     });
 
     return blockDoc;
@@ -458,12 +471,14 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @template T
    * @param {string} container
    * @param {string} blob
+   * @param {boolean} isCommitted
    * @returns {Promise<T[]>}
    * @memberof LokiBlobDataStore
    */
   public async getBlocks<T extends BlockModel>(
     container: string,
     blob: string,
+    isCommitted: boolean
   ): Promise<T[]> {
     const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
     const blockDocs = coll
@@ -471,6 +486,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       .find({
         containerName: container,
         blobName: blob,
+        isCommitted
       })
       .simplesort("$loki") // We assume blocks in a blocks are in order stored
       .data();
@@ -512,7 +528,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   public async readPayload(
     persistencyID?: string,
     offset: number = 0,
-    count: number = Infinity,
+    count: number = Infinity
   ): Promise<NodeJS.ReadableStream> {
     if (persistencyID === undefined) {
       const emptyStream = new Duplex();
@@ -537,7 +553,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   public async readPayloads(
     persistencyIDs: string[],
     offset: number = 0,
-    count: number = Infinity,
+    count: number = Infinity
   ): Promise<NodeJS.ReadableStream> {
     const start = offset; // Start inclusive position in the merged stream
     const end = offset + count; // End exclusive position in the merged stream
@@ -572,7 +588,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
         }
 
         streams.push(
-          createReadStream(path, { start: payloadStart, end: payloadEnd }),
+          createReadStream(path, { start: payloadStart, end: payloadEnd })
         );
         payloadOffset = nextPayloadOffset;
       }
@@ -580,10 +596,10 @@ export default class LokiBlobDataStore implements IBlobDataStore {
 
     // TODO: What happens when count exceeds merged payload length?
     // throw an error of just return as much data as we can?
-    if (payloadOffset < end) {
+    if (end !== Infinity && payloadOffset < end) {
       throw new RangeError(
         // tslint:disable-next-line:max-line-length
-        `Not enough payload data error. Total length of payloads is ${payloadOffset}, while required data offset is ${offset}, count is ${count}.`,
+        `Not enough payload data error. Total length of payloads is ${payloadOffset}, while required data offset is ${offset}, count is ${count}.`
       );
     }
 

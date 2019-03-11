@@ -14,7 +14,7 @@ import { isURITemplateMatch } from "../utils/utils";
  * by going through request specifications. Operation enum will be assigned to context object.
  * Make sure dispatchMiddleware is triggered before other generated middleware.
  *
- * TODO: Add support for API piroirties to deal with both matched APIs
+ * TODO: Add support for API priorities to deal with both matched APIs
  *
  * @export
  * @param {Context} context Context object
@@ -27,11 +27,11 @@ export default function dispatchMiddleware(
   context: Context,
   req: IRequest,
   next: NextFunction,
-  logger: ILogger,
+  logger: ILogger
 ): void {
   logger.verbose(
     `DispatchMiddleware: Dispatching request...`,
-    context.contextID,
+    context.contextID
   );
 
   // Sometimes, more than one operations specifications are all valid against current request
@@ -56,14 +56,14 @@ export default function dispatchMiddleware(
     const handlerError = new UnsupportedRequestError();
     logger.error(
       `DispatchMiddleware: ${handlerError.message}`,
-      context.contextID,
+      context.contextID
     );
     return next(handlerError);
   }
 
   logger.info(
     `DispatchMiddleware: Operation=${Operation[context.operation]}`,
-    context.contextID,
+    context.contextID
   );
 
   next();
@@ -78,7 +78,7 @@ export default function dispatchMiddleware(
  */
 function isRequestAgainstOperation(
   req: IRequest,
-  spec: msRest.OperationSpec,
+  spec: msRest.OperationSpec
 ): [boolean, number] {
   let metConditionsNum = 0;
   if (req === undefined || spec === undefined) {
@@ -104,7 +104,7 @@ function isRequestAgainstOperation(
   for (const queryParameter of spec.queryParameters || []) {
     if (queryParameter.mapper.required) {
       const queryValue = req.getQuery(
-        queryParameter.mapper.serializedName || "",
+        queryParameter.mapper.serializedName || ""
       );
       if (queryValue === undefined) {
         return [false, metConditionsNum];
@@ -134,7 +134,7 @@ function isRequestAgainstOperation(
   for (const headerParameter of spec.headerParameters || []) {
     if (headerParameter.mapper.required) {
       const headerValue = req.getHeader(
-        headerParameter.mapper.serializedName || "",
+        headerParameter.mapper.serializedName || ""
       );
       if (headerValue === undefined) {
         return [false, metConditionsNum];

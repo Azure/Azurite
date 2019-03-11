@@ -30,7 +30,19 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
     }
 
-    const body = await this.dataStore.readPayload(blob.persistencyID);
+    let body: NodeJS.ReadableStream | undefined;
+    if (
+      blob.committedBlocksInOrder === undefined ||
+      blob.committedBlocksInOrder.length === 0
+    ) {
+      body = await this.dataStore.readPayload(blob.persistencyID);
+    } else {
+      const blocks = blob.committedBlocksInOrder;
+      body = await this.dataStore.readPayloads(
+        blocks.map(block => block.persistencyID)
+      );
+    }
+
     const response: Models.BlobDownloadResponse = {
       statusCode: 200,
       body,

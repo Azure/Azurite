@@ -4,7 +4,17 @@ import * as Models from "../generated/artifacts/models";
 export type ServicePropertiesModel = Models.StorageServiceProperties;
 export type ContainerModel = Models.ContainerItem;
 
-export interface IPersistencyProperties {
+export interface IPersistencyPropertiesRequired {
+  /**
+   * A unique ID refers to the persisted payload data for a blob or block.
+   *
+   * @type {string}
+   * @memberof IPersistencyProperties
+   */
+  persistencyID: string;
+}
+
+export interface IPersistencyPropertiesOptional {
   /**
    * A unique ID refers to the persisted payload data for a blob or block.
    *
@@ -17,10 +27,11 @@ export interface IPersistencyProperties {
 /** MODELS FOR BLOBS */
 export interface IBlobAdditionalProperties {
   isCommitted: boolean;
+  committedBlocksInOrder?: PersistencyBlockModel[];
 }
 export type BlobModel = IBlobAdditionalProperties &
   Models.BlobItem &
-  IPersistencyProperties;
+  IPersistencyPropertiesOptional;
 
 /** MODELS FOR BLOCKS */
 export interface IBlockAdditionalProperties {
@@ -28,9 +39,9 @@ export interface IBlockAdditionalProperties {
   blobName: string;
   isCommitted: boolean;
 }
-export type BlockModel = IBlockAdditionalProperties &
-  Models.Block &
-  IPersistencyProperties;
+export type PersistencyBlockModel = Models.Block &
+  IPersistencyPropertiesRequired;
+export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
 
 /**
  * Persistency layer data store interface.
@@ -50,7 +61,7 @@ export interface IBlobDataStore extends IDataStore {
    * @memberof IBlobDataStore
    */
   setServiceProperties<T extends ServicePropertiesModel>(
-    serviceProperties: T,
+    serviceProperties: T
   ): Promise<T>;
 
   /**
@@ -72,7 +83,7 @@ export interface IBlobDataStore extends IDataStore {
    * @memberof IBlobDataStore
    */
   getContainer<T extends ContainerModel>(
-    container: string,
+    container: string
   ): Promise<T | undefined>;
 
   /**
@@ -111,7 +122,7 @@ export interface IBlobDataStore extends IDataStore {
   listContainers<T extends ContainerModel>(
     prefix?: string,
     maxResults?: number,
-    marker?: number,
+    marker?: number
   ): Promise<[T[], number | undefined]>;
 
   /**
@@ -138,7 +149,7 @@ export interface IBlobDataStore extends IDataStore {
    */
   getBlob<T extends BlobModel>(
     container: string,
-    blob: string,
+    blob: string
   ): Promise<T | undefined>;
 
   /**
@@ -169,13 +180,13 @@ export interface IBlobDataStore extends IDataStore {
    * @template T
    * @param {string} container
    * @param {string} blob
-   * @returns {Promise<T[]>}
+   * @returns {Promise<void>}
    * @memberof IBlobDataStore
    */
   deleteBlocks<T extends BlockModel>(
     container: string,
-    blob: string,
-  ): Promise<T[]>;
+    blob: string
+  ): Promise<void>;
 
   /**
    * Insert blocks for a blob in persistency layer. Order of blocks should be saved too when
@@ -198,6 +209,7 @@ export interface IBlobDataStore extends IDataStore {
    * @param {string} container
    * @param {string} blob
    * @param {string} block
+   * @param {boolean} isCommitted
    * @returns {Promise<T | undefined>}
    * @memberof LokiBlobDataStore
    */
@@ -205,6 +217,7 @@ export interface IBlobDataStore extends IDataStore {
     container: string,
     blob: string,
     block: string,
+    isCommitted: boolean
   ): Promise<T | undefined>;
 
   /**
@@ -213,12 +226,14 @@ export interface IBlobDataStore extends IDataStore {
    * @template T
    * @param {string} container
    * @param {string} blob
+   * @param {boolean} isCommitted
    * @returns {(Promise<T[]>)}
    * @memberof IBlobDataStore
    */
   getBlocks<T extends BlockModel>(
     container: string,
     blob: string,
+    isCommitted: boolean
   ): Promise<T[]>;
 
   /**
@@ -242,7 +257,7 @@ export interface IBlobDataStore extends IDataStore {
   readPayload(
     persistencyID?: string,
     offset?: number,
-    count?: number,
+    count?: number
   ): Promise<NodeJS.ReadableStream>;
 
   /**
@@ -257,7 +272,7 @@ export interface IBlobDataStore extends IDataStore {
   readPayloads(
     persistencyIDs: string[],
     offset?: number,
-    count?: number,
+    count?: number
   ): Promise<NodeJS.ReadableStream>;
 
   /**

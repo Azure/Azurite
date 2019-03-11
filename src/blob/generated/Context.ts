@@ -1,4 +1,6 @@
 import Operation from "./artifacts/operation";
+import IRequest from "./IRequest";
+import IResponse from "./IResponse";
 
 export interface IHandlerParameters {
   [key: string]: any;
@@ -32,14 +34,22 @@ export default class Context {
    *
    * @param {Object} holder Holder is an Object which used to keep context information
    * @param {string} [path="context"] holder[path] is used as context object by default
+   * @param {IRequest} [req]
+   * @param {IResponse} [res]
    * @memberof Context
    */
-  // tslint:disable-next-line:ban-types
-  public constructor(holder: Object, path: string);
   public constructor(
-    // tslint:disable-next-line:ban-types
-    holderOrContext: Object | Context,
-    path: string = "context"
+    holder: object,
+    path: string,
+    req?: IRequest,
+    res?: IResponse
+  );
+
+  public constructor(
+    holderOrContext: object | Context,
+    path: string = "context",
+    req?: IRequest,
+    res?: IResponse
   ) {
     if (holderOrContext instanceof Context) {
       this.context = holderOrContext.context;
@@ -61,6 +71,9 @@ export default class Context {
       }
 
       this.context = context[this.path];
+
+      this.request = req;
+      this.response = res;
     }
   }
 
@@ -70,6 +83,22 @@ export default class Context {
 
   public set operation(operation: Operation | undefined) {
     this.context.operation = operation;
+  }
+
+  public set request(request: IRequest | undefined) {
+    this.context.request = request;
+  }
+
+  public get request(): IRequest | undefined {
+    return this.context.request;
+  }
+
+  public set response(response: IResponse | undefined) {
+    this.context.response = response;
+  }
+
+  public get response(): IResponse | undefined {
+    return this.context.response;
   }
 
   public get handlerParameters(): IHandlerParameters | undefined {

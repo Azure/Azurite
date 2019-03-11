@@ -33,4 +33,8 @@ export default class StorageErrorFactory {
       contextID
     );
   }
+
+  public static getBadRequest(contextID: string): StorageError {
+    return new StorageError(400, "BadRequest", "", contextID);
+  }
 }
