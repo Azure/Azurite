@@ -67,13 +67,7 @@ export default class BlobRequestListenerFactory
     app.use(blobStorageContextMiddleware);
 
     // Dispatch incoming HTTP request to specific operation
-    // Emulator's URL pattern is like http://hostname:port/account/container
-    // Create a router to exclude account name from req.path, as url path in swagger doesn't include account
-    // Exclude account name from req.path for dispatchMiddleware
-    app.use(
-      "/:account",
-      express.Router().use(middlewareFactory.createDispatchMiddleware())
-    );
+    app.use(middlewareFactory.createDispatchMiddleware());
 
     // TODO: AuthN middleware, like shared key auth or SAS auth
 

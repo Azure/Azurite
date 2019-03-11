@@ -153,6 +153,24 @@ export interface IBlobDataStore extends IDataStore {
   ): Promise<T | undefined>;
 
   /**
+   * List blobs with query conditions specified.
+   *
+   * @template T
+   * @param {string} container
+   * @param {string} [prefix]
+   * @param {number} [maxResults]
+   * @param {number} [marker]
+   * @returns {(Promise<[T[], number | undefined]>)}
+   * @memberof IBlobDataStore
+   */
+  listBlobs<T extends BlobModel>(
+    container: string,
+    prefix?: string,
+    maxResults?: number,
+    marker?: number
+  ): Promise<[T[], number | undefined]>;
+
+  /**
    * Delete blob item from persistency layer.
    *
    * @param {string} container
@@ -230,7 +248,7 @@ export interface IBlobDataStore extends IDataStore {
    * @returns {(Promise<T[]>)}
    * @memberof IBlobDataStore
    */
-  getBlocks<T extends BlockModel>(
+  listBlocks<T extends BlockModel>(
     container: string,
     blob: string,
     isCommitted: boolean

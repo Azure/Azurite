@@ -130,7 +130,7 @@ export default class ContainerHandler extends BaseHandler
     }
 
     container.metadata = options.metadata;
-    container.properties.lastModified = new Date();
+    container.properties.lastModified = blobCtx.startTime!;
 
     await this.dataStore.updateContainer(container);
     await Mutex.unlock(containerName);
@@ -211,7 +211,72 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerListBlobHierarchySegmentOptionalParams,
     context: Context
   ): Promise<Models.ContainerListBlobHierarchySegmentResponse> {
-    throw new NotImplementedError(context.contextID);
+    const blobCtx = new BlobStorageContext(context);
+    const containerName = blobCtx.container!;
+
+    const container = await this.dataStore.getContainer(containerName);
+    if (container === undefined) {
+      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+    }
+
+    const marker = parseInt(options.marker || "0", 10);
+    options.prefix = options.prefix || "";
+    options.marker = options.marker || "";
+
+    const [blobs, nextMarker] = await this.dataStore.listBlobs(
+      containerName,
+      options.prefix,
+      options.maxresults,
+      marker
+    );
+
+    const blobItems: Models.BlobItem[] = [];
+    const blobPrefixes: Models.BlobPrefix[] = [];
+    const blobPrefixesSet = new Set<string>();
+
+    const prefixLength = options.prefix.length;
+    for (const blob of blobs) {
+      const delimiterPosAfterPrefix = blob.name.indexOf(
+        delimiter,
+        prefixLength
+      );
+
+      // This is a blob
+      if (delimiterPosAfterPrefix < 0) {
+        blobItems.push(blob);
+      } else {
+        // This is a prefix
+        const prefix = blob.name.substr(0, delimiterPosAfterPrefix + 1);
+        blobPrefixesSet.add(prefix);
+      }
+    }
+
+    const iter = blobPrefixesSet.values();
+    let val;
+    while (!(val = iter.next()).done) {
+      blobPrefixes.push({ name: val.value });
+    }
+
+    const response: Models.ContainerListBlobHierarchySegmentResponse = {
+      statusCode: 200,
+      contentType: "application/xml",
+      requestId: blobCtx.contextID,
+      version: API_VERSION,
+      date: blobCtx.startTime,
+      serviceEndpoint: "http://127.0.0.1", // TODO: Fill up dynamic endpoint
+      containerName,
+      prefix: options.prefix,
+      marker: options.marker,
+      maxResults: options.maxresults || 5000,
+      delimiter,
+      segment: {
+        blobItems,
+        blobPrefixes
+      },
+      nextMarker: `${nextMarker || ""}`
+    };
+
+    return response;
   }
 
   public async getAccountInfo(

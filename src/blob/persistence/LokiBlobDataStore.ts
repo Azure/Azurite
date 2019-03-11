@@ -374,6 +374,52 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
+   * List blobs with query conditions specified.
+   *
+   * @template T
+   * @param {string} container
+   * @param {(string | undefined)} [prefix]
+   * @param {(number | undefined)} [maxResults=5000]
+   * @param {(number | undefined)} [marker]
+   * @returns {(Promise<[T[], number | undefined]>)}
+   * @memberof LokiBlobDataStore
+   */
+  public async listBlobs<T extends BlobModel>(
+    container: string,
+    prefix?: string | undefined,
+    maxResults: number | undefined = 5000,
+    marker?: number | undefined
+  ): Promise<[T[], number | undefined]> {
+    const containerItem = await this.getContainer(container);
+    if (!containerItem) {
+      return [[], undefined];
+    }
+
+    const coll = this.db.getCollection(container);
+    if (!coll) {
+      return [[], undefined];
+    }
+
+    const query =
+      prefix === ""
+        ? { $loki: { $gt: marker } }
+        : { name: { $regex: `^${prefix}` }, $loki: { $gt: marker } };
+
+    const docs = coll
+      .chain()
+      .find(query)
+      .limit(maxResults)
+      .data();
+
+    if (docs.length < maxResults) {
+      return [docs, undefined];
+    } else {
+      const nextMarker = docs[docs.length - 1].$loki;
+      return [docs, nextMarker];
+    }
+  }
+
+  /**
    * Delete a blob item from loki DB if exists.
    *
    * @param {string} container
@@ -475,7 +521,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @returns {Promise<T[]>}
    * @memberof LokiBlobDataStore
    */
-  public async getBlocks<T extends BlockModel>(
+  public async listBlocks<T extends BlockModel>(
     container: string,
     blob: string,
     isCommitted: boolean

@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 
 import logger from "../../common/Logger";
-import StorageError from "../errors/StorageError";
+import StorageErrorFactory from "../errors/StorageErrorFactory";
 import { DEFAULT_CONTEXT_PATH } from "../utils/constants";
 import BlobStorageContext from "./BlobStorageContext";
 
@@ -18,12 +18,12 @@ export default function blobStorageContextMiddleware(
   res: Response,
   next: NextFunction
 ): void {
-  // TODO: Use GUID for a server request ID
-  const requestID = new Date().getTime().toString();
-
   const blobContext = new BlobStorageContext(res.locals, DEFAULT_CONTEXT_PATH);
-  blobContext.xMsRequestID = requestID;
   blobContext.startTime = new Date();
+
+  // TODO: Use GUID for a server request ID
+  const requestID = blobContext.startTime.getTime().toString();
+  blobContext.xMsRequestID = requestID;
 
   logger.info(
     `BlobStorageContextMiddleware: RequestMethod=${req.method} RequestURL=${
@@ -42,18 +42,30 @@ export default function blobStorageContextMiddleware(
 
   const account = paths[0];
   const container = paths[1];
-  const blob = paths[2];
+  const blob = paths.slice(2).join("/");
 
   blobContext.account = account;
   blobContext.container = container;
   blobContext.blob = blob;
 
+  // Emulator's URL pattern is like http://hostname:port/account/container
+  // Create a router to exclude account name from req.path, as url path in swagger doesn't include account
+  // Exclude account name from req.path for dispatchMiddleware
+  blobContext.dispatchPath =
+    "/" +
+    [container, blob]
+      .filter(value => {
+        return value !== undefined && value.length > 0;
+      })
+      .map(value => {
+        // // Dispatch middleware cannot handle path parts including $ and /
+        return value.replace(/\$/g, "_").replace(/\//g, "_");
+      })
+      .join("/");
+
   if (!account) {
-    const handlerError = new StorageError(
-      400,
-      "InvalidQueryParameterValue",
-      `Value for one of the query parameters specified in the request URI is invalid`,
-      blobContext.contextID!
+    const handlerError = StorageErrorFactory.getInvalidQueryParameterValue(
+      requestID
     );
 
     logger.error(

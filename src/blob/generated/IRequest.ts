@@ -17,6 +17,6 @@ export default interface IRequest {
   setBody(body: string | undefined): IRequest;
   getBody(): string | undefined;
   getHeader(field: string): string | undefined;
-  getHeaders(): {[header: string]: string | string[] | undefined};
+  getHeaders(): { [header: string]: string | string[] | undefined };
   getQuery(key: string): string | undefined;
 }

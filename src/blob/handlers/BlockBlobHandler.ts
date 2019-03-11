@@ -190,7 +190,7 @@ export default class BlockBlobHandler extends BaseHandler
     }
 
     // Get all blocks in persistency layer
-    const pUncommittedBlocks = await this.dataStore.getBlocks(
+    const pUncommittedBlocks = await this.dataStore.listBlocks(
       containerName,
       blobName,
       false
@@ -333,7 +333,7 @@ export default class BlockBlobHandler extends BaseHandler
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
     }
 
-    const blockList = await this.dataStore.getBlocks(
+    const blockList = await this.dataStore.listBlocks(
       containerName,
       blobName,
       false

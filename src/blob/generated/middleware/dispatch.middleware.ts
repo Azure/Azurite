@@ -44,7 +44,11 @@ export default function dispatchMiddleware(
   for (const key in Operation) {
     if (Operation.hasOwnProperty(key)) {
       const operation = parseInt(key, 10);
-      const res = isRequestAgainstOperation(req, Specifications[operation]);
+      const res = isRequestAgainstOperation(
+        req,
+        Specifications[operation],
+        context.dispatchPath
+      );
       if (res[0] && res[1] > conditionsMet) {
         context.operation = operation;
         conditionsMet = res[1];
@@ -78,7 +82,8 @@ export default function dispatchMiddleware(
  */
 function isRequestAgainstOperation(
   req: IRequest,
-  spec: msRest.OperationSpec
+  spec: msRest.OperationSpec,
+  dispatchPath?: string
 ): [boolean, number] {
   let metConditionsNum = 0;
   if (req === undefined || spec === undefined) {
@@ -96,7 +101,13 @@ function isRequestAgainstOperation(
       ? spec.path
       : `/${spec.path}`
     : "/";
-  if (!isURITemplateMatch(req.getPath(), path)) {
+  if (
+    !isURITemplateMatch(
+      // Use dispatch path with priority
+      dispatchPath !== undefined ? dispatchPath : req.getPath(),
+      path
+    )
+  ) {
     return [false, metConditionsNum++];
   }
 

@@ -286,23 +286,11 @@ export async function serialize(
     responseSpec.bodyMapper.type.name === "Stream"
   ) {
     await new Promise((resolve, reject) => {
-      const body = handlerResponse.body as NodeJS.ReadableStream;
-      const ws = res.getBodyStream();
-
-      body.on("data", data => {
-        console.log(data.toString());
-        if (!ws.write(data)) {
-          body.pause();
-        }
-      });
-
-      ws.on("drain", () => {
-        body.resume();
-      });
-
-      body.on("end", resolve);
-      body.on("error", reject);
-      ws.on("error", reject);
+      (handlerResponse.body as NodeJS.ReadableStream)
+        .on("error", reject)
+        .pipe(res.getBodyStream())
+        .on("error", reject)
+        .on("close", resolve);
     });
   }
 }
