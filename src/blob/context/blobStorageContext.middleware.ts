@@ -44,9 +44,9 @@ export default function blobStorageContextMiddleware(
   const container = paths[1];
   const blob = paths.slice(2).join("/");
 
-  blobContext.account = account;
-  blobContext.container = container;
-  blobContext.blob = blob;
+  blobContext.account = account ? decodeURIComponent(account) : account;
+  blobContext.container = container ? decodeURIComponent(container) : container;
+  blobContext.blob = blob ? decodeURIComponent(blob) : blob;
 
   // Emulator's URL pattern is like http://hostname:port/account/container
   // Create a router to exclude account name from req.path, as url path in swagger doesn't include account
