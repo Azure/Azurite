@@ -24,7 +24,7 @@ export default class ServiceHandler extends BaseHandler
     const response: Models.ServiceSetPropertiesResponse = {
       requestId: context.contextID,
       statusCode: 202,
-      version: API_VERSION,
+      version: API_VERSION
     };
     return response;
   }
@@ -38,7 +38,7 @@ export default class ServiceHandler extends BaseHandler
       ...properties,
       requestId: context.contextID,
       statusCode: 200,
-      version: API_VERSION,
+      version: API_VERSION
     };
     return response;
   }
@@ -55,7 +55,8 @@ export default class ServiceHandler extends BaseHandler
     context: Context
   ): Promise<Models.ServiceListContainersSegmentResponse> {
     const LIST_CONTAINERS_MAX_RESULTS_DEFAULT = 2000;
-    options.maxresults = options.maxresults || LIST_CONTAINERS_MAX_RESULTS_DEFAULT;
+    options.maxresults =
+      options.maxresults || LIST_CONTAINERS_MAX_RESULTS_DEFAULT;
     options.prefix = options.prefix || "";
 
     const marker = parseInt(options.marker || "0", 10);
@@ -71,6 +72,8 @@ export default class ServiceHandler extends BaseHandler
       prefix: options.prefix,
       serviceEndpoint: `http://127.0.0.1:1000`, // TODO: Update Context to include req and res and get server endpoint
       statusCode: 200,
+      requestId: context.contextID,
+      version: API_VERSION
     };
 
     return res;

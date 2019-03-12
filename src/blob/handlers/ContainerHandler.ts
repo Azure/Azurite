@@ -26,8 +26,8 @@ export default class ContainerHandler extends BaseHandler
     const blobCtx = new BlobStorageContext(context);
     const containerName = blobCtx.container!;
 
-    const etag = `"${new Date().getTime()}"`; // TODO: Implement etag
-    const lastModified = new Date();
+    const etag = newEtag(); // TODO: Implement etag
+    const lastModified = blobCtx.startTime!;
 
     const container = await this.dataStore.getContainer(containerName);
     if (container) {
@@ -39,7 +39,10 @@ export default class ContainerHandler extends BaseHandler
       name: containerName,
       properties: {
         etag,
-        lastModified
+        lastModified,
+        leaseStatus: Models.LeaseStatusType.Unlocked,
+        leaseState: Models.LeaseStateType.Available,
+        publicAccess: options.access
       }
     });
 
@@ -69,9 +72,11 @@ export default class ContainerHandler extends BaseHandler
     const response: Models.ContainerGetPropertiesResponse = {
       eTag: container.properties.etag,
       ...container.properties,
+      blobPublicAccess: container.properties.publicAccess,
       metadata: container.metadata,
       requestId: blobCtx.contextID,
-      statusCode: 200
+      statusCode: 200,
+      version: API_VERSION
     };
 
     return response;

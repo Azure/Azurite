@@ -1,29 +1,29 @@
-import { Aborter, AnonymousCredential, ServiceURL, StorageURL } from "@azure/storage-blob";
+import { Aborter, AnonymousCredential, ContainerURL, ServiceURL, StorageURL } from "@azure/storage-blob";
 import * as assert from "assert";
-import { rmdirSync, unlinkSync } from "fs";
 
 import BlobConfiguration from "../../../src/blob/BlobConfiguration";
 import Server from "../../../src/blob/BlobServer";
-
-// TODO: Create a server factory as tests utils
-const host = "127.0.0.1";
-const port = 11000;
-const dbPath = "__testsstorage__";
-const persistencePath = "__testspersistence__";
-const config = new BlobConfiguration(host, port, dbPath, persistencePath);
-
-// TODO: Create serviceURL factory as tests utils
-const baseURL = `http://${host}:${port}/devaccount`;
-const serviceURL = new ServiceURL(
-  baseURL,
-  StorageURL.newPipeline(new AnonymousCredential(), {
-    retryOptions: { maxTries: 1 }
-  })
-);
-
-let server: Server;
+import { getUniqueName, rmRecursive } from "../../testutils";
 
 describe("ServiceHandler", () => {
+  // TODO: Create a server factory as tests utils
+  const host = "127.0.0.1";
+  const port = 11000;
+  const dbPath = "__testsstorage__";
+  const persistencePath = "__testspersistence__";
+  const config = new BlobConfiguration(host, port, dbPath, persistencePath);
+
+  // TODO: Create serviceURL factory as tests utils
+  const baseURL = `http://${host}:${port}/devstoreaccount1`;
+  const serviceURL = new ServiceURL(
+    baseURL,
+    StorageURL.newPipeline(new AnonymousCredential(), {
+      retryOptions: { maxTries: 1 }
+    })
+  );
+
+  let server: Server;
+
   before(async () => {
     server = new Server(config);
     await server.start();
@@ -31,8 +31,8 @@ describe("ServiceHandler", () => {
 
   after(async () => {
     await server.close();
-    unlinkSync(dbPath);
-    rmdirSync(persistencePath);
+    await rmRecursive(dbPath);
+    await rmRecursive(persistencePath);
   });
 
   it("GetServiceProperties", async () => {
@@ -114,5 +114,95 @@ describe("ServiceHandler", () => {
     assert.ok(typeof result.version);
     assert.ok(result.version!.length > 0);
     assert.deepEqual(result.hourMetrics, serviceProperties.hourMetrics);
+  });
+
+  it("ListContainers with default parameters", async () => {
+    const result = await serviceURL.listContainersSegment(Aborter.none);
+    assert.ok(typeof result.requestId);
+    assert.ok(result.requestId!.length > 0);
+    assert.ok(typeof result.version);
+    assert.ok(result.version!.length > 0);
+
+    assert.ok(result.serviceEndpoint.length > 0);
+    assert.ok(result.containerItems!.length >= 0);
+
+    if (result.containerItems!.length > 0) {
+      const container = result.containerItems![0];
+      assert.ok(container.name.length > 0);
+      assert.ok(container.properties.etag.length > 0);
+      assert.ok(container.properties.lastModified);
+    }
+  });
+
+  it("ListContainers with all parameters configured", async () => {
+    const containerNamePrefix = getUniqueName("container");
+    const containerName1 = `${containerNamePrefix}x1`;
+    const containerName2 = `${containerNamePrefix}x2`;
+    const containerURL1 = ContainerURL.fromServiceURL(
+      serviceURL,
+      containerName1
+    );
+    const containerURL2 = ContainerURL.fromServiceURL(
+      serviceURL,
+      containerName2
+    );
+    await containerURL1.create(Aborter.none, { metadata: { key: "val" } });
+    await containerURL2.create(Aborter.none, { metadata: { key: "val" } });
+
+    const result1 = await serviceURL.listContainersSegment(
+      Aborter.none,
+      undefined,
+      {
+        include: "metadata",
+        maxresults: 1,
+        prefix: containerNamePrefix
+      }
+    );
+
+    assert.ok(result1.nextMarker);
+    assert.equal(result1.containerItems!.length, 1);
+    assert.ok(result1.containerItems![0].name.startsWith(containerNamePrefix));
+    assert.ok(result1.containerItems![0].properties.etag.length > 0);
+    assert.ok(result1.containerItems![0].properties.lastModified);
+    assert.ok(!result1.containerItems![0].properties.leaseDuration);
+    assert.ok(!result1.containerItems![0].properties.publicAccess);
+    assert.deepEqual(
+      result1.containerItems![0].properties.leaseState,
+      "available"
+    );
+    assert.deepEqual(
+      result1.containerItems![0].properties.leaseStatus,
+      "unlocked"
+    );
+    assert.deepEqual(result1.containerItems![0].metadata!.key, "val");
+
+    const result2 = await serviceURL.listContainersSegment(
+      Aborter.none,
+      result1.nextMarker,
+      {
+        include: "metadata",
+        maxresults: 1,
+        prefix: containerNamePrefix
+      }
+    );
+
+    assert.equal(result2.containerItems!.length, 1);
+    assert.ok(result2.containerItems![0].name.startsWith(containerNamePrefix));
+    assert.ok(result2.containerItems![0].properties.etag.length > 0);
+    assert.ok(result2.containerItems![0].properties.lastModified);
+    assert.ok(!result2.containerItems![0].properties.leaseDuration);
+    assert.ok(!result2.containerItems![0].properties.publicAccess);
+    assert.deepEqual(
+      result2.containerItems![0].properties.leaseState,
+      "available"
+    );
+    assert.deepEqual(
+      result2.containerItems![0].properties.leaseStatus,
+      "unlocked"
+    );
+    assert.deepEqual(result2.containerItems![0].metadata!.key, "val");
+
+    await containerURL1.delete(Aborter.none);
+    await containerURL2.delete(Aborter.none);
   });
 });

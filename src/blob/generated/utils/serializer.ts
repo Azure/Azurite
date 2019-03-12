@@ -27,7 +27,20 @@ export async function deserialize(
       );
     }
     const queryKey = queryParameter.mapper.serializedName;
-    const queryValueOriginal = req.getQuery(queryKey);
+    let queryValueOriginal: string | string[] | undefined = req.getQuery(
+      queryKey
+    );
+
+    if (
+      queryValueOriginal !== undefined &&
+      queryParameter.collectionFormat !== undefined &&
+      queryParameter.mapper.type.name === "Sequence"
+    ) {
+      queryValueOriginal = `${queryValueOriginal}`.split(
+        queryParameter.collectionFormat
+      );
+    }
+
     const queryValue = spec.serializer.deserialize(
       queryParameter.mapper,
       queryValueOriginal,

@@ -27,6 +27,7 @@
     "@types/mocha": "^5.2.6",
     "@types/morgan": "^1.7.35",
     "@types/multistream": "^2.1.1",
+    "@types/rimraf": "^2.0.2",
     "@types/uri-templates": "^0.1.29",
     "@types/uuid": "^3.4.4",
     "@types/xml2js": "^0.4.3",
