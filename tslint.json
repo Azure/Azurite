@@ -6,7 +6,8 @@
     "trailing-comma": false,
     "arrow-parens": false,
     "variable-name": false,
-    "object-literal-sort-keys": false
+    "object-literal-sort-keys": false,
+    "array-type": false
   },
   "rulesDirectory": [],
   "linterOptions": {}
