@@ -33,7 +33,7 @@ export default class BlockBlobHandler extends BaseHandler
 
     // TODO: Implement a high efficiency current date factory, because object allocation
     // and system call to get time is expensive
-    const date = new Date();
+    const date = blobCtx.startTime!;
     const etag = newEtag();
     options.blobHTTPHeaders = options.blobHTTPHeaders || {};
     const blob: BlobModel = {
@@ -144,7 +144,7 @@ export default class BlockBlobHandler extends BaseHandler
 
     const response: Models.BlockBlobStageBlockResponse = {
       statusCode: 201,
-      contentMD5: new Uint8Array([0x00, 0x01, 0x02]), // TODO: Block content MD5
+      contentMD5: undefined, // TODO: Block content MD5
       requestId: blobCtx.contextID,
       version: API_VERSION,
       date,

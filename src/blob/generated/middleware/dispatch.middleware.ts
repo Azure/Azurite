@@ -39,7 +39,7 @@ export default function dispatchMiddleware(
   // We need to avoid this kind of situation when define swagger
   // However, following code will try to find most suitable operation by selecting operation which
   // have most required conditions met
-  let conditionsMet: number = 0;
+  let conditionsMet: number = -1;
 
   for (const key in Operation) {
     if (Operation.hasOwnProperty(key)) {

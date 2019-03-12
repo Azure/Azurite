@@ -6831,7 +6831,7 @@
       "name": "x-ms-version",
       "x-ms-client-name": "version",
       "in": "header",
-      "required": true,
+      "required": false,
       "type": "string",
       "description": "Specifies the version of the operation to use for this request."
     },

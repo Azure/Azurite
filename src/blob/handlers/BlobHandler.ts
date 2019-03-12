@@ -35,36 +35,62 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       context.request!.getHeader("range") ||
       context.request!.getHeader("x-ms-range") ||
       "bytes=0-";
-    const rangesArray = rangesString.substr(6).split("-")[0];
+    const partialRead = rangesString !== "bytes=0-";
+    const rangesArray = rangesString.substr(6).split("-");
     const rangeStart = parseInt(rangesArray[0], 10);
     const rangeEnd =
       rangesArray[1] && rangesArray[1].length > 0
         ? parseInt(rangesArray[1], 10)
         : Infinity;
+    const contentLength =
+      rangeEnd === Infinity
+        ? blob.properties.contentLength! - rangeStart
+        : rangeEnd - rangeStart + 1;
 
-    let body: NodeJS.ReadableStream | undefined;
+    let bodyGetter: () => Promise<NodeJS.ReadableStream | undefined>;
     if (
       blob.committedBlocksInOrder === undefined ||
       blob.committedBlocksInOrder.length === 0
     ) {
-      body = await this.dataStore.readPayload(
-        blob.persistencyID,
-        rangeStart,
-        rangeEnd + 1 - rangeStart
-      );
+      bodyGetter = async () => {
+        return this.dataStore.readPayload(
+          blob.persistencyID,
+          rangeStart,
+          rangeEnd + 1 - rangeStart
+        );
+      };
+      // body = await this.dataStore.readPayload(
+      //   blob.persistencyID,
+      //   rangeStart,
+      //   rangeEnd + 1 - rangeStart
+      // );
     } else {
       const blocks = blob.committedBlocksInOrder;
-      body = await this.dataStore.readPayloads(
-        blocks.map(block => block.persistencyID),
-        rangeStart,
-        rangeEnd + 1 - rangeStart
-      );
+      bodyGetter = async () => {
+        return this.dataStore.readPayloads(
+          blocks.map(block => block.persistencyID),
+          rangeStart,
+          rangeEnd + 1 - rangeStart
+        );
+      };
+      // body = await this.dataStore.readPayloads(
+      //   blocks.map(block => block.persistencyID),
+      //   rangeStart,
+      //   rangeEnd + 1 - rangeStart
+      // );
     }
 
-    // TODO:
-    blob.properties.contentMD5 = blob.properties.contentMD5
-      ? new Uint8Array(Buffer.from(blob.properties.contentMD5).buffer)
-      : undefined;
+    let body: NodeJS.ReadableStream | undefined = await bodyGetter();
+    let contentMD5: Uint8Array | undefined;
+    if (!partialRead) {
+      contentMD5 = blob.properties.contentMD5;
+    } else if (contentLength <= 4 * 1024 * 1024) {
+      if (body) {
+        // TODO： Get partial content MD5
+        contentMD5 = undefined; // await getMD5FromStream(body);
+        body = await bodyGetter();
+      }
+    }
 
     const response: Models.BlobDownloadResponse = {
       statusCode: 200,
@@ -72,9 +98,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       metadata: blob.metadata,
       eTag: blob.properties.etag,
       requestId: blobCtx.contextID,
-      date: new Date(),
+      date: blobCtx.startTime!,
       version: API_VERSION,
-      ...blob.properties
+      ...blob.properties,
+      contentLength,
+      contentMD5
     };
 
     return response;
@@ -97,11 +125,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     if (!blob) {
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
     }
-
-    // TODO:
-    blob.properties.contentMD5 = blob.properties.contentMD5
-      ? new Uint8Array(blob.properties.contentMD5)
-      : undefined;
 
     const response: Models.BlobGetPropertiesResponse = {
       statusCode: 200,

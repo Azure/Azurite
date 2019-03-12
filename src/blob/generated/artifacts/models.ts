@@ -563,6 +563,16 @@ export interface AppendPositionAccessConditions {
 }
 
 /**
+ * An interface representing AzuriteServerBlobOptions.
+ */
+export interface AzuriteServerBlobOptions {
+  /**
+   * Specifies the version of the operation to use for this request.
+   */
+  version?: string;
+}
+
+/**
  * Optional Parameters.
  */
 export interface ServiceSetPropertiesOptionalParams {

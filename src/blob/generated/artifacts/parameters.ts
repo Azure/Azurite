@@ -1054,7 +1054,6 @@ export const url: msRest.OperationURLParameter = {
 export const version: msRest.OperationParameter = {
   parameterPath: "version",
   mapper: {
-    required: true,
     serializedName: "x-ms-version",
     type: {
       name: "String"

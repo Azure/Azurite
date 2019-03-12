@@ -244,10 +244,6 @@ export default class ContainerHandler extends BaseHandler
       // This is a blob
       if (delimiterPosAfterPrefix < 0) {
         blob.deleted = blob.deleted !== true ? undefined : true;
-        // TODO: better way?
-        blob.properties.contentMD5 = blob.properties.contentMD5
-          ? new Uint8Array(Buffer.from(blob.properties.contentMD5).buffer)
-          : undefined;
         blobItems.push(blob);
       } else {
         // This is a prefix

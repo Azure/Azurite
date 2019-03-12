@@ -370,6 +370,11 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       return undefined;
     }
 
+    const blobModel = blobItem as BlobModel;
+    blobModel.properties.contentMD5 = this.restoreUint8Array(
+      blobModel.properties.contentMD5
+    );
+
     return blobItem;
   }
 
@@ -410,6 +415,13 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       .find(query)
       .limit(maxResults)
       .data();
+
+    for (const doc of docs) {
+      const blobDoc = doc as BlobModel;
+      blobDoc.properties.contentMD5 = this.restoreUint8Array(
+        blobDoc.properties.contentMD5
+      );
+    }
 
     if (docs.length < maxResults) {
       return [docs, undefined];
@@ -625,7 +637,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       } else {
         let payloadStart = 0;
         if (start > payloadOffset) {
-          payloadStart = payloadOffset - start;
+          payloadStart = start - payloadOffset;
         }
 
         let payloadEnd = Infinity;
@@ -699,5 +711,43 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    */
   private getPersistencyID(): string {
     return uuid();
+  }
+
+  /**
+   * LokiJS will persist Uint8Array into Object
+   * This method will restore object to Uint8Array
+   *
+   * @private
+   * @param {*} obj
+   * @returns {(Uint8Array | undefined)}
+   * @memberof LokiBlobDataStore
+   */
+  private restoreUint8Array(obj: any): Uint8Array | undefined {
+    if (typeof obj !== "object") {
+      return undefined;
+    }
+
+    if (obj instanceof Uint8Array) {
+      return obj;
+    }
+
+    if (obj.type === "Buffer") {
+      obj = obj.data;
+    }
+
+    const length = Object.keys(obj).length;
+    const arr = Buffer.allocUnsafe(length);
+
+    for (let i = 0; i < length; i++) {
+      if (!obj.hasOwnProperty(i)) {
+        throw new TypeError(
+          `Cannot restore loki DB persisted object to Uint8Array. Key ${i} is missing.`
+        );
+      }
+
+      arr[i] = obj[i];
+    }
+
+    return arr;
   }
 }
