@@ -8,8 +8,6 @@ import IBlobHandler from "../generated/handlers/IBlobHandler";
 import { API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
 
-// tslint:disable:object-literal-sort-keys
-
 export default class BlobHandler extends BaseHandler implements IBlobHandler {
   // TODO: Implement download cross blocks; Implement page blob download and append blob download;
   // TODO: Implement partial download
@@ -70,11 +68,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           rangeEnd + 1 - rangeStart
         );
       };
-      // body = await this.dataStore.readPayload(
-      //   blob.persistencyID,
-      //   rangeStart,
-      //   rangeEnd + 1 - rangeStart
-      // );
     } else {
       const blocks = blob.committedBlocksInOrder;
       bodyGetter = async () => {
@@ -84,11 +77,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           rangeEnd + 1 - rangeStart
         );
       };
-      // body = await this.dataStore.readPayloads(
-      //   blocks.map(block => block.persistencyID),
-      //   rangeStart,
-      //   rangeEnd + 1 - rangeStart
-      // );
     }
 
     let body: NodeJS.ReadableStream | undefined = await bodyGetter();
