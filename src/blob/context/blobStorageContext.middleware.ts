@@ -36,32 +36,23 @@ export default function blobStorageContextMiddleware(
     requestID
   );
 
-  // TODO: Optimize container/blob name extraction algorithm,
-  // because blob names may contain special characters
-  const paths = req.path.split("/").filter(value => value.length > 0);
+  const parts = extractStoragePartsFromPath(req.path);
+  const account = parts[0];
+  const container = parts[1];
+  const blob = parts[2];
 
-  const account = paths[0];
-  const container = paths[1];
-  const blob = paths.slice(2).join("/");
-
-  blobContext.account = account ? decodeURIComponent(account) : account;
-  blobContext.container = container ? decodeURIComponent(container) : container;
-  blobContext.blob = blob ? decodeURIComponent(blob) : blob;
+  blobContext.account = account;
+  blobContext.container = container;
+  blobContext.blob = blob;
 
   // Emulator's URL pattern is like http://hostname:port/account/container
   // Create a router to exclude account name from req.path, as url path in swagger doesn't include account
   // Exclude account name from req.path for dispatchMiddleware
-  blobContext.dispatchPath =
-    "/" +
-    [container, blob]
-      .filter(value => {
-        return value !== undefined && value.length > 0;
-      })
-      .map(value => {
-        // // Dispatch middleware cannot handle path parts including $ and /
-        return value.replace(/\$/g, "_").replace(/\//g, "_");
-      })
-      .join("/");
+  blobContext.dispatchPath = container
+    ? blob
+      ? `/container/blob`
+      : `/container`
+    : "/";
 
   if (!account) {
     const handlerError = StorageErrorFactory.getInvalidQueryParameterValue(
@@ -79,8 +70,38 @@ export default function blobStorageContextMiddleware(
   }
 
   logger.info(
-    `BlobStorageContextMiddleware: Account:=${account} Container=${container} Blob=${blob}`,
+    `BlobStorageContextMiddleware: Account=${account} Container=${container} Blob=${blob}`,
     requestID
   );
   next();
+}
+
+/**
+ * Extract storage account, container, and blob from URL path.
+ *
+ * @param {string} path
+ * @returns {([string | undefined, string | undefined, string | undefined])}
+ */
+function extractStoragePartsFromPath(
+  path: string
+): [string | undefined, string | undefined, string | undefined] {
+  let account;
+  let container;
+  let blob;
+
+  const decodedPath = decodeURIComponent(path);
+  const normalizedPath = decodedPath.startsWith("/")
+    ? decodedPath.substr(1)
+    : decodedPath; // Remove starting "/"
+
+  const parts = normalizedPath.split("/");
+
+  account = parts[0];
+  container = parts[1];
+  blob = parts
+    .slice(2)
+    .join("/")
+    .replace(/\\/g, "/"); // Azure Storage Server will replace "\" with "/" in the blob names
+
+  return [account, container, blob];
 }

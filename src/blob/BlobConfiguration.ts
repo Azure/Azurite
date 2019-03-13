@@ -27,15 +27,19 @@ export default class BlobConfiguration extends ConfigurationBase {
     host?: string,
     port?: number,
     dbPath?: string,
-    persistencePath?: string
+    persistencePath?: string,
+    enableAccessLog: boolean = true,
+    accessLogFilePath?: string,
+    enableDebugLog: boolean = false,
+    debugLogFilePath?: string
   ) {
     super(
       host || DEFAULT_SERVER_HOST_NAME,
       port || DEFAULT_SERVER_LISTENING_PORT,
-      true,
-      undefined,
-      true,
-      undefined
+      enableAccessLog,
+      accessLogFilePath,
+      enableDebugLog,
+      debugLogFilePath
     );
     this.dbPath = dbPath || DEFAULT_LOKI_DB_PATH;
     this.persistencePath = persistencePath || DEFAULT_BLOB_PERSISTENCE_PATH;

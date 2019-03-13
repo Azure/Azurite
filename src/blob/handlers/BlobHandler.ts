@@ -1,3 +1,4 @@
+import logger from "../../common/Logger";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -30,22 +31,32 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
     }
 
-    // TODO: Deserializer doesn't handle range header currently
+    // Deserializer doesn't handle range header currently
+    // We manually parse range headers here
     const rangesString =
-      context.request!.getHeader("range") ||
       context.request!.getHeader("x-ms-range") ||
+      context.request!.getHeader("range") ||
       "bytes=0-";
-    const partialRead = rangesString !== "bytes=0-";
     const rangesArray = rangesString.substr(6).split("-");
     const rangeStart = parseInt(rangesArray[0], 10);
-    const rangeEnd =
+    let rangeEnd = // Inclusive
       rangesArray[1] && rangesArray[1].length > 0
         ? parseInt(rangesArray[1], 10)
         : Infinity;
-    const contentLength =
-      rangeEnd === Infinity
-        ? blob.properties.contentLength! - rangeStart
-        : rangeEnd - rangeStart + 1;
+
+    // Will automatically shift request with longer data end than blob size to blob size
+    if (rangeEnd + 1 >= blob.properties.contentLength!) {
+      rangeEnd = blob.properties.contentLength! - 1;
+    }
+
+    const contentLength = rangeEnd - rangeStart + 1;
+    const partialRead = contentLength !== blob.properties.contentLength!;
+
+    logger.info(
+      // tslint:disable-next-line:max-line-length
+      `BlobHandler:download() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
+      blobCtx.contextID
+    );
 
     let bodyGetter: () => Promise<NodeJS.ReadableStream | undefined>;
     if (

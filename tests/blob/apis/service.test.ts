@@ -5,13 +5,19 @@ import BlobConfiguration from "../../../src/blob/BlobConfiguration";
 import Server from "../../../src/blob/BlobServer";
 import { getUniqueName, rmRecursive } from "../../testutils";
 
-describe("ServiceHandler", () => {
+describe("ServiceAPIs", () => {
   // TODO: Create a server factory as tests utils
   const host = "127.0.0.1";
   const port = 11000;
   const dbPath = "__testsstorage__";
   const persistencePath = "__testspersistence__";
-  const config = new BlobConfiguration(host, port, dbPath, persistencePath);
+  const config = new BlobConfiguration(
+    host,
+    port,
+    dbPath,
+    persistencePath,
+    false
+  );
 
   // TODO: Create serviceURL factory as tests utils
   const baseURL = `http://${host}:${port}/devstoreaccount1`;

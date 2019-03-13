@@ -28,8 +28,9 @@ export class Logger {
 
 // A singleton logger instance
 // Could customized logger strategy by assigning a new logger.strategy
-// Default WinstonLoggerStrategy will display all levels logs to console STD
-const logger = new Logger(new WinstonLoggerStrategy());
+// Default NoLoggerStrategy will be used
+// Config Logger with WinstonLoggerStrategy will display all levels logs to console STD
+const logger = new Logger(new NoLoggerStrategy());
 
 /**
  * Config global singleton logger instance.
@@ -40,9 +41,7 @@ const logger = new Logger(new WinstonLoggerStrategy());
  */
 export function configLogger(enable: boolean, logFile?: string) {
   if (enable) {
-    if (logFile !== undefined) {
-      logger.strategy = new WinstonLoggerStrategy(LogLevels.Debug, logFile);
-    }
+    logger.strategy = new WinstonLoggerStrategy(LogLevels.Debug, logFile);
   } else {
     logger.strategy = new NoLoggerStrategy();
   }

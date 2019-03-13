@@ -303,7 +303,10 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     const query =
       prefix === ""
         ? { $loki: { $gt: marker } }
-        : { name: { $regex: `^${prefix}` }, $loki: { $gt: marker } };
+        : {
+            name: { $regex: `^${this.escapeRegex(prefix)}` },
+            $loki: { $gt: marker }
+          };
 
     const docs = coll
       .chain()
@@ -391,7 +394,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    */
   public async listBlobs<T extends BlobModel>(
     container: string,
-    prefix?: string | undefined,
+    prefix: string | undefined = "",
     maxResults: number | undefined = 5000,
     marker?: number | undefined
   ): Promise<[T[], number | undefined]> {
@@ -408,7 +411,12 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     const query =
       prefix === ""
         ? { $loki: { $gt: marker } }
-        : { name: { $regex: `^${prefix}` }, $loki: { $gt: marker } };
+        : {
+            name: {
+              $regex: `^${this.escapeRegex(prefix)}`
+            },
+            $loki: { $gt: marker }
+          };
 
     const docs = coll
       .chain()
@@ -749,5 +757,17 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     }
 
     return arr;
+  }
+
+  /**
+   * Escape a string to be used as a regex.
+   *
+   * @private
+   * @param {string} regex
+   * @returns {string}
+   * @memberof LokiBlobDataStore
+   */
+  private escapeRegex(regex: string): string {
+    return regex.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
   }
 }

@@ -293,6 +293,7 @@ export async function serialize(
   }
 
   // Serialize stream body
+  // TODO: Move to end middleware for end tracking
   if (
     handlerResponse.body &&
     responseSpec.bodyMapper &&
