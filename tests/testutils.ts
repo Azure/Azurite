@@ -2,6 +2,7 @@ import { randomBytes } from "crypto";
 import { createWriteStream } from "fs";
 import { join } from "path";
 import rimraf from "rimraf";
+import { URL } from "url";
 
 export function getUniqueName(prefix: string): string {
   return `${prefix}${new Date().getTime()}${padStart(
