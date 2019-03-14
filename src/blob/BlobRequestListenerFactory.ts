@@ -2,7 +2,7 @@ import express from "express";
 import morgan = require("morgan");
 
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
-import debugLogger from "../common/Logger";
+import logger from "../common/Logger";
 import { RequestListener } from "../common/ServerBase";
 import blobStorageContextMiddleware from "./context/blobStorageContext.middleware";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
@@ -39,18 +39,18 @@ export default class BlobRequestListenerFactory
 
     // MiddlewareFactory is a factory to create auto-generated middleware
     const middlewareFactory: MiddlewareFactory = new ExpressMiddlewareFactory(
-      debugLogger,
+      logger,
       DEFAULT_CONTEXT_PATH
     );
 
     // Create handlers into handler middleware factory
     const handlers: IHandlers = {
-      appendBlobHandler: new AppendBlobHandler(this.dataStore, debugLogger),
-      blobHandler: new BlobHandler(this.dataStore, debugLogger),
-      blockBlobHandler: new BlockBlobHandler(this.dataStore, debugLogger),
-      containerHandler: new ContainerHandler(this.dataStore, debugLogger),
-      pageBlobHandler: new PageBlobHandler(this.dataStore, debugLogger),
-      serviceHandler: new ServiceHandler(this.dataStore, debugLogger)
+      appendBlobHandler: new AppendBlobHandler(this.dataStore, logger),
+      blobHandler: new BlobHandler(this.dataStore, logger),
+      blockBlobHandler: new BlockBlobHandler(this.dataStore, logger),
+      containerHandler: new ContainerHandler(this.dataStore, logger),
+      pageBlobHandler: new PageBlobHandler(this.dataStore, logger),
+      serviceHandler: new ServiceHandler(this.dataStore, logger)
     };
 
     /*
@@ -67,13 +67,7 @@ export default class BlobRequestListenerFactory
     app.use(blobStorageContextMiddleware);
 
     // Dispatch incoming HTTP request to specific operation
-    // Emulator's URL pattern is like http://hostname:port/account/container
-    // Create a router to exclude account name from req.path, as url path in swagger doesn't include account
-    // Exclude account name from req.path for dispatchMiddleware
-    app.use(
-      "/:account",
-      express.Router().use(middlewareFactory.createDispatchMiddleware())
-    );
+    app.use(middlewareFactory.createDispatchMiddleware());
 
     // TODO: AuthN middleware, like shared key auth or SAS auth
 

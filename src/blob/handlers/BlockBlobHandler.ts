@@ -4,12 +4,11 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IBlockBlobHandler from "../generated/handlers/IBlockBlobHandler";
-import { BlobModel } from "../persistence/IBlobDataStore";
+import { parseXML } from "../generated/utils/xml";
+import { BlobModel, BlockModel } from "../persistence/IBlobDataStore";
 import { API_VERSION } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
-
-// tslint:disable:object-literal-sort-keys
 
 export default class BlockBlobHandler extends BaseHandler
   implements IBlockBlobHandler {
@@ -17,7 +16,7 @@ export default class BlockBlobHandler extends BaseHandler
     body: NodeJS.ReadableStream,
     contentLength: number,
     options: Models.BlockBlobUploadOptionalParams,
-    context: Context,
+    context: Context
   ): Promise<Models.BlockBlobUploadResponse> {
     const blobCtx = new BlobStorageContext(context);
     const containerName = blobCtx.container!;
@@ -28,9 +27,13 @@ export default class BlockBlobHandler extends BaseHandler
       throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
     }
 
-    await this.dataStore.writeBlobPayload(containerName, blobName, body);
+    const persistencyID = await this.dataStore.writePayload(body);
 
-    const date = new Date();
+    const existingBlob = await this.dataStore.getBlob(containerName, blobName);
+
+    // TODO: Implement a high efficiency current date factory, because object allocation
+    // and system call to get time is expensive
+    const date = blobCtx.startTime!;
     const etag = newEtag();
     options.blobHTTPHeaders = options.blobHTTPHeaders || {};
     const blob: BlobModel = {
@@ -48,13 +51,20 @@ export default class BlockBlobHandler extends BaseHandler
         contentMD5: options.blobHTTPHeaders.blobContentMD5,
         contentDisposition: options.blobHTTPHeaders.blobContentDisposition,
         cacheControl: options.blobHTTPHeaders.blobCacheControl,
-        blobType: Models.BlobType.BlockBlob,
+        blobType: Models.BlobType.BlockBlob
       },
       snapshot: "",
       isCommitted: true,
+      persistencyID
     };
 
+    // TODO: Need a lock for multi keys
     await this.dataStore.updateBlob(containerName, blob);
+
+    // TODO: Make clean up async
+    if (existingBlob && existingBlob.persistencyID) {
+      await this.dataStore.deletePayloads([existingBlob.persistencyID]);
+    }
 
     const response: Models.BlockBlobUploadResponse = {
       statusCode: 201,
@@ -63,7 +73,7 @@ export default class BlockBlobHandler extends BaseHandler
       contentMD5: blob.properties.contentMD5,
       requestId: blobCtx.contextID,
       version: API_VERSION,
-      date,
+      date
     };
 
     return response;
@@ -74,9 +84,74 @@ export default class BlockBlobHandler extends BaseHandler
     contentLength: number,
     body: NodeJS.ReadableStream,
     options: Models.BlockBlobStageBlockOptionalParams,
-    context: Context,
+    context: Context
   ): Promise<Models.BlockBlobStageBlockResponse> {
-    throw new NotImplementedError(context.contextID);
+    const blobCtx = new BlobStorageContext(context);
+    const containerName = blobCtx.container!;
+    const blobName = blobCtx.blob!;
+    const date = blobCtx.startTime!;
+
+    const container = await this.dataStore.getContainer(containerName);
+    if (!container) {
+      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+    }
+
+    const existingBlock = await this.dataStore.getBlock(
+      containerName,
+      blobName,
+      blockId,
+      false
+    );
+
+    const persistencyID = await this.dataStore.writePayload(body);
+    const block: BlockModel = {
+      containerName,
+      blobName,
+      isCommitted: false,
+      name: blockId,
+      size: contentLength,
+      persistencyID
+    };
+
+    await this.dataStore.updateBlock(block);
+
+    // Create an uncommitted block blob if doesn't exist
+    // TODO: Lock
+    let blob = await this.dataStore.getBlob(containerName, blobName);
+    if (!blob) {
+      const etag = newEtag();
+      blob = {
+        deleted: false,
+        name: blobName,
+        properties: {
+          creationTime: date,
+          lastModified: date,
+          etag,
+          contentLength,
+          blobType: Models.BlobType.BlockBlob
+        },
+        snapshot: "",
+        isCommitted: false
+      };
+      await this.dataStore.updateBlob(containerName, blob!);
+    }
+    // TODO: Unlock
+
+    // TODO: Make clean up async
+    if (existingBlock && existingBlock.persistencyID) {
+      await this.dataStore.deletePayloads([existingBlock.persistencyID]);
+    }
+
+    const response: Models.BlockBlobStageBlockResponse = {
+      statusCode: 201,
+      contentMD5: undefined, // TODO: Block content MD5
+      requestId: blobCtx.contextID,
+      version: API_VERSION,
+      date,
+      isServerEncrypted: true
+    };
+
+    return response;
   }
 
   public async stageBlockFromURL(
@@ -84,7 +159,7 @@ export default class BlockBlobHandler extends BaseHandler
     contentLength: number,
     sourceUrl: string,
     options: Models.BlockBlobStageBlockFromURLOptionalParams,
-    context: Context,
+    context: Context
   ): Promise<Models.BlockBlobStageBlockFromURLResponse> {
     throw new NotImplementedError(context.contextID);
   }
@@ -92,16 +167,193 @@ export default class BlockBlobHandler extends BaseHandler
   public async commitBlockList(
     blocks: Models.BlockLookupList,
     options: Models.BlockBlobCommitBlockListOptionalParams,
-    context: Context,
+    context: Context
   ): Promise<Models.BlockBlobCommitBlockListResponse> {
-    throw new NotImplementedError(context.contextID);
+    const blobCtx = new BlobStorageContext(context);
+    const containerName = blobCtx.container!;
+    const blobName = blobCtx.blob!;
+    const request = blobCtx.request!;
+
+    const container = await this.dataStore.getContainer(containerName);
+    if (!container) {
+      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+    }
+
+    // TODO: Lock for container and blob
+    const blob = await this.dataStore.getBlob(containerName, blobName);
+    if (!blob) {
+      // At least there should be a uncommitted blob
+      // If not, there are some error happens
+      // TODO: Which error should be thrown ere?
+      // TODO: Unlock
+      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
+    }
+
+    // Get all blocks in persistency layer
+    const pUncommittedBlocks = await this.dataStore.listBlocks(
+      containerName,
+      blobName,
+      false
+    );
+    const pCommittedBlocksMap: Map<string, BlockModel> = new Map(); // persistencyCommittedBlocksMap
+    for (const pBlock of blob.committedBlocksInOrder || []) {
+      pCommittedBlocksMap.set(pBlock.name, {
+        ...pBlock,
+        containerName,
+        blobName,
+        isCommitted: true
+      });
+    }
+
+    const pUncommittedBlocksMap: Map<string, BlockModel> = new Map(); // persistencyUncommittedBlocksMap
+    for (const pBlock of pUncommittedBlocks) {
+      if (!pBlock.isCommitted) {
+        pUncommittedBlocksMap.set(pBlock.name, pBlock);
+      }
+    }
+
+    // Here we leveraged generated code utils to parser xml
+    // Re-parsing request body to get destination blocks
+    // We don't leverage serialized blocks parameter because it doesn't include sequence
+    const rawBody = request.getBody();
+    const badRequestError = StorageErrorFactory.getBadRequest(
+      blobCtx.contextID!
+    );
+    if (rawBody === undefined) {
+      throw badRequestError;
+    }
+    const parsed = await parseXML(rawBody, true);
+
+    // Validate selected block list
+    const selectedBlockList: BlockModel[] = [];
+
+    // $$ is the built-in field of xml2js parsing results when enabling explicitChildrenWithOrder
+    // TODO: Should make these fields explicit for parseXML method
+    // TODO: What happens when committedBlocks and uncommittedBlocks contains same block ID?
+    if (parsed !== undefined && parsed.$$ instanceof Array) {
+      for (const block of parsed.$$) {
+        const blockID: string | undefined = block._;
+        const blockCommitType: string | undefined = block["#name"];
+
+        if (blockID === undefined || blockCommitType === undefined) {
+          throw badRequestError;
+        }
+
+        switch (blockCommitType.toLowerCase()) {
+          case "uncommitted":
+            const pUncommittedBlock = pUncommittedBlocksMap.get(blockID);
+            if (pUncommittedBlock === undefined) {
+              throw badRequestError;
+            } else {
+              pUncommittedBlock.isCommitted = true;
+              selectedBlockList.push(pUncommittedBlock);
+            }
+            break;
+          case "committed":
+            const pCommittedBlock = pCommittedBlocksMap.get(blockID);
+            if (pCommittedBlock === undefined) {
+              throw badRequestError;
+            } else {
+              selectedBlockList.push(pCommittedBlock);
+            }
+            break;
+          case "latest":
+            const pLatestBlock =
+              pUncommittedBlocksMap.get(blockID) ||
+              pCommittedBlocksMap.get(blockID);
+            if (pLatestBlock === undefined) {
+              throw badRequestError;
+            } else {
+              pLatestBlock.isCommitted = true;
+              selectedBlockList.push(pLatestBlock);
+            }
+            break;
+          default:
+            throw badRequestError;
+        }
+      }
+    }
+
+    // Commit block list
+    blob.committedBlocksInOrder = selectedBlockList;
+
+    blob.metadata = options.metadata;
+    options.blobHTTPHeaders = options.blobHTTPHeaders || {};
+    blob.properties.cacheControl = options.blobHTTPHeaders.blobCacheControl;
+    blob.properties.contentType = options.blobHTTPHeaders.blobContentType;
+    blob.properties.contentMD5 = options.blobHTTPHeaders.blobContentMD5;
+    blob.properties.contentEncoding =
+      options.blobHTTPHeaders.blobContentEncoding;
+    blob.properties.contentLanguage =
+      options.blobHTTPHeaders.blobContentLanguage;
+    blob.properties.contentDisposition =
+      options.blobHTTPHeaders.blobContentDisposition;
+    blob.properties.contentLength = selectedBlockList
+      .map(block => block.size)
+      .reduce((total, val) => {
+        return total + val;
+      });
+
+    await this.dataStore.updateBlob(containerName, blob);
+
+    // TODO: recover deleted blocks when inserts failed
+    await this.dataStore.deleteBlocks(containerName, blobName);
+
+    // TODO: Unlock
+
+    const response: Models.BlockBlobCommitBlockListResponse = {
+      statusCode: 201,
+      eTag: newEtag(),
+      lastModified: blobCtx.startTime,
+      contentMD5: blob.properties.contentMD5,
+      requestId: blobCtx.contextID,
+      version: API_VERSION,
+      date: blobCtx.startTime,
+      isServerEncrypted: true
+    };
+    return response;
   }
 
   public async getBlockList(
-    listType: Models.BlockListType,
     options: Models.BlockBlobGetBlockListOptionalParams,
-    context: Context,
+    context: Context
   ): Promise<Models.BlockBlobGetBlockListResponse> {
-    throw new NotImplementedError(context.contextID);
+    const blobCtx = new BlobStorageContext(context);
+    const containerName = blobCtx.container!;
+    const blobName = blobCtx.blob!;
+    const date = blobCtx.startTime!;
+
+    const container = await this.dataStore.getContainer(containerName);
+    if (!container) {
+      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+    }
+
+    const blob = await this.dataStore.getBlob(containerName, blobName);
+    if (!blob) {
+      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
+    }
+
+    const blockList = await this.dataStore.listBlocks(
+      containerName,
+      blobName,
+      false
+    );
+    const response: Models.BlockBlobGetBlockListResponse = {
+      statusCode: 200,
+      lastModified: blob.properties.lastModified,
+      eTag: blob.properties.etag,
+      contentType: blob.properties.contentType,
+      blobContentLength: blob.properties.contentLength,
+      requestId: blobCtx.contextID,
+      version: API_VERSION,
+      date,
+      committedBlocks: [],
+      uncommittedBlocks: []
+    };
+
+    response.uncommittedBlocks = blockList;
+    response.committedBlocks = blob.committedBlocksInOrder;
+
+    return response;
   }
 }

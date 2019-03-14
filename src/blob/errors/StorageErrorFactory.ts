@@ -33,4 +33,17 @@ export default class StorageErrorFactory {
       contextID
     );
   }
+
+  public static getInvalidQueryParameterValue(contextID: string): StorageError {
+    return new StorageError(
+      400,
+      "InvalidQueryParameterValue",
+      `Value for one of the query parameters specified in the request URI is invalid`,
+      contextID
+    );
+  }
+
+  public static getBadRequest(contextID: string): StorageError {
+    return new StorageError(400, "BadRequest", "", contextID);
+  }
 }

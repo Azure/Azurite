@@ -389,7 +389,6 @@ operationHandlerMapping[Operation.BlockBlob_CommitBlockList] = {
 };
 operationHandlerMapping[Operation.BlockBlob_GetBlockList] = {
   arguments: [
-    "listType",
     "options"
   ],
   handler: "blockBlobHandler",

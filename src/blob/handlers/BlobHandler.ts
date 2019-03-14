@@ -1,3 +1,4 @@
+import logger from "../../common/Logger";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -6,8 +7,6 @@ import Context from "../generated/Context";
 import IBlobHandler from "../generated/handlers/IBlobHandler";
 import { API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
-
-// tslint:disable:object-literal-sort-keys
 
 export default class BlobHandler extends BaseHandler implements IBlobHandler {
   // TODO: Implement download cross blocks; Implement page blob download and append blob download;
@@ -30,16 +29,79 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
     }
 
-    const body = await this.dataStore.readBlobPayload(containerName, blobName);
+    // Deserializer doesn't handle range header currently
+    // We manually parse range headers here
+    const rangesString =
+      context.request!.getHeader("x-ms-range") ||
+      context.request!.getHeader("range") ||
+      "bytes=0-";
+    const rangesArray = rangesString.substr(6).split("-");
+    const rangeStart = parseInt(rangesArray[0], 10);
+    let rangeEnd = // Inclusive
+      rangesArray[1] && rangesArray[1].length > 0
+        ? parseInt(rangesArray[1], 10)
+        : Infinity;
+
+    // Will automatically shift request with longer data end than blob size to blob size
+    if (rangeEnd + 1 >= blob.properties.contentLength!) {
+      rangeEnd = blob.properties.contentLength! - 1;
+    }
+
+    const contentLength = rangeEnd - rangeStart + 1;
+    const partialRead = contentLength !== blob.properties.contentLength!;
+
+    logger.info(
+      // tslint:disable-next-line:max-line-length
+      `BlobHandler:download() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
+      blobCtx.contextID
+    );
+
+    let bodyGetter: () => Promise<NodeJS.ReadableStream | undefined>;
+    if (
+      blob.committedBlocksInOrder === undefined ||
+      blob.committedBlocksInOrder.length === 0
+    ) {
+      bodyGetter = async () => {
+        return this.dataStore.readPayload(
+          blob.persistencyID,
+          rangeStart,
+          rangeEnd + 1 - rangeStart
+        );
+      };
+    } else {
+      const blocks = blob.committedBlocksInOrder;
+      bodyGetter = async () => {
+        return this.dataStore.readPayloads(
+          blocks.map(block => block.persistencyID),
+          rangeStart,
+          rangeEnd + 1 - rangeStart
+        );
+      };
+    }
+
+    let body: NodeJS.ReadableStream | undefined = await bodyGetter();
+    let contentMD5: Uint8Array | undefined;
+    if (!partialRead) {
+      contentMD5 = blob.properties.contentMD5;
+    } else if (contentLength <= 4 * 1024 * 1024) {
+      if (body) {
+        // TODO： Get partial content MD5
+        contentMD5 = undefined; // await getMD5FromStream(body);
+        body = await bodyGetter();
+      }
+    }
+
     const response: Models.BlobDownloadResponse = {
       statusCode: 200,
       body,
       metadata: blob.metadata,
-      ...blob.properties,
       eTag: blob.properties.etag,
       requestId: blobCtx.contextID,
-      date: new Date(),
+      date: blobCtx.startTime!,
       version: API_VERSION,
+      ...blob.properties,
+      contentLength,
+      contentMD5
     };
 
     return response;
@@ -49,7 +111,35 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobGetPropertiesOptionalParams,
     context: Context
   ): Promise<Models.BlobGetPropertiesResponse> {
-    throw new NotImplementedError(context.contextID);
+    const blobCtx = new BlobStorageContext(context);
+    const containerName = blobCtx.container!;
+    const blobName = blobCtx.blob!;
+
+    const container = await this.dataStore.getContainer(containerName);
+    if (!container) {
+      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+    }
+
+    const blob = await this.dataStore.getBlob(containerName, blobName);
+    if (!blob) {
+      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
+    }
+
+    const response: Models.BlobGetPropertiesResponse = {
+      statusCode: 200,
+      metadata: blob.metadata,
+      isIncrementalCopy: blob.properties.incrementalCopy,
+      eTag: blob.properties.etag,
+      requestId: blobCtx.contextID,
+      version: API_VERSION,
+      date: blobCtx.startTime,
+      acceptRanges: undefined, // TODO:
+      blobCommittedBlockCount: undefined, // TODO:
+      isServerEncrypted: true,
+      ...blob.properties
+    };
+
+    return response;
   }
 
   public async delete(
@@ -76,7 +166,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       statusCode: 202,
       requestId: blobCtx.contextID,
       date: new Date(),
-      version: API_VERSION,
+      version: API_VERSION
     };
 
     return response;

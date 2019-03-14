@@ -1,17 +1,18 @@
-import { configDebugLogger } from "../common/Logger";
+import * as Logger from "../common/Logger";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobServer from "./BlobServer";
 
 /**
- * Entry for the blob service.
- *
+ * Entry for Azurite blob service.
  */
 async function main() {
   const config = new BlobConfiguration();
 
-  // Config debug logger singleton instance
-  // TODO: better design for debugger log?
-  configDebugLogger(config.enableDebugLog, config.debugLogFilePath);
+  // We use logger singleton as global debugger logger to track detailed outputs cross layers
+  // Note that, debug log is different from access log which is only available in request handler layer to
+  // track every request. Access log is not singleton, and initialized in specific RequestHandlerFactory implementations
+  // Enable debug log by default before first release for debugging purpose
+  Logger.configLogger(config.enableDebugLog || true, config.debugLogFilePath);
 
   const server = new BlobServer(config);
   await server.start();

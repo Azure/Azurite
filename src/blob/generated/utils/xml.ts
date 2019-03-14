@@ -5,18 +5,23 @@ export function stringifyXML(obj: any, opts?: { rootName?: string }) {
     explicitArray: false,
     explicitCharkey: false,
     renderOpts: {
-      pretty: false,
+      pretty: false
     },
-    rootName: (opts || {}).rootName,
+    rootName: (opts || {}).rootName
   });
   return builder.buildObject(obj);
 }
 
-export function parseXML(str: string): Promise<any> {
+export function parseXML(
+  str: string,
+  explicitChildrenWithOrder: boolean = false
+): Promise<any> {
   const xmlParser = new xml2js.Parser({
     explicitArray: false,
     explicitCharkey: false,
     explicitRoot: false,
+    preserveChildrenOrder: explicitChildrenWithOrder,
+    explicitChildren: explicitChildrenWithOrder
   });
   return new Promise((resolve, reject) => {
     xmlParser.parseString(str, (err?: Error, res?: any) => {

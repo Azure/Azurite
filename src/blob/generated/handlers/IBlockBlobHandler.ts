@@ -17,5 +17,5 @@ export default interface IBlockBlobHandler {
   stageBlock(blockId: string, contentLength: number, body: NodeJS.ReadableStream, options: Models.BlockBlobStageBlockOptionalParams, context: Context): Promise<Models.BlockBlobStageBlockResponse>;
   stageBlockFromURL(blockId: string, contentLength: number, sourceUrl: string, options: Models.BlockBlobStageBlockFromURLOptionalParams, context: Context): Promise<Models.BlockBlobStageBlockFromURLResponse>;
   commitBlockList(blocks: Models.BlockLookupList, options: Models.BlockBlobCommitBlockListOptionalParams, context: Context): Promise<Models.BlockBlobCommitBlockListResponse>;
-  getBlockList(listType: Models.BlockListType, options: Models.BlockBlobGetBlockListOptionalParams, context: Context): Promise<Models.BlockBlobGetBlockListResponse>;
+  getBlockList(options: Models.BlockBlobGetBlockListOptionalParams, context: Context): Promise<Models.BlockBlobGetBlockListResponse>;
 }

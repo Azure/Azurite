@@ -14,6 +14,8 @@ import { isURITemplateMatch } from "../utils/utils";
  * by going through request specifications. Operation enum will be assigned to context object.
  * Make sure dispatchMiddleware is triggered before other generated middleware.
  *
+ * TODO: Add support for API priorities to deal with both matched APIs
+ *
  * @export
  * @param {Context} context Context object
  * @param {IRequest} req An request object
@@ -37,12 +39,16 @@ export default function dispatchMiddleware(
   // We need to avoid this kind of situation when define swagger
   // However, following code will try to find most suitable operation by selecting operation which
   // have most required conditions met
-  let conditionsMet: number = 0;
+  let conditionsMet: number = -1;
 
   for (const key in Operation) {
     if (Operation.hasOwnProperty(key)) {
       const operation = parseInt(key, 10);
-      const res = isRequestAgainstOperation(req, Specifications[operation]);
+      const res = isRequestAgainstOperation(
+        req,
+        Specifications[operation],
+        context.dispatchPath
+      );
       if (res[0] && res[1] > conditionsMet) {
         context.operation = operation;
         conditionsMet = res[1];
@@ -76,7 +82,8 @@ export default function dispatchMiddleware(
  */
 function isRequestAgainstOperation(
   req: IRequest,
-  spec: msRest.OperationSpec
+  spec: msRest.OperationSpec,
+  dispatchPath?: string
 ): [boolean, number] {
   let metConditionsNum = 0;
   if (req === undefined || spec === undefined) {
@@ -94,7 +101,13 @@ function isRequestAgainstOperation(
       ? spec.path
       : `/${spec.path}`
     : "/";
-  if (!isURITemplateMatch(req.getPath(), path)) {
+  if (
+    !isURITemplateMatch(
+      // Use dispatch path with priority
+      dispatchPath !== undefined ? dispatchPath : req.getPath(),
+      path
+    )
+  ) {
     return [false, metConditionsNum++];
   }
 
@@ -110,7 +123,7 @@ function isRequestAgainstOperation(
 
       if (
         queryParameter.mapper.type.name === "Enum" &&
-        queryParameter.mapper.type.allowedValues.findIndex((val) => {
+        queryParameter.mapper.type.allowedValues.findIndex(val => {
           return val === queryValue;
         }) < 0
       ) {
@@ -140,7 +153,7 @@ function isRequestAgainstOperation(
 
       if (
         headerParameter.mapper.type.name === "Enum" &&
-        headerParameter.mapper.type.allowedValues.findIndex((val) => {
+        headerParameter.mapper.type.allowedValues.findIndex(val => {
           return val === headerValue;
         }) < 0
       ) {

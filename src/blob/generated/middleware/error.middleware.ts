@@ -27,7 +27,7 @@ export default function errorMiddleware(
   err: MiddlewareError | Error,
   res: IResponse,
   next: NextFunction,
-  logger: ILogger,
+  logger: ILogger
 ): void {
   if (res.headersSent()) {
     logger.warn(
@@ -50,9 +50,11 @@ export default function errorMiddleware(
         err.message
       }  ErrorHTTPStatusCode=${err.statusCode} ErrorHTTPStatusMessage=${
         err.statusMessage
-      } ErrorHTTPHeaders=${JSON.stringify(err.headers)} ErrorHTTPBody=${
-        JSON.stringify(err.body)
-      } ErrorStack=${JSON.stringify(err.stack)}`,
+      } ErrorHTTPHeaders=${JSON.stringify(
+        err.headers
+      )} ErrorHTTPBody=${JSON.stringify(err.body)} ErrorStack=${JSON.stringify(
+        err.stack
+      )}`,
       context.contextID
     );
 
@@ -108,7 +110,8 @@ export default function errorMiddleware(
     logger.error(
       `ErrorMiddleware: ErrorName=${err.name} ErrorMessage=${
         err.message
-      } ErrorStack=${JSON.stringify(err.stack)}`
+      } ErrorStack=${JSON.stringify(err.stack)}`,
+      context.contextID
     );
     logger.error(`ErrorMiddleware: Set HTTP code: ${500}`, context.contextID);
     res.setStatusCode(500);

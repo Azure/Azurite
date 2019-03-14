@@ -5925,7 +5925,6 @@
       "type": "object",
       "required": [
         "Name",
-        "Deleted",
         "Snapshot",
         "Properties"
       ],
@@ -6180,7 +6179,7 @@
         "BlobItems": {
           "type": "array",
           "items": {
-          "$ref": "#/definitions/BlobItem"
+            "$ref": "#/definitions/BlobItem"
           }
         }
       }
@@ -6832,7 +6831,7 @@
       "name": "x-ms-version",
       "x-ms-client-name": "version",
       "in": "header",
-      "required": true,
+      "required": false,
       "type": "string",
       "description": "Specifies the version of the operation to use for this request."
     },
@@ -7032,7 +7031,7 @@
       "name": "blocklisttype",
       "x-ms-client-name": "listType",
       "in": "query",
-      "required": true,
+      "required": false,
       "default": "committed",
       "x-ms-parameter-location": "method",
       "description": "Specifies whether to return the list of committed blocks, the list of uncommitted blocks, or both lists together.",
@@ -7269,21 +7268,21 @@
       "x-ms-parameter-location": "method",
       "description": "Include this parameter to specify one or more datasets to include in the response."
     },
-    "ListContainersInclude": { 
-      "name": "include", 
-      "in": "query", 
-      "required": false, 
-      "type": "string", 
-      "enum": [ 
-        "metadata" 
-      ], 
-      "x-ms-enum": { 
-        "name": "ListContainersIncludeType", 
-        "modelAsString": false 
-      }, 
-      "x-ms-parameter-location": "method", 
-      "description": "Include this parameter to specify that the container's metadata be returned as part of the response body." 
-    }, 
+    "ListContainersInclude": {
+      "name": "include",
+      "in": "query",
+      "required": false,
+      "type": "string",
+      "enum": [
+        "metadata"
+      ],
+      "x-ms-enum": {
+        "name": "ListContainersIncludeType",
+        "modelAsString": false
+      },
+      "x-ms-parameter-location": "method",
+      "description": "Include this parameter to specify that the container's metadata be returned as part of the response body."
+    },
     "LeaseBreakPeriod": {
       "name": "x-ms-lease-break-period",
       "x-ms-client-name": "breakPeriod",

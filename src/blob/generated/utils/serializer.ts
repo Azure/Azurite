@@ -27,7 +27,20 @@ export async function deserialize(
       );
     }
     const queryKey = queryParameter.mapper.serializedName;
-    const queryValueOriginal = req.getQuery(queryKey);
+    let queryValueOriginal: string | string[] | undefined = req.getQuery(
+      queryKey
+    );
+
+    if (
+      queryValueOriginal !== undefined &&
+      queryParameter.collectionFormat !== undefined &&
+      queryParameter.mapper.type.name === "Sequence"
+    ) {
+      queryValueOriginal = `${queryValueOriginal}`.split(
+        queryParameter.collectionFormat
+      );
+    }
+
     const queryValue = spec.serializer.deserialize(
       queryParameter.mapper,
       queryValueOriginal,
@@ -106,15 +119,15 @@ export async function deserialize(
     const contentType = req.getHeader("content-type") || "";
     const contentComponents = !contentType
       ? []
-      : contentType.split(";").map((component) => component.toLowerCase());
+      : contentType.split(";").map(component => component.toLowerCase());
 
     const isRequestWithJSON = contentComponents.some(
-      (component) => jsonContentTypes.indexOf(component) !== -1
+      component => jsonContentTypes.indexOf(component) !== -1
     ); // TODO
     const isRequestWithXML =
       spec.isXML ||
       contentComponents.some(
-        (component) => xmlContentTypes.indexOf(component) !== -1
+        component => xmlContentTypes.indexOf(component) !== -1
       );
     // const isRequestWithStream = false;
 
@@ -160,7 +173,7 @@ async function readRequestIntoText(req: IRequest): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const segments: string[] = [];
     const bodyStream = req.getBodyStream();
-    bodyStream.on("data", (buffer) => {
+    bodyStream.on("data", buffer => {
       segments.push(buffer);
     });
     bodyStream.on("error", reject);
@@ -271,7 +284,7 @@ export async function serialize(
     const xmlBody = stringifyXML(body, {
       rootName:
         responseSpec.bodyMapper!.xmlName ||
-        responseSpec.bodyMapper!.serializedName,
+        responseSpec.bodyMapper!.serializedName
     });
     res.setContentType(`application/xml`);
 
@@ -280,6 +293,7 @@ export async function serialize(
   }
 
   // Serialize stream body
+  // TODO: Move to end middleware for end tracking
   if (
     handlerResponse.body &&
     responseSpec.bodyMapper &&

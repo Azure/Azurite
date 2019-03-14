@@ -105,7 +105,7 @@ export interface BlobProperties {
  */
 export interface BlobItem {
   name: string;
-  deleted: boolean;
+  deleted?: boolean;
   snapshot: string;
   properties: BlobProperties;
   metadata?: { [propertyName: string]: string };
@@ -560,6 +560,16 @@ export interface AppendPositionAccessConditions {
    * status code 412 - Precondition Failed).
    */
   appendPosition?: number;
+}
+
+/**
+ * An interface representing AzuriteServerBlobOptions.
+ */
+export interface AzuriteServerBlobOptions {
+  /**
+   * Specifies the version of the operation to use for this request.
+   */
+  version?: string;
 }
 
 /**
@@ -1973,6 +1983,12 @@ export interface BlockBlobGetBlockListOptionalParams {
    * a Snapshot of a Blob.</a>
    */
   snapshot?: string;
+  /**
+   * Specifies whether to return the list of committed blocks, the list of uncommitted blocks, or
+   * both lists together. Possible values include: 'committed', 'uncommitted', 'all'. Default
+   * value: 'committed'.
+   */
+  listType?: BlockListType;
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
    * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting

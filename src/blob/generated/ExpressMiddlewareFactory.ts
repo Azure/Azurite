@@ -49,11 +49,13 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
    */
   public createDispatchMiddleware(): RequestHandler {
     return (req: Request, res: Response, next: NextFunction) => {
+      const request = new ExpressRequestAdapter(req);
+      const response = new ExpressResponseAdapter(res);
       dispatchMiddleware(
-        new Context(res.locals, this.contextPath),
-        new ExpressRequestAdapter(req),
+        new Context(res.locals, this.contextPath, request, response),
+        request,
         next,
-        this.logger,
+        this.logger
       );
     };
   }
@@ -66,11 +68,13 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
    */
   public createDeserializerMiddleware(): RequestHandler {
     return (req: Request, res: Response, next: NextFunction) => {
+      const request = new ExpressRequestAdapter(req);
+      const response = new ExpressResponseAdapter(res);
       deserializerMiddleware(
-        new Context(res.locals, this.contextPath),
-        new ExpressRequestAdapter(req),
+        new Context(res.locals, this.contextPath, request, response),
+        request,
         next,
-        this.logger,
+        this.logger
       );
     };
   }
@@ -87,10 +91,12 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
       handlers,
       this.logger
     );
-    return (_req: Request, res: Response, next: NextFunction) => {
+    return (req: Request, res: Response, next: NextFunction) => {
+      const request = new ExpressRequestAdapter(req);
+      const response = new ExpressResponseAdapter(res);
       handlerMiddlewareFactory.createHandlerMiddleware()(
-        new Context(res.locals, this.contextPath),
-        next,
+        new Context(res.locals, this.contextPath, request, response),
+        next
       );
     };
   }
@@ -102,12 +108,14 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
    * @memberof MiddlewareFactory
    */
   public createSerializerMiddleware(): RequestHandler {
-    return (_req: Request, res: Response, next: NextFunction) => {
+    return (req: Request, res: Response, next: NextFunction) => {
+      const request = new ExpressRequestAdapter(req);
+      const response = new ExpressResponseAdapter(res);
       serializerMiddleware(
-        new Context(res.locals, this.contextPath),
+        new Context(res.locals, this.contextPath, request, response),
         new ExpressResponseAdapter(res),
         next,
-        this.logger,
+        this.logger
       );
     };
   }
@@ -119,13 +127,15 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
    * @memberof MiddlewareFactory
    */
   public createErrorMiddleware(): ErrorRequestHandler {
-    return (err: Error, _req: Request, res: Response, next: NextFunction) => {
+    return (err: Error, req: Request, res: Response, next: NextFunction) => {
+      const request = new ExpressRequestAdapter(req);
+      const response = new ExpressResponseAdapter(res);
       errorMiddleware(
-        new Context(res.locals, this.contextPath),
+        new Context(res.locals, this.contextPath, request, response),
         err,
         new ExpressResponseAdapter(res),
         next,
-        this.logger,
+        this.logger
       );
     };
   }
@@ -137,11 +147,13 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
    * @memberof MiddlewareFactory
    */
   public createEndMiddleware(): RequestHandler {
-    return (_req: Request, res: Response) => {
+    return (req: Request, res: Response) => {
+      const request = new ExpressRequestAdapter(req);
+      const response = new ExpressResponseAdapter(res);
       endMiddleware(
-        new Context(res.locals, this.contextPath),
+        new Context(res.locals, this.contextPath, request, response),
         new ExpressResponseAdapter(res),
-        this.logger,
+        this.logger
       );
     };
   }
