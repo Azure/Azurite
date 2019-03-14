@@ -27,6 +27,9 @@ describe("ContainerAPIs", () => {
     false
   );
 
+  // Open following line to enable debug log
+  // configLogger(true);
+
   // TODO: Create serviceURL factory as tests utils
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
   const serviceURL = new ServiceURL(

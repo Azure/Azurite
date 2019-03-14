@@ -531,6 +531,6 @@ describe("BlockBlobHighlevel", () => {
     }
 
     assert.ok(expectedError);
-    fs.unlinkSync(downloadedFile);
+    rmRecursive(downloadedFile);
   });
 });

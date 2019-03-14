@@ -19,17 +19,25 @@ export default class BlockBlobHandler extends BaseHandler
     context: Context
   ): Promise<Models.BlockBlobUploadResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
 
-    const container = await this.dataStore.getContainer(containerName);
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
     if (!container) {
       throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
     }
 
     const persistencyID = await this.dataStore.writePayload(body);
 
-    const existingBlob = await this.dataStore.getBlob(containerName, blobName);
+    const existingBlob = await this.dataStore.getBlob(
+      accountName,
+      containerName,
+      blobName
+    );
 
     // TODO: Implement a high efficiency current date factory, because object allocation
     // and system call to get time is expensive
@@ -39,6 +47,8 @@ export default class BlockBlobHandler extends BaseHandler
     const blob: BlobModel = {
       deleted: false,
       metadata: options.metadata,
+      accountName,
+      containerName,
       name: blobName,
       properties: {
         creationTime: date,
@@ -59,7 +69,7 @@ export default class BlockBlobHandler extends BaseHandler
     };
 
     // TODO: Need a lock for multi keys
-    await this.dataStore.updateBlob(containerName, blob);
+    await this.dataStore.updateBlob(blob);
 
     // TODO: Make clean up async
     if (existingBlob && existingBlob.persistencyID) {
@@ -87,16 +97,21 @@ export default class BlockBlobHandler extends BaseHandler
     context: Context
   ): Promise<Models.BlockBlobStageBlockResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
-    const container = await this.dataStore.getContainer(containerName);
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
     if (!container) {
       throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
     }
 
     const existingBlock = await this.dataStore.getBlock(
+      accountName,
       containerName,
       blobName,
       blockId,
@@ -105,6 +120,7 @@ export default class BlockBlobHandler extends BaseHandler
 
     const persistencyID = await this.dataStore.writePayload(body);
     const block: BlockModel = {
+      accountName,
       containerName,
       blobName,
       isCommitted: false,
@@ -117,11 +133,17 @@ export default class BlockBlobHandler extends BaseHandler
 
     // Create an uncommitted block blob if doesn't exist
     // TODO: Lock
-    let blob = await this.dataStore.getBlob(containerName, blobName);
+    let blob = await this.dataStore.getBlob(
+      accountName,
+      containerName,
+      blobName
+    );
     if (!blob) {
       const etag = newEtag();
       blob = {
         deleted: false,
+        accountName,
+        containerName,
         name: blobName,
         properties: {
           creationTime: date,
@@ -133,7 +155,7 @@ export default class BlockBlobHandler extends BaseHandler
         snapshot: "",
         isCommitted: false
       };
-      await this.dataStore.updateBlob(containerName, blob!);
+      await this.dataStore.updateBlob(blob!);
     }
     // TODO: Unlock
 
@@ -170,17 +192,25 @@ export default class BlockBlobHandler extends BaseHandler
     context: Context
   ): Promise<Models.BlockBlobCommitBlockListResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
     const request = blobCtx.request!;
 
-    const container = await this.dataStore.getContainer(containerName);
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
     if (!container) {
       throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
     }
 
     // TODO: Lock for container and blob
-    const blob = await this.dataStore.getBlob(containerName, blobName);
+    const blob = await this.dataStore.getBlob(
+      accountName,
+      containerName,
+      blobName
+    );
     if (!blob) {
       // At least there should be a uncommitted blob
       // If not, there are some error happens
@@ -191,6 +221,7 @@ export default class BlockBlobHandler extends BaseHandler
 
     // Get all blocks in persistency layer
     const pUncommittedBlocks = await this.dataStore.listBlocks(
+      accountName,
       containerName,
       blobName,
       false
@@ -199,6 +230,7 @@ export default class BlockBlobHandler extends BaseHandler
     for (const pBlock of blob.committedBlocksInOrder || []) {
       pCommittedBlocksMap.set(pBlock.name, {
         ...pBlock,
+        accountName,
         containerName,
         blobName,
         isCommitted: true
@@ -294,10 +326,10 @@ export default class BlockBlobHandler extends BaseHandler
         return total + val;
       });
 
-    await this.dataStore.updateBlob(containerName, blob);
+    await this.dataStore.updateBlob(blob);
 
     // TODO: recover deleted blocks when inserts failed
-    await this.dataStore.deleteBlocks(containerName, blobName);
+    await this.dataStore.deleteBlocks(accountName, containerName, blobName);
 
     // TODO: Unlock
 
@@ -319,21 +351,30 @@ export default class BlockBlobHandler extends BaseHandler
     context: Context
   ): Promise<Models.BlockBlobGetBlockListResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
-    const container = await this.dataStore.getContainer(containerName);
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
     if (!container) {
       throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
     }
 
-    const blob = await this.dataStore.getBlob(containerName, blobName);
+    const blob = await this.dataStore.getBlob(
+      accountName,
+      containerName,
+      blobName
+    );
     if (!blob) {
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
     }
 
     const blockList = await this.dataStore.listBlocks(
+      accountName,
       containerName,
       blobName,
       false

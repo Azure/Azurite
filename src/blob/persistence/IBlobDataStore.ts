@@ -1,9 +1,23 @@
 import { IDataStore } from "../../common/IDataStore";
 import * as Models from "../generated/artifacts/models";
 
-export type ServicePropertiesModel = Models.StorageServiceProperties;
-export type ContainerModel = Models.ContainerItem;
+/** MODELS FOR SERVICE */
+export interface IServiceAdditionalProperties {
+  accountName: string;
+}
 
+export type ServicePropertiesModel = Models.StorageServiceProperties &
+  IServiceAdditionalProperties;
+
+/** MODELS FOR CONTAINER */
+export interface IContainerAdditionalProperties {
+  accountName: string;
+}
+
+export type ContainerModel = Models.ContainerItem &
+  IContainerAdditionalProperties;
+
+/** MODELS FOR BLOBS */
 export interface IPersistencyPropertiesRequired {
   /**
    * A unique ID refers to the persisted payload data for a blob or block.
@@ -24,23 +38,41 @@ export interface IPersistencyPropertiesOptional {
   persistencyID?: string;
 }
 
-/** MODELS FOR BLOBS */
 export interface IBlobAdditionalProperties {
+  accountName: string;
+  containerName: string;
+  /**
+   * False for uncommitted block blob, otherwise true.
+   *
+   * @type {boolean}
+   * @memberof IBlobAdditionalProperties
+   */
   isCommitted: boolean;
+
+  /**
+   * Committed blocks for block blob.
+   *
+   * @type {PersistencyBlockModel[]}
+   * @memberof IBlobAdditionalProperties
+   */
   committedBlocksInOrder?: PersistencyBlockModel[];
 }
+
 export type BlobModel = IBlobAdditionalProperties &
   Models.BlobItem &
   IPersistencyPropertiesOptional;
 
 /** MODELS FOR BLOCKS */
 export interface IBlockAdditionalProperties {
+  accountName: string;
   containerName: string;
   blobName: string;
   isCommitted: boolean;
 }
+
 export type PersistencyBlockModel = Models.Block &
   IPersistencyPropertiesRequired;
+
 export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
 
 /**
@@ -53,54 +85,57 @@ export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
 export interface IBlobDataStore extends IDataStore {
   /**
    * Update blob service properties. Create service properties document if not exists in persistency layer.
-   * Assume service properties collection has been created.
+   * Assume service properties collection has been created during start method.
    *
    * @template T
    * @param {T} serviceProperties
    * @returns {Promise<T>}
    * @memberof IBlobDataStore
    */
-  setServiceProperties<T extends ServicePropertiesModel>(
+  updateServiceProperties<T extends ServicePropertiesModel>(
     serviceProperties: T
   ): Promise<T>;
 
   /**
-   * Get service properties.
-   * Assume service properties collection has already be initialized with 1 document.
+   * Get service properties for specific storage account.
    *
    * @template T
-   * @returns {Promise<T>}
+   * @param {string} account
+   * @returns {Promise<T | undefined>}
    * @memberof IBlobDataStore
    */
-  getServiceProperties<T extends ServicePropertiesModel>(): Promise<T>;
+  getServiceProperties<T extends ServicePropertiesModel>(
+    account: string
+  ): Promise<T | undefined>;
 
   /**
-   * Get a container item from persistency layer by container name.
+   * Get a container item from persistency layer by account and container name.
    *
    * @template T
+   * @param {string} account
    * @param {string} container
    * @returns {(Promise<T | undefined>)}
    * @memberof IBlobDataStore
    */
   getContainer<T extends ContainerModel>(
+    account: string,
     container: string
   ): Promise<T | undefined>;
 
   /**
    * Delete container item if exists from persistency layer.
-   * Note that this method will remove container related collections and documents from persistency layer.
-   * Make sure blobs under the container has been properly removed before calling this method.
+   * Note that this method will only remove container related document from persistency layer.
+   * Make sure blobs under the container has been properly handled before calling this method.
    *
+   * @param {string} account
    * @param {string} container
    * @returns {Promise<void>}
    * @memberof IBlobDataStore
    */
-  deleteContainer(container: string): Promise<void>;
+  deleteContainer(account: string, container: string): Promise<void>;
 
   /**
    * Update a container item in persistency layer. If the container doesn't exist, it will be created.
-   * For a update operation, parameter container should be a valid loki persistency layer document object
-   * retrieved by calling getContainer().
    *
    * @template T
    * @param {T} container
@@ -113,13 +148,15 @@ export interface IBlobDataStore extends IDataStore {
    * List containers with query conditions specified.
    *
    * @template T
+   * @param {string} account
    * @param {string} [prefix]
    * @param {number} [maxResults]
    * @param {number} [marker]
-   * @returns {(Promise<[T[], number | undefined]>)}
+   * @returns {(Promise<[T[], number | undefined]>)} A tuple including containers and next marker
    * @memberof IBlobDataStore
    */
   listContainers<T extends ContainerModel>(
+    account: string,
     prefix?: string,
     maxResults?: number,
     marker?: number
@@ -127,27 +164,26 @@ export interface IBlobDataStore extends IDataStore {
 
   /**
    * Update blob item in persistency layer. Will create if blob doesn't exist.
-   * For a update operation, blob item should be a valid loki persistency layer document object
-   * retrieved by calling getBlob().
    *
    * @template T
-   * @param {string} container
    * @param {T} blob
    * @returns {Promise<T>}
    * @memberof IBlobDataStore
    */
-  updateBlob<T extends BlobModel>(container: string, blob: T): Promise<T>;
+  updateBlob<T extends BlobModel>(blob: T): Promise<T>;
 
   /**
    * Gets a blob item from persistency layer by container name and blob name.
    *
    * @template T
+   * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @returns {(Promise<T | undefined>)}
    * @memberof IBlobDataStore
    */
   getBlob<T extends BlobModel>(
+    account: string,
     container: string,
     blob: string
   ): Promise<T | undefined>;
@@ -156,14 +192,16 @@ export interface IBlobDataStore extends IDataStore {
    * List blobs with query conditions specified.
    *
    * @template T
+   * @param {string} account
    * @param {string} container
    * @param {string} [prefix]
    * @param {number} [maxResults]
    * @param {number} [marker]
-   * @returns {(Promise<[T[], number | undefined]>)}
+   * @returns {(Promise<[T[], number | undefined]>)} A tuple including list blobs and next marker.
    * @memberof IBlobDataStore
    */
   listBlobs<T extends BlobModel>(
+    account: string,
     container: string,
     prefix?: string,
     maxResults?: number,
@@ -173,17 +211,16 @@ export interface IBlobDataStore extends IDataStore {
   /**
    * Delete blob item from persistency layer.
    *
+   * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @returns {Promise<void>}
    * @memberof IBlobDataStore
    */
-  deleteBlob(container: string, blob: string): Promise<void>;
+  deleteBlob(account: string, container: string, blob: string): Promise<void>;
 
   /**
    * Update blob block item in persistency layer. Will create if block doesn't exist.
-   * For a update operation, block item should be a valid loki persistency layer document object
-   * retrieved by calling getBlocks().
    *
    * @template T
    * @param {T} block
@@ -195,24 +232,18 @@ export interface IBlobDataStore extends IDataStore {
   /**
    * Delete all blocks for a blob in persistency layer.
    *
-   * @template T
+   * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @returns {Promise<void>}
    * @memberof IBlobDataStore
    */
-  deleteBlocks<T extends BlockModel>(
-    container: string,
-    blob: string
-  ): Promise<void>;
+  deleteBlocks(account: string, container: string, blob: string): Promise<void>;
 
   /**
-   * Insert blocks for a blob in persistency layer. Order of blocks should be saved too when
-   * getBlocks(). Existing blocks with same name will be replaced.
+   * Insert blocks for a blob in persistency layer. Existing blocks with same name will be replaced.
    *
    * @template T
-   * @param {string} container
-   * @param {string} blob
    * @param {T[]} blocks
    * @returns {Promise<T[]>}
    * @memberof IBlobDataStore
@@ -220,10 +251,10 @@ export interface IBlobDataStore extends IDataStore {
   insertBlocks<T extends BlockModel>(blocks: T[]): Promise<T[]>;
 
   /**
-   * Gets block for a blob from persistency layer by
-   * container name, blob name and block name.
+   * Gets block for a blob from persistency layer by account, container, blob and block names.
    *
    * @template T
+   * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {string} block
@@ -232,6 +263,7 @@ export interface IBlobDataStore extends IDataStore {
    * @memberof LokiBlobDataStore
    */
   getBlock<T extends BlockModel>(
+    account: string,
     container: string,
     blob: string,
     block: string,
@@ -239,9 +271,10 @@ export interface IBlobDataStore extends IDataStore {
   ): Promise<T | undefined>;
 
   /**
-   * Gets blocks list for a blob from persistency layer by container name and blob name.
+   * Gets blocks list for a blob from persistency layer by account, container and blob names.
    *
    * @template T
+   * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {boolean} isCommitted
@@ -249,6 +282,7 @@ export interface IBlobDataStore extends IDataStore {
    * @memberof IBlobDataStore
    */
   listBlocks<T extends BlockModel>(
+    account: string,
     container: string,
     blob: string,
     isCommitted: boolean
@@ -258,7 +292,7 @@ export interface IBlobDataStore extends IDataStore {
    * Persist payload and return a unique persistency ID for tracking.
    *
    * @param {NodeJS.ReadableStream} payload
-   * @returns {Promise<string>}
+   * @returns {Promise<string>} Returns the unique persistency ID
    * @memberof IBlobDataStore
    */
   writePayload(payload: NodeJS.ReadableStream): Promise<string>;

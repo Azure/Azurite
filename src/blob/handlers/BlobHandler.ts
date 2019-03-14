@@ -16,15 +16,23 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobDownloadResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
 
-    const container = await this.dataStore.getContainer(containerName);
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
     if (!container) {
       throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
     }
 
-    const blob = await this.dataStore.getBlob(containerName, blobName);
+    const blob = await this.dataStore.getBlob(
+      accountName,
+      containerName,
+      blobName
+    );
     if (!blob) {
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
     }
@@ -112,15 +120,23 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobGetPropertiesResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
 
-    const container = await this.dataStore.getContainer(containerName);
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
     if (!container) {
       throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
     }
 
-    const blob = await this.dataStore.getBlob(containerName, blobName);
+    const blob = await this.dataStore.getBlob(
+      accountName,
+      containerName,
+      blobName
+    );
     if (!blob) {
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
     }
@@ -147,20 +163,28 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobDeleteResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
 
-    const container = await this.dataStore.getContainer(containerName);
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
     if (!container) {
       throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
     }
 
-    const blob = await this.dataStore.getBlob(containerName, blobName);
+    const blob = await this.dataStore.getBlob(
+      accountName,
+      containerName,
+      blobName
+    );
     if (!blob) {
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
     }
 
-    await this.dataStore.deleteBlob(containerName, blobName);
+    await this.dataStore.deleteBlob(accountName, containerName, blobName);
 
     const response: Models.BlobDeleteResponse = {
       statusCode: 202,
