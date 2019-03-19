@@ -5,7 +5,7 @@ import BlobConfiguration from "../../src/blob/BlobConfiguration";
 import Server from "../../src/blob/BlobServer";
 import { appendToURLPath, getUniqueName, rmRecursive } from "../testutils";
 
-describe("SpecialNamingAPIs", () => {
+describe("SpecialNaming", () => {
   // TODO: Create a server factory as tests utils
   const host = "127.0.0.1";
   const port = 11000;
