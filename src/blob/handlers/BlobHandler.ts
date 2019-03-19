@@ -9,102 +9,39 @@ import { API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
 
 export default class BlobHandler extends BaseHandler implements IBlobHandler {
-  // TODO: Implement download cross blocks; Implement page blob download and append blob download;
-  // TODO: Implement partial download
   public async download(
     options: Models.BlobDownloadOptionalParams,
     context: Context
   ): Promise<Models.BlobDownloadResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
 
-    const container = await this.dataStore.getContainer(containerName);
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
     if (!container) {
-      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
-    const blob = await this.dataStore.getBlob(containerName, blobName);
+    const blob = await this.dataStore.getBlob(
+      accountName,
+      containerName,
+      blobName
+    );
     if (!blob) {
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
     }
 
-    // Deserializer doesn't handle range header currently
-    // We manually parse range headers here
-    const rangesString =
-      context.request!.getHeader("x-ms-range") ||
-      context.request!.getHeader("range") ||
-      "bytes=0-";
-    const rangesArray = rangesString.substr(6).split("-");
-    const rangeStart = parseInt(rangesArray[0], 10);
-    let rangeEnd = // Inclusive
-      rangesArray[1] && rangesArray[1].length > 0
-        ? parseInt(rangesArray[1], 10)
-        : Infinity;
-
-    // Will automatically shift request with longer data end than blob size to blob size
-    if (rangeEnd + 1 >= blob.properties.contentLength!) {
-      rangeEnd = blob.properties.contentLength! - 1;
-    }
-
-    const contentLength = rangeEnd - rangeStart + 1;
-    const partialRead = contentLength !== blob.properties.contentLength!;
-
-    logger.info(
-      // tslint:disable-next-line:max-line-length
-      `BlobHandler:download() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
-      blobCtx.contextID
-    );
-
-    let bodyGetter: () => Promise<NodeJS.ReadableStream | undefined>;
-    if (
-      blob.committedBlocksInOrder === undefined ||
-      blob.committedBlocksInOrder.length === 0
-    ) {
-      bodyGetter = async () => {
-        return this.dataStore.readPayload(
-          blob.persistencyID,
-          rangeStart,
-          rangeEnd + 1 - rangeStart
-        );
-      };
+    if (blob.properties.blobType === Models.BlobType.BlockBlob) {
+      return this.downloadBlockBlob(options, context);
     } else {
-      const blocks = blob.committedBlocksInOrder;
-      bodyGetter = async () => {
-        return this.dataStore.readPayloads(
-          blocks.map(block => block.persistencyID),
-          rangeStart,
-          rangeEnd + 1 - rangeStart
-        );
-      };
+      return this.downloadPageBlob(options, context);
     }
 
-    let body: NodeJS.ReadableStream | undefined = await bodyGetter();
-    let contentMD5: Uint8Array | undefined;
-    if (!partialRead) {
-      contentMD5 = blob.properties.contentMD5;
-    } else if (contentLength <= 4 * 1024 * 1024) {
-      if (body) {
-        // TODO： Get partial content MD5
-        contentMD5 = undefined; // await getMD5FromStream(body);
-        body = await bodyGetter();
-      }
-    }
-
-    const response: Models.BlobDownloadResponse = {
-      statusCode: 200,
-      body,
-      metadata: blob.metadata,
-      eTag: blob.properties.etag,
-      requestId: blobCtx.contextID,
-      date: blobCtx.startTime!,
-      version: API_VERSION,
-      ...blob.properties,
-      contentLength,
-      contentMD5
-    };
-
-    return response;
+    // TODO: Handle append blob
   }
 
   public async getProperties(
@@ -112,15 +49,23 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobGetPropertiesResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
 
-    const container = await this.dataStore.getContainer(containerName);
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
     if (!container) {
-      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
-    const blob = await this.dataStore.getBlob(containerName, blobName);
+    const blob = await this.dataStore.getBlob(
+      accountName,
+      containerName,
+      blobName
+    );
     if (!blob) {
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
     }
@@ -147,20 +92,28 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobDeleteResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
 
-    const container = await this.dataStore.getContainer(containerName);
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
     if (!container) {
-      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
-    const blob = await this.dataStore.getBlob(containerName, blobName);
+    const blob = await this.dataStore.getBlob(
+      accountName,
+      containerName,
+      blobName
+    );
     if (!blob) {
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
     }
 
-    await this.dataStore.deleteBlob(containerName, blobName);
+    await this.dataStore.deleteBlob(accountName, containerName, blobName);
 
     const response: Models.BlobDeleteResponse = {
       statusCode: 202,
@@ -267,5 +220,221 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobGetAccountInfoResponse> {
     throw new NotImplementedError(context.contextID);
+  }
+
+  private async downloadBlockBlob(
+    options: Models.BlobDownloadOptionalParams,
+    context: Context
+  ): Promise<Models.BlobDownloadResponse> {
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    const blobName = blobCtx.blob!;
+
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
+    if (!container) {
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
+    }
+
+    const blob = await this.dataStore.getBlob(
+      accountName,
+      containerName,
+      blobName
+    );
+    if (!blob) {
+      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
+    }
+
+    // Deserializer doesn't handle range header currently
+    // We manually parse range headers here
+    const rangesString =
+      context.request!.getHeader("x-ms-range") ||
+      context.request!.getHeader("range") ||
+      "bytes=0-";
+    const rangesArray = rangesString.substr(6).split("-");
+    const rangeStart = parseInt(rangesArray[0], 10);
+    let rangeEnd = // Inclusive
+      rangesArray[1] && rangesArray[1].length > 0
+        ? parseInt(rangesArray[1], 10)
+        : Infinity;
+
+    // Will automatically shift request with longer data end than blob size to blob size
+    if (rangeEnd + 1 >= blob.properties.contentLength!) {
+      rangeEnd = blob.properties.contentLength! - 1;
+    }
+
+    const contentLength = rangeEnd - rangeStart + 1;
+    const partialRead = contentLength !== blob.properties.contentLength!;
+
+    logger.info(
+      // tslint:disable-next-line:max-line-length
+      `BlobHandler:download() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
+      blobCtx.contextID
+    );
+
+    let bodyGetter: () => Promise<NodeJS.ReadableStream | undefined>;
+    if (
+      blob.committedBlocksInOrder === undefined ||
+      blob.committedBlocksInOrder.length === 0
+    ) {
+      bodyGetter = async () => {
+        return this.dataStore.readPayload(
+          blob.persistencyID,
+          rangeStart,
+          rangeEnd + 1 - rangeStart
+        );
+      };
+    } else {
+      const blocks = blob.committedBlocksInOrder;
+      bodyGetter = async () => {
+        return this.dataStore.readPayloads(
+          blocks.map(block => block.persistencyID),
+          rangeStart,
+          rangeEnd + 1 - rangeStart
+        );
+      };
+    }
+
+    let body: NodeJS.ReadableStream | undefined = await bodyGetter();
+    let contentMD5: Uint8Array | undefined;
+    if (!partialRead) {
+      contentMD5 = blob.properties.contentMD5;
+    } else if (contentLength <= 4 * 1024 * 1024) {
+      if (body) {
+        // TODO： Get partial content MD5
+        contentMD5 = undefined; // await getMD5FromStream(body);
+        body = await bodyGetter();
+      }
+    }
+
+    const response: Models.BlobDownloadResponse = {
+      statusCode: 200,
+      body,
+      metadata: blob.metadata,
+      eTag: blob.properties.etag,
+      requestId: blobCtx.contextID,
+      date: blobCtx.startTime!,
+      version: API_VERSION,
+      ...blob.properties,
+      contentLength,
+      contentMD5
+    };
+
+    return response;
+  }
+
+  private async downloadPageBlob(
+    options: Models.BlobDownloadOptionalParams,
+    context: Context
+  ): Promise<Models.BlobDownloadResponse> {
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    const blobName = blobCtx.blob!;
+
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
+    if (!container) {
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
+    }
+
+    const blob = await this.dataStore.getBlob(
+      accountName,
+      containerName,
+      blobName
+    );
+    if (!blob) {
+      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
+    }
+
+    // Deserializer doesn't handle range header currently
+    // We manually parse range headers here
+    const rangesString =
+      context.request!.getHeader("x-ms-range") ||
+      context.request!.getHeader("range") ||
+      "bytes=0-";
+    const rangesArray = rangesString.substr(6).split("-");
+    const rangeStart = parseInt(rangesArray[0], 10);
+    let rangeEnd = // Inclusive
+      rangesArray[1] && rangesArray[1].length > 0
+        ? parseInt(rangesArray[1], 10)
+        : Infinity;
+
+    // Will automatically shift request with longer data end than blob size to blob size
+    if (rangeEnd + 1 >= blob.properties.contentLength!) {
+      rangeEnd = blob.properties.contentLength! - 1;
+    }
+
+    const contentLength = rangeEnd - rangeStart + 1;
+    const partialRead = contentLength !== blob.properties.contentLength!;
+
+    logger.info(
+      // tslint:disable-next-line:max-line-length
+      `BlobHandler:download() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
+      blobCtx.contextID
+    );
+
+    // TODO: Share a single zero range persisted chunk cross Azurite
+    // TODO: Not all page blob has zero ranges
+    const zeroRangePersistencyID = await this.dataStore.writePayload(
+      Buffer.alloc(512)
+    );
+
+    const startRangeOffset = Math.floor(rangeStart / 512) * 512;
+    const endRangeOffset = Math.min(
+      Math.floor(rangeEnd / 512) * 512,
+      blob.properties.contentLength! - 512
+    );
+
+    const persistencyIDs: string[] = [];
+    blob.pageRanges = blob.pageRanges || {};
+    for (let range = startRangeOffset; range <= endRangeOffset; range += 512) {
+      const pageRange = blob.pageRanges[range];
+      if (blob.pageRanges[range] !== undefined) {
+        persistencyIDs.push(pageRange.persistencyID);
+      } else {
+        persistencyIDs.push(zeroRangePersistencyID);
+      }
+    }
+
+    const bodyGetter = async () => {
+      return this.dataStore.readPayloads(
+        persistencyIDs,
+        rangeStart - startRangeOffset,
+        contentLength
+      );
+    };
+
+    let body: NodeJS.ReadableStream | undefined = await bodyGetter();
+    let contentMD5: Uint8Array | undefined;
+    if (!partialRead) {
+      contentMD5 = blob.properties.contentMD5;
+    } else if (contentLength <= 4 * 1024 * 1024) {
+      if (body) {
+        // TODO： Get partial content MD5
+        contentMD5 = undefined; // await getMD5FromStream(body);
+        body = await bodyGetter();
+      }
+    }
+
+    const response: Models.BlobDownloadResponse = {
+      statusCode: 200,
+      body,
+      metadata: blob.metadata,
+      eTag: blob.properties.etag,
+      requestId: blobCtx.contextID,
+      date: blobCtx.startTime!,
+      version: API_VERSION,
+      ...blob.properties,
+      contentLength,
+      contentMD5
+    };
+
+    return response;
   }
 }

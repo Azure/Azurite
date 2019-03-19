@@ -24,17 +24,22 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerCreateResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
 
     const etag = newEtag(); // TODO: Implement etag
     const lastModified = blobCtx.startTime!;
 
-    const container = await this.dataStore.getContainer(containerName);
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
     if (container) {
       throw StorageErrorFactory.getContainerAlreadyExists(blobCtx.contextID!);
     }
 
     await this.dataStore.updateContainer({
+      accountName,
       metadata: options.metadata,
       name: containerName,
       properties: {
@@ -62,11 +67,15 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerGetPropertiesResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
 
-    const container = await this.dataStore.getContainer(containerName);
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
     if (!container) {
-      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
     const response: Models.ContainerGetPropertiesResponse = {
@@ -94,18 +103,22 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerDeleteResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
 
-    const container = await this.dataStore.getContainer(containerName);
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
     if (container === undefined) {
-      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
     // TODO: Mark container as being deleted status, then (mark) delete all blobs async
     // When above finishes, execute following delete container operation
     // Because following delete container operation will only delete DB metadata for container and
     // blobs under the container, but will not clean up blob data in disk
-    await this.dataStore.deleteContainer(containerName);
+    await this.dataStore.deleteContainer(accountName, containerName);
 
     const response: Models.ContainerDeleteResponse = {
       date: new Date(),
@@ -122,16 +135,18 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerSetMetadataResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
 
     await Mutex.lock(containerName);
 
-    const container = await this.dataStore.getContainer<Models.ContainerItem>(
+    const container = await this.dataStore.getContainer(
+      accountName,
       containerName
     );
     if (!container) {
       await Mutex.unlock(containerName);
-      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
     container.metadata = options.metadata;
@@ -217,11 +232,15 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerListBlobHierarchySegmentResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
 
-    const container = await this.dataStore.getContainer(containerName);
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
     if (container === undefined) {
-      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
     const marker = parseInt(options.marker || "0", 10);
@@ -229,6 +248,7 @@ export default class ContainerHandler extends BaseHandler
     options.marker = options.marker || "";
 
     const [blobs, nextMarker] = await this.dataStore.listBlobs(
+      accountName,
       containerName,
       options.prefix,
       options.maxresults,

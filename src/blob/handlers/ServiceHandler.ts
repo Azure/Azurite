@@ -1,3 +1,4 @@
+import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -15,12 +16,71 @@ import BaseHandler from "./BaseHandler";
  */
 export default class ServiceHandler extends BaseHandler
   implements IServiceHandler {
+  private readonly defaultServiceProperties = {
+    cors: [],
+    defaultServiceVersion: API_VERSION,
+    hourMetrics: {
+      enabled: false,
+      retentionPolicy: {
+        enabled: false
+      },
+      version: "1.0"
+    },
+    logging: {
+      deleteProperty: true,
+      read: true,
+      retentionPolicy: {
+        enabled: false
+      },
+      version: "1.0",
+      write: true
+    },
+    minuteMetrics: {
+      enabled: false,
+      retentionPolicy: {
+        enabled: false
+      },
+      version: "1.0"
+    },
+    staticWebsite: {
+      enabled: false
+    }
+  };
+
   public async setProperties(
     storageServiceProperties: Models.StorageServiceProperties,
     options: Models.ServiceSetPropertiesOptionalParams,
     context: Context
   ): Promise<Models.ServiceSetPropertiesResponse> {
-    await this.dataStore.setServiceProperties(storageServiceProperties);
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+
+    let properties = await this.dataStore.getServiceProperties(accountName);
+    if (!properties) {
+      properties = { ...storageServiceProperties, accountName };
+    } else {
+      const requestCors = storageServiceProperties.cors || [];
+      properties.cors = requestCors.length > 0 ? requestCors : properties.cors;
+      properties.defaultServiceVersion =
+        storageServiceProperties.defaultServiceVersion ||
+        properties.defaultServiceVersion;
+      properties.deleteRetentionPolicy =
+        storageServiceProperties.deleteRetentionPolicy ||
+        properties.deleteRetentionPolicy;
+      properties.hourMetrics =
+        storageServiceProperties.hourMetrics || properties.hourMetrics;
+      properties.logging =
+        storageServiceProperties.logging || properties.logging;
+      properties.minuteMetrics =
+        storageServiceProperties.minuteMetrics || properties.minuteMetrics;
+      properties.staticWebsite =
+        storageServiceProperties.staticWebsite || properties.staticWebsite;
+    }
+
+    await this.dataStore.updateServiceProperties({
+      ...properties,
+      accountName
+    });
     const response: Models.ServiceSetPropertiesResponse = {
       requestId: context.contextID,
       statusCode: 202,
@@ -33,7 +93,15 @@ export default class ServiceHandler extends BaseHandler
     options: Models.ServiceGetPropertiesOptionalParams,
     context: Context
   ): Promise<Models.ServiceGetPropertiesResponse> {
-    const properties = await this.dataStore.getServiceProperties();
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+
+    let properties = await this.dataStore.getServiceProperties(accountName);
+
+    if (!properties) {
+      properties = { ...this.defaultServiceProperties, accountName };
+    }
+
     const response: Models.ServiceGetPropertiesResponse = {
       ...properties,
       requestId: context.contextID,
@@ -54,6 +122,9 @@ export default class ServiceHandler extends BaseHandler
     options: Models.ServiceListContainersSegmentOptionalParams,
     context: Context
   ): Promise<Models.ServiceListContainersSegmentResponse> {
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+
     const LIST_CONTAINERS_MAX_RESULTS_DEFAULT = 2000;
     options.maxresults =
       options.maxresults || LIST_CONTAINERS_MAX_RESULTS_DEFAULT;
@@ -61,9 +132,12 @@ export default class ServiceHandler extends BaseHandler
 
     const marker = parseInt(options.marker || "0", 10);
 
-    const containers = await this.dataStore.listContainers<
-      Models.ContainerItem
-    >(options.prefix, options.maxresults, marker);
+    const containers = await this.dataStore.listContainers(
+      accountName,
+      options.prefix,
+      options.maxresults,
+      marker
+    );
 
     const res: Models.ServiceListContainersSegmentResponse = {
       containerItems: containers[0],
