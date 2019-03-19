@@ -28,7 +28,7 @@ export default class BlockBlobHandler extends BaseHandler
       containerName
     );
     if (!container) {
-      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
     const persistencyID = await this.dataStore.writePayload(body);
@@ -61,7 +61,12 @@ export default class BlockBlobHandler extends BaseHandler
         contentMD5: options.blobHTTPHeaders.blobContentMD5,
         contentDisposition: options.blobHTTPHeaders.blobContentDisposition,
         cacheControl: options.blobHTTPHeaders.blobCacheControl,
-        blobType: Models.BlobType.BlockBlob
+        blobType: Models.BlobType.BlockBlob,
+        leaseStatus: Models.LeaseStatusType.Unlocked,
+        leaseState: Models.LeaseStateType.Available,
+        serverEncrypted: true,
+        accessTier: Models.AccessTier.Hot,
+        accessTierInferred: true
       },
       snapshot: "",
       isCommitted: true,
@@ -107,7 +112,7 @@ export default class BlockBlobHandler extends BaseHandler
       containerName
     );
     if (!container) {
-      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
     const existingBlock = await this.dataStore.getBlock(
@@ -202,7 +207,7 @@ export default class BlockBlobHandler extends BaseHandler
       containerName
     );
     if (!container) {
-      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
     // TODO: Lock for container and blob
@@ -248,7 +253,7 @@ export default class BlockBlobHandler extends BaseHandler
     // Re-parsing request body to get destination blocks
     // We don't leverage serialized blocks parameter because it doesn't include sequence
     const rawBody = request.getBody();
-    const badRequestError = StorageErrorFactory.getBadRequest(
+    const badRequestError = StorageErrorFactory.getInvalidOperation(
       blobCtx.contextID!
     );
     if (rawBody === undefined) {
@@ -361,7 +366,7 @@ export default class BlockBlobHandler extends BaseHandler
       containerName
     );
     if (!container) {
-      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
     const blob = await this.dataStore.getBlob(

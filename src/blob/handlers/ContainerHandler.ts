@@ -75,7 +75,7 @@ export default class ContainerHandler extends BaseHandler
       containerName
     );
     if (!container) {
-      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
     const response: Models.ContainerGetPropertiesResponse = {
@@ -111,7 +111,7 @@ export default class ContainerHandler extends BaseHandler
       containerName
     );
     if (container === undefined) {
-      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
     // TODO: Mark container as being deleted status, then (mark) delete all blobs async
@@ -146,7 +146,7 @@ export default class ContainerHandler extends BaseHandler
     );
     if (!container) {
       await Mutex.unlock(containerName);
-      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
     container.metadata = options.metadata;
@@ -240,7 +240,7 @@ export default class ContainerHandler extends BaseHandler
       containerName
     );
     if (container === undefined) {
-      throw StorageErrorFactory.getContainerNotFoundError(blobCtx.contextID!);
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
     const marker = parseInt(options.marker || "0", 10);

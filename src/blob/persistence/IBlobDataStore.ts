@@ -2,7 +2,7 @@ import { IDataStore } from "../../common/IDataStore";
 import * as Models from "../generated/artifacts/models";
 
 /** MODELS FOR SERVICE */
-export interface IServiceAdditionalProperties {
+interface IServiceAdditionalProperties {
   accountName: string;
 }
 
@@ -10,7 +10,7 @@ export type ServicePropertiesModel = Models.StorageServiceProperties &
   IServiceAdditionalProperties;
 
 /** MODELS FOR CONTAINER */
-export interface IContainerAdditionalProperties {
+interface IContainerAdditionalProperties {
   accountName: string;
 }
 
@@ -18,7 +18,7 @@ export type ContainerModel = Models.ContainerItem &
   IContainerAdditionalProperties;
 
 /** MODELS FOR BLOBS */
-export interface IPersistencyPropertiesRequired {
+interface IPersistencyPropertiesRequired {
   /**
    * A unique ID refers to the persisted payload data for a blob or block.
    *
@@ -28,7 +28,7 @@ export interface IPersistencyPropertiesRequired {
   persistencyID: string;
 }
 
-export interface IPersistencyPropertiesOptional {
+interface IPersistencyPropertiesOptional {
   /**
    * A unique ID refers to the persisted payload data for a blob or block.
    *
@@ -38,9 +38,7 @@ export interface IPersistencyPropertiesOptional {
   persistencyID?: string;
 }
 
-export interface IBlobAdditionalProperties {
-  accountName: string;
-  containerName: string;
+interface IBlockBlobAdditionalProperties {
   /**
    * False for uncommitted block blob, otherwise true.
    *
@@ -58,25 +56,41 @@ export interface IBlobAdditionalProperties {
   committedBlocksInOrder?: PersistencyBlockModel[];
 }
 
+interface IPersistencyPageRange {
+  [offset: number]: IPersistencyPropertiesRequired & Models.PageRange;
+}
+
+interface IPageBlobAdditionalProperties {
+  pageRanges?: IPersistencyPageRange;
+}
+
+interface IBlobAdditionalProperties {
+  accountName: string;
+  containerName: string;
+}
+
 export type BlobModel = IBlobAdditionalProperties &
+  IPageBlobAdditionalProperties &
+  IBlockBlobAdditionalProperties &
   Models.BlobItem &
   IPersistencyPropertiesOptional;
 
 /** MODELS FOR BLOCKS */
-export interface IBlockAdditionalProperties {
+interface IBlockAdditionalProperties {
   accountName: string;
   containerName: string;
   blobName: string;
   isCommitted: boolean;
 }
 
-export type PersistencyBlockModel = Models.Block &
-  IPersistencyPropertiesRequired;
+type PersistencyBlockModel = Models.Block & IPersistencyPropertiesRequired;
 
 export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
 
 /**
  * Persistency layer data store interface.
+ *
+ * TODO: Split payload and binary data store APIs to another interface.
  *
  * @export
  * @interface IBlobDataStore
@@ -291,11 +305,11 @@ export interface IBlobDataStore extends IDataStore {
   /**
    * Persist payload and return a unique persistency ID for tracking.
    *
-   * @param {NodeJS.ReadableStream} payload
+   * @param {NodeJS.ReadableStream | Buffer} payload
    * @returns {Promise<string>} Returns the unique persistency ID
    * @memberof IBlobDataStore
    */
-  writePayload(payload: NodeJS.ReadableStream): Promise<string>;
+  writePayload(payload: NodeJS.ReadableStream | Buffer): Promise<string>;
 
   /**
    * Reads a persistency layer payload with a persistency ID.

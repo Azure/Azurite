@@ -30,7 +30,7 @@ import { BlobModel, BlockModel, ContainerModel, IBlobDataStore, ServicePropertie
  *                           // Each document maps to a blob
  *                           // Unique document properties: accountName, containerName, (blob)name
  * -- BLOCKS_COLLECTION      // Block blob blocks collection includes all UNCOMMITTED blocks
- *                           // Unique document properties: (blob)name, blockID
+ *                           // Unique document properties: accountName, containerName, blobName, name, isCommitted
  *
  * TODO:
  * 1. Create an async task to GC persistency files
@@ -579,23 +579,35 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   /**
    * Persist payload and return a unique persistency ID for tracking.
    *
-   * @param {NodeJS.ReadableStream} payload
+   * @param {NodeJS.ReadableStream | Buffer} payload
    * @returns {Promise<string>}
    * @memberof LokiBlobDataStore
    */
-  public async writePayload(payload: NodeJS.ReadableStream): Promise<string> {
+  public async writePayload(
+    payload: NodeJS.ReadableStream | Buffer
+  ): Promise<string> {
     const persistencyID = this.getPersistencyID();
     const persistencyPath = this.getPersistencyPath(persistencyID);
 
-    return new Promise<string>((resolve, reject) => {
-      const ws = createWriteStream(persistencyPath);
-      payload
-        .pipe(ws)
-        .on("close", () => {
+    if (payload instanceof Buffer) {
+      return new Promise<string>((resolve, reject) => {
+        const ws = createWriteStream(persistencyPath);
+        ws.end(payload);
+        ws.on("close", () => {
           resolve(persistencyID);
-        })
-        .on("error", reject);
-    });
+        }).on("error", reject);
+      });
+    } else {
+      return new Promise<string>((resolve, reject) => {
+        const ws = createWriteStream(persistencyPath);
+        payload
+          .pipe(ws)
+          .on("close", () => {
+            resolve(persistencyID);
+          })
+          .on("error", reject);
+      });
+    }
   }
 
   /**
