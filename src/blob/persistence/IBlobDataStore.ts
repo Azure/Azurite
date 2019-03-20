@@ -1,6 +1,18 @@
 import { IDataStore } from "../../common/IDataStore";
 import * as Models from "../generated/artifacts/models";
 
+/**
+ * This model describes a chunk inside a persistency extent for a given persistencyID.
+ *
+ * @export
+ * @interface IPersistencyChunk
+ */
+export interface IPersistencyChunk {
+  id: string; // The persistency layer storage extent ID where the chunk belongs to
+  offset?: number; // Chunk offset inside the extent where chunk starts in bytes
+  count?: number; // Chunk length in bytes
+}
+
 /** MODELS FOR SERVICE */
 interface IServiceAdditionalProperties {
   accountName: string;
@@ -20,22 +32,26 @@ export type ContainerModel = Models.ContainerItem &
 /** MODELS FOR BLOBS */
 interface IPersistencyPropertiesRequired {
   /**
-   * A unique ID refers to the persisted payload data for a blob or block.
+   * A reference to persistency layer chunk of data.
+   * A unique ID string refers to the full range of chunk data.
+   * While IPersistencyChunk refers to sub-range of a chunk.
    *
-   * @type {string}
+   * @type {IPersistencyChunk}
    * @memberof IPersistencyProperties
    */
-  persistencyID: string;
+  persistency: IPersistencyChunk;
 }
 
 interface IPersistencyPropertiesOptional {
   /**
-   * A unique ID refers to the persisted payload data for a blob or block.
+   * A reference to persistency layer chunk of data.
+   * A unique ID string refers to the full range of chunk data.
+   * While IPersistencyChunk refers to sub-range of a chunk.
    *
-   * @type {string}
+   * @type {IPersistencyChunk}
    * @memberof IPersistencyProperties
    */
-  persistencyID?: string;
+  persistency?: IPersistencyChunk;
 }
 
 interface IBlockBlobAdditionalProperties {
@@ -303,52 +319,57 @@ export interface IBlobDataStore extends IDataStore {
   ): Promise<T[]>;
 
   /**
-   * Persist payload and return a unique persistency ID for tracking.
+   * Persist payload and return a persistency chunk for tracking.
    *
    * @param {NodeJS.ReadableStream | Buffer} payload
-   * @returns {Promise<string>} Returns the unique persistency ID
+   * @returns {Promise<IPersistencyChunk>} Returns the unique persistency chunk
    * @memberof IBlobDataStore
    */
-  writePayload(payload: NodeJS.ReadableStream | Buffer): Promise<string>;
+  writePayload(
+    payload: NodeJS.ReadableStream | Buffer
+  ): Promise<IPersistencyChunk>;
 
   /**
-   * Reads a persistency layer payload with a persistency ID.
+   * Reads a persistency layer payload with a persistency ID or chunk model.
    *
-   * @param {string} [persistencyID] Persistency payload ID
-   * @param {number} [offset] Optional. Payload reads offset. Default is 0.
-   * @param {number} [count] Optional. Payload reads count. Default is Infinity.
+   * @param {IPersistencyChunk} [persistency] A persistencyID or chunk model
+   *                                                   pointing to a persistency chunk or sub-chunk
+   * @param {number} [offset] Optional. Payload reads offset. Default is 0
+   * @param {number} [count] Optional. Payload reads count. Default is Infinity
    * @returns {Promise<NodeJS.ReadableStream>}
    * @memberof IBlobDataStore
    */
   readPayload(
-    persistencyID?: string,
+    persistency?: IPersistencyChunk,
     offset?: number,
     count?: number
   ): Promise<NodeJS.ReadableStream>;
 
   /**
-   * Reads a persistency layer data cross multi persistency payloads by order.
+   * Merge persistency payloads into a single payload and return a ReadableStream
+   * from the merged stream according to the offset and count.
    *
-   * @param {string[]} persistencyIDs Persistency payload ID list
-   * @param {number} [offset] Optional. Payload reads offset. Default is 0.
-   * @param {number} [count] Optional. Payload reads count. Default is Infinity.
+   * @param {(IPersistencyChunk)[]} persistencyArray Persistency chunk ID or chunk model list
+   * @param {number} [offset] Optional. Reads offset from the merged persistency (sub)chunks. Default is 0
+   * @param {number} [count] Optional. Reads count from the merged persistency (sub)chunks. Default is Infinity
    * @returns {Promise<NodeJS.ReadableStream>}
    * @memberof IBlobDataStore
    */
   readPayloads(
-    persistencyIDs: string[],
+    persistencyArray: (IPersistencyChunk)[],
     offset?: number,
     count?: number
   ): Promise<NodeJS.ReadableStream>;
 
   /**
+   * TODO: Handle with GC
    * Remove payloads from persistency layer.
    *
-   * @param {string[]} persistencyIDs
+   * @param {(IPersistencyChunk)[]} persistencyIDs
    * @returns {Promise<void>}
    * @memberof IBlobDataStore
    */
-  deletePayloads(persistencyIDs: string[]): Promise<void>;
+  deletePayloads(persistencyIDs: (IPersistencyChunk)[]): Promise<void>;
 }
 
 export default IBlobDataStore;

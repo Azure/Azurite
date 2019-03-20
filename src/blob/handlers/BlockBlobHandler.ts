@@ -70,15 +70,15 @@ export default class BlockBlobHandler extends BaseHandler
       },
       snapshot: "",
       isCommitted: true,
-      persistencyID
+      persistency: persistencyID
     };
 
     // TODO: Need a lock for multi keys
     await this.dataStore.updateBlob(blob);
 
     // TODO: Make clean up async
-    if (existingBlob && existingBlob.persistencyID) {
-      await this.dataStore.deletePayloads([existingBlob.persistencyID]);
+    if (existingBlob && existingBlob.persistency) {
+      await this.dataStore.deletePayloads([existingBlob.persistency]);
     }
 
     const response: Models.BlockBlobUploadResponse = {
@@ -131,7 +131,7 @@ export default class BlockBlobHandler extends BaseHandler
       isCommitted: false,
       name: blockId,
       size: contentLength,
-      persistencyID
+      persistency: persistencyID
     };
 
     await this.dataStore.updateBlock(block);
@@ -165,8 +165,8 @@ export default class BlockBlobHandler extends BaseHandler
     // TODO: Unlock
 
     // TODO: Make clean up async
-    if (existingBlock && existingBlock.persistencyID) {
-      await this.dataStore.deletePayloads([existingBlock.persistencyID]);
+    if (existingBlock && existingBlock.persistency) {
+      await this.dataStore.deletePayloads([existingBlock.persistency]);
     }
 
     const response: Models.BlockBlobStageBlockResponse = {

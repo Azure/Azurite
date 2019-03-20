@@ -5,6 +5,7 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IBlobHandler from "../generated/handlers/IBlobHandler";
+import { IPersistencyChunk } from "../persistence/IBlobDataStore";
 import { API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
 import { BlobModel } from "../persistence/IBlobDataStore";
@@ -255,7 +256,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     if (blocks === undefined || blocks.length === 0) {
       bodyGetter = async () => {
         return this.dataStore.readPayload(
-          blob.persistencyID,
+          blob.persistency,
           rangeStart,
           rangeEnd + 1 - rangeStart
         );
@@ -263,7 +264,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     } else {
       bodyGetter = async () => {
         return this.dataStore.readPayloads(
-          blocks.map(block => block.persistencyID),
+          blocks.map(block => block.persistency),
           rangeStart,
           rangeEnd + 1 - rangeStart
         );
@@ -345,20 +346,20 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blob.properties.contentLength! - 512
     );
 
-    const persistencyIDs: string[] = [];
+    const persistencyArray: (IPersistencyChunk)[] = [];
     blob.pageRanges = blob.pageRanges || {};
     for (let range = startRangeOffset; range <= endRangeOffset; range += 512) {
       const pageRange = blob.pageRanges[range];
       if (blob.pageRanges[range] !== undefined) {
-        persistencyIDs.push(pageRange.persistencyID);
+        persistencyArray.push(pageRange.persistency);
       } else {
-        persistencyIDs.push(zeroRangePersistencyID);
+        persistencyArray.push(zeroRangePersistencyID);
       }
     }
 
     const bodyGetter = async () => {
       return this.dataStore.readPayloads(
-        persistencyIDs,
+        persistencyArray,
         rangeStart - startRangeOffset,
         contentLength
       );

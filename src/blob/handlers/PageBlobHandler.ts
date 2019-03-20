@@ -151,40 +151,19 @@ export default class PageBlobHandler extends BaseHandler
     const end = ranges[1];
     const numberOfPages = (end - start + 1) / 512;
 
-    const persistencyID = await this.dataStore.writePayload(body);
-
-    // TODO: Bad performance to store lots of 512bytes files in disk
-    // Optimize persistencyID to {persistencyID, offset, length}, which allow
-    // different page ranges point to same persistency extent with different offsets
-    const promises = []; // Promises to duplicate "big" payload into payloads with 512 size
-    for (let i = 0; i < numberOfPages; i++) {
-      promises.push(
-        new Promise<string>((resolve, reject) => {
-          this.dataStore
-            .readPayload(persistencyID, i * 512, 512)
-            .then(rs => {
-              this.dataStore
-                .writePayload(rs)
-                .then(resolve)
-                .catch(reject);
-            })
-            .catch(reject);
-        })
-      );
-    }
-
-    const persistencyIDs = await Promise.all(promises);
-
-    await this.dataStore.deletePayloads([persistencyID]);
+    const persistency = await this.dataStore.writePayload(body);
 
     blob.pageRanges = blob.pageRanges || {};
-
     for (let i = 0; i < numberOfPages; i++) {
       const offset = i * 512 + start;
       blob.pageRanges![offset] = {
         start: offset,
         end: offset + 511,
-        persistencyID: persistencyIDs[i]
+        persistency: {
+          id: persistency.id,
+          offset: i * 512,
+          count: 512
+        }
       };
     }
 

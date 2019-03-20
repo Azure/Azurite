@@ -14,7 +14,7 @@ import BaseHandler from "./BaseHandler";
  * Handlers will take to persistency layer directly.
  *
  * @export
- * @class SimpleContainerHandler
+ * @class ContainerHandler
  * @implements {IHandler}
  */
 export default class ContainerHandler extends BaseHandler
