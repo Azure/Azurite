@@ -7,12 +7,10 @@ import Context from "../generated/Context";
 import IBlobHandler from "../generated/handlers/IBlobHandler";
 import { API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
+import * as IBlobDataStore from "../persistence/IBlobDataStore";
 
 export default class BlobHandler extends BaseHandler implements IBlobHandler {
-  public async download(
-    options: Models.BlobDownloadOptionalParams,
-    context: Context
-  ): Promise<Models.BlobDownloadResponse> {
+  private async getSimpleBlobFromStorage(context: Context): Promise<any> {
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -34,6 +32,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     if (!blob) {
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
     }
+
+    return blob;
+  }
+
+  public async download(
+    options: Models.BlobDownloadOptionalParams,
+    context: Context
+  ): Promise<Models.BlobDownloadResponse> {
+    const blob = await this.getSimpleBlobFromStorage(context);
 
     if (blob.properties.blobType === Models.BlobType.BlockBlob) {
       return this.downloadBlockBlob(options, context);
@@ -48,27 +55,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobGetPropertiesOptionalParams,
     context: Context
   ): Promise<Models.BlobGetPropertiesResponse> {
+    const blob = await this.getSimpleBlobFromStorage(context);
     const blobCtx = new BlobStorageContext(context);
-    const accountName = blobCtx.account!;
-    const containerName = blobCtx.container!;
-    const blobName = blobCtx.blob!;
-
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
-    const blob = await this.dataStore.getBlob(
-      accountName,
-      containerName,
-      blobName
-    );
-    if (!blob) {
-      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
-    }
 
     const response: Models.BlobGetPropertiesResponse = {
       statusCode: 200,
@@ -91,27 +79,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobDeleteMethodOptionalParams,
     context: Context
   ): Promise<Models.BlobDeleteResponse> {
+    // Will throw exception first if blob does not exist before delete
+    // need to use ts-ignore to avoid compilation error.
+    // @ts-ignore
+    const blob = await this.getSimpleBlobFromStorage(context);
+
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
-
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
-    const blob = await this.dataStore.getBlob(
-      accountName,
-      containerName,
-      blobName
-    );
-    if (!blob) {
-      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
-    }
 
     await this.dataStore.deleteBlob(accountName, containerName, blobName);
 
@@ -143,7 +119,21 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobSetMetadataOptionalParams,
     context: Context
   ): Promise<Models.BlobSetMetadataResponse> {
-    throw new NotImplementedError(context.contextID);
+    const blob = await this.getSimpleBlobFromStorage(context);
+    const blobCtx = new BlobStorageContext(context);
+
+    blob.metadata = options.metadata;
+
+    await this.dataStore.updateBlob(blob);
+
+    const response: Models.BlobSetMetadataResponse = {
+      statusCode: 200,
+      requestId: blobCtx.contextID,
+      date: new Date(),
+      version: API_VERSION
+    };
+
+    return response;
   }
 
   public async acquireLease(
@@ -227,27 +217,16 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobDownloadResponse> {
     const blobCtx = new BlobStorageContext(context);
-    const accountName = blobCtx.account!;
-    const containerName = blobCtx.container!;
-    const blobName = blobCtx.blob!;
 
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
+    const blob = await this.getSimpleBlobFromStorage(context);
+    let blockBlob;
+    if (blob.properties.blobType === Models.BlobType.BlockBlob) {
+      blockBlob = <IBlobDataStore.BlobModel>blob;
+    } else {
+      throw StorageErrorFactory.getInvalidOperation(
+        "Invalid blob type retrieval"
+      );
     }
-
-    const blob = await this.dataStore.getBlob(
-      accountName,
-      containerName,
-      blobName
-    );
-    if (!blob) {
-      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
-    }
-
     // Deserializer doesn't handle range header currently
     // We manually parse range headers here
     const rangesString =
@@ -263,7 +242,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
-      rangeEnd = blob.properties.contentLength! - 1;
+      rangeEnd = blockBlob.properties.contentLength! - 1;
     }
 
     const contentLength = rangeEnd - rangeStart + 1;
@@ -288,14 +267,19 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         );
       };
     } else {
-      const blocks = blob.committedBlocksInOrder;
-      bodyGetter = async () => {
-        return this.dataStore.readPayloads(
-          blocks.map(block => block.persistencyID),
-          rangeStart,
-          rangeEnd + 1 - rangeStart
-        );
-      };
+      const blocks = blockBlob.committedBlocksInOrder;
+      if (blocks != undefined) {
+        bodyGetter = async () => {
+          return this.dataStore.readPayloads(
+            blocks.map(block => block.persistencyID),
+            rangeStart,
+            rangeEnd + 1 - rangeStart
+          );
+        };
+      } else {
+        bodyGetter = async () => undefined;
+        throw StorageErrorFactory.getInvalidOperation("Unable to get blocks!");
+      }
     }
 
     let body: NodeJS.ReadableStream | undefined = await bodyGetter();
@@ -331,26 +315,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobDownloadResponse> {
     const blobCtx = new BlobStorageContext(context);
-    const accountName = blobCtx.account!;
-    const containerName = blobCtx.container!;
-    const blobName = blobCtx.blob!;
 
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
-    const blob = await this.dataStore.getBlob(
-      accountName,
-      containerName,
-      blobName
-    );
-    if (!blob) {
-      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
-    }
+    const blob = await this.getSimpleBlobFromStorage(context);
 
     // Deserializer doesn't handle range header currently
     // We manually parse range headers here
