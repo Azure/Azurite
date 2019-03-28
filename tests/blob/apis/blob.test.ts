@@ -5,7 +5,7 @@ import {
   BlockBlobURL,
   ContainerURL,
   ServiceURL,
-  StorageURL,
+  StorageURL
 } from "@azure/storage-blob";
 import assert = require("assert");
 
@@ -84,5 +84,15 @@ describe("BlobAPIs", () => {
 
   it("delete", async () => {
     await blobURL.delete(Aborter.none);
+  });
+
+  it("setMetadata with new metadata set", async () => {
+    const metadata = {
+      a: "a",
+      b: "b"
+    };
+    await blobURL.setMetadata(Aborter.none, metadata);
+    const result = await blobURL.getProperties(Aborter.none);
+    assert.deepStrictEqual(result.metadata, metadata);
   });
 });
