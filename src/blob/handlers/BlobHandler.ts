@@ -5,10 +5,10 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IBlobHandler from "../generated/handlers/IBlobHandler";
-import { IPersistencyChunk } from "../persistence/IBlobDataStore";
+import { BlobModel, IPersistencyChunk } from "../persistence/IBlobDataStore";
 import { API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
-import { BlobModel } from "../persistence/IBlobDataStore";
+import PageBlobHandler from "./PageBlobHandler";
 
 export default class BlobHandler extends BaseHandler implements IBlobHandler {
   private async getSimpleBlobFromStorage(context: Context): Promise<BlobModel> {
@@ -326,7 +326,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     const contentLength = rangeEnd - rangeStart + 1;
-    const partialRead = contentLength !== blob.properties.contentLength!;
+    // const partialRead = contentLength !== blob.properties.contentLength!;
 
     logger.info(
       // tslint:disable-next-line:max-line-length
@@ -334,25 +334,99 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blobCtx.contextID
     );
 
+    if (contentLength <= 0) {
+      return {
+        statusCode: 200,
+        body: undefined,
+        metadata: blob.metadata,
+        eTag: blob.properties.etag,
+        requestId: blobCtx.contextID,
+        date: blobCtx.startTime!,
+        version: API_VERSION,
+        ...blob.properties,
+        contentLength,
+        contentMD5: undefined // TODO
+      };
+    }
+
     // TODO: Share a single zero range persisted chunk cross Azurite
     // TODO: Not all page blob has zero ranges
     const zeroRangePersistencyID = await this.dataStore.writePayload(
       Buffer.alloc(512)
     );
 
-    const startRangeOffset = Math.floor(rangeStart / 512) * 512;
-    const endRangeOffset = Math.min(
-      Math.floor(rangeEnd / 512) * 512,
-      blob.properties.contentLength! - 512
+    const persistencyArray: (IPersistencyChunk)[] = [];
+    blob.pageRangesInOrder = blob.pageRangesInOrder || [];
+
+    // TODO: Put page ranges logic into single class
+    const impactedScope = PageBlobHandler.selectImpactedRanges(
+      blob.pageRangesInOrder,
+      rangeStart,
+      rangeEnd
     );
 
-    const persistencyArray: (IPersistencyChunk)[] = [];
-    blob.pageRanges = blob.pageRanges || {};
-    for (let range = startRangeOffset; range <= endRangeOffset; range += 512) {
-      const pageRange = blob.pageRanges[range];
-      if (blob.pageRanges[range] !== undefined) {
-        persistencyArray.push(pageRange.persistency);
-      } else {
+    // Find out first and last impacted range index
+    const impactedStartIndex = impactedScope[0];
+    const impactedEndIndex = impactedScope[1];
+    const impactedRangesCount =
+      impactedStartIndex > impactedEndIndex // No impacted ranges
+        ? 0
+        : impactedEndIndex - impactedStartIndex + 1;
+
+    let bodyGetterOffset = 0;
+    let dataLength = 0;
+    let gap = 0;
+    if (impactedRangesCount > 0) {
+      bodyGetterOffset =
+        rangeStart - blob.pageRangesInOrder[impactedStartIndex].start;
+
+      if (bodyGetterOffset < 0) {
+        gap = -bodyGetterOffset;
+        if (gap % 512 !== 0) {
+          throw new RangeError(
+            "BlobHandler:downloadPageBlob() Gap between 2 ranges doesn't align with 512 boundary."
+          );
+        }
+        const numOfGaps = gap / 512;
+        for (let j = 0; j < numOfGaps; j++) {
+          persistencyArray.push(zeroRangePersistencyID);
+        }
+        bodyGetterOffset = 0;
+        dataLength += gap;
+      }
+
+      for (let i = impactedStartIndex; i <= impactedEndIndex; i++) {
+        const range = blob.pageRangesInOrder[i];
+        persistencyArray.push(range.persistency);
+        dataLength += range.end + 1 - range.start;
+
+        const nextIndex = i + 1;
+        if (nextIndex <= impactedEndIndex) {
+          const nextRange = blob.pageRangesInOrder[nextIndex];
+          gap = nextRange.start - range.end - 1;
+          if (gap % 512 !== 0) {
+            throw new RangeError(
+              "BlobHandler:downloadPageBlob() Gap between 2 ranges doesn't align with 512 boundary."
+            );
+          }
+          const numOfGaps = gap / 512;
+          for (let j = 0; j < numOfGaps; j++) {
+            persistencyArray.push(zeroRangePersistencyID);
+          }
+          dataLength += gap;
+        }
+      }
+    }
+
+    gap = contentLength - dataLength;
+    if (gap > 0) {
+      if (gap % 512 !== 0) {
+        throw new RangeError(
+          "BlobHandler:downloadPageBlob() Gap between 2 ranges doesn't align with 512 boundary."
+        );
+      }
+      const numOfGaps = gap / 512;
+      for (let j = 0; j < numOfGaps; j++) {
         persistencyArray.push(zeroRangePersistencyID);
       }
     }
@@ -360,22 +434,22 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const bodyGetter = async () => {
       return this.dataStore.readPayloads(
         persistencyArray,
-        rangeStart - startRangeOffset,
+        bodyGetterOffset,
         contentLength
       );
     };
 
-    let body: NodeJS.ReadableStream | undefined = await bodyGetter();
-    let contentMD5: Uint8Array | undefined;
-    if (!partialRead) {
-      contentMD5 = blob.properties.contentMD5;
-    } else if (contentLength <= 4 * 1024 * 1024) {
-      if (body) {
-        // TODO： Get partial content MD5
-        contentMD5 = undefined; // await getMD5FromStream(body);
-        body = await bodyGetter();
-      }
-    }
+    const body: NodeJS.ReadableStream | undefined = await bodyGetter();
+    // let contentMD5: Uint8Array | undefined;
+    // if (!partialRead) {
+    //   contentMD5 = blob.properties.contentMD5;
+    // } else if (contentLength <= 4 * 1024 * 1024) {
+    //   if (body) {
+    //     // TODO： Get partial content MD5
+    //     contentMD5 = undefined; // await getMD5FromStream(body);
+    //     body = await bodyGetter();
+    //   }
+    // }
 
     const response: Models.BlobDownloadResponse = {
       statusCode: 200,
@@ -387,7 +461,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       version: API_VERSION,
       ...blob.properties,
       contentLength,
-      contentMD5
+      contentMD5: undefined // TODO
     };
 
     return response;

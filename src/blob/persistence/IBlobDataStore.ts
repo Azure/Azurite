@@ -9,8 +9,8 @@ import * as Models from "../generated/artifacts/models";
  */
 export interface IPersistencyChunk {
   id: string; // The persistency layer storage extent ID where the chunk belongs to
-  offset?: number; // Chunk offset inside the extent where chunk starts in bytes
-  count?: number; // Chunk length in bytes
+  offset: number; // Chunk offset inside the extent where chunk starts in bytes
+  count: number; // Chunk length in bytes
 }
 
 /** MODELS FOR SERVICE */
@@ -72,12 +72,14 @@ interface IBlockBlobAdditionalProperties {
   committedBlocksInOrder?: PersistencyBlockModel[];
 }
 
-interface IPersistencyPageRange {
-  [offset: number]: IPersistencyPropertiesRequired & Models.PageRange;
-}
+/**
+ * PageRange model with pointers to persistency chunk.
+ */
+export type PersistencyPageRange = IPersistencyPropertiesRequired &
+  Models.PageRange;
 
 interface IPageBlobAdditionalProperties {
-  pageRanges?: IPersistencyPageRange;
+  pageRangesInOrder?: PersistencyPageRange[];
 }
 
 interface IBlobAdditionalProperties {
