@@ -7,10 +7,10 @@ import Context from "../generated/Context";
 import IBlobHandler from "../generated/handlers/IBlobHandler";
 import { API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
-import * as IBlobDataStore from "../persistence/IBlobDataStore";
+import { BlobModel } from "../persistence/IBlobDataStore";
 
 export default class BlobHandler extends BaseHandler implements IBlobHandler {
-  private async getSimpleBlobFromStorage(context: Context): Promise<any> {
+  private async getSimpleBlobFromStorage(context: Context): Promise<BlobModel> {
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -221,7 +221,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const blob = await this.getSimpleBlobFromStorage(context);
     let blockBlob;
     if (blob.properties.blobType === Models.BlobType.BlockBlob) {
-      blockBlob = <IBlobDataStore.BlobModel>blob;
+      blockBlob = blob;
     } else {
       throw StorageErrorFactory.getInvalidOperation(
         "Invalid blob type retrieval"
