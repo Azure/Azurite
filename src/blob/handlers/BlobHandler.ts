@@ -56,16 +56,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobGetPropertiesResponse> {
     const blob = await this.getSimpleBlobFromStorage(context);
-    const blobCtx = new BlobStorageContext(context);
 
     const response: Models.BlobGetPropertiesResponse = {
       statusCode: 200,
       metadata: blob.metadata,
       isIncrementalCopy: blob.properties.incrementalCopy,
       eTag: blob.properties.etag,
-      requestId: blobCtx.contextID,
+      requestId: context.contextID,
       version: API_VERSION,
-      date: blobCtx.startTime,
+      date: context.startTime,
       acceptRanges: undefined, // TODO:
       blobCommittedBlockCount: undefined, // TODO:
       isServerEncrypted: true,
@@ -80,20 +79,19 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobDeleteResponse> {
     // Will throw exception first if blob does not exist before delete
-    // need to use ts-ignore to avoid compilation error.
+    // need to use ts-ignore to avoid compilation error due to "noUnusedLocals": true,.
     // @ts-ignore
     const blob = await this.getSimpleBlobFromStorage(context);
 
-    const blobCtx = new BlobStorageContext(context);
-    const accountName = blobCtx.account!;
-    const containerName = blobCtx.container!;
-    const blobName = blobCtx.blob!;
-
-    await this.dataStore.deleteBlob(accountName, containerName, blobName);
+    await this.dataStore.deleteBlob(
+      blob.accountName,
+      blob.containerName,
+      blob.name
+    );
 
     const response: Models.BlobDeleteResponse = {
       statusCode: 202,
-      requestId: blobCtx.contextID,
+      requestId: context.contextID,
       date: new Date(),
       version: API_VERSION
     };
@@ -216,8 +214,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobDownloadOptionalParams,
     context: Context
   ): Promise<Models.BlobDownloadResponse> {
-    const blobCtx = new BlobStorageContext(context);
-
     const blob = await this.getSimpleBlobFromStorage(context);
     let blockBlob;
     if (blob.properties.blobType === Models.BlobType.BlockBlob) {
@@ -251,7 +247,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     logger.info(
       // tslint:disable-next-line:max-line-length
       `BlobHandler:download() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
-      blobCtx.contextID
+      context.contextID
     );
 
     let bodyGetter: () => Promise<NodeJS.ReadableStream | undefined>;
@@ -299,8 +295,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       body,
       metadata: blob.metadata,
       eTag: blob.properties.etag,
-      requestId: blobCtx.contextID,
-      date: blobCtx.startTime!,
+      requestId: context.contextID,
+      date: context.startTime!,
       version: API_VERSION,
       ...blob.properties,
       contentLength,
