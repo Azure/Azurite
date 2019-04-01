@@ -1,40 +1,23 @@
-import logger from "../../common/Logger";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IBlobHandler from "../generated/handlers/IBlobHandler";
-import { BlobModel, IPersistencyChunk } from "../persistence/IBlobDataStore";
+import ILogger from "../generated/utils/ILogger";
+import IBlobDataStore, { BlobModel } from "../persistence/IBlobDataStore";
 import { API_VERSION } from "../utils/constants";
+import { deserializePageBlobRangeHeader, deserializeRangeHeader } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
-import PageBlobHandler from "./PageBlobHandler";
+import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
 export default class BlobHandler extends BaseHandler implements IBlobHandler {
-  private async getSimpleBlobFromStorage(context: Context): Promise<BlobModel> {
-    const blobCtx = new BlobStorageContext(context);
-    const accountName = blobCtx.account!;
-    const containerName = blobCtx.container!;
-    const blobName = blobCtx.blob!;
-
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
-    const blob = await this.dataStore.getBlob(
-      accountName,
-      containerName,
-      blobName
-    );
-    if (!blob) {
-      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
-    }
-
-    return blob;
+  constructor(
+    dataStore: IBlobDataStore,
+    logger: ILogger,
+    private readonly rangesManager: IPageBlobRangesManager
+  ) {
+    super(dataStore, logger);
   }
 
   public async download(
@@ -226,16 +209,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
     // Deserializer doesn't handle range header currently
     // We manually parse range headers here
-    const rangesString =
-      context.request!.getHeader("x-ms-range") ||
-      context.request!.getHeader("range") ||
-      "bytes=0-";
-    const rangesArray = rangesString.substr(6).split("-");
-    const rangeStart = parseInt(rangesArray[0], 10);
-    let rangeEnd = // Inclusive
-      rangesArray[1] && rangesArray[1].length > 0
-        ? parseInt(rangesArray[1], 10)
-        : Infinity;
+    const rangesParts = deserializeRangeHeader(
+      context.request!.getHeader("range"),
+      context.request!.getHeader("x-ms-range")
+    );
+    const rangeStart = rangesParts[0];
+    let rangeEnd = rangesParts[1];
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
@@ -245,7 +224,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const contentLength = rangeEnd - rangeStart + 1;
     const partialRead = contentLength !== blob.properties.contentLength!;
 
-    logger.info(
+    this.logger.info(
       // tslint:disable-next-line:max-line-length
       `BlobHandler:download() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
       context.contextID
@@ -309,16 +288,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Deserializer doesn't handle range header currently
     // We manually parse range headers here
-    const rangesString =
-      context.request!.getHeader("x-ms-range") ||
-      context.request!.getHeader("range") ||
-      "bytes=0-";
-    const rangesArray = rangesString.substr(6).split("-");
-    const rangeStart = parseInt(rangesArray[0], 10);
-    let rangeEnd = // Inclusive
-      rangesArray[1] && rangesArray[1].length > 0
-        ? parseInt(rangesArray[1], 10)
-        : Infinity;
+    const rangesParts = deserializePageBlobRangeHeader(
+      context.request!.getHeader("range"),
+      context.request!.getHeader("x-ms-range")
+    );
+    const rangeStart = rangesParts[0];
+    let rangeEnd = rangesParts[1];
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
@@ -328,7 +303,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const contentLength = rangeEnd - rangeStart + 1;
     // const partialRead = contentLength !== blob.properties.contentLength!;
 
-    logger.info(
+    this.logger.info(
       // tslint:disable-next-line:max-line-length
       `BlobHandler:download() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
       blobCtx.contextID
@@ -349,92 +324,17 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       };
     }
 
-    // TODO: Share a single zero range persisted chunk cross Azurite
-    // TODO: Not all page blob has zero ranges
-    const zeroRangePersistencyID = await this.dataStore.writePayload(
-      Buffer.alloc(512)
-    );
-
-    const persistencyArray: (IPersistencyChunk)[] = [];
     blob.pageRangesInOrder = blob.pageRangesInOrder || [];
 
-    // TODO: Put page ranges logic into single class
-    const impactedScope = PageBlobHandler.selectImpactedRanges(
-      blob.pageRangesInOrder,
-      rangeStart,
-      rangeEnd
-    );
-
-    // Find out first and last impacted range index
-    const impactedStartIndex = impactedScope[0];
-    const impactedEndIndex = impactedScope[1];
-    const impactedRangesCount =
-      impactedStartIndex > impactedEndIndex // No impacted ranges
-        ? 0
-        : impactedEndIndex - impactedStartIndex + 1;
-
-    let bodyGetterOffset = 0;
-    let dataLength = 0;
-    let gap = 0;
-    if (impactedRangesCount > 0) {
-      bodyGetterOffset =
-        rangeStart - blob.pageRangesInOrder[impactedStartIndex].start;
-
-      if (bodyGetterOffset < 0) {
-        gap = -bodyGetterOffset;
-        if (gap % 512 !== 0) {
-          throw new RangeError(
-            "BlobHandler:downloadPageBlob() Gap between 2 ranges doesn't align with 512 boundary."
-          );
-        }
-        const numOfGaps = gap / 512;
-        for (let j = 0; j < numOfGaps; j++) {
-          persistencyArray.push(zeroRangePersistencyID);
-        }
-        bodyGetterOffset = 0;
-        dataLength += gap;
-      }
-
-      for (let i = impactedStartIndex; i <= impactedEndIndex; i++) {
-        const range = blob.pageRangesInOrder[i];
-        persistencyArray.push(range.persistency);
-        dataLength += range.end + 1 - range.start;
-
-        const nextIndex = i + 1;
-        if (nextIndex <= impactedEndIndex) {
-          const nextRange = blob.pageRangesInOrder[nextIndex];
-          gap = nextRange.start - range.end - 1;
-          if (gap % 512 !== 0) {
-            throw new RangeError(
-              "BlobHandler:downloadPageBlob() Gap between 2 ranges doesn't align with 512 boundary."
-            );
-          }
-          const numOfGaps = gap / 512;
-          for (let j = 0; j < numOfGaps; j++) {
-            persistencyArray.push(zeroRangePersistencyID);
-          }
-          dataLength += gap;
-        }
-      }
-    }
-
-    gap = contentLength - dataLength;
-    if (gap > 0) {
-      if (gap % 512 !== 0) {
-        throw new RangeError(
-          "BlobHandler:downloadPageBlob() Gap between 2 ranges doesn't align with 512 boundary."
-        );
-      }
-      const numOfGaps = gap / 512;
-      for (let j = 0; j < numOfGaps; j++) {
-        persistencyArray.push(zeroRangePersistencyID);
-      }
-    }
+    const ranges = this.rangesManager.fillZeroRanges(blob.pageRangesInOrder, {
+      start: rangeStart,
+      end: rangeEnd
+    });
 
     const bodyGetter = async () => {
       return this.dataStore.readPayloads(
-        persistencyArray,
-        bodyGetterOffset,
+        ranges.map(value => value.persistency),
+        0,
         contentLength
       );
     };
@@ -465,5 +365,31 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     };
 
     return response;
+  }
+
+  private async getSimpleBlobFromStorage(context: Context): Promise<BlobModel> {
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    const blobName = blobCtx.blob!;
+
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
+    if (!container) {
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
+    }
+
+    const blob = await this.dataStore.getBlob(
+      accountName,
+      containerName,
+      blobName
+    );
+    if (!blob) {
+      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
+    }
+
+    return blob;
   }
 }

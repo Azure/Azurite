@@ -13,6 +13,8 @@ export interface IPersistencyChunk {
   count: number; // Chunk length in bytes
 }
 
+export const ZERO_PERSISTENCY_CHUNK_ID = "*ZERO*";
+
 /** MODELS FOR SERVICE */
 interface IServiceAdditionalProperties {
   accountName: string;

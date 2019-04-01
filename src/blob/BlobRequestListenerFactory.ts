@@ -13,6 +13,7 @@ import BlobHandler from "./handlers/BlobHandler";
 import BlockBlobHandler from "./handlers/BlockBlobHandler";
 import ContainerHandler from "./handlers/ContainerHandler";
 import PageBlobHandler from "./handlers/PageBlobHandler";
+import PageBlobRangesManager from "./handlers/PageBlobRangesManager";
 import ServiceHandler from "./handlers/ServiceHandler";
 import { IBlobDataStore } from "./persistence/IBlobDataStore";
 import { DEFAULT_CONTEXT_PATH } from "./utils/constants";
@@ -44,12 +45,21 @@ export default class BlobRequestListenerFactory
     );
 
     // Create handlers into handler middleware factory
+    const pageBlobRangesManager = new PageBlobRangesManager();
     const handlers: IHandlers = {
       appendBlobHandler: new AppendBlobHandler(this.dataStore, logger),
-      blobHandler: new BlobHandler(this.dataStore, logger),
+      blobHandler: new BlobHandler(
+        this.dataStore,
+        logger,
+        pageBlobRangesManager
+      ),
       blockBlobHandler: new BlockBlobHandler(this.dataStore, logger),
       containerHandler: new ContainerHandler(this.dataStore, logger),
-      pageBlobHandler: new PageBlobHandler(this.dataStore, logger),
+      pageBlobHandler: new PageBlobHandler(
+        this.dataStore,
+        logger,
+        pageBlobRangesManager
+      ),
       serviceHandler: new ServiceHandler(this.dataStore, logger)
     };
 

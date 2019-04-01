@@ -1,8 +1,8 @@
 import assert = require("assert");
 
-import PageBlobHandler from "../../../src/blob/handlers/PageBlobHandler";
+import PageBlobRangesManager from "../../../src/blob/handlers/PageBlobRangesManager";
 
-describe("PageBlobHandler", () => {
+describe("PageBlobRangesManager", () => {
   it("selectImpactedRanges", () => {
     const testCases = [
       {
@@ -256,9 +256,10 @@ describe("PageBlobHandler", () => {
       }
     ];
 
-    // const pageBlobHandler = new PageBlobHandler({} as any, {} as any);
+    const manager = new PageBlobRangesManager();
+
     testCases.forEach(testCase => {
-      const results = PageBlobHandler.selectImpactedRanges(
+      const results = manager.selectImpactedRanges(
         testCase.ranges as any,
         testCase.start,
         testCase.end

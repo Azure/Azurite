@@ -39,7 +39,7 @@ export default class BlobConfiguration extends ConfigurationBase {
       enableAccessLog,
       accessLogFilePath,
       enableDebugLog,
-      debugLogFilePath
+      debugLogFilePath || "./debug.log"
     );
     this.dbPath = dbPath || DEFAULT_LOKI_DB_PATH;
     this.persistencePath = persistencePath || DEFAULT_BLOB_PERSISTENCE_PATH;

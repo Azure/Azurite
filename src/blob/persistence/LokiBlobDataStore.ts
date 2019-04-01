@@ -6,6 +6,7 @@ import { Duplex } from "stream";
 import { promisify } from "util";
 import uuid from "uuid/v4";
 
+import ZeroBytesStream from "../../common/ZeroBytesStream";
 import {
   BlobModel,
   BlockModel,
@@ -13,6 +14,7 @@ import {
   IBlobDataStore,
   IPersistencyChunk,
   ServicePropertiesModel,
+  ZERO_PERSISTENCY_CHUNK_ID,
 } from "./IBlobDataStore";
 
 /**
@@ -650,6 +652,11 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       const emptyStream = new Duplex();
       emptyStream.end();
       return emptyStream;
+    }
+
+    if (persistency.id === ZERO_PERSISTENCY_CHUNK_ID) {
+      const subRangeCount = Math.min(count, persistency.count - offset);
+      return new ZeroBytesStream(subRangeCount);
     }
 
     const path = this.getPersistencyPath(persistency);
