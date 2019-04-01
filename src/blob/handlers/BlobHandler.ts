@@ -251,10 +251,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     );
 
     let bodyGetter: () => Promise<NodeJS.ReadableStream | undefined>;
-    if (
-      blob.committedBlocksInOrder === undefined ||
-      blob.committedBlocksInOrder.length === 0
-    ) {
+    const blocks = blockBlob!.committedBlocksInOrder;
+    if (blocks === undefined || blocks.length === 0) {
       bodyGetter = async () => {
         return this.dataStore.readPayload(
           blob.persistencyID,
@@ -263,19 +261,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         );
       };
     } else {
-      const blocks = blockBlob.committedBlocksInOrder;
-      if (blocks != undefined) {
-        bodyGetter = async () => {
-          return this.dataStore.readPayloads(
-            blocks.map(block => block.persistencyID),
-            rangeStart,
-            rangeEnd + 1 - rangeStart
-          );
-        };
-      } else {
-        bodyGetter = async () => undefined;
-        throw StorageErrorFactory.getInvalidOperation("Unable to get blocks!");
-      }
+      bodyGetter = async () => {
+        return this.dataStore.readPayloads(
+          blocks.map(block => block.persistencyID),
+          rangeStart,
+          rangeEnd + 1 - rangeStart
+        );
+      };
     }
 
     let body: NodeJS.ReadableStream | undefined = await bodyGetter();
