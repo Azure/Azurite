@@ -12,6 +12,7 @@ export type HttpMethod =
 export default interface IRequest {
   getMethod(): HttpMethod;
   getUrl(): string;
+  getEndpoint(): string;
   getPath(): string;
   getBodyStream(): NodeJS.ReadableStream;
   setBody(body: string | undefined): IRequest;

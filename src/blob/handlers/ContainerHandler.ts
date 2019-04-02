@@ -5,13 +5,13 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IContainerHandler from "../generated/handlers/IContainerHandler";
+import { ContainerModel } from "../persistence/IBlobDataStore";
 import { API_VERSION } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 /**
- * Manually implement handlers by implementing IContainerHandler interface.
- * Handlers will take to persistency layer directly.
+ * ContainerHandler handles Azure Storage Blob container related requests.
  *
  * @export
  * @class ContainerHandler
@@ -19,6 +19,14 @@ import BaseHandler from "./BaseHandler";
  */
 export default class ContainerHandler extends BaseHandler
   implements IContainerHandler {
+  /**
+   * Default listing blobs max number.
+   *
+   * @private
+   * @memberof ContainerHandler
+   */
+  private readonly LIST_BLOBS_MAX_RESULTS_DEFAULT = 5000;
+
   public async create(
     options: Models.ContainerCreateOptionalParams,
     context: Context
@@ -26,9 +34,8 @@ export default class ContainerHandler extends BaseHandler
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
-
-    const etag = newEtag(); // TODO: Implement etag
     const lastModified = blobCtx.startTime!;
+    const etag = newEtag();
 
     const container = await this.dataStore.getContainer(
       accountName,
@@ -66,28 +73,16 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerGetPropertiesOptionalParams,
     context: Context
   ): Promise<Models.ContainerGetPropertiesResponse> {
-    const blobCtx = new BlobStorageContext(context);
-    const accountName = blobCtx.account!;
-    const containerName = blobCtx.container!;
-
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
+    const container = await this.getSimpleContainerFromStorage(context);
     const response: Models.ContainerGetPropertiesResponse = {
       eTag: container.properties.etag,
       ...container.properties,
       blobPublicAccess: container.properties.publicAccess,
       metadata: container.metadata,
-      requestId: blobCtx.contextID,
+      requestId: context.contextID,
       statusCode: 200,
       version: API_VERSION
     };
-
     return response;
   }
 
@@ -102,27 +97,17 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerDeleteMethodOptionalParams,
     context: Context
   ): Promise<Models.ContainerDeleteResponse> {
-    const blobCtx = new BlobStorageContext(context);
-    const accountName = blobCtx.account!;
-    const containerName = blobCtx.container!;
-
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (container === undefined) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
+    const container = await this.getSimpleContainerFromStorage(context);
 
     // TODO: Mark container as being deleted status, then (mark) delete all blobs async
     // When above finishes, execute following delete container operation
     // Because following delete container operation will only delete DB metadata for container and
     // blobs under the container, but will not clean up blob data in disk
-    await this.dataStore.deleteContainer(accountName, containerName);
+    await this.dataStore.deleteContainer(container.accountName, container.name);
 
     const response: Models.ContainerDeleteResponse = {
-      date: new Date(),
-      requestId: blobCtx.contextID,
+      date: context.startTime,
+      requestId: context.contextID,
       statusCode: 202,
       version: API_VERSION
     };
@@ -135,23 +120,19 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerSetMetadataResponse> {
     const blobCtx = new BlobStorageContext(context);
-    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
+    let container: ContainerModel;
 
     await Mutex.lock(containerName);
-
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
+    try {
+      container = await this.getSimpleContainerFromStorage(context);
+    } catch (error) {
       await Mutex.unlock(containerName);
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
+      throw error;
     }
 
     container.metadata = options.metadata;
     container.properties.lastModified = blobCtx.startTime!;
-
     await this.dataStore.updateContainer(container);
     await Mutex.unlock(containerName);
 
@@ -159,7 +140,7 @@ export default class ContainerHandler extends BaseHandler
       date: container.properties.lastModified,
       eTag: newEtag(),
       lastModified: container.properties.lastModified,
-      requestId: blobCtx.contextID,
+      requestId: context.contextID,
       statusCode: 200
     };
 
@@ -226,23 +207,24 @@ export default class ContainerHandler extends BaseHandler
     throw new NotImplementedError(context.contextID);
   }
 
+  /**
+   * List blobs hierarchy.
+   *
+   * @param {string} delimiter
+   * @param {Models.ContainerListBlobHierarchySegmentOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ContainerListBlobHierarchySegmentResponse>}
+   * @memberof ContainerHandler
+   */
   public async listBlobHierarchySegment(
     delimiter: string,
     options: Models.ContainerListBlobHierarchySegmentOptionalParams,
     context: Context
   ): Promise<Models.ContainerListBlobHierarchySegmentResponse> {
-    const blobCtx = new BlobStorageContext(context);
-    const accountName = blobCtx.account!;
-    const containerName = blobCtx.container!;
-
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (container === undefined) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
+    const container = await this.getSimpleContainerFromStorage(context);
+    const request = context.request!;
+    const accountName = container.accountName;
+    const containerName = container.name;
     const marker = parseInt(options.marker || "0", 10);
     options.prefix = options.prefix || "";
     options.marker = options.marker || "";
@@ -283,17 +265,18 @@ export default class ContainerHandler extends BaseHandler
       blobPrefixes.push({ name: val.value });
     }
 
+    const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const response: Models.ContainerListBlobHierarchySegmentResponse = {
       statusCode: 200,
       contentType: "application/xml",
-      requestId: blobCtx.contextID,
+      requestId: context.contextID,
       version: API_VERSION,
-      date: blobCtx.startTime,
-      serviceEndpoint: "http://127.0.0.1", // TODO: Fill up dynamic endpoint
+      date: context.startTime,
+      serviceEndpoint,
       containerName,
       prefix: options.prefix,
       marker: options.marker,
-      maxResults: options.maxresults || 5000,
+      maxResults: options.maxresults || this.LIST_BLOBS_MAX_RESULTS_DEFAULT,
       delimiter,
       segment: {
         blobItems,
@@ -309,5 +292,31 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerGetAccountInfoResponse> {
     throw new NotImplementedError(context.contextID);
+  }
+
+  /**
+   * Get container object from persistency layer according to request context.
+   *
+   * @private
+   * @param {Context} context
+   * @returns {Promise<BlobModel>}
+   * @memberof ContainerHandler
+   */
+  private async getSimpleContainerFromStorage(
+    context: Context
+  ): Promise<ContainerModel> {
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
+    if (!container) {
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
+    }
+
+    return container;
   }
 }

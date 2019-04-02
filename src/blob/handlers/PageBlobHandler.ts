@@ -11,6 +11,14 @@ import { deserializePageBlobRangeHeader, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
+/**
+ * PageBlobHandler handles Azure Storage PageBlob related requests.
+ *
+ * @export
+ * @class PageBlobHandler
+ * @extends {BaseHandler}
+ * @implements {IPageBlobHandler}
+ */
 export default class PageBlobHandler extends BaseHandler
   implements IPageBlobHandler {
   constructor(
@@ -34,7 +42,6 @@ export default class PageBlobHandler extends BaseHandler
     const date = blobCtx.startTime!;
 
     if (contentLength !== 0) {
-      // TODO: Which error should return?
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
         "Content-Length must be 0 for Create Page Blob request."
@@ -42,7 +49,6 @@ export default class PageBlobHandler extends BaseHandler
     }
 
     if (blobContentLength % 512 !== 0) {
-      // TODO: Which error should return?
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
         "x-ms-content-length must be aligned to a 512-byte boundary."
@@ -89,7 +95,8 @@ export default class PageBlobHandler extends BaseHandler
       pageRangesInOrder: []
     };
 
-    // TODO: What's happens when create page blob right before commit block list?
+    // TODO: What's happens when create page blob right before commit block list? Or should we lock
+    // Should we check if there is an uncommitted blob?
     this.dataStore.updateBlob(blob);
 
     const response: Models.PageBlobCreateResponse = {
@@ -97,7 +104,7 @@ export default class PageBlobHandler extends BaseHandler
       eTag: etag,
       lastModified: blob.properties.lastModified,
       contentMD5: blob.properties.contentMD5,
-      requestId: blobCtx.contextID,
+      requestId: context.contextID,
       version: API_VERSION,
       date,
       isServerEncrypted: true
@@ -119,7 +126,6 @@ export default class PageBlobHandler extends BaseHandler
     const date = blobCtx.startTime!;
 
     if (contentLength % 512 !== 0) {
-      // TODO: Which error should return?
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
         "content-length or x-ms-content-length must be aligned to a 512-byte boundary."
@@ -176,10 +182,10 @@ export default class PageBlobHandler extends BaseHandler
 
     const response: Models.PageBlobUploadPagesResponse = {
       statusCode: 201,
-      eTag: newEtag(), // TODO
+      eTag: newEtag(),
       lastModified: date,
       contentMD5: undefined, // TODO
-      blobSequenceNumber: blob.properties.blobSequenceNumber, // TODO
+      blobSequenceNumber: blob.properties.blobSequenceNumber,
       requestId: blobCtx.contextID,
       version: API_VERSION,
       date,
@@ -201,7 +207,6 @@ export default class PageBlobHandler extends BaseHandler
     const date = blobCtx.startTime!;
 
     if (contentLength !== 0) {
-      // TODO: Which error should return?
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
         "content-length or x-ms-content-length must be 0 for clear pages operation."
@@ -252,10 +257,10 @@ export default class PageBlobHandler extends BaseHandler
 
     const response: Models.PageBlobClearPagesResponse = {
       statusCode: 201,
-      eTag: newEtag(), // TODO
+      eTag: newEtag(),
       lastModified: date,
       contentMD5: undefined, // TODO
-      blobSequenceNumber: blob.properties.blobSequenceNumber, // TODO
+      blobSequenceNumber: blob.properties.blobSequenceNumber,
       requestId: blobCtx.contextID,
       version: API_VERSION,
       date
@@ -304,15 +309,13 @@ export default class PageBlobHandler extends BaseHandler
     if (!ranges) {
       ranges = [0, blob.properties.contentLength! - 1];
     }
-    const start = ranges[0];
-    const end = ranges[1];
 
     blob.pageRangesInOrder = blob.pageRangesInOrder || [];
     const impactedRanges = this.rangesManager.cutRanges(
       blob.pageRangesInOrder,
       {
-        start,
-        end
+        start: ranges[0],
+        end: ranges[1]
       }
     );
 
@@ -349,7 +352,6 @@ export default class PageBlobHandler extends BaseHandler
     const date = blobCtx.startTime!;
 
     if (blobContentLength % 512 !== 0) {
-      // TODO: Which error should return?
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
         "x-ms-blob-content-length must be aligned to a 512-byte boundary for Page Blob Resize request."

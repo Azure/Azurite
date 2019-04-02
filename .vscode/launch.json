@@ -10,7 +10,7 @@
       "name": "Azurite Blob Service",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
-      "args": ["${workspaceFolder}/src/blob/bin.ts"],
+      "args": ["${workspaceFolder}/src/blob/main.ts"],
       "outputCapture": "std"
     },
     {

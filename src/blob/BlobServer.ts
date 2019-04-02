@@ -52,26 +52,29 @@ export default class BlobServer extends ServerBase {
     // and replace the default Express based request listener
     const requestListenerFactory: IRequestListenerFactory = new BlobRequestListenerFactory(
       dataStore,
-      configuration.enableAccessLog // Access log will display every request served
+      configuration.enableAccessLog // Access log includes every handled HTTP request
     );
 
     super(host, port, httpServer, requestListenerFactory, dataStore);
   }
 
-  protected async afterStart(): Promise<void> {
-    let address = this.httpServer.address();
-    if (typeof address !== "string") {
-      address = address.address;
-    }
+  protected async beforeStart(): Promise<void> {
+    const msg = `Azurite Blob service is starting on ${this.host}:${this.port}`;
+    logger.info(msg);
+  }
 
-    logger.info(
-      `Azurite Blob service successfully listens on ${address}:${this.port}`
-    );
+  protected async afterStart(): Promise<void> {
+    const msg = `Starting Azurite Blob service successfully listens on ${this.getHttpServerAddress()}`;
+    logger.info(msg);
   }
 
   protected async beforeClose(): Promise<void> {
-    logger.info(
-      `Azurite Blob service is shutdown... Waiting for existing keep-alive connections timeout...`
-    );
+    const msg = `Azurite Blob service is closing...`;
+    logger.info(msg);
+  }
+
+  protected async afterClose(): Promise<void> {
+    const msg = `Azurite Blob service successfully closed`;
+    logger.info(msg);
   }
 }

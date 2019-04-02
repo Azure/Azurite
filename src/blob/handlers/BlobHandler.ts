@@ -7,10 +7,21 @@ import IBlobHandler from "../generated/handlers/IBlobHandler";
 import ILogger from "../generated/utils/ILogger";
 import IBlobDataStore, { BlobModel } from "../persistence/IBlobDataStore";
 import { API_VERSION } from "../utils/constants";
-import { deserializePageBlobRangeHeader, deserializeRangeHeader } from "../utils/utils";
+import {
+  deserializePageBlobRangeHeader,
+  deserializeRangeHeader
+} from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
+/**
+ * BlobHandler handles Azure Storage Blob related requests.
+ *
+ * @export
+ * @class BlobHandler
+ * @extends {BaseHandler}
+ * @implements {IBlobHandler}
+ */
 export default class BlobHandler extends BaseHandler implements IBlobHandler {
   constructor(
     dataStore: IBlobDataStore,
@@ -20,6 +31,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     super(dataStore, logger);
   }
 
+  /**
+   * Download blob.
+   *
+   * @param {Models.BlobDownloadOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobDownloadResponse>}
+   * @memberof BlobHandler
+   */
   public async download(
     options: Models.BlobDownloadOptionalParams,
     context: Context
@@ -27,14 +46,25 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const blob = await this.getSimpleBlobFromStorage(context);
 
     if (blob.properties.blobType === Models.BlobType.BlockBlob) {
-      return this.downloadBlockBlob(options, context);
+      return this.downloadBlockBlob(options, context, blob);
+    } else if (blob.properties.blobType === Models.BlobType.PageBlob) {
+      return this.downloadPageBlob(options, context, blob);
+    } else if (blob.properties.blobType === Models.BlobType.AppendBlob) {
+      // TODO: Handle append blob
+      throw new NotImplementedError(context.contextID);
     } else {
-      return this.downloadPageBlob(options, context);
+      throw StorageErrorFactory.getInvalidOperation(context.contextID!);
     }
-
-    // TODO: Handle append blob
   }
 
+  /**
+   * Get blob properties.
+   *
+   * @param {Models.BlobGetPropertiesOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobGetPropertiesResponse>}
+   * @memberof BlobHandler
+   */
   public async getProperties(
     options: Models.BlobGetPropertiesOptionalParams,
     context: Context
@@ -49,8 +79,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       requestId: context.contextID,
       version: API_VERSION,
       date: context.startTime,
-      acceptRanges: undefined, // TODO:
-      blobCommittedBlockCount: undefined, // TODO:
+      acceptRanges: "bytes",
+      blobCommittedBlockCount: undefined, // TODO: Append blob
       isServerEncrypted: true,
       ...blob.properties
     };
@@ -58,13 +88,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
+  /**
+   * Delete blob.
+   *
+   * @param {Models.BlobDeleteMethodOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobDeleteResponse>}
+   * @memberof BlobHandler
+   */
   public async delete(
     options: Models.BlobDeleteMethodOptionalParams,
     context: Context
   ): Promise<Models.BlobDeleteResponse> {
-    // Will throw exception first if blob does not exist before delete
-    // need to use ts-ignore to avoid compilation error due to "noUnusedLocals": true,.
-    // @ts-ignore
     const blob = await this.getSimpleBlobFromStorage(context);
 
     await this.dataStore.deleteBlob(
@@ -76,7 +111,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const response: Models.BlobDeleteResponse = {
       statusCode: 202,
       requestId: context.contextID,
-      date: new Date(),
+      date: context.startTime,
       version: API_VERSION
     };
 
@@ -102,16 +137,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobSetMetadataResponse> {
     const blob = await this.getSimpleBlobFromStorage(context);
-    const blobCtx = new BlobStorageContext(context);
 
     blob.metadata = options.metadata;
-
     await this.dataStore.updateBlob(blob);
 
     const response: Models.BlobSetMetadataResponse = {
       statusCode: 200,
-      requestId: blobCtx.contextID,
-      date: new Date(),
+      requestId: context.contextID,
+      date: context.startTime,
       version: API_VERSION
     };
 
@@ -196,19 +229,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
   private async downloadBlockBlob(
     options: Models.BlobDownloadOptionalParams,
-    context: Context
+    context: Context,
+    blob: BlobModel
   ): Promise<Models.BlobDownloadResponse> {
-    const blob = await this.getSimpleBlobFromStorage(context);
-    let blockBlob;
-    if (blob.properties.blobType === Models.BlobType.BlockBlob) {
-      blockBlob = blob;
-    } else {
-      throw StorageErrorFactory.getInvalidOperation(
-        "Invalid blob type retrieval"
-      );
-    }
-    // Deserializer doesn't handle range header currently
-    // We manually parse range headers here
+    // Deserializer doesn't handle range header currently, manually parse range headers here
     const rangesParts = deserializeRangeHeader(
       context.request!.getHeader("range"),
       context.request!.getHeader("x-ms-range")
@@ -218,7 +242,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
-      rangeEnd = blockBlob.properties.contentLength! - 1;
+      rangeEnd = blob.properties.contentLength! - 1;
     }
 
     const contentLength = rangeEnd - rangeStart + 1;
@@ -226,12 +250,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     this.logger.info(
       // tslint:disable-next-line:max-line-length
-      `BlobHandler:download() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
+      `BlobHandler:downloadBlockBlob() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
       context.contextID
     );
 
     let bodyGetter: () => Promise<NodeJS.ReadableStream | undefined>;
-    const blocks = blockBlob!.committedBlocksInOrder;
+    const blocks = blob.committedBlocksInOrder;
     if (blocks === undefined || blocks.length === 0) {
       bodyGetter = async () => {
         return this.dataStore.readPayload(
@@ -280,14 +304,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
   private async downloadPageBlob(
     options: Models.BlobDownloadOptionalParams,
-    context: Context
+    context: Context,
+    blob: BlobModel
   ): Promise<Models.BlobDownloadResponse> {
-    const blobCtx = new BlobStorageContext(context);
-
-    const blob = await this.getSimpleBlobFromStorage(context);
-
-    // Deserializer doesn't handle range header currently
-    // We manually parse range headers here
+    // Deserializer doesn't handle range header currently, manually parse range headers here
     const rangesParts = deserializePageBlobRangeHeader(
       context.request!.getHeader("range"),
       context.request!.getHeader("x-ms-range")
@@ -305,8 +325,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     this.logger.info(
       // tslint:disable-next-line:max-line-length
-      `BlobHandler:download() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
-      blobCtx.contextID
+      `BlobHandler:downloadPageBlob() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
+      context.contextID
     );
 
     if (contentLength <= 0) {
@@ -315,17 +335,16 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         body: undefined,
         metadata: blob.metadata,
         eTag: blob.properties.etag,
-        requestId: blobCtx.contextID,
-        date: blobCtx.startTime!,
+        requestId: context.contextID,
+        date: context.startTime!,
         version: API_VERSION,
         ...blob.properties,
         contentLength,
-        contentMD5: undefined // TODO
+        contentMD5: undefined
       };
     }
 
     blob.pageRangesInOrder = blob.pageRangesInOrder || [];
-
     const ranges = this.rangesManager.fillZeroRanges(blob.pageRangesInOrder, {
       start: rangeStart,
       end: rangeEnd
@@ -356,8 +375,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       body,
       metadata: blob.metadata,
       eTag: blob.properties.etag,
-      requestId: blobCtx.contextID,
-      date: blobCtx.startTime!,
+      requestId: context.contextID,
+      date: context.startTime!,
       version: API_VERSION,
       ...blob.properties,
       contentLength,
@@ -367,6 +386,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
+  /**
+   * Get blob object from persistency layer according to request context.
+   *
+   * @private
+   * @param {Context} context
+   * @returns {Promise<BlobModel>}
+   * @memberof BlobHandler
+   */
   private async getSimpleBlobFromStorage(context: Context): Promise<BlobModel> {
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;

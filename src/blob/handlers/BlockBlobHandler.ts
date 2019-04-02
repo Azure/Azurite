@@ -10,6 +10,14 @@ import { API_VERSION } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
+/**
+ * BlobHandler handles Azure Storage BlockBlob related requests.
+ *
+ * @export
+ * @class BlockBlobHandler
+ * @extends {BaseHandler}
+ * @implements {IBlockBlobHandler}
+ */
 export default class BlockBlobHandler extends BaseHandler
   implements IBlockBlobHandler {
   public async upload(
@@ -22,6 +30,8 @@ export default class BlockBlobHandler extends BaseHandler
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
+    const date = context.startTime!;
+    const etag = newEtag();
 
     const container = await this.dataStore.getContainer(
       accountName,
@@ -39,10 +49,6 @@ export default class BlockBlobHandler extends BaseHandler
       blobName
     );
 
-    // TODO: Implement a high efficiency current date factory, because object allocation
-    // and system call to get time is expensive
-    const date = blobCtx.startTime!;
-    const etag = newEtag();
     options.blobHTTPHeaders = options.blobHTTPHeaders || {};
     const blob: BlobModel = {
       deleted: false,
@@ -73,7 +79,7 @@ export default class BlockBlobHandler extends BaseHandler
       persistency: persistencyID
     };
 
-    // TODO: Need a lock for multi keys
+    // TODO: Need a lock for multi keys including containerName and blobName
     await this.dataStore.updateBlob(blob);
 
     // TODO: Make clean up async

@@ -1,9 +1,10 @@
 import { createHash } from "crypto";
+import etag from "etag";
 import { createWriteStream, PathLike } from "fs";
 
-// TODO: Implement ETag
+// TODO: Align eTag with Azure Storage Service
 export function newEtag(): string {
-  return `"${new Date().getTime()}"`;
+  return etag(`${new Date().getTime()}`);
 }
 
 export async function streamToLocalFile(
