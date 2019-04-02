@@ -1,4 +1,13 @@
-import { createReadStream, createWriteStream, mkdir, stat, unlink } from "fs";
+import {
+  close,
+  createReadStream,
+  createWriteStream,
+  fstat,
+  mkdir,
+  open,
+  stat,
+  unlink
+} from "fs";
 import Loki from "lokijs";
 import multistream = require("multistream");
 import { join } from "path";
@@ -6,7 +15,23 @@ import { Duplex } from "stream";
 import { promisify } from "util";
 import uuid from "uuid/v4";
 
-import { BlobModel, BlockModel, ContainerModel, IBlobDataStore, ServicePropertiesModel } from "./IBlobDataStore";
+import ZeroBytesStream from "../../common/ZeroBytesStream";
+import {
+  BlobModel,
+  BlockModel,
+  ContainerModel,
+  IBlobDataStore,
+  IPersistencyChunk,
+  ServicePropertiesModel,
+  ZERO_PERSISTENCY_CHUNK_ID
+} from "./IBlobDataStore";
+
+const statAsync = promisify(stat);
+const fstatAsync = promisify(fstat);
+const openAsync = promisify(open);
+const unlinkAsync = promisify(unlink);
+const mkdirAsync = promisify(mkdir);
+const closeAsync = promisify(close);
 
 /**
  * This is a persistency layer data source implementation based on loki DB.
@@ -46,6 +71,8 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   private readonly BLOBS_COLLECTION = "$BLOBS_COLLECTION$";
   private readonly BLOCKS_COLLECTION = "$BLOCKS_COLLECTION$";
 
+  private readonly FDCache: Map<string, number> = new Map<string, number>(); // For reading reuse only
+
   public constructor(
     private readonly lokiDBPath: string,
     private readonly persistencePath: string // private readonly logger: ILogger
@@ -57,15 +84,12 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   public async init(): Promise<void> {
-    const statAsync = promisify(stat);
-    const mkdirAsync = promisify(mkdir);
     try {
       await statAsync(this.persistencePath);
     } catch {
       await mkdirAsync(this.persistencePath);
     }
 
-    // TODO: Native Promise doesn't have promisifyAll method. Create it into utils helpers
     await new Promise<void>((resolve, reject) => {
       stat(this.lokiDBPath, (statError, stats) => {
         if (!statError) {
@@ -153,7 +177,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @memberof LokiBlobDataStore
    */
   public async close(): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       this.db.close(err => {
         if (err) {
           reject(err);
@@ -162,6 +186,12 @@ export default class LokiBlobDataStore implements IBlobDataStore {
         }
       });
     });
+
+    const closeFDPromises: Promise<void>[] = [];
+    this.FDCache.forEach(fd => {
+      closeFDPromises.push(closeAsync(fd));
+    });
+    await Promise.all(closeFDPromises);
   }
 
   /**
@@ -577,33 +607,46 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
-   * Persist payload and return a unique persistency ID for tracking.
+   * Persist payload and return a persistency chunk for tracking.
    *
    * @param {NodeJS.ReadableStream | Buffer} payload
-   * @returns {Promise<string>}
+   * @returns {Promise<IPersistencyChunk>} Returns the unique persistency chunk
    * @memberof LokiBlobDataStore
    */
   public async writePayload(
     payload: NodeJS.ReadableStream | Buffer
-  ): Promise<string> {
+  ): Promise<IPersistencyChunk> {
     const persistencyID = this.getPersistencyID();
     const persistencyPath = this.getPersistencyPath(persistencyID);
+    const fd = await this.getPersistencyFD(persistencyID);
 
     if (payload instanceof Buffer) {
-      return new Promise<string>((resolve, reject) => {
-        const ws = createWriteStream(persistencyPath);
+      return new Promise<IPersistencyChunk>((resolve, reject) => {
+        const ws = createWriteStream(persistencyPath, { fd, autoClose: false });
         ws.end(payload);
-        ws.on("close", () => {
-          resolve(persistencyID);
+        ws.on("finish", () => {
+          resolve({
+            id: persistencyID,
+            offset: 0,
+            count: payload.length
+          });
         }).on("error", reject);
       });
     } else {
-      return new Promise<string>((resolve, reject) => {
-        const ws = createWriteStream(persistencyPath);
+      return new Promise<IPersistencyChunk>((resolve, reject) => {
+        const ws = createWriteStream(persistencyPath, { fd, autoClose: false });
+        let count = 0;
         payload
+          .on("data", data => {
+            count += data.length;
+          })
           .pipe(ws)
-          .on("close", () => {
-            resolve(persistencyID);
+          .on("finish", () => {
+            resolve({
+              id: persistencyID,
+              offset: 0,
+              count
+            });
           })
           .on("error", reject);
       });
@@ -611,57 +654,89 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
-   * Reads a persistency layer payload with a persistency ID.
+   * Reads a subset of persistency layer (sub)chunk with a persistency ID or chunk model.
    *
-   * @param {string} [persistencyID] Persistency payload ID
-   * @param {number} [offset] Optional. Payload reads offset. Default is 0.
-   * @param {number} [count] Optional. Payload reads count. Default is Infinity.
+   * @param {IPersistencyChunk} [persistency] A persistencyID or chunk model
+   *                                                   pointing to a persistency chunk ID
+   * @param {number} [offset] Optional. Payload reads offset. Default is 0
+   * @param {number} [count] Optional. Payload reads count. Default is Infinity
    * @returns {Promise<NodeJS.ReadableStream>}
    * @memberof LokiBlobDataStore
    */
   public async readPayload(
-    persistencyID?: string,
+    persistency?: IPersistencyChunk,
     offset: number = 0,
     count: number = Infinity
   ): Promise<NodeJS.ReadableStream> {
-    if (persistencyID === undefined) {
+    if (persistency === undefined) {
       const emptyStream = new Duplex();
       emptyStream.end();
       return emptyStream;
     }
 
-    const path = this.getPersistencyPath(persistencyID);
-    return createReadStream(path, { start: offset, end: offset + count });
+    if (persistency.id === ZERO_PERSISTENCY_CHUNK_ID) {
+      const subRangeCount = Math.min(count, persistency.count - offset);
+      return new ZeroBytesStream(subRangeCount);
+    }
+
+    const path = this.getPersistencyPath(persistency);
+    const fd = await this.getPersistencyFD(persistency);
+
+    if (typeof persistency === "string") {
+      return createReadStream(path, {
+        start: offset,
+        end: offset + count - 1,
+        fd,
+        autoClose: false
+      });
+    } else {
+      persistency.offset =
+        persistency.offset === undefined ? 0 : persistency.offset;
+      persistency.count =
+        persistency.count === undefined ? Infinity : persistency.count;
+
+      const subRangeOffset = persistency.offset + offset;
+      const subRangeCount = Math.min(count, persistency.count - offset);
+
+      return createReadStream(path, {
+        start: subRangeOffset,
+        end: subRangeOffset + subRangeCount - 1,
+        fd,
+        autoClose: false
+      });
+    }
   }
 
   /**
    * Merge persistency payloads into a single payload and return a ReadableStream
    * from the merged stream according to the offset and count.
    *
-   * @param {string[]} persistencyIDs Persistency payload ID list
-   * @param {number} [offset] Optional. Payload reads offset. Default is 0.
-   * @param {number} [count] Optional. Payload reads count. Default is Infinity.
+   * @param {(IPersistencyChunk)[]} persistencyArray Persistency chunk ID or chunk model list
+   * @param {number} [offset] Optional. Reads offset from the merged persistency (sub)chunks. Default is 0
+   * @param {number} [count] Optional. Reads count from the merged persistency (sub)chunks. Default is Infinity
    * @returns {Promise<NodeJS.ReadableStream>}
    * @memberof LokiBlobDataStore
    */
   public async readPayloads(
-    persistencyIDs: string[],
+    persistencyArray: (IPersistencyChunk)[],
     offset: number = 0,
     count: number = Infinity
   ): Promise<NodeJS.ReadableStream> {
     const start = offset; // Start inclusive position in the merged stream
     const end = offset + count; // End exclusive position in the merged stream
 
-    const streams: NodeJS.ReadableStream[] = [];
-    const statAsync = promisify(stat);
+    const getPayloadSizesPromises: Promise<number>[] = [];
+    for (const chunk of persistencyArray) {
+      getPayloadSizesPromises.push(this.getPersistencySize(chunk));
+    }
+    const payloadSizes = await Promise.all(getPayloadSizesPromises);
 
+    const streams: NodeJS.ReadableStream[] = [];
     let payloadOffset = 0; // Current payload offset in the merged stream
 
-    for (const id of persistencyIDs) {
-      const path = this.getPersistencyPath(id);
-      // TODO: Add a path size cache, we assume different payloads will always has different persistency
-      // ID and path. So the cache will always align with the persisted files.
-      const payloadSize = (await statAsync(path)).size;
+    let i = 0;
+    for (const chunk of persistencyArray) {
+      const payloadSize = payloadSizes[i++];
       const nextPayloadOffset = payloadOffset + payloadSize;
 
       if (nextPayloadOffset <= start) {
@@ -673,16 +748,16 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       } else {
         let payloadStart = 0;
         if (start > payloadOffset) {
-          payloadStart = start - payloadOffset;
+          payloadStart = start - payloadOffset; // Inclusive
         }
 
         let payloadEnd = Infinity;
         if (end <= nextPayloadOffset) {
-          payloadEnd = end - payloadOffset - 1;
+          payloadEnd = end - payloadOffset; // Exclusive
         }
 
         streams.push(
-          createReadStream(path, { start: payloadStart, end: payloadEnd })
+          await this.readPayload(chunk, payloadStart, payloadEnd - payloadStart)
         );
         payloadOffset = nextPayloadOffset;
       }
@@ -703,15 +778,15 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   /**
    * Remove payloads from persistency layer.
    *
-   * @param {string[]} persistencyIDs
+   * @param {(IPersistencyChunk)[]} persistencyArray
    * @returns {Promise<void>}
    * @memberof LokiBlobDataStore
    */
-  public async deletePayloads(persistencyIDs: string[]): Promise<void> {
-    const unlinkAsync = promisify(unlink);
-
+  public async deletePayloads(
+    persistencyArray: (IPersistencyChunk)[]
+  ): Promise<void> {
     // TODO: Throw exceptions or skip exceptions?
-    for (const id of persistencyIDs) {
+    for (const id of persistencyArray) {
       const path = this.getPersistencyPath(id);
       try {
         await unlinkAsync(path);
@@ -722,16 +797,72 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
-   * Get persistency file path for a resource with persistencyID provided.
+   * Get persistency file path for a resource with persistencyID or persistency chunk provided.
    * Warning: Modify this method may result existing payloads cannot be found.
    *
    * @private
-   * @param {string} persistencyID
+   * @param {string | IPersistencyChunk} persistency
    * @returns {string}
    * @memberof LokiBlobDataStore
    */
-  private getPersistencyPath(persistencyID: string): string {
-    return join(this.persistencePath, persistencyID);
+  private getPersistencyPath(persistency: string | IPersistencyChunk): string {
+    if (typeof persistency === "string") {
+      return join(this.persistencePath, persistency);
+    } else {
+      return join(this.persistencePath, persistency.id);
+    }
+  }
+
+  /**
+   * Cache opened file descriptors for reusing.
+   *
+   * TODO: Limit cache size.
+   *
+   * @private
+   * @param {(string | IPersistencyChunk)} persistency
+   * @returns {Promise<number>}
+   * @memberof LokiBlobDataStore
+   */
+  private async getPersistencyFD(
+    persistency: string | IPersistencyChunk
+  ): Promise<number> {
+    const path = this.getPersistencyPath(persistency);
+    let fd = this.FDCache.get(path);
+    if (fd !== undefined) {
+      return fd;
+    }
+
+    fd = await openAsync(path, "w+", undefined);
+    this.FDCache.set(path, fd);
+    return fd;
+  }
+
+  /**
+   * Get size for a given persistency (sub)chunk.
+   *
+   * @private
+   * @param {IPersistencyChunk } persistency
+   * @returns {Promise<number>}
+   * @memberof LokiBlobDataStore
+   */
+  private async getPersistencySize(
+    persistency: IPersistencyChunk
+  ): Promise<number> {
+    // TODO: Add a path size cache, we assume different payloads will always has different persistency
+    // ID and path. So the cache will always align with the persisted files.
+    if (typeof persistency === "string") {
+      const fd = await this.getPersistencyFD(persistency);
+      return (await fstatAsync(fd)).size;
+    } else {
+      if (persistency.count === undefined) {
+        const fd = await this.getPersistencyFD(persistency);
+        persistency.offset =
+          persistency.offset === undefined ? 0 : persistency.offset;
+        return (await fstatAsync(fd)).size - persistency.offset;
+      } else {
+        return persistency.count;
+      }
+    }
   }
 
   /**

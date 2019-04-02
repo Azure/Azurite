@@ -67,9 +67,14 @@ export async function bodyToString(
   response: {
     readableStreamBody?: NodeJS.ReadableStream;
     blobBody?: Promise<Blob>;
+    contentLength?: number;
   },
   length?: number
 ): Promise<string> {
+  if (response.contentLength === 0) {
+    return "";
+  }
+
   return new Promise<string>((resolve, reject) => {
     response.readableStreamBody!.on("readable", () => {
       let chunk;

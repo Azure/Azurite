@@ -7,15 +7,28 @@ import { API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
 
 /**
- * Manually implement handlers by implementing IServiceHandler interface.
- * Handlers will talk with persistency layer directly.
+ * ServiceHandler handles Azure Storage Blob service related requests.
  *
  * @export
- * @class SimpleHandler
+ * @class ServiceHandler
  * @implements {IHandler}
  */
 export default class ServiceHandler extends BaseHandler
   implements IServiceHandler {
+  /**
+   * Default listing containers max number.
+   *
+   * @private
+   * @memberof ServiceHandler
+   */
+  private readonly LIST_CONTAINERS_MAX_RESULTS_DEFAULT = 2000;
+
+  /**
+   * Default service properties.
+   *
+   * @private
+   * @memberof ServiceHandler
+   */
   private readonly defaultServiceProperties = {
     cors: [],
     defaultServiceVersion: API_VERSION,
@@ -47,6 +60,15 @@ export default class ServiceHandler extends BaseHandler
     }
   };
 
+  /**
+   * Set blob service properties.
+   *
+   * @param {Models.StorageServiceProperties} storageServiceProperties
+   * @param {Models.ServiceSetPropertiesOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ServiceSetPropertiesResponse>}
+   * @memberof ServiceHandler
+   */
   public async setProperties(
     storageServiceProperties: Models.StorageServiceProperties,
     options: Models.ServiceSetPropertiesOptionalParams,
@@ -81,6 +103,7 @@ export default class ServiceHandler extends BaseHandler
       ...properties,
       accountName
     });
+
     const response: Models.ServiceSetPropertiesResponse = {
       requestId: context.contextID,
       statusCode: 202,
@@ -89,6 +112,14 @@ export default class ServiceHandler extends BaseHandler
     return response;
   }
 
+  /**
+   * Get blob service properties.
+   *
+   * @param {Models.ServiceGetPropertiesOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ServiceGetPropertiesResponse>}
+   * @memberof ServiceHandler
+   */
   public async getProperties(
     options: Models.ServiceGetPropertiesOptionalParams,
     context: Context
@@ -97,7 +128,6 @@ export default class ServiceHandler extends BaseHandler
     const accountName = blobCtx.account!;
 
     let properties = await this.dataStore.getServiceProperties(accountName);
-
     if (!properties) {
       properties = { ...this.defaultServiceProperties, accountName };
     }
@@ -118,16 +148,24 @@ export default class ServiceHandler extends BaseHandler
     throw new NotImplementedError(context.contextID);
   }
 
+  /**
+   * List containers.
+   *
+   * @param {Models.ServiceListContainersSegmentOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ServiceListContainersSegmentResponse>}
+   * @memberof ServiceHandler
+   */
   public async listContainersSegment(
     options: Models.ServiceListContainersSegmentOptionalParams,
     context: Context
   ): Promise<Models.ServiceListContainersSegmentResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const request = blobCtx.request!;
     const accountName = blobCtx.account!;
 
-    const LIST_CONTAINERS_MAX_RESULTS_DEFAULT = 2000;
     options.maxresults =
-      options.maxresults || LIST_CONTAINERS_MAX_RESULTS_DEFAULT;
+      options.maxresults || this.LIST_CONTAINERS_MAX_RESULTS_DEFAULT;
     options.prefix = options.prefix || "";
 
     const marker = parseInt(options.marker || "0", 10);
@@ -139,12 +177,13 @@ export default class ServiceHandler extends BaseHandler
       marker
     );
 
+    const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const res: Models.ServiceListContainersSegmentResponse = {
       containerItems: containers[0],
       maxResults: options.maxresults,
       nextMarker: `${containers[1] || ""}`,
       prefix: options.prefix,
-      serviceEndpoint: `http://127.0.0.1:1000`, // TODO: Update Context to include req and res and get server endpoint
+      serviceEndpoint,
       statusCode: 200,
       requestId: context.contextID,
       version: API_VERSION

@@ -1,9 +1,13 @@
 import ConfigurationBase from "../common/ConfigurationBase";
 import {
+  DEFAULT_ACCESS_LOG_PATH,
   DEFAULT_BLOB_PERSISTENCE_PATH,
+  DEFAULT_DEBUG_LOG_PATH,
+  DEFAULT_ENABLE_ACCESS_LOG,
+  DEFAULT_ENABLE_DEBUG_LOG,
   DEFAULT_LOKI_DB_PATH,
   DEFAULT_SERVER_HOST_NAME,
-  DEFAULT_SERVER_LISTENING_PORT,
+  DEFAULT_SERVER_LISTENING_PORT
 } from "./utils/constants";
 
 /**
@@ -19,29 +23,23 @@ import {
  * @class Configuration
  */
 export default class BlobConfiguration extends ConfigurationBase {
-  public readonly dbPath: string;
-  public readonly persistencePath: string;
-
-  // TODO: Add an overload constructor to parsing configurations from command line arguments or environment variables
   public constructor(
-    host?: string,
-    port?: number,
-    dbPath?: string,
-    persistencePath?: string,
-    enableAccessLog: boolean = true,
-    accessLogFilePath?: string,
-    enableDebugLog: boolean = false,
-    debugLogFilePath?: string
+    host: string = DEFAULT_SERVER_HOST_NAME,
+    port: number = DEFAULT_SERVER_LISTENING_PORT,
+    public readonly dbPath: string = DEFAULT_LOKI_DB_PATH,
+    public readonly persistencePath: string = DEFAULT_BLOB_PERSISTENCE_PATH,
+    enableAccessLog: boolean = DEFAULT_ENABLE_ACCESS_LOG,
+    accessLogFilePath: string = DEFAULT_ACCESS_LOG_PATH,
+    enableDebugLog: boolean = DEFAULT_ENABLE_DEBUG_LOG,
+    debugLogFilePath: string = DEFAULT_DEBUG_LOG_PATH
   ) {
     super(
-      host || DEFAULT_SERVER_HOST_NAME,
-      port || DEFAULT_SERVER_LISTENING_PORT,
+      host,
+      port,
       enableAccessLog,
       accessLogFilePath,
       enableDebugLog,
       debugLogFilePath
     );
-    this.dbPath = dbPath || DEFAULT_LOKI_DB_PATH;
-    this.persistencePath = persistencePath || DEFAULT_BLOB_PERSISTENCE_PATH;
   }
 }

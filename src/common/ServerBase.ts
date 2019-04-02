@@ -30,7 +30,7 @@ export default abstract class ServerBase {
   public constructor(
     public readonly host: string,
     public readonly port: number,
-    protected readonly httpServer: http.Server | https.Server,
+    public readonly httpServer: http.Server | https.Server,
     requestListenerFactory: IRequestListenerFactory,
     private readonly dataStore?: IDataStore
   ) {
@@ -40,6 +40,24 @@ export default abstract class ServerBase {
       "request",
       requestListenerFactory.createRequestListener()
     );
+  }
+
+  /**
+   * Get HTTP server listening address and port string.
+   * Note this may be different from host and port parameters values, because
+   * when port is 0, system will select a rand port number for listening.
+   * This method will return the port and address being used.
+   *
+   * @returns {string}
+   * @memberof ServerBase
+   */
+  public getHttpServerAddress(): string {
+    const address = this.httpServer.address();
+    if (typeof address === "string") {
+      return address;
+    } else {
+      return `${address.address}:${address.port}`;
+    }
   }
 
   /**

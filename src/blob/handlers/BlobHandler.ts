@@ -1,41 +1,44 @@
-import logger from "../../common/Logger";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IBlobHandler from "../generated/handlers/IBlobHandler";
+import ILogger from "../generated/utils/ILogger";
+import IBlobDataStore, { BlobModel } from "../persistence/IBlobDataStore";
 import { API_VERSION } from "../utils/constants";
+import {
+  deserializePageBlobRangeHeader,
+  deserializeRangeHeader
+} from "../utils/utils";
 import BaseHandler from "./BaseHandler";
-import { BlobModel } from "../persistence/IBlobDataStore";
+import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
+/**
+ * BlobHandler handles Azure Storage Blob related requests.
+ *
+ * @export
+ * @class BlobHandler
+ * @extends {BaseHandler}
+ * @implements {IBlobHandler}
+ */
 export default class BlobHandler extends BaseHandler implements IBlobHandler {
-  private async getSimpleBlobFromStorage(context: Context): Promise<BlobModel> {
-    const blobCtx = new BlobStorageContext(context);
-    const accountName = blobCtx.account!;
-    const containerName = blobCtx.container!;
-    const blobName = blobCtx.blob!;
-
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
-    const blob = await this.dataStore.getBlob(
-      accountName,
-      containerName,
-      blobName
-    );
-    if (!blob) {
-      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
-    }
-
-    return blob;
+  constructor(
+    dataStore: IBlobDataStore,
+    logger: ILogger,
+    private readonly rangesManager: IPageBlobRangesManager
+  ) {
+    super(dataStore, logger);
   }
 
+  /**
+   * Download blob.
+   *
+   * @param {Models.BlobDownloadOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobDownloadResponse>}
+   * @memberof BlobHandler
+   */
   public async download(
     options: Models.BlobDownloadOptionalParams,
     context: Context
@@ -43,14 +46,25 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const blob = await this.getSimpleBlobFromStorage(context);
 
     if (blob.properties.blobType === Models.BlobType.BlockBlob) {
-      return this.downloadBlockBlob(options, context);
+      return this.downloadBlockBlob(options, context, blob);
+    } else if (blob.properties.blobType === Models.BlobType.PageBlob) {
+      return this.downloadPageBlob(options, context, blob);
+    } else if (blob.properties.blobType === Models.BlobType.AppendBlob) {
+      // TODO: Handle append blob
+      throw new NotImplementedError(context.contextID);
     } else {
-      return this.downloadPageBlob(options, context);
+      throw StorageErrorFactory.getInvalidOperation(context.contextID!);
     }
-
-    // TODO: Handle append blob
   }
 
+  /**
+   * Get blob properties.
+   *
+   * @param {Models.BlobGetPropertiesOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobGetPropertiesResponse>}
+   * @memberof BlobHandler
+   */
   public async getProperties(
     options: Models.BlobGetPropertiesOptionalParams,
     context: Context
@@ -65,8 +79,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       requestId: context.contextID,
       version: API_VERSION,
       date: context.startTime,
-      acceptRanges: undefined, // TODO:
-      blobCommittedBlockCount: undefined, // TODO:
+      acceptRanges: "bytes",
+      blobCommittedBlockCount: undefined, // TODO: Append blob
       isServerEncrypted: true,
       ...blob.properties
     };
@@ -74,13 +88,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
+  /**
+   * Delete blob.
+   *
+   * @param {Models.BlobDeleteMethodOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobDeleteResponse>}
+   * @memberof BlobHandler
+   */
   public async delete(
     options: Models.BlobDeleteMethodOptionalParams,
     context: Context
   ): Promise<Models.BlobDeleteResponse> {
-    // Will throw exception first if blob does not exist before delete
-    // need to use ts-ignore to avoid compilation error due to "noUnusedLocals": true,.
-    // @ts-ignore
     const blob = await this.getSimpleBlobFromStorage(context);
 
     await this.dataStore.deleteBlob(
@@ -92,7 +111,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const response: Models.BlobDeleteResponse = {
       statusCode: 202,
       requestId: context.contextID,
-      date: new Date(),
+      date: context.startTime,
       version: API_VERSION
     };
 
@@ -118,16 +137,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobSetMetadataResponse> {
     const blob = await this.getSimpleBlobFromStorage(context);
-    const blobCtx = new BlobStorageContext(context);
 
     blob.metadata = options.metadata;
-
     await this.dataStore.updateBlob(blob);
 
     const response: Models.BlobSetMetadataResponse = {
       statusCode: 200,
-      requestId: blobCtx.contextID,
-      date: new Date(),
+      requestId: context.contextID,
+      date: context.startTime,
       version: API_VERSION
     };
 
@@ -212,50 +229,37 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
   private async downloadBlockBlob(
     options: Models.BlobDownloadOptionalParams,
-    context: Context
+    context: Context,
+    blob: BlobModel
   ): Promise<Models.BlobDownloadResponse> {
-    const blob = await this.getSimpleBlobFromStorage(context);
-    let blockBlob;
-    if (blob.properties.blobType === Models.BlobType.BlockBlob) {
-      blockBlob = blob;
-    } else {
-      throw StorageErrorFactory.getInvalidOperation(
-        "Invalid blob type retrieval"
-      );
-    }
-    // Deserializer doesn't handle range header currently
-    // We manually parse range headers here
-    const rangesString =
-      context.request!.getHeader("x-ms-range") ||
-      context.request!.getHeader("range") ||
-      "bytes=0-";
-    const rangesArray = rangesString.substr(6).split("-");
-    const rangeStart = parseInt(rangesArray[0], 10);
-    let rangeEnd = // Inclusive
-      rangesArray[1] && rangesArray[1].length > 0
-        ? parseInt(rangesArray[1], 10)
-        : Infinity;
+    // Deserializer doesn't handle range header currently, manually parse range headers here
+    const rangesParts = deserializeRangeHeader(
+      context.request!.getHeader("range"),
+      context.request!.getHeader("x-ms-range")
+    );
+    const rangeStart = rangesParts[0];
+    let rangeEnd = rangesParts[1];
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
-      rangeEnd = blockBlob.properties.contentLength! - 1;
+      rangeEnd = blob.properties.contentLength! - 1;
     }
 
     const contentLength = rangeEnd - rangeStart + 1;
     const partialRead = contentLength !== blob.properties.contentLength!;
 
-    logger.info(
+    this.logger.info(
       // tslint:disable-next-line:max-line-length
-      `BlobHandler:download() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
+      `BlobHandler:downloadBlockBlob() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
       context.contextID
     );
 
     let bodyGetter: () => Promise<NodeJS.ReadableStream | undefined>;
-    const blocks = blockBlob!.committedBlocksInOrder;
+    const blocks = blob.committedBlocksInOrder;
     if (blocks === undefined || blocks.length === 0) {
       bodyGetter = async () => {
         return this.dataStore.readPayload(
-          blob.persistencyID,
+          blob.persistency,
           rangeStart,
           rangeEnd + 1 - rangeStart
         );
@@ -263,7 +267,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     } else {
       bodyGetter = async () => {
         return this.dataStore.readPayloads(
-          blocks.map(block => block.persistencyID),
+          blocks.map(block => block.persistency),
           rangeStart,
           rangeEnd + 1 - rangeStart
         );
@@ -300,24 +304,16 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
   private async downloadPageBlob(
     options: Models.BlobDownloadOptionalParams,
-    context: Context
+    context: Context,
+    blob: BlobModel
   ): Promise<Models.BlobDownloadResponse> {
-    const blobCtx = new BlobStorageContext(context);
-
-    const blob = await this.getSimpleBlobFromStorage(context);
-
-    // Deserializer doesn't handle range header currently
-    // We manually parse range headers here
-    const rangesString =
-      context.request!.getHeader("x-ms-range") ||
-      context.request!.getHeader("range") ||
-      "bytes=0-";
-    const rangesArray = rangesString.substr(6).split("-");
-    const rangeStart = parseInt(rangesArray[0], 10);
-    let rangeEnd = // Inclusive
-      rangesArray[1] && rangesArray[1].length > 0
-        ? parseInt(rangesArray[1], 10)
-        : Infinity;
+    // Deserializer doesn't handle range header currently, manually parse range headers here
+    const rangesParts = deserializePageBlobRangeHeader(
+      context.request!.getHeader("range"),
+      context.request!.getHeader("x-ms-range")
+    );
+    const rangeStart = rangesParts[0];
+    let rangeEnd = rangesParts[1];
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
@@ -325,70 +321,102 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     const contentLength = rangeEnd - rangeStart + 1;
-    const partialRead = contentLength !== blob.properties.contentLength!;
+    // const partialRead = contentLength !== blob.properties.contentLength!;
 
-    logger.info(
+    this.logger.info(
       // tslint:disable-next-line:max-line-length
-      `BlobHandler:download() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
-      blobCtx.contextID
+      `BlobHandler:downloadPageBlob() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
+      context.contextID
     );
 
-    // TODO: Share a single zero range persisted chunk cross Azurite
-    // TODO: Not all page blob has zero ranges
-    const zeroRangePersistencyID = await this.dataStore.writePayload(
-      Buffer.alloc(512)
-    );
-
-    const startRangeOffset = Math.floor(rangeStart / 512) * 512;
-    const endRangeOffset = Math.min(
-      Math.floor(rangeEnd / 512) * 512,
-      blob.properties.contentLength! - 512
-    );
-
-    const persistencyIDs: string[] = [];
-    blob.pageRanges = blob.pageRanges || {};
-    for (let range = startRangeOffset; range <= endRangeOffset; range += 512) {
-      const pageRange = blob.pageRanges[range];
-      if (blob.pageRanges[range] !== undefined) {
-        persistencyIDs.push(pageRange.persistencyID);
-      } else {
-        persistencyIDs.push(zeroRangePersistencyID);
-      }
+    if (contentLength <= 0) {
+      return {
+        statusCode: 200,
+        body: undefined,
+        metadata: blob.metadata,
+        eTag: blob.properties.etag,
+        requestId: context.contextID,
+        date: context.startTime!,
+        version: API_VERSION,
+        ...blob.properties,
+        contentLength,
+        contentMD5: undefined
+      };
     }
+
+    blob.pageRangesInOrder = blob.pageRangesInOrder || [];
+    const ranges = this.rangesManager.fillZeroRanges(blob.pageRangesInOrder, {
+      start: rangeStart,
+      end: rangeEnd
+    });
 
     const bodyGetter = async () => {
       return this.dataStore.readPayloads(
-        persistencyIDs,
-        rangeStart - startRangeOffset,
+        ranges.map(value => value.persistency),
+        0,
         contentLength
       );
     };
 
-    let body: NodeJS.ReadableStream | undefined = await bodyGetter();
-    let contentMD5: Uint8Array | undefined;
-    if (!partialRead) {
-      contentMD5 = blob.properties.contentMD5;
-    } else if (contentLength <= 4 * 1024 * 1024) {
-      if (body) {
-        // TODO： Get partial content MD5
-        contentMD5 = undefined; // await getMD5FromStream(body);
-        body = await bodyGetter();
-      }
-    }
+    const body: NodeJS.ReadableStream | undefined = await bodyGetter();
+    // let contentMD5: Uint8Array | undefined;
+    // if (!partialRead) {
+    //   contentMD5 = blob.properties.contentMD5;
+    // } else if (contentLength <= 4 * 1024 * 1024) {
+    //   if (body) {
+    //     // TODO： Get partial content MD5
+    //     contentMD5 = undefined; // await getMD5FromStream(body);
+    //     body = await bodyGetter();
+    //   }
+    // }
 
     const response: Models.BlobDownloadResponse = {
       statusCode: 200,
       body,
       metadata: blob.metadata,
       eTag: blob.properties.etag,
-      requestId: blobCtx.contextID,
-      date: blobCtx.startTime!,
+      requestId: context.contextID,
+      date: context.startTime!,
       version: API_VERSION,
       ...blob.properties,
       contentLength,
-      contentMD5
+      contentMD5: undefined // TODO
     };
 
     return response;
+  }
+
+  /**
+   * Get blob object from persistency layer according to request context.
+   *
+   * @private
+   * @param {Context} context
+   * @returns {Promise<BlobModel>}
+   * @memberof BlobHandler
+   */
+  private async getSimpleBlobFromStorage(context: Context): Promise<BlobModel> {
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    const blobName = blobCtx.blob!;
+
+    const container = await this.dataStore.getContainer(
+      accountName,
+      containerName
+    );
+    if (!container) {
+      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
+    }
+
+    const blob = await this.dataStore.getBlob(
+      accountName,
+      containerName,
+      blobName
+    );
+    if (!blob) {
+      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
+    }
+
+    return blob;
   }
 }

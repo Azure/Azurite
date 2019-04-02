@@ -8,7 +8,7 @@ import {
   ServiceURL,
   StorageURL,
   uploadFileToBlockBlob,
-  uploadStreamToBlockBlob,
+  uploadStreamToBlockBlob
 } from "@azure/storage-blob";
 import assert = require("assert");
 import * as fs from "fs";
@@ -17,7 +17,16 @@ import { PassThrough } from "stream";
 
 import BlobConfiguration from "../../src/blob/BlobConfiguration";
 import Server from "../../src/blob/BlobServer";
-import { createRandomLocalFile, getUniqueName, readStreamToLocalFile, rmRecursive } from "../testutils";
+import { configLogger } from "../../src/common/Logger";
+import {
+  createRandomLocalFile,
+  getUniqueName,
+  readStreamToLocalFile,
+  rmRecursive
+} from "../testutils";
+
+// Disable debugging log
+configLogger(false);
 
 // tslint:disable:no-empty
 describe("BlockBlobHighlevel", () => {

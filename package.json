@@ -3,13 +3,14 @@
   "version": "3.0.0-preview",
   "description": "A lightweight server clone of Azure Storage that simulates most of the commands supported by it with minimal dependencies.",
   "bin": {
-    "azurite": "./dist/src/blob/bin.js"
+    "azurite": "./dist/src/blob/main.js"
   },
   "engines": {
     "node": ">=8.0.0"
   },
   "dependencies": {
     "@azure/ms-rest-js": "^1.5.0",
+    "etag": "^1.8.1",
     "express": "^4.16.4",
     "lokijs": "^1.5.6",
     "morgan": "^1.9.1",
@@ -31,8 +32,12 @@
     "@types/uri-templates": "^0.1.29",
     "@types/uuid": "^3.4.4",
     "@types/xml2js": "^0.4.3",
+    "@types/etag": "^1.8.0",
     "autorest": "^2.0.4283",
+    "husky": "^1.3.1",
+    "lint-staged": "^8.1.5",
     "mocha": "^5.2.0",
+    "prettier": "^1.16.4",
     "rimraf": "^2.6.3",
     "ts-node": "^7.0.1",
     "tslint": "^5.12.1",
@@ -42,9 +47,15 @@
     "build": "tsc",
     "build:autorest": "autorest ./swagger/blob.md --typescript --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorestdebug": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
-    "blob": "node -r ts-node/register src/blob/bin.ts",
+    "blob": "node -r ts-node/register src/blob/main.ts",
+    "lint": "tslint -p tsconfig.json -c tslint.json src/**/*.ts",
     "test": "mocha --compilers ts-node/register --no-timeouts tests/**/*.test.ts",
-    "clean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output"
+    "clean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
   },
   "repository": {
     "type": "git",

@@ -4,13 +4,31 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IPageBlobHandler from "../generated/handlers/IPageBlobHandler";
-import { BlobModel } from "../persistence/IBlobDataStore";
+import ILogger from "../generated/utils/ILogger";
+import IBlobDataStore, { BlobModel } from "../persistence/IBlobDataStore";
 import { API_VERSION } from "../utils/constants";
-import { newEtag } from "../utils/utils";
+import { deserializePageBlobRangeHeader, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
+import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
+/**
+ * PageBlobHandler handles Azure Storage PageBlob related requests.
+ *
+ * @export
+ * @class PageBlobHandler
+ * @extends {BaseHandler}
+ * @implements {IPageBlobHandler}
+ */
 export default class PageBlobHandler extends BaseHandler
   implements IPageBlobHandler {
+  constructor(
+    dataStore: IBlobDataStore,
+    logger: ILogger,
+    private readonly rangesManager: IPageBlobRangesManager
+  ) {
+    super(dataStore, logger);
+  }
+
   public async create(
     contentLength: number,
     blobContentLength: number,
@@ -24,7 +42,6 @@ export default class PageBlobHandler extends BaseHandler
     const date = blobCtx.startTime!;
 
     if (contentLength !== 0) {
-      // TODO: Which error should return?
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
         "Content-Length must be 0 for Create Page Blob request."
@@ -32,7 +49,6 @@ export default class PageBlobHandler extends BaseHandler
     }
 
     if (blobContentLength % 512 !== 0) {
-      // TODO: Which error should return?
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
         "x-ms-content-length must be aligned to a 512-byte boundary."
@@ -75,10 +91,12 @@ export default class PageBlobHandler extends BaseHandler
         accessTierInferred: true
       },
       snapshot: "",
-      isCommitted: true
+      isCommitted: true,
+      pageRangesInOrder: []
     };
 
-    // TODO: What's happens when create page blob right before commit block list?
+    // TODO: What's happens when create page blob right before commit block list? Or should we lock
+    // Should we check if there is an uncommitted blob?
     this.dataStore.updateBlob(blob);
 
     const response: Models.PageBlobCreateResponse = {
@@ -86,7 +104,7 @@ export default class PageBlobHandler extends BaseHandler
       eTag: etag,
       lastModified: blob.properties.lastModified,
       contentMD5: blob.properties.contentMD5,
-      requestId: blobCtx.contextID,
+      requestId: context.contextID,
       version: API_VERSION,
       date,
       isServerEncrypted: true
@@ -108,7 +126,6 @@ export default class PageBlobHandler extends BaseHandler
     const date = blobCtx.startTime!;
 
     if (contentLength % 512 !== 0) {
-      // TODO: Which error should return?
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
         "content-length or x-ms-content-length must be aligned to a 512-byte boundary."
@@ -138,64 +155,37 @@ export default class PageBlobHandler extends BaseHandler
       );
     }
 
-    options.range =
-      options.range ||
-      blobCtx.request!.getHeader("x-ms-range") ||
-      blobCtx.request!.getHeader("range");
-    const ranges = this.deserializeRangeHeader(options.range);
+    const ranges = deserializePageBlobRangeHeader(
+      blobCtx.request!.getHeader("range"),
+      blobCtx.request!.getHeader("x-ms-range")
+    );
     if (!ranges) {
       throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextID!);
     }
 
     const start = ranges[0];
-    const end = ranges[1];
-    const numberOfPages = (end - start + 1) / 512;
-
-    const persistencyID = await this.dataStore.writePayload(body);
-
-    // TODO: Bad performance to store lots of 512bytes files in disk
-    // Optimize persistencyID to {persistencyID, offset, length}, which allow
-    // different page ranges point to same persistency extent with different offsets
-    const promises = []; // Promises to duplicate "big" payload into payloads with 512 size
-    for (let i = 0; i < numberOfPages; i++) {
-      promises.push(
-        new Promise<string>((resolve, reject) => {
-          this.dataStore
-            .readPayload(persistencyID, i * 512, 512)
-            .then(rs => {
-              this.dataStore
-                .writePayload(rs)
-                .then(resolve)
-                .catch(reject);
-            })
-            .catch(reject);
-        })
-      );
+    const end = ranges[1]; // Inclusive
+    if (end - start + 1 !== contentLength) {
+      throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextID!);
     }
 
-    const persistencyIDs = await Promise.all(promises);
+    // Persisted request payload
+    const persistency = await this.dataStore.writePayload(body);
 
-    await this.dataStore.deletePayloads([persistencyID]);
-
-    blob.pageRanges = blob.pageRanges || {};
-
-    for (let i = 0; i < numberOfPages; i++) {
-      const offset = i * 512 + start;
-      blob.pageRanges![offset] = {
-        start: offset,
-        end: offset + 511,
-        persistencyID: persistencyIDs[i]
-      };
-    }
+    this.rangesManager.mergeRange(blob.pageRangesInOrder || [], {
+      start,
+      end,
+      persistency
+    });
 
     await this.dataStore.updateBlob(blob);
 
     const response: Models.PageBlobUploadPagesResponse = {
       statusCode: 201,
-      eTag: newEtag(), // TODO
+      eTag: newEtag(),
       lastModified: date,
       contentMD5: undefined, // TODO
-      blobSequenceNumber: blob.properties.blobSequenceNumber, // TODO
+      blobSequenceNumber: blob.properties.blobSequenceNumber,
       requestId: blobCtx.contextID,
       version: API_VERSION,
       date,
@@ -217,7 +207,6 @@ export default class PageBlobHandler extends BaseHandler
     const date = blobCtx.startTime!;
 
     if (contentLength !== 0) {
-      // TODO: Which error should return?
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
         "content-length or x-ms-content-length must be 0 for clear pages operation."
@@ -249,36 +238,29 @@ export default class PageBlobHandler extends BaseHandler
       );
     }
 
-    options.range =
-      options.range ||
-      blobCtx.request!.getHeader("x-ms-range") ||
-      blobCtx.request!.getHeader("range");
-    const ranges = this.deserializeRangeHeader(options.range);
+    const ranges = deserializePageBlobRangeHeader(
+      blobCtx.request!.getHeader("range"),
+      blobCtx.request!.getHeader("x-ms-range")
+    );
     if (!ranges) {
       throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextID!);
     }
-
     const start = ranges[0];
     const end = ranges[1];
-    const numberOfPages = (end - start + 1) / 512;
 
-    blob.pageRanges = blob.pageRanges || {};
-
-    // Clear selected ranges
-    // TODO: GC unlinked persistency chunks
-    for (let i = 0; i < numberOfPages; i++) {
-      const offset = i * 512 + start;
-      delete blob.pageRanges![offset];
-    }
+    this.rangesManager.clearRange(blob.pageRangesInOrder || [], {
+      start,
+      end
+    });
 
     await this.dataStore.updateBlob(blob);
 
     const response: Models.PageBlobClearPagesResponse = {
       statusCode: 201,
-      eTag: newEtag(), // TODO
+      eTag: newEtag(),
       lastModified: date,
       contentMD5: undefined, // TODO
-      blobSequenceNumber: blob.properties.blobSequenceNumber, // TODO
+      blobSequenceNumber: blob.properties.blobSequenceNumber,
       requestId: blobCtx.contextID,
       version: API_VERSION,
       date
@@ -320,35 +302,28 @@ export default class PageBlobHandler extends BaseHandler
       );
     }
 
-    options.range =
-      options.range ||
-      blobCtx.request!.getHeader("x-ms-range") ||
-      blobCtx.request!.getHeader("range");
-    let ranges = this.deserializeRangeHeader(options.range);
+    let ranges = deserializePageBlobRangeHeader(
+      blobCtx.request!.getHeader("range"),
+      blobCtx.request!.getHeader("x-ms-range")
+    );
     if (!ranges) {
       ranges = [0, blob.properties.contentLength! - 1];
     }
 
-    const start = ranges[0];
-    const end = ranges[1];
-    const numberOfPages = (end - start + 1) / 512;
-
-    blob.pageRanges = blob.pageRanges || {};
-    const pageRanges: Models.PageRange[] = [];
-
-    // TODO: Merge ranges
-    for (let i = 0; i < numberOfPages; i++) {
-      const offset = i * 512 + start;
-      const pageRange = blob.pageRanges![offset];
-      if (pageRange) {
-        pageRanges.push(pageRange);
+    blob.pageRangesInOrder = blob.pageRangesInOrder || [];
+    const impactedRanges = this.rangesManager.cutRanges(
+      blob.pageRangesInOrder,
+      {
+        start: ranges[0],
+        end: ranges[1]
       }
-    }
+    );
 
     const response: Models.PageBlobGetPageRangesResponse = {
       statusCode: 200,
-      pageRange: pageRanges,
-      eTag: newEtag(), // TODO
+      pageRange: impactedRanges,
+      eTag: blob.properties.etag,
+      blobContentLength: blob.properties.contentLength,
       lastModified: date,
       requestId: blobCtx.contextID,
       version: API_VERSION,
@@ -377,7 +352,6 @@ export default class PageBlobHandler extends BaseHandler
     const date = blobCtx.startTime!;
 
     if (blobContentLength % 512 !== 0) {
-      // TODO: Which error should return?
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
         "x-ms-blob-content-length must be aligned to a 512-byte boundary for Page Blob Resize request."
@@ -407,16 +381,14 @@ export default class PageBlobHandler extends BaseHandler
       );
     }
 
-    blob.pageRanges = blob.pageRanges || {};
+    blob.pageRangesInOrder = blob.pageRangesInOrder || [];
     if (blob.properties.contentLength! > blobContentLength) {
-      for (
-        let rangeOffset = blobContentLength;
-        rangeOffset < blob.properties.contentLength!;
-        rangeOffset += 512
-      ) {
-        // TODO: GC unlinked persistency chunks
-        delete blob.pageRanges[rangeOffset];
-      }
+      const start = blobContentLength;
+      const end = blob.properties.contentLength! - 1;
+      this.rangesManager.clearRange(blob.pageRangesInOrder || [], {
+        start,
+        end
+      });
     }
 
     blob.properties.contentLength = blobContentLength;
@@ -536,53 +508,5 @@ export default class PageBlobHandler extends BaseHandler
     context: Context
   ): Promise<Models.PageBlobCopyIncrementalResponse> {
     throw new NotImplementedError(context.contextID);
-  }
-
-  /**
-   * Deserialize range header into valid page ranges.
-   * For example, "bytes=0-1023" will return [0, 1023].
-   * Empty of invalid range headers will return undefined.
-   *
-   * @private
-   * @param {string} [rangeHeaderValue]
-   * @param {string} [xMsRangeHeaderValue]
-   * @returns {([number, number] | undefined)}
-   * @memberof PageBlobHandler
-   */
-  private deserializeRangeHeader(
-    rangeHeaderValue?: string,
-    xMsRangeHeaderValue?: string
-  ): [number, number] | undefined {
-    const range = rangeHeaderValue || xMsRangeHeaderValue;
-    if (!range) {
-      return undefined;
-    }
-
-    let parts = range.split("=");
-    if (parts === undefined || parts.length !== 2) {
-      return undefined;
-    }
-
-    parts = parts[1].split("-");
-    if (parts === undefined || parts.length !== 2) {
-      return undefined;
-    }
-
-    const startInclusive = parseInt(parts[0], 10);
-    const endInclusive = parseInt(parts[1], 10);
-
-    if (startInclusive >= endInclusive) {
-      return undefined;
-    }
-
-    if (startInclusive % 512 !== 0) {
-      return undefined;
-    }
-
-    if ((endInclusive + 1) % 512 !== 0) {
-      return undefined;
-    }
-
-    return [startInclusive, endInclusive];
   }
 }

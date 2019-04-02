@@ -11,7 +11,10 @@ import assert = require("assert");
 
 import BlobConfiguration from "../../../src/blob/BlobConfiguration";
 import Server from "../../../src/blob/BlobServer";
+import { configLogger } from "../../../src/common/Logger";
 import { bodyToString, getUniqueName, rmRecursive } from "../../testutils";
+
+configLogger(false);
 
 describe("PageBlobAPIs", () => {
   // TODO: Create a server factory as tests utils
@@ -125,6 +128,75 @@ describe("PageBlobAPIs", () => {
     assert.equal(properties.metadata!.key2, options.metadata.key2);
   });
 
+  it("download page blob with no ranges uploaded", async () => {
+    const length = 512 * 10;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.deepStrictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
+  });
+
+  it("download page blob with no ranges uploaded after resize to bigger size", async () => {
+    let length = 512 * 10;
+    await pageBlobURL.create(Aborter.none, length);
+
+    let ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+
+    let result = await blobURL.download(Aborter.none, 0);
+    assert.deepStrictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
+
+    length *= 2;
+    await pageBlobURL.resize(Aborter.none, length);
+    ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+
+    result = await blobURL.download(Aborter.none, 0);
+    assert.deepStrictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
+  });
+
+  it("download page blob with no ranges uploaded after resize to smaller size", async () => {
+    let length = 512 * 10;
+    await pageBlobURL.create(Aborter.none, length);
+
+    let ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+
+    let result = await blobURL.download(Aborter.none, 0);
+    assert.deepStrictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
+
+    length /= 2;
+    await pageBlobURL.resize(Aborter.none, length);
+    ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+
+    result = await blobURL.download(Aborter.none, 0);
+    assert.deepStrictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(length)
+    );
+  });
+
   it("uploadPages", async () => {
     await pageBlobURL.create(Aborter.none, 1024);
 
@@ -139,6 +211,805 @@ describe("PageBlobAPIs", () => {
 
     assert.equal(await bodyToString(page1, 512), "a".repeat(512));
     assert.equal(await bodyToString(page2, 512), "b".repeat(512));
+  });
+
+  it("uploadPages with sequential pages", async () => {
+    const length = 512 * 3;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(Aborter.none, "a".repeat(512), 0, 512);
+    await pageBlobURL.uploadPages(Aborter.none, "b".repeat(512), 512, 512);
+    await pageBlobURL.uploadPages(Aborter.none, "c".repeat(512), 1024, 512);
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+
+    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "b".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "c".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "a".repeat(512) + "b".repeat(512) + "c".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 3);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], { start: 0, end: 511 });
+    assert.deepStrictEqual(ranges.pageRange![1], { start: 512, end: 1023 });
+    assert.deepStrictEqual(ranges.pageRange![2], { start: 1024, end: 1535 });
+  });
+
+  it("uploadPages with one big page range", async () => {
+    const length = 512 * 3;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
+      0,
+      length
+    );
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+
+    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "b".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "c".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "a".repeat(512) + "b".repeat(512) + "c".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 1);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], { start: 0, end: 1535 });
+  });
+
+  it("uploadPages with non-sequential pages", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(Aborter.none, "a".repeat(512), 512, 512);
+    await pageBlobURL.uploadPages(Aborter.none, "c".repeat(512), 1536, 512);
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "\u0000".repeat(512) +
+        "a".repeat(512) +
+        "\u0000".repeat(512) +
+        "c".repeat(512) +
+        "\u0000".repeat(512)
+    );
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "c".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], { start: 512, end: 1023 });
+    assert.deepStrictEqual(ranges.pageRange![1], { start: 1536, end: 2047 });
+  });
+
+  it("uploadPages to internally override a sequential range", async () => {
+    const length = 512 * 3;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
+      0,
+      length
+    );
+
+    await pageBlobURL.uploadPages(Aborter.none, "d".repeat(512), 512, 512);
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+
+    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "c".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "a".repeat(512) + "d".repeat(512) + "c".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 3);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], { start: 0, end: 511 });
+    assert.deepStrictEqual(ranges.pageRange![1], { start: 512, end: 1023 });
+    assert.deepStrictEqual(ranges.pageRange![2], { start: 1024, end: 1535 });
+  });
+
+  it("uploadPages to internally right align override a sequential range", async () => {
+    const length = 512 * 3;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
+      0,
+      length
+    );
+
+    await pageBlobURL.uploadPages(Aborter.none, "d".repeat(512), 1024, 512);
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+
+    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "b".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "d".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "a".repeat(512) + "b".repeat(512) + "d".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], { start: 0, end: 1023 });
+    assert.deepStrictEqual(ranges.pageRange![1], { start: 1024, end: 1535 });
+  });
+
+  it("uploadPages to internally left align override a sequential range", async () => {
+    const length = 512 * 3;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
+      0,
+      length
+    );
+
+    await pageBlobURL.uploadPages(Aborter.none, "d".repeat(512), 0, 512);
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+
+    assert.equal(await bodyToString(page1, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "b".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "c".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "d".repeat(512) + "b".repeat(512) + "c".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], { start: 0, end: 511 });
+    assert.deepStrictEqual(ranges.pageRange![1], { start: 512, end: 1535 });
+  });
+
+  it("uploadPages to totally override a sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
+      512,
+      512 * 3
+    );
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "b".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "c".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+
+    let full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "\u0000".repeat(512) +
+        "a".repeat(512) +
+        "b".repeat(512) +
+        "c".repeat(512) +
+        "\u0000".repeat(512)
+    );
+
+    let ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 1);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], { start: 512, end: 2047 });
+
+    await pageBlobURL.uploadPages(Aborter.none, "d".repeat(length), 0, length);
+
+    full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(full, length), "d".repeat(length));
+
+    ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 1);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], { start: 0, end: length - 1 });
+  });
+
+  it("uploadPages to left override a sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
+      512,
+      512 * 3
+    );
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "d".repeat(512 * 2),
+      0,
+      512 * 2
+    );
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "b".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "c".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "d".repeat(512) +
+        "d".repeat(512) +
+        "b".repeat(512) +
+        "c".repeat(512) +
+        "\u0000".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], { start: 0, end: 1023 });
+    assert.deepStrictEqual(ranges.pageRange![1], { start: 1024, end: 2047 });
+  });
+
+  it("uploadPages to right override a sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
+      512,
+      512 * 3
+    );
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "d".repeat(512 * 2),
+      512 * 3,
+      512 * 2
+    );
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "b".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "d".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "\u0000".repeat(512) +
+        "a".repeat(512) +
+        "b".repeat(512) +
+        "d".repeat(512) +
+        "d".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], {
+      start: 512,
+      end: 512 * 3 - 1
+    });
+    assert.deepStrictEqual(ranges.pageRange![1], {
+      start: 512 * 3,
+      end: length - 1
+    });
+  });
+
+  it("resize override a sequential range", async () => {
+    let length = 512 * 3;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
+      0,
+      length
+    );
+
+    length = 512 * 2;
+    await pageBlobURL.resize(Aborter.none, length);
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+
+    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "b".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "");
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "a".repeat(512) + "b".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 1);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], { start: 0, end: length - 1 });
+  });
+
+  it("uploadPages to internally override a non-sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512 * 2),
+      0,
+      512 * 2
+    );
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "b".repeat(512 * 2),
+      512 * 3,
+      512 * 2
+    );
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "d".repeat(512 * 3),
+      512,
+      512 * 3
+    );
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "b".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "a".repeat(512) +
+        "d".repeat(512) +
+        "d".repeat(512) +
+        "d".repeat(512) +
+        "b".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 3);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], {
+      start: 0,
+      end: 512 - 1
+    });
+    assert.deepStrictEqual(ranges.pageRange![1], {
+      start: 512,
+      end: 512 * 4 - 1
+    });
+    assert.deepStrictEqual(ranges.pageRange![2], {
+      start: 512 * 4,
+      end: length - 1
+    });
+  });
+
+  it("uploadPages to internally insert into a non-sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512 * 1),
+      0,
+      512 * 1
+    );
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "b".repeat(512 * 1),
+      512 * 4,
+      512 * 1
+    );
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "d".repeat(512 * 3),
+      512,
+      512 * 3
+    );
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "b".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "a".repeat(512) +
+        "d".repeat(512) +
+        "d".repeat(512) +
+        "d".repeat(512) +
+        "b".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 3);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], {
+      start: 0,
+      end: 512 - 1
+    });
+    assert.deepStrictEqual(ranges.pageRange![1], {
+      start: 512,
+      end: 512 * 4 - 1
+    });
+    assert.deepStrictEqual(ranges.pageRange![2], {
+      start: 512 * 4,
+      end: length - 1
+    });
+  });
+
+  it("uploadPages to totally override a non-sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512 * 1),
+      512 * 1,
+      512 * 1
+    );
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "b".repeat(512 * 1),
+      512 * 3,
+      512 * 1
+    );
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "d".repeat(512 * 3),
+      512,
+      512 * 3
+    );
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "\u0000".repeat(512) +
+        "d".repeat(512) +
+        "d".repeat(512) +
+        "d".repeat(512) +
+        "\u0000".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 1);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], {
+      start: 512,
+      end: 512 * 4 - 1
+    });
+  });
+
+  it("uploadPages to left override a non-sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512 * 1),
+      512 * 1,
+      512 * 1
+    );
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "b".repeat(512 * 1),
+      512 * 3,
+      512 * 1
+    );
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "d".repeat(512 * 2),
+      512,
+      512 * 2
+    );
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "b".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "\u0000".repeat(512) +
+        "d".repeat(512) +
+        "d".repeat(512) +
+        "b".repeat(512) +
+        "\u0000".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], {
+      start: 512,
+      end: 512 * 3 - 1
+    });
+    assert.deepStrictEqual(ranges.pageRange![1], {
+      start: 512 * 3,
+      end: 512 * 4 - 1
+    });
+  });
+
+  it("uploadPages to insert into a non-sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512 * 1),
+      512 * 1,
+      512 * 1
+    );
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "b".repeat(512 * 1),
+      512 * 3,
+      512 * 1
+    );
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "d".repeat(512 * 1),
+      512 * 2,
+      512 * 1
+    );
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "b".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "\u0000".repeat(512) +
+        "a".repeat(512) +
+        "d".repeat(512) +
+        "b".repeat(512) +
+        "\u0000".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 3);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], {
+      start: 512,
+      end: 512 * 2 - 1
+    });
+    assert.deepStrictEqual(ranges.pageRange![1], {
+      start: 512 * 2,
+      end: 512 * 3 - 1
+    });
+    assert.deepStrictEqual(ranges.pageRange![2], {
+      start: 512 * 3,
+      end: 512 * 4 - 1
+    });
+  });
+
+  it("uploadPages to right override a non-sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512 * 1),
+      512 * 1,
+      512 * 1
+    );
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "b".repeat(512 * 1),
+      512 * 3,
+      512 * 1
+    );
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "d".repeat(512 * 2),
+      512 * 2,
+      512 * 2
+    );
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "d".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "\u0000".repeat(512) +
+        "a".repeat(512) +
+        "d".repeat(512) +
+        "d".repeat(512) +
+        "\u0000".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], {
+      start: 512,
+      end: 512 * 2 - 1
+    });
+    assert.deepStrictEqual(ranges.pageRange![1], {
+      start: 512 * 2,
+      end: 512 * 4 - 1
+    });
   });
 
   it("clearPages", async () => {
@@ -159,6 +1030,434 @@ describe("PageBlobAPIs", () => {
       await bodyToString(result, 512),
       "\u0000".repeat(512)
     );
+  });
+
+  it("clearPages to internally override a sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
+      512,
+      512 * 3
+    );
+
+    await pageBlobURL.clearPages(Aborter.none, 512 * 2, 512);
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "c".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "\u0000".repeat(512) +
+        "a".repeat(512) +
+        "\u0000".repeat(512) +
+        "c".repeat(512) +
+        "\u0000".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], {
+      start: 512,
+      end: 512 * 2 - 1
+    });
+    assert.deepStrictEqual(ranges.pageRange![1], {
+      start: 512 * 3,
+      end: 512 * 4 - 1
+    });
+  });
+
+  it("clearPages to totally override a sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
+      512,
+      512 * 3
+    );
+
+    await pageBlobURL.clearPages(Aborter.none, 512, 512 * 3);
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "\u0000".repeat(512) +
+        "\u0000".repeat(512) +
+        "\u0000".repeat(512) +
+        "\u0000".repeat(512) +
+        "\u0000".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+  });
+
+  it("clearPages to left override a sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
+      512,
+      512 * 3
+    );
+
+    await pageBlobURL.clearPages(Aborter.none, 512 * 2, 512 * 3);
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "\u0000".repeat(512) +
+        "a".repeat(512) +
+        "\u0000".repeat(512) +
+        "\u0000".repeat(512) +
+        "\u0000".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 1);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], {
+      start: 512,
+      end: 512 * 2 - 1
+    });
+  });
+
+  it("clearPages to right override a sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
+      512,
+      512 * 3
+    );
+
+    await pageBlobURL.clearPages(Aborter.none, 0, 512 * 3);
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "c".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "\u0000".repeat(512) +
+        "\u0000".repeat(512) +
+        "\u0000".repeat(512) +
+        "c".repeat(512) +
+        "\u0000".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 1);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], {
+      start: 512 * 3,
+      end: 512 * 4 - 1
+    });
+  });
+
+  it("clearPages to internally override a non-sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(Aborter.none, "a".repeat(512), 0, 512);
+    await pageBlobURL.uploadPages(Aborter.none, "b".repeat(512), 512 * 2, 512);
+    await pageBlobURL.uploadPages(Aborter.none, "c".repeat(512), 512 * 4, 512);
+
+    await pageBlobURL.clearPages(Aborter.none, 512, 512 * 3);
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "c".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "a".repeat(512) +
+        "\u0000".repeat(512) +
+        "\u0000".repeat(512) +
+        "\u0000".repeat(512) +
+        "c".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], {
+      start: 0,
+      end: 512 * 1 - 1
+    });
+    assert.deepStrictEqual(ranges.pageRange![1], {
+      start: 512 * 4,
+      end: length - 1
+    });
+  });
+
+  it("clearPages to internally insert into a non-sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(Aborter.none, "a".repeat(512), 0, 512);
+    await pageBlobURL.uploadPages(Aborter.none, "b".repeat(512), 512 * 2, 512);
+    await pageBlobURL.uploadPages(Aborter.none, "c".repeat(512), 512 * 4, 512);
+
+    await pageBlobURL.clearPages(Aborter.none, 512, 512 * 1);
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "b".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "c".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "a".repeat(512) +
+        "\u0000".repeat(512) +
+        "b".repeat(512) +
+        "\u0000".repeat(512) +
+        "c".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 3);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], {
+      start: 0,
+      end: 512 * 1 - 1
+    });
+    assert.deepStrictEqual(ranges.pageRange![1], {
+      start: 512 * 2,
+      end: 512 * 3 - 1
+    });
+    assert.deepStrictEqual(ranges.pageRange![2], {
+      start: 512 * 4,
+      end: length - 1
+    });
+  });
+
+  it("clearPages to totally override a non-sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(Aborter.none, "a".repeat(512), 0, 512);
+    await pageBlobURL.uploadPages(Aborter.none, "b".repeat(512), 512 * 2, 512);
+    await pageBlobURL.uploadPages(Aborter.none, "c".repeat(512), 512 * 4, 512);
+
+    await pageBlobURL.clearPages(Aborter.none, 0, 512 * 5);
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "\u0000".repeat(512) +
+        "\u0000".repeat(512) +
+        "\u0000".repeat(512) +
+        "\u0000".repeat(512) +
+        "\u0000".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+  });
+
+  it("clearPages to left override a non-sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(Aborter.none, "a".repeat(512), 0, 512);
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "b".repeat(512 * 2),
+      512 * 2,
+      512 * 2
+    );
+
+    await pageBlobURL.clearPages(Aborter.none, 512 * 3, 512 * 2);
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "b".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "\u0000".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "a".repeat(512) +
+        "\u0000".repeat(512) +
+        "b".repeat(512) +
+        "\u0000".repeat(512) +
+        "\u0000".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 2);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], {
+      start: 0,
+      end: 512 * 1 - 1
+    });
+    assert.deepStrictEqual(ranges.pageRange![1], {
+      start: 512 * 2,
+      end: 512 * 3 - 1
+    });
+  });
+
+  it("clearPages to right override a non-sequential range", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobURL.uploadPages(Aborter.none, "a".repeat(512), 512, 512);
+    await pageBlobURL.uploadPages(
+      Aborter.none,
+      "b".repeat(512 * 2),
+      512 * 3,
+      512 * 2
+    );
+
+    await pageBlobURL.clearPages(Aborter.none, 0, 512 * 4);
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+    const page3 = await pageBlobURL.download(Aborter.none, 1024, 512);
+    const page4 = await pageBlobURL.download(Aborter.none, 1536, 512);
+    const page5 = await pageBlobURL.download(Aborter.none, 2048, 512);
+
+    assert.equal(await bodyToString(page1, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page3, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page4, 512), "\u0000".repeat(512));
+    assert.equal(await bodyToString(page5, 512), "b".repeat(512));
+
+    const full = await pageBlobURL.download(Aborter.none, 0);
+    assert.equal(
+      await bodyToString(full, length),
+      "\u0000".repeat(512) +
+        "\u0000".repeat(512) +
+        "\u0000".repeat(512) +
+        "\u0000".repeat(512) +
+        "b".repeat(512)
+    );
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 1);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.deepStrictEqual(ranges.pageRange![0], {
+      start: 512 * 4,
+      end: length - 1
+    });
   });
 
   it("getPageRanges", async () => {
