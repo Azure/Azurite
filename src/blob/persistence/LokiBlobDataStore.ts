@@ -1,4 +1,13 @@
-import { createReadStream, createWriteStream, mkdir, stat, unlink } from "fs";
+import {
+  close,
+  createReadStream,
+  createWriteStream,
+  fstat,
+  mkdir,
+  open,
+  stat,
+  unlink
+} from "fs";
 import Loki from "lokijs";
 import multistream = require("multistream");
 import { join } from "path";
@@ -14,8 +23,15 @@ import {
   IBlobDataStore,
   IPersistencyChunk,
   ServicePropertiesModel,
-  ZERO_PERSISTENCY_CHUNK_ID,
+  ZERO_PERSISTENCY_CHUNK_ID
 } from "./IBlobDataStore";
+
+const statAsync = promisify(stat);
+const fstatAsync = promisify(fstat);
+const openAsync = promisify(open);
+const unlinkAsync = promisify(unlink);
+const mkdirAsync = promisify(mkdir);
+const closeAsync = promisify(close);
 
 /**
  * This is a persistency layer data source implementation based on loki DB.
@@ -55,7 +71,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   private readonly BLOBS_COLLECTION = "$BLOBS_COLLECTION$";
   private readonly BLOCKS_COLLECTION = "$BLOCKS_COLLECTION$";
 
-  private readonly statAsync = promisify(stat);
+  private readonly FDCache: Map<string, number> = new Map<string, number>(); // For reading reuse only
 
   public constructor(
     private readonly lokiDBPath: string,
@@ -68,15 +84,12 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   public async init(): Promise<void> {
-    const statAsync = promisify(stat);
-    const mkdirAsync = promisify(mkdir);
     try {
       await statAsync(this.persistencePath);
     } catch {
       await mkdirAsync(this.persistencePath);
     }
 
-    // TODO: Native Promise doesn't have promisifyAll method. Create it into utils helpers
     await new Promise<void>((resolve, reject) => {
       stat(this.lokiDBPath, (statError, stats) => {
         if (!statError) {
@@ -164,7 +177,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @memberof LokiBlobDataStore
    */
   public async close(): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       this.db.close(err => {
         if (err) {
           reject(err);
@@ -173,6 +186,12 @@ export default class LokiBlobDataStore implements IBlobDataStore {
         }
       });
     });
+
+    const closeFDPromises: Promise<void>[] = [];
+    this.FDCache.forEach(fd => {
+      closeFDPromises.push(closeAsync(fd));
+    });
+    await Promise.all(closeFDPromises);
   }
 
   /**
@@ -599,12 +618,13 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   ): Promise<IPersistencyChunk> {
     const persistencyID = this.getPersistencyID();
     const persistencyPath = this.getPersistencyPath(persistencyID);
+    const fd = await this.getPersistencyFD(persistencyID);
 
     if (payload instanceof Buffer) {
       return new Promise<IPersistencyChunk>((resolve, reject) => {
-        const ws = createWriteStream(persistencyPath);
+        const ws = createWriteStream(persistencyPath, { fd, autoClose: false });
         ws.end(payload);
-        ws.on("close", () => {
+        ws.on("finish", () => {
           resolve({
             id: persistencyID,
             offset: 0,
@@ -614,14 +634,14 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       });
     } else {
       return new Promise<IPersistencyChunk>((resolve, reject) => {
-        const ws = createWriteStream(persistencyPath);
+        const ws = createWriteStream(persistencyPath, { fd, autoClose: false });
         let count = 0;
         payload
           .on("data", data => {
             count += data.length;
           })
           .pipe(ws)
-          .on("close", () => {
+          .on("finish", () => {
             resolve({
               id: persistencyID,
               offset: 0,
@@ -660,9 +680,15 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     }
 
     const path = this.getPersistencyPath(persistency);
+    const fd = await this.getPersistencyFD(persistency);
 
     if (typeof persistency === "string") {
-      return createReadStream(path, { start: offset, end: offset + count - 1 });
+      return createReadStream(path, {
+        start: offset,
+        end: offset + count - 1,
+        fd,
+        autoClose: false
+      });
     } else {
       persistency.offset =
         persistency.offset === undefined ? 0 : persistency.offset;
@@ -674,7 +700,9 @@ export default class LokiBlobDataStore implements IBlobDataStore {
 
       return createReadStream(path, {
         start: subRangeOffset,
-        end: subRangeOffset + subRangeCount - 1
+        end: subRangeOffset + subRangeCount - 1,
+        fd,
+        autoClose: false
       });
     }
   }
@@ -757,8 +785,6 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   public async deletePayloads(
     persistencyArray: (IPersistencyChunk)[]
   ): Promise<void> {
-    const unlinkAsync = promisify(unlink);
-
     // TODO: Throw exceptions or skip exceptions?
     for (const id of persistencyArray) {
       const path = this.getPersistencyPath(id);
@@ -788,6 +814,30 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
+   * Cache opened file descriptors for reusing.
+   *
+   * TODO: Limit cache size.
+   *
+   * @private
+   * @param {(string | IPersistencyChunk)} persistency
+   * @returns {Promise<number>}
+   * @memberof LokiBlobDataStore
+   */
+  private async getPersistencyFD(
+    persistency: string | IPersistencyChunk
+  ): Promise<number> {
+    const path = this.getPersistencyPath(persistency);
+    let fd = this.FDCache.get(path);
+    if (fd !== undefined) {
+      return fd;
+    }
+
+    fd = await openAsync(path, "w+", undefined);
+    this.FDCache.set(path, fd);
+    return fd;
+  }
+
+  /**
    * Get size for a given persistency (sub)chunk.
    *
    * @private
@@ -801,14 +851,14 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     // TODO: Add a path size cache, we assume different payloads will always has different persistency
     // ID and path. So the cache will always align with the persisted files.
     if (typeof persistency === "string") {
-      const path = this.getPersistencyPath(persistency);
-      return (await this.statAsync(path)).size;
+      const fd = await this.getPersistencyFD(persistency);
+      return (await fstatAsync(fd)).size;
     } else {
       if (persistency.count === undefined) {
-        const path = this.getPersistencyPath(persistency);
+        const fd = await this.getPersistencyFD(persistency);
         persistency.offset =
           persistency.offset === undefined ? 0 : persistency.offset;
-        return (await this.statAsync(path)).size - persistency.offset;
+        return (await fstatAsync(fd)).size - persistency.offset;
       } else {
         return persistency.count;
       }
