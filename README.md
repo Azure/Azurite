@@ -108,6 +108,15 @@ $ az storage container create --name 'test' --connection-string 'DefaultEndpoint
 }
 ```
 
+## Shared Key Credential
+
+The Shared Key Credential account and access key is 
+
+```
+ACCOUNT_NAME: devstoreaccount1
+ACCOUNT_ACCESS_KEY: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
+```
+
 ## Current List of Command Line Options
 
 ```
