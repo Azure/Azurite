@@ -616,9 +616,9 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   public async writePayload(
     payload: NodeJS.ReadableStream | Buffer
   ): Promise<IPersistencyChunk> {
-    const persistencyID = this.getPersistencyID();
-    const persistencyPath = this.getPersistencyPath(persistencyID);
-    const fd = await this.getPersistencyFD(persistencyID);
+    const id = this.getExtentID();
+    const persistencyPath = this.getPersistencyPath(id);
+    const fd = await this.getPersistencyFD(id);
 
     if (payload instanceof Buffer) {
       return new Promise<IPersistencyChunk>((resolve, reject) => {
@@ -626,7 +626,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
         ws.end(payload);
         ws.on("finish", () => {
           resolve({
-            id: persistencyID,
+            id,
             offset: 0,
             count: payload.length
           });
@@ -643,7 +643,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
           .pipe(ws)
           .on("finish", () => {
             resolve({
-              id: persistencyID,
+              id,
               offset: 0,
               count
             });
@@ -654,10 +654,9 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
-   * Reads a subset of persistency layer (sub)chunk with a persistency ID or chunk model.
+   * Reads a subset of persistency layer (sub)chunk with a persistency chunk model.
    *
-   * @param {IPersistencyChunk} [persistency] A persistencyID or chunk model
-   *                                                   pointing to a persistency chunk ID
+   * @param {IPersistencyChunk} [persistency] A chunk model pointing to a persistency chunk
    * @param {number} [offset] Optional. Payload reads offset. Default is 0
    * @param {number} [count] Optional. Payload reads count. Default is Infinity
    * @returns {Promise<NodeJS.ReadableStream>}
@@ -797,11 +796,11 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
-   * Get persistency file path for a resource with persistencyID or persistency chunk provided.
+   * Get persistency file path for a resource with extent ID or persistency chunk provided.
    * Warning: Modify this method may result existing payloads cannot be found.
    *
    * @private
-   * @param {string | IPersistencyChunk} persistency
+   * @param {string | IPersistencyChunk} persistency Extent ID or chunk model
    * @returns {string}
    * @memberof LokiBlobDataStore
    */
@@ -866,8 +865,8 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
-   * Maps a blob or block to a unique ID used as persisted local file name.
-   * Note that, this method is only used to calculate persistency IDs for new blob or blocks.
+   * Maps a blob or block to a unique ID pointing to an extent persisted.
+   * Note that, this method is only used to calculate ID for new blob or blocks.
    *
    * DO NOT use this method for existing blobs or blocks, as the calculation algorithm may
    * change without warning.
@@ -876,7 +875,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @returns {string} Unique persistency ID
    * @memberof LokiBlobDataStore
    */
-  private getPersistencyID(): string {
+  private getExtentID(): string {
     return uuid();
   }
 

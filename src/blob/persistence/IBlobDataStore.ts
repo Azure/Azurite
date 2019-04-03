@@ -2,7 +2,7 @@ import { IDataStore } from "../../common/IDataStore";
 import * as Models from "../generated/artifacts/models";
 
 /**
- * This model describes a chunk inside a persistency extent for a given persistencyID.
+ * This model describes a chunk inside a persistency extent for a given extent ID.
  *
  * @export
  * @interface IPersistencyChunk
@@ -336,8 +336,8 @@ export interface IBlobDataStore extends IDataStore {
   /**
    * Reads a persistency layer payload with a persistency ID or chunk model.
    *
-   * @param {IPersistencyChunk} [persistency] A persistencyID or chunk model
-   *                                                   pointing to a persistency chunk or sub-chunk
+   * @param {IPersistencyChunk} [persistency] A persistency chunk model
+   *                                          pointing to a persistency chunk
    * @param {number} [offset] Optional. Payload reads offset. Default is 0
    * @param {number} [count] Optional. Payload reads count. Default is Infinity
    * @returns {Promise<NodeJS.ReadableStream>}
@@ -366,14 +366,13 @@ export interface IBlobDataStore extends IDataStore {
   ): Promise<NodeJS.ReadableStream>;
 
   /**
-   * TODO: Handle with GC
    * Remove payloads from persistency layer.
    *
-   * @param {(IPersistencyChunk)[]} persistencyIDs
+   * @param {(IPersistencyChunk)[]} persistencyChunks
    * @returns {Promise<void>}
    * @memberof IBlobDataStore
    */
-  deletePayloads(persistencyIDs: (IPersistencyChunk)[]): Promise<void>;
+  deletePayloads(persistencyChunks: (IPersistencyChunk)[]): Promise<void>;
 }
 
 export default IBlobDataStore;
