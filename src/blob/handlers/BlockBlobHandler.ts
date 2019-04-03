@@ -41,7 +41,7 @@ export default class BlockBlobHandler extends BaseHandler
       throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
-    const persistencyID = await this.dataStore.writePayload(body);
+    const persistency = await this.dataStore.writePayload(body);
 
     const existingBlob = await this.dataStore.getBlob(
       accountName,
@@ -76,7 +76,7 @@ export default class BlockBlobHandler extends BaseHandler
       },
       snapshot: "",
       isCommitted: true,
-      persistency: persistencyID
+      persistency
     };
 
     // TODO: Need a lock for multi keys including containerName and blobName
@@ -129,7 +129,7 @@ export default class BlockBlobHandler extends BaseHandler
       false
     );
 
-    const persistencyID = await this.dataStore.writePayload(body);
+    const persistency = await this.dataStore.writePayload(body);
     const block: BlockModel = {
       accountName,
       containerName,
@@ -137,7 +137,7 @@ export default class BlockBlobHandler extends BaseHandler
       isCommitted: false,
       name: blockId,
       size: contentLength,
-      persistency: persistencyID
+      persistency
     };
 
     await this.dataStore.updateBlock(block);
