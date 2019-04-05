@@ -54,6 +54,7 @@
     "fs-extra": "^4.0.1",
     "js2xmlparser": "^2.0.2",
     "lokijs": "^1.4.1",
+    "method-override": "^3.0.0",
     "minimist": "^1.2.0",
     "morgan": "^1.7.0",
     "request": "2.87.0",
