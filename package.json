@@ -50,7 +50,7 @@
     "build:autorestdebug": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
     "blob": "node -r ts-node/register src/blob/main.ts",
     "lint": "tslint -p tsconfig.json -c tslint.json src/**/*.ts",
-    "test": "mocha --compilers ts-node/register --no-timeouts tests/**/*.test.ts",
+    "test": "mocha --compilers ts-node/register --no-timeouts --recursive tests/**/*.test.ts tests/**/**/*.test.ts",
     "clean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log",
     "deepclean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log __blobstorage__ __azurite_db_blob__.json debug.log"
   },
