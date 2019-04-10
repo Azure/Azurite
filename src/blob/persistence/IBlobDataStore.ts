@@ -36,8 +36,6 @@ export type ContainerModel = Models.ContainerItem &
 interface IPersistencyPropertiesRequired {
   /**
    * A reference to persistency layer chunk of data.
-   * A unique ID string refers to the full range of chunk data.
-   * While IPersistencyChunk refers to sub-range of a chunk.
    *
    * @type {IPersistencyChunk}
    * @memberof IPersistencyProperties
@@ -48,8 +46,6 @@ interface IPersistencyPropertiesRequired {
 interface IPersistencyPropertiesOptional {
   /**
    * A reference to persistency layer chunk of data.
-   * A unique ID string refers to the full range of chunk data.
-   * While IPersistencyChunk refers to sub-range of a chunk.
    *
    * @type {IPersistencyChunk}
    * @memberof IPersistencyProperties
@@ -110,8 +106,6 @@ export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
 
 /**
  * Persistency layer data store interface.
- *
- * TODO: Split payload and binary data store APIs to another interface.
  *
  * @export
  * @interface IBlobDataStore
