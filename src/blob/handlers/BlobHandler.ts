@@ -233,10 +233,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     blob: BlobModel
   ): Promise<Models.BlobDownloadResponse> {
     if (blob.isCommitted === false) {
-      throw StorageErrorFactory.getInvalidOperation(
-        context.contextID!,
-        `Cannot download an uncommitted block blob.`
-      );
+      throw StorageErrorFactory.getBlobNotFound(context.contextID!);
     }
 
     // Deserializer doesn't handle range header currently, manually parse range headers here
