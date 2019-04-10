@@ -21,7 +21,6 @@ import {
   BlockModel,
   ContainerModel,
   IBlobDataStore,
-  IExtentModel,
   IPersistencyChunk,
   ServicePropertiesModel,
   ZERO_PERSISTENCY_CHUNK_ID
@@ -35,6 +34,29 @@ const openAsync = promisify(open);
 const unlinkAsync = promisify(unlink);
 const mkdirAsync = promisify(mkdir);
 const closeAsync = promisify(close);
+
+/**
+ * Maintains mapping relationship between extent ID and relative local file path/name.
+ *
+ * @interface IExtentModel
+ */
+interface IExtentModel {
+  /**
+   * Extent ID.
+   *
+   * @type {string}
+   * @memberof IExtentModel
+   */
+  id: string;
+
+  /**
+   * Relative local file path/name.
+   *
+   * @type {string}
+   * @memberof IExtentModel
+   */
+  path: string;
+}
 
 /**
  * This is a persistency layer data source implementation based on loki DB.
@@ -467,6 +489,15 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     coll.insertOne({ id, path });
   }
 
+  /**
+   * Get extent row record from collection. ExtentID or extent mapped relative file path
+   * must be provided at least one.
+   *
+   * @param {string} [id]
+   * @param {string} [path]
+   * @returns {(Promise<IExtentModel | undefined>)}
+   * @memberof LokiBlobDataStore
+   */
   public async getExtent(
     id?: string,
     path?: string
@@ -496,6 +527,16 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     }
   }
 
+  /**
+   * List extents segmented.
+   *
+   * @param {string} [id]
+   * @param {string} [path]
+   * @param {(number | undefined)} [maxResults=5000]
+   * @param {(number | undefined)} [marker]
+   * @returns {(Promise<[IExtentModel[], number | undefined]>)}
+   * @memberof LokiBlobDataStore
+   */
   public async listExtents(
     id?: string,
     path?: string,
@@ -526,6 +567,13 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     }
   }
 
+  /**
+   * Delete an extent row in collection.
+   *
+   * @param {string} id
+   * @returns {Promise<void>}
+   * @memberof LokiBlobDataStore
+   */
   public async deleteExtent(id: string): Promise<void> {
     const coll = this.db.getCollection(this.EXTENTS_COLLECTION);
     return coll.findAndRemove({ id });
@@ -714,9 +762,9 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   public async writePayload(
     payload: NodeJS.ReadableStream | Buffer
   ): Promise<IPersistencyChunk> {
-    const id = await this.generateExtentID();
-    const file = this.generateExtentMappedLocalFileName(id);
-    const path = this.getPersistencyPathFromLocalFileName(file);
+    const id = this.generateExtentID();
+    const file = this.generateRelativeFilePath(id);
+    const path = this.getPersistencyPath(file);
     const fd = await this.getPersistencyFD(id, path);
 
     if (payload instanceof Buffer) {
@@ -761,10 +809,13 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
-   * Reads a subset of persistency layer (sub)chunk with a persistency chunk model.
+   * Reads a subset of persistency layer chunk for a given persistency chunk model.
    *
-   * @param {IPersistencyChunk} [persistency] A chunk model pointing to a persistency chunk
-   * @param {number} [offset] Optional. Payload reads offset. Default is 0
+   * @param {IPersistencyChunk} [persistency] Optional. A chunk model pointing to a persistency chunk.
+   *                                          Pass undefined will return an empty readable stream without any data.
+   *                                          Pass ZERO_PERSISTENCY_CHUNK_ID as persistency.id will return a
+   *                                          stream with zero bytes
+   * @param {number} [offset] Optional. Payload reads chunk (not extent) offset. Default is 0
    * @param {number} [count] Optional. Payload reads count. Default is Infinity
    * @returns {Promise<NodeJS.ReadableStream>}
    * @memberof LokiBlobDataStore
@@ -785,8 +836,10 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       return new ZeroBytesStream(subRangeCount);
     }
 
-    const path = await this.getPersistencyPathFromDB(persistency);
-    const fd = await this.getPersistencyFD(persistency);
+    const [path, fd] = await Promise.all([
+      this.getExtentPersistencyPath(persistency),
+      this.getPersistencyFD(persistency)
+    ]);
 
     if (typeof persistency === "string") {
       return createReadStream(path, {
@@ -817,7 +870,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * Merge persistency payloads into a single payload and return a ReadableStream
    * from the merged stream according to the offset and count.
    *
-   * @param {(IPersistencyChunk)[]} persistencyArray Persistency chunk ID or chunk model list
+   * @param {(IPersistencyChunk)[]} persistencyArray Persistency chunk model list
    * @param {number} [offset] Optional. Reads offset from the merged persistency (sub)chunks. Default is 0
    * @param {number} [count] Optional. Reads count from the merged persistency (sub)chunks. Default is Infinity
    * @returns {Promise<NodeJS.ReadableStream>}
@@ -891,9 +944,8 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   public async deletePayloads(
     persistency: Iterable<string | IPersistencyChunk>
   ): Promise<void> {
-    // TODO: Throw exceptions or skip exceptions?
     for (const id of persistency) {
-      const path = await this.getPersistencyPathFromDB(id);
+      const path = await this.getExtentPersistencyPath(id);
       const idStr = typeof id === "string" ? id : id.id;
       try {
         await unlinkAsync(path);
@@ -906,41 +958,72 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     }
   }
 
-  public getIteratorForAllExtents(): AsyncIterator<string[]> {
+  /**
+   * Create an async iterator to enumerate all extent IDs.
+   *
+   * @returns {AsyncIterator<string[]>}
+   * @memberof IBlobDataStore
+   */
+  public iteratorAllExtents(): AsyncIterator<string[]> {
     return new LokiAllExtentsAsyncIterator(this);
   }
 
-  public getIteratorForReferredExtents(): AsyncIterator<IPersistencyChunk[]> {
+  /**
+   * Create an async iterator to enumerate all extent records referred or being used.
+   *
+   * @returns {AsyncIterator<IPersistencyChunk[]>}
+   * @memberof IBlobDataStore
+   */
+  public iteratorReferredExtents(): AsyncIterator<IPersistencyChunk[]> {
     return new LokiReferredExtentsAsyncIterator(this);
   }
 
   /**
    * Allocate a new extent ID.
    *
-   * @returns {Promise<string>}
+   * @private
+   * @returns {string}
    * @memberof LokiBlobDataStore
    */
-  public async generateExtentID(): Promise<string> {
+  private generateExtentID(): string {
     return uuid();
   }
 
-  private generateExtentMappedLocalFileName(id: string): string {
+  /**
+   * Generate a file name/path relative to persistencePath for a given extent ID.
+   *
+   * @private
+   * @param {string} id Extent ID
+   * @returns {string}
+   * @memberof LokiBlobDataStore
+   */
+  private generateRelativeFilePath(id: string): string {
     return id;
   }
 
-  private getPersistencyPathFromLocalFileName(name: string): string {
-    return join(this.persistencePath, name);
+  /**
+   * Get a full path for a give relative file path.
+   * The full path could be used to open, read and write files.
+   *
+   * @private
+   * @param {string} relativePath
+   * @returns {string}
+   * @memberof LokiBlobDataStore
+   */
+  private getPersistencyPath(relativePath: string): string {
+    return join(this.persistencePath, relativePath);
   }
 
   /**
-   * Get persistency file path for an extent.
+   * Get persistency file path for an created extent.
+   * The full path could be used to open, read and write files.
    *
    * @private
-   * @param {(string | IPersistencyChunk)} persistency
+   * @param {(string | IPersistencyChunk)} persistency Extent ID or chunk
    * @returns {Promise<string>}
    * @memberof LokiBlobDataStore
    */
-  private async getPersistencyPathFromDB(
+  private async getExtentPersistencyPath(
     persistency: string | IPersistencyChunk
   ): Promise<string> {
     let id: string;
@@ -957,7 +1040,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       );
     }
 
-    return join(this.persistencePath, extent.path);
+    return this.getPersistencyPath(extent.path);
   }
 
   /**
@@ -975,9 +1058,11 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     persistency: string | IPersistencyChunk,
     path?: string
   ): Promise<number> {
+    // If not a specified full path provided, try to get path from DB record
     if (path === undefined) {
-      path = await this.getPersistencyPathFromDB(persistency);
+      path = await this.getExtentPersistencyPath(persistency);
     }
+
     let fd = this.FDCache.get(path);
     if (fd !== undefined) {
       return fd;

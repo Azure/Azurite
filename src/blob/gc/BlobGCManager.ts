@@ -12,6 +12,17 @@ enum Status {
   Closed
 }
 
+/**
+ * GC manager to clean up unused extents mapped local files based on mark and sweep
+ * algorithm.
+ *
+ * In the future, GC manager can also help merging small extent mapped files
+ * into one big file to improve the performance.
+ *
+ * @export
+ * @class BlobGCManager
+ * @implements {IGCManager}
+ */
 export default class BlobGCManager implements IGCManager {
   private _status: Status = Status.Closed;
   private emitter: EventEmitter = new EventEmitter();
@@ -20,7 +31,8 @@ export default class BlobGCManager implements IGCManager {
    * Creates an instance of BlobGCManager.
    *
    * @param {IBlobDataStore} blobDataStore
-   * @param {(err: Error) => void} errorHandler Error handler callback to handle
+   * @param {(err: Error) => void} errorHandler Error handler callback to handle critical errors during GC loop
+   *                                            When an error happens, GC loop will close automatically
    * @param {ILogger} logger
    * @param {number} [gcIntervalInMS=DEFAULT_GC_INTERVAL_MS]
    * @memberof BlobGCManager
@@ -187,7 +199,7 @@ export default class BlobGCManager implements IGCManager {
     }
 
     this.logger.info(`BlobGCManager:markSweep() Get referred extents.`);
-    const iter = this.blobDataStore.getIteratorForReferredExtents();
+    const iter = this.blobDataStore.iteratorReferredExtents();
     for (
       let res = await iter.next();
       (res.done === false || res.value.length > 0) &&
@@ -214,7 +226,7 @@ export default class BlobGCManager implements IGCManager {
   private async getAllExtents(): Promise<Set<string>> {
     const ids: Set<string> = new Set<string>();
 
-    const iter = this.blobDataStore.getIteratorForAllExtents();
+    const iter = this.blobDataStore.iteratorAllExtents();
     for (
       let res = await iter.next();
       (res.done === false || res.value.length > 0) &&

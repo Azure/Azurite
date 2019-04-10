@@ -7,6 +7,13 @@ enum State {
   DONE
 }
 
+/**
+ * An async iterator which enumerates all extents being used.
+ *
+ * @export
+ * @class LokiReferredExtentsAsyncIterator
+ * @implements {AsyncIterator<IPersistencyChunk[]>}
+ */
 export default class LokiReferredExtentsAsyncIterator
   implements AsyncIterator<IPersistencyChunk[]> {
   private state: State = State.LISTING_EXTENTS_IN_BLOBS;
