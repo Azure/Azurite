@@ -5,13 +5,22 @@ import {
   BlockBlobURL,
   ContainerURL,
   ServiceURL,
-  StorageURL,
+  StorageURL
 } from "@azure/storage-blob";
 import assert = require("assert");
 
 import BlobConfiguration from "../../../src/blob/BlobConfiguration";
 import Server from "../../../src/blob/BlobServer";
-import { base64encode, bodyToString, getUniqueName, rmRecursive } from "../../testutils";
+import { configLogger } from "../../../src/common/Logger";
+import {
+  base64encode,
+  bodyToString,
+  getUniqueName,
+  rmRecursive
+} from "../../testutils";
+
+// Disable debugging log by passing false
+configLogger(false);
 
 describe("BlockBlobAPIs", () => {
   // TODO: Create a server factory as tests utils

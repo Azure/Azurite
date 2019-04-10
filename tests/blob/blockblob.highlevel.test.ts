@@ -25,7 +25,7 @@ import {
   rmRecursive
 } from "../testutils";
 
-// Disable debugging log
+// Disable debugging log by passing false
 configLogger(false);
 
 // tslint:disable:no-empty

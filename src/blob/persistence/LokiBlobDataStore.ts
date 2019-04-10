@@ -21,10 +21,13 @@ import {
   BlockModel,
   ContainerModel,
   IBlobDataStore,
+  IExtentModel,
   IPersistencyChunk,
   ServicePropertiesModel,
   ZERO_PERSISTENCY_CHUNK_ID
 } from "./IBlobDataStore";
+import LokiAllExtentsAsyncIterator from "./LokiAllExtentsAsyncIterator";
+import LokiReferredExtentsAsyncIterator from "./LokiReferredExtentsAsyncIterator";
 
 const statAsync = promisify(stat);
 const fstatAsync = promisify(fstat);
@@ -56,6 +59,8 @@ const closeAsync = promisify(close);
  *                           // Unique document properties: accountName, containerName, (blob)name
  * -- BLOCKS_COLLECTION      // Block blob blocks collection includes all UNCOMMITTED blocks
  *                           // Unique document properties: accountName, containerName, blobName, name, isCommitted
+ * -- EXTENTS_COLLECTION     // Collections maintain extents information, including extentID, mapped local file path
+ *                           // Unique document properties: id, path
  *
  * TODO:
  * 1. Create an async task to GC persistency files
@@ -66,21 +71,33 @@ const closeAsync = promisify(close);
 export default class LokiBlobDataStore implements IBlobDataStore {
   private readonly db: Loki;
 
+  private initialized: boolean = false;
+  private closed: boolean = false;
+
   private readonly SERVICES_COLLECTION = "$SERVICES_COLLECTION$";
   private readonly CONTAINERS_COLLECTION = "$CONTAINERS_COLLECTION$";
   private readonly BLOBS_COLLECTION = "$BLOBS_COLLECTION$";
   private readonly BLOCKS_COLLECTION = "$BLOCKS_COLLECTION$";
+  private readonly EXTENTS_COLLECTION = "$EXTENTS_COLLECTION$";
 
   private readonly FDCache: Map<string, number> = new Map<string, number>(); // For reading reuse only
 
   public constructor(
-    private readonly lokiDBPath: string,
-    private readonly persistencePath: string // private readonly logger: ILogger
+    public readonly lokiDBPath: string,
+    public readonly persistencePath: string // private readonly logger: ILogger
   ) {
     this.db = new Loki(lokiDBPath, {
       autosave: true,
       autosaveInterval: 5000
     });
+  }
+
+  public isInitialized(): boolean {
+    return this.initialized;
+  }
+
+  public isClosed(): boolean {
+    return this.closed;
   }
 
   public async init(): Promise<void> {
@@ -146,18 +163,12 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       });
     }
 
-    // Create default service properties document if not exists
-    // Get SERVICE_PROPERTIES_DOCUMENT_LOKI_ID from DB if not exists
-    // const servicePropertiesDocs = servicePropertiesColl.where(() => true);
-    // if (servicePropertiesDocs.length === 0) {
-    //   await this.updateServiceProperties(this.defaultServiceProperties);
-    // } else if (servicePropertiesDocs.length === 1) {
-    //   this.servicePropertiesDocumentID = servicePropertiesDocs[0].$loki;
-    // } else {
-    //   throw new Error(
-    //     "LokiDB initialization error: Service properties collection has more than one document."
-    //   );
-    // }
+    // Create EXTENTS_COLLECTION if not exists
+    if (this.db.getCollection(this.EXTENTS_COLLECTION) === null) {
+      this.db.addCollection(this.EXTENTS_COLLECTION, {
+        indices: ["id", "path"] // Optimize for find operation
+      });
+    }
 
     await new Promise((resolve, reject) => {
       this.db.saveDatabase(err => {
@@ -168,6 +179,9 @@ export default class LokiBlobDataStore implements IBlobDataStore {
         }
       });
     });
+
+    this.initialized = true;
+    this.closed = false;
   }
 
   /**
@@ -192,6 +206,8 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       closeFDPromises.push(closeAsync(fd));
     });
     await Promise.all(closeFDPromises);
+
+    this.closed = true;
   }
 
   /**
@@ -397,8 +413,8 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * List blobs with query conditions specified.
    *
    * @template T
-   * @param {string} account
-   * @param {string} container
+   * @param {string} [account]
+   * @param {string} [container]
    * @param {string} [prefix]
    * @param {number} [maxResults=5000]
    * @param {number} [marker]
@@ -406,27 +422,23 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @memberof LokiBlobDataStore
    */
   public async listBlobs<T extends BlobModel>(
-    account: string,
-    container: string,
+    account?: string,
+    container?: string,
     prefix: string | undefined = "",
     maxResults: number | undefined = 5000,
     marker?: number | undefined
   ): Promise<[T[], number | undefined]> {
-    const query =
-      prefix === ""
-        ? {
-            $loki: { $gt: marker },
-            accountName: account,
-            containerName: container
-          }
-        : {
-            name: {
-              $regex: `^${this.escapeRegex(prefix)}`
-            },
-            $loki: { $gt: marker },
-            accountName: account,
-            containerName: container
-          };
+    const query: any = {};
+    if (prefix !== "") {
+      query.name = { $regex: `^${this.escapeRegex(prefix)}` };
+    }
+    if (account !== undefined) {
+      query.accountName = account;
+    }
+    if (container !== undefined) {
+      query.containerName = container;
+    }
+    query.$loki = { $gt: marker };
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const docs = coll
@@ -448,6 +460,75 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       const nextMarker = docs[docs.length - 1].$loki;
       return [docs, nextMarker];
     }
+  }
+
+  public async insertExtent(id: string, path: string): Promise<void> {
+    const coll = this.db.getCollection(this.EXTENTS_COLLECTION);
+    coll.insertOne({ id, path });
+  }
+
+  public async getExtent(
+    id?: string,
+    path?: string
+  ): Promise<IExtentModel | undefined> {
+    if (id === undefined && path === undefined) {
+      throw RangeError(
+        `LokiBlobDataStore:getExtent() id and path must be provided at least one.`
+      );
+    }
+
+    const coll = this.db.getCollection(this.EXTENTS_COLLECTION);
+    const query: any = {};
+
+    if (id !== undefined) {
+      query.id = id;
+    }
+
+    if (path !== undefined) {
+      query.path = path;
+    }
+
+    const extentDoc = coll.findOne(query);
+    if (extentDoc) {
+      return extentDoc;
+    } else {
+      return undefined;
+    }
+  }
+
+  public async listExtents(
+    id?: string,
+    path?: string,
+    maxResults: number | undefined = 5000,
+    marker?: number | undefined
+  ): Promise<[IExtentModel[], number | undefined]> {
+    const query: any = {};
+    if (id !== undefined) {
+      query.id = id;
+    }
+    if (path !== undefined) {
+      query.path = path;
+    }
+    query.$loki = { $gt: marker };
+
+    const coll = this.db.getCollection(this.EXTENTS_COLLECTION);
+    const docs = coll
+      .chain()
+      .find(query)
+      .limit(maxResults)
+      .data();
+
+    if (docs.length < maxResults) {
+      return [docs, undefined];
+    } else {
+      const nextMarker = docs[docs.length - 1].$loki;
+      return [docs, nextMarker];
+    }
+  }
+
+  public async deleteExtent(id: string): Promise<void> {
+    const coll = this.db.getCollection(this.EXTENTS_COLLECTION);
+    return coll.findAndRemove({ id });
   }
 
   /**
@@ -474,6 +555,14 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     if (blobDoc) {
       coll.remove(blobDoc);
     }
+  }
+
+  public async deleteBlobs(account: string, container: string): Promise<void> {
+    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    return coll.findAndRemove({
+      accountName: account,
+      containerName: container
+    });
   }
 
   /**
@@ -578,28 +667,37 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * Gets blocks list for a blob from persistency layer by account, container and blob names.
    *
    * @template T
-   * @param {string} account
-   * @param {string} container
-   * @param {string} blob
-   * @param {boolean} isCommitted
+   * @param {string} [account]
+   * @param {string} [container]
+   * @param {string} [blob]
+   * @param {boolean} [isCommitted]
    * @returns {(Promise<T[]>)}
    * @memberof LokiBlobDataStore
    */
   public async listBlocks<T extends BlockModel>(
-    account: string,
-    container: string,
-    blob: string,
-    isCommitted: boolean
+    account?: string,
+    container?: string,
+    blob?: string,
+    isCommitted?: boolean
   ): Promise<T[]> {
+    const query: any = {};
+    if (account !== undefined) {
+      query.accountName = account;
+    }
+    if (container !== undefined) {
+      query.containerName = container;
+    }
+    if (blob !== undefined) {
+      query.blobName = blob;
+    }
+    if (isCommitted !== undefined) {
+      query.isCommitted = isCommitted;
+    }
+
     const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
     const blockDocs = coll
       .chain()
-      .find({
-        accountName: account,
-        containerName: container,
-        blobName: blob,
-        isCommitted
-      })
+      .find(query)
       .simplesort("$loki")
       .data();
 
@@ -616,25 +714,30 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   public async writePayload(
     payload: NodeJS.ReadableStream | Buffer
   ): Promise<IPersistencyChunk> {
-    const id = this.getExtentID();
-    const persistencyPath = this.getPersistencyPath(id);
-    const fd = await this.getPersistencyFD(id);
+    const id = await this.generateExtentID();
+    const file = this.generateExtentMappedLocalFileName(id);
+    const path = this.getPersistencyPathFromLocalFileName(file);
+    const fd = await this.getPersistencyFD(id, path);
 
     if (payload instanceof Buffer) {
       return new Promise<IPersistencyChunk>((resolve, reject) => {
-        const ws = createWriteStream(persistencyPath, { fd, autoClose: false });
+        const ws = createWriteStream(path, { fd, autoClose: false });
         ws.end(payload);
         ws.on("finish", () => {
-          resolve({
-            id,
-            offset: 0,
-            count: payload.length
-          });
+          this.insertExtent(id, file)
+            .then(() => {
+              resolve({
+                id,
+                offset: 0,
+                count: payload.length
+              });
+            })
+            .catch(reject);
         }).on("error", reject);
       });
     } else {
       return new Promise<IPersistencyChunk>((resolve, reject) => {
-        const ws = createWriteStream(persistencyPath, { fd, autoClose: false });
+        const ws = createWriteStream(path, { fd, autoClose: false });
         let count = 0;
         payload
           .on("data", data => {
@@ -642,11 +745,15 @@ export default class LokiBlobDataStore implements IBlobDataStore {
           })
           .pipe(ws)
           .on("finish", () => {
-            resolve({
-              id,
-              offset: 0,
-              count
-            });
+            this.insertExtent(id, file)
+              .then(() => {
+                resolve({
+                  id,
+                  offset: 0,
+                  count
+                });
+              })
+              .catch(reject);
           })
           .on("error", reject);
       });
@@ -678,7 +785,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       return new ZeroBytesStream(subRangeCount);
     }
 
-    const path = this.getPersistencyPath(persistency);
+    const path = await this.getPersistencyPathFromDB(persistency);
     const fd = await this.getPersistencyFD(persistency);
 
     if (typeof persistency === "string") {
@@ -777,39 +884,80 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   /**
    * Remove payloads from persistency layer.
    *
-   * @param {(IPersistencyChunk)[]} persistencyArray
+   * @param {Iterable<string | IPersistencyChunk>} persistency
    * @returns {Promise<void>}
    * @memberof LokiBlobDataStore
    */
   public async deletePayloads(
-    persistencyArray: (IPersistencyChunk)[]
+    persistency: Iterable<string | IPersistencyChunk>
   ): Promise<void> {
     // TODO: Throw exceptions or skip exceptions?
-    for (const id of persistencyArray) {
-      const path = this.getPersistencyPath(id);
+    for (const id of persistency) {
+      const path = await this.getPersistencyPathFromDB(id);
+      const idStr = typeof id === "string" ? id : id.id;
       try {
         await unlinkAsync(path);
-      } catch {
-        /** NOOP */
+        await this.deleteExtent(idStr);
+      } catch (err) {
+        if (err.code === "ENOENT") {
+          await this.deleteExtent(idStr);
+        }
       }
     }
   }
 
+  public getIteratorForAllExtents(): AsyncIterator<string[]> {
+    return new LokiAllExtentsAsyncIterator(this);
+  }
+
+  public getIteratorForReferredExtents(): AsyncIterator<IPersistencyChunk[]> {
+    return new LokiReferredExtentsAsyncIterator(this);
+  }
+
   /**
-   * Get persistency file path for a resource with extent ID or persistency chunk provided.
-   * Warning: Modify this method may result existing payloads cannot be found.
+   * Allocate a new extent ID.
    *
-   * @private
-   * @param {string | IPersistencyChunk} persistency Extent ID or chunk model
-   * @returns {string}
+   * @returns {Promise<string>}
    * @memberof LokiBlobDataStore
    */
-  private getPersistencyPath(persistency: string | IPersistencyChunk): string {
+  public async generateExtentID(): Promise<string> {
+    return uuid();
+  }
+
+  private generateExtentMappedLocalFileName(id: string): string {
+    return id;
+  }
+
+  private getPersistencyPathFromLocalFileName(name: string): string {
+    return join(this.persistencePath, name);
+  }
+
+  /**
+   * Get persistency file path for an extent.
+   *
+   * @private
+   * @param {(string | IPersistencyChunk)} persistency
+   * @returns {Promise<string>}
+   * @memberof LokiBlobDataStore
+   */
+  private async getPersistencyPathFromDB(
+    persistency: string | IPersistencyChunk
+  ): Promise<string> {
+    let id: string;
     if (typeof persistency === "string") {
-      return join(this.persistencePath, persistency);
+      id = persistency;
     } else {
-      return join(this.persistencePath, persistency.id);
+      id = persistency.id;
     }
+
+    const extent = await this.getExtent(id);
+    if (extent === undefined) {
+      throw new Error(
+        `LokiBlobDataStore:getPersistencyPath() cannot find extent record for given id ${id}`
+      );
+    }
+
+    return join(this.persistencePath, extent.path);
   }
 
   /**
@@ -819,13 +967,17 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    *
    * @private
    * @param {(string | IPersistencyChunk)} persistency
+   * @param {string} [path]
    * @returns {Promise<number>}
    * @memberof LokiBlobDataStore
    */
   private async getPersistencyFD(
-    persistency: string | IPersistencyChunk
+    persistency: string | IPersistencyChunk,
+    path?: string
   ): Promise<number> {
-    const path = this.getPersistencyPath(persistency);
+    if (path === undefined) {
+      path = await this.getPersistencyPathFromDB(persistency);
+    }
     let fd = this.FDCache.get(path);
     if (fd !== undefined) {
       return fd;
@@ -862,21 +1014,6 @@ export default class LokiBlobDataStore implements IBlobDataStore {
         return persistency.count;
       }
     }
-  }
-
-  /**
-   * Maps a blob or block to a unique ID pointing to an extent persisted.
-   * Note that, this method is only used to calculate ID for new blob or blocks.
-   *
-   * DO NOT use this method for existing blobs or blocks, as the calculation algorithm may
-   * change without warning.
-   *
-   * @private
-   * @returns {string} Unique persistency ID
-   * @memberof LokiBlobDataStore
-   */
-  private getExtentID(): string {
-    return uuid();
   }
 
   /**

@@ -17,7 +17,8 @@
     "importHelpers": true,
     "declarationDir": "./typings",
     "lib": ["es5", "es6", "es7", "esnext", "dom"],
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "downlevelIteration": true
   },
   "compileOnSave": true,
   "exclude": ["node_modules"],

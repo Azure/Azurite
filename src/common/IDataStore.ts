@@ -14,10 +14,26 @@ export interface IDataStore {
   init(): Promise<void>;
 
   /**
+   * Whether data store has been initialized.
+   *
+   * @returns {boolean}
+   * @memberof IDataStore
+   */
+  isInitialized(): boolean;
+
+  /**
    * Data store close steps. Such as close DB connections.
    *
    * @returns {Promise<void>}
    * @memberof IDataStore
    */
   close(): Promise<void>;
+
+  /**
+   * Whether data store has been closed.
+   *
+   * @returns {boolean}
+   * @memberof IDataStore
+   */
+  isClosed(): boolean;
 }

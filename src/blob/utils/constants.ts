@@ -21,3 +21,5 @@ export const IS_PRODUCTION = process.env.NODE_ENV === "production";
 export const LOGGER_CONFIGS = {};
 
 export const API_VERSION = "2018-03-28";
+
+export const DEFAULT_GC_INTERVAL_MS = 30 * 1000;

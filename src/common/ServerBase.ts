@@ -2,6 +2,7 @@ import * as http from "http";
 import * as https from "https";
 
 import { IDataStore } from "./IDataStore";
+import IGCManager from "./IGCManager";
 import IRequestListenerFactory from "./IRequestListenerFactory";
 
 export type RequestListener = (
@@ -32,7 +33,8 @@ export default abstract class ServerBase {
     public readonly port: number,
     public readonly httpServer: http.Server | https.Server,
     requestListenerFactory: IRequestListenerFactory,
-    private readonly dataStore?: IDataStore
+    private readonly dataStore?: IDataStore,
+    private readonly gcManager?: IGCManager
   ) {
     // Remove predefined request listeners to avoid double request handling
     this.httpServer.removeAllListeners("request");
@@ -53,8 +55,8 @@ export default abstract class ServerBase {
    */
   public getHttpServerAddress(): string {
     const address = this.httpServer.address();
-    if (typeof address === "string") {
-      return address;
+    if (typeof address === "string" || address === null) {
+      return address || "";
     } else {
       return `${address.address}:${address.port}`;
     }
@@ -73,6 +75,10 @@ export default abstract class ServerBase {
 
     if (this.dataStore !== undefined) {
       await this.dataStore.init();
+    }
+
+    if (this.gcManager !== undefined) {
+      await this.gcManager.start();
     }
 
     await new Promise<void>((resolve, reject) => {
@@ -110,6 +116,10 @@ export default abstract class ServerBase {
     await new Promise(resolve => {
       this.httpServer.close(resolve);
     });
+
+    if (this.gcManager !== undefined) {
+      await this.gcManager.close();
+    }
 
     if (this.dataStore !== undefined) {
       await this.dataStore.close();
