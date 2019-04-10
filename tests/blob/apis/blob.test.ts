@@ -86,7 +86,7 @@ describe("BlobAPIs", () => {
     await blobURL.delete(Aborter.none);
   });
 
-  it("setMetadata with new metadata set", async () => {
+  it("should setMetadata with new metadata set", async () => {
     const metadata = {
       a: "a",
       b: "b"
@@ -94,5 +94,21 @@ describe("BlobAPIs", () => {
     await blobURL.setMetadata(Aborter.none, metadata);
     const result = await blobURL.getProperties(Aborter.none);
     assert.deepStrictEqual(result.metadata, metadata);
+  });
+
+  // https://docs.microsoft.com/en-us/rest/api/storageservices/get-blob-properties
+  // as properties retrieval is implemented, the properties should be added to the tests below
+  it("should get the correct properties set based on headers", async () => {
+    const metadata = {
+      a: "a",
+      b: "b"
+    };
+    await blobURL.setMetadata(Aborter.none, metadata);
+    const result = await blobURL.getProperties(Aborter.none);
+    assert.deepStrictEqual(result.accessTier, "Hot"); // defaulting for now
+    assert.deepStrictEqual(result.acceptRanges, "bytes"); // defaulting for now
+    // assert.deepStrictEqual(result.blobCommittedBlockCount, 2); // defaulting 2 for now - currently undefined
+    assert.deepStrictEqual(result.blobType, "BlockBlob"); // defaulting for now
+    // assert.deepStrictEqual(result.contentType, "text/plain; charset=UTF-8"); // currently undefined
   });
 });
