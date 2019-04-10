@@ -32,6 +32,11 @@ export default class BlobGCManager implements IGCManager {
     public readonly gcIntervalInMS: number = DEFAULT_GC_INTERVAL_MS
   ) {
     this.emitter.once("error", this.errorHandler);
+
+    // Avoid infinite GC loop
+    if (gcIntervalInMS <= 0) {
+      this.gcIntervalInMS = 1;
+    }
   }
 
   public get status(): Status {
