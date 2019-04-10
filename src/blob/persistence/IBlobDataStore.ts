@@ -3,6 +3,7 @@ import * as Models from "../generated/artifacts/models";
 
 /**
  * This model describes a chunk inside a persistency extent for a given extent ID.
+ * A chunk points to a sub-range of an extent.
  *
  * @export
  * @interface IPersistencyChunk
@@ -106,11 +107,6 @@ interface IBlockAdditionalProperties {
 type PersistencyBlockModel = Models.Block & IPersistencyPropertiesRequired;
 
 export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
-
-export interface IExtentModel {
-  id: string;
-  path: string;
-}
 
 /**
  * Persistency layer data store interface.
@@ -383,8 +379,21 @@ export interface IBlobDataStore extends IDataStore {
     persistency: Iterable<string | IPersistencyChunk>
   ): Promise<void>;
 
-  getIteratorForAllExtents(): AsyncIterator<string[]>;
-  getIteratorForReferredExtents(): AsyncIterator<IPersistencyChunk[]>;
+  /**
+   * Create an async iterator to enumerate all extent IDs.
+   *
+   * @returns {AsyncIterator<string[]>}
+   * @memberof IBlobDataStore
+   */
+  iteratorAllExtents(): AsyncIterator<string[]>;
+
+  /**
+   * Create an async iterator to enumerate all extent records referred or being used.
+   *
+   * @returns {AsyncIterator<IPersistencyChunk[]>}
+   * @memberof IBlobDataStore
+   */
+  iteratorReferredExtents(): AsyncIterator<IPersistencyChunk[]>;
 }
 
 export default IBlobDataStore;

@@ -1,5 +1,12 @@
 import LokiBlobDataStore from "./LokiBlobDataStore";
 
+/**
+ * Async iterator to enumerate all extent IDs.
+ *
+ * @export
+ * @class LokiAllExtentsAsyncIterator
+ * @implements {AsyncIterator<string[]>}
+ */
 export default class LokiAllExtentsAsyncIterator
   implements AsyncIterator<string[]> {
   private unit: number = 1000;
