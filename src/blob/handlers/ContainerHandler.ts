@@ -104,6 +104,7 @@ export default class ContainerHandler extends BaseHandler
     // Because following delete container operation will only delete DB metadata for container and
     // blobs under the container, but will not clean up blob data in disk
     await this.dataStore.deleteContainer(container.accountName, container.name);
+    await this.dataStore.deleteBlobs(container.accountName, container.name);
 
     const response: Models.ContainerDeleteResponse = {
       date: context.startTime,

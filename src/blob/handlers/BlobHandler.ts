@@ -232,6 +232,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context,
     blob: BlobModel
   ): Promise<Models.BlobDownloadResponse> {
+    if (blob.isCommitted === false) {
+      throw StorageErrorFactory.getInvalidOperation(
+        context.contextID!,
+        `Cannot download an uncommitted block blob.`
+      );
+    }
+
     // Deserializer doesn't handle range header currently, manually parse range headers here
     const rangesParts = deserializeRangeHeader(
       context.request!.getHeader("range"),
@@ -274,7 +281,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       };
     }
 
-    let body: NodeJS.ReadableStream | undefined = await bodyGetter();
+    const body: NodeJS.ReadableStream | undefined = await bodyGetter();
     let contentMD5: Uint8Array | undefined;
     if (!partialRead) {
       contentMD5 = blob.properties.contentMD5;
@@ -282,7 +289,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       if (body) {
         // TODO： Get partial content MD5
         contentMD5 = undefined; // await getMD5FromStream(body);
-        body = await bodyGetter();
       }
     }
 

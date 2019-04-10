@@ -107,6 +107,11 @@ type PersistencyBlockModel = Models.Block & IPersistencyPropertiesRequired;
 
 export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
 
+export interface IExtentModel {
+  id: string;
+  path: string;
+}
+
 /**
  * Persistency layer data store interface.
  *
@@ -196,6 +201,8 @@ export interface IBlobDataStore extends IDataStore {
     marker?: number
   ): Promise<[T[], number | undefined]>;
 
+  deleteBlobs(account: string, container: string): Promise<void>;
+
   /**
    * Update blob item in persistency layer. Will create if blob doesn't exist.
    *
@@ -226,8 +233,8 @@ export interface IBlobDataStore extends IDataStore {
    * List blobs with query conditions specified.
    *
    * @template T
-   * @param {string} account
-   * @param {string} container
+   * @param {string} [account]
+   * @param {string} [container]
    * @param {string} [prefix]
    * @param {number} [maxResults]
    * @param {number} [marker]
@@ -235,8 +242,8 @@ export interface IBlobDataStore extends IDataStore {
    * @memberof IBlobDataStore
    */
   listBlobs<T extends BlobModel>(
-    account: string,
-    container: string,
+    account?: string,
+    container?: string,
     prefix?: string,
     maxResults?: number,
     marker?: number
@@ -308,18 +315,18 @@ export interface IBlobDataStore extends IDataStore {
    * Gets blocks list for a blob from persistency layer by account, container and blob names.
    *
    * @template T
-   * @param {string} account
-   * @param {string} container
-   * @param {string} blob
-   * @param {boolean} isCommitted
+   * @param {string} [account]
+   * @param {string} [container]
+   * @param {string} [blob]
+   * @param {boolean} [isCommitted]
    * @returns {(Promise<T[]>)}
    * @memberof IBlobDataStore
    */
   listBlocks<T extends BlockModel>(
-    account: string,
-    container: string,
-    blob: string,
-    isCommitted: boolean
+    account?: string,
+    container?: string,
+    blob?: string,
+    isCommitted?: boolean
   ): Promise<T[]>;
 
   /**
@@ -368,11 +375,16 @@ export interface IBlobDataStore extends IDataStore {
   /**
    * Remove payloads from persistency layer.
    *
-   * @param {(IPersistencyChunk)[]} persistencyChunks
+   * @param {Iterable<string | IPersistencyChunk>} persistency
    * @returns {Promise<void>}
    * @memberof IBlobDataStore
    */
-  deletePayloads(persistencyChunks: (IPersistencyChunk)[]): Promise<void>;
+  deletePayloads(
+    persistency: Iterable<string | IPersistencyChunk>
+  ): Promise<void>;
+
+  getIteratorForAllExtents(): AsyncIterator<string[]>;
+  getIteratorForReferredExtents(): AsyncIterator<IPersistencyChunk[]>;
 }
 
 export default IBlobDataStore;
