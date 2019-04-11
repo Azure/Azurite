@@ -23,3 +23,31 @@ export const LOGGER_CONFIGS = {};
 export const API_VERSION = "2018-03-28";
 
 export const DEFAULT_GC_INTERVAL_MS = 30 * 1000;
+
+export const EMULATOR_ACCOUNT_NAME = "devstoreaccount1";
+
+export const EMULATOR_ACCOUNT_KEY = Buffer.from(
+  "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+  "base64"
+);
+
+export const HeaderConstants = {
+  AUTHORIZATION: "authorization",
+  AUTHORIZATION_SCHEME: "Bearer",
+  CONTENT_ENCODING: "content-encoding",
+  CONTENT_LANGUAGE: "content-language",
+  CONTENT_LENGTH: "content-length",
+  CONTENT_MD5: "content-md5",
+  CONTENT_TYPE: "content-type",
+  COOKIE: "Cookie",
+  DATE: "date",
+  IF_MATCH: "if-match",
+  IF_MODIFIED_SINCE: "if-modified-since",
+  IF_NONE_MATCH: "if-none-match",
+  IF_UNMODIFIED_SINCE: "if-unmodified-since",
+  PREFIX_FOR_STORAGE: "x-ms-",
+  RANGE: "Range",
+  USER_AGENT: "User-Agent",
+  X_MS_CLIENT_REQUEST_ID: "x-ms-client-request-id",
+  X_MS_DATE: "x-ms-date"
+};

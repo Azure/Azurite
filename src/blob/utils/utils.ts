@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import etag from "etag";
 import { createWriteStream, PathLike } from "fs";
+import { parse } from "url";
 
 // TODO: Align eTag with Azure Storage Service
 export function newEtag(): string {
@@ -34,6 +35,46 @@ export async function getMD5FromStream(
       })
       .on("error", reject);
   });
+}
+
+/**
+ * Get URL query key value pairs from an URL string.
+ *
+ * @export
+ * @param {string} url
+ * @returns {{[key: string]: string}}
+ */
+export function getURLQueries(url: string): { [key: string]: string } {
+  let queryString = parse(url).query;
+  if (!queryString) {
+    return {};
+  }
+
+  queryString = queryString.trim();
+  queryString = queryString.startsWith("?")
+    ? queryString.substr(1)
+    : queryString;
+
+  let querySubStrings: string[] = queryString.split("&");
+  querySubStrings = querySubStrings.filter((value: string) => {
+    const indexOfEqual = value.indexOf("=");
+    const lastIndexOfEqual = value.lastIndexOf("=");
+    return (
+      indexOfEqual > 0 &&
+      indexOfEqual === lastIndexOfEqual &&
+      lastIndexOfEqual < value.length - 1
+    );
+  });
+
+  const queries: { [key: string]: string } = {};
+  for (const querySubString of querySubStrings) {
+    const splitResults = querySubString.split("=");
+    const key: string = splitResults[0];
+    const value: string = splitResults[1];
+    queries[key] = value;
+  }
+
+  return queries;
 }
 
 /**

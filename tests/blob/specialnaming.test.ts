@@ -1,9 +1,9 @@
 import {
   Aborter,
-  AnonymousCredential,
   BlockBlobURL,
   ContainerURL,
   ServiceURL,
+  SharedKeyCredential,
   StorageURL
 } from "@azure/storage-blob";
 import assert = require("assert");
@@ -11,8 +11,15 @@ import assert = require("assert");
 import BlobConfiguration from "../../src/blob/BlobConfiguration";
 import Server from "../../src/blob/BlobServer";
 import { configLogger } from "../../src/common/Logger";
-import { appendToURLPath, getUniqueName, rmRecursive } from "../testutils";
+import {
+  appendToURLPath,
+  EMULATOR_ACCOUNT_KEY,
+  EMULATOR_ACCOUNT_NAME,
+  getUniqueName,
+  rmRecursive
+} from "../testutils";
 
+// Set true to enable debug log
 configLogger(false);
 
 describe("SpecialNaming", () => {
@@ -33,9 +40,12 @@ describe("SpecialNaming", () => {
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
   const serviceURL = new ServiceURL(
     baseURL,
-    StorageURL.newPipeline(new AnonymousCredential(), {
-      retryOptions: { maxTries: 1 }
-    })
+    StorageURL.newPipeline(
+      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+      {
+        retryOptions: { maxTries: 1 }
+      }
+    )
   );
 
   const containerName: string = getUniqueName("1container-with-dash");

@@ -144,4 +144,14 @@ export default class StorageErrorFactory {
       contextID
     );
   }
+
+  public static getAuthenticationFailed(contextID: string): StorageError {
+    return new StorageError(
+      403,
+      "AuthenticationFailed",
+      // tslint:disable-next-line:max-line-length
+      "Server failed to authenticate the request. Make sure the value of the Authorization header is formed correctly including the signature.",
+      contextID
+    );
+  }
 }

@@ -4,6 +4,11 @@ import { join } from "path";
 import rimraf from "rimraf";
 import { URL } from "url";
 
+export const EMULATOR_ACCOUNT_NAME = "devstoreaccount1";
+
+export const EMULATOR_ACCOUNT_KEY =
+  "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
+
 export function getUniqueName(prefix: string): string {
   return `${prefix}${new Date().getTime()}${padStart(
     Math.floor(Math.random() * 10000).toString(),
