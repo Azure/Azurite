@@ -140,7 +140,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     // If a value is not provided for a given property when at least one
     // of the properties listed below is set, then that property will
     // be cleared for the blob.
-    if (blobHeaders != undefined) {
+    if (blobHeaders !== undefined) {
       blobProps.cacheControl = blobHeaders.blobCacheControl;
       blobProps.contentType = blobHeaders.blobContentType;
       blobProps.contentMD5 = blobHeaders.blobContentMD5;
