@@ -132,7 +132,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   ): Promise<Models.BlobSetHTTPHeadersResponse> {
     const blob = await this.getSimpleBlobFromStorage(context);
     const blobHeaders = options.blobHTTPHeaders;
-    let blobProps = blob.properties;
+    const blobProps = blob.properties;
 
     // as per https://docs.microsoft.com/en-us/rest/api/storageservices/set-blob-properties#remarks
     // If any one or more of the following properties is set in the request,
