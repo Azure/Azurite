@@ -125,11 +125,48 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     throw new NotImplementedError(context.contextID);
   }
 
+  // see also https://docs.microsoft.com/en-us/rest/api/storageservices/set-blob-properties
   public async setHTTPHeaders(
     options: Models.BlobSetHTTPHeadersOptionalParams,
     context: Context
   ): Promise<Models.BlobSetHTTPHeadersResponse> {
-    throw new NotImplementedError(context.contextID);
+    const blob = await this.getSimpleBlobFromStorage(context);
+    const blobHeaders = options.blobHTTPHeaders;
+    let blobProps = blob.properties;
+
+    // as per https://docs.microsoft.com/en-us/rest/api/storageservices/set-blob-properties#remarks
+    // If any one or more of the following properties is set in the request,
+    // then all of these properties are set together.
+    // If a value is not provided for a given property when at least one
+    // of the properties listed below is set, then that property will
+    // be cleared for the blob.
+    if (blobHeaders != undefined) {
+      blobProps.cacheControl = blobHeaders.blobCacheControl;
+      blobProps.contentType = blobHeaders.blobContentType;
+      blobProps.contentMD5 = blobHeaders.blobContentMD5;
+      blobProps.contentEncoding = blobHeaders.blobContentEncoding;
+      blobProps.contentLanguage = blobHeaders.blobContentLanguage;
+      blobProps.contentDisposition = blobHeaders.blobContentDisposition;
+      blobProps.lastModified = context.startTime
+        ? context.startTime
+        : new Date();
+    }
+
+    blob.properties = blobProps;
+    await this.dataStore.updateBlob(blob);
+
+    // ToDo: return correct headers and test for these.
+    const response: Models.BlobSetHTTPHeadersResponse = {
+      statusCode: 200,
+      eTag: blob.properties.etag,
+      lastModified: blob.properties.lastModified,
+      blobSequenceNumber: blob.properties.blobSequenceNumber,
+      requestId: context.contextID,
+      version: API_VERSION,
+      date: context.startTime
+    };
+
+    return response;
   }
 
   public async setMetadata(
@@ -141,8 +178,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     blob.metadata = options.metadata;
     await this.dataStore.updateBlob(blob);
 
+    // ToDo: return correct headers and test for these.
     const response: Models.BlobSetMetadataResponse = {
       statusCode: 200,
+      eTag: blob.properties.etag,
+      lastModified: blob.properties.lastModified,
+      isServerEncrypted: true,
       requestId: context.contextID,
       date: context.startTime,
       version: API_VERSION
@@ -232,6 +273,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context,
     blob: BlobModel
   ): Promise<Models.BlobDownloadResponse> {
+    if (blob.isCommitted === false) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextID!);
+    }
+
     // Deserializer doesn't handle range header currently, manually parse range headers here
     const rangesParts = deserializeRangeHeader(
       context.request!.getHeader("range"),
@@ -274,7 +319,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       };
     }
 
-    let body: NodeJS.ReadableStream | undefined = await bodyGetter();
+    const body: NodeJS.ReadableStream | undefined = await bodyGetter();
     let contentMD5: Uint8Array | undefined;
     if (!partialRead) {
       contentMD5 = blob.properties.contentMD5;
@@ -282,7 +327,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       if (body) {
         // TODO： Get partial content MD5
         contentMD5 = undefined; // await getMD5FromStream(body);
-        body = await bodyGetter();
       }
     }
 

@@ -2,7 +2,8 @@ import { IDataStore } from "../../common/IDataStore";
 import * as Models from "../generated/artifacts/models";
 
 /**
- * This model describes a chunk inside a persistency extent for a given persistencyID.
+ * This model describes a chunk inside a persistency extent for a given extent ID.
+ * A chunk points to a sub-range of an extent.
  *
  * @export
  * @interface IPersistencyChunk
@@ -35,8 +36,6 @@ export type ContainerModel = Models.ContainerItem &
 interface IPersistencyPropertiesRequired {
   /**
    * A reference to persistency layer chunk of data.
-   * A unique ID string refers to the full range of chunk data.
-   * While IPersistencyChunk refers to sub-range of a chunk.
    *
    * @type {IPersistencyChunk}
    * @memberof IPersistencyProperties
@@ -47,8 +46,6 @@ interface IPersistencyPropertiesRequired {
 interface IPersistencyPropertiesOptional {
   /**
    * A reference to persistency layer chunk of data.
-   * A unique ID string refers to the full range of chunk data.
-   * While IPersistencyChunk refers to sub-range of a chunk.
    *
    * @type {IPersistencyChunk}
    * @memberof IPersistencyProperties
@@ -109,8 +106,6 @@ export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
 
 /**
  * Persistency layer data store interface.
- *
- * TODO: Split payload and binary data store APIs to another interface.
  *
  * @export
  * @interface IBlobDataStore
@@ -196,6 +191,8 @@ export interface IBlobDataStore extends IDataStore {
     marker?: number
   ): Promise<[T[], number | undefined]>;
 
+  deleteBlobs(account: string, container: string): Promise<void>;
+
   /**
    * Update blob item in persistency layer. Will create if blob doesn't exist.
    *
@@ -226,8 +223,8 @@ export interface IBlobDataStore extends IDataStore {
    * List blobs with query conditions specified.
    *
    * @template T
-   * @param {string} account
-   * @param {string} container
+   * @param {string} [account]
+   * @param {string} [container]
    * @param {string} [prefix]
    * @param {number} [maxResults]
    * @param {number} [marker]
@@ -235,8 +232,8 @@ export interface IBlobDataStore extends IDataStore {
    * @memberof IBlobDataStore
    */
   listBlobs<T extends BlobModel>(
-    account: string,
-    container: string,
+    account?: string,
+    container?: string,
     prefix?: string,
     maxResults?: number,
     marker?: number
@@ -308,18 +305,18 @@ export interface IBlobDataStore extends IDataStore {
    * Gets blocks list for a blob from persistency layer by account, container and blob names.
    *
    * @template T
-   * @param {string} account
-   * @param {string} container
-   * @param {string} blob
-   * @param {boolean} isCommitted
+   * @param {string} [account]
+   * @param {string} [container]
+   * @param {string} [blob]
+   * @param {boolean} [isCommitted]
    * @returns {(Promise<T[]>)}
    * @memberof IBlobDataStore
    */
   listBlocks<T extends BlockModel>(
-    account: string,
-    container: string,
-    blob: string,
-    isCommitted: boolean
+    account?: string,
+    container?: string,
+    blob?: string,
+    isCommitted?: boolean
   ): Promise<T[]>;
 
   /**
@@ -336,8 +333,8 @@ export interface IBlobDataStore extends IDataStore {
   /**
    * Reads a persistency layer payload with a persistency ID or chunk model.
    *
-   * @param {IPersistencyChunk} [persistency] A persistencyID or chunk model
-   *                                                   pointing to a persistency chunk or sub-chunk
+   * @param {IPersistencyChunk} [persistency] A persistency chunk model
+   *                                          pointing to a persistency chunk
    * @param {number} [offset] Optional. Payload reads offset. Default is 0
    * @param {number} [count] Optional. Payload reads count. Default is Infinity
    * @returns {Promise<NodeJS.ReadableStream>}
@@ -366,14 +363,31 @@ export interface IBlobDataStore extends IDataStore {
   ): Promise<NodeJS.ReadableStream>;
 
   /**
-   * TODO: Handle with GC
    * Remove payloads from persistency layer.
    *
-   * @param {(IPersistencyChunk)[]} persistencyIDs
+   * @param {Iterable<string | IPersistencyChunk>} persistency
    * @returns {Promise<void>}
    * @memberof IBlobDataStore
    */
-  deletePayloads(persistencyIDs: (IPersistencyChunk)[]): Promise<void>;
+  deletePayloads(
+    persistency: Iterable<string | IPersistencyChunk>
+  ): Promise<void>;
+
+  /**
+   * Create an async iterator to enumerate all extent IDs.
+   *
+   * @returns {AsyncIterator<string[]>}
+   * @memberof IBlobDataStore
+   */
+  iteratorAllExtents(): AsyncIterator<string[]>;
+
+  /**
+   * Create an async iterator to enumerate all extent records referred or being used.
+   *
+   * @returns {AsyncIterator<IPersistencyChunk[]>}
+   * @memberof IBlobDataStore
+   */
+  iteratorReferredExtents(): AsyncIterator<IPersistencyChunk[]>;
 }
 
 export default IBlobDataStore;

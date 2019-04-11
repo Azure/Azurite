@@ -41,13 +41,7 @@ export default class BlockBlobHandler extends BaseHandler
       throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
-    const persistencyID = await this.dataStore.writePayload(body);
-
-    const existingBlob = await this.dataStore.getBlob(
-      accountName,
-      containerName,
-      blobName
-    );
+    const persistency = await this.dataStore.writePayload(body);
 
     options.blobHTTPHeaders = options.blobHTTPHeaders || {};
     const blob: BlobModel = {
@@ -76,16 +70,11 @@ export default class BlockBlobHandler extends BaseHandler
       },
       snapshot: "",
       isCommitted: true,
-      persistency: persistencyID
+      persistency
     };
 
     // TODO: Need a lock for multi keys including containerName and blobName
     await this.dataStore.updateBlob(blob);
-
-    // TODO: Make clean up async
-    if (existingBlob && existingBlob.persistency) {
-      await this.dataStore.deletePayloads([existingBlob.persistency]);
-    }
 
     const response: Models.BlockBlobUploadResponse = {
       statusCode: 201,
@@ -121,15 +110,7 @@ export default class BlockBlobHandler extends BaseHandler
       throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
-    const existingBlock = await this.dataStore.getBlock(
-      accountName,
-      containerName,
-      blobName,
-      blockId,
-      false
-    );
-
-    const persistencyID = await this.dataStore.writePayload(body);
+    const persistency = await this.dataStore.writePayload(body);
     const block: BlockModel = {
       accountName,
       containerName,
@@ -137,7 +118,7 @@ export default class BlockBlobHandler extends BaseHandler
       isCommitted: false,
       name: blockId,
       size: contentLength,
-      persistency: persistencyID
+      persistency
     };
 
     await this.dataStore.updateBlock(block);
@@ -169,11 +150,6 @@ export default class BlockBlobHandler extends BaseHandler
       await this.dataStore.updateBlob(blob!);
     }
     // TODO: Unlock
-
-    // TODO: Make clean up async
-    if (existingBlock && existingBlock.persistency) {
-      await this.dataStore.deletePayloads([existingBlock.persistency]);
-    }
 
     const response: Models.BlockBlobStageBlockResponse = {
       statusCode: 201,
@@ -319,6 +295,7 @@ export default class BlockBlobHandler extends BaseHandler
 
     // Commit block list
     blob.committedBlocksInOrder = selectedBlockList;
+    blob.isCommitted = true;
 
     blob.metadata = options.metadata;
     options.blobHTTPHeaders = options.blobHTTPHeaders || {};

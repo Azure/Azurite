@@ -1,7 +1,6 @@
 import * as http from "http";
 import * as https from "https";
 
-import { IDataStore } from "./IDataStore";
 import IRequestListenerFactory from "./IRequestListenerFactory";
 
 export type RequestListener = (
@@ -24,15 +23,13 @@ export default abstract class ServerBase {
    * @param {number} port Server port, for example, 10000
    * @param {http.Server | https.Server} httpServer A HTTP or HTTPS server instance without request listener bound
    * @param {IRequestListenerFactory} requestListenerFactory A request listener factory
-   * @param {IDataStore} [dataStore] Optional. A data store class will start and close when server starts and closes
-   * @memberof Server
+   * @memberof ServerBase
    */
   public constructor(
     public readonly host: string,
     public readonly port: number,
     public readonly httpServer: http.Server | https.Server,
-    requestListenerFactory: IRequestListenerFactory,
-    private readonly dataStore?: IDataStore
+    requestListenerFactory: IRequestListenerFactory
   ) {
     // Remove predefined request listeners to avoid double request handling
     this.httpServer.removeAllListeners("request");
@@ -53,8 +50,8 @@ export default abstract class ServerBase {
    */
   public getHttpServerAddress(): string {
     const address = this.httpServer.address();
-    if (typeof address === "string") {
-      return address;
+    if (typeof address === "string" || address === null) {
+      return address || "";
     } else {
       return `${address.address}:${address.port}`;
     }
@@ -70,10 +67,6 @@ export default abstract class ServerBase {
    */
   public async start(): Promise<void> {
     await this.beforeStart();
-
-    if (this.dataStore !== undefined) {
-      await this.dataStore.init();
-    }
 
     await new Promise<void>((resolve, reject) => {
       this.httpServer.listen(this.port, this.host, resolve).on("error", reject);
@@ -110,10 +103,6 @@ export default abstract class ServerBase {
     await new Promise(resolve => {
       this.httpServer.close(resolve);
     });
-
-    if (this.dataStore !== undefined) {
-      await this.dataStore.close();
-    }
 
     await this.afterClose();
   }

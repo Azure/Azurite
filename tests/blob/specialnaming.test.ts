@@ -1,9 +1,19 @@
-import { Aborter, AnonymousCredential, BlockBlobURL, ContainerURL, ServiceURL, StorageURL } from "@azure/storage-blob";
+import {
+  Aborter,
+  AnonymousCredential,
+  BlockBlobURL,
+  ContainerURL,
+  ServiceURL,
+  StorageURL
+} from "@azure/storage-blob";
 import assert = require("assert");
 
 import BlobConfiguration from "../../src/blob/BlobConfiguration";
 import Server from "../../src/blob/BlobServer";
+import { configLogger } from "../../src/common/Logger";
 import { appendToURLPath, getUniqueName, rmRecursive } from "../testutils";
+
+configLogger(false);
 
 describe("SpecialNaming", () => {
   // TODO: Create a server factory as tests utils

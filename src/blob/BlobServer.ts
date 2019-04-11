@@ -1,12 +1,18 @@
 import * as http from "http";
 
+import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
 import ServerBase from "../common/ServerBase";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
+import BlobGCManager from "./gc/BlobGCManager";
 import IBlobDataStore from "./persistence/IBlobDataStore";
 import LokiBlobDataStore from "./persistence/LokiBlobDataStore";
+
+const BEFORE_CLOSE_MESSAGE = `Azurite Blob service is closing...`;
+const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Blob service is closing... Critical error happens during GC.`;
+const AFTER_CLOSE_MESSAGE = `Azurite Blob service successfully closed`;
 
 /**
  * Default implementation of Azurite Blob HTTP server.
@@ -22,6 +28,9 @@ import LokiBlobDataStore from "./persistence/LokiBlobDataStore";
  * @class Server
  */
 export default class BlobServer extends ServerBase {
+  private readonly dataStore: IBlobDataStore;
+  private readonly gcManager: IGCManager;
+
   /**
    * Creates an instance of Server.
    *
@@ -55,26 +64,60 @@ export default class BlobServer extends ServerBase {
       configuration.enableAccessLog // Access log includes every handled HTTP request
     );
 
-    super(host, port, httpServer, requestListenerFactory, dataStore);
+    super(host, port, httpServer, requestListenerFactory);
+
+    // Default Blob GC Manager
+    // Will close service when any critical GC error happens
+    const gcManager = new BlobGCManager(
+      dataStore,
+      () => {
+        // tslint:disable-next-line:no-console
+        console.log(BEFORE_CLOSE_MESSAGE_GC_ERROR);
+        logger.info(BEFORE_CLOSE_MESSAGE_GC_ERROR);
+        this.close().then(() => {
+          // tslint:disable-next-line:no-console
+          console.log(AFTER_CLOSE_MESSAGE);
+          logger.info(AFTER_CLOSE_MESSAGE);
+        });
+      },
+      logger
+    );
+
+    this.dataStore = dataStore;
+    this.gcManager = gcManager;
   }
 
   protected async beforeStart(): Promise<void> {
     const msg = `Azurite Blob service is starting on ${this.host}:${this.port}`;
     logger.info(msg);
+
+    if (this.dataStore !== undefined) {
+      await this.dataStore.init();
+    }
+
+    if (this.gcManager !== undefined) {
+      await this.gcManager.start();
+    }
   }
 
   protected async afterStart(): Promise<void> {
-    const msg = `Starting Azurite Blob service successfully listens on ${this.getHttpServerAddress()}`;
+    const msg = `Azurite Blob service successfully listens on ${this.getHttpServerAddress()}`;
     logger.info(msg);
   }
 
   protected async beforeClose(): Promise<void> {
-    const msg = `Azurite Blob service is closing...`;
-    logger.info(msg);
+    logger.info(BEFORE_CLOSE_MESSAGE);
   }
 
   protected async afterClose(): Promise<void> {
-    const msg = `Azurite Blob service successfully closed`;
-    logger.info(msg);
+    if (this.gcManager !== undefined) {
+      await this.gcManager.close();
+    }
+
+    if (this.dataStore !== undefined) {
+      await this.dataStore.close();
+    }
+
+    logger.info(AFTER_CLOSE_MESSAGE);
   }
 }
