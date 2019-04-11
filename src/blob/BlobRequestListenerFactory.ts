@@ -1,9 +1,12 @@
 import express from "express";
 import morgan = require("morgan");
 
+import IAccountDataStore from "../common/IAccountDataStore";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
 import { RequestListener } from "../common/ServerBase";
+import AuthenticationMiddlewareFactory from "./authentication/AuthenticationMiddlewareFactory";
+import BlobSharedKeyAuthenticator from "./authentication/BlobSharedKeyAuthenticator";
 import blobStorageContextMiddleware from "./context/blobStorageContext.middleware";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
 import IHandlers from "./generated/handlers/IHandlers";
@@ -32,6 +35,7 @@ export default class BlobRequestListenerFactory
   implements IRequestListenerFactory {
   public constructor(
     private readonly dataStore: IBlobDataStore,
+    private readonly accountDataStore: IAccountDataStore,
     private readonly enableAccessLog: boolean
   ) {}
 
@@ -79,7 +83,15 @@ export default class BlobRequestListenerFactory
     // Dispatch incoming HTTP request to specific operation
     app.use(middlewareFactory.createDispatchMiddleware());
 
-    // TODO: AuthN middleware, like shared key auth or SAS auth
+    // AuthN middleware, like shared key auth or SAS auth
+    const authenticationMiddlewareFactory = new AuthenticationMiddlewareFactory(
+      logger
+    );
+    app.use(
+      authenticationMiddlewareFactory.createAuthenticationMiddleware([
+        new BlobSharedKeyAuthenticator(this.accountDataStore, logger)
+      ])
+    );
 
     // Generated, will do basic validation defined in swagger
     app.use(middlewareFactory.createDeserializerMiddleware());

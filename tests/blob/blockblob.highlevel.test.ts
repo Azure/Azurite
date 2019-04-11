@@ -1,11 +1,11 @@
 import {
   Aborter,
-  AnonymousCredential,
   BlobURL,
   BlockBlobURL,
   ContainerURL,
   downloadBlobToBuffer,
   ServiceURL,
+  SharedKeyCredential,
   StorageURL,
   uploadFileToBlockBlob,
   uploadStreamToBlockBlob
@@ -20,6 +20,8 @@ import Server from "../../src/blob/BlobServer";
 import { configLogger } from "../../src/common/Logger";
 import {
   createRandomLocalFile,
+  EMULATOR_ACCOUNT_KEY,
+  EMULATOR_ACCOUNT_NAME,
   getUniqueName,
   readStreamToLocalFile,
   rmRecursive
@@ -48,9 +50,12 @@ describe("BlockBlobHighlevel", () => {
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
   const serviceURL = new ServiceURL(
     baseURL,
-    StorageURL.newPipeline(new AnonymousCredential(), {
-      retryOptions: { maxTries: 1 }
-    })
+    StorageURL.newPipeline(
+      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+      {
+        retryOptions: { maxTries: 1 }
+      }
+    )
   );
   let containerName = getUniqueName("container");
   let containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);

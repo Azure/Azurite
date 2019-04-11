@@ -1,10 +1,10 @@
 import {
   Aborter,
-  AnonymousCredential,
   BlobURL,
   BlockBlobURL,
   ContainerURL,
   ServiceURL,
+  SharedKeyCredential,
   StorageURL
 } from "@azure/storage-blob";
 import assert = require("assert");
@@ -15,6 +15,8 @@ import { configLogger } from "../../../src/common/Logger";
 import {
   base64encode,
   bodyToString,
+  EMULATOR_ACCOUNT_KEY,
+  EMULATOR_ACCOUNT_NAME,
   getUniqueName,
   rmRecursive
 } from "../../testutils";
@@ -40,9 +42,12 @@ describe("BlockBlobAPIs", () => {
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
   const serviceURL = new ServiceURL(
     baseURL,
-    StorageURL.newPipeline(new AnonymousCredential(), {
-      retryOptions: { maxTries: 1 }
-    })
+    StorageURL.newPipeline(
+      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+      {
+        retryOptions: { maxTries: 1 }
+      }
+    )
   );
 
   let containerName: string = getUniqueName("container");

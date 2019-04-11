@@ -1,17 +1,17 @@
 import {
   Aborter,
-  AnonymousCredential,
   BlobURL,
   BlockBlobURL,
   ContainerURL,
   ServiceURL,
-  StorageURL
+  SharedKeyCredential,
+  StorageURL,
 } from "@azure/storage-blob";
 import assert = require("assert");
 
 import BlobConfiguration from "../../../src/blob/BlobConfiguration";
 import Server from "../../../src/blob/BlobServer";
-import { getUniqueName, rmRecursive, sleep } from "../../testutils";
+import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName, rmRecursive, sleep } from "../../testutils";
 
 describe("ContainerAPIs", () => {
   // TODO: Create a server factory as tests utils
@@ -34,9 +34,12 @@ describe("ContainerAPIs", () => {
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
   const serviceURL = new ServiceURL(
     baseURL,
-    StorageURL.newPipeline(new AnonymousCredential(), {
-      retryOptions: { maxTries: 1 }
-    })
+    StorageURL.newPipeline(
+      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+      {
+        retryOptions: { maxTries: 1 }
+      }
+    )
   );
 
   let server: Server;

@@ -1,8 +1,9 @@
+import ILogger from "./ILogger";
 import ILoggerStrategy, { LogLevels } from "./ILoggerStrategy";
 import NoLoggerStrategy from "./NoLoggerStrategy";
 import WinstonLoggerStrategy from "./WinstonLoggerStrategy";
 
-export class Logger {
+export class Logger implements ILogger {
   public constructor(public strategy: ILoggerStrategy) {}
 
   public error(message: string, contextID?: string) {
