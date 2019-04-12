@@ -1,3 +1,4 @@
+import uuid from "uuid/v4";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -23,6 +24,125 @@ import IPageBlobRangesManager from "./IPageBlobRangesManager";
  * @implements {IBlobHandler}
  */
 export default class BlobHandler extends BaseHandler implements IBlobHandler {
+  /**
+   * Update Blob lease Attributes according to the current time.
+   * The Attribute not set back
+   *
+   * @private
+   * @param {BlobModel} blob
+   * @param {Date} currentTime
+   * @returns {BlobModel}
+   * @memberof BlobHandler
+   */
+  public static updateLeaseAttributes(
+    blob: BlobModel,
+    currentTime: Date
+  ): BlobModel {
+    // check Leased -> Expired
+    if (
+      blob.properties.leaseState === Models.LeaseStateType.Leased &&
+      blob.properties.leaseDuration === Models.LeaseDurationType.Fixed
+    ) {
+      if (
+        blob.leaseExpireTime !== undefined &&
+        currentTime > blob.leaseExpireTime
+      ) {
+        blob.properties.leaseState = Models.LeaseStateType.Expired;
+        blob.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
+        blob.properties.leaseDuration = undefined;
+        blob.leaseExpireTime = undefined;
+        blob.leaseBreakExpireTime = undefined;
+      }
+    }
+
+    // check Breaking -> Broken
+    if (blob.properties.leaseState === Models.LeaseStateType.Breaking) {
+      if (
+        blob.leaseBreakExpireTime !== undefined &&
+        currentTime > blob.leaseBreakExpireTime
+      ) {
+        blob.properties.leaseState = Models.LeaseStateType.Broken;
+        blob.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
+        blob.properties.leaseDuration = undefined;
+        blob.leaseExpireTime = undefined;
+        blob.leaseBreakExpireTime = undefined;
+      }
+    }
+    return blob;
+  }
+
+  /**
+   * Check Blob lease status on write blob.
+   *
+   * Need run the funtion on: PutBlob, SetBlobMetadata, SetBlobProperties,
+   * DeleteBlob, PutBlock, PutBlockList, PutPage, AppendBlock, CopyBlob(dest)
+   *
+   * @private
+   * @param {Context} context
+   * @param {BlobModel} blob
+   * @param {LeaseAccessConditions} leaseAccessConditions
+   * @returns {void}
+   * @memberof BlobHandler
+   */
+  public static checkBlobLeaseOnWriteBlob(
+    context: Context,
+    blob: BlobModel,
+    leaseAccessConditions?: Models.LeaseAccessConditions
+  ): void {
+    // check Leased -> Expired
+
+    if (blob.properties.leaseStatus === Models.LeaseStatusType.Locked) {
+      if (
+        leaseAccessConditions === undefined ||
+        leaseAccessConditions.leaseId === undefined ||
+        leaseAccessConditions.leaseId === null
+      ) {
+        const blobCtx = new BlobStorageContext(context);
+        throw StorageErrorFactory.getBlobLeaseIdMissing(blobCtx.contextID!);
+      } else if (
+        blob.leaseId !== undefined &&
+        leaseAccessConditions.leaseId.toLowerCase() !==
+          blob.leaseId.toLowerCase()
+      ) {
+        const blobCtx = new BlobStorageContext(context);
+        throw StorageErrorFactory.getBlobLeaseIdMismatchWithBlobOperation(
+          blobCtx.contextID!
+        );
+      }
+    } else if (
+      leaseAccessConditions !== undefined &&
+      leaseAccessConditions.leaseId !== undefined &&
+      leaseAccessConditions.leaseId !== ""
+    ) {
+      const blobCtx = new BlobStorageContext(context);
+      throw StorageErrorFactory.getBlobLeaseLost(blobCtx.contextID!);
+    }
+  }
+
+  /**
+   * Update lease Expire Blob lease status to Available on write blob.
+   *
+   * Need run the funtion on: PutBlob, SetBlobMetadata, SetBlobProperties,
+   * DeleteBlob, PutBlock, PutBlockList, PutPage, AppendBlock, CopyBlob(dest)
+   *
+   * @private
+   * @param {BlobModel} blob
+   * @returns {BlobModel}
+   * @memberof BlobHandler
+   */
+  public static UpdateBlobLeaseStateOnWriteBlob(blob: BlobModel): BlobModel {
+    if (blob.properties.leaseState === Models.LeaseStateType.Expired) {
+      blob.properties.leaseState = Models.LeaseStateType.Available;
+      blob.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
+      blob.properties.leaseDuration = undefined;
+      blob.leaseduration = undefined;
+      blob.leaseId = undefined;
+      blob.leaseExpireTime = undefined;
+      blob.leaseBreakExpireTime = undefined;
+    }
+    return blob;
+  }
+
   constructor(
     dataStore: IBlobDataStore,
     logger: ILogger,
@@ -102,6 +222,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   ): Promise<Models.BlobDeleteResponse> {
     const blob = await this.getSimpleBlobFromStorage(context);
 
+    // Check Lease status
+    BlobHandler.checkBlobLeaseOnWriteBlob(
+      context,
+      blob,
+      options.leaseAccessConditions
+    );
+
     await this.dataStore.deleteBlob(
       blob.accountName,
       blob.containerName,
@@ -129,6 +256,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobSetHTTPHeadersOptionalParams,
     context: Context
   ): Promise<Models.BlobSetHTTPHeadersResponse> {
+    // TODO: Check Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
     throw new NotImplementedError(context.contextID);
   }
 
@@ -136,9 +264,19 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobSetMetadataOptionalParams,
     context: Context
   ): Promise<Models.BlobSetMetadataResponse> {
-    const blob = await this.getSimpleBlobFromStorage(context);
+    let blob = await this.getSimpleBlobFromStorage(context);
+
+    // Check Lease status
+    BlobHandler.checkBlobLeaseOnWriteBlob(
+      context,
+      blob,
+      options.leaseAccessConditions
+    );
 
     blob.metadata = options.metadata;
+
+    // Set lease to available if it's expired
+    blob = BlobHandler.UpdateBlobLeaseStateOnWriteBlob(blob);
     await this.dataStore.updateBlob(blob);
 
     const response: Models.BlobSetMetadataResponse = {
@@ -155,7 +293,65 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobAcquireLeaseOptionalParams,
     context: Context
   ): Promise<Models.BlobAcquireLeaseResponse> {
-    throw new NotImplementedError(context.contextID);
+    const blobCtx = new BlobStorageContext(context);
+    let blob: BlobModel;
+
+    try {
+      blob = await this.getSimpleBlobFromStorage(context);
+    } catch (error) {
+      throw error;
+    }
+
+    // check the lease action aligned with current lease state.
+    if (blob.snapshot !== "") {
+      throw StorageErrorFactory.getBlobLeaseOnSnapshot(blobCtx.contextID!);
+    }
+    if (blob.properties.leaseState === Models.LeaseStateType.Breaking) {
+      throw StorageErrorFactory.getLeaseAlreadyPresent(context.contextID!);
+    }
+    if (
+      blob.properties.leaseState === Models.LeaseStateType.Leased &&
+      options.proposedLeaseId !== blob.leaseId
+    ) {
+      throw StorageErrorFactory.getLeaseAlreadyPresent(context.contextID!);
+    }
+
+    // update the lease information
+    if (options.duration === -1 || options.duration === undefined) {
+      blob.properties.leaseDuration = Models.LeaseDurationType.Infinite;
+    } else {
+      // verify options.duration between 15 and 60
+      if (options.duration > 60 || options.duration < 15) {
+        throw StorageErrorFactory.getInvalidLeaseDuration(context.contextID!);
+      }
+      blob.properties.leaseDuration = Models.LeaseDurationType.Fixed;
+      blob.leaseExpireTime = blobCtx.startTime!;
+      blob.leaseExpireTime.setSeconds(
+        blob.leaseExpireTime.getSeconds() + options.duration
+      );
+      blob.leaseduration = options.duration;
+    }
+    blob.properties.leaseState = Models.LeaseStateType.Leased;
+    blob.properties.leaseStatus = Models.LeaseStatusType.Locked;
+    blob.leaseId =
+      options.proposedLeaseId !== "" && options.proposedLeaseId !== undefined
+        ? options.proposedLeaseId
+        : uuid();
+    blob.leaseBreakExpireTime = undefined;
+
+    await this.dataStore.updateBlob(blob);
+
+    const response: Models.BlobAcquireLeaseResponse = {
+      date: blobCtx.startTime!,
+      eTag: blob.properties.etag,
+      lastModified: blob.properties.lastModified,
+      leaseId: blob.leaseId,
+      requestId: context.contextID,
+      version: API_VERSION,
+      statusCode: 201
+    };
+
+    return response;
   }
 
   public async releaseLease(
@@ -163,7 +359,53 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobReleaseLeaseOptionalParams,
     context: Context
   ): Promise<Models.BlobReleaseLeaseResponse> {
-    throw new NotImplementedError(context.contextID);
+    const blobCtx = new BlobStorageContext(context);
+    let blob: BlobModel;
+
+    try {
+      blob = await this.getSimpleBlobFromStorage(context);
+    } catch (error) {
+      throw error;
+    }
+
+    // check the lease action aligned with current lease state.
+    if (blob.snapshot !== "") {
+      throw StorageErrorFactory.getBlobLeaseOnSnapshot(blobCtx.contextID!);
+    }
+    if (blob.properties.leaseState === Models.LeaseStateType.Available) {
+      throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
+        blobCtx.contextID!
+      );
+    }
+
+    // Check lease ID
+    if (blob.leaseId !== leaseId) {
+      throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
+        blobCtx.contextID!
+      );
+    }
+
+    // update the lease information
+    blob.properties.leaseState = Models.LeaseStateType.Available;
+    blob.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
+    blob.properties.leaseDuration = undefined;
+    blob.leaseduration = undefined;
+    blob.leaseId = undefined;
+    blob.leaseExpireTime = undefined;
+    blob.leaseBreakExpireTime = undefined;
+
+    await this.dataStore.updateBlob(blob);
+
+    const response: Models.BlobReleaseLeaseResponse = {
+      date: blobCtx.startTime!,
+      eTag: blob.properties.etag,
+      lastModified: blob.properties.lastModified,
+      requestId: context.contextID,
+      version: API_VERSION,
+      statusCode: 200
+    };
+
+    return response;
   }
 
   public async renewLease(
@@ -171,7 +413,66 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobRenewLeaseOptionalParams,
     context: Context
   ): Promise<Models.BlobRenewLeaseResponse> {
-    throw new NotImplementedError(context.contextID);
+    const blobCtx = new BlobStorageContext(context);
+    let blob: BlobModel;
+
+    try {
+      blob = await this.getSimpleBlobFromStorage(context);
+    } catch (error) {
+      throw error;
+    }
+
+    // check the lease action aligned with current lease state.
+    if (blob.snapshot !== "") {
+      throw StorageErrorFactory.getBlobLeaseOnSnapshot(blobCtx.contextID!);
+    }
+    if (blob.properties.leaseState === Models.LeaseStateType.Available) {
+      throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
+        blobCtx.contextID!
+      );
+    }
+    if (
+      blob.properties.leaseState === Models.LeaseStateType.Breaking ||
+      blob.properties.leaseState === Models.LeaseStateType.Broken
+    ) {
+      throw StorageErrorFactory.getLeaseIsBrokenAndCannotBeRenewed(
+        blobCtx.contextID!
+      );
+    }
+
+    // Check lease ID
+    if (blob.leaseId !== leaseId) {
+      throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
+        blobCtx.contextID!
+      );
+    }
+
+    // update the lease information
+    blob.properties.leaseState = Models.LeaseStateType.Leased;
+    blob.properties.leaseStatus = Models.LeaseStatusType.Locked;
+    // when container.leaseduration has value (not -1), means fixed duration
+    if (blob.leaseduration !== undefined && blob.leaseduration !== -1) {
+      blob.leaseExpireTime = blobCtx.startTime!;
+      blob.leaseExpireTime.setSeconds(
+        blob.leaseExpireTime.getSeconds() + blob.leaseduration
+      );
+      blob.properties.leaseDuration = Models.LeaseDurationType.Fixed;
+    } else {
+      blob.properties.leaseDuration = Models.LeaseDurationType.Infinite;
+    }
+    await this.dataStore.updateContainer(blob);
+
+    const response: Models.BlobRenewLeaseResponse = {
+      date: blobCtx.startTime!,
+      eTag: blob.properties.etag,
+      lastModified: blob.properties.lastModified,
+      leaseId: blob.leaseId,
+      requestId: context.contextID,
+      version: API_VERSION,
+      statusCode: 200
+    };
+
+    return response;
   }
 
   public async changeLease(
@@ -180,14 +481,157 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobChangeLeaseOptionalParams,
     context: Context
   ): Promise<Models.BlobChangeLeaseResponse> {
-    throw new NotImplementedError(context.contextID);
+    const blobCtx = new BlobStorageContext(context);
+    let blob: BlobModel;
+
+    try {
+      blob = await this.getSimpleBlobFromStorage(context);
+    } catch (error) {
+      throw error;
+    }
+
+    // check the lease action aligned with current lease state.
+    if (blob.snapshot !== "") {
+      throw StorageErrorFactory.getBlobLeaseOnSnapshot(blobCtx.contextID!);
+    }
+    if (
+      blob.properties.leaseState === Models.LeaseStateType.Available ||
+      blob.properties.leaseState === Models.LeaseStateType.Expired ||
+      blob.properties.leaseState === Models.LeaseStateType.Broken
+    ) {
+      throw StorageErrorFactory.getBlobLeaseNotPresentWithLeaseOperation(
+        blobCtx.contextID!
+      );
+    }
+    if (blob.properties.leaseState === Models.LeaseStateType.Breaking) {
+      throw StorageErrorFactory.getLeaseIsBreakingAndCannotBeChanged(
+        blobCtx.contextID!
+      );
+    }
+
+    // Check lease ID
+    if (blob.leaseId !== leaseId && blob.leaseId !== proposedLeaseId) {
+      throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
+        blobCtx.contextID!
+      );
+    }
+
+    // update the lease information, only need update lease ID
+    blob.leaseId = proposedLeaseId;
+
+    await this.dataStore.updateBlob(blob);
+
+    const response: Models.BlobChangeLeaseResponse = {
+      date: blobCtx.startTime!,
+      eTag: blob.properties.etag,
+      lastModified: blob.properties.lastModified,
+      leaseId: blob.leaseId,
+      requestId: context.contextID,
+      version: API_VERSION,
+      statusCode: 200
+    };
+
+    return response;
   }
 
   public async breakLease(
     options: Models.BlobBreakLeaseOptionalParams,
     context: Context
   ): Promise<Models.BlobBreakLeaseResponse> {
-    throw new NotImplementedError(context.contextID);
+    const blobCtx = new BlobStorageContext(context);
+    let blob: BlobModel;
+    let leaseTimeinSecond: number;
+    leaseTimeinSecond = 0;
+
+    try {
+      blob = await this.getSimpleBlobFromStorage(context);
+    } catch (error) {
+      throw error;
+    }
+
+    // check the lease action aligned with current lease state.
+    if (blob.snapshot !== "") {
+      throw StorageErrorFactory.getBlobLeaseOnSnapshot(blobCtx.contextID!);
+    }
+    if (blob.properties.leaseState === Models.LeaseStateType.Available) {
+      throw StorageErrorFactory.getBlobLeaseNotPresentWithLeaseOperation(
+        blobCtx.contextID!
+      );
+    }
+
+    // update the lease information
+    // verify options.breakPeriod between 0 and 60
+    if (
+      options.breakPeriod !== undefined &&
+      (options.breakPeriod > 60 || options.breakPeriod < 0)
+    ) {
+      throw StorageErrorFactory.getInvalidLeaseBreakPeriod(blobCtx.contextID!);
+    }
+    if (
+      blob.properties.leaseState === Models.LeaseStateType.Expired ||
+      blob.properties.leaseState === Models.LeaseStateType.Broken ||
+      options.breakPeriod === 0 ||
+      options.breakPeriod === undefined
+    ) {
+      blob.properties.leaseState = Models.LeaseStateType.Broken;
+      blob.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
+      blob.properties.leaseDuration = undefined;
+      blob.leaseduration = undefined;
+      blob.leaseExpireTime = undefined;
+      blob.leaseBreakExpireTime = undefined;
+      leaseTimeinSecond = 0;
+    } else {
+      blob.properties.leaseState = Models.LeaseStateType.Breaking;
+      blob.properties.leaseStatus = Models.LeaseStatusType.Locked;
+      blob.leaseduration = undefined;
+      if (blob.properties.leaseDuration === Models.LeaseDurationType.Infinite) {
+        blob.properties.leaseDuration = undefined;
+        blob.leaseExpireTime = undefined;
+        blob.leaseBreakExpireTime = new Date(blobCtx.startTime!);
+        blob.leaseBreakExpireTime.setSeconds(
+          blob.leaseBreakExpireTime.getSeconds() + options.breakPeriod
+        );
+        leaseTimeinSecond = options.breakPeriod;
+      } else {
+        let newleaseBreakExpireTime = new Date(blobCtx.startTime!);
+        newleaseBreakExpireTime.setSeconds(
+          newleaseBreakExpireTime.getSeconds() + options.breakPeriod
+        );
+        if (
+          blob.leaseExpireTime !== undefined &&
+          newleaseBreakExpireTime > blob.leaseExpireTime
+        ) {
+          newleaseBreakExpireTime = blob.leaseExpireTime;
+        }
+        if (
+          blob.leaseBreakExpireTime === undefined ||
+          blob.leaseBreakExpireTime > newleaseBreakExpireTime
+        ) {
+          blob.leaseBreakExpireTime = newleaseBreakExpireTime;
+        }
+        leaseTimeinSecond = Math.round(
+          Math.abs(
+            blob.leaseBreakExpireTime.getTime() - blobCtx.startTime!.getTime()
+          ) / 1000
+        );
+        blob.leaseExpireTime = undefined;
+        blob.properties.leaseDuration = undefined;
+      }
+    }
+
+    await this.dataStore.updateBlob(blob);
+
+    const response: Models.BlobBreakLeaseResponse = {
+      date: blobCtx.startTime!,
+      eTag: blob.properties.etag,
+      lastModified: blob.properties.lastModified,
+      leaseTime: leaseTimeinSecond,
+      requestId: context.contextID,
+      version: API_VERSION,
+      statusCode: 202
+    };
+
+    return response;
   }
 
   public async createSnapshot(
@@ -202,6 +646,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobStartCopyFromURLOptionalParams,
     context: Context
   ): Promise<Models.BlobStartCopyFromURLResponse> {
+    // TODO: Check dest Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
     throw new NotImplementedError(context.contextID);
   }
 
@@ -411,7 +856,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
-    const blob = await this.dataStore.getBlob(
+    let blob = await this.dataStore.getBlob(
       accountName,
       containerName,
       blobName
@@ -419,6 +864,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     if (!blob) {
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
     }
+
+    blob = BlobHandler.updateLeaseAttributes(blob, blobCtx.startTime!);
 
     return blob;
   }

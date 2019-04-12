@@ -9,6 +9,7 @@ import { BlobModel, BlockModel } from "../persistence/IBlobDataStore";
 import { API_VERSION } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
+import BlobHandler from "./BlobHandler";
 
 /**
  * BlobHandler handles Azure Storage BlockBlob related requests.
@@ -26,6 +27,7 @@ export default class BlockBlobHandler extends BaseHandler
     options: Models.BlockBlobUploadOptionalParams,
     context: Context
   ): Promise<Models.BlockBlobUploadResponse> {
+    // TODO: Check Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -96,6 +98,7 @@ export default class BlockBlobHandler extends BaseHandler
     options: Models.BlockBlobStageBlockOptionalParams,
     context: Context
   ): Promise<Models.BlockBlobStageBlockResponse> {
+    // TODO: Check Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -193,7 +196,7 @@ export default class BlockBlobHandler extends BaseHandler
     }
 
     // TODO: Lock for container and blob
-    const blob = await this.dataStore.getBlob(
+    let blob = await this.dataStore.getBlob(
       accountName,
       containerName,
       blobName
@@ -205,6 +208,13 @@ export default class BlockBlobHandler extends BaseHandler
       // TODO: Unlock
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
     }
+
+    // Check Lease status
+    BlobHandler.checkBlobLeaseOnWriteBlob(
+      context,
+      blob,
+      options.leaseAccessConditions
+    );
 
     // Get all blocks in persistency layer
     const pUncommittedBlocks = await this.dataStore.listBlocks(
@@ -314,6 +324,8 @@ export default class BlockBlobHandler extends BaseHandler
         return total + val;
       });
 
+    // set lease state to available if it's expired
+    blob = BlobHandler.UpdateBlobLeaseStateOnWriteBlob(blob);
     await this.dataStore.updateBlob(blob);
 
     // TODO: recover deleted blocks when inserts failed

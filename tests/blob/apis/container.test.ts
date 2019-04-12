@@ -5,13 +5,19 @@ import {
   ContainerURL,
   ServiceURL,
   SharedKeyCredential,
-  StorageURL,
+  StorageURL
 } from "@azure/storage-blob";
 import assert = require("assert");
 
 import BlobConfiguration from "../../../src/blob/BlobConfiguration";
 import Server from "../../../src/blob/BlobServer";
-import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName, rmRecursive, sleep } from "../../testutils";
+import {
+  EMULATOR_ACCOUNT_KEY,
+  EMULATOR_ACCOUNT_NAME,
+  getUniqueName,
+  rmRecursive,
+  sleep
+} from "../../testutils";
 
 describe("ContainerAPIs", () => {
   // TODO: Create a server factory as tests utils
@@ -226,8 +232,8 @@ describe("ContainerAPIs", () => {
     }
   });
 
-  it("acquireLease", async () => {
-    const guid = "ca761232ed4211cebacd00aa0057b223";
+  it("acquireLease_available_proposedLeaseId_fixed", async () => {
+    const guid = "ca761232-ed42-11ce-bacd-00aa0057b223";
     const duration = 30;
     await containerURL.acquireLease(Aborter.none, guid, duration);
 
@@ -237,6 +243,19 @@ describe("ContainerAPIs", () => {
     assert.equal(result.leaseStatus, "locked");
 
     await containerURL.releaseLease(Aborter.none, guid);
+  });
+
+  it("acquireLease_available_NoproposedLeaseId_infinite", async () => {
+    const leaseResult = await containerURL.acquireLease(Aborter.none, "", -1);
+    const leaseId = leaseResult.leaseId;
+    assert.ok(leaseId);
+
+    const result = await containerURL.getProperties(Aborter.none);
+    assert.equal(result.leaseDuration, "infinite");
+    assert.equal(result.leaseState, "leased");
+    assert.equal(result.leaseStatus, "locked");
+
+    await containerURL.releaseLease(Aborter.none, leaseId!);
   });
 
   it("releaseLease", async () => {
@@ -304,14 +323,26 @@ describe("ContainerAPIs", () => {
     assert.equal(result.leaseState, "leased");
     assert.equal(result.leaseStatus, "locked");
 
-    await containerURL.breakLease(Aborter.none, 1);
+    const breakDuration = 30;
+    let breaklefttime = breakDuration;
+    while (breaklefttime > 0) {
+      const breakResult = await containerURL.breakLease(
+        Aborter.none,
+        breakDuration
+      );
 
-    const result2 = await containerURL.getProperties(Aborter.none);
-    assert.ok(!result2.leaseDuration);
-    assert.equal(result2.leaseState, "breaking");
-    assert.equal(result2.leaseStatus, "locked");
+      assert.equal(breakResult.leaseTime! <= breaklefttime, true);
+      breaklefttime = breakResult.leaseTime!;
 
-    await sleep(1 * 1000);
+      const result2 = await containerURL.getProperties(Aborter.none);
+      assert.ok(!result2.leaseDuration);
+      if (breaklefttime !== 0) {
+        assert.equal(result2.leaseState, "breaking");
+        assert.equal(result2.leaseStatus, "locked");
+      }
+
+      await sleep(500);
+    }
 
     const result3 = await containerURL.getProperties(Aborter.none);
     assert.ok(!result3.leaseDuration);

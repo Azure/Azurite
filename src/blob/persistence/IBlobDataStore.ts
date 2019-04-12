@@ -65,6 +65,10 @@ interface IBlockBlobAdditionalProperties {
    * @memberof IBlobAdditionalProperties
    */
   isCommitted: boolean;
+  leaseduration?: number;
+  leaseId?: string;
+  leaseExpireTime?: Date;
+  leaseBreakExpireTime?: Date;
 
   /**
    * Committed blocks for block blob.
