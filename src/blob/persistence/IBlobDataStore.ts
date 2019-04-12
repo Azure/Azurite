@@ -27,6 +27,10 @@ export type ServicePropertiesModel = Models.StorageServiceProperties &
 /** MODELS FOR CONTAINER */
 interface IContainerAdditionalProperties {
   accountName: string;
+  leaseduration?: number;
+  leaseId?: string;
+  leaseExpireTime?: Date;
+  leaseBreakExpireTime?: Date;
 }
 
 export type ContainerModel = Models.ContainerItem &
