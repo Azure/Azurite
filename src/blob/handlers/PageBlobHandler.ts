@@ -9,6 +9,7 @@ import IBlobDataStore, { BlobModel } from "../persistence/IBlobDataStore";
 import { API_VERSION } from "../utils/constants";
 import { deserializePageBlobRangeHeader, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
+import BlobHandler from "./BlobHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
 /**
@@ -140,7 +141,7 @@ export default class PageBlobHandler extends BaseHandler
       throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
-    const blob = await this.dataStore.getBlob(
+    let blob = await this.dataStore.getBlob(
       accountName,
       containerName,
       blobName
@@ -154,6 +155,13 @@ export default class PageBlobHandler extends BaseHandler
         "Get Page Ranges could only be against a page blob."
       );
     }
+
+    // Check Lease status
+    BlobHandler.checkBlobLeaseOnWriteBlob(
+      context,
+      blob,
+      options.leaseAccessConditions
+    );
 
     const ranges = deserializePageBlobRangeHeader(
       blobCtx.request!.getHeader("range"),
@@ -178,6 +186,8 @@ export default class PageBlobHandler extends BaseHandler
       persistency
     });
 
+    // set lease state to available if it's expired
+    blob = BlobHandler.UpdateBlobLeaseStateOnWriteBlob(blob);
     await this.dataStore.updateBlob(blob);
 
     const response: Models.PageBlobUploadPagesResponse = {

@@ -177,6 +177,7 @@ export default class ServiceHandler extends BaseHandler
       marker
     );
 
+    // TODO: Need update list out container lease properties with ContainerHandler.updateLeaseAttributes()
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const res: Models.ServiceListContainersSegmentResponse = {
       containerItems: containers[0],

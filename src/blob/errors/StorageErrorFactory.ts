@@ -59,20 +59,34 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getContainerInvalidLeaseDuration(
-    contextID: string
-  ): StorageError {
+  public static getInvalidLeaseDuration(contextID: string): StorageError {
     return new StorageError(
       400,
-      "InvalidLeaseDuration",
-      "The LeaseDuration is invalid, it must between 15 and 60 seconds.",
+      "InvalidHeaderValue",
+      "The value for one of the HTTP headers is not in the correct format.",
       contextID
     );
   }
 
-  public static getContainerLeaseAlreadyPresent(
-    contextID: string
-  ): StorageError {
+  public static getInvalidLeaseBreakPeriod(contextID: string): StorageError {
+    return new StorageError(
+      400,
+      "InvalidHeaderValue",
+      "The value for one of the HTTP headers is not in the correct format.",
+      contextID
+    );
+  }
+
+  public static getInvalidId(contextID: string): StorageError {
+    return new StorageError(
+      400,
+      "InvalidHeaderValue",
+      "The value for one of the HTTP headers is not in the correct format.",
+      contextID
+    );
+  }
+
+  public static getLeaseAlreadyPresent(contextID: string): StorageError {
     return new StorageError(
       409,
       "LeaseAlreadyPresent",
@@ -103,7 +117,7 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getContainerLeaseIsBrokenAndCannotBeRenewed(
+  public static getLeaseIsBrokenAndCannotBeRenewed(
     contextID: string
   ): StorageError {
     return new StorageError(
@@ -114,7 +128,7 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getContainerLeaseIsBreakingAndCannotBeChanged(
+  public static getLeaseIsBreakingAndCannotBeChanged(
     contextID: string
   ): StorageError {
     return new StorageError(
@@ -141,6 +155,76 @@ export default class StorageErrorFactory {
       412,
       "LeaseIdMismatchWithContainerOperation",
       "The lease ID specified did not match the lease ID for the container.",
+      contextID
+    );
+  }
+
+  public static getContainerLeaseLost(contextID: string): StorageError {
+    return new StorageError(
+      412,
+      "LeaseLost",
+      "A lease ID was specified, but the lease for the container has expired.",
+      contextID
+    );
+  }
+
+  public static getBlobLeaseIdMismatchWithLeaseOperation(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      409,
+      "LeaseIdMismatchWithLeaseOperation",
+      "The lease ID specified did not match the lease ID for the blob.",
+      contextID
+    );
+  }
+
+  public static getBlobLeaseNotPresentWithLeaseOperation(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      409,
+      "LeaseNotPresentWithLeaseOperation",
+      "There is currently no lease on the blob.",
+      contextID
+    );
+  }
+
+  // The error code/message need check with server
+  public static getBlobLeaseOnSnapshot(contextID: string): StorageError {
+    return new StorageError(
+      400,
+      "SnapshotsPresent",
+      "This operation is not permitted because the blob is snapshot.",
+      contextID
+    );
+  }
+
+  public static getBlobLeaseIdMissing(contextID: string): StorageError {
+    return new StorageError(
+      412,
+      "LeaseIdMissing",
+      "There is currently a lease on the blob and no lease ID was specified in the request.",
+      contextID
+    );
+  }
+
+  public static getBlobLeaseIdMismatchWithBlobOperation(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      412,
+      "LeaseIdMismatchWithBlobOperation ",
+      "The lease ID specified did not match the lease ID for the blob.",
+      contextID
+    );
+  }
+
+  public static getBlobLeaseLost(contextID: string): StorageError {
+    return new StorageError(
+      412,
+      "LeaseLost ",
+      "A lease ID was specified, but the lease for the blob has expired.",
       contextID
     );
   }
