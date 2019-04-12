@@ -10,8 +10,8 @@ export declare type ParameterPath =
   | string
   | string[]
   | {
-      [propertyName: string]: ParameterPath;
-    };
+    [propertyName: string]: ParameterPath;
+  };
 
 export async function deserialize(
   req: IRequest,
@@ -66,7 +66,7 @@ export async function deserialize(
     const headerCollectionPrefix:
       | string
       | undefined = (headerParameter.mapper as msRest.DictionaryMapper)
-      .headerCollectionPrefix;
+        .headerCollectionPrefix;
     if (headerCollectionPrefix) {
       const dictionary: any = {};
       const headers = req.getHeaders();
@@ -263,7 +263,7 @@ export async function serialize(
             }
           }
         } else {
-          if (headerName && headerValueSerialized) {
+          if (headerName && headerValueSerialized !== undefined) {
             res.setHeader(headerName, headerValueSerialized);
           }
         }

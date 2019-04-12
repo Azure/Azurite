@@ -58,4 +58,90 @@ export default class StorageErrorFactory {
       contextID
     );
   }
+
+  public static getContainerInvalidLeaseDuration(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      400,
+      "InvalidLeaseDuration",
+      "The LeaseDuration is invalid, it must between 15 and 60 seconds.",
+      contextID
+    );
+  }
+
+  public static getContainerLeaseAlreadyPresent(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      409,
+      "LeaseAlreadyPresent",
+      "There is already a lease present.",
+      contextID
+    );
+  }
+
+  public static getContainerLeaseNotPresentWithLeaseOperation(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      409,
+      "LeaseNotPresentWithLeaseOperation",
+      "There is currently no lease on the container.",
+      contextID
+    );
+  }
+
+  public static getContainerLeaseIdMismatchWithLeaseOperation(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      409,
+      "LeaseIdMismatchWithLeaseOperation",
+      "The lease ID specified did not match the lease ID for the container.",
+      contextID
+    );
+  }
+
+  public static getContainerLeaseIsBrokenAndCannotBeRenewed(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      409,
+      "LeaseIsBrokenAndCannotBeRenewed",
+      "The lease ID matched, but the lease has been broken explicitly and cannot be renewed.",
+      contextID
+    );
+  }
+
+  public static getContainerLeaseIsBreakingAndCannotBeChanged(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      409,
+      "LeaseIsBreakingAndCannotBeChanged",
+      "The lease ID matched, but the lease is currently in breaking state and cannot be changed.",
+      contextID
+    );
+  }
+
+  public static getContainerLeaseIdMissing(contextID: string): StorageError {
+    return new StorageError(
+      412,
+      "LeaseIdMissing",
+      "There is currently a lease on the container and no lease ID was specified in the request.",
+      contextID
+    );
+  }
+
+  public static getContainerLeaseIdMismatchWithContainerOperation(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      412,
+      "LeaseIdMismatchWithContainerOperation",
+      "The lease ID specified did not match the lease ID for the container.",
+      contextID
+    );
+  }
 }

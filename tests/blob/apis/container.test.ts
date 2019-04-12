@@ -5,13 +5,13 @@ import {
   BlockBlobURL,
   ContainerURL,
   ServiceURL,
-  StorageURL,
+  StorageURL
 } from "@azure/storage-blob";
 import assert = require("assert");
 
 import BlobConfiguration from "../../../src/blob/BlobConfiguration";
 import Server from "../../../src/blob/BlobServer";
-import { getUniqueName, rmRecursive } from "../../testutils";
+import { getUniqueName, rmRecursive, sleep } from "../../testutils";
 
 describe("ContainerAPIs", () => {
   // TODO: Create a server factory as tests utils
@@ -221,5 +221,98 @@ describe("ContainerAPIs", () => {
     for (const blob of blobURLs) {
       await blob.delete(Aborter.none);
     }
+  });
+
+  it("acquireLease", async () => {
+    const guid = "ca761232ed4211cebacd00aa0057b223";
+    const duration = 30;
+    await containerURL.acquireLease(Aborter.none, guid, duration);
+
+    const result = await containerURL.getProperties(Aborter.none);
+    assert.equal(result.leaseDuration, "fixed");
+    assert.equal(result.leaseState, "leased");
+    assert.equal(result.leaseStatus, "locked");
+
+    await containerURL.releaseLease(Aborter.none, guid);
+  });
+
+  it("releaseLease", async () => {
+    const guid = "ca761232ed4211cebacd00aa0057b223";
+    const duration = -1;
+    await containerURL.acquireLease(Aborter.none, guid, duration);
+
+    const result = await containerURL.getProperties(Aborter.none);
+    assert.equal(result.leaseDuration, "infinite");
+    assert.equal(result.leaseState, "leased");
+    assert.equal(result.leaseStatus, "locked");
+
+    await containerURL.releaseLease(Aborter.none, guid);
+  });
+
+  it("renewLease", async () => {
+    const guid = "ca761232ed4211cebacd00aa0057b223";
+    const duration = 15;
+    await containerURL.acquireLease(Aborter.none, guid, duration);
+
+    const result = await containerURL.getProperties(Aborter.none);
+    assert.equal(result.leaseDuration, "fixed");
+    assert.equal(result.leaseState, "leased");
+    assert.equal(result.leaseStatus, "locked");
+
+    await sleep(16 * 1000);
+    const result2 = await containerURL.getProperties(Aborter.none);
+    assert.ok(!result2.leaseDuration);
+    assert.equal(result2.leaseState, "expired");
+    assert.equal(result2.leaseStatus, "unlocked");
+
+    await containerURL.renewLease(Aborter.none, guid);
+    const result3 = await containerURL.getProperties(Aborter.none);
+    assert.equal(result3.leaseDuration, "fixed");
+    assert.equal(result3.leaseState, "leased");
+    assert.equal(result3.leaseStatus, "locked");
+
+    await containerURL.releaseLease(Aborter.none, guid);
+  });
+
+  it("changeLease", async () => {
+    const guid = "ca761232ed4211cebacd00aa0057b223";
+    const duration = 15;
+    await containerURL.acquireLease(Aborter.none, guid, duration);
+
+    const result = await containerURL.getProperties(Aborter.none);
+    assert.equal(result.leaseDuration, "fixed");
+    assert.equal(result.leaseState, "leased");
+    assert.equal(result.leaseStatus, "locked");
+
+    const newGuid = "3c7e72ebb4304526bc53d8ecef03798f";
+    await containerURL.changeLease(Aborter.none, guid, newGuid);
+
+    await containerURL.getProperties(Aborter.none);
+    await containerURL.releaseLease(Aborter.none, newGuid);
+  });
+
+  it("breakLease", async () => {
+    const guid = "ca761232ed4211cebacd00aa0057b223";
+    const duration = 15;
+    await containerURL.acquireLease(Aborter.none, guid, duration);
+
+    const result = await containerURL.getProperties(Aborter.none);
+    assert.equal(result.leaseDuration, "fixed");
+    assert.equal(result.leaseState, "leased");
+    assert.equal(result.leaseStatus, "locked");
+
+    await containerURL.breakLease(Aborter.none, 1);
+
+    const result2 = await containerURL.getProperties(Aborter.none);
+    assert.ok(!result2.leaseDuration);
+    assert.equal(result2.leaseState, "breaking");
+    assert.equal(result2.leaseStatus, "locked");
+
+    await sleep(1 * 1000);
+
+    const result3 = await containerURL.getProperties(Aborter.none);
+    assert.ok(!result3.leaseDuration);
+    assert.equal(result3.leaseState, "broken");
+    assert.equal(result3.leaseStatus, "unlocked");
   });
 });

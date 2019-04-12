@@ -88,6 +88,12 @@ export async function bodyToString(
   });
 }
 
+export async function sleep(time: number): Promise<void> {
+  return new Promise<void>(resolve => {
+    setTimeout(resolve, time);
+  });
+}
+
 export function base64encode(content: string): string {
   return Buffer.from(content).toString("base64");
 }
