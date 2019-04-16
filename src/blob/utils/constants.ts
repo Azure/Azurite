@@ -1,3 +1,5 @@
+import * as Models from "../generated/artifacts/models";
+
 export const DEFAULT_SERVER_HOST_NAME = "0.0.0.0"; // Change to 0.0.0.0 when needs external access
 
 export const DEFAULT_SERVER_LISTENING_PORT = 10000;
@@ -30,6 +32,10 @@ export const EMULATOR_ACCOUNT_KEY = Buffer.from(
   "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
   "base64"
 );
+
+export const EMULATOR_ACCOUNT_SKUNAME = Models.SkuName.StandardRAGRS;
+
+export const EMULATOR_ACCOUNT_KIND = Models.AccountKind.StorageV2;
 
 export const HeaderConstants = {
   AUTHORIZATION: "authorization",

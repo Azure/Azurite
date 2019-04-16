@@ -2,6 +2,13 @@ import { createHash } from "crypto";
 import etag from "etag";
 import { createWriteStream, PathLike } from "fs";
 import { parse } from "url";
+import * as Models from "../generated/artifacts/models";
+import Context from "../generated/Context";
+import {
+  API_VERSION,
+  EMULATOR_ACCOUNT_KIND,
+  EMULATOR_ACCOUNT_SKUNAME
+} from "../utils/constants";
 
 // TODO: Align eTag with Azure Storage Service
 export function newEtag(): string {
@@ -156,4 +163,25 @@ export function deserializePageBlobRangeHeader(
   }
 
   return [startInclusive, endInclusive];
+}
+
+/**
+ * Create a ContainerGetAccountInfoResponse
+ *
+ * @private
+ * @param {Context} [context]
+ * @returns Models.ContainerGetAccountInfoResponse
+ */
+export function getContainerGetAccountInfoResponse(
+  context: Context
+): Models.ContainerGetAccountInfoResponse {
+  const response: Models.ContainerGetAccountInfoResponse = {
+    skuName: EMULATOR_ACCOUNT_SKUNAME,
+    accountKind: EMULATOR_ACCOUNT_KIND,
+    date: new Date(),
+    requestId: context.contextID,
+    statusCode: 200,
+    version: API_VERSION
+  };
+  return response;
 }

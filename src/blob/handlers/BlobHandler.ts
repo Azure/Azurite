@@ -13,6 +13,7 @@ import {
   deserializePageBlobRangeHeader,
   deserializeRangeHeader
 } from "../utils/utils";
+import { getContainerGetAccountInfoResponse } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
@@ -832,7 +833,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   public async getAccountInfo(
     context: Context
   ): Promise<Models.BlobGetAccountInfoResponse> {
-    throw new NotImplementedError(context.contextID);
+    return getContainerGetAccountInfoResponse(context);
   }
 
   /**
@@ -845,7 +846,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   public async getAccountInfoWithHead(
     context: Context
   ): Promise<Models.BlobGetAccountInfoResponse> {
-    throw new NotImplementedError(context.contextID);
+    return getContainerGetAccountInfoResponse(context);
   }
 
   /**

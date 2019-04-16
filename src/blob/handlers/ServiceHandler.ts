@@ -4,6 +4,7 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IServiceHandler from "../generated/handlers/IServiceHandler";
 import { API_VERSION } from "../utils/constants";
+import { getContainerGetAccountInfoResponse } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 /**
@@ -196,12 +197,12 @@ export default class ServiceHandler extends BaseHandler
   public async getAccountInfo(
     context: Context
   ): Promise<Models.ServiceGetAccountInfoResponse> {
-    throw new NotImplementedError(context.contextID);
+    return getContainerGetAccountInfoResponse(context);
   }
 
   public async getAccountInfoWithHead(
     context: Context
   ): Promise<Models.ServiceGetAccountInfoResponse> {
-    throw new NotImplementedError(context.contextID);
+    return getContainerGetAccountInfoResponse(context);
   }
 }
