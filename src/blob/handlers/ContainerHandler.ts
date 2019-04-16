@@ -29,6 +29,14 @@ export default class ContainerHandler extends BaseHandler
    */
   private readonly LIST_BLOBS_MAX_RESULTS_DEFAULT = 5000;
 
+  /**
+   * create container
+   *
+   * @param {Models.ContainerCreateOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ContainerCreateResponse>}
+   * @memberof ContainerHandler
+   */
   public async create(
     options: Models.ContainerCreateOptionalParams,
     context: Context
@@ -71,6 +79,14 @@ export default class ContainerHandler extends BaseHandler
     return response;
   }
 
+  /**
+   * get container properties
+   *
+   * @param {Models.ContainerGetPropertiesOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ContainerGetPropertiesResponse>}
+   * @memberof ContainerHandler
+   */
   public async getProperties(
     options: Models.ContainerGetPropertiesOptionalParams,
     context: Context
@@ -88,6 +104,14 @@ export default class ContainerHandler extends BaseHandler
     return response;
   }
 
+  /**
+   * get container properties with headers
+   *
+   * @param {Models.ContainerGetPropertiesOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ContainerGetPropertiesResponse>}
+   * @memberof ContainerHandler
+   */
   public async getPropertiesWithHead(
     options: Models.ContainerGetPropertiesOptionalParams,
     context: Context
@@ -95,6 +119,14 @@ export default class ContainerHandler extends BaseHandler
     return this.getProperties(options, context);
   }
 
+  /**
+   * delete container
+   *
+   * @param {Models.ContainerDeleteMethodOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ContainerDeleteResponse>}
+   * @memberof ContainerHandler
+   */
   public async delete(
     options: Models.ContainerDeleteMethodOptionalParams,
     context: Context
@@ -149,6 +181,14 @@ export default class ContainerHandler extends BaseHandler
     return response;
   }
 
+  /**
+   * set container metadata
+   *
+   * @param {Models.ContainerSetMetadataOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ContainerSetMetadataResponse>}
+   * @memberof ContainerHandler
+   */
   public async setMetadata(
     options: Models.ContainerSetMetadataOptionalParams,
     context: Context
@@ -181,6 +221,14 @@ export default class ContainerHandler extends BaseHandler
     return response;
   }
 
+  /**
+   * get container access policy
+   *
+   * @param {Models.ContainerGetAccessPolicyOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ContainerGetAccessPolicyResponse>}
+   * @memberof ContainerHandler
+   */
   public async getAccessPolicy(
     options: Models.ContainerGetAccessPolicyOptionalParams,
     context: Context
@@ -188,6 +236,14 @@ export default class ContainerHandler extends BaseHandler
     throw new NotImplementedError(context.contextID);
   }
 
+  /**
+   * set container access policy
+   *
+   * @param {Models.ContainerSetAccessPolicyOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ContainerSetAccessPolicyResponse>}
+   * @memberof ContainerHandler
+   */
   public async setAccessPolicy(
     options: Models.ContainerSetAccessPolicyOptionalParams,
     context: Context
@@ -195,6 +251,14 @@ export default class ContainerHandler extends BaseHandler
     throw new NotImplementedError(context.contextID);
   }
 
+  /**
+   * acquire container lease
+   *
+   * @param {Models.ContainerAcquireLeaseOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ContainerAcquireLeaseResponse>}
+   * @memberof ContainerHandler
+   */
   public async acquireLease(
     options: Models.ContainerAcquireLeaseOptionalParams,
     context: Context
@@ -263,6 +327,15 @@ export default class ContainerHandler extends BaseHandler
     return response;
   }
 
+  /**
+   * release container lease
+   *
+   * @param {string} leaseId
+   * @param {Models.ContainerReleaseLeaseOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ContainerReleaseLeaseResponse>}
+   * @memberof ContainerHandler
+   */
   public async releaseLease(
     leaseId: string,
     options: Models.ContainerReleaseLeaseOptionalParams,
@@ -320,6 +393,15 @@ export default class ContainerHandler extends BaseHandler
     return response;
   }
 
+  /**
+   * renew container lease
+   *
+   * @param {string} leaseId
+   * @param {Models.ContainerRenewLeaseOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ContainerRenewLeaseResponse>}
+   * @memberof ContainerHandler
+   */
   public async renewLease(
     leaseId: string,
     options: Models.ContainerRenewLeaseOptionalParams,
@@ -394,6 +476,14 @@ export default class ContainerHandler extends BaseHandler
     return response;
   }
 
+  /**
+   * break container lease
+   *
+   * @param {Models.ContainerBreakLeaseOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ContainerBreakLeaseResponse>}
+   * @memberof ContainerHandler
+   */
   public async breakLease(
     options: Models.ContainerBreakLeaseOptionalParams,
     context: Context
@@ -500,6 +590,16 @@ export default class ContainerHandler extends BaseHandler
     return response;
   }
 
+  /**
+   * change container lease
+   *
+   * @param {string} leaseId
+   * @param {string} proposedLeaseId
+   * @param {Models.ContainerChangeLeaseOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ContainerChangeLeaseResponse>}
+   * @memberof ContainerHandler
+   */
   public async changeLease(
     leaseId: string,
     proposedLeaseId: string,
@@ -566,6 +666,14 @@ export default class ContainerHandler extends BaseHandler
     return response;
   }
 
+  /**
+   * list blobs flat segments
+   *
+   * @param {Models.ContainerListBlobFlatSegmentOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ContainerListBlobFlatSegmentResponse>}
+   * @memberof ContainerHandler
+   */
   public async listBlobFlatSegment(
     options: Models.ContainerListBlobFlatSegmentOptionalParams,
     context: Context
@@ -576,7 +684,7 @@ export default class ContainerHandler extends BaseHandler
     const containerName = container.name;
     const marker = parseInt(options.marker || "0", 10);
     const delimiter = "";
-    options.prefix = options.prefix || "";
+    options.prefix = ""; // we do not support a prefix for the flat list
     options.marker = options.marker || "";
 
     const [blobs, nextMarker] = await this.dataStore.listBlobs(
@@ -702,12 +810,26 @@ export default class ContainerHandler extends BaseHandler
     return response;
   }
 
+  /**
+   * get account info
+   *
+   * @param {Context} context
+   * @returns {Promise<Models.ContainerGetAccountInfoResponse>}
+   * @memberof ContainerHandler
+   */
   public async getAccountInfo(
     context: Context
   ): Promise<Models.ContainerGetAccountInfoResponse> {
     throw new NotImplementedError(context.contextID);
   }
 
+  /**
+   * get account info with headers
+   *
+   * @param {Context} context
+   * @returns {Promise<Models.ContainerGetAccountInfoResponse>}
+   * @memberof ContainerHandler
+   */
   public async getAccountInfoWithHead(
     context: Context
   ): Promise<Models.ContainerGetAccountInfoResponse> {
