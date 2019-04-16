@@ -1,4 +1,5 @@
 import uuid from "uuid/v4";
+
 import Mutex from "../../common/Mutex";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
@@ -656,6 +657,12 @@ export default class ContainerHandler extends BaseHandler
   }
 
   public async getAccountInfo(
+    context: Context
+  ): Promise<Models.ContainerGetAccountInfoResponse> {
+    throw new NotImplementedError(context.contextID);
+  }
+
+  public async getAccountInfoWithHead(
     context: Context
   ): Promise<Models.ContainerGetAccountInfoResponse> {
     throw new NotImplementedError(context.contextID);

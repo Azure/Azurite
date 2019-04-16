@@ -159,6 +159,30 @@ const serviceGetAccountInfoOperationSpec: msRest.OperationSpec = {
   serializer
 };
 
+const serviceGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
+  httpMethod: "HEAD",
+  urlParameters: [
+    Parameters.url
+  ],
+  queryParameters: [
+    Parameters.restype1,
+    Parameters.comp0
+  ],
+  headerParameters: [
+    Parameters.version
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.ServiceGetAccountInfoWithHeadHeaders
+    },
+    default: {
+      bodyMapper: Mappers.StorageError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
 // specifications for new method group start
 const containerCreateOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
@@ -632,6 +656,31 @@ const containerGetAccountInfoOperationSpec: msRest.OperationSpec = {
   responses: {
     200: {
       headersMapper: Mappers.ContainerGetAccountInfoHeaders
+    },
+    default: {
+      bodyMapper: Mappers.StorageError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
+const containerGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
+  httpMethod: "HEAD",
+  path: "{containerName}",
+  urlParameters: [
+    Parameters.url
+  ],
+  queryParameters: [
+    Parameters.restype1,
+    Parameters.comp0
+  ],
+  headerParameters: [
+    Parameters.version
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.ContainerGetAccountInfoWithHeadHeaders
     },
     default: {
       bodyMapper: Mappers.StorageError
@@ -1153,6 +1202,31 @@ const blobGetAccountInfoOperationSpec: msRest.OperationSpec = {
   responses: {
     200: {
       headersMapper: Mappers.BlobGetAccountInfoHeaders
+    },
+    default: {
+      bodyMapper: Mappers.StorageError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
+const blobGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
+  httpMethod: "HEAD",
+  path: "{containerName}/{blobName}",
+  urlParameters: [
+    Parameters.url
+  ],
+  queryParameters: [
+    Parameters.restype1,
+    Parameters.comp0
+  ],
+  headerParameters: [
+    Parameters.version
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.BlobGetAccountInfoWithHeadHeaders
     },
     default: {
       bodyMapper: Mappers.StorageError
@@ -1745,6 +1819,7 @@ Specifications[Operation.Service_GetProperties] = serviceGetPropertiesOperationS
 Specifications[Operation.Service_GetStatistics] = serviceGetStatisticsOperationSpec;
 Specifications[Operation.Service_ListContainersSegment] = serviceListContainersSegmentOperationSpec;
 Specifications[Operation.Service_GetAccountInfo] = serviceGetAccountInfoOperationSpec;
+Specifications[Operation.Service_GetAccountInfoWithHead] = serviceGetAccountInfoWithHeadOperationSpec;
 Specifications[Operation.Container_Create] = containerCreateOperationSpec;
 Specifications[Operation.Container_GetProperties] = containerGetPropertiesOperationSpec;
 Specifications[Operation.Container_GetPropertiesWithHead] = containerGetPropertiesWithHeadOperationSpec;
@@ -1760,6 +1835,7 @@ Specifications[Operation.Container_ChangeLease] = containerChangeLeaseOperationS
 Specifications[Operation.Container_ListBlobFlatSegment] = containerListBlobFlatSegmentOperationSpec;
 Specifications[Operation.Container_ListBlobHierarchySegment] = containerListBlobHierarchySegmentOperationSpec;
 Specifications[Operation.Container_GetAccountInfo] = containerGetAccountInfoOperationSpec;
+Specifications[Operation.Container_GetAccountInfoWithHead] = containerGetAccountInfoWithHeadOperationSpec;
 Specifications[Operation.Blob_Download] = blobDownloadOperationSpec;
 Specifications[Operation.Blob_GetProperties] = blobGetPropertiesOperationSpec;
 Specifications[Operation.Blob_Delete] = blobDeleteOperationSpec;
@@ -1776,6 +1852,7 @@ Specifications[Operation.Blob_StartCopyFromURL] = blobStartCopyFromURLOperationS
 Specifications[Operation.Blob_AbortCopyFromURL] = blobAbortCopyFromURLOperationSpec;
 Specifications[Operation.Blob_SetTier] = blobSetTierOperationSpec;
 Specifications[Operation.Blob_GetAccountInfo] = blobGetAccountInfoOperationSpec;
+Specifications[Operation.Blob_GetAccountInfoWithHead] = blobGetAccountInfoWithHeadOperationSpec;
 Specifications[Operation.PageBlob_Create] = pageBlobCreateOperationSpec;
 Specifications[Operation.PageBlob_UploadPages] = pageBlobUploadPagesOperationSpec;
 Specifications[Operation.PageBlob_ClearPages] = pageBlobClearPagesOperationSpec;

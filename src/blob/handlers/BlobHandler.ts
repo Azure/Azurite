@@ -1,4 +1,5 @@
 import uuid from "uuid/v4";
+
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -667,6 +668,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   public async getAccountInfo(
+    context: Context
+  ): Promise<Models.BlobGetAccountInfoResponse> {
+    throw new NotImplementedError(context.contextID);
+  }
+
+  public async getAccountInfoWithHead(
     context: Context
   ): Promise<Models.BlobGetAccountInfoResponse> {
     throw new NotImplementedError(context.contextID);

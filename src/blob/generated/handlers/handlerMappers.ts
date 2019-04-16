@@ -44,6 +44,11 @@ operationHandlerMapping[Operation.Service_GetAccountInfo] = {
   handler: "serviceHandler",
   method: "getAccountInfo"
 };
+operationHandlerMapping[Operation.Service_GetAccountInfoWithHead] = {
+  arguments: [],
+  handler: "serviceHandler",
+  method: "getAccountInfoWithHead"
+};
 operationHandlerMapping[Operation.Container_Create] = {
   arguments: [
     "options"
@@ -151,6 +156,11 @@ operationHandlerMapping[Operation.Container_GetAccountInfo] = {
   arguments: [],
   handler: "containerHandler",
   method: "getAccountInfo"
+};
+operationHandlerMapping[Operation.Container_GetAccountInfoWithHead] = {
+  arguments: [],
+  handler: "containerHandler",
+  method: "getAccountInfoWithHead"
 };
 operationHandlerMapping[Operation.Blob_Download] = {
   arguments: [
@@ -268,6 +278,11 @@ operationHandlerMapping[Operation.Blob_GetAccountInfo] = {
   arguments: [],
   handler: "blobHandler",
   method: "getAccountInfo"
+};
+operationHandlerMapping[Operation.Blob_GetAccountInfoWithHead] = {
+  arguments: [],
+  handler: "blobHandler",
+  method: "getAccountInfoWithHead"
 };
 operationHandlerMapping[Operation.PageBlob_Create] = {
   arguments: [
