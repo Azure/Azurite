@@ -570,8 +570,67 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerListBlobFlatSegmentOptionalParams,
     context: Context
   ): Promise<Models.ContainerListBlobFlatSegmentResponse> {
-    // TODO: Need update list out blobs lease properties with BlobHandler.updateLeaseAttributes()
-    throw new NotImplementedError(context.contextID);
+    const container = await this.getSimpleContainerFromStorage(context);
+    const request = context.request!;
+    const accountName = container.accountName;
+    const containerName = container.name;
+    const marker = parseInt(options.marker || "0", 10);
+    const delimiter = "";
+    options.prefix = options.prefix || "";
+    options.marker = options.marker || "";
+
+    const [blobs, nextMarker] = await this.dataStore.listBlobs(
+      accountName,
+      containerName,
+      options.prefix,
+      options.maxresults,
+      marker
+    );
+
+    const blobItems: Models.BlobItem[] = [];
+    const blobPrefixes: Models.BlobPrefix[] = [];
+    const blobPrefixesSet = new Set<string>();
+    const prefixLength = options.prefix.length;
+
+    for (const blob of blobs) {
+      if (blob.name.length < prefixLength) {
+        continue;
+      }
+      const prefixPos = blob.name.indexOf(options.prefix);
+      // This is a blob with matching prefix
+      if (prefixPos >= 0) {
+        blob.deleted = blob.deleted !== true ? undefined : true;
+        blobItems.push(blob);
+      }
+    }
+
+    const iter = blobPrefixesSet.values();
+    let val;
+    while (!(val = iter.next()).done) {
+      blobPrefixes.push({ name: val.value });
+    }
+
+    const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
+    const response: Models.ContainerListBlobFlatSegmentResponse = {
+      statusCode: 200,
+      contentType: "application/xml",
+      requestId: context.contextID,
+      version: API_VERSION,
+      date: context.startTime,
+      serviceEndpoint,
+      containerName,
+      prefix: options.prefix,
+      marker: options.marker,
+      maxResults: options.maxresults || this.LIST_BLOBS_MAX_RESULTS_DEFAULT,
+      delimiter,
+      segment: {
+        blobItems,
+        blobPrefixes
+      },
+      nextMarker: `${nextMarker || ""}`
+    };
+
+    return response;
   }
 
   /**

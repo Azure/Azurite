@@ -253,12 +253,48 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     throw new NotImplementedError(context.contextID);
   }
 
+  // see also https://docs.microsoft.com/en-us/rest/api/storageservices/set-blob-properties
   public async setHTTPHeaders(
     options: Models.BlobSetHTTPHeadersOptionalParams,
     context: Context
   ): Promise<Models.BlobSetHTTPHeadersResponse> {
-    // TODO: Check Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
-    throw new NotImplementedError(context.contextID);
+    const blob = await this.getSimpleBlobFromStorage(context);
+    const blobHeaders = options.blobHTTPHeaders;
+    const blobProps = blob.properties;
+
+    // as per https://docs.microsoft.com/en-us/rest/api/storageservices/set-blob-properties#remarks
+    // If any one or more of the following properties is set in the request,
+    // then all of these properties are set together.
+    // If a value is not provided for a given property when at least one
+    // of the properties listed below is set, then that property will
+    // be cleared for the blob.
+    if (blobHeaders !== undefined) {
+      blobProps.cacheControl = blobHeaders.blobCacheControl;
+      blobProps.contentType = blobHeaders.blobContentType;
+      blobProps.contentMD5 = blobHeaders.blobContentMD5;
+      blobProps.contentEncoding = blobHeaders.blobContentEncoding;
+      blobProps.contentLanguage = blobHeaders.blobContentLanguage;
+      blobProps.contentDisposition = blobHeaders.blobContentDisposition;
+      blobProps.lastModified = context.startTime
+        ? context.startTime
+        : new Date();
+    }
+
+    blob.properties = blobProps;
+    await this.dataStore.updateBlob(blob);
+
+    // ToDo: return correct headers and test for these.
+    const response: Models.BlobSetHTTPHeadersResponse = {
+      statusCode: 200,
+      eTag: blob.properties.etag,
+      lastModified: blob.properties.lastModified,
+      blobSequenceNumber: blob.properties.blobSequenceNumber,
+      requestId: context.contextID,
+      version: API_VERSION,
+      date: context.startTime
+    };
+
+    return response;
   }
 
   public async setMetadata(
@@ -280,8 +316,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     blob = BlobHandler.UpdateBlobLeaseStateOnWriteBlob(blob);
     await this.dataStore.updateBlob(blob);
 
+    // ToDo: return correct headers and test for these.
     const response: Models.BlobSetMetadataResponse = {
       statusCode: 200,
+      eTag: blob.properties.etag,
+      lastModified: blob.properties.lastModified,
+      isServerEncrypted: true,
       requestId: context.contextID,
       date: context.startTime,
       version: API_VERSION
