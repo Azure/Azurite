@@ -11,6 +11,7 @@ import assert = require("assert");
 
 import BlobConfiguration from "../../../src/blob/BlobConfiguration";
 import Server from "../../../src/blob/BlobServer";
+import { BlobHTTPHeaders } from "../../../src/blob/generated/artifacts/models";
 import {
   bodyToString,
   EMULATOR_ACCOUNT_KEY,
@@ -96,7 +97,7 @@ describe("BlobAPIs", () => {
     await blobURL.delete(Aborter.none);
   });
 
-  it("setMetadata with new metadata set", async () => {
+  it("should setMetadata with new metadata set", async () => {
     const metadata = {
       a: "a",
       b: "b"
@@ -227,5 +228,51 @@ describe("BlobAPIs", () => {
     assert.equal(result4.leaseDuration, undefined);
     assert.equal(result4.leaseState, "available");
     assert.equal(result4.leaseStatus, "unlocked");
+  });
+
+  it("should get the correct headers back when setting metadata", async () => {
+    const metadata = {
+      a: "a",
+      b: "b"
+    };
+    const setResult = await blobURL.setMetadata(Aborter.none, metadata);
+    assert.notEqual(setResult.date, undefined);
+    assert.notEqual(setResult.eTag, undefined);
+    assert.notEqual(setResult.isServerEncrypted, undefined);
+    assert.notEqual(setResult.lastModified, undefined);
+    assert.notEqual(setResult.requestId, undefined);
+    assert.notEqual(setResult.version, undefined);
+    const result = await blobURL.getProperties(Aborter.none);
+    assert.deepStrictEqual(result.metadata, metadata);
+    assert.deepStrictEqual(result.accessTier, "Hot");
+    assert.deepStrictEqual(result.acceptRanges, "bytes");
+    assert.deepStrictEqual(result.blobType, "BlockBlob");
+  });
+
+  // https://docs.microsoft.com/en-us/rest/api/storageservices/get-blob-properties
+  // as properties retrieval is implemented, the properties should be added to the tests below
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Header
+  it("should get the correct properties set based on set HTTP headers", async () => {
+    const cacheControl = "no-cache";
+    const contentType = "text/plain; charset=UTF-8";
+    const md5 = new Uint8Array([1, 2, 3, 4, 5]);
+    const contentEncoding = "identity";
+    const contentLanguage = "en-US";
+    const contentDisposition = "attachment";
+    const headers: BlobHTTPHeaders = {
+      blobCacheControl: cacheControl,
+      blobContentType: contentType,
+      blobContentMD5: md5,
+      blobContentDisposition: contentDisposition,
+      blobContentLanguage: contentLanguage,
+      blobContentEncoding: contentEncoding
+    };
+    await blobURL.setHTTPHeaders(Aborter.none, headers);
+    const result = await blobURL.getProperties(Aborter.none);
+    assert.deepStrictEqual(result.cacheControl, cacheControl);
+    assert.deepStrictEqual(result.contentType, contentType);
+    assert.deepEqual(result.contentMD5, md5);
+    assert.deepStrictEqual(result.contentDisposition, contentDisposition);
+    assert.deepStrictEqual(result.contentLanguage, contentLanguage);
   });
 });
