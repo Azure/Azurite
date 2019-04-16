@@ -18,4 +18,5 @@ export default interface IServiceHandler {
   getStatistics(options: Models.ServiceGetStatisticsOptionalParams, context: Context): Promise<Models.ServiceGetStatisticsResponse>;
   listContainersSegment(options: Models.ServiceListContainersSegmentOptionalParams, context: Context): Promise<Models.ServiceListContainersSegmentResponse>;
   getAccountInfo(context: Context): Promise<Models.ServiceGetAccountInfoResponse>;
+  getAccountInfoWithHead(context: Context): Promise<Models.ServiceGetAccountInfoWithHeadResponse>;
 }

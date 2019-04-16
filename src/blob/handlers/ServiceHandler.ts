@@ -198,4 +198,10 @@ export default class ServiceHandler extends BaseHandler
   ): Promise<Models.ServiceGetAccountInfoResponse> {
     throw new NotImplementedError(context.contextID);
   }
+
+  public async getAccountInfoWithHead(
+    context: Context
+  ): Promise<Models.ServiceGetAccountInfoResponse> {
+    throw new NotImplementedError(context.contextID);
+  }
 }

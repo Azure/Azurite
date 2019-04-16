@@ -28,4 +28,5 @@ export default interface IContainerHandler {
   listBlobFlatSegment(options: Models.ContainerListBlobFlatSegmentOptionalParams, context: Context): Promise<Models.ContainerListBlobFlatSegmentResponse>;
   listBlobHierarchySegment(delimiter: string, options: Models.ContainerListBlobHierarchySegmentOptionalParams, context: Context): Promise<Models.ContainerListBlobHierarchySegmentResponse>;
   getAccountInfo(context: Context): Promise<Models.ContainerGetAccountInfoResponse>;
+  getAccountInfoWithHead(context: Context): Promise<Models.ContainerGetAccountInfoWithHeadResponse>;
 }
