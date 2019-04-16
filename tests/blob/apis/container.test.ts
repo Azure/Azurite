@@ -349,4 +349,36 @@ describe("ContainerAPIs", () => {
     assert.equal(result3.leaseState, "broken");
     assert.equal(result3.leaseStatus, "unlocked");
   });
+
+  it("should correctly list all blobs in the container using listBlobFlatSegment with default parameters", async () => {
+    const blobURLs = [];
+    for (let i = 0; i < 3; i++) {
+      const blobURL = BlobURL.fromContainerURL(
+        containerURL,
+        getUniqueName(`blockblob${i}/${i}`)
+      );
+      const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
+      await blockBlobURL.upload(Aborter.none, "", 0);
+      blobURLs.push(blobURL);
+    }
+
+    const inputmarker = "";
+    const result = await containerURL.listBlobFlatSegment(
+      Aborter.none,
+      inputmarker
+    );
+    assert.ok(result.serviceEndpoint.length > 0);
+    assert.ok(containerURL.url.indexOf(result.containerName));
+    assert.deepStrictEqual(result.nextMarker, "");
+    assert.deepStrictEqual(result.segment.blobItems!.length, blobURLs.length);
+
+    for (const blob of blobURLs) {
+      let i = 0;
+      assert.ok(blob.url.indexOf(result.segment.blobItems![i++].name));
+    }
+
+    for (const blob of blobURLs) {
+      await blob.delete(Aborter.none);
+    }
+  });
 });
