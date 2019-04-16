@@ -246,6 +246,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
+  /**
+   * undelete blob
+   *
+   * @param {Models.BlobUndeleteOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobUndeleteResponse>}
+   * @memberof BlobHandler
+   */
   public async undelete(
     options: Models.BlobUndeleteOptionalParams,
     context: Context
@@ -253,13 +261,31 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     throw new NotImplementedError(context.contextID);
   }
 
-  // see also https://docs.microsoft.com/en-us/rest/api/storageservices/set-blob-properties
+  /**
+   * set blob http headers
+   *
+   * @param {Models.BlobSetHTTPHeadersOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobSetHTTPHeadersResponse>}
+   * @memberof BlobHandler
+   */
   public async setHTTPHeaders(
     options: Models.BlobSetHTTPHeadersOptionalParams,
     context: Context
   ): Promise<Models.BlobSetHTTPHeadersResponse> {
-    // TODO: Check lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
-    const blob = await this.getSimpleBlobFromStorage(context);
+    let blob = await this.getSimpleBlobFromStorage(context);
+
+    // Check Lease status
+    BlobHandler.checkBlobLeaseOnWriteBlob(
+      context,
+      blob,
+      options.leaseAccessConditions
+    );
+
+    // Set lease to available if it's expired
+    blob = BlobHandler.UpdateBlobLeaseStateOnWriteBlob(blob);
+    await this.dataStore.updateBlob(blob);
+
     const blobHeaders = options.blobHTTPHeaders;
     const blobProps = blob.properties;
 
