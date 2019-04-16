@@ -8,7 +8,6 @@ import {
   StorageURL
 } from "@azure/storage-blob";
 import assert = require("assert");
-
 import BlobConfiguration from "../../../src/blob/BlobConfiguration";
 import Server from "../../../src/blob/BlobServer";
 import { BlobHTTPHeaders } from "../../../src/blob/generated/artifacts/models";
