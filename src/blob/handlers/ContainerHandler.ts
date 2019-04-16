@@ -588,27 +588,14 @@ export default class ContainerHandler extends BaseHandler
     );
 
     const blobItems: Models.BlobItem[] = [];
-    const blobPrefixes: Models.BlobPrefix[] = [];
-    const blobPrefixesSet = new Set<string>();
-    const prefixLength = options.prefix.length;
 
     for (const blob of blobs) {
-      if (blob.name.length < prefixLength) {
-        continue;
-      }
-      const prefixPos = blob.name.indexOf(options.prefix);
-      // This is a blob with matching prefix
-      if (prefixPos >= 0) {
-        blob.deleted = blob.deleted !== true ? undefined : true;
-        blobItems.push(blob);
-      }
+      blob.deleted = blob.deleted !== true ? undefined : true;
+      blobItems.push(blob);
     }
 
-    const iter = blobPrefixesSet.values();
-    let val;
-    while (!(val = iter.next()).done) {
-      blobPrefixes.push({ name: val.value });
-    }
+    // only need an empty array for the prefixes
+    const blobPrefixes: Models.BlobPrefix[] = [];
 
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const response: Models.ContainerListBlobFlatSegmentResponse = {
