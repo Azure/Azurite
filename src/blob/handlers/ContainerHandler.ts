@@ -9,7 +9,7 @@ import Context from "../generated/Context";
 import IContainerHandler from "../generated/handlers/IContainerHandler";
 import { ContainerModel } from "../persistence/IBlobDataStore";
 import { API_VERSION } from "../utils/constants";
-import { newEtag } from "../utils/utils";
+import { getContainerGetAccountInfoResponse, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 /**
@@ -820,7 +820,7 @@ export default class ContainerHandler extends BaseHandler
   public async getAccountInfo(
     context: Context
   ): Promise<Models.ContainerGetAccountInfoResponse> {
-    throw new NotImplementedError(context.contextID);
+    return getContainerGetAccountInfoResponse(context);
   }
 
   /**
@@ -833,7 +833,7 @@ export default class ContainerHandler extends BaseHandler
   public async getAccountInfoWithHead(
     context: Context
   ): Promise<Models.ContainerGetAccountInfoResponse> {
-    throw new NotImplementedError(context.contextID);
+    return getContainerGetAccountInfoResponse(context);
   }
 
   /**

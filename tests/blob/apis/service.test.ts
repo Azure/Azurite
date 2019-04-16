@@ -10,6 +10,10 @@ import * as assert from "assert";
 import BlobConfiguration from "../../../src/blob/BlobConfiguration";
 import Server from "../../../src/blob/BlobServer";
 import {
+  EMULATOR_ACCOUNT_KIND,
+  EMULATOR_ACCOUNT_SKUNAME
+} from "../../../src/blob/utils/constants";
+import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
@@ -224,5 +228,11 @@ describe("ServiceAPIs", () => {
 
     await containerURL1.delete(Aborter.none);
     await containerURL2.delete(Aborter.none);
+  });
+
+  it("get Account info", async () => {
+    const result = await serviceURL.getAccountInfo(Aborter.none);
+    assert.equal(result.accountKind, EMULATOR_ACCOUNT_KIND);
+    assert.equal(result.skuName, EMULATOR_ACCOUNT_SKUNAME);
   });
 });
