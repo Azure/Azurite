@@ -246,6 +246,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
+  /**
+   * undelete blob
+   *
+   * @param {Models.BlobUndeleteOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobUndeleteResponse>}
+   * @memberof BlobHandler
+   */
   public async undelete(
     options: Models.BlobUndeleteOptionalParams,
     context: Context
@@ -253,7 +261,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     throw new NotImplementedError(context.contextID);
   }
 
-  // see also https://docs.microsoft.com/en-us/rest/api/storageservices/set-blob-properties
+  /**
+   * Set HTTP Headers
+   * see also https://docs.microsoft.com/en-us/rest/api/storageservices/set-blob-properties
+   *
+   * @param {Models.BlobSetHTTPHeadersOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobSetHTTPHeadersResponse>}
+   * @memberof BlobHandler
+   */
   public async setHTTPHeaders(
     options: Models.BlobSetHTTPHeadersOptionalParams,
     context: Context
@@ -297,6 +313,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
+  /**
+   * Set Metadata
+   *
+   * @param {Models.BlobSetMetadataOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobSetMetadataResponse>}
+   * @memberof BlobHandler
+   */
   public async setMetadata(
     options: Models.BlobSetMetadataOptionalParams,
     context: Context
@@ -330,6 +354,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
+  /**
+   * Acquire Blob Lease
+   *
+   * @param {Models.BlobAcquireLeaseOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobAcquireLeaseResponse>}
+   * @memberof BlobHandler
+   */
   public async acquireLease(
     options: Models.BlobAcquireLeaseOptionalParams,
     context: Context
@@ -395,6 +427,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
+  /**
+   * release blob lease
+   *
+   * @param {string} leaseId
+   * @param {Models.BlobReleaseLeaseOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobReleaseLeaseResponse>}
+   * @memberof BlobHandler
+   */
   public async releaseLease(
     leaseId: string,
     options: Models.BlobReleaseLeaseOptionalParams,
@@ -449,6 +490,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
+  /**
+   * Renew blob lease
+   *
+   * @param {string} leaseId
+   * @param {Models.BlobRenewLeaseOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobRenewLeaseResponse>}
+   * @memberof BlobHandler
+   */
   public async renewLease(
     leaseId: string,
     options: Models.BlobRenewLeaseOptionalParams,
@@ -516,6 +566,16 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
+  /**
+   * change lease
+   *
+   * @param {string} leaseId
+   * @param {string} proposedLeaseId
+   * @param {Models.BlobChangeLeaseOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobChangeLeaseResponse>}
+   * @memberof BlobHandler
+   */
   public async changeLease(
     leaseId: string,
     proposedLeaseId: string,
@@ -575,6 +635,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
+  /**
+   * break lease
+   *
+   * @param {Models.BlobBreakLeaseOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobBreakLeaseResponse>}
+   * @memberof BlobHandler
+   */
   public async breakLease(
     options: Models.BlobBreakLeaseOptionalParams,
     context: Context
@@ -675,6 +743,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
+  /**
+   * create snapshot
+   *
+   * @param {Models.BlobCreateSnapshotOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobCreateSnapshotResponse>}
+   * @memberof BlobHandler
+   */
   public async createSnapshot(
     options: Models.BlobCreateSnapshotOptionalParams,
     context: Context
@@ -682,6 +758,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     throw new NotImplementedError(context.contextID);
   }
 
+  /**
+   * start copy from Url
+   *
+   * @param {string} copySource
+   * @param {Models.BlobStartCopyFromURLOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobStartCopyFromURLResponse>}
+   * @memberof BlobHandler
+   */
   public async startCopyFromURL(
     copySource: string,
     options: Models.BlobStartCopyFromURLOptionalParams,
@@ -691,6 +776,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     throw new NotImplementedError(context.contextID);
   }
 
+  /**
+   * abort copy from Url
+   *
+   * @param {string} copyId
+   * @param {Models.BlobAbortCopyFromURLOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobAbortCopyFromURLResponse>}
+   * @memberof BlobHandler
+   */
   public async abortCopyFromURL(
     copyId: string,
     options: Models.BlobAbortCopyFromURLOptionalParams,
@@ -699,6 +793,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     throw new NotImplementedError(context.contextID);
   }
 
+  /**
+   * set blob tier
+   *
+   * @param {Models.AccessTier} tier
+   * @param {Models.BlobSetTierOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobSetTierResponse>}
+   * @memberof BlobHandler
+   */
   public async setTier(
     tier: Models.AccessTier,
     options: Models.BlobSetTierOptionalParams,
@@ -707,18 +810,42 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     throw new NotImplementedError(context.contextID);
   }
 
+  /**
+   * get account info
+   *
+   * @param {Context} context
+   * @returns {Promise<Models.BlobGetAccountInfoResponse>}
+   * @memberof BlobHandler
+   */
   public async getAccountInfo(
     context: Context
   ): Promise<Models.BlobGetAccountInfoResponse> {
     throw new NotImplementedError(context.contextID);
   }
 
+  /**
+   * get account info with headers
+   *
+   * @param {Context} context
+   * @returns {Promise<Models.BlobGetAccountInfoResponse>}
+   * @memberof BlobHandler
+   */
   public async getAccountInfoWithHead(
     context: Context
   ): Promise<Models.BlobGetAccountInfoResponse> {
     throw new NotImplementedError(context.contextID);
   }
 
+  /**
+   * download block blob
+   *
+   * @private
+   * @param {Models.BlobDownloadOptionalParams} options
+   * @param {Context} context
+   * @param {BlobModel} blob
+   * @returns {Promise<Models.BlobDownloadResponse>}
+   * @memberof BlobHandler
+   */
   private async downloadBlockBlob(
     options: Models.BlobDownloadOptionalParams,
     context: Context,
@@ -797,6 +924,16 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
+  /**
+   * download page blob
+   *
+   * @private
+   * @param {Models.BlobDownloadOptionalParams} options
+   * @param {Context} context
+   * @param {BlobModel} blob
+   * @returns {Promise<Models.BlobDownloadResponse>}
+   * @memberof BlobHandler
+   */
   private async downloadPageBlob(
     options: Models.BlobDownloadOptionalParams,
     context: Context,
