@@ -96,6 +96,42 @@ describe("BlobAPIs", () => {
     await blobURL.delete(Aborter.none);
   });
 
+  it("should create a snapshot from a blob", async () => {
+    const result = await blobURL.createSnapshot(Aborter.none);
+    assert.ok(result.snapshot);
+  });
+
+  it("should delete snapshot", async () => {
+    const result = await blobURL.createSnapshot(Aborter.none);
+    assert.ok(result.snapshot);
+    const blobSnapshotURL = blobURL.withSnapshot(result.snapshot!);
+    await blobSnapshotURL.getProperties(Aborter.none);
+    await blobSnapshotURL.delete(Aborter.none);
+    await blobURL.delete(Aborter.none);
+    const result2 = await containerURL.listBlobFlatSegment(
+      Aborter.none,
+      undefined,
+      {
+        include: ["snapshots"]
+      }
+    );
+    // Verify that the snapshot is deleted
+    assert.equal(result2.segment.blobItems!.length, 0);
+  });
+
+  it("should also list snapshots", async () => {
+    const result = await blobURL.createSnapshot(Aborter.none);
+    assert.ok(result.snapshot);
+    const result2 = await containerURL.listBlobFlatSegment(
+      Aborter.none,
+      undefined,
+      {
+        include: ["snapshots"]
+      }
+    );
+    assert.strictEqual(result2.segment.blobItems!.length, 2);
+  });
+
   it("should setMetadata with new metadata set", async () => {
     const metadata = {
       a: "a",
