@@ -31,6 +31,7 @@ interface IContainerAdditionalProperties {
   leaseId?: string;
   leaseExpireTime?: Date;
   leaseBreakExpireTime?: Date;
+  containerAcl?: Models.SignedIdentifier[];
 }
 
 export type ContainerModel = Models.ContainerItem &

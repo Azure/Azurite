@@ -92,12 +92,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     leaseAccessConditions?: Models.LeaseAccessConditions
   ): void {
     // check Leased -> Expired
-
     if (blob.properties.leaseStatus === Models.LeaseStatusType.Locked) {
       if (
         leaseAccessConditions === undefined ||
         leaseAccessConditions.leaseId === undefined ||
-        leaseAccessConditions.leaseId === null
+        leaseAccessConditions.leaseId === ""
       ) {
         const blobCtx = new BlobStorageContext(context);
         throw StorageErrorFactory.getBlobLeaseIdMissing(blobCtx.contextID!);
@@ -133,7 +132,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
    * @memberof BlobHandler
    */
   public static UpdateBlobLeaseStateOnWriteBlob(blob: BlobModel): BlobModel {
-    if (blob.properties.leaseState === Models.LeaseStateType.Expired) {
+    if (
+      blob.properties.leaseState === Models.LeaseStateType.Expired ||
+      blob.properties.leaseState === Models.LeaseStateType.Broken
+    ) {
       blob.properties.leaseState = Models.LeaseStateType.Available;
       blob.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
       blob.properties.leaseDuration = undefined;
@@ -143,6 +145,45 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blob.leaseBreakExpireTime = undefined;
     }
     return blob;
+  }
+
+  /**
+   * Check Blob lease status on Read blob.
+   *
+   * @private
+   * @param {Context} context
+   * @param {BlobModel} blob
+   * @param {LeaseAccessConditions} leaseAccessConditions
+   * @returns {void}
+   * @memberof BlobHandler
+   */
+  public static checkLeaseOnReadBlob(
+    context: Context,
+    blob: BlobModel,
+    leaseAccessConditions?: Models.LeaseAccessConditions
+  ): void {
+    // check only when input Leased Id is not empty
+    if (
+      leaseAccessConditions !== undefined &&
+      leaseAccessConditions.leaseId !== undefined &&
+      leaseAccessConditions.leaseId !== ""
+    ) {
+      // return error when lease is unlocked
+      if (blob.properties.leaseStatus === Models.LeaseStatusType.Unlocked) {
+        const blobCtx = new BlobStorageContext(context);
+        throw StorageErrorFactory.getBlobLeaseLost(blobCtx.contextID!);
+      } else if (
+        blob.leaseId !== undefined &&
+        leaseAccessConditions.leaseId.toLowerCase() !==
+          blob.leaseId.toLowerCase()
+      ) {
+        // return error when lease is locked but lease ID not match
+        const blobCtx = new BlobStorageContext(context);
+        throw StorageErrorFactory.getBlobLeaseIdMismatchWithBlobOperation(
+          blobCtx.contextID!
+        );
+      }
+    }
   }
 
   constructor(
@@ -166,6 +207,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobDownloadResponse> {
     const blob = await this.getSimpleBlobFromStorage(context);
+
+    BlobHandler.checkLeaseOnReadBlob(
+      context,
+      blob,
+      options.leaseAccessConditions
+    );
 
     if (blob.properties.blobType === Models.BlobType.BlockBlob) {
       return this.downloadBlockBlob(options, context, blob);
@@ -192,6 +239,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobGetPropertiesResponse> {
     const blob = await this.getSimpleBlobFromStorage(context);
+
+    BlobHandler.checkLeaseOnReadBlob(
+      context,
+      blob,
+      options.leaseAccessConditions
+    );
 
     const response: Models.BlobGetPropertiesResponse = {
       statusCode: 200,
@@ -390,7 +443,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // check the lease action aligned with current lease state.
     if (blob.snapshot !== "") {
-      throw StorageErrorFactory.getBlobLeaseOnSnapshot(blobCtx.contextID!);
+      throw StorageErrorFactory.getBlobSnapshotsPresent(blobCtx.contextID!);
     }
     if (blob.properties.leaseState === Models.LeaseStateType.Breaking) {
       throw StorageErrorFactory.getLeaseAlreadyPresent(context.contextID!);
@@ -465,7 +518,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // check the lease action aligned with current lease state.
     if (blob.snapshot !== "") {
-      throw StorageErrorFactory.getBlobLeaseOnSnapshot(blobCtx.contextID!);
+      throw StorageErrorFactory.getBlobSnapshotsPresent(blobCtx.contextID!);
     }
     if (blob.properties.leaseState === Models.LeaseStateType.Available) {
       throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
@@ -528,7 +581,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // check the lease action aligned with current lease state.
     if (blob.snapshot !== "") {
-      throw StorageErrorFactory.getBlobLeaseOnSnapshot(blobCtx.contextID!);
+      throw StorageErrorFactory.getBlobSnapshotsPresent(blobCtx.contextID!);
     }
     if (blob.properties.leaseState === Models.LeaseStateType.Available) {
       throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
@@ -606,7 +659,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // check the lease action aligned with current lease state.
     if (blob.snapshot !== "") {
-      throw StorageErrorFactory.getBlobLeaseOnSnapshot(blobCtx.contextID!);
+      throw StorageErrorFactory.getBlobSnapshotsPresent(blobCtx.contextID!);
     }
     if (
       blob.properties.leaseState === Models.LeaseStateType.Available ||
@@ -673,7 +726,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // check the lease action aligned with current lease state.
     if (blob.snapshot !== "") {
-      throw StorageErrorFactory.getBlobLeaseOnSnapshot(blobCtx.contextID!);
+      throw StorageErrorFactory.getBlobSnapshotsPresent(blobCtx.contextID!);
     }
     if (blob.properties.leaseState === Models.LeaseStateType.Available) {
       throw StorageErrorFactory.getBlobLeaseNotPresentWithLeaseOperation(
@@ -820,7 +873,113 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobSetTierOptionalParams,
     context: Context
   ): Promise<Models.BlobSetTierResponse> {
-    throw new NotImplementedError(context.contextID);
+    const blobCtx = new BlobStorageContext(context);
+    let blob: BlobModel;
+
+    try {
+      blob = await this.getSimpleBlobFromStorage(context);
+    } catch (error) {
+      throw error;
+    }
+
+    // check the lease action aligned with current lease state.
+    // the API has not lease ID input, but run it on a lease blocked blob will fail with LeaseIdMissing,
+    // this is aliged with server behavior
+    BlobHandler.checkBlobLeaseOnWriteBlob(context, blob, undefined);
+
+    // Check Blob is not snapshot
+    if (blob.snapshot !== "") {
+      throw StorageErrorFactory.getBlobSnapshotsPresent(blobCtx.contextID!);
+    }
+
+    const response: Models.BlobSetTierResponse = {
+      requestId: context.contextID,
+      version: API_VERSION,
+      statusCode: 200
+    };
+
+    // Check BlobTier matches blob type
+    if (
+      (tier === Models.AccessTier.Archive ||
+        tier === Models.AccessTier.Cool ||
+        tier === Models.AccessTier.Hot) &&
+      blob.properties.blobType === Models.BlobType.BlockBlob
+    ) {
+      // Block blob
+      // tslint:disable-next-line:max-line-length
+      // TODO: check blob is not block blob with snapshot, throw StorageErrorFactory.getBlobSnapshotsPresent_hassnapshot()
+
+      // Archive -> Coo/Hot will return 202
+      if (
+        blob.properties.accessTier === Models.AccessTier.Archive &&
+        (tier === Models.AccessTier.Cool || tier === Models.AccessTier.Hot)
+      ) {
+        response.statusCode = 202;
+      }
+
+      blob.properties.accessTier = tier;
+    } else if (
+      tier
+        .toString()
+        .toUpperCase()
+        .startsWith("P") &&
+      blob.properties.blobType === Models.BlobType.PageBlob
+    ) {
+      // page blob
+      // Check Page blob tier not set to lower
+      if (blob.properties.accessTier !== undefined) {
+        const oldTierInt = parseInt(
+          blob.properties.accessTier.toString().substring(1),
+          10
+        );
+        const newTierInt = parseInt(tier.toString().substring(1), 10);
+        if (oldTierInt > newTierInt) {
+          throw StorageErrorFactory.getBlobCannotChangeToLowerTier(
+            blobCtx.contextID!
+          );
+        }
+      }
+
+      const oneGBinByte = 1024 * 1024 * 1024;
+      // Check Blob size match tier
+      if (
+        (tier === Models.AccessTier.P4 &&
+          blob.properties.contentLength! > 32 * oneGBinByte) ||
+        (tier === Models.AccessTier.P6 &&
+          blob.properties.contentLength! > 64 * oneGBinByte) ||
+        (tier === Models.AccessTier.P10 &&
+          blob.properties.contentLength! > 128 * oneGBinByte) ||
+        // (tier === Models.AccessTier.P15 &&
+        //   blob.properties.contentLength! > 256 * oneGBinByte) ||
+        (tier === Models.AccessTier.P20 &&
+          blob.properties.contentLength! > 512 * oneGBinByte) ||
+        (tier === Models.AccessTier.P30 &&
+          blob.properties.contentLength! > 1024 * oneGBinByte) ||
+        (tier === Models.AccessTier.P40 &&
+          blob.properties.contentLength! > 2048 * oneGBinByte) ||
+        (tier === Models.AccessTier.P50 &&
+          blob.properties.contentLength! > 4095 * oneGBinByte)
+        // (tier === Models.AccessTier.P60 &&
+        //   blob.properties.contentLength! > 64 * oneGBinByte) ||
+        // (tier === Models.AccessTier.P70 &&
+        //   blob.properties.contentLength! > 64 * oneGBinByte) ||
+        // (tier === Models.AccessTier.P80 &&
+        //   blob.properties.contentLength! > 64 * oneGBinByte)
+      ) {
+        throw StorageErrorFactory.getBlobBlobTierInadequateForContentLength(
+          blobCtx.contextID!
+        );
+      }
+
+      blob.properties.accessTier = tier;
+    } else {
+      // Blob tier and blob type not match
+      throw StorageErrorFactory.getBlobInvalidBlobType(blobCtx.contextID!);
+    }
+
+    await this.dataStore.updateBlob(blob);
+
+    return response;
   }
 
   /**
@@ -864,6 +1023,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context,
     blob: BlobModel
   ): Promise<Models.BlobDownloadResponse> {
+    BlobHandler.checkLeaseOnReadBlob(
+      context,
+      blob,
+      options.leaseAccessConditions
+    );
+
     if (blob.isCommitted === false) {
       throw StorageErrorFactory.getBlobNotFound(context.contextID!);
     }
@@ -952,6 +1117,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context,
     blob: BlobModel
   ): Promise<Models.BlobDownloadResponse> {
+    BlobHandler.checkLeaseOnReadBlob(
+      context,
+      blob,
+      options.leaseAccessConditions
+    );
+
     // Deserializer doesn't handle range header currently, manually parse range headers here
     const rangesParts = deserializePageBlobRangeHeader(
       context.request!.getHeader("range"),

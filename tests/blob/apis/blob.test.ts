@@ -8,6 +8,7 @@ import {
   StorageURL
 } from "@azure/storage-blob";
 import assert = require("assert");
+import { isNode } from "@azure/ms-rest-js";
 import BlobConfiguration from "../../../src/blob/BlobConfiguration";
 import Server from "../../../src/blob/BlobServer";
 import { BlobHTTPHeaders } from "../../../src/blob/generated/artifacts/models";
@@ -273,5 +274,69 @@ describe("BlobAPIs", () => {
     assert.deepEqual(result.contentMD5, md5);
     assert.deepStrictEqual(result.contentDisposition, contentDisposition);
     assert.deepStrictEqual(result.contentLanguage, contentLanguage);
+  });
+
+  it("setTier set default to cool", async () => {
+    await blockBlobURL.setTier(Aborter.none, "Cool");
+    const properties = await blockBlobURL.getProperties(Aborter.none);
+    assert.equal(properties.accessTier!.toLowerCase(), "cool");
+  });
+
+  it("setTier set archive to hot", async () => {
+    await blockBlobURL.setTier(Aborter.none, "Archive");
+    let properties = await blockBlobURL.getProperties(Aborter.none);
+    assert.equal(properties.accessTier!.toLowerCase(), "archive");
+
+    await blockBlobURL.setTier(Aborter.none, "Hot");
+    properties = await blockBlobURL.getProperties(Aborter.none);
+    if (properties.archiveStatus) {
+      assert.equal(
+        properties.archiveStatus.toLowerCase(),
+        "rehydrate-pending-to-hot"
+      );
+    }
+  });
+
+  it("setHTTPHeaders with default parameters", async () => {
+    await blobURL.setHTTPHeaders(Aborter.none, {});
+    const result = await blobURL.getProperties(Aborter.none);
+
+    assert.deepStrictEqual(result.blobType, "BlockBlob");
+    assert.ok(result.lastModified);
+    assert.deepStrictEqual(result.metadata, {});
+    assert.ok(!result.cacheControl);
+    assert.ok(!result.contentType);
+    assert.ok(!result.contentMD5);
+    assert.ok(!result.contentEncoding);
+    assert.ok(!result.contentLanguage);
+    assert.ok(!result.contentDisposition);
+  });
+
+  it("setHTTPHeaders with all parameters set", async () => {
+    const headers = {
+      blobCacheControl: "blobCacheControl",
+      blobContentDisposition: "blobContentDisposition",
+      blobContentEncoding: "blobContentEncoding",
+      blobContentLanguage: "blobContentLanguage",
+      blobContentMD5: isNode
+        ? Buffer.from([1, 2, 3, 4])
+        : new Uint8Array([1, 2, 3, 4]),
+      blobContentType: "blobContentType"
+    };
+    await blobURL.setHTTPHeaders(Aborter.none, headers);
+    const result = await blobURL.getProperties(Aborter.none);
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "BlockBlob");
+    assert.ok(result.lastModified);
+    assert.deepStrictEqual(result.metadata, {});
+    assert.deepStrictEqual(result.cacheControl, headers.blobCacheControl);
+    assert.deepStrictEqual(result.contentType, headers.blobContentType);
+    assert.deepStrictEqual(result.contentMD5, headers.blobContentMD5);
+    assert.deepStrictEqual(result.contentEncoding, headers.blobContentEncoding);
+    assert.deepStrictEqual(result.contentLanguage, headers.blobContentLanguage);
+    assert.deepStrictEqual(
+      result.contentDisposition,
+      headers.blobContentDisposition
+    );
   });
 });
