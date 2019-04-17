@@ -2,7 +2,6 @@ import uuid from "uuid/v4";
 
 import Mutex from "../../common/Mutex";
 import BlobStorageContext from "../context/BlobStorageContext";
-import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -233,7 +232,46 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerGetAccessPolicyOptionalParams,
     context: Context
   ): Promise<Models.ContainerGetAccessPolicyResponse> {
-    throw new NotImplementedError(context.contextID);
+    // const blobCtx = new BlobStorageContext(context);
+    // const containerName = blobCtx.container!;
+    let container: ContainerModel;
+
+    // await Mutex.lock(containerName);
+    try {
+      container = await this.getSimpleContainerFromStorage(context);
+    } catch (error) {
+      // await Mutex.unlock(containerName);
+      throw error;
+    }
+
+    this.checkLeaseOnReadContainer(
+      context,
+      container,
+      options.leaseAccessConditions
+    );
+
+    const response: any = [];
+    const responseArray = response as Models.SignedIdentifier[];
+    const responseObject = response as Models.ContainerGetAccessPolicyHeaders & {
+      statusCode: 200;
+    };
+    if (container.containerAcl !== undefined) {
+      responseArray.push(...container.containerAcl);
+    }
+    responseObject.date = container.properties.lastModified;
+    responseObject.blobPublicAccess = container.properties.publicAccess;
+    responseObject.eTag = newEtag();
+    responseObject.lastModified = container.properties.lastModified;
+    responseObject.requestId = context.contextID;
+    responseObject.version = API_VERSION;
+    responseObject.statusCode = 200;
+
+    // TODO: Need fix generator code since the output containerAcl can't be serialized correctly
+    // tslint:disable-next-line:max-line-length
+    // Correct responds： <?xml version="1.0" encoding="utf-8"?><SignedIdentifiers><SignedIdentifier><Id>123</Id><AccessPolicy><Start>2019-04-30T16:00:00.0000000Z</Start><Expiry>2019-12-31T16:00:00.0000000Z</Expiry><Permission>r</Permission></AccessPolicy></SignedIdentifier></SignedIdentifiers>
+    // tslint:disable-next-line:max-line-length
+    // Current responds: <?xml version="1.0" encoding="UTF-8" standalone="yes"?><parsedResponse><Id>123</Id><AccessPolicy><Start>2019-04-30T16:00:00Z</Start><Expiry>2019-12-31T16:00:00Z</Expiry><Permission>r</Permission></AccessPolicy></parsedResponse>"
+    return response;
   }
 
   /**
@@ -248,7 +286,41 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerSetAccessPolicyOptionalParams,
     context: Context
   ): Promise<Models.ContainerSetAccessPolicyResponse> {
-    throw new NotImplementedError(context.contextID);
+    const blobCtx = new BlobStorageContext(context);
+    const containerName = blobCtx.container!;
+    let container: ContainerModel;
+
+    await Mutex.lock(containerName);
+    try {
+      container = await this.getSimpleContainerFromStorage(context);
+    } catch (error) {
+      await Mutex.unlock(containerName);
+      throw error;
+    }
+
+    // from rest spec, this is how lease works
+    this.checkLeaseOnReadContainer(
+      context,
+      container,
+      options.leaseAccessConditions
+    );
+
+    container.properties.publicAccess = options.access;
+    container.containerAcl = options.containerAcl;
+    container.properties.lastModified = blobCtx.startTime!;
+    await this.dataStore.updateContainer(container);
+    await Mutex.unlock(containerName);
+
+    const response: Models.ContainerSetAccessPolicyResponse = {
+      date: container.properties.lastModified,
+      eTag: newEtag(),
+      lastModified: container.properties.lastModified,
+      requestId: context.contextID,
+      version: API_VERSION,
+      statusCode: 200
+    };
+
+    return response;
   }
 
   /**
@@ -909,5 +981,46 @@ export default class ContainerHandler extends BaseHandler
       }
     }
     return container;
+  }
+
+  /**
+   * Check Container lease status on Read Container.
+   *
+   * @private
+   * @param {Context} context
+   * @param {ContainerModel} container
+   * @param {LeaseAccessConditions} leaseAccessConditions
+   * @returns {void}
+   * @memberof ContainerHandler
+   */
+  private checkLeaseOnReadContainer(
+    context: Context,
+    container: ContainerModel,
+    leaseAccessConditions?: Models.LeaseAccessConditions
+  ): void {
+    // check only when input Leased Id is not empty
+    if (
+      leaseAccessConditions !== undefined &&
+      leaseAccessConditions.leaseId !== undefined &&
+      leaseAccessConditions.leaseId !== ""
+    ) {
+      // return error when lease is unlocked
+      if (
+        container.properties.leaseStatus === Models.LeaseStatusType.Unlocked
+      ) {
+        const blobCtx = new BlobStorageContext(context);
+        throw StorageErrorFactory.getContainerLeaseLost(blobCtx.contextID!);
+      } else if (
+        container.leaseId !== undefined &&
+        leaseAccessConditions.leaseId.toLowerCase() !==
+          container.leaseId.toLowerCase()
+      ) {
+        // return error when lease is locked but lease ID not match
+        const blobCtx = new BlobStorageContext(context);
+        throw StorageErrorFactory.getContainerLeaseIdMismatchWithContainerOperation(
+          blobCtx.contextID!
+        );
+      }
+    }
   }
 }

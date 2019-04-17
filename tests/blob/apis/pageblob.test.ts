@@ -1504,4 +1504,30 @@ describe("PageBlobAPIs", () => {
     propertiesResponse = await pageBlobURL.getProperties(Aborter.none);
     assert.equal(propertiesResponse.blobSequenceNumber!, 100);
   });
+
+  it("setTier for Page blob", async () => {
+    const length = 512 * 5;
+    await pageBlobURL.create(Aborter.none, length);
+    let propertiesResponse = await pageBlobURL.getProperties(Aborter.none);
+
+    await pageBlobURL.setTier(Aborter.none, "P10");
+    propertiesResponse = await pageBlobURL.getProperties(Aborter.none);
+    assert.equal(propertiesResponse.accessTier!, "P10");
+
+    await pageBlobURL.setTier(Aborter.none, "P20");
+    propertiesResponse = await pageBlobURL.getProperties(Aborter.none);
+    assert.equal(propertiesResponse.accessTier!, "P20");
+
+    await pageBlobURL.setTier(Aborter.none, "P30");
+    propertiesResponse = await pageBlobURL.getProperties(Aborter.none);
+    assert.equal(propertiesResponse.accessTier!, "P30");
+
+    await pageBlobURL.setTier(Aborter.none, "P40");
+    propertiesResponse = await pageBlobURL.getProperties(Aborter.none);
+    assert.equal(propertiesResponse.accessTier!, "P40");
+
+    await pageBlobURL.setTier(Aborter.none, "P50");
+    propertiesResponse = await pageBlobURL.getProperties(Aborter.none);
+    assert.equal(propertiesResponse.accessTier!, "P50");
+  });
 });

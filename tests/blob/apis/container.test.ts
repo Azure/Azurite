@@ -381,4 +381,59 @@ describe("ContainerAPIs", () => {
       await blob.delete(Aborter.none);
     }
   });
+
+  it("getAccessPolicy", async () => {
+    const result = await containerURL.getAccessPolicy(Aborter.none);
+    assert.ok(result.eTag!.length > 0);
+    assert.ok(result.lastModified);
+    assert.ok(result.requestId);
+    assert.ok(result.version);
+    assert.ok(result.date);
+  });
+
+  it("setAccessPolicy_publicAccess", async () => {
+    const access = "blob";
+    const containerAcl = [
+      {
+        accessPolicy: {
+          expiry: new Date("2018-12-31T11:22:33.4567890Z"),
+          permission: "rwd",
+          start: new Date("2017-12-31T11:22:33.4567890Z")
+        },
+        id: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
+      }
+    ];
+    await containerURL.setAccessPolicy(Aborter.none, access, containerAcl);
+    const result = await containerURL.getAccessPolicy(Aborter.none);
+    // assert.deepEqual(result.signedIdentifiers, containerAcl);
+    assert.deepEqual(result.blobPublicAccess, access);
+  });
+
+  // Skip since getAccessPolicy can't get signedIdentifiers now
+  it.skip("setAccessPolicy_signedIdentifiers", async () => {
+    const access = "container";
+    const containerAcl = [
+      {
+        accessPolicy: {
+          expiry: new Date("2018-12-31T11:22:33.4567890Z"),
+          permission: "rwdl",
+          start: new Date("2017-12-31T11:22:33.4567890Z")
+        },
+        id: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
+      },
+      {
+        accessPolicy: {
+          expiry: new Date("2030-11-31T11:22:33.4567890Z"),
+          permission: "w",
+          start: new Date("2017-12-31T11:22:33.4567890Z")
+        },
+        id: "policy2"
+      }
+    ];
+
+    await containerURL.setAccessPolicy(Aborter.none, access, containerAcl);
+    const result = await containerURL.getAccessPolicy(Aborter.none);
+    assert.deepEqual(result.signedIdentifiers, containerAcl);
+    assert.deepEqual(result.blobPublicAccess, access);
+  });
 });

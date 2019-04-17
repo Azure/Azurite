@@ -191,7 +191,7 @@ export default class StorageErrorFactory {
   }
 
   // The error code/message need check with server
-  public static getBlobLeaseOnSnapshot(contextID: string): StorageError {
+  public static getBlobSnapshotsPresent(contextID: string): StorageError {
     return new StorageError(
       400,
       "SnapshotsPresent",
@@ -235,6 +235,48 @@ export default class StorageErrorFactory {
       "AuthenticationFailed",
       // tslint:disable-next-line:max-line-length
       "Server failed to authenticate the request. Make sure the value of the Authorization header is formed correctly including the signature.",
+      contextID
+    );
+  }
+
+  public static getBlobInvalidBlobType(contextID: string): StorageError {
+    return new StorageError(
+      409,
+      "InvalidBlobType",
+      "The blob type is invalid for this operation.",
+      contextID
+    );
+  }
+
+  public static getBlobSnapshotsPresent_hassnapshot(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      409,
+      "SnapshotsPresent",
+      "This operation is not permitted because the blob has snapshots.",
+      contextID
+    );
+  }
+
+  public static getBlobCannotChangeToLowerTier(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      409,
+      "CannotChangeToLowerTier",
+      "A higher blob tier has already been explicitly set.",
+      contextID
+    );
+  }
+
+  public static getBlobBlobTierInadequateForContentLength(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      409,
+      "BlobTierInadequateForContentLength",
+      "Specified blob tier size limit cannot be less than content length.",
       contextID
     );
   }
