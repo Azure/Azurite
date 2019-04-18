@@ -484,12 +484,13 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       query.containerName = container;
     }
     if (includeSnapshots === true) {
-      query.snapshot = { $regex: /+/ };
+      query.snapshot = { $regex: "+" };
     }
 
     query.$loki = { $gt: marker };
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+
     const docs = coll
       .chain()
       .find(query)
