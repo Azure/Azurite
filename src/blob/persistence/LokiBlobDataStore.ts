@@ -483,8 +483,8 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     if (container !== undefined) {
       query.containerName = container;
     }
-    if (includeSnapshots === undefined || includeSnapshots === false) {
-      query.snapshot = { $ne: "" };
+    if (includeSnapshots === true) {
+      query.snapshot = { $regex: /+/ };
     }
 
     query.$loki = { $gt: marker };
