@@ -483,19 +483,28 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     if (container !== undefined) {
       query.containerName = container;
     }
-    if (includeSnapshots === true) {
-      query.snapshot = { $regex: "+" };
-    }
 
     query.$loki = { $gt: marker };
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
 
-    const docs = coll
-      .chain()
-      .find(query)
-      .limit(maxResults)
-      .data();
+    let docs;
+    if (includeSnapshots === true) {
+      docs = await coll
+        .chain()
+        .find(query)
+        .limit(maxResults)
+        .data();
+    } else {
+      docs = await coll
+        .chain()
+        .find(query)
+        .where(obj => {
+          return obj.snapshot.length === 0;
+        })
+        .limit(maxResults)
+        .data();
+    }
 
     for (const doc of docs) {
       const blobDoc = doc as BlobModel;
