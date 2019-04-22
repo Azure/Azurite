@@ -237,6 +237,7 @@ export interface IBlobDataStore extends IDataStore {
    * @param {string} [prefix]
    * @param {number} [maxResults]
    * @param {number} [marker]
+   * @param {boolean} [includeSnapshots]
    * @returns {(Promise<[T[], number | undefined]>)} A tuple including list blobs and next marker.
    * @memberof IBlobDataStore
    */
@@ -245,7 +246,8 @@ export interface IBlobDataStore extends IDataStore {
     container?: string,
     prefix?: string,
     maxResults?: number,
-    marker?: number
+    marker?: number,
+    includeSnapshots?: boolean
   ): Promise<[T[], number | undefined]>;
 
   /**
@@ -397,6 +399,17 @@ export interface IBlobDataStore extends IDataStore {
    * @memberof IBlobDataStore
    */
   iteratorReferredExtents(): AsyncIterator<IPersistencyChunk[]>;
+
+  /**
+   * Create a snapshot of a blob in the blobs collection
+   * Returned object will contain a snapshot property which can be used to find / get the snapshot
+   *
+   * @template T
+   * @param {T} blob
+   * @returns {Promise<T>}
+   * @memberof IBlobDataStore
+   */
+  snapshotBlob<T extends BlobModel>(blob: T): Promise<T>;
 }
 
 export default IBlobDataStore;

@@ -168,7 +168,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     // Create containers collection if not exists
     if (this.db.getCollection(this.BLOBS_COLLECTION) === null) {
       this.db.addCollection(this.BLOBS_COLLECTION, {
-        indices: ["accountName", "containerName", "name"] // Optimize for find operation
+        indices: ["accountName", "containerName", "name", "snapshot"] // Optimize for find operation
       });
     }
 
@@ -389,7 +389,8 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     const blobDoc = coll.findOne({
       accountName: blob.accountName,
       containerName: blob.containerName,
-      name: blob.name
+      name: blob.name,
+      snapshot: blob.snapshot
     });
     if (blobDoc) {
       coll.remove(blobDoc);
@@ -397,6 +398,27 @@ export default class LokiBlobDataStore implements IBlobDataStore {
 
     delete (blob as any).$loki;
     return coll.insert(blob);
+  }
+
+  /**
+   * Create a snapshot of a blob
+   *
+   * @template T
+   * @param {T} blob
+   * @returns {Promise<T>}
+   * @memberof LokiBlobDataStore
+   */
+  public async snapshotBlob<T extends BlobModel>(blob: T): Promise<T> {
+    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+
+    const clean_rec: any = Object.assign({}, blob);
+    clean_rec.snapshot = new Date().toISOString();
+
+    // we need to remove these props to allow insert of new snapshot entry
+    delete clean_rec.meta;
+    delete clean_rec.$loki;
+
+    return coll.insert(clean_rec);
   }
 
   /**
@@ -448,7 +470,8 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     container?: string,
     prefix: string | undefined = "",
     maxResults: number | undefined = 5000,
-    marker?: number | undefined
+    marker?: number | undefined,
+    includeSnapshots?: boolean | undefined
   ): Promise<[T[], number | undefined]> {
     const query: any = {};
     if (prefix !== "") {
@@ -460,14 +483,28 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     if (container !== undefined) {
       query.containerName = container;
     }
+
     query.$loki = { $gt: marker };
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const docs = coll
-      .chain()
-      .find(query)
-      .limit(maxResults)
-      .data();
+
+    let docs;
+    if (includeSnapshots === true) {
+      docs = await coll
+        .chain()
+        .find(query)
+        .limit(maxResults)
+        .data();
+    } else {
+      docs = await coll
+        .chain()
+        .find(query)
+        .where(obj => {
+          return obj.snapshot.length === 0;
+        })
+        .limit(maxResults)
+        .data();
+    }
 
     for (const doc of docs) {
       const blobDoc = doc as BlobModel;

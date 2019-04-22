@@ -182,7 +182,13 @@ describe("ContainerAPIs", () => {
       delimiter,
       undefined,
       {
-        include: ["metadata", "uncommittedblobs", "copy", "deleted"],
+        include: [
+          "metadata",
+          "uncommittedblobs",
+          "copy",
+          "deleted",
+          "snapshots"
+        ],
         maxresults: 1,
         prefix
       }
@@ -198,7 +204,13 @@ describe("ContainerAPIs", () => {
       delimiter,
       result.nextMarker,
       {
-        include: ["metadata", "uncommittedblobs", "copy", "deleted"],
+        include: [
+          "metadata",
+          "uncommittedblobs",
+          "copy",
+          "deleted",
+          "snapshots"
+        ],
         maxresults: 2,
         prefix
       }
@@ -214,7 +226,13 @@ describe("ContainerAPIs", () => {
       delimiter,
       undefined,
       {
-        include: ["metadata", "uncommittedblobs", "copy", "deleted"],
+        include: [
+          "metadata",
+          "uncommittedblobs",
+          "copy",
+          "deleted",
+          "snapshots"
+        ],
         maxresults: 2,
         prefix: `${prefix}0${delimiter}`
       }

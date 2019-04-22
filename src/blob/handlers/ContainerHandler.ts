@@ -758,13 +758,19 @@ export default class ContainerHandler extends BaseHandler
     const delimiter = "";
     options.prefix = ""; // we do not support a prefix for the flat list
     options.marker = options.marker || "";
-
+    let includeSnapshots: boolean = false;
+    if (options.include !== undefined) {
+      if (options.include.includes(Models.ListBlobsIncludeItem.Snapshots)) {
+        includeSnapshots = true;
+      }
+    }
     const [blobs, nextMarker] = await this.dataStore.listBlobs(
       accountName,
       containerName,
       options.prefix,
       options.maxresults,
-      marker
+      marker,
+      includeSnapshots
     );
 
     const blobItems: Models.BlobItem[] = [];
@@ -822,13 +828,19 @@ export default class ContainerHandler extends BaseHandler
     const marker = parseInt(options.marker || "0", 10);
     options.prefix = options.prefix || "";
     options.marker = options.marker || "";
-
+    let includeSnapshots: boolean = false;
+    if (options.include !== undefined) {
+      if (options.include.includes(Models.ListBlobsIncludeItem.Snapshots)) {
+        includeSnapshots = true;
+      }
+    }
     const [blobs, nextMarker] = await this.dataStore.listBlobs(
       accountName,
       containerName,
       options.prefix,
       options.maxresults,
-      marker
+      marker,
+      includeSnapshots
     );
 
     const blobItems: Models.BlobItem[] = [];

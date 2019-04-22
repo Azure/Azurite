@@ -811,6 +811,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
   /**
    * create snapshot
+   * https://docs.microsoft.com/en-us/rest/api/storageservices/snapshot-blob
    *
    * @param {Models.BlobCreateSnapshotOptionalParams} options
    * @param {Context} context
@@ -821,7 +822,21 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobCreateSnapshotOptionalParams,
     context: Context
   ): Promise<Models.BlobCreateSnapshotResponse> {
-    throw new NotImplementedError(context.contextID);
+    const blob = await this.getSimpleBlobFromStorage(context);
+
+    const snapshotResult = await this.dataStore.snapshotBlob(blob);
+
+    const response: Models.BlobCreateSnapshotResponse = {
+      statusCode: 201,
+      eTag: snapshotResult.properties.etag,
+      lastModified: snapshotResult.properties.lastModified,
+      requestId: context.contextID,
+      date: context.startTime!,
+      version: API_VERSION,
+      snapshot: snapshotResult.snapshot
+    };
+
+    return response;
   }
 
   /**
