@@ -415,8 +415,8 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     clean_rec.snapshot = new Date().toISOString();
 
     // we need to remove these props to allow insert of new snapshot entry
-    delete clean_rec["meta"];
-    delete clean_rec["$loki"];
+    delete clean_rec.meta;
+    delete clean_rec.$loki;
 
     return coll.insert(clean_rec);
   }
