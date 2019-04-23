@@ -5,6 +5,7 @@ import IAccountDataStore from "../common/IAccountDataStore";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
 import { RequestListener } from "../common/ServerBase";
+import AccountSASAuthenticator from "./authentication/AccountSASAuthenticator";
 import AuthenticationMiddlewareFactory from "./authentication/AuthenticationMiddlewareFactory";
 import BlobSharedKeyAuthenticator from "./authentication/BlobSharedKeyAuthenticator";
 import blobStorageContextMiddleware from "./context/blobStorageContext.middleware";
@@ -89,7 +90,12 @@ export default class BlobRequestListenerFactory
     );
     app.use(
       authenticationMiddlewareFactory.createAuthenticationMiddleware([
-        new BlobSharedKeyAuthenticator(this.accountDataStore, logger)
+        new BlobSharedKeyAuthenticator(this.accountDataStore, logger),
+        new AccountSASAuthenticator(
+          this.accountDataStore,
+          this.dataStore,
+          logger
+        )
       ])
     );
 

@@ -1,5 +1,3 @@
-import { createHmac } from "crypto";
-
 import IAccountDataStore from "../../common/IAccountDataStore";
 import ILogger from "../../common/ILogger";
 import BlobStorageContext from "../context/BlobStorageContext";
@@ -7,7 +5,7 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import Context from "../generated/Context";
 import IRequest from "../generated/IRequest";
 import { HeaderConstants } from "../utils/constants";
-import { getURLQueries } from "../utils/utils";
+import { computeHMACSHA256, getURLQueries } from "../utils/utils";
 import IAuthenticator from "./IAuthenticator";
 
 export default class BlobSharedKeyAuthenticator implements IAuthenticator {
@@ -16,7 +14,10 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
     private readonly logger: ILogger
   ) {}
 
-  public validate(req: IRequest, context: Context): boolean | undefined {
+  public async validate(
+    req: IRequest,
+    context: Context
+  ): Promise<boolean | undefined> {
     const blobContext = new BlobStorageContext(context);
     const account = blobContext.account!;
 
@@ -69,19 +70,13 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       blobContext.contextID
     );
 
-    const signature1 = this.computeHMACSHA256(
-      stringToSign,
-      accountProperties.key1
-    );
+    const signature1 = computeHMACSHA256(stringToSign, accountProperties.key1);
     const authValue1 = `SharedKey ${account}:${signature1}`;
     if (authHeaderValue === authValue1) {
       return true;
     }
 
-    const signature2 = this.computeHMACSHA256(
-      stringToSign,
-      accountProperties.key1
-    );
+    const signature2 = computeHMACSHA256(stringToSign, accountProperties.key1);
     const authValue2 = `SharedKey ${account}:${signature2}`;
     if (authHeaderValue === authValue2) {
       return true;
@@ -96,20 +91,6 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       blobContext.contextID
     );
     return false;
-  }
-
-  /**
-   * Generates a hash signature for an HTTP request or for a SAS.
-   *
-   * @param {string} stringToSign
-   * @param {key} key
-   * @returns {string}
-   * @memberof SharedKeyCredential
-   */
-  private computeHMACSHA256(stringToSign: string, key: Buffer): string {
-    return createHmac("sha256", key)
-      .update(stringToSign, "utf8")
-      .digest("base64");
   }
 
   /**

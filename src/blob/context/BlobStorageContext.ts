@@ -1,6 +1,8 @@
+import IAuthenticationContext from "../authentication/IAuthenticationContext";
 import Context from "../generated/Context";
 
-export default class BlobStorageContext extends Context {
+export default class BlobStorageContext extends Context
+  implements IAuthenticationContext {
   public getContainer(): string | undefined {
     return this.context.container;
   }
