@@ -27,7 +27,7 @@ import {
   rmRecursive
 } from "../testutils";
 
-configLogger(true);
+configLogger(false);
 
 describe("Shared Access Signature (SAS) generation Node.js only", () => {
   // TODO: Create a server factory as tests utils

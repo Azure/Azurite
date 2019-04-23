@@ -21,15 +21,16 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
     const blobContext = new BlobStorageContext(context);
     const account = blobContext.account!;
 
-    this.logger.verbose(
-      `BlobSharedKeyAuthenticator:validate()`,
+    this.logger.info(
+      `BlobSharedKeyAuthenticator:validate() Start validation against account shared key authentication.`,
       blobContext.contextID
     );
 
     const authHeaderValue = req.getHeader(HeaderConstants.AUTHORIZATION);
     if (authHeaderValue === undefined) {
-      this.logger.verbose(
-        `BlobSharedKeyAuthenticator:validate() Request doesn't include valid authentication header.`,
+      this.logger.info(
+        // tslint:disable-next-line:max-line-length
+        `BlobSharedKeyAuthenticator:validate() Request doesn't include valid authentication header. Skip shared key authentication.`,
         blobContext.contextID
       );
       return undefined;
@@ -86,7 +87,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
     // this.logger.info(`[HEADERS]:${req.getHeaders().toString()}`);
     // this.logger.info(`[KEY]: ${request.headers.get(HeaderConstants.AUTHORIZATION)}`);
 
-    this.logger.verbose(
+    this.logger.info(
       `BlobSharedKeyAuthenticator:validate() Validation failed.`,
       blobContext.contextID
     );

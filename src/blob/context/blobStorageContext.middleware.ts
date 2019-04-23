@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import uuid from "uuid/v4";
 
 import logger from "../../common/Logger";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -21,8 +22,7 @@ export default function blobStorageContextMiddleware(
   const blobContext = new BlobStorageContext(res.locals, DEFAULT_CONTEXT_PATH);
   blobContext.startTime = new Date();
 
-  // TODO: Use GUID for a server request ID
-  const requestID = blobContext.startTime.getTime().toString();
+  const requestID = uuid();
   blobContext.xMsRequestID = requestID;
 
   logger.info(

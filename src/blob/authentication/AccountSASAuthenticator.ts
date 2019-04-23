@@ -26,7 +26,7 @@ export default class AccountSASAuthenticator implements IAuthenticator {
     context: Context
   ): Promise<boolean | undefined> {
     this.logger.info(
-      `AccountSASAuthenticator:validate() Start validation against account Shared Key Signature pattern.`,
+      `AccountSASAuthenticator:validate() Start validation against account Shared Access Signature pattern.`,
       context.contextID
     );
 
@@ -72,7 +72,7 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       );
       return false;
     }
-    this.logger.info(
+    this.logger.debug(
       `AccountSASAuthenticator:validate() Successfully got valid account SAS values from request. ${JSON.stringify(
         values
       )}`,
@@ -123,6 +123,44 @@ export default class AccountSASAuthenticator implements IAuthenticator {
         );
         return false;
       }
+    }
+
+    this.logger.info(
+      `AccountSASAuthenticator:validate() Validate start and expiry time.`,
+      context.contextID
+    );
+    if (!this.validateTime(values.expiryTime, values.startTime)) {
+      this.logger.info(
+        `AccountSASAuthenticator:validate() Validate start and expiry failed.`,
+        context.contextID
+      );
+      return;
+    }
+
+    this.logger.info(
+      `AccountSASAuthenticator:validate() Validate IP range.`,
+      context.contextID
+    );
+    if (!this.validateIPRange()) {
+      this.logger.info(
+        `AccountSASAuthenticator:validate() Validate IP range failed.`,
+        context.contextID
+      );
+      return;
+    }
+
+    this.logger.info(
+      `AccountSASAuthenticator:validate() Validate request protocol.`,
+      context.contextID
+    );
+    if (
+      !this.validateProtocol(values.protocol || "https,http", req.getProtocol())
+    ) {
+      this.logger.info(
+        `AccountSASAuthenticator:validate() Validate protocol failed.`,
+        context.contextID
+      );
+      return;
     }
 
     const operation = context.operation;
@@ -238,6 +276,36 @@ export default class AccountSASAuthenticator implements IAuthenticator {
     };
 
     return accountSASValues;
+  }
+
+  private validateTime(expiry: Date | string, start?: Date | string): boolean {
+    const expiryTime = new Date(expiry);
+    const now = new Date();
+
+    if (now > expiryTime) {
+      return false;
+    }
+
+    if (start !== undefined) {
+      const startTime = new Date(start);
+      if (now < startTime) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private validateIPRange(): boolean {
+    // TODO: Emulator doesn't validate IP Address
+    return true;
+  }
+
+  private validateProtocol(
+    sasProtocol: string,
+    requestProtocol: string
+  ): boolean {
+    return sasProtocol.toLowerCase().includes(requestProtocol.toLowerCase());
   }
 
   private decodeIfExist(value?: string): string | undefined {
