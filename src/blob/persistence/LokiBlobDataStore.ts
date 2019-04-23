@@ -448,9 +448,9 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       blobModel.properties.contentMD5 = this.restoreUint8Array(
         blobModel.properties.contentMD5
       );
+    } else {
+      return undefined;
     }
-
-    return blobDoc;
   }
 
   /**

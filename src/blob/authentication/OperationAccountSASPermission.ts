@@ -20,21 +20,32 @@ export class OperationAccountSASPermission {
     services: AccountSASServices | string,
     resourceTypes: AccountSASResourceTypes | string,
     permissions: AccountSASPermissions | string
-  ) {
-    if (!services.toString().includes(this.service)) {
-      return false;
-    }
+  ): boolean {
+    return (
+      this.validateServices(services) &&
+      this.validateResourceTypes(resourceTypes) &&
+      this.validatePermissions(permissions)
+    );
+  }
 
-    if (!resourceTypes.toString().includes(this.resourceType)) {
-      return false;
-    }
+  public validateServices(services: AccountSASServices | string): boolean {
+    return services.toString().includes(this.service);
+  }
 
+  public validateResourceTypes(
+    resourceTypes: AccountSASResourceTypes | string
+  ): boolean {
+    return resourceTypes.toString().includes(this.resourceType);
+  }
+
+  public validatePermissions(
+    permissions: AccountSASPermissions | string
+  ): boolean {
     for (const p of this.permission) {
       if (permissions.toString().includes(p)) {
         return true;
       }
     }
-
     return false;
   }
 }

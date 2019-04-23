@@ -229,10 +229,10 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getAuthenticationFailed(contextID: string): StorageError {
+  public static getAuthorizationFailure(contextID: string): StorageError {
     return new StorageError(
       403,
-      "AuthenticationFailed",
+      "AuthorizationFailure",
       // tslint:disable-next-line:max-line-length
       "Server failed to authenticate the request. Make sure the value of the Authorization header is formed correctly including the signature.",
       contextID
@@ -277,6 +277,70 @@ export default class StorageErrorFactory {
       409,
       "BlobTierInadequateForContentLength",
       "Specified blob tier size limit cannot be less than content length.",
+      contextID
+    );
+  }
+
+  public static getAuthorizationSourceIPMismatch(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      403,
+      "AuthorizationSourceIPMismatch",
+      "This request is not authorized to perform this operation using this source IP {SourceIP}.",
+      contextID
+    );
+  }
+
+  public static getAuthorizationProtocolMismatch(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      403,
+      "AuthorizationProtocolMismatch",
+      "This request is not authorized to perform this operation using this protocol.",
+      contextID
+    );
+  }
+
+  public static getAuthorizationPermissionMismatch(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      403,
+      "AuthorizationPermissionMismatch",
+      "This request is not authorized to perform this operation using this permission.",
+      contextID
+    );
+  }
+
+  public static getAuthorizationServiceMismatch(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      403,
+      "AuthorizationServiceMismatch",
+      "This request is not authorized to perform this operation using this service.",
+      contextID
+    );
+  }
+
+  public static getAuthorizationResourceTypeMismatch(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      403,
+      "AuthorizationResourceTypeMismatch",
+      "This request is not authorized to perform this operation using this resource type.",
+      contextID
+    );
+  }
+
+  public static getFeatureVersionMismatch(contextID: string): StorageError {
+    return new StorageError(
+      409,
+      "FeatureVersionMismatch",
+      "Stored access policy contains a permission that is not supported by this version.",
       contextID
     );
   }

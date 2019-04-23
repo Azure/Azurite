@@ -125,6 +125,9 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       }
     }
 
+    // When signature validation passes, we enforce account SAS validation
+    // Any validation errors will stop this request immediately
+
     this.logger.info(
       `AccountSASAuthenticator:validate() Validate start and expiry time.`,
       context.contextID
@@ -134,7 +137,7 @@ export default class AccountSASAuthenticator implements IAuthenticator {
         `AccountSASAuthenticator:validate() Validate start and expiry failed.`,
         context.contextID
       );
-      return;
+      throw StorageErrorFactory.getAuthorizationFailure(context.contextID!);
     }
 
     this.logger.info(
@@ -146,21 +149,23 @@ export default class AccountSASAuthenticator implements IAuthenticator {
         `AccountSASAuthenticator:validate() Validate IP range failed.`,
         context.contextID
       );
-      return;
+      throw StorageErrorFactory.getAuthorizationSourceIPMismatch(
+        context.contextID!
+      );
     }
 
     this.logger.info(
       `AccountSASAuthenticator:validate() Validate request protocol.`,
       context.contextID
     );
-    if (
-      !this.validateProtocol(values.protocol || "https,http", req.getProtocol())
-    ) {
+    if (!this.validateProtocol(values.protocol, req.getProtocol())) {
       this.logger.info(
         `AccountSASAuthenticator:validate() Validate protocol failed.`,
         context.contextID
       );
-      return;
+      throw StorageErrorFactory.getAuthorizationProtocolMismatch(
+        context.contextID!
+      );
     }
 
     const operation = context.operation;
@@ -189,55 +194,60 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       );
     }
 
+    if (!accountSASPermission.validateServices(values.services)) {
+      throw StorageErrorFactory.getAuthorizationServiceMismatch(
+        context.contextID!
+      );
+    }
+
+    if (!accountSASPermission.validateResourceTypes(values.resourceTypes)) {
+      throw StorageErrorFactory.getAuthorizationResourceTypeMismatch(
+        context.contextID!
+      );
+    }
+
+    if (!accountSASPermission.validatePermissions(values.permissions)) {
+      throw StorageErrorFactory.getAuthorizationPermissionMismatch(
+        context.contextID!
+      );
+    }
+
+    // Check 3 special permission requirements
+    // If block blob exists, then permission must be Write only
+    // If page blob exists, then permission must be Write only
+    // If destination blob exists, then permission must be Write only
     if (
-      accountSASPermission.validate(
-        values.services,
-        values.resourceTypes,
-        values.permissions
-      )
+      operation === Operation.BlockBlob_Upload ||
+      operation === Operation.PageBlob_Create ||
+      operation === Operation.Blob_StartCopyFromURL
     ) {
       this.logger.info(
-        `AccountSASAuthenticator:validate() Account SAS validation successfully.`,
+        `AccountSASAuthenticator:validate() For ${
+          Operation[operation]
+        }, if blob exists, the permission must be Write.`,
         context.contextID
       );
 
-      // Check 3 special permission requirements
-      // If block blob exists, then permission must be Write only
-      // If page blob exists, then permission must be Write only
-      // If destination blob exists, then permission must be Write only
       if (
-        operation === Operation.BlockBlob_Upload ||
-        operation === Operation.PageBlob_Create ||
-        operation === Operation.Blob_StartCopyFromURL
+        (await this.blobExist(account, containerName!, blobName!)) &&
+        accountSASPermission.permission !== AccountSASPermission.Write
       ) {
         this.logger.info(
-          `AccountSASAuthenticator:validate() For ${
-            Operation[operation]
-          }, if blob exists, then permission must be Write.`,
+          `AccountSASAuthenticator:validate() Account SAS validation failed for special requirement.`,
           context.contextID
         );
-
-        if (
-          (await this.blobExist(account, containerName!, blobName!)) &&
-          accountSASPermission.permission !== AccountSASPermission.Write
-        ) {
-          this.logger.info(
-            `AccountSASAuthenticator:validate() Account SAS validation failed for special requirement.`,
-            context.contextID
-          );
-          return false;
-        }
-        return true;
+        throw StorageErrorFactory.getAuthorizationPermissionMismatch(
+          context.contextID!
+        );
       }
-
-      return true;
     }
 
     this.logger.info(
-      `AccountSASAuthenticator:validate() Account SAS validation failed.`,
+      `AccountSASAuthenticator:validate() Account SAS validation successfully.`,
       context.contextID
     );
-    return false;
+
+    return true;
   }
 
   private getAccountSASSignatureValuesFromRequest(
@@ -302,7 +312,7 @@ export default class AccountSASAuthenticator implements IAuthenticator {
   }
 
   private validateProtocol(
-    sasProtocol: string,
+    sasProtocol: string = "https,http",
     requestProtocol: string
   ): boolean {
     return sasProtocol.toLowerCase().includes(requestProtocol.toLowerCase());

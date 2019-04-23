@@ -18,11 +18,11 @@ export default class AuthenticationMiddlewareFactory {
       this.authenticate(req, res, authenticators)
         .then(pass => {
           // TODO: To support public access, we need to modify here to reject request later in handler
-          if (pass === true) {
+          if (pass) {
             next();
           } else {
             next(
-              StorageErrorFactory.getAuthenticationFailed(context.contextID!)
+              StorageErrorFactory.getAuthorizationFailure(context.contextID!)
             );
           }
         })
