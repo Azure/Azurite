@@ -41,7 +41,7 @@ export default function errorMiddleware(
   // other error handlers.
   if (err instanceof MiddlewareError) {
     logger.error(
-      `ErrorMiddleware: received a MiddlewareError, fill error information to HTTP response`,
+      `ErrorMiddleware: Received a MiddlewareError, fill error information to HTTP response`,
       context.contextID
     );
 
@@ -104,7 +104,7 @@ export default function errorMiddleware(
     }
   } else if (err instanceof Error) {
     logger.error(
-      `ErrorMiddleware: received an Error, fill error information to HTTP response`,
+      `ErrorMiddleware: Received an error, fill error information to HTTP response`,
       context.contextID
     );
     logger.error(
@@ -123,7 +123,7 @@ export default function errorMiddleware(
     // res.getBodyStream().write(err.message);
   } else {
     logger.warn(
-      `ErrorMiddleware: received unhandled error object`,
+      `ErrorMiddleware: Received unhandled error object`,
       context.contextID
     );
   }

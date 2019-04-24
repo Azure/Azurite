@@ -1,7 +1,8 @@
-import { createHash } from "crypto";
+import { createHash, createHmac } from "crypto";
 import etag from "etag";
 import { createWriteStream, PathLike } from "fs";
 import { parse } from "url";
+
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import {
@@ -9,6 +10,40 @@ import {
   EMULATOR_ACCOUNT_KIND,
   EMULATOR_ACCOUNT_SKUNAME
 } from "../utils/constants";
+
+/**
+ * Generates a hash signature for an HTTP request or for a SAS.
+ *
+ * @param {string} stringToSign
+ * @param {key} key
+ * @returns {string}
+ */
+export function computeHMACSHA256(stringToSign: string, key: Buffer): string {
+  return createHmac("sha256", key)
+    .update(stringToSign, "utf8")
+    .digest("base64");
+}
+
+/**
+ * Rounds a date off to seconds.
+ *
+ * @export
+ * @param {Date} date
+ * @param {boolean} [withMilliseconds=true] If true, YYYY-MM-DDThh:mm:ss.fffffffZ will be returned;
+ *                                          If false, YYYY-MM-DDThh:mm:ssZ will be returned.
+ * @returns {string} Date string in ISO8061 format, with or without 7 milliseconds component
+ */
+export function truncatedISO8061Date(
+  date: Date,
+  withMilliseconds: boolean = true
+): string {
+  // Date.toISOString() will return like "2018-10-29T06:34:36.139Z"
+  const dateString = date.toISOString();
+
+  return withMilliseconds
+    ? dateString.substring(0, dateString.length - 1) + "0000" + "Z"
+    : dateString.substring(0, dateString.length - 5) + "Z";
+}
 
 // TODO: Align eTag with Azure Storage Service
 export function newEtag(): string {
@@ -66,11 +101,7 @@ export function getURLQueries(url: string): { [key: string]: string } {
   querySubStrings = querySubStrings.filter((value: string) => {
     const indexOfEqual = value.indexOf("=");
     const lastIndexOfEqual = value.lastIndexOf("=");
-    return (
-      indexOfEqual > 0 &&
-      indexOfEqual === lastIndexOfEqual &&
-      lastIndexOfEqual < value.length - 1
-    );
+    return indexOfEqual > 0 && indexOfEqual === lastIndexOfEqual;
   });
 
   const queries: { [key: string]: string } = {};

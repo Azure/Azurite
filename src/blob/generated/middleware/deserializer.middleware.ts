@@ -22,7 +22,7 @@ export default function deserializerMiddleware(
   context: Context,
   req: IRequest,
   next: NextFunction,
-  logger: ILogger,
+  logger: ILogger
 ): void {
   logger.verbose(
     `DeserializerMiddleware: Start deserializing...`,
@@ -40,18 +40,18 @@ export default function deserializerMiddleware(
 
   if (Specifications[context.operation] === undefined) {
     logger.warn(
-      `DeserializerMiddleware: cannot find deserializer for operation ${
+      `DeserializerMiddleware: Cannot find deserializer for operation ${
         Operation[context.operation]
       }`
     );
   }
 
-  deserialize(req, Specifications[context.operation])
-    .then((parameters) => {
+  deserialize(context, req, Specifications[context.operation], logger)
+    .then(parameters => {
       context.handlerParameters = parameters;
     })
     .then(next)
-    .catch((err) => {
+    .catch(err => {
       const deserializationError = new DeserializationError(err.message);
       deserializationError.stack = err.stack;
       next(deserializationError);

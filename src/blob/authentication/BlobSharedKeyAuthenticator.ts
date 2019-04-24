@@ -1,5 +1,3 @@
-import { createHmac } from "crypto";
-
 import IAccountDataStore from "../../common/IAccountDataStore";
 import ILogger from "../../common/ILogger";
 import BlobStorageContext from "../context/BlobStorageContext";
@@ -7,7 +5,7 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import Context from "../generated/Context";
 import IRequest from "../generated/IRequest";
 import { HeaderConstants } from "../utils/constants";
-import { getURLQueries } from "../utils/utils";
+import { computeHMACSHA256, getURLQueries } from "../utils/utils";
 import IAuthenticator from "./IAuthenticator";
 
 export default class BlobSharedKeyAuthenticator implements IAuthenticator {
@@ -16,19 +14,23 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
     private readonly logger: ILogger
   ) {}
 
-  public validate(req: IRequest, context: Context): boolean | undefined {
+  public async validate(
+    req: IRequest,
+    context: Context
+  ): Promise<boolean | undefined> {
     const blobContext = new BlobStorageContext(context);
     const account = blobContext.account!;
 
-    this.logger.verbose(
-      `BlobSharedKeyAuthenticator:validate()`,
+    this.logger.info(
+      `BlobSharedKeyAuthenticator:validate() Start validation against account shared key authentication.`,
       blobContext.contextID
     );
 
     const authHeaderValue = req.getHeader(HeaderConstants.AUTHORIZATION);
     if (authHeaderValue === undefined) {
-      this.logger.verbose(
-        `BlobSharedKeyAuthenticator:validate() Request doesn't include valid authentication header.`,
+      this.logger.info(
+        // tslint:disable-next-line:max-line-length
+        `BlobSharedKeyAuthenticator:validate() Request doesn't include valid authentication header. Skip shared key authentication.`,
         blobContext.contextID
       );
       return undefined;
@@ -37,6 +39,10 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
     // TODO: Make following async
     const accountProperties = this.dataStore.getAccount(account);
     if (accountProperties === undefined) {
+      this.logger.error(
+        `BlobSharedKeyAuthenticator:validate() Invalid storage account ${account}.`,
+        blobContext.contextID
+      );
       throw StorageErrorFactory.getInvalidOperation(
         blobContext.contextID!,
         "Invalid storage account."
@@ -60,7 +66,11 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       ].join("\n") +
       "\n" +
       this.getCanonicalizedHeadersString(req) +
-      this.getCanonicalizedResourceString(req, account);
+      this.getCanonicalizedResourceString(
+        req,
+        account,
+        blobContext.authenticationPath
+      );
 
     this.logger.info(
       `BlobSharedKeyAuthenticator:validate() [STRING TO SIGN]:${JSON.stringify(
@@ -69,47 +79,48 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       blobContext.contextID
     );
 
-    const signature1 = this.computeHMACSHA256(
-      stringToSign,
-      accountProperties.key1
-    );
+    const signature1 = computeHMACSHA256(stringToSign, accountProperties.key1);
     const authValue1 = `SharedKey ${account}:${signature1}`;
+    this.logger.info(
+      `BlobSharedKeyAuthenticator:validate() Calculated authentication header based on key1: ${authValue1}`,
+      blobContext.contextID
+    );
     if (authHeaderValue === authValue1) {
+      this.logger.info(
+        `BlobSharedKeyAuthenticator:validate() Signature 1 matched.`,
+        blobContext.contextID
+      );
       return true;
     }
 
-    const signature2 = this.computeHMACSHA256(
-      stringToSign,
-      accountProperties.key1
-    );
-    const authValue2 = `SharedKey ${account}:${signature2}`;
-    if (authHeaderValue === authValue2) {
-      return true;
+    if (accountProperties.key2) {
+      const signature2 = computeHMACSHA256(
+        stringToSign,
+        accountProperties.key2
+      );
+      const authValue2 = `SharedKey ${account}:${signature2}`;
+      this.logger.info(
+        `BlobSharedKeyAuthenticator:validate() Calculated authentication header based on key2: ${authValue2}`,
+        blobContext.contextID
+      );
+      if (authHeaderValue === authValue2) {
+        this.logger.info(
+          `BlobSharedKeyAuthenticator:validate() Signature 2 matched.`,
+          blobContext.contextID
+        );
+        return true;
+      }
     }
 
     // this.logger.info(`[URL]:${req.getUrl()}`);
     // this.logger.info(`[HEADERS]:${req.getHeaders().toString()}`);
     // this.logger.info(`[KEY]: ${request.headers.get(HeaderConstants.AUTHORIZATION)}`);
 
-    this.logger.verbose(
+    this.logger.info(
       `BlobSharedKeyAuthenticator:validate() Validation failed.`,
       blobContext.contextID
     );
     return false;
-  }
-
-  /**
-   * Generates a hash signature for an HTTP request or for a SAS.
-   *
-   * @param {string} stringToSign
-   * @param {key} key
-   * @returns {string}
-   * @memberof SharedKeyCredential
-   */
-  private computeHMACSHA256(stringToSign: string, key: Buffer): string {
-    return createHmac("sha256", key)
-      .update(stringToSign, "utf8")
-      .digest("base64");
   }
 
   /**
@@ -183,17 +194,6 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       }
     );
 
-    // Remove duplicate headers
-    // headersArray = headersArray.filter((value, index, array) => {
-    //   if (
-    //     index > 0 &&
-    //     value.name.toLowerCase() === array[index - 1].name.toLowerCase()
-    //   ) {
-    //     return false;
-    //   }
-    //   return true;
-    // });
-
     let canonicalizedHeadersStringToSign: string = "";
     headersArray.forEach(header => {
       canonicalizedHeadersStringToSign += `${header.name
@@ -214,9 +214,15 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
    */
   private getCanonicalizedResourceString(
     request: IRequest,
-    account: string
+    account: string,
+    authenticationPath?: string
   ): string {
-    const path = request.getPath() || "/";
+    let path = request.getPath() || "/";
+
+    // For secondary account, we use account name (without "-secondary") for the path
+    if (authenticationPath !== undefined) {
+      path = authenticationPath;
+    }
 
     let canonicalizedResourceString: string = "";
     canonicalizedResourceString += `/${account}${path}`;

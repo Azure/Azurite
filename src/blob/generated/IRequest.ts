@@ -20,4 +20,5 @@ export default interface IRequest {
   getHeader(field: string): string | undefined;
   getHeaders(): { [header: string]: string | string[] | undefined };
   getQuery(key: string): string | undefined;
+  getProtocol(): string;
 }

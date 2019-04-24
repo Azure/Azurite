@@ -46,4 +46,8 @@ export default class ExpressRequestAdapter implements IRequest {
   public getQuery(key: string): string | undefined {
     return this.req.query[key];
   }
+
+  public getProtocol(): string {
+    return this.req.protocol;
+  }
 }

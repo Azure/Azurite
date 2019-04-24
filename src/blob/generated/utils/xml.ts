@@ -21,7 +21,8 @@ export function parseXML(
     explicitCharkey: false,
     explicitRoot: false,
     preserveChildrenOrder: explicitChildrenWithOrder,
-    explicitChildren: explicitChildrenWithOrder
+    explicitChildren: explicitChildrenWithOrder,
+    emptyTag: undefined
   });
   return new Promise((resolve, reject) => {
     xmlParser.parseString(str, (err?: Error, res?: any) => {

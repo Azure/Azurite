@@ -345,7 +345,7 @@ const containerGetAccessPolicyOperationSpec: msRest.OperationSpec = {
     200: {
       bodyMapper: {
         xmlElementName: "SignedIdentifier",
-        serializedName: "parsedResponse",
+        serializedName: "SignedIdentifiers",
         type: {
           name: "Sequence",
           element: {
@@ -715,7 +715,7 @@ const blobDownloadOperationSpec: msRest.OperationSpec = {
   responses: {
     200: {
       bodyMapper: {
-        serializedName: "parsedResponse",
+        serializedName: "Stream",
         type: {
           name: "Stream"
         }
@@ -724,7 +724,7 @@ const blobDownloadOperationSpec: msRest.OperationSpec = {
     },
     206: {
       bodyMapper: {
-        serializedName: "parsedResponse",
+        serializedName: "Stream",
         type: {
           name: "Stream"
         }

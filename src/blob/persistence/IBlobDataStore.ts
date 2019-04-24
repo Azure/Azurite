@@ -219,13 +219,15 @@ export interface IBlobDataStore extends IDataStore {
    * @param {string} account
    * @param {string} container
    * @param {string} blob
+   * @param {string} [snapshot]
    * @returns {(Promise<T | undefined>)}
    * @memberof IBlobDataStore
    */
   getBlob<T extends BlobModel>(
     account: string,
     container: string,
-    blob: string
+    blob: string,
+    snapshot?: string
   ): Promise<T | undefined>;
 
   /**

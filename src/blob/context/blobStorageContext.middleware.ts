@@ -1,8 +1,9 @@
 import { NextFunction, Request, Response } from "express";
+import uuid from "uuid/v4";
 
 import logger from "../../common/Logger";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
-import { DEFAULT_CONTEXT_PATH } from "../utils/constants";
+import { DEFAULT_CONTEXT_PATH, SECONDARY_SUFFIX } from "../utils/constants";
 import BlobStorageContext from "./BlobStorageContext";
 
 /**
@@ -21,8 +22,7 @@ export default function blobStorageContextMiddleware(
   const blobContext = new BlobStorageContext(res.locals, DEFAULT_CONTEXT_PATH);
   blobContext.startTime = new Date();
 
-  // TODO: Use GUID for a server request ID
-  const requestID = blobContext.startTime.getTime().toString();
+  const requestID = uuid();
   blobContext.xMsRequestID = requestID;
 
   logger.info(
@@ -36,23 +36,31 @@ export default function blobStorageContextMiddleware(
     requestID
   );
 
-  const parts = extractStoragePartsFromPath(req.path);
-  const account = parts[0];
-  const container = parts[1];
-  const blob = parts[2];
+  const [account, container, blob, isSecondary] = extractStoragePartsFromPath(
+    req.path
+  );
 
   blobContext.account = account;
   blobContext.container = container;
   blobContext.blob = blob;
+  blobContext.isSecondary = isSecondary;
 
   // Emulator's URL pattern is like http://hostname:port/account/container
   // Create a router to exclude account name from req.path, as url path in swagger doesn't include account
   // Exclude account name from req.path for dispatchMiddleware
-  blobContext.dispatchPath = container
+  blobContext.dispatchPattern = container
     ? blob
       ? `/container/blob`
       : `/container`
     : "/";
+
+  blobContext.authenticationPath = req.path;
+  if (isSecondary) {
+    const pos = blobContext.authenticationPath.search(SECONDARY_SUFFIX);
+    blobContext.authenticationPath =
+      blobContext.authenticationPath.substr(0, pos) +
+      blobContext.authenticationPath.substr(pos + SECONDARY_SUFFIX.length);
+  }
 
   if (!account) {
     const handlerError = StorageErrorFactory.getInvalidQueryParameterValue(
@@ -80,14 +88,20 @@ export default function blobStorageContextMiddleware(
  * Extract storage account, container, and blob from URL path.
  *
  * @param {string} path
- * @returns {([string | undefined, string | undefined, string | undefined])}
+ * @returns {([string | undefined, string | undefined, string | undefined, boolean | undefined])}
  */
 function extractStoragePartsFromPath(
   path: string
-): [string | undefined, string | undefined, string | undefined] {
+): [
+  string | undefined,
+  string | undefined,
+  string | undefined,
+  boolean | undefined
+] {
   let account;
   let container;
   let blob;
+  let isSecondary = false;
 
   const decodedPath = decodeURIComponent(path);
   const normalizedPath = decodedPath.startsWith("/")
@@ -103,5 +117,10 @@ function extractStoragePartsFromPath(
     .join("/")
     .replace(/\\/g, "/"); // Azure Storage Server will replace "\" with "/" in the blob names
 
-  return [account, container, blob];
+  if (account.endsWith(SECONDARY_SUFFIX)) {
+    account = account.substr(0, account.length - SECONDARY_SUFFIX.length);
+    isSecondary = true;
+  }
+
+  return [account, container, blob, isSecondary];
 }

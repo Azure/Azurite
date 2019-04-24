@@ -11,9 +11,9 @@ import IBlobDataStore, { BlobModel } from "../persistence/IBlobDataStore";
 import { API_VERSION } from "../utils/constants";
 import {
   deserializePageBlobRangeHeader,
-  deserializeRangeHeader
+  deserializeRangeHeader,
+  getContainerGetAccountInfoResponse
 } from "../utils/utils";
-import { getContainerGetAccountInfoResponse } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
@@ -1202,7 +1202,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     // }
 
     const response: Models.BlobDownloadResponse = {
-      statusCode: 200,
+      statusCode: rangesParts[1] === Infinity ? 200 : 206,
       body,
       metadata: blob.metadata,
       eTag: blob.properties.etag,

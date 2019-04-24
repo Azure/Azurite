@@ -1,5 +1,4 @@
 import BlobStorageContext from "../context/BlobStorageContext";
-import NotImplementedError from "../errors/NotImplementedError";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IServiceHandler from "../generated/handlers/IServiceHandler";
@@ -146,7 +145,17 @@ export default class ServiceHandler extends BaseHandler
     options: Models.ServiceGetStatisticsOptionalParams,
     context: Context
   ): Promise<Models.ServiceGetStatisticsResponse> {
-    throw new NotImplementedError(context.contextID);
+    const response: Models.ServiceGetStatisticsResponse = {
+      statusCode: 200,
+      requestId: context.contextID,
+      version: API_VERSION,
+      date: context.startTime,
+      geoReplication: {
+        status: Models.GeoReplicationStatusType.Live,
+        lastSyncTime: context.startTime!
+      }
+    };
+    return response;
   }
 
   /**

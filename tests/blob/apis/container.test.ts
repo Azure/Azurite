@@ -11,6 +11,7 @@ import assert = require("assert");
 
 import BlobConfiguration from "../../../src/blob/BlobConfiguration";
 import Server from "../../../src/blob/BlobServer";
+import { configLogger } from "../../../src/common/Logger";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
@@ -18,6 +19,9 @@ import {
   rmRecursive,
   sleep
 } from "../../testutils";
+
+// Set to true enable debug log
+configLogger(false);
 
 describe("ContainerAPIs", () => {
   // TODO: Create a server factory as tests utils
@@ -380,7 +384,7 @@ describe("ContainerAPIs", () => {
       blobURLs.push(blobURL);
     }
 
-    const inputmarker = "";
+    const inputmarker = undefined;
     const result = await containerURL.listBlobFlatSegment(
       Aborter.none,
       inputmarker

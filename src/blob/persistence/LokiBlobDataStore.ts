@@ -78,7 +78,7 @@ interface IExtentModel {
  * -- BLOBS_COLLECTION       // Collection contains all blobs
  *                           // Default collection name is $BLOBS_COLLECTION$
  *                           // Each document maps to a blob
- *                           // Unique document properties: accountName, containerName, (blob)name
+ *                           // Unique document properties: accountName, containerName, (blob)name, snapshot
  * -- BLOCKS_COLLECTION      // Block blob blocks collection includes all UNCOMMITTED blocks
  *                           // Unique document properties: accountName, containerName, blobName, name, isCommitted
  * -- EXTENTS_COLLECTION     // Collections maintain extents information, including extentID, mapped local file path
@@ -428,19 +428,22 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @param {string} account
    * @param {string} container
    * @param {string} blob
+   * @param {string} [snapshot=""]
    * @returns {(Promise<T | undefined>)}
-   * @memberof IBlobDataStore
+   * @memberof LokiBlobDataStore
    */
   public async getBlob<T extends BlobModel>(
     account: string,
     container: string,
-    blob: string
+    blob: string,
+    snapshot: string = ""
   ): Promise<T | undefined> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const blobDoc = coll.findOne({
       accountName: account,
       containerName: container,
-      name: blob
+      name: blob,
+      snapshot
     });
 
     if (blobDoc) {
@@ -448,9 +451,10 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       blobModel.properties.contentMD5 = this.restoreUint8Array(
         blobModel.properties.contentMD5
       );
+      return blobDoc;
+    } else {
+      return undefined;
     }
-
-    return blobDoc;
   }
 
   /**

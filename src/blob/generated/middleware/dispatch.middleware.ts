@@ -47,7 +47,7 @@ export default function dispatchMiddleware(
       const res = isRequestAgainstOperation(
         req,
         Specifications[operation],
-        context.dispatchPath
+        context.dispatchPattern
       );
       if (res[0] && res[1] > conditionsMet) {
         context.operation = operation;
@@ -83,7 +83,7 @@ export default function dispatchMiddleware(
 function isRequestAgainstOperation(
   req: IRequest,
   spec: msRest.OperationSpec,
-  dispatchPath?: string
+  dispatchPathPattern?: string
 ): [boolean, number] {
   let metConditionsNum = 0;
   if (req === undefined || spec === undefined) {
@@ -104,7 +104,7 @@ function isRequestAgainstOperation(
   if (
     !isURITemplateMatch(
       // Use dispatch path with priority
-      dispatchPath !== undefined ? dispatchPath : req.getPath(),
+      dispatchPathPattern !== undefined ? dispatchPathPattern : req.getPath(),
       path
     )
   ) {
@@ -162,7 +162,8 @@ function isRequestAgainstOperation(
 
       if (
         headerParameter.mapper.isConstant &&
-        headerParameter.mapper.defaultValue !== headerValue
+        `${headerParameter.mapper.defaultValue || ""}`.toLowerCase() !==
+          headerValue.toLowerCase()
       ) {
         return [false, metConditionsNum];
       }
