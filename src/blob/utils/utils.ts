@@ -2,6 +2,7 @@ import { createHash, createHmac } from "crypto";
 import etag from "etag";
 import { createWriteStream, PathLike } from "fs";
 import { parse } from "url";
+
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import {
@@ -100,11 +101,7 @@ export function getURLQueries(url: string): { [key: string]: string } {
   querySubStrings = querySubStrings.filter((value: string) => {
     const indexOfEqual = value.indexOf("=");
     const lastIndexOfEqual = value.lastIndexOf("=");
-    return (
-      indexOfEqual > 0 &&
-      indexOfEqual === lastIndexOfEqual &&
-      lastIndexOfEqual < value.length - 1
-    );
+    return indexOfEqual > 0 && indexOfEqual === lastIndexOfEqual;
   });
 
   const queries: { [key: string]: string } = {};

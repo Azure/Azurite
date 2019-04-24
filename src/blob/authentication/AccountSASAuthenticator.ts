@@ -67,7 +67,7 @@ export default class AccountSASAuthenticator implements IAuthenticator {
     const values = this.getAccountSASSignatureValuesFromRequest(req);
     if (values === undefined) {
       this.logger.info(
-        `AccountSASAuthenticator:validate() failed to get valid account SAS values from request.`,
+        `AccountSASAuthenticator:validate() Failed to get valid account SAS values from request.`,
         context.contextID
       );
       return false;

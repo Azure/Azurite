@@ -1,21 +1,24 @@
 import * as msRest from "@azure/ms-rest-js";
 
 import * as Mappers from "../artifacts/mappers";
-import { IHandlerParameters } from "../Context";
+import Context, { IHandlerParameters } from "../Context";
 import IRequest from "../IRequest";
 import IResponse from "../IResponse";
+import ILogger from "./ILogger";
 import { parseXML, stringifyXML } from "./xml";
 
 export declare type ParameterPath =
   | string
   | string[]
   | {
-    [propertyName: string]: ParameterPath;
-  };
+      [propertyName: string]: ParameterPath;
+    };
 
 export async function deserialize(
+  context: Context,
   req: IRequest,
-  spec: msRest.OperationSpec
+  spec: msRest.OperationSpec,
+  logger: ILogger
 ): Promise<IHandlerParameters> {
   const parameters: IHandlerParameters = {};
 
@@ -66,7 +69,7 @@ export async function deserialize(
     const headerCollectionPrefix:
       | string
       | undefined = (headerParameter.mapper as msRest.DictionaryMapper)
-        .headerCollectionPrefix;
+      .headerCollectionPrefix;
     if (headerCollectionPrefix) {
       const dictionary: any = {};
       const headers = req.getHeaders();
@@ -132,6 +135,11 @@ export async function deserialize(
     // const isRequestWithStream = false;
 
     const body = await readRequestIntoText(req);
+    logger.debug(
+      `deserialize(): Raw request body string is ${body}`,
+      context.contextID
+    );
+
     req.setBody(body);
     let parsedBody: object = {};
     if (isRequestWithJSON) {
@@ -209,9 +217,11 @@ function setParametersValue(
 }
 
 export async function serialize(
+  context: Context,
   res: IResponse,
   spec: msRest.OperationSpec,
-  handlerResponse: any
+  handlerResponse: any,
+  logger: ILogger
 ): Promise<void> {
   const statusCodeInResponse: number = handlerResponse.statusCode;
   res.setStatusCode(statusCodeInResponse);
@@ -290,6 +300,10 @@ export async function serialize(
 
     // TODO: Should send response in a serializer?
     res.getBodyStream().write(xmlBody);
+    logger.debug(
+      `serialize(): Raw response body string is ${xmlBody}`,
+      context.contextID
+    );
   }
 
   // Serialize stream body

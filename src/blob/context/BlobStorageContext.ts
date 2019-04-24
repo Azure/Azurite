@@ -15,6 +15,14 @@ export default class BlobStorageContext extends Context
     this.context.account = account;
   }
 
+  public set isSecondary(isSecondary: boolean | undefined) {
+    this.context.isSecondary = isSecondary;
+  }
+
+  public get isSecondary(): boolean | undefined {
+    return this.context.isSecondary;
+  }
+
   public get container(): string | undefined {
     return this.context.container;
   }
@@ -29,6 +37,14 @@ export default class BlobStorageContext extends Context
 
   public set blob(blob: string | undefined) {
     this.context.blob = blob;
+  }
+
+  public get authenticationPath(): string | undefined {
+    return this.context.authenticationPath;
+  }
+
+  public set authenticationPath(path: string | undefined) {
+    this.context.authenticationPath = path;
   }
 
   public get xMsRequestID(): string | undefined {

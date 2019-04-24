@@ -20,7 +20,7 @@ export default function serializerMiddleware(
   context: Context,
   res: IResponse,
   next: NextFunction,
-  logger: ILogger,
+  logger: ILogger
 ): void {
   logger.verbose(
     `SerializerMiddleware: Start serializing...`,
@@ -38,13 +38,20 @@ export default function serializerMiddleware(
 
   if (Specifications[context.operation] === undefined) {
     logger.warn(
-      `SerializerMiddleware: cannot find serializer for operation ${
+      `SerializerMiddleware: Cannot find serializer for operation ${
         Operation[context.operation]
-      }`
+      }`,
+      context.contextID
     );
   }
 
-  serialize(res, Specifications[context.operation], context.handlerResponses)
+  serialize(
+    context,
+    res,
+    Specifications[context.operation],
+    context.handlerResponses,
+    logger
+  )
     .then(next)
     .catch(next);
 }

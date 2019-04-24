@@ -57,3 +57,5 @@ export const HeaderConstants = {
   X_MS_CLIENT_REQUEST_ID: "x-ms-client-request-id",
   X_MS_DATE: "x-ms-date"
 };
+
+export const SECONDARY_SUFFIX = "-secondary";

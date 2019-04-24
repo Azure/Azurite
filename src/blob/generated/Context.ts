@@ -93,12 +93,12 @@ export default class Context {
     return this.context.request;
   }
 
-  public get dispatchPath(): string | undefined {
-    return this.context.dispatchPath;
+  public get dispatchPattern(): string | undefined {
+    return this.context.dispatchPattern;
   }
 
-  public set dispatchPath(path: string | undefined) {
-    this.context.dispatchPath = path;
+  public set dispatchPattern(path: string | undefined) {
+    this.context.dispatchPattern = path;
   }
 
   public set response(response: IResponse | undefined) {
