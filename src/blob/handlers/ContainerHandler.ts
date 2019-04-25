@@ -221,7 +221,7 @@ export default class ContainerHandler extends BaseHandler
   }
 
   /**
-   * get container access policy
+   * Get container access policy
    *
    * @param {Models.ContainerGetAccessPolicyOptionalParams} options
    * @param {Context} context

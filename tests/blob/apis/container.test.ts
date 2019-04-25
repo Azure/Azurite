@@ -21,7 +21,7 @@ import {
 } from "../../testutils";
 
 // Set to true enable debug log
-configLogger(false);
+configLogger(true);
 
 describe("ContainerAPIs", () => {
   // TODO: Create a server factory as tests utils
@@ -432,7 +432,7 @@ describe("ContainerAPIs", () => {
   });
 
   // Skip since getAccessPolicy can't get signedIdentifiers now
-  it.skip("setAccessPolicy_signedIdentifiers", async () => {
+  it("setAccessPolicy_signedIdentifiers", async () => {
     const access = "container";
     const containerAcl = [
       {

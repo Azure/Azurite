@@ -212,13 +212,15 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       );
     }
 
-    // Check 3 special permission requirements
+    // Check special permission requirements
     // If block blob exists, then permission must be Write only
     // If page blob exists, then permission must be Write only
-    // If destination blob exists, then permission must be Write only
+    // If append blob exists, then permission must be Write only
+    // If copy destination blob exists, then permission must be Write only
     if (
       operation === Operation.BlockBlob_Upload ||
       operation === Operation.PageBlob_Create ||
+      operation === Operation.AppendBlob_Create ||
       operation === Operation.Blob_StartCopyFromURL
     ) {
       this.logger.info(

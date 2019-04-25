@@ -2,11 +2,6 @@ import { computeHMACSHA256, truncatedISO8061Date } from "../utils/utils";
 import { SASProtocol } from "./IAccountSASSignatureValues";
 import { IIPRange, ipRangeToString } from "./IIPRange";
 
-export enum BlobSASResourceType {
-  Container = "c",
-  Blob = "b"
-}
-
 /**
  * IBlobSASSignatureValues is used to help generating Blob service SAS tokens for containers or blobs.
  *
@@ -60,10 +55,10 @@ export interface IBlobSASSignatureValues {
   /**
    * Optional. IP ranges allowed in this SAS.
    *
-   * @type {IIPRange}
+   * @type {IIPRange | string}
    * @memberof IBlobSASSignatureValues
    */
-  ipRange?: IIPRange;
+  ipRange?: IIPRange | string;
 
   /**
    * The name of the container the SAS user may access.
@@ -186,7 +181,9 @@ export function generateBlobSASSignature(
     ),
     blobSASSignatureValues.identifier, // TODO: ? blobSASSignatureValues.identifier : "",
     blobSASSignatureValues.ipRange
-      ? ipRangeToString(blobSASSignatureValues.ipRange)
+      ? typeof blobSASSignatureValues.ipRange === "string"
+        ? blobSASSignatureValues.ipRange
+        : ipRangeToString(blobSASSignatureValues.ipRange)
       : "",
     blobSASSignatureValues.protocol ? blobSASSignatureValues.protocol : "",
     version,

@@ -287,10 +287,21 @@ export async function serialize(
     responseSpec.bodyMapper &&
     responseSpec.bodyMapper.type.name !== "Stream"
   ) {
-    const body = spec.serializer.serialize(
+    let body = spec.serializer.serialize(
       responseSpec.bodyMapper!,
       handlerResponse
     );
+
+    // When root element is sequence type, should wrap with because serialize() doesn't do that
+    if (responseSpec.bodyMapper!.type.name === "Sequence") {
+      const sequenceElementName = responseSpec.bodyMapper!.xmlElementName;
+      if (sequenceElementName !== undefined) {
+        const newBody = {} as any;
+        newBody[sequenceElementName] = body;
+        body = newBody;
+      }
+    }
+
     const xmlBody = stringifyXML(body, {
       rootName:
         responseSpec.bodyMapper!.xmlName ||
