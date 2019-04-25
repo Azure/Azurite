@@ -143,6 +143,10 @@ export default class ServiceHandler extends BaseHandler
       properties = { ...this.defaultServiceProperties, accountName };
     }
 
+    if (properties.cors === undefined) {
+      properties.cors = [];
+    }
+
     const response: Models.ServiceGetPropertiesResponse = {
       ...properties,
       requestId: context.contextID,
