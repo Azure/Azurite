@@ -344,4 +344,22 @@ export default class StorageErrorFactory {
       contextID
     );
   }
+
+  public static getCopyIdMismatch(contextID: string): StorageError {
+    return new StorageError(
+      409,
+      "CopyIdMismatch",
+      "The specified copy ID did not match the copy ID for the pending copy operation.",
+      contextID
+    );
+  }
+
+  public static getNoPendingCopyOperation(contextID: string): StorageError {
+    return new StorageError(
+      409,
+      "NoPendingCopyOperation",
+      "There is currently no pending copy operation.",
+      contextID
+    );
+  }
 }
