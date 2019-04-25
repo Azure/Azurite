@@ -7,7 +7,9 @@ import logger from "../common/Logger";
 import { RequestListener } from "../common/ServerBase";
 import AccountSASAuthenticator from "./authentication/AccountSASAuthenticator";
 import AuthenticationMiddlewareFactory from "./authentication/AuthenticationMiddlewareFactory";
+import BlobSASAuthenticator from "./authentication/BlobSASAuthenticator";
 import BlobSharedKeyAuthenticator from "./authentication/BlobSharedKeyAuthenticator";
+import PublicAccessAuthenticator from "./authentication/PublicAccessAuthenticator";
 import blobStorageContextMiddleware from "./context/blobStorageContext.middleware";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
 import IHandlers from "./generated/handlers/IHandlers";
@@ -90,12 +92,14 @@ export default class BlobRequestListenerFactory
     );
     app.use(
       authenticationMiddlewareFactory.createAuthenticationMiddleware([
+        new PublicAccessAuthenticator(this.dataStore, logger),
         new BlobSharedKeyAuthenticator(this.accountDataStore, logger),
         new AccountSASAuthenticator(
           this.accountDataStore,
           this.dataStore,
           logger
-        )
+        ),
+        new BlobSASAuthenticator(this.accountDataStore, this.dataStore, logger)
       ])
     );
 

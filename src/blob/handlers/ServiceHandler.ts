@@ -2,6 +2,7 @@ import BlobStorageContext from "../context/BlobStorageContext";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IServiceHandler from "../generated/handlers/IServiceHandler";
+import { parseXML } from "../generated/utils/xml";
 import { API_VERSION } from "../utils/constants";
 import { getContainerGetAccountInfoResponse } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -77,12 +78,22 @@ export default class ServiceHandler extends BaseHandler
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
 
+    // TODO: deserializor has a bug that when cors is undefined,
+    // it will serialize it to empty array instead of undefined
+    const body = blobCtx.request!.getBody();
+    const parsedBody = await parseXML(body || "");
+    if (parsedBody.cors === undefined && parsedBody.Cors === undefined) {
+      storageServiceProperties.cors = undefined;
+    }
+
     let properties = await this.dataStore.getServiceProperties(accountName);
     if (!properties) {
       properties = { ...storageServiceProperties, accountName };
     } else {
-      const requestCors = storageServiceProperties.cors || [];
-      properties.cors = requestCors.length > 0 ? requestCors : properties.cors;
+      properties.cors =
+        storageServiceProperties.cors === undefined
+          ? properties.cors
+          : storageServiceProperties.cors;
       properties.defaultServiceVersion =
         storageServiceProperties.defaultServiceVersion ||
         properties.defaultServiceVersion;
@@ -130,6 +141,10 @@ export default class ServiceHandler extends BaseHandler
     let properties = await this.dataStore.getServiceProperties(accountName);
     if (!properties) {
       properties = { ...this.defaultServiceProperties, accountName };
+    }
+
+    if (properties.cors === undefined) {
+      properties.cors = [];
     }
 
     const response: Models.ServiceGetPropertiesResponse = {

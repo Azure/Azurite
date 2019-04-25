@@ -34,7 +34,6 @@ export const AccessPolicy: msRest.CompositeMapper = {
     modelProperties: {
       start: {
         xmlName: "Start",
-        required: true,
         serializedName: "Start",
         type: {
           name: "String"

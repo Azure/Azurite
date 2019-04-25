@@ -258,10 +258,16 @@ export interface IBlobDataStore extends IDataStore {
    * @param {string} account
    * @param {string} container
    * @param {string} blob
+   * @param {string} [snapshot]
    * @returns {Promise<void>}
    * @memberof IBlobDataStore
    */
-  deleteBlob(account: string, container: string, blob: string): Promise<void>;
+  deleteBlob(
+    account: string,
+    container: string,
+    blob: string,
+    snapshot?: string
+  ): Promise<void>;
 
   /**
    * Update blob block item in persistency layer. Will create if block doesn't exist.
@@ -401,17 +407,6 @@ export interface IBlobDataStore extends IDataStore {
    * @memberof IBlobDataStore
    */
   iteratorReferredExtents(): AsyncIterator<IPersistencyChunk[]>;
-
-  /**
-   * Create a snapshot of a blob in the blobs collection
-   * Returned object will contain a snapshot property which can be used to find / get the snapshot
-   *
-   * @template T
-   * @param {T} blob
-   * @returns {Promise<T>}
-   * @memberof IBlobDataStore
-   */
-  snapshotBlob<T extends BlobModel>(blob: T): Promise<T>;
 }
 
 export default IBlobDataStore;

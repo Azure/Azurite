@@ -51,6 +51,7 @@ export class OperationAccountSASPermission {
 }
 
 // See https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-an-account-sas
+// TODO: Check all required operations
 const OPERATION_ACCOUNT_SAS_PERMISSIONS = new Map<
   Operation,
   OperationAccountSASPermission
@@ -364,7 +365,7 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   new OperationAccountSASPermission(
     AccountSASService.Blob,
     AccountSASResourceType.Object,
-    // TODO: If destination is an existing blob, create permission is not enough
+    // If destination is an existing blob, create permission is not enough
     AccountSASPermission.Write + AccountSASPermission.Create
   )
 );

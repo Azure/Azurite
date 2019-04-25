@@ -111,6 +111,8 @@ export interface IAccountSASSignatureValues {
  * @see https://docs.microsoft.com/en-us/rest/api/storageservices/constructing-an-account-sas
  *
  * @param {SharedKeyCredential} sharedKeyCredential
+ * @param {string} accountName
+ * @param {Buffer} sharedKey
  * @returns {string}
  * @memberof IAccountSASSignatureValues
  */

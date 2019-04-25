@@ -1,6 +1,8 @@
+import { URL } from "url";
 import uuid from "uuid/v4";
 
 import BlobStorageContext from "../context/BlobStorageContext";
+import { extractStoragePartsFromPath } from "../context/blobStorageContext.middleware";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
@@ -12,7 +14,8 @@ import { API_VERSION } from "../utils/constants";
 import {
   deserializePageBlobRangeHeader,
   deserializeRangeHeader,
-  getContainerGetAccountInfoResponse
+  getContainerGetAccountInfoResponse,
+  newEtag
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -206,13 +209,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobDownloadOptionalParams,
     context: Context
   ): Promise<Models.BlobDownloadResponse> {
-    const blob = await this.getSimpleBlobFromStorage(context);
+    const blob = await this.getSimpleBlobFromStorage(context, options.snapshot);
 
-    BlobHandler.checkLeaseOnReadBlob(
-      context,
-      blob,
-      options.leaseAccessConditions
-    );
+    if (blob.snapshot === "") {
+      BlobHandler.checkLeaseOnReadBlob(
+        context,
+        blob,
+        options.leaseAccessConditions
+      );
+    }
 
     if (blob.properties.blobType === Models.BlobType.BlockBlob) {
       return this.downloadBlockBlob(options, context, blob);
@@ -238,13 +243,16 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobGetPropertiesOptionalParams,
     context: Context
   ): Promise<Models.BlobGetPropertiesResponse> {
-    const blob = await this.getSimpleBlobFromStorage(context);
+    const blob = await this.getSimpleBlobFromStorage(context, options.snapshot);
 
-    BlobHandler.checkLeaseOnReadBlob(
-      context,
-      blob,
-      options.leaseAccessConditions
-    );
+    // TODO: Lease for a snapshot blob?
+    if (blob.snapshot === "") {
+      BlobHandler.checkLeaseOnReadBlob(
+        context,
+        blob,
+        options.leaseAccessConditions
+      );
+    }
 
     const response: Models.BlobGetPropertiesResponse = {
       statusCode: 200,
@@ -275,19 +283,22 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobDeleteMethodOptionalParams,
     context: Context
   ): Promise<Models.BlobDeleteResponse> {
-    const blob = await this.getSimpleBlobFromStorage(context);
+    const blob = await this.getSimpleBlobFromStorage(context, options.snapshot);
 
     // Check Lease status
-    BlobHandler.checkBlobLeaseOnWriteBlob(
-      context,
-      blob,
-      options.leaseAccessConditions
-    );
+    if (blob.snapshot === "") {
+      BlobHandler.checkBlobLeaseOnWriteBlob(
+        context,
+        blob,
+        options.leaseAccessConditions
+      );
+    }
 
     await this.dataStore.deleteBlob(
       blob.accountName,
       blob.containerName,
-      blob.name
+      blob.name,
+      blob.snapshot
     );
 
     const response: Models.BlobDeleteResponse = {
@@ -301,7 +312,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * undelete blob
+   * Undelete blob
    *
    * @param {Models.BlobUndeleteOptionalParams} options
    * @param {Context} context
@@ -633,7 +644,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * change lease
+   * Change lease.
    *
    * @param {string} leaseId
    * @param {string} proposedLeaseId
@@ -651,11 +662,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const blobCtx = new BlobStorageContext(context);
     let blob: BlobModel;
 
-    try {
-      blob = await this.getSimpleBlobFromStorage(context);
-    } catch (error) {
-      throw error;
-    }
+    blob = await this.getSimpleBlobFromStorage(context);
 
     // check the lease action aligned with current lease state.
     if (blob.snapshot !== "") {
@@ -702,7 +709,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * break lease
+   * Break lease.
    *
    * @param {Models.BlobBreakLeaseOptionalParams} options
    * @param {Context} context
@@ -718,11 +725,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     let leaseTimeinSecond: number;
     leaseTimeinSecond = 0;
 
-    try {
-      blob = await this.getSimpleBlobFromStorage(context);
-    } catch (error) {
-      throw error;
-    }
+    blob = await this.getSimpleBlobFromStorage(context);
 
     // check the lease action aligned with current lease state.
     if (blob.snapshot !== "") {
@@ -810,8 +813,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * create snapshot
-   * https://docs.microsoft.com/en-us/rest/api/storageservices/snapshot-blob
+   * Create snapshot.
+   *
+   * @see https://docs.microsoft.com/en-us/rest/api/storageservices/snapshot-blob
    *
    * @param {Models.BlobCreateSnapshotOptionalParams} options
    * @param {Context} context
@@ -824,16 +828,40 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   ): Promise<Models.BlobCreateSnapshotResponse> {
     const blob = await this.getSimpleBlobFromStorage(context);
 
-    const snapshotResult = await this.dataStore.snapshotBlob(blob);
+    // Deep clone blob model to snapshot blob model.
+    // TODO: Create a method for deep object copy
+    const snapshotBlob: BlobModel = {
+      name: blob.name,
+      deleted: false,
+      snapshot: context.startTime!.toISOString(),
+      properties: { ...blob.properties },
+      metadata: { ...blob.metadata },
+      accountName: blob.accountName,
+      containerName: blob.containerName,
+      pageRangesInOrder: blob.pageRangesInOrder,
+      isCommitted: blob.isCommitted,
+      leaseduration: blob.leaseduration,
+      leaseId: blob.leaseId,
+      leaseExpireTime: blob.leaseExpireTime,
+      leaseBreakExpireTime: blob.leaseBreakExpireTime,
+      committedBlocksInOrder:
+        blob.committedBlocksInOrder === undefined
+          ? undefined
+          : blob.committedBlocksInOrder.slice(),
+      persistency:
+        blob.persistency === undefined ? undefined : { ...blob.persistency }
+    };
+
+    await this.dataStore.updateBlob(snapshotBlob);
 
     const response: Models.BlobCreateSnapshotResponse = {
       statusCode: 201,
-      eTag: snapshotResult.properties.etag,
-      lastModified: snapshotResult.properties.lastModified,
+      eTag: snapshotBlob.properties.etag,
+      lastModified: snapshotBlob.properties.lastModified,
       requestId: context.contextID,
       date: context.startTime!,
       version: API_VERSION,
-      snapshot: snapshotResult.snapshot
+      snapshot: snapshotBlob.snapshot
     };
 
     return response;
@@ -853,8 +881,128 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobStartCopyFromURLOptionalParams,
     context: Context
   ): Promise<Models.BlobStartCopyFromURLResponse> {
+    const blobContext = new BlobStorageContext(context);
+
     // TODO: Check dest Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
-    throw new NotImplementedError(context.contextID);
+    const url = new URL(copySource);
+    const [
+      sourceAccount,
+      sourceContainer,
+      sourceBlob
+    ] = extractStoragePartsFromPath(url.pathname);
+    const snapshot = url.searchParams.get("snapshot") || "";
+
+    if (
+      sourceAccount !== blobContext.account ||
+      sourceAccount === undefined ||
+      sourceContainer === undefined ||
+      sourceBlob === undefined
+    ) {
+      throw new NotImplementedError(context.contextID);
+    }
+
+    // TODO: Only supports copy from devstoreaccount1, not a complete copy implementation
+    // Extract source account name, container name, blob name and snapshot
+    // If within devstoreaccount1
+    const sourceContainerModel = await this.dataStore.getContainer(
+      sourceAccount,
+      sourceContainer
+    );
+    if (sourceContainerModel === undefined) {
+      // TODO: Check error message
+      throw StorageErrorFactory.getInvalidOperation(
+        context.contextID!,
+        "Source container doesn't exist."
+      );
+    }
+
+    // Get source storage blob model
+    const sourceBlobModel = await this.dataStore.getBlob(
+      sourceAccount,
+      sourceContainer,
+      sourceBlob,
+      snapshot
+    );
+
+    // If source is uncommitted or deleted
+    if (
+      sourceBlobModel === undefined ||
+      sourceBlobModel.deleted ||
+      !sourceBlobModel.isCommitted
+    ) {
+      // TODO: Check error message
+      throw StorageErrorFactory.getInvalidOperation(
+        context.contextID!,
+        "Source blob doesn't exist."
+      );
+    }
+
+    const destContainerModel = await this.dataStore.getContainer(
+      blobContext.account!,
+      blobContext.container!
+    );
+    if (destContainerModel === undefined) {
+      throw StorageErrorFactory.getContainerNotFound(blobContext.contextID!);
+    }
+
+    // Deep clone a copied blob
+    const copiedBlob: BlobModel = {
+      name: blobContext.blob!,
+      deleted: false,
+      snapshot: "",
+      properties: {
+        ...sourceBlobModel.properties,
+        creationTime: context.startTime!,
+        lastModified: context.startTime!,
+        etag: newEtag(),
+        leaseStatus: Models.LeaseStatusType.Unlocked,
+        leaseState: Models.LeaseStateType.Available,
+        leaseDuration: undefined,
+        copyId: uuid(),
+        copyStatus: Models.CopyStatusType.Success,
+        copySource,
+        copyProgress: sourceBlobModel.properties.contentLength
+          ? `${sourceBlobModel.properties.contentLength}`
+          : undefined,
+        copyCompletionTime: context.startTime,
+        copyStatusDescription: undefined,
+        incrementalCopy: false,
+        destinationSnapshot: undefined,
+        deletedTime: undefined,
+        remainingRetentionDays: undefined,
+        archiveStatus: undefined,
+        accessTierChangeTime: undefined
+      },
+      metadata:
+        options.metadata === undefined
+          ? { ...sourceBlobModel.metadata }
+          : options.metadata,
+      accountName: blobContext.account!,
+      containerName: blobContext.container!,
+      pageRangesInOrder: sourceBlobModel.pageRangesInOrder,
+      isCommitted: sourceBlobModel.isCommitted,
+      leaseduration: undefined,
+      leaseId: undefined,
+      leaseExpireTime: undefined,
+      leaseBreakExpireTime: undefined,
+      committedBlocksInOrder: sourceBlobModel.committedBlocksInOrder,
+      persistency: sourceBlobModel.persistency
+    };
+
+    await this.dataStore.updateBlob(copiedBlob);
+
+    const response: Models.BlobStartCopyFromURLResponse = {
+      statusCode: 202,
+      eTag: copiedBlob.properties.etag,
+      lastModified: copiedBlob.properties.lastModified,
+      requestId: context.contextID,
+      version: API_VERSION,
+      date: context.startTime,
+      copyId: copiedBlob.properties.copyId,
+      copyStatus: copiedBlob.properties.copyStatus
+    };
+
+    return response;
   }
 
   /**
@@ -871,7 +1019,24 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobAbortCopyFromURLOptionalParams,
     context: Context
   ): Promise<Models.BlobAbortCopyFromURLResponse> {
-    throw new NotImplementedError(context.contextID);
+    const blob = await this.getSimpleBlobFromStorage(context);
+
+    if (blob.properties.copyId !== copyId) {
+      throw StorageErrorFactory.getCopyIdMismatch(context.contextID!);
+    }
+
+    if (blob.properties.copyStatus === Models.CopyStatusType.Success) {
+      throw StorageErrorFactory.getNoPendingCopyOperation(context.contextID!);
+    }
+
+    const response: Models.BlobAbortCopyFromURLResponse = {
+      statusCode: 204,
+      requestId: context.contextID,
+      version: API_VERSION,
+      date: context.startTime
+    };
+
+    return response;
   }
 
   /**
@@ -891,11 +1056,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const blobCtx = new BlobStorageContext(context);
     let blob: BlobModel;
 
-    try {
-      blob = await this.getSimpleBlobFromStorage(context);
-    } catch (error) {
-      throw error;
-    }
+    blob = await this.getSimpleBlobFromStorage(context);
 
     // check the lease action aligned with current lease state.
     // the API has not lease ID input, but run it on a lease blocked blob will fail with LeaseIdMissing,
@@ -1038,11 +1199,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context,
     blob: BlobModel
   ): Promise<Models.BlobDownloadResponse> {
-    BlobHandler.checkLeaseOnReadBlob(
-      context,
-      blob,
-      options.leaseAccessConditions
-    );
+    if (blob.snapshot === "") {
+      BlobHandler.checkLeaseOnReadBlob(
+        context,
+        blob,
+        options.leaseAccessConditions
+      );
+    }
 
     if (blob.isCommitted === false) {
       throw StorageErrorFactory.getBlobNotFound(context.contextID!);
@@ -1132,11 +1295,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context,
     blob: BlobModel
   ): Promise<Models.BlobDownloadResponse> {
-    BlobHandler.checkLeaseOnReadBlob(
-      context,
-      blob,
-      options.leaseAccessConditions
-    );
+    if (blob.snapshot === "") {
+      BlobHandler.checkLeaseOnReadBlob(
+        context,
+        blob,
+        options.leaseAccessConditions
+      );
+    }
 
     // Deserializer doesn't handle range header currently, manually parse range headers here
     const rangesParts = deserializePageBlobRangeHeader(
@@ -1222,10 +1387,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
    *
    * @private
    * @param {Context} context
+   * @param {string} [snapshot=""]
    * @returns {Promise<BlobModel>}
    * @memberof BlobHandler
    */
-  private async getSimpleBlobFromStorage(context: Context): Promise<BlobModel> {
+  private async getSimpleBlobFromStorage(
+    context: Context,
+    snapshot: string = ""
+  ): Promise<BlobModel> {
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -1242,7 +1411,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     let blob = await this.dataStore.getBlob(
       accountName,
       containerName,
-      blobName
+      blobName,
+      snapshot
     );
     if (!blob) {
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
