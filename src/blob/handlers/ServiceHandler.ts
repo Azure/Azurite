@@ -82,7 +82,7 @@ export default class ServiceHandler extends BaseHandler
     // it will serialize it to empty array instead of undefined
     const body = blobCtx.request!.getBody();
     const parsedBody = await parseXML(body || "");
-    if (parsedBody.cors === undefined || parsedBody.Cors === undefined) {
+    if (parsedBody.cors === undefined && parsedBody.Cors === undefined) {
       storageServiceProperties.cors = undefined;
     }
 
