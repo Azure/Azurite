@@ -401,27 +401,6 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
-   * Create a snapshot of a blob
-   *
-   * @template T
-   * @param {T} blob
-   * @returns {Promise<T>}
-   * @memberof LokiBlobDataStore
-   */
-  public async snapshotBlob<T extends BlobModel>(blob: T): Promise<T> {
-    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-
-    const clean_rec: any = Object.assign({}, blob);
-    clean_rec.snapshot = new Date().toISOString();
-
-    // we need to remove these props to allow insert of new snapshot entry
-    delete clean_rec.meta;
-    delete clean_rec.$loki;
-
-    return coll.insert(clean_rec);
-  }
-
-  /**
    * Gets a blob item from persistency layer by container name and blob name.
    *
    * @template T
@@ -626,19 +605,22 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @param {string} account
    * @param {string} container
    * @param {string} blob
+   * @param {string} [snapshot=""]
    * @returns {Promise<void>}
    * @memberof LokiBlobDataStore
    */
   public async deleteBlob(
     account: string,
     container: string,
-    blob: string
+    blob: string,
+    snapshot: string = ""
   ): Promise<void> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const blobDoc = coll.findOne({
       accountName: account,
       containerName: container,
-      name: blob
+      name: blob,
+      snapshot
     });
 
     if (blobDoc) {

@@ -826,6 +826,7 @@ export default class ContainerHandler extends BaseHandler
     const accountName = container.accountName;
     const containerName = container.name;
     const marker = parseInt(options.marker || "0", 10);
+    delimiter = delimiter === "" ? "/" : delimiter;
     options.prefix = options.prefix || "";
     options.marker = options.marker || "";
     let includeSnapshots: boolean = false;
