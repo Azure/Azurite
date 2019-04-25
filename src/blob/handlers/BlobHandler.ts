@@ -1,6 +1,8 @@
+import { URL } from "url";
 import uuid from "uuid/v4";
 
 import BlobStorageContext from "../context/BlobStorageContext";
+import { extractStoragePartsFromPath } from "../context/blobStorageContext.middleware";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
@@ -878,7 +880,65 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobStartCopyFromURLOptionalParams,
     context: Context
   ): Promise<Models.BlobStartCopyFromURLResponse> {
+    const blobContext = new BlobStorageContext(context);
+
     // TODO: Check dest Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
+    const url = new URL(copySource);
+    const [
+      sourceAccount,
+      sourceContainer,
+      sourceBlob
+    ] = extractStoragePartsFromPath(url.pathname);
+
+    const snapshot = url.searchParams.get("snapshot") || "";
+
+    if (
+      sourceAccount !== blobContext.account ||
+      sourceAccount === undefined ||
+      sourceContainer === undefined ||
+      sourceBlob === undefined
+    ) {
+      throw new NotImplementedError(context.contextID);
+    }
+
+    // TODO: Only supports copy from devstoreaccount1, not a complete copy implementation
+    // Extract source account name, container name, blob name and snapshot
+    // If within devstoreaccount1
+    const sourceContainerModel = await this.dataStore.getContainer(
+      sourceAccount,
+      sourceContainer
+    );
+    if (sourceContainerModel === undefined) {
+      // TODO: Check error message
+      throw StorageErrorFactory.getInvalidOperation(
+        context.contextID!,
+        "Source container doesn't exist."
+      );
+    }
+
+    // Get source storage blob model
+    const sourceBlobModel = await this.dataStore.getBlob(
+      sourceAccount,
+      sourceContainer,
+      sourceBlob,
+      snapshot
+    );
+
+    // If source is uncommitted or deleted
+    if (
+      sourceBlobModel === undefined ||
+      sourceBlobModel.deleted ||
+      !sourceBlobModel.isCommitted
+    ) {
+      // TODO: Check error message
+      throw StorageErrorFactory.getInvalidOperation(
+        context.contextID!,
+        "Source container doesn't exist."
+      );
+    }
+
+    // Deep clone a copied blob
+
     throw new NotImplementedError(context.contextID);
   }
 

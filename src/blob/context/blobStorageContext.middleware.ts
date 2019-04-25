@@ -90,7 +90,7 @@ export default function blobStorageContextMiddleware(
  * @param {string} path
  * @returns {([string | undefined, string | undefined, string | undefined, boolean | undefined])}
  */
-function extractStoragePartsFromPath(
+export function extractStoragePartsFromPath(
   path: string
 ): [
   string | undefined,
