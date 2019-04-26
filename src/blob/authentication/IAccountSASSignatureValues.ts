@@ -113,14 +113,14 @@ export interface IAccountSASSignatureValues {
  * @param {SharedKeyCredential} sharedKeyCredential
  * @param {string} accountName
  * @param {Buffer} sharedKey
- * @returns {string}
+ * @returns {[string, string]} signature and stringToSign
  * @memberof IAccountSASSignatureValues
  */
 export function generateAccountSASSignature(
   accountSASSignatureValues: IAccountSASSignatureValues,
   accountName: string,
   sharedKey: Buffer
-): string {
+): [string, string] {
   const parsedPermissions = accountSASSignatureValues.permissions.toString();
   const parsedServices = accountSASSignatureValues.services.toString();
   const parsedResourceTypes = accountSASSignatureValues.resourceTypes.toString();
@@ -160,5 +160,5 @@ export function generateAccountSASSignature(
   ].join("\n");
 
   const signature: string = computeHMACSHA256(stringToSign, sharedKey);
-  return signature;
+  return [signature, stringToSign];
 }

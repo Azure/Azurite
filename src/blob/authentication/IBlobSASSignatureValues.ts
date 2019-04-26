@@ -1,4 +1,5 @@
 import { computeHMACSHA256, truncatedISO8061Date } from "../utils/utils";
+import { BlobSASResourceType } from "./BlobSASResourceType";
 import { SASProtocol } from "./IAccountSASSignatureValues";
 import { IIPRange, ipRangeToString } from "./IIPRange";
 
@@ -139,15 +140,17 @@ export interface IBlobSASSignatureValues {
  *
  * @export
  * @param {IBlobSASSignatureValues} blobSASSignatureValues
+ * @param {BlobSASResourceType} resource
  * @param {string} accountName
  * @param {Buffer} sharedKey
- * @returns {string}
+ * @returns {[string, string]} signature and stringToSign
  */
 export function generateBlobSASSignature(
   blobSASSignatureValues: IBlobSASSignatureValues,
+  resource: BlobSASResourceType,
   accountName: string,
   sharedKey: Buffer
-): string {
+): [string, string] {
   if (
     !blobSASSignatureValues.identifier &&
     (!blobSASSignatureValues.permissions && !blobSASSignatureValues.expiryTime)
@@ -177,7 +180,9 @@ export function generateBlobSASSignature(
     getCanonicalName(
       accountName,
       blobSASSignatureValues.containerName,
-      blobSASSignatureValues.blobName
+      resource === BlobSASResourceType.Blob
+        ? blobSASSignatureValues.blobName
+        : ""
     ),
     blobSASSignatureValues.identifier, // TODO: ? blobSASSignatureValues.identifier : "",
     blobSASSignatureValues.ipRange
@@ -203,7 +208,7 @@ export function generateBlobSASSignature(
   ].join("\n");
 
   const signature = computeHMACSHA256(stringToSign, sharedKey);
-  return signature;
+  return [signature, stringToSign];
 }
 
 function getCanonicalName(

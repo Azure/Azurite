@@ -57,6 +57,7 @@ export default class BlobServer extends ServerBase {
     const dataStore: IBlobDataStore = new LokiBlobDataStore(
       configuration.dbPath,
       configuration.persistencePath
+      // logger
     );
 
     const accountDataStore: IAccountDataStore = new AccountDataStore();

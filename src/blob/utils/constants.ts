@@ -24,7 +24,7 @@ export const LOGGER_CONFIGS = {};
 
 export const API_VERSION = "2018-03-28";
 
-export const DEFAULT_GC_INTERVAL_MS = 30 * 1000;
+export const DEFAULT_GC_INTERVAL_MS = 30 * 1000; // TODO: Set a larger interval for production usage
 
 export const EMULATOR_ACCOUNT_NAME = "devstoreaccount1";
 
