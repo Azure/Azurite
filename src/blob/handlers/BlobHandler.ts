@@ -962,7 +962,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         copyStatus: Models.CopyStatusType.Success,
         copySource,
         copyProgress: sourceBlobModel.properties.contentLength
-          ? `${sourceBlobModel.properties.contentLength}`
+          ? `${sourceBlobModel.properties.contentLength}/${
+              sourceBlobModel.properties.contentLength
+            }`
           : undefined,
         copyCompletionTime: context.startTime,
         copyStatusDescription: undefined,
