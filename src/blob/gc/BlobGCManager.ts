@@ -218,9 +218,15 @@ export default class BlobGCManager implements IGCManager {
     );
 
     // sweep
-    this.logger.info(`BlobGCManager:markSweep() Delete unreferenced extents.`);
-    await this.blobDataStore.deletePayloads(allExtents);
-    this.logger.info(`BlobGCManager:markSweep() Deleted unreferenced extents.`);
+    if (allExtents.size > 0) {
+      this.logger.info(
+        `BlobGCManager:markSweep() Delete unreferenced extents.`
+      );
+      await this.blobDataStore.deletePayloads(allExtents);
+      this.logger.info(
+        `BlobGCManager:markSweep() Deleted unreferenced extents.`
+      );
+    }
   }
 
   private async getAllExtents(): Promise<Set<string>> {

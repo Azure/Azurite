@@ -84,9 +84,6 @@ interface IExtentModel {
  * -- EXTENTS_COLLECTION     // Collections maintain extents information, including extentID, mapped local file path
  *                           // Unique document properties: id, path
  *
- * TODO:
- * 1. Create an async task to GC persistency files
- *
  * @export
  * @class LokiBlobDataStore
  */
@@ -998,7 +995,8 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @memberof IBlobDataStore
    */
   public iteratorReferredExtents(): AsyncIterator<IPersistencyChunk[]> {
-    return new LokiReferredExtentsAsyncIterator(this);
+    // By default, we disable detailed log for GC
+    return new LokiReferredExtentsAsyncIterator(this /*, this.logger*/);
   }
 
   /**
@@ -1091,7 +1089,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       return fd;
     }
 
-    fd = await openAsync(path, "w+", undefined);
+    fd = await openAsync(path, "a+", undefined);
     this.FDCache.set(path, fd);
     return fd;
   }

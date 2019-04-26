@@ -101,6 +101,10 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       );
       return undefined;
     }
+    this.logger.debug(
+      `BlobSASAuthenticator:validate() Signed resource type is ${resource}.`,
+      context.contextID
+    );
 
     const values = this.getBlobSASSignatureValuesFromRequest(
       req,
@@ -127,10 +131,21 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       `BlobSASAuthenticator:validate() Validate signature based account key1.`,
       context.contextID
     );
-    const sig1 = generateBlobSASSignature(
+    const [sig1, stringToSign1] = generateBlobSASSignature(
       values,
+      resource,
       account,
       accountProperties.key1
+    );
+    this.logger.debug(
+      `BlobSASAuthenticator:validate() String to sign is: ${JSON.stringify(
+        stringToSign1
+      )}`,
+      context.contextID!
+    );
+    this.logger.debug(
+      `BlobSASAuthenticator:validate() Calculated signature is: ${sig1}`,
+      context.contextID!
     );
 
     const sig1Pass = sig1 === signature;
@@ -146,10 +161,21 @@ export default class BlobSASAuthenticator implements IAuthenticator {
         `BlobSASAuthenticator:validate() Account key2 is not empty, validate signature based account key2.`,
         context.contextID
       );
-      const sig2 = generateBlobSASSignature(
+      const [sig2, stringToSign2] = generateBlobSASSignature(
         values,
+        resource,
         account,
         accountProperties.key2
+      );
+      this.logger.debug(
+        `BlobSASAuthenticator:validate() String to sign is: ${JSON.stringify(
+          stringToSign2
+        )}`,
+        context.contextID!
+      );
+      this.logger.debug(
+        `BlobSASAuthenticator:validate() Calculated signature is: ${sig2}`,
+        context.contextID!
       );
 
       const sig2Pass = sig2 !== signature;
@@ -165,6 +191,10 @@ export default class BlobSASAuthenticator implements IAuthenticator {
           `BlobSASAuthenticator:validate() Validate signature based account key1 and key2 failed.`,
           context.contextID
         );
+        return false;
+      }
+    } else {
+      if (!sig1Pass) {
         return false;
       }
     }

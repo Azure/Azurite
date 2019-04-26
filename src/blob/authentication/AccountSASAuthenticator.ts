@@ -83,10 +83,20 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       `AccountSASAuthenticator:validate() Validate signature based account key1.`,
       context.contextID
     );
-    const sig1 = generateAccountSASSignature(
+    const [sig1, stringToSign1] = generateAccountSASSignature(
       values,
       account,
       accountProperties.key1
+    );
+    this.logger.debug(
+      `AccountSASAuthenticator:validate() String to sign is: ${JSON.stringify(
+        stringToSign1
+      )}`,
+      context.contextID!
+    );
+    this.logger.debug(
+      `AccountSASAuthenticator:validate() Calculated signature is: ${sig1}`,
+      context.contextID!
     );
 
     const sig1Pass = sig1 === signature;
@@ -102,10 +112,20 @@ export default class AccountSASAuthenticator implements IAuthenticator {
         `AccountSASAuthenticator:validate() Account key2 is not empty, validate signature based account key2.`,
         context.contextID
       );
-      const sig2 = generateAccountSASSignature(
+      const [sig2, stringToSign2] = generateAccountSASSignature(
         values,
         account,
         accountProperties.key2
+      );
+      this.logger.debug(
+        `AccountSASAuthenticator:validate() String to sign is: ${JSON.stringify(
+          stringToSign2
+        )}`,
+        context.contextID!
+      );
+      this.logger.debug(
+        `AccountSASAuthenticator:validate() Calculated signature is: ${sig2}`,
+        context.contextID!
       );
 
       const sig2Pass = sig2 !== signature;
@@ -121,6 +141,10 @@ export default class AccountSASAuthenticator implements IAuthenticator {
           `AccountSASAuthenticator:validate() Validate signature based account key1 and key2 failed.`,
           context.contextID
         );
+        return false;
+      }
+    } else {
+      if (!sig1Pass) {
         return false;
       }
     }

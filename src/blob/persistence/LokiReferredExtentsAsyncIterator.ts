@@ -1,3 +1,6 @@
+import ILogger from "../../common/ILogger";
+import { Logger } from "../../common/Logger";
+import NoLoggerStrategy from "../../common/NoLoggerStrategy";
 import { IPersistencyChunk } from "./IBlobDataStore";
 import LokiBlobDataStore from "./LokiBlobDataStore";
 
@@ -20,7 +23,10 @@ export default class LokiReferredExtentsAsyncIterator
 
   private blobListingMarker: number | undefined;
 
-  constructor(private readonly blobDataStore: LokiBlobDataStore) {}
+  constructor(
+    private readonly blobDataStore: LokiBlobDataStore,
+    private readonly logger: ILogger = new Logger(new NoLoggerStrategy())
+  ) {}
 
   public async next(): Promise<IteratorResult<IPersistencyChunk[]>> {
     if (this.state === State.LISTING_EXTENTS_IN_BLOBS) {
@@ -39,6 +45,16 @@ export default class LokiReferredExtentsAsyncIterator
 
       const extents = [];
       for (const blob of blobs) {
+        this.logger.debug(
+          `LokiReferredExtentsAsyncIterator:next() Handle blob ${
+            blob.accountName
+          } ${blob.containerName} ${blob.name} ${blob.snapshot} Blocks: ${
+            (blob.committedBlocksInOrder || []).length
+          } PageRanges: ${(blob.pageRangesInOrder || []).length} Persistency: ${
+            blob.persistency ? blob.persistency.id : ""
+          }`
+        );
+
         for (const block of blob.committedBlocksInOrder || []) {
           extents.push(block.persistency);
         }
@@ -56,6 +72,9 @@ export default class LokiReferredExtentsAsyncIterator
     } else if (this.state === State.LISTING_EXTENTS_IN_BLOCKS) {
       // TODO: Make listBlocks operation segment
       const blocks = await this.blobDataStore.listBlocks();
+      this.logger.debug(
+        `LokiReferredExtentsAsyncIterator:next() Handle blocks ${blocks.length}`
+      );
       this.state = State.DONE;
       return {
         done: false,
