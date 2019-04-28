@@ -2,9 +2,7 @@ import {
   close,
   createReadStream,
   createWriteStream,
-  fstat,
   mkdir,
-  open,
   stat,
   unlink
 } from "fs";
@@ -29,8 +27,6 @@ import LokiAllExtentsAsyncIterator from "./LokiAllExtentsAsyncIterator";
 import LokiReferredExtentsAsyncIterator from "./LokiReferredExtentsAsyncIterator";
 
 const statAsync = promisify(stat);
-const fstatAsync = promisify(fstat);
-const openAsync = promisify(open);
 const unlinkAsync = promisify(unlink);
 const mkdirAsync = promisify(mkdir);
 const closeAsync = promisify(close);
@@ -785,11 +781,10 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     const id = this.generateExtentID();
     const file = this.generateRelativeFilePath(id);
     const path = this.getPersistencyPath(file);
-    const fd = await this.getPersistencyFD(id, path);
 
     if (payload instanceof Buffer) {
       return new Promise<IPersistencyChunk>((resolve, reject) => {
-        const ws = createWriteStream(path, { fd, autoClose: false });
+        const ws = createWriteStream(path);
         ws.end(payload);
         ws.on("finish", () => {
           this.insertExtent(id, file)
@@ -805,7 +800,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       });
     } else {
       return new Promise<IPersistencyChunk>((resolve, reject) => {
-        const ws = createWriteStream(path, { fd, autoClose: false });
+        const ws = createWriteStream(path);
         let count = 0;
         payload
           .on("data", data => {
@@ -856,17 +851,12 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       return new ZeroBytesStream(subRangeCount);
     }
 
-    const [path, fd] = await Promise.all([
-      this.getExtentPersistencyPath(persistency),
-      this.getPersistencyFD(persistency)
-    ]);
+    const path = await this.getExtentPersistencyPath(persistency);
 
     if (typeof persistency === "string") {
       return createReadStream(path, {
         start: offset,
-        end: offset + count - 1,
-        fd,
-        autoClose: false
+        end: offset + count - 1
       });
     } else {
       persistency.offset =
@@ -879,9 +869,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
 
       return createReadStream(path, {
         start: subRangeOffset,
-        end: subRangeOffset + subRangeCount - 1,
-        fd,
-        autoClose: false
+        end: subRangeOffset + subRangeCount - 1
       });
     }
   }
@@ -1065,36 +1053,6 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
-   * Cache opened file descriptors for reusing.
-   *
-   * TODO: Limit cache size.
-   *
-   * @private
-   * @param {(string | IPersistencyChunk)} persistency
-   * @param {string} [path]
-   * @returns {Promise<number>}
-   * @memberof LokiBlobDataStore
-   */
-  private async getPersistencyFD(
-    persistency: string | IPersistencyChunk,
-    path?: string
-  ): Promise<number> {
-    // If not a specified full path provided, try to get path from DB record
-    if (path === undefined) {
-      path = await this.getExtentPersistencyPath(persistency);
-    }
-
-    let fd = this.FDCache.get(path);
-    if (fd !== undefined) {
-      return fd;
-    }
-
-    fd = await openAsync(path, "a+", undefined);
-    this.FDCache.set(path, fd);
-    return fd;
-  }
-
-  /**
    * Get size for a given persistency (sub)chunk.
    *
    * @private
@@ -1108,14 +1066,14 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     // TODO: Add a path size cache, we assume different payloads will always has different persistency
     // ID and path. So the cache will always align with the persisted files.
     if (typeof persistency === "string") {
-      const fd = await this.getPersistencyFD(persistency);
-      return (await fstatAsync(fd)).size;
+      const path = await this.getExtentPersistencyPath(persistency);
+      return (await statAsync(path)).size;
     } else {
       if (persistency.count === undefined) {
-        const fd = await this.getPersistencyFD(persistency);
+        const path = await this.getExtentPersistencyPath(persistency);
         persistency.offset =
           persistency.offset === undefined ? 0 : persistency.offset;
-        return (await fstatAsync(fd)).size - persistency.offset;
+        return (await statAsync(path)).size - persistency.offset;
       } else {
         return persistency.count;
       }
