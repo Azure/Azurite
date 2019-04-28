@@ -38,8 +38,8 @@ export default class LokiReferredExtentsAsyncIterator
         this.blobListingMarker,
         true
       );
+      this.blobListingMarker = marker;
       if (marker === undefined) {
-        this.blobListingMarker = undefined;
         this.state = State.LISTING_EXTENTS_IN_BLOCKS;
       }
 
