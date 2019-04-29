@@ -253,7 +253,7 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   new OperationAccountSASPermission(
     AccountSASService.Blob,
     AccountSASResourceType.Object,
-    // TODO: Create permission is only available for non existing block blob. Handle this scenario separately
+    // Create permission is only available for non existing block blob. Handle this scenario separately
     AccountSASPermission.Write + AccountSASPermission.Create
   )
 );
@@ -263,7 +263,17 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   new OperationAccountSASPermission(
     AccountSASService.Blob,
     AccountSASResourceType.Object,
-    // TODO: Create permission is only available for non existing page blob. Handle this scenario separately
+    // Create permission is only available for non existing page blob. Handle this scenario separately
+    AccountSASPermission.Write + AccountSASPermission.Create
+  )
+);
+
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.AppendBlob_Create,
+  new OperationAccountSASPermission(
+    AccountSASService.Blob,
+    AccountSASResourceType.Object,
+    // Create permission is only available for non existing append blob. Handle this scenario separately
     AccountSASPermission.Write + AccountSASPermission.Create
   )
 );
