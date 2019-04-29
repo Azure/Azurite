@@ -151,7 +151,7 @@ export function deserializeRangeHeader(
   const startInclusive = parseInt(parts[0], 10);
   let endInclusive = Infinity;
 
-  if (parts.length > 1) {
+  if (parts.length > 1 && parts[1] !== "") {
     endInclusive = parseInt(parts[1], 10);
   }
 
