@@ -7,10 +7,9 @@ import IBlockBlobHandler from "../generated/handlers/IBlockBlobHandler";
 import { parseXML } from "../generated/utils/xml";
 import { BlobModel, BlockModel } from "../persistence/IBlobDataStore";
 import { API_VERSION } from "../utils/constants";
-import { newEtag, getMD5FromString } from "../utils/utils";
+import { newEtag, getMD5FromString, getMD5FromStream } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import BlobHandler from "./BlobHandler";
-import { AccessTier } from "../generated/artifacts/models";
 
 /**
  * BlobHandler handles Azure Storage BlockBlob related requests.
@@ -40,6 +39,9 @@ export default class BlockBlobHandler extends BaseHandler
       options.blobHTTPHeaders.blobContentType ||
       context.request!.getHeader("content-type") ||
       "application/octet-stream";
+    const contentMD5 =
+      options.blobHTTPHeaders.blobContentMD5 ||
+      context.request!.getHeader("content-md5");
 
     const container = await this.dataStore.getContainer(
       accountName,
@@ -50,6 +52,16 @@ export default class BlockBlobHandler extends BaseHandler
     }
 
     const persistency = await this.dataStore.writePayload(body);
+
+    // Calculate MD5 for validation
+    const stream = await this.dataStore.readPayload(persistency);
+    const calculatedContentMD5 = await getMD5FromStream(stream);
+    if (contentMD5 !== undefined && contentMD5 !== calculatedContentMD5) {
+      throw StorageErrorFactory.getInvalidOperation(
+        context.contextID!,
+        "Provided contentMD5 doesn't match."
+      );
+    }
 
     const blob: BlobModel = {
       deleted: false,
@@ -65,7 +77,7 @@ export default class BlockBlobHandler extends BaseHandler
         contentType,
         contentEncoding: options.blobHTTPHeaders.blobContentEncoding,
         contentLanguage: options.blobHTTPHeaders.blobContentLanguage,
-        contentMD5: options.blobHTTPHeaders.blobContentMD5,
+        contentMD5: calculatedContentMD5,
         contentDisposition: options.blobHTTPHeaders.blobContentDisposition,
         cacheControl: options.blobHTTPHeaders.blobCacheControl,
         blobType: Models.BlobType.BlockBlob,
@@ -319,7 +331,7 @@ export default class BlockBlobHandler extends BaseHandler
     blob.isCommitted = true;
 
     blob.metadata = options.metadata;
-    blob.properties.accessTier = AccessTier.Hot;
+    blob.properties.accessTier = Models.AccessTier.Hot;
     blob.properties.accessTierInferred = true;
     blob.properties.cacheControl = options.blobHTTPHeaders.blobCacheControl;
     blob.properties.contentType = contentType;
