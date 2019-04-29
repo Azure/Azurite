@@ -26,9 +26,13 @@ export default class ExpressResponseAdapter implements IResponse {
 
   public setHeader(
     field: string,
-    value?: string | string[] | undefined
+    value?: string | string[] | undefined | number | boolean
   ): IResponse {
     if (typeof value === "number") {
+      value = `${value}`;
+    }
+
+    if (typeof value === "boolean") {
       value = `${value}`;
     }
 
