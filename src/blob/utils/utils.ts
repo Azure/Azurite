@@ -81,6 +81,12 @@ export async function getMD5FromStream(
   });
 }
 
+export async function getMD5FromString(text: string): Promise<Uint8Array> {
+  return createHash("md5")
+    .update(text)
+    .digest();
+}
+
 /**
  * Get URL query key value pairs from an URL string.
  *
@@ -211,7 +217,7 @@ export function getContainerGetAccountInfoResponse(
   const response: Models.ContainerGetAccountInfoResponse = {
     skuName: EMULATOR_ACCOUNT_SKUNAME,
     accountKind: EMULATOR_ACCOUNT_KIND,
-    date: new Date(),
+    date: context.startTime!,
     requestId: context.contextID,
     statusCode: 200,
     version: API_VERSION
