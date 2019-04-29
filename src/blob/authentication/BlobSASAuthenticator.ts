@@ -427,7 +427,11 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     sasProtocol: string = "https,http",
     requestProtocol: string
   ): boolean {
-    return sasProtocol.toLowerCase().includes(requestProtocol.toLowerCase());
+    if (sasProtocol.includes(",")) {
+      return true;
+    } else {
+      return sasProtocol.toLowerCase() === requestProtocol;
+    }
   }
 
   private decodeIfExist(value?: string): string | undefined {
