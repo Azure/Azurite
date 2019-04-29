@@ -56,11 +56,28 @@ export default class BlockBlobHandler extends BaseHandler
     // Calculate MD5 for validation
     const stream = await this.dataStore.readPayload(persistency);
     const calculatedContentMD5 = await getMD5FromStream(stream);
-    if (contentMD5 !== undefined && contentMD5 !== calculatedContentMD5) {
-      throw StorageErrorFactory.getInvalidOperation(
-        context.contextID!,
-        "Provided contentMD5 doesn't match."
-      );
+    if (contentMD5 !== undefined) {
+      if (typeof contentMD5 === "string") {
+        const calculatedContentMD5String = Buffer.from(
+          calculatedContentMD5
+        ).toString("base64");
+        if (contentMD5 !== calculatedContentMD5String) {
+          throw StorageErrorFactory.getInvalidOperation(
+            context.contextID!,
+            "Provided contentMD5 doesn't match."
+          );
+        }
+      } else {
+        if (
+          contentMD5 !== undefined &&
+          !Buffer.from(contentMD5).equals(calculatedContentMD5)
+        ) {
+          throw StorageErrorFactory.getInvalidOperation(
+            context.contextID!,
+            "Provided contentMD5 doesn't match."
+          );
+        }
+      }
     }
 
     const blob: BlobModel = {
