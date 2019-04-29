@@ -48,7 +48,7 @@ export default class ExpressResponseAdapter implements IResponse {
   }
 
   public setContentType(value: string): IResponse {
-    this.res.contentType(value);
+    this.res.setHeader("content-type", value);
     return this;
   }
 

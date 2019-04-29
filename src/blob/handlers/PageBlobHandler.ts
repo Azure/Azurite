@@ -305,7 +305,8 @@ export default class PageBlobHandler extends BaseHandler
     const blob = await this.dataStore.getBlob(
       accountName,
       containerName,
-      blobName
+      blobName,
+      options.snapshot
     );
     if (!blob) {
       throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
