@@ -1421,20 +1421,20 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       context.contextID
     );
 
-    if (contentLength <= 0) {
-      return {
-        statusCode: 200,
-        body: undefined,
-        metadata: blob.metadata,
-        eTag: blob.properties.etag,
-        requestId: context.contextID,
-        date: context.startTime!,
-        version: API_VERSION,
-        ...blob.properties,
-        contentLength,
-        contentMD5: undefined
-      };
-    }
+    // if (contentLength <= 0) {
+    //   return {
+    //     statusCode: 200,
+    //     body: undefined,
+    //     metadata: blob.metadata,
+    //     eTag: blob.properties.etag,
+    //     requestId: context.contextID,
+    //     date: context.startTime!,
+    //     version: API_VERSION,
+    //     ...blob.properties,
+    //     contentLength,
+    //     contentMD5: undefined
+    //   };
+    // }
 
     blob.pageRangesInOrder = blob.pageRangesInOrder || [];
     const ranges = this.rangesManager.fillZeroRanges(blob.pageRangesInOrder, {

@@ -891,6 +891,10 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     offset: number = 0,
     count: number = Infinity
   ): Promise<NodeJS.ReadableStream> {
+    if (count === 0) {
+      return new ZeroBytesStream(0);
+    }
+
     const start = offset; // Start inclusive position in the merged stream
     const end = offset + count; // End exclusive position in the merged stream
 
