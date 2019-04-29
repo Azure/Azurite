@@ -7,7 +7,7 @@ import IBlockBlobHandler from "../generated/handlers/IBlockBlobHandler";
 import { parseXML } from "../generated/utils/xml";
 import { BlobModel, BlockModel } from "../persistence/IBlobDataStore";
 import { API_VERSION } from "../utils/constants";
-import { newEtag } from "../utils/utils";
+import { newEtag, getMD5FromString } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import BlobHandler from "./BlobHandler";
 import { AccessTier } from "../generated/artifacts/models";
@@ -345,11 +345,13 @@ export default class BlockBlobHandler extends BaseHandler
 
     // TODO: Unlock
 
+    const contentMD5 = await getMD5FromString(rawBody);
+
     const response: Models.BlockBlobCommitBlockListResponse = {
       statusCode: 201,
       eTag: newEtag(),
       lastModified: blobCtx.startTime,
-      contentMD5: blob.properties.contentMD5,
+      contentMD5,
       requestId: blobCtx.contextID,
       version: API_VERSION,
       date: blobCtx.startTime,
