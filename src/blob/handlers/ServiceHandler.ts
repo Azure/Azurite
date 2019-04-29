@@ -90,28 +90,27 @@ export default class ServiceHandler extends BaseHandler
     }
 
     let properties = await this.dataStore.getServiceProperties(accountName);
-    if (!properties) {
-      properties = { ...storageServiceProperties, accountName };
-    } else {
-      properties.cors =
-        storageServiceProperties.cors === undefined
-          ? properties.cors
-          : storageServiceProperties.cors;
-      properties.defaultServiceVersion =
-        storageServiceProperties.defaultServiceVersion ||
-        properties.defaultServiceVersion;
-      properties.deleteRetentionPolicy =
-        storageServiceProperties.deleteRetentionPolicy ||
-        properties.deleteRetentionPolicy;
-      properties.hourMetrics =
-        storageServiceProperties.hourMetrics || properties.hourMetrics;
-      properties.logging =
-        storageServiceProperties.logging || properties.logging;
-      properties.minuteMetrics =
-        storageServiceProperties.minuteMetrics || properties.minuteMetrics;
-      properties.staticWebsite =
-        storageServiceProperties.staticWebsite || properties.staticWebsite;
+    if (properties === undefined) {
+      properties = { ...this.defaultServiceProperties, accountName };
     }
+
+    properties.cors =
+      storageServiceProperties.cors === undefined
+        ? properties.cors
+        : storageServiceProperties.cors;
+    properties.defaultServiceVersion =
+      storageServiceProperties.defaultServiceVersion ||
+      properties.defaultServiceVersion;
+    properties.deleteRetentionPolicy =
+      storageServiceProperties.deleteRetentionPolicy ||
+      properties.deleteRetentionPolicy;
+    properties.hourMetrics =
+      storageServiceProperties.hourMetrics || properties.hourMetrics;
+    properties.logging = storageServiceProperties.logging || properties.logging;
+    properties.minuteMetrics =
+      storageServiceProperties.minuteMetrics || properties.minuteMetrics;
+    properties.staticWebsite =
+      storageServiceProperties.staticWebsite || properties.staticWebsite;
 
     await this.dataStore.updateServiceProperties({
       ...properties,

@@ -272,7 +272,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * Delete blob.
+   * Delete blob or snapshots.
    *
    * @param {Models.BlobDeleteMethodOptionalParams} options
    * @param {Context} context
@@ -284,9 +284,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobDeleteResponse> {
     const blob = await this.getSimpleBlobFromStorage(context, options.snapshot);
+    const againstBaseBlob = blob.snapshot === "";
 
     // Check Lease status
-    if (blob.snapshot === "") {
+    if (againstBaseBlob) {
       BlobHandler.checkBlobLeaseOnWriteBlob(
         context,
         blob,
@@ -294,12 +295,95 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       );
     }
 
-    await this.dataStore.deleteBlob(
-      blob.accountName,
-      blob.containerName,
-      blob.name,
-      blob.snapshot
-    );
+    // Check bad requests
+    if (!againstBaseBlob && options.deleteSnapshots !== undefined) {
+      throw StorageErrorFactory.getInvalidOperation(
+        context.contextID!,
+        "Invalid operation against a blob snapshot."
+      );
+    }
+
+    // Check whether blob has snapshots
+    const blobAndSnapshots = [];
+    let marker;
+    let blobs = [];
+    do {
+      [blobs, marker] = await this.dataStore.listBlobs(
+        blob.accountName,
+        blob.containerName,
+        blob.name,
+        undefined,
+        5000,
+        marker,
+        true
+      );
+      blobAndSnapshots.push(...blobs);
+    } while (marker !== undefined);
+
+    const hasSnapshots = blobAndSnapshots.length > 1;
+
+    // Scenario: Delete base blob only
+    if (againstBaseBlob && options.deleteSnapshots === undefined) {
+      if (hasSnapshots) {
+        throw StorageErrorFactory.getSnapshotsPresent(context.contextID!);
+      } else {
+        await this.dataStore.deleteBlob(
+          blob.accountName,
+          blob.containerName,
+          blob.name
+        );
+      }
+    }
+
+    // Scenario: Delete snapshot only
+    if (!againstBaseBlob) {
+      await this.dataStore.deleteBlob(
+        blob.accountName,
+        blob.containerName,
+        blob.name,
+        blob.snapshot
+      );
+    }
+
+    // Scenario: Delete base blob and snapshots
+    if (
+      againstBaseBlob &&
+      options.deleteSnapshots === Models.DeleteSnapshotsOptionType.Include
+    ) {
+      const promises = [];
+      for (const item of blobAndSnapshots) {
+        promises.push(
+          this.dataStore.deleteBlob(
+            item.accountName,
+            item.containerName,
+            item.name,
+            item.snapshot
+          )
+        );
+      }
+      await Promise.all(promises);
+    }
+
+    // Scenario: Delete snapshots only
+    if (
+      againstBaseBlob &&
+      options.deleteSnapshots === Models.DeleteSnapshotsOptionType.Only
+    ) {
+      const promises = [];
+      for (const item of blobAndSnapshots.filter(value => {
+        return value.snapshot !== "";
+      })) {
+        promises.push(
+          this.dataStore.deleteBlob(
+            item.accountName,
+            item.containerName,
+            item.name,
+            item.snapshot
+          )
+        );
+      }
+      await Promise.all(promises);
+    }
 
     const response: Models.BlobDeleteResponse = {
       statusCode: 202,

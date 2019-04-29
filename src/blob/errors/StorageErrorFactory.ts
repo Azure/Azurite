@@ -362,4 +362,13 @@ export default class StorageErrorFactory {
       contextID
     );
   }
+
+  public static getSnapshotsPresent(contextID: string): StorageError {
+    return new StorageError(
+      409,
+      "SnapshotsPresent",
+      "This operation is not permitted while the blob has snapshots.",
+      contextID
+    );
+  }
 }

@@ -435,6 +435,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @template T
    * @param {string} [account]
    * @param {string} [container]
+   * @param {string} [blob] If blob name provided, prefix will be ignored.
    * @param {string} [prefix]
    * @param {number} [maxResults=5000]
    * @param {number} [marker]
@@ -444,6 +445,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   public async listBlobs<T extends BlobModel>(
     account?: string,
     container?: string,
+    blob?: string,
     prefix: string | undefined = "",
     maxResults: number | undefined = 5000,
     marker?: number | undefined,
@@ -452,6 +454,9 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     const query: any = {};
     if (prefix !== "") {
       query.name = { $regex: `^${this.escapeRegex(prefix)}` };
+    }
+    if (blob !== undefined) {
+      query.name = blob;
     }
     if (account !== undefined) {
       query.accountName = account;

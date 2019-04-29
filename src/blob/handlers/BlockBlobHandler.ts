@@ -34,6 +34,11 @@ export default class BlockBlobHandler extends BaseHandler
     const blobName = blobCtx.blob!;
     const date = context.startTime!;
     const etag = newEtag();
+    options.blobHTTPHeaders = options.blobHTTPHeaders || {};
+    const contentType =
+      options.blobHTTPHeaders.blobContentType ||
+      context.request!.getHeader("content-type") ||
+      "application/octet-stream";
 
     const container = await this.dataStore.getContainer(
       accountName,
@@ -45,7 +50,6 @@ export default class BlockBlobHandler extends BaseHandler
 
     const persistency = await this.dataStore.writePayload(body);
 
-    options.blobHTTPHeaders = options.blobHTTPHeaders || {};
     const blob: BlobModel = {
       deleted: false,
       metadata: options.metadata,
@@ -57,7 +61,7 @@ export default class BlockBlobHandler extends BaseHandler
         lastModified: date,
         etag,
         contentLength,
-        contentType: options.blobHTTPHeaders.blobContentType,
+        contentType,
         contentEncoding: options.blobHTTPHeaders.blobContentEncoding,
         contentLanguage: options.blobHTTPHeaders.blobContentLanguage,
         contentMD5: options.blobHTTPHeaders.blobContentMD5,
