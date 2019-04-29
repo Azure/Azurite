@@ -312,9 +312,10 @@ export async function serialize(
     // TODO: Should send response in a serializer?
     res.getBodyStream().write(xmlBody);
     logger.debug(
-      `serialize(): Raw response body string is ${xmlBody}`,
+      `Serializer: Raw response body string is ${xmlBody}`,
       context.contextID
     );
+    logger.info(`Serializer: Start returning stream body.`, context.contextID);
   }
 
   // Serialize stream body
@@ -324,6 +325,8 @@ export async function serialize(
     responseSpec.bodyMapper &&
     responseSpec.bodyMapper.type.name === "Stream"
   ) {
+    logger.info(`Serializer: Start returning stream body.`, context.contextID);
+
     await new Promise((resolve, reject) => {
       (handlerResponse.body as NodeJS.ReadableStream)
         .on("error", reject)
@@ -331,5 +334,17 @@ export async function serialize(
         .on("error", reject)
         .on("close", resolve);
     });
+
+    // const totalTimeInMS = context.startTime
+    //   ? new Date().getTime() - context.startTime.getTime()
+    //   : undefined;
+
+    // logger.info(
+    // tslint:disable-next-line:max-line-length
+    //   `Serializer: End response. TotalTimeInMS=${totalTimeInMS} StatusCode=${res.getStatusCode()} StatusMessage=${res.getStatusMessage()} Headers=${JSON.stringify(
+    //     res.getHeaders()
+    //   )}`,
+    //   context.contextID
+    // );
   }
 }
