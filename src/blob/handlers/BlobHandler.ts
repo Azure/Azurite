@@ -15,6 +15,7 @@ import {
   deserializePageBlobRangeHeader,
   deserializeRangeHeader,
   getContainerGetAccountInfoResponse,
+  getMD5FromStream,
   newEtag
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -1344,14 +1345,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       };
     }
 
-    const body: NodeJS.ReadableStream | undefined = await bodyGetter();
+    let body: NodeJS.ReadableStream | undefined = await bodyGetter();
     let contentMD5: Uint8Array | undefined;
     if (!partialRead) {
       contentMD5 = blob.properties.contentMD5;
     } else if (contentLength <= 4 * 1024 * 1024) {
       if (body) {
         // TODO： Get partial content MD5
-        contentMD5 = undefined; // await getMD5FromStream(body);
+        contentMD5 = await getMD5FromStream(body);
+        body = await bodyGetter();
       }
     }
 
@@ -1408,7 +1410,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     const contentLength = rangeEnd - rangeStart + 1;
-    // const partialRead = contentLength !== blob.properties.contentLength!;
+    const partialRead = contentLength !== blob.properties.contentLength!;
 
     this.logger.info(
       // tslint:disable-next-line:max-line-length
@@ -1445,17 +1447,17 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       );
     };
 
-    const body: NodeJS.ReadableStream | undefined = await bodyGetter();
-    // let contentMD5: Uint8Array | undefined;
-    // if (!partialRead) {
-    //   contentMD5 = blob.properties.contentMD5;
-    // } else if (contentLength <= 4 * 1024 * 1024) {
-    //   if (body) {
-    //     // TODO： Get partial content MD5
-    //     contentMD5 = undefined; // await getMD5FromStream(body);
-    //     body = await bodyGetter();
-    //   }
-    // }
+    let body: NodeJS.ReadableStream | undefined = await bodyGetter();
+    let contentMD5: Uint8Array | undefined;
+    if (!partialRead) {
+      contentMD5 = blob.properties.contentMD5;
+    } else if (contentLength <= 4 * 1024 * 1024) {
+      if (body) {
+        // TODO： Get partial content MD5
+        contentMD5 = await getMD5FromStream(body);
+        body = await bodyGetter();
+      }
+    }
 
     const response: Models.BlobDownloadResponse = {
       statusCode: rangesParts[1] === Infinity ? 200 : 206,
@@ -1467,7 +1469,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       version: API_VERSION,
       ...blob.properties,
       contentLength,
-      contentMD5: undefined // TODO
+      contentMD5 // TODO
     };
 
     return response;
