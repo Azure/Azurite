@@ -10,6 +10,7 @@ import { API_VERSION } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import BlobHandler from "./BlobHandler";
+import { AccessTier } from "../generated/artifacts/models";
 
 /**
  * BlobHandler handles Azure Storage BlockBlob related requests.
@@ -220,6 +221,12 @@ export default class BlockBlobHandler extends BaseHandler
       options.leaseAccessConditions
     );
 
+    options.blobHTTPHeaders = options.blobHTTPHeaders || {};
+    const contentType =
+      options.blobHTTPHeaders.blobContentType ||
+      context.request!.getHeader("content-type") ||
+      "application/octet-stream";
+
     // Get all blocks in persistency layer
     const pUncommittedBlocks = await this.dataStore.listBlocks(
       accountName,
@@ -312,9 +319,10 @@ export default class BlockBlobHandler extends BaseHandler
     blob.isCommitted = true;
 
     blob.metadata = options.metadata;
-    options.blobHTTPHeaders = options.blobHTTPHeaders || {};
+    blob.properties.accessTier = AccessTier.Hot;
+    blob.properties.accessTierInferred = true;
     blob.properties.cacheControl = options.blobHTTPHeaders.blobCacheControl;
-    blob.properties.contentType = options.blobHTTPHeaders.blobContentType;
+    blob.properties.contentType = contentType;
     blob.properties.contentMD5 = options.blobHTTPHeaders.blobContentMD5;
     blob.properties.contentEncoding =
       options.blobHTTPHeaders.blobContentEncoding;
