@@ -9,7 +9,6 @@ import {
 import Loki from "lokijs";
 import multistream = require("multistream");
 import { join } from "path";
-import { Duplex } from "stream";
 import { promisify } from "util";
 import uuid from "uuid/v4";
 
@@ -845,10 +844,8 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     offset: number = 0,
     count: number = Infinity
   ): Promise<NodeJS.ReadableStream> {
-    if (persistency === undefined) {
-      const emptyStream = new Duplex();
-      emptyStream.end();
-      return emptyStream;
+    if (persistency === undefined || persistency.count === 0) {
+      return new ZeroBytesStream(0);
     }
 
     if (persistency.id === ZERO_PERSISTENCY_CHUNK_ID) {
