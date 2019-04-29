@@ -1366,6 +1366,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime!,
       version: API_VERSION,
       ...blob.properties,
+      blobContentMD5: blob.properties.contentMD5,
       contentLength,
       contentMD5
     };
@@ -1469,7 +1470,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       version: API_VERSION,
       ...blob.properties,
       contentLength,
-      contentMD5 // TODO
+      contentMD5,
+      blobContentMD5: blob.properties.contentMD5
     };
 
     return response;
