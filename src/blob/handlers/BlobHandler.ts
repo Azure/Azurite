@@ -1349,12 +1349,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     let contentMD5: Uint8Array | undefined;
     if (!partialRead) {
       contentMD5 = blob.properties.contentMD5;
-    } else if (contentLength <= 4 * 1024 * 1024) {
-      if (body) {
-        // TODO： Get partial content MD5
-        contentMD5 = await getMD5FromStream(body);
-        body = await bodyGetter();
-      }
+    }
+    if (
+      contentLength <= 4 * 1024 * 1024 &&
+      contentMD5 === undefined &&
+      body !== undefined
+    ) {
+      contentMD5 = await getMD5FromStream(body);
+      body = await bodyGetter();
     }
 
     const response: Models.BlobDownloadResponse = {
@@ -1452,12 +1454,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     let contentMD5: Uint8Array | undefined;
     if (!partialRead) {
       contentMD5 = blob.properties.contentMD5;
-    } else if (contentLength <= 4 * 1024 * 1024) {
-      if (body) {
-        // TODO： Get partial content MD5
-        contentMD5 = await getMD5FromStream(body);
-        body = await bodyGetter();
-      }
+    }
+    if (
+      contentLength <= 4 * 1024 * 1024 &&
+      contentMD5 === undefined &&
+      body !== undefined
+    ) {
+      contentMD5 = await getMD5FromStream(body);
+      body = await bodyGetter();
     }
 
     const response: Models.BlobDownloadResponse = {
