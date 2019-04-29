@@ -130,6 +130,24 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
 );
 
 OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.Container_SetAccessPolicy,
+  new OperationAccountSASPermission(
+    AccountSASService.Blob,
+    AccountSASResourceType.Container,
+    "" // NOT ALLOWED
+  )
+);
+
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.Container_GetAccessPolicy,
+  new OperationAccountSASPermission(
+    AccountSASService.Blob,
+    AccountSASResourceType.Container,
+    "" // NOT ALLOWED
+  )
+);
+
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   Operation.Container_GetProperties,
   new OperationAccountSASPermission(
     AccountSASService.Blob,
