@@ -922,7 +922,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       metadata: { ...blob.metadata },
       accountName: blob.accountName,
       containerName: blob.containerName,
-      pageRangesInOrder: blob.pageRangesInOrder,
+      pageRangesInOrder:
+        blob.pageRangesInOrder === undefined
+          ? undefined
+          : blob.pageRangesInOrder.slice(),
       isCommitted: blob.isCommitted,
       leaseduration: blob.leaseduration,
       leaseId: blob.leaseId,
