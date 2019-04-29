@@ -7,7 +7,7 @@ export default interface IResponse {
   getStatusMessage(): string;
   setHeader(
     field: string,
-    value?: string | string[] | undefined | number
+    value?: string | string[] | undefined | number | boolean
   ): IResponse;
   getHeaders(): OutgoingHttpHeaders;
   headersSent(): boolean;

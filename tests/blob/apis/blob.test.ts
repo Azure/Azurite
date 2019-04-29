@@ -1,3 +1,4 @@
+import { isNode } from "@azure/ms-rest-js";
 import {
   Aborter,
   BlobURL,
@@ -8,10 +9,11 @@ import {
   StorageURL
 } from "@azure/storage-blob";
 import assert = require("assert");
-import { isNode } from "@azure/ms-rest-js";
+
 import BlobConfiguration from "../../../src/blob/BlobConfiguration";
 import Server from "../../../src/blob/BlobServer";
 import { BlobHTTPHeaders } from "../../../src/blob/generated/artifacts/models";
+import { configLogger } from "../../../src/common/Logger";
 import {
   bodyToString,
   EMULATOR_ACCOUNT_KEY,
@@ -20,6 +22,8 @@ import {
   rmRecursive,
   sleep
 } from "../../testutils";
+
+configLogger(false);
 
 describe("BlobAPIs", () => {
   // TODO: Create a server factory as tests utils
