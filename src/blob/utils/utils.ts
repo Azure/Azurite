@@ -71,7 +71,9 @@ export async function getMD5FromStream(
   const hash = createHash("md5");
   return new Promise<Uint8Array>((resolve, reject) => {
     stream
-      .on("data", hash.update)
+      .on("data", data => {
+        hash.update(data);
+      })
       .on("end", () => {
         resolve(hash.digest());
       })
