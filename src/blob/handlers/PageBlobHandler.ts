@@ -56,6 +56,12 @@ export default class PageBlobHandler extends BaseHandler
       );
     }
 
+    options.blobHTTPHeaders = options.blobHTTPHeaders || {};
+    const contentType =
+      options.blobHTTPHeaders.blobContentType ||
+      context.request!.getHeader("content-type") ||
+      "application/octet-stream";
+
     const container = await this.dataStore.getContainer(
       accountName,
       containerName
@@ -65,7 +71,6 @@ export default class PageBlobHandler extends BaseHandler
     }
 
     const etag = newEtag();
-    options.blobHTTPHeaders = options.blobHTTPHeaders || {};
     const blob: BlobModel = {
       deleted: false,
       metadata: options.metadata,
@@ -77,7 +82,7 @@ export default class PageBlobHandler extends BaseHandler
         lastModified: date,
         etag,
         contentLength: blobContentLength,
-        contentType: options.blobHTTPHeaders.blobContentType,
+        contentType,
         contentEncoding: options.blobHTTPHeaders.blobContentEncoding,
         contentLanguage: options.blobHTTPHeaders.blobContentLanguage,
         contentMD5: options.blobHTTPHeaders.blobContentMD5,
