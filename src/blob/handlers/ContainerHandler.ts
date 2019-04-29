@@ -63,7 +63,9 @@ export default class ContainerHandler extends BaseHandler
         lastModified,
         leaseStatus: Models.LeaseStatusType.Unlocked,
         leaseState: Models.LeaseStateType.Available,
-        publicAccess: options.access
+        publicAccess: options.access,
+        hasImmutabilityPolicy: false,
+        hasLegalHold: false
       }
     });
 
