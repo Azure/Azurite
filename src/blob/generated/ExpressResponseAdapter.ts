@@ -33,10 +33,8 @@ export default class ExpressResponseAdapter implements IResponse {
     }
 
     // Cannot remove if block because of a potential TypeScript bug
-    if (typeof value === "string") {
-      this.res.set(field, value);
-    } else {
-      this.res.set(field, value);
+    if (typeof value === "string" || value instanceof Array) {
+      this.res.setHeader(field, value);
     }
     return this;
   }
