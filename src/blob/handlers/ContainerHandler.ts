@@ -767,6 +767,7 @@ export default class ContainerHandler extends BaseHandler
     const [blobs, nextMarker] = await this.dataStore.listBlobs(
       accountName,
       containerName,
+      undefined,
       options.prefix,
       options.maxresults,
       marker,
@@ -838,6 +839,7 @@ export default class ContainerHandler extends BaseHandler
     const [blobs, nextMarker] = await this.dataStore.listBlobs(
       accountName,
       containerName,
+      undefined,
       options.prefix,
       options.maxresults,
       marker,

@@ -35,6 +35,7 @@ export default class LokiReferredExtentsAsyncIterator
         undefined,
         undefined,
         undefined,
+        undefined,
         this.blobListingMarker,
         true
       );
