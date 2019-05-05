@@ -358,6 +358,7 @@ export default class ContainerHandler extends BaseHandler
       container.properties.leaseState === Models.LeaseStateType.Leased &&
       options.proposedLeaseId !== container.leaseId
     ) {
+      await Mutex.unlock(containerName);
       throw StorageErrorFactory.getLeaseAlreadyPresent(context.contextID!);
     }
 
