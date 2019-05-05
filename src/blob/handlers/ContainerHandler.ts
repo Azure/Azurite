@@ -758,7 +758,6 @@ export default class ContainerHandler extends BaseHandler
     const containerName = container.name;
     const marker = parseInt(options.marker || "0", 10);
     const delimiter = "";
-    options.prefix = ""; // we do not support a prefix for the flat list
     options.marker = options.marker || "";
     let includeSnapshots: boolean = false;
     if (options.include !== undefined) {
@@ -795,7 +794,7 @@ export default class ContainerHandler extends BaseHandler
       date: context.startTime,
       serviceEndpoint,
       containerName,
-      prefix: options.prefix,
+      prefix: options.prefix || "",
       marker: options.marker,
       maxResults: options.maxresults || this.LIST_BLOBS_MAX_RESULTS_DEFAULT,
       delimiter,
