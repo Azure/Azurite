@@ -255,19 +255,31 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       );
     }
 
-    const response: Models.BlobGetPropertiesResponse = {
-      statusCode: 200,
-      metadata: blob.metadata,
-      isIncrementalCopy: blob.properties.incrementalCopy,
-      eTag: blob.properties.etag,
-      requestId: context.contextID,
-      version: API_VERSION,
-      date: context.startTime,
-      acceptRanges: "bytes",
-      blobCommittedBlockCount: undefined, // TODO: Append blob
-      isServerEncrypted: true,
-      ...blob.properties
-    };
+    // TODO: Create get metadata specific request in swagger
+    const againstMetadata = context.request!.getQuery("comp") === "metadata";
+
+    const response: Models.BlobGetPropertiesResponse = againstMetadata
+      ? {
+          statusCode: 200,
+          metadata: blob.metadata,
+          eTag: blob.properties.etag,
+          requestId: context.contextID,
+          version: API_VERSION,
+          date: context.startTime
+        }
+      : {
+          statusCode: 200,
+          metadata: blob.metadata,
+          isIncrementalCopy: blob.properties.incrementalCopy,
+          eTag: blob.properties.etag,
+          requestId: context.contextID,
+          version: API_VERSION,
+          date: context.startTime,
+          acceptRanges: "bytes",
+          blobCommittedBlockCount: undefined, // TODO: Append blob
+          isServerEncrypted: true,
+          ...blob.properties
+        };
 
     return response;
   }
@@ -1370,7 +1382,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       ...blob.properties,
       blobContentMD5: blob.properties.contentMD5,
       contentLength,
-      contentMD5
+      contentMD5,
+      isServerEncrypted: true
     };
 
     return response;
@@ -1478,7 +1491,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       ...blob.properties,
       contentLength,
       contentMD5,
-      blobContentMD5: blob.properties.contentMD5
+      blobContentMD5: blob.properties.contentMD5,
+      isServerEncrypted: true
     };
 
     return response;
