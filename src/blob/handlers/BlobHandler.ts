@@ -1437,10 +1437,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     // }
 
     blob.pageRangesInOrder = blob.pageRangesInOrder || [];
-    const ranges = this.rangesManager.fillZeroRanges(blob.pageRangesInOrder, {
-      start: rangeStart,
-      end: rangeEnd
-    });
+    const ranges =
+      contentLength <= 0
+        ? []
+        : this.rangesManager.fillZeroRanges(blob.pageRangesInOrder, {
+            start: rangeStart,
+            end: rangeEnd
+          });
 
     const bodyGetter = async () => {
       return this.dataStore.readPayloads(
