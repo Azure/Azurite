@@ -230,7 +230,7 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       `BlobSASAuthenticator:validate() Validate start and expiry time.`,
       context.contextID
     );
-    if (!this.validateTime(values.expiryTime!, values.startTime)) {
+    if (!this.validateTime(values.expiryTime, values.startTime)) {
       this.logger.info(
         `BlobSASAuthenticator:validate() Validate start and expiry failed.`,
         context.contextID
@@ -400,12 +400,18 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     return blobSASValues;
   }
 
-  private validateTime(expiry: Date | string, start?: Date | string): boolean {
-    const expiryTime = new Date(expiry);
+  private validateTime(expiry?: Date | string, start?: Date | string): boolean {
+    if (expiry === undefined && start === undefined) {
+      return true;
+    }
+
     const now = new Date();
 
-    if (now > expiryTime) {
-      return false;
+    if (expiry !== undefined) {
+      const expiryTime = new Date(expiry);
+      if (now > expiryTime) {
+        return false;
+      }
     }
 
     if (start !== undefined) {

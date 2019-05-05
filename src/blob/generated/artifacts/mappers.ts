@@ -41,7 +41,6 @@ export const AccessPolicy: msRest.CompositeMapper = {
       },
       expiry: {
         xmlName: "Expiry",
-        required: true,
         serializedName: "Expiry",
         type: {
           name: "String"
