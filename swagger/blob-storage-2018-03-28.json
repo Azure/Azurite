@@ -6093,7 +6093,6 @@
     "AccessPolicy": {
       "type": "object",
       "required": [
-        "Expiry",
         "Permission"
       ],
       "description": "An Access policy",
