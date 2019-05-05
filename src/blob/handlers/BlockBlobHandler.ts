@@ -119,7 +119,8 @@ export default class BlockBlobHandler extends BaseHandler
       contentMD5: blob.properties.contentMD5,
       requestId: blobCtx.contextID,
       version: API_VERSION,
-      date
+      date,
+      isServerEncrypted: true
     };
 
     return response;
