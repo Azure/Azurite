@@ -264,7 +264,10 @@ export async function serialize(
               const collectionHeaderValueSerialized =
                 headerValueSerialized[collectionHeaderPartialName];
               const collectionHeaderName = `${headerCollectionPrefix}${collectionHeaderPartialName}`;
-              if (collectionHeaderName && collectionHeaderValueSerialized) {
+              if (
+                collectionHeaderName &&
+                collectionHeaderValueSerialized !== undefined
+              ) {
                 res.setHeader(
                   collectionHeaderName,
                   collectionHeaderValueSerialized
