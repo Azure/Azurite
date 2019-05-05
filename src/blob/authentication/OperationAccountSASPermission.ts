@@ -58,7 +58,7 @@ const OPERATION_ACCOUNT_SAS_PERMISSIONS = new Map<
 >();
 
 OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
-  Operation.Service_GetAccountInfo, // Not sure about this permission
+  Operation.Service_GetAccountInfo,
   new OperationAccountSASPermission(
     AccountSASService.Blob,
     AccountSASResourceType.Service,
@@ -67,7 +67,7 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
 );
 
 OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
-  Operation.Container_GetAccountInfo, // Not sure about this permission
+  Operation.Service_GetAccountInfoWithHead,
   new OperationAccountSASPermission(
     AccountSASService.Blob,
     AccountSASResourceType.Service,
@@ -76,7 +76,34 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
 );
 
 OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
-  Operation.Blob_GetAccountInfo, // Not sure about this permission
+  Operation.Container_GetAccountInfo,
+  new OperationAccountSASPermission(
+    AccountSASService.Blob,
+    AccountSASResourceType.Service,
+    AccountSASPermission.Read
+  )
+);
+
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.Container_GetAccountInfoWithHead,
+  new OperationAccountSASPermission(
+    AccountSASService.Blob,
+    AccountSASResourceType.Service,
+    AccountSASPermission.Read
+  )
+);
+
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.Blob_GetAccountInfo,
+  new OperationAccountSASPermission(
+    AccountSASService.Blob,
+    AccountSASResourceType.Service,
+    AccountSASPermission.Read
+  )
+);
+
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.Blob_GetAccountInfoWithHead,
   new OperationAccountSASPermission(
     AccountSASService.Blob,
     AccountSASResourceType.Service,

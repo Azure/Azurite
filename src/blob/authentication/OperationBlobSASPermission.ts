@@ -108,11 +108,11 @@ OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
 );
 OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
   Operation.Container_GetAccountInfo,
-  new OperationBlobSASPermission()
+  new OperationBlobSASPermission(BlobSASPermission.Read)
 );
 OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
   Operation.Container_GetAccountInfoWithHead,
-  new OperationBlobSASPermission()
+  new OperationBlobSASPermission(BlobSASPermission.Read)
 );
 OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
   Operation.Blob_Download,
@@ -183,11 +183,11 @@ OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
 );
 OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
   Operation.Blob_GetAccountInfo,
-  new OperationBlobSASPermission()
+  new OperationBlobSASPermission(BlobSASPermission.Read)
 );
 OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
   Operation.Blob_GetAccountInfoWithHead,
-  new OperationBlobSASPermission()
+  new OperationBlobSASPermission(BlobSASPermission.Read)
 );
 OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
   Operation.PageBlob_Create,
@@ -349,155 +349,155 @@ OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Container_GetAccountInfo,
-  new OperationBlobSASPermission()
+  new OperationBlobSASPermission(ContainerSASPermission.Read)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Container_GetAccountInfoWithHead,
-  new OperationBlobSASPermission()
+  new OperationBlobSASPermission(ContainerSASPermission.Read)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_Download,
-  new OperationBlobSASPermission(ContainerSASPermission.Read)
+  new OperationBlobSASPermission(BlobSASPermission.Read)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_GetProperties,
-  new OperationBlobSASPermission(ContainerSASPermission.Read)
+  new OperationBlobSASPermission(BlobSASPermission.Read)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_Delete,
-  new OperationBlobSASPermission(ContainerSASPermission.Delete)
+  new OperationBlobSASPermission(BlobSASPermission.Delete)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_Undelete,
-  new OperationBlobSASPermission(ContainerSASPermission.Write) // TODO: Not sure
+  new OperationBlobSASPermission(BlobSASPermission.Write) // TODO: Not sure
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_SetHTTPHeaders,
-  new OperationBlobSASPermission(ContainerSASPermission.Write)
+  new OperationBlobSASPermission(BlobSASPermission.Write)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_SetMetadata,
-  new OperationBlobSASPermission(ContainerSASPermission.Write)
+  new OperationBlobSASPermission(BlobSASPermission.Write)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_AcquireLease,
-  new OperationBlobSASPermission(ContainerSASPermission.Write)
+  new OperationBlobSASPermission(BlobSASPermission.Write)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_ReleaseLease,
-  new OperationBlobSASPermission(ContainerSASPermission.Write)
+  new OperationBlobSASPermission(BlobSASPermission.Write)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_RenewLease,
-  new OperationBlobSASPermission(ContainerSASPermission.Write)
+  new OperationBlobSASPermission(BlobSASPermission.Write)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_ChangeLease,
-  new OperationBlobSASPermission(ContainerSASPermission.Write)
+  new OperationBlobSASPermission(BlobSASPermission.Write)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_BreakLease,
   new OperationBlobSASPermission(
-    ContainerSASPermission.Write + ContainerSASPermission.Delete
+    BlobSASPermission.Write + BlobSASPermission.Delete
   )
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_CreateSnapshot,
   new OperationBlobSASPermission(
-    ContainerSASPermission.Write + ContainerSASPermission.Create
+    BlobSASPermission.Write + BlobSASPermission.Create
   )
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_StartCopyFromURL,
   // TODO: If destination is an existing blob, create permission is not enough
   new OperationBlobSASPermission(
-    ContainerSASPermission.Write + ContainerSASPermission.Create
+    BlobSASPermission.Write + BlobSASPermission.Create
   )
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_AbortCopyFromURL,
-  new OperationBlobSASPermission(ContainerSASPermission.Write)
+  new OperationBlobSASPermission(BlobSASPermission.Write)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_SetTier,
-  new OperationBlobSASPermission(ContainerSASPermission.Write)
+  new OperationBlobSASPermission(BlobSASPermission.Write)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_GetAccountInfo,
-  new OperationBlobSASPermission()
+  new OperationBlobSASPermission(BlobSASPermission.Read)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_GetAccountInfoWithHead,
-  new OperationBlobSASPermission()
+  new OperationBlobSASPermission(BlobSASPermission.Read)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.PageBlob_Create,
   new OperationBlobSASPermission(
     // TODO: When destination blob doesn't exist, needs create permission
-    ContainerSASPermission.Write + ContainerSASPermission.Create
+    BlobSASPermission.Write + BlobSASPermission.Create
   )
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.PageBlob_UploadPages,
-  new OperationBlobSASPermission(ContainerSASPermission.Write)
+  new OperationBlobSASPermission(BlobSASPermission.Write)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.PageBlob_ClearPages,
-  new OperationBlobSASPermission(ContainerSASPermission.Write)
+  new OperationBlobSASPermission(BlobSASPermission.Write)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.PageBlob_GetPageRanges,
-  new OperationBlobSASPermission(ContainerSASPermission.Read)
+  new OperationBlobSASPermission(BlobSASPermission.Read)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.PageBlob_GetPageRangesDiff,
-  new OperationBlobSASPermission(ContainerSASPermission.Read)
+  new OperationBlobSASPermission(BlobSASPermission.Read)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.PageBlob_Resize,
-  new OperationBlobSASPermission(ContainerSASPermission.Write)
+  new OperationBlobSASPermission(BlobSASPermission.Write)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.PageBlob_UpdateSequenceNumber,
-  new OperationBlobSASPermission(ContainerSASPermission.Write)
+  new OperationBlobSASPermission(BlobSASPermission.Write)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.PageBlob_CopyIncremental,
   new OperationBlobSASPermission(
-    ContainerSASPermission.Write + ContainerSASPermission.Create
+    BlobSASPermission.Write + BlobSASPermission.Create
   )
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.AppendBlob_Create,
   // TODO: Create a new blob must be write
   new OperationBlobSASPermission(
-    ContainerSASPermission.Write + ContainerSASPermission.Create
+    BlobSASPermission.Write + BlobSASPermission.Create
   )
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.AppendBlob_AppendBlock,
-  new OperationBlobSASPermission(ContainerSASPermission.Add)
+  new OperationBlobSASPermission(BlobSASPermission.Add)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.BlockBlob_Upload,
   // Create a new blob, must be write
   new OperationBlobSASPermission(
-    ContainerSASPermission.Write + ContainerSASPermission.Create
+    BlobSASPermission.Write + BlobSASPermission.Create
   )
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.BlockBlob_StageBlock,
-  new OperationBlobSASPermission(ContainerSASPermission.Write)
+  new OperationBlobSASPermission(BlobSASPermission.Write)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.BlockBlob_StageBlockFromURL,
-  new OperationBlobSASPermission(ContainerSASPermission.Write)
+  new OperationBlobSASPermission(BlobSASPermission.Write)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.BlockBlob_CommitBlockList,
-  new OperationBlobSASPermission(ContainerSASPermission.Write)
+  new OperationBlobSASPermission(BlobSASPermission.Write)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.BlockBlob_GetBlockList,
-  new OperationBlobSASPermission(ContainerSASPermission.Read)
+  new OperationBlobSASPermission(BlobSASPermission.Read)
 );
