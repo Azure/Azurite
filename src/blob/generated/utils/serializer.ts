@@ -146,7 +146,7 @@ export async function deserialize(
       // read body
       parsedBody = JSON.parse(body);
     } else if (isRequestWithXML) {
-      parsedBody = await parseXML(body);
+      parsedBody = (await parseXML(body)) || {};
     }
 
     let valueToDeserialize: any = parsedBody;
