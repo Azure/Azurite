@@ -1,5 +1,8 @@
 import { PageRange } from "../generated/artifacts/models";
-import { PersistencyPageRange, ZERO_PERSISTENCY_CHUNK_ID } from "../persistence/IBlobDataStore";
+import {
+  PersistencyPageRange,
+  ZERO_PERSISTENCY_CHUNK_ID
+} from "../persistence/IBlobDataStore";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
 /********** Ranges Merging Strategy ************/
@@ -334,7 +337,7 @@ export default class PageBlobRangesManager implements IPageBlobRangesManager {
     if (start > end || start < 0) {
       throw new RangeError(
         // tslint:disable-next-line:max-line-length
-        "PageBlobHandler:selectImpactedRanges() start must less equal than end parameter, start must larger equal than 0."
+        "PageBlobRangesManager:selectImpactedRanges() start must less equal than end parameter, start must larger equal than 0."
       );
     }
 
