@@ -70,6 +70,18 @@ export default class PageBlobHandler extends BaseHandler
       throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
+    // const accessTierInferred = options.pageBlobAccessTier === undefined;
+
+    // Check Blob size match tier
+    // if (
+    //   !accessTierInferred &&
+    //   blobContentLength > PageBlobAccessTierThreshold.get(tier)!
+    // ) {
+    //   throw StorageErrorFactory.getBlobBlobTierInadequateForContentLength(
+    //     blobCtx.contextID!
+    //   );
+    // }
+
     const etag = newEtag();
     const blob: BlobModel = {
       deleted: false,
@@ -92,9 +104,11 @@ export default class PageBlobHandler extends BaseHandler
         blobType: Models.BlobType.PageBlob,
         leaseStatus: Models.LeaseStatusType.Unlocked,
         leaseState: Models.LeaseStateType.Available,
-        serverEncrypted: true,
-        accessTier: Models.AccessTier.P10, // TODO
-        accessTierInferred: true
+        serverEncrypted: true
+        // accessTier: accessTierInferred
+        //   ? ((options.pageBlobAccessTier as any) as Models.AccessTier)
+        //   : Models.AccessTier.P4, // TODO: Infer tier from size
+        // accessTierInferred
       },
       snapshot: "",
       isCommitted: true,

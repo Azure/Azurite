@@ -1251,6 +1251,7 @@ const pageBlobCreateOperationSpec: msRest.OperationSpec = {
     Parameters.metadata,
     Parameters.blobContentLength,
     Parameters.blobSequenceNumber,
+    Parameters.pageBlobAccessTier,
     Parameters.version,
     Parameters.requestId,
     Parameters.blobType0,

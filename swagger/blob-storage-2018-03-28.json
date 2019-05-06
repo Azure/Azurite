@@ -2968,6 +2968,9 @@
             "$ref": "#/parameters/BlobSequenceNumber"
           },
           {
+            "$ref": "#/parameters/PageBlobAccessTier"
+          },
+          {
             "$ref": "#/parameters/ApiVersionParameter"
           },
           {
@@ -6119,10 +6122,14 @@
         "P4",
         "P6",
         "P10",
+        "P15",
         "P20",
         "P30",
         "P40",
         "P50",
+        "P60",
+        "P70",
+        "P80",
         "Hot",
         "Cool",
         "Archive"
@@ -7137,10 +7144,14 @@
         "P4",
         "P6",
         "P10",
+        "P15",
         "P20",
         "P30",
         "P40",
         "P50",
+        "P60",
+        "P70",
+        "P80",
         "Hot",
         "Cool",
         "Archive"
@@ -7243,6 +7254,32 @@
       "default": 0,
       "x-ms-parameter-location": "method",
       "description": "Set for page blobs only. The sequence number is a user-controlled value that you can use to track requests. The value of the sequence number must be between 0 and 2^63 - 1."
+    },
+    "PageBlobAccessTier": {
+      "name": "x-ms-access-tier",
+      "x-ms-client-name": "pageBlobAccessTier",
+      "in": "header",
+      "required": false,
+      "type": "string",
+      "enum": [
+        "P4",
+        "P6",
+        "P10",
+        "P15",
+        "P20",
+        "P30",
+        "P40",
+        "P50",
+        "P60",
+        "P70",
+        "P80"
+      ],
+      "x-ms-enum": {
+        "name": "PageBlobAccessTier",
+        "modelAsString": true
+      },
+      "x-ms-parameter-location": "method",
+      "description": "Set for page blobs only. For page blobs on a premium storage account only. Specifies the tier to be set on the blob."
     },
     "BlockId": {
       "name": "blockid",

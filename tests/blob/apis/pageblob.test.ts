@@ -1505,7 +1505,8 @@ describe("PageBlobAPIs", () => {
     assert.equal(propertiesResponse.blobSequenceNumber!, 100);
   });
 
-  it("setTier for Page blob", async () => {
+  // devstoreaccount1 is standard storage account which doesn't support premium page blob tiers
+  it.skip("setTier for Page blob", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
     let propertiesResponse = await pageBlobURL.getProperties(Aborter.none);

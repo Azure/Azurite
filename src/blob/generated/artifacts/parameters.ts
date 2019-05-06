@@ -759,6 +759,18 @@ export const metadata: msRest.OperationParameter = {
     headerCollectionPrefix: "x-ms-meta-"
   }
 };
+export const pageBlobAccessTier: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "pageBlobAccessTier"
+  ],
+  mapper: {
+    serializedName: "x-ms-access-tier",
+    type: {
+      name: "String"
+    }
+  }
+};
 export const pageWrite0: msRest.OperationParameter = {
   parameterPath: "pageWrite",
   mapper: {

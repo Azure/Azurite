@@ -1197,62 +1197,48 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
       blob.properties.accessTier = tier;
       blob.properties.accessTierChangeTime = context.startTime;
-    } else if (
-      tier
-        .toString()
-        .toUpperCase()
-        .startsWith("P") &&
-      blob.properties.blobType === Models.BlobType.PageBlob
-    ) {
-      // page blob
-      // Check Page blob tier not set to lower
-      if (blob.properties.accessTier !== undefined) {
-        const oldTierInt = parseInt(
-          blob.properties.accessTier.toString().substring(1),
-          10
-        );
-        const newTierInt = parseInt(tier.toString().substring(1), 10);
-        if (oldTierInt > newTierInt) {
-          throw StorageErrorFactory.getBlobCannotChangeToLowerTier(
-            blobCtx.contextID!
-          );
-        }
-      }
+    }
+    // else if (
+    //   tier
+    //     .toString()
+    //     .toUpperCase()
+    //     .startsWith("P") &&
+    //   blob.properties.blobType === Models.BlobType.PageBlob
+    // ) {
+    //   // page blob
+    //   // Check Page blob tier not set to lower
+    //   if (blob.properties.accessTier !== undefined) {
+    //     const oldTierInt = parseInt(
+    //       blob.properties.accessTier.toString().substring(1),
+    //       10
+    //     );
+    //     const newTierInt = parseInt(tier.toString().substring(1), 10);
+    //     if (oldTierInt > newTierInt) {
+    //       throw StorageErrorFactory.getBlobCannotChangeToLowerTier(
+    //         blobCtx.contextID!
+    //       );
+    //     }
+    //   }
 
-      const oneGBinByte = 1024 * 1024 * 1024;
-      // Check Blob size match tier
-      if (
-        (tier === Models.AccessTier.P4 &&
-          blob.properties.contentLength! > 32 * oneGBinByte) ||
-        (tier === Models.AccessTier.P6 &&
-          blob.properties.contentLength! > 64 * oneGBinByte) ||
-        (tier === Models.AccessTier.P10 &&
-          blob.properties.contentLength! > 128 * oneGBinByte) ||
-        // (tier === Models.AccessTier.P15 &&
-        //   blob.properties.contentLength! > 256 * oneGBinByte) ||
-        (tier === Models.AccessTier.P20 &&
-          blob.properties.contentLength! > 512 * oneGBinByte) ||
-        (tier === Models.AccessTier.P30 &&
-          blob.properties.contentLength! > 1024 * oneGBinByte) ||
-        (tier === Models.AccessTier.P40 &&
-          blob.properties.contentLength! > 2048 * oneGBinByte) ||
-        (tier === Models.AccessTier.P50 &&
-          blob.properties.contentLength! > 4095 * oneGBinByte)
-        // (tier === Models.AccessTier.P60 &&
-        //   blob.properties.contentLength! > 64 * oneGBinByte) ||
-        // (tier === Models.AccessTier.P70 &&
-        //   blob.properties.contentLength! > 64 * oneGBinByte) ||
-        // (tier === Models.AccessTier.P80 &&
-        //   blob.properties.contentLength! > 64 * oneGBinByte)
-      ) {
-        throw StorageErrorFactory.getBlobBlobTierInadequateForContentLength(
-          blobCtx.contextID!
-        );
-      }
+    //   if (!PageBlobAccessTierThreshold.has(tier)) {
+    //     throw Error(
+    //       `BlobHandler:setTier() PageBlobAccessTierThreshold doesn't define tier threshold for tier ${tier}`
+    //     );
+    //   }
 
-      blob.properties.accessTier = tier;
-      blob.properties.accessTierChangeTime = context.startTime;
-    } else {
+    //   // Check Blob size match tier
+    //   if (
+    //     blob.properties.contentLength! > PageBlobAccessTierThreshold.get(tier)!
+    //   ) {
+    //     throw StorageErrorFactory.getBlobBlobTierInadequateForContentLength(
+    //       blobCtx.contextID!
+    //     );
+    //   }
+
+    //   blob.properties.accessTier = tier;
+    //   blob.properties.accessTierChangeTime = context.startTime;
+    // }
+    else {
       // Blob tier and blob type not match
       throw StorageErrorFactory.getBlobInvalidBlobType(blobCtx.contextID!);
     }
