@@ -1,7 +1,7 @@
 {
   "name": "azurite",
   "version": "3.0.0-preview",
-  "description": "A lightweight server clone of Azure Storage that simulates most of the commands supported by it with minimal dependencies.",
+  "description": "An open source Azure Storage API compatible server.",
   "bin": {
     "azurite": "./dist/src/blob/main.js",
     "azurite-blob": "./dist/src/blob/main.js"
@@ -55,7 +55,7 @@
     "lint": "tslint -p tsconfig.json -c tslint.json src/**/*.ts",
     "test": "mocha --compilers ts-node/register --no-timeouts --recursive tests/**/*.test.ts tests/**/**/*.test.ts",
     "clean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log",
-    "deepclean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log __blobstorage__ __azurite_db_blob__.json debug.log"
+    "clean:deep": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log __blobstorage__ __azurite_db_blob__.json debug.log"
   },
   "husky": {
     "hooks": {

@@ -52,8 +52,4 @@ npm run test
 
 ## PR
 
-Make sure a unit test case is added for the changes you made. And send a PR to `newarch` branch for Azurite V3 develpment.
-
-## TypeScript Practices
-
-TODO
+Make sure a unit test case is added for the changes you made. And send a PR to `master` branch for Azurite V3 development.
