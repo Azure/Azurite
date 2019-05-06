@@ -88,8 +88,8 @@ export interface BlobProperties {
   deletedTime?: Date;
   remainingRetentionDays?: number;
   /**
-   * Possible values include: 'P4', 'P6', 'P10', 'P20', 'P30', 'P40', 'P50', 'Hot', 'Cool',
-   * 'Archive'
+   * Possible values include: 'P4', 'P6', 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70',
+   * 'P80', 'Hot', 'Cool', 'Archive'
    */
   accessTier?: AccessTier;
   accessTierInferred?: boolean;
@@ -1523,6 +1523,12 @@ export interface PageBlobCreateOptionalParams {
    * value: 0.
    */
   blobSequenceNumber?: number;
+  /**
+   * Set for page blobs only. For page blobs on a premium storage account only. Specifies the tier
+   * to be set on the blob. Possible values include: 'P4', 'P6', 'P10', 'P15', 'P20', 'P30', 'P40',
+   * 'P50', 'P60', 'P70', 'P80'
+   */
+  pageBlobAccessTier?: PageBlobAccessTier;
   /**
    * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
    * analytics logs when storage analytics logging is enabled.
@@ -4219,7 +4225,8 @@ export enum LeaseStatusType {
 
 /**
  * Defines values for AccessTier.
- * Possible values include: 'P4', 'P6', 'P10', 'P20', 'P30', 'P40', 'P50', 'Hot', 'Cool', 'Archive'
+ * Possible values include: 'P4', 'P6', 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70',
+ * 'P80', 'Hot', 'Cool', 'Archive'
  * @readonly
  * @enum {string}
  */
@@ -4227,10 +4234,14 @@ export enum AccessTier {
   P4 = 'P4',
   P6 = 'P6',
   P10 = 'P10',
+  P15 = 'P15',
   P20 = 'P20',
   P30 = 'P30',
   P40 = 'P40',
   P50 = 'P50',
+  P60 = 'P60',
+  P70 = 'P70',
+  P80 = 'P80',
   Hot = 'Hot',
   Cool = 'Cool',
   Archive = 'Archive',
@@ -4414,6 +4425,27 @@ export enum GeoReplicationStatusType {
   Live = 'live',
   Bootstrap = 'bootstrap',
   Unavailable = 'unavailable',
+}
+
+/**
+ * Defines values for PageBlobAccessTier.
+ * Possible values include: 'P4', 'P6', 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70',
+ * 'P80'
+ * @readonly
+ * @enum {string}
+ */
+export enum PageBlobAccessTier {
+  P4 = 'P4',
+  P6 = 'P6',
+  P10 = 'P10',
+  P15 = 'P15',
+  P20 = 'P20',
+  P30 = 'P30',
+  P40 = 'P40',
+  P50 = 'P50',
+  P60 = 'P60',
+  P70 = 'P70',
+  P80 = 'P80',
 }
 
 /**
