@@ -7,7 +7,7 @@ import IBlockBlobHandler from "../generated/handlers/IBlockBlobHandler";
 import { parseXML } from "../generated/utils/xml";
 import { BlobModel, BlockModel } from "../persistence/IBlobDataStore";
 import { API_VERSION } from "../utils/constants";
-import { newEtag, getMD5FromString, getMD5FromStream } from "../utils/utils";
+import { getMD5FromStream, getMD5FromString, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import BlobHandler from "./BlobHandler";
 

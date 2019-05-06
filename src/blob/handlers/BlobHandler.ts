@@ -1238,6 +1238,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     //   blob.properties.accessTier = tier;
     //   blob.properties.accessTierChangeTime = context.startTime;
     // }
+    // tslint:disable-next-line:one-line
     else {
       // Blob tier and blob type not match
       throw StorageErrorFactory.getBlobInvalidBlobType(blobCtx.contextID!);
