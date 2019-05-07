@@ -52,4 +52,4 @@ npm run test
 
 ## PR
 
-Make sure a unit test case is added for the changes you made. And send a PR to `master` branch for Azurite V3 development.
+Make sure test cases are added for the changes you made. And send a PR to `dev` branch for Azurite V3 development, `dev-legacy` branch for Azurite V2.
