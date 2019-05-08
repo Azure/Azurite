@@ -151,11 +151,11 @@ You can customize the listening port per your requirements.
 --blobPort 8888
 ```
 
-<!-- #### Let System Auto Select an Available Port
+#### Let System Auto Select an Available Port
 
 ```cmd
 --blobPort 0
-``` -->
+```
 
 ### Workspace Path Configuration
 
