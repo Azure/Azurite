@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { access } from "fs";
 import { dirname, join } from "path";
 import { promisify } from "util";
@@ -77,6 +78,6 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error(err.message);
-  process.exit();
+  console.error(`Exit due to unhandled error: ${err.message}`);
+  process.exit(1);
 });

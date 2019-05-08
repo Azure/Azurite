@@ -9,6 +9,11 @@ import StorageError from "./StorageError";
  */
 export default class NotImplementedError extends StorageError {
   public constructor(requestID: string = "") {
-    super(500, "APINotImplemented", "Current API is not implemented yet.", requestID);
+    super(
+      500,
+      "APINotImplemented",
+      "Current API is not implemented yet. Please vote your wanted features to https://github.com/azure/azurite/issues",
+      requestID
+    );
   }
 }

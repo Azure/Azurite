@@ -6,7 +6,7 @@ Visual Studio Code is the best editor for TypeScript. Install and configure foll
 
 ### TSLint
 
-To keep a persistence coding style, we use TSLint to find potential bugs. All developers should follow the same tslint.json defined in project.
+To maintain a consistent coding style, we use TSLint to find potential bugs. All developers should follow the same tslint.json defined in project.
 
 ### prettier
 
@@ -14,7 +14,7 @@ prettier is a tool helping automatically clean up our TypeScript codes. Recommen
 
 ### Document This
 
-This is useful to generate JSDoc for TypeScript codes.
+This is useful for generating JSDoc for TypeScript codes.
 
 ### TypeScript Import Sorter
 
@@ -28,7 +28,7 @@ Every handler will talk to persistence layer directly. We make implements of per
 
 ## Debug
 
-In the root of the repository, we provided pre-defined debugging scripts. To make it easy to debug in Visual Studio Code with simple F5 click for debug configuration "Azurite Blob Service".
+In the root of the repository, we have provided pre-defined debugging scripts. This makes it easy to debug in Visual Studio Code with simple F5 click for debug configuration "Azurite Blob Service".
 
 Or manually follow following steps to build and run:
 
@@ -39,9 +39,9 @@ npm run blob
 
 ## Testing
 
-For every new implemented REST API and handler, there should at least 1 unit test case for covering.
+For every newly implemented REST API and handler, there should be at least coverage from 1 unit / integration test case.
 
-We also predefined Visual Studio Code debug configuration "Current Mocha" for execute mocha test with current opended file.
+We also provide a predefined Visual Studio Code debug configuration "Current Mocha", allowing you to execute mocha tests within the currently opended file.
 
 Or manually execute all test cases:
 
@@ -52,8 +52,4 @@ npm run test
 
 ## PR
 
-Make sure a unit test case is added for the changes you made. And send a PR to `newarch` branch for Azurite V3 develpment.
-
-## TypeScript Practices
-
-TODO
+Make sure test cases are added for the changes you made. And send a PR to `dev` branch for Azurite V3 or later development, `dev-legacy` branch for Azurite V2.

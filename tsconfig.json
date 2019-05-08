@@ -5,7 +5,7 @@
     "preserveConstEnums": true,
     "sourceMap": true,
     "newLine": "LF",
-    "target": "es5",
+    "target": "es2017",
     "moduleResolution": "node",
     "noUnusedLocals": true,
     "noUnusedParameters": false,

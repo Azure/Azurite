@@ -6,6 +6,8 @@
 
 trigger:
   - newarch-dev
+  - master
+  - dev
 
 jobs:
   - job: blobnodejslinux

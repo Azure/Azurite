@@ -8,12 +8,12 @@ import {
 args
   .option(
     ["", "blobHost"],
-    "Optional. Customize listening address, default is 127.0.0.1",
+    "Optional. Customize listening address",
     DEFAULT_SERVER_HOST_NAME
   )
   .option(
     ["", "blobPort"],
-    "Optional. Customize listening port, default is 10000",
+    "Optional. Customize listening port",
     DEFAULT_SERVER_LISTENING_PORT
   )
   .option(
@@ -26,6 +26,8 @@ args
     "debug",
     "Optional. Enable debug log by providing a valid local file path as log destination"
   );
+
+(args as any).config.name = "azurite";
 
 export default class Environment {
   private flags = args.parse(process.argv);
