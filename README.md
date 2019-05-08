@@ -158,6 +158,7 @@ You can customize the listening port per your requirements.
 ```cmd
 --blobPort 0
 ```
+Note: The port in use is displayed on Azurite startup.
 
 ### Workspace Path Configuration
 
@@ -319,14 +320,6 @@ Table service support is currently under discussion.
 
 Azurite V3 supports features from Azure Storage API version 2018-03-28, and willmaintain parity with the latest API versions, in a more frequent update frequency than legacy Azurite V2.
 
-## Welcome Contributions!
-
-We are currently working on Azurite V3 to implement the remaining Azure Storage REST APIs.  
-We finished the basic structure and majority of features in Blob Storage, as can be seen in the support matrix.  
-The detailed work items are also tracked in GitHub repository projects and issues.  
-
-Any contribution to Azurite V3 is welcome, please goto `CONTRIBUTION.md` for detailed contribution guidelines. Alternatively, you can open GitHub issues voting for any missing features in Azurite V3.
-
 ## TypeScript Server Code Generator
 
 Azurite V3 leverages a TypeScript Node.js Server Code Generator to generate the majority of code from Azure Storage REST APIs swagger specification.  
@@ -383,9 +376,15 @@ Detailed support matrix:
 
 This project is licensed under MIT.
 
-## Contributing
+## We Welcome Contributions!
 
-This project welcomes contributions and suggestions. Most contributions require you to agree to a
+We are currently working on Azurite V3 to implement the remaining Azure Storage REST APIs.  
+We finished the basic structure and majority of features in Blob Storage, as can be seen in the support matrix.  
+The detailed work items are also tracked in GitHub repository projects and issues.  
+
+Any contribution and suggestions for Azurite V3 is welcome, please goto `CONTRIBUTION.md` for detailed contribution guidelines. Alternatively, you can open GitHub issues voting for any missing features in Azurite V3.
+
+Most contributions require you to agree to a
 Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
 the rights to use your contribution. For details, visit <https://cla.microsoft.com.>
 
