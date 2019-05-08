@@ -3,7 +3,8 @@
   "version": "3.0.0-preview",
   "description": "A lightweight server clone of Azure Storage that simulates most of the commands supported by it with minimal dependencies.",
   "bin": {
-    "azurite": "./dist/src/blob/main.js"
+    "azurite": "./dist/src/blob/main.js",
+    "azurite-blob": "./dist/src/blob/main.js"
   },
   "engines": {
     "node": ">=8.0.0"
