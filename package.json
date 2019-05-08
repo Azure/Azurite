@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@azure/ms-rest-js": "^1.5.0",
+    "args": "^5.0.1",
     "etag": "^1.8.1",
     "express": "^4.16.4",
     "lokijs": "^1.5.6",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@azure/storage-blob": "^10.3.0",
+    "@types/args": "^3.0.0",
     "@types/etag": "^1.8.0",
     "@types/express": "^4.16.0",
     "@types/lokijs": "^1.5.2",

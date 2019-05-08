@@ -3,7 +3,12 @@ import uuid from "uuid/v4";
 
 import logger from "../../common/Logger";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
-import { DEFAULT_CONTEXT_PATH, SECONDARY_SUFFIX } from "../utils/constants";
+import {
+  DEFAULT_CONTEXT_PATH,
+  HeaderConstants,
+  SECONDARY_SUFFIX,
+  VERSION
+} from "../utils/constants";
 import BlobStorageContext from "./BlobStorageContext";
 
 /**
@@ -19,6 +24,9 @@ export default function blobStorageContextMiddleware(
   res: Response,
   next: NextFunction
 ): void {
+  // Set server header in every Azurite response
+  res.setHeader(HeaderConstants.SERVER, `Azurite-Blob/${VERSION}`);
+
   const blobContext = new BlobStorageContext(res.locals, DEFAULT_CONTEXT_PATH);
   blobContext.startTime = new Date();
 

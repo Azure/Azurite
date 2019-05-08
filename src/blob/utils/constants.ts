@@ -1,40 +1,25 @@
 import * as Models from "../generated/artifacts/models";
 
-export const DEFAULT_SERVER_HOST_NAME = "0.0.0.0"; // Change to 0.0.0.0 when needs external access
-
-export const DEFAULT_SERVER_LISTENING_PORT = 10000;
-
-export const DEFAULT_LOKI_DB_PATH = "__azurite_db_blob__.json";
-
-export const DEFAULT_BLOB_PERSISTENCE_PATH = "__blobstorage__";
-
-export const DEFAULT_DEBUG_LOG_PATH = "./debug.log";
-
-export const DEFAULT_ENABLE_DEBUG_LOG = true;
-
-export const DEFAULT_ACCESS_LOG_PATH = "./access.log";
-
-export const DEFAULT_ENABLE_ACCESS_LOG = true;
-
-export const DEFAULT_CONTEXT_PATH = "azurite_blob_context";
-
-export const IS_PRODUCTION = process.env.NODE_ENV === "production";
-
-export const LOGGER_CONFIGS = {};
-
+export const VERSION = "3.0.0-preview";
 export const API_VERSION = "2018-03-28";
-
-export const DEFAULT_GC_INTERVAL_MS = 30 * 1000; // TODO: Set a larger interval for production usage
-
+export const DEFAULT_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
+export const DEFAULT_SERVER_LISTENING_PORT = 10000;
+export const IS_PRODUCTION = process.env.NODE_ENV === "production";
+export const DEFAULT_LOKI_DB_PATH = "__azurite_db_blob__.json";
+export const DEFAULT_BLOB_PERSISTENCE_PATH = "__blobstorage__";
+export const DEFAULT_DEBUG_LOG_PATH = "./debug.log";
+export const DEFAULT_ENABLE_DEBUG_LOG = true;
+export const DEFAULT_ACCESS_LOG_PATH = "./access.log";
+export const DEFAULT_ENABLE_ACCESS_LOG = true;
+export const DEFAULT_CONTEXT_PATH = "azurite_blob_context";
+export const LOGGER_CONFIGS = {};
+export const DEFAULT_GC_INTERVAL_MS = 60 * 1000;
 export const EMULATOR_ACCOUNT_NAME = "devstoreaccount1";
-
 export const EMULATOR_ACCOUNT_KEY = Buffer.from(
   "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
   "base64"
 );
-
 export const EMULATOR_ACCOUNT_SKUNAME = Models.SkuName.StandardRAGRS;
-
 export const EMULATOR_ACCOUNT_KIND = Models.AccountKind.StorageV2;
 
 export const HeaderConstants = {
@@ -55,7 +40,8 @@ export const HeaderConstants = {
   RANGE: "Range",
   USER_AGENT: "User-Agent",
   X_MS_CLIENT_REQUEST_ID: "x-ms-client-request-id",
-  X_MS_DATE: "x-ms-date"
+  X_MS_DATE: "x-ms-date",
+  SERVER: "Server"
 };
 
 export const SECONDARY_SUFFIX = "-secondary";
