@@ -1,5 +1,7 @@
 # Contribution
 
+> Go to [GitHub project](https://github.com/Azure/Azurite/projects) page or [GitHub issues](https://github.com/Azure/Azurite/issues) for the milestone and TODO items we are used for tracking upcoming features and bug fixes.
+
 ## Development Environments
 
 Visual Studio Code is the best editor for TypeScript. Install and configure following plugins and configurations before starting development.
