@@ -61,7 +61,7 @@ async function main() {
   const beforeCloseMessage = `Azurite Blob service is closing...`;
   const afterCloseMessage = `Azurite Blob service successfully closed`;
   process
-    .on("message", msg => {
+    .once("message", msg => {
       if (msg === "shutdown") {
         console.log(beforeCloseMessage);
         server.close().then(() => {
@@ -69,7 +69,7 @@ async function main() {
         });
       }
     })
-    .on("SIGINT", () => {
+    .once("SIGINT", () => {
       console.log(beforeCloseMessage);
       server.close().then(() => {
         console.log(afterCloseMessage);

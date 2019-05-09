@@ -50,9 +50,11 @@ export default class BlobSASAuthenticator implements IAuthenticator {
 
     const containerName = blobContext.container;
     if (containerName === undefined) {
-      throw RangeError(
-        `BlobSASAuthenticator:validate() container name is undefined in context.`
+      this.logger.error(
+        `BlobSASAuthenticator:validate() container name is undefined in context.`,
+        context.contextID
       );
+      return undefined;
     }
 
     const blobName = blobContext.blob;
