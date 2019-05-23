@@ -8,6 +8,13 @@ export type RequestListener = (
   response: http.ServerResponse
 ) => void;
 
+export enum ServerStatus {
+  Closed = "Closed",
+  Starting = "Starting",
+  Running = "Running",
+  Closing = "Closing"
+}
+
 /**
  * Abstract Server class for Azurite HTTP or HTTPS Servers.
  *
@@ -16,6 +23,8 @@ export type RequestListener = (
  * @class Server
  */
 export default abstract class ServerBase {
+  protected status: ServerStatus = ServerStatus.Closed;
+
   /**
    * Creates an instance of HTTP or HTTPS server.
    *
@@ -57,6 +66,10 @@ export default abstract class ServerBase {
     }
   }
 
+  public getStatus(): ServerStatus {
+    return this.status;
+  }
+
   /**
    * Initialize and start the server to server incoming HTTP requests.
    * beforeStart() and afterStart() will be executed before and after start().
@@ -66,6 +79,12 @@ export default abstract class ServerBase {
    * @memberof Server
    */
   public async start(): Promise<void> {
+    if (this.status !== ServerStatus.Closed) {
+      throw Error(`Cannot start server in status ${ServerStatus[this.status]}`);
+    }
+
+    this.status = ServerStatus.Starting;
+
     await this.beforeStart();
 
     await new Promise<void>((resolve, reject) => {
@@ -73,6 +92,8 @@ export default abstract class ServerBase {
     });
 
     await this.afterStart();
+
+    this.status = ServerStatus.Running;
   }
 
   /**
@@ -88,6 +109,12 @@ export default abstract class ServerBase {
    * @memberof Server
    */
   public async close(): Promise<void> {
+    if (this.status !== ServerStatus.Running) {
+      throw Error(`Cannot close server in status ${ServerStatus[this.status]}`);
+    }
+
+    this.status = ServerStatus.Closing;
+
     await this.beforeClose();
 
     // Remove request listener to reject incoming requests
@@ -105,6 +132,8 @@ export default abstract class ServerBase {
     });
 
     await this.afterClose();
+
+    this.status = ServerStatus.Closed;
   }
 
   /**

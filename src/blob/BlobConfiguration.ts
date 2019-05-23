@@ -1,8 +1,6 @@
 import ConfigurationBase from "../common/ConfigurationBase";
 import {
-  DEFAULT_ACCESS_LOG_PATH,
   DEFAULT_BLOB_PERSISTENCE_PATH,
-  DEFAULT_DEBUG_LOG_PATH,
   DEFAULT_ENABLE_ACCESS_LOG,
   DEFAULT_ENABLE_DEBUG_LOG,
   DEFAULT_LOKI_DB_PATH,
@@ -29,9 +27,9 @@ export default class BlobConfiguration extends ConfigurationBase {
     public readonly dbPath: string = DEFAULT_LOKI_DB_PATH,
     public readonly persistencePath: string = DEFAULT_BLOB_PERSISTENCE_PATH,
     enableAccessLog: boolean = DEFAULT_ENABLE_ACCESS_LOG,
-    accessLogFilePath: string = DEFAULT_ACCESS_LOG_PATH,
+    accessLogFilePath?: string,
     enableDebugLog: boolean = DEFAULT_ENABLE_DEBUG_LOG,
-    debugLogFilePath: string = DEFAULT_DEBUG_LOG_PATH
+    debugLogFilePath?: string
   ) {
     super(
       host,

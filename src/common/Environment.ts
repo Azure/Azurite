@@ -4,6 +4,7 @@ import {
   DEFAULT_SERVER_HOST_NAME,
   DEFAULT_SERVER_LISTENING_PORT
 } from "../blob/utils/constants";
+import IEnvironment from "./IEnvironment";
 
 args
   .option(
@@ -29,29 +30,29 @@ args
 
 (args as any).config.name = "azurite";
 
-export default class Environment {
+export default class Environment implements IEnvironment {
   private flags = args.parse(process.argv);
 
-  public get blobHost(): string | undefined {
+  public blobHost(): string | undefined {
     return this.flags.blobHost;
   }
 
-  public get blobPort(): number | undefined {
+  public blobPort(): number | undefined {
     return this.flags.blobPort;
   }
 
-  public get location(): string {
+  public async location(): Promise<string> {
     return this.flags.location || process.cwd();
   }
 
-  public get silent(): boolean {
+  public silent(): boolean {
     if (this.flags.silent !== undefined) {
       return true;
     }
     return false;
   }
 
-  public get debug(): string | undefined {
+  public debug(): string | undefined {
     if (typeof this.flags.debug === "string") {
       // Enable debug log to file
       return this.flags.debug;
