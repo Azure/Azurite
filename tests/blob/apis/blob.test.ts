@@ -88,6 +88,7 @@ describe("BlobAPIs", () => {
   it("download with with default parameters", async () => {
     const result = await blobURL.download(Aborter.none, 0);
     assert.deepStrictEqual(await bodyToString(result, content.length), content);
+    assert.equal(result.contentRange, undefined);
   });
 
   it("download all parameters set", async () => {
@@ -95,6 +96,16 @@ describe("BlobAPIs", () => {
       rangeGetContentMD5: true
     });
     assert.deepStrictEqual(await bodyToString(result, 1), content[0]);
+    assert.equal(result.contentRange, `bytes 0-0/${content.length}`);
+  });
+
+  it("download entire with range", async () => {
+    const result = await blobURL.download(Aborter.none, 0, content.length);
+    assert.deepStrictEqual(await bodyToString(result, content.length), content);
+    assert.equal(
+      result.contentRange,
+      `bytes 0-${content.length - 1}/${content.length}`
+    );
   });
 
   it("delete", async () => {
