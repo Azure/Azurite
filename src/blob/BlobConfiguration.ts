@@ -27,7 +27,7 @@ export default class BlobConfiguration extends ConfigurationBase {
     public readonly dbPath: string = DEFAULT_LOKI_DB_PATH,
     public readonly persistencePath: string = DEFAULT_BLOB_PERSISTENCE_PATH,
     enableAccessLog: boolean = DEFAULT_ENABLE_ACCESS_LOG,
-    accessLogFilePath?: string,
+    accessLogWriteStream?: NodeJS.WritableStream,
     enableDebugLog: boolean = DEFAULT_ENABLE_DEBUG_LOG,
     debugLogFilePath?: string
   ) {
@@ -35,7 +35,7 @@ export default class BlobConfiguration extends ConfigurationBase {
       host,
       port,
       enableAccessLog,
-      accessLogFilePath,
+      accessLogWriteStream,
       enableDebugLog,
       debugLogFilePath
     );
