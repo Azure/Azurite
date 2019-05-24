@@ -57,6 +57,7 @@
     "vscode": "^1.1.34"
   },
   "activationEvents": [
+    "*",
     "onCommand:azurite.start",
     "onCommand:azurite.close",
     "onCommand:azurite.clean",

@@ -7,6 +7,7 @@ import {
   ExtensionContext,
   Progress,
   ProgressLocation,
+  StatusBarAlignment,
   window
 } from "vscode";
 
@@ -30,6 +31,14 @@ const accessAsync = promisify(access);
 let blobServer: ServerBase;
 const accessLoggerStream = new VSCChannelWriteStream("Azurite");
 const debugLoggerStrategy = new VSCChannelLoggerStrategy("Azurite Debug");
+
+const blobStatusBarItem = window.createStatusBarItem(
+  StatusBarAlignment.Right,
+  100
+);
+blobStatusBarItem.text = `$(database) Azurite Blob`;
+blobStatusBarItem.command = `azurite.start_blob`;
+blobStatusBarItem.tooltip = `Start Azurite Blob Service`;
 
 async function getBlobConfiguration(): Promise<BlobConfiguration> {
   const env = new VSCEnvironment();
@@ -83,8 +92,14 @@ async function startAzuriteBlob(
   accessLoggerStream.write(
     `Azurite Blob Service is starting on ${config.host}:${config.port}\n`
   );
+  blobStatusBarItem.text = `$(database) Azurite Blob Starting`;
+  blobStatusBarItem.command = undefined;
 
   await blobServer.start();
+
+  blobStatusBarItem.text = `$(database) Azurite Blob Running`;
+  blobStatusBarItem.command = `azurite.close_blob`;
+  blobStatusBarItem.tooltip = `Close Azurite Blob Service`;
 
   progress.report({
     increment: 100,
@@ -119,7 +134,12 @@ async function closeAzuriteBlob(
     increment: 30,
     message: `Azurite Blob Service is closing...`
   });
+  blobStatusBarItem.text = `$(database) Azurite Blob Closing`;
+  blobStatusBarItem.command = undefined;
   await blobServer.close();
+  blobStatusBarItem.text = `$(database) Azurite Blob`;
+  blobStatusBarItem.command = `azurite.start_blob`;
+  blobStatusBarItem.tooltip = `Start Azurite Blob Service`;
   console.log(`Azurite Blob Service successfully closed`);
   accessLoggerStream.write(`Azurite Blob Service successfully closed\n`);
   progress.report({
@@ -254,8 +274,11 @@ export function activate(context: ExtensionContext) {
           });
         }
       );
-    })
+    }),
+    blobStatusBarItem
   );
+
+  blobStatusBarItem.show();
 }
 
 // this method is called when your extension is deactivated
