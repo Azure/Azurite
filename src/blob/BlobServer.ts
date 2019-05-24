@@ -68,7 +68,8 @@ export default class BlobServer extends ServerBase {
     const requestListenerFactory: IRequestListenerFactory = new BlobRequestListenerFactory(
       dataStore,
       accountDataStore,
-      configuration.enableAccessLog // Access log includes every handled HTTP request
+      configuration.enableAccessLog, // Access log includes every handled HTTP request
+      configuration.accessLogWriteStream
     );
 
     super(host, port, httpServer, requestListenerFactory);

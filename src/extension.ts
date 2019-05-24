@@ -17,7 +17,10 @@ import {
   DEFAULT_LOKI_DB_PATH
 } from "./blob/utils/constants";
 import * as Logger from "./common/Logger";
+import NoLoggerStrategy from "./common/NoLoggerStrategy";
 import ServerBase, { ServerStatus } from "./common/ServerBase";
+import VSCChannelLoggerStrategy from "./common/VSCChannelLoggerStrategy";
+import { VSCChannelWriteStream } from "./common/VSCChannelWriteStream";
 import VSCEnvironment from "./common/VSCEnvironment";
 
 // tslint:disable: no-console
@@ -25,6 +28,8 @@ import VSCEnvironment from "./common/VSCEnvironment";
 const accessAsync = promisify(access);
 
 let blobServer: ServerBase;
+const accessLoggerStream = new VSCChannelWriteStream("Azurite");
+const debugLoggerStrategy = new VSCChannelLoggerStrategy("Azurite Debug");
 
 async function getBlobConfiguration(): Promise<BlobConfiguration> {
   const env = new VSCEnvironment();
@@ -39,7 +44,7 @@ async function getBlobConfiguration(): Promise<BlobConfiguration> {
     join(location, DEFAULT_LOKI_DB_PATH),
     join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
     !env.silent(),
-    undefined,
+    accessLoggerStream,
     env.debug() === true,
     undefined
   );
@@ -60,12 +65,9 @@ async function startAzuriteBlob(
   }
 
   const config = await getBlobConfiguration();
-
-  // We use logger singleton as global debugger logger to track detailed outputs cross layers
-  // Note that, debug log is different from access log which is only available in request handler layer to
-  // track every request. Access log is not singleton, and initialized in specific RequestHandlerFactory implementations
-  // Enable debug log by default before first release for debugging purpose
-  Logger.configLogger(config.enableDebugLog);
+  Logger.default.strategy = config.enableDebugLog
+    ? debugLoggerStrategy
+    : new NoLoggerStrategy();
 
   // Create server instance
   blobServer = new BlobServer(config);
@@ -78,6 +80,9 @@ async function startAzuriteBlob(
   console.log(
     `Azurite Blob Service is starting on ${config.host}:${config.port}`
   );
+  accessLoggerStream.write(
+    `Azurite Blob Service is starting on ${config.host}:${config.port}\n`
+  );
 
   await blobServer.start();
 
@@ -87,6 +92,9 @@ async function startAzuriteBlob(
   });
   console.log(
     `Azurite Blob Service successfully listens on ${blobServer.getHttpServerAddress()}`
+  );
+  accessLoggerStream.write(
+    `Azurite Blob Service successfully listens on ${blobServer.getHttpServerAddress()}\n`
   );
   window.showInformationMessage(
     `Azurite Blob Service successfully listens on ${blobServer.getHttpServerAddress()}`
@@ -106,12 +114,14 @@ async function closeAzuriteBlob(
   }
 
   console.log(`Azurite Blob Service is closing...`);
+  accessLoggerStream.write(`Azurite Blob Service is closing...\n`);
   progress.report({
     increment: 30,
     message: `Azurite Blob Service is closing...`
   });
   await blobServer.close();
   console.log(`Azurite Blob Service successfully closed`);
+  accessLoggerStream.write(`Azurite Blob Service successfully closed\n`);
   progress.report({
     increment: 100,
     message: `Azurite Blob Service successfully closed`
@@ -137,6 +147,7 @@ async function cleanAzuriteBlob(
     increment: 30,
     message: `Cleaning Azurite Blob Service...`
   });
+  accessLoggerStream.write(`Cleaning Azurite Blob Service...\n`);
 
   const rimrafAsync = promisify(rimraf);
   await rimrafAsync(config.dbPath);
@@ -147,6 +158,7 @@ async function cleanAzuriteBlob(
     message: `Clean up Azurite Blob Service successfully`
   });
   window.showInformationMessage(`Clean up Azurite Blob Service successfully`);
+  accessLoggerStream.write(`Clean up Azurite Blob Service successfully\n`);
 }
 
 export function activate(context: ExtensionContext) {

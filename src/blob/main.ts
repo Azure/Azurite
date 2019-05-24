@@ -8,7 +8,6 @@ import * as Logger from "../common/Logger";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobServer from "./BlobServer";
 import {
-  DEFAULT_ACCESS_LOG_PATH,
   DEFAULT_BLOB_PERSISTENCE_PATH,
   DEFAULT_LOKI_DB_PATH
 } from "./utils/constants";
@@ -36,7 +35,7 @@ async function main() {
     join(location, DEFAULT_LOKI_DB_PATH),
     join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
     !env.silent(),
-    DEFAULT_ACCESS_LOG_PATH,
+    undefined,
     env.debug() !== undefined,
     env.debug()
   );
