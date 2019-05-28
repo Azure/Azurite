@@ -100,31 +100,31 @@
     ],
     "configuration": [
       {
-        "title": "azurite",
+        "title": "Azurite",
         "properties": {
           "azurite.debug": {
             "type": "boolean",
             "default": false,
-            "description": "If true, enable debug log into Visual Studio Code Channel \"Azurite Debug\""
+            "description": "Enable debug log into Visual Studio Code channel"
           },
           "azurite.silent": {
             "type": "boolean",
             "default": false,
-            "description": "If false, enable access log into Visual Studio Code Channel \"Azurite\""
+            "description": "Disable access log into Visual Studio Code channel"
           },
           "azurite.location": {
             "type": "string",
-            "description": "Use customer provided path as workspace, if provided a valid existing folder path"
+            "description": "Workspace location folder path, by default Visual Studio Code current opened folder"
           },
           "azurite.blobHost": {
             "type": "string",
             "default": "127.0.0.1",
-            "description": "If provided, override default listening endpoint"
+            "description": "Blob service listening endpoint, by default 127.0.0.1"
           },
           "azurite.blobPort": {
             "type": "number",
             "default": 10000,
-            "description": "If provided, override default listening port"
+            "description": "Blob service listening port, by default 10000"
           }
         }
       }

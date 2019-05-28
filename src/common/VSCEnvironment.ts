@@ -23,10 +23,9 @@ export default class VSCEnvironment implements IEnvironment {
         workspace.workspaceFolders.length === 0
       ) {
         // location = join(homedir(), "Azurite");
-        window.showWarningMessage(
-          'Please open a folder, or provide a valid workspace path for Azurite in configuration "azurite.location"'
+        throw Error(
+          `Invalid workspace location for Azurite. Please open a folder in Visual Studio Code, or provide a valid workspace folder path for Azurite in Visual Studio Code setting "azurite.location"`
         );
-        throw Error("Invalid workspace location for Azurite");
       }
 
       let folder: WorkspaceFolder | undefined;
@@ -36,10 +35,9 @@ export default class VSCEnvironment implements IEnvironment {
             "Select the working directory you wish to use as Azurite workspace location"
         });
         if (folder === undefined) {
-          window.showWarningMessage(
-            `Please select a folder, or provide a valid workspace path for Azurite in configuration "azurite.location"`
+          throw Error(
+            `Invalid workspace location for Azurite. Please select a folder in Visual Studio Code, or provide a valid workspace folder path for Azurite in Visual Studio Code setting "azurite.location"`
           );
-          throw Error("Invalid workspace location for Azurite");
         }
       } else {
         folder = workspace.workspaceFolders[0];
