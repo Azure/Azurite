@@ -72,7 +72,7 @@ export default class BlobServer extends ServerBase {
       configuration.accessLogWriteStream
     );
 
-    super(host, port, httpServer, requestListenerFactory);
+    super(host, port, httpServer, requestListenerFactory, configuration);
 
     // Default Blob GC Manager
     // Will close service when any critical GC error happens

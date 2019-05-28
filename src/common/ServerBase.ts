@@ -1,6 +1,7 @@
 import * as http from "http";
 import * as https from "https";
 
+import ConfigurationBase from "./ConfigurationBase";
 import IRequestListenerFactory from "./IRequestListenerFactory";
 
 export type RequestListener = (
@@ -38,7 +39,8 @@ export default abstract class ServerBase {
     public readonly host: string,
     public readonly port: number,
     public readonly httpServer: http.Server | https.Server,
-    requestListenerFactory: IRequestListenerFactory
+    requestListenerFactory: IRequestListenerFactory,
+    public readonly config: ConfigurationBase
   ) {
     // Remove predefined request listeners to avoid double request handling
     this.httpServer.removeAllListeners("request");
