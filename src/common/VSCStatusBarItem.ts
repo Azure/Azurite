@@ -16,14 +16,14 @@ export default class VSCStatusBarItem
     this.statusBarItem.show();
   }
 
-  onStart(serverManager: VSCServerManagerBase): void {
+  public onStart(serverManager: VSCServerManagerBase): void {
     this.statusBarItem.text = `[${serverManager.name}] Starting...`;
     this.statusBarItem.command = undefined;
     this.statusBarItem.tooltip = ``;
     this.statusBarItem.show();
   }
 
-  onStartFail(
+  public onStartFail(
     serverManager: VSCServerManagerBase,
     session: number,
     error: Error
@@ -48,7 +48,7 @@ export default class VSCStatusBarItem
     }
   }
 
-  onStartSuccess(serverManager: VSCServerManagerBase): void {
+  public onStartSuccess(serverManager: VSCServerManagerBase): void {
     const server = serverManager.getServer()!;
     this.statusBarItem.text = `[${
       serverManager.name
@@ -58,14 +58,14 @@ export default class VSCStatusBarItem
     this.statusBarItem.show();
   }
 
-  onClean(serverManager: VSCServerManagerBase): void {
+  public onClean(serverManager: VSCServerManagerBase): void {
     this.statusBarItem.text = `[${serverManager.name}] Cleaning`;
     this.statusBarItem.command = undefined;
     this.statusBarItem.tooltip = ``;
     this.statusBarItem.show();
   }
 
-  onCleanFail(
+  public onCleanFail(
     serverManager: VSCServerManagerBase,
     session: number,
     error: Error
@@ -90,21 +90,21 @@ export default class VSCStatusBarItem
     }
   }
 
-  onCleanSuccess(serverManager: VSCServerManagerBase): void {
+  public onCleanSuccess(serverManager: VSCServerManagerBase): void {
     this.statusBarItem.text = `[${serverManager.name}]`;
     this.statusBarItem.command = serverManager.getStartCommand();
     this.statusBarItem.tooltip = `Start ${serverManager.name}`;
     this.statusBarItem.show();
   }
 
-  onClose(serverManager: VSCServerManagerBase): void {
+  public onClose(serverManager: VSCServerManagerBase): void {
     this.statusBarItem.text = `[${serverManager.name}] Closing...`;
     this.statusBarItem.command = undefined;
     this.statusBarItem.tooltip = ``;
     this.statusBarItem.show();
   }
 
-  onCloseFail(
+  public onCloseFail(
     serverManager: VSCServerManagerBase,
     session: number,
     error: Error
@@ -129,7 +129,7 @@ export default class VSCStatusBarItem
     }
   }
 
-  onCloseSuccess(serverManager: VSCServerManagerBase): void {
+  public onCloseSuccess(serverManager: VSCServerManagerBase): void {
     this.statusBarItem.text = `[${serverManager.name}]`;
     this.statusBarItem.command = serverManager.getStartCommand();
     this.statusBarItem.tooltip = `Start ${serverManager.name}`;

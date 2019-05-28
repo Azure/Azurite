@@ -91,7 +91,9 @@ export default abstract class VSCServerManagerBase
     for (const handler of this.handlers) {
       try {
         handler.onStart(this, session);
-      } catch {}
+      } catch {
+        /* NOOP */
+      }
     }
   }
 
@@ -99,7 +101,9 @@ export default abstract class VSCServerManagerBase
     for (const handler of this.handlers) {
       try {
         handler.onStartFail(this, session, error);
-      } catch {}
+      } catch {
+        /* NOOP */
+      }
     }
   }
 
@@ -107,7 +111,9 @@ export default abstract class VSCServerManagerBase
     for (const handler of this.handlers) {
       try {
         handler.onStartSuccess(this, session);
-      } catch {}
+      } catch {
+        /* NOOP */
+      }
     }
   }
 
@@ -115,7 +121,9 @@ export default abstract class VSCServerManagerBase
     for (const handler of this.handlers) {
       try {
         handler.onClean(this, session);
-      } catch {}
+      } catch {
+        /* NOOP */
+      }
     }
   }
 
@@ -123,7 +131,9 @@ export default abstract class VSCServerManagerBase
     for (const handler of this.handlers) {
       try {
         handler.onCleanFail(this, session, error);
-      } catch {}
+      } catch {
+        /* NOOP */
+      }
     }
   }
 
@@ -131,7 +141,9 @@ export default abstract class VSCServerManagerBase
     for (const handler of this.handlers) {
       try {
         handler.onCleanSuccess(this, session);
-      } catch {}
+      } catch {
+        /* NOOP */
+      }
     }
   }
 
@@ -139,7 +151,9 @@ export default abstract class VSCServerManagerBase
     for (const handler of this.handlers) {
       try {
         handler.onClose(this, session);
-      } catch {}
+      } catch {
+        /* NOOP */
+      }
     }
   }
 
@@ -147,7 +161,9 @@ export default abstract class VSCServerManagerBase
     for (const handler of this.handlers) {
       try {
         handler.onCloseFail(this, session, error);
-      } catch {}
+      } catch {
+        /* NOOP */
+      }
     }
   }
 
@@ -155,7 +171,9 @@ export default abstract class VSCServerManagerBase
     for (const handler of this.handlers) {
       try {
         handler.onCloseSuccess(this, session);
-      } catch {}
+      } catch {
+        /* NOOP */
+      }
     }
   }
 }
