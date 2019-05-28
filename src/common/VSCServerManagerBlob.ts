@@ -12,7 +12,7 @@ import {
 import * as Logger from "./Logger";
 import NoLoggerStrategy from "./NoLoggerStrategy";
 import VSCChannelLoggerStrategy from "./VSCChannelLoggerStrategy";
-import { VSCChannelWriteStream } from "./VSCChannelWriteStream";
+import VSCChannelWriteStream from "./VSCChannelWriteStream";
 import VSCEnvironment from "./VSCEnvironment";
 import VSCServerManagerBase from "./VSCServerManagerBase";
 import VSCServerManagerClosedState from "./VSCServerManagerClosedState";
