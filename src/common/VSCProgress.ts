@@ -21,7 +21,7 @@ export default class VSCProgress extends EventEmitter
       },
       progress => {
         progress.report({
-          increment: 15,
+          increment: 5,
           message: `${serverManager.name} is starting...`
         });
         return new Promise((resolve, reject) => {
@@ -64,7 +64,7 @@ export default class VSCProgress extends EventEmitter
       },
       progress => {
         progress.report({
-          increment: 15,
+          increment: 5,
           message: `${serverManager.name} is cleaning`
         });
         return new Promise((resolve, reject) => {
@@ -107,7 +107,7 @@ export default class VSCProgress extends EventEmitter
       },
       progress => {
         progress.report({
-          increment: 15,
+          increment: 5,
           message: `${serverManager.name} is closing`
         });
         return new Promise((resolve, reject) => {

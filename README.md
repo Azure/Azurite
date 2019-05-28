@@ -82,6 +82,29 @@ For example, to start blob service only:
 $ azurite-blob -l path/to/azurite/workspace
 ```
 
+### Visual Studio Code Extension
+
+Azurite V3 can be installed from Visual Studio Code extension market.
+
+You can quickly start or close Azurite by clicking Azurite status bar item or following commands.
+
+Extension supports following Visual Studio Code commands:
+
+- `Azurite: Start` Start all Azurite services
+- `Azurite: Close` Close all Azurite services
+- `Azurite: Clean` Reset all Azurite services persistency data
+- `Azurite: Start Blob` Start blob service
+- `Azurite: Close Blob` Close blob service
+- `Azurite: Clean Blob` Clean blob service
+
+Following extension configurations are supported:
+
+- `azurite.blobHost` Blob service listening endpoint, by default 127.0.0.1
+- `azurite.blobPort` Blob service listening port, by default 10000
+- `azurite.location` Workspace location path, by default existing Visual Studio Code opened folder
+- `azurite.silent` Silent mode to disable access log in Visual Studio channel, by default false
+- `azurite.debug` Output debug log into Azurite channel, by default false
+
 > Will support more release channels for Azurite V3 in the future.
 
 ### DockerHub
@@ -91,10 +114,6 @@ _Releasing Azurite V3 to DockerHub is under investigation._
 ### NuGet
 
 _Releasing Azurite V3 to NuGet is under investigation._
-
-### Visual Studio Code Extension
-
-_Publish Azurite as a Visual Studio Code Extension is under investigation._
 
 ### Visual Studio
 

@@ -28,7 +28,12 @@ export default class VSCStatusBarItem
     session: number,
     error: Error
   ): void {
-    const server = serverManager.getServer()!;
+    const server = serverManager.getServer();
+    if (server === undefined) {
+      this.onCloseSuccess(serverManager);
+      return;
+    }
+
     if (server.getStatus() === ServerStatus.Closed) {
       this.onCloseSuccess(serverManager);
     }
@@ -65,7 +70,12 @@ export default class VSCStatusBarItem
     session: number,
     error: Error
   ): void {
-    const server = serverManager.getServer()!;
+    const server = serverManager.getServer();
+    if (server === undefined) {
+      this.onCloseSuccess(serverManager);
+      return;
+    }
+
     if (server.getStatus() === ServerStatus.Closed) {
       this.onCloseSuccess(serverManager);
     }
@@ -99,7 +109,12 @@ export default class VSCStatusBarItem
     session: number,
     error: Error
   ): void {
-    const server = serverManager.getServer()!;
+    const server = serverManager.getServer();
+    if (server === undefined) {
+      this.onCloseSuccess(serverManager);
+      return;
+    }
+
     if (server.getStatus() === ServerStatus.Closed) {
       this.onCloseSuccess(serverManager);
     }
