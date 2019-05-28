@@ -6,11 +6,11 @@ import VSCServerManagerBase from "./VSCServerManagerBase";
 export default class VSCAccessLog implements IVSCServerManagerEventsHandler {
   public constructor(private readonly logStream: Writable) {}
 
-  onStart(serverManager: VSCServerManagerBase, session: number): void {
+  public onStart(serverManager: VSCServerManagerBase, session: number): void {
     this.logStream.write(`${serverManager.name} is starting...\n`);
   }
 
-  onStartFail(
+  public onStartFail(
     serverManager: VSCServerManagerBase,
     session: number,
     error: Error
@@ -22,7 +22,10 @@ export default class VSCAccessLog implements IVSCServerManagerEventsHandler {
     );
   }
 
-  onStartSuccess(serverManager: VSCServerManagerBase, session: number): void {
+  public onStartSuccess(
+    serverManager: VSCServerManagerBase,
+    session: number
+  ): void {
     const server = serverManager.getServer()!;
     this.logStream.write(
       `${
@@ -31,11 +34,11 @@ export default class VSCAccessLog implements IVSCServerManagerEventsHandler {
     );
   }
 
-  onClean(serverManager: VSCServerManagerBase, session: number): void {
+  public onClean(serverManager: VSCServerManagerBase, session: number): void {
     this.logStream.write(`${serverManager.name} is cleaning.\n`);
   }
 
-  onCleanFail(
+  public onCleanFail(
     serverManager: VSCServerManagerBase,
     session: number,
     error: Error
@@ -47,15 +50,18 @@ export default class VSCAccessLog implements IVSCServerManagerEventsHandler {
     );
   }
 
-  onCleanSuccess(serverManager: VSCServerManagerBase, session: number): void {
+  public onCleanSuccess(
+    serverManager: VSCServerManagerBase,
+    session: number
+  ): void {
     this.logStream.write(`${serverManager.name} successfully cleaned.\n`);
   }
 
-  onClose(serverManager: VSCServerManagerBase, session: number): void {
+  public onClose(serverManager: VSCServerManagerBase, session: number): void {
     this.logStream.write(`${serverManager.name} is closing.\n`);
   }
 
-  onCloseFail(
+  public onCloseFail(
     serverManager: VSCServerManagerBase,
     session: number,
     error: Error
@@ -67,7 +73,10 @@ export default class VSCAccessLog implements IVSCServerManagerEventsHandler {
     );
   }
 
-  onCloseSuccess(serverManager: VSCServerManagerBase, session: number): void {
+  public onCloseSuccess(
+    serverManager: VSCServerManagerBase,
+    session: number
+  ): void {
     this.logStream.write(`${serverManager.name} successfully closed.\n`);
   }
 }

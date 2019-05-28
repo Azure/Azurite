@@ -7,8 +7,6 @@ import VSCServerManagerBlob from "./common/VSCServerManagerBlob";
 import VSCStatusBarItem from "./common/VSCStatusBarItem";
 
 export function activate(context: ExtensionContext) {
-  console.log("Azurite extension is now active!");
-
   // Initialize server managers
   const blobServerManager = new VSCServerManagerBlob();
 
@@ -54,4 +52,6 @@ export function activate(context: ExtensionContext) {
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+  /* NOOP */
+}

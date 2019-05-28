@@ -24,6 +24,7 @@ export default class VSCEnvironment implements IEnvironment {
       ) {
         // location = join(homedir(), "Azurite");
         throw Error(
+          // tslint:disable-next-line:max-line-length
           `Invalid workspace location for Azurite. Please open a folder in Visual Studio Code, or provide a valid workspace folder path for Azurite in Visual Studio Code setting "azurite.location"`
         );
       }
@@ -36,6 +37,7 @@ export default class VSCEnvironment implements IEnvironment {
         });
         if (folder === undefined) {
           throw Error(
+            // tslint:disable-next-line:max-line-length
             `Invalid workspace location for Azurite. Please select a folder in Visual Studio Code, or provide a valid workspace folder path for Azurite in Visual Studio Code setting "azurite.location"`
           );
         }

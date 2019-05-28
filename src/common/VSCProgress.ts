@@ -13,7 +13,7 @@ export default class VSCProgress extends EventEmitter
   private readonly CLOSE_SUCCESS = "closeSuccess_";
   private readonly CLOSE_FAIL = "closeFail_";
 
-  onStart(serverManager: VSCServerManagerBase, session: number): void {
+  public onStart(serverManager: VSCServerManagerBase, session: number): void {
     window.withProgress(
       {
         location: ProgressLocation.Notification,
@@ -44,7 +44,7 @@ export default class VSCProgress extends EventEmitter
     );
   }
 
-  onStartFail(
+  public onStartFail(
     serverManager: VSCServerManagerBase,
     session: number,
     error: Error
@@ -52,11 +52,14 @@ export default class VSCProgress extends EventEmitter
     this.emit(this.START_FAIL + session, error);
   }
 
-  onStartSuccess(serverManager: VSCServerManagerBase, session: number): void {
+  public onStartSuccess(
+    serverManager: VSCServerManagerBase,
+    session: number
+  ): void {
     this.emit(this.START_SUCCESS + session);
   }
 
-  onClean(serverManager: VSCServerManagerBase, session: number): void {
+  public onClean(serverManager: VSCServerManagerBase, session: number): void {
     window.withProgress(
       {
         location: ProgressLocation.Notification,
@@ -87,7 +90,7 @@ export default class VSCProgress extends EventEmitter
     );
   }
 
-  onCleanFail(
+  public onCleanFail(
     serverManager: VSCServerManagerBase,
     session: number,
     error: Error
@@ -95,11 +98,14 @@ export default class VSCProgress extends EventEmitter
     this.emit(this.CLEAN_FAIL + session, error);
   }
 
-  onCleanSuccess(serverManager: VSCServerManagerBase, session: number): void {
+  public onCleanSuccess(
+    serverManager: VSCServerManagerBase,
+    session: number
+  ): void {
     this.emit(this.CLEAN_SUCCESS + session);
   }
 
-  onClose(serverManager: VSCServerManagerBase, session: number): void {
+  public onClose(serverManager: VSCServerManagerBase, session: number): void {
     window.withProgress(
       {
         location: ProgressLocation.Notification,
@@ -130,7 +136,7 @@ export default class VSCProgress extends EventEmitter
     );
   }
 
-  onCloseFail(
+  public onCloseFail(
     serverManager: VSCServerManagerBase,
     session: number,
     error: Error
@@ -138,7 +144,10 @@ export default class VSCProgress extends EventEmitter
     this.emit(this.CLOSE_FAIL + session, error);
   }
 
-  onCloseSuccess(serverManager: VSCServerManagerBase, session: number): void {
+  public onCloseSuccess(
+    serverManager: VSCServerManagerBase,
+    session: number
+  ): void {
     this.emit(this.CLOSE_SUCCESS + session);
   }
 }
