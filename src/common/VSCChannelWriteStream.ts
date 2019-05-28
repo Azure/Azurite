@@ -1,7 +1,7 @@
 import { Writable } from "stream";
 import { OutputChannel, window } from "vscode";
 
-export class VSCChannelWriteStream extends Writable
+export default class VSCChannelWriteStream extends Writable
   implements NodeJS.WritableStream {
   private readonly channel: OutputChannel;
 
