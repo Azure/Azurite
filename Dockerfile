@@ -2,6 +2,7 @@ FROM node:10.6-alpine
 
 WORKDIR /opt/azurite
 
+COPY package-lock.json package-lock.json
 COPY package.json package.json
 
 RUN npm install
@@ -19,4 +20,4 @@ EXPOSE 10001
 EXPOSE 10002
 
 
-CMD ["azurite","-l", "/azurite-data", "--blobHost", "0.0.0.0"]
+CMD ["azurite", "-l", "/azurite-data", "--blobHost", "0.0.0.0"]
