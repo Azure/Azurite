@@ -1,14 +1,17 @@
 # Azurite V3
 
+[![npm version](https://badge.fury.io/js/azurite.svg)](https://badge.fury.io/js/azurite)
+[![Build Status](https://dev.azure.com/azure/Azurite/_apis/build/status/Azure.Azurite?branchName=master)](https://dev.azure.com/azure/Azurite/_build/latest?definitionId=20&branchName=master)
+
 > Note:
 > Azurite V2 has been moved to [legacy-master](https://github.com/Azure/azurite/tree/legacy-master) branch.
 > Master branch has been updated with latest Azurite V3.
 > V3 currently only supports Blob service, please use V2 for Queue or Table service for the time being.
 
-| Version       | Azure Storage API Version | Service Support       | Description                                       | Reference Links                              |
-| ------------- | ------------------------- | --------------------- | ------------------------------------------------- | -------------------------------------------- |
-| 3.0.0-preview | 2018-03-28                | Blob                  | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) |
-| 2.7.0         | 2016-05-31                | Blob, Queue and Table | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite) |
+| Version       | Azure Storage API Version | Service Support       | Description                                       | Reference Links                                                                                                                                                                                           |
+| ------------- | ------------------------- | --------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.0.0-preview | 2018-03-28                | Blob                  | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/r/microsoft/azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| 2.7.0         | 2016-05-31                | Blob, Queue and Table | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                              |
 
 ## Introduction
 
@@ -82,19 +85,70 @@ For example, to start blob service only:
 $ azurite-blob -l path/to/azurite/workspace
 ```
 
+### Visual Studio Code Extension
+
+Azurite V3 can be installed from [Visual Studio Code extension market](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite).
+
+You can quickly start or close Azurite by clicking Azurite status bar item or following commands.
+
+Extension supports following Visual Studio Code commands:
+
+- `Azurite: Start` Start all Azurite services
+- `Azurite: Close` Close all Azurite services
+- `Azurite: Clean` Reset all Azurite services persistency data
+- `Azurite: Start Blob` Start blob service
+- `Azurite: Close Blob` Close blob service
+- `Azurite: Clean Blob` Clean blob service
+
+Following extension configurations are supported:
+
+- `azurite.blobHost` Blob service listening endpoint, by default 127.0.0.1
+- `azurite.blobPort` Blob service listening port, by default 10000
+- `azurite.location` Workspace location path, by default existing Visual Studio Code opened folder
+- `azurite.silent` Silent mode to disable access log in Visual Studio channel, by default false
+- `azurite.debug` Output debug log into Azurite channel, by default false
+
+### [DockerHub](https://hub.docker.com/r/microsoft/azurite)
+
+#### Run Azurite V3 docker image
+
+```bash
+docker run -p 10000:10000 mcr.microsoft.com/azurite
+```
+
+`-p 10000:10000` will expose blob service's default listening port.
+
+#### Run Azurite V3 docker image with customized persisted data location
+
+```bash
+docker run -p 10000:10000 -v c:/azurite:/data mcr.microsoft.com/azurite
+```
+
+`-v c:/azurite:/data` will use and map host path `c:/azurite` as Azurite's workspace location.
+
+#### Customize all Azurite V3 supported parameters for docker image
+
+```bash
+docker run -p 8888:8888 -v c:/azurite:/workspace mcr.microsoft.com/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 8888 --blobHost 0.0.0.0
+```
+
+Above command will try to start Azurite image with configurations:
+
+`-l //workspace` defines folder `/workspace` as Azurite's location path inside docker instance, while `/workspace` is mapped to `c:/azurite` in host environment by `-v c:/azurite:/workspace`
+
+`-d //workspace/debug.log` enables debug log into `/workspace/debug.log` inside docker instance. `debug.log` will also mapped to `c:/azurite/debug.log` in host machine because of docker volume mapping.
+
+`--blobPort 8888` makes Azurite blob service listen to port 8888, while `-p 8888:8888` redirects requests from host machine's port 8888 to docker instance.
+
+`--blobHost 0.0.0.0` defines blob service listening endpoint to accept requests from host machine.
+
+> In above sample, you need to use **double first forward slash** for location and debug path parameters to avoid a [known issue](https://stackoverflow.com/questions/48427366/docker-build-command-add-c-program-files-git-to-the-path-passed-as-build-argu) for Git on Windows.
+
 > Will support more release channels for Azurite V3 in the future.
-
-### DockerHub
-
-_Releasing Azurite V3 to DockerHub is under investigation._
 
 ### NuGet
 
 _Releasing Azurite V3 to NuGet is under investigation._
-
-### Visual Studio Code Extension
-
-_Publish Azurite as a Visual Studio Code Extension is under investigation._
 
 ### Visual Studio
 

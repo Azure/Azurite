@@ -22,21 +22,22 @@ const accessAsync = promisify(access);
 async function main() {
   // Initialize and validate environment values from command line parameters
   const env = new Environment();
-  await accessAsync(env.location);
-  if (env.debug !== undefined) {
-    await accessAsync(dirname(env.debug));
+  const location = await env.location();
+  await accessAsync(location);
+  if (env.debug() !== undefined) {
+    await accessAsync(dirname(env.debug()!));
   }
 
   // Initialize server configuration
   const config = new BlobConfiguration(
-    env.blobHost,
-    env.blobPort,
-    join(env.location, DEFAULT_LOKI_DB_PATH),
-    join(env.location, DEFAULT_BLOB_PERSISTENCE_PATH),
-    !env.silent,
+    env.blobHost(),
+    env.blobPort(),
+    join(location, DEFAULT_LOKI_DB_PATH),
+    join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
+    !env.silent(),
     undefined,
-    env.debug !== undefined,
-    env.debug
+    env.debug() !== undefined,
+    env.debug()
   );
 
   // We use logger singleton as global debugger logger to track detailed outputs cross layers

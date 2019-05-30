@@ -1344,6 +1344,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       };
     }
 
+    let contentRange: string | undefined;
+    if (
+      context.request!.getHeader("range") ||
+      context.request!.getHeader("x-ms-range")
+    ) {
+      contentRange = `bytes ${rangeStart}-${rangeEnd}/${blob.properties
+        .contentLength!}`;
+    }
+
     let body: NodeJS.ReadableStream | undefined = await bodyGetter();
     let contentMD5: Uint8Array | undefined;
     if (!partialRead) {
@@ -1359,7 +1368,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     const response: Models.BlobDownloadResponse = {
-      statusCode: 200,
+      statusCode: contentRange ? 206 : 200,
       body,
       metadata: blob.metadata,
       eTag: blob.properties.etag,
@@ -1369,6 +1378,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       ...blob.properties,
       blobContentMD5: blob.properties.contentMD5,
       contentLength,
+      contentRange,
       contentMD5,
       isServerEncrypted: true
     };
