@@ -998,7 +998,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       sourceContainer === undefined ||
       sourceBlob === undefined
     ) {
-      throw new NotImplementedError(context.contextID);
+      throw StorageErrorFactory.getBlobNotFound(context.contextID!);
     }
 
     // TODO: Only supports copy from devstoreaccount1, not a complete copy implementation
@@ -1009,11 +1009,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       sourceContainer
     );
     if (sourceContainerModel === undefined) {
-      // TODO: Check error message
-      throw StorageErrorFactory.getInvalidOperation(
-        context.contextID!,
-        "Source container doesn't exist."
-      );
+      throw StorageErrorFactory.getBlobNotFound(context.contextID!);
     }
 
     // Get source storage blob model
@@ -1030,11 +1026,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       sourceBlobModel.deleted ||
       !sourceBlobModel.isCommitted
     ) {
-      // TODO: Check error message
-      throw StorageErrorFactory.getInvalidOperation(
-        context.contextID!,
-        "Source blob doesn't exist."
-      );
+      throw StorageErrorFactory.getBlobNotFound(context.contextID!);
     }
 
     const destContainerModel = await this.dataStore.getContainer(
