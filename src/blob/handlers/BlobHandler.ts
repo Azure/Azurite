@@ -1068,7 +1068,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         accessTierChangeTime: undefined
       },
       metadata:
-        options.metadata === undefined
+        options.metadata === undefined ||
+        Object.keys(options.metadata).length === 0
           ? { ...sourceBlobModel.metadata }
           : options.metadata,
       accountName: blobContext.account!,

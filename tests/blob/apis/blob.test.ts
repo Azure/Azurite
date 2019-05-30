@@ -390,4 +390,81 @@ describe("BlobAPIs", () => {
       headers.blobContentDisposition
     );
   });
+
+  it("Copy blob should work", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobURL = BlockBlobURL.fromContainerURL(
+      containerURL,
+      sourceBlob
+    );
+    const destBlobURL = BlockBlobURL.fromContainerURL(containerURL, destBlob);
+
+    const metadata = { key: "value" };
+    const blobHTTPHeaders = {
+      blobCacheControl: "blobCacheControl",
+      blobContentDisposition: "blobContentDisposition",
+      blobContentEncoding: "blobContentEncoding",
+      blobContentLanguage: "blobContentLanguage",
+      blobContentType: "blobContentType"
+    };
+
+    await sourceBlobURL.upload(Aborter.none, "hello", 5, {
+      metadata,
+      blobHTTPHeaders
+    });
+
+    await destBlobURL.startCopyFromURL(Aborter.none, sourceBlobURL.url);
+
+    const result = await destBlobURL.getProperties(Aborter.none);
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "BlockBlob");
+    assert.ok(result.lastModified);
+    assert.deepStrictEqual(result.metadata, metadata);
+    assert.deepStrictEqual(
+      result.cacheControl,
+      blobHTTPHeaders.blobCacheControl
+    );
+    assert.deepStrictEqual(result.contentType, blobHTTPHeaders.blobContentType);
+    assert.deepStrictEqual(
+      result.contentEncoding,
+      blobHTTPHeaders.blobContentEncoding
+    );
+    assert.deepStrictEqual(
+      result.contentLanguage,
+      blobHTTPHeaders.blobContentLanguage
+    );
+    assert.deepStrictEqual(
+      result.contentDisposition,
+      blobHTTPHeaders.blobContentDisposition
+    );
+  });
+
+  it("Copy blob should work to override metadata", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobURL = BlockBlobURL.fromContainerURL(
+      containerURL,
+      sourceBlob
+    );
+    const destBlobURL = BlockBlobURL.fromContainerURL(containerURL, destBlob);
+
+    const metadata = { key: "value" };
+    const metadata2 = { key: "value2" };
+    await sourceBlobURL.upload(Aborter.none, "hello", 5, {
+      metadata
+    });
+
+    await destBlobURL.startCopyFromURL(Aborter.none, sourceBlobURL.url, {
+      metadata: metadata2
+    });
+
+    const result = await destBlobURL.getProperties(Aborter.none);
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "BlockBlob");
+    assert.ok(result.lastModified);
+    assert.deepStrictEqual(result.metadata, metadata2);
+  });
 });
