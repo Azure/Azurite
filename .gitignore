@@ -9,3 +9,4 @@ __azurite_db_blob__.json
 dist
 typings
 debug.log
+*.vsix

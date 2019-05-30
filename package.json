@@ -2,7 +2,7 @@
   "name": "azurite",
   "displayName": "Azurite",
   "description": "An open source Azure Storage API compatible server",
-  "version": "3.0.0-preview",
+  "version": "3.1.0-preview",
   "preview": true,
   "publisher": "Azurite",
   "categories": [
@@ -15,7 +15,7 @@
   },
   "engines": {
     "node": ">=8.0.0",
-    "vscode": "^1.34.0"
+    "vscode": "^1.20.0"
   },
   "dependencies": {
     "@azure/ms-rest-js": "^1.5.0",
@@ -47,6 +47,7 @@
     "@types/uuid": "^3.4.4",
     "@types/xml2js": "^0.4.3",
     "autorest": "^2.0.4283",
+    "cross-var": "^1.1.0",
     "husky": "^1.3.1",
     "lint-staged": "^8.1.5",
     "mocha": "^5.2.0",
@@ -131,6 +132,15 @@
     ]
   },
   "scripts": {
+    "vscode:prepublish": "npm run build",
+    "vscode:publish": "vsce publish",
+    "vscode:pack": "vsce package",
+    "docker:prebuild": "npm run build",
+    "docker:build": "npm run docker:prebuild && cross-var docker build --rm -f \"Dockerfile\" -t xstoreazurite.azurecr.io/public/azurite:$npm_package_version .",
+    "docker:build:internal": "npm run docker:prebuild && cross-var docker build --rm -f \"Dockerfile\" -t xstoreazurite.azurecr.io/internal/azurite:$npm_package_version .",
+    "docker:publish": "cross-var docker push xstoreazurite.azurecr.io/public/azurite:$npm_package_version",
+    "docker:publish:internal": "cross-var docker push xstoreazurite.azurecr.io/internal/azurite:$npm_package_version",
+    "prepublishOnly": "npm run build",
     "postinstall": "node ./node_modules/vscode/bin/install || true",
     "build": "tsc",
     "build:autorest": "autorest ./swagger/blob.md --typescript --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
