@@ -1,0 +1,17 @@
+**/*.ts
+**/tsconfig.json
+**/tslint.json
+PULL_REQUEST_TEMPLATE.md
+ISSUE_TEMPLATE.md
+azure-pipelines.yml
+.vscodeignore
+.lintstagedrc
+.gitignore
+.npmignore
+Dockerfile
+typings
+tests
+swagger
+src
+.vscode
+dist/tests
