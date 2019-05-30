@@ -256,7 +256,7 @@ export default class AccountSASAuthenticator implements IAuthenticator {
 
       if (
         (await this.blobExist(account, containerName!, blobName!)) &&
-        accountSASPermission.permission !== AccountSASPermission.Write
+        !values.permissions.toString().includes(AccountSASPermission.Write)
       ) {
         this.logger.info(
           `AccountSASAuthenticator:validate() Account SAS validation failed for special requirement.`,
