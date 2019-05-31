@@ -87,15 +87,21 @@ export default abstract class ServerBase {
 
     this.status = ServerStatus.Starting;
 
-    await this.beforeStart();
+    try {
+      await this.beforeStart();
+      await new Promise<void>((resolve, reject) => {
+        this.httpServer
+          .listen(this.port, this.host, resolve)
+          .on("error", reject);
+      });
 
-    await new Promise<void>((resolve, reject) => {
-      this.httpServer.listen(this.port, this.host, resolve).on("error", reject);
-    });
+      this.status = ServerStatus.Running;
+    } catch (err) {
+      this.status = ServerStatus.Closed;
+      throw err;
+    }
 
     await this.afterStart();
-
-    this.status = ServerStatus.Running;
   }
 
   /**

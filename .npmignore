@@ -21,3 +21,6 @@ dist/tests/
 typings/tests/
 tests/
 swagger/
+debug.log
+__blobstorage__
+__azurite_db_blob__.json

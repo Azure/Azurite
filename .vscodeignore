@@ -15,3 +15,6 @@ swagger
 src
 .vscode
 dist/tests
+debug.log
+__blobstorage__
+__azurite_db_blob__.json
