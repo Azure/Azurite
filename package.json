@@ -15,7 +15,7 @@
   },
   "engines": {
     "node": ">=8.0.0",
-    "vscode": "^1.20.0"
+    "vscode": "^1.30.0"
   },
   "dependencies": {
     "@azure/ms-rest-js": "^1.5.0",
@@ -149,8 +149,8 @@
     "blob": "node -r ts-node/register src/blob/main.ts",
     "lint": "tslint -p tsconfig.json -c tslint.json src/**/*.ts",
     "test": "npm run lint && mocha --compilers ts-node/register --no-timeouts --recursive tests/**/*.test.ts tests/**/**/*.test.ts",
-    "clean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log",
-    "clean:deep": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log __blobstorage__ __azurite_db_blob__.json debug.log"
+    "clean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log *.vsix",
+    "clean:deep": "npm run clean && rimraf __blobstorage__ __azurite_db_blob__.json debug.log"
   },
   "husky": {
     "hooks": {

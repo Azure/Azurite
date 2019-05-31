@@ -10,7 +10,7 @@
 
 | Version       | Azure Storage API Version | Service Support       | Description                                       | Reference Links                                                                                                                                                                                           |
 | ------------- | ------------------------- | --------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.0.0-preview | 2018-03-28                | Blob                  | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/r/microsoft/azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| 3.1.0-preview | 2018-03-28                | Blob                  | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/r/microsoft/azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
 | 2.7.0         | 2016-05-31                | Blob, Queue and Table | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                              |
 
 ## Introduction
@@ -89,7 +89,7 @@ $ azurite-blob -l path/to/azurite/workspace
 
 Azurite V3 can be installed from [Visual Studio Code extension market](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite).
 
-You can quickly start or close Azurite by clicking Azurite status bar item or following commands.
+You can quickly start or close Azurite by clicking Azurite **status bar item** or following commands.
 
 Extension supports following Visual Studio Code commands:
 
@@ -192,7 +192,7 @@ You can customize the listening port per your requirements.
 --blobPort 0
 ```
 
-Note: The port in use is displayed on Azurite startup.
+> Note: The port in use is displayed on Azurite startup.
 
 ### Workspace Path Configuration
 
