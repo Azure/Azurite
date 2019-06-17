@@ -7,6 +7,7 @@ VOLUME [ "/data" ]
 
 COPY . .
 
+RUN npm config set unsafe-perm=true
 RUN npm install
 RUN npm run build
 RUN npm install -g
