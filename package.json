@@ -2,6 +2,7 @@
   "name": "azurite",
   "displayName": "Azurite",
   "description": "An open source Azure Storage API compatible server",
+  "icon": "icon.png",
   "version": "3.1.0-preview",
   "preview": true,
   "publisher": "Azurite",
