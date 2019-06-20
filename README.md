@@ -8,10 +8,10 @@
 > Master branch has been updated with latest Azurite V3.
 > V3 currently only supports Blob service, please use V2 for Queue or Table service for the time being.
 
-| Version       | Azure Storage API Version | Service Support       | Description                                       | Reference Links                                                                                                                                                                                           |
-| ------------- | ------------------------- | --------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.1.0-preview | 2018-03-28                | Blob                  | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/r/microsoft/azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
-| 2.7.0         | 2016-05-31                | Blob, Queue and Table | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                              |
+| Version       | Azure Storage API Version | Service Support       | Description                                       | Reference Links                                                                                                                                                                                                         |
+| ------------- | ------------------------- | --------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.1.0-preview | 2018-03-28                | Blob                  | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| 2.7.0         | 2016-05-31                | Blob, Queue and Table | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
 ## Introduction
 
