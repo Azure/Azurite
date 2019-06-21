@@ -108,12 +108,12 @@ Following extension configurations are supported:
 - `azurite.silent` Silent mode to disable access log in Visual Studio channel, by default false
 - `azurite.debug` Output debug log into Azurite channel, by default false
 
-### [DockerHub](https://hub.docker.com/r/microsoft/azurite)
+### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
 #### Run Azurite V3 docker image
 
 ```bash
-docker run -p 10000:10000 mcr.microsoft.com/azurite
+docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite
 ```
 
 `-p 10000:10000` will expose blob service's default listening port.
@@ -121,7 +121,7 @@ docker run -p 10000:10000 mcr.microsoft.com/azurite
 #### Run Azurite V3 docker image with customized persisted data location
 
 ```bash
-docker run -p 10000:10000 -v c:/azurite:/data mcr.microsoft.com/azurite
+docker run -p 10000:10000 -v c:/azurite:/data mcr.microsoft.com/azure-storage/azurite
 ```
 
 `-v c:/azurite:/data` will use and map host path `c:/azurite` as Azurite's workspace location.
@@ -129,7 +129,7 @@ docker run -p 10000:10000 -v c:/azurite:/data mcr.microsoft.com/azurite
 #### Customize all Azurite V3 supported parameters for docker image
 
 ```bash
-docker run -p 8888:8888 -v c:/azurite:/workspace mcr.microsoft.com/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 8888 --blobHost 0.0.0.0
+docker run -p 8888:8888 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 8888 --blobHost 0.0.0.0
 ```
 
 Above command will try to start Azurite image with configurations:
