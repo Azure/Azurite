@@ -10,6 +10,7 @@
 - Fixed an authentication issue when copy blob to override an existing blob with SAS.
 - Return 404 for copy blob operation when source blob doesn't exist.
 - Fixed an issue that metadata doesn't get copied when copy blob.
+- Fixed GetBlockBlob missing Content-Range header
 
 2019.05 Version 3.0.0-preview
 
