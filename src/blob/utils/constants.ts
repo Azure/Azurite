@@ -1,6 +1,6 @@
 import * as Models from "../generated/artifacts/models";
 
-export const VERSION = "3.1.0-preview";
+export const VERSION = "3.1.1-preview";
 export const API_VERSION = "2018-03-28";
 export const DEFAULT_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_SERVER_LISTENING_PORT = 10000;
