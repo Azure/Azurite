@@ -3,7 +3,7 @@
   "displayName": "Azurite",
   "description": "An open source Azure Storage API compatible server",
   "icon": "icon.png",
-  "version": "3.1.0-preview",
+  "version": "3.1.1-preview",
   "preview": true,
   "publisher": "Azurite",
   "categories": [
@@ -31,7 +31,8 @@
     "uuid": "^3.3.2",
     "winston": "^3.1.0",
     "xml2js": "^0.4.19",
-    "rimraf": "^2.6.3"
+    "rimraf": "^2.6.3",
+    "vscode": "^1.1.34"
   },
   "devDependencies": {
     "@azure/storage-blob": "^10.3.0",
@@ -55,8 +56,7 @@
     "prettier": "^1.16.4",
     "ts-node": "^7.0.1",
     "tslint": "^5.16.0",
-    "typescript": "^3.1.4",
-    "vscode": "^1.1.34"
+    "typescript": "^3.1.4"
   },
   "activationEvents": [
     "*",
@@ -142,7 +142,7 @@
     "docker:publish": "cross-var docker push xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version",
     "docker:publish:internal": "cross-var docker push xstoreazurite.azurecr.io/internal/azure-storage/azurite:$npm_package_version",
     "prepublishOnly": "npm run build",
-    "postinstall": "node ./node_modules/vscode/bin/install || true",
+    "postinstall": "node ./node_modules/vscode/bin/install",
     "build": "tsc",
     "build:autorest": "autorest ./swagger/blob.md --typescript --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorestdebug": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
