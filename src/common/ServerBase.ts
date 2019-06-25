@@ -1,12 +1,20 @@
 import * as http from "http";
 import * as https from "https";
 
+import ConfigurationBase from "./ConfigurationBase";
 import IRequestListenerFactory from "./IRequestListenerFactory";
 
 export type RequestListener = (
   request: http.IncomingMessage,
   response: http.ServerResponse
 ) => void;
+
+export enum ServerStatus {
+  Closed = "Closed",
+  Starting = "Starting",
+  Running = "Running",
+  Closing = "Closing"
+}
 
 /**
  * Abstract Server class for Azurite HTTP or HTTPS Servers.
@@ -16,6 +24,8 @@ export type RequestListener = (
  * @class Server
  */
 export default abstract class ServerBase {
+  protected status: ServerStatus = ServerStatus.Closed;
+
   /**
    * Creates an instance of HTTP or HTTPS server.
    *
@@ -29,7 +39,8 @@ export default abstract class ServerBase {
     public readonly host: string,
     public readonly port: number,
     public readonly httpServer: http.Server | https.Server,
-    requestListenerFactory: IRequestListenerFactory
+    requestListenerFactory: IRequestListenerFactory,
+    public readonly config: ConfigurationBase
   ) {
     // Remove predefined request listeners to avoid double request handling
     this.httpServer.removeAllListeners("request");
@@ -57,6 +68,10 @@ export default abstract class ServerBase {
     }
   }
 
+  public getStatus(): ServerStatus {
+    return this.status;
+  }
+
   /**
    * Initialize and start the server to server incoming HTTP requests.
    * beforeStart() and afterStart() will be executed before and after start().
@@ -66,11 +81,25 @@ export default abstract class ServerBase {
    * @memberof Server
    */
   public async start(): Promise<void> {
-    await this.beforeStart();
+    if (this.status !== ServerStatus.Closed) {
+      throw Error(`Cannot start server in status ${ServerStatus[this.status]}`);
+    }
 
-    await new Promise<void>((resolve, reject) => {
-      this.httpServer.listen(this.port, this.host, resolve).on("error", reject);
-    });
+    this.status = ServerStatus.Starting;
+
+    try {
+      await this.beforeStart();
+      await new Promise<void>((resolve, reject) => {
+        this.httpServer
+          .listen(this.port, this.host, resolve)
+          .on("error", reject);
+      });
+
+      this.status = ServerStatus.Running;
+    } catch (err) {
+      this.status = ServerStatus.Closed;
+      throw err;
+    }
 
     await this.afterStart();
   }
@@ -88,6 +117,12 @@ export default abstract class ServerBase {
    * @memberof Server
    */
   public async close(): Promise<void> {
+    if (this.status !== ServerStatus.Running) {
+      throw Error(`Cannot close server in status ${ServerStatus[this.status]}`);
+    }
+
+    this.status = ServerStatus.Closing;
+
     await this.beforeClose();
 
     // Remove request listener to reject incoming requests
@@ -105,6 +140,8 @@ export default abstract class ServerBase {
     });
 
     await this.afterClose();
+
+    this.status = ServerStatus.Closed;
   }
 
   /**

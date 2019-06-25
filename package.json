@@ -1,13 +1,22 @@
 {
   "name": "azurite",
-  "version": "3.0.0-preview",
-  "description": "An open source Azure Storage API compatible server.",
+  "displayName": "Azurite",
+  "description": "An open source Azure Storage API compatible server",
+  "icon": "icon.png",
+  "version": "3.1.0-preview",
+  "preview": true,
+  "publisher": "Azurite",
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/src/main.js",
   "bin": {
     "azurite": "./dist/src/blob/main.js",
     "azurite-blob": "./dist/src/blob/main.js"
   },
   "engines": {
-    "node": ">=8.0.0"
+    "node": ">=8.0.0",
+    "vscode": "^1.30.0"
   },
   "dependencies": {
     "@azure/ms-rest-js": "^1.5.0",
@@ -21,7 +30,8 @@
     "uri-templates": "^0.2.0",
     "uuid": "^3.3.2",
     "winston": "^3.1.0",
-    "xml2js": "^0.4.19"
+    "xml2js": "^0.4.19",
+    "rimraf": "^2.6.3"
   },
   "devDependencies": {
     "@azure/storage-blob": "^10.3.0",
@@ -38,24 +48,110 @@
     "@types/uuid": "^3.4.4",
     "@types/xml2js": "^0.4.3",
     "autorest": "^2.0.4283",
+    "cross-var": "^1.1.0",
     "husky": "^1.3.1",
     "lint-staged": "^8.1.5",
     "mocha": "^5.2.0",
     "prettier": "^1.16.4",
-    "rimraf": "^2.6.3",
     "ts-node": "^7.0.1",
-    "tslint": "^5.12.1",
-    "typescript": "^3.1.4"
+    "tslint": "^5.16.0",
+    "typescript": "^3.1.4",
+    "vscode": "^1.1.34"
+  },
+  "activationEvents": [
+    "*",
+    "onCommand:azurite.start",
+    "onCommand:azurite.close",
+    "onCommand:azurite.clean",
+    "onCommand:azurite.start_blob",
+    "onCommand:azurite.close_blob",
+    "onCommand:azurite.clean_blob"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "azurite.start",
+        "title": "Start",
+        "category": "Azurite"
+      },
+      {
+        "command": "azurite.close",
+        "title": "Close",
+        "category": "Azurite"
+      },
+      {
+        "command": "azurite.clean",
+        "title": "Clean",
+        "category": "Azurite"
+      },
+      {
+        "command": "azurite.start_blob",
+        "title": "Start Blob Service",
+        "category": "Azurite"
+      },
+      {
+        "command": "azurite.close_blob",
+        "title": "Close Blob Service",
+        "category": "Azurite"
+      },
+      {
+        "command": "azurite.clean_blob",
+        "title": "Clean Blob Service",
+        "category": "Azurite"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "Azurite",
+        "properties": {
+          "azurite.debug": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable debug log into Visual Studio Code channel"
+          },
+          "azurite.silent": {
+            "type": "boolean",
+            "default": false,
+            "description": "Disable access log into Visual Studio Code channel"
+          },
+          "azurite.location": {
+            "type": "string",
+            "description": "Workspace location folder path, by default Visual Studio Code current opened folder"
+          },
+          "azurite.blobHost": {
+            "type": "string",
+            "default": "127.0.0.1",
+            "description": "Blob service listening endpoint, by default 127.0.0.1"
+          },
+          "azurite.blobPort": {
+            "type": "number",
+            "default": 10000,
+            "description": "Blob service listening port, by default 10000"
+          }
+        }
+      }
+    ]
   },
   "scripts": {
+    "vscode:prepublish": "npm run build",
+    "vscode:publish": "vsce publish",
+    "vscode:pack": "vsce package",
+    "docker:prebuild": "npm run build",
+    "docker:build": "npm run docker:prebuild && cross-var docker build --rm -f \"Dockerfile\" -t xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version .",
+    "docker:build:internal": "npm run docker:prebuild && cross-var docker build --rm -f \"Dockerfile\" -t xstoreazurite.azurecr.io/internal/azure-storage/azurite:$npm_package_version .",
+    "docker:publish": "cross-var docker push xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version",
+    "docker:publish:internal": "cross-var docker push xstoreazurite.azurecr.io/internal/azure-storage/azurite:$npm_package_version",
+    "prepublishOnly": "npm run build",
+    "postinstall": "node ./node_modules/vscode/bin/install || true",
     "build": "tsc",
     "build:autorest": "autorest ./swagger/blob.md --typescript --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorestdebug": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
+    "watch": "tsc -watch -p ./",
     "blob": "node -r ts-node/register src/blob/main.ts",
     "lint": "tslint -p tsconfig.json -c tslint.json src/**/*.ts",
-    "test": "mocha --compilers ts-node/register --no-timeouts --recursive tests/**/*.test.ts tests/**/**/*.test.ts",
-    "clean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log",
-    "clean:deep": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log __blobstorage__ __azurite_db_blob__.json debug.log"
+    "test": "npm run lint && mocha --compilers ts-node/register --no-timeouts --recursive tests/**/*.test.ts tests/**/**/*.test.ts",
+    "clean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log *.vsix",
+    "clean:deep": "npm run clean && rimraf __blobstorage__ __azurite_db_blob__.json debug.log"
   },
   "husky": {
     "hooks": {

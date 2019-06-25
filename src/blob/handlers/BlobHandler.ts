@@ -998,7 +998,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       sourceContainer === undefined ||
       sourceBlob === undefined
     ) {
-      throw new NotImplementedError(context.contextID);
+      throw StorageErrorFactory.getBlobNotFound(context.contextID!);
     }
 
     // TODO: Only supports copy from devstoreaccount1, not a complete copy implementation
@@ -1009,11 +1009,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       sourceContainer
     );
     if (sourceContainerModel === undefined) {
-      // TODO: Check error message
-      throw StorageErrorFactory.getInvalidOperation(
-        context.contextID!,
-        "Source container doesn't exist."
-      );
+      throw StorageErrorFactory.getBlobNotFound(context.contextID!);
     }
 
     // Get source storage blob model
@@ -1030,11 +1026,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       sourceBlobModel.deleted ||
       !sourceBlobModel.isCommitted
     ) {
-      // TODO: Check error message
-      throw StorageErrorFactory.getInvalidOperation(
-        context.contextID!,
-        "Source blob doesn't exist."
-      );
+      throw StorageErrorFactory.getBlobNotFound(context.contextID!);
     }
 
     const destContainerModel = await this.dataStore.getContainer(
@@ -1076,7 +1068,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         accessTierChangeTime: undefined
       },
       metadata:
-        options.metadata === undefined
+        options.metadata === undefined ||
+        Object.keys(options.metadata).length === 0
           ? { ...sourceBlobModel.metadata }
           : options.metadata,
       accountName: blobContext.account!,
@@ -1344,6 +1337,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       };
     }
 
+    let contentRange: string | undefined;
+    if (
+      context.request!.getHeader("range") ||
+      context.request!.getHeader("x-ms-range")
+    ) {
+      contentRange = `bytes ${rangeStart}-${rangeEnd}/${blob.properties
+        .contentLength!}`;
+    }
+
     let body: NodeJS.ReadableStream | undefined = await bodyGetter();
     let contentMD5: Uint8Array | undefined;
     if (!partialRead) {
@@ -1359,7 +1361,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     const response: Models.BlobDownloadResponse = {
-      statusCode: 200,
+      statusCode: contentRange ? 206 : 200,
       body,
       metadata: blob.metadata,
       eTag: blob.properties.etag,
@@ -1369,6 +1371,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       ...blob.properties,
       blobContentMD5: blob.properties.contentMD5,
       contentLength,
+      contentRange,
       contentMD5,
       isServerEncrypted: true
     };

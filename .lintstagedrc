@@ -8,6 +8,8 @@
   "ignore": [
     "**/dist/**",
     "**/swagger/**",
-    "**/generated/**"
+    "**/generated/**",
+    "ChangeLog.md",
+    "BreakingChanges.md"
   ]
 }

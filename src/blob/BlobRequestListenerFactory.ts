@@ -39,7 +39,8 @@ export default class BlobRequestListenerFactory
   public constructor(
     private readonly dataStore: IBlobDataStore,
     private readonly accountDataStore: IAccountDataStore,
-    private readonly enableAccessLog: boolean
+    private readonly enableAccessLog: boolean,
+    private readonly accessLogWriteStream?: NodeJS.WritableStream
   ) {}
 
   public createRequestListener(): RequestListener {
@@ -77,7 +78,7 @@ export default class BlobRequestListenerFactory
 
     // Access log per request
     if (this.enableAccessLog) {
-      app.use(morgan("common"));
+      app.use(morgan("common", { stream: this.accessLogWriteStream }));
     }
 
     // Manually created middleware to deserialize feature related context which swagger doesn't know
