@@ -2,7 +2,7 @@
 
 > Note. This file includes changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
-2019.06 Version 3.1.1-preview
+2019.06 Version 3.1.2-preview
 
 - Integrated Azurite with Visual Studio Code as an extension.
 - Added Visual Studio Code extension usage guidelines.

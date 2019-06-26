@@ -39,6 +39,10 @@ npm install
 npm run blob
 ```
 
+## Develop for Visual Studio Code Extension
+
+Select and start Visual Studio Code debug configuration "Run Extension".
+
 ## Testing
 
 For every newly implemented REST API and handler, there should be at least coverage from 1 unit / integration test case.

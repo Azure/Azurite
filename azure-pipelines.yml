@@ -37,6 +37,16 @@ jobs:
         displayName: "tslint"
 
       - script: |
+          npm run validate:npmpack:linux_mac
+        workingDirectory: "./"
+        displayName: "Validate npm package installation"
+
+      - script: |
+          npm run vscode:pack
+        workingDirectory: "./"
+        displayName: "Validate Visual Studio Code extension package generation"
+
+      - script: |
           npm run test
         workingDirectory: "./"
         displayName: "npm run test"
@@ -69,6 +79,16 @@ jobs:
         displayName: "tslint"
 
       - script: |
+          npm run validate:npmpack:win
+        workingDirectory: "./"
+        displayName: "Validate npm package installation"
+
+      - script: |
+          npm run vscode:pack
+        workingDirectory: "./"
+        displayName: "Validate Visual Studio Code extension package generation"
+
+      - script: |
           npm run test
         workingDirectory: "./"
         displayName: "npm run test"
@@ -99,6 +119,16 @@ jobs:
           npm run lint
         workingDirectory: "./"
         displayName: "tslint"
+
+      - script: |
+          npm run validate:npmpack:linux_mac
+        workingDirectory: "./"
+        displayName: "Validate npm package installation"
+
+      - script: |
+          npm run vscode:pack
+        workingDirectory: "./"
+        displayName: "Validate Visual Studio Code extension package generation"
 
       - script: |
           npm run test
