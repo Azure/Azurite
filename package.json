@@ -138,7 +138,7 @@
     "vscode:publish": "vsce publish",
     "vscode:pack": "vsce package",
     "prepare": "node ./node_modules/vscode/bin/install",
-    "docker:prebuild": "npm run build",
+    "docker:prebuild": "echo skip",
     "docker:build": "npm run docker:prebuild && cross-var docker build --rm -f \"Dockerfile\" -t xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version . && cross-var docker tag xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version xstoreazurite.azurecr.io/public/azure-storage/azurite:latest",
     "docker:build:internal": "npm run docker:prebuild && cross-var docker build --rm -f \"Dockerfile\" -t xstoreazurite.azurecr.io/internal/azure-storage/azurite:$npm_package_version . && cross-var docker tag xstoreazurite.azurecr.io/internal/azure-storage/azurite:$npm_package_version xstoreazurite.azurecr.io/internal/azure-storage/azurite:latest",
     "docker:publish": "cross-var docker push xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version",
