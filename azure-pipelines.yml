@@ -46,6 +46,15 @@ jobs:
         displayName: "Validate Visual Studio Code extension package generation"
 
       - script: |
+          sudo npm uninstall -g azurite
+          npm run build
+          sudo npm install -g
+          azurite -v
+          azurite-blob -v
+        workingDirectory: "./"
+        displayName: "Validate npm global installation from GitHub code base"
+
+      - script: |
           npm run test
         workingDirectory: "./"
         displayName: "npm run test"
@@ -88,6 +97,15 @@ jobs:
         displayName: "Validate Visual Studio Code extension package generation"
 
       - script: |
+          npm uninstall -g azurite
+          npm run build
+          npm install -g
+          azurite -v
+          azurite-blob -v
+        workingDirectory: "./"
+        displayName: "Validate npm global installation from GitHub code base"
+
+      - script: |
           npm run test
         workingDirectory: "./"
         displayName: "npm run test"
@@ -128,6 +146,15 @@ jobs:
           npm run vscode:pack
         workingDirectory: "./"
         displayName: "Validate Visual Studio Code extension package generation"
+
+      - script: |
+          sudo npm uninstall -g azurite
+          npm run build
+          sudo npm install -g
+          azurite -v
+          azurite-blob -v
+        workingDirectory: "./"
+        displayName: "Validate npm global installation from GitHub code base"
 
       - script: |
           npm run test
