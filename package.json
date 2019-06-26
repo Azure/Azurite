@@ -3,7 +3,7 @@
   "displayName": "Azurite",
   "description": "An open source Azure Storage API compatible server",
   "icon": "icon.png",
-  "version": "3.1.1-preview",
+  "version": "3.1.2-preview",
   "preview": true,
   "publisher": "Azurite",
   "categories": [
@@ -26,13 +26,12 @@
     "lokijs": "^1.5.6",
     "morgan": "^1.9.1",
     "multistream": "^2.1.1",
+    "rimraf": "^2.6.3",
     "tslib": "^1.9.3",
     "uri-templates": "^0.2.0",
     "uuid": "^3.3.2",
     "winston": "^3.1.0",
-    "xml2js": "^0.4.19",
-    "rimraf": "^2.6.3",
-    "vscode": "^1.1.34"
+    "xml2js": "^0.4.19"
   },
   "devDependencies": {
     "@azure/storage-blob": "^10.3.0",
@@ -56,7 +55,9 @@
     "prettier": "^1.16.4",
     "ts-node": "^7.0.1",
     "tslint": "^5.16.0",
-    "typescript": "^3.1.4"
+    "typescript": "^3.1.4",
+    "vsce": "^1.64.0",
+    "vscode": "^1.1.34"
   },
   "activationEvents": [
     "*",
@@ -136,13 +137,13 @@
     "vscode:prepublish": "npm run build",
     "vscode:publish": "vsce publish",
     "vscode:pack": "vsce package",
+    "prepare": "node ./node_modules/vscode/bin/install",
     "docker:prebuild": "npm run build",
-    "docker:build": "npm run docker:prebuild && cross-var docker build --rm -f \"Dockerfile\" -t xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version .",
-    "docker:build:internal": "npm run docker:prebuild && cross-var docker build --rm -f \"Dockerfile\" -t xstoreazurite.azurecr.io/internal/azure-storage/azurite:$npm_package_version .",
+    "docker:build": "npm run docker:prebuild && cross-var docker build --rm -f \"Dockerfile\" -t xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version . && cross-var docker tag xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version xstoreazurite.azurecr.io/public/azure-storage/azurite:latest",
+    "docker:build:internal": "npm run docker:prebuild && cross-var docker build --rm -f \"Dockerfile\" -t xstoreazurite.azurecr.io/internal/azure-storage/azurite:$npm_package_version . && cross-var docker tag xstoreazurite.azurecr.io/internal/azure-storage/azurite:$npm_package_version xstoreazurite.azurecr.io/internal/azure-storage/azurite:latest",
     "docker:publish": "cross-var docker push xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version",
     "docker:publish:internal": "cross-var docker push xstoreazurite.azurecr.io/internal/azure-storage/azurite:$npm_package_version",
-    "prepublishOnly": "npm run build",
-    "postinstall": "node ./node_modules/vscode/bin/install",
+    "prepack": "npm run build",
     "build": "tsc",
     "build:autorest": "autorest ./swagger/blob.md --typescript --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorestdebug": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
@@ -151,7 +152,9 @@
     "lint": "tslint -p tsconfig.json -c tslint.json src/**/*.ts",
     "test": "npm run lint && mocha --compilers ts-node/register --no-timeouts --recursive tests/**/*.test.ts tests/**/**/*.test.ts",
     "clean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log *.vsix",
-    "clean:deep": "npm run clean && rimraf __blobstorage__ __azurite_db_blob__.json debug.log"
+    "clean:deep": "npm run clean && rimraf __blobstorage__ __azurite_db_blob__.json debug.log",
+    "validate:npmpack:win": "npm install && npm run build && npm pack && cross-var npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v",
+    "validate:npmpack:linux_mac": "npm install && npm run build && npm pack && cross-var sudo npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v"
   },
   "husky": {
     "hooks": {
