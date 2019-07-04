@@ -210,7 +210,29 @@ describe("Table HTTP Api tests", () => {
         expect(response.statusCode).to.equal(200);
         done();
       });
-    });
+    })
+
+    it("should retrive single-element collection of entities when only one entity is returned by the query", (done) => {
+      const query = new azureStorage.TableQuery()
+      .top(1)
+      .where("RowKey eq ?", rowKeyForTestEntity1);
+  
+      const retrievalTableService = azureStorage.createTableService(
+        "UseDevelopmentStorage=true"
+      );
+  
+      retrievalTableService.queryEntities(tableName, query, null, function(
+        error,
+        result,
+        response
+      ) {
+        expect(error).to.equal(null);
+        expect(response.body.value.length).to.equal(1);
+        expect(result.entries.length).to.equal(1);
+        expect(response.statusCode).to.equal(200);
+        done();
+      });
+    })
   });
 
   describe("PUT and Insert Table Entites", () => {
