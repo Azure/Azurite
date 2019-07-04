@@ -451,6 +451,38 @@ describe("Table HTTP Api tests", () => {
     });
   });
 
+
+  describe("DELETE and Delete Table operations", (done) => {
+    it("should not fail to delete a Table", (done) => {
+      const deleteTableService = azureStorage.createTableService(
+        "UseDevelopmentStorage=true"
+      );
+
+      const tempEntity = {
+        PartitionKey: entGen.String(partitionKeyForTest),
+        RowKey: entGen.String("4"),
+        description: entGen.String("qux"),
+        dueDate: entGen.DateTime(new Date(Date.UTC(2018, 12, 26))),
+      };
+
+      // Request is made by default with "return-no-content" when using the storage-sdk
+      // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
+      // status code should be 204
+      deleteTableService.deleteTable(tableName,
+        {
+          echoContent: false,
+        },
+        function (error, result, response) {
+          if (error !== null) {
+            throw error;
+          }
+          expect(result.statusCode).to.equal(204);
+          done(); 
+        }
+      );
+    });
+  });
+
   after(() => azurite.close());
 
 });
