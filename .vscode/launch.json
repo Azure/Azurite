@@ -26,6 +26,25 @@
         {
             "type": "node",
             "request": "launch",
+            "env": {
+                "AZURITE_LOCATION": "azurite-testdrive"
+            },
+            "name": "Mocha Current File",
+            "program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
+            "args": [
+                "-u",
+                "tdd",
+                "--timeout",
+                "999999",
+                "--colors",
+                "${file}"
+            ],
+            "internalConsoleOptions": "openOnSessionStart",
+            "protocol": "inspector"
+        },
+        {
+            "type": "node",
+            "request": "launch",
             "protocol": "auto",
             "name": "Launch Azurite with AuthEnabled",
             "program": "${workspaceRoot}/bin/azurite",
