@@ -31,10 +31,7 @@ const rowKeyForTestEntity2 = "2";
 const EntityNotFoundErrorMessage = 'The specified entity does not exist.';
 
 function createDevTableService() {
-  const svc = azureStorage.createTableService(
-    "UseDevelopmentStorage=true"
-  );
-
+  const svc = azureStorage.createTableService(azureStorage.generateDevelopmentStorageCredentials());
   // Disable keep-alive connections
   svc.enableGlobalHttpAgent = true;
 
@@ -115,15 +112,20 @@ describe("Table HTTP Api tests", () => {
         tableName,
         partitionKeyForTest,
         rowKeyForTestEntity1,
-        function (error, result, response) {
+        function(error, result, response) {
           expect(error).to.equal(null);
           expect(result).to.not.equal(undefined);
           expect(result).to.not.equal(null);
           expect(result.PartitionKey._).to.equal(partitionKeyForTest);
           expect(result.RowKey._).to.equal(rowKeyForTestEntity1);
-          expect(result.description._).to.equal(tableEntity1.description._);
-          expect(result.dueDate._.toISOString().split(".")[0] + "Z").to.equal(
-            new Date(Date.UTC(2018, 12, 25)).toISOString().split(".")[0] + "Z"
+          expect(result.description._).to.equal(
+            tableEntity1.description._
+          );
+          expect(
+            result.dueDate._.toISOString().split(".")[0] + "Z"
+          ).to.equal(
+            new Date(Date.UTC(2018, 12, 25)).toISOString().split(".")[0] +
+              "Z"
           );
           done();
         }
@@ -159,9 +161,7 @@ describe("Table HTTP Api tests", () => {
     });
 
     it("should fail to retrieve a non-existing row with 404 EntityNotFound", (done) => {
-      const faillingLookupTableService = azureStorage.createTableService(
-        "UseDevelopmentStorage=true"
-      );
+      const faillingLookupTableService = createDevTableService();
       faillingLookupTableService.retrieveEntity(
         tableName,
         partitionKeyForTest,
@@ -210,7 +210,7 @@ describe("Table HTTP Api tests", () => {
         expect(response.statusCode).to.equal(200);
         done();
       });
-    })
+    });
 
     it("should retrive single-element collection of entities when only one entity is returned by the query", (done) => {
       const query = new azureStorage.TableQuery()
@@ -232,7 +232,35 @@ describe("Table HTTP Api tests", () => {
         expect(response.statusCode).to.equal(200);
         done();
       });
-    })
+    });
+    
+
+    it("should return correct metadata for multiple entities result", (done) => {
+      const query = new azureStorage.TableQuery()
+      .top(5);
+       const multipleResultsTableService = azureStorage.createTableService(azureStorage.generateDevelopmentStorageCredentials());
+       multipleResultsTableService.queryEntities(tableName, query, null, function(
+        error,
+        result,
+        response
+      ) {
+        expect(result.entries.length).to.equal(2);
+        expect(response.body["odata.metadata"]).to.equal(`http://127.0.0.1:10002/devstoreaccount1/$metadata#${tableName}`)
+        done();
+      });
+    });
+    
+    it("should return correct metadata for single entity result", (done) => {
+       const multipleResultsTableService = azureStorage.createTableService(azureStorage.generateDevelopmentStorageCredentials());
+       multipleResultsTableService.retrieveEntity(tableName, partitionKeyForTest, rowKeyForTestEntity1, null, function(
+        error,
+        result,
+        response
+      ) {
+        expect(response.body["odata.metadata"]).to.equal(`http://127.0.0.1:10002/devstoreaccount1/$metadata#${tableName}/@Element`)
+        done();
+      });
+    });
   });
 
   describe("PUT and Insert Table Entites", () => {
@@ -260,9 +288,7 @@ describe("Table HTTP Api tests", () => {
     });
 
     it("should return a valid object in the result object when creating an Entity in TableStorage using return no content", (done) => {
-      const insertEntityTableService = azureStorage.createTableService(
-        "UseDevelopmentStorage=true"
-      );
+      const insertEntityTableService = azureStorage.createTableService(azureStorage.generateDevelopmentStorageCredentials());
       const insertionEntity = {
         PartitionKey: entGen.String(partitionKeyForTest),
         RowKey: entGen.String("5"),
