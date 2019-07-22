@@ -783,9 +783,6 @@ export default class ContainerHandler extends BaseHandler
       blobItems.push(blob);
     }
 
-    // only need an empty array for the prefixes
-    const blobPrefixes: Models.BlobPrefix[] = [];
-
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const response: Models.ContainerListBlobFlatSegmentResponse = {
       statusCode: 200,
@@ -800,8 +797,7 @@ export default class ContainerHandler extends BaseHandler
       maxResults: options.maxresults || this.LIST_BLOBS_MAX_RESULTS_DEFAULT,
       delimiter,
       segment: {
-        blobItems,
-        blobPrefixes
+        blobItems
       },
       nextMarker: `${nextMarker || ""}`
     };
