@@ -31,7 +31,7 @@ export default class LokiBlobMetadataStore
   deleteContainer(account: string, container: string): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  updateContainer<T extends ContainerModel>(container: T): Promise<T> {
+  setContainerMetadata<T extends ContainerModel>(container: T): Promise<T> {
     throw new Error("Method not implemented.");
   }
   listContainers<T extends ContainerModel>(

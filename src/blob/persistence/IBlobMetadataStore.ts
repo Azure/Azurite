@@ -137,7 +137,6 @@ export interface IBlobMetadataStore extends IDataStore {
   /**
    * Get service properties for specific storage account.
    *
-   * @template T
    * @param {string} account
    * @returns {Promise<undefined>}
    * @memberof IBlobMetadataStore
@@ -149,16 +148,15 @@ export interface IBlobMetadataStore extends IDataStore {
   /**
    * Get a container item from persistency layer by account and container name.
    *
-   * @template T
    * @param {string} account
    * @param {string} container
-   * @returns {(Promise<T | undefined>)}
+   * @returns {(Promise<ContainerModel | undefined>)}
    * @memberof IBlobMetadataStore
    */
-  getContainer<T extends ContainerModel>(
+  getContainer(
     account: string,
     container: string
-  ): Promise<T | undefined>;
+  ): Promise<ContainerModel | undefined>;
 
   /**
    * Delete container item if exists from persistency layer.
@@ -173,14 +171,23 @@ export interface IBlobMetadataStore extends IDataStore {
   deleteContainer(account: string, container: string): Promise<void>;
 
   /**
-   * Update a container item in persistency layer. If the container doesn't exist, it will be created.
+   * Create a container item in persistency layer.
+   *
+   * @param {ContainerModel} container
+   * @returns {Promise<ContainerModel>}
+   * @memberof IBlobMetadataStore
+   */
+  createContainer(container: ContainerModel): Promise<ContainerModel>;
+
+  /**
+   * Update a container item in persistency layer.
    *
    * @template T
    * @param {T} container
    * @returns {Promise<T>}
    * @memberof IBlobMetadataStore
    */
-  updateContainer<T extends ContainerModel>(container: T): Promise<T>;
+  setContainerMetadata<T extends ContainerModel>(container: T): Promise<T>;
 
   /**
    * List containers with query conditions specified.
@@ -339,17 +346,6 @@ export interface IBlobMetadataStore extends IDataStore {
     blob?: string,
     isCommitted?: boolean
   ): Promise<T[]>;
-
-  /**
-   * Remove payloads from persistency layer.
-   *
-   * @param {Iterable<string | IPersistencyChunk>} persistency
-   * @returns {Promise<void>}
-   * @memberof IBlobMetadataStore
-   */
-  deletePayloads(
-    persistency: Iterable<string | IPersistencyChunk>
-  ): Promise<void>;
 }
 
 export default IBlobMetadataStore;

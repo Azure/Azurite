@@ -158,7 +158,9 @@
     "clean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log *.vsix",
     "clean:deep": "npm run clean && rimraf __blobstorage__ __azurite_db_blob__.json debug.log",
     "validate:npmpack:win": "npm install && npm run build && npm pack && cross-var npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v",
-    "validate:npmpack:linux_mac": "npm install && npm run build && npm pack && cross-var sudo npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v"
+    "validate:npmpack:linux_mac": "npm install && npm run build && npm pack && cross-var sudo npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v",
+    "db:migrate:blob:metadata": "sequelize db:migrate --config migrations/blob/metadata/config/config.json --migrations-path migrations/blob/metadata/migrations",
+    "db:create:blob:metadata": "sequelize db:create --config migrations/blob/metadata/config/config.json --migrations-path migrations/blob/metadata/migrations"
   },
   "husky": {
     "hooks": {

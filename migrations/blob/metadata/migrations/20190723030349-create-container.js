@@ -4,31 +4,37 @@
 // sequelize db:migrate
 module.exports = {
   up: (queryInterface, Sequelize) => {
-    return queryInterface.createTable("Services", {
+    return queryInterface.createTable("Containers", {
       accountName: {
         type: "VARCHAR(255)",
         primaryKey: true
       },
-      defaultServiceVersion: {
+      containerName: {
+        type: "VARCHAR(255)",
+        primaryKey: true
+      },
+      lastModified: {
+        allowNull: false,
+        type: Sequelize.DATE(6)
+      },
+      etag: {
+        allowNull: false,
+        type: "VARCHAR(127)"
+      },
+      metadata: {
+        type: "VARCHAR(2047)"
+      },
+      containerAcl: {
+        type: "VARCHAR(1023)"
+      },
+      publicAccess: {
         type: "VARCHAR(31)"
       },
-      cors: {
-        type: "VARCHAR(1023)"
+      hasImmutabilityPolicy: {
+        type: Sequelize.BOOLEAN
       },
-      logging: {
-        type: "VARCHAR(1023)"
-      },
-      minuteMetrics: {
-        type: "VARCHAR(1023)"
-      },
-      hourMetrics: {
-        type: "VARCHAR(1023)"
-      },
-      staticWebsite: {
-        type: "VARCHAR(1023)"
-      },
-      deleteRetentionPolicy: {
-        type: "VARCHAR(1023)"
+      hasLegalHold: {
+        type: Sequelize.BOOLEAN
       },
       createdAt: {
         allowNull: false,
@@ -40,6 +46,7 @@ module.exports = {
       }
     });
   },
+
   down: (queryInterface, Sequelize) => {
     return queryInterface.dropTable("Services");
   }
