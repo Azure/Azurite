@@ -1,4 +1,4 @@
-import { BOOLEAN, DATE, Model, Options as SequelizeOptions, Sequelize } from "sequelize";
+import { BOOLEAN, DATE, INTEGER, Model, Op, Options as SequelizeOptions, Sequelize } from "sequelize";
 
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import IBlobMetadataStore, {
@@ -102,12 +102,15 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     ContainersModel.init(
       {
         accountName: {
-          type: "VARCHAR(255)",
-          primaryKey: true
+          type: "VARCHAR(255)"
         },
         containerName: {
-          type: "VARCHAR(255)",
-          primaryKey: true
+          type: "VARCHAR(255)"
+        },
+        containerId: {
+          type: INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true
         },
         lastModified: {
           allowNull: false,
@@ -415,13 +418,61 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     }
   }
 
-  listContainers<T extends ContainerModel>(
+  public async listContainers(
     account: string,
-    prefix?: string | undefined,
-    maxResults?: number | undefined,
+    prefix: string = "",
+    maxResults: number = 2000,
     marker?: number | undefined
-  ): Promise<[T[], number | undefined]> {
-    throw new Error("Method not implemented.");
+  ): Promise<[ContainerModel[], number | undefined]> {
+    const whereQuery: any = { accountName: account };
+    if (prefix.length > 0) {
+      whereQuery.containerName = {
+        [Op.like]: `${prefix}%`
+      };
+    }
+    if (marker !== undefined) {
+      whereQuery.containerId = {
+        [Op.gt]: marker
+      };
+    }
+
+    const modelConvert = (dbModel: ContainersModel): ContainerModel => {
+      const model: ContainerModel = {
+        accountName: this.getModelValue<string>(dbModel, "accountName", true),
+        name: this.getModelValue<string>(dbModel, "containerName", true),
+        containerAcl: this.deserializeModelValue(dbModel, "containerAcl"),
+        metadata: this.deserializeModelValue(dbModel, "metadata"),
+        properties: {
+          lastModified: this.getModelValue<Date>(dbModel, "lastModified", true),
+          etag: this.getModelValue<string>(dbModel, "etag", true),
+          publicAccess: this.deserializeModelValue(dbModel, "publicAccess"),
+          hasImmutabilityPolicy: this.getModelValue<boolean>(
+            dbModel,
+            "hasImmutabilityPolicy"
+          ),
+          hasLegalHold: this.getModelValue<boolean>(dbModel, "hasLegalHold")
+        }
+      };
+      return model;
+    };
+
+    return ContainersModel.findAll({
+      limit: maxResults,
+      where: whereQuery as any,
+      order: [["containerId", "ASC"]]
+    }).then(res => {
+      if (res.length < maxResults) {
+        return [res.map(val => modelConvert(val)), undefined];
+      } else {
+        const tail = res[res.length - 1];
+        const nextMarker = this.getModelValue<number>(
+          tail,
+          "containerId",
+          true
+        );
+        return [res.map(val => modelConvert(val)), nextMarker];
+      }
+    });
   }
 
   deleteBlobs(account: string, container: string): Promise<void> {
@@ -497,8 +548,21 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new Error("Method not implemented.");
   }
 
-  private getModelValue<T>(model: Model, key: string): T | undefined {
-    return model.get(key) as T | undefined;
+  private getModelValue<T>(model: Model, key: string): T | undefined;
+  private getModelValue<T>(model: Model, key: string, isRequired: true): T;
+  private getModelValue<T>(
+    model: Model,
+    key: string,
+    isRequired?: boolean
+  ): T | undefined {
+    const value = model.get(key) as T | undefined;
+    if (value === undefined && isRequired === true) {
+      // tslint:disable-next-line:max-line-length
+      throw new Error(
+        `SqlBlobMetadataStore:getModelValue() error. ${key} is required but value from database model is undefined.`
+      );
+    }
+    return value;
   }
 
   private deserializeModelValue(model: Model, key: string): any {

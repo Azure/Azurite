@@ -17,11 +17,15 @@ let store: IBlobMetadataStore;
 describe("SqlBlobMetadataStore", () => {
   before(async () => {
     store = new SqlBlobMetadataStore(DB_URI, {
+      logging: false,
       pool: {
-        max: 30,
+        max: 100,
         min: 0,
         acquire: 30000,
         idle: 10000
+      },
+      dialectOptions: {
+        timezone: "Etc/GMT-0"
       }
     });
     await store.init();
@@ -441,5 +445,235 @@ describe("SqlBlobMetadataStore", () => {
     const res = await store.getContainer(container.accountName, container.name);
     assert.notDeepStrictEqual(res, undefined);
     assert.deepStrictEqual(res!.metadata, container.metadata);
+  });
+
+  it("Create and get large amount of containers", async () => {
+    const count = 1000;
+    const timestamp = new Date().getTime();
+    const createOperations: Promise<any>[] = [];
+    const containers: ContainerModel[] = [];
+    for (let i = 0; i < count; i++) {
+      const container = {
+        accountName: `accountname_${timestamp}_${i}`,
+        name: `containername_${timestamp}_${i}`,
+        properties: {
+          lastModified: new Date(),
+          etag: "etag",
+          publicAccess: PublicAccessType.Container,
+          hasImmutabilityPolicy: true,
+          hasLegalHold: false
+        }
+      };
+      containers.push(container);
+      createOperations.push(store.createContainer(container));
+    }
+
+    // let time = new Date();
+    await Promise.all(createOperations);
+    // let now = new Date();
+    // console.log(now.getTime() - time.getTime());
+
+    const readContainerOperations: Promise<any>[] = [];
+    for (let i = 0; i < count; i++) {
+      readContainerOperations.push(
+        store.getContainer(
+          `accountname_${timestamp}_${i}`,
+          `containername_${timestamp}_${i}`
+        )
+      );
+    }
+
+    // time = new Date();
+    const res = await Promise.all(readContainerOperations);
+    for (let i = 0; i < count; i++) {
+      assert.deepStrictEqual(containers[i], res[i]);
+    }
+    // now = new Date();
+    // console.log(now.getTime() - time.getTime());
+  });
+
+  it("listContainers should work", async () => {
+    const count = 20;
+    const timestamp = new Date().getTime();
+    const createOperations: Promise<any>[] = [];
+    const containers: ContainerModel[] = [];
+    const accountName = `accountname_${timestamp}`;
+    const containerAcl = [
+      {
+        accessPolicy: {
+          expiry: "2018-11-31T11:22:33.4567890Z",
+          permission: "rwd",
+          start: "2017-12-31T11:22:33.4567890Z"
+        },
+        id: "MTIzNDU2Nd5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
+      }
+    ];
+    const metadata = {
+      meta1: "value1",
+      META2: "META2"
+    };
+    for (let i = 0; i < count; i++) {
+      const container: ContainerModel = {
+        accountName,
+        name: `containername_${timestamp}_${i}`,
+        containerAcl,
+        metadata,
+        properties: {
+          lastModified: new Date(),
+          etag: "etag",
+          publicAccess: PublicAccessType.Container,
+          hasImmutabilityPolicy: true,
+          hasLegalHold: false
+        }
+      };
+      containers.push(container);
+      createOperations.push(store.createContainer(container));
+    }
+
+    await Promise.all(createOperations);
+
+    const [result] = await store.listContainers(accountName);
+    for (const container of result) {
+      assert.deepStrictEqual(container.accountName, accountName);
+      assert.deepStrictEqual(container.properties.etag, "etag");
+      assert.deepStrictEqual(
+        container.properties.publicAccess,
+        PublicAccessType.Container
+      );
+      assert.deepStrictEqual(container.properties.hasImmutabilityPolicy, true);
+      assert.deepStrictEqual(container.properties.hasLegalHold, false);
+      assert.deepStrictEqual(container.metadata, metadata);
+      assert.deepStrictEqual(container.containerAcl, containerAcl);
+    }
+  });
+
+  it("listContainers should work for prefix", async () => {
+    const count = 20;
+    const timestamp = new Date().getTime();
+    const createOperations: Promise<any>[] = [];
+    const containers: ContainerModel[] = [];
+    const accountName = `accountname_${timestamp}`;
+    const containerAcl = [
+      {
+        accessPolicy: {
+          expiry: "2018-11-31T11:22:33.4567890Z",
+          permission: "rwd",
+          start: "2017-12-31T11:22:33.4567890Z"
+        },
+        id: "MTIzNDU2Nd5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
+      }
+    ];
+    const metadata = {
+      meta1: "value1",
+      META2: "META2"
+    };
+    for (let i = 0; i < count; i++) {
+      const container: ContainerModel = {
+        accountName,
+        name: `containername_${timestamp}_${i}`,
+        containerAcl,
+        metadata,
+        properties: {
+          lastModified: new Date(),
+          etag: "etag",
+          publicAccess: PublicAccessType.Container,
+          hasImmutabilityPolicy: true,
+          hasLegalHold: false
+        }
+      };
+      containers.push(container);
+      createOperations.push(store.createContainer(container));
+    }
+
+    await Promise.all(createOperations);
+
+    let [result] = await store.listContainers(accountName, "containername");
+    assert.deepStrictEqual(result.length, count);
+    for (const container of result) {
+      assert.deepStrictEqual(container.accountName, accountName);
+      assert.deepStrictEqual(container.properties.etag, "etag");
+      assert.deepStrictEqual(
+        container.properties.publicAccess,
+        PublicAccessType.Container
+      );
+      assert.deepStrictEqual(container.properties.hasImmutabilityPolicy, true);
+      assert.deepStrictEqual(container.properties.hasLegalHold, false);
+      assert.deepStrictEqual(container.metadata, metadata);
+      assert.deepStrictEqual(container.containerAcl, containerAcl);
+    }
+
+    [result] = await store.listContainers(
+      accountName,
+      `invalidna${new Date().getTime()}`
+    );
+    assert.deepStrictEqual(result.length, 0);
+  });
+
+  it("listContainers should work for segment listing", async () => {
+    const count = 10;
+    const timestamp = new Date().getTime();
+    const createOperations: Promise<any>[] = [];
+    const containers: ContainerModel[] = [];
+    const accountName = `accountname_${timestamp}`;
+    const prefix = `prefix_${timestamp}`;
+    const containerAcl = [
+      {
+        accessPolicy: {
+          expiry: "2018-11-31T11:22:33.4567890Z",
+          permission: "rwd",
+          start: "2017-12-31T11:22:33.4567890Z"
+        },
+        id: "MTIzNDU2Nd5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
+      }
+    ];
+    const metadata = {
+      meta1: "value1",
+      META2: "META2"
+    };
+    for (let i = 0; i < count; i++) {
+      const container: ContainerModel = {
+        accountName,
+        name: `${prefix}_containername_${timestamp}_${i}`,
+        containerAcl,
+        metadata,
+        properties: {
+          lastModified: new Date(),
+          etag: "etag",
+          publicAccess: PublicAccessType.Container,
+          hasImmutabilityPolicy: true,
+          hasLegalHold: false
+        }
+      };
+      containers.push(container);
+      createOperations.push(store.createContainer(container));
+    }
+
+    await Promise.all(createOperations);
+
+    let [result, marker] = await store.listContainers(
+      accountName,
+      `${prefix}_containername`,
+      5
+    );
+    assert.deepStrictEqual(result.length, 5);
+    assert.notDeepStrictEqual(marker, undefined);
+
+    [result, marker] = await store.listContainers(
+      accountName,
+      `${prefix}_containername`,
+      5,
+      marker
+    );
+    assert.deepStrictEqual(result.length, 5);
+    assert.notDeepStrictEqual(marker, undefined);
+
+    [result, marker] = await store.listContainers(
+      accountName,
+      `${prefix}_containername`,
+      5,
+      marker
+    );
+    assert.deepStrictEqual(result.length, 0);
+    assert.deepStrictEqual(marker, undefined);
   });
 });

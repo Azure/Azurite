@@ -192,20 +192,19 @@ export interface IBlobMetadataStore extends IDataStore {
   /**
    * List containers with query conditions specified.
    *
-   * @template T
    * @param {string} account
    * @param {string} [prefix]
    * @param {number} [maxResults]
    * @param {number} [marker]
-   * @returns {(Promise<[T[], number | undefined]>)} A tuple including containers and next marker
+   * @returns {(Promise<[ContainerModel[], number | undefined]>)} A tuple including containers and next marker
    * @memberof IBlobMetadataStore
    */
-  listContainers<T extends ContainerModel>(
+  listContainers(
     account: string,
     prefix?: string,
     maxResults?: number,
     marker?: number
-  ): Promise<[T[], number | undefined]>;
+  ): Promise<[ContainerModel[], number | undefined]>;
 
   deleteBlobs(account: string, container: string): Promise<void>;
 
