@@ -4,37 +4,66 @@ import IBlobMetadataStore, {
   BlockModel,
   ContainerModel,
   IPersistencyChunk,
-  ServicePropertiesModel,
+  ServicePropertiesModel
 } from "./IBlobMetadataStore";
 
 export default class LokiBlobMetadataStore
   implements IBlobMetadataStore, IGCExtentProvider {
-  iteratorAllExtents(): AsyncIterator<string[]> {
+  public createContainer(container: ContainerModel): Promise<ContainerModel> {
     throw new Error("Method not implemented.");
   }
-  updateServiceProperties<T extends ServicePropertiesModel>(
+  public setBlobHTTPHeaders(blob: BlobModel): Promise<BlobModel> {
+    throw new Error("Method not implemented.");
+  }
+  public setBlobMetadata(blob: BlobModel): Promise<BlobModel> {
+    throw new Error("Method not implemented.");
+  }
+  public getBlobProperties(
+    account: string,
+    container: string,
+    blob: string,
+    snapshot?: string | undefined
+  ): Promise<BlobModel | undefined> {
+    throw new Error("Method not implemented.");
+  }
+  public undeleteBlob(
+    account: string,
+    container: string,
+    blob: string
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  public commitBlockList(blockList: BlockModel[]): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  public iteratorAllExtents(): AsyncIterator<string[]> {
+    throw new Error("Method not implemented.");
+  }
+  public setServiceProperties<T extends ServicePropertiesModel>(
     serviceProperties: T
   ): Promise<T> {
     throw new Error("Method not implemented.");
   }
-  getServiceProperties<T extends ServicePropertiesModel>(
+  public getServiceProperties<T extends ServicePropertiesModel>(
     account: string
   ): Promise<T | undefined> {
     throw new Error("Method not implemented.");
   }
-  getContainer<T extends ContainerModel>(
+  public getContainerProperties<T extends ContainerModel>(
     account: string,
     container: string
   ): Promise<T | undefined> {
     throw new Error("Method not implemented.");
   }
-  deleteContainer(account: string, container: string): Promise<void> {
+  public deleteContainer(account: string, container: string): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  setContainerMetadata<T extends ContainerModel>(container: T): Promise<T> {
+  public setContainerMetadata<T extends ContainerModel>(
+    container: T
+  ): Promise<T> {
     throw new Error("Method not implemented.");
   }
-  listContainers<T extends ContainerModel>(
+  public listContainers<T extends ContainerModel>(
     account: string,
     prefix?: string | undefined,
     maxResults?: number | undefined,
@@ -42,13 +71,13 @@ export default class LokiBlobMetadataStore
   ): Promise<[T[], number | undefined]> {
     throw new Error("Method not implemented.");
   }
-  deleteBlobs(account: string, container: string): Promise<void> {
+  public deleteBlobs(account: string, container: string): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  updateBlob<T extends BlobModel>(blob: T): Promise<T> {
+  public createBlob<T extends BlobModel>(blob: T): Promise<T> {
     throw new Error("Method not implemented.");
   }
-  getBlob<T extends BlobModel>(
+  public downloadBlob<T extends BlobModel>(
     account: string,
     container: string,
     blob: string,
@@ -56,7 +85,7 @@ export default class LokiBlobMetadataStore
   ): Promise<T | undefined> {
     throw new Error("Method not implemented.");
   }
-  listBlobs<T extends BlobModel>(
+  public listBlobs<T extends BlobModel>(
     account?: string | undefined,
     container?: string | undefined,
     blob?: string | undefined,
@@ -67,7 +96,7 @@ export default class LokiBlobMetadataStore
   ): Promise<[T[], number | undefined]> {
     throw new Error("Method not implemented.");
   }
-  deleteBlob(
+  public deleteBlob(
     account: string,
     container: string,
     blob: string,
@@ -75,20 +104,20 @@ export default class LokiBlobMetadataStore
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  updateBlock<T extends BlockModel>(block: T): Promise<T> {
+  public stageBlock<T extends BlockModel>(block: T): Promise<T> {
     throw new Error("Method not implemented.");
   }
-  deleteBlocks(
+  public deleteAllBlocks(
     account: string,
     container: string,
     blob: string
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  insertBlocks<T extends BlockModel>(blocks: T[]): Promise<T[]> {
+  public insertBlocks<T extends BlockModel>(blocks: T[]): Promise<T[]> {
     throw new Error("Method not implemented.");
   }
-  getBlock<T extends BlockModel>(
+  public getBlock<T extends BlockModel>(
     account: string,
     container: string,
     blob: string,
@@ -97,7 +126,7 @@ export default class LokiBlobMetadataStore
   ): Promise<T | undefined> {
     throw new Error("Method not implemented.");
   }
-  listBlocks<T extends BlockModel>(
+  public getBlockList<T extends BlockModel>(
     account?: string | undefined,
     container?: string | undefined,
     blob?: string | undefined,
@@ -105,21 +134,21 @@ export default class LokiBlobMetadataStore
   ): Promise<T[]> {
     throw new Error("Method not implemented.");
   }
-  deletePayloads(
+  public deletePayloads(
     persistency: Iterable<string | IPersistencyChunk>
   ): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  init(): Promise<void> {
+  public init(): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  isInitialized(): boolean {
+  public isInitialized(): boolean {
     throw new Error("Method not implemented.");
   }
-  close(): Promise<void> {
+  public close(): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  isClosed(): boolean {
+  public isClosed(): boolean {
     throw new Error("Method not implemented.");
   }
 }

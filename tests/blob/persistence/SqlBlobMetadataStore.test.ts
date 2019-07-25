@@ -2,7 +2,9 @@ import * as assert from "assert";
 
 import { PublicAccessType } from "../../../src/blob/generated/artifacts/models";
 import { ServicePropertiesModel } from "../../../src/blob/persistence/IBlobDataStore";
-import IBlobMetadataStore, { ContainerModel } from "../../../src/blob/persistence/IBlobMetadataStore";
+import IBlobMetadataStore, {
+  ContainerModel
+} from "../../../src/blob/persistence/IBlobMetadataStore";
 import SqlBlobMetadataStore from "../../../src/blob/persistence/SqlBlobMetadataStore";
 
 // TODO: Collect database URI from environment variable. If not, skip these cases
@@ -107,7 +109,7 @@ describe("SqlBlobMetadataStore", () => {
       }
     };
 
-    await store.updateServiceProperties(serviceProperties);
+    await store.setServiceProperties(serviceProperties);
     const res = await store.getServiceProperties(accountName);
     assert.deepStrictEqual(serviceProperties, res);
   });
@@ -147,7 +149,7 @@ describe("SqlBlobMetadataStore", () => {
       }
     };
 
-    await store.updateServiceProperties(serviceProperties);
+    await store.setServiceProperties(serviceProperties);
     let res = await store.getServiceProperties(accountName);
     assert.deepStrictEqual(serviceProperties, res);
 
@@ -163,7 +165,7 @@ describe("SqlBlobMetadataStore", () => {
         }
       ]
     };
-    await store.updateServiceProperties(updateServiceProperties);
+    await store.setServiceProperties(updateServiceProperties);
     res = await store.getServiceProperties(accountName);
     assert.deepStrictEqual(
       { ...serviceProperties, cors: updateServiceProperties.cors },
@@ -214,7 +216,7 @@ describe("SqlBlobMetadataStore", () => {
       }
     };
 
-    await store.updateServiceProperties(serviceProperties);
+    await store.setServiceProperties(serviceProperties);
     let res = await store.getServiceProperties(accountName);
     assert.deepStrictEqual(serviceProperties, res);
 
@@ -222,7 +224,7 @@ describe("SqlBlobMetadataStore", () => {
       accountName,
       cors: []
     };
-    await store.updateServiceProperties(updateServiceProperties);
+    await store.setServiceProperties(updateServiceProperties);
     res = await store.getServiceProperties(accountName);
     assert.deepStrictEqual(
       { ...serviceProperties, cors: updateServiceProperties.cors },
@@ -261,7 +263,10 @@ describe("SqlBlobMetadataStore", () => {
     };
     await store.createContainer(container);
 
-    const res = await store.getContainer(container.accountName, container.name);
+    const res = await store.getContainerProperties(
+      container.accountName,
+      container.name
+    );
     assert.deepStrictEqual(res, container);
   });
 
@@ -337,7 +342,10 @@ describe("SqlBlobMetadataStore", () => {
     };
     await store.createContainer(container);
     await store.deleteContainer(container.accountName, container.name);
-    const res = await store.getContainer(container.accountName, container.name);
+    const res = await store.getContainerProperties(
+      container.accountName,
+      container.name
+    );
     assert.deepStrictEqual(res, undefined);
   });
 
@@ -390,7 +398,10 @@ describe("SqlBlobMetadataStore", () => {
     };
     await store.setContainerMetadata(container);
 
-    const res = await store.getContainer(container.accountName, container.name);
+    const res = await store.getContainerProperties(
+      container.accountName,
+      container.name
+    );
     assert.notDeepStrictEqual(res, undefined);
     assert.notDeepStrictEqual(res!.properties, undefined);
     assert.deepStrictEqual(res!.metadata, container.metadata);
@@ -442,7 +453,10 @@ describe("SqlBlobMetadataStore", () => {
     };
     await store.setContainerMetadata(container);
 
-    const res = await store.getContainer(container.accountName, container.name);
+    const res = await store.getContainerProperties(
+      container.accountName,
+      container.name
+    );
     assert.notDeepStrictEqual(res, undefined);
     assert.deepStrictEqual(res!.metadata, container.metadata);
   });
@@ -476,7 +490,7 @@ describe("SqlBlobMetadataStore", () => {
     const readContainerOperations: Promise<any>[] = [];
     for (let i = 0; i < count; i++) {
       readContainerOperations.push(
-        store.getContainer(
+        store.getContainerProperties(
           `accountname_${timestamp}_${i}`,
           `containername_${timestamp}_${i}`
         )

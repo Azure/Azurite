@@ -1,16 +1,27 @@
-import { BOOLEAN, DATE, INTEGER, Model, Op, Options as SequelizeOptions, Sequelize } from "sequelize";
+import {
+  BOOLEAN,
+  DATE,
+  INTEGER,
+  Model,
+  Op,
+  Options as SequelizeOptions,
+  Sequelize
+} from "sequelize";
 
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import IBlobMetadataStore, {
   BlobModel,
   BlockModel,
   ContainerModel,
-  ServicePropertiesModel,
+  ServicePropertiesModel
 } from "./IBlobMetadataStore";
 
 // tslint:disable: max-classes-per-file
 class ServicesModel extends Model {}
 class ContainersModel extends Model {}
+class BlobsModel extends Model {}
+// class BlocksModel extends Model {}
+// class PagesModel extends Model {}
 
 /*
  * Preparations before starting with Sql based metadata store implementation
@@ -135,6 +146,63 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         hasLegalHold: {
           type: BOOLEAN
         },
+        deleting: {
+          type: BOOLEAN,
+          defaultValue: false,
+          allowNull: false
+        },
+        createdAt: {
+          allowNull: false,
+          type: DATE
+        },
+        updatedAt: {
+          allowNull: false,
+          type: DATE
+        }
+      },
+      { sequelize: this.sequelize, modelName: "Containers" }
+    );
+
+    // TODO: Duplicate models definition here with migrations files; Should update them together to avoid inconsistency
+    BlobsModel.init(
+      {
+        accountName: {
+          type: "VARCHAR(255)"
+        },
+        containerName: {
+          type: "VARCHAR(255)"
+        },
+        blobName: {
+          type: "VARCHAR(255)"
+        },
+        blobId: {
+          type: INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true
+        },
+        lastModified: {
+          allowNull: false,
+          type: DATE(6)
+        },
+        etag: {
+          allowNull: false,
+          type: "VARCHAR(127)"
+        },
+        metadata: {
+          type: "VARCHAR(2047)"
+        },
+        containerAcl: {
+          type: "VARCHAR(1023)"
+        },
+        publicAccess: {
+          type: "VARCHAR(31)"
+        },
+        hasImmutabilityPolicy: {
+          type: BOOLEAN
+        },
+        hasLegalHold: {
+          type: BOOLEAN
+        },
         createdAt: {
           allowNull: false,
           type: DATE
@@ -163,7 +231,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     return this.closed;
   }
 
-  public async updateServiceProperties<T extends ServicePropertiesModel>(
+  public async setServiceProperties<T extends ServicePropertiesModel>(
     serviceProperties: T
   ): Promise<T> {
     // TODO: Optimize to reduce first query IO, or caching
@@ -273,7 +341,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
-  public async getContainer(
+  public async getContainerProperties(
     account: string,
     container: string
   ): Promise<ContainerModel | undefined> {
@@ -475,15 +543,15 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
-  deleteBlobs(account: string, container: string): Promise<void> {
+  public deleteBlobs(account: string, container: string): Promise<void> {
     throw new Error("Method not implemented.");
   }
 
-  updateBlob<T extends BlobModel>(blob: T): Promise<T> {
+  public createBlob<T extends BlobModel>(blob: T): Promise<T> {
     throw new Error("Method not implemented.");
   }
 
-  getBlob<T extends BlobModel>(
+  public downloadBlob<T extends BlobModel>(
     account: string,
     container: string,
     blob: string,
@@ -492,7 +560,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new Error("Method not implemented.");
   }
 
-  listBlobs<T extends BlobModel>(
+  public listBlobs<T extends BlobModel>(
     account?: string | undefined,
     container?: string | undefined,
     blob?: string | undefined,
@@ -504,7 +572,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new Error("Method not implemented.");
   }
 
-  deleteBlob(
+  public deleteBlob(
     account: string,
     container: string,
     blob: string,
@@ -513,11 +581,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new Error("Method not implemented.");
   }
 
-  updateBlock<T extends BlockModel>(block: T): Promise<T> {
+  public stageBlock<T extends BlockModel>(block: T): Promise<T> {
     throw new Error("Method not implemented.");
   }
 
-  deleteBlocks(
+  public deleteAllBlocks(
     account: string,
     container: string,
     blob: string
@@ -525,11 +593,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new Error("Method not implemented.");
   }
 
-  insertBlocks<T extends BlockModel>(blocks: T[]): Promise<T[]> {
+  public insertBlocks<T extends BlockModel>(blocks: T[]): Promise<T[]> {
     throw new Error("Method not implemented.");
   }
 
-  getBlock<T extends BlockModel>(
+  public getBlock<T extends BlockModel>(
     account: string,
     container: string,
     blob: string,
@@ -539,12 +607,37 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new Error("Method not implemented.");
   }
 
-  listBlocks<T extends BlockModel>(
+  public getBlockList<T extends BlockModel>(
     account?: string | undefined,
     container?: string | undefined,
     blob?: string | undefined,
     isCommitted?: boolean | undefined
   ): Promise<T[]> {
+    throw new Error("Method not implemented.");
+  }
+
+  public setBlobHTTPHeaders(blob: BlobModel): Promise<BlobModel> {
+    throw new Error("Method not implemented.");
+  }
+  public setBlobMetadata(blob: BlobModel): Promise<BlobModel> {
+    throw new Error("Method not implemented.");
+  }
+  public getBlobProperties(
+    account: string,
+    container: string,
+    blob: string,
+    snapshot?: string | undefined
+  ): Promise<BlobModel | undefined> {
+    throw new Error("Method not implemented.");
+  }
+  public undeleteBlob(
+    account: string,
+    container: string,
+    blob: string
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  public commitBlockList(blockList: BlockModel[]): Promise<void> {
     throw new Error("Method not implemented.");
   }
 

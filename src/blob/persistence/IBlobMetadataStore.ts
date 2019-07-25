@@ -114,7 +114,9 @@ type PersistencyBlockModel = Models.Block & IPersistencyPropertiesRequired;
 export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
 
 /**
- * Persistency layer data store interface.
+ * Persistency layer metadata storage interface.
+ *
+ * TODO: Integrate cache layer to cache account, container & blob metadata.
  *
  * @export
  * @interface IBlobDataStore
@@ -122,72 +124,30 @@ export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
  */
 export interface IBlobMetadataStore extends IDataStore {
   /**
-   * Update blob service properties. Create service properties document if not exists in persistency layer.
-   * Assume service properties collection has been created during start method.
+   * Update blob service properties. Create service properties if not exists in persistency layer.
    *
-   * @template T
-   * @param {T} serviceProperties
-   * @returns {Promise<T>}
+   * TODO: Account's service property should be created when storage account is created or metadata
+   * storage initialization. This method should only be responsible for updating existing record.
+   * In this way, we can reduce one I/O call to get account properties.
+   *
+   * @param {ServicePropertiesModel} serviceProperties
+   * @returns {Promise<ServicePropertiesModel>} undefined properties will be ignored during properties setup
    * @memberof IBlobMetadataStore
    */
-  updateServiceProperties<T extends ServicePropertiesModel>(
-    serviceProperties: T
-  ): Promise<T>;
+  setServiceProperties(
+    serviceProperties: ServicePropertiesModel
+  ): Promise<ServicePropertiesModel>;
 
   /**
    * Get service properties for specific storage account.
    *
    * @param {string} account
-   * @returns {Promise<undefined>}
+   * @returns {Promise<ServicePropertiesModel | undefined>}
    * @memberof IBlobMetadataStore
    */
   getServiceProperties(
     account: string
   ): Promise<ServicePropertiesModel | undefined>;
-
-  /**
-   * Get a container item from persistency layer by account and container name.
-   *
-   * @param {string} account
-   * @param {string} container
-   * @returns {(Promise<ContainerModel | undefined>)}
-   * @memberof IBlobMetadataStore
-   */
-  getContainer(
-    account: string,
-    container: string
-  ): Promise<ContainerModel | undefined>;
-
-  /**
-   * Delete container item if exists from persistency layer.
-   * Note that this method will only remove container related document from persistency layer.
-   * Make sure blobs under the container has been properly handled before calling this method.
-   *
-   * @param {string} account
-   * @param {string} container
-   * @returns {Promise<void>}
-   * @memberof IBlobMetadataStore
-   */
-  deleteContainer(account: string, container: string): Promise<void>;
-
-  /**
-   * Create a container item in persistency layer.
-   *
-   * @param {ContainerModel} container
-   * @returns {Promise<ContainerModel>}
-   * @memberof IBlobMetadataStore
-   */
-  createContainer(container: ContainerModel): Promise<ContainerModel>;
-
-  /**
-   * Update a container item in persistency layer.
-   *
-   * @template T
-   * @param {T} container
-   * @returns {Promise<T>}
-   * @memberof IBlobMetadataStore
-   */
-  setContainerMetadata<T extends ContainerModel>(container: T): Promise<T>;
 
   /**
    * List containers with query conditions specified.
@@ -206,35 +166,52 @@ export interface IBlobMetadataStore extends IDataStore {
     marker?: number
   ): Promise<[ContainerModel[], number | undefined]>;
 
-  deleteBlobs(account: string, container: string): Promise<void>;
-
   /**
-   * Update blob item in persistency layer. Will create if blob doesn't exist.
+   * Create a container.
    *
-   * @template T
-   * @param {T} blob
-   * @returns {Promise<T>}
+   * @param {ContainerModel} container
+   * @returns {Promise<ContainerModel>}
    * @memberof IBlobMetadataStore
    */
-  updateBlob<T extends BlobModel>(blob: T): Promise<T>;
+  createContainer(container: ContainerModel): Promise<ContainerModel>;
 
   /**
-   * Gets a blob item from persistency layer by container name and blob name.
+   * Get a container properties.
    *
-   * @template T
    * @param {string} account
    * @param {string} container
-   * @param {string} blob
-   * @param {string} [snapshot]
-   * @returns {(Promise<T | undefined>)}
+   * @returns {(Promise<ContainerModel | undefined>)}
    * @memberof IBlobMetadataStore
    */
-  getBlob<T extends BlobModel>(
+  getContainerProperties(
     account: string,
-    container: string,
-    blob: string,
-    snapshot?: string
-  ): Promise<T | undefined>;
+    container: string
+  ): Promise<ContainerModel | undefined>;
+
+  /**
+   * Delete container item if exists from persistency layer.
+   * Note that this method will mark the specific container with "deleting" tag. Container item
+   * will be removed only if all blobs under that container has been removed with GC. During
+   * "deleting" status, container and blobs under that container cannot be accessed.
+   *
+   * TODO: Make sure all metadata interface implementation follow up above assumption.
+   * TODO: GC for async container deletion.
+   *
+   * @param {string} account
+   * @param {string} container
+   * @returns {Promise<void>}
+   * @memberof IBlobMetadataStore
+   */
+  deleteContainer(account: string, container: string): Promise<void>;
+
+  /**
+   * Set container metadata.
+   *
+   * @param {ContainerModel} container
+   * @returns {Promise<ContainerModel>}
+   * @memberof IBlobMetadataStore
+   */
+  setContainerMetadata(container: ContainerModel): Promise<ContainerModel>;
 
   /**
    * List blobs with query conditions specified.
@@ -261,6 +238,50 @@ export interface IBlobMetadataStore extends IDataStore {
   ): Promise<[T[], number | undefined]>;
 
   /**
+   * Create blob item in persistency layer. Will replace if blob exists.
+   *
+   * @param {BlobModel} blob
+   * @returns {Promise<BlobModel>}
+   * @memberof IBlobMetadataStore
+   */
+  createBlob(blob: BlobModel): Promise<BlobModel>;
+
+  /**
+   * Gets a blob item from persistency layer by container name and blob name.
+   * Will return block list or page list as well for downloading.
+   *
+   * @param {string} account
+   * @param {string} container
+   * @param {string} blob
+   * @param {string} [snapshot]
+   * @returns {(Promise<BlobModel | undefined>)}
+   * @memberof IBlobMetadataStore
+   */
+  downloadBlob(
+    account: string,
+    container: string,
+    blob: string,
+    snapshot?: string
+  ): Promise<BlobModel | undefined>;
+
+  /**
+   * Get blob properties and metadata without block list or page range list.
+   *
+   * @param {string} account
+   * @param {string} container
+   * @param {string} blob
+   * @param {string} [snapshot]
+   * @returns {(Promise<BlobModel | undefined>)}
+   * @memberof IBlobMetadataStore
+   */
+  getBlobProperties(
+    account: string,
+    container: string,
+    blob: string,
+    snapshot?: string
+  ): Promise<BlobModel | undefined>;
+
+  /**
    * Delete blob item from persistency layer.
    *
    * @param {string} account
@@ -278,73 +299,57 @@ export interface IBlobMetadataStore extends IDataStore {
   ): Promise<void>;
 
   /**
-   * Update blob block item in persistency layer. Will create if block doesn't exist.
+   * Set blob HTTP headers.
    *
-   * @template T
-   * @param {T} block
-   * @returns {Promise<T>}
+   * @param {BlobModel} blob
+   * @returns {Promise<BlobModel>}
    * @memberof IBlobMetadataStore
    */
-  updateBlock<T extends BlockModel>(block: T): Promise<T>;
+  setBlobHTTPHeaders(blob: BlobModel): Promise<BlobModel>;
 
   /**
-   * Delete all blocks for a blob in persistency layer.
+   * Set blob metadata.
    *
-   * @param {string} account
-   * @param {string} container
-   * @param {string} blob
+   * @param {BlobModel} blob
+   * @returns {Promise<BlobModel>}
+   * @memberof IBlobMetadataStore
+   */
+  setBlobMetadata(blob: BlobModel): Promise<BlobModel>;
+
+  /**
+   * Update blob block item in persistency layer. Will create if block doesn't exist.
+   *
+   * @param {BlockModel} block
+   * @returns {Promise<BlockModel>}
+   * @memberof IBlobMetadataStore
+   */
+  stageBlock(block: BlockModel): Promise<BlockModel>;
+
+  /**
+   * Commit block list for a blob.
+   *
+   * @param {BlockModel[]} blockList
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
-  deleteBlocks(account: string, container: string, blob: string): Promise<void>;
-
-  /**
-   * Insert blocks for a blob in persistency layer. Existing blocks with same name will be replaced.
-   *
-   * @template T
-   * @param {T[]} blocks
-   * @returns {Promise<T[]>}
-   * @memberof IBlobMetadataStore
-   */
-  insertBlocks<T extends BlockModel>(blocks: T[]): Promise<T[]>;
-
-  /**
-   * Gets block for a blob from persistency layer by account, container, blob and block names.
-   *
-   * @template T
-   * @param {string} account
-   * @param {string} container
-   * @param {string} blob
-   * @param {string} block
-   * @param {boolean} isCommitted
-   * @returns {Promise<T | undefined>}
-   * @memberof LokiBlobDataStore
-   */
-  getBlock<T extends BlockModel>(
-    account: string,
-    container: string,
-    blob: string,
-    block: string,
-    isCommitted: boolean
-  ): Promise<T | undefined>;
+  commitBlockList(blockList: BlockModel[]): Promise<void>;
 
   /**
    * Gets blocks list for a blob from persistency layer by account, container and blob names.
    *
-   * @template T
    * @param {string} [account]
    * @param {string} [container]
    * @param {string} [blob]
    * @param {boolean} [isCommitted]
-   * @returns {(Promise<T[]>)}
+   * @returns {(Promise<BlockModel[]>)}
    * @memberof IBlobMetadataStore
    */
-  listBlocks<T extends BlockModel>(
+  getBlockList(
     account?: string,
     container?: string,
     blob?: string,
     isCommitted?: boolean
-  ): Promise<T[]>;
+  ): Promise<BlockModel[]>;
 }
 
 export default IBlobMetadataStore;
