@@ -1,6 +1,7 @@
 import { URL } from "url";
 import uuid from "uuid/v4";
 
+import IExtentStore from "../../common/persistence/IExtentStore";
 import BlobStorageContext from "../context/BlobStorageContext";
 import { extractStoragePartsFromPath } from "../context/blobStorageContext.middleware";
 import NotImplementedError from "../errors/NotImplementedError";
@@ -192,10 +193,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
   constructor(
     dataStore: IBlobDataStore,
+    extentStore: IExtentStore,
     logger: ILogger,
     private readonly rangesManager: IPageBlobRangesManager
   ) {
-    super(dataStore, logger);
+    super(dataStore, extentStore, logger);
   }
 
   /**
@@ -1321,15 +1323,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const blocks = blob.committedBlocksInOrder;
     if (blocks === undefined || blocks.length === 0) {
       bodyGetter = async () => {
-        return this.dataStore.readPayload(
-          blob.persistency,
-          rangeStart,
-          rangeEnd + 1 - rangeStart
-        );
+        if (blob.persistency === undefined) {
+          return this.extentStore.readExtent(blob.persistency);
+        }
+        return this.extentStore.readExtent({
+          id: blob.persistency.id,
+          offset: blob.persistency.offset + rangeStart,
+          count: Math.min(blob.persistency.count, contentLength)
+        });
       };
     } else {
       bodyGetter = async () => {
-        return this.dataStore.readPayloads(
+        return this.extentStore.readExtents(
           blocks.map(block => block.persistency),
           rangeStart,
           rangeEnd + 1 - rangeStart
@@ -1449,7 +1454,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           });
 
     const bodyGetter = async () => {
-      return this.dataStore.readPayloads(
+      return this.extentStore.readExtents(
         ranges.map(value => value.persistency),
         0,
         contentLength

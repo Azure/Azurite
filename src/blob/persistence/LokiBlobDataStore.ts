@@ -7,7 +7,6 @@ import {
   unlink
 } from "fs";
 import Loki from "lokijs";
-import multistream = require("multistream");
 import { join } from "path";
 import { promisify } from "util";
 import uuid from "uuid/v4";
@@ -25,6 +24,7 @@ import {
 import LokiAllExtentsAsyncIterator from "./LokiAllExtentsAsyncIterator";
 import LokiReferredExtentsAsyncIterator from "./LokiReferredExtentsAsyncIterator";
 
+import multistream = require("multistream");
 const statAsync = promisify(stat);
 const unlinkAsync = promisify(unlink);
 const mkdirAsync = promisify(mkdir);
@@ -76,7 +76,7 @@ interface IExtentModel {
  *                           // Unique document properties: accountName, containerName, (blob)name, snapshot
  * -- BLOCKS_COLLECTION      // Block blob blocks collection includes all UNCOMMITTED blocks
  *                           // Unique document properties: accountName, containerName, blobName, name, isCommitted
- * -- EXTENTS_COLLECTION     // Collections maintain extents information, including extentID, mapped local file path
+ * -- EXTENTS_COLLECTION     // Collections maintain extents information, including extentId, mapped local file path
  *                           // Unique document properties: id, path
  *
  * @export
@@ -387,7 +387,6 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     if (blobDoc) {
       coll.remove(blobDoc);
     }
-
     delete (blob as any).$loki;
     return coll.insert(blob);
   }
@@ -507,7 +506,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
-   * Get extent row record from collection. ExtentID or extent mapped relative file path
+   * Get extent row record from collection. ExtentId or extent mapped relative file path
    * must be provided at least one.
    *
    * @param {string} [id]

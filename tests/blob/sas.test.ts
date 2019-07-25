@@ -1,3 +1,5 @@
+import * as assert from "assert";
+
 import {
   Aborter,
   AccountSASPermissions,
@@ -16,36 +18,25 @@ import {
   SharedKeyCredential,
   StorageURL
 } from "@azure/storage-blob";
-import * as assert from "assert";
 
-import BlobConfiguration from "../../src/blob/BlobConfiguration";
 import Server from "../../src/blob/BlobServer";
 import { configLogger } from "../../src/common/Logger";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
+  getTestServerConfig,
   getUniqueName,
-  rmRecursive
+  rmTestFile
 } from "../testutils";
 
 configLogger(false);
 
 describe("Shared Access Signature (SAS) authentication", () => {
   // TODO: Create a server factory as tests utils
-  const host = "127.0.0.1";
-  const port = 11000;
-  const dbPath = "__testsstorage__";
-  const persistencePath = "__testspersistence__";
-  const config = new BlobConfiguration(
-    host,
-    port,
-    dbPath,
-    persistencePath,
-    false
-  );
+  const config = getTestServerConfig();
 
   // TODO: Create serviceURL factory as tests utils
-  const baseURL = `http://${host}:${port}/devstoreaccount1`;
+  const baseURL = `http://${config.host}:${config.port}/devstoreaccount1`;
   const serviceURL = new ServiceURL(
     baseURL,
     StorageURL.newPipeline(
@@ -65,8 +56,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
   after(async () => {
     await server.close();
-    await rmRecursive(dbPath);
-    await rmRecursive(persistencePath);
+    await rmTestFile(config);
   });
 
   it("generateAccountSASQueryParameters should work", async () => {

@@ -5,10 +5,14 @@ import IAccountDataStore from "../common/IAccountDataStore";
 import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
+import FSExtentStore from "../common/persistence/FSExtentStore";
+import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
+import IExtentStore from "../common/persistence/IExtentStore";
+import LokiExtentMetadata from "../common/persistence/LokiExtentMetadata";
 import ServerBase from "../common/ServerBase";
-import BlobConfiguration from "./BlobConfiguration";
 import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
 import BlobGCManager from "./gc/BlobGCManager";
+import LokiBlobConfiguration from "./LokiBlobConfiguration";
 import IBlobDataStore from "./persistence/IBlobDataStore";
 import LokiBlobDataStore from "./persistence/LokiBlobDataStore";
 
@@ -31,6 +35,8 @@ const AFTER_CLOSE_MESSAGE = `Azurite Blob service successfully closed`;
  */
 export default class BlobServer extends ServerBase {
   private readonly dataStore: IBlobDataStore;
+  private readonly extentMetadataStore: IExtentMetadataStore;
+  private readonly extentStore: IExtentStore;
   private readonly accountDataStore: IAccountDataStore;
   private readonly gcManager: IGCManager;
 
@@ -40,9 +46,9 @@ export default class BlobServer extends ServerBase {
    * @param {BlobConfiguration} configuration
    * @memberof Server
    */
-  constructor(configuration?: BlobConfiguration) {
+  constructor(configuration?: LokiBlobConfiguration) {
     if (configuration === undefined) {
-      configuration = new BlobConfiguration();
+      configuration = new LokiBlobConfiguration();
     }
 
     const host = configuration.host;
@@ -55,9 +61,18 @@ export default class BlobServer extends ServerBase {
     // creating a new XXXDataStore class implementing IBlobDataStore interface
     // and replace the default LokiBlobDataStore
     const dataStore: IBlobDataStore = new LokiBlobDataStore(
-      configuration.dbPath,
-      configuration.persistencePath
+      configuration.blobDBPath,
+      configuration.persistenceArray[0].persistencyPath
       // logger
+    );
+
+    const extentMetadataStore: IExtentMetadataStore = new LokiExtentMetadata(
+      configuration.extentDBPath
+    );
+
+    const extentStore: IExtentStore = new FSExtentStore(
+      extentMetadataStore,
+      configuration.persistenceArray
     );
 
     const accountDataStore: IAccountDataStore = new AccountDataStore();
@@ -67,6 +82,7 @@ export default class BlobServer extends ServerBase {
     // and replace the default Express based request listener
     const requestListenerFactory: IRequestListenerFactory = new BlobRequestListenerFactory(
       dataStore,
+      extentStore,
       accountDataStore,
       configuration.enableAccessLog, // Access log includes every handled HTTP request
       configuration.accessLogWriteStream
@@ -92,6 +108,8 @@ export default class BlobServer extends ServerBase {
     );
 
     this.dataStore = dataStore;
+    this.extentMetadataStore = extentMetadataStore;
+    this.extentStore = extentStore;
     this.accountDataStore = accountDataStore;
     this.gcManager = gcManager;
   }
@@ -106,6 +124,14 @@ export default class BlobServer extends ServerBase {
 
     if (this.dataStore !== undefined) {
       await this.dataStore.init();
+    }
+
+    if (this.extentMetadataStore !== undefined) {
+      await this.extentMetadataStore.init();
+    }
+
+    if (this.extentStore !== undefined) {
+      await this.extentStore.init();
     }
 
     if (this.gcManager !== undefined) {
@@ -125,6 +151,14 @@ export default class BlobServer extends ServerBase {
   protected async afterClose(): Promise<void> {
     if (this.gcManager !== undefined) {
       await this.gcManager.close();
+    }
+
+    if (this.extentStore !== undefined) {
+      await this.extentStore.close();
+    }
+
+    if (this.extentMetadataStore !== undefined) {
+      await this.extentMetadataStore.close();
     }
 
     if (this.dataStore !== undefined) {

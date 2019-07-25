@@ -1,9 +1,9 @@
 import express from "express";
-import morgan = require("morgan");
 
 import IAccountDataStore from "../common/IAccountDataStore";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
+import IExtentStore from "../common/persistence/IExtentStore";
 import { RequestListener } from "../common/ServerBase";
 import AccountSASAuthenticator from "./authentication/AccountSASAuthenticator";
 import AuthenticationMiddlewareFactory from "./authentication/AuthenticationMiddlewareFactory";
@@ -24,6 +24,8 @@ import ServiceHandler from "./handlers/ServiceHandler";
 import { IBlobDataStore } from "./persistence/IBlobDataStore";
 import { DEFAULT_CONTEXT_PATH } from "./utils/constants";
 
+import morgan = require("morgan");
+
 /**
  * Default RequestListenerFactory based on express framework.
  *
@@ -38,6 +40,7 @@ export default class BlobRequestListenerFactory
   implements IRequestListenerFactory {
   public constructor(
     private readonly dataStore: IBlobDataStore,
+    private readonly extentStore: IExtentStore,
     private readonly accountDataStore: IAccountDataStore,
     private readonly enableAccessLog: boolean,
     private readonly accessLogWriteStream?: NodeJS.WritableStream
@@ -55,20 +58,38 @@ export default class BlobRequestListenerFactory
     // Create handlers into handler middleware factory
     const pageBlobRangesManager = new PageBlobRangesManager();
     const handlers: IHandlers = {
-      appendBlobHandler: new AppendBlobHandler(this.dataStore, logger),
+      appendBlobHandler: new AppendBlobHandler(
+        this.dataStore,
+        this.extentStore,
+        logger
+      ),
       blobHandler: new BlobHandler(
         this.dataStore,
+        this.extentStore,
         logger,
         pageBlobRangesManager
       ),
-      blockBlobHandler: new BlockBlobHandler(this.dataStore, logger),
-      containerHandler: new ContainerHandler(this.dataStore, logger),
+      blockBlobHandler: new BlockBlobHandler(
+        this.dataStore,
+        this.extentStore,
+        logger
+      ),
+      containerHandler: new ContainerHandler(
+        this.dataStore,
+        this.extentStore,
+        logger
+      ),
       pageBlobHandler: new PageBlobHandler(
         this.dataStore,
+        this.extentStore,
         logger,
         pageBlobRangesManager
       ),
-      serviceHandler: new ServiceHandler(this.dataStore, logger)
+      serviceHandler: new ServiceHandler(
+        this.dataStore,
+        this.extentStore,
+        logger
+      )
     };
 
     /*

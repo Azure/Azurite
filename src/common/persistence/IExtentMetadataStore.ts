@@ -37,6 +37,14 @@ export interface IExtentModel {
    * @memberof IExtentModel
    */
   size: number;
+
+  /**
+   * Last modify time in millisecond
+   *
+   * @type {number}
+   * @memberof IExtentModel
+   */
+  LastModifyInMS: number;
 }
 
 /**

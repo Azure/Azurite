@@ -1,10 +1,6 @@
 import IGCExtentProvider from "../../common/IGCExtentProvider";
 import IBlobMetadataStore, {
-  BlobModel,
-  BlockModel,
-  ContainerModel,
-  IPersistencyChunk,
-  ServicePropertiesModel
+    BlobModel, BlockModel, ContainerModel, IPersistencyChunk, ServicePropertiesModel
 } from "./IBlobMetadataStore";
 
 export default class LokiBlobMetadataStore
