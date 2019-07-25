@@ -1,24 +1,13 @@
 import * as assert from "assert";
 
 import {
-  Aborter,
-  ContainerURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+    Aborter, ContainerURL, ServiceURL, SharedKeyCredential, StorageURL
 } from "@azure/storage-blob";
 
 import Server from "../../../src/blob/SqlBlobServer";
+import { EMULATOR_ACCOUNT_KIND, EMULATOR_ACCOUNT_SKUNAME } from "../../../src/blob/utils/constants";
 import {
-  EMULATOR_ACCOUNT_KIND,
-  EMULATOR_ACCOUNT_SKUNAME
-} from "../../../src/blob/utils/constants";
-import {
-  EMULATOR_ACCOUNT_KEY,
-  EMULATOR_ACCOUNT_NAME,
-  getUniqueName,
-  rmTestFile,
-  ServerConfigFactory
+    EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName, rmTestFile, ServerConfigFactory
 } from "../../testutils";
 
 describe("ServiceAPIs", () => {

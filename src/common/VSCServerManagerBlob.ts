@@ -5,9 +5,7 @@ import { promisify } from "util";
 import BlobServer from "../blob/BlobServer";
 import LokiBlobConfiguration from "../blob/LokiBlobConfiguration";
 import {
-  DEFAULT_BLOB_DB_PATH,
-  DEFAULT_BLOB_PERSISTENCE_PATH,
-  DEFAULT_EXTENT_DB_PATH
+    DEFAULT_BLOB_DB_PATH, DEFAULT_BLOB_PERSISTENCE_PATH, DEFAULT_EXTENT_DB_PATH
 } from "../blob/utils/constants";
 import * as Logger from "./Logger";
 import NoLoggerStrategy from "./NoLoggerStrategy";
@@ -67,7 +65,7 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
     await rimrafAsync(config.blobDBPath);
     await rimrafAsync(config.extentDBPath);
     for (const persistence of config.persistenceArray) {
-      await rimrafAsync(persistence.persistencyPath);
+      await rimrafAsync(persistence.persistencePath);
     }
   }
 
@@ -79,8 +77,8 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
     // Initialize server configuration
     const persistenceArray: StoreDestinationArray = [
       {
-        persistencyId: "Default",
-        persistencyPath: join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
+        persistenceId: "Default",
+        persistencePath: join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
         maxConcurrency: 1
       }
     ];

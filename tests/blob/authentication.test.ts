@@ -1,22 +1,13 @@
 import * as assert from "assert";
 
 import {
-  Aborter,
-  AnonymousCredential,
-  ContainerURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+    Aborter, AnonymousCredential, ContainerURL, ServiceURL, SharedKeyCredential, StorageURL
 } from "@azure/storage-blob";
 
 import Server from "../../src/blob/SqlBlobServer";
 import { configLogger } from "../../src/common/Logger";
 import {
-  EMULATOR_ACCOUNT_KEY,
-  EMULATOR_ACCOUNT_NAME,
-  getUniqueName,
-  rmTestFile,
-  ServerConfigFactory
+    EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName, rmTestFile, ServerConfigFactory
 } from "../testutils";
 
 // Set true to enable debug log

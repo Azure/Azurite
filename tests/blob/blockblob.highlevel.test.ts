@@ -3,29 +3,15 @@ import { join } from "path";
 import { PassThrough } from "stream";
 
 import {
-  Aborter,
-  BlobURL,
-  BlockBlobURL,
-  ContainerURL,
-  downloadBlobToBuffer,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL,
-  uploadFileToBlockBlob,
-  uploadStreamToBlockBlob
+    Aborter, BlobURL, BlockBlobURL, ContainerURL, downloadBlobToBuffer, ServiceURL,
+    SharedKeyCredential, StorageURL, uploadFileToBlockBlob, uploadStreamToBlockBlob
 } from "@azure/storage-blob";
 
 import Server from "../../src/blob/SqlBlobServer";
 import { configLogger } from "../../src/common/Logger";
 import {
-  createRandomLocalFile,
-  EMULATOR_ACCOUNT_KEY,
-  EMULATOR_ACCOUNT_NAME,
-  getUniqueName,
-  readStreamToLocalFile,
-  rmRecursive,
-  rmTestFile,
-  ServerConfigFactory
+    createRandomLocalFile, EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName,
+    readStreamToLocalFile, rmRecursive, rmTestFile, ServerConfigFactory
 } from "../testutils";
 
 import assert = require("assert");

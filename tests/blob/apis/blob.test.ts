@@ -1,25 +1,14 @@
 import { isNode } from "@azure/ms-rest-js";
 import {
-  Aborter,
-  BlobURL,
-  BlockBlobURL,
-  ContainerURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+    Aborter, BlobURL, BlockBlobURL, ContainerURL, ServiceURL, SharedKeyCredential, StorageURL
 } from "@azure/storage-blob";
 
 import { BlobHTTPHeaders } from "../../../src/blob/generated/artifacts/models";
 import Server from "../../../src/blob/SqlBlobServer";
 import { configLogger } from "../../../src/common/Logger";
 import {
-  bodyToString,
-  EMULATOR_ACCOUNT_KEY,
-  EMULATOR_ACCOUNT_NAME,
-  getUniqueName,
-  rmTestFile,
-  ServerConfigFactory,
-  sleep
+    bodyToString, EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName, rmTestFile,
+    ServerConfigFactory, sleep
 } from "../../testutils";
 
 import assert = require("assert");

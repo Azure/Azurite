@@ -1,11 +1,4 @@
-import {
-  createReadStream,
-  createWriteStream,
-  mkdir,
-  open,
-  stat,
-  unlink
-} from "fs";
+import { createReadStream, createWriteStream, mkdir, open, stat, unlink } from "fs";
 import { join } from "path";
 import { Writable } from "stream";
 import { promisify } from "util";
@@ -15,10 +8,7 @@ import BufferStream from "../utils/BufferStream";
 import ZeroBytesStream from "../ZeroBytesStream";
 import FDCache from "./FDCache";
 import IExtentMetadataStore, { IExtentModel } from "./IExtentMetadataStore";
-import IExtentStore, {
-  IExtentChunk,
-  StoreDestinationArray
-} from "./IExtentStore";
+import IExtentStore, { IExtentChunk, StoreDestinationArray } from "./IExtentStore";
 import IFDCache from "./IFDCache";
 import IOperationQueue from "./IOperationQueue";
 import OperationQueue from "./OperationQueue";

@@ -1,21 +1,12 @@
 import {
-  Aborter,
-  BlockBlobURL,
-  ContainerURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+    Aborter, BlockBlobURL, ContainerURL, ServiceURL, SharedKeyCredential, StorageURL
 } from "@azure/storage-blob";
 
 import Server from "../../src/blob/SqlBlobServer";
 import { configLogger } from "../../src/common/Logger";
 import {
-  appendToURLPath,
-  EMULATOR_ACCOUNT_KEY,
-  EMULATOR_ACCOUNT_NAME,
-  getUniqueName,
-  rmTestFile,
-  ServerConfigFactory
+    appendToURLPath, EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName, rmTestFile,
+    ServerConfigFactory
 } from "../testutils";
 
 import assert = require("assert");

@@ -1,32 +1,16 @@
 import * as assert from "assert";
 
 import {
-  Aborter,
-  AccountSASPermissions,
-  AccountSASResourceTypes,
-  AccountSASServices,
-  AnonymousCredential,
-  BlobSASPermissions,
-  BlockBlobURL,
-  ContainerSASPermissions,
-  ContainerURL,
-  generateAccountSASQueryParameters,
-  generateBlobSASQueryParameters,
-  PageBlobURL,
-  SASProtocol,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+    Aborter, AccountSASPermissions, AccountSASResourceTypes, AccountSASServices,
+    AnonymousCredential, BlobSASPermissions, BlockBlobURL, ContainerSASPermissions, ContainerURL,
+    generateAccountSASQueryParameters, generateBlobSASQueryParameters, PageBlobURL, SASProtocol,
+    ServiceURL, SharedKeyCredential, StorageURL
 } from "@azure/storage-blob";
 
 import Server from "../../src/blob/SqlBlobServer";
 import { configLogger } from "../../src/common/Logger";
 import {
-  EMULATOR_ACCOUNT_KEY,
-  EMULATOR_ACCOUNT_NAME,
-  getUniqueName,
-  rmTestFile,
-  ServerConfigFactory
+    EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName, rmTestFile, ServerConfigFactory
 } from "../testutils";
 
 configLogger(false);
