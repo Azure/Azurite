@@ -1,22 +1,24 @@
 import { access } from "fs";
 import { join } from "path";
-import rimraf = require("rimraf");
 import { promisify } from "util";
 
-import BlobConfiguration from "../blob/BlobConfiguration";
 import BlobServer from "../blob/BlobServer";
+import LokiBlobConfiguration from "../blob/LokiBlobConfiguration";
 import {
+  DEFAULT_BLOB_DB_PATH,
   DEFAULT_BLOB_PERSISTENCE_PATH,
-  DEFAULT_LOKI_DB_PATH
+  DEFAULT_EXTENT_DB_PATH
 } from "../blob/utils/constants";
 import * as Logger from "./Logger";
 import NoLoggerStrategy from "./NoLoggerStrategy";
+import { StoreDestinationArray } from "./persistence/IExtentStore";
 import VSCChannelLoggerStrategy from "./VSCChannelLoggerStrategy";
 import VSCChannelWriteStream from "./VSCChannelWriteStream";
 import VSCEnvironment from "./VSCEnvironment";
 import VSCServerManagerBase from "./VSCServerManagerBase";
 import VSCServerManagerClosedState from "./VSCServerManagerClosedState";
 
+import rimraf = require("rimraf");
 const accessAsync = promisify(access);
 const rimrafAsync = promisify(rimraf);
 
@@ -62,21 +64,33 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
 
   public async cleanImpl(): Promise<void> {
     const config = await this.getConfiguration();
-    await rimrafAsync(config.dbPath);
-    await rimrafAsync(config.persistencePath);
+    await rimrafAsync(config.blobDBPath);
+    await rimrafAsync(config.extentDBPath);
+    for (const persistence of config.persistenceArray) {
+      await rimrafAsync(persistence.persistencyPath);
+    }
   }
 
-  private async getConfiguration(): Promise<BlobConfiguration> {
+  private async getConfiguration(): Promise<LokiBlobConfiguration> {
     const env = new VSCEnvironment();
     const location = await env.location();
     await accessAsync(location);
 
     // Initialize server configuration
-    const config = new BlobConfiguration(
+    const persistenceArray: StoreDestinationArray = [
+      {
+        persistencyId: "Default",
+        persistencyPath: join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
+        maxConcurrency: 1
+      }
+    ];
+
+    const config = new LokiBlobConfiguration(
       env.blobHost(),
       env.blobPort(),
-      join(location, DEFAULT_LOKI_DB_PATH),
-      join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
+      join(location, DEFAULT_BLOB_DB_PATH),
+      join(location, DEFAULT_EXTENT_DB_PATH),
+      persistenceArray,
       !env.silent(),
       this.accessChannelStream,
       env.debug() === true,

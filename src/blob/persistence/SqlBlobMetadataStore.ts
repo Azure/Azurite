@@ -1,19 +1,10 @@
 import {
-  BOOLEAN,
-  DATE,
-  INTEGER,
-  Model,
-  Op,
-  Options as SequelizeOptions,
-  Sequelize
+    BOOLEAN, DATE, INTEGER, Model, Op, Options as SequelizeOptions, Sequelize
 } from "sequelize";
 
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import IBlobMetadataStore, {
-  BlobModel,
-  BlockModel,
-  ContainerModel,
-  ServicePropertiesModel
+    BlobModel, BlockModel, ContainerModel, ServicePropertiesModel
 } from "./IBlobMetadataStore";
 
 // tslint:disable: max-classes-per-file
@@ -559,7 +550,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<T | undefined> {
     throw new Error("Method not implemented.");
   }
-
   public listBlobs<T extends BlobModel>(
     account?: string | undefined,
     container?: string | undefined,
@@ -571,7 +561,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<[T[], number | undefined]> {
     throw new Error("Method not implemented.");
   }
-
   public deleteBlob(
     account: string,
     container: string,

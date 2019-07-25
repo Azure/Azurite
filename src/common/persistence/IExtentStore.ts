@@ -43,9 +43,24 @@ export default interface IExtentStore extends IDataStore {
   /**
    * Read data from persistency layer accoding to the given IExtentChunk.
    *
-   * @param {IExtentChunk} persistency
+   * @param {IExtentChunk} [persistency]
    * @returns {Promise<NodeJS.ReadableStream>}
    * @memberof IExtentStore
    */
-  readExtent(extentChunk: IExtentChunk): Promise<NodeJS.ReadableStream>;
+  readExtent(extentChunk?: IExtentChunk): Promise<NodeJS.ReadableStream>;
+
+  /**
+   * Merge serveral extent chunks to a ReadableStream according to the offset and count.
+   *
+   * @param {(IExtentChunk)[]} extentChunkArray
+   * @param {number} [offset]
+   * @param {number} [count]
+   * @returns {Promise<NodeJS.ReadableStream>}
+   * @memberof FSExtentStore
+   */
+  readExtents(
+    extentChunkArray: (IExtentChunk)[],
+    offset: number,
+    count: number
+  ): Promise<NodeJS.ReadableStream>;
 }

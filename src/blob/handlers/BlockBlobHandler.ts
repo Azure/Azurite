@@ -51,10 +51,20 @@ export default class BlockBlobHandler extends BaseHandler
       throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
-    const persistency = await this.dataStore.writePayload(body);
+    // console.log(`upload block ${blobName} starts`);
+    const persistency = await this.extentStore.appendExtent(body);
+    if (persistency.count !== contentLength) {
+      throw StorageErrorFactory.getInvalidOperation(
+        blobCtx.contextID!,
+        `The size of the request body ${
+          persistency.count
+        } mismatches the content-length ${contentLength}.`
+      );
+    }
+    // console.log(`upload block ${blobName} done`);
 
     // Calculate MD5 for validation
-    const stream = await this.dataStore.readPayload(persistency);
+    const stream = await this.extentStore.readExtent(persistency);
     const calculatedContentMD5 = await getMD5FromStream(stream);
     if (contentMD5 !== undefined) {
       if (typeof contentMD5 === "string") {
@@ -148,7 +158,19 @@ export default class BlockBlobHandler extends BaseHandler
       throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
     }
 
-    const persistency = await this.dataStore.writePayload(body);
+    // console.log(`stageBlock ${blockId} starts`);
+    const persistency = await this.extentStore.appendExtent(body); // this.dataStore.writePayload(body);
+    if (persistency.count !== contentLength) {
+      // TODO: Confirm error code
+      throw StorageErrorFactory.getInvalidOperation(
+        blobCtx.contextID!,
+        `The size of the request body ${
+          persistency.count
+        } mismatches the content-length ${contentLength}.`
+      );
+    }
+
+    // console.log(`stageBlock ${blockId} ends`);
     const block: BlockModel = {
       accountName,
       containerName,

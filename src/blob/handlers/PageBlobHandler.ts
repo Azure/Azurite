@@ -1,3 +1,4 @@
+import IExtentStore from "../../common/persistence/IExtentStore";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -24,10 +25,11 @@ export default class PageBlobHandler extends BaseHandler
   implements IPageBlobHandler {
   constructor(
     dataStore: IBlobDataStore,
+    extentStore: IExtentStore,
     logger: ILogger,
     private readonly rangesManager: IPageBlobRangesManager
   ) {
-    super(dataStore, logger);
+    super(dataStore, extentStore, logger);
   }
 
   public async create(
@@ -196,8 +198,16 @@ export default class PageBlobHandler extends BaseHandler
       throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextID!);
     }
 
-    // Persisted request payload
-    const persistency = await this.dataStore.writePayload(body);
+    const persistency = await this.extentStore.appendExtent(body);
+    if (persistency.count !== contentLength) {
+      // TODO: Confirm status code
+      throw StorageErrorFactory.getInvalidOperation(
+        blobCtx.contextID!,
+        `The size of the request body ${
+          persistency.count
+        } mismatches the content-length ${contentLength}.`
+      );
+    }
 
     this.rangesManager.mergeRange(blob.pageRangesInOrder || [], {
       start,

@@ -4,6 +4,9 @@ import { join } from "path";
 import rimraf from "rimraf";
 import { URL } from "url";
 
+import LokiBlobConfiguration from "../src/blob/LokiBlobConfiguration";
+import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
+
 export const EMULATOR_ACCOUNT_NAME = "devstoreaccount1";
 
 export const EMULATOR_ACCOUNT_KEY =
@@ -173,4 +176,36 @@ export async function readStreamToLocalFile(
     ws.on("error", reject);
     ws.on("finish", resolve);
   });
+}
+
+export function getTestServerConfig(): LokiBlobConfiguration {
+  const host = "127.0.0.1";
+  const port = 11000;
+  const dbPath = "__testsstorage__";
+  const extentdbPath = "__testsextentstorage__";
+  const persistenceArray: StoreDestinationArray = [
+    {
+      persistencyId: "test",
+      persistencyPath: "__testspersistence__",
+      maxConcurrency: 10
+    }
+  ];
+
+  const config = new LokiBlobConfiguration(
+    host,
+    port,
+    dbPath,
+    extentdbPath,
+    persistenceArray,
+    false
+  );
+  return config;
+}
+
+export async function rmTestFile(config: LokiBlobConfiguration) {
+  await rmRecursive(config.blobDBPath);
+  await rmRecursive(config.extentDBPath);
+  for (const persistence of config.persistenceArray) {
+    await rmRecursive(persistence.persistencyPath);
+  }
 }

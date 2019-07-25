@@ -5,11 +5,13 @@ import { promisify } from "util";
 
 import Environment from "../common/Environment";
 import * as Logger from "../common/Logger";
-import BlobConfiguration from "./BlobConfiguration";
+import { StoreDestinationArray } from "../common/persistence/IExtentStore";
 import BlobServer from "./BlobServer";
+import LokiBlobConfiguration from "./LokiBlobConfiguration";
 import {
+  DEFAULT_BLOB_DB_PATH,
   DEFAULT_BLOB_PERSISTENCE_PATH,
-  DEFAULT_LOKI_DB_PATH
+  DEFAULT_EXTENT_DB_PATH
 } from "./utils/constants";
 
 // tslint:disable:no-console
@@ -29,11 +31,20 @@ async function main() {
   }
 
   // Initialize server configuration
-  const config = new BlobConfiguration(
+  const persistenceArray: StoreDestinationArray = [
+    {
+      persistencyId: "Default",
+      persistencyPath: join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
+      maxConcurrency: 1
+    }
+  ];
+
+  const config = new LokiBlobConfiguration(
     env.blobHost(),
     env.blobPort(),
-    join(location, DEFAULT_LOKI_DB_PATH),
-    join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
+    join(location, DEFAULT_BLOB_DB_PATH),
+    join(location, DEFAULT_EXTENT_DB_PATH),
+    persistenceArray,
     !env.silent(),
     undefined,
     env.debug() !== undefined,

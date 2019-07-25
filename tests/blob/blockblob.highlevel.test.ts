@@ -1,3 +1,7 @@
+import * as fs from "fs";
+import { join } from "path";
+import { PassThrough } from "stream";
+
 import {
   Aborter,
   BlobURL,
@@ -10,44 +14,32 @@ import {
   uploadFileToBlockBlob,
   uploadStreamToBlockBlob
 } from "@azure/storage-blob";
-import assert = require("assert");
-import * as fs from "fs";
-import { join } from "path";
-import { PassThrough } from "stream";
 
-import BlobConfiguration from "../../src/blob/BlobConfiguration";
 import Server from "../../src/blob/BlobServer";
 import { configLogger } from "../../src/common/Logger";
 import {
   createRandomLocalFile,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
+  getTestServerConfig,
   getUniqueName,
   readStreamToLocalFile,
-  rmRecursive
+  rmRecursive,
+  rmTestFile
 } from "../testutils";
 
+import assert = require("assert");
 // Disable debugging log by passing false
 configLogger(false);
 
 // tslint:disable:no-empty
 describe("BlockBlobHighlevel", () => {
   // TODO: Create a server factory as tests utils
-  const host = "127.0.0.1";
-  const port = 11000;
-  const dbPath = "__testsstorage__";
-  const persistencePath = "__testspersistence__";
-  const config = new BlobConfiguration(
-    host,
-    port,
-    dbPath,
-    persistencePath,
-    false
-  );
+  const config = getTestServerConfig();
   let server: Server;
 
   // TODO: Create serviceURL factory as tests utils
-  const baseURL = `http://${host}:${port}/devstoreaccount1`;
+  const baseURL = `http://${config.host}:${config.port}/devstoreaccount1`;
   const serviceURL = new ServiceURL(
     baseURL,
     StorageURL.newPipeline(
@@ -107,6 +99,7 @@ describe("BlockBlobHighlevel", () => {
     fs.unlinkSync(tempFileLarge);
     fs.unlinkSync(tempFileSmall);
     rmRecursive(tempFolderPath);
+    await rmTestFile(config);
   });
 
   it("uploadFileToBlockBlob should success when blob >= BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES", async () => {
@@ -215,7 +208,12 @@ describe("BlockBlobHighlevel", () => {
       20
     );
 
-    const downloadResponse = await blockBlobURL.download(Aborter.none, 0);
+    const downloadResponse = await blockBlobURL.download(
+      Aborter.none,
+      0,
+      undefined,
+      { progress: undefined }
+    );
 
     const downloadFilePath = join(
       tempFolderPath,
