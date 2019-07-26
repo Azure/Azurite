@@ -1,5 +1,6 @@
 import { stat } from "fs";
 import Loki from "lokijs";
+
 import IExtentMetadataStore, { IExtentModel } from "./IExtentMetadataStore";
 import LokiAllExtentsAsyncIterator from "./LokiAllExtentsAsyncIterator";
 
@@ -141,7 +142,7 @@ export default class LokiExtentMetadata implements IExtentMetadataStore {
       maxResults = 5000;
     }
     if (queryTime !== undefined) {
-      query.sealTime = { $lt: queryTime.getTime() - 1000 };
+      query.lastModifiedInMS = { $lt: queryTime.getTime() - 1000 };
     }
 
     query.$loki = { $gt: marker };

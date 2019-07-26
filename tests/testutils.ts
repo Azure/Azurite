@@ -5,6 +5,7 @@ import rimraf from "rimraf";
 import { URL } from "url";
 
 import LokiBlobConfiguration from "../src/blob/LokiBlobConfiguration";
+import SqlBlobConfiguration from "../src/blob/SqlBlobConfiguration";
 import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
 
 export const EMULATOR_ACCOUNT_NAME = "devstoreaccount1";
@@ -165,6 +166,26 @@ export async function createRandomLocalFile(
   });
 }
 
+export async function readStreamToString(
+  data: NodeJS.ReadableStream
+): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    let res: string = "";
+    data
+      .on("readable", () => {
+        let chunk;
+        chunk = data.read();
+        if (chunk) {
+          res += chunk.toString();
+        }
+      })
+      .on("end", () => {
+        resolve(res);
+      })
+      .on("error", reject);
+  });
+}
+
 export async function readStreamToLocalFile(
   rs: NodeJS.ReadableStream,
   file: string
@@ -178,34 +199,69 @@ export async function readStreamToLocalFile(
   });
 }
 
-export function getTestServerConfig(): LokiBlobConfiguration {
-  const host = "127.0.0.1";
-  const port = 11000;
-  const dbPath = "__testsstorage__";
-  const extentdbPath = "__testsextentstorage__";
-  const persistenceArray: StoreDestinationArray = [
+export class ServerConfigFactory {
+  static host = "127.0.0.1";
+  static port = 11000;
+  static persistenceArray: StoreDestinationArray = [
     {
-      persistencyId: "test",
-      persistencyPath: "__testspersistence__",
+      persistenceId: "test",
+      persistencePath: "__testspersistence__",
       maxConcurrency: 10
     }
   ];
+  static dbPath = "__testsstorage__";
+  static extentdbPath = "__testsextentstorage__";
 
-  const config = new LokiBlobConfiguration(
-    host,
-    port,
-    dbPath,
-    extentdbPath,
-    persistenceArray,
-    false
-  );
-  return config;
+  static DEFUALT_SQL_URI =
+    "mariadb://root:my-secret-pw@127.0.0.1:3306/azurite_extent_metadata";
+  static DEFUALT_SQL_OPTIONS = {
+    logging: false,
+    pool: {
+      max: 100,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    },
+    dialectOptions: {
+      timezone: "Etc/GMT-0"
+    }
+  };
+
+  public static getLoki(): LokiBlobConfiguration {
+    const config = new LokiBlobConfiguration(
+      this.host,
+      this.port,
+      this.dbPath,
+      this.extentdbPath,
+      this.persistenceArray,
+      false
+    );
+    return config;
+  }
+
+  public static getSql(): SqlBlobConfiguration {
+    const config = new SqlBlobConfiguration(
+      this.host,
+      this.port,
+      this.DEFUALT_SQL_URI,
+      this.DEFUALT_SQL_OPTIONS,
+      this.dbPath,
+      this.persistenceArray,
+      false
+    );
+    return config;
+  }
 }
 
-export async function rmTestFile(config: LokiBlobConfiguration) {
+export function rmTestFile(config: LokiBlobConfiguration): Promise<void>;
+export function rmTestFile(config: SqlBlobConfiguration): Promise<void>;
+
+export async function rmTestFile(config: any) {
   await rmRecursive(config.blobDBPath);
-  await rmRecursive(config.extentDBPath);
+  if (config instanceof LokiBlobConfiguration) {
+    await rmRecursive(config.extentDBPath);
+  }
   for (const persistence of config.persistenceArray) {
-    await rmRecursive(persistence.persistencyPath);
+    await rmRecursive(persistence.persistencePath);
   }
 }

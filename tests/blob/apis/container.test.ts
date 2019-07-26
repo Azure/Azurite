@@ -8,14 +8,14 @@ import {
   StorageURL
 } from "@azure/storage-blob";
 
-import Server from "../../../src/blob/BlobServer";
+import Server from "../../../src/blob/SqlBlobServer";
 import { configLogger } from "../../../src/common/Logger";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
-  getTestServerConfig,
   getUniqueName,
   rmTestFile,
+  ServerConfigFactory,
   sleep
 } from "../../testutils";
 
@@ -25,7 +25,7 @@ configLogger(false);
 
 describe("ContainerAPIs", () => {
   // TODO: Create a server factory as tests utils
-  const config = getTestServerConfig();
+  const config = ServerConfigFactory.getSql();
 
   // Open following line to enable debug log
   // configLogger(true);

@@ -33,8 +33,8 @@ async function main() {
   // Initialize server configuration
   const persistenceArray: StoreDestinationArray = [
     {
-      persistencyId: "Default",
-      persistencyPath: join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
+      persistenceId: "Default",
+      persistencePath: join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
       maxConcurrency: 1
     }
   ];

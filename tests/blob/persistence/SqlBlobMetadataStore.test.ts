@@ -232,6 +232,50 @@ describe("SqlBlobMetadataStore", () => {
     );
   });
 
+  it("Create 1000 account should work.", async () => {
+    const accountName = `accountname_${new Date().getTime()}`;
+
+    const count = 1000;
+    const createOp: Promise<any>[] = [];
+    for (let i = 0; i < count; i++) {
+      const serviceProperties = {
+        accountName: `${accountName}_${i}`,
+        cors: [],
+        defaultServiceVersion: "2018-03-28",
+        hourMetrics: {
+          enabled: false,
+          retentionPolicy: {
+            enabled: false
+          },
+          version: "1.0"
+        },
+        logging: {
+          deleteProperty: true,
+          read: true,
+          retentionPolicy: {
+            enabled: false
+          },
+          version: "1.0",
+          write: true
+        },
+        minuteMetrics: {
+          enabled: false,
+          retentionPolicy: {
+            enabled: false
+          },
+          version: "1.0"
+        },
+        staticWebsite: {
+          enabled: false
+        }
+      };
+
+      createOp.push(store.setServiceProperties(serviceProperties));
+    }
+
+    await Promise.all(createOp);
+  });
+
   it("createContainer should work", async () => {
     const accountName = `accountname_${new Date().getTime()}`;
     const containerName = `containerName_${new Date().getTime()}`;
