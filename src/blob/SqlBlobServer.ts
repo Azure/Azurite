@@ -8,13 +8,13 @@ import logger from "../common/Logger";
 import FSExtentStore from "../common/persistence/FSExtentStore";
 import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
-import LokiExtentMetadata from "../common/persistence/LokiExtentMetadata";
+import SqlExtentMetadataStore from "../common/persistence/SqlExtentMetadataStore";
 import ServerBase from "../common/ServerBase";
 import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
 import BlobGCManager from "./gc/BlobGCManager";
-import LokiBlobConfiguration from "./LokiBlobConfiguration";
 import IBlobDataStore from "./persistence/IBlobDataStore";
 import LokiBlobDataStore from "./persistence/LokiBlobDataStore";
+import SqlBlobConfiguration from "./SqlBlobConfiguration";
 
 const BEFORE_CLOSE_MESSAGE = `Azurite Blob service is closing...`;
 const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Blob service is closing... Critical error happens during GC.`;
@@ -46,9 +46,9 @@ export default class BlobServer extends ServerBase {
    * @param {BlobConfiguration} configuration
    * @memberof Server
    */
-  constructor(configuration?: LokiBlobConfiguration) {
+  constructor(configuration?: SqlBlobConfiguration) {
     if (configuration === undefined) {
-      configuration = new LokiBlobConfiguration();
+      configuration = new SqlBlobConfiguration();
     }
 
     const host = configuration.host;
@@ -66,8 +66,9 @@ export default class BlobServer extends ServerBase {
       // logger
     );
 
-    const extentMetadataStore: IExtentMetadataStore = new LokiExtentMetadata(
-      configuration.extentDBPath
+    const extentMetadataStore: IExtentMetadataStore = new SqlExtentMetadataStore(
+      configuration.sqlURL,
+      configuration.sequelizeOptions
     );
 
     const extentStore: IExtentStore = new FSExtentStore(

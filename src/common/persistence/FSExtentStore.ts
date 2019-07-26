@@ -79,12 +79,12 @@ export default class FSExtentStore implements IExtentStore {
 
     for (const storeDestination of persistencyConfiguration) {
       this.persistencyPath.set(
-        storeDestination.persistencyId,
-        storeDestination.persistencyPath
+        storeDestination.persistenceId,
+        storeDestination.persistencePath
       );
       for (let i = 0; i < storeDestination.maxConcurrency; i++) {
         const appendExtent = this.createAppendExtent(
-          storeDestination.persistencyId
+          storeDestination.persistenceId
         );
         this.appendExtentArray.push(appendExtent);
         // console.log(appendExtent.id);
@@ -108,13 +108,14 @@ export default class FSExtentStore implements IExtentStore {
   public async init(): Promise<void> {
     for (const storeDestination of this.persistencyConfiguration) {
       try {
-        await statAsync(storeDestination.persistencyPath);
+        await statAsync(storeDestination.persistencePath);
       } catch {
-        await mkdirAsync(storeDestination.persistencyPath);
+        await mkdirAsync(storeDestination.persistencePath);
       }
     }
 
     if (!this.metadataStore.isInitialized()) {
+      // console.log(`FSExtentStore.init() this.metadataStore init.`);
       await this.metadataStore.init();
     }
 
@@ -226,7 +227,7 @@ export default class FSExtentStore implements IExtentStore {
               persistencyId: appendExtent.persistencyId,
               path: extentId,
               size: count + offset,
-              LastModifyInMS: Date.now()
+              lastModifiedInMS: Date.now()
             };
             // console.log(
             //   `appendExtent() write finish. extent:${JSON.stringify(extent)}`

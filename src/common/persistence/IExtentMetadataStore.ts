@@ -44,7 +44,7 @@ export interface IExtentModel {
    * @type {number}
    * @memberof IExtentModel
    */
-  LastModifyInMS: number;
+  lastModifiedInMS: number;
 }
 
 /**
@@ -72,6 +72,25 @@ export default interface IExtentMetadataStore extends IDataStore {
    * @memberof IExtentMetadata
    */
   deleteExtent(extentId: string): Promise<void>;
+
+  /**
+   * List extents.
+   *
+   * @param {string} [id]
+   * @param {number} [maxResults]
+   * @param {(number | undefined)} [marker]
+   * @param {Date} [queryTime]
+   * @param {number} [releaseTime]
+   * @returns {(Promise<[IExtentModel[], number | undefined]>)}
+   * @memberof SqlExtentMetadataStore
+   */
+  listExtents(
+    id?: string,
+    maxResults?: number,
+    marker?: number | undefined,
+    queryTime?: Date,
+    releaseTime?: number
+  ): Promise<[IExtentModel[], number | undefined]>;
 
   /**
    * Get the persistencyId for a given extentId.

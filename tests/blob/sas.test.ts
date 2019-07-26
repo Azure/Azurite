@@ -19,21 +19,21 @@ import {
   StorageURL
 } from "@azure/storage-blob";
 
-import Server from "../../src/blob/BlobServer";
+import Server from "../../src/blob/SqlBlobServer";
 import { configLogger } from "../../src/common/Logger";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
-  getTestServerConfig,
   getUniqueName,
-  rmTestFile
+  rmTestFile,
+  ServerConfigFactory
 } from "../testutils";
 
 configLogger(false);
 
 describe("Shared Access Signature (SAS) authentication", () => {
   // TODO: Create a server factory as tests utils
-  const config = getTestServerConfig();
+  const config = ServerConfigFactory.getSql();
 
   // TODO: Create serviceURL factory as tests utils
   const baseURL = `http://${config.host}:${config.port}/devstoreaccount1`;

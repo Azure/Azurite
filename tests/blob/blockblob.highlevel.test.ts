@@ -15,17 +15,17 @@ import {
   uploadStreamToBlockBlob
 } from "@azure/storage-blob";
 
-import Server from "../../src/blob/BlobServer";
+import Server from "../../src/blob/SqlBlobServer";
 import { configLogger } from "../../src/common/Logger";
 import {
   createRandomLocalFile,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
-  getTestServerConfig,
   getUniqueName,
   readStreamToLocalFile,
   rmRecursive,
-  rmTestFile
+  rmTestFile,
+  ServerConfigFactory
 } from "../testutils";
 
 import assert = require("assert");
@@ -35,7 +35,7 @@ configLogger(false);
 // tslint:disable:no-empty
 describe("BlockBlobHighlevel", () => {
   // TODO: Create a server factory as tests utils
-  const config = getTestServerConfig();
+  const config = ServerConfigFactory.getSql();
   let server: Server;
 
   // TODO: Create serviceURL factory as tests utils
