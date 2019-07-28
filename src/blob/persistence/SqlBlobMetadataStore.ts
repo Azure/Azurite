@@ -1,28 +1,20 @@
-import {
-  BOOLEAN,
-  col,
-  DATE,
-  fn,
-  INTEGER,
-  Model,
-  Op,
-  Options as SequelizeOptions,
-  Sequelize
-} from "sequelize";
+import async from "async";
+import { promisify } from "bluebird";
+import { BOOLEAN, DATE, fn, INTEGER, Model, Op, Options as SequelizeOptions, Sequelize } from "sequelize";
 
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import IBlobMetadataStore, {
   BlobModel,
   BlockModel,
   ContainerModel,
-  ServicePropertiesModel
+  ServicePropertiesModel,
 } from "./IBlobMetadataStore";
 
 // tslint:disable: max-classes-per-file
 class ServicesModel extends Model {}
 class ContainersModel extends Model {}
 class BlobsModel extends Model {}
-class Tests extends Model {}
+class TestModel extends Model {}
 // class BlocksModel extends Model {}
 // class PagesModel extends Model {}
 
@@ -218,17 +210,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       { sequelize: this.sequelize, modelName: "Containers" }
     );
 
-    Tests.init(
+    TestModel.init(
       {
-        name: {
-          type: "VARCHAR(255)",
+        blobName: {
+          type: "VARCHAR(50)",
           primaryKey: true
         },
-        text: {
-          type: "VARCHAR(255)"
-        },
-        id: {
-          type: INTEGER.UNSIGNED
+        blockList: {
+          type: "MEDIUMTEXT"
         },
         createdAt: {
           allowNull: false,
@@ -239,10 +228,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           type: DATE
         }
       },
-      { sequelize: this.sequelize, modelName: "Tests" }
+      { sequelize: this.sequelize, modelName: "Test" }
     );
 
     await this.sequelize.sync();
+
     this.initialized = true;
   }
 
@@ -607,16 +597,92 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new Error("Method not implemented.");
   }
 
-  public stageBlock<T extends BlockModel>(block: T): Promise<T> {
-    return Tests.upsert(
+  public stageBlock(block: BlockModel): Promise<BlockModel> {
+    // return TestModel.upsert(
+    //   {
+    //     blobName: block.blobName,
+    //     blockList: fn(
+    //       "CONCAT",
+    //       Sequelize.col("blockList"),
+    //       `${block.name}_${block.persistency.id}#`
+    //     )
+    //   },
+    //   {
+    //     fields: {
+    //       blockList: fn(
+    //         "CONCAT",
+    //         Sequelize.col("blockList"),
+    //         `${block.name}_${block.persistency.id}#`
+    //       )
+    //     }
+    //   }
+    // ).then(() => block);
+
+    return TestModel.update(
       {
-        name: "haha",
-        text: fn("concat", col("text"), "text"),
-        id: 10
+        blockList: fn(
+          "CONCAT",
+          Sequelize.col("blockList"),
+          `${block.name}_${block.persistency.id}#`
+        )
       },
-      { fields: ["text"] }
-    ).then(() => {
-      return block;
+      {
+        where: {
+          blobName: block.blobName
+        }
+      }
+    ).then(() => block);
+  }
+
+  public async insertBlock(block: BlockModel): Promise<void> {
+    await TestModel.create({
+      blobName: block.blobName,
+      blockList: block.name
+    });
+  }
+
+  public async updateBlock(block: BlockModel): Promise<void> {
+    await TestModel.update(
+      {
+        blockList: block.name
+      },
+      {
+        where: { blobName: block.blobName }
+      }
+    );
+  }
+
+  public async updateBlocksTran(blocks: BlockModel[]): Promise<void> {
+    const mapLimitAsync = promisify(async.mapLimit);
+
+    await this.sequelize.transaction(t => {
+      return mapLimitAsync(blocks, 100, async block => {
+        return TestModel.update(
+          { blockList: block.name },
+          { transaction: t, where: { blobName: block.blobName } }
+        );
+      });
+    });
+  }
+
+  public async bulkInsertBlock(blocks: BlockModel[]): Promise<void> {
+    await TestModel.bulkCreate(
+      blocks.map(block => {
+        return { blobName: block.blobName, blockList: block.name };
+      })
+    );
+  }
+
+  public async bulkInsertBlockTran(blocks: BlockModel[]): Promise<void> {
+    const mapLimitAsync = promisify(async.mapLimit);
+
+    await this.sequelize.transaction(t => {
+      return mapLimitAsync(blocks, 100, async block => {
+        return TestModel.create(
+          { blobName: block.blobName, blockList: block.name },
+          { transaction: t }
+        );
+      });
     });
   }
 
