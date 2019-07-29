@@ -109,7 +109,8 @@ interface IBlockAdditionalProperties {
   isCommitted: boolean;
 }
 
-type PersistencyBlockModel = Models.Block & IPersistencyPropertiesRequired;
+export type PersistencyBlockModel = Models.Block &
+  IPersistencyPropertiesRequired;
 
 export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
 
@@ -227,7 +228,7 @@ export interface IBlobMetadataStore extends IDataStore {
    * @returns {(Promise<[T[], number | undefined]>)} A tuple including list blobs and next marker.
    * @memberof IBlobMetadataStore
    */
-  listBlobs<T extends BlobModel>(
+  listBlobs(
     account?: string,
     container?: string,
     blob?: string,
@@ -235,16 +236,16 @@ export interface IBlobMetadataStore extends IDataStore {
     maxResults?: number,
     marker?: number,
     includeSnapshots?: boolean
-  ): Promise<[T[], number | undefined]>;
+  ): Promise<[BlobModel[], number | undefined]>;
 
   /**
    * Create blob item in persistency layer. Will replace if blob exists.
    *
    * @param {BlobModel} blob
-   * @returns {Promise<BlobModel>}
+   * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
-  createBlob(blob: BlobModel): Promise<BlobModel>;
+  createBlob(blob: BlobModel): Promise<void>;
 
   /**
    * Gets a blob item from persistency layer by container name and blob name.
@@ -318,21 +319,27 @@ export interface IBlobMetadataStore extends IDataStore {
 
   /**
    * Update blob block item in persistency layer. Will create if block doesn't exist.
+   * TODO: Will also create a uncommitted block blob.
    *
    * @param {BlockModel} block
-   * @returns {Promise<BlockModel>}
+   * @param {BlobModel} [blob]
+   * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
-  stageBlock(block: BlockModel): Promise<BlockModel>;
+  stageBlock(block: BlockModel, blob?: BlobModel): Promise<void>;
 
   /**
    * Commit block list for a blob.
    *
-   * @param {BlockModel[]} blockList
+   * @param {BlobModel} blob
+   * @param {{ blockName: string; blockCommitType: string }[]} blockList
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
-  commitBlockList(blockList: BlockModel[]): Promise<void>;
+  commitBlockList(
+    blob: BlobModel,
+    blockList: { blockName: string; blockCommitType: string }[]
+  ): Promise<void>;
 
   /**
    * Gets blocks list for a blob from persistency layer by account, container and blob names.
@@ -345,11 +352,14 @@ export interface IBlobMetadataStore extends IDataStore {
    * @memberof IBlobMetadataStore
    */
   getBlockList(
-    account?: string,
-    container?: string,
-    blob?: string,
+    account: string,
+    container: string,
+    blob: string,
     isCommitted?: boolean
-  ): Promise<BlockModel[]>;
+  ): Promise<{
+    uncommittedBlocks: Models.Block[];
+    committedBlocks: Models.Block[];
+  }>;
 }
 
 export default IBlobMetadataStore;

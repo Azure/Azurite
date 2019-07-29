@@ -4,8 +4,12 @@ import { promisify } from "bluebird";
 import uuid from "uuid/v4";
 
 import { PublicAccessType } from "../../../src/blob/generated/artifacts/models";
-import { ServicePropertiesModel } from "../../../src/blob/persistence/IBlobDataStore";
+import {
+  BlobModel,
+  ServicePropertiesModel
+} from "../../../src/blob/persistence/IBlobDataStore";
 import IBlobMetadataStore, {
+  BlockModel,
   ContainerModel
 } from "../../../src/blob/persistence/IBlobMetadataStore";
 import SqlBlobMetadataStore from "../../../src/blob/persistence/SqlBlobMetadataStore";
@@ -529,10 +533,10 @@ describe("SqlBlobMetadataStore", () => {
       createOperations.push(store.createContainer(container));
     }
 
-    let time = new Date();
+    // let time = new Date();
     await Promise.all(createOperations);
-    let now = new Date();
-    console.log(now.getTime() - time.getTime());
+    // let now = new Date();
+    // console.log(now.getTime() - time.getTime());
 
     const readContainerOperations: Promise<any>[] = [];
     for (let i = 0; i < count; i++) {
@@ -544,13 +548,13 @@ describe("SqlBlobMetadataStore", () => {
       );
     }
 
-    time = new Date();
+    // time = new Date();
     const res = await Promise.all(readContainerOperations);
     for (let i = 0; i < count; i++) {
       assert.deepStrictEqual(containers[i], res[i]);
     }
-    now = new Date();
-    console.log(now.getTime() - time.getTime());
+    // now = new Date();
+    // console.log(now.getTime() - time.getTime());
   });
 
   it("listContainers should work", async () => {
@@ -738,7 +742,271 @@ describe("SqlBlobMetadataStore", () => {
     assert.deepStrictEqual(marker, undefined);
   });
 
-  it("stageBlock", async () => {
+  it("create blob and download blob should work", async () => {
+    const blob: BlobModel = {
+      accountName: "account001",
+      containerName: "container002",
+      name: `blob_${new Date().getTime()}`,
+      snapshot: "",
+      properties: {
+        lastModified: new Date(),
+        etag: "etag"
+      },
+      isCommitted: true,
+      persistency: {
+        id: "extent_id",
+        offset: 22,
+        count: 100
+      },
+      committedBlocksInOrder: [
+        {
+          name: "block1",
+          size: 100,
+          persistency: {
+            id: "extent_id_001",
+            offset: 0,
+            count: 100
+          }
+        },
+        {
+          name: "block2",
+          size: 200,
+          persistency: {
+            id: "extent_id_002",
+            offset: 100,
+            count: 100
+          }
+        }
+      ]
+    };
+
+    await store.createBlob(blob);
+    const downloadedBlob = await store.downloadBlob(
+      blob.accountName,
+      blob.containerName,
+      blob.name,
+      blob.snapshot
+    );
+
+    assert.deepStrictEqual(downloadedBlob, blob);
+  });
+
+  it("list blobs should work", async () => {
+    const blobs: BlobModel[] = [];
+    const prefix = `p_${new Date().getTime()}`;
+    const account = "account001";
+    const container = "container" + prefix;
+
+    for (let i = 0; i < 10; i++) {
+      const blob: BlobModel = {
+        accountName: account,
+        containerName: container,
+        name: `${prefix}blob_${new Date().getTime()}`,
+        snapshot: "",
+        properties: {
+          lastModified: new Date(),
+          etag: "etag"
+        },
+        isCommitted: true,
+        persistency: {
+          id: "extent_id",
+          offset: 22,
+          count: 100
+        },
+        committedBlocksInOrder: [
+          {
+            name: "block1",
+            size: 100,
+            persistency: {
+              id: "extent_id_001",
+              offset: 0,
+              count: 100
+            }
+          },
+          {
+            name: "block2",
+            size: 200,
+            persistency: {
+              id: "extent_id_002",
+              offset: 100,
+              count: 100
+            }
+          }
+        ]
+      };
+      blobs.push(blob);
+      await store.createBlob(blob);
+    }
+
+    const [blobList1, marker1] = await store.listBlobs(
+      account,
+      container,
+      undefined,
+      prefix,
+      4,
+      undefined,
+      true
+    );
+    assert.deepStrictEqual(blobList1.length, 4);
+    for (let i = 0; i < 4; i++) {
+      assert.deepStrictEqual(blobList1[i], blobs[i]);
+    }
+
+    const [blobList2, marker2] = await store.listBlobs(
+      account,
+      container,
+      undefined,
+      prefix,
+      4,
+      marker1,
+      true
+    );
+    assert.deepStrictEqual(blobList2.length, 4);
+    for (let i = 0; i < 4; i++) {
+      assert.deepStrictEqual(blobList2[i], blobs[i + 4]);
+    }
+
+    const [blobList3, marker3] = await store.listBlobs(
+      account,
+      container,
+      undefined,
+      prefix,
+      4,
+      marker2,
+      true
+    );
+    assert.deepStrictEqual(blobList3.length, 2);
+    assert.deepStrictEqual(marker3, undefined);
+    for (let i = 0; i < 4; i++) {
+      assert.deepStrictEqual(blobList3[i], blobs[i + 8]);
+    }
+  });
+
+  it("stage block and list blocks should work for uncommitted blocks", async () => {
+    const accountName = "myaccount";
+    const containerName = "mycontainer";
+    const blobName = "myblob" + new Date().getTime();
+    const blocks: BlockModel[] = [];
+    const count = 10;
+
+    for (let i = 0; i < count; i++) {
+      const block: BlockModel = {
+        accountName,
+        containerName,
+        blobName,
+        isCommitted: false,
+        name: "block" + i,
+        size: 10,
+        persistency: {
+          id: "extent" + i,
+          offset: i * 10,
+          count: 10
+        }
+      };
+      blocks.push(block);
+      await store.stageBlock(block);
+    }
+
+    const blockList = await store.getBlockList(
+      accountName,
+      containerName,
+      blobName
+    );
+    assert.deepStrictEqual(blockList.committedBlocks.length, 0);
+    assert.deepStrictEqual(blockList.uncommittedBlocks.length, 10);
+    for (let i = 0; i < count; i++) {
+      assert.deepStrictEqual(blockList.uncommittedBlocks[i], {
+        name: blocks[i].name,
+        size: blocks[i].size
+      });
+    }
+  });
+
+  it("list block should work for committed blocks", async () => {
+    const accountName = "myaccount";
+    const containerName = "mycontainer";
+    const blobName = "myblob" + new Date().getTime();
+    const blocks: BlockModel[] = [];
+    const count = 10;
+
+    for (let i = 0; i < count; i++) {
+      const block: BlockModel = {
+        accountName,
+        containerName,
+        blobName,
+        isCommitted: false,
+        name: "block" + i,
+        size: 10,
+        persistency: {
+          id: "extent" + i,
+          offset: i * 10,
+          count: 10
+        }
+      };
+      blocks.push(block);
+      await store.stageBlock(block);
+    }
+
+    const blob: BlobModel = {
+      accountName,
+      containerName,
+      name: blobName,
+      snapshot: "",
+      properties: {
+        lastModified: new Date(),
+        etag: "etag"
+      },
+      isCommitted: true
+    };
+
+    const half = Math.floor(count / 2);
+    await store.commitBlockList(
+      blob,
+      blocks.slice(0, half).map(block => {
+        return { blockName: block.name, blockCommitType: "latest" };
+      })
+    );
+
+    const blockList = await store.getBlockList(
+      accountName,
+      containerName,
+      blobName
+    );
+    assert.deepStrictEqual(blockList.committedBlocks.length, half);
+    for (let i = 0; i < half; i++) {
+      assert.deepStrictEqual(blockList.committedBlocks[i].name, blocks[i].name);
+      assert.deepStrictEqual(blockList.committedBlocks[i].size, blocks[i].size);
+    }
+
+    assert.deepStrictEqual(blockList.uncommittedBlocks.length, 0);
+
+    const downloadedBlob = await store.downloadBlob(
+      accountName,
+      containerName,
+      blobName
+    );
+    assert.notDeepStrictEqual(downloadedBlob, undefined);
+    assert.deepStrictEqual(
+      downloadedBlob!.committedBlocksInOrder!.length,
+      half
+    );
+    for (let i = 0; i < half; i++) {
+      assert.deepStrictEqual(
+        downloadedBlob!.committedBlocksInOrder![i].name,
+        blocks[i].name
+      );
+      assert.deepStrictEqual(
+        downloadedBlob!.committedBlocksInOrder![i].size,
+        blocks[i].size
+      );
+      assert.deepStrictEqual(
+        downloadedBlob!.committedBlocksInOrder![i].persistency,
+        blocks[i].persistency
+      );
+    }
+  });
+
+  it.skip("stageBlock", async () => {
     const blobName = "blob2";
     const promises = [];
 
@@ -766,7 +1034,7 @@ describe("SqlBlobMetadataStore", () => {
     console.log(end.getTime() - start.getTime());
   });
 
-  it("bulkInsertBlock within transaction", async () => {
+  it.skip("bulkInsertBlock within transaction", async () => {
     const blocks = [];
     const blocks2 = [];
     const blocks3 = [];
@@ -907,7 +1175,7 @@ describe("SqlBlobMetadataStore", () => {
     // await Promise.all(promises);
   });
 
-  it("bulkInsertBlock", async () => {
+  it.skip("bulkInsertBlock", async () => {
     const blocks = [];
     const blocks2 = [];
     const blocks3 = [];
@@ -1045,7 +1313,7 @@ describe("SqlBlobMetadataStore", () => {
     // await Promise.all(promises);
   });
 
-  it("insertBlocks", async () => {
+  it.skip("insertBlocks", async () => {
     const blocks = [];
     const containers = [];
 
@@ -1118,7 +1386,7 @@ describe("SqlBlobMetadataStore", () => {
     // await Promise.all(promises);
   });
 
-  it("updateBlock single row", async () => {
+  it.skip("updateBlock single row", async () => {
     const blocks = [];
     const updateBlocks = [];
     const containers = [];
@@ -1205,7 +1473,7 @@ describe("SqlBlobMetadataStore", () => {
     console.log(end.getTime() - start.getTime());
   });
 
-  it.only("updateBlock transaction", async () => {
+  it.skip("updateBlock transaction", async () => {
     const blocks = [];
     const updateBlocks = [];
     const containers = [];

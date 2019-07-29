@@ -1,12 +1,14 @@
 import async from "async";
 import { promisify } from "bluebird";
-import { BOOLEAN, DATE, fn, INTEGER, Model, Op, Options as SequelizeOptions, Sequelize } from "sequelize";
+import { BOOLEAN, DATE, INTEGER, literal, Model, Op, Options as SequelizeOptions, Sequelize, TEXT } from "sequelize";
 
 import StorageErrorFactory from "../errors/StorageErrorFactory";
+import * as Models from "../generated/artifacts/models";
 import IBlobMetadataStore, {
   BlobModel,
   BlockModel,
   ContainerModel,
+  PersistencyBlockModel,
   ServicePropertiesModel,
 } from "./IBlobMetadataStore";
 
@@ -15,7 +17,7 @@ class ServicesModel extends Model {}
 class ContainersModel extends Model {}
 class BlobsModel extends Model {}
 class TestModel extends Model {}
-// class BlocksModel extends Model {}
+class BlocksModel extends Model {}
 // class PagesModel extends Model {}
 
 /*
@@ -67,6 +69,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     // TODO: Duplicate models definition here with migrations files; Should update them together to avoid inconsistency
     ServicesModel.init(
       {
+        // TODO: Check max account name length
         accountName: {
           type: "VARCHAR(255)",
           primaryKey: true
@@ -91,27 +94,27 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         deleteRetentionPolicy: {
           type: "VARCHAR(255)"
-        },
-        createdAt: {
-          allowNull: false,
-          type: DATE
-        },
-        updatedAt: {
-          allowNull: false,
-          type: DATE
         }
       },
-      { sequelize: this.sequelize, modelName: "Services" }
+      {
+        sequelize: this.sequelize,
+        modelName: "Services",
+        tableName: "Services",
+        timestamps: false
+      }
     );
 
     // TODO: Duplicate models definition here with migrations files; Should update them together to avoid inconsistency
     ContainersModel.init(
       {
         accountName: {
-          type: "VARCHAR(255)"
+          type: "VARCHAR(255)",
+          unique: "accountname_containername"
         },
+        // TODO: Check max container name length
         containerName: {
-          type: "VARCHAR(255)"
+          type: "VARCHAR(255)",
+          unique: "accountname_containername"
         },
         containerId: {
           type: INTEGER.UNSIGNED,
@@ -142,33 +145,39 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           type: BOOLEAN
         },
         deleting: {
-          type: BOOLEAN,
-          defaultValue: false,
+          type: INTEGER.UNSIGNED,
+          defaultValue: 0, // 0 means container is not under deleting(gc)
           allowNull: false
-        },
-        createdAt: {
-          allowNull: false,
-          type: DATE
-        },
-        updatedAt: {
-          allowNull: false,
-          type: DATE
         }
       },
-      { sequelize: this.sequelize, modelName: "Containers" }
+      {
+        sequelize: this.sequelize,
+        modelName: "Containers",
+        tableName: "Containers",
+        timestamps: false
+      }
     );
 
     // TODO: Duplicate models definition here with migrations files; Should update them together to avoid inconsistency
     BlobsModel.init(
       {
         accountName: {
-          type: "VARCHAR(255)"
+          type: "VARCHAR(255)",
+          allowNull: false
         },
         containerName: {
-          type: "VARCHAR(255)"
+          type: "VARCHAR(255)",
+          allowNull: false
         },
+        // TODO: Check max blob name length
         blobName: {
-          type: "VARCHAR(255)"
+          type: "VARCHAR(255)",
+          allowNull: false
+        },
+        snapshot: {
+          type: "VARCHAR(255)",
+          allowNull: false,
+          defaultValue: ""
         },
         blobId: {
           type: INTEGER.UNSIGNED,
@@ -183,31 +192,89 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           allowNull: false,
           type: "VARCHAR(127)"
         },
+        deleting: {
+          type: INTEGER.UNSIGNED,
+          defaultValue: 0, // 0 means container is not under deleting(gc)
+          allowNull: false
+        },
+        isCommitted: {
+          type: BOOLEAN,
+          allowNull: false
+        },
+        persistency: {
+          type: "VARCHAR(255)"
+        },
+        committedBlocksInOrder: {
+          type: TEXT({ length: "medium" })
+        },
         metadata: {
           type: "VARCHAR(2047)"
-        },
-        containerAcl: {
-          type: "VARCHAR(1023)"
-        },
-        publicAccess: {
-          type: "VARCHAR(31)"
-        },
-        hasImmutabilityPolicy: {
-          type: BOOLEAN
-        },
-        hasLegalHold: {
-          type: BOOLEAN
-        },
-        createdAt: {
-          allowNull: false,
-          type: DATE
-        },
-        updatedAt: {
-          allowNull: false,
-          type: DATE
         }
       },
-      { sequelize: this.sequelize, modelName: "Containers" }
+      {
+        sequelize: this.sequelize,
+        modelName: "Blobs",
+        tableName: "Blobs",
+        timestamps: false,
+        indexes: [
+          {
+            // name: 'title_index',
+            // using: 'BTREE',
+            fields: [
+              "accountName",
+              "containerName",
+              "blobName",
+              "snapshot",
+              "deleting"
+            ]
+          }
+        ]
+      }
+    );
+
+    BlocksModel.init(
+      {
+        accountName: {
+          type: "VARCHAR(255)",
+          allowNull: false
+        },
+        containerName: {
+          type: "VARCHAR(255)",
+          allowNull: false
+        },
+        blobName: {
+          type: "VARCHAR(255)",
+          allowNull: false
+        },
+        // TODO: Check max block name length
+        blockName: {
+          type: "VARCHAR(255)",
+          allowNull: false
+        },
+        deleting: {
+          type: INTEGER.UNSIGNED,
+          defaultValue: 0, // 0 means container is not under deleting(gc)
+          allowNull: false
+        },
+        size: {
+          type: INTEGER.UNSIGNED,
+          allowNull: false
+        },
+        persistency: {
+          type: "VARCHAR(255)"
+        }
+      },
+      {
+        sequelize: this.sequelize,
+        modelName: "Blocks",
+        tableName: "Blocks",
+        timestamps: false,
+        indexes: [
+          {
+            fields: ["accountName", "containerName", "blobName", "blockName"]
+          }
+        ]
+      }
     );
 
     TestModel.init(
@@ -228,9 +295,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           type: DATE
         }
       },
-      { sequelize: this.sequelize, modelName: "Test" }
+      { sequelize: this.sequelize, modelName: "Test", tableName: "Tests" }
     );
 
+    // TODO: sync() is only for development purpose, use migration for production
     await this.sequelize.sync();
 
     this.initialized = true;
@@ -565,28 +633,122 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new Error("Method not implemented.");
   }
 
-  public createBlob<T extends BlobModel>(blob: T): Promise<T> {
-    throw new Error("Method not implemented.");
+  public async createBlob(blob: BlobModel): Promise<void> {
+    // TODO: Check account & container status
+    await BlobsModel.upsert({
+      accountName: blob.accountName,
+      containerName: blob.containerName,
+      blobName: blob.name,
+      snapshot: blob.snapshot,
+      isCommitted: true,
+      lastModified: blob.properties.lastModified,
+      etag: blob.properties.etag,
+      persistency: this.serializeModelValue(blob.persistency),
+      committedBlocksInOrder: this.serializeModelValue(
+        blob.committedBlocksInOrder
+      )
+    });
   }
 
-  public downloadBlob<T extends BlobModel>(
+  public downloadBlob(
     account: string,
     container: string,
     blob: string,
-    snapshot?: string | undefined
-  ): Promise<T | undefined> {
-    throw new Error("Method not implemented.");
+    snapshot: string = ""
+  ): Promise<BlobModel | undefined> {
+    // TODO: Check account & container status
+    return BlobsModel.findOne({
+      where: {
+        accountName: account,
+        containerName: container,
+        blobName: blob,
+        snapshot
+      }
+    }).then(res => {
+      if (res === null || res === undefined) {
+        return undefined;
+      }
+
+      const isCommitted = this.getModelValue<boolean>(res, "isCommitted", true);
+      if (!isCommitted) {
+        return undefined;
+      }
+
+      return {
+        accountName: account,
+        containerName: container,
+        name: blob,
+        snapshot,
+        isCommitted,
+        properties: {
+          lastModified: this.getModelValue<Date>(res, "lastModified", true),
+          etag: this.getModelValue<string>(res, "etag", true)
+        },
+        persistency: this.deserializeModelValue(res, "persistency"),
+        committedBlocksInOrder: this.deserializeModelValue(
+          res,
+          "committedBlocksInOrder"
+        )
+      };
+    });
   }
-  public listBlobs<T extends BlobModel>(
+
+  public listBlobs(
     account?: string | undefined,
     container?: string | undefined,
     blob?: string | undefined,
-    prefix?: string | undefined,
-    maxResults?: number | undefined,
+    prefix: string | undefined = "",
+    maxResults: number | undefined = 2000,
     marker?: number | undefined,
-    includeSnapshots?: boolean | undefined
-  ): Promise<[T[], number | undefined]> {
-    throw new Error("Method not implemented.");
+    includeSnapshots: boolean = false
+  ): Promise<[BlobModel[], number | undefined]> {
+    // TODO: Validate account, container
+    const whereQuery: any = { accountName: account, containerName: container };
+    if (prefix.length > 0) {
+      whereQuery.blobName = {
+        [Op.like]: `${prefix}%`
+      };
+    }
+    if (marker !== undefined) {
+      whereQuery.blobId = {
+        [Op.gt]: marker
+      };
+    }
+    // TODO: Query snapshot
+
+    const modelConvert = (res: BlobsModel): BlobModel => {
+      return {
+        accountName: this.getModelValue<string>(res, "accountName", true),
+        containerName: this.getModelValue<string>(res, "containerName", true),
+        name: this.getModelValue<string>(res, "blobName", true),
+        snapshot: this.getModelValue<string>(res, "snapshot", true),
+        isCommitted: this.getModelValue<boolean>(res, "isCommitted", true),
+        properties: {
+          lastModified: this.getModelValue<Date>(res, "lastModified", true),
+          etag: this.getModelValue<string>(res, "etag", true)
+        },
+        persistency: this.deserializeModelValue(res, "persistency"),
+        committedBlocksInOrder: this.deserializeModelValue(
+          res,
+          "committedBlocksInOrder"
+        )
+      };
+    };
+
+    return BlobsModel.findAll({
+      limit: maxResults,
+      where: whereQuery as any,
+      // TODO: Should use ASC order index?
+      order: [["blobId", "ASC"]]
+    }).then(res => {
+      if (res.length < maxResults) {
+        return [res.map(val => modelConvert(val)), undefined];
+      } else {
+        const tail = res[res.length - 1];
+        const nextMarker = this.getModelValue<number>(tail, "blobId", true);
+        return [res.map(val => modelConvert(val)), nextMarker];
+      }
+    });
   }
   public deleteBlob(
     account: string,
@@ -597,41 +759,202 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new Error("Method not implemented.");
   }
 
-  public stageBlock(block: BlockModel): Promise<BlockModel> {
-    // return TestModel.upsert(
-    //   {
-    //     blobName: block.blobName,
-    //     blockList: fn(
-    //       "CONCAT",
-    //       Sequelize.col("blockList"),
-    //       `${block.name}_${block.persistency.id}#`
-    //     )
-    //   },
-    //   {
-    //     fields: {
-    //       blockList: fn(
-    //         "CONCAT",
-    //         Sequelize.col("blockList"),
-    //         `${block.name}_${block.persistency.id}#`
-    //       )
-    //     }
-    //   }
-    // ).then(() => block);
+  public async stageBlock(block: BlockModel): Promise<void> {
+    await BlocksModel.upsert({
+      accountName: block.accountName,
+      containerName: block.containerName,
+      blobName: block.blobName,
+      blockName: block.name,
+      size: block.size,
+      persistency: this.serializeModelValue(block.persistency)
+    });
+  }
 
-    return TestModel.update(
-      {
-        blockList: fn(
-          "CONCAT",
-          Sequelize.col("blockList"),
-          `${block.name}_${block.persistency.id}#`
-        )
-      },
-      {
-        where: {
-          blobName: block.blobName
+  public async getBlockList(
+    account: string,
+    container: string,
+    blob: string,
+    isCommitted?: boolean | undefined
+  ): Promise<{
+    uncommittedBlocks: Models.Block[];
+    committedBlocks: Models.Block[];
+  }> {
+    const res: {
+      uncommittedBlocks: Models.Block[];
+      committedBlocks: Models.Block[];
+    } = {
+      uncommittedBlocks: [],
+      committedBlocks: []
+    };
+
+    await this.sequelize.transaction(async t => {
+      if (isCommitted !== false) {
+        const blobModel = await BlobsModel.findOne({
+          attributes: ["committedBlocksInOrder"],
+          where: {
+            accountName: account,
+            containerName: container,
+            blobName: blob,
+            snapshot: ""
+          },
+          transaction: t
+        });
+
+        if (blobModel !== null && res !== undefined) {
+          res.committedBlocks = this.deserializeModelValue(
+            blobModel,
+            "committedBlocksInOrder"
+          );
         }
       }
-    ).then(() => block);
+
+      if (isCommitted !== true) {
+        const blocks = await BlocksModel.findAll({
+          attributes: ["blockName", "size"],
+          where: {
+            accountName: account,
+            containerName: container,
+            blobName: blob,
+            deleting: 0
+          },
+          transaction: t
+        });
+        for (const item of blocks) {
+          const block = {
+            name: this.getModelValue<string>(item, "blockName", true),
+            size: this.getModelValue<number>(item, "size", true)
+          };
+          res.uncommittedBlocks.push(block);
+        }
+      }
+    });
+
+    return res;
+  }
+
+  public async commitBlockList(
+    blob: BlobModel,
+    blockList: { blockName: string; blockCommitType: string }[]
+  ): Promise<void> {
+    // TODO: Validate account, container
+    // Steps:
+    // 1. Check blob exist
+    // 2. Get committed block list
+    // 3. Get uncommitted block list
+    // 4. Check incoming block list
+    // 5. Update blob model
+    // 6. GC uncommitted blocks
+
+    await this.sequelize.transaction(async t => {
+      const pCommittedBlocksMap: Map<string, PersistencyBlockModel> = new Map(); // persistencyCommittedBlocksMap
+      const pUncommittedBlocksMap: Map<
+        string,
+        PersistencyBlockModel
+      > = new Map(); // persistencyUncommittedBlocksMap
+
+      // TODO: Fill in context id
+      const badRequestError = StorageErrorFactory.getInvalidOperation("");
+
+      const res = await BlobsModel.findOne({
+        where: {
+          accountName: blob.accountName,
+          containerName: blob.containerName,
+          blobName: blob.name,
+          snapshot: blob.snapshot
+        },
+        transaction: t
+      });
+      if (res !== null && res !== undefined) {
+        const committedBlocksInOrder = this.deserializeModelValue(
+          res!,
+          "committedBlocksInOrder"
+        );
+        for (const pBlock of committedBlocksInOrder || []) {
+          pCommittedBlocksMap.set(pBlock.name, pBlock);
+        }
+      }
+      const res_1 = await BlocksModel.findAll({
+        where: {
+          accountName: blob.accountName,
+          containerName: blob.containerName,
+          blobName: blob.name,
+          deleting: 0
+        },
+        transaction: t
+      });
+      for (const item of res_1) {
+        const block = {
+          name: this.getModelValue<string>(item, "blockName", true),
+          size: this.getModelValue<number>(item, "size", true),
+          persistency: this.deserializeModelValue(item, "persistency")
+        };
+        pUncommittedBlocksMap.set(block.name, block);
+      }
+      const selectedBlockList: PersistencyBlockModel[] = [];
+      for (const block_1 of blockList) {
+        switch (block_1.blockCommitType.toLowerCase()) {
+          case "uncommitted":
+            const pUncommittedBlock = pUncommittedBlocksMap.get(
+              block_1.blockName
+            );
+            if (pUncommittedBlock === undefined) {
+              throw badRequestError;
+            } else {
+              selectedBlockList.push(pUncommittedBlock);
+            }
+            break;
+          case "committed":
+            const pCommittedBlock = pCommittedBlocksMap.get(block_1.blockName);
+            if (pCommittedBlock === undefined) {
+              throw badRequestError;
+            } else {
+              selectedBlockList.push(pCommittedBlock);
+            }
+            break;
+          case "latest":
+            const pLatestBlock =
+              pUncommittedBlocksMap.get(block_1.blockName) ||
+              pCommittedBlocksMap.get(block_1.blockName);
+            if (pLatestBlock === undefined) {
+              throw badRequestError;
+            } else {
+              selectedBlockList.push(pLatestBlock);
+            }
+            break;
+          default:
+            throw badRequestError;
+        }
+      }
+
+      await BlobsModel.upsert(
+        {
+          accountName: blob.accountName,
+          containerName: blob.containerName,
+          blobName: blob.name,
+          snapshot: "",
+          isCommitted: true,
+          lastModified: blob.properties.lastModified,
+          etag: blob.properties.etag,
+          persistency: null,
+          committedBlocksInOrder: this.serializeModelValue(selectedBlockList)
+        },
+        { transaction: t }
+      );
+
+      await BlocksModel.update(
+        {
+          deleting: literal("deleting + 1")
+        },
+        {
+          where: {
+            accountName: blob.accountName,
+            containerName: blob.containerName,
+            blobName: blob.name
+          },
+          transaction: t
+        }
+      );
+    });
   }
 
   public async insertBlock(block: BlockModel): Promise<void> {
@@ -708,21 +1031,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new Error("Method not implemented.");
   }
 
-  public getBlockList<T extends BlockModel>(
-    account?: string | undefined,
-    container?: string | undefined,
-    blob?: string | undefined,
-    isCommitted?: boolean | undefined
-  ): Promise<T[]> {
-    throw new Error("Method not implemented.");
-  }
-
   public setBlobHTTPHeaders(blob: BlobModel): Promise<BlobModel> {
     throw new Error("Method not implemented.");
   }
+
   public setBlobMetadata(blob: BlobModel): Promise<BlobModel> {
     throw new Error("Method not implemented.");
   }
+
   public getBlobProperties(
     account: string,
     container: string,
@@ -731,14 +1047,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<BlobModel | undefined> {
     throw new Error("Method not implemented.");
   }
+
   public undeleteBlob(
     account: string,
     container: string,
     blob: string
   ): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-  public commitBlockList(blockList: BlockModel[]): Promise<void> {
     throw new Error("Method not implemented.");
   }
 
@@ -759,12 +1073,24 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     return value;
   }
 
-  private deserializeModelValue(model: Model, key: string): any {
+  private deserializeModelValue(
+    model: Model,
+    key: string,
+    isRequired: boolean = false
+  ): any {
     const rawValue = this.getModelValue<string>(model, key);
     if (typeof rawValue === "string") {
       // TODO: Decouple deserializer
       return JSON.parse(rawValue);
     }
+
+    if (isRequired) {
+      throw new Error(
+        // tslint:disable-next-line:max-line-length
+        `SqlBlobMetadataStore:deserializeModelValue() error. ${key} is required but value from database model is undefined.`
+      );
+    }
+
     return undefined;
   }
 
