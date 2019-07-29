@@ -7,15 +7,13 @@ import {
   StorageURL
 } from "@azure/storage-blob";
 
-import Server from "../../src/blob/SqlBlobServer";
 import { configLogger } from "../../src/common/Logger";
 import {
   appendToURLPath,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
-  rmTestFile,
-  ServerConfigFactory
+  TestServerFactory
 } from "../testutils";
 
 import assert = require("assert");
@@ -23,11 +21,13 @@ import assert = require("assert");
 configLogger(false);
 
 describe("SpecialNaming", () => {
+  const host = "127.0.0.1";
+  const port = 11000;
   // TODO: Create a server factory as tests utils
-  const config = ServerConfigFactory.getSql();
+  const server = TestServerFactory.getServer(host, port);
 
   // TODO: Create serviceURL factory as tests utils
-  const baseURL = `http://${config.host}:${config.port}/devstoreaccount1`;
+  const baseURL = `http://${host}:${port}/devstoreaccount1`;
   const serviceURL = new ServiceURL(
     baseURL,
     StorageURL.newPipeline(
@@ -41,10 +41,7 @@ describe("SpecialNaming", () => {
   const containerName: string = getUniqueName("1container-with-dash");
   const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
 
-  let server: Server;
-
   before(async () => {
-    server = new Server(config);
     await server.start();
     await containerURL.create(Aborter.none);
   });
@@ -52,7 +49,7 @@ describe("SpecialNaming", () => {
   after(async () => {
     await containerURL.delete(Aborter.none);
     await server.close();
-    await rmTestFile(config);
+    await TestServerFactory.rmTestFile();
   });
 
   it("Should work with special container and blob names with spaces", async () => {

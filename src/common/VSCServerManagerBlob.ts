@@ -67,7 +67,7 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
     await rimrafAsync(config.blobDBPath);
     await rimrafAsync(config.extentDBPath);
     for (const persistence of config.persistenceArray) {
-      await rimrafAsync(persistence.persistencyPath);
+      await rimrafAsync(persistence.persistencePath);
     }
   }
 
@@ -79,8 +79,8 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
     // Initialize server configuration
     const persistenceArray: StoreDestinationArray = [
       {
-        persistencyId: "Default",
-        persistencyPath: join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
+        persistenceId: "Default",
+        persistencePath: join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
         maxConcurrency: 1
       }
     ];

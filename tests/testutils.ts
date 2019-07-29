@@ -4,9 +4,12 @@ import { join } from "path";
 import rimraf from "rimraf";
 import { URL } from "url";
 
+import BlobServer from "../src/blob/BlobServer";
 import LokiBlobConfiguration from "../src/blob/LokiBlobConfiguration";
 import SqlBlobConfiguration from "../src/blob/SqlBlobConfiguration";
+import SqlBlobServer from "../src/blob/SqlBlobServer";
 import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
+import ServerBase from "../src/common/ServerBase";
 
 export const EMULATOR_ACCOUNT_NAME = "devstoreaccount1";
 
@@ -199,7 +202,7 @@ export async function readStreamToLocalFile(
   });
 }
 
-export class ServerConfigFactory {
+export class TestServerFactory {
   static host = "127.0.0.1";
   static port = 11000;
   static persistenceArray: StoreDestinationArray = [
@@ -227,6 +230,16 @@ export class ServerConfigFactory {
     }
   };
 
+  static serverType = process.env.AZURITE_TEST_SERVER;
+
+  public static getHost() {
+    return this.host;
+  }
+
+  public static getPort() {
+    return this.port;
+  }
+
   public static getLoki(): LokiBlobConfiguration {
     const config = new LokiBlobConfiguration(
       this.host,
@@ -251,17 +264,52 @@ export class ServerConfigFactory {
     );
     return config;
   }
-}
 
-export function rmTestFile(config: LokiBlobConfiguration): Promise<void>;
-export function rmTestFile(config: SqlBlobConfiguration): Promise<void>;
-
-export async function rmTestFile(config: any) {
-  await rmRecursive(config.blobDBPath);
-  if (config instanceof LokiBlobConfiguration) {
-    await rmRecursive(config.extentDBPath);
+  public static getServer(host?: string, port?: number): ServerBase {
+    this.getServerType();
+    // console.log(this.serverType);
+    if (this.serverType === "sql") {
+      // console.log("SqlServer");
+      return this.getSqlServer(host, port);
+    } else {
+      // console.log("LokiServer");
+      return this.getLokiServer(host, port);
+    }
   }
-  for (const persistence of config.persistenceArray) {
-    await rmRecursive(persistence.persistencePath);
+
+  public static getSqlServer(host?: string, port?: number) {
+    const config = this.getSql();
+    const _host = host || config.host;
+    const _port = port || config.port;
+
+    return new SqlBlobServer({
+      host: _host,
+      port: _port,
+      ...config
+    });
+  }
+
+  public static getLokiServer(host?: string, port?: number) {
+    const config = this.getLoki();
+    const _host = host || config.host;
+    const _port = port || config.port;
+
+    return new BlobServer({
+      host: _host,
+      port: _port,
+      ...config
+    });
+  }
+
+  public static async rmTestFile() {
+    await rmRecursive(this.dbPath);
+    await rmRecursive(this.extentdbPath);
+    for (const persistence of this.persistenceArray) {
+      await rmRecursive(persistence.persistencePath);
+    }
+  }
+
+  private static getServerType() {
+    this.serverType = process.env.AZURITE_TEST_SERVER;
   }
 }

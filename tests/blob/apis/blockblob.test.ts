@@ -8,7 +8,6 @@ import {
   StorageURL
 } from "@azure/storage-blob";
 
-import Server from "../../../src/blob/SqlBlobServer";
 import { configLogger } from "../../../src/common/Logger";
 import {
   base64encode,
@@ -16,8 +15,7 @@ import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
-  rmTestFile,
-  ServerConfigFactory
+  TestServerFactory
 } from "../../testutils";
 
 import assert = require("assert");
@@ -25,11 +23,13 @@ import assert = require("assert");
 configLogger(false);
 
 describe("BlockBlobAPIs", () => {
+  const host = "127.0.0.1";
+  const port = 11000;
   // TODO: Create a server factory as tests utils
-  const config = ServerConfigFactory.getSql();
+  const server = TestServerFactory.getServer(host, port);
 
   // TODO: Create serviceURL factory as tests utils
-  const baseURL = `http://${config.host}:${config.port}/devstoreaccount1`;
+  const baseURL = `http://${host}:${port}/devstoreaccount1`;
   const serviceURL = new ServiceURL(
     baseURL,
     StorageURL.newPipeline(
@@ -46,16 +46,13 @@ describe("BlockBlobAPIs", () => {
   let blobURL = BlobURL.fromContainerURL(containerURL, blobName);
   let blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
 
-  let server: Server;
-
   before(async () => {
-    server = new Server(config);
     await server.start();
   });
 
   after(async () => {
     await server.close();
-    await rmTestFile(config);
+    await TestServerFactory.rmTestFile();
   });
 
   beforeEach(async () => {
