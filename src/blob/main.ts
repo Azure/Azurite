@@ -9,9 +9,7 @@ import { StoreDestinationArray } from "../common/persistence/IExtentStore";
 import BlobServer from "./BlobServer";
 import LokiBlobConfiguration from "./LokiBlobConfiguration";
 import {
-  DEFAULT_BLOB_DB_PATH,
-  DEFAULT_BLOB_PERSISTENCE_PATH,
-  DEFAULT_EXTENT_DB_PATH
+    DEFAULT_BLOB_DB_PATH, DEFAULT_BLOB_PERSISTENCE_PATH, DEFAULT_EXTENT_DB_PATH
 } from "./utils/constants";
 
 // tslint:disable:no-console

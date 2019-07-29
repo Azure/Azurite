@@ -1,42 +1,27 @@
 import * as assert from "assert";
 
 import {
-  Aborter,
-  AccountSASPermissions,
-  AccountSASResourceTypes,
-  AccountSASServices,
-  AnonymousCredential,
-  BlobSASPermissions,
-  BlockBlobURL,
-  ContainerSASPermissions,
-  ContainerURL,
-  generateAccountSASQueryParameters,
-  generateBlobSASQueryParameters,
-  PageBlobURL,
-  SASProtocol,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+    Aborter, AccountSASPermissions, AccountSASResourceTypes, AccountSASServices,
+    AnonymousCredential, BlobSASPermissions, BlockBlobURL, ContainerSASPermissions, ContainerURL,
+    generateAccountSASQueryParameters, generateBlobSASQueryParameters, PageBlobURL, SASProtocol,
+    ServiceURL, SharedKeyCredential, StorageURL
 } from "@azure/storage-blob";
 
-import Server from "../../src/blob/SqlBlobServer";
 import { configLogger } from "../../src/common/Logger";
 import {
-  EMULATOR_ACCOUNT_KEY,
-  EMULATOR_ACCOUNT_NAME,
-  getUniqueName,
-  rmTestFile,
-  ServerConfigFactory
+    EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName, TestServerFactory
 } from "../testutils";
 
 configLogger(false);
 
 describe("Shared Access Signature (SAS) authentication", () => {
+  const host = "127.0.0.1";
+  const port = 11000;
   // TODO: Create a server factory as tests utils
-  const config = ServerConfigFactory.getSql();
+  const server = TestServerFactory.getServer(host, port);
 
   // TODO: Create serviceURL factory as tests utils
-  const baseURL = `http://${config.host}:${config.port}/devstoreaccount1`;
+  const baseURL = `http://${host}:${port}/devstoreaccount1`;
   const serviceURL = new ServiceURL(
     baseURL,
     StorageURL.newPipeline(
@@ -47,16 +32,13 @@ describe("Shared Access Signature (SAS) authentication", () => {
     )
   );
 
-  let server: Server;
-
   before(async () => {
-    server = new Server(config);
     await server.start();
   });
 
   after(async () => {
     await server.close();
-    await rmTestFile(config);
+    await TestServerFactory.rmTestFile();
   });
 
   it("generateAccountSASQueryParameters should work", async () => {
