@@ -38,7 +38,10 @@
         "${workspaceFolder}/${relativeFile}"
       ],
       "internalConsoleOptions": "openOnSessionStart",
-      "outputCapture": "std"
+      "outputCapture": "std",
+      "env": {
+        "AZURITE_TEST_SERVER": "sql"
+      }
     },
     {
       "name": "Run Extension",

@@ -1,16 +1,28 @@
 import {
-    BOOLEAN, DATE, INTEGER, Model, Op, Options as SequelizeOptions, Sequelize
+  BOOLEAN,
+  col,
+  DATE,
+  fn,
+  INTEGER,
+  Model,
+  Op,
+  Options as SequelizeOptions,
+  Sequelize
 } from "sequelize";
 
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import IBlobMetadataStore, {
-    BlobModel, BlockModel, ContainerModel, ServicePropertiesModel
+  BlobModel,
+  BlockModel,
+  ContainerModel,
+  ServicePropertiesModel
 } from "./IBlobMetadataStore";
 
 // tslint:disable: max-classes-per-file
 class ServicesModel extends Model {}
 class ContainersModel extends Model {}
 class BlobsModel extends Model {}
+class Tests extends Model {}
 // class BlocksModel extends Model {}
 // class PagesModel extends Model {}
 
@@ -206,6 +218,31 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       { sequelize: this.sequelize, modelName: "Containers" }
     );
 
+    Tests.init(
+      {
+        name: {
+          type: "VARCHAR(255)",
+          primaryKey: true
+        },
+        text: {
+          type: "VARCHAR(255)"
+        },
+        id: {
+          type: INTEGER.UNSIGNED
+        },
+        createdAt: {
+          allowNull: false,
+          type: DATE
+        },
+        updatedAt: {
+          allowNull: false,
+          type: DATE
+        }
+      },
+      { sequelize: this.sequelize, modelName: "Tests" }
+    );
+
+    await this.sequelize.sync();
     this.initialized = true;
   }
 
@@ -571,7 +608,16 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public stageBlock<T extends BlockModel>(block: T): Promise<T> {
-    throw new Error("Method not implemented.");
+    return Tests.upsert(
+      {
+        name: "haha",
+        text: fn("concat", col("text"), "text"),
+        id: 10
+      },
+      { fields: ["text"] }
+    ).then(() => {
+      return block;
+    });
   }
 
   public deleteAllBlocks(
