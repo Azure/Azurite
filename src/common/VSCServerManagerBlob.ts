@@ -1,13 +1,12 @@
 import { access } from "fs";
 import { join } from "path";
-import rimraf = require("rimraf");
 import { promisify } from "util";
 
 import BlobConfiguration from "../blob/BlobConfiguration";
 import BlobServer from "../blob/BlobServer";
 import {
-  DEFAULT_BLOB_PERSISTENCE_PATH,
-  DEFAULT_LOKI_DB_PATH
+  DEFAULT_BLOB_LOKI_DB_PATH,
+  DEFAULT_BLOB_PERSISTENCE_PATH
 } from "../blob/utils/constants";
 import * as Logger from "./Logger";
 import NoLoggerStrategy from "./NoLoggerStrategy";
@@ -17,6 +16,7 @@ import VSCEnvironment from "./VSCEnvironment";
 import VSCServerManagerBase from "./VSCServerManagerBase";
 import VSCServerManagerClosedState from "./VSCServerManagerClosedState";
 
+import rimraf = require("rimraf");
 const accessAsync = promisify(access);
 const rimrafAsync = promisify(rimraf);
 
@@ -75,7 +75,7 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
     const config = new BlobConfiguration(
       env.blobHost(),
       env.blobPort(),
-      join(location, DEFAULT_LOKI_DB_PATH),
+      join(location, DEFAULT_BLOB_LOKI_DB_PATH),
       join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
       !env.silent(),
       this.accessChannelStream,

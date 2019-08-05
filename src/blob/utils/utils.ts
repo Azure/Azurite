@@ -6,7 +6,7 @@ import { parse } from "url";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import {
-  API_VERSION,
+  BLOB_API_VERSION,
   EMULATOR_ACCOUNT_KIND,
   EMULATOR_ACCOUNT_SKUNAME
 } from "../utils/constants";
@@ -220,7 +220,7 @@ export function getContainerGetAccountInfoResponse(
     date: context.startTime!,
     requestId: context.contextID,
     statusCode: 200,
-    version: API_VERSION
+    version: BLOB_API_VERSION
   };
   return response;
 }

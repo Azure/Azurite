@@ -3,7 +3,7 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IServiceHandler from "../generated/handlers/IServiceHandler";
 import { parseXML } from "../generated/utils/xml";
-import { API_VERSION } from "../utils/constants";
+import { BLOB_API_VERSION } from "../utils/constants";
 import { getContainerGetAccountInfoResponse } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
@@ -32,7 +32,7 @@ export default class ServiceHandler extends BaseHandler
    */
   private readonly defaultServiceProperties = {
     cors: [],
-    defaultServiceVersion: API_VERSION,
+    defaultServiceVersion: BLOB_API_VERSION,
     hourMetrics: {
       enabled: false,
       retentionPolicy: {
@@ -120,7 +120,7 @@ export default class ServiceHandler extends BaseHandler
     const response: Models.ServiceSetPropertiesResponse = {
       requestId: context.contextID,
       statusCode: 202,
-      version: API_VERSION
+      version: BLOB_API_VERSION
     };
     return response;
   }
@@ -153,7 +153,7 @@ export default class ServiceHandler extends BaseHandler
       ...properties,
       requestId: context.contextID,
       statusCode: 200,
-      version: API_VERSION
+      version: BLOB_API_VERSION
     };
     return response;
   }
@@ -165,7 +165,7 @@ export default class ServiceHandler extends BaseHandler
     const response: Models.ServiceGetStatisticsResponse = {
       statusCode: 200,
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       date: context.startTime,
       geoReplication: {
         status: Models.GeoReplicationStatusType.Live,
@@ -214,7 +214,7 @@ export default class ServiceHandler extends BaseHandler
       serviceEndpoint,
       statusCode: 200,
       requestId: context.contextID,
-      version: API_VERSION
+      version: BLOB_API_VERSION
     };
 
     return res;

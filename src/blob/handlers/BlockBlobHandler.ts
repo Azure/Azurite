@@ -6,7 +6,7 @@ import Context from "../generated/Context";
 import IBlockBlobHandler from "../generated/handlers/IBlockBlobHandler";
 import { parseXML } from "../generated/utils/xml";
 import { BlobModel, BlockModel } from "../persistence/IBlobDataStore";
-import { API_VERSION } from "../utils/constants";
+import { BLOB_API_VERSION } from "../utils/constants";
 import { getMD5FromStream, getMD5FromString, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import BlobHandler from "./BlobHandler";
@@ -118,7 +118,7 @@ export default class BlockBlobHandler extends BaseHandler
       lastModified: date,
       contentMD5: blob.properties.contentMD5,
       requestId: blobCtx.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true
     };
@@ -193,7 +193,7 @@ export default class BlockBlobHandler extends BaseHandler
       statusCode: 201,
       contentMD5: undefined, // TODO: Block content MD5
       requestId: blobCtx.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true
     };
@@ -383,7 +383,7 @@ export default class BlockBlobHandler extends BaseHandler
       lastModified: blobCtx.startTime,
       contentMD5,
       requestId: blobCtx.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       date: blobCtx.startTime,
       isServerEncrypted: true
     };
@@ -430,7 +430,7 @@ export default class BlockBlobHandler extends BaseHandler
       contentType: blob.properties.contentType,
       blobContentLength: blob.properties.contentLength,
       requestId: blobCtx.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       date,
       committedBlocks: [],
       uncommittedBlocks: []

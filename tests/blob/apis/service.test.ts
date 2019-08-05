@@ -1,3 +1,5 @@
+import * as assert from "assert";
+
 import {
   Aborter,
   ContainerURL,
@@ -5,7 +7,6 @@ import {
   SharedKeyCredential,
   StorageURL
 } from "@azure/storage-blob";
-import * as assert from "assert";
 
 import BlobConfiguration from "../../../src/blob/BlobConfiguration";
 import Server from "../../../src/blob/BlobServer";
