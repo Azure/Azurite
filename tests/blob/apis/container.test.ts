@@ -404,6 +404,43 @@ describe("ContainerAPIs", () => {
     }
   });
 
+  it("should correctly order all blobs in the container", async () => {
+    const blobURLs = [];
+    const blobNames: Array<string> = [];
+
+    for (let i = 1; i < 4; i++) {
+      var name = `blockblob${i}/abc-00${i}`;
+      const blobURL = BlobURL.fromContainerURL(containerURL, name);
+      const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
+      await blockBlobURL.upload(Aborter.none, "", 0);
+      blobURLs.push(blobURL);
+      blobNames.push(name);
+    }
+
+    const inputmarker = undefined;
+    const result = await containerURL.listBlobFlatSegment(
+      Aborter.none,
+      inputmarker,
+      {
+        prefix: "blockblob"
+      }
+    );
+    assert.ok(result.serviceEndpoint.length > 0);
+    assert.ok(containerURL.url.indexOf(result.containerName));
+
+    const gotNames: Array<string> = [];
+
+    for (const item of result.segment.blobItems) {
+      gotNames.push(item.name);
+    }
+
+    assert.deepStrictEqual(gotNames, blobNames);
+
+    for (const blob of blobURLs) {
+      await blob.delete(Aborter.none);
+    }
+  });
+
   it("getAccessPolicy", async () => {
     const result = await containerURL.getAccessPolicy(Aborter.none);
     assert.ok(result.eTag!.length > 0);
