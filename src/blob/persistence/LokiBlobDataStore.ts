@@ -473,6 +473,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       docs = await coll
         .chain()
         .find(query)
+        .simplesort("name")
         .limit(maxResults)
         .data();
     } else {
@@ -482,6 +483,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
         .where(obj => {
           return obj.snapshot.length === 0;
         })
+        .simplesort("name")
         .limit(maxResults)
         .data();
     }
