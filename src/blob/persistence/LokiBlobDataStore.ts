@@ -464,7 +464,9 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       query.containerName = container;
     }
 
-    query.$loki = { $gt: marker };
+    if (marker === undefined) {
+      marker = 0;
+    }
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
 
@@ -474,6 +476,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
         .chain()
         .find(query)
         .simplesort("name")
+        .offset(marker)
         .limit(maxResults)
         .data();
     } else {
@@ -484,6 +487,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
           return obj.snapshot.length === 0;
         })
         .simplesort("name")
+        .offset(marker)
         .limit(maxResults)
         .data();
     }
@@ -498,7 +502,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     if (docs.length < maxResults) {
       return [docs, undefined];
     } else {
-      const nextMarker = docs[docs.length - 1].$loki;
+      const nextMarker = docs.length;
       return [docs, nextMarker];
     }
   }
