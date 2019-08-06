@@ -502,7 +502,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     if (docs.length < maxResults) {
       return [docs, undefined];
     } else {
-      const nextMarker = docs.length;
+      const nextMarker = docs.length + marker;
       return [docs, nextMarker];
     }
   }

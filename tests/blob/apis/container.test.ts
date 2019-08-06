@@ -471,12 +471,13 @@ describe("ContainerAPIs", () => {
       Aborter.none,
       inputmarker,
       {
-        maxresults: 7
+        maxresults: 4
       }
     );
     assert.ok(result.serviceEndpoint.length > 0);
     assert.ok(containerURL.url.indexOf(result.containerName));
     assert.ok(result.nextMarker);
+    assert.equal(result.segment.blobItems.length, 4);
 
     const gotNames: Array<string> = [];
 
@@ -484,19 +485,33 @@ describe("ContainerAPIs", () => {
       gotNames.push(item.name);
     }
 
-    assert.equal(result.segment.blobItems.length, 7);
+    result = await containerURL.listBlobFlatSegment(
+      Aborter.none,
+      result.nextMarker,
+      {
+        maxresults: 4
+      }
+    );
+    assert.ok(result.serviceEndpoint.length > 0);
+    assert.ok(containerURL.url.indexOf(result.containerName));
+    assert.ok(result.nextMarker);
+    assert.equal(result.segment.blobItems.length, 4);
+
+    for (const item of result.segment.blobItems) {
+      gotNames.push(item.name);
+    }
 
     result = await containerURL.listBlobFlatSegment(
       Aborter.none,
       result.nextMarker,
       {
-        maxresults: 7
+        maxresults: 4
       }
     );
     assert.ok(result.serviceEndpoint.length > 0);
     assert.ok(containerURL.url.indexOf(result.containerName));
     assert.strictEqual(result.nextMarker, "");
-    assert.equal(result.segment.blobItems.length, 3);
+    assert.equal(result.segment.blobItems.length, 2);
 
     for (const item of result.segment.blobItems) {
       gotNames.push(item.name);
