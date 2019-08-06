@@ -441,6 +441,64 @@ describe("ContainerAPIs", () => {
     }
   });
 
+  it("returns a valid, correct nextMarker", async () => {
+    const blobURLs = [];
+    const blobNames: Array<string> = [];
+
+    for (let i = 0; i < 10; i++) {
+      var name = `blockblob${i}/abc-00${i}`;
+      const blobURL = BlobURL.fromContainerURL(containerURL, name);
+      const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
+      await blockBlobURL.upload(Aborter.none, "", 0);
+      blobURLs.push(blobURL);
+      blobNames.push(name);
+    }
+
+    const inputmarker = undefined;
+    var result = await containerURL.listBlobFlatSegment(
+      Aborter.none,
+      inputmarker,
+      {
+        prefix: "blockblob",
+        maxresults: 7
+      }
+    );
+    assert.ok(result.serviceEndpoint.length > 0);
+    assert.ok(containerURL.url.indexOf(result.containerName));
+    assert.ok(result.nextMarker);
+
+    const gotNames: Array<string> = [];
+
+    for (const item of result.segment.blobItems) {
+      gotNames.push(item.name);
+    }
+
+    assert.equal(result.segment.blobItems.length, 7);
+
+    result = await containerURL.listBlobFlatSegment(
+      Aborter.none,
+      result.nextMarker,
+      {
+        prefix: "blockblob",
+        maxresults: 7
+      }
+    );
+    assert.ok(result.serviceEndpoint.length > 0);
+    assert.ok(containerURL.url.indexOf(result.containerName));
+    assert.strictEqual(result.nextMarker, "");
+    assert.equal(result.segment.blobItems.length, 3);
+
+    for (const item of result.segment.blobItems) {
+      gotNames.push(item.name);
+    }
+
+    assert.deepStrictEqual(gotNames, blobNames);
+
+    for (const blob of blobURLs) {
+      await blob.delete(Aborter.none);
+    }
+  });
+
   it("getAccessPolicy", async () => {
     const result = await containerURL.getAccessPolicy(Aborter.none);
     assert.ok(result.eTag!.length > 0);
