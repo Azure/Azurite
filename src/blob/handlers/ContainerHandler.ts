@@ -757,7 +757,7 @@ export default class ContainerHandler extends BaseHandler
     const request = context.request!;
     const accountName = container.accountName;
     const containerName = container.name;
-    const marker = parseInt(options.marker || "0", 10);
+    const marker = options.marker;
     const delimiter = "";
     options.marker = options.marker || "";
     let includeSnapshots: boolean = false;
@@ -828,7 +828,7 @@ export default class ContainerHandler extends BaseHandler
     const request = context.request!;
     const accountName = container.accountName;
     const containerName = container.name;
-    const marker = parseInt(options.marker || "0", 10);
+    const marker = options.marker;
     delimiter = delimiter === "" ? "/" : delimiter;
     options.prefix = options.prefix || "";
     options.marker = options.marker || "";

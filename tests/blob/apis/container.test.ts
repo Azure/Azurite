@@ -476,7 +476,7 @@ describe("ContainerAPIs", () => {
     );
     assert.ok(result.serviceEndpoint.length > 0);
     assert.ok(containerURL.url.indexOf(result.containerName));
-    assert.ok(result.nextMarker);
+    assert.equal(result.nextMarker, "blockblob/abc-003");
     assert.equal(result.segment.blobItems.length, 4);
 
     const gotNames: Array<string> = [];
@@ -494,7 +494,7 @@ describe("ContainerAPIs", () => {
     );
     assert.ok(result.serviceEndpoint.length > 0);
     assert.ok(containerURL.url.indexOf(result.containerName));
-    assert.ok(result.nextMarker);
+    assert.equal(result.nextMarker, "blockblob/abc-007");
     assert.equal(result.segment.blobItems.length, 4);
 
     for (const item of result.segment.blobItems) {
