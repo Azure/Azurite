@@ -447,7 +447,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     blob?: string,
     prefix: string | undefined = "",
     maxResults: number | undefined = 5000,
-    marker?: string,
+    marker: string = "",
     includeSnapshots?: boolean | undefined
   ): Promise<[T[], string | undefined]> {
     const query: any = {};
@@ -462,10 +462,6 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     }
     if (container !== undefined) {
       query.containerName = container;
-    }
-
-    if (marker === undefined) {
-      marker = "";
     }
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
