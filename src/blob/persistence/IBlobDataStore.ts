@@ -250,9 +250,9 @@ export interface IBlobDataStore extends IDataStore {
     blob?: string,
     prefix?: string,
     maxResults?: number,
-    marker?: number,
+    marker?: string,
     includeSnapshots?: boolean
-  ): Promise<[T[], number | undefined]>;
+  ): Promise<[T[], string | undefined]>;
 
   /**
    * Delete blob item from persistency layer.
