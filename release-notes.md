@@ -1,6 +1,7 @@
 # 2.0  
 ## 2.7.1
 - using correct process termination for cleanup on exit in windows 
+- updated dependencies to address package vulnerabilities  
 - merged PR [#134](https://github.com/Azure/Azurite/pull/134) -> Thanks to gpartyk  
 - fixes[#133](https://github.com/Azure/Azurite/issues/133) - Correct OData Metadata for single entity  
 - merged PR [#184] -> Thanks to AleF83  
@@ -9,7 +10,7 @@
 - fixes [#129](https://github.com/Azure/Azurite/issues/129) - Query Entities operation not returning a list of entities in a table for single entities
 - merged PR [#128](https://github.com/Azure/Azurite/pull/128) -> Thanks to gpartyk - Added Support for HTTP Method OVerrides
 - merged PR [#119](https://github.com/Azure/Azurite/pull/119) -> Thanks to seniorquico - Fixes incorrect handling of table management URLs
-
+-
 
 ## 2.7.0  
 - updated SAS Authentication   
