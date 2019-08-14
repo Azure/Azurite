@@ -10,7 +10,6 @@
 - fixes [#129](https://github.com/Azure/Azurite/issues/129) - Query Entities operation not returning a list of entities in a table for single entities
 - merged PR [#128](https://github.com/Azure/Azurite/pull/128) -> Thanks to gpartyk - Added Support for HTTP Method OVerrides
 - merged PR [#119](https://github.com/Azure/Azurite/pull/119) -> Thanks to seniorquico - Fixes incorrect handling of table management URLs
--
 
 ## 2.7.0  
 - updated SAS Authentication   
