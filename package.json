@@ -27,7 +27,7 @@
   "preferGlobal": true,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/arafato/azurite.git"
+    "url": "git+https://github.com/Azure/azurite.git"
   },
   "keywords": [
     "azure",
@@ -42,9 +42,9 @@
   "author": "Oliver Arafat",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/arafato/azurite/issues"
+    "url": "https://github.com/Azure/azurite/issues"
   },
-  "homepage": "https://github.com/arafato/azurite#readme",
+  "homepage": "https://github.com/Azure/azurite#readme",
   "dependencies": {
     "bluebird": "^3.5.5",
     "body-parser": "^1.19.0",
