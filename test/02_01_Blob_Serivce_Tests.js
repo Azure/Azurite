@@ -6,7 +6,7 @@ const chai = require("chai"),
   expect = chai.expect,
   BbPromise = require("bluebird"),
   fs = BbPromise.promisifyAll(require("fs-extra")),
-  Azurite = require("./../../Azurite/lib/AzuriteBlob"),
+  Azurite = require("../lib/AzuriteBlob"),
   rp = require("request-promise"),
   path = require("path"),
   xml2js = require("xml2js"),
@@ -23,9 +23,7 @@ const blobServiceTestPath =
     .toISOString()
     .replace(/:/g, "")
     .replace(/\./g, "") + "_BLOBSERVICE_TESTS";
-const blobService = azureStorage.createBlobService(
-  "UseDevelopmentStorage=true"
-);
+const blobService = createDevBlobService();
 
 describe("Blob Service Tests", () => {
     const azurite = new Azurite();
@@ -80,3 +78,14 @@ describe("Blob Service Tests", () => {
       });
 
 });
+
+function createDevBlobService() {
+    const svc = azureStorage.createBlobService(
+        "UseDevelopmentStorage=true"
+    );
+
+    // Disable keep-alive connections
+    svc.enableGlobalHttpAgent = true;
+
+    return svc;
+}
