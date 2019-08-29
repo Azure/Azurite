@@ -1,11 +1,11 @@
 import ConfigurationBase from "../common/ConfigurationBase";
 import {
+  DEFAULT_BLOB_LISTENING_PORT,
+  DEFAULT_BLOB_LOKI_DB_PATH,
   DEFAULT_BLOB_PERSISTENCE_PATH,
+  DEFAULT_BLOB_SERVER_HOST_NAME,
   DEFAULT_ENABLE_ACCESS_LOG,
-  DEFAULT_ENABLE_DEBUG_LOG,
-  DEFAULT_LOKI_DB_PATH,
-  DEFAULT_SERVER_HOST_NAME,
-  DEFAULT_SERVER_LISTENING_PORT
+  DEFAULT_ENABLE_DEBUG_LOG
 } from "./utils/constants";
 
 /**
@@ -22,9 +22,9 @@ import {
  */
 export default class BlobConfiguration extends ConfigurationBase {
   public constructor(
-    host: string = DEFAULT_SERVER_HOST_NAME,
-    port: number = DEFAULT_SERVER_LISTENING_PORT,
-    public readonly dbPath: string = DEFAULT_LOKI_DB_PATH,
+    host: string = DEFAULT_BLOB_SERVER_HOST_NAME,
+    port: number = DEFAULT_BLOB_LISTENING_PORT,
+    public readonly dbPath: string = DEFAULT_BLOB_LOKI_DB_PATH,
     public readonly persistencePath: string = DEFAULT_BLOB_PERSISTENCE_PATH,
     enableAccessLog: boolean = DEFAULT_ENABLE_ACCESS_LOG,
     accessLogWriteStream?: NodeJS.WritableStream,

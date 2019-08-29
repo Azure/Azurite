@@ -7,6 +7,15 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "Azurite Queue Service",
+      "cwd": "${workspaceFolder}",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "args": ["${workspaceFolder}/src/queue/main.ts", "-d", "debug.log"],
+      "outputCapture": "std"
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "Azurite Blob Service",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],

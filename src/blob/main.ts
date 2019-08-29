@@ -3,13 +3,13 @@ import { access } from "fs";
 import { dirname, join } from "path";
 import { promisify } from "util";
 
-import Environment from "../common/Environment";
 import * as Logger from "../common/Logger";
 import BlobConfiguration from "./BlobConfiguration";
+import BlobEnvironment from "./BlobEnvironment";
 import BlobServer from "./BlobServer";
 import {
-  DEFAULT_BLOB_PERSISTENCE_PATH,
-  DEFAULT_LOKI_DB_PATH
+  DEFAULT_BLOB_LOKI_DB_PATH,
+  DEFAULT_BLOB_PERSISTENCE_PATH
 } from "./utils/constants";
 
 // tslint:disable:no-console
@@ -21,7 +21,7 @@ const accessAsync = promisify(access);
  */
 async function main() {
   // Initialize and validate environment values from command line parameters
-  const env = new Environment();
+  const env = new BlobEnvironment();
   const location = await env.location();
   await accessAsync(location);
   if (env.debug() !== undefined) {
@@ -32,7 +32,7 @@ async function main() {
   const config = new BlobConfiguration(
     env.blobHost(),
     env.blobPort(),
-    join(location, DEFAULT_LOKI_DB_PATH),
+    join(location, DEFAULT_BLOB_LOKI_DB_PATH),
     join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
     !env.silent(),
     undefined,
@@ -76,6 +76,7 @@ async function main() {
         console.log(afterCloseMessage);
       });
     });
+  console.log("end");
 }
 
 main().catch(err => {

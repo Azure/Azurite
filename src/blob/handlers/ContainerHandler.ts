@@ -7,7 +7,7 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IContainerHandler from "../generated/handlers/IContainerHandler";
 import { ContainerModel } from "../persistence/IBlobDataStore";
-import { API_VERSION } from "../utils/constants";
+import { BLOB_API_VERSION } from "../utils/constants";
 import { getContainerGetAccountInfoResponse, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
@@ -74,7 +74,7 @@ export default class ContainerHandler extends BaseHandler
       lastModified,
       requestId: blobCtx.contextID,
       statusCode: 201,
-      version: API_VERSION
+      version: BLOB_API_VERSION
     };
 
     return response;
@@ -100,7 +100,7 @@ export default class ContainerHandler extends BaseHandler
       metadata: container.metadata,
       requestId: context.contextID,
       statusCode: 200,
-      version: API_VERSION
+      version: BLOB_API_VERSION
     };
     return response;
   }
@@ -176,7 +176,7 @@ export default class ContainerHandler extends BaseHandler
       date: context.startTime,
       requestId: context.contextID,
       statusCode: 202,
-      version: API_VERSION
+      version: BLOB_API_VERSION
     };
 
     return response;
@@ -265,7 +265,7 @@ export default class ContainerHandler extends BaseHandler
     responseObject.eTag = newEtag();
     responseObject.lastModified = container.properties.lastModified;
     responseObject.requestId = context.contextID;
-    responseObject.version = API_VERSION;
+    responseObject.version = BLOB_API_VERSION;
     responseObject.statusCode = 200;
 
     // TODO: Need fix generator code since the output containerAcl can't be serialized correctly
@@ -318,7 +318,7 @@ export default class ContainerHandler extends BaseHandler
       eTag: newEtag(),
       lastModified: container.properties.lastModified,
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       statusCode: 200
     };
 
@@ -395,7 +395,7 @@ export default class ContainerHandler extends BaseHandler
       lastModified: container.properties.lastModified,
       leaseId: container.leaseId,
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       statusCode: 201
     };
 
@@ -461,7 +461,7 @@ export default class ContainerHandler extends BaseHandler
       eTag: container.properties.etag,
       lastModified: container.properties.lastModified,
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       statusCode: 200
     };
 
@@ -544,7 +544,7 @@ export default class ContainerHandler extends BaseHandler
       lastModified: container.properties.lastModified,
       leaseId: container.leaseId,
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       statusCode: 200
     };
 
@@ -658,7 +658,7 @@ export default class ContainerHandler extends BaseHandler
       lastModified: container.properties.lastModified,
       leaseTime: leaseTimeinSecond,
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       statusCode: 202
     };
 
@@ -734,7 +734,7 @@ export default class ContainerHandler extends BaseHandler
       lastModified: container.properties.lastModified,
       leaseId: container.leaseId,
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       statusCode: 200
     };
 
@@ -757,7 +757,7 @@ export default class ContainerHandler extends BaseHandler
     const request = context.request!;
     const accountName = container.accountName;
     const containerName = container.name;
-    const marker = parseInt(options.marker || "0", 10);
+    const marker = options.marker;
     const delimiter = "";
     options.marker = options.marker || "";
     let includeSnapshots: boolean = false;
@@ -791,7 +791,7 @@ export default class ContainerHandler extends BaseHandler
       statusCode: 200,
       contentType: "application/xml",
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       date: context.startTime,
       serviceEndpoint,
       containerName,
@@ -828,7 +828,7 @@ export default class ContainerHandler extends BaseHandler
     const request = context.request!;
     const accountName = container.accountName;
     const containerName = container.name;
-    const marker = parseInt(options.marker || "0", 10);
+    const marker = options.marker;
     delimiter = delimiter === "" ? "/" : delimiter;
     options.prefix = options.prefix || "";
     options.marker = options.marker || "";
@@ -881,7 +881,7 @@ export default class ContainerHandler extends BaseHandler
       statusCode: 200,
       contentType: "application/xml",
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       date: context.startTime,
       serviceEndpoint,
       containerName,

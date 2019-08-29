@@ -1,3 +1,7 @@
+import * as fs from "fs";
+import { join } from "path";
+import { PassThrough } from "stream";
+
 import {
   Aborter,
   BlobURL,
@@ -10,10 +14,6 @@ import {
   uploadFileToBlockBlob,
   uploadStreamToBlockBlob
 } from "@azure/storage-blob";
-import assert = require("assert");
-import * as fs from "fs";
-import { join } from "path";
-import { PassThrough } from "stream";
 
 import BlobConfiguration from "../../src/blob/BlobConfiguration";
 import Server from "../../src/blob/BlobServer";
@@ -27,6 +27,7 @@ import {
   rmRecursive
 } from "../testutils";
 
+import assert = require("assert");
 // Disable debugging log by passing false
 configLogger(false);
 
@@ -107,6 +108,8 @@ describe("BlockBlobHighlevel", () => {
     fs.unlinkSync(tempFileLarge);
     fs.unlinkSync(tempFileSmall);
     rmRecursive(tempFolderPath);
+    await rmRecursive(dbPath);
+    await rmRecursive(persistencePath);
   });
 
   it("uploadFileToBlockBlob should success when blob >= BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES", async () => {

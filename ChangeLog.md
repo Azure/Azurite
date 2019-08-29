@@ -2,6 +2,18 @@
 
 > Note. This file includes changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
+2019.08 Version 3.2.0-preview 
+
+- Updated repository link to https to compatible with Visual Studio Code.
+
+Blob:
+- Fix listblobs order when filtering by prefix.
+
+Queue:
+- Added Azure Storage Queue Service features (API version: 2019-02-02).
+- Decoupled persistence layer into service metadata storage and extent file storage.
+- Supported Cors and Preflight in Queue service.
+
 2019.06 Version 3.1.2-preview
 
 - Integrated Azurite with Visual Studio Code as an extension.

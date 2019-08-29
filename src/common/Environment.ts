@@ -1,21 +1,35 @@
 import args from "args";
 
 import {
-  DEFAULT_SERVER_HOST_NAME,
-  DEFAULT_SERVER_LISTENING_PORT
+  DEFAULT_BLOB_LISTENING_PORT,
+  DEFAULT_BLOB_SERVER_HOST_NAME
 } from "../blob/utils/constants";
+import {
+  DEFAULT_QUEUE_LISTENING_PORT,
+  DEFAULT_QUEUE_SERVER_HOST_NAME
+} from "../queue/utils/constants";
 import IEnvironment from "./IEnvironment";
 
 args
   .option(
     ["", "blobHost"],
-    "Optional. Customize listening address",
-    DEFAULT_SERVER_HOST_NAME
+    "Optional. Customize listening address for blob",
+    DEFAULT_BLOB_SERVER_HOST_NAME
   )
   .option(
     ["", "blobPort"],
-    "Optional. Customize listening port",
-    DEFAULT_SERVER_LISTENING_PORT
+    "Optional. Customize listening port for blob",
+    DEFAULT_BLOB_LISTENING_PORT
+  )
+  .option(
+    ["", "queueHost"],
+    "Optional. Customize listening address for queue",
+    DEFAULT_QUEUE_SERVER_HOST_NAME
+  )
+  .option(
+    ["", "queuePort"],
+    "Optional. Customize listening port for queue",
+    DEFAULT_QUEUE_LISTENING_PORT
   )
   .option(
     "location",
@@ -39,6 +53,14 @@ export default class Environment implements IEnvironment {
 
   public blobPort(): number | undefined {
     return this.flags.blobPort;
+  }
+
+  public queueHost(): string | undefined {
+    return this.flags.queueHost;
+  }
+
+  public queuePort(): number | undefined {
+    return this.flags.queuePort;
   }
 
   public async location(): Promise<string> {

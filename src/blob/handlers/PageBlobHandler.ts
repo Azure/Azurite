@@ -6,7 +6,7 @@ import Context from "../generated/Context";
 import IPageBlobHandler from "../generated/handlers/IPageBlobHandler";
 import ILogger from "../generated/utils/ILogger";
 import IBlobDataStore, { BlobModel } from "../persistence/IBlobDataStore";
-import { API_VERSION } from "../utils/constants";
+import { BLOB_API_VERSION } from "../utils/constants";
 import { deserializePageBlobRangeHeader, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import BlobHandler from "./BlobHandler";
@@ -125,7 +125,7 @@ export default class PageBlobHandler extends BaseHandler
       lastModified: blob.properties.lastModified,
       contentMD5: blob.properties.contentMD5,
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true
     };
@@ -216,7 +216,7 @@ export default class PageBlobHandler extends BaseHandler
       contentMD5: undefined, // TODO
       blobSequenceNumber: blob.properties.blobSequenceNumber,
       requestId: blobCtx.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true
     };
@@ -291,7 +291,7 @@ export default class PageBlobHandler extends BaseHandler
       contentMD5: undefined, // TODO
       blobSequenceNumber: blob.properties.blobSequenceNumber,
       requestId: blobCtx.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       date
     };
 
@@ -356,7 +356,7 @@ export default class PageBlobHandler extends BaseHandler
       blobContentLength: blob.properties.contentLength,
       lastModified: date,
       requestId: blobCtx.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       date
     };
 
@@ -432,7 +432,7 @@ export default class PageBlobHandler extends BaseHandler
       lastModified: blob.properties.lastModified,
       blobSequenceNumber: blob.properties.blobSequenceNumber,
       requestId: blobCtx.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       date
     };
 
@@ -525,7 +525,7 @@ export default class PageBlobHandler extends BaseHandler
       lastModified: blob.properties.lastModified,
       blobSequenceNumber: blob.properties.blobSequenceNumber,
       requestId: blobCtx.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       date
     };
 

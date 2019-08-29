@@ -3,7 +3,7 @@
   "displayName": "Azurite",
   "description": "An open source Azure Storage API compatible server",
   "icon": "icon.png",
-  "version": "3.1.2-preview",
+  "version": "3.2.0-preview",
   "preview": true,
   "publisher": "Azurite",
   "categories": [
@@ -11,8 +11,9 @@
   ],
   "main": "./dist/src/main.js",
   "bin": {
-    "azurite": "./dist/src/blob/main.js",
-    "azurite-blob": "./dist/src/blob/main.js"
+    "azurite": "./dist/src/azurite.js",
+    "azurite-blob": "./dist/src/blob/main.js",
+    "azurite-queue": "./dist/src/queue/main.js"
   },
   "engines": {
     "node": ">=8.0.0",
@@ -35,6 +36,7 @@
   },
   "devDependencies": {
     "@azure/storage-blob": "^10.3.0",
+    "@azure/storage-queue": "^10.2.0",
     "@types/args": "^3.0.0",
     "@types/etag": "^1.8.0",
     "@types/express": "^4.16.0",
@@ -66,7 +68,10 @@
     "onCommand:azurite.clean",
     "onCommand:azurite.start_blob",
     "onCommand:azurite.close_blob",
-    "onCommand:azurite.clean_blob"
+    "onCommand:azurite.clean_blob",
+    "onCommand:azurite.start_queue",
+    "onCommand:azurite.close_queue",
+    "onCommand:azurite.clean_queue"
   ],
   "contributes": {
     "commands": [
@@ -99,6 +104,21 @@
         "command": "azurite.clean_blob",
         "title": "Clean Blob Service",
         "category": "Azurite"
+      },
+      {
+        "command": "azurite.start_queue",
+        "title": "Start Queue Service",
+        "category": "Azurite"
+      },
+      {
+        "command": "azurite.close_queue",
+        "title": "Close Queue Service",
+        "category": "Azurite"
+      },
+      {
+        "command": "azurite.clean_queue",
+        "title": "Clean Queue Service",
+        "category": "Azurite"
       }
     ],
     "configuration": [
@@ -128,6 +148,16 @@
             "type": "number",
             "default": 10000,
             "description": "Blob service listening port, by default 10000"
+          },
+          "azurite.queueHost": {
+            "type": "string",
+            "default": "127.0.0.1",
+            "description": "Queue service listening endpoint, by default 127.0.0.1"
+          },
+          "azurite.queuePort": {
+            "type": "number",
+            "default": 10001,
+            "description": "Queue service listening port, by default 10000"
           }
         }
       }
@@ -143,18 +173,22 @@
     "docker:build:internal": "npm run docker:prebuild && cross-var docker build --rm -f \"Dockerfile\" -t xstoreazurite.azurecr.io/internal/azure-storage/azurite:$npm_package_version . && cross-var docker tag xstoreazurite.azurecr.io/internal/azure-storage/azurite:$npm_package_version xstoreazurite.azurecr.io/internal/azure-storage/azurite:latest",
     "docker:publish": "cross-var docker push xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version",
     "docker:publish:internal": "cross-var docker push xstoreazurite.azurecr.io/internal/azure-storage/azurite:$npm_package_version",
-    "prepack": "npm run build",
     "build": "tsc",
-    "build:autorest": "autorest ./swagger/blob.md --typescript --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorestdebug": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
+    "build:autorest:blob": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
+    "build:autorest:queue": "autorest ./swagger/queue.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
     "watch": "tsc -watch -p ./",
     "blob": "node -r ts-node/register src/blob/main.ts",
+    "queue": "node -r ts-node/register src/queue/main.ts",
+    "azurite": "node -r ts-node/register src/azurite.ts",
     "lint": "tslint -p tsconfig.json -c tslint.json src/**/*.ts",
     "test": "npm run lint && mocha --compilers ts-node/register --no-timeouts --recursive tests/**/*.test.ts tests/**/**/*.test.ts",
+    "test:blob": "npm run lint && mocha --compilers ts-node/register --no-timeouts --recursive tests/blob/*.test.ts tests/blob/**/*.test.ts",
+    "test:queue": "npm run lint && mocha --compilers ts-node/register --no-timeouts --recursive tests/queue/*.test.ts tests/queue/**/*.test.ts",
     "clean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log *.vsix",
-    "clean:deep": "npm run clean && rimraf __blobstorage__ __azurite_db_blob__.json debug.log",
-    "validate:npmpack:win": "npm install && npm run build && npm pack && cross-var npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v",
-    "validate:npmpack:linux_mac": "npm install && npm run build && npm pack && cross-var sudo npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v"
+    "clean:deep": "npm run clean && rimraf __blobstorage__ __queuestorage__ __azurite_db_blob__.json __azurite_db_queue__.json __azurite_db_queue_extent__.json debug.log",
+    "validate:npmpack:win": "npm install && npm run build && npm pack && cross-var npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v && azurite-queue -v",
+    "validate:npmpack:linux_mac": "npm install && npm run build && npm pack && cross-var sudo npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v && azurite-queue -v"
   },
   "husky": {
     "hooks": {
@@ -163,7 +197,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/azure/azurite.git"
+    "url": "https://github.com/azure/azurite.git"
   },
   "keywords": [
     "Azurite",

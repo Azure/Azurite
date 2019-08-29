@@ -5,8 +5,12 @@ __blobstorage__
 __testspersistence__
 __testsstorage__
 __azurite_db_blob__.json
+__queuestorage__
+__azurite_db_queue_extent__.json
+__azurite_db_queue__.json
 .nyc_output
 dist
 typings
 debug.log
 *.vsix
+*.tgz

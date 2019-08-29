@@ -6,12 +6,12 @@
 > Note:
 > Azurite V2 has been moved to [legacy-master](https://github.com/Azure/azurite/tree/legacy-master) branch.
 > Master branch has been updated with latest Azurite V3.
-> V3 currently only supports Blob service, please use V2 for Queue or Table service for the time being.
+> V3 currently only supports Blob and Queue service, please use V2 for Table service for the time being.
 
-| Version       | Azure Storage API Version | Service Support       | Description                                       | Reference Links                                                                                                                                                                                                         |
-| ------------- | ------------------------- | --------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.1.2-preview | 2018-03-28                | Blob                  | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
-| 2.7.1         | 2016-05-31                | Blob, Queue and Table | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
+| Version                                                            | Azure Storage API Version               | Service Support       | Description                                       | Reference Links                                                                                                                                                                                                         |
+| ------------------------------------------------------------------ | --------------------------------------- | --------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.2.0-preview                                                      | 2018-03-28 (Blob)<br>2019-02-02 (Queue) | Blob<br>Queue         | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                              | Blob, Queue and Table | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
 ## Introduction
 
@@ -31,6 +31,12 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
   - Create/List/Delete Containers
   - Create/Read/List/Update/Delete Block Blobs
   - Create/Read/List/Update/Delete Page Blobs
+- Queue storage features align with Azure Storage API version 2019-02-02 (Refer to support matrix section below)
+  - SharedKey/Account SAS/Service SAS
+  - Get/Set Queue Service Properties
+  - Preflight Request
+  - Create/List/Delete Queues
+  - Put/Get/Peek/Updata/Deleta/Clear Messages
 - Features **NEW** on V3
   - Built with TypeScript and ECMA native promise and async features
   - New architecture based on TypeScript server generator. Leverage auto generated protocol layer, models, serializer, deserializer and handler interfaces from REST API swagger
@@ -85,6 +91,12 @@ For example, to start blob service only:
 $ azurite-blob -l path/to/azurite/workspace
 ```
 
+Start queue service only:
+
+```bash
+$ azurite-queue -l path/to/azurite/workspace
+```
+
 ### Visual Studio Code Extension
 
 Azurite V3 can be installed from [Visual Studio Code extension market](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite).
@@ -96,14 +108,19 @@ Extension supports following Visual Studio Code commands:
 - `Azurite: Start` Start all Azurite services
 - `Azurite: Close` Close all Azurite services
 - `Azurite: Clean` Reset all Azurite services persistency data
-- `Azurite: Start Blob` Start blob service
-- `Azurite: Close Blob` Close blob service
-- `Azurite: Clean Blob` Clean blob service
+- `Azurite: Start Blob Service` Start blob service
+- `Azurite: Close Blob Service` Close blob service
+- `Azurite: Clean Blob Service` Clean blob service
+- `Azurite: Start Queue Service` Start queue service
+- `Azurite: Close Queue Service` Close queue service
+- `Azurite: Clean Queue Service` Clean queue service
 
 Following extension configurations are supported:
 
 - `azurite.blobHost` Blob service listening endpoint, by default 127.0.0.1
 - `azurite.blobPort` Blob service listening port, by default 10000
+- `azurite.queueHost` Queue service listening endpoint, by default 127.0.0.1
+- `azurite.queuePort` Queue service listening port, by default 10001
 - `azurite.location` Workspace location path, by default existing Visual Studio Code opened folder
 - `azurite.silent` Silent mode to disable access log in Visual Studio channel, by default false
 - `azurite.debug` Output debug log into Azurite channel, by default false
@@ -113,15 +130,22 @@ Following extension configurations are supported:
 #### Run Azurite V3 docker image
 
 ```bash
-docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite
+docker run -p 10000:10000 -p 10001:10001 mcr.microsoft.com/azure-storage/azurite
 ```
 
 `-p 10000:10000` will expose blob service's default listening port.
+`-p 10001:10001` will expose queue service's default listening port.
+
+Or just run blob service:
+
+```bash
+docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite azurite-blob
+```
 
 #### Run Azurite V3 docker image with customized persisted data location
 
 ```bash
-docker run -p 10000:10000 -v c:/azurite:/data mcr.microsoft.com/azure-storage/azurite
+docker run -p 10000:10000 -p 10001:10001 -v c:/azurite:/data mcr.microsoft.com/azure-storage/azurite
 ```
 
 `-v c:/azurite:/data` will use and map host path `c:/azurite` as Azurite's workspace location.
@@ -129,7 +153,7 @@ docker run -p 10000:10000 -v c:/azurite:/data mcr.microsoft.com/azure-storage/az
 #### Customize all Azurite V3 supported parameters for docker image
 
 ```bash
-docker run -p 8888:8888 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 8888 --blobHost 0.0.0.0
+docker run -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 8888 --blobHost 0.0.0.0 --queuePort 9999 --queueHost 0.0.0.0
 ```
 
 Above command will try to start Azurite image with configurations:
@@ -141,6 +165,10 @@ Above command will try to start Azurite image with configurations:
 `--blobPort 8888` makes Azurite blob service listen to port 8888, while `-p 8888:8888` redirects requests from host machine's port 8888 to docker instance.
 
 `--blobHost 0.0.0.0` defines blob service listening endpoint to accept requests from host machine.
+
+`--queuePort 9999` makes Azurite queue service listen to port 9999, while `-p 9999:9999` redirects requests from host machine's port 9999 to docker instance.
+
+`--queueHost 0.0.0.0` defines queue service listening endpoint to accept requests from host machine.
 
 > In above sample, you need to use **double first forward slash** for location and debug path parameters to avoid a [known issue](https://stackoverflow.com/questions/48427366/docker-build-command-add-c-program-files-git-to-the-path-passed-as-build-argu) for Git on Windows.
 
@@ -165,31 +193,35 @@ You can customize the listening address per your requirements.
 
 ```cmd
 --blobHost 127.0.0.1
+--queueHost 127.0.0.1
 ```
 
 #### Allow Accepting Requests from Remote (potentially unsafe)
 
 ```cmd
 --blobHost 0.0.0.0
+--queueHost 0.0.0.0
 ```
 
 ### Listening Port Configuration
 
-Optional. By default, Azurite V3 will listen to 10000 as blob service port.
+Optional. By default, Azurite V3 will listen to 10000 as blob service port, and 10001 as queue service port.
 You can customize the listening port per your requirements.
 
 > Warning: After using a customized port, you need to update connection string or configurations correspondingly in your Storage Tools or SDKs.
 
-#### Customize Blob Service Listening Port
+#### Customize Blob/Queue Service Listening Port
 
 ```cmd
 --blobPort 8888
+--queuePort 9999
 ```
 
 #### Let System Auto Select an Available Port
 
 ```cmd
 --blobPort 0
+--queuePort 0
 ```
 
 > Note: The port in use is displayed on Azurite startup.
@@ -247,7 +279,13 @@ Azurite V3 provides support for a default storage account as General Storage Acc
 
 Typically you can pass following connection strings to SDKs or tools (like Azure CLI2.0 or Storage Explorer)
 
-Take blob service as example, full connection string is:
+The full connection string is:
+
+```
+DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;QueueEndpoint=http://127.0.0.1:10001/devstoreaccount1;
+```
+
+Take blob service only, the full connection string is:
 
 ```
 DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;
@@ -370,7 +408,7 @@ Azurite V3 selected TypeScript as its' programming language, as this facilitates
 ### Features Scope
 
 Legacy Azurite V2 supports Azure Storage Blob, Queue and Table services.  
-Azurite V3 currently only supports Azure Storage blob service, with queue support to follow soon.  
+Azurite V3 currently only supports Azure Storage blob service. Queue service is supported after V3.2.0-preview.
 Table service support is currently under discussion.
 
 Azurite V3 supports features from Azure Storage API version 2018-03-28, and will maintain parity with the latest API versions, in a more frequent update frequency than legacy Azurite V2.
@@ -418,6 +456,7 @@ Detailed support matrix:
   - Copy Blob (Only supports copy within same account in Azurite)
   - Abort Copy Blob (Only supports copy within same account in Azurite)
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
+
   - OAuth authentication
   - Access control based on conditional headers, container/blob lease (lease control is limited supported)
   - CORS and Preflight
@@ -426,6 +465,34 @@ Detailed support matrix:
   - Put Block from URL
   - Incremental Copy Blob
   - Create Append Blob, Append Block
+
+  3.2.0-preview release added support for **2019-02-02** API version **queue** service.
+  Detailed support matrix:
+
+- Supported Vertical Features
+  - SharedKey Authentication
+  - Shared Access Signature Account Level
+  - Shared Access Signature Service Level
+- Supported REST APIs
+  - List Queues
+  - Set Service Properties
+  - Get Service Properties
+  - Get Stats
+  - Preflight Queue Request
+  - Create Queue
+  - Get Queue Metadata
+  - Set Queue Metadata
+  - Get Queue ACL
+  - Set Queue ACL
+  - Delete Queue
+  - Put Message
+  - Get Messages
+  - Peek Messages
+  - Delete Message
+  - Update Message
+  - Clear Message
+- Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
+  - OAuth authentication
 
 ## License
 

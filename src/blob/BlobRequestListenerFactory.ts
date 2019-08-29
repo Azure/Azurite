@@ -1,5 +1,4 @@
 import express from "express";
-import morgan = require("morgan");
 
 import IAccountDataStore from "../common/IAccountDataStore";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
@@ -23,6 +22,8 @@ import PageBlobRangesManager from "./handlers/PageBlobRangesManager";
 import ServiceHandler from "./handlers/ServiceHandler";
 import { IBlobDataStore } from "./persistence/IBlobDataStore";
 import { DEFAULT_CONTEXT_PATH } from "./utils/constants";
+
+import morgan = require("morgan");
 
 /**
  * Default RequestListenerFactory based on express framework.

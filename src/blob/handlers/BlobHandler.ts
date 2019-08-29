@@ -10,7 +10,7 @@ import Context from "../generated/Context";
 import IBlobHandler from "../generated/handlers/IBlobHandler";
 import ILogger from "../generated/utils/ILogger";
 import IBlobDataStore, { BlobModel } from "../persistence/IBlobDataStore";
-import { API_VERSION } from "../utils/constants";
+import { BLOB_API_VERSION } from "../utils/constants";
 import {
   deserializePageBlobRangeHeader,
   deserializeRangeHeader,
@@ -264,7 +264,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           metadata: blob.metadata,
           eTag: blob.properties.etag,
           requestId: context.contextID,
-          version: API_VERSION,
+          version: BLOB_API_VERSION,
           date: context.startTime
         }
       : {
@@ -273,7 +273,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           isIncrementalCopy: blob.properties.incrementalCopy,
           eTag: blob.properties.etag,
           requestId: context.contextID,
-          version: API_VERSION,
+          version: BLOB_API_VERSION,
           date: context.startTime,
           acceptRanges: "bytes",
           blobCommittedBlockCount: undefined, // TODO: Append blob
@@ -402,7 +402,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       statusCode: 202,
       requestId: context.contextID,
       date: context.startTime,
-      version: API_VERSION
+      version: BLOB_API_VERSION
     };
 
     return response;
@@ -480,7 +480,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       lastModified: blob.properties.lastModified,
       blobSequenceNumber: blob.properties.blobSequenceNumber,
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       date: context.startTime
     };
 
@@ -522,7 +522,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       isServerEncrypted: true,
       requestId: context.contextID,
       date: context.startTime,
-      version: API_VERSION
+      version: BLOB_API_VERSION
     };
 
     return response;
@@ -594,7 +594,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       lastModified: blob.properties.lastModified,
       leaseId: blob.leaseId,
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       statusCode: 201
     };
 
@@ -657,7 +657,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       eTag: blob.properties.etag,
       lastModified: blob.properties.lastModified,
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       statusCode: 200
     };
 
@@ -733,7 +733,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       lastModified: blob.properties.lastModified,
       leaseId: blob.leaseId,
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       statusCode: 200
     };
 
@@ -798,7 +798,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       lastModified: blob.properties.lastModified,
       leaseId: blob.leaseId,
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       statusCode: 200
     };
 
@@ -902,7 +902,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       lastModified: blob.properties.lastModified,
       leaseTime: leaseTimeinSecond,
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       statusCode: 202
     };
 
@@ -960,7 +960,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       lastModified: snapshotBlob.properties.lastModified,
       requestId: context.contextID,
       date: context.startTime!,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       snapshot: snapshotBlob.snapshot
     };
 
@@ -1091,7 +1091,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       eTag: copiedBlob.properties.etag,
       lastModified: copiedBlob.properties.lastModified,
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       date: context.startTime,
       copyId: copiedBlob.properties.copyId,
       copyStatus: copiedBlob.properties.copyStatus
@@ -1127,7 +1127,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const response: Models.BlobAbortCopyFromURLResponse = {
       statusCode: 204,
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       date: context.startTime
     };
 
@@ -1165,7 +1165,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     const response: Models.BlobSetTierResponse = {
       requestId: context.contextID,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       statusCode: 200
     };
 
@@ -1367,7 +1367,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       eTag: blob.properties.etag,
       requestId: context.contextID,
       date: context.startTime!,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       ...blob.properties,
       blobContentMD5: blob.properties.contentMD5,
       contentLength,
@@ -1432,7 +1432,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     //     eTag: blob.properties.etag,
     //     requestId: context.contextID,
     //     date: context.startTime!,
-    //     version: API_VERSION,
+    //     version: BLOB_API_VERSION,
     //     ...blob.properties,
     //     contentLength,
     //     contentMD5: undefined
@@ -1477,7 +1477,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       eTag: blob.properties.etag,
       requestId: context.contextID,
       date: context.startTime!,
-      version: API_VERSION,
+      version: BLOB_API_VERSION,
       ...blob.properties,
       contentLength,
       contentMD5,

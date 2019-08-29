@@ -1,30 +1,18 @@
-import {
-  close,
-  createReadStream,
-  createWriteStream,
-  mkdir,
-  stat,
-  unlink
-} from "fs";
+import { close, createReadStream, createWriteStream, mkdir, stat, unlink } from "fs";
 import Loki from "lokijs";
-import multistream = require("multistream");
 import { join } from "path";
 import { promisify } from "util";
 import uuid from "uuid/v4";
 
 import ZeroBytesStream from "../../common/ZeroBytesStream";
 import {
-  BlobModel,
-  BlockModel,
-  ContainerModel,
-  IBlobDataStore,
-  IPersistencyChunk,
-  ServicePropertiesModel,
-  ZERO_PERSISTENCY_CHUNK_ID
+    BlobModel, BlockModel, ContainerModel, IBlobDataStore, IPersistencyChunk,
+    ServicePropertiesModel, ZERO_PERSISTENCY_CHUNK_ID
 } from "./IBlobDataStore";
 import LokiAllExtentsAsyncIterator from "./LokiAllExtentsAsyncIterator";
 import LokiReferredExtentsAsyncIterator from "./LokiReferredExtentsAsyncIterator";
 
+import multistream = require("multistream");
 const statAsync = promisify(stat);
 const unlinkAsync = promisify(unlink);
 const mkdirAsync = promisify(mkdir);
@@ -349,10 +337,10 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       prefix === ""
         ? { $loki: { $gt: marker }, accountName: account }
         : {
-            name: { $regex: `^${this.escapeRegex(prefix)}` },
-            $loki: { $gt: marker },
-            accountName: account
-          };
+          name: { $regex: `^${this.escapeRegex(prefix)}` },
+          $loki: { $gt: marker },
+          accountName: account
+        };
 
     const docs = coll
       .chain()
@@ -387,7 +375,6 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     if (blobDoc) {
       coll.remove(blobDoc);
     }
-
     delete (blob as any).$loki;
     return coll.insert(blob);
   }
@@ -437,8 +424,8 @@ export default class LokiBlobDataStore implements IBlobDataStore {
    * @param {string} [blob] If blob name provided, prefix will be ignored.
    * @param {string} [prefix]
    * @param {number} [maxResults=5000]
-   * @param {number} [marker]
-   * @returns {(Promise<[T[], number | undefined]>)} A tuple including list blobs and next marker.
+   * @param {string} [marker]
+   * @returns {(Promise<[T[], string | undefined]>)} A tuple including list blobs and next marker.
    * @memberof LokiBlobDataStore
    */
   public async listBlobs<T extends BlobModel>(
@@ -447,9 +434,9 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     blob?: string,
     prefix: string | undefined = "",
     maxResults: number | undefined = 5000,
-    marker?: number | undefined,
+    marker: string = "",
     includeSnapshots?: boolean | undefined
-  ): Promise<[T[], number | undefined]> {
+  ): Promise<[T[], string | undefined]> {
     const query: any = {};
     if (prefix !== "") {
       query.name = { $regex: `^${this.escapeRegex(prefix)}` };
@@ -464,8 +451,6 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       query.containerName = container;
     }
 
-    query.$loki = { $gt: marker };
-
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
 
     let docs;
@@ -473,6 +458,10 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       docs = await coll
         .chain()
         .find(query)
+        .where(obj => {
+          return obj.name > marker!;
+        })
+        .simplesort("name")
         .limit(maxResults)
         .data();
     } else {
@@ -480,8 +469,9 @@ export default class LokiBlobDataStore implements IBlobDataStore {
         .chain()
         .find(query)
         .where(obj => {
-          return obj.snapshot.length === 0;
+          return obj.snapshot.length === 0 && obj.name > marker!;
         })
+        .simplesort("name")
         .limit(maxResults)
         .data();
     }
@@ -496,7 +486,7 @@ export default class LokiBlobDataStore implements IBlobDataStore {
     if (docs.length < maxResults) {
       return [docs, undefined];
     } else {
-      const nextMarker = docs[docs.length - 1].$loki;
+      const nextMarker = docs[docs.length - 1].name;
       return [docs, nextMarker];
     }
   }

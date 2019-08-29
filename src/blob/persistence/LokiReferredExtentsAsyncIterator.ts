@@ -21,7 +21,7 @@ export default class LokiReferredExtentsAsyncIterator
   implements AsyncIterator<IPersistencyChunk[]> {
   private state: State = State.LISTING_EXTENTS_IN_BLOBS;
 
-  private blobListingMarker: number | undefined;
+  private blobListingMarker: string | undefined;
 
   constructor(
     private readonly blobDataStore: LokiBlobDataStore,

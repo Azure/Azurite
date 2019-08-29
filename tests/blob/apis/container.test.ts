@@ -404,6 +404,126 @@ describe("ContainerAPIs", () => {
     }
   });
 
+  it("should correctly order all blobs in the container", async () => {
+    const blobURLs = [];
+    const blobNames: Array<string> = [];
+
+    for (let i = 1; i < 4; i++) {
+      var name = `blockblob${i}/abc-00${i}`;
+      const blobURL = BlobURL.fromContainerURL(containerURL, name);
+      const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
+      await blockBlobURL.upload(Aborter.none, "", 0);
+      blobURLs.push(blobURL);
+      blobNames.push(name);
+    }
+
+    const inputmarker = undefined;
+    const result = await containerURL.listBlobFlatSegment(
+      Aborter.none,
+      inputmarker,
+      {
+        prefix: "blockblob"
+      }
+    );
+    assert.ok(result.serviceEndpoint.length > 0);
+    assert.ok(containerURL.url.indexOf(result.containerName));
+
+    const gotNames: Array<string> = [];
+
+    for (const item of result.segment.blobItems) {
+      gotNames.push(item.name);
+    }
+
+    assert.deepStrictEqual(gotNames, blobNames);
+
+    for (const blob of blobURLs) {
+      await blob.delete(Aborter.none);
+    }
+  });
+
+  it("returns a valid, correct nextMarker", async () => {
+    const blobURLs = [];
+    var blobNames: Array<string> = [
+      "blockblob/abc-001",
+      "blockblob/abc-004",
+      "blockblob/abc-009",
+      "blockblob/abc-003",
+      "blockblob/abc-006",
+      "blockblob/abc-000",
+      "blockblob/abc-007",
+      "blockblob/abc-002",
+      "blockblob/abc-005",
+      "blockblob/abc-008"
+    ];
+
+    for (let i = 0; i < 10; i++) {
+      const blobURL = BlobURL.fromContainerURL(containerURL, blobNames[i]);
+      const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
+      await blockBlobURL.upload(Aborter.none, "", 0);
+      blobURLs.push(blobURL);
+    }
+
+    //Sort blobnames for comparison
+    blobNames = blobNames.sort();
+
+    const inputmarker = undefined;
+    var result = await containerURL.listBlobFlatSegment(
+      Aborter.none,
+      inputmarker,
+      {
+        maxresults: 4
+      }
+    );
+    assert.ok(result.serviceEndpoint.length > 0);
+    assert.ok(containerURL.url.indexOf(result.containerName));
+    assert.equal(result.nextMarker, "blockblob/abc-003");
+    assert.equal(result.segment.blobItems.length, 4);
+
+    const gotNames: Array<string> = [];
+
+    for (const item of result.segment.blobItems) {
+      gotNames.push(item.name);
+    }
+
+    result = await containerURL.listBlobFlatSegment(
+      Aborter.none,
+      result.nextMarker,
+      {
+        maxresults: 4
+      }
+    );
+    assert.ok(result.serviceEndpoint.length > 0);
+    assert.ok(containerURL.url.indexOf(result.containerName));
+    assert.equal(result.nextMarker, "blockblob/abc-007");
+    assert.equal(result.segment.blobItems.length, 4);
+
+    for (const item of result.segment.blobItems) {
+      gotNames.push(item.name);
+    }
+
+    result = await containerURL.listBlobFlatSegment(
+      Aborter.none,
+      result.nextMarker,
+      {
+        maxresults: 4
+      }
+    );
+    assert.ok(result.serviceEndpoint.length > 0);
+    assert.ok(containerURL.url.indexOf(result.containerName));
+    assert.strictEqual(result.nextMarker, "");
+    assert.equal(result.segment.blobItems.length, 2);
+
+    for (const item of result.segment.blobItems) {
+      gotNames.push(item.name);
+    }
+
+    assert.deepStrictEqual(gotNames, blobNames);
+
+    for (const blob of blobURLs) {
+      await blob.delete(Aborter.none);
+    }
+  });
+
   it("getAccessPolicy", async () => {
     const result = await containerURL.getAccessPolicy(Aborter.none);
     assert.ok(result.eTag!.length > 0);
