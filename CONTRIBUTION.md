@@ -32,7 +32,7 @@ Every handler will talk to persistence layer directly. We make implements of per
 
 In the root of the repository, we have provided pre-defined debugging scripts. This makes it easy to debug in Visual Studio Code with simple F5 click for debug configuration "Azurite Blob Service" or "Azurite Queue Service".
 
-Manually follow following steps to build and run Azurite:
+Manually follow following steps to build and run all services in Azurite:
 
 ```bash
 npm install

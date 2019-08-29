@@ -466,8 +466,8 @@ Detailed support matrix:
   - Incremental Copy Blob
   - Create Append Blob, Append Block
 
-    3.2.0-preview release added support for **2019-02-02** API version **queue** service.
-    Detailed support matrix:
+  3.2.0-preview release added support for **2019-02-02** API version **queue** service.
+  Detailed support matrix:
 
 - Supported Vertical Features
   - SharedKey Authentication
@@ -492,7 +492,6 @@ Detailed support matrix:
   - Update Message
   - Clear Message
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
-
   - OAuth authentication
 
 ## License

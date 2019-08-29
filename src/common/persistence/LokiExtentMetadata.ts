@@ -1,8 +1,8 @@
 import { stat } from "fs";
 import Loki from "lokijs";
 
+import AllExtentsAsyncIterator from "./AllExtentsAsyncIterator";
 import IExtentMetadata, { IExtentModel } from "./IExtentMetadata";
-import LokiAllExtentsAsyncIterator from "./LokiAllExtentsAsyncIterator";
 
 /**
  * This is a metadata source implementation for extent management based on loki DB.
@@ -124,9 +124,9 @@ export default class LokiExtentMetadata implements IExtentMetadata {
    *
    * @param {string} [id]
    * @param {number} [maxResults]
-   * @param {(number | undefined)} [marker]
+   * @param {number} [marker]
    * @param {Date} [queryTime]
-   * @param {number} [UnmodifiedTime=0] // An visible extent should not be modified for past given time.
+   * @param {number} [UnmodifiedTime]
    * @returns {(Promise<[IExtentModel[], number | undefined]>)}
    * @memberof LokiExtentMetadata
    */
@@ -191,7 +191,7 @@ export default class LokiExtentMetadata implements IExtentMetadata {
    * @memberof IExtentMetadata
    */
   public getExtentIterator(): AsyncIterator<string[]> {
-    return new LokiAllExtentsAsyncIterator(this);
+    return new AllExtentsAsyncIterator(this);
   }
 
   /**

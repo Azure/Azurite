@@ -1,21 +1,21 @@
 import { DEFAULT_GC_UNMODIFIED_TIME } from "../utils/constants";
-import LokiExtentMetadata from "./LokiExtentMetadata";
+import IExtentMetadata from "./IExtentMetadata";
 
 /**
  * Async iterator to enumerate all extent IDs.
  *
  * @export
- * @class LokiAllExtentsAsyncIterator
+ * @class AllExtentsAsyncIterator
  * @implements {AsyncIterator<string[]>}
  */
-export default class LokiAllExtentsAsyncIterator
+export default class AllExtentsAsyncIterator
   implements AsyncIterator<string[]> {
   private unit: number = 1000;
   private done: boolean = false;
   private marker?: number;
   private readonly time: Date;
 
-  constructor(private readonly extentMetadata: LokiExtentMetadata) {
+  constructor(private readonly extentMetadata: IExtentMetadata) {
     this.time = new Date();
   }
 

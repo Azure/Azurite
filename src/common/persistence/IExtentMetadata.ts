@@ -35,7 +35,7 @@ export default interface IExtentMetadata extends IDataStore {
    *
    * @param {string} [id]
    * @param {number} [maxResults]
-   * @param {(number | undefined)} [marker]
+   * @param {number} [marker]
    * @param {Date} [queryTime]
    * @param {number} [UnmodifiedTime]
    * @returns {(Promise<[IExtentModel[], number | undefined]>)}
@@ -44,7 +44,7 @@ export default interface IExtentMetadata extends IDataStore {
   listExtents(
     id?: string,
     maxResults?: number,
-    marker?: number | undefined,
+    marker?: number,
     queryTime?: Date,
     UnmodifiedTime?: number
   ): Promise<[IExtentModel[], number | undefined]>;

@@ -1,19 +1,19 @@
-import LokiqueueMetadataStore from "./LokiQueueMetadataStore";
+import IQueueMetadataStore from "./IQueueMetadataStore";
 
 /**
  * An async iterator which enumerates all extents being used.
  *
  * @export
- * @class LokiReferredExtentsAsyncIterator
+ * @class ReferredExtentsAsyncIterator
  * @implements {AsyncIterator<string[]>}
  */
-export default class LokiReferredExtentsAsyncIterator
+export default class ReferredExtentsAsyncIterator
   implements AsyncIterator<string[]> {
   private unit: number = 1000;
   private done: boolean = false;
   private marker?: number;
 
-  constructor(private readonly queueMetadata: LokiqueueMetadataStore) {}
+  constructor(private readonly queueMetadata: IQueueMetadataStore) {}
 
   public async next(): Promise<IteratorResult<string[]>> {
     if (this.done) {

@@ -14,7 +14,7 @@ Queue:
 - Decoupled persistence layer into service metadata storage and extent file storage.
 - Supported Cors and Preflight in Queue service.
 
-2019.06 Version 3.1.0-preview
+2019.06 Version 3.1.2-preview
 
 - Integrated Azurite with Visual Studio Code as an extension.
 - Added Visual Studio Code extension usage guidelines.

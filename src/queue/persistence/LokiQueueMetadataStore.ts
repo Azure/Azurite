@@ -13,7 +13,7 @@ import {
   QueueModel,
   ServicePropertiesModel
 } from "./IQueueMetadataStore";
-import LokiReferredExtentsAsyncIterator from "./LokiReferredExtentsAsyncIterator";
+import ReferredExtentsAsyncIterator from "./ReferredExtentsAsyncIterator";
 
 /**
  * This is a metadata source implementation for queue based on loki DB.
@@ -737,7 +737,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
    * @memberof IExtentMetadata
    */
   public getExtentIterator(): AsyncIterator<string[]> {
-    return new LokiReferredExtentsAsyncIterator(this);
+    return new ReferredExtentsAsyncIterator(this);
   }
 
   /**

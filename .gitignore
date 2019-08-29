@@ -13,3 +13,4 @@ dist
 typings
 debug.log
 *.vsix
+*.tgz
