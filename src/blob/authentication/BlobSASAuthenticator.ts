@@ -94,7 +94,8 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     const resource = this.decodeIfExist(req.getQuery("sr"));
     if (
       resource !== BlobSASResourceType.Container &&
-      resource !== BlobSASResourceType.Blob
+      resource !== BlobSASResourceType.Blob &&
+      resource !== BlobSASResourceType.BlobSnapshot
     ) {
       this.logger.debug(
         // tslint:disable-next-line:max-line-length
@@ -365,6 +366,8 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     const contentEncoding = this.decodeIfExist(req.getQuery("rsce"));
     const contentLanguage = this.decodeIfExist(req.getQuery("rscl"));
     const contentType = this.decodeIfExist(req.getQuery("rsct"));
+    const signedResource = this.decodeIfExist(req.getQuery("sr"));
+    const snapshot = this.decodeIfExist(req.getQuery("snapshot"));
 
     if (!identifier && (!permissions || !expiryTime)) {
       this.logger.warn(
@@ -396,7 +399,9 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       contentDisposition,
       contentEncoding,
       contentLanguage,
-      contentType
+      contentType,
+      signedResource,
+      snapshot
     };
 
     return blobSASValues;

@@ -109,6 +109,15 @@ export default class BlockBlobHandler extends BaseHandler
       persistency
     };
 
+    if (options.tier !== undefined) {
+      blob.properties.accessTier = this.parseTier(options.tier);
+      if (blob.properties.accessTier === undefined) {
+        throw StorageErrorFactory.getInvalidHeaderValue(context.contextID, {
+          HeaderName: "x-ms-access-tier",
+          HeaderValue: `${options.tier}`
+        });
+      }
+    }
     // TODO: Need a lock for multi keys including containerName and blobName
     await this.dataStore.updateBlob(blob);
 
@@ -366,6 +375,16 @@ export default class BlockBlobHandler extends BaseHandler
         return total + val;
       });
 
+    if (options.tier !== undefined) {
+      blob.properties.accessTier = this.parseTier(options.tier);
+      if (blob.properties.accessTier === undefined) {
+        throw StorageErrorFactory.getInvalidHeaderValue(context.contextID, {
+          HeaderName: "x-ms-access-tier",
+          HeaderValue: `${options.tier}`
+        });
+      }
+    }
+
     // set lease state to available if it's expired
     blob = BlobHandler.UpdateBlobLeaseStateOnWriteBlob(blob);
     await this.dataStore.updateBlob(blob);
@@ -440,5 +459,27 @@ export default class BlockBlobHandler extends BaseHandler
     response.committedBlocks = blob.committedBlocksInOrder;
 
     return response;
+  }
+
+  /**
+   * Get the tier setting from request headers.
+   *
+   * @private
+   * @param {string} tier
+   * @returns {(Models.AccessTier | undefined)}
+   * @memberof BlobHandler
+   */
+  private parseTier(tier: string): Models.AccessTier | undefined {
+    tier = tier.toLowerCase();
+    if (tier === Models.AccessTier.Hot.toLowerCase()) {
+      return Models.AccessTier.Hot;
+    }
+    if (tier === Models.AccessTier.Cool.toLowerCase()) {
+      return Models.AccessTier.Cool;
+    }
+    if (tier === Models.AccessTier.Archive.toLowerCase()) {
+      return Models.AccessTier.Archive;
+    }
+    return undefined;
   }
 }

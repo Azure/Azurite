@@ -198,6 +198,33 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     super(dataStore, logger);
   }
 
+  public setAccessControl(
+    options: Models.BlobSetAccessControlOptionalParams,
+    context: Context
+  ): Promise<Models.BlobSetAccessControlResponse> {
+    throw new Error("Method not implemented.");
+  }
+  public getAccessControl(
+    options: Models.BlobGetAccessControlOptionalParams,
+    context: Context
+  ): Promise<Models.BlobGetAccessControlResponse> {
+    throw new Error("Method not implemented.");
+  }
+  public rename(
+    renameSource: string,
+    options: Models.BlobRenameOptionalParams,
+    context: Context
+  ): Promise<Models.BlobRenameResponse> {
+    throw new Error("Method not implemented.");
+  }
+  public copyFromURL(
+    copySource: string,
+    options: Models.BlobCopyFromURLOptionalParams,
+    context: Context
+  ): Promise<Models.BlobCopyFromURLResponse> {
+    throw new Error("Method not implemented.");
+  }
+
   /**
    * Download blob.
    *
@@ -1029,6 +1056,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getBlobNotFound(context.contextID!);
     }
 
+    if (sourceBlobModel.properties.accessTier === Models.AccessTier.Archive) {
+      throw StorageErrorFactory.getBlobArchived(context.contextID!);
+    }
+
     const destContainerModel = await this.dataStore.getContainer(
       blobContext.account!,
       blobContext.container!
@@ -1083,6 +1114,19 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       committedBlocksInOrder: sourceBlobModel.committedBlocksInOrder,
       persistency: sourceBlobModel.persistency
     };
+
+    if (
+      copiedBlob.properties.blobType === Models.BlobType.BlockBlob &&
+      options.tier !== undefined
+    ) {
+      copiedBlob.properties.accessTier = this.parseTier(options.tier);
+      if (copiedBlob.properties.accessTier === undefined) {
+        throw StorageErrorFactory.getInvalidHeaderValue(context.contextID, {
+          HeaderName: "x-ms-access-tier",
+          HeaderValue: `${options.tier}`
+        });
+      }
+    }
 
     await this.dataStore.updateBlob(copiedBlob);
 
@@ -1527,5 +1571,27 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     blob = BlobHandler.updateLeaseAttributes(blob, blobCtx.startTime!);
 
     return blob;
+  }
+
+  /**
+   * Get the tier setting from request headers.
+   *
+   * @private
+   * @param {string} tier
+   * @returns {(Models.AccessTier | undefined)}
+   * @memberof BlobHandler
+   */
+  private parseTier(tier: string): Models.AccessTier | undefined {
+    tier = tier.toLowerCase();
+    if (tier === Models.AccessTier.Hot.toLowerCase()) {
+      return Models.AccessTier.Hot;
+    }
+    if (tier === Models.AccessTier.Cool.toLowerCase()) {
+      return Models.AccessTier.Cool;
+    }
+    if (tier === Models.AccessTier.Archive.toLowerCase()) {
+      return Models.AccessTier.Archive;
+    }
+    return undefined;
   }
 }

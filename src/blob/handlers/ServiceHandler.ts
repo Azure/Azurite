@@ -61,6 +61,23 @@ export default class ServiceHandler extends BaseHandler
     }
   };
 
+  public getUserDelegationKey(
+    keyInfo: Models.KeyInfo,
+    options: Models.ServiceGetUserDelegationKeyOptionalParams,
+    context: Context
+  ): Promise<Models.ServiceGetUserDelegationKeyResponse> {
+    throw new Error("Method not implemented.");
+  }
+  public submitBatch(
+    body: NodeJS.ReadableStream,
+    contentLength: number,
+    multipartContentType: string,
+    options: Models.ServiceSubmitBatchOptionalParams,
+    context: Context
+  ): Promise<Models.ServiceSubmitBatchResponse> {
+    throw new Error("Method not implemented.");
+  }
+
   /**
    * Set blob service properties.
    *

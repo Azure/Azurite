@@ -30,6 +30,17 @@ export default class PageBlobHandler extends BaseHandler
     super(dataStore, logger);
   }
 
+  public uploadPagesFromURL(
+    sourceUrl: string,
+    sourceRange: string,
+    contentLength: number,
+    range: string,
+    options: Models.PageBlobUploadPagesFromURLOptionalParams,
+    context: Context
+  ): Promise<Models.PageBlobUploadPagesFromURLResponse> {
+    throw new Error("Method not implemented.");
+  }
+
   public async create(
     contentLength: number,
     blobContentLength: number,
@@ -105,6 +116,7 @@ export default class PageBlobHandler extends BaseHandler
         leaseStatus: Models.LeaseStatusType.Unlocked,
         leaseState: Models.LeaseStateType.Available,
         serverEncrypted: true
+        // TODO: May support setting this part for a premium storage account.
         // accessTier: accessTierInferred
         //   ? ((options.pageBlobAccessTier as any) as Models.AccessTier)
         //   : Models.AccessTier.P4, // TODO: Infer tier from size

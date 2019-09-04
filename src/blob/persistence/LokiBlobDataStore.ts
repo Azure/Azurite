@@ -1,13 +1,27 @@
-import { close, createReadStream, createWriteStream, mkdir, stat, unlink } from "fs";
+import {
+  close,
+  createReadStream,
+  createWriteStream,
+  mkdir,
+  stat,
+  unlink
+} from "fs";
 import Loki from "lokijs";
 import { join } from "path";
 import { promisify } from "util";
 import uuid from "uuid/v4";
 
 import ZeroBytesStream from "../../common/ZeroBytesStream";
+import StorageErrorFactory from "../errors/StorageErrorFactory";
+import * as Models from "../generated/artifacts/models";
 import {
-    BlobModel, BlockModel, ContainerModel, IBlobDataStore, IPersistencyChunk,
-    ServicePropertiesModel, ZERO_PERSISTENCY_CHUNK_ID
+  BlobModel,
+  BlockModel,
+  ContainerModel,
+  IBlobDataStore,
+  IPersistencyChunk,
+  ServicePropertiesModel,
+  ZERO_PERSISTENCY_CHUNK_ID
 } from "./IBlobDataStore";
 import LokiAllExtentsAsyncIterator from "./LokiAllExtentsAsyncIterator";
 import LokiReferredExtentsAsyncIterator from "./LokiReferredExtentsAsyncIterator";
@@ -337,10 +351,10 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       prefix === ""
         ? { $loki: { $gt: marker }, accountName: account }
         : {
-          name: { $regex: `^${this.escapeRegex(prefix)}` },
-          $loki: { $gt: marker },
-          accountName: account
-        };
+            name: { $regex: `^${this.escapeRegex(prefix)}` },
+            $loki: { $gt: marker },
+            accountName: account
+          };
 
     const docs = coll
       .chain()
@@ -373,6 +387,12 @@ export default class LokiBlobDataStore implements IBlobDataStore {
       snapshot: blob.snapshot
     });
     if (blobDoc) {
+      if (
+        blobDoc.properties !== undefined &&
+        blobDoc.properties.accessTier === Models.AccessTier.Archive
+      ) {
+        throw StorageErrorFactory.getBlobArchived();
+      }
       coll.remove(blobDoc);
     }
     delete (blob as any).$loki;

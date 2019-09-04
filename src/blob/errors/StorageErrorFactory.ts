@@ -371,4 +371,36 @@ export default class StorageErrorFactory {
       contextID
     );
   }
+
+  public static getInvalidHeaderValue(
+    contextID: string = "",
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    if (additionalMessages === undefined) {
+      additionalMessages = {};
+    }
+    return new StorageError(
+      400,
+      "InvalidHeaderValue",
+      "The value for one of the HTTP headers is not in the correct format.",
+      contextID,
+      additionalMessages
+    );
+  }
+
+  public static getBlobArchived(
+    contextID: string = "",
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    if (additionalMessages === undefined) {
+      additionalMessages = {};
+    }
+    return new StorageError(
+      409,
+      "BlobArchived",
+      "This operation is not permitted on an archived blob.",
+      contextID,
+      additionalMessages
+    );
+  }
 }

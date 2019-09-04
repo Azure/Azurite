@@ -35,7 +35,7 @@
     "xml2js": "^0.4.19"
   },
   "devDependencies": {
-    "@azure/storage-blob": "^10.3.0",
+    "@azure/storage-blob": "^10.4.1",
     "@azure/storage-queue": "^10.2.0",
     "@types/args": "^3.0.0",
     "@types/etag": "^1.8.0",
@@ -175,8 +175,8 @@
     "docker:publish:internal": "cross-var docker push xstoreazurite.azurecr.io/internal/azure-storage/azurite:$npm_package_version",
     "build": "tsc",
     "build:autorestdebug": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
-    "build:autorest:blob": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
-    "build:autorest:queue": "autorest ./swagger/queue.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
+    "build:autorest:blob": "autorest ./swagger/blob.md --typescript  --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
+    "build:autorest:queue": "autorest ./swagger/queue.md --typescript  --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
     "watch": "tsc -watch -p ./",
     "blob": "node -r ts-node/register src/blob/main.ts",
     "queue": "node -r ts-node/register src/queue/main.ts",

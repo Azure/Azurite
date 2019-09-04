@@ -44,7 +44,7 @@ export default class StorageError extends MiddlewareError {
     super(
       statusCode,
       storageErrorMessage,
-      undefined,
+      storageErrorMessage,
       {
         "x-ms-error-code": storageErrorCode,
         "x-ms-request-id": storageRequestID

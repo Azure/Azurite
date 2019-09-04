@@ -1,4 +1,5 @@
 export enum BlobSASResourceType {
   Container = "c",
-  Blob = "b"
+  Blob = "b",
+  BlobSnapshot = "bs"
 }

@@ -76,7 +76,6 @@ async function main() {
         console.log(afterCloseMessage);
       });
     });
-  console.log("end");
 }
 
 main().catch(err => {
