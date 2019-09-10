@@ -25,26 +25,14 @@
       "in": "header"
     }
   },
-  "schemes": [
-    "https"
-  ],
-  "consumes": [
-    "application/xml",
-    "application/octet-stream",
-    "text/plain"
-  ],
-  "produces": [
-    "application/xml",
-    "application/octet-stream",
-    "text/plain"
-  ],
+  "schemes": ["https"],
+  "consumes": ["application/xml"],
+  "produces": ["application/xml"],
   "paths": {},
   "x-ms-paths": {
     "/?restype=service&comp=properties": {
       "put": {
-        "tags": [
-          "service"
-        ],
+        "tags": ["service"],
         "operationId": "Service_SetProperties",
         "description": "Sets properties for a storage account's Blob service endpoint, including properties for Storage Analytics and CORS (Cross-Origin Resource Sharing) rules",
         "parameters": [
@@ -97,9 +85,7 @@
         }
       },
       "get": {
-        "tags": [
-          "service"
-        ],
+        "tags": ["service"],
         "operationId": "Service_GetProperties",
         "description": "gets the properties of a storage account's Blob service, including properties for Storage Analytics and CORS (Cross-Origin Resource Sharing) rules.",
         "parameters": [
@@ -157,26 +143,20 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "service"
-          ]
+          "enum": ["service"]
         },
         {
           "name": "comp",
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "properties"
-          ]
+          "enum": ["properties"]
         }
       ]
     },
     "/?restype=service&comp=stats": {
       "get": {
-        "tags": [
-          "service"
-        ],
+        "tags": ["service"],
         "operationId": "Service_GetStatistics",
         "description": "Retrieves statistics related to replication for the Blob service. It is only available on the secondary location endpoint when read-access geo-redundant replication is enabled for the storage account.",
         "parameters": [
@@ -239,26 +219,20 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "service"
-          ]
+          "enum": ["service"]
         },
         {
           "name": "comp",
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "stats"
-          ]
+          "enum": ["stats"]
         }
       ]
     },
     "/?comp=list": {
       "get": {
-        "tags": [
-          "service"
-        ],
+        "tags": ["service"],
         "operationId": "Service_ListContainersSegment",
         "description": "The List Containers Segment operation returns a list of the containers under the specified account",
         "parameters": [
@@ -331,17 +305,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "list"
-          ]
+          "enum": ["list"]
         }
       ]
     },
     "/?restype=service&comp=userdelegationkey": {
       "post": {
-        "tags": [
-          "service"
-        ],
+        "tags": ["service"],
         "operationId": "Service_GetUserDelegationKey",
         "description": "Retrieves a user delegation key for the Blob service. This is only a valid operation when using bearer token authentication.",
         "parameters": [
@@ -407,26 +377,20 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "service"
-          ]
+          "enum": ["service"]
         },
         {
           "name": "comp",
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "userdelegationkey"
-          ]
+          "enum": ["userdelegationkey"]
         }
       ]
     },
     "/?restype=account&comp=properties": {
       "get": {
-        "tags": [
-          "service"
-        ],
+        "tags": ["service"],
         "operationId": "Service_GetAccountInfo",
         "description": "Returns the sku name and account kind ",
         "parameters": [
@@ -477,11 +441,7 @@
               "x-ms-account-kind": {
                 "x-ms-client-name": "AccountKind",
                 "type": "string",
-                "enum": [
-                  "Storage",
-                  "BlobStorage",
-                  "StorageV2"
-                ],
+                "enum": ["Storage", "BlobStorage", "StorageV2"],
                 "x-ms-enum": {
                   "name": "AccountKind",
                   "modelAsString": false
@@ -505,9 +465,7 @@
         }
       },
       "head": {
-        "tags": [
-          "service"
-        ],
+        "tags": ["service"],
         "operationId": "Service_GetAccountInfoWithHead",
         "description": "Returns the sku name and account kind ",
         "parameters": [
@@ -558,11 +516,7 @@
               "x-ms-account-kind": {
                 "x-ms-client-name": "AccountKind",
                 "type": "string",
-                "enum": [
-                  "Storage",
-                  "BlobStorage",
-                  "StorageV2"
-                ],
+                "enum": ["Storage", "BlobStorage", "StorageV2"],
                 "x-ms-enum": {
                   "name": "AccountKind",
                   "modelAsString": false
@@ -591,26 +545,20 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "account"
-          ]
+          "enum": ["account"]
         },
         {
           "name": "comp",
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "properties"
-          ]
+          "enum": ["properties"]
         }
       ]
     },
     "/?comp=batch": {
       "post": {
-        "tags": [
-          "service"
-        ],
+        "tags": ["service"],
         "operationId": "Service_SubmitBatch",
         "description": "The Batch operation allows multiple API calls to be embedded into a single HTTP request.",
         "parameters": [
@@ -677,17 +625,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "batch"
-          ]
+          "enum": ["batch"]
         }
       ]
     },
     "/{containerName}?restype=container": {
       "put": {
-        "tags": [
-          "container"
-        ],
+        "tags": ["container"],
         "operationId": "Container_Create",
         "description": "creates a new container under the specified account. If the container with the same name already exists, the operation fails",
         "parameters": [
@@ -758,9 +702,7 @@
         }
       },
       "get": {
-        "tags": [
-          "container"
-        ],
+        "tags": ["container"],
         "operationId": "Container_GetProperties",
         "description": "returns all user-defined metadata and system properties for the specified container. The data returned does not include the container's list of blobs",
         "parameters": [
@@ -800,10 +742,7 @@
                 "x-ms-client-name": "LeaseDuration",
                 "description": "When a blob is leased, specifies whether the lease is of infinite or fixed duration.",
                 "type": "string",
-                "enum": [
-                  "infinite",
-                  "fixed"
-                ],
+                "enum": ["infinite", "fixed"],
                 "x-ms-enum": {
                   "name": "LeaseDurationType",
                   "modelAsString": false
@@ -829,10 +768,7 @@
                 "x-ms-client-name": "LeaseStatus",
                 "description": "The current lease status of the blob.",
                 "type": "string",
-                "enum": [
-                  "locked",
-                  "unlocked"
-                ],
+                "enum": ["locked", "unlocked"],
                 "x-ms-enum": {
                   "name": "LeaseStatusType",
                   "modelAsString": false
@@ -862,10 +798,7 @@
                 "x-ms-client-name": "BlobPublicAccess",
                 "description": "Indicated whether data in the container may be accessed publicly and the level of access",
                 "type": "string",
-                "enum": [
-                  "container",
-                  "blob"
-                ],
+                "enum": ["container", "blob"],
                 "x-ms-enum": {
                   "name": "PublicAccessType",
                   "modelAsString": true
@@ -898,9 +831,7 @@
         }
       },
       "head": {
-        "tags": [
-          "container"
-        ],
+        "tags": ["container"],
         "operationId": "Container_GetPropertiesWithHead",
         "description": "returns all user-defined metadata and system properties for the specified container. The data returned does not include the container's list of blobs",
         "parameters": [
@@ -940,10 +871,7 @@
                 "x-ms-client-name": "LeaseDuration",
                 "description": "When a blob is leased, specifies whether the lease is of infinite or fixed duration.",
                 "type": "string",
-                "enum": [
-                  "infinite",
-                  "fixed"
-                ],
+                "enum": ["infinite", "fixed"],
                 "x-ms-enum": {
                   "name": "LeaseDurationType",
                   "modelAsString": false
@@ -969,10 +897,7 @@
                 "x-ms-client-name": "LeaseStatus",
                 "description": "The current lease status of the blob.",
                 "type": "string",
-                "enum": [
-                  "locked",
-                  "unlocked"
-                ],
+                "enum": ["locked", "unlocked"],
                 "x-ms-enum": {
                   "name": "LeaseStatusType",
                   "modelAsString": false
@@ -1002,10 +927,7 @@
                 "x-ms-client-name": "BlobPublicAccess",
                 "description": "Indicated whether data in the container may be accessed publicly and the level of access",
                 "type": "string",
-                "enum": [
-                  "container",
-                  "blob"
-                ],
+                "enum": ["container", "blob"],
                 "x-ms-enum": {
                   "name": "PublicAccessType",
                   "modelAsString": true
@@ -1038,9 +960,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "container"
-        ],
+        "tags": ["container"],
         "operationId": "Container_Delete",
         "description": "operation marks the specified container for deletion. The container and any blobs contained within it are later deleted during garbage collection",
         "parameters": [
@@ -1109,17 +1029,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "container"
-          ]
+          "enum": ["container"]
         }
       ]
     },
     "/{containerName}?restype=container&comp=metadata": {
       "put": {
-        "tags": [
-          "container"
-        ],
+        "tags": ["container"],
         "operationId": "Container_SetMetadata",
         "description": "operation sets one or more user-defined name-value pairs for the specified container.",
         "parameters": [
@@ -1198,26 +1114,20 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "container"
-          ]
+          "enum": ["container"]
         },
         {
           "name": "comp",
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "metadata"
-          ]
+          "enum": ["metadata"]
         }
       ]
     },
     "/{containerName}?restype=container&comp=acl": {
       "get": {
-        "tags": [
-          "container"
-        ],
+        "tags": ["container"],
         "operationId": "Container_GetAccessPolicy",
         "description": "gets the permissions for the specified container. The permissions indicate whether container data may be accessed publicly.",
         "parameters": [
@@ -1242,10 +1152,7 @@
                 "x-ms-client-name": "BlobPublicAccess",
                 "description": "Indicated whether data in the container may be accessed publicly and the level of access",
                 "type": "string",
-                "enum": [
-                  "container",
-                  "blob"
-                ],
+                "enum": ["container", "blob"],
                 "x-ms-enum": {
                   "name": "PublicAccessType",
                   "modelAsString": true
@@ -1301,9 +1208,7 @@
         }
       },
       "put": {
-        "tags": [
-          "container"
-        ],
+        "tags": ["container"],
         "operationId": "Container_SetAccessPolicy",
         "description": "sets the permissions for the specified container. The permissions indicate whether blobs in a container may be accessed publicly.",
         "parameters": [
@@ -1388,26 +1293,20 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "container"
-          ]
+          "enum": ["container"]
         },
         {
           "name": "comp",
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "acl"
-          ]
+          "enum": ["acl"]
         }
       ]
     },
     "/{containerName}?comp=lease&restype=container&acquire": {
       "put": {
-        "tags": [
-          "container"
-        ],
+        "tags": ["container"],
         "operationId": "Container_AcquireLease",
         "description": "[Update] establishes and manages a lock on a container for delete operations. The lock duration can be 15 to 60 seconds, or can be infinite",
         "parameters": [
@@ -1494,18 +1393,14 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "lease"
-          ]
+          "enum": ["lease"]
         },
         {
           "name": "restype",
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "container"
-          ]
+          "enum": ["container"]
         },
         {
           "name": "x-ms-lease-action",
@@ -1513,9 +1408,7 @@
           "in": "header",
           "required": true,
           "type": "string",
-          "enum": [
-            "acquire"
-          ],
+          "enum": ["acquire"],
           "x-ms-enum": {
             "name": "LeaseAction",
             "modelAsString": false
@@ -1527,9 +1420,7 @@
     },
     "/{containerName}?comp=lease&restype=container&release": {
       "put": {
-        "tags": [
-          "container"
-        ],
+        "tags": ["container"],
         "operationId": "Container_ReleaseLease",
         "description": "[Update] establishes and manages a lock on a container for delete operations. The lock duration can be 15 to 60 seconds, or can be infinite",
         "parameters": [
@@ -1608,18 +1499,14 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "lease"
-          ]
+          "enum": ["lease"]
         },
         {
           "name": "restype",
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "container"
-          ]
+          "enum": ["container"]
         },
         {
           "name": "x-ms-lease-action",
@@ -1627,9 +1514,7 @@
           "in": "header",
           "required": true,
           "type": "string",
-          "enum": [
-            "release"
-          ],
+          "enum": ["release"],
           "x-ms-enum": {
             "name": "LeaseAction",
             "modelAsString": false
@@ -1641,9 +1526,7 @@
     },
     "/{containerName}?comp=lease&restype=container&renew": {
       "put": {
-        "tags": [
-          "container"
-        ],
+        "tags": ["container"],
         "operationId": "Container_RenewLease",
         "description": "[Update] establishes and manages a lock on a container for delete operations. The lock duration can be 15 to 60 seconds, or can be infinite",
         "parameters": [
@@ -1727,18 +1610,14 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "lease"
-          ]
+          "enum": ["lease"]
         },
         {
           "name": "restype",
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "container"
-          ]
+          "enum": ["container"]
         },
         {
           "name": "x-ms-lease-action",
@@ -1746,9 +1625,7 @@
           "in": "header",
           "required": true,
           "type": "string",
-          "enum": [
-            "renew"
-          ],
+          "enum": ["renew"],
           "x-ms-enum": {
             "name": "LeaseAction",
             "modelAsString": false
@@ -1760,9 +1637,7 @@
     },
     "/{containerName}?comp=lease&restype=container&break": {
       "put": {
-        "tags": [
-          "container"
-        ],
+        "tags": ["container"],
         "operationId": "Container_BreakLease",
         "description": "[Update] establishes and manages a lock on a container for delete operations. The lock duration can be 15 to 60 seconds, or can be infinite",
         "parameters": [
@@ -1846,18 +1721,14 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "lease"
-          ]
+          "enum": ["lease"]
         },
         {
           "name": "restype",
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "container"
-          ]
+          "enum": ["container"]
         },
         {
           "name": "x-ms-lease-action",
@@ -1865,9 +1736,7 @@
           "in": "header",
           "required": true,
           "type": "string",
-          "enum": [
-            "break"
-          ],
+          "enum": ["break"],
           "x-ms-enum": {
             "name": "LeaseAction",
             "modelAsString": false
@@ -1879,9 +1748,7 @@
     },
     "/{containerName}?comp=lease&restype=container&change": {
       "put": {
-        "tags": [
-          "container"
-        ],
+        "tags": ["container"],
         "operationId": "Container_ChangeLease",
         "description": "[Update] establishes and manages a lock on a container for delete operations. The lock duration can be 15 to 60 seconds, or can be infinite",
         "parameters": [
@@ -1968,18 +1835,14 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "lease"
-          ]
+          "enum": ["lease"]
         },
         {
           "name": "restype",
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "container"
-          ]
+          "enum": ["container"]
         },
         {
           "name": "x-ms-lease-action",
@@ -1987,9 +1850,7 @@
           "in": "header",
           "required": true,
           "type": "string",
-          "enum": [
-            "change"
-          ],
+          "enum": ["change"],
           "x-ms-enum": {
             "name": "LeaseAction",
             "modelAsString": false
@@ -2001,9 +1862,7 @@
     },
     "/{containerName}?restype=container&comp=list&flat": {
       "get": {
-        "tags": [
-          "containers"
-        ],
+        "tags": ["containers"],
         "operationId": "Container_ListBlobFlatSegment",
         "description": "[Update] The List Blobs operation returns a list of the blobs under the specified container",
         "parameters": [
@@ -2085,26 +1944,20 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "container"
-          ]
+          "enum": ["container"]
         },
         {
           "name": "comp",
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "list"
-          ]
+          "enum": ["list"]
         }
       ]
     },
     "/{containerName}?restype=container&comp=list&hierarchy": {
       "get": {
-        "tags": [
-          "containers"
-        ],
+        "tags": ["containers"],
         "operationId": "Container_ListBlobHierarchySegment",
         "description": "[Update] The List Blobs operation returns a list of the blobs under the specified container",
         "parameters": [
@@ -2189,26 +2042,20 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "container"
-          ]
+          "enum": ["container"]
         },
         {
           "name": "comp",
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "list"
-          ]
+          "enum": ["list"]
         }
       ]
     },
     "/{containerName}?restype=account&comp=properties": {
       "get": {
-        "tags": [
-          "container"
-        ],
+        "tags": ["container"],
         "operationId": "Container_GetAccountInfo",
         "description": "Returns the sku name and account kind ",
         "parameters": [
@@ -2259,11 +2106,7 @@
               "x-ms-account-kind": {
                 "x-ms-client-name": "AccountKind",
                 "type": "string",
-                "enum": [
-                  "Storage",
-                  "BlobStorage",
-                  "StorageV2"
-                ],
+                "enum": ["Storage", "BlobStorage", "StorageV2"],
                 "x-ms-enum": {
                   "name": "AccountKind",
                   "modelAsString": false
@@ -2287,9 +2130,7 @@
         }
       },
       "head": {
-        "tags": [
-          "container"
-        ],
+        "tags": ["container"],
         "operationId": "Container_GetAccountInfoWithHead",
         "description": "Returns the sku name and account kind ",
         "parameters": [
@@ -2340,11 +2181,7 @@
               "x-ms-account-kind": {
                 "x-ms-client-name": "AccountKind",
                 "type": "string",
-                "enum": [
-                  "Storage",
-                  "BlobStorage",
-                  "StorageV2"
-                ],
+                "enum": ["Storage", "BlobStorage", "StorageV2"],
                 "x-ms-enum": {
                   "name": "AccountKind",
                   "modelAsString": false
@@ -2373,31 +2210,23 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "account"
-          ]
+          "enum": ["account"]
         },
         {
           "name": "comp",
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "properties"
-          ]
+          "enum": ["properties"]
         }
       ]
     },
     "/{filesystem}/{path}?resource=directory&Create": {
       "put": {
-        "tags": [
-          "directory"
-        ],
+        "tags": ["directory"],
         "operationId": "Directory_Create",
         "description": "Create a directory. By default, the destination is overwritten and if the destination already exists and has a lease the lease is broken. This operation supports conditional HTTP requests.  For more information, see [Specifying Conditional Headers for Blob Service Operations](https://docs.microsoft.com/en-us/rest/api/storageservices/specifying-conditional-headers-for-blob-service-operations).  To fail if the destination already exists, use a conditional request with If-None-Match: \"*\".",
-        "consumes": [
-          "application/octet-stream"
-        ],
+        "consumes": ["application/octet-stream"],
         "parameters": [
           {
             "$ref": "#/parameters/Timeout"
@@ -2520,22 +2349,16 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "directory"
-          ]
+          "enum": ["directory"]
         }
       ]
     },
     "/{filesystem}/{path}?DirectoryRename": {
       "put": {
-        "tags": [
-          "directory"
-        ],
+        "tags": ["directory"],
         "operationId": "Directory_Rename",
         "description": "Rename a directory. By default, the destination is overwritten and if the destination already exists and has a lease the lease is broken. This operation supports conditional HTTP requests. For more information, see [Specifying Conditional Headers for Blob Service Operations](https://docs.microsoft.com/en-us/rest/api/storageservices/specifying-conditional-headers-for-blob-service-operations). To fail if the destination already exists, use a conditional request with If-None-Match: \"*\".",
-        "consumes": [
-          "application/octet-stream"
-        ],
+        "consumes": ["application/octet-stream"],
         "parameters": [
           {
             "$ref": "#/parameters/Timeout"
@@ -2684,9 +2507,7 @@
     },
     "/{filesystem}/{path}?DirectoryDelete": {
       "delete": {
-        "tags": [
-          "directory"
-        ],
+        "tags": ["directory"],
         "operationId": "Directory_Delete",
         "description": "Deletes the directory",
         "parameters": [
@@ -2780,9 +2601,7 @@
     },
     "/{filesystem}/{path}?action=setAccessControl&directory": {
       "patch": {
-        "tags": [
-          "directory"
-        ],
+        "tags": ["directory"],
         "operationId": "Directory_SetAccessControl",
         "description": "Set the owner, group, permissions, or access control list for a directory.",
         "parameters": [
@@ -2885,17 +2704,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "setAccessControl"
-          ]
+          "enum": ["setAccessControl"]
         }
       ]
     },
     "/{filesystem}/{path}?action=getAccessControl&directory": {
       "head": {
-        "tags": [
-          "directory"
-        ],
+        "tags": ["directory"],
         "operationId": "Directory_GetAccessControl",
         "description": "Get the owner, group, permissions, or access control list for a directory.",
         "parameters": [
@@ -3005,17 +2820,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "getAccessControl"
-          ]
+          "enum": ["getAccessControl"]
         }
       ]
     },
     "/{containerName}/{blob}": {
       "get": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_Download",
         "description": "The Download operation reads or downloads a blob from the system, including its metadata and properties. You can also call Download to read a snapshot.",
         "parameters": [
@@ -3128,11 +2939,7 @@
                 "x-ms-client-name": "BlobType",
                 "description": "The blob's type.",
                 "type": "string",
-                "enum": [
-                  "BlockBlob",
-                  "PageBlob",
-                  "AppendBlob"
-                ],
+                "enum": ["BlockBlob", "PageBlob", "AppendBlob"],
                 "x-ms-enum": {
                   "name": "BlobType",
                   "modelAsString": false
@@ -3168,12 +2975,7 @@
                 "x-ms-client-name": "CopyStatus",
                 "description": "State of the copy operation identified by x-ms-copy-id.",
                 "type": "string",
-                "enum": [
-                  "pending",
-                  "success",
-                  "aborted",
-                  "failed"
-                ],
+                "enum": ["pending", "success", "aborted", "failed"],
                 "x-ms-enum": {
                   "name": "CopyStatusType",
                   "modelAsString": false
@@ -3183,10 +2985,7 @@
                 "x-ms-client-name": "LeaseDuration",
                 "description": "When a blob is leased, specifies whether the lease is of infinite or fixed duration.",
                 "type": "string",
-                "enum": [
-                  "infinite",
-                  "fixed"
-                ],
+                "enum": ["infinite", "fixed"],
                 "x-ms-enum": {
                   "name": "LeaseDurationType",
                   "modelAsString": false
@@ -3212,10 +3011,7 @@
                 "x-ms-client-name": "LeaseStatus",
                 "description": "The current lease status of the blob.",
                 "type": "string",
-                "enum": [
-                  "locked",
-                  "unlocked"
-                ],
+                "enum": ["locked", "unlocked"],
                 "x-ms-enum": {
                   "name": "LeaseStatusType",
                   "modelAsString": false
@@ -3334,11 +3130,7 @@
                 "x-ms-client-name": "BlobType",
                 "description": "The blob's type.",
                 "type": "string",
-                "enum": [
-                  "BlockBlob",
-                  "PageBlob",
-                  "AppendBlob"
-                ],
+                "enum": ["BlockBlob", "PageBlob", "AppendBlob"],
                 "x-ms-enum": {
                   "name": "BlobType",
                   "modelAsString": false
@@ -3380,12 +3172,7 @@
                 "x-ms-client-name": "CopyStatus",
                 "description": "State of the copy operation identified by x-ms-copy-id.",
                 "type": "string",
-                "enum": [
-                  "pending",
-                  "success",
-                  "aborted",
-                  "failed"
-                ],
+                "enum": ["pending", "success", "aborted", "failed"],
                 "x-ms-enum": {
                   "name": "CopyStatusType",
                   "modelAsString": false
@@ -3395,10 +3182,7 @@
                 "x-ms-client-name": "LeaseDuration",
                 "description": "When a blob is leased, specifies whether the lease is of infinite or fixed duration.",
                 "type": "string",
-                "enum": [
-                  "infinite",
-                  "fixed"
-                ],
+                "enum": ["infinite", "fixed"],
                 "x-ms-enum": {
                   "name": "LeaseDurationType",
                   "modelAsString": false
@@ -3424,10 +3208,7 @@
                 "x-ms-client-name": "LeaseStatus",
                 "description": "The current lease status of the blob.",
                 "type": "string",
-                "enum": [
-                  "locked",
-                  "unlocked"
-                ],
+                "enum": ["locked", "unlocked"],
                 "x-ms-enum": {
                   "name": "LeaseStatusType",
                   "modelAsString": false
@@ -3499,9 +3280,7 @@
         }
       },
       "head": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_GetProperties",
         "description": "The Get Properties operation returns all user-defined metadata, standard HTTP properties, and system properties for the blob. It does not return the content of the blob.",
         "parameters": [
@@ -3566,11 +3345,7 @@
                 "x-ms-client-name": "BlobType",
                 "description": "The blob's type.",
                 "type": "string",
-                "enum": [
-                  "BlockBlob",
-                  "PageBlob",
-                  "AppendBlob"
-                ],
+                "enum": ["BlockBlob", "PageBlob", "AppendBlob"],
                 "x-ms-enum": {
                   "name": "BlobType",
                   "modelAsString": false
@@ -3606,12 +3381,7 @@
                 "x-ms-client-name": "CopyStatus",
                 "description": "State of the copy operation identified by x-ms-copy-id.",
                 "type": "string",
-                "enum": [
-                  "pending",
-                  "success",
-                  "aborted",
-                  "failed"
-                ],
+                "enum": ["pending", "success", "aborted", "failed"],
                 "x-ms-enum": {
                   "name": "CopyStatusType",
                   "modelAsString": false
@@ -3631,10 +3401,7 @@
                 "x-ms-client-name": "LeaseDuration",
                 "description": "When a blob is leased, specifies whether the lease is of infinite or fixed duration.",
                 "type": "string",
-                "enum": [
-                  "infinite",
-                  "fixed"
-                ],
+                "enum": ["infinite", "fixed"],
                 "x-ms-enum": {
                   "name": "LeaseDurationType",
                   "modelAsString": false
@@ -3660,10 +3427,7 @@
                 "x-ms-client-name": "LeaseStatus",
                 "description": "The current lease status of the blob.",
                 "type": "string",
-                "enum": [
-                  "locked",
-                  "unlocked"
-                ],
+                "enum": ["locked", "unlocked"],
                 "x-ms-enum": {
                   "name": "LeaseStatusType",
                   "modelAsString": false
@@ -3787,9 +3551,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_Delete",
         "description": "If the storage account's soft delete feature is disabled then, when a blob is deleted, it is permanently removed from the storage account. If the storage account's soft delete feature is enabled, then, when a blob is deleted, it is marked for deletion and becomes inaccessible immediately. However, the blob service retains the blob or snapshot for the number of days specified by the DeleteRetentionPolicy section of [Storage service properties] (Set-Blob-Service-Properties.md). After the specified number of days has passed, the blob's data is permanently removed from the storage account. Note that you continue to be charged for the soft-deleted blob's storage until it is permanently removed. Use the List Blobs API and specify the \"include=deleted\" query parameter to discover which blobs and snapshots have been soft deleted. You can then use the Undelete Blob API to restore a soft-deleted blob. All other operations on a soft-deleted blob or snapshot causes the service to return an HTTP status code of 404 (ResourceNotFound).",
         "parameters": [
@@ -3867,9 +3629,7 @@
     },
     "/{filesystem}/{path}?action=setAccessControl&blob": {
       "patch": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_SetAccessControl",
         "description": "Set the owner, group, permissions, or access control list for a blob.",
         "parameters": [
@@ -3972,17 +3732,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "setAccessControl"
-          ]
+          "enum": ["setAccessControl"]
         }
       ]
     },
     "/{filesystem}/{path}?action=getAccessControl&blob": {
       "head": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_GetAccessControl",
         "description": "Get the owner, group, permissions, or access control list for a blob.",
         "parameters": [
@@ -4092,22 +3848,16 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "getAccessControl"
-          ]
+          "enum": ["getAccessControl"]
         }
       ]
     },
     "/{filesystem}/{path}?FileRename": {
       "put": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_Rename",
         "description": "Rename a blob/file.  By default, the destination is overwritten and if the destination already exists and has a lease the lease is broken.  This operation supports conditional HTTP requests.  For more information, see [Specifying Conditional Headers for Blob Service Operations](https://docs.microsoft.com/en-us/rest/api/storageservices/specifying-conditional-headers-for-blob-service-operations).  To fail if the destination already exists, use a conditional request with If-None-Match: \"*\".",
-        "consumes": [
-          "application/octet-stream"
-        ],
+        "consumes": ["application/octet-stream"],
         "parameters": [
           {
             "$ref": "#/parameters/Timeout"
@@ -4248,14 +3998,10 @@
     },
     "/{containerName}/{blob}?PageBlob": {
       "put": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "PageBlob_Create",
         "description": "The Create operation creates a new page blob.",
-        "consumes": [
-          "application/octet-stream"
-        ],
+        "consumes": ["application/octet-stream"],
         "parameters": [
           {
             "$ref": "#/parameters/Timeout"
@@ -4398,9 +4144,7 @@
           "x-ms-parameter-location": "method",
           "description": "Specifies the type of blob to create: block blob, page blob, or append blob.",
           "type": "string",
-          "enum": [
-            "PageBlob"
-          ],
+          "enum": ["PageBlob"],
           "x-ms-enum": {
             "name": "BlobType",
             "modelAsString": false
@@ -4410,14 +4154,10 @@
     },
     "/{containerName}/{blob}?AppendBlob": {
       "put": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "AppendBlob_Create",
         "description": "The Create Append Blob operation creates a new append blob.",
-        "consumes": [
-          "application/octet-stream"
-        ],
+        "consumes": ["application/octet-stream"],
         "parameters": [
           {
             "$ref": "#/parameters/Timeout"
@@ -4551,9 +4291,7 @@
           "x-ms-parameter-location": "method",
           "description": "Specifies the type of blob to create: block blob, page blob, or append blob.",
           "type": "string",
-          "enum": [
-            "AppendBlob"
-          ],
+          "enum": ["AppendBlob"],
           "x-ms-enum": {
             "name": "BlobType",
             "modelAsString": false
@@ -4563,14 +4301,10 @@
     },
     "/{containerName}/{blob}?BlockBlob": {
       "put": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "BlockBlob_Upload",
         "description": "The Upload Block Blob operation updates the content of an existing block blob. Updating an existing block blob overwrites any existing metadata on the blob. Partial updates are not supported with Put Blob; the content of the existing blob is overwritten with the content of the new blob. To perform a partial update of the content of a block blob, use the Put Block List operation.",
-        "consumes": [
-          "application/octet-stream"
-        ],
+        "consumes": ["application/octet-stream"],
         "parameters": [
           {
             "$ref": "#/parameters/Body"
@@ -4710,9 +4444,7 @@
           "x-ms-parameter-location": "method",
           "description": "Specifies the type of blob to create: block blob, page blob, or append blob.",
           "type": "string",
-          "enum": [
-            "BlockBlob"
-          ],
+          "enum": ["BlockBlob"],
           "x-ms-enum": {
             "name": "BlobType",
             "modelAsString": false
@@ -4722,9 +4454,7 @@
     },
     "/{containerName}/{blob}?comp=undelete": {
       "put": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_Undelete",
         "description": "Undelete a blob that was previously soft deleted",
         "parameters": [
@@ -4784,17 +4514,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "undelete"
-          ]
+          "enum": ["undelete"]
         }
       ]
     },
     "/{containerName}/{blob}?comp=properties&SetHTTPHeaders": {
       "put": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_SetHTTPHeaders",
         "description": "The Set HTTP Headers operation sets system properties on the blob",
         "parameters": [
@@ -4903,17 +4629,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "properties"
-          ]
+          "enum": ["properties"]
         }
       ]
     },
     "/{containerName}/{blob}?comp=metadata": {
       "put": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_SetMetadata",
         "description": "The Set Blob Metadata operation sets user-defined metadata for the specified blob as one or more name-value pairs",
         "parameters": [
@@ -5020,17 +4742,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "metadata"
-          ]
+          "enum": ["metadata"]
         }
       ]
     },
     "/{containerName}/{blob}?comp=lease&acquire": {
       "put": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_AcquireLease",
         "description": "[Update] The Lease Blob operation establishes and manages a lock on a blob for write and delete operations",
         "parameters": [
@@ -5123,9 +4841,7 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "lease"
-          ]
+          "enum": ["lease"]
         },
         {
           "name": "x-ms-lease-action",
@@ -5133,9 +4849,7 @@
           "in": "header",
           "required": true,
           "type": "string",
-          "enum": [
-            "acquire"
-          ],
+          "enum": ["acquire"],
           "x-ms-enum": {
             "name": "LeaseAction",
             "modelAsString": false
@@ -5147,9 +4861,7 @@
     },
     "/{containerName}/{blob}?comp=lease&release": {
       "put": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_ReleaseLease",
         "description": "[Update] The Lease Blob operation establishes and manages a lock on a blob for write and delete operations",
         "parameters": [
@@ -5234,9 +4946,7 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "lease"
-          ]
+          "enum": ["lease"]
         },
         {
           "name": "x-ms-lease-action",
@@ -5244,9 +4954,7 @@
           "in": "header",
           "required": true,
           "type": "string",
-          "enum": [
-            "release"
-          ],
+          "enum": ["release"],
           "x-ms-enum": {
             "name": "LeaseAction",
             "modelAsString": false
@@ -5258,9 +4966,7 @@
     },
     "/{containerName}/{blob}?comp=lease&renew": {
       "put": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_RenewLease",
         "description": "[Update] The Lease Blob operation establishes and manages a lock on a blob for write and delete operations",
         "parameters": [
@@ -5350,9 +5056,7 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "lease"
-          ]
+          "enum": ["lease"]
         },
         {
           "name": "x-ms-lease-action",
@@ -5360,9 +5064,7 @@
           "in": "header",
           "required": true,
           "type": "string",
-          "enum": [
-            "renew"
-          ],
+          "enum": ["renew"],
           "x-ms-enum": {
             "name": "LeaseAction",
             "modelAsString": false
@@ -5374,9 +5076,7 @@
     },
     "/{containerName}/{blob}?comp=lease&change": {
       "put": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_ChangeLease",
         "description": "[Update] The Lease Blob operation establishes and manages a lock on a blob for write and delete operations",
         "parameters": [
@@ -5469,9 +5169,7 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "lease"
-          ]
+          "enum": ["lease"]
         },
         {
           "name": "x-ms-lease-action",
@@ -5479,9 +5177,7 @@
           "in": "header",
           "required": true,
           "type": "string",
-          "enum": [
-            "change"
-          ],
+          "enum": ["change"],
           "x-ms-enum": {
             "name": "LeaseAction",
             "modelAsString": false
@@ -5493,9 +5189,7 @@
     },
     "/{containerName}/{blob}?comp=lease&break": {
       "put": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_BreakLease",
         "description": "[Update] The Lease Blob operation establishes and manages a lock on a blob for write and delete operations",
         "parameters": [
@@ -5585,9 +5279,7 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "lease"
-          ]
+          "enum": ["lease"]
         },
         {
           "name": "x-ms-lease-action",
@@ -5595,9 +5287,7 @@
           "in": "header",
           "required": true,
           "type": "string",
-          "enum": [
-            "break"
-          ],
+          "enum": ["break"],
           "x-ms-enum": {
             "name": "LeaseAction",
             "modelAsString": false
@@ -5609,9 +5299,7 @@
     },
     "/{containerName}/{blob}?comp=snapshot": {
       "put": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_CreateSnapshot",
         "description": "The Create Snapshot operation creates a read-only snapshot of a blob",
         "parameters": [
@@ -5718,17 +5406,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "snapshot"
-          ]
+          "enum": ["snapshot"]
         }
       ]
     },
     "/{containerName}/{blob}?comp=copy": {
       "put": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_StartCopyFromURL",
         "description": "The Start Copy From URL operation copies a blob or an internet resource to a new blob.",
         "parameters": [
@@ -5824,12 +5508,7 @@
                 "x-ms-client-name": "CopyStatus",
                 "description": "State of the copy operation identified by x-ms-copy-id.",
                 "type": "string",
-                "enum": [
-                  "pending",
-                  "success",
-                  "aborted",
-                  "failed"
-                ],
+                "enum": ["pending", "success", "aborted", "failed"],
                 "x-ms-enum": {
                   "name": "CopyStatusType",
                   "modelAsString": false
@@ -5855,9 +5534,7 @@
     },
     "/{containerName}/{blob}?comp=copy&sync": {
       "put": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_CopyFromURL",
         "description": "The Copy From URL operation copies a blob or an internet resource to a new blob. It will not return a response until the copy is complete.",
         "parameters": [
@@ -5950,9 +5627,7 @@
                 "x-ms-client-name": "CopyStatus",
                 "description": "State of the copy operation identified by x-ms-copy-id.",
                 "type": "string",
-                "enum": [
-                  "success"
-                ],
+                "enum": ["success"],
                 "x-ms-enum": {
                   "name": "SyncCopyStatusType",
                   "modelAsString": false
@@ -5980,17 +5655,13 @@
           "in": "header",
           "required": true,
           "type": "string",
-          "enum": [
-            "true"
-          ]
+          "enum": ["true"]
         }
       ]
     },
     "/{containerName}/{blob}?comp=copy&copyid={CopyId}": {
       "put": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_AbortCopyFromURL",
         "description": "The Abort Copy From URL operation aborts a pending Copy From URL operation, and leaves a destination blob with zero length and full metadata.",
         "parameters": [
@@ -6056,9 +5727,7 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "copy"
-          ]
+          "enum": ["copy"]
         },
         {
           "name": "x-ms-copy-action",
@@ -6066,18 +5735,14 @@
           "in": "header",
           "required": true,
           "type": "string",
-          "enum": [
-            "abort"
-          ],
+          "enum": ["abort"],
           "x-ms-parameter-location": "method"
         }
       ]
     },
     "/{containerName}/{blob}?comp=tier": {
       "put": {
-        "tags": [
-          "blobs"
-        ],
+        "tags": ["blobs"],
         "operationId": "Blob_SetTier",
         "description": "The Set Tier operation sets the tier on a blob. The operation is allowed on a page blob in a premium storage account and on a block blob in a blob storage account (locally redundant storage only). A premium page blob's tier determines the allowed size, IOPS, and bandwidth of the blob. A block blob's tier determines Hot/Cool/Archive storage type. This operation does not update the blob's ETag.",
         "parameters": [
@@ -6158,17 +5823,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "tier"
-          ]
+          "enum": ["tier"]
         }
       ]
     },
     "/{containerName}/{blob}?restype=account&comp=properties": {
       "get": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_GetAccountInfo",
         "description": "Returns the sku name and account kind ",
         "parameters": [
@@ -6219,11 +5880,7 @@
               "x-ms-account-kind": {
                 "x-ms-client-name": "AccountKind",
                 "type": "string",
-                "enum": [
-                  "Storage",
-                  "BlobStorage",
-                  "StorageV2"
-                ],
+                "enum": ["Storage", "BlobStorage", "StorageV2"],
                 "x-ms-enum": {
                   "name": "AccountKind",
                   "modelAsString": false
@@ -6247,9 +5904,7 @@
         }
       },
       "head": {
-        "tags": [
-          "blob"
-        ],
+        "tags": ["blob"],
         "operationId": "Blob_GetAccountInfoWithHead",
         "description": "Returns the sku name and account kind ",
         "parameters": [
@@ -6300,11 +5955,7 @@
               "x-ms-account-kind": {
                 "x-ms-client-name": "AccountKind",
                 "type": "string",
-                "enum": [
-                  "Storage",
-                  "BlobStorage",
-                  "StorageV2"
-                ],
+                "enum": ["Storage", "BlobStorage", "StorageV2"],
                 "x-ms-enum": {
                   "name": "AccountKind",
                   "modelAsString": false
@@ -6333,31 +5984,23 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "account"
-          ]
+          "enum": ["account"]
         },
         {
           "name": "comp",
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "properties"
-          ]
+          "enum": ["properties"]
         }
       ]
     },
     "/{containerName}/{blob}?comp=block": {
       "put": {
-        "tags": [
-          "blockblob"
-        ],
+        "tags": ["blockblob"],
         "operationId": "BlockBlob_StageBlock",
         "description": "The Stage Block operation creates a new block to be committed as part of a blob",
-        "consumes": [
-          "application/octet-stream"
-        ],
+        "consumes": ["application/octet-stream"],
         "parameters": [
           {
             "$ref": "#/parameters/BlockId"
@@ -6459,17 +6102,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "block"
-          ]
+          "enum": ["block"]
         }
       ]
     },
     "/{containerName}/{blob}?comp=block&fromURL": {
       "put": {
-        "tags": [
-          "blockblob"
-        ],
+        "tags": ["blockblob"],
         "operationId": "BlockBlob_StageBlockFromURL",
         "description": "The Stage Block operation creates a new block to be committed as part of a blob where the contents are read from a URL.",
         "parameters": [
@@ -6591,17 +6230,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "block"
-          ]
+          "enum": ["block"]
         }
       ]
     },
     "/{containerName}/{blob}?comp=blocklist": {
       "put": {
-        "tags": [
-          "blockblob"
-        ],
+        "tags": ["blockblob"],
         "operationId": "BlockBlob_CommitBlockList",
         "description": "The Commit Block List operation writes a blob by specifying the list of block IDs that make up the blob. In order to be written as part of a blob, a block must have been successfully written to the server in a prior Put Block operation. You can call Put Block List to update a blob by uploading only those blocks that have changed, then committing the new and existing blocks together. You can do this by specifying whether to commit a block from the committed block list or from the uncommitted block list, or to commit the most recently uploaded version of the block, whichever list it may belong to.",
         "parameters": [
@@ -6745,9 +6380,7 @@
         }
       },
       "get": {
-        "tags": [
-          "blockblob"
-        ],
+        "tags": ["blockblob"],
         "operationId": "BlockBlob_GetBlockList",
         "description": "The Get Block List operation retrieves the list of blocks that have been uploaded as part of a block blob",
         "parameters": [
@@ -6839,22 +6472,16 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "blocklist"
-          ]
+          "enum": ["blocklist"]
         }
       ]
     },
     "/{containerName}/{blob}?comp=page&update": {
       "put": {
-        "tags": [
-          "pageblob"
-        ],
+        "tags": ["pageblob"],
         "operationId": "PageBlob_UploadPages",
         "description": "The Upload Pages operation writes a range of pages to a page blob",
-        "consumes": [
-          "application/octet-stream"
-        ],
+        "consumes": ["application/octet-stream"],
         "parameters": [
           {
             "$ref": "#/parameters/Body"
@@ -6993,9 +6620,7 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "page"
-          ]
+          "enum": ["page"]
         },
         {
           "name": "x-ms-page-write",
@@ -7005,9 +6630,7 @@
           "x-ms-parameter-location": "method",
           "description": "Required. You may specify one of the following options:\n  - Update: Writes the bytes specified by the request body into the specified range. The Range and Content-Length headers must match to perform the update.\n  - Clear: Clears the specified range and releases the space used in storage for that range. To clear a range, set the Content-Length header to zero, and the Range header to a value that indicates the range to clear, up to maximum blob size.",
           "type": "string",
-          "enum": [
-            "update"
-          ],
+          "enum": ["update"],
           "x-ms-enum": {
             "name": "PageWriteType",
             "modelAsString": false
@@ -7017,14 +6640,10 @@
     },
     "/{containerName}/{blob}?comp=page&clear": {
       "put": {
-        "tags": [
-          "pageblob"
-        ],
+        "tags": ["pageblob"],
         "operationId": "PageBlob_ClearPages",
         "description": "The Clear Pages operation clears a set of pages from a page blob",
-        "consumes": [
-          "application/octet-stream"
-        ],
+        "consumes": ["application/octet-stream"],
         "parameters": [
           {
             "$ref": "#/parameters/ContentLength"
@@ -7147,9 +6766,7 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "page"
-          ]
+          "enum": ["page"]
         },
         {
           "name": "x-ms-page-write",
@@ -7159,9 +6776,7 @@
           "x-ms-parameter-location": "method",
           "description": "Required. You may specify one of the following options:\n  - Update: Writes the bytes specified by the request body into the specified range. The Range and Content-Length headers must match to perform the update.\n  - Clear: Clears the specified range and releases the space used in storage for that range. To clear a range, set the Content-Length header to zero, and the Range header to a value that indicates the range to clear, up to maximum blob size.",
           "type": "string",
-          "enum": [
-            "clear"
-          ],
+          "enum": ["clear"],
           "x-ms-enum": {
             "name": "PageWriteType",
             "modelAsString": false
@@ -7171,14 +6786,10 @@
     },
     "/{containerName}/{blob}?comp=page&update&fromUrl": {
       "put": {
-        "tags": [
-          "pageblob"
-        ],
+        "tags": ["pageblob"],
         "operationId": "PageBlob_UploadPagesFromURL",
         "description": "The Upload Pages operation writes a range of pages to a page blob where the contents are read from a URL",
-        "consumes": [
-          "application/octet-stream"
-        ],
+        "consumes": ["application/octet-stream"],
         "parameters": [
           {
             "$ref": "#/parameters/SourceUrl"
@@ -7325,9 +6936,7 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "page"
-          ]
+          "enum": ["page"]
         },
         {
           "name": "x-ms-page-write",
@@ -7337,9 +6946,7 @@
           "x-ms-parameter-location": "method",
           "description": "Required. You may specify one of the following options:\n  - Update: Writes the bytes specified by the request body into the specified range. The Range and Content-Length headers must match to perform the update.\n  - Clear: Clears the specified range and releases the space used in storage for that range. To clear a range, set the Content-Length header to zero, and the Range header to a value that indicates the range to clear, up to maximum blob size.",
           "type": "string",
-          "enum": [
-            "update"
-          ],
+          "enum": ["update"],
           "x-ms-enum": {
             "name": "PageWriteType",
             "modelAsString": false
@@ -7349,9 +6956,7 @@
     },
     "/{containerName}/{blob}?comp=pagelist": {
       "get": {
-        "tags": [
-          "pageblob"
-        ],
+        "tags": ["pageblob"],
         "operationId": "PageBlob_GetPageRanges",
         "description": "The Get Page Ranges operation returns the list of valid page ranges for a page blob or snapshot of a page blob",
         "parameters": [
@@ -7451,17 +7056,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "pagelist"
-          ]
+          "enum": ["pagelist"]
         }
       ]
     },
     "/{containerName}/{blob}?comp=pagelist&diff": {
       "get": {
-        "tags": [
-          "pageblob"
-        ],
+        "tags": ["pageblob"],
         "operationId": "PageBlob_GetPageRangesDiff",
         "description": "The Get Page Ranges Diff operation returns the list of valid page ranges for a page blob that were changed between target blob and previous snapshot.",
         "parameters": [
@@ -7564,17 +7165,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "pagelist"
-          ]
+          "enum": ["pagelist"]
         }
       ]
     },
     "/{containerName}/{blob}?comp=properties&Resize": {
       "put": {
-        "tags": [
-          "pageblob"
-        ],
+        "tags": ["pageblob"],
         "operationId": "PageBlob_Resize",
         "description": "Resize the Blob",
         "parameters": [
@@ -7677,17 +7274,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "properties"
-          ]
+          "enum": ["properties"]
         }
       ]
     },
     "/{containerName}/{blob}?comp=properties&UpdateSequenceNumber": {
       "put": {
-        "tags": [
-          "pageblob"
-        ],
+        "tags": ["pageblob"],
         "operationId": "PageBlob_UpdateSequenceNumber",
         "description": "Update the sequence number of the blob",
         "parameters": [
@@ -7784,17 +7377,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "properties"
-          ]
+          "enum": ["properties"]
         }
       ]
     },
     "/{containerName}/{blob}?comp=incrementalcopy": {
       "put": {
-        "tags": [
-          "pageblob"
-        ],
+        "tags": ["pageblob"],
         "operationId": "PageBlob_CopyIncremental",
         "description": "The Copy Incremental operation copies a snapshot of the source page blob to a destination page blob. The snapshot is copied such that only the differential changes between the previously copied snapshot are transferred to the destination. The copied snapshots are complete copies of the original snapshot and can be read or copied from as usual. This API is supported since REST version 2016-05-31.",
         "parameters": [
@@ -7869,12 +7458,7 @@
                 "x-ms-client-name": "CopyStatus",
                 "description": "State of the copy operation identified by x-ms-copy-id.",
                 "type": "string",
-                "enum": [
-                  "pending",
-                  "success",
-                  "aborted",
-                  "failed"
-                ],
+                "enum": ["pending", "success", "aborted", "failed"],
                 "x-ms-enum": {
                   "name": "CopyStatusType",
                   "modelAsString": false
@@ -7902,17 +7486,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "incrementalcopy"
-          ]
+          "enum": ["incrementalcopy"]
         }
       ]
     },
     "/{containerName}/{blob}?comp=appendblock": {
       "put": {
-        "tags": [
-          "appendblob"
-        ],
+        "tags": ["appendblob"],
         "operationId": "AppendBlob_AppendBlock",
         "description": "The Append Block operation commits a new block of data to the end of an existing append blob. The Append Block operation is permitted only if the blob was created with x-ms-blob-type set to AppendBlob. Append Block is supported only on version 2015-02-21 version or later.",
         "parameters": [
@@ -8051,17 +7631,13 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "appendblock"
-          ]
+          "enum": ["appendblock"]
         }
       ]
     },
     "/{containerName}/{blob}?comp=appendblock&fromUrl": {
       "put": {
-        "tags": [
-          "appendblob"
-        ],
+        "tags": ["appendblob"],
         "operationId": "AppendBlob_AppendBlockFromUrl",
         "description": "The Append Block operation commits a new block of data to the end of an existing append blob where the contents are read from a source url. The Append Block operation is permitted only if the blob was created with x-ms-blob-type set to AppendBlob. Append Block is supported only on version 2015-02-21 version or later.",
         "parameters": [
@@ -8208,9 +7784,7 @@
           "in": "query",
           "required": true,
           "type": "string",
-          "enum": [
-            "appendblock"
-          ]
+          "enum": ["appendblock"]
         }
       ]
     }
@@ -8218,10 +7792,7 @@
   "definitions": {
     "KeyInfo": {
       "type": "object",
-      "required": [
-        "Start",
-        "Expiry"
-      ],
+      "required": ["Start", "Expiry"],
       "description": "Key information",
       "properties": {
         "Start": {
@@ -8281,10 +7852,7 @@
     },
     "PublicAccessType": {
       "type": "string",
-      "enum": [
-        "container",
-        "blob"
-      ],
+      "enum": ["container", "blob"],
       "x-ms-enum": {
         "name": "PublicAccessType",
         "modelAsString": true
@@ -8292,12 +7860,7 @@
     },
     "CopyStatus": {
       "type": "string",
-      "enum": [
-        "pending",
-        "success",
-        "aborted",
-        "failed"
-      ],
+      "enum": ["pending", "success", "aborted", "failed"],
       "x-ms-enum": {
         "name": "CopyStatusType",
         "modelAsString": false
@@ -8305,10 +7868,7 @@
     },
     "LeaseDuration": {
       "type": "string",
-      "enum": [
-        "infinite",
-        "fixed"
-      ],
+      "enum": ["infinite", "fixed"],
       "x-ms-enum": {
         "name": "LeaseDurationType",
         "modelAsString": false
@@ -8316,13 +7876,7 @@
     },
     "LeaseState": {
       "type": "string",
-      "enum": [
-        "available",
-        "leased",
-        "expired",
-        "breaking",
-        "broken"
-      ],
+      "enum": ["available", "leased", "expired", "breaking", "broken"],
       "x-ms-enum": {
         "name": "LeaseStateType",
         "modelAsString": false
@@ -8330,10 +7884,7 @@
     },
     "LeaseStatus": {
       "type": "string",
-      "enum": [
-        "locked",
-        "unlocked"
-      ],
+      "enum": ["locked", "unlocked"],
       "x-ms-enum": {
         "name": "LeaseStatusType",
         "modelAsString": false
@@ -8367,9 +7918,7 @@
     },
     "AccessPolicy": {
       "type": "object",
-      "required": [
-        "Permission"
-      ],
+      "required": ["Permission"],
       "description": "An Access policy",
       "properties": {
         "Start": {
@@ -8413,10 +7962,7 @@
     },
     "ArchiveStatus": {
       "type": "string",
-      "enum": [
-        "rehydrate-pending-to-hot",
-        "rehydrate-pending-to-cool"
-      ],
+      "enum": ["rehydrate-pending-to-hot", "rehydrate-pending-to-cool"],
       "x-ms-enum": {
         "name": "ArchiveStatus",
         "modelAsString": true
@@ -8428,11 +7974,7 @@
       },
       "description": "An Azure Storage blob",
       "type": "object",
-      "required": [
-        "Name",
-        "Snapshot",
-        "Properties"
-      ],
+      "required": ["Name", "Snapshot", "Properties"],
       "properties": {
         "Name": {
           "type": "string"
@@ -8457,10 +7999,7 @@
       },
       "description": "Properties of a blob",
       "type": "object",
-      "required": [
-        "Etag",
-        "Last-Modified"
-      ],
+      "required": ["Etag", "Last-Modified"],
       "properties": {
         "Creation-Time": {
           "type": "string",
@@ -8505,11 +8044,7 @@
         },
         "BlobType": {
           "type": "string",
-          "enum": [
-            "BlockBlob",
-            "PageBlob",
-            "AppendBlob"
-          ],
+          "enum": ["BlockBlob", "PageBlob", "AppendBlob"],
           "x-ms-enum": {
             "name": "BlobType",
             "modelAsString": false
@@ -8583,11 +8118,7 @@
       },
       "description": "An enumeration of blobs",
       "type": "object",
-      "required": [
-        "ServiceEndpoint",
-        "ContainerName",
-        "Segment"
-      ],
+      "required": ["ServiceEndpoint", "ContainerName", "Segment"],
       "properties": {
         "ServiceEndpoint": {
           "type": "string",
@@ -8627,11 +8158,7 @@
       },
       "description": "An enumeration of blobs",
       "type": "object",
-      "required": [
-        "ServiceEndpoint",
-        "ContainerName",
-        "Segment"
-      ],
+      "required": ["ServiceEndpoint", "ContainerName", "Segment"],
       "properties": {
         "ServiceEndpoint": {
           "type": "string",
@@ -8669,9 +8196,7 @@
       "xml": {
         "name": "Blobs"
       },
-      "required": [
-        "BlobItems"
-      ],
+      "required": ["BlobItems"],
       "type": "object",
       "properties": {
         "BlobItems": {
@@ -8687,9 +8212,7 @@
         "name": "Blobs"
       },
       "type": "object",
-      "required": [
-        "BlobItems"
-      ],
+      "required": ["BlobItems"],
       "properties": {
         "BlobPrefixes": {
           "type": "array",
@@ -8707,9 +8230,7 @@
     },
     "BlobPrefix": {
       "type": "object",
-      "required": [
-        "Name"
-      ],
+      "required": ["Name"],
       "properties": {
         "Name": {
           "type": "string"
@@ -8718,10 +8239,7 @@
     },
     "Block": {
       "type": "object",
-      "required": [
-        "Name",
-        "Size"
-      ],
+      "required": ["Name", "Size"],
       "description": "Represents a single block in a block blob.  It describes the block's ID and size.",
       "properties": {
         "Name": {
@@ -8797,10 +8315,7 @@
         "name": "Container"
       },
       "type": "object",
-      "required": [
-        "Name",
-        "Properties"
-      ],
+      "required": ["Name", "Properties"],
       "description": "An Azure Storage container",
       "properties": {
         "Name": {
@@ -8816,10 +8331,7 @@
     },
     "ContainerProperties": {
       "type": "object",
-      "required": [
-        "Last-Modified",
-        "Etag"
-      ],
+      "required": ["Last-Modified", "Etag"],
       "description": "Properties of a container",
       "properties": {
         "Last-Modified": {
@@ -8856,10 +8368,7 @@
       },
       "description": "An enumeration of containers",
       "type": "object",
-      "required": [
-        "ServiceEndpoint",
-        "ContainerItems"
-      ],
+      "required": ["ServiceEndpoint", "ContainerItems"],
       "properties": {
         "ServiceEndpoint": {
           "type": "string",
@@ -9042,19 +8551,12 @@
     "GeoReplication": {
       "description": "Geo-Replication information for the Secondary Storage Service",
       "type": "object",
-      "required": [
-        "Status",
-        "LastSyncTime"
-      ],
+      "required": ["Status", "LastSyncTime"],
       "properties": {
         "Status": {
           "description": "The status of the secondary location",
           "type": "string",
-          "enum": [
-            "live",
-            "bootstrap",
-            "unavailable"
-          ],
+          "enum": ["live", "bootstrap", "unavailable"],
           "x-ms-enum": {
             "name": "GeoReplicationStatusType",
             "modelAsString": true
@@ -9070,13 +8572,7 @@
     "Logging": {
       "description": "Azure Analytics Logging settings.",
       "type": "object",
-      "required": [
-        "Version",
-        "Delete",
-        "Read",
-        "Write",
-        "RetentionPolicy"
-      ],
+      "required": ["Version", "Delete", "Read", "Write", "RetentionPolicy"],
       "properties": {
         "Version": {
           "description": "The version of Storage Analytics to configure.",
@@ -9127,9 +8623,7 @@
     },
     "Metrics": {
       "description": "a summary of request statistics grouped by API in hour or minute aggregates for blobs",
-      "required": [
-        "Enabled"
-      ],
+      "required": ["Enabled"],
       "properties": {
         "Version": {
           "description": "The version of Storage Analytics to configure.",
@@ -9168,10 +8662,7 @@
     },
     "PageRange": {
       "type": "object",
-      "required": [
-        "Start",
-        "End"
-      ],
+      "required": ["Start", "End"],
       "properties": {
         "Start": {
           "type": "integer",
@@ -9194,10 +8685,7 @@
     },
     "ClearRange": {
       "type": "object",
-      "required": [
-        "Start",
-        "End"
-      ],
+      "required": ["Start", "End"],
       "properties": {
         "Start": {
           "type": "integer",
@@ -9221,9 +8709,7 @@
     "RetentionPolicy": {
       "description": "the retention policy which determines how long the associated data should persist",
       "type": "object",
-      "required": [
-        "Enabled"
-      ],
+      "required": ["Enabled"],
       "properties": {
         "Enabled": {
           "description": "Indicates whether a retention policy is enabled for the storage service",
@@ -9242,10 +8728,7 @@
       },
       "description": "signed identifier",
       "type": "object",
-      "required": [
-        "Id",
-        "AccessPolicy"
-      ],
+      "required": ["Id", "AccessPolicy"],
       "properties": {
         "Id": {
           "type": "string",
@@ -9270,9 +8753,7 @@
     "StaticWebsite": {
       "description": "The properties that enable an account to host a static website",
       "type": "object",
-      "required": [
-        "Enabled"
-      ],
+      "required": ["Enabled"],
       "properties": {
         "Enabled": {
           "description": "Indicates whether this account is hosting a static website",
@@ -9423,10 +8904,7 @@
       "x-ms-parameter-location": "method",
       "description": "Specifies whether data in the container may be accessed publicly and the level of access",
       "type": "string",
-      "enum": [
-        "container",
-        "blob"
-      ],
+      "enum": ["container", "blob"],
       "x-ms-enum": {
         "name": "PublicAccessType",
         "modelAsString": true
@@ -9496,10 +8974,7 @@
       "in": "header",
       "required": false,
       "type": "string",
-      "enum": [
-        "High",
-        "Standard"
-      ],
+      "enum": ["High", "Standard"],
       "x-ms-enum": {
         "name": "RehydratePriority",
         "modelAsString": true
@@ -9643,11 +9118,7 @@
       "x-ms-parameter-location": "method",
       "description": "Specifies whether to return the list of committed blocks, the list of uncommitted blocks, or both lists together.",
       "type": "string",
-      "enum": [
-        "committed",
-        "uncommitted",
-        "all"
-      ],
+      "enum": ["committed", "uncommitted", "all"],
       "x-ms-enum": {
         "name": "BlockListType",
         "modelAsString": false
@@ -9745,10 +9216,7 @@
       "in": "header",
       "required": false,
       "type": "string",
-      "enum": [
-        "include",
-        "only"
-      ],
+      "enum": ["include", "only"],
       "x-ms-enum": {
         "name": "DeleteSnapshotsOptionType",
         "modelAsString": false
@@ -9801,9 +9269,7 @@
       "type": "string",
       "in": "header",
       "required": false,
-      "enum": [
-        "AES256"
-      ],
+      "enum": ["AES256"],
       "x-ms-enum": {
         "name": "EncryptionAlgorithmType",
         "modelAsString": false
@@ -9969,9 +9435,7 @@
       "in": "query",
       "required": false,
       "type": "string",
-      "enum": [
-        "metadata"
-      ],
+      "enum": ["metadata"],
       "x-ms-enum": {
         "name": "ListContainersIncludeType",
         "modelAsString": false
@@ -10088,10 +9552,7 @@
       "in": "query",
       "required": false,
       "type": "string",
-      "enum": [
-        "legacy",
-        "posix"
-      ],
+      "enum": ["legacy", "posix"],
       "x-ms-enum": {
         "name": "PathRenameMode",
         "modelAsString": false
@@ -10193,11 +9654,7 @@
       "x-ms-parameter-location": "method",
       "description": "Required if the x-ms-blob-sequence-number header is set for the request. This property applies to page blobs only. This property indicates how the service should modify the blob's sequence number",
       "type": "string",
-      "enum": [
-        "max",
-        "update",
-        "increment"
-      ],
+      "enum": ["max", "update", "increment"],
       "x-ms-enum": {
         "name": "SequenceNumberActionType",
         "modelAsString": false

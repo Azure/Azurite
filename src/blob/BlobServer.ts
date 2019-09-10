@@ -5,12 +5,18 @@ import IAccountDataStore from "../common/IAccountDataStore";
 import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
+import FSExtentStore from "../common/persistence/FSExtentStore";
+import IExtentMetadata from "../common/persistence/IExtentMetadata";
+import IExtentStore from "../common/persistence/IExtentStore";
+import LokiExtentMetadata from "../common/persistence/LokiExtentMetadata";
 import ServerBase from "../common/ServerBase";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
 import BlobGCManager from "./gc/BlobGCManager";
 import IBlobDataStore from "./persistence/IBlobDataStore";
+import IBlobMetadataStore from "./persistence/IBlobMetaDataStore";
 import LokiBlobDataStore from "./persistence/LokiBlobDataStore";
+import LokiBlobMetadataStore from "./persistence/LokiBlobMetadataStore";
 
 const BEFORE_CLOSE_MESSAGE = `Azurite Blob service is closing...`;
 const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Blob service is closing... Critical error happens during GC.`;
@@ -30,7 +36,10 @@ const AFTER_CLOSE_MESSAGE = `Azurite Blob service successfully closed`;
  * @class Server
  */
 export default class BlobServer extends ServerBase {
-  private readonly dataStore: IBlobDataStore;
+  private readonly metadata: IBlobDataStore;
+  private readonly metadataStore: IBlobMetadataStore;
+  private readonly extentMetadataStore: IExtentMetadata;
+  private readonly extentStore: IExtentStore;
   private readonly accountDataStore: IAccountDataStore;
   private readonly gcManager: IGCManager;
 
@@ -54,10 +63,24 @@ export default class BlobServer extends ServerBase {
     // We can change the persistency layer implementation by
     // creating a new XXXDataStore class implementing IBlobDataStore interface
     // and replace the default LokiBlobDataStore
-    const dataStore: IBlobDataStore = new LokiBlobDataStore(
-      configuration.dbPath,
-      configuration.persistencePath
+    const metadataStore: IBlobMetadataStore = new LokiBlobMetadataStore(
+      configuration.metadataDBPath
       // logger
+    );
+    const metadata: IBlobDataStore = new LokiBlobDataStore(
+      configuration.metadataDBPath,
+      configuration.persistencePathArray[0].persistencyPath
+      // logger
+    );
+
+    const extentMetadataStore: IExtentMetadata = new LokiExtentMetadata(
+      configuration.extentDBPath
+    );
+
+    const extentStore: IExtentStore = new FSExtentStore(
+      extentMetadataStore,
+      configuration.persistencePathArray,
+      logger
     );
 
     const accountDataStore: IAccountDataStore = new AccountDataStore();
@@ -66,7 +89,8 @@ export default class BlobServer extends ServerBase {
     // creating a new XXXListenerFactory implementing IRequestListenerFactory interface
     // and replace the default Express based request listener
     const requestListenerFactory: IRequestListenerFactory = new BlobRequestListenerFactory(
-      dataStore,
+      metadataStore,
+      extentStore,
       accountDataStore,
       configuration.enableAccessLog, // Access log includes every handled HTTP request
       configuration.accessLogWriteStream
@@ -77,7 +101,7 @@ export default class BlobServer extends ServerBase {
     // Default Blob GC Manager
     // Will close service when any critical GC error happens
     const gcManager = new BlobGCManager(
-      dataStore,
+      metadata,
       () => {
         // tslint:disable-next-line:no-console
         console.log(BEFORE_CLOSE_MESSAGE_GC_ERROR);
@@ -91,7 +115,10 @@ export default class BlobServer extends ServerBase {
       logger
     );
 
-    this.dataStore = dataStore;
+    this.metadata = metadata;
+    this.metadataStore = metadataStore;
+    this.extentMetadataStore = extentMetadataStore;
+    this.extentStore = extentStore;
     this.accountDataStore = accountDataStore;
     this.gcManager = gcManager;
   }
@@ -104,8 +131,20 @@ export default class BlobServer extends ServerBase {
       await this.accountDataStore.init();
     }
 
-    if (this.dataStore !== undefined) {
-      await this.dataStore.init();
+    if (this.metadata !== undefined) {
+      await this.metadata.init();
+    }
+
+    if (this.metadataStore !== undefined) {
+      await this.metadataStore.init();
+    }
+
+    if (this.metadataStore !== undefined) {
+      await this.extentMetadataStore.init();
+    }
+
+    if (this.extentStore !== undefined) {
+      await this.extentStore.init();
     }
 
     if (this.gcManager !== undefined) {
@@ -127,8 +166,20 @@ export default class BlobServer extends ServerBase {
       await this.gcManager.close();
     }
 
-    if (this.dataStore !== undefined) {
-      await this.dataStore.close();
+    if (this.extentStore !== undefined) {
+      await this.extentStore.close();
+    }
+
+    if (this.extentMetadataStore !== undefined) {
+      await this.extentMetadataStore.close();
+    }
+
+    if (this.metadataStore !== undefined) {
+      await this.metadataStore.close();
+    }
+
+    if (this.metadata !== undefined) {
+      await this.metadata.close();
     }
 
     if (this.accountDataStore !== undefined) {

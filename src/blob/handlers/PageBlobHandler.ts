@@ -1,3 +1,4 @@
+import IExtentStore from "../../common/persistence/IExtentStore";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -5,7 +6,9 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IPageBlobHandler from "../generated/handlers/IPageBlobHandler";
 import ILogger from "../generated/utils/ILogger";
-import IBlobDataStore, { BlobModel } from "../persistence/IBlobDataStore";
+import IBlobMetadataStore, {
+  BlobModel
+} from "../persistence/IBlobMetadataStore";
 import { BLOB_API_VERSION } from "../utils/constants";
 import { deserializePageBlobRangeHeader, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -23,11 +26,12 @@ import IPageBlobRangesManager from "./IPageBlobRangesManager";
 export default class PageBlobHandler extends BaseHandler
   implements IPageBlobHandler {
   constructor(
-    dataStore: IBlobDataStore,
+    metadataStore: IBlobMetadataStore,
+    extentStore: IExtentStore,
     logger: ILogger,
     private readonly rangesManager: IPageBlobRangesManager
   ) {
-    super(dataStore, logger);
+    super(metadataStore, extentStore, logger);
   }
 
   public uploadPagesFromURL(
@@ -72,14 +76,6 @@ export default class PageBlobHandler extends BaseHandler
       options.blobHTTPHeaders.blobContentType ||
       context.request!.getHeader("content-type") ||
       "application/octet-stream";
-
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
 
     // const accessTierInferred = options.pageBlobAccessTier === undefined;
 
@@ -129,7 +125,7 @@ export default class PageBlobHandler extends BaseHandler
 
     // TODO: What's happens when create page blob right before commit block list? Or should we lock
     // Should we check if there is an uncommitted blob?
-    this.dataStore.updateBlob(blob);
+    this.metadataStore.createBlob(blob);
 
     const response: Models.PageBlobCreateResponse = {
       statusCode: 201,
@@ -164,22 +160,14 @@ export default class PageBlobHandler extends BaseHandler
       );
     }
 
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
-    let blob = await this.dataStore.getBlob(
+    const blob = await this.metadataStore.downloadBlob(
       accountName,
       containerName,
-      blobName
+      blobName,
+      undefined,
+      context
     );
-    if (!blob) {
-      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
-    }
+
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
@@ -208,25 +196,31 @@ export default class PageBlobHandler extends BaseHandler
       throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextID!);
     }
 
-    // Persisted request payload
-    const persistency = await this.dataStore.writePayload(body);
+    const persistency = await this.extentStore.appendExtent(body);
+    if (persistency.count !== contentLength) {
+      // TODO: Confirm status code
+      throw StorageErrorFactory.getInvalidOperation(
+        blobCtx.contextID!,
+        `The size of the request body ${
+          persistency.count
+        } mismatches the content-length ${contentLength}.`
+      );
+    }
 
-    this.rangesManager.mergeRange(blob.pageRangesInOrder || [], {
+    const res = await this.metadataStore.uploadPages(
+      blob,
       start,
       end,
-      persistency
-    });
-
-    // set lease state to available if it's expired
-    blob = BlobHandler.UpdateBlobLeaseStateOnWriteBlob(blob);
-    await this.dataStore.updateBlob(blob);
+      persistency,
+      context
+    );
 
     const response: Models.PageBlobUploadPagesResponse = {
       statusCode: 201,
-      eTag: newEtag(),
+      eTag: res.etag,
       lastModified: date,
       contentMD5: undefined, // TODO
-      blobSequenceNumber: blob.properties.blobSequenceNumber,
+      blobSequenceNumber: res.blobSequenceNumber,
       requestId: blobCtx.contextID,
       version: BLOB_API_VERSION,
       date,
@@ -254,24 +248,14 @@ export default class PageBlobHandler extends BaseHandler
       );
     }
 
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
-    // TODO: Lock
-
-    const blob = await this.dataStore.getBlob(
+    const blob = await this.metadataStore.downloadBlob(
       accountName,
       containerName,
-      blobName
+      blobName,
+      undefined,
+      context
     );
-    if (!blob) {
-      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
-    }
+
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
@@ -289,19 +273,14 @@ export default class PageBlobHandler extends BaseHandler
     const start = ranges[0];
     const end = ranges[1];
 
-    this.rangesManager.clearRange(blob.pageRangesInOrder || [], {
-      start,
-      end
-    });
-
-    await this.dataStore.updateBlob(blob);
+    const res = await this.metadataStore.clearRange(blob, start, end, context);
 
     const response: Models.PageBlobClearPagesResponse = {
       statusCode: 201,
-      eTag: newEtag(),
+      eTag: res.etag,
       lastModified: date,
       contentMD5: undefined, // TODO
-      blobSequenceNumber: blob.properties.blobSequenceNumber,
+      blobSequenceNumber: res.blobSequenceNumber,
       requestId: blobCtx.contextID,
       version: BLOB_API_VERSION,
       date
@@ -320,23 +299,14 @@ export default class PageBlobHandler extends BaseHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
-    const blob = await this.dataStore.getBlob(
+    const blob = await this.metadataStore.getPageRanges(
       accountName,
       containerName,
       blobName,
-      options.snapshot
+      options.snapshot,
+      context
     );
-    if (!blob) {
-      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
-    }
+
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
@@ -400,49 +370,19 @@ export default class PageBlobHandler extends BaseHandler
       );
     }
 
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
-    const blob = await this.dataStore.getBlob(
+    const res = await this.metadataStore.resizePageBlob(
       accountName,
       containerName,
-      blobName
+      blobName,
+      blobContentLength,
+      context
     );
-    if (!blob) {
-      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
-    }
-    if (blob.properties.blobType !== Models.BlobType.PageBlob) {
-      throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextID!,
-        "Resize could only be against a page blob."
-      );
-    }
-
-    blob.pageRangesInOrder = blob.pageRangesInOrder || [];
-    if (blob.properties.contentLength! > blobContentLength) {
-      const start = blobContentLength;
-      const end = blob.properties.contentLength! - 1;
-      this.rangesManager.clearRange(blob.pageRangesInOrder || [], {
-        start,
-        end
-      });
-    }
-
-    blob.properties.contentLength = blobContentLength;
-    blob.properties.lastModified = blobCtx.startTime!;
-
-    this.dataStore.updateBlob(blob);
 
     const response: Models.PageBlobResizeResponse = {
       statusCode: 200,
-      eTag: newEtag(),
-      lastModified: blob.properties.lastModified,
-      blobSequenceNumber: blob.properties.blobSequenceNumber,
+      eTag: res.etag,
+      lastModified: res.lastModified,
+      blobSequenceNumber: res.blobSequenceNumber,
       requestId: blobCtx.contextID,
       version: BLOB_API_VERSION,
       date
@@ -462,80 +402,20 @@ export default class PageBlobHandler extends BaseHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
-    // TODO: Lock
-
-    const blob = await this.dataStore.getBlob(
+    const res = await this.metadataStore.updateSequenceNumber(
       accountName,
       containerName,
-      blobName
+      blobName,
+      sequenceNumberAction,
+      options.blobSequenceNumber,
+      context
     );
-    if (!blob) {
-      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
-    }
-    if (blob.properties.blobType !== Models.BlobType.PageBlob) {
-      throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextID!,
-        "Get Page Ranges could only be against a page blob."
-      );
-    }
-
-    if (blob.properties.blobSequenceNumber === undefined) {
-      blob.properties.blobSequenceNumber = 0;
-    }
-
-    switch (sequenceNumberAction) {
-      case Models.SequenceNumberActionType.Max:
-        if (options.blobSequenceNumber === undefined) {
-          throw StorageErrorFactory.getInvalidOperation(
-            blobCtx.contextID!,
-            "x-ms-blob-sequence-number is required when x-ms-sequence-number-action is set to max."
-          );
-        }
-        blob.properties.blobSequenceNumber = Math.max(
-          blob.properties.blobSequenceNumber,
-          options.blobSequenceNumber
-        );
-        break;
-      case Models.SequenceNumberActionType.Increment:
-        if (options.blobSequenceNumber !== undefined) {
-          throw StorageErrorFactory.getInvalidOperation(
-            blobCtx.contextID!,
-            "x-ms-blob-sequence-number cannot be provided when x-ms-sequence-number-action is set to increment."
-          );
-        }
-        blob.properties.blobSequenceNumber++;
-        break;
-      case Models.SequenceNumberActionType.Update:
-        if (options.blobSequenceNumber === undefined) {
-          throw StorageErrorFactory.getInvalidOperation(
-            blobCtx.contextID!,
-            "x-ms-blob-sequence-number is required when x-ms-sequence-number-action is set to update."
-          );
-        }
-        blob.properties.blobSequenceNumber = options.blobSequenceNumber;
-        break;
-      default:
-        throw StorageErrorFactory.getInvalidOperation(
-          blobCtx.contextID!,
-          "Unsupported x-ms-sequence-number-action value."
-        );
-    }
-
-    this.dataStore.updateBlob(blob);
 
     const response: Models.PageBlobUpdateSequenceNumberResponse = {
       statusCode: 200,
-      eTag: newEtag(),
-      lastModified: blob.properties.lastModified,
-      blobSequenceNumber: blob.properties.blobSequenceNumber,
+      eTag: res.etag,
+      lastModified: res.lastModified,
+      blobSequenceNumber: res.blobSequenceNumber,
       requestId: blobCtx.contextID,
       version: BLOB_API_VERSION,
       date

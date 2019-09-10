@@ -400,6 +400,30 @@ export default class LokiBlobDataStore implements IBlobDataStore {
   }
 
   /**
+   * Delete blob item from persistency layer.
+   *
+   * @param {BlobModel} blob
+   * @returns {Promise<void>}
+   * @memberof LokiBlobDataStore
+   */
+  public async setTier(blob: BlobModel): Promise<void> {
+    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    const blobDoc = coll.findOne({
+      accountName: blob.accountName,
+      containerName: blob.containerName,
+      name: blob.name,
+      snapshot: blob.snapshot
+    });
+    if (blobDoc) {
+      blobDoc.properties.accessTier = blob.properties.accessTier;
+      coll.update(blobDoc);
+    } else {
+      delete (blob as any).$loki;
+      return coll.insert(blob);
+    }
+  }
+
+  /**
    * Gets a blob item from persistency layer by container name and blob name.
    *
    * @template T

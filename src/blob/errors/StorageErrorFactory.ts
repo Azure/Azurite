@@ -1,5 +1,7 @@
 import StorageError from "./StorageError";
 
+const DefaultID: string = "DefaultBlobRequestID";
+
 /**
  * A factory class maintains all Azure Storage Blob service errors.
  *
@@ -7,7 +9,9 @@ import StorageError from "./StorageError";
  * @class StorageErrorFactory
  */
 export default class StorageErrorFactory {
-  public static getContainerNotFound(contextID: string): StorageError {
+  public static getContainerNotFound(
+    contextID: string = DefaultID
+  ): StorageError {
     return new StorageError(
       404,
       "ContainerNotFound",
@@ -16,7 +20,9 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getContainerAlreadyExists(contextID: string): StorageError {
+  public static getContainerAlreadyExists(
+    contextID: string = DefaultID
+  ): StorageError {
     return new StorageError(
       409,
       "ContainerAlreadyExists",
@@ -25,7 +31,7 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getBlobNotFound(contextID: string): StorageError {
+  public static getBlobNotFound(contextID: string = DefaultID): StorageError {
     return new StorageError(
       404,
       "BlobNotFound",
@@ -44,7 +50,7 @@ export default class StorageErrorFactory {
   }
 
   public static getInvalidOperation(
-    contextID: string,
+    contextID: string = DefaultID,
     message: string = ""
   ): StorageError {
     return new StorageError(400, "InvalidOperation", message, contextID);
@@ -59,7 +65,9 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getInvalidLeaseDuration(contextID: string): StorageError {
+  public static getInvalidLeaseDuration(
+    contextID: string = DefaultID
+  ): StorageError {
     return new StorageError(
       400,
       "InvalidHeaderValue",
@@ -68,7 +76,9 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getInvalidLeaseBreakPeriod(contextID: string): StorageError {
+  public static getInvalidLeaseBreakPeriod(
+    contextID: string = DefaultID
+  ): StorageError {
     return new StorageError(
       400,
       "InvalidHeaderValue",
@@ -86,7 +96,9 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getLeaseAlreadyPresent(contextID: string): StorageError {
+  public static getLeaseAlreadyPresent(
+    contextID: string = DefaultID
+  ): StorageError {
     return new StorageError(
       409,
       "LeaseAlreadyPresent",
@@ -96,7 +108,7 @@ export default class StorageErrorFactory {
   }
 
   public static getContainerLeaseNotPresentWithLeaseOperation(
-    contextID: string
+    contextID: string = DefaultID
   ): StorageError {
     return new StorageError(
       409,
@@ -107,7 +119,7 @@ export default class StorageErrorFactory {
   }
 
   public static getContainerLeaseIdMismatchWithLeaseOperation(
-    contextID: string
+    contextID: string = DefaultID
   ): StorageError {
     return new StorageError(
       409,
@@ -118,7 +130,7 @@ export default class StorageErrorFactory {
   }
 
   public static getLeaseIsBrokenAndCannotBeRenewed(
-    contextID: string
+    contextID: string = DefaultID
   ): StorageError {
     return new StorageError(
       409,
@@ -129,7 +141,7 @@ export default class StorageErrorFactory {
   }
 
   public static getLeaseIsBreakingAndCannotBeChanged(
-    contextID: string
+    contextID: string = DefaultID
   ): StorageError {
     return new StorageError(
       409,
@@ -139,7 +151,9 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getContainerLeaseIdMissing(contextID: string): StorageError {
+  public static getContainerLeaseIdMissing(
+    contextID: string = DefaultID
+  ): StorageError {
     return new StorageError(
       412,
       "LeaseIdMissing",
@@ -149,7 +163,7 @@ export default class StorageErrorFactory {
   }
 
   public static getContainerLeaseIdMismatchWithContainerOperation(
-    contextID: string
+    contextID: string = DefaultID
   ): StorageError {
     return new StorageError(
       412,
@@ -159,7 +173,9 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getContainerLeaseLost(contextID: string): StorageError {
+  public static getContainerLeaseLost(
+    contextID: string = DefaultID
+  ): StorageError {
     return new StorageError(
       412,
       "LeaseLost",
@@ -191,7 +207,9 @@ export default class StorageErrorFactory {
   }
 
   // The error code/message need check with server
-  public static getBlobSnapshotsPresent(contextID: string): StorageError {
+  public static getBlobSnapshotsPresent(
+    contextID: string = DefaultID
+  ): StorageError {
     return new StorageError(
       400,
       "SnapshotsPresent",
@@ -220,7 +238,7 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getBlobLeaseLost(contextID: string): StorageError {
+  public static getBlobLeaseLost(contextID: string = DefaultID): StorageError {
     return new StorageError(
       412,
       "LeaseLost ",

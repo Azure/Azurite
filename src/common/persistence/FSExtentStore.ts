@@ -7,8 +7,10 @@ import {
   unlink
 } from "fs";
 import { join } from "path";
+import { Writable } from "stream";
 import { promisify } from "util";
 
+import { ZERO_PERSISTENCY_CHUNK_ID } from "../../blob/persistence/IBlobMetadataStore";
 import ILogger from "../ILogger";
 import BufferStream from "../utils/BufferStream";
 import {
@@ -26,6 +28,7 @@ import IFDCache from "./IFDCache";
 import IOperationQueue from "./IOperationQueue";
 import OperationQueue from "./OperationQueue";
 
+import multistream = require("multistream");
 import uuid = require("uuid");
 const statAsync = promisify(stat);
 const mkdirAsync = promisify(mkdir);
@@ -259,15 +262,20 @@ export default class FSExtentStore implements IExtentStore {
   /**
    * Read data from persistency layer accoding to the given IExtentChunk.
    *
-   * @param {string} persistency
-   * @returns {Promise<string>}
-   * @memberof IExtentStore
+   * @param {IExtentChunk} [extentChunk]
+   * @returns {Promise<NodeJS.ReadableStream>}
+   * @memberof FSExtentStore
    */
   public async readExtent(
-    extentChunk: IExtentChunk
+    extentChunk?: IExtentChunk
   ): Promise<NodeJS.ReadableStream> {
-    if (extentChunk.count === 0) {
+    if (extentChunk === undefined || extentChunk.count === 0) {
       return new ZeroBytesStream(0);
+    }
+
+    if (extentChunk.id === ZERO_PERSISTENCY_CHUNK_ID) {
+      const subRangeCount = Math.min(extentChunk.count);
+      return new ZeroBytesStream(subRangeCount);
     }
 
     const persistencyId = await this.metadataStore.getExtentPersistencyId(
@@ -306,6 +314,72 @@ export default class FSExtentStore implements IExtentStore {
   }
 
   /**
+   * Merge serveral extent chunks to a ReadableStream according to the offset and count.
+   *
+   * @param {(IExtentChunk)[]} extentChunkArray
+   * @param {number} [offset=0]
+   * @param {number} [count=Infinity]
+   * @returns {Promise<NodeJS.ReadableStream>}
+   * @memberof FSExtentStore
+   */
+  public async readExtents(
+    extentChunkArray: (IExtentChunk)[],
+    offset: number = 0,
+    count: number = Infinity
+  ): Promise<NodeJS.ReadableStream> {
+    if (count === 0) {
+      return new ZeroBytesStream(0);
+    }
+
+    const start = offset; // Start inclusive position in the merged stream
+    const end = offset + count; // End exclusive position in the merged stream
+
+    const streams: NodeJS.ReadableStream[] = [];
+    let accumulatedOffset = 0; // Current payload offset in the merged stream
+
+    for (const chunk of extentChunkArray) {
+      const nextOffset = accumulatedOffset + chunk.count;
+
+      if (nextOffset <= start) {
+        accumulatedOffset = nextOffset;
+        continue;
+      } else if (end <= accumulatedOffset) {
+        break;
+      } else {
+        let chunkStart = chunk.offset;
+        let chunkEnd = chunk.offset + chunk.count;
+        if (start > accumulatedOffset) {
+          chunkStart = chunkStart + start - accumulatedOffset; // Inclusive
+        }
+
+        if (end <= nextOffset) {
+          chunkEnd = chunkEnd - (nextOffset - end); // Exclusive
+        }
+
+        streams.push(
+          await this.readExtent({
+            id: chunk.id,
+            offset: chunkStart,
+            count: chunkEnd - chunkStart
+          })
+        );
+        accumulatedOffset = nextOffset;
+      }
+    }
+
+    // TODO: What happens when count exceeds merged payload length?
+    // throw an error of just return as much data as we can?
+    if (end !== Infinity && accumulatedOffset < end) {
+      throw new RangeError(
+        // tslint:disable-next-line:max-line-length
+        `Not enough payload data error. Total length of payloads is ${accumulatedOffset}, while required data offset is ${offset}, count is ${count}.`
+      );
+    }
+
+    return multistream(streams);
+  }
+
+  /**
    * Delete the extents from persistency layer.
    *
    * @param {Iterable<string>} persistency
@@ -341,15 +415,40 @@ export default class FSExtentStore implements IExtentStore {
 
   private async streamPipe(
     rs: NodeJS.ReadableStream,
-    ws: NodeJS.WritableStream
+    ws: Writable
   ): Promise<number> {
     return new Promise<number>((resolve, reject) => {
       let count: number = 0;
+      let wsEnd = false;
+
       rs.on("data", data => {
         count += data.length;
+        if (!ws.write(data)) {
+          rs.pause();
+        }
       })
-        .pipe(ws)
-        .on("finish", () => resolve(count))
+        .on("end", () => {
+          if (!wsEnd) {
+            ws.end();
+            wsEnd = true;
+          }
+        })
+        .on("close", () => {
+          if (!wsEnd) {
+            ws.end();
+            wsEnd = true;
+          }
+        })
+        .on("error", err => {
+          ws.destroy(err);
+        });
+
+      ws.on("drain", () => {
+        rs.resume();
+      })
+        .on("finish", () => {
+          resolve(count);
+        })
         .on("error", reject);
     });
   }

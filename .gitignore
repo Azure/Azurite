@@ -3,6 +3,12 @@ coverage
 azurite-testdrive
 __blobstorage__
 __testspersistence__
+__blobTestsPersistence__
+__queueTestsPersistence__
+__blobExtentTestsStorage__
+__blobTestsStorage__
+__queueExtentTestsStorage__
+__queueTestsStorage__
 __testsstorage__
 __azurite_db_blob__.json
 __queuestorage__

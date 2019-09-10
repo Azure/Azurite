@@ -5,7 +5,7 @@ import { BlobType } from "../generated/artifacts/models";
 import Operation from "../generated/artifacts/operation";
 import Context from "../generated/Context";
 import IRequest from "../generated/IRequest";
-import IBlobDataStore from "../persistence/IBlobDataStore";
+import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import { AccountSASPermission } from "./AccountSASPermissions";
 import {
   generateAccountSASSignature,
@@ -17,7 +17,7 @@ import OPERATION_ACCOUNT_SAS_PERMISSIONS from "./OperationAccountSASPermission";
 export default class AccountSASAuthenticator implements IAuthenticator {
   public constructor(
     private readonly accountDataStore: IAccountDataStore,
-    private readonly blobDataStore: IBlobDataStore,
+    private readonly blobMetadataStore: IBlobMetadataStore,
     private readonly logger: ILogger
   ) {}
 
@@ -357,7 +357,7 @@ export default class AccountSASAuthenticator implements IAuthenticator {
     container: string,
     blob: string
   ): Promise<boolean> {
-    const blobModel = await this.blobDataStore.getBlob(
+    const blobModel = await this.blobMetadataStore.getBlobType(
       account,
       container,
       blob
@@ -367,7 +367,7 @@ export default class AccountSASAuthenticator implements IAuthenticator {
     }
 
     if (
-      blobModel.properties.blobType === BlobType.BlockBlob &&
+      blobModel.blobType === BlobType.BlockBlob &&
       blobModel.isCommitted === false
     ) {
       return false;

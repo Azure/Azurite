@@ -4,11 +4,13 @@ import { access } from "fs";
 import { dirname, join } from "path";
 import { promisify } from "util";
 
-import BlobConfiguration from "./blob/BlobConfiguration";
+import BlobConfiguration, {
+  DEFUALT_BLOB_PERSISTENCE_ARRAY
+} from "./blob/BlobConfiguration";
 import BlobServer from "./blob/BlobServer";
 import {
-  DEFAULT_BLOB_LOKI_DB_PATH,
-  DEFAULT_BLOB_PERSISTENCE_PATH
+  DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
+  DEFAULT_BLOB_LOKI_DB_PATH
 } from "./blob/utils/constants";
 import Environment from "./common/Environment";
 import * as Logger from "./common/Logger";
@@ -49,7 +51,8 @@ async function main() {
     env.blobHost(),
     env.blobPort(),
     join(location, DEFAULT_BLOB_LOKI_DB_PATH),
-    join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
+    join(location, DEFAULT_BLOB_EXTENT_LOKI_DB_PATH),
+    DEFUALT_BLOB_PERSISTENCE_ARRAY,
     !env.silent(),
     undefined,
     env.debug() !== undefined,

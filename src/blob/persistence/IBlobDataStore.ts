@@ -231,6 +231,15 @@ export interface IBlobDataStore extends IDataStore {
   ): Promise<T | undefined>;
 
   /**
+   * Update Tier for a blob.
+   *
+   * @param {BlobModel} blob
+   * @returns {Promise<void>}
+   * @memberof IBlobDataStore
+   */
+  setTier(blob: BlobModel): Promise<void>;
+
+  /**
    * List blobs with query conditions specified.
    *
    * @template T

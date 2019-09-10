@@ -1,14 +1,13 @@
 import StorageError from "./StorageError";
 
+const defaultID: string = "DefaultID";
+
 /**
- * A factory class maintains all Azure Storage Blob service errors.
+ * A factory class maintains all Azure Storage queue service errors.
  *
  * @export
  * @class StorageErrorFactory
  */
-
-const defaultID: string = "DefaultID";
-
 export default class StorageErrorFactory {
   public static notImplement(contextID: string = defaultID): StorageError {
     return new StorageError(

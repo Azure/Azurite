@@ -106,31 +106,8 @@ export default class ServiceHandler extends BaseHandler
       storageServiceProperties.cors = undefined;
     }
 
-    let properties = await this.dataStore.getServiceProperties(accountName);
-    if (properties === undefined) {
-      properties = { ...this.defaultServiceProperties, accountName };
-    }
-
-    properties.cors =
-      storageServiceProperties.cors === undefined
-        ? properties.cors
-        : storageServiceProperties.cors;
-    properties.defaultServiceVersion =
-      storageServiceProperties.defaultServiceVersion ||
-      properties.defaultServiceVersion;
-    properties.deleteRetentionPolicy =
-      storageServiceProperties.deleteRetentionPolicy ||
-      properties.deleteRetentionPolicy;
-    properties.hourMetrics =
-      storageServiceProperties.hourMetrics || properties.hourMetrics;
-    properties.logging = storageServiceProperties.logging || properties.logging;
-    properties.minuteMetrics =
-      storageServiceProperties.minuteMetrics || properties.minuteMetrics;
-    properties.staticWebsite =
-      storageServiceProperties.staticWebsite || properties.staticWebsite;
-
-    await this.dataStore.updateServiceProperties({
-      ...properties,
+    await this.metadataStore.setServiceProperties({
+      ...storageServiceProperties,
       accountName
     });
 
@@ -157,7 +134,7 @@ export default class ServiceHandler extends BaseHandler
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
 
-    let properties = await this.dataStore.getServiceProperties(accountName);
+    let properties = await this.metadataStore.getServiceProperties(accountName);
     if (!properties) {
       properties = { ...this.defaultServiceProperties, accountName };
     }
@@ -165,6 +142,35 @@ export default class ServiceHandler extends BaseHandler
     if (properties.cors === undefined) {
       properties.cors = [];
     }
+
+    if (properties.cors === undefined) {
+      properties.cors = [];
+    }
+
+    if (properties.hourMetrics === undefined) {
+      properties.hourMetrics = this.defaultServiceProperties.hourMetrics;
+    }
+
+    if (properties.logging === undefined) {
+      properties.logging = this.defaultServiceProperties.logging;
+    }
+
+    if (properties.minuteMetrics === undefined) {
+      properties.minuteMetrics = this.defaultServiceProperties.minuteMetrics;
+    }
+
+    if (properties.defaultServiceVersion === undefined) {
+      properties.defaultServiceVersion = this.defaultServiceProperties.defaultServiceVersion;
+    }
+
+    if (properties.staticWebsite === undefined) {
+      properties.staticWebsite = this.defaultServiceProperties.staticWebsite;
+    }
+
+    await this.metadataStore.setServiceProperties({
+      ...properties,
+      accountName
+    });
 
     const response: Models.ServiceGetPropertiesResponse = {
       ...properties,
@@ -214,7 +220,7 @@ export default class ServiceHandler extends BaseHandler
 
     const marker = parseInt(options.marker || "0", 10);
 
-    const containers = await this.dataStore.listContainers(
+    const containers = await this.metadataStore.listContainers(
       accountName,
       options.prefix,
       options.maxresults,

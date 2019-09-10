@@ -161,7 +161,7 @@ export default class QueueServer extends ServerBase {
       await this.extentStore.close();
     }
 
-    if (this.metadataStore !== undefined) {
+    if (this.extentMetadataStore !== undefined) {
       await this.extentMetadataStore.close();
     }
 
