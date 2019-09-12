@@ -4,6 +4,13 @@ import { join } from "path";
 import rimraf from "rimraf";
 import { URL } from "url";
 
+import BlobConfiguration from "../src/blob/BlobConfiguration";
+import BlobServer from "../src/blob/BlobServer";
+import SqlBlobConfiguration from "../src/blob/SqlBlobConfiguration";
+import SqlBlobServer from "../src/blob/SqlBlobServer";
+import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
+import ServerBase from "../src/common/ServerBase";
+
 export const EMULATOR_ACCOUNT_NAME = "devstoreaccount1";
 
 export const EMULATOR_ACCOUNT_KEY =
@@ -173,4 +180,119 @@ export async function readStreamToLocalFile(
     ws.on("error", reject);
     ws.on("finish", resolve);
   });
+}
+
+export class TestServerFactory {
+  static host = "127.0.0.1";
+  static port = 11000;
+  static persistenceArray: StoreDestinationArray = [
+    {
+      persistencyId: "test",
+      persistencyPath: "__testsblobpersistence__",
+      maxConcurrency: 10
+    }
+  ];
+  static dbPath = "__testsblobstorage__";
+  static extentdbPath = "__testsblobextentstorage__";
+
+  static DEFUALT_SQL_URI =
+    "mariadb://root:my-secret-pw@127.0.0.1:3306/azurite_blob_metadata";
+  static DEFUALT_SQL_OPTIONS = {
+    logging: false,
+    pool: {
+      max: 100,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    },
+    dialectOptions: {
+      timezone: "Etc/GMT-0"
+    }
+  };
+
+  static serverType = process.env.AZURITE_TEST_SERVER;
+
+  public static getHost() {
+    return this.host;
+  }
+
+  public static getPort() {
+    return this.port;
+  }
+
+  public static getLoki(): BlobConfiguration {
+    const config = new BlobConfiguration(
+      this.host,
+      this.port,
+      this.dbPath,
+      this.extentdbPath,
+      this.persistenceArray,
+      false
+    );
+    return config;
+  }
+
+  public static getSql(): SqlBlobConfiguration {
+    const config = new SqlBlobConfiguration(
+      this.host,
+      this.port,
+      this.DEFUALT_SQL_URI,
+      this.DEFUALT_SQL_OPTIONS,
+      this.dbPath,
+      this.persistenceArray,
+      false
+    );
+    return config;
+  }
+
+  public static getServer(host?: string, port?: number): ServerBase {
+    this.getServerType();
+
+    this.serverType = "sql";
+    console.log(this.serverType);
+
+    if (this.serverType === "sql") {
+      // console.log("SqlServer");
+      return this.getSqlServer(host, port);
+    } else {
+      // console.log("LokiServer");
+      return this.getLokiServer(host, port);
+    }
+  }
+
+  public static getSqlServer(host?: string, port?: number) {
+    const config = this.getSql();
+    const _host = host || config.host;
+    const _port = port || config.port;
+
+    return new SqlBlobServer({
+      host: _host,
+      port: _port,
+      ...config
+    });
+  }
+
+  public static getLokiServer(host?: string, port?: number) {
+    const config = this.getLoki();
+    const _host = host || config.host;
+    const _port = port || config.port;
+
+    return new BlobServer({
+      host: _host,
+      port: _port,
+      ...config
+    });
+  }
+
+  public static async rmTestFile() {
+    await rmRecursive(this.dbPath);
+    await rmRecursive(this.extentdbPath);
+    for (const persistence of this.persistenceArray) {
+      await rmRecursive(persistence.persistencyPath);
+    }
+  }
+
+  private static getServerType() {
+    this.serverType = process.env.AZURITE_TEST_SERVER;
+  }
 }

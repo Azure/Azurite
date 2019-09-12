@@ -19,7 +19,7 @@ import {
 } from "../utils/constants";
 import ZeroBytesStream from "../ZeroBytesStream";
 import FDCache from "./FDCache";
-import IExtentMetadata, { IExtentModel } from "./IExtentMetadata";
+import IExtentMetadataStore, { IExtentModel } from "./IExtentMetadataStore";
 import IExtentStore, {
   IExtentChunk,
   StoreDestinationArray
@@ -60,7 +60,7 @@ interface IAppendExtent {
  * @implements {IExtentStore}
  */
 export default class FSExtentStore implements IExtentStore {
-  private readonly metadataStore: IExtentMetadata;
+  private readonly metadataStore: IExtentMetadataStore;
   private readonly appendQueue: IOperationQueue;
   private readonly readQueue: IOperationQueue;
   private readonly fdCache: IFDCache;
@@ -75,7 +75,7 @@ export default class FSExtentStore implements IExtentStore {
   private persistencyPath: Map<string, string>;
 
   public constructor(
-    metadata: IExtentMetadata,
+    metadata: IExtentMetadataStore,
     private readonly persistencyConfiguration: StoreDestinationArray,
     private readonly logger: ILogger
   ) {
@@ -233,7 +233,7 @@ export default class FSExtentStore implements IExtentStore {
               persistencyId: appendExtent.persistencyId,
               path: id,
               size: count + offset,
-              LastModifyInMS: Date.now()
+              lastModifiedInMS: Date.now()
             };
             this.logger.debug(
               `appendExtent() write finish. extent:${JSON.stringify(extent)}`
@@ -406,10 +406,10 @@ export default class FSExtentStore implements IExtentStore {
   /**
    * Return its metadata store.
    *
-   * @returns {IExtentMetadata}
+   * @returns {IExtentMetadataStore}
    * @memberof IExtentStore
    */
-  public getMetadataStore(): IExtentMetadata {
+  public getMetadataStore(): IExtentMetadataStore {
     return this.metadataStore;
   }
 

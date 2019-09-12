@@ -1,7 +1,7 @@
 import { EventEmitter } from "events";
 
 import IGCManager from "../../common/IGCManager";
-import IExtentMetadata from "../../common/persistence/IExtentMetadata";
+import IExtentMetadataStore from "../../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../../common/persistence/IExtentStore";
 import ILogger from "../generated/utils/ILogger";
 import IQueueMetadataStore from "../persistence/IQueueMetadataStore";
@@ -31,7 +31,7 @@ export default class QueueGCManager implements IGCManager {
 
   constructor(
     private readonly queueMetadata: IQueueMetadataStore,
-    private readonly extentMetadata: IExtentMetadata,
+    private readonly extentMetadata: IExtentMetadataStore,
     private readonly extentStore: IExtentStore,
     private readonly errorHandler: (err: Error) => void,
     private readonly logger: ILogger,

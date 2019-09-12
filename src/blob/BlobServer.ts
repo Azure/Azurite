@@ -6,16 +6,14 @@ import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
 import FSExtentStore from "../common/persistence/FSExtentStore";
-import IExtentMetadata from "../common/persistence/IExtentMetadata";
+import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
-import LokiExtentMetadata from "../common/persistence/LokiExtentMetadata";
+import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
 import ServerBase from "../common/ServerBase";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
 import BlobGCManager from "./gc/BlobGCManager";
-import IBlobDataStore from "./persistence/IBlobDataStore";
 import IBlobMetadataStore from "./persistence/IBlobMetaDataStore";
-import LokiBlobDataStore from "./persistence/LokiBlobDataStore";
 import LokiBlobMetadataStore from "./persistence/LokiBlobMetadataStore";
 
 const BEFORE_CLOSE_MESSAGE = `Azurite Blob service is closing...`;
@@ -36,9 +34,8 @@ const AFTER_CLOSE_MESSAGE = `Azurite Blob service successfully closed`;
  * @class Server
  */
 export default class BlobServer extends ServerBase {
-  private readonly metadata: IBlobDataStore;
   private readonly metadataStore: IBlobMetadataStore;
-  private readonly extentMetadataStore: IExtentMetadata;
+  private readonly extentMetadataStore: IExtentMetadataStore;
   private readonly extentStore: IExtentStore;
   private readonly accountDataStore: IAccountDataStore;
   private readonly gcManager: IGCManager;
@@ -67,13 +64,8 @@ export default class BlobServer extends ServerBase {
       configuration.metadataDBPath
       // logger
     );
-    const metadata: IBlobDataStore = new LokiBlobDataStore(
-      configuration.metadataDBPath,
-      configuration.persistencePathArray[0].persistencyPath
-      // logger
-    );
 
-    const extentMetadataStore: IExtentMetadata = new LokiExtentMetadata(
+    const extentMetadataStore: IExtentMetadataStore = new LokiExtentMetadataStore(
       configuration.extentDBPath
     );
 
@@ -101,7 +93,9 @@ export default class BlobServer extends ServerBase {
     // Default Blob GC Manager
     // Will close service when any critical GC error happens
     const gcManager = new BlobGCManager(
-      metadata,
+      metadataStore,
+      extentMetadataStore,
+      extentStore,
       () => {
         // tslint:disable-next-line:no-console
         console.log(BEFORE_CLOSE_MESSAGE_GC_ERROR);
@@ -115,7 +109,6 @@ export default class BlobServer extends ServerBase {
       logger
     );
 
-    this.metadata = metadata;
     this.metadataStore = metadataStore;
     this.extentMetadataStore = extentMetadataStore;
     this.extentStore = extentStore;
@@ -129,10 +122,6 @@ export default class BlobServer extends ServerBase {
 
     if (this.accountDataStore !== undefined) {
       await this.accountDataStore.init();
-    }
-
-    if (this.metadata !== undefined) {
-      await this.metadata.init();
     }
 
     if (this.metadataStore !== undefined) {
@@ -176,10 +165,6 @@ export default class BlobServer extends ServerBase {
 
     if (this.metadataStore !== undefined) {
       await this.metadataStore.close();
-    }
-
-    if (this.metadata !== undefined) {
-      await this.metadata.close();
     }
 
     if (this.accountDataStore !== undefined) {

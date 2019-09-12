@@ -1,8 +1,10 @@
 import { EventEmitter } from "events";
 
 import IGCManager from "../../common/IGCManager";
+import IExtentMetadataStore from "../../common/persistence/IExtentMetadataStore";
+import IExtentStore from "../../common/persistence/IExtentStore";
 import ILogger from "../generated/utils/ILogger";
-import IBlobDataStore from "../persistence/IBlobDataStore";
+import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import { DEFAULT_GC_INTERVAL_MS } from "../utils/constants";
 
 enum Status {
@@ -38,7 +40,9 @@ export default class BlobGCManager implements IGCManager {
    * @memberof BlobGCManager
    */
   constructor(
-    private readonly blobDataStore: IBlobDataStore,
+    private readonly blobMetadataStore: IBlobMetadataStore,
+    private readonly extentMetadata: IExtentMetadataStore,
+    private readonly extentStore: IExtentStore,
     private readonly errorHandler: (err: Error) => void,
     private readonly logger: ILogger,
     public readonly gcIntervalInMS: number = DEFAULT_GC_INTERVAL_MS
@@ -84,13 +88,33 @@ export default class BlobGCManager implements IGCManager {
     );
     this._status = Status.Initializing;
 
-    if (!this.blobDataStore.isInitialized()) {
+    if (!this.blobMetadataStore.isInitialized()) {
       this.logger.info(
         `BlobGCManager:start() blobDataStore doesn't boot up. Starting blobDataStore.`
       );
-      await this.blobDataStore.init();
+      await this.blobMetadataStore.init();
       this.logger.info(
         `BlobGCManager:start() blobDataStore successfully started.`
+      );
+    }
+
+    if (!this.extentMetadata.isInitialized()) {
+      this.logger.info(
+        `BlobGCManager:start() extentMetadata doesn't boot up. Starting extentMetadata.`
+      );
+      await this.extentMetadata.init();
+      this.logger.info(
+        `BlobGCManager:start() extentMetadata successfully started.`
+      );
+    }
+
+    if (!this.extentStore.isInitialized()) {
+      this.logger.info(
+        `BlobGCManager:start() extentStore doesn't boot up. Starting extentStore.`
+      );
+      await this.extentStore.init();
+      this.logger.info(
+        `BlobGCManager:start() extentStore successfully started.`
       );
     }
 
@@ -199,7 +223,7 @@ export default class BlobGCManager implements IGCManager {
     }
 
     this.logger.info(`BlobGCManager:markSweep() Get referred extents.`);
-    const iter = this.blobDataStore.iteratorReferredExtents();
+    const iter = this.blobMetadataStore.iteratorReferredExtents();
     for (
       let res = await iter.next();
       (res.done === false || res.value.length > 0) &&
@@ -222,7 +246,7 @@ export default class BlobGCManager implements IGCManager {
       this.logger.info(
         `BlobGCManager:markSweep() Delete unreferenced extents.`
       );
-      await this.blobDataStore.deletePayloads(allExtents);
+      await this.extentStore.deleteExtents(allExtents);
       this.logger.info(
         `BlobGCManager:markSweep() Deleted unreferenced extents.`
       );
@@ -232,7 +256,7 @@ export default class BlobGCManager implements IGCManager {
   private async getAllExtents(): Promise<Set<string>> {
     const ids: Set<string> = new Set<string>();
 
-    const iter = this.blobDataStore.iteratorAllExtents();
+    const iter = this.extentMetadata.getExtentIterator();
     for (
       let res = await iter.next();
       (res.done === false || res.value.length > 0) &&

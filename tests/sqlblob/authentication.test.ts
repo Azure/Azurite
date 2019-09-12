@@ -9,33 +9,58 @@ import {
   StorageURL
 } from "@azure/storage-blob";
 
+import BlobConfiguration from "../../src/blob/BlobConfiguration";
+import Server from "../../src/blob/BlobServer";
 import { configLogger } from "../../src/common/Logger";
+import { StoreDestinationArray } from "../../src/common/persistence/IExtentStore";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
-  TestServerFactory
+  rmRecursive
 } from "../testutils";
 
 // Set true to enable debug log
 configLogger(false);
 
 describe("Authentication", () => {
+  // TODO: Create a server factory as tests utils
   const host = "127.0.0.1";
   const port = 11000;
-  // TODO: Create a server factory as tests utils
-  const server = TestServerFactory.getServer(host, port);
+  const metadataDbPath = "__blobTestsStorage__";
+  const extentDbPath = "__blobExtentTestsStorage__";
+  const persistencePath = "__blobTestsPersistence__";
+  const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
+    {
+      persistencyId: "blobTest",
+      persistencyPath: persistencePath,
+      maxConcurrency: 10
+    }
+  ];
+  const config = new BlobConfiguration(
+    host,
+    port,
+    metadataDbPath,
+    extentDbPath,
+    DEFUALT_QUEUE_PERSISTENCE_ARRAY,
+    false
+  );
 
   // TODO: Create serviceURL factory as tests utils
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
 
+  let server: Server;
+
   before(async () => {
+    server = new Server(config);
     await server.start();
   });
 
   after(async () => {
     await server.close();
-    await TestServerFactory.rmTestFile();
+    await rmRecursive(metadataDbPath);
+    await rmRecursive(extentDbPath);
+    await rmRecursive(persistencePath);
   });
 
   it("Should not work without credential", async () => {

@@ -2,7 +2,7 @@ import { stat } from "fs";
 import Loki from "lokijs";
 
 import AllExtentsAsyncIterator from "./AllExtentsAsyncIterator";
-import IExtentMetadata, { IExtentModel } from "./IExtentMetadata";
+import IExtentMetadataStore, { IExtentModel } from "./IExtentMetadataStore";
 
 /**
  * This is a metadata source implementation for extent management based on loki DB.
@@ -16,7 +16,7 @@ import IExtentMetadata, { IExtentModel } from "./IExtentMetadata";
  * @class LokiExtentMetadata
  * @implements {IExtentMetadata}
  */
-export default class LokiExtentMetadata implements IExtentMetadata {
+export default class LokiExtentMetadata implements IExtentMetadataStore {
   private readonly db: Loki;
 
   private initialized: boolean = false;
@@ -115,7 +115,7 @@ export default class LokiExtentMetadata implements IExtentMetadata {
     }
 
     doc.size = extent.size;
-    doc.LastModifyInMS = extent.LastModifyInMS;
+    doc.LastModifyInMS = extent.lastModifiedInMS;
     coll.update(doc);
   }
 

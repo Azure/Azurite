@@ -35,6 +35,7 @@ import IBlobMetadataStore, {
   ServicePropertiesModel,
   SetContainerAccessPolicyParam
 } from "./IBlobMetadataStore";
+import LokiReferredExtentsAsyncIterator from "./LokiReferredExtentsAsyncIterator";
 
 /**
  * This is a metadata source implementation for blob based on loki DB.
@@ -180,6 +181,17 @@ export default class LokiBlobMetadataStore
   // TODO
   public iteratorAllExtents(): AsyncIterator<string[]> {
     throw new Error("Method not implemented.");
+  }
+
+  /**
+   * Create an async iterator to enumerate all extent records referred or being used.
+   *
+   * @returns {AsyncIterator<IPersistencyChunk[]>}
+   * @memberof IBlobDataStore
+   */
+  public iteratorReferredExtents(): AsyncIterator<IPersistencyChunk[]> {
+    // By default, we disable detailed log for GC
+    return new LokiReferredExtentsAsyncIterator(this /*, this.logger*/);
   }
 
   /**
@@ -431,6 +443,12 @@ export default class LokiBlobMetadataStore
       accountName: account,
       containerName: container
     });
+
+    const blockColl = this.db.getCollection(this.BLOCKS_COLLECTION);
+    blockColl.findAndRemove({
+      accountName: account,
+      containerName: container
+    });
   }
 
   /**
@@ -442,7 +460,7 @@ export default class LokiBlobMetadataStore
    * @param {string} etag
    * @param {IContainerMetadata} [metadata]
    * @param {Context} [context]
-   * @returns {Promise<ContainerModel>}
+   * @returns {Promise<void>}
    * @memberof LokiBlobMetadataStore
    */
   public async setContainerMetadata(
@@ -452,7 +470,7 @@ export default class LokiBlobMetadataStore
     etag: string,
     metadata?: IContainerMetadata,
     context?: Context
-  ): Promise<ContainerModel> {
+  ): Promise<void> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainerDoc(account, container, context);
 
@@ -1019,28 +1037,6 @@ export default class LokiBlobMetadataStore
       properties: snapshotBlob.properties,
       snapshot: snapshotBlob.snapshot
     };
-  }
-
-  /**
-   * Update blob item in persistency layer. Will create if blob doesn't exist.
-   *
-   * @param {BlobModel} blob
-   * @returns {Promise<BlobModel>}
-   * @memberof LokiBlobMetadataStore
-   */
-  public async updateBlob(blob: BlobModel): Promise<BlobModel> {
-    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const blobDoc = coll.findOne({
-      accountName: blob.accountName,
-      containerName: blob.containerName,
-      name: blob.name,
-      snapshot: blob.snapshot
-    });
-    if (blobDoc) {
-      coll.remove(blobDoc);
-    }
-    delete (blob as any).$loki;
-    return coll.insert(blob);
   }
 
   /**
@@ -2435,6 +2431,47 @@ export default class LokiBlobMetadataStore
 
     coll.update(doc);
     return doc.properties;
+  }
+
+  /**
+   * Gets blocks list for a blob from persistency layer by account, container and blob names.
+   *
+   * @template T
+   * @param {string} [account]
+   * @param {string} [container]
+   * @param {string} [blob]
+   * @param {boolean} [isCommitted]
+   * @returns {(Promise<T[]>)}
+   * @memberof LokiBlobDataStore
+   */
+  public async listBlocks<T extends BlockModel>(
+    account?: string,
+    container?: string,
+    blob?: string,
+    isCommitted?: boolean
+  ): Promise<T[]> {
+    const query: any = {};
+    if (account !== undefined) {
+      query.accountName = account;
+    }
+    if (container !== undefined) {
+      query.containerName = container;
+    }
+    if (blob !== undefined) {
+      query.blobName = blob;
+    }
+    if (isCommitted !== undefined) {
+      query.isCommitted = isCommitted;
+    }
+
+    const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
+    const blockDocs = coll
+      .chain()
+      .find(query)
+      .simplesort("$loki")
+      .data();
+
+    return blockDocs;
   }
 
   /**

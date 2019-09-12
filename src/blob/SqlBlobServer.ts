@@ -8,19 +8,18 @@ import logger from "../common/Logger";
 import FSExtentStore from "../common/persistence/FSExtentStore";
 import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
-import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
+import SqlExtentMetadataStore from "../common/persistence/SqlExtentMetadataStore";
 import ServerBase from "../common/ServerBase";
-import QueueGCManager from "./GC/queueGCMagager";
-import IQueueMetadataStore from "./persistence/IQueueMetadataStore";
-import LokiQueueMetadataStore from "./persistence/LokiQueueMetadataStore";
-import QueueConfiguration from "./QueueConfiguration";
-import QueueRequestListenerFactory from "./QueueRequestListenerFactory";
+import BlobGCManager from "./gc/BlobGCManager";
+import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
+import LokiBlobMetadataStore from "./persistence/LokiBlobMetadataStore";
+import SqlBlobMetadataStore from "./persistence/SqlBlobMetadataStore";
+import SqlBlobConfiguration from "./SqlBlobConfiguration";
+import SqlBlobRequestListenerFactory from "./SqlBlobRequestListenerFactory";
 
-const BEFORE_CLOSE_MESSAGE = `Azurite Queue service is closing...`;
-const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Queue service is closing... Critical error happens during GC.`;
-const AFTER_CLOSE_MESSAGE = `Azurite Queue service successfully closed`;
-
-// modify comments
+const BEFORE_CLOSE_MESSAGE = `Azurite Blob service is closing...`;
+const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Blob service is closing... Critical error happens during GC.`;
+const AFTER_CLOSE_MESSAGE = `Azurite Blob service successfully closed`;
 
 /**
  * Default implementation of Azurite Blob HTTP server.
@@ -35,8 +34,9 @@ const AFTER_CLOSE_MESSAGE = `Azurite Queue service successfully closed`;
  * @export
  * @class Server
  */
-export default class QueueServer extends ServerBase {
-  private readonly metadataStore: IQueueMetadataStore;
+export default class SqlBlobServer extends ServerBase {
+  private readonly dataStore: IBlobMetadataStore;
+  private readonly metadataStore: IBlobMetadataStore;
   private readonly extentMetadataStore: IExtentMetadataStore;
   private readonly extentStore: IExtentStore;
   private readonly accountDataStore: IAccountDataStore;
@@ -48,9 +48,9 @@ export default class QueueServer extends ServerBase {
    * @param {BlobConfiguration} configuration
    * @memberof Server
    */
-  constructor(configuration?: QueueConfiguration) {
+  constructor(configuration?: SqlBlobConfiguration) {
     if (configuration === undefined) {
-      configuration = new QueueConfiguration();
+      configuration = new SqlBlobConfiguration();
     }
 
     const host = configuration.host;
@@ -62,18 +62,23 @@ export default class QueueServer extends ServerBase {
     // We can change the persistency layer implementation by
     // creating a new XXXDataStore class implementing IBlobDataStore interface
     // and replace the default LokiBlobDataStore
-    const metadataStore: IQueueMetadataStore = new LokiQueueMetadataStore(
-      configuration.metadataDBPath
-      // logger
+    const dataStore: IBlobMetadataStore = new LokiBlobMetadataStore(
+      configuration.blobDBPath
     );
 
-    const extentMetadataStore = new LokiExtentMetadataStore(
-      configuration.extentDBPath
+    const metadataStore: IBlobMetadataStore = new SqlBlobMetadataStore(
+      configuration.sqlURL,
+      configuration.sequelizeOptions
+    );
+
+    const extentMetadataStore: IExtentMetadataStore = new SqlExtentMetadataStore(
+      configuration.sqlURL,
+      configuration.sequelizeOptions
     );
 
     const extentStore: IExtentStore = new FSExtentStore(
       extentMetadataStore,
-      configuration.persistencePathArray,
+      configuration.persistenceArray,
       logger
     );
 
@@ -82,7 +87,8 @@ export default class QueueServer extends ServerBase {
     // We can also change the HTTP framework here by
     // creating a new XXXListenerFactory implementing IRequestListenerFactory interface
     // and replace the default Express based request listener
-    const requestListenerFactory: IRequestListenerFactory = new QueueRequestListenerFactory(
+    const requestListenerFactory: IRequestListenerFactory = new SqlBlobRequestListenerFactory(
+      dataStore,
       metadataStore,
       extentStore,
       accountDataStore,
@@ -92,8 +98,10 @@ export default class QueueServer extends ServerBase {
 
     super(host, port, httpServer, requestListenerFactory, configuration);
 
-    const gcManager = new QueueGCManager(
-      metadataStore,
+    // Default Blob GC Manager
+    // Will close service when any critical GC error happens
+    const gcManager = new BlobGCManager(
+      dataStore,
       extentMetadataStore,
       extentStore,
       () => {
@@ -109,6 +117,7 @@ export default class QueueServer extends ServerBase {
       logger
     );
 
+    this.dataStore = dataStore;
     this.metadataStore = metadataStore;
     this.extentMetadataStore = extentMetadataStore;
     this.extentStore = extentStore;
@@ -117,20 +126,22 @@ export default class QueueServer extends ServerBase {
   }
 
   protected async beforeStart(): Promise<void> {
-    const msg = `Azurite Queue service is starting on ${this.host}:${
-      this.port
-    }`;
+    const msg = `Azurite Blob service is starting on ${this.host}:${this.port}`;
     logger.info(msg);
 
     if (this.accountDataStore !== undefined) {
       await this.accountDataStore.init();
     }
 
+    if (this.dataStore !== undefined) {
+      await this.dataStore.init();
+    }
+
     if (this.metadataStore !== undefined) {
       await this.metadataStore.init();
     }
 
-    if (this.metadataStore !== undefined) {
+    if (this.extentMetadataStore !== undefined) {
       await this.extentMetadataStore.init();
     }
 
@@ -144,7 +155,7 @@ export default class QueueServer extends ServerBase {
   }
 
   protected async afterStart(): Promise<void> {
-    const msg = `Azurite Queue service successfully listens on ${this.getHttpServerAddress()}`;
+    const msg = `Azurite Blob service successfully listens on ${this.getHttpServerAddress()}`;
     logger.info(msg);
   }
 
@@ -167,6 +178,10 @@ export default class QueueServer extends ServerBase {
 
     if (this.metadataStore !== undefined) {
       await this.metadataStore.close();
+    }
+
+    if (this.dataStore !== undefined) {
+      await this.dataStore.close();
     }
 
     if (this.accountDataStore !== undefined) {

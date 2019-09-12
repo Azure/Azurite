@@ -106,10 +106,14 @@ export default class ServiceHandler extends BaseHandler
       storageServiceProperties.cors = undefined;
     }
 
-    await this.metadataStore.setServiceProperties({
-      ...storageServiceProperties,
-      accountName
-    });
+    try {
+      await this.metadataStore.setServiceProperties({
+        ...storageServiceProperties,
+        accountName
+      });
+    } catch (err) {
+      console.log(err);
+    }
 
     const response: Models.ServiceSetPropertiesResponse = {
       requestId: context.contextID,
@@ -166,11 +170,6 @@ export default class ServiceHandler extends BaseHandler
     if (properties.staticWebsite === undefined) {
       properties.staticWebsite = this.defaultServiceProperties.staticWebsite;
     }
-
-    await this.metadataStore.setServiceProperties({
-      ...properties,
-      accountName
-    });
 
     const response: Models.ServiceGetPropertiesResponse = {
       ...properties,

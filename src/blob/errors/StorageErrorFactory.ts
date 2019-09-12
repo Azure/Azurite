@@ -218,7 +218,9 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getBlobLeaseIdMissing(contextID: string): StorageError {
+  public static getBlobLeaseIdMissing(
+    contextID: string = DefaultID
+  ): StorageError {
     return new StorageError(
       412,
       "LeaseIdMissing",
@@ -228,7 +230,7 @@ export default class StorageErrorFactory {
   }
 
   public static getBlobLeaseIdMismatchWithBlobOperation(
-    contextID: string
+    contextID: string = DefaultID
   ): StorageError {
     return new StorageError(
       412,

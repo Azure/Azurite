@@ -9,15 +9,18 @@ import {
   StorageURL
 } from "@azure/storage-blob";
 
+import BlobConfiguration from "../../../src/blob/BlobConfiguration";
+import Server from "../../../src/blob/BlobServer";
 import { BlobHTTPHeaders } from "../../../src/blob/generated/artifacts/models";
 import { configLogger } from "../../../src/common/Logger";
+import { StoreDestinationArray } from "../../../src/common/persistence/IExtentStore";
 import {
   bodyToString,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
-  sleep,
-  TestServerFactory
+  rmRecursive,
+  sleep
 } from "../../testutils";
 
 import assert = require("assert");
@@ -25,10 +28,27 @@ import assert = require("assert");
 configLogger(false);
 
 describe("BlobAPIs", () => {
+  // TODO: Create a server factory as tests utils
   const host = "127.0.0.1";
   const port = 11000;
-  // TODO: Create a server factory as tests utils
-  const server = TestServerFactory.getServer(host, port);
+  const metadataDbPath = "__blobTestsStorage__";
+  const extentDbPath = "__blobExtentTestsStorage__";
+  const persistencePath = "__blobTestsPersistence__";
+  const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
+    {
+      persistencyId: "blobTest",
+      persistencyPath: persistencePath,
+      maxConcurrency: 10
+    }
+  ];
+  const config = new BlobConfiguration(
+    host,
+    port,
+    metadataDbPath,
+    extentDbPath,
+    DEFUALT_QUEUE_PERSISTENCE_ARRAY,
+    false
+  );
 
   // TODO: Create serviceURL factory as tests utils
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
@@ -49,13 +69,18 @@ describe("BlobAPIs", () => {
   let blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
   const content = "Hello World";
 
+  let server: Server;
+
   before(async () => {
+    server = new Server(config);
     await server.start();
   });
 
   after(async () => {
     await server.close();
-    await TestServerFactory.rmTestFile();
+    await rmRecursive(metadataDbPath);
+    await rmRecursive(extentDbPath);
+    await rmRecursive(persistencePath);
   });
 
   beforeEach(async () => {
@@ -104,7 +129,7 @@ describe("BlobAPIs", () => {
     assert.ok(result.snapshot);
   });
 
-  it.only("should delete snapshot", async () => {
+  it("should delete snapshot", async () => {
     const result = await blobURL.createSnapshot(Aborter.none);
     assert.ok(result.snapshot);
     const blobSnapshotURL = blobURL.withSnapshot(result.snapshot!);

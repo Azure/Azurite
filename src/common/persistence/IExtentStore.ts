@@ -1,5 +1,5 @@
 import { IDataStore } from "../IDataStore";
-import IExtentMetadata from "./IExtentMetadata";
+import IExtentMetadataStore from "./IExtentMetadataStore";
 
 /**
  * This model describes a chunk inside a persistency extent for a given extent ID.
@@ -80,5 +80,5 @@ export default interface IExtentStore extends IDataStore {
    * @returns {IExtentMetadata}
    * @memberof IExtentStore
    */
-  getMetadataStore(): IExtentMetadata;
+  getMetadataStore(): IExtentMetadataStore;
 }

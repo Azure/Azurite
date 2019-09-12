@@ -15,15 +15,17 @@ import {
   uploadStreamToBlockBlob
 } from "@azure/storage-blob";
 
+import BlobConfiguration from "../../src/blob/BlobConfiguration";
+import Server from "../../src/blob/BlobServer";
 import { configLogger } from "../../src/common/Logger";
+import { StoreDestinationArray } from "../../src/common/persistence/IExtentStore";
 import {
   createRandomLocalFile,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
   readStreamToLocalFile,
-  rmRecursive,
-  TestServerFactory
+  rmRecursive
 } from "../testutils";
 
 import assert = require("assert");
@@ -32,10 +34,28 @@ configLogger(false);
 
 // tslint:disable:no-empty
 describe("BlockBlobHighlevel", () => {
+  // TODO: Create a server factory as tests utils
   const host = "127.0.0.1";
   const port = 11000;
-  // TODO: Create a server factory as tests utils
-  const server = TestServerFactory.getServer(host, port);
+  const metadataDbPath = "__blobTestsStorage__";
+  const extentDbPath = "__blobExtentTestsStorage__";
+  const persistencePath = "__blobTestsPersistence__";
+  const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
+    {
+      persistencyId: "blobTest",
+      persistencyPath: persistencePath,
+      maxConcurrency: 10
+    }
+  ];
+  const config = new BlobConfiguration(
+    host,
+    port,
+    metadataDbPath,
+    extentDbPath,
+    DEFUALT_QUEUE_PERSISTENCE_ARRAY,
+    false
+  );
+  let server: Server;
 
   // TODO: Create serviceURL factory as tests utils
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
@@ -48,7 +68,6 @@ describe("BlockBlobHighlevel", () => {
       }
     )
   );
-
   let containerName = getUniqueName("container");
   let containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
   let blobName = getUniqueName("blob");
@@ -74,6 +93,7 @@ describe("BlockBlobHighlevel", () => {
   });
 
   before(async () => {
+    server = new Server(config);
     await server.start();
 
     if (!fs.existsSync(tempFolderPath)) {
@@ -98,7 +118,9 @@ describe("BlockBlobHighlevel", () => {
     fs.unlinkSync(tempFileLarge);
     fs.unlinkSync(tempFileSmall);
     rmRecursive(tempFolderPath);
-    await TestServerFactory.rmTestFile();
+    await rmRecursive(metadataDbPath);
+    await rmRecursive(extentDbPath);
+    await rmRecursive(persistencePath);
   });
 
   it("uploadFileToBlockBlob should success when blob >= BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES", async () => {

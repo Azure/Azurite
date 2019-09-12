@@ -329,7 +329,7 @@ export interface IBlobMetadataStore extends IDataStore {
    * @param {string} etag
    * @param {IContainerMetadata} [metadata]
    * @param {Context} [context]
-   * @returns {Promise<ContainerModel>}
+   * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
   setContainerMetadata(
@@ -339,7 +339,7 @@ export interface IBlobMetadataStore extends IDataStore {
     etag: string,
     metadata?: IContainerMetadata,
     context?: Context
-  ): Promise<ContainerModel>;
+  ): Promise<void>;
 
   /**
    * Get container access policy.
@@ -526,15 +526,6 @@ export interface IBlobMetadataStore extends IDataStore {
     blob: string,
     context: Context
   ): Promise<CreateSnapshotRes>;
-
-  /**
-   * Update blob item in persistency layer. Will create if blob doesn't exist.
-   *
-   * @param {BlobModel} blob
-   * @returns {Promise<BlobModel>}
-   * @memberof IBlobMetadataStore
-   */
-  updateBlob(blob: BlobModel): Promise<BlobModel>;
 
   /**
    * Gets a blob item from persistency layer by container name and blob name.
@@ -960,6 +951,32 @@ export interface IBlobMetadataStore extends IDataStore {
     blobSequenceNumber: number | undefined,
     context: Context
   ): Promise<Models.BlobProperties>;
+
+  /**
+   * Gets blocks list for a blob from persistency layer by account, container and blob names.
+   *
+   * @template T
+   * @param {string} [account]
+   * @param {string} [container]
+   * @param {string} [blob]
+   * @param {boolean} [isCommitted]
+   * @returns {Promise<T[]>}
+   * @memberof IBlobMetadataStore
+   */
+  listBlocks<T extends BlockModel>(
+    account?: string,
+    container?: string,
+    blob?: string,
+    isCommitted?: boolean
+  ): Promise<T[]>;
+
+  /**
+   * Return a referred extent iterator for GC.
+   *
+   * @returns {AsyncIterator<IPersistencyChunk[]>}
+   * @memberof IBlobMetadataStore
+   */
+  iteratorReferredExtents(): AsyncIterator<IPersistencyChunk[]>;
 }
 
 export default IBlobMetadataStore;

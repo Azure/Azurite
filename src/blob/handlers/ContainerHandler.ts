@@ -1,9 +1,7 @@
 import BlobStorageContext from "../context/BlobStorageContext";
-import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IContainerHandler from "../generated/handlers/IContainerHandler";
-import { ContainerModel } from "../persistence/IBlobDataStore";
 import { BLOB_API_VERSION } from "../utils/constants";
 import { getContainerGetAccountInfoResponse, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -485,11 +483,16 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerListBlobFlatSegmentOptionalParams,
     context: Context
   ): Promise<Models.ContainerListBlobFlatSegmentResponse> {
-    // TODO: May check the existance of container in this.metadataStore.listBlobs().
-    const container = await this.getSimpleContainerFromStorage(context);
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    await this.metadataStore.checkContainerExist(
+      accountName,
+      containerName,
+      context
+    );
+
     const request = context.request!;
-    const accountName = container.accountName;
-    const containerName = container.name;
     const marker = options.marker;
     const delimiter = "";
     options.marker = options.marker || "";
@@ -553,11 +556,16 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerListBlobHierarchySegmentResponse> {
     // TODO: Need update list out blobs lease properties with BlobHandler.updateLeaseAttributes()
-    // TODO: May check the existance of container in this.metadataStore.listBlobs().
-    const container = await this.getSimpleContainerFromStorage(context);
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    await this.metadataStore.checkContainerExist(
+      accountName,
+      containerName,
+      context
+    );
+
     const request = context.request!;
-    const accountName = container.accountName;
-    const containerName = container.name;
     const marker = options.marker;
     delimiter = delimiter === "" ? "/" : delimiter;
     options.prefix = options.prefix || "";
@@ -653,81 +661,5 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerGetAccountInfoResponse> {
     return getContainerGetAccountInfoResponse(context);
-  }
-
-  /**
-   * Get container object from persistency layer according to request context.
-   *
-   * @private
-   * @param {Context} context
-   * @returns {Promise<BlobModel>}
-   * @memberof ContainerHandler
-   */
-  private async getSimpleContainerFromStorage(
-    context: Context
-  ): Promise<ContainerModel> {
-    const blobCtx = new BlobStorageContext(context);
-    const accountName = blobCtx.account!;
-    const containerName = blobCtx.container!;
-
-    let container = await this.metadataStore.getContainer(
-      accountName,
-      containerName,
-      context
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
-    container = this.updateLeaseAttributes(container, blobCtx.startTime!);
-
-    return container;
-  }
-
-  /**
-   * Update container lease Attributes according to the current time.
-   * The Attribute not set back
-   *
-   * @private
-   * @param {ContainerModel} container
-   * @param {Date} currentTime
-   * @returns {ContainerModel}
-   * @memberof ContainerHandler
-   */
-  private updateLeaseAttributes(
-    container: ContainerModel,
-    currentTime: Date
-  ): ContainerModel {
-    // check Leased -> Expired
-    if (
-      container.properties.leaseState === Models.LeaseStateType.Leased &&
-      container.properties.leaseDuration === Models.LeaseDurationType.Fixed
-    ) {
-      if (
-        container.leaseExpireTime !== undefined &&
-        currentTime > container.leaseExpireTime
-      ) {
-        container.properties.leaseState = Models.LeaseStateType.Expired;
-        container.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
-        container.properties.leaseDuration = undefined;
-        container.leaseExpireTime = undefined;
-        container.leaseBreakExpireTime = undefined;
-      }
-    }
-
-    // check Breaking -> Broken
-    if (container.properties.leaseState === Models.LeaseStateType.Breaking) {
-      if (
-        container.leaseBreakExpireTime !== undefined &&
-        currentTime > container.leaseBreakExpireTime
-      ) {
-        container.properties.leaseState = Models.LeaseStateType.Broken;
-        container.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
-        container.properties.leaseDuration = undefined;
-        container.leaseExpireTime = undefined;
-        container.leaseBreakExpireTime = undefined;
-      }
-    }
-    return container;
   }
 }
