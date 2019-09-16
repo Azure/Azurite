@@ -12,7 +12,6 @@ import SqlExtentMetadataStore from "../common/persistence/SqlExtentMetadataStore
 import ServerBase from "../common/ServerBase";
 import BlobGCManager from "./gc/BlobGCManager";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
-import LokiBlobMetadataStore from "./persistence/LokiBlobMetadataStore";
 import SqlBlobMetadataStore from "./persistence/SqlBlobMetadataStore";
 import SqlBlobConfiguration from "./SqlBlobConfiguration";
 import SqlBlobRequestListenerFactory from "./SqlBlobRequestListenerFactory";
@@ -35,7 +34,6 @@ const AFTER_CLOSE_MESSAGE = `Azurite Blob service successfully closed`;
  * @class Server
  */
 export default class SqlBlobServer extends ServerBase {
-  private readonly dataStore: IBlobMetadataStore;
   private readonly metadataStore: IBlobMetadataStore;
   private readonly extentMetadataStore: IExtentMetadataStore;
   private readonly extentStore: IExtentStore;
@@ -59,13 +57,6 @@ export default class SqlBlobServer extends ServerBase {
     // We can crate a HTTP server or a HTTPS server here
     const httpServer = http.createServer();
 
-    // We can change the persistency layer implementation by
-    // creating a new XXXDataStore class implementing IBlobDataStore interface
-    // and replace the default LokiBlobDataStore
-    const dataStore: IBlobMetadataStore = new LokiBlobMetadataStore(
-      configuration.blobDBPath
-    );
-
     const metadataStore: IBlobMetadataStore = new SqlBlobMetadataStore(
       configuration.sqlURL,
       configuration.sequelizeOptions
@@ -88,7 +79,6 @@ export default class SqlBlobServer extends ServerBase {
     // creating a new XXXListenerFactory implementing IRequestListenerFactory interface
     // and replace the default Express based request listener
     const requestListenerFactory: IRequestListenerFactory = new SqlBlobRequestListenerFactory(
-      dataStore,
       metadataStore,
       extentStore,
       accountDataStore,
@@ -101,7 +91,7 @@ export default class SqlBlobServer extends ServerBase {
     // Default Blob GC Manager
     // Will close service when any critical GC error happens
     const gcManager = new BlobGCManager(
-      dataStore,
+      metadataStore,
       extentMetadataStore,
       extentStore,
       () => {
@@ -117,7 +107,6 @@ export default class SqlBlobServer extends ServerBase {
       logger
     );
 
-    this.dataStore = dataStore;
     this.metadataStore = metadataStore;
     this.extentMetadataStore = extentMetadataStore;
     this.extentStore = extentStore;
@@ -131,10 +120,6 @@ export default class SqlBlobServer extends ServerBase {
 
     if (this.accountDataStore !== undefined) {
       await this.accountDataStore.init();
-    }
-
-    if (this.dataStore !== undefined) {
-      await this.dataStore.init();
     }
 
     if (this.metadataStore !== undefined) {
@@ -178,10 +163,6 @@ export default class SqlBlobServer extends ServerBase {
 
     if (this.metadataStore !== undefined) {
       await this.metadataStore.close();
-    }
-
-    if (this.dataStore !== undefined) {
-      await this.dataStore.close();
     }
 
     if (this.accountDataStore !== undefined) {

@@ -38,7 +38,6 @@ import morgan = require("morgan");
 export default class SqlBlobRequestListenerFactory
   implements IRequestListenerFactory {
   public constructor(
-    private readonly dataStore: IBlobMetadataStore,
     private readonly metadataStore: IBlobMetadataStore,
     private readonly extentStore: IExtentStore,
     private readonly accountDataStore: IAccountDataStore,
@@ -59,7 +58,7 @@ export default class SqlBlobRequestListenerFactory
     const pageBlobRangesManager = new PageBlobRangesManager();
     const handlers: IHandlers = {
       appendBlobHandler: new AppendBlobHandler(
-        this.dataStore,
+        this.metadataStore,
         this.extentStore,
         logger
       ),
@@ -80,7 +79,7 @@ export default class SqlBlobRequestListenerFactory
         logger
       ),
       pageBlobHandler: new PageBlobHandler(
-        this.dataStore,
+        this.metadataStore,
         this.extentStore,
         logger,
         pageBlobRangesManager
@@ -114,14 +113,18 @@ export default class SqlBlobRequestListenerFactory
     );
     app.use(
       authenticationMiddlewareFactory.createAuthenticationMiddleware([
-        new PublicAccessAuthenticator(this.dataStore, logger),
+        new PublicAccessAuthenticator(this.metadataStore, logger),
         new BlobSharedKeyAuthenticator(this.accountDataStore, logger),
         new AccountSASAuthenticator(
           this.accountDataStore,
-          this.dataStore,
+          this.metadataStore,
           logger
         ),
-        new BlobSASAuthenticator(this.accountDataStore, this.dataStore, logger)
+        new BlobSASAuthenticator(
+          this.accountDataStore,
+          this.metadataStore,
+          logger
+        )
       ])
     );
 

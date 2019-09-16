@@ -1,7 +1,7 @@
 import ILogger from "../../common/ILogger";
 import { Logger } from "../../common/Logger";
 import NoLoggerStrategy from "../../common/NoLoggerStrategy";
-import { IPersistencyChunk } from "./IBlobDataStore";
+import { IPersistencyChunk } from "./IBlobMetadataStore";
 import LokiBlobMetadataStore from "./LokiBlobMetadataStore";
 
 enum State {

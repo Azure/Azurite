@@ -58,8 +58,8 @@ export default class BlobServer extends ServerBase {
     const httpServer = http.createServer();
 
     // We can change the persistency layer implementation by
-    // creating a new XXXDataStore class implementing IBlobDataStore interface
-    // and replace the default LokiBlobDataStore
+    // creating a new XXXDataStore class implementing IBlobMetadataStore interface
+    // and replace the default LokiBlobMetadataStore
     const metadataStore: IBlobMetadataStore = new LokiBlobMetadataStore(
       configuration.metadataDBPath
       // logger

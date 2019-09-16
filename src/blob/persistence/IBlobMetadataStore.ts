@@ -207,7 +207,7 @@ export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
  * TODO: Integrate cache layer to cache account, container & blob metadata.
  *
  * @export
- * @interface IBlobDataStore
+ * @interface IBlobMetadataStore
  * @extends {IDataStore}
  */
 export interface IBlobMetadataStore extends IDataStore {

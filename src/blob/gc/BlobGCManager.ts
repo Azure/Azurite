@@ -32,7 +32,7 @@ export default class BlobGCManager implements IGCManager {
   /**
    * Creates an instance of BlobGCManager.
    *
-   * @param {IBlobDataStore} blobDataStore
+   * @param {IBlobMetadataStore} blobDataStore
    * @param {(err: Error) => void} errorHandler Error handler callback to handle critical errors during GC loop
    *                                            When an error happens, GC loop will close automatically
    * @param {ILogger} logger

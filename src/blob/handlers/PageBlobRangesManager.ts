@@ -2,7 +2,7 @@ import { PageRange } from "../generated/artifacts/models";
 import {
   PersistencyPageRange,
   ZERO_PERSISTENCY_CHUNK_ID
-} from "../persistence/IBlobDataStore";
+} from "../persistence/IBlobMetadataStore";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
 /********** Ranges Merging Strategy ************/

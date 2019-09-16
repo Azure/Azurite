@@ -187,7 +187,7 @@ export default class LokiBlobMetadataStore
    * Create an async iterator to enumerate all extent records referred or being used.
    *
    * @returns {AsyncIterator<IPersistencyChunk[]>}
-   * @memberof IBlobDataStore
+   * @memberof IBlobMetadataStore
    */
   public iteratorReferredExtents(): AsyncIterator<IPersistencyChunk[]> {
     // By default, we disable detailed log for GC
@@ -2442,7 +2442,7 @@ export default class LokiBlobMetadataStore
    * @param {string} [blob]
    * @param {boolean} [isCommitted]
    * @returns {(Promise<T[]>)}
-   * @memberof LokiBlobDataStore
+   * @memberof LokiBlobMetadataStore
    */
   public async listBlocks<T extends BlockModel>(
     account?: string,
