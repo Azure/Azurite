@@ -1,5 +1,5 @@
 import { IDataStore } from "../IDataStore";
-import IExtentMetadata from "./IExtentMetadata";
+import IExtentMetadataStore from "./IExtentMetadataStore";
 
 /**
  * This model describes a chunk inside a persistency extent for a given extent ID.
@@ -44,11 +44,26 @@ export default interface IExtentStore extends IDataStore {
   /**
    * Read data from persistency layer accoding to the given IExtentChunk.
    *
-   * @param {IExtentChunk} persistency
+   * @param {IExtentChunk} [extentChunk]
    * @returns {Promise<NodeJS.ReadableStream>}
    * @memberof IExtentStore
    */
-  readExtent(extentChunk: IExtentChunk): Promise<NodeJS.ReadableStream>;
+  readExtent(extentChunk?: IExtentChunk): Promise<NodeJS.ReadableStream>;
+
+  /**
+   * Merge serveral extent chunks to a ReadableStream according to the offset and count.
+   *
+   * @param {(IExtentChunk)[]} extentChunkArray
+   * @param {number} offset
+   * @param {number} count
+   * @returns {Promise<NodeJS.ReadableStream>}
+   * @memberof IExtentStore
+   */
+  readExtents(
+    extentChunkArray: (IExtentChunk)[],
+    offset: number,
+    count: number
+  ): Promise<NodeJS.ReadableStream>;
 
   /**
    * Delete the extents from persistency layer.
@@ -65,5 +80,5 @@ export default interface IExtentStore extends IDataStore {
    * @returns {IExtentMetadata}
    * @memberof IExtentStore
    */
-  getMetadataStore(): IExtentMetadata;
+  getMetadataStore(): IExtentMetadataStore;
 }

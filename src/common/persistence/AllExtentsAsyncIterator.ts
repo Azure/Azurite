@@ -1,5 +1,5 @@
 import { DEFAULT_GC_UNMODIFIED_TIME } from "../utils/constants";
-import IExtentMetadata from "./IExtentMetadata";
+import IExtentMetadataStore from "./IExtentMetadataStore";
 
 /**
  * Async iterator to enumerate all extent IDs.
@@ -15,7 +15,7 @@ export default class AllExtentsAsyncIterator
   private marker?: number;
   private readonly time: Date;
 
-  constructor(private readonly extentMetadata: IExtentMetadata) {
+  constructor(private readonly extentMetadata: IExtentMetadataStore) {
     this.time = new Date();
   }
 

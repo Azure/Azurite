@@ -17,6 +17,8 @@ export default interface IServiceHandler {
   getProperties(options: Models.ServiceGetPropertiesOptionalParams, context: Context): Promise<Models.ServiceGetPropertiesResponse>;
   getStatistics(options: Models.ServiceGetStatisticsOptionalParams, context: Context): Promise<Models.ServiceGetStatisticsResponse>;
   listContainersSegment(options: Models.ServiceListContainersSegmentOptionalParams, context: Context): Promise<Models.ServiceListContainersSegmentResponse>;
+  getUserDelegationKey(keyInfo: Models.KeyInfo, options: Models.ServiceGetUserDelegationKeyOptionalParams, context: Context): Promise<Models.ServiceGetUserDelegationKeyResponse>;
   getAccountInfo(context: Context): Promise<Models.ServiceGetAccountInfoResponse>;
   getAccountInfoWithHead(context: Context): Promise<Models.ServiceGetAccountInfoWithHeadResponse>;
+  submitBatch(body: NodeJS.ReadableStream, contentLength: number, multipartContentType: string, options: Models.ServiceSubmitBatchOptionalParams, context: Context): Promise<Models.ServiceSubmitBatchResponse>;
 }

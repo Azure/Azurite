@@ -1,6 +1,6 @@
 import { URL } from "url";
-import uuid from "uuid/v4";
 
+import IExtentStore from "../../common/persistence/IExtentStore";
 import BlobStorageContext from "../context/BlobStorageContext";
 import { extractStoragePartsFromPath } from "../context/blobStorageContext.middleware";
 import NotImplementedError from "../errors/NotImplementedError";
@@ -9,14 +9,15 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IBlobHandler from "../generated/handlers/IBlobHandler";
 import ILogger from "../generated/utils/ILogger";
-import IBlobDataStore, { BlobModel } from "../persistence/IBlobDataStore";
+import IBlobMetadataStore, {
+  BlobModel
+} from "../persistence/IBlobMetadataStore";
 import { BLOB_API_VERSION } from "../utils/constants";
 import {
   deserializePageBlobRangeHeader,
   deserializeRangeHeader,
   getContainerGetAccountInfoResponse,
-  getMD5FromStream,
-  newEtag
+  getMD5FromStream
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -191,11 +192,39 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   constructor(
-    dataStore: IBlobDataStore,
+    metadataStore: IBlobMetadataStore,
+    extentStore: IExtentStore,
     logger: ILogger,
     private readonly rangesManager: IPageBlobRangesManager
   ) {
-    super(dataStore, logger);
+    super(metadataStore, extentStore, logger);
+  }
+
+  public setAccessControl(
+    options: Models.BlobSetAccessControlOptionalParams,
+    context: Context
+  ): Promise<Models.BlobSetAccessControlResponse> {
+    throw new Error("Method not implemented.");
+  }
+  public getAccessControl(
+    options: Models.BlobGetAccessControlOptionalParams,
+    context: Context
+  ): Promise<Models.BlobGetAccessControlResponse> {
+    throw new Error("Method not implemented.");
+  }
+  public rename(
+    renameSource: string,
+    options: Models.BlobRenameOptionalParams,
+    context: Context
+  ): Promise<Models.BlobRenameResponse> {
+    throw new Error("Method not implemented.");
+  }
+  public copyFromURL(
+    copySource: string,
+    options: Models.BlobCopyFromURLOptionalParams,
+    context: Context
+  ): Promise<Models.BlobCopyFromURLResponse> {
+    throw new Error("Method not implemented.");
   }
 
   /**
@@ -210,7 +239,17 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobDownloadOptionalParams,
     context: Context
   ): Promise<Models.BlobDownloadResponse> {
-    const blob = await this.getSimpleBlobFromStorage(context, options.snapshot);
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    const blobName = blobCtx.blob!;
+    const blob = await this.metadataStore.downloadBlob(
+      accountName,
+      containerName,
+      blobName,
+      options.snapshot,
+      context
+    );
 
     if (blob.snapshot === "") {
       BlobHandler.checkLeaseOnReadBlob(
@@ -244,16 +283,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobGetPropertiesOptionalParams,
     context: Context
   ): Promise<Models.BlobGetPropertiesResponse> {
-    const blob = await this.getSimpleBlobFromStorage(context, options.snapshot);
-
-    // TODO: Lease for a snapshot blob?
-    if (blob.snapshot === "") {
-      BlobHandler.checkLeaseOnReadBlob(
-        context,
-        blob,
-        options.leaseAccessConditions
-      );
-    }
+    const blobCtx = new BlobStorageContext(context);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+    const res = await this.metadataStore.getBlobProperties(
+      account,
+      container,
+      blob,
+      options.snapshot,
+      options.leaseAccessConditions,
+      context
+    );
 
     // TODO: Create get metadata specific request in swagger
     const againstMetadata = context.request!.getQuery("comp") === "metadata";
@@ -261,24 +302,24 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const response: Models.BlobGetPropertiesResponse = againstMetadata
       ? {
           statusCode: 200,
-          metadata: blob.metadata,
-          eTag: blob.properties.etag,
+          metadata: res.metadata,
+          eTag: res.properties.etag,
           requestId: context.contextID,
           version: BLOB_API_VERSION,
           date: context.startTime
         }
       : {
           statusCode: 200,
-          metadata: blob.metadata,
-          isIncrementalCopy: blob.properties.incrementalCopy,
-          eTag: blob.properties.etag,
+          metadata: res.metadata,
+          isIncrementalCopy: res.properties.incrementalCopy,
+          eTag: res.properties.etag,
           requestId: context.contextID,
           version: BLOB_API_VERSION,
           date: context.startTime,
           acceptRanges: "bytes",
           blobCommittedBlockCount: undefined, // TODO: Append blob
           isServerEncrypted: true,
-          ...blob.properties
+          ...res.properties
         };
 
     return response;
@@ -296,107 +337,17 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobDeleteMethodOptionalParams,
     context: Context
   ): Promise<Models.BlobDeleteResponse> {
-    const blob = await this.getSimpleBlobFromStorage(context, options.snapshot);
-    const againstBaseBlob = blob.snapshot === "";
-
-    // Check Lease status
-    if (againstBaseBlob) {
-      BlobHandler.checkBlobLeaseOnWriteBlob(
-        context,
-        blob,
-        options.leaseAccessConditions
-      );
-    }
-
-    // Check bad requests
-    if (!againstBaseBlob && options.deleteSnapshots !== undefined) {
-      throw StorageErrorFactory.getInvalidOperation(
-        context.contextID!,
-        "Invalid operation against a blob snapshot."
-      );
-    }
-
-    // Check whether blob has snapshots
-    const blobAndSnapshots = [];
-    let marker;
-    let blobs = [];
-    do {
-      [blobs, marker] = await this.dataStore.listBlobs(
-        blob.accountName,
-        blob.containerName,
-        blob.name,
-        undefined,
-        5000,
-        marker,
-        true
-      );
-      blobAndSnapshots.push(...blobs);
-    } while (marker !== undefined);
-
-    const hasSnapshots = blobAndSnapshots.length > 1;
-
-    // Scenario: Delete base blob only
-    if (againstBaseBlob && options.deleteSnapshots === undefined) {
-      if (hasSnapshots) {
-        throw StorageErrorFactory.getSnapshotsPresent(context.contextID!);
-      } else {
-        await this.dataStore.deleteBlob(
-          blob.accountName,
-          blob.containerName,
-          blob.name
-        );
-      }
-    }
-
-    // Scenario: Delete snapshot only
-    if (!againstBaseBlob) {
-      await this.dataStore.deleteBlob(
-        blob.accountName,
-        blob.containerName,
-        blob.name,
-        blob.snapshot
-      );
-    }
-
-    // Scenario: Delete base blob and snapshots
-    if (
-      againstBaseBlob &&
-      options.deleteSnapshots === Models.DeleteSnapshotsOptionType.Include
-    ) {
-      const promises = [];
-      for (const item of blobAndSnapshots) {
-        promises.push(
-          this.dataStore.deleteBlob(
-            item.accountName,
-            item.containerName,
-            item.name,
-            item.snapshot
-          )
-        );
-      }
-      await Promise.all(promises);
-    }
-
-    // Scenario: Delete snapshots only
-    if (
-      againstBaseBlob &&
-      options.deleteSnapshots === Models.DeleteSnapshotsOptionType.Only
-    ) {
-      const promises = [];
-      for (const item of blobAndSnapshots.filter(value => {
-        return value.snapshot !== "";
-      })) {
-        promises.push(
-          this.dataStore.deleteBlob(
-            item.accountName,
-            item.containerName,
-            item.name,
-            item.snapshot
-          )
-        );
-      }
-      await Promise.all(promises);
-    }
+    const blobCtx = new BlobStorageContext(context);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+    await this.metadataStore.deleteBlob(
+      account,
+      container,
+      blob,
+      options,
+      context
+    );
 
     const response: Models.BlobDeleteResponse = {
       statusCode: 202,
@@ -436,49 +387,24 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobSetHTTPHeadersOptionalParams,
     context: Context
   ): Promise<Models.BlobSetHTTPHeadersResponse> {
-    let blob = await this.getSimpleBlobFromStorage(context);
-
-    // Check Lease status
-    BlobHandler.checkBlobLeaseOnWriteBlob(
-      context,
+    const blobCtx = new BlobStorageContext(context);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+    const res = await this.metadataStore.setBlobHTTPHeaders(
+      account,
+      container,
       blob,
-      options.leaseAccessConditions
+      options.leaseAccessConditions,
+      options.blobHTTPHeaders,
+      context
     );
-
-    // Set lease to available if it's expired
-    blob = BlobHandler.UpdateBlobLeaseStateOnWriteBlob(blob);
-    await this.dataStore.updateBlob(blob);
-
-    const blobHeaders = options.blobHTTPHeaders;
-    const blobProps = blob.properties;
-
-    // as per https://docs.microsoft.com/en-us/rest/api/storageservices/set-blob-properties#remarks
-    // If any one or more of the following properties is set in the request,
-    // then all of these properties are set together.
-    // If a value is not provided for a given property when at least one
-    // of the properties listed below is set, then that property will
-    // be cleared for the blob.
-    if (blobHeaders !== undefined) {
-      blobProps.cacheControl = blobHeaders.blobCacheControl;
-      blobProps.contentType = blobHeaders.blobContentType;
-      blobProps.contentMD5 = blobHeaders.blobContentMD5;
-      blobProps.contentEncoding = blobHeaders.blobContentEncoding;
-      blobProps.contentLanguage = blobHeaders.blobContentLanguage;
-      blobProps.contentDisposition = blobHeaders.blobContentDisposition;
-      blobProps.lastModified = context.startTime
-        ? context.startTime
-        : new Date();
-    }
-
-    blob.properties = blobProps;
-    await this.dataStore.updateBlob(blob);
-
     // ToDo: return correct headers and test for these.
     const response: Models.BlobSetHTTPHeadersResponse = {
       statusCode: 200,
-      eTag: blob.properties.etag,
-      lastModified: blob.properties.lastModified,
-      blobSequenceNumber: blob.properties.blobSequenceNumber,
+      eTag: res.etag,
+      lastModified: res.lastModified,
+      blobSequenceNumber: res.blobSequenceNumber,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
       date: context.startTime
@@ -499,26 +425,24 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobSetMetadataOptionalParams,
     context: Context
   ): Promise<Models.BlobSetMetadataResponse> {
-    let blob = await this.getSimpleBlobFromStorage(context);
-
-    // Check Lease status
-    BlobHandler.checkBlobLeaseOnWriteBlob(
-      context,
+    const blobCtx = new BlobStorageContext(context);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+    const res = await this.metadataStore.setBlobMetadata(
+      account,
+      container,
       blob,
-      options.leaseAccessConditions
+      options.leaseAccessConditions,
+      options.metadata,
+      context
     );
-
-    blob.metadata = options.metadata;
-
-    // Set lease to available if it's expired
-    blob = BlobHandler.UpdateBlobLeaseStateOnWriteBlob(blob);
-    await this.dataStore.updateBlob(blob);
 
     // ToDo: return correct headers and test for these.
     const response: Models.BlobSetMetadataResponse = {
       statusCode: 200,
-      eTag: blob.properties.etag,
-      lastModified: blob.properties.lastModified,
+      eTag: res.etag,
+      lastModified: res.lastModified,
       isServerEncrypted: true,
       requestId: context.contextID,
       date: context.startTime,
@@ -541,58 +465,22 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobAcquireLeaseResponse> {
     const blobCtx = new BlobStorageContext(context);
-    let blob: BlobModel;
-
-    try {
-      blob = await this.getSimpleBlobFromStorage(context);
-    } catch (error) {
-      throw error;
-    }
-
-    // check the lease action aligned with current lease state.
-    if (blob.snapshot !== "") {
-      throw StorageErrorFactory.getBlobSnapshotsPresent(blobCtx.contextID!);
-    }
-    if (blob.properties.leaseState === Models.LeaseStateType.Breaking) {
-      throw StorageErrorFactory.getLeaseAlreadyPresent(context.contextID!);
-    }
-    if (
-      blob.properties.leaseState === Models.LeaseStateType.Leased &&
-      options.proposedLeaseId !== blob.leaseId
-    ) {
-      throw StorageErrorFactory.getLeaseAlreadyPresent(context.contextID!);
-    }
-
-    // update the lease information
-    if (options.duration === -1 || options.duration === undefined) {
-      blob.properties.leaseDuration = Models.LeaseDurationType.Infinite;
-    } else {
-      // verify options.duration between 15 and 60
-      if (options.duration > 60 || options.duration < 15) {
-        throw StorageErrorFactory.getInvalidLeaseDuration(context.contextID!);
-      }
-      blob.properties.leaseDuration = Models.LeaseDurationType.Fixed;
-      blob.leaseExpireTime = blobCtx.startTime!;
-      blob.leaseExpireTime.setSeconds(
-        blob.leaseExpireTime.getSeconds() + options.duration
-      );
-      blob.leaseduration = options.duration;
-    }
-    blob.properties.leaseState = Models.LeaseStateType.Leased;
-    blob.properties.leaseStatus = Models.LeaseStatusType.Locked;
-    blob.leaseId =
-      options.proposedLeaseId !== "" && options.proposedLeaseId !== undefined
-        ? options.proposedLeaseId
-        : uuid();
-    blob.leaseBreakExpireTime = undefined;
-
-    await this.dataStore.updateBlob(blob);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+    const res = await this.metadataStore.acquireBlobLease(
+      account,
+      container,
+      blob,
+      options,
+      context
+    );
 
     const response: Models.BlobAcquireLeaseResponse = {
       date: blobCtx.startTime!,
-      eTag: blob.properties.etag,
-      lastModified: blob.properties.lastModified,
-      leaseId: blob.leaseId,
+      eTag: res.properties.etag,
+      lastModified: res.properties.lastModified,
+      leaseId: res.leaseId,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
       statusCode: 201
@@ -616,46 +504,21 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobReleaseLeaseResponse> {
     const blobCtx = new BlobStorageContext(context);
-    let blob: BlobModel;
-
-    try {
-      blob = await this.getSimpleBlobFromStorage(context);
-    } catch (error) {
-      throw error;
-    }
-
-    // check the lease action aligned with current lease state.
-    if (blob.snapshot !== "") {
-      throw StorageErrorFactory.getBlobSnapshotsPresent(blobCtx.contextID!);
-    }
-    if (blob.properties.leaseState === Models.LeaseStateType.Available) {
-      throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
-        blobCtx.contextID!
-      );
-    }
-
-    // Check lease ID
-    if (blob.leaseId !== leaseId) {
-      throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
-        blobCtx.contextID!
-      );
-    }
-
-    // update the lease information
-    blob.properties.leaseState = Models.LeaseStateType.Available;
-    blob.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
-    blob.properties.leaseDuration = undefined;
-    blob.leaseduration = undefined;
-    blob.leaseId = undefined;
-    blob.leaseExpireTime = undefined;
-    blob.leaseBreakExpireTime = undefined;
-
-    await this.dataStore.updateBlob(blob);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+    const res = await this.metadataStore.releaseBlobLease(
+      account,
+      container,
+      blob,
+      leaseId,
+      context
+    );
 
     const response: Models.BlobReleaseLeaseResponse = {
       date: blobCtx.startTime!,
-      eTag: blob.properties.etag,
-      lastModified: blob.properties.lastModified,
+      eTag: res.etag,
+      lastModified: res.lastModified,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
       statusCode: 200
@@ -679,59 +542,22 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobRenewLeaseResponse> {
     const blobCtx = new BlobStorageContext(context);
-    let blob: BlobModel;
-
-    try {
-      blob = await this.getSimpleBlobFromStorage(context);
-    } catch (error) {
-      throw error;
-    }
-
-    // check the lease action aligned with current lease state.
-    if (blob.snapshot !== "") {
-      throw StorageErrorFactory.getBlobSnapshotsPresent(blobCtx.contextID!);
-    }
-    if (blob.properties.leaseState === Models.LeaseStateType.Available) {
-      throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
-        blobCtx.contextID!
-      );
-    }
-    if (
-      blob.properties.leaseState === Models.LeaseStateType.Breaking ||
-      blob.properties.leaseState === Models.LeaseStateType.Broken
-    ) {
-      throw StorageErrorFactory.getLeaseIsBrokenAndCannotBeRenewed(
-        blobCtx.contextID!
-      );
-    }
-
-    // Check lease ID
-    if (blob.leaseId !== leaseId) {
-      throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
-        blobCtx.contextID!
-      );
-    }
-
-    // update the lease information
-    blob.properties.leaseState = Models.LeaseStateType.Leased;
-    blob.properties.leaseStatus = Models.LeaseStatusType.Locked;
-    // when container.leaseduration has value (not -1), means fixed duration
-    if (blob.leaseduration !== undefined && blob.leaseduration !== -1) {
-      blob.leaseExpireTime = blobCtx.startTime!;
-      blob.leaseExpireTime.setSeconds(
-        blob.leaseExpireTime.getSeconds() + blob.leaseduration
-      );
-      blob.properties.leaseDuration = Models.LeaseDurationType.Fixed;
-    } else {
-      blob.properties.leaseDuration = Models.LeaseDurationType.Infinite;
-    }
-    await this.dataStore.updateContainer(blob);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+    const res = await this.metadataStore.renewBlobLease(
+      account,
+      container,
+      blob,
+      leaseId,
+      context
+    );
 
     const response: Models.BlobRenewLeaseResponse = {
       date: blobCtx.startTime!,
-      eTag: blob.properties.etag,
-      lastModified: blob.properties.lastModified,
-      leaseId: blob.leaseId,
+      eTag: res.properties.etag,
+      lastModified: res.properties.lastModified,
+      leaseId: res.leaseId,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
       statusCode: 200
@@ -757,46 +583,23 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobChangeLeaseResponse> {
     const blobCtx = new BlobStorageContext(context);
-    let blob: BlobModel;
-
-    blob = await this.getSimpleBlobFromStorage(context);
-
-    // check the lease action aligned with current lease state.
-    if (blob.snapshot !== "") {
-      throw StorageErrorFactory.getBlobSnapshotsPresent(blobCtx.contextID!);
-    }
-    if (
-      blob.properties.leaseState === Models.LeaseStateType.Available ||
-      blob.properties.leaseState === Models.LeaseStateType.Expired ||
-      blob.properties.leaseState === Models.LeaseStateType.Broken
-    ) {
-      throw StorageErrorFactory.getBlobLeaseNotPresentWithLeaseOperation(
-        blobCtx.contextID!
-      );
-    }
-    if (blob.properties.leaseState === Models.LeaseStateType.Breaking) {
-      throw StorageErrorFactory.getLeaseIsBreakingAndCannotBeChanged(
-        blobCtx.contextID!
-      );
-    }
-
-    // Check lease ID
-    if (blob.leaseId !== leaseId && blob.leaseId !== proposedLeaseId) {
-      throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
-        blobCtx.contextID!
-      );
-    }
-
-    // update the lease information, only need update lease ID
-    blob.leaseId = proposedLeaseId;
-
-    await this.dataStore.updateBlob(blob);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+    const res = await this.metadataStore.changeBlobLease(
+      account,
+      container,
+      blob,
+      leaseId,
+      proposedLeaseId,
+      context
+    );
 
     const response: Models.BlobChangeLeaseResponse = {
       date: blobCtx.startTime!,
-      eTag: blob.properties.etag,
-      lastModified: blob.properties.lastModified,
-      leaseId: blob.leaseId,
+      eTag: res.properties.etag,
+      lastModified: res.properties.lastModified,
+      leaseId: res.leaseId,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
       statusCode: 200
@@ -818,89 +621,22 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobBreakLeaseResponse> {
     const blobCtx = new BlobStorageContext(context);
-    let blob: BlobModel;
-    let leaseTimeinSecond: number;
-    leaseTimeinSecond = 0;
-
-    blob = await this.getSimpleBlobFromStorage(context);
-
-    // check the lease action aligned with current lease state.
-    if (blob.snapshot !== "") {
-      throw StorageErrorFactory.getBlobSnapshotsPresent(blobCtx.contextID!);
-    }
-    if (blob.properties.leaseState === Models.LeaseStateType.Available) {
-      throw StorageErrorFactory.getBlobLeaseNotPresentWithLeaseOperation(
-        blobCtx.contextID!
-      );
-    }
-
-    // update the lease information
-    // verify options.breakPeriod between 0 and 60
-    if (
-      options.breakPeriod !== undefined &&
-      (options.breakPeriod > 60 || options.breakPeriod < 0)
-    ) {
-      throw StorageErrorFactory.getInvalidLeaseBreakPeriod(blobCtx.contextID!);
-    }
-    if (
-      blob.properties.leaseState === Models.LeaseStateType.Expired ||
-      blob.properties.leaseState === Models.LeaseStateType.Broken ||
-      options.breakPeriod === 0 ||
-      options.breakPeriod === undefined
-    ) {
-      blob.properties.leaseState = Models.LeaseStateType.Broken;
-      blob.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
-      blob.properties.leaseDuration = undefined;
-      blob.leaseduration = undefined;
-      blob.leaseExpireTime = undefined;
-      blob.leaseBreakExpireTime = undefined;
-      leaseTimeinSecond = 0;
-    } else {
-      blob.properties.leaseState = Models.LeaseStateType.Breaking;
-      blob.properties.leaseStatus = Models.LeaseStatusType.Locked;
-      blob.leaseduration = undefined;
-      if (blob.properties.leaseDuration === Models.LeaseDurationType.Infinite) {
-        blob.properties.leaseDuration = undefined;
-        blob.leaseExpireTime = undefined;
-        blob.leaseBreakExpireTime = new Date(blobCtx.startTime!);
-        blob.leaseBreakExpireTime.setSeconds(
-          blob.leaseBreakExpireTime.getSeconds() + options.breakPeriod
-        );
-        leaseTimeinSecond = options.breakPeriod;
-      } else {
-        let newleaseBreakExpireTime = new Date(blobCtx.startTime!);
-        newleaseBreakExpireTime.setSeconds(
-          newleaseBreakExpireTime.getSeconds() + options.breakPeriod
-        );
-        if (
-          blob.leaseExpireTime !== undefined &&
-          newleaseBreakExpireTime > blob.leaseExpireTime
-        ) {
-          newleaseBreakExpireTime = blob.leaseExpireTime;
-        }
-        if (
-          blob.leaseBreakExpireTime === undefined ||
-          blob.leaseBreakExpireTime > newleaseBreakExpireTime
-        ) {
-          blob.leaseBreakExpireTime = newleaseBreakExpireTime;
-        }
-        leaseTimeinSecond = Math.round(
-          Math.abs(
-            blob.leaseBreakExpireTime.getTime() - blobCtx.startTime!.getTime()
-          ) / 1000
-        );
-        blob.leaseExpireTime = undefined;
-        blob.properties.leaseDuration = undefined;
-      }
-    }
-
-    await this.dataStore.updateBlob(blob);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+    const res = await this.metadataStore.breakBlobLease(
+      account,
+      container,
+      blob,
+      options.breakPeriod,
+      context
+    );
 
     const response: Models.BlobBreakLeaseResponse = {
       date: blobCtx.startTime!,
-      eTag: blob.properties.etag,
-      lastModified: blob.properties.lastModified,
-      leaseTime: leaseTimeinSecond,
+      eTag: res.properties.etag,
+      lastModified: res.properties.lastModified,
+      leaseTime: res.leaseTime,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
       statusCode: 202
@@ -923,45 +659,25 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobCreateSnapshotOptionalParams,
     context: Context
   ): Promise<Models.BlobCreateSnapshotResponse> {
-    const blob = await this.getSimpleBlobFromStorage(context);
-
-    // Deep clone blob model to snapshot blob model.
-    // TODO: Create a method for deep object copy
-    const snapshotBlob: BlobModel = {
-      name: blob.name,
-      deleted: false,
-      snapshot: context.startTime!.toISOString(),
-      properties: { ...blob.properties },
-      metadata: { ...blob.metadata },
-      accountName: blob.accountName,
-      containerName: blob.containerName,
-      pageRangesInOrder:
-        blob.pageRangesInOrder === undefined
-          ? undefined
-          : blob.pageRangesInOrder.slice(),
-      isCommitted: blob.isCommitted,
-      leaseduration: blob.leaseduration,
-      leaseId: blob.leaseId,
-      leaseExpireTime: blob.leaseExpireTime,
-      leaseBreakExpireTime: blob.leaseBreakExpireTime,
-      committedBlocksInOrder:
-        blob.committedBlocksInOrder === undefined
-          ? undefined
-          : blob.committedBlocksInOrder.slice(),
-      persistency:
-        blob.persistency === undefined ? undefined : { ...blob.persistency }
-    };
-
-    await this.dataStore.updateBlob(snapshotBlob);
+    const blobCtx = new BlobStorageContext(context);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+    const res = await this.metadataStore.createSnapshot(
+      account,
+      container,
+      blob,
+      context
+    );
 
     const response: Models.BlobCreateSnapshotResponse = {
       statusCode: 201,
-      eTag: snapshotBlob.properties.etag,
-      lastModified: snapshotBlob.properties.lastModified,
+      eTag: res.properties.etag,
+      lastModified: res.properties.lastModified,
       requestId: context.contextID,
       date: context.startTime!,
       version: BLOB_API_VERSION,
-      snapshot: snapshotBlob.snapshot
+      snapshot: res.snapshot
     };
 
     return response;
@@ -981,7 +697,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobStartCopyFromURLOptionalParams,
     context: Context
   ): Promise<Models.BlobStartCopyFromURLResponse> {
-    const blobContext = new BlobStorageContext(context);
+    const blobCtx = new BlobStorageContext(context);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
 
     // TODO: Check dest Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
     const url = new URL(copySource);
@@ -993,7 +712,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const snapshot = url.searchParams.get("snapshot") || "";
 
     if (
-      sourceAccount !== blobContext.account ||
+      sourceAccount !== blobCtx.account ||
       sourceAccount === undefined ||
       sourceContainer === undefined ||
       sourceBlob === undefined
@@ -1001,100 +720,29 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getBlobNotFound(context.contextID!);
     }
 
-    // TODO: Only supports copy from devstoreaccount1, not a complete copy implementation
-    // Extract source account name, container name, blob name and snapshot
-    // If within devstoreaccount1
-    const sourceContainerModel = await this.dataStore.getContainer(
-      sourceAccount,
-      sourceContainer
-    );
-    if (sourceContainerModel === undefined) {
-      throw StorageErrorFactory.getBlobNotFound(context.contextID!);
-    }
-
-    // Get source storage blob model
-    const sourceBlobModel = await this.dataStore.getBlob(
-      sourceAccount,
-      sourceContainer,
-      sourceBlob,
-      snapshot
-    );
-
-    // If source is uncommitted or deleted
-    if (
-      sourceBlobModel === undefined ||
-      sourceBlobModel.deleted ||
-      !sourceBlobModel.isCommitted
-    ) {
-      throw StorageErrorFactory.getBlobNotFound(context.contextID!);
-    }
-
-    const destContainerModel = await this.dataStore.getContainer(
-      blobContext.account!,
-      blobContext.container!
-    );
-    if (destContainerModel === undefined) {
-      throw StorageErrorFactory.getContainerNotFound(blobContext.contextID!);
-    }
-
-    // Deep clone a copied blob
-    const copiedBlob: BlobModel = {
-      name: blobContext.blob!,
-      deleted: false,
-      snapshot: "",
-      properties: {
-        ...sourceBlobModel.properties,
-        creationTime: context.startTime!,
-        lastModified: context.startTime!,
-        etag: newEtag(),
-        leaseStatus: Models.LeaseStatusType.Unlocked,
-        leaseState: Models.LeaseStateType.Available,
-        leaseDuration: undefined,
-        copyId: uuid(),
-        copyStatus: Models.CopyStatusType.Success,
-        copySource,
-        copyProgress: sourceBlobModel.properties.contentLength
-          ? `${sourceBlobModel.properties.contentLength}/${
-              sourceBlobModel.properties.contentLength
-            }`
-          : undefined,
-        copyCompletionTime: context.startTime,
-        copyStatusDescription: undefined,
-        incrementalCopy: false,
-        destinationSnapshot: undefined,
-        deletedTime: undefined,
-        remainingRetentionDays: undefined,
-        archiveStatus: undefined,
-        accessTierChangeTime: undefined
+    const res = await this.metadataStore.startCopyFromURL(
+      {
+        account: sourceAccount,
+        container: sourceContainer,
+        blob: sourceBlob,
+        snapshot
       },
-      metadata:
-        options.metadata === undefined ||
-        Object.keys(options.metadata).length === 0
-          ? { ...sourceBlobModel.metadata }
-          : options.metadata,
-      accountName: blobContext.account!,
-      containerName: blobContext.container!,
-      pageRangesInOrder: sourceBlobModel.pageRangesInOrder,
-      isCommitted: sourceBlobModel.isCommitted,
-      leaseduration: undefined,
-      leaseId: undefined,
-      leaseExpireTime: undefined,
-      leaseBreakExpireTime: undefined,
-      committedBlocksInOrder: sourceBlobModel.committedBlocksInOrder,
-      persistency: sourceBlobModel.persistency
-    };
-
-    await this.dataStore.updateBlob(copiedBlob);
+      { account, container, blob },
+      copySource,
+      options.metadata,
+      options.tier,
+      context
+    );
 
     const response: Models.BlobStartCopyFromURLResponse = {
       statusCode: 202,
-      eTag: copiedBlob.properties.etag,
-      lastModified: copiedBlob.properties.lastModified,
+      eTag: res.etag,
+      lastModified: res.lastModified,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
       date: context.startTime,
-      copyId: copiedBlob.properties.copyId,
-      copyStatus: copiedBlob.properties.copyStatus
+      copyId: res.copyId,
+      copyStatus: res.copyStatus
     };
 
     return response;
@@ -1114,7 +762,17 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobAbortCopyFromURLOptionalParams,
     context: Context
   ): Promise<Models.BlobAbortCopyFromURLResponse> {
-    const blob = await this.getSimpleBlobFromStorage(context);
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    const blobName = blobCtx.blob!;
+    const blob = await this.metadataStore.downloadBlob(
+      accountName,
+      containerName,
+      blobName,
+      undefined,
+      context
+    );
 
     if (blob.properties.copyId !== copyId) {
       throw StorageErrorFactory.getCopyIdMismatch(context.contextID!);
@@ -1149,95 +807,22 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context
   ): Promise<Models.BlobSetTierResponse> {
     const blobCtx = new BlobStorageContext(context);
-    let blob: BlobModel;
-
-    blob = await this.getSimpleBlobFromStorage(context);
-
-    // check the lease action aligned with current lease state.
-    // the API has not lease ID input, but run it on a lease blocked blob will fail with LeaseIdMissing,
-    // this is aliged with server behavior
-    BlobHandler.checkBlobLeaseOnWriteBlob(context, blob, undefined);
-
-    // Check Blob is not snapshot
-    if (blob.snapshot !== "") {
-      throw StorageErrorFactory.getBlobSnapshotsPresent(blobCtx.contextID!);
-    }
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+    const res = await this.metadataStore.setTier(
+      account,
+      container,
+      blob,
+      tier,
+      context
+    );
 
     const response: Models.BlobSetTierResponse = {
       requestId: context.contextID,
       version: BLOB_API_VERSION,
-      statusCode: 200
+      statusCode: res
     };
-
-    // Check BlobTier matches blob type
-    if (
-      (tier === Models.AccessTier.Archive ||
-        tier === Models.AccessTier.Cool ||
-        tier === Models.AccessTier.Hot) &&
-      blob.properties.blobType === Models.BlobType.BlockBlob
-    ) {
-      // Block blob
-      // tslint:disable-next-line:max-line-length
-      // TODO: check blob is not block blob with snapshot, throw StorageErrorFactory.getBlobSnapshotsPresent_hassnapshot()
-
-      // Archive -> Coo/Hot will return 202
-      if (
-        blob.properties.accessTier === Models.AccessTier.Archive &&
-        (tier === Models.AccessTier.Cool || tier === Models.AccessTier.Hot)
-      ) {
-        response.statusCode = 202;
-      }
-
-      blob.properties.accessTier = tier;
-      blob.properties.accessTierChangeTime = context.startTime;
-    }
-    // else if (
-    //   tier
-    //     .toString()
-    //     .toUpperCase()
-    //     .startsWith("P") &&
-    //   blob.properties.blobType === Models.BlobType.PageBlob
-    // ) {
-    //   // page blob
-    //   // Check Page blob tier not set to lower
-    //   if (blob.properties.accessTier !== undefined) {
-    //     const oldTierInt = parseInt(
-    //       blob.properties.accessTier.toString().substring(1),
-    //       10
-    //     );
-    //     const newTierInt = parseInt(tier.toString().substring(1), 10);
-    //     if (oldTierInt > newTierInt) {
-    //       throw StorageErrorFactory.getBlobCannotChangeToLowerTier(
-    //         blobCtx.contextID!
-    //       );
-    //     }
-    //   }
-
-    //   if (!PageBlobAccessTierThreshold.has(tier)) {
-    //     throw Error(
-    //       `BlobHandler:setTier() PageBlobAccessTierThreshold doesn't define tier threshold for tier ${tier}`
-    //     );
-    //   }
-
-    //   // Check Blob size match tier
-    //   if (
-    //     blob.properties.contentLength! > PageBlobAccessTierThreshold.get(tier)!
-    //   ) {
-    //     throw StorageErrorFactory.getBlobBlobTierInadequateForContentLength(
-    //       blobCtx.contextID!
-    //     );
-    //   }
-
-    //   blob.properties.accessTier = tier;
-    //   blob.properties.accessTierChangeTime = context.startTime;
-    // }
-    // tslint:disable-next-line:one-line
-    else {
-      // Blob tier and blob type not match
-      throw StorageErrorFactory.getBlobInvalidBlobType(blobCtx.contextID!);
-    }
-
-    await this.dataStore.updateBlob(blob);
 
     return response;
   }
@@ -1321,15 +906,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const blocks = blob.committedBlocksInOrder;
     if (blocks === undefined || blocks.length === 0) {
       bodyGetter = async () => {
-        return this.dataStore.readPayload(
-          blob.persistency,
-          rangeStart,
-          rangeEnd + 1 - rangeStart
-        );
+        if (blob.persistency === undefined) {
+          return this.extentStore.readExtent();
+        }
+        return this.extentStore.readExtent({
+          id: blob.persistency.id,
+          offset: blob.persistency.offset + rangeStart,
+          count: Math.min(blob.persistency.count, contentLength)
+        });
       };
     } else {
       bodyGetter = async () => {
-        return this.dataStore.readPayloads(
+        return this.extentStore.readExtents(
           blocks.map(block => block.persistency),
           rangeStart,
           rangeEnd + 1 - rangeStart
@@ -1449,7 +1037,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           });
 
     const bodyGetter = async () => {
-      return this.dataStore.readPayloads(
+      return this.extentStore.readExtents(
         ranges.map(value => value.persistency),
         0,
         contentLength
@@ -1486,46 +1074,5 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     };
 
     return response;
-  }
-
-  /**
-   * Get blob object from persistency layer according to request context.
-   *
-   * @private
-   * @param {Context} context
-   * @param {string} [snapshot=""]
-   * @returns {Promise<BlobModel>}
-   * @memberof BlobHandler
-   */
-  private async getSimpleBlobFromStorage(
-    context: Context,
-    snapshot: string = ""
-  ): Promise<BlobModel> {
-    const blobCtx = new BlobStorageContext(context);
-    const accountName = blobCtx.account!;
-    const containerName = blobCtx.container!;
-    const blobName = blobCtx.blob!;
-
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
-    let blob = await this.dataStore.getBlob(
-      accountName,
-      containerName,
-      blobName,
-      snapshot
-    );
-    if (!blob) {
-      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
-    }
-
-    blob = BlobHandler.updateLeaseAttributes(blob, blobCtx.startTime!);
-
-    return blob;
   }
 }

@@ -17,8 +17,16 @@ src
 dist/tests
 debug.log
 __blobstorage__
-__queuestorage__
+__testspersistence__
+__blobTestsPersistence__
+__queueTestsPersistence__
+__blobExtentTestsStorage__
+__blobTestsStorage__
+__queueExtentTestsStorage__
+__queueTestsStorage__
+__testsstorage__
 __azurite_db_blob__.json
+__queuestorage__
 __azurite_db_queue_extent__.json
 __azurite_db_queue__.json
 *.tgz

@@ -2,11 +2,13 @@ import { access } from "fs";
 import { join } from "path";
 import { promisify } from "util";
 
-import BlobConfiguration from "../blob/BlobConfiguration";
+import BlobConfiguration, {
+  DEFUALT_BLOB_PERSISTENCE_ARRAY
+} from "../blob/BlobConfiguration";
 import BlobServer from "../blob/BlobServer";
 import {
-  DEFAULT_BLOB_LOKI_DB_PATH,
-  DEFAULT_BLOB_PERSISTENCE_PATH
+  DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
+  DEFAULT_BLOB_LOKI_DB_PATH
 } from "../blob/utils/constants";
 import * as Logger from "./Logger";
 import NoLoggerStrategy from "./NoLoggerStrategy";
@@ -62,8 +64,11 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
 
   public async cleanImpl(): Promise<void> {
     const config = await this.getConfiguration();
-    await rimrafAsync(config.dbPath);
-    await rimrafAsync(config.persistencePath);
+    await rimrafAsync(config.extentDBPath);
+    await rimrafAsync(config.metadataDBPath);
+    for (const path of config.persistencePathArray) {
+      await rimrafAsync(path.persistencyPath);
+    }
   }
 
   private async getConfiguration(): Promise<BlobConfiguration> {
@@ -76,7 +81,8 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       env.blobHost(),
       env.blobPort(),
       join(location, DEFAULT_BLOB_LOKI_DB_PATH),
-      join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
+      join(location, DEFAULT_BLOB_EXTENT_LOKI_DB_PATH),
+      DEFUALT_BLOB_PERSISTENCE_ARRAY,
       !env.silent(),
       this.accessChannelStream,
       env.debug() === true,

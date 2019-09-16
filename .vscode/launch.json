@@ -25,6 +25,15 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "Azurite Blob SQL Service",
+      "cwd": "${workspaceFolder}",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "args": ["${workspaceFolder}/src/blob/sqlmain.ts", "-d", "debug.log"],
+      "outputCapture": "std"
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "Current TS File",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],

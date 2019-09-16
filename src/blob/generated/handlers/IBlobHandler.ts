@@ -16,6 +16,9 @@ export default interface IBlobHandler {
   download(options: Models.BlobDownloadOptionalParams, context: Context): Promise<Models.BlobDownloadResponse>;
   getProperties(options: Models.BlobGetPropertiesOptionalParams, context: Context): Promise<Models.BlobGetPropertiesResponse>;
   delete(options: Models.BlobDeleteMethodOptionalParams, context: Context): Promise<Models.BlobDeleteResponse>;
+  setAccessControl(options: Models.BlobSetAccessControlOptionalParams, context: Context): Promise<Models.BlobSetAccessControlResponse>;
+  getAccessControl(options: Models.BlobGetAccessControlOptionalParams, context: Context): Promise<Models.BlobGetAccessControlResponse>;
+  rename(renameSource: string, options: Models.BlobRenameOptionalParams, context: Context): Promise<Models.BlobRenameResponse>;
   undelete(options: Models.BlobUndeleteOptionalParams, context: Context): Promise<Models.BlobUndeleteResponse>;
   setHTTPHeaders(options: Models.BlobSetHTTPHeadersOptionalParams, context: Context): Promise<Models.BlobSetHTTPHeadersResponse>;
   setMetadata(options: Models.BlobSetMetadataOptionalParams, context: Context): Promise<Models.BlobSetMetadataResponse>;
@@ -26,6 +29,7 @@ export default interface IBlobHandler {
   breakLease(options: Models.BlobBreakLeaseOptionalParams, context: Context): Promise<Models.BlobBreakLeaseResponse>;
   createSnapshot(options: Models.BlobCreateSnapshotOptionalParams, context: Context): Promise<Models.BlobCreateSnapshotResponse>;
   startCopyFromURL(copySource: string, options: Models.BlobStartCopyFromURLOptionalParams, context: Context): Promise<Models.BlobStartCopyFromURLResponse>;
+  copyFromURL(copySource: string, options: Models.BlobCopyFromURLOptionalParams, context: Context): Promise<Models.BlobCopyFromURLResponse>;
   abortCopyFromURL(copyId: string, options: Models.BlobAbortCopyFromURLOptionalParams, context: Context): Promise<Models.BlobAbortCopyFromURLResponse>;
   setTier(tier: Models.AccessTier, options: Models.BlobSetTierOptionalParams, context: Context): Promise<Models.BlobSetTierResponse>;
   getAccountInfo(context: Context): Promise<Models.BlobGetAccountInfoResponse>;

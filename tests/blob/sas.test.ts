@@ -1,3 +1,5 @@
+import * as assert from "assert";
+
 import {
   Aborter,
   AccountSASPermissions,
@@ -16,33 +18,22 @@ import {
   SharedKeyCredential,
   StorageURL
 } from "@azure/storage-blob";
-import * as assert from "assert";
 
-import BlobConfiguration from "../../src/blob/BlobConfiguration";
-import Server from "../../src/blob/BlobServer";
 import { configLogger } from "../../src/common/Logger";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
-  rmRecursive
+  TestServerFactory
 } from "../testutils";
 
 configLogger(false);
 
 describe("Shared Access Signature (SAS) authentication", () => {
-  // TODO: Create a server factory as tests utils
   const host = "127.0.0.1";
   const port = 11000;
-  const dbPath = "__testsstorage__";
-  const persistencePath = "__testspersistence__";
-  const config = new BlobConfiguration(
-    host,
-    port,
-    dbPath,
-    persistencePath,
-    false
-  );
+  // TODO: Create a server factory as tests utils
+  const server = TestServerFactory.getServer(host, port);
 
   // TODO: Create serviceURL factory as tests utils
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
@@ -56,17 +47,13 @@ describe("Shared Access Signature (SAS) authentication", () => {
     )
   );
 
-  let server: Server;
-
   before(async () => {
-    server = new Server(config);
     await server.start();
   });
 
   after(async () => {
     await server.close();
-    await rmRecursive(dbPath);
-    await rmRecursive(persistencePath);
+    await TestServerFactory.rmTestFile();
   });
 
   it("generateAccountSASQueryParameters should work", async () => {
@@ -718,5 +705,65 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     // this copy should work
     await blob2SAS.startCopyFromURL(Aborter.none, blob1.url);
+  });
+
+  it("GenerateUserDelegationSAS should work for blob snapshot", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = serviceURL.pipeline.factories;
+    const sharedKeyCredential = factories[factories.length - 1];
+
+    const containerName = getUniqueName("container");
+    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+    await containerURL.create(Aborter.none);
+
+    const blobName = getUniqueName("blob");
+    const blobURL = PageBlobURL.fromContainerURL(containerURL, blobName);
+    await blobURL.create(Aborter.none, 1024, {
+      blobHTTPHeaders: {
+        blobContentType: "content-type-original"
+      }
+    });
+    const response = await blobURL.createSnapshot(Aborter.none);
+
+    const blobSAS = generateBlobSASQueryParameters(
+      {
+        blobName,
+        cacheControl: "cache-control-override",
+        containerName,
+        contentDisposition: "content-disposition-override",
+        contentEncoding: "content-encoding-override",
+        contentLanguage: "content-language-override",
+        contentType: "content-type-override",
+        expiryTime: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: BlobSASPermissions.parse("racwd").toString(),
+        protocol: SASProtocol.HTTPSandHTTP,
+        startTime: now,
+        snapshotTime: response.snapshot
+      },
+      sharedKeyCredential as SharedKeyCredential
+    );
+
+    const sasURL = `${blobURL.withSnapshot(response.snapshot!).url}&${blobSAS}`;
+    const blobURLwithSAS = new PageBlobURL(
+      sasURL,
+      StorageURL.newPipeline(new AnonymousCredential())
+    );
+
+    const properties = await blobURLwithSAS.getProperties(Aborter.none);
+    assert.ok(properties);
+    // assert.equal(properties.cacheControl, "cache-control-override");
+    // assert.equal(properties.contentDisposition, "content-disposition-override");
+    // assert.equal(properties.contentEncoding, "content-encoding-override");
+    // assert.equal(properties.contentLanguage, "content-language-override");
+    // assert.equal(properties.contentType, "content-type-override");
+
+    await containerURL.delete(Aborter.none);
   });
 });

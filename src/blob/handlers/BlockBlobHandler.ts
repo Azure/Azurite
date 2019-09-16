@@ -5,11 +5,10 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IBlockBlobHandler from "../generated/handlers/IBlockBlobHandler";
 import { parseXML } from "../generated/utils/xml";
-import { BlobModel, BlockModel } from "../persistence/IBlobDataStore";
+import { BlobModel, BlockModel } from "../persistence/IBlobMetadataStore";
 import { BLOB_API_VERSION } from "../utils/constants";
 import { getMD5FromStream, getMD5FromString, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
-import BlobHandler from "./BlobHandler";
 
 /**
  * BlobHandler handles Azure Storage BlockBlob related requests.
@@ -43,18 +42,24 @@ export default class BlockBlobHandler extends BaseHandler
       options.blobHTTPHeaders.blobContentMD5 ||
       context.request!.getHeader("content-md5");
 
-    const container = await this.dataStore.getContainer(
+    await this.metadataStore.checkContainerExist(
       accountName,
-      containerName
+      containerName,
+      context
     );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
+
+    const persistency = await this.extentStore.appendExtent(body);
+    if (persistency.count !== contentLength) {
+      throw StorageErrorFactory.getInvalidOperation(
+        blobCtx.contextID!,
+        `The size of the request body ${
+          persistency.count
+        } mismatches the content-length ${contentLength}.`
+      );
     }
 
-    const persistency = await this.dataStore.writePayload(body);
-
     // Calculate MD5 for validation
-    const stream = await this.dataStore.readPayload(persistency);
+    const stream = await this.extentStore.readExtent(persistency);
     const calculatedContentMD5 = await getMD5FromStream(stream);
     if (contentMD5 !== undefined) {
       if (typeof contentMD5 === "string") {
@@ -109,8 +114,18 @@ export default class BlockBlobHandler extends BaseHandler
       persistency
     };
 
+    if (options.tier !== undefined) {
+      blob.properties.accessTier = this.parseTier(options.tier);
+      if (blob.properties.accessTier === undefined) {
+        throw StorageErrorFactory.getInvalidHeaderValue(context.contextID, {
+          HeaderName: "x-ms-access-tier",
+          HeaderValue: `${options.tier}`
+        });
+      }
+    }
     // TODO: Need a lock for multi keys including containerName and blobName
-    await this.dataStore.updateBlob(blob);
+    // TODO: Provide a specified function.
+    await this.metadataStore.createBlob(blob, context);
 
     const response: Models.BlockBlobUploadResponse = {
       statusCode: 201,
@@ -140,15 +155,23 @@ export default class BlockBlobHandler extends BaseHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
-    const container = await this.dataStore.getContainer(
+    await this.metadataStore.checkContainerExist(
       accountName,
-      containerName
+      containerName,
+      context
     );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
+
+    const persistency = await this.extentStore.appendExtent(body);
+    if (persistency.count !== contentLength) {
+      // TODO: Confirm error code
+      throw StorageErrorFactory.getInvalidOperation(
+        blobCtx.contextID!,
+        `The size of the request body ${
+          persistency.count
+        } mismatches the content-length ${contentLength}.`
+      );
     }
 
-    const persistency = await this.dataStore.writePayload(body);
     const block: BlockModel = {
       accountName,
       containerName,
@@ -159,35 +182,8 @@ export default class BlockBlobHandler extends BaseHandler
       persistency
     };
 
-    await this.dataStore.updateBlock(block);
-
-    // Create an uncommitted block blob if doesn't exist
-    // TODO: Lock
-    let blob = await this.dataStore.getBlob(
-      accountName,
-      containerName,
-      blobName
-    );
-    if (!blob) {
-      const etag = newEtag();
-      blob = {
-        deleted: false,
-        accountName,
-        containerName,
-        name: blobName,
-        properties: {
-          creationTime: date,
-          lastModified: date,
-          etag,
-          contentLength,
-          blobType: Models.BlobType.BlockBlob
-        },
-        snapshot: "",
-        isCommitted: false
-      };
-      await this.dataStore.updateBlob(blob!);
-    }
-    // TODO: Unlock
+    // TODO: Verify it.
+    await this.metadataStore.stageBlock(block, context);
 
     const response: Models.BlockBlobStageBlockResponse = {
       statusCode: 201,
@@ -222,65 +218,11 @@ export default class BlockBlobHandler extends BaseHandler
     const blobName = blobCtx.blob!;
     const request = blobCtx.request!;
 
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
-    // TODO: Lock for container and blob
-    let blob = await this.dataStore.getBlob(
-      accountName,
-      containerName,
-      blobName
-    );
-    if (!blob) {
-      // At least there should be a uncommitted blob
-      // If not, there are some error happens
-      // TODO: Which error should be thrown ere?
-      // TODO: Unlock
-      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
-    }
-
-    // Check Lease status
-    BlobHandler.checkBlobLeaseOnWriteBlob(
-      context,
-      blob,
-      options.leaseAccessConditions
-    );
-
     options.blobHTTPHeaders = options.blobHTTPHeaders || {};
     const contentType =
       options.blobHTTPHeaders.blobContentType ||
       context.request!.getHeader("content-type") ||
       "application/octet-stream";
-
-    // Get all blocks in persistency layer
-    const pUncommittedBlocks = await this.dataStore.listBlocks(
-      accountName,
-      containerName,
-      blobName,
-      false
-    );
-    const pCommittedBlocksMap: Map<string, BlockModel> = new Map(); // persistencyCommittedBlocksMap
-    for (const pBlock of blob.committedBlocksInOrder || []) {
-      pCommittedBlocksMap.set(pBlock.name, {
-        ...pBlock,
-        accountName,
-        containerName,
-        blobName,
-        isCommitted: true
-      });
-    }
-
-    const pUncommittedBlocksMap: Map<string, BlockModel> = new Map(); // persistencyUncommittedBlocksMap
-    for (const pBlock of pUncommittedBlocks) {
-      if (!pBlock.isCommitted) {
-        pUncommittedBlocksMap.set(pBlock.name, pBlock);
-      }
-    }
 
     // Here we leveraged generated code utils to parser xml
     // Re-parsing request body to get destination blocks
@@ -295,7 +237,7 @@ export default class BlockBlobHandler extends BaseHandler
     const parsed = await parseXML(rawBody, true);
 
     // Validate selected block list
-    const selectedBlockList: BlockModel[] = [];
+    const commitBlockList = [];
 
     // $$ is the built-in field of xml2js parsing results when enabling explicitChildrenWithOrder
     // TODO: Should make these fields explicit for parseXML method
@@ -308,49 +250,27 @@ export default class BlockBlobHandler extends BaseHandler
         if (blockID === undefined || blockCommitType === undefined) {
           throw badRequestError;
         }
-
-        switch (blockCommitType.toLowerCase()) {
-          case "uncommitted":
-            const pUncommittedBlock = pUncommittedBlocksMap.get(blockID);
-            if (pUncommittedBlock === undefined) {
-              throw badRequestError;
-            } else {
-              pUncommittedBlock.isCommitted = true;
-              selectedBlockList.push(pUncommittedBlock);
-            }
-            break;
-          case "committed":
-            const pCommittedBlock = pCommittedBlocksMap.get(blockID);
-            if (pCommittedBlock === undefined) {
-              throw badRequestError;
-            } else {
-              selectedBlockList.push(pCommittedBlock);
-            }
-            break;
-          case "latest":
-            const pLatestBlock =
-              pUncommittedBlocksMap.get(blockID) ||
-              pCommittedBlocksMap.get(blockID);
-            if (pLatestBlock === undefined) {
-              throw badRequestError;
-            } else {
-              pLatestBlock.isCommitted = true;
-              selectedBlockList.push(pLatestBlock);
-            }
-            break;
-          default:
-            throw badRequestError;
-        }
+        commitBlockList.push({
+          blockName: blockID,
+          blockCommitType
+        });
       }
     }
 
-    // Commit block list
-    blob.committedBlocksInOrder = selectedBlockList;
-    blob.isCommitted = true;
+    const blob: BlobModel = {
+      accountName,
+      containerName,
+      name: blobName,
+      snapshot: "",
+      properties: {
+        lastModified: new Date(),
+        etag: newEtag()
+      },
+      isCommitted: true
+    };
 
     blob.metadata = options.metadata;
     blob.properties.accessTier = Models.AccessTier.Hot;
-    blob.properties.accessTierInferred = true;
     blob.properties.cacheControl = options.blobHTTPHeaders.blobCacheControl;
     blob.properties.contentType = contentType;
     blob.properties.contentMD5 = options.blobHTTPHeaders.blobContentMD5;
@@ -360,26 +280,29 @@ export default class BlockBlobHandler extends BaseHandler
       options.blobHTTPHeaders.blobContentLanguage;
     blob.properties.contentDisposition =
       options.blobHTTPHeaders.blobContentDisposition;
-    blob.properties.contentLength = selectedBlockList
-      .map(block => block.size)
-      .reduce((total, val) => {
-        return total + val;
-      });
 
-    // set lease state to available if it's expired
-    blob = BlobHandler.UpdateBlobLeaseStateOnWriteBlob(blob);
-    await this.dataStore.updateBlob(blob);
+    if (options.tier !== undefined) {
+      blob.properties.accessTier = this.parseTier(options.tier);
+      if (blob.properties.accessTier === undefined) {
+        throw StorageErrorFactory.getInvalidHeaderValue(context.contextID, {
+          HeaderName: "x-ms-access-tier",
+          HeaderValue: `${options.tier}`
+        });
+      }
+    }
 
-    // TODO: recover deleted blocks when inserts failed
-    await this.dataStore.deleteBlocks(accountName, containerName, blobName);
-
-    // TODO: Unlock
+    await this.metadataStore.commitBlockList(
+      blob,
+      commitBlockList,
+      options.leaseAccessConditions,
+      context
+    );
 
     const contentMD5 = await getMD5FromString(rawBody);
 
     const response: Models.BlockBlobCommitBlockListResponse = {
       statusCode: 201,
-      eTag: newEtag(),
+      eTag: blob.properties.etag,
       lastModified: blobCtx.startTime,
       contentMD5,
       requestId: blobCtx.contextID,
@@ -400,35 +323,20 @@ export default class BlockBlobHandler extends BaseHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
-    const blob = await this.dataStore.getBlob(
-      accountName,
-      containerName,
-      blobName
-    );
-    if (!blob) {
-      throw StorageErrorFactory.getBlobNotFound(blobCtx.contextID!);
-    }
-
-    const blockList = await this.dataStore.listBlocks(
+    const res = await this.metadataStore.getBlockList(
       accountName,
       containerName,
       blobName,
-      false
+      undefined,
+      context
     );
+
     const response: Models.BlockBlobGetBlockListResponse = {
       statusCode: 200,
-      lastModified: blob.properties.lastModified,
-      eTag: blob.properties.etag,
-      contentType: blob.properties.contentType,
-      blobContentLength: blob.properties.contentLength,
+      lastModified: res.properties.lastModified,
+      eTag: res.properties.etag,
+      contentType: res.properties.contentType,
+      blobContentLength: res.properties.contentLength,
       requestId: blobCtx.contextID,
       version: BLOB_API_VERSION,
       date,
@@ -436,9 +344,31 @@ export default class BlockBlobHandler extends BaseHandler
       uncommittedBlocks: []
     };
 
-    response.uncommittedBlocks = blockList;
-    response.committedBlocks = blob.committedBlocksInOrder;
+    response.uncommittedBlocks = res.uncommittedBlocks;
+    response.committedBlocks = res.committedBlocks;
 
     return response;
+  }
+
+  /**
+   * Get the tier setting from request headers.
+   *
+   * @private
+   * @param {string} tier
+   * @returns {(Models.AccessTier | undefined)}
+   * @memberof BlobHandler
+   */
+  private parseTier(tier: string): Models.AccessTier | undefined {
+    tier = tier.toLowerCase();
+    if (tier === Models.AccessTier.Hot.toLowerCase()) {
+      return Models.AccessTier.Hot;
+    }
+    if (tier === Models.AccessTier.Cool.toLowerCase()) {
+      return Models.AccessTier.Cool;
+    }
+    if (tier === Models.AccessTier.Archive.toLowerCase()) {
+      return Models.AccessTier.Archive;
+    }
+    return undefined;
   }
 }
