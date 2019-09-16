@@ -230,7 +230,10 @@ describe("ContainerAPIs", () => {
     assert.deepStrictEqual(result3.nextMarker, "");
     assert.deepStrictEqual(result3.delimiter, delimiter);
     assert.deepStrictEqual(result3.segment.blobItems!.length, 1);
-    assert.deepStrictEqual(result3.segment.blobItems![0].metadata, metadata);
+    assert.deepStrictEqual(result3.segment.blobItems![0].metadata, {
+      encrypted: undefined,
+      ...metadata
+    });
     assert.ok(blobURLs[0].url.indexOf(result3.segment.blobItems![0].name));
 
     for (const blob of blobURLs) {
