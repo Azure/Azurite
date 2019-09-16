@@ -1,5 +1,5 @@
 import { PageRange } from "../generated/artifacts/models";
-import { PersistencyPageRange } from "../persistence/IBlobDataStore";
+import { PersistencyPageRange } from "../persistence/IBlobMetadataStore";
 
 export default interface IPageBlobRangesManager {
   mergeRange(ranges: PersistencyPageRange[], range: PersistencyPageRange): void;

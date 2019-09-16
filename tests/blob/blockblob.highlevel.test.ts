@@ -15,8 +15,6 @@ import {
   uploadStreamToBlockBlob
 } from "@azure/storage-blob";
 
-import BlobConfiguration from "../../src/blob/BlobConfiguration";
-import Server from "../../src/blob/BlobServer";
 import { configLogger } from "../../src/common/Logger";
 import {
   createRandomLocalFile,
@@ -24,7 +22,8 @@ import {
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
   readStreamToLocalFile,
-  rmRecursive
+  rmRecursive,
+  TestServerFactory
 } from "../testutils";
 
 import assert = require("assert");
@@ -33,19 +32,10 @@ configLogger(false);
 
 // tslint:disable:no-empty
 describe("BlockBlobHighlevel", () => {
-  // TODO: Create a server factory as tests utils
   const host = "127.0.0.1";
   const port = 11000;
-  const dbPath = "__testsstorage__";
-  const persistencePath = "__testspersistence__";
-  const config = new BlobConfiguration(
-    host,
-    port,
-    dbPath,
-    persistencePath,
-    false
-  );
-  let server: Server;
+  // TODO: Create a server factory as tests utils
+  const server = TestServerFactory.getServer(host, port);
 
   // TODO: Create serviceURL factory as tests utils
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
@@ -58,6 +48,7 @@ describe("BlockBlobHighlevel", () => {
       }
     )
   );
+
   let containerName = getUniqueName("container");
   let containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
   let blobName = getUniqueName("blob");
@@ -83,7 +74,6 @@ describe("BlockBlobHighlevel", () => {
   });
 
   before(async () => {
-    server = new Server(config);
     await server.start();
 
     if (!fs.existsSync(tempFolderPath)) {
@@ -108,8 +98,7 @@ describe("BlockBlobHighlevel", () => {
     fs.unlinkSync(tempFileLarge);
     fs.unlinkSync(tempFileSmall);
     rmRecursive(tempFolderPath);
-    await rmRecursive(dbPath);
-    await rmRecursive(persistencePath);
+    await TestServerFactory.rmTestFile();
   });
 
   it("uploadFileToBlockBlob should success when blob >= BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES", async () => {

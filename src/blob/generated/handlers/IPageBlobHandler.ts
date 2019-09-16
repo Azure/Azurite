@@ -16,6 +16,7 @@ export default interface IPageBlobHandler {
   create(contentLength: number, blobContentLength: number, options: Models.PageBlobCreateOptionalParams, context: Context): Promise<Models.PageBlobCreateResponse>;
   uploadPages(body: NodeJS.ReadableStream, contentLength: number, options: Models.PageBlobUploadPagesOptionalParams, context: Context): Promise<Models.PageBlobUploadPagesResponse>;
   clearPages(contentLength: number, options: Models.PageBlobClearPagesOptionalParams, context: Context): Promise<Models.PageBlobClearPagesResponse>;
+  uploadPagesFromURL(sourceUrl: string, sourceRange: string, contentLength: number, range: string, options: Models.PageBlobUploadPagesFromURLOptionalParams, context: Context): Promise<Models.PageBlobUploadPagesFromURLResponse>;
   getPageRanges(options: Models.PageBlobGetPageRangesOptionalParams, context: Context): Promise<Models.PageBlobGetPageRangesResponse>;
   getPageRangesDiff(options: Models.PageBlobGetPageRangesDiffOptionalParams, context: Context): Promise<Models.PageBlobGetPageRangesDiffResponse>;
   resize(blobContentLength: number, options: Models.PageBlobResizeOptionalParams, context: Context): Promise<Models.PageBlobResizeResponse>;

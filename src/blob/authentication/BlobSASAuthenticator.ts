@@ -6,7 +6,7 @@ import { AccessPolicy, BlobType } from "../generated/artifacts/models";
 import Operation from "../generated/artifacts/operation";
 import Context from "../generated/Context";
 import IRequest from "../generated/IRequest";
-import IBlobDataStore from "../persistence/IBlobDataStore";
+import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import { BlobSASPermission } from "./BlobSASPermissions";
 import { BlobSASResourceType } from "./BlobSASResourceType";
 import IAuthenticator from "./IAuthenticator";
@@ -22,7 +22,7 @@ import {
 export default class BlobSASAuthenticator implements IAuthenticator {
   public constructor(
     private readonly accountDataStore: IAccountDataStore,
-    private readonly blobDataStore: IBlobDataStore,
+    private readonly blobMetadataStore: IBlobMetadataStore,
     private readonly logger: ILogger
   ) {}
 
@@ -94,7 +94,8 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     const resource = this.decodeIfExist(req.getQuery("sr"));
     if (
       resource !== BlobSASResourceType.Container &&
-      resource !== BlobSASResourceType.Blob
+      resource !== BlobSASResourceType.Blob &&
+      resource !== BlobSASResourceType.BlobSnapshot
     ) {
       this.logger.debug(
         // tslint:disable-next-line:max-line-length
@@ -365,6 +366,8 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     const contentEncoding = this.decodeIfExist(req.getQuery("rsce"));
     const contentLanguage = this.decodeIfExist(req.getQuery("rscl"));
     const contentType = this.decodeIfExist(req.getQuery("rsct"));
+    const signedResource = this.decodeIfExist(req.getQuery("sr"));
+    const snapshot = this.decodeIfExist(req.getQuery("snapshot"));
 
     if (!identifier && (!permissions || !expiryTime)) {
       this.logger.warn(
@@ -396,7 +399,9 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       contentDisposition,
       contentEncoding,
       contentLanguage,
-      contentType
+      contentType,
+      signedResource,
+      snapshot
     };
 
     return blobSASValues;
@@ -451,25 +456,27 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     container: string,
     id: string
   ): Promise<AccessPolicy | undefined> {
-    const containerModel = await this.blobDataStore.getContainer(
-      account,
-      container
-    );
-    if (containerModel === undefined) {
-      return undefined;
-    }
-
-    if (containerModel.containerAcl === undefined) {
-      return undefined;
-    }
-
-    for (const acl of containerModel.containerAcl) {
-      if (acl.id === id) {
-        return acl.accessPolicy;
+    try {
+      const containerModel = await this.blobMetadataStore.getContainer(
+        account,
+        container
+      );
+      if (containerModel === undefined) {
+        return undefined;
       }
-    }
 
-    return undefined;
+      if (containerModel.containerAcl === undefined) {
+        return undefined;
+      }
+
+      for (const acl of containerModel.containerAcl) {
+        if (acl.id === id) {
+          return acl.accessPolicy;
+        }
+      }
+    } catch (err) {
+      return undefined;
+    }
   }
 
   private async blobExist(
@@ -477,7 +484,7 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     container: string,
     blob: string
   ): Promise<boolean> {
-    const blobModel = await this.blobDataStore.getBlob(
+    const blobModel = await this.blobMetadataStore.getBlobType(
       account,
       container,
       blob
@@ -487,7 +494,7 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     }
 
     if (
-      blobModel.properties.blobType === BlobType.BlockBlob &&
+      blobModel.blobType === BlobType.BlockBlob &&
       blobModel.isCommitted === false
     ) {
       return false;

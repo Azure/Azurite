@@ -1,5 +1,7 @@
 import ConfigurationBase from "../common/ConfigurationBase";
+import { StoreDestinationArray } from "../common/persistence/IExtentStore";
 import {
+  DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
   DEFAULT_BLOB_LISTENING_PORT,
   DEFAULT_BLOB_LOKI_DB_PATH,
   DEFAULT_BLOB_PERSISTENCE_PATH,
@@ -7,6 +9,14 @@ import {
   DEFAULT_ENABLE_ACCESS_LOG,
   DEFAULT_ENABLE_DEBUG_LOG
 } from "./utils/constants";
+
+export const DEFUALT_BLOB_PERSISTENCE_ARRAY: StoreDestinationArray = [
+  {
+    persistencyId: "Default",
+    persistencyPath: DEFAULT_BLOB_PERSISTENCE_PATH,
+    maxConcurrency: 10
+  }
+];
 
 /**
  * Default configurations for default implementation of BlobServer.
@@ -24,8 +34,9 @@ export default class BlobConfiguration extends ConfigurationBase {
   public constructor(
     host: string = DEFAULT_BLOB_SERVER_HOST_NAME,
     port: number = DEFAULT_BLOB_LISTENING_PORT,
-    public readonly dbPath: string = DEFAULT_BLOB_LOKI_DB_PATH,
-    public readonly persistencePath: string = DEFAULT_BLOB_PERSISTENCE_PATH,
+    public readonly metadataDBPath: string = DEFAULT_BLOB_LOKI_DB_PATH,
+    public readonly extentDBPath: string = DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
+    public readonly persistencePathArray: StoreDestinationArray = DEFUALT_BLOB_PERSISTENCE_ARRAY,
     enableAccessLog: boolean = DEFAULT_ENABLE_ACCESS_LOG,
     accessLogWriteStream?: NodeJS.WritableStream,
     enableDebugLog: boolean = DEFAULT_ENABLE_DEBUG_LOG,

@@ -1,5 +1,6 @@
+import IExtentStore from "../../common/persistence/IExtentStore";
 import ILogger from "../generated/utils/ILogger";
-import IBlobDataStore from "../persistence/IBlobDataStore";
+import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 
 /**
  * BaseHandler class should maintain a singleton to persistency layer, such as maintain a database connection pool.
@@ -10,6 +11,9 @@ import IBlobDataStore from "../persistence/IBlobDataStore";
  * @implements {IHandler}
  */
 export default class BaseHandler {
-  constructor(protected readonly dataStore: IBlobDataStore, protected readonly logger: ILogger) {
-  }
+  constructor(
+    protected readonly metadataStore: IBlobMetadataStore,
+    protected readonly extentStore: IExtentStore,
+    protected readonly logger: ILogger
+  ) {}
 }

@@ -8,10 +8,7 @@ import {
   SharedKeyCredential,
   StorageURL
 } from "@azure/storage-blob";
-import assert = require("assert");
 
-import BlobConfiguration from "../../../src/blob/BlobConfiguration";
-import Server from "../../../src/blob/BlobServer";
 import { BlobHTTPHeaders } from "../../../src/blob/generated/artifacts/models";
 import { configLogger } from "../../../src/common/Logger";
 import {
@@ -19,25 +16,19 @@ import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
-  rmRecursive,
-  sleep
+  sleep,
+  TestServerFactory
 } from "../../testutils";
+
+import assert = require("assert");
 
 configLogger(false);
 
 describe("BlobAPIs", () => {
-  // TODO: Create a server factory as tests utils
   const host = "127.0.0.1";
   const port = 11000;
-  const dbPath = "__testsstorage__";
-  const persistencePath = "__testspersistence__";
-  const config = new BlobConfiguration(
-    host,
-    port,
-    dbPath,
-    persistencePath,
-    false
-  );
+  // TODO: Create a server factory as tests utils
+  const server = TestServerFactory.getServer(host, port);
 
   // TODO: Create serviceURL factory as tests utils
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
@@ -58,17 +49,13 @@ describe("BlobAPIs", () => {
   let blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
   const content = "Hello World";
 
-  let server: Server;
-
   before(async () => {
-    server = new Server(config);
     await server.start();
   });
 
   after(async () => {
     await server.close();
-    await rmRecursive(dbPath);
-    await rmRecursive(persistencePath);
+    await TestServerFactory.rmTestFile();
   });
 
   beforeEach(async () => {

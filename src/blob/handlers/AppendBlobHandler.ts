@@ -23,4 +23,13 @@ export default class AppendBlobHandler extends BaseHandler
     // TODO: Check Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
     throw new NotImplementedError(context.contextID);
   }
+
+  public appendBlockFromUrl(
+    sourceUrl: string,
+    contentLength: number,
+    options: Models.AppendBlobAppendBlockFromUrlOptionalParams,
+    context: Context
+  ): Promise<Models.AppendBlobAppendBlockFromUrlResponse> {
+    throw new Error("Method not implemented.");
+  }
 }

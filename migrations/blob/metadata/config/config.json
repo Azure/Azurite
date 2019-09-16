@@ -1,0 +1,9 @@
+{
+  "development": {
+    "username": "root",
+    "password": "my-secret-pw",
+    "database": "azurite_blob_metadata",
+    "host": "127.0.0.1",
+    "dialect": "mariadb"
+  }
+}

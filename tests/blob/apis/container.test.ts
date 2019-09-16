@@ -7,38 +7,25 @@ import {
   SharedKeyCredential,
   StorageURL
 } from "@azure/storage-blob";
-import assert = require("assert");
 
-import BlobConfiguration from "../../../src/blob/BlobConfiguration";
-import Server from "../../../src/blob/BlobServer";
 import { configLogger } from "../../../src/common/Logger";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
-  rmRecursive,
-  sleep
+  sleep,
+  TestServerFactory
 } from "../../testutils";
 
+import assert = require("assert");
 // Set to true enable debug log
-configLogger(true);
+configLogger(false);
 
 describe("ContainerAPIs", () => {
-  // TODO: Create a server factory as tests utils
   const host = "127.0.0.1";
   const port = 11000;
-  const dbPath = "__testsstorage__";
-  const persistencePath = "__testspersistence__";
-  const config = new BlobConfiguration(
-    host,
-    port,
-    dbPath,
-    persistencePath,
-    false
-  );
-
-  // Open following line to enable debug log
-  // configLogger(true);
+  // TODO: Create a server factory as tests utils
+  const server = TestServerFactory.getServer(host, port);
 
   // TODO: Create serviceURL factory as tests utils
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
@@ -52,19 +39,16 @@ describe("ContainerAPIs", () => {
     )
   );
 
-  let server: Server;
   let containerName: string = getUniqueName("container");
   let containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
 
   before(async () => {
-    server = new Server(config);
     await server.start();
   });
 
   after(async () => {
     await server.close();
-    await rmRecursive(dbPath);
-    await rmRecursive(persistencePath);
+    await TestServerFactory.rmTestFile();
   });
 
   beforeEach(async () => {
@@ -246,7 +230,10 @@ describe("ContainerAPIs", () => {
     assert.deepStrictEqual(result3.nextMarker, "");
     assert.deepStrictEqual(result3.delimiter, delimiter);
     assert.deepStrictEqual(result3.segment.blobItems!.length, 1);
-    assert.deepStrictEqual(result3.segment.blobItems![0].metadata, metadata);
+    assert.deepStrictEqual(result3.segment.blobItems![0].metadata, {
+      encrypted: undefined,
+      ...metadata
+    });
     assert.ok(blobURLs[0].url.indexOf(result3.segment.blobItems![0].name));
 
     for (const blob of blobURLs) {

@@ -9,6 +9,98 @@
 
 import * as msRest from "@azure/ms-rest-js";
 
+export const KeyInfo: msRest.CompositeMapper = {
+  serializedName: "KeyInfo",
+  type: {
+    name: "Composite",
+    className: "KeyInfo",
+    modelProperties: {
+      start: {
+        xmlName: "Start",
+        required: true,
+        serializedName: "Start",
+        type: {
+          name: "String"
+        }
+      },
+      expiry: {
+        xmlName: "Expiry",
+        required: true,
+        serializedName: "Expiry",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const UserDelegationKey: msRest.CompositeMapper = {
+  serializedName: "UserDelegationKey",
+  type: {
+    name: "Composite",
+    className: "UserDelegationKey",
+    modelProperties: {
+      signedOid: {
+        xmlName: "SignedOid",
+        required: true,
+        serializedName: "SignedOid",
+        type: {
+          name: "String"
+        }
+      },
+      signedTid: {
+        xmlName: "SignedTid",
+        required: true,
+        serializedName: "SignedTid",
+        type: {
+          name: "String"
+        }
+      },
+      signedStart: {
+        xmlName: "SignedStart",
+        required: true,
+        serializedName: "SignedStart",
+        type: {
+          name: "String"
+        }
+      },
+      signedExpiry: {
+        xmlName: "SignedExpiry",
+        required: true,
+        serializedName: "SignedExpiry",
+        type: {
+          name: "String"
+        }
+      },
+      signedService: {
+        xmlName: "SignedService",
+        required: true,
+        serializedName: "SignedService",
+        type: {
+          name: "String"
+        }
+      },
+      signedVersion: {
+        xmlName: "SignedVersion",
+        required: true,
+        serializedName: "SignedVersion",
+        type: {
+          name: "String"
+        }
+      },
+      value: {
+        xmlName: "Value",
+        required: true,
+        serializedName: "Value",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
 export const StorageError: msRest.CompositeMapper = {
   serializedName: "StorageError",
   type: {
@@ -20,6 +112,48 @@ export const StorageError: msRest.CompositeMapper = {
         serializedName: "Message",
         type: {
           name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const DataLakeStorageErrorError: msRest.CompositeMapper = {
+  serializedName: "DataLakeStorageError_error",
+  type: {
+    name: "Composite",
+    className: "DataLakeStorageErrorError",
+    modelProperties: {
+      code: {
+        xmlName: "Code",
+        serializedName: "Code",
+        type: {
+          name: "String"
+        }
+      },
+      message: {
+        xmlName: "Message",
+        serializedName: "Message",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const DataLakeStorageError: msRest.CompositeMapper = {
+  serializedName: "DataLakeStorageError",
+  type: {
+    name: "Composite",
+    className: "DataLakeStorageError",
+    modelProperties: {
+      error: {
+        xmlName: "error",
+        serializedName: "error",
+        type: {
+          name: "Composite",
+          className: "DataLakeStorageErrorError"
         }
       }
     }
@@ -296,12 +430,43 @@ export const BlobProperties: msRest.CompositeMapper = {
           name: "String"
         }
       },
+      customerProvidedKeySha256: {
+        xmlName: "CustomerProvidedKeySha256",
+        serializedName: "CustomerProvidedKeySha256",
+        type: {
+          name: "String"
+        }
+      },
       accessTierChangeTime: {
         xmlName: "AccessTierChangeTime",
         serializedName: "AccessTierChangeTime",
         type: {
           name: "DateTimeRfc1123"
         }
+      }
+    }
+  }
+};
+
+export const BlobMetadata: msRest.CompositeMapper = {
+  xmlName: "Metadata",
+  serializedName: "BlobMetadata",
+  type: {
+    name: "Composite",
+    className: "BlobMetadata",
+    modelProperties: {
+      encrypted: {
+        xmlIsAttribute: true,
+        xmlName: "Encrypted",
+        serializedName: "Encrypted",
+        type: {
+          name: "String"
+        }
+      }
+    },
+    additionalProperties: {
+      type: {
+        name: "String"
       }
     }
   }
@@ -350,8 +515,9 @@ export const BlobItem: msRest.CompositeMapper = {
         xmlName: "Metadata",
         serializedName: "Metadata",
         type: {
-          name: "Dictionary",
-          value: {
+          name: "Composite",
+          className: "BlobMetadata",
+          additionalProperties: {
             type: {
               name: "String"
             }
@@ -415,7 +581,6 @@ export const ListBlobsFlatSegmentResponse: msRest.CompositeMapper = {
       },
       prefix: {
         xmlName: "Prefix",
-        required: true,
         serializedName: "Prefix",
         type: {
           name: "String"
@@ -423,7 +588,6 @@ export const ListBlobsFlatSegmentResponse: msRest.CompositeMapper = {
       },
       marker: {
         xmlName: "Marker",
-        required: true,
         serializedName: "Marker",
         type: {
           name: "String"
@@ -431,7 +595,6 @@ export const ListBlobsFlatSegmentResponse: msRest.CompositeMapper = {
       },
       maxResults: {
         xmlName: "MaxResults",
-        required: true,
         serializedName: "MaxResults",
         type: {
           name: "Number"
@@ -439,7 +602,6 @@ export const ListBlobsFlatSegmentResponse: msRest.CompositeMapper = {
       },
       delimiter: {
         xmlName: "Delimiter",
-        required: true,
         serializedName: "Delimiter",
         type: {
           name: "String"
@@ -456,7 +618,6 @@ export const ListBlobsFlatSegmentResponse: msRest.CompositeMapper = {
       },
       nextMarker: {
         xmlName: "NextMarker",
-        required: true,
         serializedName: "NextMarker",
         type: {
           name: "String"
@@ -551,7 +712,6 @@ export const ListBlobsHierarchySegmentResponse: msRest.CompositeMapper = {
       },
       prefix: {
         xmlName: "Prefix",
-        required: true,
         serializedName: "Prefix",
         type: {
           name: "String"
@@ -559,7 +719,6 @@ export const ListBlobsHierarchySegmentResponse: msRest.CompositeMapper = {
       },
       marker: {
         xmlName: "Marker",
-        required: true,
         serializedName: "Marker",
         type: {
           name: "String"
@@ -567,7 +726,6 @@ export const ListBlobsHierarchySegmentResponse: msRest.CompositeMapper = {
       },
       maxResults: {
         xmlName: "MaxResults",
-        required: true,
         serializedName: "MaxResults",
         type: {
           name: "Number"
@@ -575,7 +733,6 @@ export const ListBlobsHierarchySegmentResponse: msRest.CompositeMapper = {
       },
       delimiter: {
         xmlName: "Delimiter",
-        required: true,
         serializedName: "Delimiter",
         type: {
           name: "String"
@@ -592,7 +749,6 @@ export const ListBlobsHierarchySegmentResponse: msRest.CompositeMapper = {
       },
       nextMarker: {
         xmlName: "NextMarker",
-        required: true,
         serializedName: "NextMarker",
         type: {
           name: "String"
@@ -859,7 +1015,6 @@ export const ListContainersSegmentResponse: msRest.CompositeMapper = {
       },
       prefix: {
         xmlName: "Prefix",
-        required: true,
         serializedName: "Prefix",
         type: {
           name: "String"
@@ -874,7 +1029,6 @@ export const ListContainersSegmentResponse: msRest.CompositeMapper = {
       },
       maxResults: {
         xmlName: "MaxResults",
-        required: true,
         serializedName: "MaxResults",
         type: {
           name: "Number"
@@ -898,7 +1052,6 @@ export const ListContainersSegmentResponse: msRest.CompositeMapper = {
       },
       nextMarker: {
         xmlName: "NextMarker",
-        required: true,
         serializedName: "NextMarker",
         type: {
           name: "String"
@@ -1395,6 +1548,111 @@ export const ModifiedAccessConditions: msRest.CompositeMapper = {
   }
 };
 
+export const DirectoryHttpHeaders: msRest.CompositeMapper = {
+  xmlName: "directory-http-headers",
+  type: {
+    name: "Composite",
+    className: "DirectoryHttpHeaders",
+    modelProperties: {
+      cacheControl: {
+        xmlName: "cacheControl",
+        type: {
+          name: "String"
+        }
+      },
+      contentType: {
+        xmlName: "contentType",
+        type: {
+          name: "String"
+        }
+      },
+      contentEncoding: {
+        xmlName: "contentEncoding",
+        type: {
+          name: "String"
+        }
+      },
+      contentLanguage: {
+        xmlName: "contentLanguage",
+        type: {
+          name: "String"
+        }
+      },
+      contentDisposition: {
+        xmlName: "contentDisposition",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const SourceModifiedAccessConditions: msRest.CompositeMapper = {
+  xmlName: "source-modified-access-conditions",
+  type: {
+    name: "Composite",
+    className: "SourceModifiedAccessConditions",
+    modelProperties: {
+      sourceIfModifiedSince: {
+        xmlName: "sourceIfModifiedSince",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      sourceIfUnmodifiedSince: {
+        xmlName: "sourceIfUnmodifiedSince",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      sourceIfMatches: {
+        xmlName: "sourceIfMatches",
+        type: {
+          name: "String"
+        }
+      },
+      sourceIfNoneMatch: {
+        xmlName: "sourceIfNoneMatch",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const CpkInfo: msRest.CompositeMapper = {
+  xmlName: "cpk-info",
+  type: {
+    name: "Composite",
+    className: "CpkInfo",
+    modelProperties: {
+      encryptionKey: {
+        xmlName: "encryptionKey",
+        type: {
+          name: "String"
+        }
+      },
+      encryptionKeySha256: {
+        xmlName: "encryptionKeySha256",
+        type: {
+          name: "String"
+        }
+      },
+      encryptionAlgorithm: {
+        xmlName: "encryptionAlgorithm",
+        type: {
+          name: "Enum",
+          allowedValues: [
+            "AES256"
+          ]
+        }
+      }
+    }
+  }
+};
+
 export const BlobHTTPHeaders: msRest.CompositeMapper = {
   xmlName: "blob-HTTP-headers",
   type: {
@@ -1433,40 +1691,6 @@ export const BlobHTTPHeaders: msRest.CompositeMapper = {
       },
       blobContentDisposition: {
         xmlName: "blobContentDisposition",
-        type: {
-          name: "String"
-        }
-      }
-    }
-  }
-};
-
-export const SourceModifiedAccessConditions: msRest.CompositeMapper = {
-  xmlName: "source-modified-access-conditions",
-  type: {
-    name: "Composite",
-    className: "SourceModifiedAccessConditions",
-    modelProperties: {
-      sourceIfModifiedSince: {
-        xmlName: "sourceIfModifiedSince",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      },
-      sourceIfUnmodifiedSince: {
-        xmlName: "sourceIfUnmodifiedSince",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      },
-      sourceIfMatches: {
-        xmlName: "sourceIfMatches",
-        type: {
-          name: "String"
-        }
-      },
-      sourceIfNoneMatch: {
-        xmlName: "sourceIfNoneMatch",
         type: {
           name: "String"
         }
@@ -1531,6 +1755,12 @@ export const ServiceSetPropertiesHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "ServiceSetPropertiesHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -1559,6 +1789,12 @@ export const ServiceGetPropertiesHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "ServiceGetPropertiesHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -1587,6 +1823,12 @@ export const ServiceGetStatisticsHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "ServiceGetStatisticsHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -1621,6 +1863,12 @@ export const ServiceListContainersSegmentHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "ServiceListContainersSegmentHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -1643,12 +1891,58 @@ export const ServiceListContainersSegmentHeaders: msRest.CompositeMapper = {
   }
 };
 
+export const ServiceGetUserDelegationKeyHeaders: msRest.CompositeMapper = {
+  serializedName: "service-getuserdelegationkey-headers",
+  type: {
+    name: "Composite",
+    className: "ServiceGetUserDelegationKeyHeaders",
+    modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
 export const ServiceGetAccountInfoHeaders: msRest.CompositeMapper = {
   serializedName: "service-getaccountinfo-headers",
   type: {
     name: "Composite",
     className: "ServiceGetAccountInfoHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -1707,6 +2001,12 @@ export const ServiceGetAccountInfoWithHeadHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "ServiceGetAccountInfoWithHeadHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -1759,6 +2059,40 @@ export const ServiceGetAccountInfoWithHeadHeaders: msRest.CompositeMapper = {
   }
 };
 
+export const ServiceSubmitBatchHeaders: msRest.CompositeMapper = {
+  serializedName: "service-submitbatch-headers",
+  type: {
+    name: "Composite",
+    className: "ServiceSubmitBatchHeaders",
+    modelProperties: {
+      contentType: {
+        serializedName: "content-type",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
 export const ContainerCreateHeaders: msRest.CompositeMapper = {
   serializedName: "container-create-headers",
   type: {
@@ -1775,6 +2109,12 @@ export const ContainerCreateHeaders: msRest.CompositeMapper = {
         serializedName: "last-modified",
         type: {
           name: "DateTimeRfc1123"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
         }
       },
       requestId: {
@@ -1866,6 +2206,12 @@ export const ContainerGetPropertiesHeaders: msRest.CompositeMapper = {
             "locked",
             "unlocked"
           ]
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
         }
       },
       requestId: {
@@ -1977,6 +2323,12 @@ export const ContainerGetPropertiesWithHeadHeaders: msRest.CompositeMapper = {
           ]
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -2029,6 +2381,12 @@ export const ContainerDeleteHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "ContainerDeleteHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -2073,6 +2431,12 @@ export const ContainerSetMetadataHeaders: msRest.CompositeMapper = {
         serializedName: "last-modified",
         type: {
           name: "DateTimeRfc1123"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
         }
       },
       requestId: {
@@ -2127,6 +2491,12 @@ export const ContainerGetAccessPolicyHeaders: msRest.CompositeMapper = {
           name: "DateTimeRfc1123"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -2171,6 +2541,12 @@ export const ContainerSetAccessPolicyHeaders: msRest.CompositeMapper = {
         serializedName: "last-modified",
         type: {
           name: "DateTimeRfc1123"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
         }
       },
       requestId: {
@@ -2225,6 +2601,12 @@ export const ContainerAcquireLeaseHeaders: msRest.CompositeMapper = {
           name: "String"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -2269,6 +2651,12 @@ export const ContainerReleaseLeaseHeaders: msRest.CompositeMapper = {
         serializedName: "last-modified",
         type: {
           name: "DateTimeRfc1123"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
         }
       },
       requestId: {
@@ -2319,6 +2707,12 @@ export const ContainerRenewLeaseHeaders: msRest.CompositeMapper = {
       },
       leaseId: {
         serializedName: "x-ms-lease-id",
+        type: {
+          name: "String"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
         type: {
           name: "String"
         }
@@ -2375,6 +2769,12 @@ export const ContainerBreakLeaseHeaders: msRest.CompositeMapper = {
           name: "Number"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -2427,6 +2827,12 @@ export const ContainerChangeLeaseHeaders: msRest.CompositeMapper = {
           name: "String"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -2463,6 +2869,12 @@ export const ContainerListBlobFlatSegmentHeaders: msRest.CompositeMapper = {
     modelProperties: {
       contentType: {
         serializedName: "content-type",
+        type: {
+          name: "String"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
         type: {
           name: "String"
         }
@@ -2507,6 +2919,12 @@ export const ContainerListBlobHierarchySegmentHeaders: msRest.CompositeMapper = 
           name: "String"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -2541,6 +2959,12 @@ export const ContainerGetAccountInfoHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "ContainerGetAccountInfoHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -2599,6 +3023,12 @@ export const ContainerGetAccountInfoWithHeadHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "ContainerGetAccountInfoWithHeadHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -2643,6 +3073,272 @@ export const ContainerGetAccountInfoWithHeadHeaders: msRest.CompositeMapper = {
       },
       errorCode: {
         serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const DirectoryCreateHeaders: msRest.CompositeMapper = {
+  serializedName: "directory-create-headers",
+  type: {
+    name: "Composite",
+    className: "DirectoryCreateHeaders",
+    modelProperties: {
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      contentLength: {
+        serializedName: "content-length",
+        type: {
+          name: "Number"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      }
+    }
+  }
+};
+
+export const DirectoryRenameHeaders: msRest.CompositeMapper = {
+  serializedName: "directory-rename-headers",
+  type: {
+    name: "Composite",
+    className: "DirectoryRenameHeaders",
+    modelProperties: {
+      marker: {
+        serializedName: "x-ms-continuation",
+        type: {
+          name: "String"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      contentLength: {
+        serializedName: "content-length",
+        type: {
+          name: "Number"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      }
+    }
+  }
+};
+
+export const DirectoryDeleteHeaders: msRest.CompositeMapper = {
+  serializedName: "directory-delete-headers",
+  type: {
+    name: "Composite",
+    className: "DirectoryDeleteHeaders",
+    modelProperties: {
+      marker: {
+        serializedName: "x-ms-continuation",
+        type: {
+          name: "String"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      }
+    }
+  }
+};
+
+export const DirectorySetAccessControlHeaders: msRest.CompositeMapper = {
+  serializedName: "directory-setaccesscontrol-headers",
+  type: {
+    name: "Composite",
+    className: "DirectorySetAccessControlHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const DirectoryGetAccessControlHeaders: msRest.CompositeMapper = {
+  serializedName: "directory-getaccesscontrol-headers",
+  type: {
+    name: "Composite",
+    className: "DirectoryGetAccessControlHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      xMsOwner: {
+        serializedName: "x-ms-owner",
+        type: {
+          name: "String"
+        }
+      },
+      xMsGroup: {
+        serializedName: "x-ms-group",
+        type: {
+          name: "String"
+        }
+      },
+      xMsPermissions: {
+        serializedName: "x-ms-permissions",
+        type: {
+          name: "String"
+        }
+      },
+      xMsAcl: {
+        serializedName: "x-ms-acl",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
         type: {
           name: "String"
         }
@@ -2821,6 +3517,12 @@ export const BlobDownloadHeaders: msRest.CompositeMapper = {
           ]
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -2857,8 +3559,20 @@ export const BlobDownloadHeaders: msRest.CompositeMapper = {
           name: "Boolean"
         }
       },
+      encryptionKeySha256: {
+        serializedName: "x-ms-encryption-key-sha256",
+        type: {
+          name: "String"
+        }
+      },
       blobContentMD5: {
         serializedName: "x-ms-blob-content-md5",
+        type: {
+          name: "ByteArray"
+        }
+      },
+      contentCrc64: {
+        serializedName: "x-ms-content-crc64",
         type: {
           name: "ByteArray"
         }
@@ -3055,6 +3769,12 @@ export const BlobGetPropertiesHeaders: msRest.CompositeMapper = {
           name: "Number"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -3089,6 +3809,12 @@ export const BlobGetPropertiesHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-server-encrypted",
         type: {
           name: "Boolean"
+        }
+      },
+      encryptionKeySha256: {
+        serializedName: "x-ms-encryption-key-sha256",
+        type: {
+          name: "String"
         }
       },
       accessTier: {
@@ -3131,6 +3857,12 @@ export const BlobDeleteHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "BlobDeleteHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -3153,6 +3885,174 @@ export const BlobDeleteHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-error-code",
         type: {
           name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const BlobSetAccessControlHeaders: msRest.CompositeMapper = {
+  serializedName: "blob-setaccesscontrol-headers",
+  type: {
+    name: "Composite",
+    className: "BlobSetAccessControlHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const BlobGetAccessControlHeaders: msRest.CompositeMapper = {
+  serializedName: "blob-getaccesscontrol-headers",
+  type: {
+    name: "Composite",
+    className: "BlobGetAccessControlHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      xMsOwner: {
+        serializedName: "x-ms-owner",
+        type: {
+          name: "String"
+        }
+      },
+      xMsGroup: {
+        serializedName: "x-ms-group",
+        type: {
+          name: "String"
+        }
+      },
+      xMsPermissions: {
+        serializedName: "x-ms-permissions",
+        type: {
+          name: "String"
+        }
+      },
+      xMsAcl: {
+        serializedName: "x-ms-acl",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const BlobRenameHeaders: msRest.CompositeMapper = {
+  serializedName: "blob-rename-headers",
+  type: {
+    name: "Composite",
+    className: "BlobRenameHeaders",
+    modelProperties: {
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      contentLength: {
+        serializedName: "content-length",
+        type: {
+          name: "Number"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
         }
       }
     }
@@ -3183,6 +4083,12 @@ export const PageBlobCreateHeaders: msRest.CompositeMapper = {
           name: "ByteArray"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -3205,6 +4111,12 @@ export const PageBlobCreateHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-request-server-encrypted",
         type: {
           name: "Boolean"
+        }
+      },
+      encryptionKeySha256: {
+        serializedName: "x-ms-encryption-key-sha256",
+        type: {
+          name: "String"
         }
       },
       errorCode: {
@@ -3241,6 +4153,12 @@ export const AppendBlobCreateHeaders: msRest.CompositeMapper = {
           name: "ByteArray"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -3263,6 +4181,12 @@ export const AppendBlobCreateHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-request-server-encrypted",
         type: {
           name: "Boolean"
+        }
+      },
+      encryptionKeySha256: {
+        serializedName: "x-ms-encryption-key-sha256",
+        type: {
+          name: "String"
         }
       },
       errorCode: {
@@ -3299,6 +4223,12 @@ export const BlockBlobUploadHeaders: msRest.CompositeMapper = {
           name: "ByteArray"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -3323,6 +4253,12 @@ export const BlockBlobUploadHeaders: msRest.CompositeMapper = {
           name: "Boolean"
         }
       },
+      encryptionKeySha256: {
+        serializedName: "x-ms-encryption-key-sha256",
+        type: {
+          name: "String"
+        }
+      },
       errorCode: {
         serializedName: "x-ms-error-code",
         type: {
@@ -3339,6 +4275,12 @@ export const BlobUndeleteHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "BlobUndeleteHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -3391,6 +4333,12 @@ export const BlobSetHTTPHeadersHeaders: msRest.CompositeMapper = {
           name: "Number"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -3437,6 +4385,12 @@ export const BlobSetMetadataHeaders: msRest.CompositeMapper = {
           name: "DateTimeRfc1123"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -3459,6 +4413,12 @@ export const BlobSetMetadataHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-request-server-encrypted",
         type: {
           name: "Boolean"
+        }
+      },
+      encryptionKeySha256: {
+        serializedName: "x-ms-encryption-key-sha256",
+        type: {
+          name: "String"
         }
       },
       errorCode: {
@@ -3491,6 +4451,12 @@ export const BlobAcquireLeaseHeaders: msRest.CompositeMapper = {
       },
       leaseId: {
         serializedName: "x-ms-lease-id",
+        type: {
+          name: "String"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
         type: {
           name: "String"
         }
@@ -3539,6 +4505,12 @@ export const BlobReleaseLeaseHeaders: msRest.CompositeMapper = {
         serializedName: "last-modified",
         type: {
           name: "DateTimeRfc1123"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
         }
       },
       requestId: {
@@ -3593,6 +4565,12 @@ export const BlobRenewLeaseHeaders: msRest.CompositeMapper = {
           name: "String"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -3637,6 +4615,12 @@ export const BlobChangeLeaseHeaders: msRest.CompositeMapper = {
         serializedName: "last-modified",
         type: {
           name: "DateTimeRfc1123"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
         }
       },
       requestId: {
@@ -3697,6 +4681,12 @@ export const BlobBreakLeaseHeaders: msRest.CompositeMapper = {
           name: "Number"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -3749,6 +4739,12 @@ export const BlobCreateSnapshotHeaders: msRest.CompositeMapper = {
           name: "DateTimeRfc1123"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -3765,6 +4761,12 @@ export const BlobCreateSnapshotHeaders: msRest.CompositeMapper = {
         serializedName: "date",
         type: {
           name: "DateTimeRfc1123"
+        }
+      },
+      isServerEncrypted: {
+        serializedName: "x-ms-request-server-encrypted",
+        type: {
+          name: "Boolean"
         }
       },
       errorCode: {
@@ -3793,6 +4795,12 @@ export const BlobStartCopyFromURLHeaders: msRest.CompositeMapper = {
         serializedName: "last-modified",
         type: {
           name: "DateTimeRfc1123"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
         }
       },
       requestId: {
@@ -3841,12 +4849,85 @@ export const BlobStartCopyFromURLHeaders: msRest.CompositeMapper = {
   }
 };
 
+export const BlobCopyFromURLHeaders: msRest.CompositeMapper = {
+  serializedName: "blob-copyfromurl-headers",
+  type: {
+    name: "Composite",
+    className: "BlobCopyFromURLHeaders",
+    modelProperties: {
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      copyId: {
+        serializedName: "x-ms-copy-id",
+        type: {
+          name: "String"
+        }
+      },
+      copyStatus: {
+        serializedName: "x-ms-copy-status",
+        type: {
+          name: "Enum",
+          allowedValues: [
+            "success"
+          ]
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
 export const BlobAbortCopyFromURLHeaders: msRest.CompositeMapper = {
   serializedName: "blob-abortcopyfromurl-headers",
   type: {
     name: "Composite",
     className: "BlobAbortCopyFromURLHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -3881,6 +4962,12 @@ export const BlobSetTierHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "BlobSetTierHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -3909,6 +4996,12 @@ export const BlobGetAccountInfoHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "BlobGetAccountInfoHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -3967,6 +5060,12 @@ export const BlobGetAccountInfoWithHeadHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "BlobGetAccountInfoWithHeadHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -4031,6 +5130,12 @@ export const BlockBlobStageBlockHeaders: msRest.CompositeMapper = {
           name: "ByteArray"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -4049,10 +5154,22 @@ export const BlockBlobStageBlockHeaders: msRest.CompositeMapper = {
           name: "DateTimeRfc1123"
         }
       },
+      xMsContentCrc64: {
+        serializedName: "x-ms-content-crc64",
+        type: {
+          name: "ByteArray"
+        }
+      },
       isServerEncrypted: {
         serializedName: "x-ms-request-server-encrypted",
         type: {
           name: "Boolean"
+        }
+      },
+      encryptionKeySha256: {
+        serializedName: "x-ms-encryption-key-sha256",
+        type: {
+          name: "String"
         }
       },
       errorCode: {
@@ -4077,6 +5194,18 @@ export const BlockBlobStageBlockFromURLHeaders: msRest.CompositeMapper = {
           name: "ByteArray"
         }
       },
+      xMsContentCrc64: {
+        serializedName: "x-ms-content-crc64",
+        type: {
+          name: "ByteArray"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -4099,6 +5228,12 @@ export const BlockBlobStageBlockFromURLHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-request-server-encrypted",
         type: {
           name: "Boolean"
+        }
+      },
+      encryptionKeySha256: {
+        serializedName: "x-ms-encryption-key-sha256",
+        type: {
+          name: "String"
         }
       },
       errorCode: {
@@ -4135,6 +5270,18 @@ export const BlockBlobCommitBlockListHeaders: msRest.CompositeMapper = {
           name: "ByteArray"
         }
       },
+      xMsContentCrc64: {
+        serializedName: "x-ms-content-crc64",
+        type: {
+          name: "ByteArray"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -4157,6 +5304,12 @@ export const BlockBlobCommitBlockListHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-request-server-encrypted",
         type: {
           name: "Boolean"
+        }
+      },
+      encryptionKeySha256: {
+        serializedName: "x-ms-encryption-key-sha256",
+        type: {
+          name: "String"
         }
       },
       errorCode: {
@@ -4197,6 +5350,12 @@ export const BlockBlobGetBlockListHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-blob-content-length",
         type: {
           name: "Number"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
         }
       },
       requestId: {
@@ -4251,6 +5410,164 @@ export const PageBlobUploadPagesHeaders: msRest.CompositeMapper = {
           name: "ByteArray"
         }
       },
+      xMsContentCrc64: {
+        serializedName: "x-ms-content-crc64",
+        type: {
+          name: "ByteArray"
+        }
+      },
+      blobSequenceNumber: {
+        serializedName: "x-ms-blob-sequence-number",
+        type: {
+          name: "Number"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      isServerEncrypted: {
+        serializedName: "x-ms-request-server-encrypted",
+        type: {
+          name: "Boolean"
+        }
+      },
+      encryptionKeySha256: {
+        serializedName: "x-ms-encryption-key-sha256",
+        type: {
+          name: "String"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const PageBlobClearPagesHeaders: msRest.CompositeMapper = {
+  serializedName: "pageblob-clearpages-headers",
+  type: {
+    name: "Composite",
+    className: "PageBlobClearPagesHeaders",
+    modelProperties: {
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      contentMD5: {
+        serializedName: "content-md5",
+        type: {
+          name: "ByteArray"
+        }
+      },
+      xMsContentCrc64: {
+        serializedName: "x-ms-content-crc64",
+        type: {
+          name: "ByteArray"
+        }
+      },
+      blobSequenceNumber: {
+        serializedName: "x-ms-blob-sequence-number",
+        type: {
+          name: "Number"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const PageBlobUploadPagesFromURLHeaders: msRest.CompositeMapper = {
+  serializedName: "pageblob-uploadpagesfromurl-headers",
+  type: {
+    name: "Composite",
+    className: "PageBlobUploadPagesFromURLHeaders",
+    modelProperties: {
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      contentMD5: {
+        serializedName: "content-md5",
+        type: {
+          name: "ByteArray"
+        }
+      },
+      xMsContentCrc64: {
+        serializedName: "x-ms-content-crc64",
+        type: {
+          name: "ByteArray"
+        }
+      },
       blobSequenceNumber: {
         serializedName: "x-ms-blob-sequence-number",
         type: {
@@ -4291,64 +5608,6 @@ export const PageBlobUploadPagesHeaders: msRest.CompositeMapper = {
   }
 };
 
-export const PageBlobClearPagesHeaders: msRest.CompositeMapper = {
-  serializedName: "pageblob-clearpages-headers",
-  type: {
-    name: "Composite",
-    className: "PageBlobClearPagesHeaders",
-    modelProperties: {
-      eTag: {
-        serializedName: "etag",
-        type: {
-          name: "String"
-        }
-      },
-      lastModified: {
-        serializedName: "last-modified",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      },
-      contentMD5: {
-        serializedName: "content-md5",
-        type: {
-          name: "ByteArray"
-        }
-      },
-      blobSequenceNumber: {
-        serializedName: "x-ms-blob-sequence-number",
-        type: {
-          name: "Number"
-        }
-      },
-      requestId: {
-        serializedName: "x-ms-request-id",
-        type: {
-          name: "String"
-        }
-      },
-      version: {
-        serializedName: "x-ms-version",
-        type: {
-          name: "String"
-        }
-      },
-      date: {
-        serializedName: "date",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      },
-      errorCode: {
-        serializedName: "x-ms-error-code",
-        type: {
-          name: "String"
-        }
-      }
-    }
-  }
-};
-
 export const PageBlobGetPageRangesHeaders: msRest.CompositeMapper = {
   serializedName: "pageblob-getpageranges-headers",
   type: {
@@ -4371,6 +5630,12 @@ export const PageBlobGetPageRangesHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-blob-content-length",
         type: {
           name: "Number"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
         }
       },
       requestId: {
@@ -4425,6 +5690,12 @@ export const PageBlobGetPageRangesDiffHeaders: msRest.CompositeMapper = {
           name: "Number"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -4475,6 +5746,12 @@ export const PageBlobResizeHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-blob-sequence-number",
         type: {
           name: "Number"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
         }
       },
       requestId: {
@@ -4529,6 +5806,12 @@ export const PageBlobUpdateSequenceNumberHeaders: msRest.CompositeMapper = {
           name: "Number"
         }
       },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -4573,6 +5856,12 @@ export const PageBlobCopyIncrementalHeaders: msRest.CompositeMapper = {
         serializedName: "last-modified",
         type: {
           name: "DateTimeRfc1123"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
         }
       },
       requestId: {
@@ -4645,6 +5934,18 @@ export const AppendBlobAppendBlockHeaders: msRest.CompositeMapper = {
           name: "ByteArray"
         }
       },
+      xMsContentCrc64: {
+        serializedName: "x-ms-content-crc64",
+        type: {
+          name: "ByteArray"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -4673,6 +5974,94 @@ export const AppendBlobAppendBlockHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-blob-committed-block-count",
         type: {
           name: "Number"
+        }
+      },
+      isServerEncrypted: {
+        serializedName: "x-ms-request-server-encrypted",
+        type: {
+          name: "Boolean"
+        }
+      },
+      encryptionKeySha256: {
+        serializedName: "x-ms-encryption-key-sha256",
+        type: {
+          name: "String"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const AppendBlobAppendBlockFromUrlHeaders: msRest.CompositeMapper = {
+  serializedName: "appendblob-appendblockfromurl-headers",
+  type: {
+    name: "Composite",
+    className: "AppendBlobAppendBlockFromUrlHeaders",
+    modelProperties: {
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      contentMD5: {
+        serializedName: "content-md5",
+        type: {
+          name: "ByteArray"
+        }
+      },
+      xMsContentCrc64: {
+        serializedName: "x-ms-content-crc64",
+        type: {
+          name: "ByteArray"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      blobAppendOffset: {
+        serializedName: "x-ms-blob-append-offset",
+        type: {
+          name: "String"
+        }
+      },
+      blobCommittedBlockCount: {
+        serializedName: "x-ms-blob-committed-block-count",
+        type: {
+          name: "Number"
+        }
+      },
+      encryptionKeySha256: {
+        serializedName: "x-ms-encryption-key-sha256",
+        type: {
+          name: "String"
         }
       },
       errorCode: {

@@ -85,6 +85,30 @@ export const action4: msRest.OperationParameter = {
     }
   }
 };
+export const action5: msRest.OperationQueryParameter = {
+  parameterPath: "action",
+  mapper: {
+    required: true,
+    isConstant: true,
+    serializedName: "action",
+    defaultValue: 'setAccessControl',
+    type: {
+      name: "String"
+    }
+  }
+};
+export const action6: msRest.OperationQueryParameter = {
+  parameterPath: "action",
+  mapper: {
+    required: true,
+    isConstant: true,
+    serializedName: "action",
+    defaultValue: 'getAccessControl',
+    type: {
+      name: "String"
+    }
+  }
+};
 export const appendPosition: msRest.OperationParameter = {
   parameterPath: [
     "options",
@@ -257,6 +281,19 @@ export const breakPeriod: msRest.OperationParameter = {
     }
   }
 };
+export const cacheControl: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "directoryHttpHeaders",
+    "cacheControl"
+  ],
+  mapper: {
+    serializedName: "x-ms-cache-control",
+    type: {
+      name: "String"
+    }
+  }
+};
 export const comp0: msRest.OperationQueryParameter = {
   parameterPath: "comp",
   mapper: {
@@ -287,7 +324,7 @@ export const comp10: msRest.OperationQueryParameter = {
     required: true,
     isConstant: true,
     serializedName: "comp",
-    defaultValue: 'page',
+    defaultValue: 'copy',
     type: {
       name: "String"
     }
@@ -299,7 +336,7 @@ export const comp11: msRest.OperationQueryParameter = {
     required: true,
     isConstant: true,
     serializedName: "comp",
-    defaultValue: 'pagelist',
+    defaultValue: 'tier',
     type: {
       name: "String"
     }
@@ -311,7 +348,7 @@ export const comp12: msRest.OperationQueryParameter = {
     required: true,
     isConstant: true,
     serializedName: "comp",
-    defaultValue: 'incrementalcopy',
+    defaultValue: 'page',
     type: {
       name: "String"
     }
@@ -323,7 +360,7 @@ export const comp13: msRest.OperationQueryParameter = {
     required: true,
     isConstant: true,
     serializedName: "comp",
-    defaultValue: 'appendblock',
+    defaultValue: 'pagelist',
     type: {
       name: "String"
     }
@@ -335,13 +372,37 @@ export const comp14: msRest.OperationQueryParameter = {
     required: true,
     isConstant: true,
     serializedName: "comp",
-    defaultValue: 'block',
+    defaultValue: 'incrementalcopy',
     type: {
       name: "String"
     }
   }
 };
 export const comp15: msRest.OperationQueryParameter = {
+  parameterPath: "comp",
+  mapper: {
+    required: true,
+    isConstant: true,
+    serializedName: "comp",
+    defaultValue: 'appendblock',
+    type: {
+      name: "String"
+    }
+  }
+};
+export const comp16: msRest.OperationQueryParameter = {
+  parameterPath: "comp",
+  mapper: {
+    required: true,
+    isConstant: true,
+    serializedName: "comp",
+    defaultValue: 'block',
+    type: {
+      name: "String"
+    }
+  }
+};
+export const comp17: msRest.OperationQueryParameter = {
   parameterPath: "comp",
   mapper: {
     required: true,
@@ -371,7 +432,7 @@ export const comp3: msRest.OperationQueryParameter = {
     required: true,
     isConstant: true,
     serializedName: "comp",
-    defaultValue: 'metadata',
+    defaultValue: 'userdelegationkey',
     type: {
       name: "String"
     }
@@ -383,7 +444,7 @@ export const comp4: msRest.OperationQueryParameter = {
     required: true,
     isConstant: true,
     serializedName: "comp",
-    defaultValue: 'acl',
+    defaultValue: 'batch',
     type: {
       name: "String"
     }
@@ -395,7 +456,7 @@ export const comp5: msRest.OperationQueryParameter = {
     required: true,
     isConstant: true,
     serializedName: "comp",
-    defaultValue: 'lease',
+    defaultValue: 'metadata',
     type: {
       name: "String"
     }
@@ -407,7 +468,7 @@ export const comp6: msRest.OperationQueryParameter = {
     required: true,
     isConstant: true,
     serializedName: "comp",
-    defaultValue: 'undelete',
+    defaultValue: 'acl',
     type: {
       name: "String"
     }
@@ -419,7 +480,7 @@ export const comp7: msRest.OperationQueryParameter = {
     required: true,
     isConstant: true,
     serializedName: "comp",
-    defaultValue: 'snapshot',
+    defaultValue: 'lease',
     type: {
       name: "String"
     }
@@ -431,7 +492,7 @@ export const comp8: msRest.OperationQueryParameter = {
     required: true,
     isConstant: true,
     serializedName: "comp",
-    defaultValue: 'copy',
+    defaultValue: 'undelete',
     type: {
       name: "String"
     }
@@ -443,7 +504,46 @@ export const comp9: msRest.OperationQueryParameter = {
     required: true,
     isConstant: true,
     serializedName: "comp",
-    defaultValue: 'tier',
+    defaultValue: 'snapshot',
+    type: {
+      name: "String"
+    }
+  }
+};
+export const contentDisposition: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "directoryHttpHeaders",
+    "contentDisposition"
+  ],
+  mapper: {
+    serializedName: "x-ms-content-disposition",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const contentEncoding: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "directoryHttpHeaders",
+    "contentEncoding"
+  ],
+  mapper: {
+    serializedName: "x-ms-content-encoding",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const contentLanguage: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "directoryHttpHeaders",
+    "contentLanguage"
+  ],
+  mapper: {
+    serializedName: "x-ms-content-language",
     type: {
       name: "String"
     }
@@ -456,6 +556,19 @@ export const contentLength: msRest.OperationParameter = {
     serializedName: "Content-Length",
     type: {
       name: "Number"
+    }
+  }
+};
+export const contentType: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "directoryHttpHeaders",
+    "contentType"
+  ],
+  mapper: {
+    serializedName: "x-ms-content-type",
+    type: {
+      name: "String"
     }
   }
 };
@@ -517,6 +630,18 @@ export const delimiter: msRest.OperationQueryParameter = {
     }
   }
 };
+export const directoryProperties: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "directoryProperties"
+  ],
+  mapper: {
+    serializedName: "x-ms-properties",
+    type: {
+      name: "String"
+    }
+  }
+};
 export const duration: msRest.OperationParameter = {
   parameterPath: [
     "options",
@@ -526,6 +651,60 @@ export const duration: msRest.OperationParameter = {
     serializedName: "x-ms-lease-duration",
     type: {
       name: "Number"
+    }
+  }
+};
+export const encryptionAlgorithm: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "cpkInfo",
+    "encryptionAlgorithm"
+  ],
+  mapper: {
+    serializedName: "x-ms-encryption-algorithm",
+    type: {
+      name: "Enum",
+      allowedValues: [
+        "AES256"
+      ]
+    }
+  }
+};
+export const encryptionKey: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "cpkInfo",
+    "encryptionKey"
+  ],
+  mapper: {
+    serializedName: "x-ms-encryption-key",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const encryptionKeySha256: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "cpkInfo",
+    "encryptionKeySha256"
+  ],
+  mapper: {
+    serializedName: "x-ms-encryption-key-sha256",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const group: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "group"
+  ],
+  mapper: {
+    serializedName: "x-ms-group",
+    type: {
+      name: "String"
     }
   }
 };
@@ -648,11 +827,11 @@ export const include1: msRest.OperationQueryParameter = {
         type: {
           name: "Enum",
           allowedValues: [
-            "snapshots",
-            "metadata",
-            "uncommittedblobs",
             "copy",
-            "deleted"
+            "deleted",
+            "metadata",
+            "snapshots",
+            "uncommittedblobs"
           ]
         }
       }
@@ -701,13 +880,25 @@ export const listType: msRest.OperationQueryParameter = {
     }
   }
 };
-export const marker: msRest.OperationQueryParameter = {
+export const marker0: msRest.OperationQueryParameter = {
   parameterPath: [
     "options",
     "marker"
   ],
   mapper: {
     serializedName: "marker",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const marker1: msRest.OperationQueryParameter = {
+  parameterPath: [
+    "options",
+    "marker"
+  ],
+  mapper: {
+    serializedName: "continuation",
     type: {
       name: "String"
     }
@@ -759,6 +950,28 @@ export const metadata: msRest.OperationParameter = {
     headerCollectionPrefix: "x-ms-meta-"
   }
 };
+export const multipartContentType: msRest.OperationParameter = {
+  parameterPath: "multipartContentType",
+  mapper: {
+    required: true,
+    serializedName: "Content-Type",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const owner: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "owner"
+  ],
+  mapper: {
+    serializedName: "x-ms-owner",
+    type: {
+      name: "String"
+    }
+  }
+};
 export const pageBlobAccessTier: msRest.OperationParameter = {
   parameterPath: [
     "options",
@@ -790,6 +1003,55 @@ export const pageWrite1: msRest.OperationParameter = {
     isConstant: true,
     serializedName: "x-ms-page-write",
     defaultValue: 'clear',
+    type: {
+      name: "String"
+    }
+  }
+};
+export const pathRenameMode: msRest.OperationQueryParameter = {
+  parameterPath: "pathRenameMode",
+  mapper: {
+    serializedName: "mode",
+    type: {
+      name: "Enum",
+      allowedValues: [
+        "legacy",
+        "posix"
+      ]
+    }
+  }
+};
+export const posixAcl: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "posixAcl"
+  ],
+  mapper: {
+    serializedName: "x-ms-acl",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const posixPermissions: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "posixPermissions"
+  ],
+  mapper: {
+    serializedName: "x-ms-permissions",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const posixUmask: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "posixUmask"
+  ],
+  mapper: {
+    serializedName: "x-ms-umask",
     type: {
       name: "String"
     }
@@ -841,7 +1103,7 @@ export const proposedLeaseId1: msRest.OperationParameter = {
     }
   }
 };
-export const range: msRest.OperationParameter = {
+export const range0: msRest.OperationParameter = {
   parameterPath: [
     "options",
     "range"
@@ -850,6 +1112,28 @@ export const range: msRest.OperationParameter = {
     serializedName: "x-ms-range",
     type: {
       name: "String"
+    }
+  }
+};
+export const range1: msRest.OperationParameter = {
+  parameterPath: "range",
+  mapper: {
+    required: true,
+    serializedName: "x-ms-range",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const rangeGetContentCRC64: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "rangeGetContentCRC64"
+  ],
+  mapper: {
+    serializedName: "x-ms-range-get-content-crc64",
+    type: {
+      name: "Boolean"
     }
   }
 };
@@ -865,6 +1149,38 @@ export const rangeGetContentMD5: msRest.OperationParameter = {
     }
   }
 };
+export const recursiveDirectoryDelete: msRest.OperationQueryParameter = {
+  parameterPath: "recursiveDirectoryDelete",
+  mapper: {
+    required: true,
+    serializedName: "recursive",
+    type: {
+      name: "Boolean"
+    }
+  }
+};
+export const rehydratePriority: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "rehydratePriority"
+  ],
+  mapper: {
+    serializedName: "x-ms-rehydrate-priority",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const renameSource: msRest.OperationParameter = {
+  parameterPath: "renameSource",
+  mapper: {
+    required: true,
+    serializedName: "x-ms-rename-source",
+    type: {
+      name: "String"
+    }
+  }
+};
 export const requestId: msRest.OperationParameter = {
   parameterPath: [
     "options",
@@ -872,6 +1188,18 @@ export const requestId: msRest.OperationParameter = {
   ],
   mapper: {
     serializedName: "x-ms-client-request-id",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const resource: msRest.OperationQueryParameter = {
+  parameterPath: "resource",
+  mapper: {
+    required: true,
+    isConstant: true,
+    serializedName: "resource",
+    defaultValue: 'directory',
     type: {
       name: "String"
     }
@@ -940,6 +1268,18 @@ export const snapshot: msRest.OperationQueryParameter = {
     }
   }
 };
+export const sourceContentcrc64: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "sourceContentcrc64"
+  ],
+  mapper: {
+    serializedName: "x-ms-source-content-crc64",
+    type: {
+      name: "ByteArray"
+    }
+  }
+};
 export const sourceContentMD5: msRest.OperationParameter = {
   parameterPath: [
     "options",
@@ -1004,7 +1344,29 @@ export const sourceIfUnmodifiedSince: msRest.OperationParameter = {
     }
   }
 };
-export const sourceRange: msRest.OperationParameter = {
+export const sourceLeaseId: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "sourceLeaseId"
+  ],
+  mapper: {
+    serializedName: "x-ms-source-lease-id",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const sourceRange0: msRest.OperationParameter = {
+  parameterPath: "sourceRange",
+  mapper: {
+    required: true,
+    serializedName: "x-ms-source-range",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const sourceRange1: msRest.OperationParameter = {
   parameterPath: [
     "options",
     "sourceRange"
@@ -1026,7 +1388,19 @@ export const sourceUrl: msRest.OperationParameter = {
     }
   }
 };
-export const tier: msRest.OperationParameter = {
+export const tier0: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "tier"
+  ],
+  mapper: {
+    serializedName: "x-ms-access-tier",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const tier1: msRest.OperationParameter = {
   parameterPath: "tier",
   mapper: {
     required: true,
@@ -1051,6 +1425,30 @@ export const timeout: msRest.OperationQueryParameter = {
     }
   }
 };
+export const transactionalContentCrc64: msRest.OperationParameter = {
+  parameterPath: [
+    "options",
+    "transactionalContentCrc64"
+  ],
+  mapper: {
+    serializedName: "x-ms-content-crc64",
+    type: {
+      name: "ByteArray"
+    }
+  }
+};
+export const upn: msRest.OperationQueryParameter = {
+  parameterPath: [
+    "options",
+    "upn"
+  ],
+  mapper: {
+    serializedName: "upn",
+    type: {
+      name: "Boolean"
+    }
+  }
+};
 export const url: msRest.OperationURLParameter = {
   parameterPath: "url",
   mapper: {
@@ -1067,6 +1465,18 @@ export const version: msRest.OperationParameter = {
   parameterPath: "version",
   mapper: {
     serializedName: "x-ms-version",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const xMsRequiresSync: msRest.OperationParameter = {
+  parameterPath: "xMsRequiresSync",
+  mapper: {
+    required: true,
+    isConstant: true,
+    serializedName: "x-ms-requires-sync",
+    defaultValue: 'true',
     type: {
       name: "String"
     }

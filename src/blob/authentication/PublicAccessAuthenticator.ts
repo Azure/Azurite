@@ -3,7 +3,7 @@ import { PublicAccessType } from "../generated/artifacts/models";
 import Operation from "../generated/artifacts/operation";
 import Context from "../generated/Context";
 import IRequest from "../generated/IRequest";
-import IBlobDataStore from "../persistence/IBlobDataStore";
+import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import IAuthenticator from "./IAuthenticator";
 
 const CONTAINER_PUBLIC_READ_OPERATIONS = new Set<Operation>([
@@ -29,7 +29,7 @@ const BLOB_PUBLIC_READ_OPERATIONS = new Set<Operation>([
 
 export default class PublicAccessAuthenticator implements IAuthenticator {
   public constructor(
-    private readonly blobDataStore: IBlobDataStore,
+    private readonly blobMetadataStore: IBlobMetadataStore,
     private readonly logger: ILogger
   ) {}
 
@@ -136,14 +136,17 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
     account: string,
     container: string
   ): Promise<PublicAccessType | undefined> {
-    const containerModel = await this.blobDataStore.getContainer(
-      account,
-      container
-    );
-    if (containerModel === undefined) {
+    try {
+      const containerModel = await this.blobMetadataStore.getContainer(
+        account,
+        container
+      );
+      return containerModel.properties.publicAccess;
+      if (containerModel === undefined) {
+        return undefined;
+      }
+    } catch (err) {
       return undefined;
     }
-
-    return containerModel.properties.publicAccess;
   }
 }

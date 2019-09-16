@@ -4,12 +4,14 @@ import { dirname, join } from "path";
 import { promisify } from "util";
 
 import * as Logger from "../common/Logger";
-import BlobConfiguration from "./BlobConfiguration";
+import BlobConfiguration, {
+  DEFUALT_BLOB_PERSISTENCE_ARRAY
+} from "./BlobConfiguration";
 import BlobEnvironment from "./BlobEnvironment";
 import BlobServer from "./BlobServer";
 import {
-  DEFAULT_BLOB_LOKI_DB_PATH,
-  DEFAULT_BLOB_PERSISTENCE_PATH
+  DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
+  DEFAULT_BLOB_LOKI_DB_PATH
 } from "./utils/constants";
 
 // tslint:disable:no-console
@@ -33,7 +35,8 @@ async function main() {
     env.blobHost(),
     env.blobPort(),
     join(location, DEFAULT_BLOB_LOKI_DB_PATH),
-    join(location, DEFAULT_BLOB_PERSISTENCE_PATH),
+    join(location, DEFAULT_BLOB_EXTENT_LOKI_DB_PATH),
+    DEFUALT_BLOB_PERSISTENCE_ARRAY,
     !env.silent(),
     undefined,
     env.debug() !== undefined,
@@ -76,7 +79,6 @@ async function main() {
         console.log(afterCloseMessage);
       });
     });
-  console.log("end");
 }
 
 main().catch(err => {

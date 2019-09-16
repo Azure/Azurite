@@ -186,7 +186,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
    * @returns {(Promise<ServicePropertiesModel | undefined>)}
    * @memberof LokiQueueMetadataStore
    */
-  public async getServiceProperties<T extends ServicePropertiesModel>(
+  public async getServiceProperties(
     account: string
   ): Promise<ServicePropertiesModel | undefined> {
     const coll = this.db.getCollection(this.SERVICES_COLLECTION);
@@ -205,7 +205,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
    * @returns {(Promise<[QueueModel[], number | undefined]>)} A tuple including queues and next marker
    * @memberof LokiQueueMetadataStore
    */
-  public async listQueues<T extends QueueModel>(
+  public async listQueues(
     account: string,
     prefix: string = "",
     maxResults: number = 5000,

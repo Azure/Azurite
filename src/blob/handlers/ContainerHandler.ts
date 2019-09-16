@@ -1,12 +1,7 @@
-import uuid from "uuid/v4";
-
-import Mutex from "../../common/Mutex";
 import BlobStorageContext from "../context/BlobStorageContext";
-import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IContainerHandler from "../generated/handlers/IContainerHandler";
-import { ContainerModel } from "../persistence/IBlobDataStore";
 import { BLOB_API_VERSION } from "../utils/constants";
 import { getContainerGetAccountInfoResponse, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -46,28 +41,23 @@ export default class ContainerHandler extends BaseHandler
     const lastModified = blobCtx.startTime!;
     const etag = newEtag();
 
-    const container = await this.dataStore.getContainer(
-      accountName,
-      containerName
+    await this.metadataStore.createContainer(
+      {
+        accountName,
+        metadata: options.metadata,
+        name: containerName,
+        properties: {
+          etag,
+          lastModified,
+          leaseStatus: Models.LeaseStatusType.Unlocked,
+          leaseState: Models.LeaseStateType.Available,
+          publicAccess: options.access,
+          hasImmutabilityPolicy: false,
+          hasLegalHold: false
+        }
+      },
+      context
     );
-    if (container) {
-      throw StorageErrorFactory.getContainerAlreadyExists(blobCtx.contextID!);
-    }
-
-    await this.dataStore.updateContainer({
-      accountName,
-      metadata: options.metadata,
-      name: containerName,
-      properties: {
-        etag,
-        lastModified,
-        leaseStatus: Models.LeaseStatusType.Unlocked,
-        leaseState: Models.LeaseStateType.Available,
-        publicAccess: options.access,
-        hasImmutabilityPolicy: false,
-        hasLegalHold: false
-      }
-    });
 
     const response: Models.ContainerCreateResponse = {
       eTag: etag,
@@ -92,12 +82,20 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerGetPropertiesOptionalParams,
     context: Context
   ): Promise<Models.ContainerGetPropertiesResponse> {
-    const container = await this.getSimpleContainerFromStorage(context);
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    const containerProperties = await this.metadataStore.getContainerProperties(
+      accountName,
+      containerName,
+      context
+    );
+
     const response: Models.ContainerGetPropertiesResponse = {
-      eTag: container.properties.etag,
-      ...container.properties,
-      blobPublicAccess: container.properties.publicAccess,
-      metadata: container.metadata,
+      eTag: containerProperties.properties.etag,
+      ...containerProperties.properties,
+      blobPublicAccess: containerProperties.properties.publicAccess,
+      metadata: containerProperties.metadata,
       requestId: context.contextID,
       statusCode: 200,
       version: BLOB_API_VERSION
@@ -132,45 +130,21 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerDeleteMethodOptionalParams,
     context: Context
   ): Promise<Models.ContainerDeleteResponse> {
-    const container = await this.getSimpleContainerFromStorage(context);
-
-    // Check Lease status
-    if (container.properties.leaseStatus === Models.LeaseStatusType.Locked) {
-      if (
-        options.leaseAccessConditions === undefined ||
-        options.leaseAccessConditions.leaseId === undefined ||
-        options.leaseAccessConditions.leaseId === null
-      ) {
-        const blobCtx = new BlobStorageContext(context);
-        throw StorageErrorFactory.getContainerLeaseIdMissing(
-          blobCtx.contextID!
-        );
-      } else if (
-        container.leaseId !== undefined &&
-        options.leaseAccessConditions.leaseId.toLowerCase() !==
-          container.leaseId.toLowerCase()
-      ) {
-        const blobCtx = new BlobStorageContext(context);
-        throw StorageErrorFactory.getContainerLeaseIdMismatchWithContainerOperation(
-          blobCtx.contextID!
-        );
-      }
-    } else if (
-      options.leaseAccessConditions !== undefined &&
-      options.leaseAccessConditions.leaseId !== undefined &&
-      options.leaseAccessConditions.leaseId !== null &&
-      options.leaseAccessConditions.leaseId !== ""
-    ) {
-      const blobCtx = new BlobStorageContext(context);
-      throw StorageErrorFactory.getBlobLeaseLost(blobCtx.contextID!);
-    }
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
 
     // TODO: Mark container as being deleted status, then (mark) delete all blobs async
     // When above finishes, execute following delete container operation
     // Because following delete container operation will only delete DB metadata for container and
     // blobs under the container, but will not clean up blob data in disk
-    await this.dataStore.deleteContainer(container.accountName, container.name);
-    await this.dataStore.deleteBlobs(container.accountName, container.name);
+    // The current design will directly remove the container and all the blobs belong to it.
+    await this.metadataStore.deleteContainer(
+      accountName,
+      containerName,
+      options.leaseAccessConditions,
+      context
+    );
 
     const response: Models.ContainerDeleteResponse = {
       date: context.startTime,
@@ -195,26 +169,24 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerSetMetadataResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
-    let container: ContainerModel;
 
-    await Mutex.lock(containerName);
-    try {
-      container = await this.getSimpleContainerFromStorage(context);
-    } catch (error) {
-      await Mutex.unlock(containerName);
-      throw error;
-    }
-
-    container.metadata = options.metadata;
-    container.properties.lastModified = blobCtx.startTime!;
-    await this.dataStore.updateContainer(container);
-    await Mutex.unlock(containerName);
+    const date = blobCtx.startTime!;
+    const eTag = newEtag();
+    await this.metadataStore.setContainerMetadata(
+      accountName,
+      containerName,
+      date,
+      eTag,
+      options.metadata,
+      context
+    );
 
     const response: Models.ContainerSetMetadataResponse = {
-      date: container.properties.lastModified,
-      eTag: newEtag(),
-      lastModified: container.properties.lastModified,
+      date,
+      eTag,
+      lastModified: date,
       requestId: context.contextID,
       statusCode: 200
     };
@@ -234,22 +206,15 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerGetAccessPolicyOptionalParams,
     context: Context
   ): Promise<Models.ContainerGetAccessPolicyResponse> {
-    // const blobCtx = new BlobStorageContext(context);
-    // const containerName = blobCtx.container!;
-    let container: ContainerModel;
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
 
-    // await Mutex.lock(containerName);
-    try {
-      container = await this.getSimpleContainerFromStorage(context);
-    } catch (error) {
-      // await Mutex.unlock(containerName);
-      throw error;
-    }
-
-    this.checkLeaseOnReadContainer(
-      context,
-      container,
-      options.leaseAccessConditions
+    const containerAcl = await this.metadataStore.getContainerACL(
+      accountName,
+      containerName,
+      options.leaseAccessConditions,
+      context
     );
 
     const response: any = [];
@@ -257,13 +222,13 @@ export default class ContainerHandler extends BaseHandler
     const responseObject = response as Models.ContainerGetAccessPolicyHeaders & {
       statusCode: 200;
     };
-    if (container.containerAcl !== undefined) {
-      responseArray.push(...container.containerAcl);
+    if (containerAcl.containerAcl !== undefined) {
+      responseArray.push(...containerAcl.containerAcl);
     }
-    responseObject.date = container.properties.lastModified;
-    responseObject.blobPublicAccess = container.properties.publicAccess;
-    responseObject.eTag = newEtag();
-    responseObject.lastModified = container.properties.lastModified;
+    responseObject.date = containerAcl.properties.lastModified;
+    responseObject.blobPublicAccess = containerAcl.properties.publicAccess;
+    responseObject.eTag = containerAcl.properties.etag;
+    responseObject.lastModified = containerAcl.properties.lastModified;
     responseObject.requestId = context.contextID;
     responseObject.version = BLOB_API_VERSION;
     responseObject.statusCode = 200;
@@ -289,34 +254,28 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerSetAccessPolicyResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
-    let container: ContainerModel;
 
-    await Mutex.lock(containerName);
-    try {
-      container = await this.getSimpleContainerFromStorage(context);
-    } catch (error) {
-      await Mutex.unlock(containerName);
-      throw error;
-    }
-
-    // from rest spec, this is how lease works
-    this.checkLeaseOnReadContainer(
-      context,
-      container,
-      options.leaseAccessConditions
+    const date = blobCtx.startTime!;
+    const eTag = newEtag();
+    await this.metadataStore.setContainerACL(
+      accountName,
+      containerName,
+      {
+        lastModified: date,
+        etag: eTag,
+        publicAccess: options.access,
+        containerAcl: options.containerAcl,
+        leaseAccessConditions: options.leaseAccessConditions
+      },
+      context
     );
 
-    container.properties.publicAccess = options.access;
-    container.containerAcl = options.containerAcl;
-    container.properties.lastModified = blobCtx.startTime!;
-    await this.dataStore.updateContainer(container);
-    await Mutex.unlock(containerName);
-
     const response: Models.ContainerSetAccessPolicyResponse = {
-      date: container.properties.lastModified,
-      eTag: newEtag(),
-      lastModified: container.properties.lastModified,
+      date,
+      eTag,
+      lastModified: date,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
       statusCode: 200
@@ -338,62 +297,20 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerAcquireLeaseResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
-    let container: ContainerModel;
-
-    await Mutex.lock(containerName);
-    try {
-      container = await this.getSimpleContainerFromStorage(context);
-    } catch (error) {
-      await Mutex.unlock(containerName);
-      throw error;
-    }
-
-    // check the lease action aligned with current lease state.
-    if (container.properties.leaseState === Models.LeaseStateType.Breaking) {
-      await Mutex.unlock(containerName);
-      throw StorageErrorFactory.getLeaseAlreadyPresent(blobCtx.contextID!);
-    }
-    if (
-      container.properties.leaseState === Models.LeaseStateType.Leased &&
-      options.proposedLeaseId !== container.leaseId
-    ) {
-      await Mutex.unlock(containerName);
-      throw StorageErrorFactory.getLeaseAlreadyPresent(context.contextID!);
-    }
-
-    // update the lease information
-    if (options.duration === -1 || options.duration === undefined) {
-      container.properties.leaseDuration = Models.LeaseDurationType.Infinite;
-    } else {
-      // verify options.duration between 15 and 60
-      if (options.duration > 60 || options.duration < 15) {
-        await Mutex.unlock(containerName);
-        throw StorageErrorFactory.getInvalidLeaseDuration(blobCtx.contextID!);
-      }
-      container.properties.leaseDuration = Models.LeaseDurationType.Fixed;
-      container.leaseExpireTime = blobCtx.startTime!;
-      container.leaseExpireTime.setSeconds(
-        container.leaseExpireTime.getSeconds() + options.duration
-      );
-      container.leaseduration = options.duration;
-    }
-    container.properties.leaseState = Models.LeaseStateType.Leased;
-    container.properties.leaseStatus = Models.LeaseStatusType.Locked;
-    container.leaseId =
-      options.proposedLeaseId !== "" && options.proposedLeaseId !== undefined
-        ? options.proposedLeaseId
-        : uuid();
-    container.leaseBreakExpireTime = undefined;
-
-    await this.dataStore.updateContainer(container);
-    await Mutex.unlock(containerName);
+    const res = await this.metadataStore.acquireContainerLease(
+      accountName,
+      containerName,
+      options,
+      context
+    );
 
     const response: Models.ContainerAcquireLeaseResponse = {
       date: blobCtx.startTime!,
-      eTag: container.properties.etag,
-      lastModified: container.properties.lastModified,
-      leaseId: container.leaseId,
+      eTag: res.properties.etag,
+      lastModified: res.properties.lastModified,
+      leaseId: res.leaseId,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
       statusCode: 201
@@ -417,49 +334,20 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerReleaseLeaseResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
-    let container: ContainerModel;
 
-    await Mutex.lock(containerName);
-    try {
-      container = await this.getSimpleContainerFromStorage(context);
-    } catch (error) {
-      await Mutex.unlock(containerName);
-      throw error;
-    }
-
-    // check the lease action aligned with current lease state.
-    if (container.properties.leaseState === Models.LeaseStateType.Available) {
-      await Mutex.unlock(containerName);
-      throw StorageErrorFactory.getContainerLeaseIdMismatchWithLeaseOperation(
-        blobCtx.contextID!
-      );
-    }
-
-    // Check lease ID
-    if (container.leaseId !== leaseId) {
-      await Mutex.unlock(containerName);
-      throw StorageErrorFactory.getContainerLeaseIdMismatchWithLeaseOperation(
-        blobCtx.contextID!
-      );
-    }
-
-    // update the lease information
-    container.properties.leaseState = Models.LeaseStateType.Available;
-    container.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
-    container.properties.leaseDuration = undefined;
-    container.leaseduration = undefined;
-    container.leaseId = undefined;
-    container.leaseExpireTime = undefined;
-    container.leaseBreakExpireTime = undefined;
-
-    await this.dataStore.updateContainer(container);
-    await Mutex.unlock(containerName);
+    const res = await this.metadataStore.releaseContainerLease(
+      accountName,
+      containerName,
+      leaseId,
+      context
+    );
 
     const response: Models.ContainerReleaseLeaseResponse = {
       date: blobCtx.startTime!,
-      eTag: container.properties.etag,
-      lastModified: container.properties.lastModified,
+      eTag: res.etag,
+      lastModified: res.lastModified,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
       statusCode: 200
@@ -483,66 +371,21 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerRenewLeaseResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
-    let container: ContainerModel;
 
-    await Mutex.lock(containerName);
-    try {
-      container = await this.getSimpleContainerFromStorage(context);
-    } catch (error) {
-      await Mutex.unlock(containerName);
-      throw error;
-    }
-
-    // check the lease action aligned with current lease state.
-    if (container.properties.leaseState === Models.LeaseStateType.Available) {
-      await Mutex.unlock(containerName);
-      throw StorageErrorFactory.getContainerLeaseIdMismatchWithLeaseOperation(
-        blobCtx.contextID!
-      );
-    }
-    if (
-      container.properties.leaseState === Models.LeaseStateType.Breaking ||
-      container.properties.leaseState === Models.LeaseStateType.Broken
-    ) {
-      await Mutex.unlock(containerName);
-      throw StorageErrorFactory.getLeaseIsBrokenAndCannotBeRenewed(
-        blobCtx.contextID!
-      );
-    }
-
-    // Check lease ID
-    if (container.leaseId !== leaseId) {
-      await Mutex.unlock(containerName);
-      throw StorageErrorFactory.getContainerLeaseIdMismatchWithLeaseOperation(
-        blobCtx.contextID!
-      );
-    }
-
-    // update the lease information
-    container.properties.leaseState = Models.LeaseStateType.Leased;
-    container.properties.leaseStatus = Models.LeaseStatusType.Locked;
-    // when container.leaseduration has value (not -1), means fixed duration
-    if (
-      container.leaseduration !== undefined &&
-      container.leaseduration !== -1
-    ) {
-      container.leaseExpireTime = blobCtx.startTime!;
-      container.leaseExpireTime.setSeconds(
-        container.leaseExpireTime.getSeconds() + container.leaseduration
-      );
-      container.properties.leaseDuration = Models.LeaseDurationType.Fixed;
-    } else {
-      container.properties.leaseDuration = Models.LeaseDurationType.Infinite;
-    }
-    await this.dataStore.updateContainer(container);
-    await Mutex.unlock(containerName);
+    const res = await this.metadataStore.renewContainerLease(
+      accountName,
+      containerName,
+      leaseId,
+      context
+    );
 
     const response: Models.ContainerRenewLeaseResponse = {
       date: blobCtx.startTime!,
-      eTag: container.properties.etag,
-      lastModified: container.properties.lastModified,
-      leaseId: container.leaseId,
+      eTag: res.properties.etag,
+      lastModified: res.properties.lastModified,
+      leaseId: res.leaseId,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
       statusCode: 200
@@ -564,99 +407,21 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerBreakLeaseResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
-    let container: ContainerModel;
-    let leaseTimeinSecond: number;
-    leaseTimeinSecond = 0;
 
-    await Mutex.lock(containerName);
-    try {
-      container = await this.getSimpleContainerFromStorage(context);
-    } catch (error) {
-      await Mutex.unlock(containerName);
-      throw error;
-    }
-
-    // check the lease action aligned with current lease state.
-    if (container.properties.leaseState === Models.LeaseStateType.Available) {
-      await Mutex.unlock(containerName);
-      throw StorageErrorFactory.getContainerLeaseNotPresentWithLeaseOperation(
-        blobCtx.contextID!
-      );
-    }
-
-    // update the lease information
-    // verify options.breakPeriod between 0 and 60
-    if (
-      options.breakPeriod !== undefined &&
-      (options.breakPeriod > 60 || options.breakPeriod < 0)
-    ) {
-      await Mutex.unlock(containerName);
-      throw StorageErrorFactory.getInvalidLeaseBreakPeriod(blobCtx.contextID!);
-    }
-    if (
-      container.properties.leaseState === Models.LeaseStateType.Expired ||
-      container.properties.leaseState === Models.LeaseStateType.Broken ||
-      options.breakPeriod === 0 ||
-      options.breakPeriod === undefined
-    ) {
-      container.properties.leaseState = Models.LeaseStateType.Broken;
-      container.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
-      container.properties.leaseDuration = undefined;
-      container.leaseduration = undefined;
-      container.leaseExpireTime = undefined;
-      container.leaseBreakExpireTime = undefined;
-      leaseTimeinSecond = 0;
-    } else {
-      container.properties.leaseState = Models.LeaseStateType.Breaking;
-      container.properties.leaseStatus = Models.LeaseStatusType.Locked;
-      container.leaseduration = undefined;
-      if (
-        container.properties.leaseDuration === Models.LeaseDurationType.Infinite
-      ) {
-        container.properties.leaseDuration = undefined;
-        container.leaseExpireTime = undefined;
-        container.leaseBreakExpireTime = new Date(blobCtx.startTime!);
-        container.leaseBreakExpireTime.setSeconds(
-          container.leaseBreakExpireTime.getSeconds() + options.breakPeriod
-        );
-        leaseTimeinSecond = options.breakPeriod;
-      } else {
-        let newleaseBreakExpireTime = new Date(blobCtx.startTime!);
-        newleaseBreakExpireTime.setSeconds(
-          newleaseBreakExpireTime.getSeconds() + options.breakPeriod
-        );
-        if (
-          container.leaseExpireTime !== undefined &&
-          newleaseBreakExpireTime > container.leaseExpireTime
-        ) {
-          newleaseBreakExpireTime = container.leaseExpireTime;
-        }
-        if (
-          container.leaseBreakExpireTime === undefined ||
-          container.leaseBreakExpireTime > newleaseBreakExpireTime
-        ) {
-          container.leaseBreakExpireTime = newleaseBreakExpireTime;
-        }
-        leaseTimeinSecond = Math.round(
-          Math.abs(
-            container.leaseBreakExpireTime.getTime() -
-              blobCtx.startTime!.getTime()
-          ) / 1000
-        );
-        container.leaseExpireTime = undefined;
-        container.properties.leaseDuration = undefined;
-      }
-    }
-
-    await this.dataStore.updateContainer(container);
-    await Mutex.unlock(containerName);
+    const res = await this.metadataStore.breakContainerLease(
+      accountName,
+      containerName,
+      options.breakPeriod,
+      context
+    );
 
     const response: Models.ContainerBreakLeaseResponse = {
       date: blobCtx.startTime!,
-      eTag: container.properties.etag,
-      lastModified: container.properties.lastModified,
-      leaseTime: leaseTimeinSecond,
+      eTag: res.properties.etag,
+      lastModified: res.properties.lastModified,
+      leaseTime: res.leaseTime,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
       statusCode: 202
@@ -682,57 +447,22 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerChangeLeaseResponse> {
     const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
-    let container: ContainerModel;
 
-    await Mutex.lock(containerName);
-    try {
-      container = await this.getSimpleContainerFromStorage(context);
-    } catch (error) {
-      await Mutex.unlock(containerName);
-      throw error;
-    }
-
-    // check the lease action aligned with current lease state.
-    if (
-      container.properties.leaseState === Models.LeaseStateType.Available ||
-      container.properties.leaseState === Models.LeaseStateType.Expired ||
-      container.properties.leaseState === Models.LeaseStateType.Broken
-    ) {
-      await Mutex.unlock(containerName);
-      throw StorageErrorFactory.getContainerLeaseNotPresentWithLeaseOperation(
-        blobCtx.contextID!
-      );
-    }
-    if (container.properties.leaseState === Models.LeaseStateType.Breaking) {
-      await Mutex.unlock(containerName);
-      throw StorageErrorFactory.getLeaseIsBreakingAndCannotBeChanged(
-        blobCtx.contextID!
-      );
-    }
-
-    // Check lease ID
-    if (
-      container.leaseId !== leaseId &&
-      container.leaseId !== proposedLeaseId
-    ) {
-      await Mutex.unlock(containerName);
-      throw StorageErrorFactory.getContainerLeaseIdMismatchWithLeaseOperation(
-        blobCtx.contextID!
-      );
-    }
-
-    // update the lease information, only need update lease ID
-    container.leaseId = proposedLeaseId;
-
-    await this.dataStore.updateContainer(container);
-    await Mutex.unlock(containerName);
+    const res = await this.metadataStore.changeContainerLease(
+      accountName,
+      containerName,
+      leaseId,
+      proposedLeaseId,
+      context
+    );
 
     const response: Models.ContainerChangeLeaseResponse = {
       date: blobCtx.startTime!,
-      eTag: container.properties.etag,
-      lastModified: container.properties.lastModified,
-      leaseId: container.leaseId,
+      eTag: res.properties.etag,
+      lastModified: res.properties.lastModified,
+      leaseId: res.leaseId,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
       statusCode: 200
@@ -753,10 +483,16 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerListBlobFlatSegmentOptionalParams,
     context: Context
   ): Promise<Models.ContainerListBlobFlatSegmentResponse> {
-    const container = await this.getSimpleContainerFromStorage(context);
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    await this.metadataStore.checkContainerExist(
+      accountName,
+      containerName,
+      context
+    );
+
     const request = context.request!;
-    const accountName = container.accountName;
-    const containerName = container.name;
     const marker = options.marker;
     const delimiter = "";
     options.marker = options.marker || "";
@@ -766,7 +502,7 @@ export default class ContainerHandler extends BaseHandler
         includeSnapshots = true;
       }
     }
-    const [blobs, nextMarker] = await this.dataStore.listBlobs(
+    const [blobs, nextMarker] = await this.metadataStore.listBlobs(
       accountName,
       containerName,
       undefined,
@@ -783,9 +519,6 @@ export default class ContainerHandler extends BaseHandler
       blobItems.push(blob);
     }
 
-    // only need an empty array for the prefixes
-    const blobPrefixes: Models.BlobPrefix[] = [];
-
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const response: Models.ContainerListBlobFlatSegmentResponse = {
       statusCode: 200,
@@ -800,8 +533,7 @@ export default class ContainerHandler extends BaseHandler
       maxResults: options.maxresults || this.LIST_BLOBS_MAX_RESULTS_DEFAULT,
       delimiter,
       segment: {
-        blobItems,
-        blobPrefixes
+        blobItems
       },
       nextMarker: `${nextMarker || ""}`
     };
@@ -824,10 +556,16 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerListBlobHierarchySegmentResponse> {
     // TODO: Need update list out blobs lease properties with BlobHandler.updateLeaseAttributes()
-    const container = await this.getSimpleContainerFromStorage(context);
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    await this.metadataStore.checkContainerExist(
+      accountName,
+      containerName,
+      context
+    );
+
     const request = context.request!;
-    const accountName = container.accountName;
-    const containerName = container.name;
     const marker = options.marker;
     delimiter = delimiter === "" ? "/" : delimiter;
     options.prefix = options.prefix || "";
@@ -838,7 +576,7 @@ export default class ContainerHandler extends BaseHandler
         includeSnapshots = true;
       }
     }
-    const [blobs, nextMarker] = await this.dataStore.listBlobs(
+    const [blobs, nextMarker] = await this.metadataStore.listBlobs(
       accountName,
       containerName,
       undefined,
@@ -923,121 +661,5 @@ export default class ContainerHandler extends BaseHandler
     context: Context
   ): Promise<Models.ContainerGetAccountInfoResponse> {
     return getContainerGetAccountInfoResponse(context);
-  }
-
-  /**
-   * Get container object from persistency layer according to request context.
-   *
-   * @private
-   * @param {Context} context
-   * @returns {Promise<BlobModel>}
-   * @memberof ContainerHandler
-   */
-  private async getSimpleContainerFromStorage(
-    context: Context
-  ): Promise<ContainerModel> {
-    const blobCtx = new BlobStorageContext(context);
-    const accountName = blobCtx.account!;
-    const containerName = blobCtx.container!;
-
-    let container = await this.dataStore.getContainer(
-      accountName,
-      containerName
-    );
-    if (!container) {
-      throw StorageErrorFactory.getContainerNotFound(blobCtx.contextID!);
-    }
-
-    container = this.updateLeaseAttributes(container, blobCtx.startTime!);
-
-    return container;
-  }
-
-  /**
-   * Update container lease Attributes according to the current time.
-   * The Attribute not set back
-   *
-   * @private
-   * @param {ContainerModel} container
-   * @param {Date} currentTime
-   * @returns {ContainerModel}
-   * @memberof ContainerHandler
-   */
-  private updateLeaseAttributes(
-    container: ContainerModel,
-    currentTime: Date
-  ): ContainerModel {
-    // check Leased -> Expired
-    if (
-      container.properties.leaseState === Models.LeaseStateType.Leased &&
-      container.properties.leaseDuration === Models.LeaseDurationType.Fixed
-    ) {
-      if (
-        container.leaseExpireTime !== undefined &&
-        currentTime > container.leaseExpireTime
-      ) {
-        container.properties.leaseState = Models.LeaseStateType.Expired;
-        container.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
-        container.properties.leaseDuration = undefined;
-        container.leaseExpireTime = undefined;
-        container.leaseBreakExpireTime = undefined;
-      }
-    }
-
-    // check Breaking -> Broken
-    if (container.properties.leaseState === Models.LeaseStateType.Breaking) {
-      if (
-        container.leaseBreakExpireTime !== undefined &&
-        currentTime > container.leaseBreakExpireTime
-      ) {
-        container.properties.leaseState = Models.LeaseStateType.Broken;
-        container.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
-        container.properties.leaseDuration = undefined;
-        container.leaseExpireTime = undefined;
-        container.leaseBreakExpireTime = undefined;
-      }
-    }
-    return container;
-  }
-
-  /**
-   * Check Container lease status on Read Container.
-   *
-   * @private
-   * @param {Context} context
-   * @param {ContainerModel} container
-   * @param {LeaseAccessConditions} leaseAccessConditions
-   * @returns {void}
-   * @memberof ContainerHandler
-   */
-  private checkLeaseOnReadContainer(
-    context: Context,
-    container: ContainerModel,
-    leaseAccessConditions?: Models.LeaseAccessConditions
-  ): void {
-    // check only when input Leased Id is not empty
-    if (
-      leaseAccessConditions !== undefined &&
-      leaseAccessConditions.leaseId !== undefined &&
-      leaseAccessConditions.leaseId !== ""
-    ) {
-      // return error when lease is unlocked
-      if (
-        container.properties.leaseStatus === Models.LeaseStatusType.Unlocked
-      ) {
-        const blobCtx = new BlobStorageContext(context);
-        throw StorageErrorFactory.getContainerLeaseLost(blobCtx.contextID!);
-      } else if (
-        container.leaseId !== undefined &&
-        leaseAccessConditions.leaseId.toLowerCase() !==
-          container.leaseId.toLowerCase()
-      ) {
-        // return error when lease is locked but lease ID not match
-        const blobCtx = new BlobStorageContext(context);
-        throw StorageErrorFactory.getContainerLeaseIdMismatchWithContainerOperation(
-          blobCtx.contextID!
-        );
-      }
-    }
   }
 }

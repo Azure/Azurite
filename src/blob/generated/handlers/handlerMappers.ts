@@ -39,6 +39,14 @@ operationHandlerMapping[Operation.Service_ListContainersSegment] = {
   handler: "serviceHandler",
   method: "listContainersSegment"
 };
+operationHandlerMapping[Operation.Service_GetUserDelegationKey] = {
+  arguments: [
+    "keyInfo",
+    "options"
+  ],
+  handler: "serviceHandler",
+  method: "getUserDelegationKey"
+};
 operationHandlerMapping[Operation.Service_GetAccountInfo] = {
   arguments: [],
   handler: "serviceHandler",
@@ -48,6 +56,16 @@ operationHandlerMapping[Operation.Service_GetAccountInfoWithHead] = {
   arguments: [],
   handler: "serviceHandler",
   method: "getAccountInfoWithHead"
+};
+operationHandlerMapping[Operation.Service_SubmitBatch] = {
+  arguments: [
+    "body",
+    "contentLength",
+    "multipartContentType",
+    "options"
+  ],
+  handler: "serviceHandler",
+  method: "submitBatch"
 };
 operationHandlerMapping[Operation.Container_Create] = {
   arguments: [
@@ -162,6 +180,43 @@ operationHandlerMapping[Operation.Container_GetAccountInfoWithHead] = {
   handler: "containerHandler",
   method: "getAccountInfoWithHead"
 };
+operationHandlerMapping[Operation.Directory_Create] = {
+  arguments: [
+    "options"
+  ],
+  handler: "directoryHandler",
+  method: "create"
+};
+operationHandlerMapping[Operation.Directory_Rename] = {
+  arguments: [
+    "renameSource",
+    "options"
+  ],
+  handler: "directoryHandler",
+  method: "rename"
+};
+operationHandlerMapping[Operation.Directory_Delete] = {
+  arguments: [
+    "recursiveDirectoryDelete",
+    "options"
+  ],
+  handler: "directoryHandler",
+  method: "delete"
+};
+operationHandlerMapping[Operation.Directory_SetAccessControl] = {
+  arguments: [
+    "options"
+  ],
+  handler: "directoryHandler",
+  method: "setAccessControl"
+};
+operationHandlerMapping[Operation.Directory_GetAccessControl] = {
+  arguments: [
+    "options"
+  ],
+  handler: "directoryHandler",
+  method: "getAccessControl"
+};
 operationHandlerMapping[Operation.Blob_Download] = {
   arguments: [
     "options"
@@ -182,6 +237,28 @@ operationHandlerMapping[Operation.Blob_Delete] = {
   ],
   handler: "blobHandler",
   method: "delete"
+};
+operationHandlerMapping[Operation.Blob_SetAccessControl] = {
+  arguments: [
+    "options"
+  ],
+  handler: "blobHandler",
+  method: "setAccessControl"
+};
+operationHandlerMapping[Operation.Blob_GetAccessControl] = {
+  arguments: [
+    "options"
+  ],
+  handler: "blobHandler",
+  method: "getAccessControl"
+};
+operationHandlerMapping[Operation.Blob_Rename] = {
+  arguments: [
+    "renameSource",
+    "options"
+  ],
+  handler: "blobHandler",
+  method: "rename"
 };
 operationHandlerMapping[Operation.Blob_Undelete] = {
   arguments: [
@@ -258,6 +335,14 @@ operationHandlerMapping[Operation.Blob_StartCopyFromURL] = {
   handler: "blobHandler",
   method: "startCopyFromURL"
 };
+operationHandlerMapping[Operation.Blob_CopyFromURL] = {
+  arguments: [
+    "copySource",
+    "options"
+  ],
+  handler: "blobHandler",
+  method: "copyFromURL"
+};
 operationHandlerMapping[Operation.Blob_AbortCopyFromURL] = {
   arguments: [
     "copyId",
@@ -309,6 +394,17 @@ operationHandlerMapping[Operation.PageBlob_ClearPages] = {
   ],
   handler: "pageBlobHandler",
   method: "clearPages"
+};
+operationHandlerMapping[Operation.PageBlob_UploadPagesFromURL] = {
+  arguments: [
+    "sourceUrl",
+    "sourceRange",
+    "contentLength",
+    "range",
+    "options"
+  ],
+  handler: "pageBlobHandler",
+  method: "uploadPagesFromURL"
 };
 operationHandlerMapping[Operation.PageBlob_GetPageRanges] = {
   arguments: [
@@ -364,6 +460,15 @@ operationHandlerMapping[Operation.AppendBlob_AppendBlock] = {
   ],
   handler: "appendBlobHandler",
   method: "appendBlock"
+};
+operationHandlerMapping[Operation.AppendBlob_AppendBlockFromUrl] = {
+  arguments: [
+    "sourceUrl",
+    "contentLength",
+    "options"
+  ],
+  handler: "appendBlobHandler",
+  method: "appendBlockFromUrl"
 };
 operationHandlerMapping[Operation.BlockBlob_Upload] = {
   arguments: [

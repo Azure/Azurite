@@ -6,9 +6,9 @@ import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
 import FSExtentStore from "../common/persistence/FSExtentStore";
-import IExtentMetadata from "../common/persistence/IExtentMetadata";
+import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
-import LokiExtentMetadata from "../common/persistence/LokiExtentMetadata";
+import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
 import ServerBase from "../common/ServerBase";
 import QueueGCManager from "./GC/queueGCMagager";
 import IQueueMetadataStore from "./persistence/IQueueMetadataStore";
@@ -37,7 +37,7 @@ const AFTER_CLOSE_MESSAGE = `Azurite Queue service successfully closed`;
  */
 export default class QueueServer extends ServerBase {
   private readonly metadataStore: IQueueMetadataStore;
-  private readonly extentMetadataStore: IExtentMetadata;
+  private readonly extentMetadataStore: IExtentMetadataStore;
   private readonly extentStore: IExtentStore;
   private readonly accountDataStore: IAccountDataStore;
   private readonly gcManager: IGCManager;
@@ -67,7 +67,7 @@ export default class QueueServer extends ServerBase {
       // logger
     );
 
-    const extentMetadataStore = new LokiExtentMetadata(
+    const extentMetadataStore = new LokiExtentMetadataStore(
       configuration.extentDBPath
     );
 
@@ -161,7 +161,7 @@ export default class QueueServer extends ServerBase {
       await this.extentStore.close();
     }
 
-    if (this.metadataStore !== undefined) {
+    if (this.extentMetadataStore !== undefined) {
       await this.extentMetadataStore.close();
     }
 

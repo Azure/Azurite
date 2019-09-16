@@ -1,8 +1,8 @@
 import ILogger from "../../common/ILogger";
 import { Logger } from "../../common/Logger";
 import NoLoggerStrategy from "../../common/NoLoggerStrategy";
-import { IPersistencyChunk } from "./IBlobDataStore";
-import LokiBlobDataStore from "./LokiBlobDataStore";
+import { IPersistencyChunk } from "./IBlobMetadataStore";
+import LokiBlobMetadataStore from "./LokiBlobMetadataStore";
 
 enum State {
   LISTING_EXTENTS_IN_BLOBS,
@@ -24,13 +24,13 @@ export default class LokiReferredExtentsAsyncIterator
   private blobListingMarker: string | undefined;
 
   constructor(
-    private readonly blobDataStore: LokiBlobDataStore,
+    private readonly blobMetadataStore: LokiBlobMetadataStore,
     private readonly logger: ILogger = new Logger(new NoLoggerStrategy())
   ) {}
 
   public async next(): Promise<IteratorResult<IPersistencyChunk[]>> {
     if (this.state === State.LISTING_EXTENTS_IN_BLOBS) {
-      const [blobs, marker] = await this.blobDataStore.listBlobs(
+      const [blobs, marker] = await this.blobMetadataStore.listBlobs(
         undefined,
         undefined,
         undefined,
@@ -72,7 +72,7 @@ export default class LokiReferredExtentsAsyncIterator
       };
     } else if (this.state === State.LISTING_EXTENTS_IN_BLOCKS) {
       // TODO: Make listBlocks operation segment
-      const blocks = await this.blobDataStore.listBlocks();
+      const blocks = await this.blobMetadataStore.listBlocks();
       this.logger.debug(
         `LokiReferredExtentsAsyncIterator:next() Handle blocks ${blocks.length}`
       );

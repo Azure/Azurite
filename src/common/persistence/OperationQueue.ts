@@ -54,6 +54,9 @@ export default class OperationQueue implements IOperationQueue {
           this.logger.debug(`OperationQueue.operate(${id}) got error, reject`);
           this.emitter.removeAllListeners(id);
           reject(err);
+          process.nextTick(() => {
+            this.execute();
+          });
         });
     });
   }
@@ -82,8 +85,10 @@ export default class OperationQueue implements IOperationQueue {
         );
         return;
       }
+
       this.runningConcurrency++;
       const head = this.operations.shift();
+
       let res;
       try {
         this.logger.debug(`OperationQueue.execute() await ${head!.id}`);

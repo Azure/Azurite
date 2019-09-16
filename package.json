@@ -21,13 +21,16 @@
   },
   "dependencies": {
     "@azure/ms-rest-js": "^1.5.0",
+    "@types/validator": "^10.11.3",
     "args": "^5.0.1",
     "etag": "^1.8.1",
     "express": "^4.16.4",
     "lokijs": "^1.5.6",
+    "mariadb": "^2.1.1",
     "morgan": "^1.9.1",
     "multistream": "^2.1.1",
     "rimraf": "^2.6.3",
+    "sequelize": "^5.18.4",
     "tslib": "^1.9.3",
     "uri-templates": "^0.2.0",
     "uuid": "^3.3.2",
@@ -35,9 +38,11 @@
     "xml2js": "^0.4.19"
   },
   "devDependencies": {
-    "@azure/storage-blob": "^10.3.0",
+    "@azure/storage-blob": "^10.4.1",
     "@azure/storage-queue": "^10.2.0",
     "@types/args": "^3.0.0",
+    "@types/async": "^3.0.1",
+    "@types/bluebird": "^3.5.27",
     "@types/etag": "^1.8.0",
     "@types/express": "^4.16.0",
     "@types/lokijs": "^1.5.2",
@@ -175,8 +180,8 @@
     "docker:publish:internal": "cross-var docker push xstoreazurite.azurecr.io/internal/azure-storage/azurite:$npm_package_version",
     "build": "tsc",
     "build:autorestdebug": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
-    "build:autorest:blob": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
-    "build:autorest:queue": "autorest ./swagger/queue.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
+    "build:autorest:blob": "autorest ./swagger/blob.md --typescript  --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
+    "build:autorest:queue": "autorest ./swagger/queue.md --typescript  --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
     "watch": "tsc -watch -p ./",
     "blob": "node -r ts-node/register src/blob/main.ts",
     "queue": "node -r ts-node/register src/queue/main.ts",
@@ -188,7 +193,9 @@
     "clean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log *.vsix",
     "clean:deep": "npm run clean && rimraf __blobstorage__ __queuestorage__ __azurite_db_blob__.json __azurite_db_queue__.json __azurite_db_queue_extent__.json debug.log",
     "validate:npmpack:win": "npm install && npm run build && npm pack && cross-var npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v && azurite-queue -v",
-    "validate:npmpack:linux_mac": "npm install && npm run build && npm pack && cross-var sudo npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v && azurite-queue -v"
+    "validate:npmpack:linux_mac": "npm install && npm run build && npm pack && cross-var sudo npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v && azurite-queue -v",
+    "db:migrate:blob:metadata": "sequelize db:migrate --config migrations/blob/metadata/config/config.json --migrations-path migrations/blob/metadata/migrations",
+    "db:create:blob:metadata": "sequelize db:create --config migrations/blob/metadata/config/config.json --migrations-path migrations/blob/metadata/migrations"
   },
   "husky": {
     "hooks": {
