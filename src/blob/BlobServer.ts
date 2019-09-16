@@ -13,7 +13,7 @@ import ServerBase from "../common/ServerBase";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
 import BlobGCManager from "./gc/BlobGCManager";
-import IBlobMetadataStore from "./persistence/IBlobMetaDataStore";
+import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import LokiBlobMetadataStore from "./persistence/LokiBlobMetadataStore";
 
 const BEFORE_CLOSE_MESSAGE = `Azurite Blob service is closing...`;
