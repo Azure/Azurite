@@ -553,8 +553,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         containerName: container
       }
     }).then(res => {
+      const requestId = context ? context.contextID : undefined;
       if (res === null || res === undefined) {
-        const requestId = context ? context.contextID : undefined;
         throw StorageErrorFactory.getContainerNotFound(requestId);
       }
 
@@ -572,7 +572,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         );
       }
 
-      const requestId = context ? context.contextID : undefined;
       if (res === null || res === undefined) {
         throw StorageErrorFactory.getContainerNotFound(requestId);
       }
@@ -1648,7 +1647,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       ).then(updateResult => {
         const updateNumber = updateResult[0];
         if (updateNumber === 0) {
-          const requestId = context ? context.contextID : undefined;
           throw StorageErrorFactory.getContainerNotFound(requestId);
         }
         return undefined;
@@ -2724,7 +2722,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         "blobSequenceNumber"
       );
       let lastModified = this.getModelValue<Date>(res, "lastModified", true);
-      let contentProperties: IBlobContentProperties = this.deserializeModelValue(
+      const contentProperties: IBlobContentProperties = this.deserializeModelValue(
         res,
         "contentProperties"
       );
@@ -2833,7 +2831,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       lease = this.UpdateBlobLeaseStateOnWriteBlob(lease);
 
       const etag = this.getModelValue<string>(res, "etag", true);
-      let lastModified = this.getModelValue<Date>(res, "lastModified", true);
+      const lastModified = this.getModelValue<Date>(res, "lastModified", true);
 
       await BlobsModel.update(
         {

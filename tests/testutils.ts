@@ -248,8 +248,7 @@ export class TestServerFactory {
   public static getServer(host?: string, port?: number): ServerBase {
     this.getServerType();
 
-    this.serverType = "sql";
-    console.log(this.serverType);
+    this.serverType = "loki";
 
     if (this.serverType === "sql") {
       // console.log("SqlServer");

@@ -104,7 +104,7 @@ describe("BlobAPIs", () => {
     assert.ok(result.snapshot);
   });
 
-  it.only("should delete snapshot", async () => {
+  it("should delete snapshot", async () => {
     const result = await blobURL.createSnapshot(Aborter.none);
     assert.ok(result.snapshot);
     const blobSnapshotURL = blobURL.withSnapshot(result.snapshot!);

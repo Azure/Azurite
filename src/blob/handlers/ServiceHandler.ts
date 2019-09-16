@@ -106,14 +106,10 @@ export default class ServiceHandler extends BaseHandler
       storageServiceProperties.cors = undefined;
     }
 
-    try {
-      await this.metadataStore.setServiceProperties({
-        ...storageServiceProperties,
-        accountName
-      });
-    } catch (err) {
-      console.log(err);
-    }
+    await this.metadataStore.setServiceProperties({
+      ...storageServiceProperties,
+      accountName
+    });
 
     const response: Models.ServiceSetPropertiesResponse = {
       requestId: context.contextID,
