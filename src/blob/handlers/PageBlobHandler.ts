@@ -135,7 +135,8 @@ export default class PageBlobHandler extends BaseHandler
       requestId: context.contextID,
       version: BLOB_API_VERSION,
       date,
-      isServerEncrypted: true
+      isServerEncrypted: true,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -201,9 +202,7 @@ export default class PageBlobHandler extends BaseHandler
       // TODO: Confirm status code
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
-        `The size of the request body ${
-          persistency.count
-        } mismatches the content-length ${contentLength}.`
+        `The size of the request body ${persistency.count} mismatches the content-length ${contentLength}.`
       );
     }
 
@@ -224,7 +223,8 @@ export default class PageBlobHandler extends BaseHandler
       requestId: blobCtx.contextID,
       version: BLOB_API_VERSION,
       date,
-      isServerEncrypted: true
+      isServerEncrypted: true,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -283,6 +283,7 @@ export default class PageBlobHandler extends BaseHandler
       blobSequenceNumber: res.blobSequenceNumber,
       requestId: blobCtx.contextID,
       version: BLOB_API_VERSION,
+      clientRequestId: options.requestId,
       date
     };
 
@@ -339,6 +340,7 @@ export default class PageBlobHandler extends BaseHandler
       lastModified: date,
       requestId: blobCtx.contextID,
       version: BLOB_API_VERSION,
+      clientRequestId: options.requestId,
       date
     };
 
@@ -385,6 +387,7 @@ export default class PageBlobHandler extends BaseHandler
       blobSequenceNumber: res.blobSequenceNumber,
       requestId: blobCtx.contextID,
       version: BLOB_API_VERSION,
+      clientRequestId: options.requestId,
       date
     };
 
@@ -418,6 +421,7 @@ export default class PageBlobHandler extends BaseHandler
       blobSequenceNumber: res.blobSequenceNumber,
       requestId: blobCtx.contextID,
       version: BLOB_API_VERSION,
+      clientRequestId: options.requestId,
       date
     };
 

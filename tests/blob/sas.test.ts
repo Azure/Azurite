@@ -523,7 +523,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await blobURL.create(Aborter.none, 1024);
 
     const id = "unique-id";
-    await containerURL.setAccessPolicy(Aborter.none, undefined, [
+    const result = await containerURL.setAccessPolicy(Aborter.none, undefined, [
       {
         accessPolicy: {
           expiry: tmr,
@@ -533,6 +533,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
         id
       }
     ]);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
 
     const blobSAS = generateBlobSASQueryParameters(
       {

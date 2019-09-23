@@ -64,7 +64,8 @@ export default class ContainerHandler extends BaseHandler
       lastModified,
       requestId: blobCtx.contextID,
       statusCode: 201,
-      version: BLOB_API_VERSION
+      version: BLOB_API_VERSION,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -98,7 +99,8 @@ export default class ContainerHandler extends BaseHandler
       metadata: containerProperties.metadata,
       requestId: context.contextID,
       statusCode: 200,
-      version: BLOB_API_VERSION
+      version: BLOB_API_VERSION,
+      clientRequestId: options.requestId
     };
     return response;
   }
@@ -150,7 +152,8 @@ export default class ContainerHandler extends BaseHandler
       date: context.startTime,
       requestId: context.contextID,
       statusCode: 202,
-      version: BLOB_API_VERSION
+      version: BLOB_API_VERSION,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -188,7 +191,8 @@ export default class ContainerHandler extends BaseHandler
       eTag,
       lastModified: date,
       requestId: context.contextID,
-      statusCode: 200
+      statusCode: 200,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -232,6 +236,7 @@ export default class ContainerHandler extends BaseHandler
     responseObject.requestId = context.contextID;
     responseObject.version = BLOB_API_VERSION;
     responseObject.statusCode = 200;
+    responseObject.clientRequestId = options.requestId;
 
     // TODO: Need fix generator code since the output containerAcl can't be serialized correctly
     // tslint:disable-next-line:max-line-length
@@ -278,7 +283,8 @@ export default class ContainerHandler extends BaseHandler
       lastModified: date,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
-      statusCode: 200
+      statusCode: 200,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -313,7 +319,8 @@ export default class ContainerHandler extends BaseHandler
       leaseId: res.leaseId,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
-      statusCode: 201
+      statusCode: 201,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -350,7 +357,8 @@ export default class ContainerHandler extends BaseHandler
       lastModified: res.lastModified,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
-      statusCode: 200
+      statusCode: 200,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -388,7 +396,8 @@ export default class ContainerHandler extends BaseHandler
       leaseId: res.leaseId,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
-      statusCode: 200
+      statusCode: 200,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -424,7 +433,8 @@ export default class ContainerHandler extends BaseHandler
       leaseTime: res.leaseTime,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
-      statusCode: 202
+      statusCode: 202,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -465,7 +475,8 @@ export default class ContainerHandler extends BaseHandler
       leaseId: res.leaseId,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
-      statusCode: 200
+      statusCode: 200,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -535,6 +546,7 @@ export default class ContainerHandler extends BaseHandler
       segment: {
         blobItems
       },
+      clientRequestId: options.requestId,
       nextMarker: `${nextMarker || ""}`
     };
 
@@ -631,6 +643,7 @@ export default class ContainerHandler extends BaseHandler
         blobItems,
         blobPrefixes
       },
+      clientRequestId: options.requestId,
       nextMarker: `${nextMarker || ""}`
     };
 

@@ -306,7 +306,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           eTag: res.properties.etag,
           requestId: context.contextID,
           version: BLOB_API_VERSION,
-          date: context.startTime
+          date: context.startTime,
+          clientRequestId: options.requestId
         }
       : {
           statusCode: 200,
@@ -319,6 +320,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           acceptRanges: "bytes",
           blobCommittedBlockCount: undefined, // TODO: Append blob
           isServerEncrypted: true,
+          clientRequestId: options.requestId,
           ...res.properties
         };
 
@@ -353,7 +355,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       statusCode: 202,
       requestId: context.contextID,
       date: context.startTime,
-      version: BLOB_API_VERSION
+      version: BLOB_API_VERSION,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -407,7 +410,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blobSequenceNumber: res.blobSequenceNumber,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
-      date: context.startTime
+      date: context.startTime,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -446,7 +450,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       isServerEncrypted: true,
       requestId: context.contextID,
       date: context.startTime,
-      version: BLOB_API_VERSION
+      version: BLOB_API_VERSION,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -483,7 +488,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       leaseId: res.leaseId,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
-      statusCode: 201
+      statusCode: 201,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -521,7 +527,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       lastModified: res.lastModified,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
-      statusCode: 200
+      statusCode: 200,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -560,7 +567,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       leaseId: res.leaseId,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
-      statusCode: 200
+      statusCode: 200,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -602,7 +610,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       leaseId: res.leaseId,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
-      statusCode: 200
+      statusCode: 200,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -639,7 +648,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       leaseTime: res.leaseTime,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
-      statusCode: 202
+      statusCode: 202,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -677,7 +687,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       requestId: context.contextID,
       date: context.startTime!,
       version: BLOB_API_VERSION,
-      snapshot: res.snapshot
+      snapshot: res.snapshot,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -742,7 +753,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       version: BLOB_API_VERSION,
       date: context.startTime,
       copyId: res.copyId,
-      copyStatus: res.copyStatus
+      copyStatus: res.copyStatus,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -786,7 +798,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       statusCode: 204,
       requestId: context.contextID,
       version: BLOB_API_VERSION,
-      date: context.startTime
+      date: context.startTime,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -821,7 +834,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const response: Models.BlobSetTierResponse = {
       requestId: context.contextID,
       version: BLOB_API_VERSION,
-      statusCode: res
+      statusCode: res,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -961,7 +975,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentLength,
       contentRange,
       contentMD5,
-      isServerEncrypted: true
+      isServerEncrypted: true,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -1070,7 +1085,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentLength,
       contentMD5,
       blobContentMD5: blob.properties.contentMD5,
-      isServerEncrypted: true
+      isServerEncrypted: true,
+      clientRequestId: options.requestId
     };
 
     return response;
