@@ -76,6 +76,10 @@ describe("BlobAPIs", () => {
     const result = await blobURL.download(Aborter.none, 0);
     assert.deepStrictEqual(await bodyToString(result, content.length), content);
     assert.equal(result.contentRange, undefined);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   it("download all parameters set", async () => {
@@ -84,6 +88,10 @@ describe("BlobAPIs", () => {
     });
     assert.deepStrictEqual(await bodyToString(result, 1), content[0]);
     assert.equal(result.contentRange, `bytes 0-0/${content.length}`);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   it("download entire with range", async () => {
@@ -93,20 +101,36 @@ describe("BlobAPIs", () => {
       result.contentRange,
       `bytes 0-${content.length - 1}/${content.length}`
     );
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   it("delete", async () => {
-    await blobURL.delete(Aborter.none);
+    const result = await blobURL.delete(Aborter.none);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   it("should create a snapshot from a blob", async () => {
     const result = await blobURL.createSnapshot(Aborter.none);
     assert.ok(result.snapshot);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   it("should delete snapshot", async () => {
     const result = await blobURL.createSnapshot(Aborter.none);
     assert.ok(result.snapshot);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
     const blobSnapshotURL = blobURL.withSnapshot(result.snapshot!);
     await blobSnapshotURL.getProperties(Aborter.none);
     await blobSnapshotURL.delete(Aborter.none);
@@ -120,6 +144,10 @@ describe("BlobAPIs", () => {
     );
     // Verify that the snapshot is deleted
     assert.equal(result2.segment.blobItems!.length, 0);
+    assert.equal(
+      result2._response.request.headers.get("x-ms-client-request-id"),
+      result2.clientRequestId
+    );
   });
 
   it("should also list snapshots", async () => {
@@ -140,22 +168,46 @@ describe("BlobAPIs", () => {
       a: "a",
       b: "b"
     };
-    await blobURL.setMetadata(Aborter.none, metadata);
+    const result_setmeta = await blobURL.setMetadata(Aborter.none, metadata);
+    assert.equal(
+      result_setmeta._response.request.headers.get("x-ms-client-request-id"),
+      result_setmeta.clientRequestId
+    );
     const result = await blobURL.getProperties(Aborter.none);
     assert.deepStrictEqual(result.metadata, metadata);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   it("acquireLease_available_proposedLeaseId_fixed", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 30;
-    await blobURL.acquireLease(Aborter.none, guid, duration);
+    const result_acquire = await blobURL.acquireLease(
+      Aborter.none,
+      guid,
+      duration
+    );
+    assert.equal(
+      result_acquire._response.request.headers.get("x-ms-client-request-id"),
+      result_acquire.clientRequestId
+    );
 
     const result = await blobURL.getProperties(Aborter.none);
     assert.equal(result.leaseDuration, "fixed");
     assert.equal(result.leaseState, "leased");
     assert.equal(result.leaseStatus, "locked");
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
 
-    await blobURL.releaseLease(Aborter.none, guid);
+    const result_release = await blobURL.releaseLease(Aborter.none, guid);
+    assert.equal(
+      result_release._response.request.headers.get("x-ms-client-request-id"),
+      result_release.clientRequestId
+    );
   });
 
   it("acquireLease_available_NoproposedLeaseId_infinite", async () => {
@@ -204,7 +256,11 @@ describe("BlobAPIs", () => {
     assert.equal(result2.leaseState, "expired");
     assert.equal(result2.leaseStatus, "unlocked");
 
-    await blobURL.renewLease(Aborter.none, guid);
+    const result_renew = await blobURL.renewLease(Aborter.none, guid);
+    assert.equal(
+      result_renew._response.request.headers.get("x-ms-client-request-id"),
+      result_renew.clientRequestId
+    );
     const result3 = await blobURL.getProperties(Aborter.none);
     assert.equal(result3.leaseDuration, "fixed");
     assert.equal(result3.leaseState, "leased");
@@ -224,7 +280,15 @@ describe("BlobAPIs", () => {
     assert.equal(result.leaseStatus, "locked");
 
     const newGuid = "3c7e72ebb4304526bc53d8ecef03798f";
-    await blobURL.changeLease(Aborter.none, guid, newGuid);
+    const result_change = await blobURL.changeLease(
+      Aborter.none,
+      guid,
+      newGuid
+    );
+    assert.equal(
+      result_change._response.request.headers.get("x-ms-client-request-id"),
+      result_change.clientRequestId
+    );
 
     await blobURL.getProperties(Aborter.none);
     await blobURL.releaseLease(Aborter.none, newGuid);
@@ -244,6 +308,10 @@ describe("BlobAPIs", () => {
     let breaklefttime = breakDuration;
     while (breaklefttime > 0) {
       const breakResult = await blobURL.breakLease(Aborter.none, breakDuration);
+      assert.equal(
+        breakResult._response.request.headers.get("x-ms-client-request-id"),
+        breakResult.clientRequestId
+      );
 
       assert.equal(breakResult.leaseTime! <= breaklefttime, true);
       breaklefttime = breakResult.leaseTime!;
@@ -274,6 +342,10 @@ describe("BlobAPIs", () => {
       b: "b"
     };
     const setResult = await blobURL.setMetadata(Aborter.none, metadata);
+    assert.equal(
+      setResult._response.request.headers.get("x-ms-client-request-id"),
+      setResult.clientRequestId
+    );
     assert.notEqual(setResult.date, undefined);
     assert.notEqual(setResult.eTag, undefined);
     assert.notEqual(setResult.isServerEncrypted, undefined);
@@ -305,7 +377,11 @@ describe("BlobAPIs", () => {
       blobContentLanguage: contentLanguage,
       blobContentEncoding: contentEncoding
     };
-    await blobURL.setHTTPHeaders(Aborter.none, headers);
+    const result_set = await blobURL.setHTTPHeaders(Aborter.none, headers);
+    assert.equal(
+      result_set._response.request.headers.get("x-ms-client-request-id"),
+      result_set.clientRequestId
+    );
     const result = await blobURL.getProperties(Aborter.none);
     assert.deepStrictEqual(result.cacheControl, cacheControl);
     assert.deepStrictEqual(result.contentType, contentType);
@@ -315,7 +391,12 @@ describe("BlobAPIs", () => {
   });
 
   it("setTier set default to cool", async () => {
-    await blockBlobURL.setTier(Aborter.none, "Cool");
+    const result = await blockBlobURL.setTier(Aborter.none, "Cool");
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+
     const properties = await blockBlobURL.getProperties(Aborter.none);
     assert.equal(properties.accessTier!.toLowerCase(), "cool");
   });
@@ -397,12 +478,23 @@ describe("BlobAPIs", () => {
       blobContentType: "blobContentType"
     };
 
-    await sourceBlobURL.upload(Aborter.none, "hello", 5, {
+    const result_upload = await sourceBlobURL.upload(Aborter.none, "hello", 5, {
       metadata,
       blobHTTPHeaders
     });
+    assert.equal(
+      result_upload._response.request.headers.get("x-ms-client-request-id"),
+      result_upload.clientRequestId
+    );
 
-    await destBlobURL.startCopyFromURL(Aborter.none, sourceBlobURL.url);
+    const result_startcopy = await destBlobURL.startCopyFromURL(
+      Aborter.none,
+      sourceBlobURL.url
+    );
+    assert.equal(
+      result_startcopy._response.request.headers.get("x-ms-client-request-id"),
+      result_startcopy.clientRequestId
+    );
 
     const result = await destBlobURL.getProperties(Aborter.none);
     assert.ok(result.date);

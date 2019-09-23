@@ -102,10 +102,19 @@ describe("BlockBlobHighlevel", () => {
   });
 
   it("uploadFileToBlockBlob should success when blob >= BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES", async () => {
-    await uploadFileToBlockBlob(Aborter.none, tempFileLarge, blockBlobURL, {
-      blockSize: 4 * 1024 * 1024,
-      parallelism: 20
-    });
+    const result = await uploadFileToBlockBlob(
+      Aborter.none,
+      tempFileLarge,
+      blockBlobURL,
+      {
+        blockSize: 4 * 1024 * 1024,
+        parallelism: 20
+      }
+    );
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
 
     const downloadResponse = await blockBlobURL.download(Aborter.none, 0);
     const downloadedFile = join(tempFolderPath, getUniqueName("downloadfile."));
@@ -199,12 +208,16 @@ describe("BlockBlobHighlevel", () => {
 
   it("uploadStreamToBlockBlob should success", async () => {
     const rs = fs.createReadStream(tempFileLarge);
-    await uploadStreamToBlockBlob(
+    const result = await uploadStreamToBlockBlob(
       Aborter.none,
       rs,
       blockBlobURL,
       4 * 1024 * 1024,
       20
+    );
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
     );
 
     const downloadResponse = await blockBlobURL.download(Aborter.none, 0);
@@ -295,12 +308,16 @@ describe("BlockBlobHighlevel", () => {
 
   it("downloadBlobToBuffer should success", async () => {
     const rs = fs.createReadStream(tempFileLarge);
-    await uploadStreamToBlockBlob(
+    const result = await uploadStreamToBlockBlob(
       Aborter.none,
       rs,
       blockBlobURL,
       4 * 1024 * 1024,
       20
+    );
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
     );
 
     const buf = Buffer.alloc(tempFileLargeLength);
@@ -370,6 +387,10 @@ describe("BlockBlobHighlevel", () => {
           }
         }
       }
+    );
+    assert.equal(
+      downloadResponse._response.request.headers.get("x-ms-client-request-id"),
+      downloadResponse.clientRequestId
     );
 
     retirableReadableStreamOptions = (downloadResponse.readableStreamBody! as any)
