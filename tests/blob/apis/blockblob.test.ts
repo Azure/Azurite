@@ -71,9 +71,21 @@ describe("BlockBlobAPIs", () => {
 
   it("upload with string body and default parameters", async () => {
     const body: string = getUniqueName("randomstring");
-    await blockBlobURL.upload(Aborter.none, body, body.length);
+    const result_upload = await blockBlobURL.upload(
+      Aborter.none,
+      body,
+      body.length
+    );
+    assert.equal(
+      result_upload._response.request.headers.get("x-ms-client-request-id"),
+      result_upload.clientRequestId
+    );
     const result = await blobURL.download(Aborter.none, 0);
     assert.deepStrictEqual(await bodyToString(result, body.length), body);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   it("upload with string body and all parameters set", async () => {
@@ -89,10 +101,19 @@ describe("BlockBlobAPIs", () => {
         keyb: "valb"
       }
     };
-    await blockBlobURL.upload(Aborter.none, body, body.length, {
-      blobHTTPHeaders: options,
-      metadata: options.metadata
-    });
+    const result_upload = await blockBlobURL.upload(
+      Aborter.none,
+      body,
+      body.length,
+      {
+        blobHTTPHeaders: options,
+        metadata: options.metadata
+      }
+    );
+    assert.equal(
+      result_upload._response.request.headers.get("x-ms-client-request-id"),
+      result_upload.clientRequestId
+    );
     const result = await blobURL.download(Aborter.none, 0);
     assert.deepStrictEqual(await bodyToString(result, body.length), body);
     assert.deepStrictEqual(result.cacheControl, options.blobCacheControl);
@@ -104,15 +125,23 @@ describe("BlockBlobAPIs", () => {
     assert.deepStrictEqual(result.contentLanguage, options.blobContentLanguage);
     assert.deepStrictEqual(result.contentType, options.blobContentType);
     assert.deepStrictEqual(result.metadata, options.metadata);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   it("stageBlock", async () => {
     const body = "HelloWorld";
-    await blockBlobURL.stageBlock(
+    const result_stage = await blockBlobURL.stageBlock(
       Aborter.none,
       base64encode("1"),
       body,
       body.length
+    );
+    assert.equal(
+      result_stage._response.request.headers.get("x-ms-client-request-id"),
+      result_stage.clientRequestId
     );
     await blockBlobURL.stageBlock(
       Aborter.none,
@@ -129,6 +158,10 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
     assert.equal(listResponse.uncommittedBlocks![1].name, base64encode("2"));
     assert.equal(listResponse.uncommittedBlocks![1].size, body.length);
+    assert.equal(
+      listResponse._response.request.headers.get("x-ms-client-request-id"),
+      listResponse.clientRequestId
+    );
   });
 
   it("commitBlockList", async () => {
@@ -145,10 +178,14 @@ describe("BlockBlobAPIs", () => {
       body,
       body.length
     );
-    await blockBlobURL.commitBlockList(Aborter.none, [
+    const result_commit = await blockBlobURL.commitBlockList(Aborter.none, [
       base64encode("1"),
       base64encode("2")
     ]);
+    assert.equal(
+      result_commit._response.request.headers.get("x-ms-client-request-id"),
+      result_commit.clientRequestId
+    );
     const listResponse = await blockBlobURL.getBlockList(
       Aborter.none,
       "committed"
@@ -158,6 +195,10 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.committedBlocks![0].size, body.length);
     assert.equal(listResponse.committedBlocks![1].name, base64encode("2"));
     assert.equal(listResponse.committedBlocks![1].size, body.length);
+    assert.equal(
+      listResponse._response.request.headers.get("x-ms-client-request-id"),
+      listResponse.clientRequestId
+    );
   });
 
   it("commitBlockList with all parameters set", async () => {
@@ -219,6 +260,10 @@ describe("BlockBlobAPIs", () => {
     assert.deepStrictEqual(result.contentLanguage, options.blobContentLanguage);
     assert.deepStrictEqual(result.contentType, options.blobContentType);
     assert.deepStrictEqual(result.metadata, options.metadata);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   it("getBlockList", async () => {
@@ -249,6 +294,10 @@ describe("BlockBlobAPIs", () => {
 
     await blockBlobURL.upload(Aborter.none, bodyBuffer, body.length);
     const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
 
     const downloadedBody = await new Promise((resolve, reject) => {
       const buffer: string[] = [];

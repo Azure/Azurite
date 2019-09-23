@@ -52,9 +52,7 @@ export default class BlockBlobHandler extends BaseHandler
     if (persistency.count !== contentLength) {
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
-        `The size of the request body ${
-          persistency.count
-        } mismatches the content-length ${contentLength}.`
+        `The size of the request body ${persistency.count} mismatches the content-length ${contentLength}.`
       );
     }
 
@@ -135,7 +133,8 @@ export default class BlockBlobHandler extends BaseHandler
       requestId: blobCtx.contextID,
       version: BLOB_API_VERSION,
       date,
-      isServerEncrypted: true
+      isServerEncrypted: true,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -166,9 +165,7 @@ export default class BlockBlobHandler extends BaseHandler
       // TODO: Confirm error code
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
-        `The size of the request body ${
-          persistency.count
-        } mismatches the content-length ${contentLength}.`
+        `The size of the request body ${persistency.count} mismatches the content-length ${contentLength}.`
       );
     }
 
@@ -191,7 +188,8 @@ export default class BlockBlobHandler extends BaseHandler
       requestId: blobCtx.contextID,
       version: BLOB_API_VERSION,
       date,
-      isServerEncrypted: true
+      isServerEncrypted: true,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -308,7 +306,8 @@ export default class BlockBlobHandler extends BaseHandler
       requestId: blobCtx.contextID,
       version: BLOB_API_VERSION,
       date: blobCtx.startTime,
-      isServerEncrypted: true
+      isServerEncrypted: true,
+      clientRequestId: options.requestId
     };
     return response;
   }
@@ -346,6 +345,7 @@ export default class BlockBlobHandler extends BaseHandler
 
     response.uncommittedBlocks = res.uncommittedBlocks;
     response.committedBlocks = res.committedBlocks;
+    response.clientRequestId = options.requestId;
 
     return response;
   }

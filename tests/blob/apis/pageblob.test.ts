@@ -92,12 +92,20 @@ describe("PageBlobAPIs", () => {
   });
 
   it("create with default parameters", async () => {
-    await pageBlobURL.create(Aborter.none, 512);
+    const reuslt_create = await pageBlobURL.create(Aborter.none, 512);
+    assert.equal(
+      reuslt_create._response.request.headers.get("x-ms-client-request-id"),
+      reuslt_create.clientRequestId
+    );
 
     const result = await blobURL.download(Aborter.none, 0);
     assert.deepStrictEqual(
       await bodyToString(result, 512),
       "\u0000".repeat(512)
+    );
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
     );
   });
 
@@ -115,12 +123,20 @@ describe("PageBlobAPIs", () => {
         key2: "valb"
       }
     };
-    await pageBlobURL.create(Aborter.none, 512, options);
+    const result_create = await pageBlobURL.create(Aborter.none, 512, options);
+    assert.equal(
+      result_create._response.request.headers.get("x-ms-client-request-id"),
+      result_create.clientRequestId
+    );
 
     const result = await blobURL.download(Aborter.none, 0);
     assert.deepStrictEqual(
       await bodyToString(result, 512),
       "\u0000".repeat(512)
+    );
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
     );
 
     const properties = await blobURL.getProperties(Aborter.none);
@@ -146,6 +162,10 @@ describe("PageBlobAPIs", () => {
     );
     assert.equal(properties.metadata!.key1, options.metadata.key1);
     assert.equal(properties.metadata!.key2, options.metadata.key2);
+    assert.equal(
+      properties._response.request.headers.get("x-ms-client-request-id"),
+      properties.clientRequestId
+    );
   });
 
   it("download page blob with no ranges uploaded", async () => {
@@ -155,11 +175,19 @@ describe("PageBlobAPIs", () => {
     const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
     assert.deepStrictEqual((ranges.pageRange || []).length, 0);
     assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.equal(
+      ranges._response.request.headers.get("x-ms-client-request-id"),
+      ranges.clientRequestId
+    );
 
     const result = await blobURL.download(Aborter.none, 0);
     assert.deepStrictEqual(
       await bodyToString(result, length),
       "\u0000".repeat(length)
+    );
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
     );
   });
 
@@ -170,11 +198,19 @@ describe("PageBlobAPIs", () => {
     let ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
     assert.deepStrictEqual((ranges.pageRange || []).length, 0);
     assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.equal(
+      ranges._response.request.headers.get("x-ms-client-request-id"),
+      ranges.clientRequestId
+    );
 
     let result = await blobURL.download(Aborter.none, 0);
     assert.deepStrictEqual(
       await bodyToString(result, length),
       "\u0000".repeat(length)
+    );
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
     );
 
     length *= 2;
@@ -182,11 +218,19 @@ describe("PageBlobAPIs", () => {
     ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
     assert.deepStrictEqual((ranges.pageRange || []).length, 0);
     assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.equal(
+      ranges._response.request.headers.get("x-ms-client-request-id"),
+      ranges.clientRequestId
+    );
 
     result = await blobURL.download(Aborter.none, 0);
     assert.deepStrictEqual(
       await bodyToString(result, length),
       "\u0000".repeat(length)
+    );
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
     );
   });
 
@@ -205,7 +249,11 @@ describe("PageBlobAPIs", () => {
     );
 
     length /= 2;
-    await pageBlobURL.resize(Aborter.none, length);
+    const result_resize = await pageBlobURL.resize(Aborter.none, length);
+    assert.equal(
+      result_resize._response.request.headers.get("x-ms-client-request-id"),
+      result_resize.clientRequestId
+    );
     ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
     assert.deepStrictEqual((ranges.pageRange || []).length, 0);
     assert.deepStrictEqual((ranges.clearRange || []).length, 0);
@@ -224,7 +272,16 @@ describe("PageBlobAPIs", () => {
     assert.equal(await bodyToString(result, 1024), "\u0000".repeat(1024));
 
     await pageBlobURL.uploadPages(Aborter.none, "a".repeat(512), 0, 512);
-    await pageBlobURL.uploadPages(Aborter.none, "b".repeat(512), 512, 512);
+    const result_upload = await pageBlobURL.uploadPages(
+      Aborter.none,
+      "b".repeat(512),
+      512,
+      512
+    );
+    assert.equal(
+      result_upload._response.request.headers.get("x-ms-client-request-id"),
+      result_upload.clientRequestId
+    );
 
     const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
     const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
@@ -624,7 +681,11 @@ describe("PageBlobAPIs", () => {
     );
 
     length = 512 * 2;
-    await pageBlobURL.resize(Aborter.none, length);
+    const result_resize = await pageBlobURL.resize(Aborter.none, length);
+    assert.equal(
+      result_resize._response.request.headers.get("x-ms-client-request-id"),
+      result_resize.clientRequestId
+    );
 
     const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
     const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
@@ -1044,7 +1105,11 @@ describe("PageBlobAPIs", () => {
     result = await pageBlobURL.download(Aborter.none, 0, 1024);
     assert.deepStrictEqual(await bodyToString(result, 1024), "a".repeat(1024));
 
-    await pageBlobURL.clearPages(Aborter.none, 0, 512);
+    const result_clear = await pageBlobURL.clearPages(Aborter.none, 0, 512);
+    assert.equal(
+      result_clear._response.request.headers.get("x-ms-client-request-id"),
+      result_clear.clientRequestId
+    );
     result = await pageBlobURL.download(Aborter.none, 0, 512);
     assert.deepStrictEqual(
       await bodyToString(result, 512),
@@ -1503,9 +1568,16 @@ describe("PageBlobAPIs", () => {
     await pageBlobURL.create(Aborter.none, 1024);
     let propertiesResponse = await pageBlobURL.getProperties(Aborter.none);
 
-    await pageBlobURL.updateSequenceNumber(Aborter.none, "increment");
+    const result = await pageBlobURL.updateSequenceNumber(
+      Aborter.none,
+      "increment"
+    );
     propertiesResponse = await pageBlobURL.getProperties(Aborter.none);
     assert.equal(propertiesResponse.blobSequenceNumber!, 1);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
 
     await pageBlobURL.updateSequenceNumber(Aborter.none, "update", 10);
     propertiesResponse = await pageBlobURL.getProperties(Aborter.none);
@@ -1522,9 +1594,13 @@ describe("PageBlobAPIs", () => {
     await pageBlobURL.create(Aborter.none, length);
     let propertiesResponse = await pageBlobURL.getProperties(Aborter.none);
 
-    await pageBlobURL.setTier(Aborter.none, "P10");
+    const result = await pageBlobURL.setTier(Aborter.none, "P10");
     propertiesResponse = await pageBlobURL.getProperties(Aborter.none);
     assert.equal(propertiesResponse.accessTier!, "P10");
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
 
     await pageBlobURL.setTier(Aborter.none, "P20");
     propertiesResponse = await pageBlobURL.getProperties(Aborter.none);

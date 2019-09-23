@@ -220,7 +220,8 @@ export function getContainerGetAccountInfoResponse(
     date: context.startTime!,
     requestId: context.contextID,
     statusCode: 200,
-    version: BLOB_API_VERSION
+    version: BLOB_API_VERSION,
+    clientRequestId: context.request!.getHeader("x-ms-client-request-id")
   };
   return response;
 }
