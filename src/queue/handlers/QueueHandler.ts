@@ -53,7 +53,8 @@ export default class QueueHandler extends BaseHandler implements IQueueHandler {
       date: context.startTime,
       requestId: queueCtx.contextID,
       statusCode,
-      version: QUEUE_API_VERSION
+      version: QUEUE_API_VERSION,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -81,7 +82,8 @@ export default class QueueHandler extends BaseHandler implements IQueueHandler {
       date: context.startTime,
       requestId: context.contextID,
       statusCode: 204,
-      version: QUEUE_API_VERSION
+      version: QUEUE_API_VERSION,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -118,7 +120,8 @@ export default class QueueHandler extends BaseHandler implements IQueueHandler {
       date: context.startTime,
       requestId: context.contextID,
       statusCode: 200,
-      version: QUEUE_API_VERSION
+      version: QUEUE_API_VERSION,
+      clientRequestId: options.requestId
     };
     return response;
   }
@@ -170,7 +173,8 @@ export default class QueueHandler extends BaseHandler implements IQueueHandler {
       date: context.startTime,
       requestId: context.contextID,
       statusCode: 204,
-      version: QUEUE_API_VERSION
+      version: QUEUE_API_VERSION,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -210,6 +214,7 @@ export default class QueueHandler extends BaseHandler implements IQueueHandler {
     responseObject.requestId = context.contextID;
     responseObject.version = QUEUE_API_VERSION;
     responseObject.statusCode = 200;
+    responseObject.clientRequestId = options.requestId;
 
     return response;
   }
@@ -273,7 +278,8 @@ export default class QueueHandler extends BaseHandler implements IQueueHandler {
       date: context.startTime,
       requestId: context.contextID,
       version: QUEUE_API_VERSION,
-      statusCode: 204
+      statusCode: 204,
+      clientRequestId: options.requestId
     };
 
     return response;

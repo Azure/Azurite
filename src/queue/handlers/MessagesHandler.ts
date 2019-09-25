@@ -131,6 +131,7 @@ export default class MessagesHandler extends BaseHandler
     responseObject.requestId = context.contextID;
     responseObject.version = QUEUE_API_VERSION;
     responseObject.statusCode = 200;
+    responseObject.clientRequestId = options.requestId;
     return response;
   }
 
@@ -156,7 +157,8 @@ export default class MessagesHandler extends BaseHandler
       date: context.startTime,
       requestId: queueCtx.contextID,
       statusCode: 204,
-      version: QUEUE_API_VERSION
+      version: QUEUE_API_VERSION,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -293,6 +295,7 @@ export default class MessagesHandler extends BaseHandler
     responseObject.requestId = context.contextID;
     responseObject.version = QUEUE_API_VERSION;
     responseObject.statusCode = 201;
+    responseObject.clientRequestId = options.requestId;
 
     return response;
   }
@@ -360,6 +363,7 @@ export default class MessagesHandler extends BaseHandler
     responseObject.requestId = context.contextID;
     responseObject.version = QUEUE_API_VERSION;
     responseObject.statusCode = 200;
+    responseObject.clientRequestId = options.requestId;
     return response;
   }
 }

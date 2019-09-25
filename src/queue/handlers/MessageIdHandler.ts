@@ -129,7 +129,8 @@ export default class MessageIdHandler extends BaseHandler
       date: context.startTime,
       requestId: context.contextID,
       version: QUEUE_API_VERSION,
-      statusCode: 204
+      statusCode: 204,
+      clientRequestId: options.requestId
     };
     return response;
   }
@@ -165,7 +166,8 @@ export default class MessageIdHandler extends BaseHandler
       date: context.startTime,
       requestId: context.contextID,
       version: QUEUE_API_VERSION,
-      statusCode: 204
+      statusCode: 204,
+      clientRequestId: options.requestId
     };
     return response;
   }

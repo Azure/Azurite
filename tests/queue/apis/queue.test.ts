@@ -90,10 +90,18 @@ describe("Queue APIs test", () => {
       keya: "vala",
       keyb: "valb"
     };
-    await queueURL.setMetadata(Aborter.none, metadata);
+    const mResult = await queueURL.setMetadata(Aborter.none, metadata);
+    assert.equal(
+      mResult._response.request.headers.get("x-ms-client-request-id"),
+      mResult.clientRequestId
+    );
 
     const result = await queueURL.getProperties(Aborter.none);
     assert.deepEqual(result.metadata, metadata);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   it("getProperties with default/all parameters", async () => {
@@ -176,10 +184,18 @@ describe("Queue APIs test", () => {
       }
     ];
 
-    await queueURL.setAccessPolicy(Aborter.none, queueAcl);
+    const sResult = await queueURL.setAccessPolicy(Aborter.none, queueAcl);
+    assert.equal(
+      sResult._response.request.headers.get("x-ms-client-request-id"),
+      sResult.clientRequestId
+    );
 
     const result = await queueURL.getAccessPolicy(Aborter.none);
     assert.deepEqual(result.signedIdentifiers, queueAcl);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
   it("setAccessPolicy negative", async () => {
     const queueAcl = [

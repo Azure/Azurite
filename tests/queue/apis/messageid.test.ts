@@ -100,6 +100,10 @@ describe("MessageId APIs test", () => {
     assert.ok(eResult.requestId);
     assert.ok(eResult.timeNextVisible);
     assert.ok(eResult.version);
+    assert.equal(
+      eResult._response.request.headers.get("x-ms-client-request-id"),
+      eResult.clientRequestId
+    );
 
     let newMessage = "";
     let messageIdURL = MessageIdURL.fromMessagesURL(
@@ -117,6 +121,10 @@ describe("MessageId APIs test", () => {
     assert.ok(uResult.date);
     assert.ok(uResult.requestId);
     assert.ok(uResult.popReceipt);
+    assert.equal(
+      uResult._response.request.headers.get("x-ms-client-request-id"),
+      uResult.clientRequestId
+    );
 
     let pResult = await messagesURL.peek(Aborter.none);
     assert.equal(pResult.peekedMessageItems.length, 1);
@@ -124,11 +132,19 @@ describe("MessageId APIs test", () => {
       pResult.peekedMessageItems[0].messageText,
       newMessage
     );
+    assert.equal(
+      pResult._response.request.headers.get("x-ms-client-request-id"),
+      pResult.clientRequestId
+    );
 
     let dResult = await messageIdURL.delete(Aborter.none, uResult.popReceipt!);
     assert.ok(dResult.date);
     assert.ok(dResult.requestId);
     assert.ok(dResult.version);
+    assert.equal(
+      dResult._response.request.headers.get("x-ms-client-request-id"),
+      dResult.clientRequestId
+    );
 
     pResult = await messagesURL.peek(Aborter.none);
     assert.equal(pResult.peekedMessageItems.length, 0);
@@ -145,6 +161,10 @@ describe("MessageId APIs test", () => {
     assert.ok(eResult.requestId);
     assert.ok(eResult.timeNextVisible);
     assert.ok(eResult.version);
+    assert.equal(
+      eResult._response.request.headers.get("x-ms-client-request-id"),
+      eResult.clientRequestId
+    );
 
     let newMessage = "New Message";
     let messageIdURL = MessageIdURL.fromMessagesURL(
@@ -162,9 +182,17 @@ describe("MessageId APIs test", () => {
     assert.ok(uResult.date);
     assert.ok(uResult.requestId);
     assert.ok(uResult.popReceipt);
+    assert.equal(
+      uResult._response.request.headers.get("x-ms-client-request-id"),
+      uResult.clientRequestId
+    );
 
     let pResult = await messagesURL.peek(Aborter.none);
     assert.equal(pResult.peekedMessageItems.length, 0);
+    assert.equal(
+      pResult._response.request.headers.get("x-ms-client-request-id"),
+      pResult.clientRequestId
+    );
 
     await sleep(6 * 1000);
 
@@ -187,6 +215,10 @@ describe("MessageId APIs test", () => {
     assert.ok(eResult.requestId);
     assert.ok(eResult.timeNextVisible);
     assert.ok(eResult.version);
+    assert.equal(
+      eResult._response.request.headers.get("x-ms-client-request-id"),
+      eResult.clientRequestId
+    );
 
     let newMessage = new Array(64 * 1024 + 1).join("a");
     let messageIdURL = MessageIdURL.fromMessagesURL(
@@ -204,12 +236,20 @@ describe("MessageId APIs test", () => {
     assert.ok(uResult.date);
     assert.ok(uResult.requestId);
     assert.ok(uResult.popReceipt);
+    assert.equal(
+      uResult._response.request.headers.get("x-ms-client-request-id"),
+      uResult.clientRequestId
+    );
 
     let pResult = await messagesURL.peek(Aborter.none);
     assert.equal(pResult.peekedMessageItems.length, 1);
     assert.deepStrictEqual(
       pResult.peekedMessageItems[0].messageText,
       newMessage
+    );
+    assert.equal(
+      pResult._response.request.headers.get("x-ms-client-request-id"),
+      pResult.clientRequestId
     );
   });
 
