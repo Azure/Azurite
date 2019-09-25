@@ -113,6 +113,9 @@ export const maxresults: msRest.OperationQueryParameter = {
   ],
   mapper: {
     serializedName: "maxresults",
+    constraints: {
+      InclusiveMinimum: 1
+    },
     type: {
       name: "Number"
     }
@@ -125,6 +128,9 @@ export const messageTimeToLive: msRest.OperationQueryParameter = {
   ],
   mapper: {
     serializedName: "messagettl",
+    constraints: {
+      InclusiveMinimum: -1
+    },
     type: {
       name: "Number"
     }
@@ -155,6 +161,9 @@ export const numberOfMessages: msRest.OperationQueryParameter = {
   ],
   mapper: {
     serializedName: "numofmessages",
+    constraints: {
+      InclusiveMinimum: 1
+    },
     type: {
       name: "Number"
     }
@@ -261,6 +270,10 @@ export const visibilitytimeout0: msRest.OperationQueryParameter = {
   ],
   mapper: {
     serializedName: "visibilitytimeout",
+    constraints: {
+      InclusiveMaximum: 604800,
+      InclusiveMinimum: 0
+    },
     type: {
       name: "Number"
     }
@@ -271,6 +284,10 @@ export const visibilitytimeout1: msRest.OperationQueryParameter = {
   mapper: {
     required: true,
     serializedName: "visibilitytimeout",
+    constraints: {
+      InclusiveMaximum: 604800,
+      InclusiveMinimum: 0
+    },
     type: {
       name: "Number"
     }
