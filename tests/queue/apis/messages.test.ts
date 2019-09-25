@@ -128,11 +128,19 @@ describe("Messages APIs test", () => {
       dqResult.dequeuedMessageItems[0].messageId,
       eResult.messageId
     );
+    assert.equal(
+      dqResult._response.request.headers.get("x-ms-client-request-id"),
+      dqResult.clientRequestId
+    );
 
     let cResult = await messagesURL.clear(Aborter.none);
     assert.ok(cResult.date);
     assert.ok(cResult.requestId);
     assert.ok(cResult.version);
+    assert.equal(
+      cResult._response.request.headers.get("x-ms-client-request-id"),
+      cResult.clientRequestId
+    );
 
     // check all messages are cleared
     let pResult2 = await messagesURL.peek(Aborter.none);
