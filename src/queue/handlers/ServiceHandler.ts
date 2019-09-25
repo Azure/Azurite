@@ -101,7 +101,8 @@ export default class ServiceHandler extends BaseHandler
     const response: Models.ServiceSetPropertiesResponse = {
       requestId: context.contextID,
       statusCode: 202,
-      version: QUEUE_API_VERSION
+      version: QUEUE_API_VERSION,
+      clientRequestId: options.requestId
     };
     return response;
   }
@@ -146,7 +147,8 @@ export default class ServiceHandler extends BaseHandler
       ...properties,
       requestId: context.contextID,
       statusCode: 200,
-      version: QUEUE_API_VERSION
+      version: QUEUE_API_VERSION,
+      clientRequestId: options.requestId
     };
     return response;
   }
@@ -163,7 +165,8 @@ export default class ServiceHandler extends BaseHandler
       geoReplication: {
         status: Models.GeoReplicationStatusType.Live,
         lastSyncTime: context.startTime!
-      }
+      },
+      clientRequestId: options.requestId
     };
     return response;
   }
@@ -239,7 +242,8 @@ export default class ServiceHandler extends BaseHandler
       serviceEndpoint,
       statusCode: 200,
       requestId: context.contextID,
-      version: QUEUE_API_VERSION
+      version: QUEUE_API_VERSION,
+      clientRequestId: options.requestId
     };
 
     return res;
