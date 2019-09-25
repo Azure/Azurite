@@ -17,6 +17,7 @@ export const AccessPolicy: msRest.CompositeMapper = {
     modelProperties: {
       start: {
         xmlName: "Start",
+        required: true,
         serializedName: "Start",
         type: {
           name: "String"
@@ -24,6 +25,7 @@ export const AccessPolicy: msRest.CompositeMapper = {
       },
       expiry: {
         xmlName: "Expiry",
+        required: true,
         serializedName: "Expiry",
         type: {
           name: "String"
@@ -639,6 +641,12 @@ export const ServiceSetPropertiesHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "ServiceSetPropertiesHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -667,6 +675,12 @@ export const ServiceGetPropertiesHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "ServiceGetPropertiesHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -695,6 +709,12 @@ export const ServiceGetStatisticsHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "ServiceGetStatisticsHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -729,6 +749,12 @@ export const ServiceListQueuesSegmentHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "ServiceListQueuesSegmentHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -763,6 +789,12 @@ export const QueueCreateHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "QueueCreateHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -797,6 +829,12 @@ export const QueueDeleteHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "QueueDeleteHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -831,6 +869,12 @@ export const QueueGetPropertiesHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "QueueGetPropertiesHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       metadata: {
         serializedName: "x-ms-meta",
         type: {
@@ -883,6 +927,12 @@ export const QueueGetPropertiesWithHeadHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "QueueGetPropertiesWithHeadHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       metadata: {
         serializedName: "x-ms-meta",
         type: {
@@ -935,6 +985,12 @@ export const QueueSetMetadataHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "QueueSetMetadataHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -969,6 +1025,12 @@ export const QueueGetAccessPolicyHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "QueueGetAccessPolicyHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -1003,6 +1065,12 @@ export const QueueGetAccessPolicyWithHeadHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "QueueGetAccessPolicyWithHeadHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -1037,6 +1105,12 @@ export const QueueSetAccessPolicyHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "QueueSetAccessPolicyHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -1071,6 +1145,12 @@ export const MessagesDequeueHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "MessagesDequeueHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -1105,6 +1185,12 @@ export const MessagesClearHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "MessagesClearHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -1139,6 +1225,12 @@ export const MessagesEnqueueHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "MessagesEnqueueHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -1173,6 +1265,12 @@ export const MessagesPeekHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "MessagesPeekHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -1207,6 +1305,12 @@ export const MessageIdUpdateHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "MessageIdUpdateHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
@@ -1253,6 +1357,12 @@ export const MessageIdDeleteHeaders: msRest.CompositeMapper = {
     name: "Composite",
     className: "MessageIdDeleteHeaders",
     modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
       requestId: {
         serializedName: "x-ms-request-id",
         type: {
