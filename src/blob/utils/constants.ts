@@ -1,7 +1,7 @@
 import * as Models from "../generated/artifacts/models";
 
 export const VERSION = "3.2.0-preview";
-export const BLOB_API_VERSION = "2018-03-28";
+export const BLOB_API_VERSION = "2019-02-02";
 export const DEFAULT_BLOB_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_BLOB_LISTENING_PORT = 10000;
 export const IS_PRODUCTION = process.env.NODE_ENV === "production";
