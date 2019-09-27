@@ -103,7 +103,7 @@ describe("Queue SAS test", () => {
         resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
         services: AccountSASServices.parse("btqf").toString(),
         startTime: now,
-        version: "2018-03-28"
+        version: "2019-02-02"
       },
       sharedKeyCredential as SharedKeyCredential
     ).toString();
@@ -202,7 +202,7 @@ describe("Queue SAS test", () => {
         protocol: SASProtocol.HTTPSandHTTP,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
-        version: "2018-03-28"
+        version: "2019-02-02"
       },
       sharedKeyCredential as SharedKeyCredential
     ).toString();
@@ -239,7 +239,7 @@ describe("Queue SAS test", () => {
         protocol: SASProtocol.HTTPSandHTTP,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
-        version: "2018-03-28"
+        version: "2019-02-02"
       },
       sharedKeyCredential as SharedKeyCredential
     ).toString();
@@ -252,7 +252,7 @@ describe("Queue SAS test", () => {
         protocol: SASProtocol.HTTPSandHTTP,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
-        version: "2018-03-28"
+        version: "2019-02-02"
       },
       sharedKeyCredential as SharedKeyCredential
     ).toString();
@@ -298,7 +298,7 @@ describe("Queue SAS test", () => {
         protocol: SASProtocol.HTTPSandHTTP,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
-        version: "2018-03-28"
+        version: "2019-02-02"
       },
       sharedKeyCredential as SharedKeyCredential
     ).toString();
@@ -341,7 +341,7 @@ describe("Queue SAS test", () => {
         protocol: SASProtocol.HTTPSandHTTP,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
-        version: "2018-03-28"
+        version: "2019-02-02"
       },
       sharedKeyCredential as SharedKeyCredential
     ).toString();
@@ -384,7 +384,7 @@ describe("Queue SAS test", () => {
         protocol: SASProtocol.HTTPSandHTTP,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
-        version: "2018-03-28"
+        version: "2019-02-02"
       },
       sharedKeyCredential as SharedKeyCredential
     ).toString();
@@ -444,7 +444,7 @@ describe("Queue SAS test", () => {
         protocol: SASProtocol.HTTPSandHTTP,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
-        version: "2018-03-28"
+        version: "2019-02-02"
       },
       sharedKeyCredential as SharedKeyCredential
     ).toString();
@@ -497,7 +497,7 @@ describe("Queue SAS test", () => {
         protocol: SASProtocol.HTTPSandHTTP,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
-        version: "2018-03-28"
+        version: "2019-02-02"
       },
       sharedKeyCredential as SharedKeyCredential
     ).toString();
@@ -550,7 +550,7 @@ describe("Queue SAS test", () => {
         permissions: QueueSASPermissions.parse("raup").toString(),
         protocol: SASProtocol.HTTPSandHTTP,
         startTime: now,
-        version: "2018-03-28"
+        version: "2019-02-02"
       },
       sharedKeyCredential as SharedKeyCredential
     );
