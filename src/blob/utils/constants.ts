@@ -1,3 +1,4 @@
+import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 import * as Models from "../generated/artifacts/models";
 
 export const VERSION = "3.2.0-preview";
@@ -21,6 +22,10 @@ export const EMULATOR_ACCOUNT_KEY = Buffer.from(
   "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
   "base64"
 );
+
+export const DEFAULT_BLOB_METADATA_SQL_URI =
+  "mariadb://root:my-secret-pw@127.0.0.1:3306/azurite_blob_metadata";
+
 export const EMULATOR_ACCOUNT_SKUNAME = Models.SkuName.StandardRAGRS;
 export const EMULATOR_ACCOUNT_KIND = Models.AccountKind.StorageV2;
 
@@ -47,3 +52,11 @@ export const HeaderConstants = {
 };
 
 export const SECONDARY_SUFFIX = "-secondary";
+
+export const DEFAULT_BLOB_PERSISTENCE_ARRAY: StoreDestinationArray = [
+  {
+    persistencyId: "Default",
+    persistencyPath: DEFAULT_BLOB_PERSISTENCE_PATH,
+    maxConcurrency: 10
+  }
+];

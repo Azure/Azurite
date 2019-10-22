@@ -3,5 +3,5 @@ export default interface IBlobEnvironment {
   blobPort(): number | undefined;
   location(): Promise<string>;
   silent(): boolean;
-  debug(): string | boolean | undefined;
+  debug(): Promise<string | boolean | undefined>;
 }

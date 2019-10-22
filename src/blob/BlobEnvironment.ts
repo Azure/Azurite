@@ -1,10 +1,15 @@
 import args from "args";
+import { access } from "fs";
+import { dirname } from "path";
+import { promisify } from "util";
 
 import IBlobEnvironment from "./IBlobEnvironment";
 import {
   DEFAULT_BLOB_LISTENING_PORT,
   DEFAULT_BLOB_SERVER_HOST_NAME
 } from "./utils/constants";
+
+const accessAsync = promisify(access);
 
 args
   .option(
@@ -42,7 +47,9 @@ export default class BlobEnvironment implements IBlobEnvironment {
   }
 
   public async location(): Promise<string> {
-    return this.flags.location || process.cwd();
+    const location = this.flags.location || process.cwd();
+    await accessAsync(location);
+    return location;
   }
 
   public silent(): boolean {
@@ -52,10 +59,12 @@ export default class BlobEnvironment implements IBlobEnvironment {
     return false;
   }
 
-  public debug(): string | undefined {
+  public async debug(): Promise<string | undefined> {
     if (typeof this.flags.debug === "string") {
       // Enable debug log to file
-      return this.flags.debug;
+      const debugFilePath = this.flags.debug;
+      await accessAsync(dirname(debugFilePath));
+      return debugFilePath;
     }
 
     if (this.flags.debug === true) {

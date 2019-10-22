@@ -4,19 +4,11 @@ import {
   DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
   DEFAULT_BLOB_LISTENING_PORT,
   DEFAULT_BLOB_LOKI_DB_PATH,
-  DEFAULT_BLOB_PERSISTENCE_PATH,
+  DEFAULT_BLOB_PERSISTENCE_ARRAY,
   DEFAULT_BLOB_SERVER_HOST_NAME,
   DEFAULT_ENABLE_ACCESS_LOG,
   DEFAULT_ENABLE_DEBUG_LOG
 } from "./utils/constants";
-
-export const DEFUALT_BLOB_PERSISTENCE_ARRAY: StoreDestinationArray = [
-  {
-    persistencyId: "Default",
-    persistencyPath: DEFAULT_BLOB_PERSISTENCE_PATH,
-    maxConcurrency: 10
-  }
-];
 
 /**
  * Default configurations for default implementation of BlobServer.
@@ -36,7 +28,7 @@ export default class BlobConfiguration extends ConfigurationBase {
     port: number = DEFAULT_BLOB_LISTENING_PORT,
     public readonly metadataDBPath: string = DEFAULT_BLOB_LOKI_DB_PATH,
     public readonly extentDBPath: string = DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
-    public readonly persistencePathArray: StoreDestinationArray = DEFUALT_BLOB_PERSISTENCE_ARRAY,
+    public readonly persistencePathArray: StoreDestinationArray = DEFAULT_BLOB_PERSISTENCE_ARRAY,
     enableAccessLog: boolean = DEFAULT_ENABLE_ACCESS_LOG,
     accessLogWriteStream?: NodeJS.WritableStream,
     enableDebugLog: boolean = DEFAULT_ENABLE_DEBUG_LOG,

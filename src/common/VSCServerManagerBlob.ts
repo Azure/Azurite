@@ -1,14 +1,13 @@
-import { access } from "fs";
 import { join } from "path";
+import rimraf = require("rimraf");
 import { promisify } from "util";
 
-import BlobConfiguration, {
-  DEFUALT_BLOB_PERSISTENCE_ARRAY
-} from "../blob/BlobConfiguration";
+import BlobConfiguration from "../blob/BlobConfiguration";
 import BlobServer from "../blob/BlobServer";
 import {
   DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
-  DEFAULT_BLOB_LOKI_DB_PATH
+  DEFAULT_BLOB_LOKI_DB_PATH,
+  DEFAULT_BLOB_PERSISTENCE_ARRAY
 } from "../blob/utils/constants";
 import * as Logger from "./Logger";
 import NoLoggerStrategy from "./NoLoggerStrategy";
@@ -18,8 +17,6 @@ import VSCEnvironment from "./VSCEnvironment";
 import VSCServerManagerBase from "./VSCServerManagerBase";
 import VSCServerManagerClosedState from "./VSCServerManagerClosedState";
 
-import rimraf = require("rimraf");
-const accessAsync = promisify(access);
 const rimrafAsync = promisify(rimraf);
 
 export default class VSCServerManagerBlob extends VSCServerManagerBase {
@@ -74,7 +71,6 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
   private async getConfiguration(): Promise<BlobConfiguration> {
     const env = new VSCEnvironment();
     const location = await env.location();
-    await accessAsync(location);
 
     // Initialize server configuration
     const config = new BlobConfiguration(
@@ -82,7 +78,7 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       env.blobPort(),
       join(location, DEFAULT_BLOB_LOKI_DB_PATH),
       join(location, DEFAULT_BLOB_EXTENT_LOKI_DB_PATH),
-      DEFUALT_BLOB_PERSISTENCE_ARRAY,
+      DEFAULT_BLOB_PERSISTENCE_ARRAY,
       !env.silent(),
       this.accessChannelStream,
       env.debug() === true,

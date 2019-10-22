@@ -6,17 +6,9 @@ import {
   DEFAULT_QUEUE_EXTENT_LOKI_DB_PATH,
   DEFAULT_QUEUE_LISTENING_PORT,
   DEFAULT_QUEUE_LOKI_DB_PATH,
-  DEFAULT_QUEUE_PERSISTENCE_PATH,
+  DEFAULT_QUEUE_PERSISTENCE_ARRAY,
   DEFAULT_QUEUE_SERVER_HOST_NAME
 } from "./utils/constants";
-
-export const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
-  {
-    persistencyId: "Default",
-    persistencyPath: DEFAULT_QUEUE_PERSISTENCE_PATH,
-    maxConcurrency: 10
-  }
-];
 
 /**
  * Default configurations for default implementation of QueueServer.
@@ -36,7 +28,7 @@ export default class QueueConfiguration extends ConfigurationBase {
     port: number = DEFAULT_QUEUE_LISTENING_PORT,
     public readonly metadataDBPath: string = DEFAULT_QUEUE_LOKI_DB_PATH,
     public readonly extentDBPath: string = DEFAULT_QUEUE_EXTENT_LOKI_DB_PATH,
-    public readonly persistencePathArray: StoreDestinationArray = DEFUALT_QUEUE_PERSISTENCE_ARRAY,
+    public readonly persistencePathArray: StoreDestinationArray = DEFAULT_QUEUE_PERSISTENCE_ARRAY,
     enableAccessLog: boolean = DEFAULT_ENABLE_ACCESS_LOG,
     accessLogWriteStream?: NodeJS.WritableStream,
     enableDebugLog: boolean = DEFAULT_ENABLE_DEBUG_LOG,
