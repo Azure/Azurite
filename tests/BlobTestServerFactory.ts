@@ -6,7 +6,7 @@ import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
 
 export default class BlobTestServerFactory {
   public createServer(): BlobServer | SqlBlobServer {
-    const databaseConnectionString = process.env["AZURITE_TEST_DB"];
+    const databaseConnectionString = process.env.AZURITE_TEST_DB;
     const isSQL = databaseConnectionString !== undefined;
 
     const port = 11000;

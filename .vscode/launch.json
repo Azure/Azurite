@@ -16,7 +16,7 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Azurite Blob Service",
+      "name": "Azurite Blob Service - Loki",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
       "args": ["${workspaceFolder}/src/blob/main.ts", "-d", "debug.log"],
@@ -25,10 +25,11 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Azurite Blob SQL Service",
+      "name": "Azurite Blob Service - SQL",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
-      "args": ["${workspaceFolder}/src/blob/sqlmain.ts", "-d", "debug.log"],
+      "args": ["${workspaceFolder}/src/blob/main.ts", "-d", "debug.log"],
+      "envFile": "${workspaceFolder}/.env",
       "outputCapture": "std"
     },
     {
@@ -74,7 +75,7 @@
         "${workspaceFolder}/${relativeFile}"
       ],
       "env": {
-        "AZURITE_TEST_DB": "mariadb://root:my-secret-pw@127.0.0.1:3306/azurite_blob_metadata"
+        "AZURITE_TEST_DB": "mariadb://root:my-secret-pw@127.0.0.1:3306/azurite_test_db"
       },
       "internalConsoleOptions": "openOnSessionStart",
       "outputCapture": "std"

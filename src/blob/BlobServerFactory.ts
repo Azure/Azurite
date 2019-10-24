@@ -9,7 +9,6 @@ import SqlBlobServer from "./SqlBlobServer";
 import {
   DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
   DEFAULT_BLOB_LOKI_DB_PATH,
-  DEFAULT_BLOB_METADATA_SQL_URI,
   DEFAULT_BLOB_PERSISTENCE_ARRAY
 } from "./utils/constants";
 
@@ -24,14 +23,15 @@ export class BlobServerFactory {
       const debugFilePath = await env.debug();
 
       // TODO: Check we need to create blob server against SQL or Loki
-      const isSQL = false;
+      const databaseConnectionString = process.env.AZURITE_DB;
+      const isSQL = databaseConnectionString !== undefined;
+
       if (isSQL) {
         const config = new SqlBlobConfiguration(
           env.blobHost(),
           env.blobPort(),
-          DEFAULT_BLOB_METADATA_SQL_URI, // TODO: Get SQL URI for metadata & extent from environment variables
+          databaseConnectionString!,
           DEFAULT_SQL_OPTIONS,
-          DEFAULT_BLOB_LOKI_DB_PATH,
           DEFAULT_BLOB_PERSISTENCE_ARRAY,
           !env.silent(),
           undefined,

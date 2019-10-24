@@ -23,9 +23,6 @@ export const EMULATOR_ACCOUNT_KEY = Buffer.from(
   "base64"
 );
 
-export const DEFAULT_BLOB_METADATA_SQL_URI =
-  "mariadb://root:my-secret-pw@127.0.0.1:3306/azurite_blob_metadata";
-
 export const EMULATOR_ACCOUNT_SKUNAME = Models.SkuName.StandardRAGRS;
 export const EMULATOR_ACCOUNT_KIND = Models.AccountKind.StorageV2;
 

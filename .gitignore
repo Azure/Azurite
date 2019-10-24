@@ -7,5 +7,5 @@ typings
 debug.log
 *.vsix
 *.tgz
-__*__.json
-__*__
+__*
+.env

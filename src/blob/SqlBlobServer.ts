@@ -46,11 +46,7 @@ export default class SqlBlobServer extends ServerBase {
    * @param {BlobConfiguration} configuration
    * @memberof Server
    */
-  constructor(configuration?: SqlBlobConfiguration) {
-    if (configuration === undefined) {
-      configuration = new SqlBlobConfiguration();
-    }
-
+  constructor(configuration: SqlBlobConfiguration) {
     const host = configuration.host;
     const port = configuration.port;
 
@@ -63,6 +59,8 @@ export default class SqlBlobServer extends ServerBase {
     );
 
     const extentMetadataStore: IExtentMetadataStore = new SqlExtentMetadataStore(
+      // Currently, extent metadata and blob metadata share same database
+      // But they can use separate databases per future requirements
       configuration.sqlURL,
       configuration.sequelizeOptions
     );
