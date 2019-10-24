@@ -7,21 +7,9 @@ import {
   DEFAULT_BLOB_PERSISTENCE_ARRAY,
   DEFAULT_BLOB_SERVER_HOST_NAME,
   DEFAULT_ENABLE_ACCESS_LOG,
-  DEFAULT_ENABLE_DEBUG_LOG
+  DEFAULT_ENABLE_DEBUG_LOG,
+  DEFAULT_SQL_OPTIONS
 } from "./utils/constants";
-
-const DEFAULT_SQL_OPTIONS = {
-  logging: false,
-  pool: {
-    max: 100,
-    min: 0,
-    acquire: 30000,
-    idle: 10000
-  },
-  dialectOptions: {
-    timezone: "Etc/GMT-0"
-  }
-};
 
 /**
  * The configuration for the server based on sql database.

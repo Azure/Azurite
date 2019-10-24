@@ -36,7 +36,7 @@ export default class BlobTestServerFactory {
       const config = new SqlBlobConfiguration(
         host,
         port,
-        databaseConnectionString,
+        databaseConnectionString!,
         sqlOptions,
         persistenceArray,
         false,

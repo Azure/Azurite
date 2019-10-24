@@ -57,3 +57,21 @@ export const DEFAULT_BLOB_PERSISTENCE_ARRAY: StoreDestinationArray = [
     maxConcurrency: 10
   }
 ];
+
+export const DEFAULT_SQL_CHARSET = "utf8mb4";
+export const DEFAULT_SQL_COLLATE = "utf8mb4_general_ci";
+
+export const DEFAULT_SQL_OPTIONS = {
+  logging: false,
+  pool: {
+    max: 100,
+    min: 0,
+    acquire: 30000,
+    idle: 10000
+  },
+  dialectOptions: {
+    timezone: "Etc/GMT-0"
+  },
+  charset: DEFAULT_SQL_CHARSET,
+  collate: DEFAULT_SQL_COLLATE
+};

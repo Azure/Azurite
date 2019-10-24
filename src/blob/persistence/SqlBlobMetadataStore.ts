@@ -16,6 +16,7 @@ import uuid from "uuid/v4";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
+import { DEFAULT_SQL_CHARSET, DEFAULT_SQL_COLLATE } from "../utils/constants";
 import IBlobMetadataStore, {
   AcquireBlobLeaseRes,
   AcquireContainerLeaseRes,
@@ -130,7 +131,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       {
         // TODO: Check max account name length
         accountName: {
-          type: "VARCHAR(255)",
+          type: "VARCHAR(64)",
           primaryKey: true
         },
         defaultServiceVersion: {
@@ -167,7 +168,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     ContainersModel.init(
       {
         accountName: {
-          type: "VARCHAR(255)",
+          type: "VARCHAR(64)",
           unique: "accountname_containername"
         },
         // TODO: Check max container name length
@@ -242,7 +243,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     BlobsModel.init(
       {
         accountName: {
-          type: "VARCHAR(255)",
+          type: "VARCHAR(64)",
           allowNull: false
         },
         containerName: {
@@ -255,7 +256,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           allowNull: false
         },
         snapshot: {
-          type: "VARCHAR(255)",
+          type: "VARCHAR(64)",
           allowNull: false,
           defaultValue: ""
         },
@@ -330,6 +331,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         modelName: "Blobs",
         tableName: "Blobs",
         timestamps: false,
+        charset: DEFAULT_SQL_CHARSET,
+        collate: DEFAULT_SQL_COLLATE,
         indexes: [
           {
             // name: 'title_index',
@@ -349,7 +352,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     BlocksModel.init(
       {
         accountName: {
-          type: "VARCHAR(255)",
+          type: "VARCHAR(64)",
           allowNull: false
         },
         containerName: {
@@ -362,7 +365,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         // TODO: Check max block name length
         blockName: {
-          type: "VARCHAR(255)",
+          type: "VARCHAR(64)",
           allowNull: false
         },
         deleting: {
