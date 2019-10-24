@@ -352,29 +352,6 @@ export default class LokiBlobMetadataStore
   }
 
   /**
-   * Get a container.
-   *
-   * @param {string} account
-   * @param {string} container
-   * @param {Context} [context]
-   * @returns {Promise<ContainerModel>}
-   * @memberof LokiBlobMetadataStore
-   */
-  public async getContainer(
-    account: string,
-    container: string,
-    context?: Context
-  ): Promise<ContainerModel> {
-    const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
-    const doc = coll.findOne({ accountName: account, name: container });
-    if (!doc) {
-      const requestId = context ? context.contextID : undefined;
-      throw StorageErrorFactory.getContainerNotFound(requestId);
-    }
-    return doc;
-  }
-
-  /**
    * Get a container properties.
    *
    * @param {string} account

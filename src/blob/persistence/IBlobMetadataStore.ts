@@ -269,21 +269,6 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
   ): Promise<ContainerModel>;
 
   /**
-   * Get a container.
-   *
-   * @param {string} account
-   * @param {string} container
-   * @param {Context} [context]
-   * @returns {Promise<ContainerModel>}
-   * @memberof IBlobMetadataStore
-   */
-  getContainer(
-    account: string,
-    container: string,
-    context?: Context
-  ): Promise<ContainerModel>;
-
-  /**
    * Get a container properties.
    *
    * @param {string} account

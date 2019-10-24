@@ -95,9 +95,7 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
     if (containerPublicAccessType === PublicAccessType.Container) {
       if (CONTAINER_PUBLIC_READ_OPERATIONS.has(operation)) {
         this.logger.debug(
-          `PublicAccessAuthenticator:validate() Operation ${
-            Operation[operation]
-          } is in container level public access list. Validation passed.`,
+          `PublicAccessAuthenticator:validate() Operation ${Operation[operation]} is in container level public access list. Validation passed.`,
           context.contextID
         );
         return true;
@@ -105,9 +103,7 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
     } else if (containerPublicAccessType === PublicAccessType.Blob) {
       if (BLOB_PUBLIC_READ_OPERATIONS.has(operation)) {
         this.logger.debug(
-          `PublicAccessAuthenticator:validate() Operation ${
-            Operation[operation]
-          } is in blob level public access list. Validation passed.`,
+          `PublicAccessAuthenticator:validate() Operation ${Operation[operation]} is in blob level public access list. Validation passed.`,
           context.contextID
         );
         return true;
@@ -119,9 +115,7 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
     }
 
     this.logger.debug(
-      `PublicAccessAuthenticator:validate() Operation ${
-        Operation[operation]
-      } is not in container neither blob level public access list. Validation failed.`,
+      `PublicAccessAuthenticator:validate() Operation ${Operation[operation]} is not in container neither blob level public access list. Validation failed.`,
       context.contextID
     );
 
@@ -137,14 +131,14 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
     container: string
   ): Promise<PublicAccessType | undefined> {
     try {
-      const containerModel = await this.blobMetadataStore.getContainer(
+      const containerModel = await this.blobMetadataStore.getContainerACL(
         account,
         container
       );
-      return containerModel.properties.publicAccess;
       if (containerModel === undefined) {
         return undefined;
       }
+      return containerModel.properties.publicAccess;
     } catch (err) {
       return undefined;
     }

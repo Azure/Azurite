@@ -1452,13 +1452,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new Error("Method not implemented.");
   }
 
-  public getContainer(
-    account: string,
-    container: string,
-    context?: Context | undefined
-  ): Promise<ContainerModel> {
-    throw new Error("Method not implemented.");
-  }
   public async getContainerACL(
     account: string,
     container: string,

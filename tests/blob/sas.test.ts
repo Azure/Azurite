@@ -27,7 +27,7 @@ import {
 } from "../testutils";
 
 // Set true to enable debug log
-configLogger(false);
+configLogger(true);
 
 describe("Shared Access Signature (SAS) authentication", () => {
   const factory = new BlobTestServerFactory();
