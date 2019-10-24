@@ -9,7 +9,7 @@ import { BlobServerFactory } from "./BlobServerFactory";
  */
 async function main() {
   const blobServerFactory = new BlobServerFactory();
-  const server = await blobServerFactory.createBlobServer();
+  const server = await blobServerFactory.createServer();
   const config = server.config;
 
   // We use logger singleton as global debugger logger to track detailed outputs cross layers

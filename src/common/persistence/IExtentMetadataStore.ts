@@ -1,3 +1,4 @@
+import ICleaner from "../ICleaner";
 import { IDataStore } from "../IDataStore";
 
 /**
@@ -54,7 +55,7 @@ export interface IExtentModel {
  * @interface IExtentMetadata
  * @extends {IDataStore}
  */
-export default interface IExtentMetadataStore extends IDataStore {
+export default interface IExtentMetadataStore extends IDataStore, ICleaner {
   /**
    * Update the extent status in DB. A new item will be created if the extent does not exists.
    *

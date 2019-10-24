@@ -4,7 +4,6 @@ import ConfigurationBase from "../common/ConfigurationBase";
 import { StoreDestinationArray } from "../common/persistence/IExtentStore";
 import {
   DEFAULT_BLOB_LISTENING_PORT,
-  DEFAULT_BLOB_LOKI_DB_PATH,
   DEFAULT_BLOB_PERSISTENCE_PATH,
   DEFAULT_BLOB_SERVER_HOST_NAME,
   DEFAULT_ENABLE_ACCESS_LOG,
@@ -47,7 +46,6 @@ export default class SqlBlobConfiguration extends ConfigurationBase {
     port: number = DEFAULT_BLOB_LISTENING_PORT,
     public readonly sqlURL: string = DEFUALT_SQL_URI,
     public readonly sequelizeOptions: SequelizeOptions = DEFUALT_SQL_OPTIONS,
-    public readonly blobDBPath: string = DEFAULT_BLOB_LOKI_DB_PATH,
     public readonly persistenceArray: StoreDestinationArray = DEFUALT_BLOB_PERSISTENCE_ARRAY,
     enableAccessLog: boolean = DEFAULT_ENABLE_ACCESS_LOG,
     accessLogWriteStream?: NodeJS.WritableStream,

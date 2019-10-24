@@ -9,7 +9,7 @@ import FSExtentStore from "../common/persistence/FSExtentStore";
 import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import SqlExtentMetadataStore from "../common/persistence/SqlExtentMetadataStore";
-import ServerBase from "../common/ServerBase";
+import ServerBase, { ServerStatus } from "../common/ServerBase";
 import BlobGCManager from "./gc/BlobGCManager";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import SqlBlobMetadataStore from "./persistence/SqlBlobMetadataStore";
@@ -114,6 +114,34 @@ export default class SqlBlobServer extends ServerBase {
     this.extentStore = extentStore;
     this.accountDataStore = accountDataStore;
     this.gcManager = gcManager;
+  }
+
+  /**
+   * Clean up server persisted extent data.
+   *
+   * @returns {Promise<void>}
+   * @memberof BlobServer
+   */
+  public async clean(): Promise<void> {
+    if (this.getStatus() === ServerStatus.Closed) {
+      if (this.extentStore !== undefined) {
+        await this.extentStore.clean();
+      }
+
+      if (this.extentMetadataStore !== undefined) {
+        await this.extentMetadataStore.clean();
+      }
+
+      if (this.metadataStore !== undefined) {
+        await this.metadataStore.clean();
+      }
+
+      if (this.accountDataStore !== undefined) {
+        await this.accountDataStore.clean();
+      }
+      return;
+    }
+    throw Error(`Cannot clean up blob server in status ${this.getStatus()}.`);
   }
 
   protected async beforeStart(): Promise<void> {

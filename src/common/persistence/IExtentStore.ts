@@ -1,3 +1,4 @@
+import ICleaner from "../ICleaner";
 import { IDataStore } from "../IDataStore";
 import IExtentMetadataStore from "./IExtentMetadataStore";
 
@@ -30,7 +31,7 @@ export type StoreDestinationArray = IStoreDestinationConfigure[];
  * @interface IExtentStore
  * @extends {IDataStore}
  */
-export default interface IExtentStore extends IDataStore {
+export default interface IExtentStore extends IDataStore, ICleaner {
   /**
    * Append data to extent layer.
    * Return the extent chunk information including the extentId, offset and count.

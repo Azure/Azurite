@@ -431,6 +431,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     return this.closed;
   }
 
+  public async clean(): Promise<void> {
+    // TODO: Implement cleanup in database
+  }
+
   public async setServiceProperties(
     serviceProperties: ServicePropertiesModel
   ): Promise<ServicePropertiesModel> {

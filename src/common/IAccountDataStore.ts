@@ -1,3 +1,4 @@
+import ICleaner from "./ICleaner";
 import { IDataStore } from "./IDataStore";
 
 /**
@@ -11,6 +12,6 @@ export interface IAccountProperties {
   key2?: Buffer;
 }
 
-export default interface IAccountDataStore extends IDataStore {
+export default interface IAccountDataStore extends IDataStore, ICleaner {
   getAccount(name: string): IAccountProperties | undefined;
 }

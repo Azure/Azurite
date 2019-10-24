@@ -43,7 +43,7 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Current Mocha TS File",
+      "name": "Current Mocha TS File - Loki",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
       "args": [
@@ -55,6 +55,27 @@
         "--colors",
         "${workspaceFolder}/${relativeFile}"
       ],
+      "internalConsoleOptions": "openOnSessionStart",
+      "outputCapture": "std"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Current Mocha TS File - SQL",
+      "cwd": "${workspaceFolder}",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "args": [
+        "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+        "-u",
+        "tdd",
+        "--timeout",
+        "999999",
+        "--colors",
+        "${workspaceFolder}/${relativeFile}"
+      ],
+      "env": {
+        "AZURITE_TEST_DB": "mariadb://root:my-secret-pw@127.0.0.1:3306/azurite_blob_metadata"
+      },
       "internalConsoleOptions": "openOnSessionStart",
       "outputCapture": "std"
     },

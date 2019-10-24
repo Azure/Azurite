@@ -8,30 +8,27 @@ import {
   SharedKeyCredential,
   StorageURL
 } from "@azure/storage-blob";
+import assert = require("assert");
 
 import { BlobHTTPHeaders } from "../../../src/blob/generated/artifacts/models";
 import { configLogger } from "../../../src/common/Logger";
+import BlobTestServerFactory from "../../BlobTestServerFactory";
 import {
   bodyToString,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
-  sleep,
-  TestServerFactory
+  sleep
 } from "../../testutils";
 
-import assert = require("assert");
-
+// Set true to enable debug log
 configLogger(false);
 
 describe("BlobAPIs", () => {
-  const host = "127.0.0.1";
-  const port = 11000;
-  // TODO: Create a server factory as tests utils
-  const server = TestServerFactory.getServer(host, port);
+  const factory = new BlobTestServerFactory();
+  const server = factory.createServer();
 
-  // TODO: Create serviceURL factory as tests utils
-  const baseURL = `http://${host}:${port}/devstoreaccount1`;
+  const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
   const serviceURL = new ServiceURL(
     baseURL,
     StorageURL.newPipeline(
@@ -55,7 +52,7 @@ describe("BlobAPIs", () => {
 
   after(async () => {
     await server.close();
-    await TestServerFactory.rmTestFile();
+    await server.clean();
   });
 
   beforeEach(async () => {

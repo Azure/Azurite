@@ -1,3 +1,4 @@
+import ICleaner from "../../common/ICleaner";
 import { IDataStore } from "../../common/IDataStore";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -210,7 +211,7 @@ export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
  * @interface IBlobMetadataStore
  * @extends {IDataStore}
  */
-export interface IBlobMetadataStore extends IDataStore {
+export interface IBlobMetadataStore extends IDataStore, ICleaner {
   /**
    * Update blob service properties. Create service properties if not exists in persistency layer.
    *

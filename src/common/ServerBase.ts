@@ -2,6 +2,7 @@ import * as http from "http";
 import * as https from "https";
 
 import ConfigurationBase from "./ConfigurationBase";
+import ICleaner from "./ICleaner";
 import IRequestListenerFactory from "./IRequestListenerFactory";
 
 export type RequestListener = (
@@ -23,7 +24,7 @@ export enum ServerStatus {
  * @abstract
  * @class Server
  */
-export default abstract class ServerBase {
+export default abstract class ServerBase implements ICleaner {
   protected status: ServerStatus = ServerStatus.Closed;
 
   /**
@@ -142,6 +143,10 @@ export default abstract class ServerBase {
     await this.afterClose();
 
     this.status = ServerStatus.Closed;
+  }
+
+  public async clean(): Promise<void> {
+    /** NOOP */
   }
 
   /**

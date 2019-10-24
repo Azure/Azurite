@@ -14,7 +14,7 @@ import {
 } from "./utils/constants";
 
 export class BlobServerFactory {
-  public async createBlobServer(): Promise<BlobServer | SqlBlobServer> {
+  public async createServer(): Promise<BlobServer | SqlBlobServer> {
     // TODO: Check it's in Visual Studio Code environment or not
     const isVSC = false;
 

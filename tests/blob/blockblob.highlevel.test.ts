@@ -1,7 +1,3 @@
-import * as fs from "fs";
-import { join } from "path";
-import { PassThrough } from "stream";
-
 import {
   Aborter,
   BlobURL,
@@ -14,31 +10,31 @@ import {
   uploadFileToBlockBlob,
   uploadStreamToBlockBlob
 } from "@azure/storage-blob";
+import assert = require("assert");
+import * as fs from "fs";
+import { join } from "path";
+import { PassThrough } from "stream";
 
 import { configLogger } from "../../src/common/Logger";
+import BlobTestServerFactory from "../BlobTestServerFactory";
 import {
   createRandomLocalFile,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
   readStreamToLocalFile,
-  rmRecursive,
-  TestServerFactory
+  rmRecursive
 } from "../testutils";
 
-import assert = require("assert");
-// Disable debugging log by passing false
+// Set true to enable debug log
 configLogger(false);
 
 // tslint:disable:no-empty
 describe("BlockBlobHighlevel", () => {
-  const host = "127.0.0.1";
-  const port = 11000;
-  // TODO: Create a server factory as tests utils
-  const server = TestServerFactory.getServer(host, port);
+  const factory = new BlobTestServerFactory();
+  const server = factory.createServer();
 
-  // TODO: Create serviceURL factory as tests utils
-  const baseURL = `http://${host}:${port}/devstoreaccount1`;
+  const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
   const serviceURL = new ServiceURL(
     baseURL,
     StorageURL.newPipeline(
@@ -94,11 +90,13 @@ describe("BlockBlobHighlevel", () => {
   });
 
   after(async () => {
+    // TODO: Find out reason of slow close
     await server.close();
     fs.unlinkSync(tempFileLarge);
     fs.unlinkSync(tempFileSmall);
-    rmRecursive(tempFolderPath);
-    await TestServerFactory.rmTestFile();
+    await rmRecursive(tempFolderPath);
+    // TODO: Find out reason of slow clean up
+    await server.clean();
   });
 
   it("uploadFileToBlockBlob should success when blob >= BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES", async () => {

@@ -1,6 +1,4 @@
 import { join } from "path";
-import rimraf = require("rimraf");
-import { promisify } from "util";
 
 import BlobConfiguration from "../blob/BlobConfiguration";
 import BlobServer from "../blob/BlobServer";
@@ -11,13 +9,12 @@ import {
 } from "../blob/utils/constants";
 import * as Logger from "./Logger";
 import NoLoggerStrategy from "./NoLoggerStrategy";
+import { rimrafAsync } from "./utils/utils";
 import VSCChannelLoggerStrategy from "./VSCChannelLoggerStrategy";
 import VSCChannelWriteStream from "./VSCChannelWriteStream";
 import VSCEnvironment from "./VSCEnvironment";
 import VSCServerManagerBase from "./VSCServerManagerBase";
 import VSCServerManagerClosedState from "./VSCServerManagerClosedState";
-
-const rimrafAsync = promisify(rimraf);
 
 export default class VSCServerManagerBlob extends VSCServerManagerBase {
   public readonly accessChannelStream = new VSCChannelWriteStream(

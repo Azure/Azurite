@@ -1,5 +1,3 @@
-import * as assert from "assert";
-
 import {
   Aborter,
   ContainerURL,
@@ -7,46 +5,28 @@ import {
   SharedKeyCredential,
   StorageURL
 } from "@azure/storage-blob";
+import * as assert from "assert";
 
-import BlobConfiguration from "../../../src/blob/BlobConfiguration";
-import Server from "../../../src/blob/BlobServer";
 import {
   EMULATOR_ACCOUNT_KIND,
   EMULATOR_ACCOUNT_SKUNAME
 } from "../../../src/blob/utils/constants";
-import { StoreDestinationArray } from "../../../src/common/persistence/IExtentStore";
+import { configLogger } from "../../../src/common/Logger";
+import BlobTestServerFactory from "../../BlobTestServerFactory";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
-  getUniqueName,
-  rmRecursive
+  getUniqueName
 } from "../../testutils";
 
-describe("ServiceAPIs", () => {
-  // TODO: Create a server factory as tests utils
-  const host = "127.0.0.1";
-  const port = 11000;
-  const metadataDbPath = "__blobTestsStorage__";
-  const extentDbPath = "__blobExtentTestsStorage__";
-  const persistencePath = "__blobTestsPersistence__";
-  const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
-    {
-      persistencyId: "blobTest",
-      persistencyPath: persistencePath,
-      maxConcurrency: 10
-    }
-  ];
-  const config = new BlobConfiguration(
-    host,
-    port,
-    metadataDbPath,
-    extentDbPath,
-    DEFUALT_QUEUE_PERSISTENCE_ARRAY,
-    false
-  );
+// Set true to enable debug log
+configLogger(false);
 
-  // TODO: Create serviceURL factory as tests utils
-  const baseURL = `http://${host}:${port}/devstoreaccount1`;
+describe("ServiceAPIs", () => {
+  const factory = new BlobTestServerFactory();
+  const server = factory.createServer();
+
+  const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
   const serviceURL = new ServiceURL(
     baseURL,
     StorageURL.newPipeline(
@@ -57,18 +37,13 @@ describe("ServiceAPIs", () => {
     )
   );
 
-  let server: Server;
-
   before(async () => {
-    server = new Server(config);
     await server.start();
   });
 
   after(async () => {
     await server.close();
-    await rmRecursive(metadataDbPath);
-    await rmRecursive(extentDbPath);
-    await rmRecursive(persistencePath);
+    await server.clean();
   });
 
   it("GetServiceProperties", async () => {
