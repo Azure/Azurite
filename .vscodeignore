@@ -20,3 +20,4 @@ debug.log
 __*__.json
 __*__
 .env
+temp

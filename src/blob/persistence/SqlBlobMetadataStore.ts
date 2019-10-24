@@ -17,6 +17,7 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { DEFAULT_SQL_CHARSET, DEFAULT_SQL_COLLATE } from "../utils/constants";
+import { BlobType } from "../generated/artifacts/models";
 import IBlobMetadataStore, {
   AcquireBlobLeaseRes,
   AcquireContainerLeaseRes,
@@ -1270,18 +1271,32 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
             throw badRequestError;
         }
       }
-
+      const contentProperties =
+        this.serializeModelValue({
+          contentLength: selectedBlockList
+            .map(block => block.size)
+            .reduce((total, val) => {
+              return total + val;
+            }),
+          contentType: blob.properties.contentType,
+          contentEncoding: blob.properties.contentEncoding,
+          contentLanguage: blob.properties.contentLanguage,
+          contentMD5: blob.properties.contentMD5,
+          contentDisposition: blob.properties.contentDisposition
+        }) || null;
       await BlobsModel.upsert(
         {
           accountName: blob.accountName,
           containerName: blob.containerName,
           blobName: blob.name,
+          blobType: BlobType.BlockBlob,
           snapshot: "",
           isCommitted: true,
           lastModified: blob.properties.lastModified,
           etag: blob.properties.etag,
           persistency: null,
-          committedBlocksInOrder: this.serializeModelValue(selectedBlockList)
+          committedBlocksInOrder: this.serializeModelValue(selectedBlockList),
+          contentProperties
         },
         { transaction: t }
       );
