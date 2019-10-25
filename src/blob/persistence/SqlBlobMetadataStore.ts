@@ -951,7 +951,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         contentEncoding: blob.properties.contentEncoding,
         contentLanguage: blob.properties.contentLanguage,
         contentMD5: blob.properties.contentMD5,
-        contentDisposition: blob.properties.contentDisposition
+        contentDisposition: blob.properties.contentDisposition,
+        cacheControl: blob.properties.cacheControl
       }) || null;
     await BlobsModel.upsert({
       accountName: blob.accountName,
@@ -1282,7 +1283,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           contentEncoding: blob.properties.contentEncoding,
           contentLanguage: blob.properties.contentLanguage,
           contentMD5: blob.properties.contentMD5,
-          contentDisposition: blob.properties.contentDisposition
+          contentDisposition: blob.properties.contentDisposition,
+          cacheControl: blob.properties.cacheControl
         }) || null;
       await BlobsModel.upsert(
         {
