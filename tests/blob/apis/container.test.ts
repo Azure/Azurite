@@ -393,7 +393,7 @@ describe("ContainerAPIs", () => {
     const blobNames: Array<string> = [];
 
     for (let i = 1; i < 4; i++) {
-      var name = `blockblob${i}/abc-00${i}`;
+      const name = `blockblob${i}/abc-00${i}`;
       const blobURL = BlobURL.fromContainerURL(containerURL, name);
       const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
       await blockBlobURL.upload(Aborter.none, "", 0);
@@ -427,7 +427,7 @@ describe("ContainerAPIs", () => {
 
   it("returns a valid, correct nextMarker", async () => {
     const blobURLs = [];
-    var blobNames: Array<string> = [
+    let blobNames: Array<string> = [
       "blockblob/abc-001",
       "blockblob/abc-004",
       "blockblob/abc-009",
@@ -447,11 +447,11 @@ describe("ContainerAPIs", () => {
       blobURLs.push(blobURL);
     }
 
-    //Sort blobnames for comparison
+    // Sort blob names for comparison
     blobNames = blobNames.sort();
 
     const inputmarker = undefined;
-    var result = await containerURL.listBlobFlatSegment(
+    let result = await containerURL.listBlobFlatSegment(
       Aborter.none,
       inputmarker,
       {
