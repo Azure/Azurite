@@ -15,9 +15,9 @@ import uuid from "uuid/v4";
 
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
+import { BlobType } from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { DEFAULT_SQL_CHARSET, DEFAULT_SQL_COLLATE } from "../utils/constants";
-import { BlobType } from "../generated/artifacts/models";
 import IBlobMetadataStore, {
   AcquireBlobLeaseRes,
   AcquireContainerLeaseRes,
