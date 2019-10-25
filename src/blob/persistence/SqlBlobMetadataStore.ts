@@ -1299,6 +1299,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           etag: blob.properties.etag,
           persistency: null,
           committedBlocksInOrder: this.serializeModelValue(selectedBlockList),
+          metadata: this.serializeModelValue(blob.metadata) || null,
           contentProperties
         },
         { transaction: t }
