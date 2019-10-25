@@ -102,7 +102,7 @@ describe("BlockBlobAPIs", () => {
     assert.deepStrictEqual(result.metadata, options.metadata);
   });
 
-  it("stageBlock", async () => {
+  it.only("stageBlock", async () => {
     const body = "HelloWorld";
     await blockBlobURL.stageBlock(
       Aborter.none,

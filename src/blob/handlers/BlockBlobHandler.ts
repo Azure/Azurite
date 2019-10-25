@@ -52,9 +52,7 @@ export default class BlockBlobHandler extends BaseHandler
     if (persistency.count !== contentLength) {
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
-        `The size of the request body ${
-          persistency.count
-        } mismatches the content-length ${contentLength}.`
+        `The size of the request body ${persistency.count} mismatches the content-length ${contentLength}.`
       );
     }
 
@@ -166,9 +164,7 @@ export default class BlockBlobHandler extends BaseHandler
       // TODO: Confirm error code
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextID!,
-        `The size of the request body ${
-          persistency.count
-        } mismatches the content-length ${contentLength}.`
+        `The size of the request body ${persistency.count} mismatches the content-length ${contentLength}.`
       );
     }
 
@@ -331,6 +327,8 @@ export default class BlockBlobHandler extends BaseHandler
       context
     );
 
+    // TODO: Create uncommitted blockblob when stage block
+    res.properties = res.properties || {};
     const response: Models.BlockBlobGetBlockListResponse = {
       statusCode: 200,
       lastModified: res.properties.lastModified,

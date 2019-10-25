@@ -1163,6 +1163,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
             blobName: blob,
             deleting: 0
           },
+          order: [["id", "ASC"]],
           transaction: t
         });
         for (const item of blocks) {
