@@ -10,43 +10,34 @@ import VSCStatusBarItem from "./common/VSCStatusBarItem";
 export function activate(context: ExtensionContext) {
   // Initialize server managers
   const blobServerManager = new VSCServerManagerBlob();
+  const queueServerManager = new VSCServerManagerQueue();
 
   // Hook up status bar handlers
   const vscBlobStatusBar = new VSCStatusBarItem(
     blobServerManager,
     window.createStatusBarItem(StatusBarAlignment.Right, 1000)
   );
-
-  // Initialize queue server managers
-  const queueServerManager = new VSCServerManagerQueue();
-
   const vscQueueStatusBar = new VSCStatusBarItem(
     queueServerManager,
-    window.createStatusBarItem(StatusBarAlignment.Right, 1000)
+    window.createStatusBarItem(StatusBarAlignment.Right, 1001)
   );
 
   blobServerManager.addEventListener(vscBlobStatusBar);
+  queueServerManager.addEventListener(vscQueueStatusBar);
 
   // Hook up notification handlers
-  blobServerManager.addEventListener(new VSCNotification());
+  const notification = new VSCNotification();
+  blobServerManager.addEventListener(notification);
+  queueServerManager.addEventListener(notification);
 
   // Hook up progress handlers
   blobServerManager.addEventListener(new VSCProgress());
+  queueServerManager.addEventListener(new VSCProgress());
 
   // Hook up access log handlers
   blobServerManager.addEventListener(
     new VSCAccessLog(blobServerManager.accessChannelStream)
   );
-
-  queueServerManager.addEventListener(vscQueueStatusBar);
-
-  // Hook up notification handlers
-  queueServerManager.addEventListener(new VSCNotification());
-
-  // Hook up progress handlers
-  queueServerManager.addEventListener(new VSCProgress());
-
-  // Hook up access log handlers
   queueServerManager.addEventListener(
     new VSCAccessLog(queueServerManager.accessChannelStream)
   );

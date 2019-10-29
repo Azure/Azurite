@@ -7,47 +7,25 @@ import {
   SharedKeyCredential,
   StorageURL
 } from "@azure/storage-blob";
+import assert = require("assert");
 
-import BlobConfiguration from "../../../src/blob/BlobConfiguration";
-import Server from "../../../src/blob/BlobServer";
 import { configLogger } from "../../../src/common/Logger";
-import { StoreDestinationArray } from "../../../src/common/persistence/IExtentStore";
+import BlobTestServerFactory from "../../BlobTestServerFactory";
 import {
   bodyToString,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
-  getUniqueName,
-  rmRecursive
+  getUniqueName
 } from "../../testutils";
 
-import assert = require("assert");
+// Set true to enable debug log
 configLogger(false);
 
 describe("PageBlobAPIs", () => {
-  // TODO: Create a server factory as tests utils
-  const host = "127.0.0.1";
-  const port = 11000;
-  const metadataDbPath = "__blobTestsStorage__";
-  const extentDbPath = "__blobExtentTestsStorage__";
-  const persistencePath = "__blobTestsPersistence__";
-  const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
-    {
-      persistencyId: "blobTest",
-      persistencyPath: persistencePath,
-      maxConcurrency: 10
-    }
-  ];
-  const config = new BlobConfiguration(
-    host,
-    port,
-    metadataDbPath,
-    extentDbPath,
-    DEFUALT_QUEUE_PERSISTENCE_ARRAY,
-    false
-  );
+  const factory = new BlobTestServerFactory();
+  const server = factory.createServer();
 
-  // TODO: Create serviceURL factory as tests utils
-  const baseURL = `http://${host}:${port}/devstoreaccount1`;
+  const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
   const serviceURL = new ServiceURL(
     baseURL,
     StorageURL.newPipeline(
@@ -64,18 +42,13 @@ describe("PageBlobAPIs", () => {
   let blobURL = BlobURL.fromContainerURL(containerURL, blobName);
   let pageBlobURL = PageBlobURL.fromBlobURL(blobURL);
 
-  let server: Server;
-
   before(async () => {
-    server = new Server(config);
     await server.start();
   });
 
   after(async () => {
     await server.close();
-    await rmRecursive(metadataDbPath);
-    await rmRecursive(extentDbPath);
-    await rmRecursive(persistencePath);
+    await server.clean();
   });
 
   beforeEach(async () => {

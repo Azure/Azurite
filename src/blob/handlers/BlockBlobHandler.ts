@@ -330,6 +330,8 @@ export default class BlockBlobHandler extends BaseHandler
       context
     );
 
+    // TODO: Create uncommitted blockblob when stage block
+    res.properties = res.properties || {};
     const response: Models.BlockBlobGetBlockListResponse = {
       statusCode: 200,
       lastModified: res.properties.lastModified,

@@ -40,4 +40,8 @@ export default class AccountDataStore implements IAccountDataStore {
   public isClosed(): boolean {
     return this.status === Status.Closed;
   }
+
+  public async clean(): Promise<void> {
+    /* NOOP */
+  }
 }

@@ -6,9 +6,11 @@ import {
   stat,
   unlink
 } from "fs";
+import multistream = require("multistream");
 import { join } from "path";
 import { Writable } from "stream";
 import { promisify } from "util";
+import uuid = require("uuid");
 
 import { ZERO_PERSISTENCY_CHUNK_ID } from "../../blob/persistence/IBlobMetadataStore";
 import ILogger from "../ILogger";
@@ -17,6 +19,7 @@ import {
   DEFAULT_MAX_EXTENT_SIZE,
   DEFAULT_READ_CONCURRENCY
 } from "../utils/constants";
+import { rimrafAsync } from "../utils/utils";
 import ZeroBytesStream from "../ZeroBytesStream";
 import FDCache from "./FDCache";
 import IExtentMetadataStore, { IExtentModel } from "./IExtentMetadataStore";
@@ -28,8 +31,6 @@ import IFDCache from "./IFDCache";
 import IOperationQueue from "./IOperationQueue";
 import OperationQueue from "./OperationQueue";
 
-import multistream = require("multistream");
-import uuid = require("uuid");
 const statAsync = promisify(stat);
 const mkdirAsync = promisify(mkdir);
 const unlinkAsync = promisify(unlink);
@@ -144,6 +145,21 @@ export default class FSExtentStore implements IExtentStore {
     this.closed = true;
   }
 
+  public async clean(): Promise<void> {
+    if (this.isClosed()) {
+      for (const path of this.persistencyConfiguration) {
+        try {
+          await rimrafAsync(path.persistencyPath);
+        } catch {
+          // TODO: Find out why sometimes it throws no permission error
+          /* NOOP */
+        }
+      }
+      return;
+    }
+    throw new Error(`Cannot clean FSExtentStore, it's not closed.`);
+  }
+
   /**
    * This method MAY create a new extent or append data to an existing extent
    * Return the extent chunk information including the extentId, offset and count.
@@ -172,11 +188,7 @@ export default class FSExtentStore implements IExtentStore {
             AppendStatusCode.Appending;
 
           this.logger.info(
-            `appendExtent() appendExtentIdx:${appendExtentIdx} offset:${
-              this.appendExtentArray[appendExtentIdx].offset
-            } MAX_EXTENT_SIZE:${MAX_EXTENT_SIZE} extentId:${
-              this.appendExtentArray[appendExtentIdx].id
-            }`
+            `appendExtent() appendExtentIdx:${appendExtentIdx} offset:${this.appendExtentArray[appendExtentIdx].offset} MAX_EXTENT_SIZE:${MAX_EXTENT_SIZE} extentId:${this.appendExtentArray[appendExtentIdx].id}`
           );
 
           if (
@@ -184,11 +196,7 @@ export default class FSExtentStore implements IExtentStore {
           ) {
             this.getNewExtent(this.appendExtentArray[appendExtentIdx]);
             this.logger.info(
-              `appendExtent() After get new extent: appendExtentIdx:${appendExtentIdx} offset:${
-                this.appendExtentArray[appendExtentIdx].offset
-              } MAX_EXTENT_SIZE:${MAX_EXTENT_SIZE} extentId:${
-                this.appendExtentArray[appendExtentIdx].id
-              }`
+              `appendExtent() After get new extent: appendExtentIdx:${appendExtentIdx} offset:${this.appendExtentArray[appendExtentIdx].offset} MAX_EXTENT_SIZE:${MAX_EXTENT_SIZE} extentId:${this.appendExtentArray[appendExtentIdx].id}`
             );
           }
 
@@ -285,17 +293,13 @@ export default class FSExtentStore implements IExtentStore {
     const path = this.generateExtentPath(persistencyId, extentChunk.id);
 
     this.logger.info(
-      `readExtent() prepare reading. extentId:${extentChunk.id} offset:${
-        extentChunk.offset
-      } count:${extentChunk.count}`
+      `readExtent() prepare reading. extentId:${extentChunk.id} offset:${extentChunk.offset} count:${extentChunk.count}`
     );
 
     const op = () =>
       new Promise<NodeJS.ReadableStream>((resolve, reject) => {
         this.logger.debug(
-          `readExtent() start reading. extentId:${extentChunk.id} offset:${
-            extentChunk.offset
-          } count:${extentChunk.count}`
+          `readExtent() start reading. extentId:${extentChunk.id} offset:${extentChunk.offset} count:${extentChunk.count}`
         );
         resolve(
           createReadStream(path, {
@@ -304,9 +308,7 @@ export default class FSExtentStore implements IExtentStore {
           })
         );
         this.logger.debug(
-          `readExtent() reading done. extentId:${extentChunk.id} offset:${
-            extentChunk.offset
-          } count:${extentChunk.count}`
+          `readExtent() reading done. extentId:${extentChunk.id} offset:${extentChunk.offset} count:${extentChunk.count}`
         );
       });
 

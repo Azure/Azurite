@@ -1,5 +1,3 @@
-import * as assert from "assert";
-
 import {
   Aborter,
   AnonymousCredential,
@@ -8,26 +6,23 @@ import {
   SharedKeyCredential,
   StorageURL
 } from "@azure/storage-blob";
+import * as assert from "assert";
 
 import { configLogger } from "../../src/common/Logger";
+import BlobTestServerFactory from "../BlobTestServerFactory";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
-  getUniqueName,
-  TestServerFactory
+  getUniqueName
 } from "../testutils";
 
 // Set true to enable debug log
 configLogger(false);
 
 describe("Authentication", () => {
-  const host = "127.0.0.1";
-  const port = 11000;
-  // TODO: Create a server factory as tests utils
-  const server = TestServerFactory.getServer(host, port);
-
-  // TODO: Create serviceURL factory as tests utils
-  const baseURL = `http://${host}:${port}/devstoreaccount1`;
+  const factory = new BlobTestServerFactory();
+  const server = factory.createServer();
+  const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
 
   before(async () => {
     await server.start();
@@ -35,7 +30,7 @@ describe("Authentication", () => {
 
   after(async () => {
     await server.close();
-    await TestServerFactory.rmTestFile();
+    await server.clean();
   });
 
   it("Should not work without credential", async () => {

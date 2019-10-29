@@ -1,3 +1,5 @@
+import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
+
 export const VERSION = "3.2.0-preview";
 export const QUEUE_API_VERSION = "2019-02-02";
 export const DEFAULT_QUEUE_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
@@ -78,3 +80,11 @@ export enum QUEUE_STATUSCODE {
   CREATED = 201,
   NOCONTENT = 204
 }
+
+export const DEFAULT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
+  {
+    persistencyId: "Default",
+    persistencyPath: DEFAULT_QUEUE_PERSISTENCE_PATH,
+    maxConcurrency: 1
+  }
+];

@@ -2,6 +2,7 @@ import * as http from "http";
 
 import AccountDataStore from "../common/AccountDataStore";
 import IAccountDataStore from "../common/IAccountDataStore";
+import ICleaner from "../common/ICleaner";
 import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
@@ -9,7 +10,7 @@ import FSExtentStore from "../common/persistence/FSExtentStore";
 import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
-import ServerBase from "../common/ServerBase";
+import ServerBase, { ServerStatus } from "../common/ServerBase";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
 import BlobGCManager from "./gc/BlobGCManager";
@@ -33,7 +34,7 @@ const AFTER_CLOSE_MESSAGE = `Azurite Blob service successfully closed`;
  * @export
  * @class Server
  */
-export default class BlobServer extends ServerBase {
+export default class BlobServer extends ServerBase implements ICleaner {
   private readonly metadataStore: IBlobMetadataStore;
   private readonly extentMetadataStore: IExtentMetadataStore;
   private readonly extentStore: IExtentStore;
@@ -114,6 +115,35 @@ export default class BlobServer extends ServerBase {
     this.extentStore = extentStore;
     this.accountDataStore = accountDataStore;
     this.gcManager = gcManager;
+  }
+
+  /**
+   * Clean up server persisted data, including Loki metadata database file,
+   * Loki extent database file and extent data.
+   *
+   * @returns {Promise<void>}
+   * @memberof BlobServer
+   */
+  public async clean(): Promise<void> {
+    if (this.getStatus() === ServerStatus.Closed) {
+      if (this.extentStore !== undefined) {
+        await this.extentStore.clean();
+      }
+
+      if (this.extentMetadataStore !== undefined) {
+        await this.extentMetadataStore.clean();
+      }
+
+      if (this.metadataStore !== undefined) {
+        await this.metadataStore.clean();
+      }
+
+      if (this.accountDataStore !== undefined) {
+        await this.accountDataStore.clean();
+      }
+      return;
+    }
+    throw Error(`Cannot clean up blob server in status ${this.getStatus()}.`);
   }
 
   protected async beforeStart(): Promise<void> {

@@ -1,49 +1,43 @@
 #!/usr/bin/env node
-
 import { access } from "fs";
 import { dirname, join } from "path";
 import { promisify } from "util";
 
-import BlobConfiguration, {
-  DEFUALT_BLOB_PERSISTENCE_ARRAY
-} from "./blob/BlobConfiguration";
+import BlobConfiguration from "./blob/BlobConfiguration";
 import BlobServer from "./blob/BlobServer";
 import {
   DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
-  DEFAULT_BLOB_LOKI_DB_PATH
+  DEFAULT_BLOB_LOKI_DB_PATH,
+  DEFAULT_BLOB_PERSISTENCE_ARRAY
 } from "./blob/utils/constants";
 import Environment from "./common/Environment";
 import * as Logger from "./common/Logger";
-import { StoreDestinationArray } from "./common/persistence/IExtentStore";
 import QueueConfiguration from "./queue/QueueConfiguration";
 import QueueServer from "./queue/QueueServer";
 import {
   DEFAULT_QUEUE_EXTENT_LOKI_DB_PATH,
   DEFAULT_QUEUE_LOKI_DB_PATH,
+  DEFAULT_QUEUE_PERSISTENCE_ARRAY,
   DEFAULT_QUEUE_PERSISTENCE_PATH
 } from "./queue/utils/constants";
 
-const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
-  {
-    persistencyId: "Default",
-    persistencyPath: DEFAULT_QUEUE_PERSISTENCE_PATH,
-    maxConcurrency: 1
-  }
-];
 // tslint:disable:no-console
 
 const accessAsync = promisify(access);
 
 /**
- * Entry for Azurite blob service.
+ * Entry for Azurite services.
  */
 async function main() {
   // Initialize and validate environment values from command line parameters
   const env = new Environment();
+
   const location = await env.location();
   await accessAsync(location);
-  if (env.debug() !== undefined) {
-    await accessAsync(dirname(env.debug()!));
+
+  const debugFilePath = env.debug();
+  if (debugFilePath !== undefined) {
+    await accessAsync(dirname(debugFilePath!));
   }
 
   // Initialize server configuration
@@ -52,14 +46,16 @@ async function main() {
     env.blobPort(),
     join(location, DEFAULT_BLOB_LOKI_DB_PATH),
     join(location, DEFAULT_BLOB_EXTENT_LOKI_DB_PATH),
-    DEFUALT_BLOB_PERSISTENCE_ARRAY,
+    DEFAULT_BLOB_PERSISTENCE_ARRAY,
     !env.silent(),
     undefined,
     env.debug() !== undefined,
     env.debug()
   );
 
-  DEFUALT_QUEUE_PERSISTENCE_ARRAY[0].persistencyPath = join(
+  // TODO: Align with blob DEFAULT_BLOB_PERSISTENCE_ARRAY
+  // TODO: Join for all paths in the array
+  DEFAULT_QUEUE_PERSISTENCE_ARRAY[0].persistencyPath = join(
     location,
     DEFAULT_QUEUE_PERSISTENCE_PATH
   );
@@ -68,7 +64,7 @@ async function main() {
     env.queuePort(),
     join(location, DEFAULT_QUEUE_LOKI_DB_PATH),
     join(location, DEFAULT_QUEUE_EXTENT_LOKI_DB_PATH),
-    DEFUALT_QUEUE_PERSISTENCE_ARRAY,
+    DEFAULT_QUEUE_PERSISTENCE_ARRAY,
     !env.silent(),
     undefined,
     env.debug() !== undefined,
@@ -96,9 +92,7 @@ async function main() {
 
   // Start server
   console.log(
-    `Azurite Queue service is starting on ${queueConfig.host}:${
-      queueConfig.port
-    }`
+    `Azurite Queue service is starting on ${queueConfig.host}:${queueConfig.port}`
   );
   await queueServer.start();
   console.log(
@@ -108,9 +102,8 @@ async function main() {
   // Handle close event
   const blobBeforeCloseMessage = `Azurite Blob service is closing...`;
   const blobAfterCloseMessage = `Azurite Blob service successfully closed`;
-
-  const queueBeforeCloseMessage = `Azurite Blob service is closing...`;
-  const queueAfterCloseMessage = `Azurite Blob service successfully closed`;
+  const queueBeforeCloseMessage = `Azurite Queue service is closing...`;
+  const queueAfterCloseMessage = `Azurite Queue service successfully closed`;
   process
     .once("message", msg => {
       if (msg === "shutdown") {
