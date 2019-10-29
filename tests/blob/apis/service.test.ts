@@ -61,6 +61,10 @@ describe("ServiceAPIs", () => {
       assert.ok(result.cors![0].exposedHeaders.length > 0);
       assert.ok(result.cors![0].maxAgeInSeconds >= 0);
     }
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   it("SetServiceProperties", async () => {
@@ -117,7 +121,14 @@ describe("ServiceAPIs", () => {
       };
     }
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    const result_set = await serviceURL.setProperties(
+      Aborter.none,
+      serviceProperties
+    );
+    assert.equal(
+      result_set._response.request.headers.get("x-ms-client-request-id"),
+      result_set.clientRequestId
+    );
 
     const result = await serviceURL.getProperties(Aborter.none);
     assert.ok(typeof result.requestId);
@@ -125,6 +136,10 @@ describe("ServiceAPIs", () => {
     assert.ok(typeof result.version);
     assert.ok(result.version!.length > 0);
     assert.deepEqual(result.hourMetrics, serviceProperties.hourMetrics);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   it("ListContainers with default parameters", async () => {
@@ -143,6 +158,10 @@ describe("ServiceAPIs", () => {
       assert.ok(container.properties.etag.length > 0);
       assert.ok(container.properties.lastModified);
     }
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   it("ListContainers with all parameters configured", async () => {
@@ -186,6 +205,10 @@ describe("ServiceAPIs", () => {
       "unlocked"
     );
     assert.deepEqual(result1.containerItems![0].metadata!.key, "val");
+    assert.equal(
+      result1._response.request.headers.get("x-ms-client-request-id"),
+      result1.clientRequestId
+    );
 
     const result2 = await serviceURL.listContainersSegment(
       Aborter.none,
@@ -221,5 +244,9 @@ describe("ServiceAPIs", () => {
     const result = await serviceURL.getAccountInfo(Aborter.none);
     assert.equal(result.accountKind, EMULATOR_ACCOUNT_KIND);
     assert.equal(result.skuName, EMULATOR_ACCOUNT_SKUNAME);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 });

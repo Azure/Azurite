@@ -133,7 +133,8 @@ export default class BlockBlobHandler extends BaseHandler
       requestId: blobCtx.contextID,
       version: BLOB_API_VERSION,
       date,
-      isServerEncrypted: true
+      isServerEncrypted: true,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -187,7 +188,8 @@ export default class BlockBlobHandler extends BaseHandler
       requestId: blobCtx.contextID,
       version: BLOB_API_VERSION,
       date,
-      isServerEncrypted: true
+      isServerEncrypted: true,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -304,7 +306,8 @@ export default class BlockBlobHandler extends BaseHandler
       requestId: blobCtx.contextID,
       version: BLOB_API_VERSION,
       date: blobCtx.startTime,
-      isServerEncrypted: true
+      isServerEncrypted: true,
+      clientRequestId: options.requestId
     };
     return response;
   }
@@ -344,6 +347,7 @@ export default class BlockBlobHandler extends BaseHandler
 
     response.uncommittedBlocks = res.uncommittedBlocks;
     response.committedBlocks = res.committedBlocks;
+    response.clientRequestId = options.requestId;
 
     return response;
   }

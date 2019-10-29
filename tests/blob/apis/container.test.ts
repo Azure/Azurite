@@ -81,6 +81,10 @@ describe("ContainerAPIs", () => {
     assert.ok(result.version);
     assert.ok(result.date);
     assert.ok(!result.blobPublicAccess);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   it("create with default parameters", done => {
@@ -95,7 +99,11 @@ describe("ContainerAPIs", () => {
     );
     const metadata = { key: "value" };
     const access = "container";
-    await cURL.create(Aborter.none, { metadata, access });
+    const result_create = await cURL.create(Aborter.none, { metadata, access });
+    assert.equal(
+      result_create._response.request.headers.get("x-ms-client-request-id"),
+      result_create.clientRequestId
+    );
     const result = await cURL.getProperties(Aborter.none);
     assert.deepEqual(result.blobPublicAccess, access);
     assert.deepEqual(result.metadata, metadata);
@@ -125,6 +133,10 @@ describe("ContainerAPIs", () => {
     );
     assert.ok(result.serviceEndpoint.length > 0);
     assert.ok(containerURL.url.indexOf(result.containerName));
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
     assert.deepStrictEqual(result.nextMarker, "");
     assert.deepStrictEqual(result.delimiter, delimiter);
     assert.deepStrictEqual(
@@ -183,6 +195,10 @@ describe("ContainerAPIs", () => {
     assert.deepStrictEqual(result.segment.blobPrefixes!.length, 1);
     assert.deepStrictEqual(result.segment.blobItems!.length, 0);
     assert.ok(blobURLs[0].url.indexOf(result.segment.blobPrefixes![0].name));
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
 
     const result2 = await containerURL.listBlobHierarchySegment(
       Aborter.none,
@@ -241,14 +257,30 @@ describe("ContainerAPIs", () => {
   it("acquireLease_available_proposedLeaseId_fixed", async () => {
     const guid = "ca761232-ed42-11ce-bacd-00aa0057b223";
     const duration = 30;
-    await containerURL.acquireLease(Aborter.none, guid, duration);
+    const result_acquire = await containerURL.acquireLease(
+      Aborter.none,
+      guid,
+      duration
+    );
+    assert.equal(
+      result_acquire._response.request.headers.get("x-ms-client-request-id"),
+      result_acquire.clientRequestId
+    );
 
     const result = await containerURL.getProperties(Aborter.none);
     assert.equal(result.leaseDuration, "fixed");
     assert.equal(result.leaseState, "leased");
     assert.equal(result.leaseStatus, "locked");
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
 
-    await containerURL.releaseLease(Aborter.none, guid);
+    const result_release = await containerURL.releaseLease(Aborter.none, guid);
+    assert.equal(
+      result_release._response.request.headers.get("x-ms-client-request-id"),
+      result_release.clientRequestId
+    );
   });
 
   it("acquireLease_available_NoproposedLeaseId_infinite", async () => {
@@ -260,6 +292,10 @@ describe("ContainerAPIs", () => {
     assert.equal(result.leaseDuration, "infinite");
     assert.equal(result.leaseState, "leased");
     assert.equal(result.leaseStatus, "locked");
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
 
     await containerURL.releaseLease(Aborter.none, leaseId!);
   });
@@ -293,11 +329,15 @@ describe("ContainerAPIs", () => {
     assert.equal(result2.leaseState, "expired");
     assert.equal(result2.leaseStatus, "unlocked");
 
-    await containerURL.renewLease(Aborter.none, guid);
+    const result_renew = await containerURL.renewLease(Aborter.none, guid);
     const result3 = await containerURL.getProperties(Aborter.none);
     assert.equal(result3.leaseDuration, "fixed");
     assert.equal(result3.leaseState, "leased");
     assert.equal(result3.leaseStatus, "locked");
+    assert.equal(
+      result_renew._response.request.headers.get("x-ms-client-request-id"),
+      result_renew.clientRequestId
+    );
 
     await containerURL.releaseLease(Aborter.none, guid);
   });
@@ -313,7 +353,15 @@ describe("ContainerAPIs", () => {
     assert.equal(result.leaseStatus, "locked");
 
     const newGuid = "3c7e72ebb4304526bc53d8ecef03798f";
-    await containerURL.changeLease(Aborter.none, guid, newGuid);
+    const result_change = await containerURL.changeLease(
+      Aborter.none,
+      guid,
+      newGuid
+    );
+    assert.equal(
+      result_change._response.request.headers.get("x-ms-client-request-id"),
+      result_change.clientRequestId
+    );
 
     await containerURL.getProperties(Aborter.none);
     await containerURL.releaseLease(Aborter.none, newGuid);
@@ -338,6 +386,10 @@ describe("ContainerAPIs", () => {
       );
 
       assert.equal(breakResult.leaseTime! <= breaklefttime, true);
+      assert.equal(
+        breakResult._response.request.headers.get("x-ms-client-request-id"),
+        breakResult.clientRequestId
+      );
       breaklefttime = breakResult.leaseTime!;
 
       const result2 = await containerURL.getProperties(Aborter.none);
@@ -411,6 +463,10 @@ describe("ContainerAPIs", () => {
     );
     assert.ok(result.serviceEndpoint.length > 0);
     assert.ok(containerURL.url.indexOf(result.containerName));
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
 
     const gotNames: Array<string> = [];
 
@@ -462,6 +518,10 @@ describe("ContainerAPIs", () => {
     assert.ok(containerURL.url.indexOf(result.containerName));
     assert.equal(result.nextMarker, "blockblob/abc-003");
     assert.equal(result.segment.blobItems.length, 4);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
 
     const gotNames: Array<string> = [];
 
@@ -480,6 +540,10 @@ describe("ContainerAPIs", () => {
     assert.ok(containerURL.url.indexOf(result.containerName));
     assert.equal(result.nextMarker, "blockblob/abc-007");
     assert.equal(result.segment.blobItems.length, 4);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
 
     for (const item of result.segment.blobItems) {
       gotNames.push(item.name);
@@ -496,6 +560,10 @@ describe("ContainerAPIs", () => {
     assert.ok(containerURL.url.indexOf(result.containerName));
     assert.strictEqual(result.nextMarker, "");
     assert.equal(result.segment.blobItems.length, 2);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
 
     for (const item of result.segment.blobItems) {
       gotNames.push(item.name);
@@ -515,6 +583,10 @@ describe("ContainerAPIs", () => {
     assert.ok(result.requestId);
     assert.ok(result.version);
     assert.ok(result.date);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   it("setAccessPolicy_publicAccess", async () => {
@@ -533,6 +605,10 @@ describe("ContainerAPIs", () => {
     const result = await containerURL.getAccessPolicy(Aborter.none);
     // assert.deepEqual(result.signedIdentifiers, containerAcl);
     assert.deepEqual(result.blobPublicAccess, access);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   // Skip since getAccessPolicy can't get signedIdentifiers now
@@ -557,7 +633,15 @@ describe("ContainerAPIs", () => {
       }
     ];
 
-    await containerURL.setAccessPolicy(Aborter.none, access, containerAcl);
+    const result_set = await containerURL.setAccessPolicy(
+      Aborter.none,
+      access,
+      containerAcl
+    );
+    assert.equal(
+      result_set._response.request.headers.get("x-ms-client-request-id"),
+      result_set.clientRequestId
+    );
     const result = await containerURL.getAccessPolicy(Aborter.none);
     assert.deepEqual(result.signedIdentifiers, containerAcl);
     assert.deepEqual(result.blobPublicAccess, access);

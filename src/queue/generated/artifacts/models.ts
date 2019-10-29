@@ -19,13 +19,13 @@ export interface AccessPolicy {
    * **NOTE: This entity will be treated as a string instead of a Date because the API can
    * potentially deal with a higher precision value than what is supported by JavaScript.**
    */
-  start?: string;
+  start: string;
   /**
    * the date-time the policy expires
    * **NOTE: This entity will be treated as a string instead of a Date because the API can
    * potentially deal with a higher precision value than what is supported by JavaScript.**
    */
-  expiry?: string;
+  expiry: string;
   /**
    * the permissions for the acl policy
    */
@@ -320,7 +320,7 @@ export interface StorageServiceStats {
 export interface AzuriteServerQueueOptions {
   /**
    * Specifies the version of the operation to use for this request. Possible values include:
-   * '2018-03-28'
+   * '2019-02-02'
    */
   version?: Version;
 }
@@ -717,6 +717,11 @@ export interface MessageIdDeleteMethodOptionalParams {
  */
 export interface ServiceSetPropertiesHeaders {
   /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
    * This header uniquely identifies the request that was made and can be used for troubleshooting
    * the request.
    */
@@ -734,6 +739,11 @@ export interface ServiceSetPropertiesHeaders {
  */
 export interface ServiceGetPropertiesHeaders {
   /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
    * This header uniquely identifies the request that was made and can be used for troubleshooting
    * the request.
    */
@@ -750,6 +760,11 @@ export interface ServiceGetPropertiesHeaders {
  * Defines headers for GetStatistics operation.
  */
 export interface ServiceGetStatisticsHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
   /**
    * This header uniquely identifies the request that was made and can be used for troubleshooting
    * the request.
@@ -773,6 +788,11 @@ export interface ServiceGetStatisticsHeaders {
  */
 export interface ServiceListQueuesSegmentHeaders {
   /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
    * This header uniquely identifies the request that was made and can be used for troubleshooting
    * the request.
    */
@@ -794,6 +814,11 @@ export interface ServiceListQueuesSegmentHeaders {
  * Defines headers for Create operation.
  */
 export interface QueueCreateHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
   /**
    * This header uniquely identifies the request that was made and can be used for troubleshooting
    * the request.
@@ -817,6 +842,11 @@ export interface QueueCreateHeaders {
  */
 export interface QueueDeleteHeaders {
   /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
    * This header uniquely identifies the request that was made and can be used for troubleshooting
    * the request.
    */
@@ -838,6 +868,11 @@ export interface QueueDeleteHeaders {
  * Defines headers for GetProperties operation.
  */
 export interface QueueGetPropertiesHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
   metadata?: { [propertyName: string]: string };
   /**
    * The approximate number of messages in the queue. This number is not lower than the actual
@@ -866,6 +901,11 @@ export interface QueueGetPropertiesHeaders {
  * Defines headers for GetPropertiesWithHead operation.
  */
 export interface QueueGetPropertiesWithHeadHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
   metadata?: { [propertyName: string]: string };
   /**
    * The approximate number of messages in the queue. This number is not lower than the actual
@@ -895,6 +935,11 @@ export interface QueueGetPropertiesWithHeadHeaders {
  */
 export interface QueueSetMetadataHeaders {
   /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
    * This header uniquely identifies the request that was made and can be used for troubleshooting
    * the request.
    */
@@ -916,6 +961,11 @@ export interface QueueSetMetadataHeaders {
  * Defines headers for GetAccessPolicy operation.
  */
 export interface QueueGetAccessPolicyHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
   /**
    * This header uniquely identifies the request that was made and can be used for troubleshooting
    * the request.
@@ -939,6 +989,11 @@ export interface QueueGetAccessPolicyHeaders {
  */
 export interface QueueGetAccessPolicyWithHeadHeaders {
   /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
    * This header uniquely identifies the request that was made and can be used for troubleshooting
    * the request.
    */
@@ -960,6 +1015,11 @@ export interface QueueGetAccessPolicyWithHeadHeaders {
  * Defines headers for SetAccessPolicy operation.
  */
 export interface QueueSetAccessPolicyHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
   /**
    * This header uniquely identifies the request that was made and can be used for troubleshooting
    * the request.
@@ -983,6 +1043,11 @@ export interface QueueSetAccessPolicyHeaders {
  */
 export interface MessagesDequeueHeaders {
   /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
    * This header uniquely identifies the request that was made and can be used for troubleshooting
    * the request.
    */
@@ -1004,6 +1069,11 @@ export interface MessagesDequeueHeaders {
  * Defines headers for Clear operation.
  */
 export interface MessagesClearHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
   /**
    * This header uniquely identifies the request that was made and can be used for troubleshooting
    * the request.
@@ -1027,6 +1097,11 @@ export interface MessagesClearHeaders {
  */
 export interface MessagesEnqueueHeaders {
   /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
    * This header uniquely identifies the request that was made and can be used for troubleshooting
    * the request.
    */
@@ -1049,6 +1124,11 @@ export interface MessagesEnqueueHeaders {
  */
 export interface MessagesPeekHeaders {
   /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
    * This header uniquely identifies the request that was made and can be used for troubleshooting
    * the request.
    */
@@ -1070,6 +1150,11 @@ export interface MessagesPeekHeaders {
  * Defines headers for Update operation.
  */
 export interface MessageIdUpdateHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
   /**
    * This header uniquely identifies the request that was made and can be used for troubleshooting
    * the request.
@@ -1100,6 +1185,11 @@ export interface MessageIdUpdateHeaders {
  * Defines headers for Delete operation.
  */
 export interface MessageIdDeleteHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
   /**
    * This header uniquely identifies the request that was made and can be used for troubleshooting
    * the request.
@@ -1215,192 +1305,192 @@ export enum ListQueuesIncludeType {
 
 /**
  * Defines values for Version.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version1.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version1 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version2.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version2 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version3.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version3 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version4.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version4 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version5.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version5 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version6.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version6 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version7.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version7 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version8.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version8 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version9.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version9 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version10.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version10 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version11.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version11 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version12.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version12 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version13.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version13 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version14.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version14 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version15.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version15 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version16.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version16 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version17.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version17 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**
  * Defines values for Version18.
- * Possible values include: '2018-03-28'
+ * Possible values include: '2019-02-02'
  * @readonly
  * @enum {string}
  */
 export enum Version18 {
-  TwoZeroOneEightHyphenMinusZeroThreeHyphenMinusTwoEight = '2018-03-28',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**

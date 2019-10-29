@@ -92,6 +92,10 @@ describe("QueueServiceAPIs", () => {
 
   it("Set Queue service properties", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    assert.equal(
+      serviceProperties._response.request.headers.get("x-ms-client-request-id"),
+      serviceProperties.clientRequestId
+    );
 
     serviceProperties.logging = {
       deleteProperty: true,
@@ -137,7 +141,14 @@ describe("QueueServiceAPIs", () => {
       serviceProperties.cors.push(newCORS);
     }
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    const sResult = await serviceURL.setProperties(
+      Aborter.none,
+      serviceProperties
+    );
+    assert.equal(
+      sResult._response.request.headers.get("x-ms-client-request-id"),
+      sResult.clientRequestId
+    );
 
     await sleep(1 * 1000);
 
@@ -155,6 +166,10 @@ describe("QueueServiceAPIs", () => {
     assert.ok(result.requestId!.length > 0);
     assert.ok(typeof result.version);
     assert.ok(result.version!.length > 0);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
 
     assert.ok(result.serviceEndpoint.length > 0);
     assert.ok(result.queueItems!.length >= 0);
@@ -172,7 +187,13 @@ describe("QueueServiceAPIs", () => {
     const queueURL1 = QueueURL.fromServiceURL(serviceURL, queueName1);
     const queueURL2 = QueueURL.fromServiceURL(serviceURL, queueName2);
     await queueURL1.create(Aborter.none, { metadata: { key: "val" } });
-    await queueURL2.create(Aborter.none, { metadata: { key: "val" } });
+    const cResult = await queueURL2.create(Aborter.none, {
+      metadata: { key: "val" }
+    });
+    assert.equal(
+      cResult._response.request.headers.get("x-ms-client-request-id"),
+      cResult.clientRequestId
+    );
 
     const result1 = await serviceURL.listQueuesSegment(
       Aborter.none,
@@ -205,6 +226,10 @@ describe("QueueServiceAPIs", () => {
     assert.deepEqual(result2.queueItems![0].metadata!.key, "val");
 
     await queueURL1.delete(Aborter.none);
-    await queueURL2.delete(Aborter.none);
+    const dResult = await queueURL2.delete(Aborter.none);
+    assert.equal(
+      dResult._response.request.headers.get("x-ms-client-request-id"),
+      dResult.clientRequestId
+    );
   });
 });
