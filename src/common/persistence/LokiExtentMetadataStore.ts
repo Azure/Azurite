@@ -1,6 +1,7 @@
 import { stat } from "fs";
 import Loki from "lokijs";
 
+import { rimrafAsync } from "../utils/utils";
 import AllExtentsAsyncIterator from "./AllExtentsAsyncIterator";
 import IExtentMetadataStore, { IExtentModel } from "./IExtentMetadataStore";
 
@@ -96,6 +97,20 @@ export default class LokiExtentMetadata implements IExtentMetadataStore {
     });
 
     this.closed = true;
+  }
+
+  /**
+   * Clean LokiExtentMetadata.
+   *
+   * @returns {Promise<void>}
+   * @memberof LokiExtentMetadata
+   */
+  public async clean(): Promise<void> {
+    if (this.isClosed()) {
+      await rimrafAsync(this.lokiDBPath);
+      return;
+    }
+    throw new Error(`Cannot clean LokiExtentMetadata, it's not closed.`);
   }
 
   /**

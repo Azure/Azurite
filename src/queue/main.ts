@@ -4,14 +4,13 @@ import { dirname, join } from "path";
 import { promisify } from "util";
 
 import * as Logger from "../common/Logger";
-import QueueConfiguration, {
-  DEFUALT_QUEUE_PERSISTENCE_ARRAY
-} from "./QueueConfiguration";
+import QueueConfiguration from "./QueueConfiguration";
 import QueueEnvironment from "./QueueEnvironment";
 import QueueServer from "./QueueServer";
 import {
   DEFAULT_QUEUE_EXTENT_LOKI_DB_PATH,
   DEFAULT_QUEUE_LOKI_DB_PATH,
+  DEFAULT_QUEUE_PERSISTENCE_ARRAY,
   DEFAULT_QUEUE_PERSISTENCE_PATH
 } from "./utils/constants";
 
@@ -25,15 +24,18 @@ const accessAsync = promisify(access);
 async function main() {
   // Initialize and validate environment values from command line parameters
   const env = new QueueEnvironment();
+
   const location = await env.location();
   await accessAsync(location);
-  if (env.debug() !== undefined) {
-    await accessAsync(dirname(env.debug()!));
+
+  const debugFilePath = env.debug();
+  if (debugFilePath !== undefined) {
+    await accessAsync(dirname(debugFilePath!));
   }
 
   // Initialize server configuration
-  // TODO: Shold provide the absolute path directly.
-  DEFUALT_QUEUE_PERSISTENCE_ARRAY[0].persistencyPath = join(
+  // TODO: Should provide the absolute path directly.
+  DEFAULT_QUEUE_PERSISTENCE_ARRAY[0].persistencyPath = join(
     location,
     DEFAULT_QUEUE_PERSISTENCE_PATH
   );
@@ -42,7 +44,7 @@ async function main() {
     env.queuePort(),
     join(location, DEFAULT_QUEUE_LOKI_DB_PATH),
     join(location, DEFAULT_QUEUE_EXTENT_LOKI_DB_PATH),
-    DEFUALT_QUEUE_PERSISTENCE_ARRAY,
+    DEFAULT_QUEUE_PERSISTENCE_ARRAY,
     !env.silent(),
     undefined,
     env.debug() !== undefined,

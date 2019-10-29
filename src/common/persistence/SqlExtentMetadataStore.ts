@@ -112,6 +112,10 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
     return this.closed;
   }
 
+  public async clean(): Promise<void> {
+    // TODO: Implement cleanup in database
+  }
+
   /**
    * Update the extent status in DB. A new item will be created if the extent does not exists.
    *

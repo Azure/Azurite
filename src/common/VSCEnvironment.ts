@@ -1,6 +1,10 @@
+import { access } from "fs";
+import { promisify } from "util";
 import { window, workspace, WorkspaceFolder } from "vscode";
 
 import IEnvironment from "./IEnvironment";
+
+const accessAsync = promisify(access);
 
 export default class VSCEnvironment implements IEnvironment {
   private workspaceConfiguration = workspace.getConfiguration("azurite");
@@ -55,6 +59,7 @@ export default class VSCEnvironment implements IEnvironment {
       location = folder.uri.fsPath;
     }
 
+    await accessAsync(location);
     return location;
   }
 

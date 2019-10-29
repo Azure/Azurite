@@ -15,7 +15,9 @@ import uuid from "uuid/v4";
 
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
+import { BlobType } from "../generated/artifacts/models";
 import Context from "../generated/Context";
+import { DEFAULT_SQL_CHARSET, DEFAULT_SQL_COLLATE } from "../utils/constants";
 import IBlobMetadataStore, {
   AcquireBlobLeaseRes,
   AcquireContainerLeaseRes,
@@ -130,7 +132,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       {
         // TODO: Check max account name length
         accountName: {
-          type: "VARCHAR(255)",
+          type: "VARCHAR(64)",
           primaryKey: true
         },
         defaultServiceVersion: {
@@ -167,7 +169,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     ContainersModel.init(
       {
         accountName: {
-          type: "VARCHAR(255)",
+          type: "VARCHAR(64)",
           unique: "accountname_containername"
         },
         // TODO: Check max container name length
@@ -242,7 +244,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     BlobsModel.init(
       {
         accountName: {
-          type: "VARCHAR(255)",
+          type: "VARCHAR(64)",
           allowNull: false
         },
         containerName: {
@@ -255,7 +257,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           allowNull: false
         },
         snapshot: {
-          type: "VARCHAR(255)",
+          type: "VARCHAR(64)",
           allowNull: false,
           defaultValue: ""
         },
@@ -330,6 +332,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         modelName: "Blobs",
         tableName: "Blobs",
         timestamps: false,
+        charset: DEFAULT_SQL_CHARSET,
+        collate: DEFAULT_SQL_COLLATE,
         indexes: [
           {
             // name: 'title_index',
@@ -349,7 +353,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     BlocksModel.init(
       {
         accountName: {
-          type: "VARCHAR(255)",
+          type: "VARCHAR(64)",
           allowNull: false
         },
         containerName: {
@@ -362,7 +366,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         // TODO: Check max block name length
         blockName: {
-          type: "VARCHAR(255)",
+          type: "VARCHAR(64)",
           allowNull: false
         },
         deleting: {
@@ -429,6 +433,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
   public isClosed(): boolean {
     return this.closed;
+  }
+
+  public async clean(): Promise<void> {
+    // TODO: Implement cleanup in database
   }
 
   public async setServiceProperties(
@@ -943,7 +951,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         contentEncoding: blob.properties.contentEncoding,
         contentLanguage: blob.properties.contentLanguage,
         contentMD5: blob.properties.contentMD5,
-        contentDisposition: blob.properties.contentDisposition
+        contentDisposition: blob.properties.contentDisposition,
+        cacheControl: blob.properties.cacheControl
       }) || null;
     await BlobsModel.upsert({
       accountName: blob.accountName,
@@ -1154,6 +1163,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
             blobName: blob,
             deleting: 0
           },
+          order: [["id", "ASC"]],
           transaction: t
         });
         for (const item of blocks) {
@@ -1263,18 +1273,34 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
             throw badRequestError;
         }
       }
-
+      const contentProperties =
+        this.serializeModelValue({
+          contentLength: selectedBlockList
+            .map(block => block.size)
+            .reduce((total, val) => {
+              return total + val;
+            }),
+          contentType: blob.properties.contentType,
+          contentEncoding: blob.properties.contentEncoding,
+          contentLanguage: blob.properties.contentLanguage,
+          contentMD5: blob.properties.contentMD5,
+          contentDisposition: blob.properties.contentDisposition,
+          cacheControl: blob.properties.cacheControl
+        }) || null;
       await BlobsModel.upsert(
         {
           accountName: blob.accountName,
           containerName: blob.containerName,
           blobName: blob.name,
+          blobType: BlobType.BlockBlob,
           snapshot: "",
           isCommitted: true,
           lastModified: blob.properties.lastModified,
           etag: blob.properties.etag,
           persistency: null,
-          committedBlocksInOrder: this.serializeModelValue(selectedBlockList)
+          committedBlocksInOrder: this.serializeModelValue(selectedBlockList),
+          metadata: this.serializeModelValue(blob.metadata) || null,
+          contentProperties
         },
         { transaction: t }
       );
@@ -1445,13 +1471,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new Error("Method not implemented.");
   }
 
-  public getContainer(
-    account: string,
-    container: string,
-    context?: Context | undefined
-  ): Promise<ContainerModel> {
-    throw new Error("Method not implemented.");
-  }
   public async getContainerACL(
     account: string,
     container: string,

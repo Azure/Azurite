@@ -1,3 +1,4 @@
+import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 import * as Models from "../generated/artifacts/models";
 
 export const VERSION = "3.2.0-preview";
@@ -21,6 +22,7 @@ export const EMULATOR_ACCOUNT_KEY = Buffer.from(
   "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
   "base64"
 );
+
 export const EMULATOR_ACCOUNT_SKUNAME = Models.SkuName.StandardRAGRS;
 export const EMULATOR_ACCOUNT_KIND = Models.AccountKind.StorageV2;
 
@@ -47,3 +49,29 @@ export const HeaderConstants = {
 };
 
 export const SECONDARY_SUFFIX = "-secondary";
+
+export const DEFAULT_BLOB_PERSISTENCE_ARRAY: StoreDestinationArray = [
+  {
+    persistencyId: "Default",
+    persistencyPath: DEFAULT_BLOB_PERSISTENCE_PATH,
+    maxConcurrency: 10
+  }
+];
+
+export const DEFAULT_SQL_CHARSET = "utf8mb4";
+export const DEFAULT_SQL_COLLATE = "utf8mb4_general_ci";
+
+export const DEFAULT_SQL_OPTIONS = {
+  logging: false,
+  pool: {
+    max: 100,
+    min: 0,
+    acquire: 30000,
+    idle: 10000
+  },
+  dialectOptions: {
+    timezone: "Etc/GMT-0"
+  },
+  charset: DEFAULT_SQL_CHARSET,
+  collate: DEFAULT_SQL_COLLATE
+};

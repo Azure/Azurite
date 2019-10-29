@@ -9,7 +9,7 @@ import FSExtentStore from "../common/persistence/FSExtentStore";
 import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import SqlExtentMetadataStore from "../common/persistence/SqlExtentMetadataStore";
-import ServerBase from "../common/ServerBase";
+import ServerBase, { ServerStatus } from "../common/ServerBase";
 import BlobGCManager from "./gc/BlobGCManager";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import SqlBlobMetadataStore from "./persistence/SqlBlobMetadataStore";
@@ -46,11 +46,7 @@ export default class SqlBlobServer extends ServerBase {
    * @param {BlobConfiguration} configuration
    * @memberof Server
    */
-  constructor(configuration?: SqlBlobConfiguration) {
-    if (configuration === undefined) {
-      configuration = new SqlBlobConfiguration();
-    }
-
+  constructor(configuration: SqlBlobConfiguration) {
     const host = configuration.host;
     const port = configuration.port;
 
@@ -63,6 +59,8 @@ export default class SqlBlobServer extends ServerBase {
     );
 
     const extentMetadataStore: IExtentMetadataStore = new SqlExtentMetadataStore(
+      // Currently, extent metadata and blob metadata share same database
+      // But they can use separate databases per future requirements
       configuration.sqlURL,
       configuration.sequelizeOptions
     );
@@ -94,15 +92,17 @@ export default class SqlBlobServer extends ServerBase {
       metadataStore,
       extentMetadataStore,
       extentStore,
-      () => {
+      error => {
         // tslint:disable-next-line:no-console
-        console.log(BEFORE_CLOSE_MESSAGE_GC_ERROR);
-        logger.info(BEFORE_CLOSE_MESSAGE_GC_ERROR);
-        this.close().then(() => {
-          // tslint:disable-next-line:no-console
-          console.log(AFTER_CLOSE_MESSAGE);
-          logger.info(AFTER_CLOSE_MESSAGE);
-        });
+        console.log(BEFORE_CLOSE_MESSAGE_GC_ERROR, error);
+        logger.info(BEFORE_CLOSE_MESSAGE_GC_ERROR + JSON.stringify(error));
+
+        // TODO: Bring this back when GC based on SQL implemented
+        // this.close().then(() => {
+        //   // tslint:disable-next-line:no-console
+        //   console.log(AFTER_CLOSE_MESSAGE);
+        //   logger.info(AFTER_CLOSE_MESSAGE);
+        // });
       },
       logger
     );
@@ -112,6 +112,34 @@ export default class SqlBlobServer extends ServerBase {
     this.extentStore = extentStore;
     this.accountDataStore = accountDataStore;
     this.gcManager = gcManager;
+  }
+
+  /**
+   * Clean up server persisted extent data.
+   *
+   * @returns {Promise<void>}
+   * @memberof BlobServer
+   */
+  public async clean(): Promise<void> {
+    if (this.getStatus() === ServerStatus.Closed) {
+      if (this.extentStore !== undefined) {
+        await this.extentStore.clean();
+      }
+
+      if (this.extentMetadataStore !== undefined) {
+        await this.extentMetadataStore.clean();
+      }
+
+      if (this.metadataStore !== undefined) {
+        await this.metadataStore.clean();
+      }
+
+      if (this.accountDataStore !== undefined) {
+        await this.accountDataStore.clean();
+      }
+      return;
+    }
+    throw Error(`Cannot clean up blob server in status ${this.getStatus()}.`);
   }
 
   protected async beforeStart(): Promise<void> {

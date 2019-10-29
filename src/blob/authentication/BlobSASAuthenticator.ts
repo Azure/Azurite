@@ -216,9 +216,7 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       );
       if (accessPolicy === undefined) {
         this.logger.warn(
-          `BlobSASAuthenticator:validate() Cannot get access policy defined for container ${containerName} with id ${
-            values.identifier
-          }.`,
+          `BlobSASAuthenticator:validate() Cannot get access policy defined for container ${containerName} with id ${values.identifier}.`,
           context.contextID
         );
         throw StorageErrorFactory.getAuthorizationFailure(context.contextID!);
@@ -319,9 +317,7 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       operation === Operation.Blob_StartCopyFromURL
     ) {
       this.logger.info(
-        `BlobSASAuthenticator:validate() For ${
-          Operation[operation]
-        }, if blob exists, the permission must be Write.`,
+        `BlobSASAuthenticator:validate() For ${Operation[operation]}, if blob exists, the permission must be Write.`,
         context.contextID
       );
 
@@ -457,7 +453,7 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     id: string
   ): Promise<AccessPolicy | undefined> {
     try {
-      const containerModel = await this.blobMetadataStore.getContainer(
+      const containerModel = await this.blobMetadataStore.getContainerACL(
         account,
         container
       );

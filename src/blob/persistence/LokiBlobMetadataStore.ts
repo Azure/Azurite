@@ -3,6 +3,7 @@ import Loki from "lokijs";
 import uuid from "uuid/v4";
 
 import IGCExtentProvider from "../../common/IGCExtentProvider";
+import { rimrafAsync } from "../../common/utils/utils";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -178,6 +179,20 @@ export default class LokiBlobMetadataStore
     this.closed = true;
   }
 
+  /**
+   * Clean LokiBlobMetadataStore.
+   *
+   * @returns {Promise<void>}
+   * @memberof LokiBlobMetadataStore
+   */
+  public async clean(): Promise<void> {
+    if (this.isClosed()) {
+      await rimrafAsync(this.lokiDBPath);
+      return;
+    }
+    throw new Error(`Cannot clean LokiBlobMetadataStore, it's not closed.`);
+  }
+
   // TODO
   public iteratorAllExtents(): AsyncIterator<string[]> {
     throw new Error("Method not implemented.");
@@ -334,29 +349,6 @@ export default class LokiBlobMetadataStore
     }
 
     return coll.insert(container);
-  }
-
-  /**
-   * Get a container.
-   *
-   * @param {string} account
-   * @param {string} container
-   * @param {Context} [context]
-   * @returns {Promise<ContainerModel>}
-   * @memberof LokiBlobMetadataStore
-   */
-  public async getContainer(
-    account: string,
-    container: string,
-    context?: Context
-  ): Promise<ContainerModel> {
-    const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
-    const doc = coll.findOne({ accountName: account, name: container });
-    if (!doc) {
-      const requestId = context ? context.contextID : undefined;
-      throw StorageErrorFactory.getContainerNotFound(requestId);
-    }
-    return doc;
   }
 
   /**
