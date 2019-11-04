@@ -55,7 +55,7 @@ export default class LeaseLeasedState implements ILeaseState {
       context.startTime >= lease.leaseExpireTime
     ) {
       throw RangeError(
-        `LeaseLeasedState:constructor() error, incoming leaseExpireTime ${lease.leaseExpireTime} is not undefined, or less than current time ${context.startTime}.`
+        `LeaseLeasedState:constructor() error, incoming leaseExpireTime ${lease.leaseExpireTime} is not undefined, and smaller than current time ${context.startTime}.`
       );
     }
 
@@ -65,6 +65,7 @@ export default class LeaseLeasedState implements ILeaseState {
     //   lease.leaseDurationSeconds !== -1
     // ) {
     //   throw RangeError(
+    // tslint:disable-next-line:max-line-length
     //     `LeaseLeasedState:constructor() error, incoming leaseDurationSeconds ${lease.leaseDurationSeconds} is not undefined, and not equal to -1.`
     //   );
     // }

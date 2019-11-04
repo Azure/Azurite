@@ -125,7 +125,7 @@ export default class PageBlobHandler extends BaseHandler
 
     // TODO: What's happens when create page blob right before commit block list? Or should we lock
     // Should we check if there is an uncommitted blob?
-    this.metadataStore.createBlob(blob);
+    this.metadataStore.createBlob(blob, context);
 
     const response: Models.PageBlobCreateResponse = {
       statusCode: 201,
@@ -301,11 +301,11 @@ export default class PageBlobHandler extends BaseHandler
     const date = blobCtx.startTime!;
 
     const blob = await this.metadataStore.getPageRanges(
+      context,
       accountName,
       containerName,
       blobName,
-      options.snapshot,
-      context
+      options.snapshot
     );
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {

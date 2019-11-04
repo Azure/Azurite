@@ -15,24 +15,6 @@ export default class LeaseBrokenState implements ILeaseState {
   public readonly lease: ILease;
 
   public constructor(lease: ILease, private readonly context: Context) {
-    /*
-     * LeaseState: Breaking
-     * LeaseStatus: Locked
-     * LeaseDurationType: undefined
-     * LeaseExpireTime: undefined
-     * LeaseDurationSeconds: undefined
-     * LeaseBreakTime: now >= timestamp
-     * LeaseId: uuid
-     */
-    /*
-     * LeaseState: Broken
-     * LeaseStatus: Unlocked
-     * LeaseDurationType: undefined
-     * LeaseExpireTime: undefined
-     * LeaseDurationSeconds: undefined
-     * LeaseBreakTime: undefined
-     * LeaseId: uuid
-     */
     if (context.startTime === undefined) {
       throw RangeError(
         `LeaseBrokenState:constructor() error, context.startTime is undefined.`
@@ -40,6 +22,15 @@ export default class LeaseBrokenState implements ILeaseState {
     }
 
     if (lease.leaseState === LeaseStateType.Broken) {
+      /*
+       * LeaseState: Broken
+       * LeaseStatus: Unlocked
+       * LeaseDurationType: undefined
+       * LeaseExpireTime: undefined
+       * LeaseDurationSeconds: undefined
+       * LeaseBreakTime: undefined
+       * LeaseId: uuid
+       */
       if (lease.leaseStatus !== LeaseStatusType.Unlocked) {
         throw RangeError(
           `LeaseBrokenState:constructor() error, incoming lease status ${lease.leaseStatus} is not ${LeaseStatusType.Unlocked}.`
@@ -79,6 +70,15 @@ export default class LeaseBrokenState implements ILeaseState {
       // Deep copy
       this.lease = { ...lease };
     } else if (lease.leaseState === LeaseStateType.Breaking) {
+      /*
+       * LeaseState: Breaking
+       * LeaseStatus: Locked
+       * LeaseDurationType: undefined
+       * LeaseExpireTime: undefined
+       * LeaseDurationSeconds: undefined
+       * LeaseBreakTime: now >= timestamp
+       * LeaseId: uuid
+       */
       if (lease.leaseStatus !== LeaseStatusType.Locked) {
         throw RangeError(
           `LeaseBrokenState:constructor() error, incoming lease status ${lease.leaseStatus} is not ${LeaseStatusType.Locked}.`

@@ -66,7 +66,7 @@ export default class LeaseBreakingState implements ILeaseState {
       context.startTime >= lease.leaseBreakTime // Current time should be less than break time
     ) {
       throw RangeError(
-        `LeaseLeasedState:constructor() error, incoming leaseBreakTime ${lease.leaseBreakTime} is undefined, or larger than current time ${context.startTime}.`
+        `LeaseLeasedState:constructor() error, incoming leaseBreakTime ${lease.leaseBreakTime} is undefined, or less than current time ${context.startTime}.`
       );
     }
 
