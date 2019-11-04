@@ -59,14 +59,14 @@ export default class PageBlobHandler extends BaseHandler
 
     if (contentLength !== 0) {
       throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextID!,
+        blobCtx.contextId!,
         "Content-Length must be 0 for Create Page Blob request."
       );
     }
 
     if (blobContentLength % 512 !== 0) {
       throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextID!,
+        blobCtx.contextId!,
         "x-ms-content-length must be aligned to a 512-byte boundary."
       );
     }
@@ -132,7 +132,7 @@ export default class PageBlobHandler extends BaseHandler
       eTag: etag,
       lastModified: blob.properties.lastModified,
       contentMD5: blob.properties.contentMD5,
-      requestId: context.contextID,
+      requestId: context.contextId,
       version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true,
@@ -156,7 +156,7 @@ export default class PageBlobHandler extends BaseHandler
 
     if (contentLength % 512 !== 0) {
       throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextID!,
+        blobCtx.contextId!,
         "content-length or x-ms-content-length must be aligned to a 512-byte boundary."
       );
     }
@@ -171,7 +171,7 @@ export default class PageBlobHandler extends BaseHandler
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
       throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextID!,
+        blobCtx.contextId!,
         "Get Page Ranges could only be against a page blob."
       );
     }
@@ -188,20 +188,20 @@ export default class PageBlobHandler extends BaseHandler
       blobCtx.request!.getHeader("x-ms-range")
     );
     if (!ranges) {
-      throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextID!);
+      throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextId!);
     }
 
     const start = ranges[0];
     const end = ranges[1]; // Inclusive
     if (end - start + 1 !== contentLength) {
-      throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextID!);
+      throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextId!);
     }
 
     const persistency = await this.extentStore.appendExtent(body);
     if (persistency.count !== contentLength) {
       // TODO: Confirm status code
       throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextID!,
+        blobCtx.contextId!,
         `The size of the request body ${persistency.count} mismatches the content-length ${contentLength}.`
       );
     }
@@ -220,7 +220,7 @@ export default class PageBlobHandler extends BaseHandler
       lastModified: date,
       contentMD5: undefined, // TODO
       blobSequenceNumber: res.blobSequenceNumber,
-      requestId: blobCtx.contextID,
+      requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true,
@@ -243,7 +243,7 @@ export default class PageBlobHandler extends BaseHandler
 
     if (contentLength !== 0) {
       throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextID!,
+        blobCtx.contextId!,
         "content-length or x-ms-content-length must be 0 for clear pages operation."
       );
     }
@@ -258,7 +258,7 @@ export default class PageBlobHandler extends BaseHandler
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
       throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextID!,
+        blobCtx.contextId!,
         "Get Page Ranges could only be against a page blob."
       );
     }
@@ -268,7 +268,7 @@ export default class PageBlobHandler extends BaseHandler
       blobCtx.request!.getHeader("x-ms-range")
     );
     if (!ranges) {
-      throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextID!);
+      throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextId!);
     }
     const start = ranges[0];
     const end = ranges[1];
@@ -281,7 +281,7 @@ export default class PageBlobHandler extends BaseHandler
       lastModified: date,
       contentMD5: undefined, // TODO
       blobSequenceNumber: res.blobSequenceNumber,
-      requestId: blobCtx.contextID,
+      requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
       clientRequestId: options.requestId,
       date
@@ -310,7 +310,7 @@ export default class PageBlobHandler extends BaseHandler
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
       throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextID!,
+        blobCtx.contextId!,
         "Get Page Ranges could only be against a page blob."
       );
     }
@@ -338,7 +338,7 @@ export default class PageBlobHandler extends BaseHandler
       eTag: blob.properties.etag,
       blobContentLength: blob.properties.contentLength,
       lastModified: date,
-      requestId: blobCtx.contextID,
+      requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
       clientRequestId: options.requestId,
       date
@@ -351,7 +351,7 @@ export default class PageBlobHandler extends BaseHandler
     options: Models.PageBlobGetPageRangesDiffOptionalParams,
     context: Context
   ): Promise<Models.PageBlobGetPageRangesDiffResponse> {
-    throw new NotImplementedError(context.contextID);
+    throw new NotImplementedError(context.contextId);
   }
 
   public async resize(
@@ -367,7 +367,7 @@ export default class PageBlobHandler extends BaseHandler
 
     if (blobContentLength % 512 !== 0) {
       throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextID!,
+        blobCtx.contextId!,
         "x-ms-blob-content-length must be aligned to a 512-byte boundary for Page Blob Resize request."
       );
     }
@@ -385,7 +385,7 @@ export default class PageBlobHandler extends BaseHandler
       eTag: res.etag,
       lastModified: res.lastModified,
       blobSequenceNumber: res.blobSequenceNumber,
-      requestId: blobCtx.contextID,
+      requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
       clientRequestId: options.requestId,
       date
@@ -419,7 +419,7 @@ export default class PageBlobHandler extends BaseHandler
       eTag: res.etag,
       lastModified: res.lastModified,
       blobSequenceNumber: res.blobSequenceNumber,
-      requestId: blobCtx.contextID,
+      requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
       clientRequestId: options.requestId,
       date
@@ -433,6 +433,6 @@ export default class PageBlobHandler extends BaseHandler
     options: Models.PageBlobCopyIncrementalOptionalParams,
     context: Context
   ): Promise<Models.PageBlobCopyIncrementalResponse> {
-    throw new NotImplementedError(context.contextID);
+    throw new NotImplementedError(context.contextId);
   }
 }

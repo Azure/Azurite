@@ -11,7 +11,7 @@ export default class AppendBlobHandler extends BaseHandler
     options: Models.AppendBlobCreateOptionalParams,
     context: Context
   ): Promise<Models.AppendBlobCreateResponse> {
-    throw new NotImplementedError(context.contextID);
+    throw new NotImplementedError(context.contextId);
   }
 
   public appendBlock(
@@ -21,7 +21,7 @@ export default class AppendBlobHandler extends BaseHandler
     context: Context
   ): Promise<Models.AppendBlobAppendBlockResponse> {
     // TODO: Check Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
-    throw new NotImplementedError(context.contextID);
+    throw new NotImplementedError(context.contextId);
   }
 
   public appendBlockFromUrl(

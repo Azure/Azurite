@@ -2,26 +2,6 @@
 
 > Go to [GitHub project](https://github.com/Azure/Azurite/projects) page or [GitHub issues](https://github.com/Azure/Azurite/issues) for the milestone and TODO items we are used for tracking upcoming features and bug fixes.
 
-## Development Environments
-
-Visual Studio Code is the best editor for TypeScript. Install and configure following plugins and configurations before starting development.
-
-### TSLint
-
-To maintain a consistent coding style, we use TSLint to find potential bugs. All developers should follow the same tslint.json defined in project.
-
-### prettier
-
-prettier is a tool helping automatically clean up our TypeScript codes. Recommend to open "FormatOnSave" feature of Visual Studio Code.
-
-### Document This
-
-This is useful for generating JSDoc for TypeScript codes.
-
-### TypeScript Import Sorter
-
-Used to automatically sort TypeScript import statements.
-
 ## Azurite V3 Features Implementation
 
 Every Azure Storage REST APIs maps to one handler method. Handler methods throwing `NotImplementedError` should be implemented.
@@ -66,3 +46,17 @@ npm run test
 ## PR
 
 Make sure test cases are added for the changes you made. And send a PR to `dev` branch for Azurite V3 or later development, `dev-legacy` branch for Azurite V2.
+
+## Regeneration Protocol Layer from Swagger by Autorest
+
+1. Install autorest by `npm install -g autorest`
+2. Clone autorest TypeScript server generator to some local path
+   - `git clone --recursive https://github.com/xiaoningliu/autorest.typescript.server`
+3. Go to cloned autorest.typescript.server folder and build autorest server
+   - `npm install`
+   - `npm install -g gulp`
+   - `npm run build`
+4. Go to package.json of Azurite repo, update `build:autorest:blob` and `build:autorest:queue` to point to the local generator cloned path
+5. Generate by go to Azurite root folder and run
+   - `npm run build:autorest:queue`
+   - `npm run build:autorest:blob`

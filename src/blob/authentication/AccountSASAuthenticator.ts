@@ -27,12 +27,12 @@ export default class AccountSASAuthenticator implements IAuthenticator {
   ): Promise<boolean | undefined> {
     this.logger.info(
       `AccountSASAuthenticator:validate() Start validation against account Shared Access Signature pattern.`,
-      context.contextID
+      context.contextId
     );
 
     this.logger.debug(
       "AccountSASAuthenticator:validate() Getting account properties...",
-      context.contextID
+      context.contextId
     );
 
     // Doesn't create a BlobContext here because wants to move this class into common
@@ -42,33 +42,33 @@ export default class AccountSASAuthenticator implements IAuthenticator {
     this.logger.debug(
       // tslint:disable-next-line:max-line-length
       `AccountSASAuthenticator:validate() Retrieved account name from context: ${account}, container: ${containerName}, blob: ${blobName}`,
-      context.contextID
+      context.contextId
     );
 
     // TODO: Make following async
     const accountProperties = this.accountDataStore.getAccount(account);
     if (accountProperties === undefined) {
       throw StorageErrorFactory.getInvalidOperation(
-        context.contextID!,
+        context.contextId!,
         "Invalid storage account."
       );
     }
     this.logger.debug(
       "AccountSASAuthenticator:validate() Got account properties successfully.",
-      context.contextID
+      context.contextId
     );
 
     const signature = this.decodeIfExist(req.getQuery("sig"));
     this.logger.debug(
       `AccountSASAuthenticator:validate() Retrieved signature from URL parameter sig: ${signature}`,
-      context.contextID
+      context.contextId
     );
 
     const values = this.getAccountSASSignatureValuesFromRequest(req);
     if (values === undefined) {
       this.logger.info(
         `AccountSASAuthenticator:validate() Failed to get valid account SAS values from request.`,
-        context.contextID
+        context.contextId
       );
       return false;
     }
@@ -76,12 +76,12 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       `AccountSASAuthenticator:validate() Successfully got valid account SAS values from request. ${JSON.stringify(
         values
       )}`,
-      context.contextID
+      context.contextId
     );
 
     this.logger.info(
       `AccountSASAuthenticator:validate() Validate signature based account key1.`,
-      context.contextID
+      context.contextId
     );
     const [sig1, stringToSign1] = generateAccountSASSignature(
       values,
@@ -92,11 +92,11 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       `AccountSASAuthenticator:validate() String to sign is: ${JSON.stringify(
         stringToSign1
       )}`,
-      context.contextID!
+      context.contextId!
     );
     this.logger.debug(
       `AccountSASAuthenticator:validate() Calculated signature is: ${sig1}`,
-      context.contextID!
+      context.contextId!
     );
 
     const sig1Pass = sig1 === signature;
@@ -104,13 +104,13 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       `AccountSASAuthenticator:validate() Signature based on key1 validation ${
         sig1Pass ? "passed" : "failed"
       }.`,
-      context.contextID
+      context.contextId
     );
 
     if (accountProperties.key2 !== undefined) {
       this.logger.info(
         `AccountSASAuthenticator:validate() Account key2 is not empty, validate signature based account key2.`,
-        context.contextID
+        context.contextId
       );
       const [sig2, stringToSign2] = generateAccountSASSignature(
         values,
@@ -121,11 +121,11 @@ export default class AccountSASAuthenticator implements IAuthenticator {
         `AccountSASAuthenticator:validate() String to sign is: ${JSON.stringify(
           stringToSign2
         )}`,
-        context.contextID!
+        context.contextId!
       );
       this.logger.debug(
         `AccountSASAuthenticator:validate() Calculated signature is: ${sig2}`,
-        context.contextID!
+        context.contextId!
       );
 
       const sig2Pass = sig2 !== signature;
@@ -133,13 +133,13 @@ export default class AccountSASAuthenticator implements IAuthenticator {
         `AccountSASAuthenticator:validate() Signature based on key2 validation ${
           sig2Pass ? "passed" : "failed"
         }.`,
-        context.contextID
+        context.contextId
       );
 
       if (!sig2Pass && !sig1Pass) {
         this.logger.info(
           `AccountSASAuthenticator:validate() Validate signature based account key1 and key2 failed.`,
-          context.contextID
+          context.contextId
         );
         return false;
       }
@@ -154,41 +154,41 @@ export default class AccountSASAuthenticator implements IAuthenticator {
 
     this.logger.info(
       `AccountSASAuthenticator:validate() Validate start and expiry time.`,
-      context.contextID
+      context.contextId
     );
     if (!this.validateTime(values.expiryTime, values.startTime)) {
       this.logger.info(
         `AccountSASAuthenticator:validate() Validate start and expiry failed.`,
-        context.contextID
+        context.contextId
       );
-      throw StorageErrorFactory.getAuthorizationFailure(context.contextID!);
+      throw StorageErrorFactory.getAuthorizationFailure(context.contextId!);
     }
 
     this.logger.info(
       `AccountSASAuthenticator:validate() Validate IP range.`,
-      context.contextID
+      context.contextId
     );
     if (!this.validateIPRange()) {
       this.logger.info(
         `AccountSASAuthenticator:validate() Validate IP range failed.`,
-        context.contextID
+        context.contextId
       );
       throw StorageErrorFactory.getAuthorizationSourceIPMismatch(
-        context.contextID!
+        context.contextId!
       );
     }
 
     this.logger.info(
       `AccountSASAuthenticator:validate() Validate request protocol.`,
-      context.contextID
+      context.contextId
     );
     if (!this.validateProtocol(values.protocol, req.getProtocol())) {
       this.logger.info(
         `AccountSASAuthenticator:validate() Validate protocol failed.`,
-        context.contextID
+        context.contextId
       );
       throw StorageErrorFactory.getAuthorizationProtocolMismatch(
-        context.contextID!
+        context.contextId!
       );
     }
 
@@ -207,32 +207,30 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       `AccountSASAuthenticator:validate() Got permission requirements for operation ${
         Operation[operation]
       } - ${JSON.stringify(accountSASPermission)}`,
-      context.contextID
+      context.contextId
     );
     if (accountSASPermission === undefined) {
       throw new Error(
         // tslint:disable-next-line:max-line-length
-        `AccountSASAuthenticator:validate() OPERATION_ACCOUNT_SAS_PERMISSIONS doesn't have configuration for operation ${
-          Operation[operation]
-        }'s account SAS permission.`
+        `AccountSASAuthenticator:validate() OPERATION_ACCOUNT_SAS_PERMISSIONS doesn't have configuration for operation ${Operation[operation]}'s account SAS permission.`
       );
     }
 
     if (!accountSASPermission.validateServices(values.services)) {
       throw StorageErrorFactory.getAuthorizationServiceMismatch(
-        context.contextID!
+        context.contextId!
       );
     }
 
     if (!accountSASPermission.validateResourceTypes(values.resourceTypes)) {
       throw StorageErrorFactory.getAuthorizationResourceTypeMismatch(
-        context.contextID!
+        context.contextId!
       );
     }
 
     if (!accountSASPermission.validatePermissions(values.permissions)) {
       throw StorageErrorFactory.getAuthorizationPermissionMismatch(
-        context.contextID!
+        context.contextId!
       );
     }
 
@@ -248,10 +246,8 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       operation === Operation.Blob_StartCopyFromURL
     ) {
       this.logger.info(
-        `AccountSASAuthenticator:validate() For ${
-          Operation[operation]
-        }, if blob exists, the permission must be Write.`,
-        context.contextID
+        `AccountSASAuthenticator:validate() For ${Operation[operation]}, if blob exists, the permission must be Write.`,
+        context.contextId
       );
 
       if (
@@ -260,17 +256,17 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       ) {
         this.logger.info(
           `AccountSASAuthenticator:validate() Account SAS validation failed for special requirement.`,
-          context.contextID
+          context.contextId
         );
         throw StorageErrorFactory.getAuthorizationPermissionMismatch(
-          context.contextID!
+          context.contextId!
         );
       }
     }
 
     this.logger.info(
       `AccountSASAuthenticator:validate() Account SAS validation successfully.`,
-      context.contextID
+      context.contextId
     );
 
     return true;

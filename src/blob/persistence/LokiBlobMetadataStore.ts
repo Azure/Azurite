@@ -36,6 +36,9 @@ import IBlobMetadataStore, {
   ServicePropertiesModel,
   SetContainerAccessPolicyParam
 } from "./IBlobMetadataStore";
+import { ILease } from "./ILeaseState";
+import LeaseFactory from "./LeaseFactory";
+import LokiContainerLeaseAdapter from "./LokiContainerLeaseAdapter";
 import LokiReferredExtentsAsyncIterator from "./LokiReferredExtentsAsyncIterator";
 
 /**
@@ -288,7 +291,7 @@ export default class LokiBlobMetadataStore
    *
    * @param {string} account
    * @param {string} [prefix=""]
-   * @param {number} [maxResults=2000]
+   * @param {number} [maxResults=5000]
    * @param {number} [marker=0]
    * @returns {(Promise<[ContainerModel[], number | undefined]>)}
    * @memberof LokiBlobMetadataStore
@@ -296,7 +299,7 @@ export default class LokiBlobMetadataStore
   public async listContainers(
     account: string,
     prefix: string = "",
-    maxResults: number = 2000,
+    maxResults: number = 5000,
     marker: number = 0
   ): Promise<[ContainerModel[], number | undefined]> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
@@ -344,7 +347,7 @@ export default class LokiBlobMetadataStore
     });
 
     if (doc) {
-      const requestId = context ? context.contextID : undefined;
+      const requestId = context ? context.contextId : undefined;
       throw StorageErrorFactory.getContainerAlreadyExists(requestId);
     }
 
@@ -378,12 +381,11 @@ export default class LokiBlobMetadataStore
 
   /**
    * Delete container item if exists from persistency layer.
-   * Note that this method will mark the specific container with "deleting" tag. Container item
-   * will be removed only if all blobs under that container has been removed with GC. During
-   * "deleting" status, container and blobs under that container cannot be accessed.
    *
-   * TODO: Make sure all metadata interface implementation follow up above assumption.
-   * TODO: GC for async container deletion.
+   * Loki based implementation will delete container documents from Containers collection,
+   * blob documents from Blobs collection, and blocks documents from Blocks collection immediately.
+   *
+   * Persisted extents data will be deleted by GC.
    *
    * @param {string} account
    * @param {string} container
@@ -400,7 +402,7 @@ export default class LokiBlobMetadataStore
   ): Promise<void> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainerDoc(account, container, context);
-    const requestId = context ? context.contextID : undefined;
+    const requestId = context ? context.contextId : undefined;
 
     // Check Lease status
     if (doc.properties.leaseStatus === Models.LeaseStatusType.Locked) {
@@ -465,6 +467,10 @@ export default class LokiBlobMetadataStore
   ): Promise<void> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainerDoc(account, container, context);
+    // const requestId = context ? context.contextID : undefined;
+
+    // TODO: Check lease status
+    // this.validateLeaseOnReadContainer(doc, lease, requestId);
 
     doc.properties.lastModified = lastModified;
     doc.properties.etag = etag;
@@ -490,9 +496,9 @@ export default class LokiBlobMetadataStore
     context?: Context
   ): Promise<GetContainerAccessPolicyRes> {
     const doc = await this.getContainerDoc(account, container, context);
-    const requestId = context ? context.contextID : undefined;
+    const requestId = context ? context.contextId : undefined;
 
-    this.checkLeaseOnReadContainer(doc, leaseAccessConditions, requestId);
+    this.validateLeaseOnReadContainer(doc, leaseAccessConditions, requestId);
 
     const res: GetContainerAccessPolicyRes = {
       properties: doc.properties,
@@ -520,9 +526,9 @@ export default class LokiBlobMetadataStore
   ): Promise<void> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainerDoc(account, container, context);
-    const requestId = context ? context.contextID : undefined;
+    const requestId = context ? context.contextId : undefined;
 
-    this.checkLeaseOnReadContainer(
+    this.validateLeaseOnReadContainer(
       doc,
       setAclModel.leaseAccessConditions,
       requestId
@@ -537,7 +543,7 @@ export default class LokiBlobMetadataStore
   }
 
   /**
-   * Acquire container lease
+   * Acquire container lease.
    *
    * @param {string} account
    * @param {string} container
@@ -554,48 +560,65 @@ export default class LokiBlobMetadataStore
   ): Promise<AcquireContainerLeaseRes> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainerDoc(account, container, context);
-    const requestId = context ? context.contextID : undefined;
+    // const requestId = context ? context.contextId : undefined;
 
-    // check the lease action aligned with current lease state.
-    if (doc.properties.leaseState === Models.LeaseStateType.Breaking) {
-      throw StorageErrorFactory.getLeaseAlreadyPresent(requestId);
-    }
-    if (
-      doc.properties.leaseState === Models.LeaseStateType.Leased &&
-      options.proposedLeaseId !== doc.leaseId
-    ) {
-      throw StorageErrorFactory.getLeaseAlreadyPresent(requestId);
-    }
+    const lease = LeaseFactory.createLeaseState(
+      new LokiContainerLeaseAdapter(doc),
+      context
+    ).acquire(options.duration!, options.proposedLeaseId).lease;
+    this.updateContainerLease(doc, lease);
 
-    // update the lease information
-    if (options.duration === -1 || options.duration === undefined) {
-      doc.properties.leaseDuration = Models.LeaseDurationType.Infinite;
-    } else {
-      // verify options.duration between 15 and 60
-      if (options.duration > 60 || options.duration < 15) {
-        throw StorageErrorFactory.getInvalidLeaseDuration(requestId);
-      }
-      doc.properties.leaseDuration = Models.LeaseDurationType.Fixed;
-      doc.leaseExpireTime = context.startTime!;
-      doc.leaseExpireTime.setSeconds(
-        doc.leaseExpireTime.getSeconds() + options.duration
-      );
-      doc.leaseduration = options.duration;
-    }
-    doc.properties.leaseState = Models.LeaseStateType.Leased;
-    doc.properties.leaseStatus = Models.LeaseStatusType.Locked;
-    doc.leaseId =
-      options.proposedLeaseId !== "" && options.proposedLeaseId !== undefined
-        ? options.proposedLeaseId
-        : uuid();
-    doc.leaseBreakExpireTime = undefined;
+    // // TODO: Check proposed lease ID should follow GUID, otherwise should return 400
+
+    // // tslint:disable-next-line:max-line-length
+    // tslint:disable-next-line: max-line-length
+    // // Refer https://docs.microsoft.com/en-us/rest/api/storageservices/lease-container#outcomes-of-lease-operations-on-containers-by-lease-state
+
+    // // Cannot acquire lease for a breaking container
+    // if (doc.properties.leaseState === Models.LeaseStateType.Breaking) {
+    //   throw StorageErrorFactory.getLeaseAlreadyPresent(requestId);
+    // }
+
+    // // Cannot acquire lease for a leased container with mismatched lease ID
+    // if (
+    //   doc.properties.leaseState === Models.LeaseStateType.Leased &&
+    //   options.proposedLeaseId !== doc.leaseId
+    // ) {
+    //   throw StorageErrorFactory.getLeaseAlreadyPresent(requestId);
+    // }
+
+    // // Otherwise, the lease should success
+    // if (options.duration === -1 || options.duration === undefined) {
+    //   doc.properties.leaseDuration = Models.LeaseDurationType.Infinite;
+    //   doc.leaseDurationSeconds = undefined;
+    //   doc.leaseExpireTime = undefined;
+    // } else {
+    //   // Verify options.duration between 15 and 60
+    //   if (options.duration > 60 || options.duration < 15) {
+    //     throw StorageErrorFactory.getInvalidLeaseDuration(requestId);
+    //   }
+    //   doc.properties.leaseDuration = Models.LeaseDurationType.Fixed;
+    //   doc.leaseExpireTime = context.startTime!;
+    //   doc.leaseExpireTime.setSeconds(
+    //     doc.leaseExpireTime.getSeconds() + options.duration
+    //   );
+    //   doc.leaseDurationSeconds = options.duration;
+    // }
+
+    // doc.properties.leaseState = Models.LeaseStateType.Leased;
+    // doc.properties.leaseStatus = Models.LeaseStatusType.Locked;
+    // doc.leaseId =
+    //   options.proposedLeaseId !== "" && options.proposedLeaseId !== undefined
+    //     ? options.proposedLeaseId
+    //     : uuid();
+    // doc.leaseBreakTime = undefined;
 
     coll.update(doc);
     return { properties: doc.properties, leaseId: doc.leaseId };
   }
 
   /**
-   * Release container lease
+   * Release container lease.
    *
    * @param {string} account
    * @param {string} container
@@ -612,36 +635,44 @@ export default class LokiBlobMetadataStore
   ): Promise<ReleaseContainerLeaseRes> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainerDoc(account, container, context);
-    const requestId = context ? context.contextID : undefined;
+    // const requestId = context ? context.contextId : undefined;
 
-    if (doc.properties.leaseState === Models.LeaseStateType.Available) {
-      throw StorageErrorFactory.getContainerLeaseIdMismatchWithLeaseOperation(
-        requestId
-      );
-    }
+    const lease = LeaseFactory.createLeaseState(
+      new LokiContainerLeaseAdapter(doc),
+      context
+    ).release(leaseId).lease;
 
-    // Check lease ID
-    if (doc.leaseId !== leaseId) {
-      throw StorageErrorFactory.getContainerLeaseIdMismatchWithLeaseOperation(
-        requestId
-      );
-    }
+    this.updateContainerLease(doc, lease);
 
-    // update the lease information
-    doc.properties.leaseState = Models.LeaseStateType.Available;
-    doc.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
-    doc.properties.leaseDuration = undefined;
-    doc.leaseduration = undefined;
-    doc.leaseId = undefined;
-    doc.leaseExpireTime = undefined;
-    doc.leaseBreakExpireTime = undefined;
+    // tslint:disable-next-line:max-line-length
+    // Refer https://docs.microsoft.com/en-us/rest/api/storageservices/lease-container#outcomes-of-lease-operations-on-containers-by-lease-state
+
+    // // Cannot release for a container without any release
+    // if (doc.properties.leaseState === Models.LeaseStateType.Available) {
+    //   throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(requestId);
+    // }
+
+    // // Cannot release when leaseId in request doesn't match with existing leaseId
+    // if (doc.leaseId !== leaseId) {
+    //   throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(requestId);
+    // }
+
+    // // Update the lease properties
+    // // Must update all below 7 properties at the same time
+    // doc.properties.leaseState = Models.LeaseStateType.Available;
+    // doc.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
+    // doc.properties.leaseDuration = undefined;
+    // doc.leaseDurationSeconds = undefined;
+    // doc.leaseId = undefined;
+    // doc.leaseExpireTime = undefined;
+    // doc.leaseBreakTime = undefined;
 
     coll.update(doc);
     return doc.properties;
   }
 
   /**
-   * Renew container lease
+   * Renew container lease.
    *
    * @param {string} account
    * @param {string} container
@@ -658,41 +689,54 @@ export default class LokiBlobMetadataStore
   ): Promise<RenewContainerLeaseRes> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainerDoc(account, container, context);
-    const requestId = context ? context.contextID : undefined;
+    // const requestId = context ? context.contextId : undefined;
 
-    // check the lease action aligned with current lease state.
-    if (doc.properties.leaseState === Models.LeaseStateType.Available) {
-      throw StorageErrorFactory.getContainerLeaseIdMismatchWithLeaseOperation(
-        requestId
-      );
-    }
-    if (
-      doc.properties.leaseState === Models.LeaseStateType.Breaking ||
-      doc.properties.leaseState === Models.LeaseStateType.Broken
-    ) {
-      throw StorageErrorFactory.getLeaseIsBrokenAndCannotBeRenewed(requestId);
-    }
+    const lease = LeaseFactory.createLeaseState(
+      new LokiContainerLeaseAdapter(doc),
+      context
+    ).renew(leaseId).lease;
 
-    // Check lease ID
-    if (doc.leaseId !== leaseId) {
-      throw StorageErrorFactory.getContainerLeaseIdMismatchWithLeaseOperation(
-        requestId
-      );
-    }
+    this.updateContainerLease(doc, lease);
 
-    // update the lease information
-    doc.properties.leaseState = Models.LeaseStateType.Leased;
-    doc.properties.leaseStatus = Models.LeaseStatusType.Locked;
-    // when container.leaseduration has value (not -1), means fixed duration
-    if (doc.leaseduration !== undefined && doc.leaseduration !== -1) {
-      doc.leaseExpireTime = context.startTime!;
-      doc.leaseExpireTime.setSeconds(
-        doc.leaseExpireTime.getSeconds() + doc.leaseduration
-      );
-      doc.properties.leaseDuration = Models.LeaseDurationType.Fixed;
-    } else {
-      doc.properties.leaseDuration = Models.LeaseDurationType.Infinite;
-    }
+    // tslint:disable-next-line:max-line-length
+    // Refer https://docs.microsoft.com/en-us/rest/api/storageservices/lease-container#outcomes-of-lease-operations-on-containers-by-lease-state
+
+    // // Only Leased and Expired status can be renewed
+    // if (doc.properties.leaseState === Models.LeaseStateType.Available) {
+    //   throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(requestId);
+    // }
+
+    // // Only Leased and Expired status can be renewed
+    // if (
+    //   doc.properties.leaseState === Models.LeaseStateType.Breaking ||
+    //   doc.properties.leaseState === Models.LeaseStateType.Broken
+    // ) {
+    //   throw StorageErrorFactory.getLeaseIsBrokenAndCannotBeRenewed(requestId);
+    // }
+
+    // // Now the existing container must have an lease in Leased or Expired status
+    // // Make sure lease ID matches
+    // if (doc.leaseId !== leaseId) {
+    //   throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(requestId);
+    // }
+
+    // // Update the lease information
+    // doc.properties.leaseState = Models.LeaseStateType.Leased;
+    // doc.properties.leaseStatus = Models.LeaseStatusType.Locked;
+
+    // // When leaseDurationSeconds has value and it's not -1, means existing lease is fixed duration
+    // if (
+    //   doc.leaseDurationSeconds !== undefined &&
+    //   doc.leaseDurationSeconds !== -1
+    // ) {
+    //   doc.leaseExpireTime = context.startTime!;
+    //   doc.leaseExpireTime.setSeconds(
+    //     doc.leaseExpireTime.getSeconds() + doc.leaseDurationSeconds
+    //   );
+    //   doc.properties.leaseDuration = Models.LeaseDurationType.Fixed;
+    // } else {
+    //   doc.properties.leaseDuration = Models.LeaseDurationType.Infinite;
+    // }
 
     coll.update(doc);
 
@@ -700,7 +744,7 @@ export default class LokiBlobMetadataStore
   }
 
   /**
-   * Break container lease
+   * Break container lease.
    *
    * @param {string} account
    * @param {string} container
@@ -717,81 +761,194 @@ export default class LokiBlobMetadataStore
   ): Promise<BreakContainerLeaseRes> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainerDoc(account, container, context);
-    const requestId = context ? context.contextID : undefined;
+    // const requestId = context ? context.contextId : undefined;
 
-    let leaseTimeinSecond: number;
-    leaseTimeinSecond = 0;
-    // check the lease action aligned with current lease state.
-    if (doc.properties.leaseState === Models.LeaseStateType.Available) {
-      throw StorageErrorFactory.getContainerLeaseNotPresentWithLeaseOperation(
-        requestId
-      );
-    }
+    const lease = LeaseFactory.createLeaseState(
+      new LokiContainerLeaseAdapter(doc),
+      context
+    ).break(breakPeriod).lease;
 
-    // update the lease information
-    // verify options.breakPeriod between 0 and 60
-    if (breakPeriod !== undefined && (breakPeriod > 60 || breakPeriod < 0)) {
-      throw StorageErrorFactory.getInvalidLeaseBreakPeriod(requestId);
-    }
-    if (
-      doc.properties.leaseState === Models.LeaseStateType.Expired ||
-      doc.properties.leaseState === Models.LeaseStateType.Broken ||
-      breakPeriod === 0 ||
-      breakPeriod === undefined
-    ) {
-      doc.properties.leaseState = Models.LeaseStateType.Broken;
-      doc.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
-      doc.properties.leaseDuration = undefined;
-      doc.leaseduration = undefined;
-      doc.leaseExpireTime = undefined;
-      doc.leaseBreakExpireTime = undefined;
-      leaseTimeinSecond = 0;
-    } else {
-      doc.properties.leaseState = Models.LeaseStateType.Breaking;
-      doc.properties.leaseStatus = Models.LeaseStatusType.Locked;
-      doc.leaseduration = undefined;
-      if (doc.properties.leaseDuration === Models.LeaseDurationType.Infinite) {
-        doc.properties.leaseDuration = undefined;
-        doc.leaseExpireTime = undefined;
-        doc.leaseBreakExpireTime = new Date(context.startTime!);
-        doc.leaseBreakExpireTime.setSeconds(
-          doc.leaseBreakExpireTime.getSeconds() + breakPeriod
-        );
-        leaseTimeinSecond = breakPeriod;
-      } else {
-        let newleaseBreakExpireTime = new Date(context.startTime!);
-        newleaseBreakExpireTime.setSeconds(
-          newleaseBreakExpireTime.getSeconds() + breakPeriod
-        );
-        if (
-          doc.leaseExpireTime !== undefined &&
-          newleaseBreakExpireTime > doc.leaseExpireTime
-        ) {
-          newleaseBreakExpireTime = doc.leaseExpireTime;
-        }
-        if (
-          doc.leaseBreakExpireTime === undefined ||
-          doc.leaseBreakExpireTime > newleaseBreakExpireTime
-        ) {
-          doc.leaseBreakExpireTime = newleaseBreakExpireTime;
-        }
-        leaseTimeinSecond = Math.round(
-          Math.abs(
-            doc.leaseBreakExpireTime.getTime() - context.startTime!.getTime()
-          ) / 1000
-        );
-        doc.leaseExpireTime = undefined;
-        doc.properties.leaseDuration = undefined;
-      }
-    }
+    this.updateContainerLease(doc, lease);
+
+    const leaseTimeSeconds: number =
+      lease.leaseState === Models.LeaseStateType.Leased
+        ? 0
+        : Math.round(
+            (lease.leaseBreakTime!.getTime() - context.startTime!.getTime()) /
+              1000
+          );
+
+    // // Cannot break a container under Available status (without any lease)
+    // // TODO: Check status code and error message
+    // if (doc.properties.leaseState === Models.LeaseStateType.Available) {
+    //   throw StorageErrorFactory.getLeaseNotPresentWithLeaseOperation(requestId);
+    // }
+
+    // // Update the lease information
+    // // Verify breakPeriod between 0 and 60
+    // if (breakPeriod !== undefined && (breakPeriod > 60 || breakPeriod < 0)) {
+    //   throw StorageErrorFactory.getInvalidLeaseBreakPeriod(requestId);
+    // }
+
+    // if (
+    //   breakPeriod === 0 ||
+    //   doc.properties.leaseState === Models.LeaseStateType.Expired ||
+    //   doc.properties.leaseState === Models.LeaseStateType.Broken
+    // ) {
+    //   /* Scenarios 1: status is expired or broken; or breakPeriod === 0 with any non available status */
+    //   // Break immediately
+    //   doc.properties.leaseState = Models.LeaseStateType.Broken;
+    //   doc.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
+    //   doc.properties.leaseDuration = undefined;
+    //   doc.leaseDurationSeconds = undefined;
+    //   doc.leaseExpireTime = undefined;
+    //   doc.leaseBreakTime = undefined;
+    //   leaseTimeSeconds = 0;
+    // } else if (breakPeriod === undefined) {
+    //   /* Scenario 2: breakPeriod === undefined, and status is leased or breaking */
+
+    //   // If container is leased
+    //   if (doc.properties.leaseState === Models.LeaseStateType.Leased) {
+    //     if (
+    //       doc.properties.leaseDuration === Models.LeaseDurationType.Infinite
+    //     ) {
+    //       // if infinite, break immediately
+    //       doc.properties.leaseState = Models.LeaseStateType.Broken;
+    //       doc.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
+    //       doc.properties.leaseDuration = undefined;
+    //       doc.leaseDurationSeconds = undefined;
+    //       doc.leaseExpireTime = undefined;
+    //       doc.leaseBreakTime = undefined;
+    //       leaseTimeSeconds = 0;
+    //     } else if (
+    //       doc.properties.leaseDuration === Models.LeaseDurationType.Fixed
+    //     ) {
+    //       // if fixed, break after fixed time ends
+    //       doc.properties.leaseState = Models.LeaseStateType.Breaking;
+    //       doc.properties.leaseStatus = Models.LeaseStatusType.Locked;
+    //       doc.properties.leaseDuration = undefined;
+    //       doc.leaseExpireTime = undefined;
+    //       doc.leaseDurationSeconds = undefined;
+    //       doc.leaseBreakTime = doc.leaseExpireTime;
+    //       leaseTimeSeconds = Math.round(
+    //         Math.abs(
+    //           doc.leaseBreakTime!.getTime() - context.startTime!.getTime()
+    //         ) / 1000
+    //       );
+    //     }
+    //   } else if (doc.properties.leaseState === Models.LeaseStateType.Breaking) {
+    //     // Do nothing for a breaking container
+    //     leaseTimeSeconds = Math.round(
+    //       Math.abs(
+    //         doc.leaseBreakTime!.getTime() - context.startTime!.getTime()
+    //       ) / 1000
+    //     );
+    //   } else {
+    //     throw Error(
+    // tslint:disable-next-line: max-line-length
+    //       `LokiBlobMetadataStore:breakContainerLease() Unexpected container lease status: ${doc.properties.leaseState}`
+    //     );
+    //   }
+    // } else {
+    //   // Scenario 3: breakPeriod belongs to (0, 60], and status is leased or breaking
+    //   // if leased, break after fixed time (shorter time between lease time & break time) ends
+    //   if (doc.properties.leaseState === Models.LeaseStateType.Leased) {
+    //     const breakTime = new Date(
+    //       context.startTime!.getTime() + breakPeriod * 1000
+    //     );
+
+    //     doc.properties.leaseState = Models.LeaseStateType.Breaking;
+    //     doc.properties.leaseStatus = Models.LeaseStatusType.Locked;
+    //     doc.properties.leaseDuration = undefined;
+    //     doc.leaseDurationSeconds = undefined;
+    //     doc.leaseBreakTime =
+    //       doc.properties.leaseDuration === Models.LeaseDurationType.Infinite
+    //         ? breakTime
+    //         : doc.leaseExpireTime! < breakTime
+    //         ? doc.leaseExpireTime
+    //         : breakTime;
+    //     doc.leaseExpireTime = undefined;
+    //     leaseTimeSeconds = Math.round(
+    //       Math.abs(
+    //         doc.leaseBreakTime!.getTime() - context.startTime!.getTime()
+    //       ) / 1000
+    //     );
+    //   } else if (doc.properties.leaseState === Models.LeaseStateType.Breaking) {
+    //     // Do nothing for a breaking container (TODO: or select a short break time?)
+    //     leaseTimeSeconds = Math.round(
+    //       Math.abs(
+    //         doc.leaseBreakTime!.getTime() - context.startTime!.getTime()
+    //       ) / 1000
+    //     );
+    //   } else {
+    //     throw Error(
+    // tslint:disable-next-line: max-line-length
+    //       `LokiBlobMetadataStore:breakContainerLease() Unexpected container lease status: ${doc.properties.leaseState}`
+    //     );
+    //   }
+    // }
+
+    // TODO: Handle leaseTimeSeconds
+
+    // if (
+    //   doc.properties.leaseState === Models.LeaseStateType.Expired ||
+    //   doc.properties.leaseState === Models.LeaseStateType.Broken ||
+    //   breakPeriod === 0 ||
+    //   breakPeriod === undefined
+    // ) {
+    //   doc.properties.leaseState = Models.LeaseStateType.Broken;
+    //   doc.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
+    //   doc.properties.leaseDuration = undefined;
+    //   doc.leaseDurationSeconds = undefined;
+    //   doc.leaseExpireTime = undefined;
+    //   doc.leaseBreakExpireTime = undefined;
+    //   leaseTimeSeconds = 0;
+    // } else {
+    //   doc.properties.leaseState = Models.LeaseStateType.Breaking;
+    //   doc.properties.leaseStatus = Models.LeaseStatusType.Locked;
+    //   doc.leaseDurationSeconds = undefined;
+    //   if (doc.properties.leaseDuration === Models.LeaseDurationType.Infinite) {
+    //     doc.properties.leaseDuration = undefined;
+    //     doc.leaseExpireTime = undefined;
+    //     doc.leaseBreakExpireTime = new Date(context.startTime!);
+    //     doc.leaseBreakExpireTime.setSeconds(
+    //       doc.leaseBreakExpireTime.getSeconds() + breakPeriod
+    //     );
+    //     leaseTimeSeconds = breakPeriod;
+    //   } else {
+    //     let newleaseBreakExpireTime = new Date(context.startTime!);
+    //     newleaseBreakExpireTime.setSeconds(
+    //       newleaseBreakExpireTime.getSeconds() + breakPeriod
+    //     );
+    //     if (
+    //       doc.leaseExpireTime !== undefined &&
+    //       newleaseBreakExpireTime > doc.leaseExpireTime
+    //     ) {
+    //       newleaseBreakExpireTime = doc.leaseExpireTime;
+    //     }
+    //     if (
+    //       doc.leaseBreakExpireTime === undefined ||
+    //       doc.leaseBreakExpireTime > newleaseBreakExpireTime
+    //     ) {
+    //       doc.leaseBreakExpireTime = newleaseBreakExpireTime;
+    //     }
+    //     leaseTimeSeconds = Math.round(
+    //       Math.abs(
+    //         doc.leaseBreakExpireTime.getTime() - context.startTime!.getTime()
+    //       ) / 1000
+    //     );
+    //     doc.leaseExpireTime = undefined;
+    //     doc.properties.leaseDuration = undefined;
+    //   }
+    // }
 
     coll.update(doc);
 
-    return { properties: doc.properties, leaseTime: leaseTimeinSecond };
+    return { properties: doc.properties, leaseTime: leaseTimeSeconds };
   }
 
   /**
-   * Change container lease
+   * Change container lease.
    *
    * @param {string} account
    * @param {string} container
@@ -810,31 +967,36 @@ export default class LokiBlobMetadataStore
   ): Promise<ChangeContainerLeaseRes> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainerDoc(account, container, context);
-    const requestId = context ? context.contextID : undefined;
+    // const requestId = context ? context.contextId : undefined;
 
-    // check the lease action aligned with current lease state.
-    if (
-      doc.properties.leaseState === Models.LeaseStateType.Available ||
-      doc.properties.leaseState === Models.LeaseStateType.Expired ||
-      doc.properties.leaseState === Models.LeaseStateType.Broken
-    ) {
-      throw StorageErrorFactory.getContainerLeaseNotPresentWithLeaseOperation(
-        requestId
-      );
-    }
-    if (doc.properties.leaseState === Models.LeaseStateType.Breaking) {
-      throw StorageErrorFactory.getLeaseIsBreakingAndCannotBeChanged(requestId);
-    }
+    const lease = LeaseFactory.createLeaseState(
+      new LokiContainerLeaseAdapter(doc),
+      context
+    ).change(leaseId, proposedLeaseId).lease;
 
-    // Check lease ID
-    if (doc.leaseId !== leaseId && doc.leaseId !== proposedLeaseId) {
-      throw StorageErrorFactory.getContainerLeaseIdMismatchWithLeaseOperation(
-        requestId
-      );
-    }
+    this.updateContainerLease(doc, lease);
 
-    // update the lease information, only need update lease ID
-    doc.leaseId = proposedLeaseId;
+    // // Check the lease action aligned with current lease state.
+    // if (
+    //   doc.properties.leaseState === Models.LeaseStateType.Available ||
+    //   doc.properties.leaseState === Models.LeaseStateType.Expired ||
+    //   doc.properties.leaseState === Models.LeaseStateType.Broken
+    // ) {
+    //   // TODO: Check error message
+    //   throw StorageErrorFactory.getLeaseNotPresentWithLeaseOperation(requestId);
+    // }
+
+    // if (doc.properties.leaseState === Models.LeaseStateType.Breaking) {
+    //   throw StorageErrorFactory.getLeaseIsBreakingAndCannotBeChanged(requestId);
+    // }
+
+    // // Check lease ID
+    // if (doc.leaseId !== leaseId) {
+    //   throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(requestId);
+    // }
+
+    // // Update the lease information, only need update lease ID
+    // doc.leaseId = proposedLeaseId;
 
     coll.update(doc);
 
@@ -858,7 +1020,7 @@ export default class LokiBlobMetadataStore
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = coll.findOne({ accountName: account, name: container });
     if (!doc) {
-      const requestId = context ? context.contextID : undefined;
+      const requestId = context ? context.contextId : undefined;
       throw StorageErrorFactory.getContainerNotFound(requestId);
     }
   }
@@ -1178,7 +1340,7 @@ export default class LokiBlobMetadataStore
     // Check bad requests
     if (!againstBaseBlob && options.deleteSnapshots !== undefined) {
       throw StorageErrorFactory.getInvalidOperation(
-        context.contextID!,
+        context.contextId!,
         "Invalid operation against a blob snapshot."
       );
     }
@@ -1191,7 +1353,7 @@ export default class LokiBlobMetadataStore
         blobName: blob
       });
       if (count > 1) {
-        throw StorageErrorFactory.getSnapshotsPresent(context.contextID!);
+        throw StorageErrorFactory.getSnapshotsPresent(context.contextId!);
       } else {
         coll.findAndRemove({
           accountName: account,
@@ -1371,16 +1533,16 @@ export default class LokiBlobMetadataStore
 
     // check the lease action aligned with current lease state.
     if (doc.snapshot !== "") {
-      throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextID!);
+      throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextId!);
     }
     if (doc.properties.leaseState === Models.LeaseStateType.Breaking) {
-      throw StorageErrorFactory.getLeaseAlreadyPresent(context.contextID!);
+      throw StorageErrorFactory.getLeaseAlreadyPresent(context.contextId!);
     }
     if (
       doc.properties.leaseState === Models.LeaseStateType.Leased &&
       options.proposedLeaseId !== doc.leaseId
     ) {
-      throw StorageErrorFactory.getLeaseAlreadyPresent(context.contextID!);
+      throw StorageErrorFactory.getLeaseAlreadyPresent(context.contextId!);
     }
 
     // update the lease information
@@ -1389,7 +1551,7 @@ export default class LokiBlobMetadataStore
     } else {
       // verify options.duration between 15 and 60
       if (options.duration > 60 || options.duration < 15) {
-        throw StorageErrorFactory.getInvalidLeaseDuration(context.contextID!);
+        throw StorageErrorFactory.getInvalidLeaseDuration(context.contextId!);
       }
       doc.properties.leaseDuration = Models.LeaseDurationType.Fixed;
       doc.leaseExpireTime = context.startTime!;
@@ -1429,18 +1591,18 @@ export default class LokiBlobMetadataStore
 
     // check the lease action aligned with current lease state.
     if (doc.snapshot !== "") {
-      throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextID!);
+      throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextId!);
     }
     if (doc.properties.leaseState === Models.LeaseStateType.Available) {
       throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
-        context.contextID!
+        context.contextId!
       );
     }
 
     // Check lease ID
     if (doc.leaseId !== leaseId) {
       throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
-        context.contextID!
+        context.contextId!
       );
     }
 
@@ -1487,11 +1649,11 @@ export default class LokiBlobMetadataStore
 
     // check the lease action aligned with current lease state.
     if (doc.snapshot !== "") {
-      throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextID!);
+      throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextId!);
     }
     if (doc.properties.leaseState === Models.LeaseStateType.Available) {
       throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
-        context.contextID!
+        context.contextId!
       );
     }
     if (
@@ -1499,14 +1661,14 @@ export default class LokiBlobMetadataStore
       doc.properties.leaseState === Models.LeaseStateType.Broken
     ) {
       throw StorageErrorFactory.getLeaseIsBrokenAndCannotBeRenewed(
-        context.contextID!
+        context.contextId!
       );
     }
 
     // Check lease ID
     if (doc.leaseId !== leaseId) {
       throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
-        context.contextID!
+        context.contextId!
       );
     }
 
@@ -1560,7 +1722,7 @@ export default class LokiBlobMetadataStore
 
     // check the lease action aligned with current lease state.
     if (doc.snapshot !== "") {
-      throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextID!);
+      throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextId!);
     }
     if (
       doc.properties.leaseState === Models.LeaseStateType.Available ||
@@ -1568,19 +1730,19 @@ export default class LokiBlobMetadataStore
       doc.properties.leaseState === Models.LeaseStateType.Broken
     ) {
       throw StorageErrorFactory.getBlobLeaseNotPresentWithLeaseOperation(
-        context.contextID!
+        context.contextId!
       );
     }
     if (doc.properties.leaseState === Models.LeaseStateType.Breaking) {
       throw StorageErrorFactory.getLeaseIsBreakingAndCannotBeChanged(
-        context.contextID!
+        context.contextId!
       );
     }
 
     // Check lease ID
     if (doc.leaseId !== leaseId && doc.leaseId !== proposedLeaseId) {
       throw StorageErrorFactory.getBlobLeaseIdMismatchWithLeaseOperation(
-        context.contextID!
+        context.contextId!
       );
     }
 
@@ -1622,18 +1784,18 @@ export default class LokiBlobMetadataStore
 
     // check the lease action aligned with current lease state.
     if (doc.snapshot !== "") {
-      throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextID!);
+      throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextId!);
     }
     if (doc.properties.leaseState === Models.LeaseStateType.Available) {
       throw StorageErrorFactory.getBlobLeaseNotPresentWithLeaseOperation(
-        context.contextID!
+        context.contextId!
       );
     }
 
     // update the lease information
     // verify options.breakPeriod between 0 and 60
     if (breakPeriod !== undefined && (breakPeriod > 60 || breakPeriod < 0)) {
-      throw StorageErrorFactory.getInvalidLeaseBreakPeriod(context.contextID!);
+      throw StorageErrorFactory.getInvalidLeaseBreakPeriod(context.contextId!);
     }
     if (
       doc.properties.leaseState === Models.LeaseStateType.Expired ||
@@ -1720,7 +1882,7 @@ export default class LokiBlobMetadataStore
     });
 
     if (!doc) {
-      const requestId = context ? context.contextID : undefined;
+      const requestId = context ? context.contextId : undefined;
       throw StorageErrorFactory.getBlobNotFound(requestId);
     }
   }
@@ -1788,11 +1950,11 @@ export default class LokiBlobMetadataStore
 
     // If source is uncommitted or deleted
     if (doc === undefined || doc.deleted || !doc.isCommitted) {
-      throw StorageErrorFactory.getBlobNotFound(context.contextID!);
+      throw StorageErrorFactory.getBlobNotFound(context.contextId!);
     }
 
     if (doc.properties.accessTier === Models.AccessTier.Archive) {
-      throw StorageErrorFactory.getBlobArchived(context.contextID!);
+      throw StorageErrorFactory.getBlobArchived(context.contextId!);
     }
 
     await this.checkContainerExist(destination.account, destination.container);
@@ -1847,7 +2009,7 @@ export default class LokiBlobMetadataStore
     ) {
       copiedBlob.properties.accessTier = this.parseTier(tier);
       if (copiedBlob.properties.accessTier === undefined) {
-        throw StorageErrorFactory.getInvalidHeaderValue(context.contextID, {
+        throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
           HeaderName: "x-ms-access-tier",
           HeaderValue: `${tier}`
         });
@@ -1893,7 +2055,7 @@ export default class LokiBlobMetadataStore
 
     // Check Blob is not snapshot
     if (doc.snapshot !== "") {
-      throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextID!);
+      throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextId!);
     }
 
     // Check BlobTier matches blob type
@@ -1918,7 +2080,7 @@ export default class LokiBlobMetadataStore
       doc.properties.accessTier = tier;
       doc.properties.accessTierChangeTime = context.startTime;
     } else {
-      throw StorageErrorFactory.getBlobInvalidBlobType(context.contextID!);
+      throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId!);
     }
 
     coll.update(doc);
@@ -2044,7 +2206,7 @@ export default class LokiBlobMetadataStore
             block_1.blockName
           );
           if (pUncommittedBlock === undefined) {
-            throw StorageErrorFactory.getInvalidOperation(context.contextID!);
+            throw StorageErrorFactory.getInvalidOperation(context.contextId!);
           } else {
             selectedBlockList.push(pUncommittedBlock);
           }
@@ -2052,7 +2214,7 @@ export default class LokiBlobMetadataStore
         case "committed":
           const pCommittedBlock = pCommittedBlocksMap.get(block_1.blockName);
           if (pCommittedBlock === undefined) {
-            throw StorageErrorFactory.getInvalidOperation(context.contextID!);
+            throw StorageErrorFactory.getInvalidOperation(context.contextId!);
           } else {
             selectedBlockList.push(pCommittedBlock);
           }
@@ -2062,13 +2224,13 @@ export default class LokiBlobMetadataStore
             pUncommittedBlocksMap.get(block_1.blockName) ||
             pCommittedBlocksMap.get(block_1.blockName);
           if (pLatestBlock === undefined) {
-            throw StorageErrorFactory.getInvalidOperation(context.contextID!);
+            throw StorageErrorFactory.getInvalidOperation(context.contextId!);
           } else {
             selectedBlockList.push(pLatestBlock);
           }
           break;
         default:
-          throw StorageErrorFactory.getInvalidOperation(context.contextID!);
+          throw StorageErrorFactory.getInvalidOperation(context.contextId!);
       }
     }
 
@@ -2313,7 +2475,7 @@ export default class LokiBlobMetadataStore
       undefined,
       context
     );
-    const requestId = context ? context.contextID : undefined;
+    const requestId = context ? context.contextId : undefined;
 
     if (doc.properties.blobType !== Models.BlobType.PageBlob) {
       throw StorageErrorFactory.getInvalidOperation(
@@ -2372,7 +2534,7 @@ export default class LokiBlobMetadataStore
 
     if (doc.properties.blobType !== Models.BlobType.PageBlob) {
       throw StorageErrorFactory.getInvalidOperation(
-        context.contextID!,
+        context.contextId!,
         "Get Page Ranges could only be against a page blob."
       );
     }
@@ -2385,7 +2547,7 @@ export default class LokiBlobMetadataStore
       case Models.SequenceNumberActionType.Max:
         if (blobSequenceNumber === undefined) {
           throw StorageErrorFactory.getInvalidOperation(
-            context.contextID!,
+            context.contextId!,
             "x-ms-blob-sequence-number is required when x-ms-sequence-number-action is set to max."
           );
         }
@@ -2397,7 +2559,7 @@ export default class LokiBlobMetadataStore
       case Models.SequenceNumberActionType.Increment:
         if (blobSequenceNumber !== undefined) {
           throw StorageErrorFactory.getInvalidOperation(
-            context.contextID!,
+            context.contextId!,
             "x-ms-blob-sequence-number cannot be provided when x-ms-sequence-number-action is set to increment."
           );
         }
@@ -2406,7 +2568,7 @@ export default class LokiBlobMetadataStore
       case Models.SequenceNumberActionType.Update:
         if (blobSequenceNumber === undefined) {
           throw StorageErrorFactory.getInvalidOperation(
-            context.contextID!,
+            context.contextId!,
             "x-ms-blob-sequence-number is required when x-ms-sequence-number-action is set to update."
           );
         }
@@ -2414,7 +2576,7 @@ export default class LokiBlobMetadataStore
         break;
       default:
         throw StorageErrorFactory.getInvalidOperation(
-          context.contextID!,
+          context.contextId!,
           "Unsupported x-ms-sequence-number-action value."
         );
     }
@@ -2517,7 +2679,7 @@ export default class LokiBlobMetadataStore
   }
 
   /**
-   * Get a container doc from collections.
+   * Get a container document from collections.
    *
    * @param {string} account
    * @param {string} container
@@ -2533,11 +2695,11 @@ export default class LokiBlobMetadataStore
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     let doc = coll.findOne({ accountName: account, name: container });
     if (!doc) {
-      const requestId = context ? context.contextID : undefined;
+      const requestId = context ? context.contextId : undefined;
       throw StorageErrorFactory.getContainerNotFound(requestId);
     }
 
-    doc = this.updateLeaseAttributes(
+    doc = this.calculateLeaseAttributes(
       doc,
       context ? context.startTime! : new Date()
     );
@@ -2545,8 +2707,7 @@ export default class LokiBlobMetadataStore
   }
 
   /**
-   * Update container lease Attributes according to the current time.
-   * The Attribute not set back
+   * Calculate container lease attributes from raw values in database records according to the current time.
    *
    * @private
    * @param {ContainerModel} container
@@ -2554,11 +2715,11 @@ export default class LokiBlobMetadataStore
    * @returns {ContainerModel}
    * @memberof LokiBlobMetadataStore
    */
-  private updateLeaseAttributes(
+  private calculateLeaseAttributes(
     container: ContainerModel,
     currentTime: Date
   ): ContainerModel {
-    // check Leased -> Expired
+    // Check Leased -> Expired
     if (
       container.properties.leaseState === Models.LeaseStateType.Leased &&
       container.properties.leaseDuration === Models.LeaseDurationType.Fixed
@@ -2571,28 +2732,29 @@ export default class LokiBlobMetadataStore
         container.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
         container.properties.leaseDuration = undefined;
         container.leaseExpireTime = undefined;
-        container.leaseBreakExpireTime = undefined;
+        container.leaseBreakTime = undefined;
       }
     }
 
-    // check Breaking -> Broken
+    // Check Breaking -> Broken
     if (container.properties.leaseState === Models.LeaseStateType.Breaking) {
       if (
-        container.leaseBreakExpireTime !== undefined &&
-        currentTime > container.leaseBreakExpireTime
+        container.leaseBreakTime !== undefined &&
+        currentTime > container.leaseBreakTime
       ) {
         container.properties.leaseState = Models.LeaseStateType.Broken;
         container.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
         container.properties.leaseDuration = undefined;
         container.leaseExpireTime = undefined;
-        container.leaseBreakExpireTime = undefined;
+        container.leaseBreakTime = undefined;
+        container.leaseDurationSeconds = undefined;
       }
     }
     return container;
   }
 
   /**
-   * Check Container lease status on Read Container.
+   * Check Container lease status on reading container when request x-ms-lease-id is specified.
    *
    * @private
    * @param {Context} context
@@ -2600,7 +2762,7 @@ export default class LokiBlobMetadataStore
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
    * @memberof LokiBlobMetadataStore
    */
-  private checkLeaseOnReadContainer(
+  private validateLeaseOnReadContainer(
     container: ContainerModel,
     leaseAccessConditions?: Models.LeaseAccessConditions,
     requestId?: string
@@ -2659,7 +2821,7 @@ export default class LokiBlobMetadataStore
     });
 
     if (!doc) {
-      const requestId = context ? context.contextID : undefined;
+      const requestId = context ? context.contextId : undefined;
       throw StorageErrorFactory.getBlobNotFound(requestId);
     }
 
@@ -2691,5 +2853,15 @@ export default class LokiBlobMetadataStore
       return Models.AccessTier.Archive;
     }
     return undefined;
+  }
+
+  private updateContainerLease(doc: ContainerModel, lease: ILease) {
+    doc.leaseId = lease.leaseId;
+    doc.leaseExpireTime = lease.leaseExpireTime;
+    doc.leaseDurationSeconds = lease.leaseDurationSeconds;
+    doc.leaseBreakTime = lease.leaseBreakTime;
+    doc.properties.leaseDuration = lease.leaseDurationType;
+    doc.properties.leaseState = lease.leaseState;
+    doc.properties.leaseStatus = lease.leaseStatus;
   }
 }

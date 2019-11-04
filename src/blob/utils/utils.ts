@@ -3,14 +3,6 @@ import etag from "etag";
 import { createWriteStream, PathLike } from "fs";
 import { parse } from "url";
 
-import * as Models from "../generated/artifacts/models";
-import Context from "../generated/Context";
-import {
-  BLOB_API_VERSION,
-  EMULATOR_ACCOUNT_KIND,
-  EMULATOR_ACCOUNT_SKUNAME
-} from "../utils/constants";
-
 /**
  * Generates a hash signature for an HTTP request or for a SAS.
  *
@@ -202,26 +194,4 @@ export function deserializePageBlobRangeHeader(
   }
 
   return [startInclusive, endInclusive];
-}
-
-/**
- * Create a ContainerGetAccountInfoResponse
- *
- * @private
- * @param {Context} [context]
- * @returns Models.ContainerGetAccountInfoResponse
- */
-export function getContainerGetAccountInfoResponse(
-  context: Context
-): Models.ContainerGetAccountInfoResponse {
-  const response: Models.ContainerGetAccountInfoResponse = {
-    skuName: EMULATOR_ACCOUNT_SKUNAME,
-    accountKind: EMULATOR_ACCOUNT_KIND,
-    date: context.startTime!,
-    requestId: context.contextID,
-    statusCode: 200,
-    version: BLOB_API_VERSION,
-    clientRequestId: context.request!.getHeader("x-ms-client-request-id")
-  };
-  return response;
 }

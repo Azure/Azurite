@@ -23,7 +23,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
 
     this.logger.info(
       `BlobSharedKeyAuthenticator:validate() Start validation against account shared key authentication.`,
-      blobContext.contextID
+      blobContext.contextId
     );
 
     const authHeaderValue = req.getHeader(HeaderConstants.AUTHORIZATION);
@@ -31,7 +31,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       this.logger.info(
         // tslint:disable-next-line:max-line-length
         `BlobSharedKeyAuthenticator:validate() Request doesn't include valid authentication header. Skip shared key authentication.`,
-        blobContext.contextID
+        blobContext.contextId
       );
       return undefined;
     }
@@ -41,10 +41,10 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
     if (accountProperties === undefined) {
       this.logger.error(
         `BlobSharedKeyAuthenticator:validate() Invalid storage account ${account}.`,
-        blobContext.contextID
+        blobContext.contextId
       );
       throw StorageErrorFactory.getInvalidOperation(
-        blobContext.contextID!,
+        blobContext.contextId!,
         "Invalid storage account."
       );
     }
@@ -76,19 +76,19 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       `BlobSharedKeyAuthenticator:validate() [STRING TO SIGN]:${JSON.stringify(
         stringToSign
       )}`,
-      blobContext.contextID
+      blobContext.contextId
     );
 
     const signature1 = computeHMACSHA256(stringToSign, accountProperties.key1);
     const authValue1 = `SharedKey ${account}:${signature1}`;
     this.logger.info(
       `BlobSharedKeyAuthenticator:validate() Calculated authentication header based on key1: ${authValue1}`,
-      blobContext.contextID
+      blobContext.contextId
     );
     if (authHeaderValue === authValue1) {
       this.logger.info(
         `BlobSharedKeyAuthenticator:validate() Signature 1 matched.`,
-        blobContext.contextID
+        blobContext.contextId
       );
       return true;
     }
@@ -101,12 +101,12 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       const authValue2 = `SharedKey ${account}:${signature2}`;
       this.logger.info(
         `BlobSharedKeyAuthenticator:validate() Calculated authentication header based on key2: ${authValue2}`,
-        blobContext.contextID
+        blobContext.contextId
       );
       if (authHeaderValue === authValue2) {
         this.logger.info(
           `BlobSharedKeyAuthenticator:validate() Signature 2 matched.`,
-          blobContext.contextID
+          blobContext.contextId
         );
         return true;
       }
@@ -118,7 +118,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
 
     this.logger.info(
       `BlobSharedKeyAuthenticator:validate() Validation failed.`,
-      blobContext.contextID
+      blobContext.contextId
     );
     return false;
   }
@@ -188,11 +188,9 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
         .startsWith(HeaderConstants.PREFIX_FOR_STORAGE);
     });
 
-    headersArray.sort(
-      (a, b): number => {
-        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-      }
-    );
+    headersArray.sort((a, b): number => {
+      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+    });
 
     let canonicalizedHeadersStringToSign: string = "";
     headersArray.forEach(header => {

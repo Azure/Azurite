@@ -47,14 +47,14 @@ export default class HandlerMiddlewareFactory {
             return value;
           }
         )}`,
-        context.contextID
+        context.contextId
       );
 
       if (context.operation === undefined) {
         const handlerError = new OperationMismatchError();
         this.logger.error(
           `HandlerMiddleware: ${handlerError.message}`,
-          context.contextID
+          context.contextId
         );
         return next(handlerError);
       }

@@ -12,11 +12,14 @@ import ILogger from "../generated/utils/ILogger";
 import IBlobMetadataStore, {
   BlobModel
 } from "../persistence/IBlobMetadataStore";
-import { BLOB_API_VERSION } from "../utils/constants";
+import {
+  BLOB_API_VERSION,
+  EMULATOR_ACCOUNT_KIND,
+  EMULATOR_ACCOUNT_SKUNAME
+} from "../utils/constants";
 import {
   deserializePageBlobRangeHeader,
   deserializeRangeHeader,
-  getContainerGetAccountInfoResponse,
   getMD5FromStream
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -104,7 +107,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         leaseAccessConditions.leaseId === ""
       ) {
         const blobCtx = new BlobStorageContext(context);
-        throw StorageErrorFactory.getBlobLeaseIdMissing(blobCtx.contextID!);
+        throw StorageErrorFactory.getBlobLeaseIdMissing(blobCtx.contextId!);
       } else if (
         blob.leaseId !== undefined &&
         leaseAccessConditions.leaseId.toLowerCase() !==
@@ -112,7 +115,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       ) {
         const blobCtx = new BlobStorageContext(context);
         throw StorageErrorFactory.getBlobLeaseIdMismatchWithBlobOperation(
-          blobCtx.contextID!
+          blobCtx.contextId!
         );
       }
     } else if (
@@ -121,7 +124,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       leaseAccessConditions.leaseId !== ""
     ) {
       const blobCtx = new BlobStorageContext(context);
-      throw StorageErrorFactory.getBlobLeaseLost(blobCtx.contextID!);
+      throw StorageErrorFactory.getBlobLeaseLost(blobCtx.contextId!);
     }
   }
 
@@ -176,7 +179,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       // return error when lease is unlocked
       if (blob.properties.leaseStatus === Models.LeaseStatusType.Unlocked) {
         const blobCtx = new BlobStorageContext(context);
-        throw StorageErrorFactory.getBlobLeaseLost(blobCtx.contextID!);
+        throw StorageErrorFactory.getBlobLeaseLost(blobCtx.contextId!);
       } else if (
         blob.leaseId !== undefined &&
         leaseAccessConditions.leaseId.toLowerCase() !==
@@ -185,7 +188,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         // return error when lease is locked but lease ID not match
         const blobCtx = new BlobStorageContext(context);
         throw StorageErrorFactory.getBlobLeaseIdMismatchWithBlobOperation(
-          blobCtx.contextID!
+          blobCtx.contextId!
         );
       }
     }
@@ -265,9 +268,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       return this.downloadPageBlob(options, context, blob);
     } else if (blob.properties.blobType === Models.BlobType.AppendBlob) {
       // TODO: Handle append blob
-      throw new NotImplementedError(context.contextID);
+      throw new NotImplementedError(context.contextId);
     } else {
-      throw StorageErrorFactory.getInvalidOperation(context.contextID!);
+      throw StorageErrorFactory.getInvalidOperation(context.contextId!);
     }
   }
 
@@ -304,7 +307,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           statusCode: 200,
           metadata: res.metadata,
           eTag: res.properties.etag,
-          requestId: context.contextID,
+          requestId: context.contextId,
           version: BLOB_API_VERSION,
           date: context.startTime,
           clientRequestId: options.requestId
@@ -314,7 +317,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           metadata: res.metadata,
           isIncrementalCopy: res.properties.incrementalCopy,
           eTag: res.properties.etag,
-          requestId: context.contextID,
+          requestId: context.contextId,
           version: BLOB_API_VERSION,
           date: context.startTime,
           acceptRanges: "bytes",
@@ -353,7 +356,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     const response: Models.BlobDeleteResponse = {
       statusCode: 202,
-      requestId: context.contextID,
+      requestId: context.contextId,
       date: context.startTime,
       version: BLOB_API_VERSION,
       clientRequestId: options.requestId
@@ -374,7 +377,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobUndeleteOptionalParams,
     context: Context
   ): Promise<Models.BlobUndeleteResponse> {
-    throw new NotImplementedError(context.contextID);
+    throw new NotImplementedError(context.contextId);
   }
 
   /**
@@ -408,7 +411,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       eTag: res.etag,
       lastModified: res.lastModified,
       blobSequenceNumber: res.blobSequenceNumber,
-      requestId: context.contextID,
+      requestId: context.contextId,
       version: BLOB_API_VERSION,
       date: context.startTime,
       clientRequestId: options.requestId
@@ -448,7 +451,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       eTag: res.etag,
       lastModified: res.lastModified,
       isServerEncrypted: true,
-      requestId: context.contextID,
+      requestId: context.contextId,
       date: context.startTime,
       version: BLOB_API_VERSION,
       clientRequestId: options.requestId
@@ -486,7 +489,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       eTag: res.properties.etag,
       lastModified: res.properties.lastModified,
       leaseId: res.leaseId,
-      requestId: context.contextID,
+      requestId: context.contextId,
       version: BLOB_API_VERSION,
       statusCode: 201,
       clientRequestId: options.requestId
@@ -525,7 +528,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: blobCtx.startTime!,
       eTag: res.etag,
       lastModified: res.lastModified,
-      requestId: context.contextID,
+      requestId: context.contextId,
       version: BLOB_API_VERSION,
       statusCode: 200,
       clientRequestId: options.requestId
@@ -565,7 +568,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       eTag: res.properties.etag,
       lastModified: res.properties.lastModified,
       leaseId: res.leaseId,
-      requestId: context.contextID,
+      requestId: context.contextId,
       version: BLOB_API_VERSION,
       statusCode: 200,
       clientRequestId: options.requestId
@@ -608,7 +611,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       eTag: res.properties.etag,
       lastModified: res.properties.lastModified,
       leaseId: res.leaseId,
-      requestId: context.contextID,
+      requestId: context.contextId,
       version: BLOB_API_VERSION,
       statusCode: 200,
       clientRequestId: options.requestId
@@ -646,7 +649,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       eTag: res.properties.etag,
       lastModified: res.properties.lastModified,
       leaseTime: res.leaseTime,
-      requestId: context.contextID,
+      requestId: context.contextId,
       version: BLOB_API_VERSION,
       statusCode: 202,
       clientRequestId: options.requestId
@@ -684,7 +687,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       statusCode: 201,
       eTag: res.properties.etag,
       lastModified: res.properties.lastModified,
-      requestId: context.contextID,
+      requestId: context.contextId,
       date: context.startTime!,
       version: BLOB_API_VERSION,
       snapshot: res.snapshot,
@@ -728,7 +731,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       sourceContainer === undefined ||
       sourceBlob === undefined
     ) {
-      throw StorageErrorFactory.getBlobNotFound(context.contextID!);
+      throw StorageErrorFactory.getBlobNotFound(context.contextId!);
     }
 
     const res = await this.metadataStore.startCopyFromURL(
@@ -749,7 +752,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       statusCode: 202,
       eTag: res.etag,
       lastModified: res.lastModified,
-      requestId: context.contextID,
+      requestId: context.contextId,
       version: BLOB_API_VERSION,
       date: context.startTime,
       copyId: res.copyId,
@@ -787,16 +790,16 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     );
 
     if (blob.properties.copyId !== copyId) {
-      throw StorageErrorFactory.getCopyIdMismatch(context.contextID!);
+      throw StorageErrorFactory.getCopyIdMismatch(context.contextId!);
     }
 
     if (blob.properties.copyStatus === Models.CopyStatusType.Success) {
-      throw StorageErrorFactory.getNoPendingCopyOperation(context.contextID!);
+      throw StorageErrorFactory.getNoPendingCopyOperation(context.contextId!);
     }
 
     const response: Models.BlobAbortCopyFromURLResponse = {
       statusCode: 204,
-      requestId: context.contextID,
+      requestId: context.contextId,
       version: BLOB_API_VERSION,
       date: context.startTime,
       clientRequestId: options.requestId
@@ -832,7 +835,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     );
 
     const response: Models.BlobSetTierResponse = {
-      requestId: context.contextID,
+      requestId: context.contextId,
       version: BLOB_API_VERSION,
       statusCode: res,
       clientRequestId: options.requestId
@@ -851,7 +854,16 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   public async getAccountInfo(
     context: Context
   ): Promise<Models.BlobGetAccountInfoResponse> {
-    return getContainerGetAccountInfoResponse(context);
+    const response: Models.BlobGetAccountInfoResponse = {
+      statusCode: 200,
+      requestId: context.contextId,
+      clientRequestId: context.request!.getHeader("x-ms-client-request-id"),
+      skuName: EMULATOR_ACCOUNT_SKUNAME,
+      accountKind: EMULATOR_ACCOUNT_KIND,
+      date: context.startTime!,
+      version: BLOB_API_VERSION
+    };
+    return response;
   }
 
   /**
@@ -864,7 +876,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   public async getAccountInfoWithHead(
     context: Context
   ): Promise<Models.BlobGetAccountInfoResponse> {
-    return getContainerGetAccountInfoResponse(context);
+    return this.getAccountInfo(context);
   }
 
   /**
@@ -891,7 +903,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     if (blob.isCommitted === false) {
-      throw StorageErrorFactory.getBlobNotFound(context.contextID!);
+      throw StorageErrorFactory.getBlobNotFound(context.contextId!);
     }
 
     // Deserializer doesn't handle range header currently, manually parse range headers here
@@ -913,7 +925,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     this.logger.info(
       // tslint:disable-next-line:max-line-length
       `BlobHandler:downloadBlockBlob() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
-      context.contextID
+      context.contextId
     );
 
     let bodyGetter: () => Promise<NodeJS.ReadableStream | undefined>;
@@ -967,7 +979,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       body,
       metadata: blob.metadata,
       eTag: blob.properties.etag,
-      requestId: context.contextID,
+      requestId: context.contextId,
       date: context.startTime!,
       version: BLOB_API_VERSION,
       ...blob.properties,
@@ -1024,7 +1036,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     this.logger.info(
       // tslint:disable-next-line:max-line-length
       `BlobHandler:downloadPageBlob() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
-      context.contextID
+      context.contextId
     );
 
     // if (contentLength <= 0) {
@@ -1078,7 +1090,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       body,
       metadata: blob.metadata,
       eTag: blob.properties.etag,
-      requestId: context.contextID,
+      requestId: context.contextId,
       date: context.startTime!,
       version: BLOB_API_VERSION,
       ...blob.properties,

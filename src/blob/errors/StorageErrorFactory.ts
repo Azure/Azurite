@@ -107,24 +107,24 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getContainerLeaseNotPresentWithLeaseOperation(
+  public static getLeaseNotPresentWithLeaseOperation(
     contextID: string = DefaultID
   ): StorageError {
     return new StorageError(
       409,
       "LeaseNotPresentWithLeaseOperation",
-      "There is currently no lease on the container.",
+      "There is currently no lease on the container or blob.",
       contextID
     );
   }
 
-  public static getContainerLeaseIdMismatchWithLeaseOperation(
+  public static getLeaseIdMismatchWithLeaseOperation(
     contextID: string = DefaultID
   ): StorageError {
     return new StorageError(
       409,
       "LeaseIdMismatchWithLeaseOperation",
-      "The lease ID specified did not match the lease ID for the container.",
+      "The lease ID specified did not match the lease ID for the container or blob.",
       contextID
     );
   }

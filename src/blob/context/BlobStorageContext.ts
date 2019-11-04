@@ -48,10 +48,10 @@ export default class BlobStorageContext extends Context
   }
 
   public get xMsRequestID(): string | undefined {
-    return this.contextID;
+    return this.contextId;
   }
 
   public set xMsRequestID(xMsRequestID: string | undefined) {
-    this.contextID = xMsRequestID;
+    this.contextId = xMsRequestID;
   }
 }

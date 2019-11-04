@@ -137,7 +137,7 @@ export async function deserialize(
     const body = await readRequestIntoText(req);
     logger.debug(
       `deserialize(): Raw request body string is ${body}`,
-      context.contextID
+      context.contextId
     );
 
     req.setBody(body);
@@ -316,9 +316,9 @@ export async function serialize(
     res.getBodyStream().write(xmlBody);
     logger.debug(
       `Serializer: Raw response body string is ${xmlBody}`,
-      context.contextID
+      context.contextId
     );
-    logger.info(`Serializer: Start returning stream body.`, context.contextID);
+    logger.info(`Serializer: Start returning stream body.`, context.contextId);
   }
 
   // Serialize stream body
@@ -328,7 +328,7 @@ export async function serialize(
     responseSpec.bodyMapper &&
     responseSpec.bodyMapper.type.name === "Stream"
   ) {
-    logger.info(`Serializer: Start returning stream body.`, context.contextID);
+    logger.info(`Serializer: Start returning stream body.`, context.contextId);
 
     await new Promise((resolve, reject) => {
       (handlerResponse.body as NodeJS.ReadableStream)

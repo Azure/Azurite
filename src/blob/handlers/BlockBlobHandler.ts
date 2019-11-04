@@ -51,7 +51,7 @@ export default class BlockBlobHandler extends BaseHandler
     const persistency = await this.extentStore.appendExtent(body);
     if (persistency.count !== contentLength) {
       throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextID!,
+        blobCtx.contextId!,
         `The size of the request body ${persistency.count} mismatches the content-length ${contentLength}.`
       );
     }
@@ -66,7 +66,7 @@ export default class BlockBlobHandler extends BaseHandler
         ).toString("base64");
         if (contentMD5 !== calculatedContentMD5String) {
           throw StorageErrorFactory.getInvalidOperation(
-            context.contextID!,
+            context.contextId!,
             "Provided contentMD5 doesn't match."
           );
         }
@@ -76,7 +76,7 @@ export default class BlockBlobHandler extends BaseHandler
           !Buffer.from(contentMD5).equals(calculatedContentMD5)
         ) {
           throw StorageErrorFactory.getInvalidOperation(
-            context.contextID!,
+            context.contextId!,
             "Provided contentMD5 doesn't match."
           );
         }
@@ -115,7 +115,7 @@ export default class BlockBlobHandler extends BaseHandler
     if (options.tier !== undefined) {
       blob.properties.accessTier = this.parseTier(options.tier);
       if (blob.properties.accessTier === undefined) {
-        throw StorageErrorFactory.getInvalidHeaderValue(context.contextID, {
+        throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
           HeaderName: "x-ms-access-tier",
           HeaderValue: `${options.tier}`
         });
@@ -130,7 +130,7 @@ export default class BlockBlobHandler extends BaseHandler
       eTag: etag,
       lastModified: date,
       contentMD5: blob.properties.contentMD5,
-      requestId: blobCtx.contextID,
+      requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true,
@@ -164,7 +164,7 @@ export default class BlockBlobHandler extends BaseHandler
     if (persistency.count !== contentLength) {
       // TODO: Confirm error code
       throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextID!,
+        blobCtx.contextId!,
         `The size of the request body ${persistency.count} mismatches the content-length ${contentLength}.`
       );
     }
@@ -185,7 +185,7 @@ export default class BlockBlobHandler extends BaseHandler
     const response: Models.BlockBlobStageBlockResponse = {
       statusCode: 201,
       contentMD5: undefined, // TODO: Block content MD5
-      requestId: blobCtx.contextID,
+      requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
       date,
       isServerEncrypted: true,
@@ -202,7 +202,7 @@ export default class BlockBlobHandler extends BaseHandler
     options: Models.BlockBlobStageBlockFromURLOptionalParams,
     context: Context
   ): Promise<Models.BlockBlobStageBlockFromURLResponse> {
-    throw new NotImplementedError(context.contextID);
+    throw new NotImplementedError(context.contextId);
   }
 
   public async commitBlockList(
@@ -227,7 +227,7 @@ export default class BlockBlobHandler extends BaseHandler
     // We don't leverage serialized blocks parameter because it doesn't include sequence
     const rawBody = request.getBody();
     const badRequestError = StorageErrorFactory.getInvalidOperation(
-      blobCtx.contextID!
+      blobCtx.contextId!
     );
     if (rawBody === undefined) {
       throw badRequestError;
@@ -282,7 +282,7 @@ export default class BlockBlobHandler extends BaseHandler
     if (options.tier !== undefined) {
       blob.properties.accessTier = this.parseTier(options.tier);
       if (blob.properties.accessTier === undefined) {
-        throw StorageErrorFactory.getInvalidHeaderValue(context.contextID, {
+        throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
           HeaderName: "x-ms-access-tier",
           HeaderValue: `${options.tier}`
         });
@@ -303,7 +303,7 @@ export default class BlockBlobHandler extends BaseHandler
       eTag: blob.properties.etag,
       lastModified: blobCtx.startTime,
       contentMD5,
-      requestId: blobCtx.contextID,
+      requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
       date: blobCtx.startTime,
       isServerEncrypted: true,
@@ -338,7 +338,7 @@ export default class BlockBlobHandler extends BaseHandler
       eTag: res.properties.etag,
       contentType: res.properties.contentType,
       blobContentLength: res.properties.contentLength,
-      requestId: blobCtx.contextID,
+      requestId: blobCtx.contextId,
       version: BLOB_API_VERSION,
       date,
       committedBlocks: [],

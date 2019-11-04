@@ -26,14 +26,14 @@ export default function deserializerMiddleware(
 ): void {
   logger.verbose(
     `DeserializerMiddleware: Start deserializing...`,
-    context.contextID
+    context.contextId
   );
 
   if (context.operation === undefined) {
     const handlerError = new OperationMismatchError();
     logger.error(
       `DeserializerMiddleware: ${handlerError.message}`,
-      context.contextID
+      context.contextId
     );
     return next(handlerError);
   }

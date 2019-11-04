@@ -32,7 +32,7 @@ export default function errorMiddleware(
   if (res.headersSent()) {
     logger.warn(
       `Error middleware received an error, but response.headersSent is true, pass error to next middleware`,
-      context.contextID
+      context.contextId
     );
     return next(err);
   }
@@ -42,7 +42,7 @@ export default function errorMiddleware(
   if (err instanceof MiddlewareError) {
     logger.error(
       `ErrorMiddleware: Received a MiddlewareError, fill error information to HTTP response`,
-      context.contextID
+      context.contextId
     );
 
     logger.error(
@@ -55,19 +55,19 @@ export default function errorMiddleware(
       )} ErrorHTTPBody=${JSON.stringify(err.body)} ErrorStack=${JSON.stringify(
         err.stack
       )}`,
-      context.contextID
+      context.contextId
     );
 
     logger.error(
       `ErrorMiddleware: Set HTTP code: ${err.statusCode}`,
-      context.contextID
+      context.contextId
     );
 
     res.setStatusCode(err.statusCode);
     if (err.statusMessage) {
       logger.error(
         `ErrorMiddleware: Set HTTP status message: ${err.statusMessage}`,
-        context.contextID
+        context.contextId
       );
       res.setStatusMessage(err.statusMessage);
     }
@@ -79,7 +79,7 @@ export default function errorMiddleware(
           if (value) {
             logger.error(
               `ErrorMiddleware: Set HTTP Header: ${key}=${value}`,
-              context.contextID
+              context.contextId
             );
             res.setHeader(key, value);
           }
@@ -90,14 +90,14 @@ export default function errorMiddleware(
     if (err.contentType) {
       logger.error(
         `ErrorMiddleware: Set content type: ${err.contentType}`,
-        context.contextID
+        context.contextId
       );
       res.setContentType(err.contentType);
     }
 
     logger.error(
       `ErrorMiddleware: Set HTTP body: ${JSON.stringify(err.body)}`,
-      context.contextID
+      context.contextId
     );
     if (err.body) {
       res.getBodyStream().write(err.body);
@@ -105,15 +105,15 @@ export default function errorMiddleware(
   } else if (err instanceof Error) {
     logger.error(
       `ErrorMiddleware: Received an error, fill error information to HTTP response`,
-      context.contextID
+      context.contextId
     );
     logger.error(
       `ErrorMiddleware: ErrorName=${err.name} ErrorMessage=${
         err.message
       } ErrorStack=${JSON.stringify(err.stack)}`,
-      context.contextID
+      context.contextId
     );
-    logger.error(`ErrorMiddleware: Set HTTP code: ${500}`, context.contextID);
+    logger.error(`ErrorMiddleware: Set HTTP code: ${500}`, context.contextId);
     res.setStatusCode(500);
 
     // logger.error(
@@ -124,7 +124,7 @@ export default function errorMiddleware(
   } else {
     logger.warn(
       `ErrorMiddleware: Received unhandled error object`,
-      context.contextID
+      context.contextId
     );
   }
 

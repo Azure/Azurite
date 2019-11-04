@@ -25,7 +25,7 @@ export default function endMiddleware(
     `EndMiddleware: End response. TotalTimeInMS=${totalTimeInMS} StatusCode=${res.getStatusCode()} StatusMessage=${res.getStatusMessage()} Headers=${JSON.stringify(
       res.getHeaders()
     )}`,
-    context.contextID
+    context.contextId
   );
 
   res.getBodyStream().end();
