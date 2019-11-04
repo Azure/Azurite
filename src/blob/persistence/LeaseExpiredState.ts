@@ -26,7 +26,7 @@ export default class LeaseExpiredState implements ILeaseState {
       /*
        * LeaseState: Expired
        * LeaseStatus: Unlocked
-       * LeaseDurationType: Fixed
+       * LeaseDurationType: undefined
        * LeaseExpireTime: undefined
        * LeaseDurationSeconds: number
        * LeaseBreakTime: undefined
@@ -79,7 +79,7 @@ export default class LeaseExpiredState implements ILeaseState {
        * LeaseStatus: Locked
        * LeaseDurationType: Fixed
        * LeaseExpireTime: now >= timestamp
-       * LeaseDurationSeconds: number
+       * LeaseDurationSeconds: number (not -1)
        * LeaseBreakTime: undefined
        * LeaseId: uuid
        */
@@ -104,9 +104,12 @@ export default class LeaseExpiredState implements ILeaseState {
         );
       }
 
-      if (lease.leaseDurationSeconds === undefined) {
+      if (
+        lease.leaseDurationSeconds === undefined ||
+        lease.leaseDurationSeconds === -1
+      ) {
         throw RangeError(
-          `LeaseExpiredState:constructor() error, incoming leaseDurationSeconds ${lease.leaseDurationSeconds} is undefined.`
+          `LeaseExpiredState:constructor() error, incoming leaseDurationSeconds ${lease.leaseDurationSeconds} is undefined or -1 (infinite).`
         );
       }
 
@@ -126,7 +129,7 @@ export default class LeaseExpiredState implements ILeaseState {
         leaseId: lease.leaseId,
         leaseState: LeaseStateType.Expired,
         leaseStatus: LeaseStatusType.Unlocked,
-        leaseDurationType: lease.leaseDurationType,
+        leaseDurationType: undefined,
         leaseDurationSeconds: lease.leaseDurationSeconds,
         leaseExpireTime: undefined,
         leaseBreakTime: undefined

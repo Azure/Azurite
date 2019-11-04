@@ -67,7 +67,8 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
 
     const containerPublicAccessType = await this.getContainerPublicAccessType(
       account,
-      containerName
+      containerName,
+      context
     );
     if (containerPublicAccessType === undefined) {
       this.logger.debug(
@@ -128,12 +129,14 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
 
   private async getContainerPublicAccessType(
     account: string,
-    container: string
+    container: string,
+    context: Context
   ): Promise<PublicAccessType | undefined> {
     try {
       const containerModel = await this.blobMetadataStore.getContainerACL(
         account,
-        container
+        container,
+        context
       );
       if (containerModel === undefined) {
         return undefined;

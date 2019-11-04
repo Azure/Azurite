@@ -28,7 +28,7 @@ export default class ContainerHandler extends BaseHandler
   private readonly LIST_BLOBS_MAX_RESULTS_DEFAULT = 5000;
 
   /**
-   * create container
+   * Create container.
    *
    * @param {Models.ContainerCreateOptionalParams} options
    * @param {Context} context
@@ -94,7 +94,8 @@ export default class ContainerHandler extends BaseHandler
     const containerProperties = await this.metadataStore.getContainerProperties(
       accountName,
       containerName,
-      context
+      context,
+      options.leaseAccessConditions
     );
 
     const response: Models.ContainerGetPropertiesResponse = {
@@ -150,8 +151,8 @@ export default class ContainerHandler extends BaseHandler
     await this.metadataStore.deleteContainer(
       accountName,
       containerName,
-      options.leaseAccessConditions,
-      context
+      context,
+      options.leaseAccessConditions
     );
 
     const response: Models.ContainerDeleteResponse = {
@@ -188,8 +189,9 @@ export default class ContainerHandler extends BaseHandler
       containerName,
       date,
       eTag,
+      context,
       options.metadata,
-      context
+      options.leaseAccessConditions
     );
 
     const response: Models.ContainerSetMetadataResponse = {
@@ -223,8 +225,8 @@ export default class ContainerHandler extends BaseHandler
     const containerAcl = await this.metadataStore.getContainerACL(
       accountName,
       containerName,
-      options.leaseAccessConditions,
-      context
+      context,
+      options.leaseAccessConditions
     );
 
     const response: any = [];

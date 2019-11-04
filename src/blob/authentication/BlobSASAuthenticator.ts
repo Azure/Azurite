@@ -212,7 +212,8 @@ export default class BlobSASAuthenticator implements IAuthenticator {
         | undefined = await this.getContainerAccessPolicyByIdentifier(
         account,
         containerName,
-        values.identifier
+        values.identifier,
+        context
       );
       if (accessPolicy === undefined) {
         this.logger.warn(
@@ -450,12 +451,14 @@ export default class BlobSASAuthenticator implements IAuthenticator {
   private async getContainerAccessPolicyByIdentifier(
     account: string,
     container: string,
-    id: string
+    id: string,
+    context: Context
   ): Promise<AccessPolicy | undefined> {
     try {
       const containerModel = await this.blobMetadataStore.getContainerACL(
         account,
-        container
+        container,
+        context
       );
       if (containerModel === undefined) {
         return undefined;

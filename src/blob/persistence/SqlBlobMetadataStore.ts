@@ -817,8 +817,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   public async deleteContainer(
     account: string,
     container: string,
-    leaseAccessConditions?: Models.LeaseAccessConditions,
-    context?: Context
+    context: Context,
+    leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<void> {
     await this.sequelize.transaction(async t => {
       /* Transaction starts */
@@ -960,8 +960,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: string,
     lastModified: Date,
     etag: string,
-    metadata?: IContainerMetadata,
-    context?: Context
+    context: Context,
+    metadata?: IContainerMetadata
   ): Promise<void> {
     return ContainersModel.update(
       {
@@ -1517,8 +1517,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   public async getContainerACL(
     account: string,
     container: string,
-    leaseAccessConditions?: Models.LeaseAccessConditions | undefined,
-    context?: Context | undefined
+    context: Context,
+    leaseAccessConditions?: Models.LeaseAccessConditions | undefined
   ): Promise<GetContainerAccessPolicyRes> {
     return ContainersModel.findOne({
       where: {
@@ -3544,11 +3544,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async checkBlobExist(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    snapshot?: string | undefined,
-    context?: Context | undefined
+    snapshot?: string | undefined
   ): Promise<void> {
     await this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
@@ -3737,11 +3737,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new Error("Method not implemented.");
   }
   public getPageRanges(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    snapshot?: string | undefined,
-    context?: Context | undefined
+    snapshot?: string | undefined
   ): Promise<GetPageRangeRes> {
     throw new Error("Method not implemented.");
   }

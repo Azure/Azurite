@@ -11,7 +11,7 @@ export default class LeaseFactory {
   public static createLeaseState(lease: ILease, context: Context): ILeaseState {
     if (context.startTime === undefined) {
       throw new RangeError(
-        `LeaseFactory:createLeaseState() context.startTime should not be undefined when leaseState is ${LeaseStateType.Leased}.`
+        `LeaseFactory:createLeaseState() context.startTime should not be undefined.`
       );
     }
 
@@ -22,7 +22,7 @@ export default class LeaseFactory {
     if (lease.leaseState === LeaseStateType.Leased) {
       if (
         lease.leaseExpireTime === undefined ||
-        lease.leaseExpireTime >= context.startTime
+        context.startTime < lease.leaseExpireTime
       ) {
         return new LeaseLeasedState(lease, context);
       } else {
@@ -40,7 +40,7 @@ export default class LeaseFactory {
           `LeaseFactory:createLeaseState() leaseBreakTime should not be undefined when leaseState is ${LeaseStateType.Breaking}.`
         );
       }
-      if (lease.leaseBreakTime >= context.startTime) {
+      if (context.startTime < lease.leaseBreakTime) {
         return new LeaseBreakingState(lease, context);
       } else {
         return new LeaseBrokenState(lease, context);

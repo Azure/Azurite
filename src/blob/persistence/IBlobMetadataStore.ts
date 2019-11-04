@@ -265,22 +265,24 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
    */
   createContainer(
     container: ContainerModel,
-    context?: Context
+    context: Context
   ): Promise<ContainerModel>;
 
   /**
-   * Get a container properties.
+   * Get container properties.
    *
    * @param {string} account
    * @param {string} container
-   * @param {Context} [context]
-   * @returns {(Promise<GetContainerPropertiesModel>)}
+   * @param {Context} context
+   * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
+   * @returns {Promise<GetContainerPropertiesRes>}
    * @memberof IBlobMetadataStore
    */
   getContainerProperties(
     account: string,
     container: string,
-    context?: Context
+    context: Context,
+    leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<GetContainerPropertiesRes>;
 
   /**
@@ -294,27 +296,27 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
    *
    * @param {string} account
    * @param {string} container
+   * @param {Context} context
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
-   * @param {Context} [context]
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
   deleteContainer(
     account: string,
     container: string,
-    leaseAccessConditions?: Models.LeaseAccessConditions,
-    context?: Context
+    context: Context,
+    leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<void>;
 
-  /**
-   * Set container metadata.
+  /** Set container metadata.
    *
    * @param {string} account
    * @param {string} container
    * @param {Date} lastModified
    * @param {string} etag
+   * @param {Context} context
    * @param {IContainerMetadata} [metadata]
-   * @param {Context} [context]
+   * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
@@ -323,8 +325,9 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
     container: string,
     lastModified: Date,
     etag: string,
+    context: Context,
     metadata?: IContainerMetadata,
-    context?: Context
+    leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<void>;
 
   /**
@@ -332,16 +335,16 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
    *
    * @param {string} account
    * @param {string} container
+   * @param {Context} context
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
-   * @param {Context} [context]
    * @returns {Promise<GetContainerAccessPolicyRes>}
    * @memberof IBlobMetadataStore
    */
   getContainerACL(
     account: string,
     container: string,
-    leaseAccessConditions?: Models.LeaseAccessConditions,
-    context?: Context
+    context: Context,
+    leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<GetContainerAccessPolicyRes>;
 
   /**
@@ -350,7 +353,7 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
    * @param {string} account
    * @param {string} container
    * @param {SetContainerAccessPolicyParam} setAclModel
-   * @param {Context} [context]
+   * @param {Context} context
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
@@ -358,7 +361,7 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
     account: string,
     container: string,
     setAclModel: SetContainerAccessPolicyParam,
-    context?: Context
+    context: Context
   ): Promise<void>;
 
   /**
@@ -460,7 +463,7 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
   checkContainerExist(
     account: string,
     container: string,
-    context?: Context
+    context: Context
   ): Promise<void>;
 
   /**
@@ -494,7 +497,7 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
-  createBlob(blob: BlobModel, context?: Context): Promise<void>;
+  createBlob(blob: BlobModel, context: Context): Promise<void>;
 
   /**
    * Create snapshot.
@@ -715,20 +718,20 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
   /**
    * Check the existence of a blob.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {string} [snapshot]
-   * @param {Context} [context]
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
   checkBlobExist(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    snapshot?: string,
-    context?: Context
+    snapshot?: string
   ): Promise<void>;
 
   /**
@@ -859,7 +862,7 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
     start: number,
     end: number,
     persistencycontext: IPersistencyChunk,
-    context?: Context
+    context: Context
   ): Promise<Models.BlobProperties>;
 
   /**
@@ -876,26 +879,26 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
     blob: BlobModel,
     start: number,
     end: number,
-    context?: Context
+    context: Context
   ): Promise<Models.BlobProperties>;
 
   /**
    * Returns the list of valid page ranges for a page blob or snapshot of a page blob.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {string} [snapshot]
-   * @param {Context} [context]
    * @returns {Promise<GetPageRangeRes>}
    * @memberof IBlobMetadataStore
    */
   getPageRanges(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    snapshot?: string,
-    context?: Context
+    snapshot?: string
   ): Promise<GetPageRangeRes>;
 
   /**

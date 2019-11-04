@@ -138,7 +138,7 @@ export default class LeaseAvailableState implements ILeaseState {
     );
   }
 
-  public release(): ILeaseState {
+  public release(leaseId: string): ILeaseState {
     throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(
       this.context.contextId
     );
