@@ -64,9 +64,7 @@ export default class Context {
 
       if (typeof context[this.path] !== "object") {
         throw new TypeError(
-          `Initialize Context error because holder.${
-            this.path
-          } is not an object.`
+          `Initialize Context error because holder.${this.path} is not an object.`
         );
       }
 
@@ -127,11 +125,11 @@ export default class Context {
     this.context.handlerResponses = handlerResponses;
   }
 
-  public get contextID(): string | undefined {
+  public get contextId(): string | undefined {
     return this.context.contextID;
   }
 
-  public set contextID(contextID: string | undefined) {
+  public set contextId(contextID: string | undefined) {
     this.context.contextID = contextID;
   }
 

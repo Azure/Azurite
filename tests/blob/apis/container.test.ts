@@ -87,6 +87,22 @@ describe("ContainerAPIs", () => {
     );
   });
 
+  it("getProperties should return 404 for non existed container", async () => {
+    const nonExistedContainerURL = ContainerURL.fromServiceURL(
+      serviceURL,
+      "404container_"
+    );
+    let expectedError = false;
+    try {
+      await nonExistedContainerURL.getProperties(Aborter.none);
+    } catch (err) {
+      if (err.response.status === 404) {
+        expectedError = true;
+      }
+    }
+    assert.ok(expectedError);
+  });
+
   it("create with default parameters", done => {
     // create() with default parameters has been tested in beforeEach
     done();

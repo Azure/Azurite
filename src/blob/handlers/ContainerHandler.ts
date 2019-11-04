@@ -2,8 +2,12 @@ import BlobStorageContext from "../context/BlobStorageContext";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IContainerHandler from "../generated/handlers/IContainerHandler";
-import { BLOB_API_VERSION } from "../utils/constants";
-import { getContainerGetAccountInfoResponse, newEtag } from "../utils/utils";
+import {
+  BLOB_API_VERSION,
+  EMULATOR_ACCOUNT_KIND,
+  EMULATOR_ACCOUNT_SKUNAME
+} from "../utils/constants";
+import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 /**
@@ -44,8 +48,8 @@ export default class ContainerHandler extends BaseHandler
     await this.metadataStore.createContainer(
       {
         accountName,
-        metadata: options.metadata,
         name: containerName,
+        metadata: options.metadata,
         properties: {
           etag,
           lastModified,
@@ -60,12 +64,12 @@ export default class ContainerHandler extends BaseHandler
     );
 
     const response: Models.ContainerCreateResponse = {
+      statusCode: 201,
+      requestId: blobCtx.contextId,
+      clientRequestId: options.requestId,
       eTag: etag,
       lastModified,
-      requestId: blobCtx.contextID,
-      statusCode: 201,
-      version: BLOB_API_VERSION,
-      clientRequestId: options.requestId
+      version: BLOB_API_VERSION
     };
 
     return response;
@@ -86,6 +90,7 @@ export default class ContainerHandler extends BaseHandler
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
+
     const containerProperties = await this.metadataStore.getContainerProperties(
       accountName,
       containerName,
@@ -93,15 +98,16 @@ export default class ContainerHandler extends BaseHandler
     );
 
     const response: Models.ContainerGetPropertiesResponse = {
+      statusCode: 200,
+      requestId: context.contextId,
+      clientRequestId: options.requestId,
       eTag: containerProperties.properties.etag,
       ...containerProperties.properties,
       blobPublicAccess: containerProperties.properties.publicAccess,
       metadata: containerProperties.metadata,
-      requestId: context.contextID,
-      statusCode: 200,
-      version: BLOB_API_VERSION,
-      clientRequestId: options.requestId
+      version: BLOB_API_VERSION
     };
+
     return response;
   }
 
@@ -121,7 +127,7 @@ export default class ContainerHandler extends BaseHandler
   }
 
   /**
-   * delete container
+   * Delete container.
    *
    * @param {Models.ContainerDeleteMethodOptionalParams} options
    * @param {Context} context
@@ -149,18 +155,18 @@ export default class ContainerHandler extends BaseHandler
     );
 
     const response: Models.ContainerDeleteResponse = {
-      date: context.startTime,
-      requestId: context.contextID,
       statusCode: 202,
-      version: BLOB_API_VERSION,
-      clientRequestId: options.requestId
+      requestId: context.contextId,
+      clientRequestId: options.requestId,
+      date: context.startTime,
+      version: BLOB_API_VERSION
     };
 
     return response;
   }
 
   /**
-   * set container metadata
+   * Set container metadata.
    *
    * @param {Models.ContainerSetMetadataOptionalParams} options
    * @param {Context} context
@@ -174,9 +180,9 @@ export default class ContainerHandler extends BaseHandler
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
-
     const date = blobCtx.startTime!;
     const eTag = newEtag();
+
     await this.metadataStore.setContainerMetadata(
       accountName,
       containerName,
@@ -187,19 +193,19 @@ export default class ContainerHandler extends BaseHandler
     );
 
     const response: Models.ContainerSetMetadataResponse = {
+      statusCode: 200,
+      requestId: context.contextId,
+      clientRequestId: options.requestId,
       date,
       eTag,
-      lastModified: date,
-      requestId: context.contextID,
-      statusCode: 200,
-      clientRequestId: options.requestId
+      lastModified: date
     };
 
     return response;
   }
 
   /**
-   * Get container access policy
+   * Get container access policy.
    *
    * @param {Models.ContainerGetAccessPolicyOptionalParams} options
    * @param {Context} context
@@ -233,7 +239,7 @@ export default class ContainerHandler extends BaseHandler
     responseObject.blobPublicAccess = containerAcl.properties.publicAccess;
     responseObject.eTag = containerAcl.properties.etag;
     responseObject.lastModified = containerAcl.properties.lastModified;
-    responseObject.requestId = context.contextID;
+    responseObject.requestId = context.contextId;
     responseObject.version = BLOB_API_VERSION;
     responseObject.statusCode = 200;
     responseObject.clientRequestId = options.requestId;
@@ -281,7 +287,7 @@ export default class ContainerHandler extends BaseHandler
       date,
       eTag,
       lastModified: date,
-      requestId: context.contextID,
+      requestId: context.contextId,
       version: BLOB_API_VERSION,
       statusCode: 200,
       clientRequestId: options.requestId
@@ -291,7 +297,9 @@ export default class ContainerHandler extends BaseHandler
   }
 
   /**
-   * acquire container lease
+   * Acquire container lease.
+   *
+   * @see https://docs.microsoft.com/en-us/rest/api/storageservices/lease-container
    *
    * @param {Models.ContainerAcquireLeaseOptionalParams} options
    * @param {Context} context
@@ -305,6 +313,7 @@ export default class ContainerHandler extends BaseHandler
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
+
     const res = await this.metadataStore.acquireContainerLease(
       accountName,
       containerName,
@@ -313,21 +322,23 @@ export default class ContainerHandler extends BaseHandler
     );
 
     const response: Models.ContainerAcquireLeaseResponse = {
+      statusCode: 201,
+      requestId: context.contextId,
+      clientRequestId: options.requestId,
       date: blobCtx.startTime!,
       eTag: res.properties.etag,
       lastModified: res.properties.lastModified,
       leaseId: res.leaseId,
-      requestId: context.contextID,
-      version: BLOB_API_VERSION,
-      statusCode: 201,
-      clientRequestId: options.requestId
+      version: BLOB_API_VERSION
     };
 
     return response;
   }
 
   /**
-   * release container lease
+   * Release container lease.
+   *
+   * @see https://docs.microsoft.com/en-us/rest/api/storageservices/lease-container
    *
    * @param {string} leaseId
    * @param {Models.ContainerReleaseLeaseOptionalParams} options
@@ -352,20 +363,22 @@ export default class ContainerHandler extends BaseHandler
     );
 
     const response: Models.ContainerReleaseLeaseResponse = {
+      statusCode: 200,
+      requestId: context.contextId,
+      clientRequestId: options.requestId,
       date: blobCtx.startTime!,
       eTag: res.etag,
       lastModified: res.lastModified,
-      requestId: context.contextID,
-      version: BLOB_API_VERSION,
-      statusCode: 200,
-      clientRequestId: options.requestId
+      version: BLOB_API_VERSION
     };
 
     return response;
   }
 
   /**
-   * renew container lease
+   * Renew container lease.
+   *
+   * @see https://docs.microsoft.com/en-us/rest/api/storageservices/lease-container
    *
    * @param {string} leaseId
    * @param {Models.ContainerRenewLeaseOptionalParams} options
@@ -390,21 +403,23 @@ export default class ContainerHandler extends BaseHandler
     );
 
     const response: Models.ContainerRenewLeaseResponse = {
+      statusCode: 200,
+      requestId: context.contextId,
+      clientRequestId: options.requestId,
       date: blobCtx.startTime!,
+      leaseId: res.leaseId,
       eTag: res.properties.etag,
       lastModified: res.properties.lastModified,
-      leaseId: res.leaseId,
-      requestId: context.contextID,
-      version: BLOB_API_VERSION,
-      statusCode: 200,
-      clientRequestId: options.requestId
+      version: BLOB_API_VERSION
     };
 
     return response;
   }
 
   /**
-   * break container lease
+   * Break container lease.
+   *
+   * @see https://docs.microsoft.com/en-us/rest/api/storageservices/lease-container
    *
    * @param {Models.ContainerBreakLeaseOptionalParams} options
    * @param {Context} context
@@ -427,21 +442,23 @@ export default class ContainerHandler extends BaseHandler
     );
 
     const response: Models.ContainerBreakLeaseResponse = {
+      statusCode: 202,
+      requestId: context.contextId,
+      clientRequestId: options.requestId,
       date: blobCtx.startTime!,
       eTag: res.properties.etag,
       lastModified: res.properties.lastModified,
       leaseTime: res.leaseTime,
-      requestId: context.contextID,
-      version: BLOB_API_VERSION,
-      statusCode: 202,
-      clientRequestId: options.requestId
+      version: BLOB_API_VERSION
     };
 
     return response;
   }
 
   /**
-   * change container lease
+   * Change container lease.
+   *
+   * @see https://docs.microsoft.com/en-us/rest/api/storageservices/lease-container
    *
    * @param {string} leaseId
    * @param {string} proposedLeaseId
@@ -469,14 +486,14 @@ export default class ContainerHandler extends BaseHandler
     );
 
     const response: Models.ContainerChangeLeaseResponse = {
+      statusCode: 200,
+      requestId: context.contextId,
+      clientRequestId: options.requestId,
       date: blobCtx.startTime!,
       eTag: res.properties.etag,
       lastModified: res.properties.lastModified,
       leaseId: res.leaseId,
-      requestId: context.contextID,
-      version: BLOB_API_VERSION,
-      statusCode: 200,
-      clientRequestId: options.requestId
+      version: BLOB_API_VERSION
     };
 
     return response;
@@ -534,7 +551,7 @@ export default class ContainerHandler extends BaseHandler
     const response: Models.ContainerListBlobFlatSegmentResponse = {
       statusCode: 200,
       contentType: "application/xml",
-      requestId: context.contextID,
+      requestId: context.contextId,
       version: BLOB_API_VERSION,
       date: context.startTime,
       serviceEndpoint,
@@ -630,7 +647,7 @@ export default class ContainerHandler extends BaseHandler
     const response: Models.ContainerListBlobHierarchySegmentResponse = {
       statusCode: 200,
       contentType: "application/xml",
-      requestId: context.contextID,
+      requestId: context.contextId,
       version: BLOB_API_VERSION,
       date: context.startTime,
       serviceEndpoint,
@@ -660,7 +677,16 @@ export default class ContainerHandler extends BaseHandler
   public async getAccountInfo(
     context: Context
   ): Promise<Models.ContainerGetAccountInfoResponse> {
-    return getContainerGetAccountInfoResponse(context);
+    const response: Models.ContainerGetAccountInfoResponse = {
+      statusCode: 200,
+      requestId: context.contextId,
+      clientRequestId: context.request!.getHeader("x-ms-client-request-id"),
+      skuName: EMULATOR_ACCOUNT_SKUNAME,
+      accountKind: EMULATOR_ACCOUNT_KIND,
+      date: context.startTime!,
+      version: BLOB_API_VERSION
+    };
+    return response;
   }
 
   /**
@@ -673,6 +699,6 @@ export default class ContainerHandler extends BaseHandler
   public async getAccountInfoWithHead(
     context: Context
   ): Promise<Models.ContainerGetAccountInfoResponse> {
-    return getContainerGetAccountInfoResponse(context);
+    return this.getAccountInfo(context);
   }
 }

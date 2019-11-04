@@ -3,8 +3,11 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IServiceHandler from "../generated/handlers/IServiceHandler";
 import { parseXML } from "../generated/utils/xml";
-import { BLOB_API_VERSION } from "../utils/constants";
-import { getContainerGetAccountInfoResponse } from "../utils/utils";
+import {
+  BLOB_API_VERSION,
+  EMULATOR_ACCOUNT_KIND,
+  EMULATOR_ACCOUNT_SKUNAME
+} from "../utils/constants";
 import BaseHandler from "./BaseHandler";
 
 /**
@@ -22,7 +25,7 @@ export default class ServiceHandler extends BaseHandler
    * @private
    * @memberof ServiceHandler
    */
-  private readonly LIST_CONTAINERS_MAX_RESULTS_DEFAULT = 2000;
+  private readonly LIST_CONTAINERS_MAX_RESULTS_DEFAULT = 5000;
 
   /**
    * Default service properties.
@@ -112,7 +115,7 @@ export default class ServiceHandler extends BaseHandler
     });
 
     const response: Models.ServiceSetPropertiesResponse = {
-      requestId: context.contextID,
+      requestId: context.contextId,
       statusCode: 202,
       version: BLOB_API_VERSION,
       clientRequestId: options.requestId
@@ -170,7 +173,7 @@ export default class ServiceHandler extends BaseHandler
 
     const response: Models.ServiceGetPropertiesResponse = {
       ...properties,
-      requestId: context.contextID,
+      requestId: context.contextId,
       statusCode: 200,
       version: BLOB_API_VERSION,
       clientRequestId: options.requestId
@@ -184,7 +187,7 @@ export default class ServiceHandler extends BaseHandler
   ): Promise<Models.ServiceGetStatisticsResponse> {
     const response: Models.ServiceGetStatisticsResponse = {
       statusCode: 200,
-      requestId: context.contextID,
+      requestId: context.contextId,
       version: BLOB_API_VERSION,
       date: context.startTime,
       clientRequestId: options.requestId,
@@ -234,7 +237,7 @@ export default class ServiceHandler extends BaseHandler
       prefix: options.prefix,
       serviceEndpoint,
       statusCode: 200,
-      requestId: context.contextID,
+      requestId: context.contextId,
       version: BLOB_API_VERSION,
       clientRequestId: options.requestId
     };
@@ -245,12 +248,21 @@ export default class ServiceHandler extends BaseHandler
   public async getAccountInfo(
     context: Context
   ): Promise<Models.ServiceGetAccountInfoResponse> {
-    return getContainerGetAccountInfoResponse(context);
+    const response: Models.ContainerGetAccountInfoResponse = {
+      statusCode: 200,
+      requestId: context.contextId,
+      clientRequestId: context.request!.getHeader("x-ms-client-request-id"),
+      skuName: EMULATOR_ACCOUNT_SKUNAME,
+      accountKind: EMULATOR_ACCOUNT_KIND,
+      date: context.startTime!,
+      version: BLOB_API_VERSION
+    };
+    return response;
   }
 
   public async getAccountInfoWithHead(
     context: Context
   ): Promise<Models.ServiceGetAccountInfoResponse> {
-    return getContainerGetAccountInfoResponse(context);
+    return this.getAccountInfo(context);
   }
 }

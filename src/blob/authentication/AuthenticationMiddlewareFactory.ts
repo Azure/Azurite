@@ -22,7 +22,7 @@ export default class AuthenticationMiddlewareFactory {
             next();
           } else {
             next(
-              StorageErrorFactory.getAuthorizationFailure(context.contextID!)
+              StorageErrorFactory.getAuthorizationFailure(context.contextId!)
             );
           }
         })
@@ -40,7 +40,7 @@ export default class AuthenticationMiddlewareFactory {
 
     this.logger.verbose(
       `AuthenticationMiddlewareFactory:createAuthenticationMiddleware() Validating authentications.`,
-      context.contextID
+      context.contextId
     );
 
     let pass: boolean | undefined = false;

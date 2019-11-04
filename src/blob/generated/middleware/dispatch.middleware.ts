@@ -31,7 +31,7 @@ export default function dispatchMiddleware(
 ): void {
   logger.verbose(
     `DispatchMiddleware: Dispatching request...`,
-    context.contextID
+    context.contextId
   );
 
   // Sometimes, more than one operations specifications are all valid against current request
@@ -60,14 +60,14 @@ export default function dispatchMiddleware(
     const handlerError = new UnsupportedRequestError();
     logger.error(
       `DispatchMiddleware: ${handlerError.message}`,
-      context.contextID
+      context.contextId
     );
     return next(handlerError);
   }
 
   logger.info(
     `DispatchMiddleware: Operation=${Operation[context.operation]}`,
-    context.contextID
+    context.contextId
   );
 
   next();

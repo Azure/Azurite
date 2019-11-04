@@ -24,14 +24,14 @@ export default function serializerMiddleware(
 ): void {
   logger.verbose(
     `SerializerMiddleware: Start serializing...`,
-    context.contextID
+    context.contextId
   );
 
   if (context.operation === undefined) {
     const handlerError = new OperationMismatchError();
     logger.error(
       `SerializerMiddleware: ${handlerError.message}`,
-      context.contextID
+      context.contextId
     );
     return next(handlerError);
   }
@@ -41,7 +41,7 @@ export default function serializerMiddleware(
       `SerializerMiddleware: Cannot find serializer for operation ${
         Operation[context.operation]
       }`,
-      context.contextID
+      context.contextId
     );
   }
 

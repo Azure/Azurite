@@ -39,12 +39,12 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
   ): Promise<boolean | undefined> {
     this.logger.info(
       `PublicAccessAuthenticator:validate() Start validation against public access.`,
-      context.contextID
+      context.contextId
     );
 
     this.logger.debug(
       "PublicAccessAuthenticator:validate() Getting account properties...",
-      context.contextID
+      context.contextId
     );
 
     const account: string = context.context.account;
@@ -53,14 +53,14 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
     this.logger.debug(
       // tslint:disable-next-line:max-line-length
       `PublicAccessAuthenticator:validate() Retrieved account name from context: ${account}, container: ${containerName}, blob: ${blobName}`,
-      context.contextID
+      context.contextId
     );
 
     if (containerName === undefined) {
       this.logger.debug(
         // tslint:disable-next-line:max-line-length
         `PublicAccessAuthenticator:validate() Skip public access authentication. Container name is undefined.`,
-        context.contextID
+        context.contextId
       );
       return undefined;
     }
@@ -73,7 +73,7 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
       this.logger.debug(
         // tslint:disable-next-line:max-line-length
         `PublicAccessAuthenticator:validate() Skip public access authentication. Cannot get public access type for container ${containerName}`,
-        context.contextID
+        context.contextId
       );
       return undefined;
     }
@@ -81,7 +81,7 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
       `PublicAccessAuthenticator:validate() Public access type for container ${containerName} is ${JSON.stringify(
         containerPublicAccessType
       )}`,
-      context.contextID
+      context.contextId
     );
 
     const operation = context.operation;
@@ -96,7 +96,7 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
       if (CONTAINER_PUBLIC_READ_OPERATIONS.has(operation)) {
         this.logger.debug(
           `PublicAccessAuthenticator:validate() Operation ${Operation[operation]} is in container level public access list. Validation passed.`,
-          context.contextID
+          context.contextId
         );
         return true;
       }
@@ -104,7 +104,7 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
       if (BLOB_PUBLIC_READ_OPERATIONS.has(operation)) {
         this.logger.debug(
           `PublicAccessAuthenticator:validate() Operation ${Operation[operation]} is in blob level public access list. Validation passed.`,
-          context.contextID
+          context.contextId
         );
         return true;
       }
@@ -116,7 +116,7 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
 
     this.logger.debug(
       `PublicAccessAuthenticator:validate() Operation ${Operation[operation]} is not in container neither blob level public access list. Validation failed.`,
-      context.contextID
+      context.contextId
     );
 
     // TODO: Make validate() return values into 3 candidates (true, false, and error thrown)
