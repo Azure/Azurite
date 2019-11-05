@@ -492,130 +492,139 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
   /**
    * Create blob item in persistency layer. Will replace if blob exists.
    *
+   * @param {Context} context
    * @param {BlobModel} blob
-   * @param {Context} [context]
+   * @param {Models.LeaseAccessConditions} [leaseAccessConditions] Optional. Will validate lease if provided
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
-  createBlob(blob: BlobModel, context: Context): Promise<void>;
+  createBlob(
+    context: Context,
+    blob: BlobModel,
+    leaseAccessConditions?: Models.LeaseAccessConditions
+  ): Promise<void>;
 
   /**
    * Create snapshot.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
-   * @param {Context} context
+   * @param {Models.LeaseAccessConditions} [leaseAccessConditions] Optional. Will validate lease if provided
    * @returns {Promise<CreateSnapshotRes>}
    * @memberof IBlobMetadataStore
    */
   createSnapshot(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    context: Context
+    leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<CreateSnapshotRes>;
 
   /**
-   * Gets a blob item from persistency layer by container name and blob name.
+   * Gets a blob item from metadata store by account name, container name and blob name.
    * Will return block list or page list as well for downloading.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {(string | undefined)} snapshot
-   * @param {Context} context
+   * @param {Models.LeaseAccessConditions} [leaseAccessConditions] Optional. Will validate lease if provided
    * @returns {Promise<BlobModel>}
    * @memberof IBlobMetadataStore
    */
   downloadBlob(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     snapshot: string | undefined,
-    context: Context
+    leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<BlobModel>;
 
   /**
    * Get blob properties.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {(string | undefined)} snapshot
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
-   * @param {Context} context
    * @returns {Promise<GetBlobPropertiesRes>}
    * @memberof IBlobMetadataStore
    */
   getBlobProperties(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     snapshot: string | undefined,
-    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    context: Context
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<GetBlobPropertiesRes>;
 
   /**
    * Delete blob or its snapshots.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {Models.BlobDeleteMethodOptionalParams} options
-   * @param {Context} context
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
   deleteBlob(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    options: Models.BlobDeleteMethodOptionalParams,
-    context: Context
+    options: Models.BlobDeleteMethodOptionalParams
   ): Promise<void>;
 
   /**
    * Set blob HTTP headers.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @param {(Models.BlobHTTPHeaders | undefined)} blobHTTPHeaders
-   * @param {Context} context
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
   setBlobHTTPHeaders(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    blobHTTPHeaders: Models.BlobHTTPHeaders | undefined,
-    context: Context
+    blobHTTPHeaders: Models.BlobHTTPHeaders | undefined
   ): Promise<Models.BlobProperties>;
 
   /**
    * Set blob metadata.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @param {(Models.BlobMetadata | undefined)} metadata
-   * @param {Context} context
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
   setBlobMetadata(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    metadata: Models.BlobMetadata | undefined,
-    context: Context
+    metadata: Models.BlobMetadata | undefined
   ): Promise<Models.BlobProperties>;
 
   /**
@@ -760,37 +769,45 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
   /**
    * Start copy from Url.
    *
+   * @param {Context} context
    * @param {BlobId} source
    * @param {BlobId} destination
    * @param {string} copySource
    * @param {(Models.BlobMetadata | undefined)} metadata
    * @param {(Models.AccessTier | undefined)} tier
-   * @param {Context} context
+   * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
   startCopyFromURL(
+    context: Context,
     source: BlobId,
     destination: BlobId,
     copySource: string,
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
-    context: Context
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<Models.BlobProperties>;
 
   /**
    * Update Tier for a blob.
    *
-   * @param {BlobModel} blob
-   * @returns {Promise<200 | 202>}
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} blob
+   * @param {Models.AccessTier} tier
+   * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
+   * @returns {(Promise<200 | 202>)}
    * @memberof IBlobMetadataStore
    */
   setTier(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     tier: Models.AccessTier,
-    context: Context
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<200 | 202>;
 
   /**
@@ -802,7 +819,11 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
-  stageBlock(block: BlockModel, context: Context): Promise<void>;
+  stageBlock(
+    context: Context,
+    block: BlockModel,
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined
+  ): Promise<void>;
 
   /**
    * Commit block list for a blob.
@@ -815,10 +836,10 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
    * @memberof IBlobMetadataStore
    */
   commitBlockList(
+    context: Context,
     blob: BlobModel,
     blockList: { blockName: string; blockCommitType: string }[],
-    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    context: Context
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<void>;
 
   /**
@@ -837,11 +858,12 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
    * @memberof IBlobMetadataStore
    */
   getBlockList(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     isCommitted: boolean | undefined,
-    context: Context
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<{
     properties: Models.BlobProperties;
     uncommittedBlocks: Models.Block[];

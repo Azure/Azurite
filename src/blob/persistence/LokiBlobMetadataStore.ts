@@ -6,6 +6,7 @@ import IGCExtentProvider from "../../common/IGCExtentProvider";
 import { rimrafAsync } from "../../common/utils/utils";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
+import { LeaseStatusType } from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import BlobHandler from "../handlers/BlobHandler";
 import PageBlobRangesManager from "../handlers/PageBlobRangesManager";
@@ -1128,11 +1129,17 @@ export default class LokiBlobMetadataStore
   /**
    * Create blob item in persistency layer. Will replace if blob exists.
    *
+   * @param {Context} context
    * @param {BlobModel} blob
+   * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
    * @returns {Promise<void>}
    * @memberof LokiBlobMetadataStore
    */
-  public async createBlob(blob: BlobModel, context?: Context): Promise<void> {
+  public async createBlob(
+    context: Context,
+    blob: BlobModel,
+    leaseAccessConditions?: Models.LeaseAccessConditions
+  ): Promise<void> {
     await this.checkContainerExist(
       blob.accountName,
       blob.containerName,
@@ -1145,7 +1152,15 @@ export default class LokiBlobMetadataStore
       name: blob.name,
       snapshot: blob.snapshot
     });
+
     if (blobDoc) {
+      const lease = LeaseFactory.createLeaseState(
+        new LokiBlobLeaseAdapter(blobDoc),
+        context
+      ).lease;
+      this.setBlobLeaseProperties(blobDoc, lease);
+      this.validateLeaseOnWriteBlob(context, blobDoc, leaseAccessConditions);
+
       if (
         blobDoc.properties !== undefined &&
         blobDoc.properties.accessTier === Models.AccessTier.Archive
@@ -1161,27 +1176,31 @@ export default class LokiBlobMetadataStore
   /**
    * Create snapshot.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
-   * @param {Context} context
+   * @param {Models.LeaseAccessConditions} [leaseAccessConditions] Optional. Will validate lease if provided
    * @returns {Promise<CreateSnapshotRes>}
    * @memberof LokiBlobMetadataStore
    */
   public async createSnapshot(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    context: Context
+    leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<CreateSnapshotRes> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = await this.getBlobDoc(
+    const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
       undefined,
       context
     );
+
+    this.validateLeaseOnReadBlob(context, doc, leaseAccessConditions);
 
     const snapshotBlob: BlobModel = {
       name: doc.name,
@@ -1196,10 +1215,6 @@ export default class LokiBlobMetadataStore
           ? undefined
           : doc.pageRangesInOrder.slice(),
       isCommitted: doc.isCommitted,
-      leaseDurationSeconds: doc.leaseDurationSeconds,
-      leaseId: doc.leaseId,
-      leaseExpireTime: doc.leaseExpireTime,
-      leaseBreakTime: doc.leaseBreakTime,
       committedBlocksInOrder:
         doc.committedBlocksInOrder === undefined
           ? undefined
@@ -1207,6 +1222,17 @@ export default class LokiBlobMetadataStore
       persistency:
         doc.persistency === undefined ? undefined : { ...doc.persistency }
     };
+
+    // Blob snapshot should not have any lease properties
+    this.setBlobLeaseProperties(snapshotBlob, {
+      leaseId: undefined,
+      leaseExpireTime: undefined,
+      leaseDurationSeconds: undefined,
+      leaseBreakTime: undefined,
+      leaseDurationType: undefined,
+      leaseState: Models.LeaseStateType.Available, // TODO: Lease state & status should be undefined for snapshots
+      leaseStatus: LeaseStatusType.Unlocked // TODO: Lease state & status should be undefined for snapshots
+    });
 
     coll.insert(snapshotBlob);
 
@@ -1220,32 +1246,32 @@ export default class LokiBlobMetadataStore
    * Gets a blob item from persistency layer by container name and blob name.
    * Will return block list or page list as well for downloading.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {string} [snapshot=""]
-   * @param {Context} context
+   * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
    * @returns {Promise<BlobModel>}
    * @memberof LokiBlobMetadataStore
    */
   public async downloadBlob(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     snapshot: string = "",
-    context: Context
+    leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<BlobModel> {
-    let doc = await this.getBlobDoc(
+    const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
       snapshot,
       context
     );
-    doc.properties.contentMD5 = this.restoreUint8Array(
-      doc.properties.contentMD5
-    );
-    doc = BlobHandler.updateLeaseAttributes(doc, context.startTime!);
+
+    this.validateLeaseOnReadBlob(context, doc, leaseAccessConditions);
 
     return doc;
   }
@@ -1289,23 +1315,23 @@ export default class LokiBlobMetadataStore
   /**
    * Get blob properties
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {string} [snapshot=""]
-   * @param {Context} context
    * @returns {Promise<GetBlobPropertiesRes>}
    * @memberof LokiBlobMetadataStore
    */
   public async getBlobProperties(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     snapshot: string = "",
-    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    context: Context
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<GetBlobPropertiesRes> {
-    const doc = await this.getBlobDoc(
+    const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
@@ -1313,10 +1339,7 @@ export default class LokiBlobMetadataStore
       context
     );
 
-    // TODO: Lease for a snapshot blob?
-    if (doc.snapshot === "") {
-      BlobHandler.checkLeaseOnReadBlob(context, doc, leaseAccessConditions);
-    }
+    this.validateLeaseOnReadBlob(context, doc, leaseAccessConditions);
 
     return { properties: doc.properties, metadata: doc.metadata };
   }
@@ -1324,25 +1347,25 @@ export default class LokiBlobMetadataStore
   /**
    * Delete blob or its snapshots.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {Models.BlobDeleteMethodOptionalParams} options
-   * @param {Context} context
    * @returns {Promise<void>}
    * @memberof LokiBlobMetadataStore
    */
   public async deleteBlob(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    options: Models.BlobDeleteMethodOptionalParams,
-    context: Context
+    options: Models.BlobDeleteMethodOptionalParams
   ): Promise<void> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     await this.checkContainerExist(account, container, context);
 
-    const doc = await this.getBlobDoc(
+    const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
@@ -1351,15 +1374,6 @@ export default class LokiBlobMetadataStore
     );
     const againstBaseBlob = doc.snapshot === "";
 
-    // Check Lease status
-    if (againstBaseBlob) {
-      BlobHandler.checkBlobLeaseOnWriteBlob(
-        context,
-        doc,
-        options.leaseAccessConditions
-      );
-    }
-
     // Check bad requests
     if (!againstBaseBlob && options.deleteSnapshots !== undefined) {
       throw StorageErrorFactory.getInvalidOperation(
@@ -1367,6 +1381,8 @@ export default class LokiBlobMetadataStore
         "Invalid operation against a blob snapshot."
       );
     }
+
+    this.validateLeaseOnWriteBlob(context, doc, options.leaseAccessConditions);
 
     // Scenario: Delete base blob only
     if (againstBaseBlob && options.deleteSnapshots === undefined) {
@@ -1426,37 +1442,35 @@ export default class LokiBlobMetadataStore
   /**
    * Set blob HTTP headers.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {(string | undefined)} snapshot
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @param {(Models.BlobHTTPHeaders | undefined)} blobHTTPHeaders
-   * @param {Context} context
    * @returns {Promise<Models.BlobProperties>}
    * @memberof LokiBlobMetadataStore
    */
   public async setBlobHTTPHeaders(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    blobHTTPHeaders: Models.BlobHTTPHeaders | undefined,
-    context: Context
+    blobHTTPHeaders: Models.BlobHTTPHeaders | undefined
   ): Promise<Models.BlobProperties> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    let doc = await this.getBlobDoc(
+    const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
       undefined,
       context
     );
-    // Check Lease status
-    BlobHandler.checkBlobLeaseOnWriteBlob(context, doc, leaseAccessConditions);
 
-    // Set lease to available if it's expired
-    doc = BlobHandler.UpdateBlobLeaseStateOnWriteBlob(doc);
+    // Check Lease status
+    this.validateLeaseOnWriteBlob(context, doc, leaseAccessConditions);
 
     const blobHeaders = blobHTTPHeaders;
     const blobProps = doc.properties;
@@ -1488,25 +1502,25 @@ export default class LokiBlobMetadataStore
   /**
    * Set blob metadata.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @param {(Models.BlobMetadata | undefined)} metadata
-   * @param {Context} context
    * @returns {Promise<Models.BlobProperties>}
    * @memberof LokiBlobMetadataStore
    */
   public async setBlobMetadata(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    metadata: Models.BlobMetadata | undefined,
-    context: Context
+    metadata: Models.BlobMetadata | undefined
   ): Promise<Models.BlobProperties> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    let doc = await this.getBlobDoc(
+    const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
@@ -1515,12 +1529,9 @@ export default class LokiBlobMetadataStore
     );
 
     // Check Lease status
-    BlobHandler.checkBlobLeaseOnWriteBlob(context, doc, leaseAccessConditions);
+    this.validateLeaseOnWriteBlob(context, doc, leaseAccessConditions);
 
     doc.metadata = metadata;
-
-    // Set lease to available if it's expired
-    doc = BlobHandler.UpdateBlobLeaseStateOnWriteBlob(doc);
 
     coll.update(doc);
 
@@ -1548,7 +1559,7 @@ export default class LokiBlobMetadataStore
     proposedLeaseId?: string
   ): Promise<AcquireBlobLeaseRes> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = await this.getBlobDoc(
+    const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
@@ -1591,7 +1602,7 @@ export default class LokiBlobMetadataStore
     leaseId: string
   ): Promise<ReleaseBlobLeaseRes> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = await this.getBlobDoc(
+    const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
@@ -1633,7 +1644,7 @@ export default class LokiBlobMetadataStore
     leaseId: string
   ): Promise<RenewBlobLeaseRes> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = await this.getBlobDoc(
+    const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
@@ -1677,7 +1688,7 @@ export default class LokiBlobMetadataStore
     proposedLeaseId: string
   ): Promise<ChangeBlobLeaseRes> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = await this.getBlobDoc(
+    const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
@@ -1719,7 +1730,7 @@ export default class LokiBlobMetadataStore
     breakPeriod: number | undefined
   ): Promise<BreakBlobLeaseRes> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = await this.getBlobDoc(
+    const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
@@ -1819,24 +1830,26 @@ export default class LokiBlobMetadataStore
   /**
    * start copy from Url
    *
+   * @param {Context} context
    * @param {BlobId} source
    * @param {BlobId} destination
    * @param {(Models.BlobMetadata | undefined)} metadata
    * @param {(Models.AccessTier | undefined)} tier
-   * @param {Context} context
+   * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @returns {Promise<Models.BlobProperties>}
    * @memberof LokiBlobMetadataStore
    */
   public async startCopyFromURL(
+    context: Context,
     source: BlobId,
     destination: BlobId,
     copySource: string,
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
-    context: Context
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<Models.BlobProperties> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = await this.getBlobDoc(
+    const sourceBlob = await this.getBlobWithLeaseUpdated(
       source.account,
       source.container,
       source.blob,
@@ -1844,12 +1857,29 @@ export default class LokiBlobMetadataStore
       context
     );
 
+    const destBlob = await this.getBlobWithLeaseUpdated(
+      destination.account,
+      destination.container,
+      destination.blob,
+      undefined,
+      context,
+      false
+    );
+
+    if (destBlob) {
+      this.validateLeaseOnWriteBlob(context, destBlob, leaseAccessConditions);
+    }
+
     // If source is uncommitted or deleted
-    if (doc === undefined || doc.deleted || !doc.isCommitted) {
+    if (
+      sourceBlob === undefined ||
+      sourceBlob.deleted ||
+      !sourceBlob.isCommitted
+    ) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId!);
     }
 
-    if (doc.properties.accessTier === Models.AccessTier.Archive) {
+    if (sourceBlob.properties.accessTier === Models.AccessTier.Archive) {
       throw StorageErrorFactory.getBlobArchived(context.contextId!);
     }
 
@@ -1861,7 +1891,7 @@ export default class LokiBlobMetadataStore
       deleted: false,
       snapshot: "",
       properties: {
-        ...doc.properties,
+        ...sourceBlob.properties,
         creationTime: context.startTime!,
         lastModified: context.startTime!,
         etag: newEtag(),
@@ -1871,8 +1901,8 @@ export default class LokiBlobMetadataStore
         copyId: uuid(),
         copyStatus: Models.CopyStatusType.Success,
         copySource,
-        copyProgress: doc.properties.contentLength
-          ? `${doc.properties.contentLength}/${doc.properties.contentLength}`
+        copyProgress: sourceBlob.properties.contentLength
+          ? `${sourceBlob.properties.contentLength}/${sourceBlob.properties.contentLength}`
           : undefined,
         copyCompletionTime: context.startTime,
         copyStatusDescription: undefined,
@@ -1885,18 +1915,18 @@ export default class LokiBlobMetadataStore
       },
       metadata:
         metadata === undefined || Object.keys(metadata).length === 0
-          ? { ...doc.metadata }
+          ? { ...sourceBlob.metadata }
           : metadata,
       accountName: destination.account,
       containerName: destination.container,
-      pageRangesInOrder: doc.pageRangesInOrder,
-      isCommitted: doc.isCommitted,
+      pageRangesInOrder: sourceBlob.pageRangesInOrder,
+      isCommitted: sourceBlob.isCommitted,
       leaseDurationSeconds: undefined,
       leaseId: undefined,
       leaseExpireTime: undefined,
       leaseBreakTime: undefined,
-      committedBlocksInOrder: doc.committedBlocksInOrder,
-      persistency: doc.persistency
+      committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
+      persistency: sourceBlob.persistency
     };
 
     if (
@@ -1919,23 +1949,25 @@ export default class LokiBlobMetadataStore
   /**
    * Update Tier for a blob.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {Models.AccessTier} tier
-   * @param {Context} context
+   * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @returns {(Promise<200 | 202>)}
    * @memberof LokiBlobMetadataStore
    */
   public async setTier(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     tier: Models.AccessTier,
-    context: Context
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<200 | 202> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = await this.getBlobDoc(
+    const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
@@ -1944,10 +1976,10 @@ export default class LokiBlobMetadataStore
     );
     let responseCode: 200 | 202 = 200;
 
-    // check the lease action aligned with current lease state.
-    // the API has not lease ID input, but run it on a lease blocked blob will fail with LeaseIdMissing,
-    // this is aliged with server behavior
-    BlobHandler.checkBlobLeaseOnWriteBlob(context, doc, undefined);
+    // Check the lease action aligned with current lease state.
+    // API reference doesn't mention there is x-ms-lease-id header supported by this API,
+    // however, it fails to set tier for a leased blocked blob with LeaseIdMissing
+    this.validateLeaseOnWriteBlob(context, doc, leaseAccessConditions);
 
     // Check Blob is not snapshot
     if (doc.snapshot !== "") {
@@ -1993,27 +2025,16 @@ export default class LokiBlobMetadataStore
    * @returns {Promise<void>}
    * @memberof LokiBlobMetadataStore
    */
-  public async stageBlock(block: BlockModel, context: Context): Promise<void> {
+  public async stageBlock(
+    context: Context,
+    block: BlockModel,
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined
+  ): Promise<void> {
     await this.checkContainerExist(
       block.accountName,
       block.containerName,
       context
     );
-    const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
-    const blockDoc = coll.findOne({
-      accountName: block.accountName,
-      containerName: block.containerName,
-      blobName: block.blobName,
-      name: block.name,
-      isCommitted: block.isCommitted
-    });
-
-    if (blockDoc) {
-      coll.remove(blockDoc);
-    } else {
-      delete (block as any).$loki;
-      coll.insert(block);
-    }
 
     const blobColl = this.db.getCollection(this.BLOBS_COLLECTION);
     const blobDoc = blobColl.findOne({
@@ -2040,6 +2061,29 @@ export default class LokiBlobMetadataStore
         isCommitted: false
       };
       blobColl.insert(newBlob);
+    } else {
+      const lease = LeaseFactory.createLeaseState(
+        new LokiBlobLeaseAdapter(blobDoc),
+        context
+      ).lease;
+      this.setBlobLeaseProperties(blobDoc, lease);
+      this.validateLeaseOnWriteBlob(context, blobDoc, leaseAccessConditions);
+    }
+
+    const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
+    const blockDoc = coll.findOne({
+      accountName: block.accountName,
+      containerName: block.containerName,
+      blobName: block.blobName,
+      name: block.name,
+      isCommitted: block.isCommitted
+    });
+
+    if (blockDoc) {
+      coll.remove(blockDoc);
+    } else {
+      delete (block as any).$loki;
+      coll.insert(block);
     }
   }
 
@@ -2054,13 +2098,13 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   public async commitBlockList(
+    context: Context,
     blob: BlobModel,
     blockList: { blockName: string; blockCommitType: string }[],
-    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    context: Context
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<void> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    let doc = await this.getBlobDoc(
+    let doc = await this.getBlobWithLeaseUpdated(
       blob.accountName,
       blob.containerName,
       blob.name,
@@ -2178,23 +2222,26 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   public async getBlockList(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     isCommitted: boolean | undefined,
-    context: Context
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<{
     properties: Models.BlobProperties;
     uncommittedBlocks: Models.Block[];
     committedBlocks: Models.Block[];
   }> {
-    const blobDoc = await this.getBlobDoc(
+    const blobDoc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
       undefined,
       context
     );
+
+    this.validateLeaseOnReadBlob(context, blobDoc, leaseAccessConditions);
 
     const res: {
       properties: Models.BlobProperties;
@@ -2249,12 +2296,12 @@ export default class LokiBlobMetadataStore
     context?: Context
   ): Promise<Models.BlobProperties> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    let doc = await this.getBlobDoc(
+    let doc = await this.getBlobWithLeaseUpdated(
       blob.accountName,
       blob.containerName,
       blob.name,
       blob.snapshot,
-      context
+      context!
     );
 
     this.pageBlobRangesManager.mergeRange(doc.pageRangesInOrder || [], {
@@ -2290,12 +2337,12 @@ export default class LokiBlobMetadataStore
     context?: Context
   ): Promise<Models.BlobProperties> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    let doc = await this.getBlobDoc(
+    let doc = await this.getBlobWithLeaseUpdated(
       blob.accountName,
       blob.containerName,
       blob.name,
       blob.snapshot,
-      context
+      context!
     );
 
     this.pageBlobRangesManager.clearRange(doc.pageRangesInOrder || [], {
@@ -2331,7 +2378,7 @@ export default class LokiBlobMetadataStore
     blob: string,
     snapshot?: string
   ): Promise<GetPageRangeRes> {
-    const doc = await this.getBlobDoc(
+    const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
@@ -2364,7 +2411,7 @@ export default class LokiBlobMetadataStore
     context: Context
   ): Promise<Models.BlobProperties> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = await this.getBlobDoc(
+    const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
@@ -2420,7 +2467,7 @@ export default class LokiBlobMetadataStore
     context: Context
   ): Promise<Models.BlobProperties> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const doc = await this.getBlobDoc(
+    const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
       blob,
@@ -2666,6 +2713,64 @@ export default class LokiBlobMetadataStore
     }
   }
 
+  private validateLeaseOnReadBlob(
+    context: Context,
+    blob: BlobModel,
+    leaseAccessConditions?: Models.LeaseAccessConditions
+  ): void {
+    // Check only when input Leased Id is not empty
+    if (
+      leaseAccessConditions !== undefined &&
+      leaseAccessConditions.leaseId !== undefined &&
+      leaseAccessConditions.leaseId !== ""
+    ) {
+      // Return error when lease is unlocked
+      if (blob.properties.leaseStatus === Models.LeaseStatusType.Unlocked) {
+        throw StorageErrorFactory.getBlobLeaseLost(context.contextId);
+      } else if (
+        blob.leaseId !== undefined &&
+        leaseAccessConditions.leaseId.toLowerCase() !==
+          blob.leaseId.toLowerCase()
+      ) {
+        // Return error when lease is locked but lease ID not match
+        throw StorageErrorFactory.getBlobLeaseIdMismatchWithBlobOperation(
+          context.contextId
+        );
+      }
+    }
+  }
+
+  private validateLeaseOnWriteBlob(
+    context: Context,
+    blob: BlobModel,
+    leaseAccessConditions?: Models.LeaseAccessConditions
+  ): void {
+    // check Leased -> Expired
+    if (blob.properties.leaseStatus === Models.LeaseStatusType.Locked) {
+      if (
+        leaseAccessConditions === undefined ||
+        leaseAccessConditions.leaseId === undefined ||
+        leaseAccessConditions.leaseId === ""
+      ) {
+        throw StorageErrorFactory.getBlobLeaseIdMissing(context.contextId);
+      } else if (
+        blob.leaseId !== undefined &&
+        leaseAccessConditions.leaseId.toLowerCase() !==
+          blob.leaseId.toLowerCase()
+      ) {
+        throw StorageErrorFactory.getBlobLeaseIdMismatchWithBlobOperation(
+          context.contextId
+        );
+      }
+    } else if (
+      leaseAccessConditions !== undefined &&
+      leaseAccessConditions.leaseId !== undefined &&
+      leaseAccessConditions.leaseId !== ""
+    ) {
+      throw StorageErrorFactory.getBlobLeaseLost(context.contextId);
+    }
+  }
+
   /**
    * Get a blob doc from collections.
    *
@@ -2674,36 +2779,86 @@ export default class LokiBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {string} snapshot
-   * @param {Context} [context]
+   * @param {Context} context
    * @returns {Promise<BlobModel>}
    * @memberof LokiBlobMetadataStore
    */
-  private async getBlobDoc(
+  private async getBlobWithLeaseUpdated(
+    account: string,
+    container: string,
+    blob: string,
+    snapshot: string | undefined,
+    context: Context
+  ): Promise<BlobModel>;
+  private async getBlobWithLeaseUpdated(
+    account: string,
+    container: string,
+    blob: string,
+    snapshot: string | undefined,
+    context: Context,
+    // tslint:disable-next-line:unified-signatures
+    forceExist: true
+  ): Promise<BlobModel>;
+  private async getBlobWithLeaseUpdated(
+    account: string,
+    container: string,
+    blob: string,
+    snapshot: string | undefined,
+    context: Context,
+    forceExist: false
+  ): Promise<BlobModel | undefined>;
+  private async getBlobWithLeaseUpdated(
     account: string,
     container: string,
     blob: string,
     snapshot: string = "",
-    context?: Context
-  ): Promise<BlobModel> {
+    context: Context,
+    forceExist?: boolean
+  ): Promise<BlobModel | undefined> {
     await this.checkContainerExist(account, container, context);
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    let doc = coll.findOne({
+    const doc = coll.findOne({
       accountName: account,
       containerName: container,
       name: blob,
       snapshot
     });
 
-    if (!doc) {
-      const requestId = context ? context.contextId : undefined;
-      throw StorageErrorFactory.getBlobNotFound(requestId);
+    if (forceExist === undefined || forceExist === true) {
+      if (!doc) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
     }
 
-    doc = BlobHandler.updateLeaseAttributes(
-      doc,
-      context ? context.startTime! : new Date()
-    );
+    if (!doc) {
+      return undefined;
+    }
+
+    if (doc.properties) {
+      doc.properties.contentMD5 = this.restoreUint8Array(
+        doc.properties.contentMD5
+      );
+    }
+
+    // Snapshot doesn't have lease
+    if (snapshot !== undefined && snapshot !== "") {
+      this.setBlobLeaseProperties(doc, {
+        leaseId: undefined,
+        leaseExpireTime: undefined,
+        leaseDurationSeconds: undefined,
+        leaseBreakTime: undefined,
+        leaseDurationType: undefined,
+        leaseState: Models.LeaseStateType.Available, // TODO: Lease state & status should be undefined for snapshots
+        leaseStatus: LeaseStatusType.Unlocked // TODO: Lease state & status should be undefined for snapshots
+      });
+    } else {
+      const lease = LeaseFactory.createLeaseState(
+        new LokiBlobLeaseAdapter(doc),
+        context
+      ).lease;
+      this.setBlobLeaseProperties(doc, lease);
+    }
 
     return doc;
   }

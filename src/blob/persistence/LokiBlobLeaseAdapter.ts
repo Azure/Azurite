@@ -17,15 +17,17 @@ export default class LokiBlobLeaseAdapter implements ILease {
 
   public constructor(private readonly blob: BlobModel) {
     if (blob.properties.leaseState === undefined) {
-      throw RangeError(
-        `LokiBlobLeaseAdapter:constructor() container leaseState cannot be undefined.`
-      );
+      blob.properties.leaseState = LeaseStateType.Available;
+      // throw RangeError(
+      //   `LokiBlobLeaseAdapter:constructor() blob leaseState cannot be undefined.`
+      // );
     }
 
     if (blob.properties.leaseStatus === undefined) {
-      throw RangeError(
-        `LokiBlobLeaseAdapter:constructor() container leaseStatus cannot be undefined.`
-      );
+      blob.properties.leaseStatus = LeaseStatusType.Unlocked;
+      // throw RangeError(
+      //   `LokiBlobLeaseAdapter:constructor() blob leaseStatus cannot be undefined.`
+      // );
     }
 
     this.leaseId = blob.leaseId;
