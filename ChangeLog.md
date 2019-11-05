@@ -2,6 +2,19 @@
 
 > Note. This file includes changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
+2019.11 Version 3.3.0-preview
+
+Blob:
+- Updated Azure Storage API version to 2019-02-02, and added following new features:
+  - Supports new SAS format with blob snapshot.
+  - Responses now includes x-ms-client-request-id when client request ID provided in request.
+  - Copy Blob and Set Blob Tier APIs support the x-ms-rehydrate-priority.
+- Improved container & blob lease implementation.
+- Provided SQL based blob metadata store implementation.
+
+Queue:
+- Responses now includes x-ms-client-request-id when request provided client request ID.
+
 2019.08 Version 3.2.0-preview 
 
 - Updated repository link to https to compatible with Visual Studio Code.
