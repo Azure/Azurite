@@ -985,7 +985,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
-  public async createBlob(blob: BlobModel): Promise<void> {
+  public async createBlob(context: Context, blob: BlobModel): Promise<void> {
     // TODO: Check account & container status
     const contentProperties =
       this.serializeModelValue({
@@ -1025,11 +1025,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async downloadBlob(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    snapshot: string = "",
-    context: Context
+    snapshot: string = ""
   ): Promise<BlobModel> {
     const requestId = context ? context.contextId : undefined;
     return ContainersModel.findOne({
@@ -1149,7 +1149,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
-  public async stageBlock(block: BlockModel): Promise<void> {
+  public async stageBlock(context: Context, block: BlockModel): Promise<void> {
     await BlocksModel.upsert({
       accountName: block.accountName,
       containerName: block.containerName,
@@ -1161,11 +1161,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async getBlockList(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    isCommitted: boolean | undefined,
-    context: Context
+    isCommitted: boolean | undefined
   ): Promise<any> {
     const res: {
       uncommittedBlocks: Models.Block[];
@@ -1223,6 +1223,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async commitBlockList(
+    context: Context,
     blob: BlobModel,
     blockList: { blockName: string; blockCommitType: string }[]
   ): Promise<void> {
@@ -1439,12 +1440,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async getBlobProperties(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     snapshot: string = "",
-    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    context: Context
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<GetBlobPropertiesRes> {
     const requestId = context ? context.contextId : undefined;
     return ContainersModel.findOne({
@@ -2509,10 +2510,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async createSnapshot(
+    context: Context,
     account: string,
     container: string,
-    blob: string,
-    context: Context
+    blob: string
   ): Promise<CreateSnapshotRes> {
     return this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
@@ -2572,11 +2573,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async deleteBlob(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    options: Models.BlobDeleteMethodOptionalParams,
-    context: Context
+    options: Models.BlobDeleteMethodOptionalParams
   ): Promise<void> {
     await this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
@@ -2758,12 +2759,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
   public async setBlobHTTPHeaders(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    blobHTTPHeaders: Models.BlobHTTPHeaders | undefined,
-    context: Context
+    blobHTTPHeaders: Models.BlobHTTPHeaders | undefined
   ): Promise<Models.BlobProperties> {
     return this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
@@ -2877,12 +2878,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
   public setBlobMetadata(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    metadata: Models.BlobMetadata | undefined,
-    context: Context
+    metadata: Models.BlobMetadata | undefined
   ): Promise<Models.BlobProperties> {
     return this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
@@ -3612,21 +3613,22 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public startCopyFromURL(
+    context: Context,
     source: BlobId,
     destination: BlobId,
     copySource: string,
     metadata: Models.BlobMetadata | undefined,
-    tier: Models.AccessTier | undefined,
-    context: Context
+    tier: Models.AccessTier | undefined
   ): Promise<Models.BlobProperties> {
     throw new Error("Method not implemented.");
   }
+
   public setTier(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    tier: Models.AccessTier,
-    context: Context
+    tier: Models.AccessTier
   ): Promise<200 | 202> {
     return this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({

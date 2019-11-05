@@ -123,7 +123,11 @@ export default class BlockBlobHandler extends BaseHandler
     }
     // TODO: Need a lock for multi keys including containerName and blobName
     // TODO: Provide a specified function.
-    await this.metadataStore.createBlob(blob, context);
+    await this.metadataStore.createBlob(
+      context,
+      blob,
+      options.leaseAccessConditions
+    );
 
     const response: Models.BlockBlobUploadResponse = {
       statusCode: 201,
@@ -180,7 +184,11 @@ export default class BlockBlobHandler extends BaseHandler
     };
 
     // TODO: Verify it.
-    await this.metadataStore.stageBlock(block, context);
+    await this.metadataStore.stageBlock(
+      context,
+      block,
+      options.leaseAccessConditions
+    );
 
     const response: Models.BlockBlobStageBlockResponse = {
       statusCode: 201,
@@ -290,10 +298,10 @@ export default class BlockBlobHandler extends BaseHandler
     }
 
     await this.metadataStore.commitBlockList(
+      context,
       blob,
       commitBlockList,
-      options.leaseAccessConditions,
-      context
+      options.leaseAccessConditions
     );
 
     const contentMD5 = await getMD5FromString(rawBody);
@@ -323,11 +331,12 @@ export default class BlockBlobHandler extends BaseHandler
     const date = blobCtx.startTime!;
 
     const res = await this.metadataStore.getBlockList(
+      context,
       accountName,
       containerName,
       blobName,
       undefined,
-      context
+      options.leaseAccessConditions
     );
 
     // TODO: Create uncommitted blockblob when stage block

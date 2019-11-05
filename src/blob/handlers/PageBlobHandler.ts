@@ -34,7 +34,7 @@ export default class PageBlobHandler extends BaseHandler
     super(metadataStore, extentStore, logger);
   }
 
-  public uploadPagesFromURL(
+  public async uploadPagesFromURL(
     sourceUrl: string,
     sourceRange: string,
     contentLength: number,
@@ -125,7 +125,7 @@ export default class PageBlobHandler extends BaseHandler
 
     // TODO: What's happens when create page blob right before commit block list? Or should we lock
     // Should we check if there is an uncommitted blob?
-    this.metadataStore.createBlob(blob, context);
+    this.metadataStore.createBlob(context, blob);
 
     const response: Models.PageBlobCreateResponse = {
       statusCode: 201,
@@ -162,11 +162,11 @@ export default class PageBlobHandler extends BaseHandler
     }
 
     const blob = await this.metadataStore.downloadBlob(
+      context,
       accountName,
       containerName,
       blobName,
-      undefined,
-      context
+      undefined
     );
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
@@ -249,11 +249,11 @@ export default class PageBlobHandler extends BaseHandler
     }
 
     const blob = await this.metadataStore.downloadBlob(
+      context,
       accountName,
       containerName,
       blobName,
-      undefined,
-      context
+      undefined
     );
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
@@ -347,7 +347,7 @@ export default class PageBlobHandler extends BaseHandler
     return response;
   }
 
-  public getPageRangesDiff(
+  public async getPageRangesDiff(
     options: Models.PageBlobGetPageRangesDiffOptionalParams,
     context: Context
   ): Promise<Models.PageBlobGetPageRangesDiffResponse> {
@@ -428,7 +428,7 @@ export default class PageBlobHandler extends BaseHandler
     return response;
   }
 
-  public copyIncremental(
+  public async copyIncremental(
     copySource: string,
     options: Models.PageBlobCopyIncrementalOptionalParams,
     context: Context

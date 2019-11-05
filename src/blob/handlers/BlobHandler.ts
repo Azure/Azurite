@@ -209,12 +209,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   ): Promise<Models.BlobSetAccessControlResponse> {
     throw new Error("Method not implemented.");
   }
+
   public getAccessControl(
     options: Models.BlobGetAccessControlOptionalParams,
     context: Context
   ): Promise<Models.BlobGetAccessControlResponse> {
     throw new Error("Method not implemented.");
   }
+
   public rename(
     renameSource: string,
     options: Models.BlobRenameOptionalParams,
@@ -222,6 +224,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   ): Promise<Models.BlobRenameResponse> {
     throw new Error("Method not implemented.");
   }
+
   public copyFromURL(
     copySource: string,
     options: Models.BlobCopyFromURLOptionalParams,
@@ -246,21 +249,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
+
     const blob = await this.metadataStore.downloadBlob(
+      context,
       accountName,
       containerName,
       blobName,
       options.snapshot,
-      context
+      options.leaseAccessConditions
     );
-
-    if (blob.snapshot === "") {
-      BlobHandler.checkLeaseOnReadBlob(
-        context,
-        blob,
-        options.leaseAccessConditions
-      );
-    }
 
     if (blob.properties.blobType === Models.BlobType.BlockBlob) {
       return this.downloadBlockBlob(options, context, blob);
@@ -291,12 +288,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
     const res = await this.metadataStore.getBlobProperties(
+      context,
       account,
       container,
       blob,
       options.snapshot,
-      options.leaseAccessConditions,
-      context
+      options.leaseAccessConditions
     );
 
     // TODO: Create get metadata specific request in swagger
@@ -347,11 +344,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
     await this.metadataStore.deleteBlob(
+      context,
       account,
       container,
       blob,
-      options,
-      context
+      options
     );
 
     const response: Models.BlobDeleteResponse = {
@@ -366,7 +363,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * Undelete blob
+   * Undelete blob.
    *
    * @param {Models.BlobUndeleteOptionalParams} options
    * @param {Context} context
@@ -381,7 +378,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * Set HTTP Headers
+   * Set HTTP Headers.
    * see also https://docs.microsoft.com/en-us/rest/api/storageservices/set-blob-properties
    *
    * @param {Models.BlobSetHTTPHeadersOptionalParams} options
@@ -398,13 +395,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
     const res = await this.metadataStore.setBlobHTTPHeaders(
+      context,
       account,
       container,
       blob,
       options.leaseAccessConditions,
-      options.blobHTTPHeaders,
-      context
+      options.blobHTTPHeaders
     );
+
     // ToDo: return correct headers and test for these.
     const response: Models.BlobSetHTTPHeadersResponse = {
       statusCode: 200,
@@ -421,7 +419,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * Set Metadata
+   * Set Metadata.
    *
    * @param {Models.BlobSetMetadataOptionalParams} options
    * @param {Context} context
@@ -437,12 +435,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
     const res = await this.metadataStore.setBlobMetadata(
+      context,
       account,
       container,
       blob,
       options.leaseAccessConditions,
-      options.metadata,
-      context
+      options.metadata
     );
 
     // ToDo: return correct headers and test for these.
@@ -678,10 +676,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
     const res = await this.metadataStore.createSnapshot(
+      context,
       account,
       container,
       blob,
-      context
+      options.leaseAccessConditions
     );
 
     const response: Models.BlobCreateSnapshotResponse = {
@@ -699,7 +698,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * start copy from Url
+   * Start copy from Url.
    *
    * @param {string} copySource
    * @param {Models.BlobStartCopyFromURLOptionalParams} options
@@ -736,6 +735,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     const res = await this.metadataStore.startCopyFromURL(
+      context,
       {
         account: sourceAccount,
         container: sourceContainer,
@@ -746,7 +746,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       copySource,
       options.metadata,
       options.tier,
-      context
+      options.leaseAccessConditions
     );
 
     const response: Models.BlobStartCopyFromURLResponse = {
@@ -765,7 +765,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * abort copy from Url
+   * Abort copy from Url.
    *
    * @param {string} copyId
    * @param {Models.BlobAbortCopyFromURLOptionalParams} options
@@ -783,11 +783,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
     const blob = await this.metadataStore.downloadBlob(
+      context,
       accountName,
       containerName,
       blobName,
-      undefined,
-      context
+      undefined
     );
 
     if (blob.properties.copyId !== copyId) {
@@ -810,7 +810,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * set blob tier
+   * Set blob tier.
    *
    * @param {Models.AccessTier} tier
    * @param {Models.BlobSetTierOptionalParams} options
@@ -828,11 +828,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
     const res = await this.metadataStore.setTier(
+      context,
       account,
       container,
       blob,
       tier,
-      context
+      undefined
     );
 
     const response: Models.BlobSetTierResponse = {
@@ -846,7 +847,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * get account info
+   * Get account information.
    *
    * @param {Context} context
    * @returns {Promise<Models.BlobGetAccountInfoResponse>}
@@ -868,7 +869,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * get account info with headers
+   * Get account information with headers.
    *
    * @param {Context} context
    * @returns {Promise<Models.BlobGetAccountInfoResponse>}
@@ -881,7 +882,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * download block blob
+   * Download block blob.
    *
    * @private
    * @param {Models.BlobDownloadOptionalParams} options
@@ -895,14 +896,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context,
     blob: BlobModel
   ): Promise<Models.BlobDownloadResponse> {
-    if (blob.snapshot === "") {
-      BlobHandler.checkLeaseOnReadBlob(
-        context,
-        blob,
-        options.leaseAccessConditions
-      );
-    }
-
     if (blob.isCommitted === false) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId!);
     }
@@ -996,7 +989,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * download page blob
+   * Download page blob.
    *
    * @private
    * @param {Models.BlobDownloadOptionalParams} options
@@ -1010,14 +1003,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     context: Context,
     blob: BlobModel
   ): Promise<Models.BlobDownloadResponse> {
-    if (blob.snapshot === "") {
-      BlobHandler.checkLeaseOnReadBlob(
-        context,
-        blob,
-        options.leaseAccessConditions
-      );
-    }
-
     // Deserializer doesn't handle range header currently, manually parse range headers here
     const rangesParts = deserializePageBlobRangeHeader(
       context.request!.getHeader("range"),
