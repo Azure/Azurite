@@ -108,10 +108,6 @@ interface IBlockBlobAdditionalProperties {
    * @memberof IBlobAdditionalProperties
    */
   isCommitted: boolean;
-  leaseduration?: number;
-  leaseId?: string;
-  leaseExpireTime?: Date;
-  leaseBreakExpireTime?: Date;
 
   /**
    * Committed blocks for block blob.
@@ -135,6 +131,10 @@ interface IPageBlobAdditionalProperties {
 interface IBlobAdditionalProperties {
   accountName: string;
   containerName: string;
+  leaseDurationSeconds?: number;
+  leaseId?: string;
+  leaseExpireTime?: Date;
+  leaseBreakTime?: Date;
 }
 
 export type BlobModel = IBlobAdditionalProperties &
@@ -621,98 +621,100 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
   /**
    * Acquire blob lease.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
-   * @param {Models.BlobAcquireLeaseOptionalParams} options
-   * @param {Context} context
+   * @param {number} duration
+   * @param {string} [proposedLeaseId]
    * @returns {Promise<AcquireBlobLeaseRes>}
    * @memberof IBlobMetadataStore
    */
   acquireBlobLease(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    options: Models.BlobAcquireLeaseOptionalParams,
-    context: Context
+    duration: number,
+    proposedLeaseId?: string
   ): Promise<AcquireBlobLeaseRes>;
 
   /**
-   * Release container lease
+   * Release blob.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {string} leaseId
-   * @param {Context} context
    * @returns {Promise<ReleaseBlobLeaseRes>}
    * @memberof IBlobMetadataStore
    */
   releaseBlobLease(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    leaseId: string,
-    context: Context
+    leaseId: string
   ): Promise<ReleaseBlobLeaseRes>;
 
   /**
-   * Renew blob lease
+   * Renew blob lease.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {string} leaseId
-   * @param {Context} context
    * @returns {Promise<RenewBlobLeaseRes>}
    * @memberof IBlobMetadataStore
    */
   renewBlobLease(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    leaseId: string,
-    context: Context
+    leaseId: string
   ): Promise<RenewBlobLeaseRes>;
 
   /**
-   * Change blob lease
+   * Change blob lease.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {string} leaseId
    * @param {string} proposedLeaseId
-   * @param {Context} context
    * @returns {Promise<ChangeBlobLeaseRes>}
    * @memberof IBlobMetadataStore
    */
   changeBlobLease(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     leaseId: string,
-    proposedLeaseId: string,
-    context: Context
+    proposedLeaseId: string
   ): Promise<ChangeBlobLeaseRes>;
 
   /**
    * Break blob lease
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
-   * @param {(number | undefined)} breakPeriod
-   * @param {Context} context
+   * @param {number} [breakPeriod]
    * @returns {Promise<BreakBlobLeaseRes>}
    * @memberof IBlobMetadataStore
    */
   breakBlobLease(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    breakPeriod: number | undefined,
-    context: Context
+    breakPeriod?: number
   ): Promise<BreakBlobLeaseRes>;
 
   /**
