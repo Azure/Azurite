@@ -1008,10 +1008,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       lastModified: blob.properties.lastModified,
       etag: blob.properties.etag,
       accessTier: blob.properties.accessTier,
-      leaseBreakExpireTime: blob.leaseBreakExpireTime,
+      leaseBreakExpireTime: blob.leaseBreakTime,
       leaseExpireTime: blob.leaseExpireTime,
       leaseId: blob.leaseId,
-      leasedurationNumber: blob.leaseduration,
+      leasedurationNumber: blob.leaseDurationSeconds,
       leaseDuration: blob.properties.leaseDuration,
       leaseStatus: blob.properties.leaseStatus,
       leaseState: blob.properties.leaseState,
@@ -1068,10 +1068,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         const lease = this.getBlobLease(res, context);
 
         const blobRes: BlobModel = this.blobModelConvert(res);
-        blobRes.leaseBreakExpireTime = lease.leaseBreakExpireTime;
+        blobRes.leaseBreakTime = lease.leaseBreakExpireTime;
         blobRes.leaseExpireTime = lease.leaseExpireTime;
         blobRes.leaseId = lease.leaseId;
-        blobRes.leaseduration = lease.leasedurationNumber;
+        blobRes.leaseDurationSeconds = lease.leasedurationNumber;
         blobRes.properties.leaseStatus = lease.leaseStatus;
         blobRes.properties.leaseState = lease.leaseState;
         blobRes.properties.leaseDuration = lease.leaseDuration;
@@ -1486,10 +1486,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         }
         const blobRes: BlobModel = this.blobModelConvert(res);
 
-        blobRes.leaseBreakExpireTime = lease.leaseBreakExpireTime;
+        blobRes.leaseBreakTime = lease.leaseBreakExpireTime;
         blobRes.leaseExpireTime = lease.leaseExpireTime;
         blobRes.leaseId = lease.leaseId;
-        blobRes.leaseduration = lease.leasedurationNumber;
+        blobRes.leaseDurationSeconds = lease.leasedurationNumber;
         blobRes.properties.leaseStatus = lease.leaseStatus;
         blobRes.properties.leaseState = lease.leaseState;
         blobRes.properties.leaseDuration = lease.leaseDuration;
@@ -2970,11 +2970,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async acquireBlobLease(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    options: Models.BlobAcquireLeaseOptionalParams,
-    context: Context
+    duration: number,
+    proposedLeaseId?: string
   ): Promise<AcquireBlobLeaseRes> {
     return this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
@@ -3017,31 +3018,31 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       }
       if (
         lease.leaseState === Models.LeaseStateType.Leased &&
-        options.proposedLeaseId !== lease.leaseId
+        proposedLeaseId !== lease.leaseId
       ) {
         throw StorageErrorFactory.getLeaseAlreadyPresent(context.contextId!);
       }
 
       // update the lease information
-      if (options.duration === -1 || options.duration === undefined) {
+      if (duration === -1 || duration === undefined) {
         lease.leaseDuration = Models.LeaseDurationType.Infinite;
       } else {
-        // verify options.duration between 15 and 60
-        if (options.duration > 60 || options.duration < 15) {
+        // verify duration between 15 and 60
+        if (duration > 60 || duration < 15) {
           throw StorageErrorFactory.getInvalidLeaseDuration(context.contextId!);
         }
         lease.leaseDuration = Models.LeaseDurationType.Fixed;
         lease.leaseExpireTime = context.startTime!;
         lease.leaseExpireTime.setSeconds(
-          lease.leaseExpireTime.getSeconds() + options.duration
+          lease.leaseExpireTime.getSeconds() + duration
         );
-        lease.leasedurationNumber = options.duration;
+        lease.leasedurationNumber = duration;
       }
       lease.leaseState = Models.LeaseStateType.Leased;
       lease.leaseStatus = Models.LeaseStatusType.Locked;
       lease.leaseId =
-        options.proposedLeaseId !== "" && options.proposedLeaseId !== undefined
-          ? options.proposedLeaseId
+        proposedLeaseId !== "" && proposedLeaseId !== undefined
+          ? proposedLeaseId
           : uuid();
       lease.leaseBreakExpireTime = undefined;
 
@@ -3080,11 +3081,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async releaseBlobLease(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    leaseId: string,
-    context: Context
+    leaseId: string
   ): Promise<ReleaseBlobLeaseRes> {
     return this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
@@ -3179,11 +3180,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
   public async renewBlobLease(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    leaseId: string,
-    context: Context
+    leaseId: string
   ): Promise<RenewBlobLeaseRes> {
     return this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
@@ -3295,12 +3296,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async changeBlobLease(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     leaseId: string,
-    proposedLeaseId: string,
-    context: Context
+    proposedLeaseId: string
   ): Promise<ChangeBlobLeaseRes> {
     return this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
@@ -3399,11 +3400,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async breakBlobLease(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    breakPeriod: number | undefined,
-    context: Context
+    breakPeriod: number | undefined
   ): Promise<BreakBlobLeaseRes> {
     return this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
@@ -4159,11 +4160,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           ? contentProperties.cacheControl
           : undefined
       },
-      leaseduration: this.getModelValue<number>(res, "leasedurationNumber"),
-      leaseBreakExpireTime: this.getModelValue<Date>(
+      leaseDurationSeconds: this.getModelValue<number>(
         res,
-        "leaseBreakExpireTime"
+        "leasedurationNumber"
       ),
+      leaseBreakTime: this.getModelValue<Date>(res, "leaseBreakExpireTime"),
       leaseExpireTime: this.getModelValue<Date>(res, "leaseExpireTime"),
       leaseId: this.getModelValue<string>(res, "leaseId"),
       persistency: this.deserializeModelValue(res, "persistency"),

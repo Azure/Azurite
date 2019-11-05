@@ -61,21 +61,21 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         blob.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
         blob.properties.leaseDuration = undefined;
         blob.leaseExpireTime = undefined;
-        blob.leaseBreakExpireTime = undefined;
+        blob.leaseBreakTime = undefined;
       }
     }
 
     // check Breaking -> Broken
     if (blob.properties.leaseState === Models.LeaseStateType.Breaking) {
       if (
-        blob.leaseBreakExpireTime !== undefined &&
-        currentTime > blob.leaseBreakExpireTime
+        blob.leaseBreakTime !== undefined &&
+        currentTime > blob.leaseBreakTime
       ) {
         blob.properties.leaseState = Models.LeaseStateType.Broken;
         blob.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
         blob.properties.leaseDuration = undefined;
         blob.leaseExpireTime = undefined;
-        blob.leaseBreakExpireTime = undefined;
+        blob.leaseBreakTime = undefined;
       }
     }
     return blob;
@@ -147,10 +147,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blob.properties.leaseState = Models.LeaseStateType.Available;
       blob.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
       blob.properties.leaseDuration = undefined;
-      blob.leaseduration = undefined;
+      blob.leaseDurationSeconds = undefined;
       blob.leaseId = undefined;
       blob.leaseExpireTime = undefined;
-      blob.leaseBreakExpireTime = undefined;
+      blob.leaseBreakTime = undefined;
     }
     return blob;
   }
@@ -477,11 +477,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
     const res = await this.metadataStore.acquireBlobLease(
+      context,
       account,
       container,
       blob,
-      options,
-      context
+      options.duration!,
+      options.proposedLeaseId
     );
 
     const response: Models.BlobAcquireLeaseResponse = {
@@ -517,11 +518,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
     const res = await this.metadataStore.releaseBlobLease(
+      context,
       account,
       container,
       blob,
-      leaseId,
-      context
+      leaseId
     );
 
     const response: Models.BlobReleaseLeaseResponse = {
@@ -556,11 +557,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
     const res = await this.metadataStore.renewBlobLease(
+      context,
       account,
       container,
       blob,
-      leaseId,
-      context
+      leaseId
     );
 
     const response: Models.BlobRenewLeaseResponse = {
@@ -598,12 +599,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
     const res = await this.metadataStore.changeBlobLease(
+      context,
       account,
       container,
       blob,
       leaseId,
-      proposedLeaseId,
-      context
+      proposedLeaseId
     );
 
     const response: Models.BlobChangeLeaseResponse = {
@@ -637,11 +638,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
     const res = await this.metadataStore.breakBlobLease(
+      context,
       account,
       container,
       blob,
-      options.breakPeriod,
-      context
+      options.breakPeriod
     );
 
     const response: Models.BlobBreakLeaseResponse = {
