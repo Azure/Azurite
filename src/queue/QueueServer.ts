@@ -10,7 +10,7 @@ import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
 import ServerBase from "../common/ServerBase";
-import QueueGCManager from "./GC/queueGCMagager";
+import QueueGCManager from "./gc/QueueGCMagager";
 import IQueueMetadataStore from "./persistence/IQueueMetadataStore";
 import LokiQueueMetadataStore from "./persistence/LokiQueueMetadataStore";
 import QueueConfiguration from "./QueueConfiguration";
@@ -77,7 +77,7 @@ export default class QueueServer extends ServerBase {
       logger
     );
 
-    const accountDataStore: IAccountDataStore = new AccountDataStore();
+    const accountDataStore: IAccountDataStore = new AccountDataStore(logger);
 
     // We can also change the HTTP framework here by
     // creating a new XXXListenerFactory implementing IRequestListenerFactory interface
@@ -117,9 +117,7 @@ export default class QueueServer extends ServerBase {
   }
 
   protected async beforeStart(): Promise<void> {
-    const msg = `Azurite Queue service is starting on ${this.host}:${
-      this.port
-    }`;
+    const msg = `Azurite Queue service is starting on ${this.host}:${this.port}`;
     logger.info(msg);
 
     if (this.accountDataStore !== undefined) {

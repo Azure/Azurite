@@ -71,7 +71,7 @@ export default class SqlBlobServer extends ServerBase {
       logger
     );
 
-    const accountDataStore: IAccountDataStore = new AccountDataStore();
+    const accountDataStore: IAccountDataStore = new AccountDataStore(logger);
 
     // We can also change the HTTP framework here by
     // creating a new XXXListenerFactory implementing IRequestListenerFactory interface

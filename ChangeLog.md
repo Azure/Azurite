@@ -4,6 +4,9 @@
 
 2019.11 Version 3.3.0-preview
 
+- Azurite now supports customized account name and keys by environment variable `AZURITE_ACCOUNTS`.
+- [Breaking] This version cannot guarantee compatible with persisted database models file by previous version.
+
 Blob:
 - Updated Azure Storage API version to 2019-02-02, and added following new features:
   - Supports new SAS format with blob snapshot.

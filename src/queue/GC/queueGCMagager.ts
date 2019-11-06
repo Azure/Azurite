@@ -95,9 +95,7 @@ export default class QueueGCManager implements IGCManager {
       })
       .catch(err => {
         this.logger.info(
-          `QueueGCManager:start() Mark and seep loop emit error: ${err.name} ${
-            err.message
-          }`
+          `QueueGCManager:start() Mark and seep loop emit error: ${err.name} ${err.message}`
         );
         this.logger.info("QueueGCManger:start() Set status to closed.");
         this._status = Status.Closed;
@@ -195,9 +193,7 @@ export default class QueueGCManager implements IGCManager {
     }
 
     this.logger.info(
-      `QueueGCManager:markSweep() Got referred extents, unreferenced extents count is ${
-        allExtents.size
-      }.`
+      `QueueGCManager:markSweep() Got referred extents, unreferenced extents count is ${allExtents.size}.`
     );
 
     if (allExtents.size > 0) {

@@ -139,7 +139,7 @@ docker run -p 10000:10000 -p 10001:10001 mcr.microsoft.com/azure-storage/azurite
 Or just run blob service:
 
 ```bash
-docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite azurite-blob
+docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite azurite-blob --blobHost 0.0.0.0
 ```
 
 #### Run Azurite V3 docker image with customized persisted data location
@@ -253,7 +253,7 @@ Optional. By default Azurite will display access log in console. **Disable** it 
 Optional. Debug log includes detailed information on every request and exception stack traces.  
 Enable it by providing a valid local file path for the debug log destination.
 
-```
+```cmd
 -d path/debug.log
 --debug path/debug.log
 ```
@@ -274,6 +274,30 @@ Azurite V3 provides support for a default storage account as General Storage Acc
 - Account key: `Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==`
 
 > Note. Besides SharedKey authentication, Azurite V3 supports account and service SAS authentication. Anonymous access is also available when container is set to allow public access.
+
+### Customized Storage Accounts & Keys
+
+Azurite V3 allows customizing storage account names and keys by providing environment variable `AZURITE_ACCOUNTS` with format `account1:key1[:key2];account2:key1[:key2];...`.
+
+For example, customize one storage account which has only one key:
+
+```cmd
+set AZURITE_ACCOUNTS="account1:key1"
+```
+
+Or customize multi storage accounts and each has 2 keys:
+
+```cmd
+set AZURITE_ACCOUNTS="account1:key1:key2;account2:key1:key2"
+```
+
+Azurite will refresh customized account name and key from environment variable every minute. With this feature, we can dynamically rotate account key, or add new storage accounts on the air without restarting Azurite instance.
+
+> Note. Default storage account `devstoreaccount1` will be disabled when providing customized storage accounts.
+
+> Note. Should update connection string accordingly if using customized account name and key.
+
+> Note. Use `export` keyword to set environment variable in Linux like environment, `set` in Windows.
 
 ### Connection String
 
@@ -466,8 +490,8 @@ Detailed support matrix:
   - Incremental Copy Blob
   - Create Append Blob, Append Block
 
-  3.2.0-preview release added support for **2019-02-02** API version **queue** service.
-  Detailed support matrix:
+    3.2.0-preview release added support for **2019-02-02** API version **queue** service.
+    Detailed support matrix:
 
 - Supported Vertical Features
   - SharedKey Authentication
