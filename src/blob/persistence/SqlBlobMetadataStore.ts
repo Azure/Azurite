@@ -18,6 +18,7 @@ import * as Models from "../generated/artifacts/models";
 import { BlobType } from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { DEFAULT_SQL_CHARSET, DEFAULT_SQL_COLLATE } from "../utils/constants";
+import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
 import IBlobMetadataStore, {
   AcquireBlobLeaseRes,
   AcquireContainerLeaseRes,
@@ -35,6 +36,7 @@ import IBlobMetadataStore, {
   GetContainerPropertiesRes,
   GetPageRangeRes,
   IContainerMetadata,
+  IPersistencyChunk,
   PersistencyBlockModel,
   ReleaseBlobLeaseRes,
   RenewBlobLeaseRes,
@@ -1090,8 +1092,18 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     marker?: string,
     includeSnapshots?: boolean
   ): Promise<[BlobModel[], any | undefined]> {
-    // TODO: Validate account, container
-    const whereQuery: any = { accountName: account, containerName: container };
+    // TODO: Validate container exists
+
+    const whereQuery: any = {};
+
+    if (account !== undefined) {
+      whereQuery.accountName = account;
+    }
+
+    if (container !== undefined) {
+      whereQuery.containerName = container;
+    }
+
     if (blob !== undefined) {
       whereQuery.blobName = blob;
     }
@@ -3767,18 +3779,46 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<Models.BlobProperties> {
     throw new Error("Method not implemented.");
   }
-  public listBlocks<T extends BlockModel>(
-    account?: string | undefined,
-    container?: string | undefined,
-    blob?: string | undefined,
-    isCommitted?: boolean | undefined
-  ): Promise<T[]> {
-    throw new Error("Method not implemented.");
+
+  public async listUncommittedBlockPersistencyChunks(
+    marker: string = "-1",
+    maxResults: number = 2000
+  ): Promise<[IPersistencyChunk[], string | undefined]> {
+    return BlocksModel.findAll({
+      attributes: ["id", "persistency"],
+      where: {
+        id: {
+          [Op.gt]: parseInt(marker, 10)
+        },
+        deleting: 0
+      },
+      limit: maxResults + 1,
+      order: [["id", "ASC"]]
+    }).then(res => {
+      if (res.length < maxResults) {
+        return [
+          res.map(obj => {
+            return this.deserializeModelValue(obj, "persistency", true);
+          }),
+          undefined
+        ];
+      } else {
+        res.pop();
+        const nextMarker = this.getModelValue<string>(
+          res[res.length - 1],
+          "id",
+          true
+        );
+        return [
+          res.map(obj => this.deserializeModelValue(obj, "persistency", true)),
+          nextMarker
+        ];
+      }
+    });
   }
-  public iteratorReferredExtents(): AsyncIterator<
-    import("./IBlobMetadataStore").IPersistencyChunk[]
-  > {
-    throw new Error("Method not implemented.");
+
+  public iteratorReferredExtents(): AsyncIterator<IPersistencyChunk[]> {
+    return new BlobReferredExtentsAsyncIterator(this);
   }
 
   private getModelValue<T>(model: Model, key: string): T | undefined;

@@ -98,11 +98,11 @@ export default class SqlBlobServer extends ServerBase {
         logger.info(BEFORE_CLOSE_MESSAGE_GC_ERROR + JSON.stringify(error));
 
         // TODO: Bring this back when GC based on SQL implemented
-        // this.close().then(() => {
-        //   // tslint:disable-next-line:no-console
-        //   console.log(AFTER_CLOSE_MESSAGE);
-        //   logger.info(AFTER_CLOSE_MESSAGE);
-        // });
+        this.close().then(() => {
+          // tslint:disable-next-line:no-console
+          console.log(AFTER_CLOSE_MESSAGE);
+          logger.info(AFTER_CLOSE_MESSAGE);
+        });
       },
       logger
     );
