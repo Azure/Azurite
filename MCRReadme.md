@@ -25,7 +25,7 @@ docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite
 **Run Azurite V3 docker image with customized persisted data location**
 
 ```bash
-docker run -p 10000:10000 -v c:/azurite:/data mcr.microsoft.com/azure-storage/azurite
+docker run -p 10000:10000 -v c:/azurite:/data mcr.microsoft.com/azure-storage/azurite --blobHost 0.0.0.0
 ```
 
 `-v c:/azurite:/data` will use and map host path `c:/azurite` as Azurite's workspace location.

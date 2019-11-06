@@ -2,7 +2,7 @@ import ICleaner from "./ICleaner";
 import { IDataStore } from "./IDataStore";
 
 /**
- * Account properties
+ * Account properties.
  *
  * @interface IAccountProperties
  */
