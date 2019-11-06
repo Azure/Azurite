@@ -966,22 +966,12 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
   ): Promise<Models.BlobProperties>;
 
   /**
-   * Gets blocks list for a blob from persistency layer by account, container and blob names.
-   *
-   * @template T
-   * @param {string} [account]
-   * @param {string} [container]
-   * @param {string} [blob]
-   * @param {boolean} [isCommitted]
-   * @returns {Promise<T[]>}
-   * @memberof IBlobMetadataStore
+   * Gets uncommitted blocks list for a blob from persistency layer.
    */
-  listBlocks<T extends BlockModel>(
-    account?: string,
-    container?: string,
-    blob?: string,
-    isCommitted?: boolean
-  ): Promise<T[]>;
+  listUncommittedBlockPersistencyChunks(
+    marker?: string,
+    maxResults?: number
+  ): Promise<[IPersistencyChunk[], string | undefined]>;
 
   /**
    * Return a referred extent iterator for GC.

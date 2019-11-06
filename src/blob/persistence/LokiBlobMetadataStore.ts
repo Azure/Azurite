@@ -41,7 +41,7 @@ import { ILease } from "./ILeaseState";
 import LeaseFactory from "./LeaseFactory";
 import LokiBlobLeaseAdapter from "./LokiBlobLeaseAdapter";
 import LokiContainerLeaseAdapter from "./LokiContainerLeaseAdapter";
-import LokiReferredExtentsAsyncIterator from "./LokiReferredExtentsAsyncIterator";
+import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
 
 /**
  * This is a metadata source implementation for blob based on loki DB.
@@ -211,7 +211,7 @@ export default class LokiBlobMetadataStore
    */
   public iteratorReferredExtents(): AsyncIterator<IPersistencyChunk[]> {
     // By default, we disable detailed log for GC
-    return new LokiReferredExtentsAsyncIterator(this /*, this.logger*/);
+    return new BlobReferredExtentsAsyncIterator(this /*, this.logger*/);
   }
 
   /**
@@ -2530,45 +2530,27 @@ export default class LokiBlobMetadataStore
     return doc.properties;
   }
 
-  /**
-   * Gets blocks list for a blob from persistency layer by account, container and blob names.
-   *
-   * @template T
-   * @param {string} [account]
-   * @param {string} [container]
-   * @param {string} [blob]
-   * @param {boolean} [isCommitted]
-   * @returns {(Promise<T[]>)}
-   * @memberof LokiBlobMetadataStore
-   */
-  public async listBlocks<T extends BlockModel>(
-    account?: string,
-    container?: string,
-    blob?: string,
-    isCommitted?: boolean
-  ): Promise<T[]> {
-    const query: any = {};
-    if (account !== undefined) {
-      query.accountName = account;
-    }
-    if (container !== undefined) {
-      query.containerName = container;
-    }
-    if (blob !== undefined) {
-      query.blobName = blob;
-    }
-    if (isCommitted !== undefined) {
-      query.isCommitted = isCommitted;
-    }
-
+  public async listUncommittedBlockPersistencyChunks(
+    marker: string = "-1",
+    maxResults: number = 2000
+  ): Promise<[IPersistencyChunk[], string | undefined]> {
     const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
     const blockDocs = coll
       .chain()
-      .find(query)
+      .where(obj => {
+        return obj.$loki > parseInt(marker, 10);
+      })
       .simplesort("$loki")
+      .limit(maxResults + 1)
       .data();
 
-    return blockDocs;
+    if (blockDocs.length <= maxResults) {
+      return [blockDocs, undefined];
+    } else {
+      blockDocs.pop();
+      const nextMarker = `${blockDocs[maxResults - 1].$loki}`;
+      return [blockDocs, nextMarker];
+    }
   }
 
   /**

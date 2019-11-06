@@ -11,6 +11,7 @@ Blob:
   - Copy Blob and Set Blob Tier APIs support the x-ms-rehydrate-priority.
 - Improved container & blob lease implementation.
 - Provided SQL based blob metadata store implementation.
+- Added GC support for blob SQL metadata store.
 
 Queue:
 - Responses now includes x-ms-client-request-id when request provided client request ID.

@@ -7,8 +7,8 @@ import {
   Sequelize
 } from "sequelize";
 
+import AllExtentsAsyncIterator from "./AllExtentsAsyncIterator";
 import IExtentMetadataStore, { IExtentModel } from "./IExtentMetadataStore";
-import SqlAllExtentsAsyncIterator from "./SqlAllExtentsAsyncIterator";
 
 // tslint:disable: max-classes-per-file
 class ExtentsModel extends Model {}
@@ -255,9 +255,8 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
     });
   }
 
-  // TODO: Implement it.
   public getExtentIterator(): AsyncIterator<string[]> {
-    return new SqlAllExtentsAsyncIterator();
+    return new AllExtentsAsyncIterator(this);
   }
 
   private getModelValue<T>(model: Model, key: string): T | undefined;

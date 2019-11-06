@@ -2,7 +2,7 @@ import ILogger from "../../common/ILogger";
 import { Logger } from "../../common/Logger";
 import NoLoggerStrategy from "../../common/NoLoggerStrategy";
 import { IPersistencyChunk } from "./IBlobMetadataStore";
-import LokiBlobMetadataStore from "./LokiBlobMetadataStore";
+import IBlobMetadataStore from "./IBlobMetadataStore";
 
 enum State {
   LISTING_EXTENTS_IN_BLOBS,
@@ -14,17 +14,18 @@ enum State {
  * An async iterator which enumerates all extents being used.
  *
  * @export
- * @class LokiReferredExtentsAsyncIterator
+ * @class BlobReferredExtentsAsyncIterator
  * @implements {AsyncIterator<IPersistencyChunk[]>}
  */
-export default class LokiReferredExtentsAsyncIterator
+export default class BlobReferredExtentsAsyncIterator
   implements AsyncIterator<IPersistencyChunk[]> {
   private state: State = State.LISTING_EXTENTS_IN_BLOBS;
 
   private blobListingMarker: string | undefined;
+  private blockListingMarker: string | undefined;
 
   constructor(
-    private readonly blobMetadataStore: LokiBlobMetadataStore,
+    private readonly blobMetadataStore: IBlobMetadataStore,
     private readonly logger: ILogger = new Logger(new NoLoggerStrategy())
   ) {}
 
@@ -47,7 +48,7 @@ export default class LokiReferredExtentsAsyncIterator
       const extents = [];
       for (const blob of blobs) {
         this.logger.debug(
-          `LokiReferredExtentsAsyncIterator:next() Handle blob ${
+          `BlobReferredExtentsAsyncIterator:next() Handle blob ${
             blob.accountName
           } ${blob.containerName} ${blob.name} ${blob.snapshot} Blocks: ${
             (blob.committedBlocksInOrder || []).length
@@ -71,15 +72,24 @@ export default class LokiReferredExtentsAsyncIterator
         value: extents
       };
     } else if (this.state === State.LISTING_EXTENTS_IN_BLOCKS) {
-      // TODO: Make listBlocks operation segment
-      const blocks = await this.blobMetadataStore.listBlocks();
-      this.logger.debug(
-        `LokiReferredExtentsAsyncIterator:next() Handle blocks ${blocks.length}`
+      const [
+        blocks,
+        marker
+      ] = await this.blobMetadataStore.listUncommittedBlockPersistencyChunks(
+        this.blockListingMarker
       );
-      this.state = State.DONE;
+      this.blockListingMarker = marker;
+      if (marker === undefined) {
+        this.state = State.DONE;
+      }
+
+      this.logger.debug(
+        `BlobReferredExtentsAsyncIterator:next() Handle blocks ${blocks.length}`
+      );
+
       return {
         done: false,
-        value: blocks.map(value => value.persistency)
+        value: blocks
       };
     } else {
       return {
