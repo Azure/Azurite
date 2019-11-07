@@ -1189,7 +1189,8 @@ export default class LokiBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    leaseAccessConditions?: Models.LeaseAccessConditions
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    metadata?: Models.BlobMetadata
   ): Promise<CreateSnapshotRes> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = await this.getBlobWithLeaseUpdated(
@@ -1207,7 +1208,7 @@ export default class LokiBlobMetadataStore
       deleted: false,
       snapshot: context.startTime!.toISOString(),
       properties: { ...doc.properties },
-      metadata: { ...doc.metadata },
+      metadata: metadata ? { ...metadata } : { ...doc.metadata },
       accountName: doc.accountName,
       containerName: doc.containerName,
       pageRangesInOrder:

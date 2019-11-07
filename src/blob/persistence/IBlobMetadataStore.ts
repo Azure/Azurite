@@ -520,7 +520,8 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
     account: string,
     container: string,
     blob: string,
-    leaseAccessConditions?: Models.LeaseAccessConditions
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    metadata?: Models.BlobMetadata
   ): Promise<CreateSnapshotRes>;
 
   /**

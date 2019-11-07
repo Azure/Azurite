@@ -2525,7 +2525,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     context: Context,
     account: string,
     container: string,
-    blob: string
+    blob: string,
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    metadata?: Models.BlobMetadata
   ): Promise<CreateSnapshotRes> {
     return this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
@@ -2574,7 +2576,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         committedBlocksInOrder: this.serializeModelValue(
           snapshotBlob.committedBlocksInOrder
         ),
-        metadata: this.serializeModelValue(snapshotBlob.metadata) || null
+        metadata:
+          this.serializeModelValue(metadata) ||
+          this.serializeModelValue(snapshotBlob.metadata) ||
+          null
       });
 
       return {

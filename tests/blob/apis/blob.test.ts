@@ -121,6 +121,23 @@ describe("BlobAPIs", () => {
     );
   });
 
+  it("should create a snapshot with metadata from a blob", async () => {
+    const metadata = {
+      meta1: "val1",
+      meta3: "val3"
+    };
+    const result = await blobURL.createSnapshot(Aborter.none, { metadata });
+    assert.ok(result.snapshot);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+    const result2 = await blobURL
+      .withSnapshot(result.snapshot!)
+      .getProperties(Aborter.none);
+    assert.deepStrictEqual(result2.metadata, metadata);
+  });
+
   it("should delete snapshot", async () => {
     const result = await blobURL.createSnapshot(Aborter.none);
     assert.ok(result.snapshot);
