@@ -10,6 +10,7 @@
 
 Blob:
 - Fixed a bug that snapshot blob doesn't honor metadata options.
+- Force alphabetical order for list blob results.
 - Updated Azure Storage API version to 2019-02-02, and added following new features:
   - Supports new SAS format with blob snapshot.
   - Responses now includes x-ms-client-request-id when client request ID provided in request.

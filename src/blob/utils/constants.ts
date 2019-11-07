@@ -4,6 +4,7 @@ import * as Models from "../generated/artifacts/models";
 export const VERSION = "3.3.0-preview";
 export const BLOB_API_VERSION = "2019-02-02";
 export const DEFAULT_BLOB_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
+export const DEFAULT_LIST_BLOBS_MAX_RESULTS = 5000;
 export const DEFAULT_BLOB_LISTENING_PORT = 10000;
 export const IS_PRODUCTION = process.env.NODE_ENV === "production";
 export const DEFAULT_BLOB_LOKI_DB_PATH = "__azurite_db_blob__.json";
@@ -59,12 +60,14 @@ export const DEFAULT_BLOB_PERSISTENCE_ARRAY: StoreDestinationArray = [
 ];
 
 export const DEFAULT_SQL_CHARSET = "utf8mb4";
-export const DEFAULT_SQL_COLLATE = "utf8mb4_general_ci";
+// Use utf8mb4_bin instead of utf8mb4_general_ci to honor case sensitive
+// https://dev.mysql.com/doc/refman/8.0/en/case-sensitivity.html
+export const DEFAULT_SQL_COLLATE = "utf8mb4_bin";
 
 export const DEFAULT_SQL_OPTIONS = {
   logging: false,
   pool: {
-    max: 100,
+    max: 20,
     min: 0,
     acquire: 30000,
     idle: 10000

@@ -10,7 +10,9 @@ import { LeaseStatusType } from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import BlobHandler from "../handlers/BlobHandler";
 import PageBlobRangesManager from "../handlers/PageBlobRangesManager";
+import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
 import { newEtag } from "../utils/utils";
+import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
 import IBlobMetadataStore, {
   AcquireBlobLeaseRes,
   AcquireContainerLeaseRes,
@@ -41,7 +43,6 @@ import { ILease } from "./ILeaseState";
 import LeaseFactory from "./LeaseFactory";
 import LokiBlobLeaseAdapter from "./LokiBlobLeaseAdapter";
 import LokiContainerLeaseAdapter from "./LokiContainerLeaseAdapter";
-import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
 
 /**
  * This is a metadata source implementation for blob based on loki DB.
@@ -1056,7 +1057,7 @@ export default class LokiBlobMetadataStore
    * @param {string} [container]
    * @param {string} [blob]
    * @param {string} [prefix=""]
-   * @param {number} [maxResults=5000]
+   * @param {number} [maxResults=DEFAULT_LIST_BLOBS_MAX_RESULTS]
    * @param {string} [marker=""]
    * @param {boolean} [includeSnapshots]
    * @returns {(Promise<[BlobModel[], string | undefined]>)}
@@ -1067,7 +1068,7 @@ export default class LokiBlobMetadataStore
     container?: string,
     blob?: string,
     prefix: string = "",
-    maxResults: number = 5000,
+    maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
     marker: string = "",
     includeSnapshots?: boolean
   ): Promise<[BlobModel[], string | undefined]> {

@@ -17,7 +17,11 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import { BlobType } from "../generated/artifacts/models";
 import Context from "../generated/Context";
-import { DEFAULT_SQL_CHARSET, DEFAULT_SQL_COLLATE } from "../utils/constants";
+import {
+  DEFAULT_LIST_BLOBS_MAX_RESULTS,
+  DEFAULT_SQL_CHARSET,
+  DEFAULT_SQL_COLLATE
+} from "../utils/constants";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
 import IBlobMetadataStore, {
   AcquireBlobLeaseRes,
@@ -394,27 +398,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           }
         ]
       }
-    );
-
-    TestModel.init(
-      {
-        blobName: {
-          type: "VARCHAR(50)",
-          primaryKey: true
-        },
-        blockList: {
-          type: "MEDIUMTEXT"
-        },
-        createdAt: {
-          allowNull: false,
-          type: DATE
-        },
-        updatedAt: {
-          allowNull: false,
-          type: DATE
-        }
-      },
-      { sequelize: this.sequelize, modelName: "Test", tableName: "Tests" }
     );
 
     // TODO: sync() is only for development purpose, use migration for production
@@ -1088,7 +1071,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container?: string,
     blob?: string,
     prefix: string = "",
-    maxResults: number = 2000,
+    maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
     marker?: string,
     includeSnapshots?: boolean
   ): Promise<[BlobModel[], any | undefined]> {
