@@ -13,15 +13,15 @@ import {
 } from "sequelize";
 import uuid from "uuid/v4";
 
+import {
+  DEFAULT_SQL_CHARSET,
+  DEFAULT_SQL_COLLATE
+} from "../../common/utils/constants";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import { BlobType } from "../generated/artifacts/models";
 import Context from "../generated/Context";
-import {
-  DEFAULT_LIST_BLOBS_MAX_RESULTS,
-  DEFAULT_SQL_CHARSET,
-  DEFAULT_SQL_COLLATE
-} from "../utils/constants";
+import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
 import IBlobMetadataStore, {
   AcquireBlobLeaseRes,
@@ -241,11 +241,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         sequelize: this.sequelize,
         modelName: "Containers",
         tableName: "Containers",
+        charset: DEFAULT_SQL_CHARSET,
+        collate: DEFAULT_SQL_COLLATE,
         timestamps: false
       }
     );
 
-    // TODO: Duplicate models definition here with migrations files; Should update them together to avoid inconsistency
     BlobsModel.init(
       {
         accountName: {
@@ -274,6 +275,17 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         lastModified: {
           allowNull: false,
           type: DATE(6)
+        },
+        creationTime: {
+          allowNull: false,
+          type: DATE(6)
+        },
+        accessTierChangeTime: {
+          allowNull: true,
+          type: DATE(6)
+        },
+        accessTierInferred: {
+          type: BOOLEAN
         },
         etag: {
           allowNull: false,
@@ -343,6 +355,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           {
             // name: 'title_index',
             // using: 'BTREE',
+            unique: true,
             fields: [
               "accountName",
               "containerName",
@@ -1021,8 +1034,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       blobSequenceNumber: blob.properties.blobSequenceNumber,
       isCommitted: true,
       lastModified: blob.properties.lastModified,
+      creationTime: blob.properties.creationTime,
       etag: blob.properties.etag,
       accessTier: blob.properties.accessTier,
+      accessTierChangeTime: blob.properties.accessTierChangeTime,
+      accessTierInferred: blob.properties.accessTierInferred,
       leaseBreakExpireTime: blob.leaseBreakTime,
       leaseExpireTime: blob.leaseExpireTime,
       leaseId: blob.leaseId,
@@ -1139,35 +1155,45 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
     whereQuery.deleting = 0;
 
-    const modelConvert = (res: BlobsModel): BlobModel => {
-      return {
-        accountName: this.getModelValue<string>(res, "accountName", true),
-        containerName: this.getModelValue<string>(res, "containerName", true),
-        name: this.getModelValue<string>(res, "blobName", true),
-        snapshot: this.getModelValue<string>(res, "snapshot", true),
-        isCommitted: this.getModelValue<boolean>(res, "isCommitted", true),
-        leaseBreakTime: this.getModelValue<Date>(res, "leaseBreakExpireTime"),
-        leaseExpireTime: this.getModelValue<Date>(res, "leaseExpireTime"),
-        leaseDurationSeconds: this.getModelValue<number>(
-          res,
-          "leasedurationNumber"
-        ),
-        leaseId: this.getModelValue<string>(res, "leaseId"),
-        properties: {
-          lastModified: this.getModelValue<Date>(res, "lastModified", true),
-          etag: this.getModelValue<string>(res, "etag", true),
-          leaseStatus: this.getModelValue(res, "leaseStatus"),
-          leaseState: this.getModelValue(res, "leaseState"),
-          leaseDuration: this.getModelValue(res, "leaseDuration")
-        },
-        persistency: this.deserializeModelValue(res, "persistency"),
-        committedBlocksInOrder: this.deserializeModelValue(
-          res,
-          "committedBlocksInOrder"
-        ),
-        metadata: this.deserializeModelValue(res, "metadata")
-      };
-    };
+    // const modelConvert = (res: BlobsModel): BlobModel => {
+    //   return {
+    //     accountName: this.getModelValue<string>(res, "accountName", true),
+    //     containerName: this.getModelValue<string>(res, "containerName", true),
+    //     name: this.getModelValue<string>(res, "blobName", true),
+    //     snapshot: this.getModelValue<string>(res, "snapshot", true),
+    //     isCommitted: this.getModelValue<boolean>(res, "isCommitted", true),
+    //     leaseBreakTime: this.getModelValue<Date>(res, "leaseBreakExpireTime"),
+    //     leaseExpireTime: this.getModelValue<Date>(res, "leaseExpireTime"),
+    //     leaseDurationSeconds: this.getModelValue<number>(
+    //       res,
+    //       "leasedurationNumber"
+    //     ),
+    //     leaseId: this.getModelValue<string>(res, "leaseId"),
+    //     properties: {
+    //       lastModified: this.getModelValue<Date>(res, "lastModified", true),
+    //       creationTime: this.getModelValue<Date>(res, "creationTime"),
+    //       etag: this.getModelValue<string>(res, "etag", true),
+    //       leaseStatus: this.getModelValue(res, "leaseStatus"),
+    //       leaseState: this.getModelValue(res, "leaseState"),
+    //       leaseDuration: this.getModelValue(res, "leaseDuration"),
+    //       accessTier: this.getModelValue<Models.AccessTier>(res, "accessTier"),
+    //       accessTierInferred: this.getModelValue<boolean>(
+    //         res,
+    //         "accessTierInferred"
+    //       ),
+    //       accessTierChangeTime: this.getModelValue<Date>(
+    //         res,
+    //         "accessTierChangeTime"
+    //       )
+    //     },
+    //     persistency: this.deserializeModelValue(res, "persistency"),
+    //     committedBlocksInOrder: this.deserializeModelValue(
+    //       res,
+    //       "committedBlocksInOrder"
+    //     ),
+    //     metadata: this.deserializeModelValue(res, "metadata")
+    //   };
+    // };
 
     return BlobsModel.findAll({
       limit: maxResults,
@@ -1178,7 +1204,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       if (res.length < maxResults) {
         return [
           res.map(val => {
-            const blobModel = modelConvert(val);
+            const blobModel = this.blobModelConvert(val);
             this.calculateBlobLeaseAttributes(blobModel, context.startTime!);
             return blobModel;
           }),
@@ -1189,7 +1215,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         const nextMarker = this.getModelValue<string>(tail, "blobName", true);
         return [
           res.map(val => {
-            const blobModel = modelConvert(val);
+            const blobModel = this.blobModelConvert(val);
             this.calculateBlobLeaseAttributes(blobModel, context.startTime!);
             return blobModel;
           }),
@@ -1444,6 +1470,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           snapshot: "",
           isCommitted: true,
           lastModified: blob.properties.lastModified,
+          creationTime: blob.properties.creationTime || context.startTime,
+          accessTier: blob.properties.accessTier,
+          accessTierInferred: blob.properties.accessTierInferred,
+          accessTierChangeTime: blob.properties.accessTierChangeTime,
           etag: blob.properties.etag,
           persistency: null,
           committedBlocksInOrder: this.serializeModelValue(selectedBlockList),
@@ -2663,6 +2693,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         blobSequenceNumber: snapshotBlob.properties.blobSequenceNumber,
         isCommitted: true,
         lastModified: snapshotBlob.properties.lastModified,
+        creationTime: snapshotBlob.properties.creationTime,
         etag: snapshotBlob.properties.etag,
         persistency: this.serializeModelValue(snapshotBlob.persistency),
         committedBlocksInOrder: this.serializeModelValue(
@@ -3773,7 +3804,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
       // check the lease action aligned with current lease state.
       // the API has not lease ID input, but run it on a lease blocked blob will fail with LeaseIdMissing,
-      // this is aliged with server behavior
+      // this is aligned with server behavior
       const lease = this.getBlobLease(res, context);
       this.checkBlobLeaseOnWriteBlob(
         lease.leaseId,
@@ -3814,7 +3845,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       }
       await BlobsModel.update(
         {
-          accessTier
+          accessTier,
+          accessTierInferred: false,
+          accessTierChangeTime: context.startTime
         },
         {
           where: {
@@ -4227,14 +4260,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       "leaseBreakExpireTime"
     );
 
-    let lease: IContainerLease = {
+    let lease: IBlobLease = {
       leaseId,
       leaseStatus,
       leaseBreakExpireTime,
-      leaseDurationType: leaseDuration,
+      leaseDuration,
       leaseExpireTime,
       leaseState,
-      leaseDurationSeconds: leasedurationNumber
+      leasedurationNumber
     };
 
     lease = this.calculateBlobLeaseAttributes(
@@ -4263,6 +4296,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           res,
           "leaseDuration"
         ),
+        creationTime: this.getModelValue<Date>(res, "creationTime"),
         leaseState: this.getModelValue<Models.LeaseStateType>(
           res,
           "leaseState"
@@ -4272,6 +4306,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           "leaseStatus"
         ),
         accessTier: this.getModelValue<Models.AccessTier>(res, "accessTier"),
+        accessTierInferred: this.getModelValue<boolean>(
+          res,
+          "accessTierInferred"
+        ),
+        accessTierChangeTime: this.getModelValue<Date>(
+          res,
+          "accessTierChangeTime"
+        ),
         blobSequenceNumber: this.getModelValue<number>(
           res,
           "blobSequenceNumber"

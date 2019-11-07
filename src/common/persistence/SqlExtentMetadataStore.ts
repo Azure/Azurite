@@ -1,6 +1,5 @@
 import {
   BIGINT,
-  DATE,
   Model,
   Op,
   Options as SequelizeOptions,
@@ -80,14 +79,6 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
         lastModifiedInMS: {
           allowNull: false,
           type: BIGINT.UNSIGNED
-        },
-        createdAt: {
-          allowNull: false,
-          type: DATE
-        },
-        updatedAt: {
-          allowNull: false,
-          type: DATE
         }
       },
       { sequelize: this.sequelize, modelName: "Extents", timestamps: false }

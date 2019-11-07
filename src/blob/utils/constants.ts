@@ -58,23 +58,3 @@ export const DEFAULT_BLOB_PERSISTENCE_ARRAY: StoreDestinationArray = [
     maxConcurrency: 10
   }
 ];
-
-export const DEFAULT_SQL_CHARSET = "utf8mb4";
-// Use utf8mb4_bin instead of utf8mb4_general_ci to honor case sensitive
-// https://dev.mysql.com/doc/refman/8.0/en/case-sensitivity.html
-export const DEFAULT_SQL_COLLATE = "utf8mb4_bin";
-
-export const DEFAULT_SQL_OPTIONS = {
-  logging: false,
-  pool: {
-    max: 20,
-    min: 0,
-    acquire: 30000,
-    idle: 10000
-  },
-  dialectOptions: {
-    timezone: "Etc/GMT-0"
-  },
-  charset: DEFAULT_SQL_CHARSET,
-  collate: DEFAULT_SQL_COLLATE
-};

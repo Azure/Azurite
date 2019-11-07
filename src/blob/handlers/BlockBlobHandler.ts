@@ -109,7 +109,8 @@ export default class BlockBlobHandler extends BaseHandler
         leaseState: Models.LeaseStateType.Available,
         serverEncrypted: true,
         accessTier: Models.AccessTier.Hot,
-        accessTierInferred: true
+        accessTierInferred: true,
+        accessTierChangeTime: date
       },
       snapshot: "",
       isCommitted: true,
