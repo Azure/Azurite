@@ -222,6 +222,7 @@ export default class ServiceHandler extends BaseHandler
     const marker = parseInt(options.marker || "0", 10);
 
     const containers = await this.metadataStore.listContainers(
+      context,
       accountName,
       options.prefix,
       options.maxresults,

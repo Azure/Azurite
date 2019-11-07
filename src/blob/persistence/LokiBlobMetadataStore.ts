@@ -300,6 +300,7 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   public async listContainers(
+    context: Context,
     account: string,
     prefix: string = "",
     maxResults: number = 5000,
@@ -323,12 +324,34 @@ export default class LokiBlobMetadataStore
       .data();
 
     if (docs.length <= maxResults) {
-      return [docs, undefined];
+      return [
+        docs.map(doc => {
+          return this.setContainerLeaseProperties(
+            doc,
+            LeaseFactory.createLeaseState(
+              new LokiContainerLeaseAdapter(doc),
+              context
+            ).lease
+          );
+        }),
+        undefined
+      ];
     } else {
       // In this case, the last item is the one we get in addition, should set the Marker before it.
       const nextMarker = docs[docs.length - 1].$loki - 1;
       docs.pop();
-      return [docs, nextMarker];
+      return [
+        docs.map(doc => {
+          return this.setContainerLeaseProperties(
+            doc,
+            LeaseFactory.createLeaseState(
+              new LokiContainerLeaseAdapter(doc),
+              context
+            ).lease
+          );
+        }),
+        nextMarker
+      ];
     }
   }
 
@@ -585,60 +608,15 @@ export default class LokiBlobMetadataStore
   ): Promise<AcquireContainerLeaseRes> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainer(account, container, context);
-    // const requestId = context ? context.contextId : undefined;
 
     const lease = LeaseFactory.createLeaseState(
       new LokiContainerLeaseAdapter(doc),
       context
     ).acquire(options.duration!, options.proposedLeaseId).lease;
+
     this.setContainerLeaseProperties(doc, lease);
-
-    // // TODO: Check proposed lease ID should follow GUID, otherwise should return 400
-
-    // // tslint:disable-next-line:max-line-length
-    // tslint:disable-next-line: max-line-length
-    // // Refer https://docs.microsoft.com/en-us/rest/api/storageservices/lease-container#outcomes-of-lease-operations-on-containers-by-lease-state
-
-    // // Cannot acquire lease for a breaking container
-    // if (doc.properties.leaseState === Models.LeaseStateType.Breaking) {
-    //   throw StorageErrorFactory.getLeaseAlreadyPresent(requestId);
-    // }
-
-    // // Cannot acquire lease for a leased container with mismatched lease ID
-    // if (
-    //   doc.properties.leaseState === Models.LeaseStateType.Leased &&
-    //   options.proposedLeaseId !== doc.leaseId
-    // ) {
-    //   throw StorageErrorFactory.getLeaseAlreadyPresent(requestId);
-    // }
-
-    // // Otherwise, the lease should success
-    // if (options.duration === -1 || options.duration === undefined) {
-    //   doc.properties.leaseDuration = Models.LeaseDurationType.Infinite;
-    //   doc.leaseDurationSeconds = undefined;
-    //   doc.leaseExpireTime = undefined;
-    // } else {
-    //   // Verify options.duration between 15 and 60
-    //   if (options.duration > 60 || options.duration < 15) {
-    //     throw StorageErrorFactory.getInvalidLeaseDuration(requestId);
-    //   }
-    //   doc.properties.leaseDuration = Models.LeaseDurationType.Fixed;
-    //   doc.leaseExpireTime = context.startTime!;
-    //   doc.leaseExpireTime.setSeconds(
-    //     doc.leaseExpireTime.getSeconds() + options.duration
-    //   );
-    //   doc.leaseDurationSeconds = options.duration;
-    // }
-
-    // doc.properties.leaseState = Models.LeaseStateType.Leased;
-    // doc.properties.leaseStatus = Models.LeaseStatusType.Locked;
-    // doc.leaseId =
-    //   options.proposedLeaseId !== "" && options.proposedLeaseId !== undefined
-    //     ? options.proposedLeaseId
-    //     : uuid();
-    // doc.leaseBreakTime = undefined;
-
     coll.update(doc);
+
     return { properties: doc.properties, leaseId: doc.leaseId };
   }
 
@@ -660,7 +638,6 @@ export default class LokiBlobMetadataStore
   ): Promise<ReleaseContainerLeaseRes> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainer(account, container, context);
-    // const requestId = context ? context.contextId : undefined;
 
     const lease = LeaseFactory.createLeaseState(
       new LokiContainerLeaseAdapter(doc),
@@ -668,31 +645,8 @@ export default class LokiBlobMetadataStore
     ).release(leaseId).lease;
 
     this.setContainerLeaseProperties(doc, lease);
-
-    // tslint:disable-next-line:max-line-length
-    // Refer https://docs.microsoft.com/en-us/rest/api/storageservices/lease-container#outcomes-of-lease-operations-on-containers-by-lease-state
-
-    // // Cannot release for a container without any release
-    // if (doc.properties.leaseState === Models.LeaseStateType.Available) {
-    //   throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(requestId);
-    // }
-
-    // // Cannot release when leaseId in request doesn't match with existing leaseId
-    // if (doc.leaseId !== leaseId) {
-    //   throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(requestId);
-    // }
-
-    // // Update the lease properties
-    // // Must update all below 7 properties at the same time
-    // doc.properties.leaseState = Models.LeaseStateType.Available;
-    // doc.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
-    // doc.properties.leaseDuration = undefined;
-    // doc.leaseDurationSeconds = undefined;
-    // doc.leaseId = undefined;
-    // doc.leaseExpireTime = undefined;
-    // doc.leaseBreakTime = undefined;
-
     coll.update(doc);
+
     return doc.properties;
   }
 
@@ -714,7 +668,6 @@ export default class LokiBlobMetadataStore
   ): Promise<RenewContainerLeaseRes> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainer(account, container, context);
-    // const requestId = context ? context.contextId : undefined;
 
     const lease = LeaseFactory.createLeaseState(
       new LokiContainerLeaseAdapter(doc),
@@ -722,47 +675,6 @@ export default class LokiBlobMetadataStore
     ).renew(leaseId).lease;
 
     this.setContainerLeaseProperties(doc, lease);
-
-    // tslint:disable-next-line:max-line-length
-    // Refer https://docs.microsoft.com/en-us/rest/api/storageservices/lease-container#outcomes-of-lease-operations-on-containers-by-lease-state
-
-    // // Only Leased and Expired status can be renewed
-    // if (doc.properties.leaseState === Models.LeaseStateType.Available) {
-    //   throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(requestId);
-    // }
-
-    // // Only Leased and Expired status can be renewed
-    // if (
-    //   doc.properties.leaseState === Models.LeaseStateType.Breaking ||
-    //   doc.properties.leaseState === Models.LeaseStateType.Broken
-    // ) {
-    //   throw StorageErrorFactory.getLeaseIsBrokenAndCannotBeRenewed(requestId);
-    // }
-
-    // // Now the existing container must have an lease in Leased or Expired status
-    // // Make sure lease ID matches
-    // if (doc.leaseId !== leaseId) {
-    //   throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(requestId);
-    // }
-
-    // // Update the lease information
-    // doc.properties.leaseState = Models.LeaseStateType.Leased;
-    // doc.properties.leaseStatus = Models.LeaseStatusType.Locked;
-
-    // // When leaseDurationSeconds has value and it's not -1, means existing lease is fixed duration
-    // if (
-    //   doc.leaseDurationSeconds !== undefined &&
-    //   doc.leaseDurationSeconds !== -1
-    // ) {
-    //   doc.leaseExpireTime = context.startTime!;
-    //   doc.leaseExpireTime.setSeconds(
-    //     doc.leaseExpireTime.getSeconds() + doc.leaseDurationSeconds
-    //   );
-    //   doc.properties.leaseDuration = Models.LeaseDurationType.Fixed;
-    // } else {
-    //   doc.properties.leaseDuration = Models.LeaseDurationType.Infinite;
-    // }
-
     coll.update(doc);
 
     return { properties: doc.properties, leaseId: doc.leaseId };
@@ -786,187 +698,22 @@ export default class LokiBlobMetadataStore
   ): Promise<BreakContainerLeaseRes> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainer(account, container, context);
-    // const requestId = context ? context.contextId : undefined;
 
     const lease = LeaseFactory.createLeaseState(
       new LokiContainerLeaseAdapter(doc),
       context
     ).break(breakPeriod).lease;
 
-    this.setContainerLeaseProperties(doc, lease);
-
     const leaseTimeSeconds: number =
-      lease.leaseState === Models.LeaseStateType.Leased
-        ? 0
-        : Math.round(
-            (lease.leaseBreakTime!.getTime() - context.startTime!.getTime()) /
+      lease.leaseState === Models.LeaseStateType.Breaking &&
+      lease.leaseBreakTime
+        ? Math.round(
+            (lease.leaseBreakTime.getTime() - context.startTime!.getTime()) /
               1000
-          );
+          )
+        : 0;
 
-    // // Cannot break a container under Available status (without any lease)
-    // // TODO: Check status code and error message
-    // if (doc.properties.leaseState === Models.LeaseStateType.Available) {
-    //   throw StorageErrorFactory.getLeaseNotPresentWithLeaseOperation(requestId);
-    // }
-
-    // // Update the lease information
-    // // Verify breakPeriod between 0 and 60
-    // if (breakPeriod !== undefined && (breakPeriod > 60 || breakPeriod < 0)) {
-    //   throw StorageErrorFactory.getInvalidLeaseBreakPeriod(requestId);
-    // }
-
-    // if (
-    //   breakPeriod === 0 ||
-    //   doc.properties.leaseState === Models.LeaseStateType.Expired ||
-    //   doc.properties.leaseState === Models.LeaseStateType.Broken
-    // ) {
-    //   /* Scenarios 1: status is expired or broken; or breakPeriod === 0 with any non available status */
-    //   // Break immediately
-    //   doc.properties.leaseState = Models.LeaseStateType.Broken;
-    //   doc.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
-    //   doc.properties.leaseDuration = undefined;
-    //   doc.leaseDurationSeconds = undefined;
-    //   doc.leaseExpireTime = undefined;
-    //   doc.leaseBreakTime = undefined;
-    //   leaseTimeSeconds = 0;
-    // } else if (breakPeriod === undefined) {
-    //   /* Scenario 2: breakPeriod === undefined, and status is leased or breaking */
-
-    //   // If container is leased
-    //   if (doc.properties.leaseState === Models.LeaseStateType.Leased) {
-    //     if (
-    //       doc.properties.leaseDuration === Models.LeaseDurationType.Infinite
-    //     ) {
-    //       // if infinite, break immediately
-    //       doc.properties.leaseState = Models.LeaseStateType.Broken;
-    //       doc.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
-    //       doc.properties.leaseDuration = undefined;
-    //       doc.leaseDurationSeconds = undefined;
-    //       doc.leaseExpireTime = undefined;
-    //       doc.leaseBreakTime = undefined;
-    //       leaseTimeSeconds = 0;
-    //     } else if (
-    //       doc.properties.leaseDuration === Models.LeaseDurationType.Fixed
-    //     ) {
-    //       // if fixed, break after fixed time ends
-    //       doc.properties.leaseState = Models.LeaseStateType.Breaking;
-    //       doc.properties.leaseStatus = Models.LeaseStatusType.Locked;
-    //       doc.properties.leaseDuration = undefined;
-    //       doc.leaseExpireTime = undefined;
-    //       doc.leaseDurationSeconds = undefined;
-    //       doc.leaseBreakTime = doc.leaseExpireTime;
-    //       leaseTimeSeconds = Math.round(
-    //         Math.abs(
-    //           doc.leaseBreakTime!.getTime() - context.startTime!.getTime()
-    //         ) / 1000
-    //       );
-    //     }
-    //   } else if (doc.properties.leaseState === Models.LeaseStateType.Breaking) {
-    //     // Do nothing for a breaking container
-    //     leaseTimeSeconds = Math.round(
-    //       Math.abs(
-    //         doc.leaseBreakTime!.getTime() - context.startTime!.getTime()
-    //       ) / 1000
-    //     );
-    //   } else {
-    //     throw Error(
-    // tslint:disable-next-line: max-line-length
-    //       `LokiBlobMetadataStore:breakContainerLease() Unexpected container lease status: ${doc.properties.leaseState}`
-    //     );
-    //   }
-    // } else {
-    //   // Scenario 3: breakPeriod belongs to (0, 60], and status is leased or breaking
-    //   // if leased, break after fixed time (shorter time between lease time & break time) ends
-    //   if (doc.properties.leaseState === Models.LeaseStateType.Leased) {
-    //     const breakTime = new Date(
-    //       context.startTime!.getTime() + breakPeriod * 1000
-    //     );
-
-    //     doc.properties.leaseState = Models.LeaseStateType.Breaking;
-    //     doc.properties.leaseStatus = Models.LeaseStatusType.Locked;
-    //     doc.properties.leaseDuration = undefined;
-    //     doc.leaseDurationSeconds = undefined;
-    //     doc.leaseBreakTime =
-    //       doc.properties.leaseDuration === Models.LeaseDurationType.Infinite
-    //         ? breakTime
-    //         : doc.leaseExpireTime! < breakTime
-    //         ? doc.leaseExpireTime
-    //         : breakTime;
-    //     doc.leaseExpireTime = undefined;
-    //     leaseTimeSeconds = Math.round(
-    //       Math.abs(
-    //         doc.leaseBreakTime!.getTime() - context.startTime!.getTime()
-    //       ) / 1000
-    //     );
-    //   } else if (doc.properties.leaseState === Models.LeaseStateType.Breaking) {
-    //     // Do nothing for a breaking container (TODO: or select a short break time?)
-    //     leaseTimeSeconds = Math.round(
-    //       Math.abs(
-    //         doc.leaseBreakTime!.getTime() - context.startTime!.getTime()
-    //       ) / 1000
-    //     );
-    //   } else {
-    //     throw Error(
-    // tslint:disable-next-line: max-line-length
-    //       `LokiBlobMetadataStore:breakContainerLease() Unexpected container lease status: ${doc.properties.leaseState}`
-    //     );
-    //   }
-    // }
-
-    // TODO: Handle leaseTimeSeconds
-
-    // if (
-    //   doc.properties.leaseState === Models.LeaseStateType.Expired ||
-    //   doc.properties.leaseState === Models.LeaseStateType.Broken ||
-    //   breakPeriod === 0 ||
-    //   breakPeriod === undefined
-    // ) {
-    //   doc.properties.leaseState = Models.LeaseStateType.Broken;
-    //   doc.properties.leaseStatus = Models.LeaseStatusType.Unlocked;
-    //   doc.properties.leaseDuration = undefined;
-    //   doc.leaseDurationSeconds = undefined;
-    //   doc.leaseExpireTime = undefined;
-    //   doc.leaseBreakExpireTime = undefined;
-    //   leaseTimeSeconds = 0;
-    // } else {
-    //   doc.properties.leaseState = Models.LeaseStateType.Breaking;
-    //   doc.properties.leaseStatus = Models.LeaseStatusType.Locked;
-    //   doc.leaseDurationSeconds = undefined;
-    //   if (doc.properties.leaseDuration === Models.LeaseDurationType.Infinite) {
-    //     doc.properties.leaseDuration = undefined;
-    //     doc.leaseExpireTime = undefined;
-    //     doc.leaseBreakExpireTime = new Date(context.startTime!);
-    //     doc.leaseBreakExpireTime.setSeconds(
-    //       doc.leaseBreakExpireTime.getSeconds() + breakPeriod
-    //     );
-    //     leaseTimeSeconds = breakPeriod;
-    //   } else {
-    //     let newleaseBreakExpireTime = new Date(context.startTime!);
-    //     newleaseBreakExpireTime.setSeconds(
-    //       newleaseBreakExpireTime.getSeconds() + breakPeriod
-    //     );
-    //     if (
-    //       doc.leaseExpireTime !== undefined &&
-    //       newleaseBreakExpireTime > doc.leaseExpireTime
-    //     ) {
-    //       newleaseBreakExpireTime = doc.leaseExpireTime;
-    //     }
-    //     if (
-    //       doc.leaseBreakExpireTime === undefined ||
-    //       doc.leaseBreakExpireTime > newleaseBreakExpireTime
-    //     ) {
-    //       doc.leaseBreakExpireTime = newleaseBreakExpireTime;
-    //     }
-    //     leaseTimeSeconds = Math.round(
-    //       Math.abs(
-    //         doc.leaseBreakExpireTime.getTime() - context.startTime!.getTime()
-    //       ) / 1000
-    //     );
-    //     doc.leaseExpireTime = undefined;
-    //     doc.properties.leaseDuration = undefined;
-    //   }
-    // }
-
+    this.setContainerLeaseProperties(doc, lease);
     coll.update(doc);
 
     return { properties: doc.properties, leaseTime: leaseTimeSeconds };
@@ -992,7 +739,6 @@ export default class LokiBlobMetadataStore
   ): Promise<ChangeContainerLeaseRes> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainer(account, container, context);
-    // const requestId = context ? context.contextId : undefined;
 
     const lease = LeaseFactory.createLeaseState(
       new LokiContainerLeaseAdapter(doc),
@@ -1000,29 +746,6 @@ export default class LokiBlobMetadataStore
     ).change(leaseId, proposedLeaseId).lease;
 
     this.setContainerLeaseProperties(doc, lease);
-
-    // // Check the lease action aligned with current lease state.
-    // if (
-    //   doc.properties.leaseState === Models.LeaseStateType.Available ||
-    //   doc.properties.leaseState === Models.LeaseStateType.Expired ||
-    //   doc.properties.leaseState === Models.LeaseStateType.Broken
-    // ) {
-    //   // TODO: Check error message
-    //   throw StorageErrorFactory.getLeaseNotPresentWithLeaseOperation(requestId);
-    // }
-
-    // if (doc.properties.leaseState === Models.LeaseStateType.Breaking) {
-    //   throw StorageErrorFactory.getLeaseIsBreakingAndCannotBeChanged(requestId);
-    // }
-
-    // // Check lease ID
-    // if (doc.leaseId !== leaseId) {
-    //   throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(requestId);
-    // }
-
-    // // Update the lease information, only need update lease ID
-    // doc.leaseId = proposedLeaseId;
-
     coll.update(doc);
 
     return { properties: doc.properties, leaseId: doc.leaseId };
@@ -1064,6 +787,7 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   public async listBlobs(
+    context: Context,
     account?: string,
     container?: string,
     blob?: string,
@@ -1103,6 +827,72 @@ export default class LokiBlobMetadataStore
       docs = await coll
         .chain()
         .find(query)
+        .where(obj => {
+          return obj.snapshot.length === 0 && obj.name > marker!;
+        })
+        .simplesort("name")
+        .limit(maxResults + 1)
+        .data();
+    }
+
+    for (const doc of docs) {
+      const blobDoc = doc as BlobModel;
+      blobDoc.properties.contentMD5 = this.restoreUint8Array(
+        blobDoc.properties.contentMD5
+      );
+    }
+
+    if (docs.length <= maxResults) {
+      return [
+        docs.map(doc => {
+          return this.setBlobLeaseProperties(
+            doc,
+            LeaseFactory.createLeaseState(
+              new LokiBlobLeaseAdapter(doc),
+              context
+            ).lease
+          );
+        }),
+        undefined
+      ];
+    } else {
+      const nextMarker = docs[docs.length - 2].name;
+      docs.pop();
+      return [
+        docs.map(doc => {
+          return this.setBlobLeaseProperties(
+            doc,
+            LeaseFactory.createLeaseState(
+              new LokiBlobLeaseAdapter(doc),
+              context
+            ).lease
+          );
+        }),
+        nextMarker
+      ];
+    }
+  }
+
+  public async listAllBlobs(
+    maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
+    marker: string = "",
+    includeSnapshots?: boolean
+  ): Promise<[BlobModel[], string | undefined]> {
+    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+
+    let docs;
+    if (includeSnapshots === true) {
+      docs = await coll
+        .chain()
+        .where(obj => {
+          return obj.name > marker!;
+        })
+        .simplesort("name")
+        .limit(maxResults + 1)
+        .data();
+    } else {
+      docs = await coll
+        .chain()
         .where(obj => {
           return obj.snapshot.length === 0 && obj.name > marker!;
         })
@@ -1579,7 +1369,6 @@ export default class LokiBlobMetadataStore
     ).acquire(duration, proposedLeaseId).lease;
 
     this.setBlobLeaseProperties(doc, lease);
-
     coll.update(doc);
 
     return { properties: doc.properties, leaseId: doc.leaseId };
@@ -1620,8 +1409,8 @@ export default class LokiBlobMetadataStore
       new LokiBlobLeaseAdapter(doc),
       context
     ).release(leaseId).lease;
-    this.setBlobLeaseProperties(doc, lease);
 
+    this.setBlobLeaseProperties(doc, lease);
     coll.update(doc);
 
     return doc.properties;
@@ -1662,8 +1451,8 @@ export default class LokiBlobMetadataStore
       new LokiBlobLeaseAdapter(doc),
       context
     ).renew(leaseId).lease;
-    this.setBlobLeaseProperties(doc, lease);
 
+    this.setBlobLeaseProperties(doc, lease);
     coll.update(doc);
 
     return { properties: doc.properties, leaseId: doc.leaseId };
@@ -1706,8 +1495,8 @@ export default class LokiBlobMetadataStore
       new LokiBlobLeaseAdapter(doc),
       context
     ).change(leaseId, proposedLeaseId).lease;
-    this.setBlobLeaseProperties(doc, lease);
 
+    this.setBlobLeaseProperties(doc, lease);
     coll.update(doc);
 
     return { properties: doc.properties, leaseId: doc.leaseId };
@@ -1748,17 +1537,19 @@ export default class LokiBlobMetadataStore
       new LokiBlobLeaseAdapter(doc),
       context
     ).break(breakPeriod).lease;
-    this.setBlobLeaseProperties(doc, lease);
 
     const leaseTimeSeconds: number =
-      lease.leaseState === Models.LeaseStateType.Leased
-        ? 0
-        : Math.round(
-            (lease.leaseBreakTime!.getTime() - context.startTime!.getTime()) /
+      lease.leaseState === Models.LeaseStateType.Breaking &&
+      lease.leaseBreakTime
+        ? Math.round(
+            (lease.leaseBreakTime.getTime() - context.startTime!.getTime()) /
               1000
-          );
+          )
+        : 0;
 
+    this.setBlobLeaseProperties(doc, lease);
     coll.update(doc);
+
     return { properties: doc.properties, leaseTime: leaseTimeSeconds };
   }
 
@@ -2872,7 +2663,7 @@ export default class LokiBlobMetadataStore
   private setContainerLeaseProperties(
     container: ContainerModel,
     lease: ILease
-  ) {
+  ): ContainerModel {
     container.leaseId = lease.leaseId;
     container.leaseExpireTime = lease.leaseExpireTime;
     container.leaseDurationSeconds = lease.leaseDurationSeconds;
@@ -2880,9 +2671,10 @@ export default class LokiBlobMetadataStore
     container.properties.leaseDuration = lease.leaseDurationType;
     container.properties.leaseState = lease.leaseState;
     container.properties.leaseStatus = lease.leaseStatus;
+    return container;
   }
 
-  private setBlobLeaseProperties(blob: BlobModel, lease: ILease) {
+  private setBlobLeaseProperties(blob: BlobModel, lease: ILease): BlobModel {
     blob.leaseId = lease.leaseId;
     blob.leaseExpireTime = lease.leaseExpireTime;
     blob.leaseDurationSeconds = lease.leaseDurationSeconds;
@@ -2890,5 +2682,6 @@ export default class LokiBlobMetadataStore
     blob.properties.leaseDuration = lease.leaseDurationType;
     blob.properties.leaseState = lease.leaseState;
     blob.properties.leaseStatus = lease.leaseStatus;
+    return blob;
   }
 }

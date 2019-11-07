@@ -563,6 +563,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * @memberof SqlBlobMetadataStore
    */
   public async listContainers(
+    context: Context,
     account: string,
     prefix: string = "",
     maxResults: number = 5000,
@@ -586,6 +587,16 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         name: this.getModelValue<string>(dbModel, "containerName", true),
         containerAcl: this.deserializeModelValue(dbModel, "containerAcl"),
         metadata: this.deserializeModelValue(dbModel, "metadata"),
+        leaseBreakTime: this.getModelValue<Date>(
+          dbModel,
+          "leaseBreakExpireTime"
+        ),
+        leaseExpireTime: this.getModelValue<Date>(dbModel, "leaseExpireTime"),
+        leaseId: this.getModelValue<string>(dbModel, "leaseId"),
+        leaseDurationSeconds: this.getModelValue<number>(
+          dbModel,
+          "leasedurationNumber"
+        ),
         properties: {
           lastModified: this.getModelValue<Date>(dbModel, "lastModified", true),
           etag: this.getModelValue<string>(dbModel, "etag", true),
@@ -593,7 +604,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           leaseStatus: this.getModelValue(dbModel, "leaseStatus"),
           leaseState: this.getModelValue(dbModel, "leaseState"),
           leaseDuration: this.getModelValue(dbModel, "leaseDuration"),
-
           hasImmutabilityPolicy: this.getModelValue<boolean>(
             dbModel,
             "hasImmutabilityPolicy"
@@ -610,7 +620,17 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       order: [["containerId", "ASC"]]
     }).then(res => {
       if (res.length < maxResults) {
-        return [res.map(val => modelConvert(val)), undefined];
+        return [
+          res.map(val => {
+            const container = modelConvert(val);
+            this.calculateContainerLeaseAttributes(
+              container,
+              context.startTime!
+            );
+            return container;
+          }),
+          undefined
+        ];
       } else {
         const tail = res[res.length - 1];
         const nextMarker = this.getModelValue<number>(
@@ -618,7 +638,17 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           "containerId",
           true
         );
-        return [res.map(val => modelConvert(val)), nextMarker];
+        return [
+          res.map(val => {
+            const container = modelConvert(val);
+            this.calculateContainerLeaseAttributes(
+              container,
+              context.startTime!
+            );
+            return container;
+          }),
+          nextMarker
+        ];
       }
     });
   }
@@ -1067,6 +1097,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async listBlobs(
+    context: Context,
     account?: string,
     container?: string,
     blob?: string,
@@ -1096,6 +1127,84 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         [Op.like]: `${prefix}%`
       };
     }
+    if (marker !== undefined) {
+      whereQuery.blobName = {
+        [Op.gt]: marker
+      };
+    }
+    // TODO: Query snapshot
+    if (!includeSnapshots) {
+      whereQuery.snapshot = "";
+    }
+
+    whereQuery.deleting = 0;
+
+    const modelConvert = (res: BlobsModel): BlobModel => {
+      return {
+        accountName: this.getModelValue<string>(res, "accountName", true),
+        containerName: this.getModelValue<string>(res, "containerName", true),
+        name: this.getModelValue<string>(res, "blobName", true),
+        snapshot: this.getModelValue<string>(res, "snapshot", true),
+        isCommitted: this.getModelValue<boolean>(res, "isCommitted", true),
+        leaseBreakTime: this.getModelValue<Date>(res, "leaseBreakExpireTime"),
+        leaseExpireTime: this.getModelValue<Date>(res, "leaseExpireTime"),
+        leaseDurationSeconds: this.getModelValue<number>(
+          res,
+          "leasedurationNumber"
+        ),
+        leaseId: this.getModelValue<string>(res, "leaseId"),
+        properties: {
+          lastModified: this.getModelValue<Date>(res, "lastModified", true),
+          etag: this.getModelValue<string>(res, "etag", true),
+          leaseStatus: this.getModelValue(res, "leaseStatus"),
+          leaseState: this.getModelValue(res, "leaseState"),
+          leaseDuration: this.getModelValue(res, "leaseDuration")
+        },
+        persistency: this.deserializeModelValue(res, "persistency"),
+        committedBlocksInOrder: this.deserializeModelValue(
+          res,
+          "committedBlocksInOrder"
+        ),
+        metadata: this.deserializeModelValue(res, "metadata")
+      };
+    };
+
+    return BlobsModel.findAll({
+      limit: maxResults,
+      where: whereQuery as any,
+      // TODO: Should use ASC order index?
+      order: [["blobName", "ASC"]]
+    }).then(res => {
+      if (res.length < maxResults) {
+        return [
+          res.map(val => {
+            const blobModel = modelConvert(val);
+            this.calculateBlobLeaseAttributes(blobModel, context.startTime!);
+            return blobModel;
+          }),
+          undefined
+        ];
+      } else {
+        const tail = res[res.length - 1];
+        const nextMarker = this.getModelValue<string>(tail, "blobName", true);
+        return [
+          res.map(val => {
+            const blobModel = modelConvert(val);
+            this.calculateBlobLeaseAttributes(blobModel, context.startTime!);
+            return blobModel;
+          }),
+          nextMarker
+        ];
+      }
+    });
+  }
+
+  public async listAllBlobs(
+    maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
+    marker?: string,
+    includeSnapshots?: boolean
+  ): Promise<[BlobModel[], any | undefined]> {
+    const whereQuery: any = {};
     if (marker !== undefined) {
       whereQuery.blobName = {
         [Op.gt]: marker

@@ -6,8 +6,9 @@
 
 - Azurite now supports customized account name and keys by environment variable `AZURITE_ACCOUNTS`.
 - Added logging for underlayer operations, such as persistency data read and write operations.
-- Fixed race condition of GC when sometimes newly created extents will be GC.
-- Fixed a bug when md5 header is empty string in upload blob.
+- Fixed race condition of GC when sometimes newly created extents will be removed.
+- Fixed a bug when uploading blob will fail when md5 header is empty string.
+- Fixed a bug when sometimes list container or blobs doesn't have proper lease status.
 - [Breaking] This version cannot guarantee compatible with persisted database models file by previous version.
 
 Blob:
