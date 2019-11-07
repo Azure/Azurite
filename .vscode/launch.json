@@ -11,6 +11,7 @@
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
       "args": ["${workspaceFolder}/src/queue/main.ts", "-d", "debug.log"],
+      "envFile": "${workspaceFolder}/loki.env",
       "outputCapture": "std"
     },
     {
@@ -20,6 +21,7 @@
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
       "args": ["${workspaceFolder}/src/blob/main.ts", "-d", "debug.log"],
+      "envFile": "${workspaceFolder}/loki.env",
       "outputCapture": "std"
     },
     {
@@ -56,6 +58,7 @@
         "--colors",
         "${workspaceFolder}/${relativeFile}"
       ],
+      "env": { "AZURITE_ACCOUNTS": "" },
       "internalConsoleOptions": "openOnSessionStart",
       "outputCapture": "std"
     },

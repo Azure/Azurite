@@ -680,7 +680,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       account,
       container,
       blob,
-      options.leaseAccessConditions
+      options.leaseAccessConditions,
+      options.metadata
     );
 
     const response: Models.BlobCreateSnapshotResponse = {

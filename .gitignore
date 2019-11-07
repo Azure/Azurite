@@ -8,5 +8,5 @@ debug.log
 *.vsix
 *.tgz
 __*
-.env
+*.env
 temp

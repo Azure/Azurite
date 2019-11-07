@@ -19,5 +19,5 @@ debug.log
 *.tgz
 __*__.json
 __*__
-.env
+*.env
 temp

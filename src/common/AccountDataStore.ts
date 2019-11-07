@@ -21,7 +21,7 @@ interface IAccounts {
 }
 
 const DEFAULT_EMULATOR_ACCOUNTS: IAccounts = {
-  EMULATOR_ACCOUNT_NAME: {
+  [EMULATOR_ACCOUNT_NAME]: {
     name: EMULATOR_ACCOUNT_NAME,
     key1: EMULATOR_ACCOUNT_KEY
   }
@@ -70,6 +70,7 @@ export default class AccountDataStore implements IAccountDataStore {
   }
 
   private refresh() {
+    // TODO: Parse environment variable from environment class
     const env = process.env[AZURITE_ACCOUNTS_ENV];
     this.logger.info(
       `AccountDataStore:init() Refresh accounts from environment variable ${AZURITE_ACCOUNTS_ENV} with value ${
