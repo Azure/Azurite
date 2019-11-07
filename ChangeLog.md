@@ -4,12 +4,12 @@
 
 2019.11 Version 3.3.0-preview
 
-- Azurite now supports customized account name and keys by environment variable `AZURITE_ACCOUNTS`.
-- Added logging for underlayer operations, such as persistency data read and write operations.
-- Fixed race condition of GC when sometimes newly created extents will be removed.
+- Azurite now supports customized account names and keys by environment variable `AZURITE_ACCOUNTS`.
+- Improved logging for underlayer operations, such as persistency data read and write operations.
+- Handled race condition of GC when sometimes newly created extents will be removed.
 - Fixed a bug when uploading blob will fail when md5 header is empty string.
-- Fixed a bug when sometimes list container or blobs doesn't have proper lease status.
-- [Breaking] This version cannot guarantee compatible with persisted database models file by previous version.
+- Fixed a bug when sometimes list containers or blobs doesn't have proper lease status.
+- [Breaking] This version cannot guarantee compatible with persisted database models file by previous version. Remove previous metadata file and restart Azurite in case any errors.
 
 Blob:
 - Fixed a bug that snapshot blob doesn't honor metadata options.
