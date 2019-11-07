@@ -36,34 +36,44 @@ export default interface IExtentStore extends IDataStore, ICleaner {
    * Append data to extent layer.
    * Return the extent chunk information including the extentId, offset and count.
    *
-   * @param {NodeJS.ReadableStream | Buffer} data
+   * @param {(NodeJS.ReadableStream | Buffer)} data
+   * @param {string} [contextId]
    * @returns {Promise<IExtentChunk>}
    * @memberof IExtentStore
    */
-  appendExtent(data: NodeJS.ReadableStream | Buffer): Promise<IExtentChunk>;
+  appendExtent(
+    data: NodeJS.ReadableStream | Buffer,
+    contextId?: string
+  ): Promise<IExtentChunk>;
 
   /**
-   * Read data from persistency layer accoding to the given IExtentChunk.
+   * Read data from persistency layer according to the given IExtentChunk.
    *
    * @param {IExtentChunk} [extentChunk]
+   * @param {string} [contextId]
    * @returns {Promise<NodeJS.ReadableStream>}
    * @memberof IExtentStore
    */
-  readExtent(extentChunk?: IExtentChunk): Promise<NodeJS.ReadableStream>;
+  readExtent(
+    extentChunk?: IExtentChunk,
+    contextId?: string
+  ): Promise<NodeJS.ReadableStream>;
 
   /**
-   * Merge serveral extent chunks to a ReadableStream according to the offset and count.
+   * Merge several extent chunks to a ReadableStream according to the offset and count.
    *
    * @param {(IExtentChunk)[]} extentChunkArray
    * @param {number} offset
    * @param {number} count
+   * @param {string} [contextId]
    * @returns {Promise<NodeJS.ReadableStream>}
    * @memberof IExtentStore
    */
   readExtents(
     extentChunkArray: (IExtentChunk)[],
     offset: number,
-    count: number
+    count: number,
+    contextId?: string
   ): Promise<NodeJS.ReadableStream>;
 
   /**

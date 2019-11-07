@@ -132,9 +132,7 @@ export default class BlobGCManager implements IGCManager {
       })
       .catch(err => {
         this.logger.info(
-          `BlobGCManager:start() Mark and sweep loop emits error: ${err.name} ${
-            err.message
-          }`
+          `BlobGCManager:start() Mark and sweep loop emits error: ${err.name} ${err.message}`
         );
         this.logger.info(`BlobGCManager:start() Set status to Closed.`);
         this._status = Status.Closed;
@@ -236,9 +234,7 @@ export default class BlobGCManager implements IGCManager {
       }
     }
     this.logger.info(
-      `BlobGCManager:markSweep() Got referred extents, unreferenced extents count is ${
-        allExtents.size
-      }.`
+      `BlobGCManager:markSweep() Got referred extents, unreferenced extents count is ${allExtents.size}.`
     );
 
     // sweep

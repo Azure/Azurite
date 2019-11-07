@@ -48,7 +48,10 @@ export default class BlockBlobHandler extends BaseHandler
       context
     );
 
-    const persistency = await this.extentStore.appendExtent(body);
+    const persistency = await this.extentStore.appendExtent(
+      body,
+      context.contextId
+    );
     if (persistency.count !== contentLength) {
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextId!,
@@ -57,7 +60,10 @@ export default class BlockBlobHandler extends BaseHandler
     }
 
     // Calculate MD5 for validation
-    const stream = await this.extentStore.readExtent(persistency);
+    const stream = await this.extentStore.readExtent(
+      persistency,
+      context.contextId
+    );
     const calculatedContentMD5 = await getMD5FromStream(stream);
     if (contentMD5 !== undefined) {
       if (typeof contentMD5 === "string") {
@@ -164,7 +170,10 @@ export default class BlockBlobHandler extends BaseHandler
       context
     );
 
-    const persistency = await this.extentStore.appendExtent(body);
+    const persistency = await this.extentStore.appendExtent(
+      body,
+      context.contextId
+    );
     if (persistency.count !== contentLength) {
       // TODO: Confirm error code
       throw StorageErrorFactory.getInvalidOperation(

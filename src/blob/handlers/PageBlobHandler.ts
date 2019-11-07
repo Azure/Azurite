@@ -197,7 +197,10 @@ export default class PageBlobHandler extends BaseHandler
       throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextId!);
     }
 
-    const persistency = await this.extentStore.appendExtent(body);
+    const persistency = await this.extentStore.appendExtent(
+      body,
+      context.contextId
+    );
     if (persistency.count !== contentLength) {
       // TODO: Confirm status code
       throw StorageErrorFactory.getInvalidOperation(

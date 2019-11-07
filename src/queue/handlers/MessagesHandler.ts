@@ -118,7 +118,10 @@ export default class MessagesHandler extends BaseHandler
 
     // Read the message text from file system.
     for (const message of messages) {
-      const textStream = await this.extentStore.readExtent(message.persistency);
+      const textStream = await this.extentStore.readExtent(
+        message.persistency,
+        context.contextID
+      );
       const text = await readStreamToString(textStream);
       const dequeuedMessage: Models.DequeuedMessageItem = {
         ...message,
@@ -276,7 +279,8 @@ export default class MessagesHandler extends BaseHandler
 
     // Write data to file system after the validation pass.
     const extentChunk = await this.extentStore.appendExtent(
-      Buffer.from(queueMessage.messageText)
+      Buffer.from(queueMessage.messageText),
+      context.contextID
     );
     message.persistency = extentChunk;
 
@@ -350,7 +354,10 @@ export default class MessagesHandler extends BaseHandler
     };
 
     for (const message of messages) {
-      const textStream = await this.extentStore.readExtent(message.persistency);
+      const textStream = await this.extentStore.readExtent(
+        message.persistency,
+        context.contextID
+      );
       const text = await readStreamToString(textStream);
       const dequeuedMessage: Models.DequeuedMessageItem = {
         ...message,

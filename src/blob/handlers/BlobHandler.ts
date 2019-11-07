@@ -927,20 +927,24 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     if (blocks === undefined || blocks.length === 0) {
       bodyGetter = async () => {
         if (blob.persistency === undefined) {
-          return this.extentStore.readExtent();
+          return this.extentStore.readExtent(undefined, context.contextId);
         }
-        return this.extentStore.readExtent({
-          id: blob.persistency.id,
-          offset: blob.persistency.offset + rangeStart,
-          count: Math.min(blob.persistency.count, contentLength)
-        });
+        return this.extentStore.readExtent(
+          {
+            id: blob.persistency.id,
+            offset: blob.persistency.offset + rangeStart,
+            count: Math.min(blob.persistency.count, contentLength)
+          },
+          context.contextId
+        );
       };
     } else {
       bodyGetter = async () => {
         return this.extentStore.readExtents(
           blocks.map(block => block.persistency),
           rangeStart,
-          rangeEnd + 1 - rangeStart
+          rangeEnd + 1 - rangeStart,
+          context.contextId
         );
       };
     }
@@ -1053,7 +1057,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       return this.extentStore.readExtents(
         ranges.map(value => value.persistency),
         0,
-        contentLength
+        contentLength,
+        context.contextId
       );
     };
 

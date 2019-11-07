@@ -161,15 +161,17 @@ export default class FSExtentStore implements IExtentStore {
   }
 
   /**
-   * This method MAY create a new extent or append data to an existing extent
+   * This method may create a new extent or append data to an existing extent.
    * Return the extent chunk information including the extentId, offset and count.
    *
-   * @param {NodeJS.ReadableStream | Buffer} data
+   * @param {(NodeJS.ReadableStream | Buffer)} data
+   * @param {string} [contextId]
    * @returns {Promise<IExtentChunk>}
-   * @memberof IExtentStore
+   * @memberof FSExtentStore
    */
   public async appendExtent(
-    data: NodeJS.ReadableStream | Buffer
+    data: NodeJS.ReadableStream | Buffer,
+    contextId?: string
   ): Promise<IExtentChunk> {
     const op = () =>
       new Promise<IExtentChunk>((resolve, reject) => {
@@ -188,7 +190,8 @@ export default class FSExtentStore implements IExtentStore {
             AppendStatusCode.Appending;
 
           this.logger.info(
-            `appendExtent() appendExtentIdx:${appendExtentIdx} offset:${this.appendExtentArray[appendExtentIdx].offset} MAX_EXTENT_SIZE:${MAX_EXTENT_SIZE} extentId:${this.appendExtentArray[appendExtentIdx].id}`
+            `FSExtentStore:appendExtent() Select extent from idle location for extent append operation. LocationId:${appendExtentIdx} extentId:${this.appendExtentArray[appendExtentIdx].id} offset:${this.appendExtentArray[appendExtentIdx].offset} MAX_EXTENT_SIZE:${MAX_EXTENT_SIZE} `,
+            contextId
           );
 
           if (
@@ -196,7 +199,8 @@ export default class FSExtentStore implements IExtentStore {
           ) {
             this.getNewExtent(this.appendExtentArray[appendExtentIdx]);
             this.logger.info(
-              `appendExtent() After get new extent: appendExtentIdx:${appendExtentIdx} offset:${this.appendExtentArray[appendExtentIdx].offset} MAX_EXTENT_SIZE:${MAX_EXTENT_SIZE} extentId:${this.appendExtentArray[appendExtentIdx].id}`
+              `FSExtentStore:appendExtent() Size of selected extent offset is larger than maximum extent size ${MAX_EXTENT_SIZE} bytes, try appending to new extent. New extent LocationID:${appendExtentIdx} extentId:${this.appendExtentArray[appendExtentIdx].id} offset:${this.appendExtentArray[appendExtentIdx].offset} MAX_EXTENT_SIZE:${MAX_EXTENT_SIZE} `,
+              contextId
             );
           }
 
@@ -212,12 +216,16 @@ export default class FSExtentStore implements IExtentStore {
           const path = this.generateExtentPath(appendExtent.persistencyId, id);
 
           let fd = this.fdCache.get(id);
-          this.logger.debug(`appendExtent()  extentId:${id}. Get fd:${fd}`);
+          this.logger.debug(
+            `FSExtentStore:appendExtent() Get fd:${fd} for extent:${id} from cache.`,
+            contextId
+          );
           if (fd === undefined) {
-            fd = openSync(path, "a");
+            fd = openSync(path, "a"); // TODO: async
             this.fdCache.insert(id, fd);
             this.logger.debug(
-              `appendExtent()  extentId:${id}. Get new fd:${fd}`
+              `FSExtentStore:appendExtent() Open file:${path} for extent:${id}, get new fd:${fd}`,
+              contextId
             );
           }
 
@@ -229,7 +237,10 @@ export default class FSExtentStore implements IExtentStore {
 
           let count = 0;
 
-          this.logger.debug(`appendExtent() start writing. extentId:${id}`);
+          this.logger.debug(
+            `FSExtentStore:appendExtent() Start writing to extent ${id}`,
+            contextId
+          );
 
           try {
             count = await this.streamPipe(rs, ws);
@@ -244,11 +255,17 @@ export default class FSExtentStore implements IExtentStore {
               lastModifiedInMS: Date.now()
             };
             this.logger.debug(
-              `appendExtent() write finish. extent:${JSON.stringify(extent)}`
+              `FSExtentStore:appendExtent() Write finish, start updating extent metadata. extent:${JSON.stringify(
+                extent
+              )}`,
+              contextId
             );
             await this.metadataStore.updateExtent(extent);
 
-            this.logger.debug(`appendExtent() update extent done. Resolve()`);
+            this.logger.debug(
+              `FSExtentStore:appendExtent() Update extent metadata done. Resolve()`,
+              contextId
+            );
             appendExtent.appendStatus = AppendStatusCode.Idle;
             return {
               id,
@@ -264,18 +281,19 @@ export default class FSExtentStore implements IExtentStore {
           .catch(reject);
       });
 
-    return this.appendQueue.operate(op);
+    return this.appendQueue.operate(op, contextId);
   }
 
   /**
-   * Read data from persistency layer accoding to the given IExtentChunk.
+   * Read data from persistency layer according to the given IExtentChunk.
    *
    * @param {IExtentChunk} [extentChunk]
    * @returns {Promise<NodeJS.ReadableStream>}
    * @memberof FSExtentStore
    */
   public async readExtent(
-    extentChunk?: IExtentChunk
+    extentChunk?: IExtentChunk,
+    contextId?: string
   ): Promise<NodeJS.ReadableStream> {
     if (extentChunk === undefined || extentChunk.count === 0) {
       return new ZeroBytesStream(0);
@@ -292,43 +310,56 @@ export default class FSExtentStore implements IExtentStore {
 
     const path = this.generateExtentPath(persistencyId, extentChunk.id);
 
-    this.logger.info(
-      `readExtent() prepare reading. extentId:${extentChunk.id} offset:${extentChunk.offset} count:${extentChunk.count}`
-    );
-
     const op = () =>
       new Promise<NodeJS.ReadableStream>((resolve, reject) => {
-        this.logger.debug(
-          `readExtent() start reading. extentId:${extentChunk.id} offset:${extentChunk.offset} count:${extentChunk.count}`
+        this.logger.verbose(
+          `FSExtentStore:readExtent() Creating read stream. LocationId:${persistencyId} extentId:${
+            extentChunk.id
+          } path:${path} offset:${extentChunk.offset} count:${
+            extentChunk.count
+          } end:${extentChunk.offset + extentChunk.count - 1}`,
+          contextId
         );
-        resolve(
-          createReadStream(path, {
-            start: extentChunk.offset,
-            end: extentChunk.offset + extentChunk.count - 1
-          })
-        );
-        this.logger.debug(
-          `readExtent() reading done. extentId:${extentChunk.id} offset:${extentChunk.offset} count:${extentChunk.count}`
-        );
+        const stream = createReadStream(path, {
+          start: extentChunk.offset,
+          end: extentChunk.offset + extentChunk.count - 1
+        }).on("close", () => {
+          this.logger.verbose(
+            `FSExtentStore:readExtent() Read stream closed. LocationId:${persistencyId} extentId:${
+              extentChunk.id
+            } path:${path} offset:${extentChunk.offset} count:${
+              extentChunk.count
+            } end:${extentChunk.offset + extentChunk.count - 1}`,
+            contextId
+          );
+        });
+        resolve(stream);
       });
 
-    return this.readQueue.operate(op);
+    return this.readQueue.operate(op, contextId);
   }
 
   /**
-   * Merge serveral extent chunks to a ReadableStream according to the offset and count.
+   * Merge several extent chunks to a ReadableStream according to the offset and count.
    *
    * @param {(IExtentChunk)[]} extentChunkArray
    * @param {number} [offset=0]
    * @param {number} [count=Infinity]
+   * @param {string} [contextId]
    * @returns {Promise<NodeJS.ReadableStream>}
    * @memberof FSExtentStore
    */
   public async readExtents(
     extentChunkArray: (IExtentChunk)[],
     offset: number = 0,
-    count: number = Infinity
+    count: number = Infinity,
+    contextId?: string
   ): Promise<NodeJS.ReadableStream> {
+    this.logger.verbose(
+      `FSExtentStore:readExtents() Start read from multi extents...`,
+      contextId
+    );
+
     if (count === 0) {
       return new ZeroBytesStream(0);
     }
@@ -359,11 +390,14 @@ export default class FSExtentStore implements IExtentStore {
         }
 
         streams.push(
-          await this.readExtent({
-            id: chunk.id,
-            offset: chunkStart,
-            count: chunkEnd - chunkStart
-          })
+          await this.readExtent(
+            {
+              id: chunk.id,
+              offset: chunkStart,
+              count: chunkEnd - chunkStart
+            },
+            contextId
+          )
         );
         accumulatedOffset = nextOffset;
       }
