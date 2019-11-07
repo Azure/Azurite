@@ -1,4 +1,4 @@
-import { DEFAULT_GC_UNMODIFIED_TIME } from "../utils/constants";
+import { DEFAULT_EXTENT_GC_PROTECT_TIME_IN_MS } from "../utils/constants";
 import IExtentMetadataStore from "./IExtentMetadataStore";
 
 /**
@@ -29,7 +29,7 @@ export default class AllExtentsAsyncIterator
       this.unit,
       this.marker,
       this.time,
-      DEFAULT_GC_UNMODIFIED_TIME
+      DEFAULT_EXTENT_GC_PROTECT_TIME_IN_MS
     );
     this.marker = nextMarker;
 

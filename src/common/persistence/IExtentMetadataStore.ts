@@ -81,7 +81,7 @@ export default interface IExtentMetadataStore extends IDataStore, ICleaner {
    * @param {number} [maxResults]
    * @param {(number | undefined)} [marker]
    * @param {Date} [queryTime]
-   * @param {number} [releaseTime]
+   * @param {number} [protectTimeInMs]
    * @returns {(Promise<[IExtentModel[], number | undefined]>)}
    * @memberof IExtentMetadataStore
    */
@@ -90,7 +90,7 @@ export default interface IExtentMetadataStore extends IDataStore, ICleaner {
     maxResults?: number,
     marker?: number | undefined,
     queryTime?: Date,
-    releaseTime?: number
+    protectTimeInMs?: number
   ): Promise<[IExtentModel[], number | undefined]>;
 
   /**
