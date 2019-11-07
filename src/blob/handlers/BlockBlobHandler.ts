@@ -38,9 +38,10 @@ export default class BlockBlobHandler extends BaseHandler
       options.blobHTTPHeaders.blobContentType ||
       context.request!.getHeader("content-type") ||
       "application/octet-stream";
-    const contentMD5 =
-      options.blobHTTPHeaders.blobContentMD5 ||
-      context.request!.getHeader("content-md5");
+    const contentMD5 = context.request!.getHeader("content-md5")
+      ? options.blobHTTPHeaders.blobContentMD5 ||
+        context.request!.getHeader("content-md5")
+      : undefined;
 
     await this.metadataStore.checkContainerExist(
       accountName,
@@ -77,10 +78,7 @@ export default class BlockBlobHandler extends BaseHandler
           );
         }
       } else {
-        if (
-          contentMD5 !== undefined &&
-          !Buffer.from(contentMD5).equals(calculatedContentMD5)
-        ) {
+        if (!Buffer.from(contentMD5).equals(calculatedContentMD5)) {
           throw StorageErrorFactory.getInvalidOperation(
             context.contextId!,
             "Provided contentMD5 doesn't match."
