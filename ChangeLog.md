@@ -5,6 +5,7 @@
 2019.11 Version 3.3.0-preview
 
 - Azurite now supports customized account name and keys by environment variable `AZURITE_ACCOUNTS`.
+- Added logging for underlayer operations, such as persistency data read and write operations.
 - [Breaking] This version cannot guarantee compatible with persisted database models file by previous version.
 
 Blob:

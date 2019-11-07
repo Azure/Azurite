@@ -57,7 +57,7 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
     );
 
     if (containerName === undefined) {
-      this.logger.debug(
+      this.logger.info(
         // tslint:disable-next-line:max-line-length
         `PublicAccessAuthenticator:validate() Skip public access authentication. Container name is undefined.`,
         context.contextId

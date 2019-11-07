@@ -117,7 +117,8 @@ export default class MessageIdHandler extends BaseHandler
     // then the popRecept should be check in metadata store to determine update or not.
     if (queueMessage.messageText !== undefined) {
       message.persistency = await this.extentStore.appendExtent(
-        Buffer.from(queueMessage.messageText)
+        Buffer.from(queueMessage.messageText),
+        context.contextID
       );
     }
 

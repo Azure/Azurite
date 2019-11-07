@@ -72,7 +72,9 @@ export default class AccountDataStore implements IAccountDataStore {
   private refresh() {
     const env = process.env[AZURITE_ACCOUNTS_ENV];
     this.logger.info(
-      `AccountDataStore:init() Refresh accounts from environment variable ${AZURITE_ACCOUNTS_ENV} with value ${env}`
+      `AccountDataStore:init() Refresh accounts from environment variable ${AZURITE_ACCOUNTS_ENV} with value ${
+        env ? "*****" : undefined
+      }`
     );
     if (env) {
       try {

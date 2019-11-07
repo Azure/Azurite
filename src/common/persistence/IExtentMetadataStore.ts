@@ -16,7 +16,7 @@ export interface IExtentModel {
   id: string;
 
   /**
-   * Destination persistencyId
+   * Destination persistencyId or called location ID.
    *
    * @type {string}
    * @memberof IExtentModel
