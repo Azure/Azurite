@@ -7,6 +7,7 @@ import {
   EMULATOR_ACCOUNT_KIND,
   EMULATOR_ACCOUNT_SKUNAME
 } from "../utils/constants";
+import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
@@ -19,14 +20,6 @@ import BaseHandler from "./BaseHandler";
  */
 export default class ContainerHandler extends BaseHandler
   implements IContainerHandler {
-  /**
-   * Default listing blobs max number.
-   *
-   * @private
-   * @memberof ContainerHandler
-   */
-  private readonly LIST_BLOBS_MAX_RESULTS_DEFAULT = 5000;
-
   /**
    * Create container.
    *
@@ -532,6 +525,13 @@ export default class ContainerHandler extends BaseHandler
         includeSnapshots = true;
       }
     }
+    if (
+      options.maxresults === undefined ||
+      options.maxresults > DEFAULT_LIST_BLOBS_MAX_RESULTS
+    ) {
+      options.maxresults = DEFAULT_LIST_BLOBS_MAX_RESULTS;
+    }
+
     const [blobs, nextMarker] = await this.metadataStore.listBlobs(
       accountName,
       containerName,
@@ -560,7 +560,7 @@ export default class ContainerHandler extends BaseHandler
       containerName,
       prefix: options.prefix || "",
       marker: options.marker,
-      maxResults: options.maxresults || this.LIST_BLOBS_MAX_RESULTS_DEFAULT,
+      maxResults: options.maxresults,
       delimiter,
       segment: {
         blobItems
@@ -607,6 +607,13 @@ export default class ContainerHandler extends BaseHandler
         includeSnapshots = true;
       }
     }
+    if (
+      options.maxresults === undefined ||
+      options.maxresults > DEFAULT_LIST_BLOBS_MAX_RESULTS
+    ) {
+      options.maxresults = DEFAULT_LIST_BLOBS_MAX_RESULTS;
+    }
+
     const [blobs, nextMarker] = await this.metadataStore.listBlobs(
       accountName,
       containerName,
@@ -656,7 +663,7 @@ export default class ContainerHandler extends BaseHandler
       containerName,
       prefix: options.prefix,
       marker: options.marker,
-      maxResults: options.maxresults || this.LIST_BLOBS_MAX_RESULTS_DEFAULT,
+      maxResults: options.maxresults,
       delimiter,
       segment: {
         blobItems,
