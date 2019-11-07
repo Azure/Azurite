@@ -681,7 +681,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       options.leaseAccessConditions,
-      options.metadata
+      !options.metadata || JSON.stringify(options.metadata) === "{}"
+        ? undefined
+        : options.metadata
     );
 
     const response: Models.BlobCreateSnapshotResponse = {
