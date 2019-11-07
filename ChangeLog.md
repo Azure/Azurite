@@ -6,6 +6,7 @@
 
 - Azurite now supports customized account name and keys by environment variable `AZURITE_ACCOUNTS`.
 - Added logging for underlayer operations, such as persistency data read and write operations.
+- Fixed race condition of GC when sometimes newly created extents will be GC.
 - [Breaking] This version cannot guarantee compatible with persisted database models file by previous version.
 
 Blob:

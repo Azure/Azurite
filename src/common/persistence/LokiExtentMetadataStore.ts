@@ -141,7 +141,7 @@ export default class LokiExtentMetadata implements IExtentMetadataStore {
    * @param {number} [maxResults]
    * @param {number} [marker]
    * @param {Date} [queryTime]
-   * @param {number} [UnmodifiedTime]
+   * @param {number} [protectTimeInMs]
    * @returns {(Promise<[IExtentModel[], number | undefined]>)}
    * @memberof LokiExtentMetadata
    */
@@ -150,7 +150,7 @@ export default class LokiExtentMetadata implements IExtentMetadataStore {
     maxResults?: number,
     marker?: number,
     queryTime?: Date,
-    UnmodifiedTime?: number
+    protectTimeInMs?: number
   ): Promise<[IExtentModel[], number | undefined]> {
     const query: any = {};
     if (id !== undefined) {
@@ -160,13 +160,13 @@ export default class LokiExtentMetadata implements IExtentMetadataStore {
       maxResults = 5000;
     }
 
-    if (UnmodifiedTime === undefined) {
-      UnmodifiedTime = 0;
+    if (protectTimeInMs === undefined) {
+      protectTimeInMs = 0;
     }
 
     if (queryTime !== undefined) {
       query.LastModifyInMS = {
-        $lt: queryTime.getTime() - UnmodifiedTime * 1000
+        $lt: queryTime.getTime() - protectTimeInMs
       };
     }
 

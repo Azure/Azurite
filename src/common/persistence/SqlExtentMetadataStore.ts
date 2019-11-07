@@ -90,7 +90,7 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
           type: DATE
         }
       },
-      { sequelize: this.sequelize, modelName: "Extents" }
+      { sequelize: this.sequelize, modelName: "Extents", timestamps: false }
     );
 
     // TODO: Remove this part which only for test.
@@ -144,7 +144,7 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
    * @param {number} [maxResults]
    * @param {(number | undefined)} [marker]
    * @param {Date} [queryTime]
-   * @param {number} [releaseTime]
+   * @param {number} [protectTimeInMs]
    * @returns {(Promise<[IExtentModel[], number | undefined]>)}
    * @memberof SqlExtentMetadataStore
    */
@@ -153,7 +153,7 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
     maxResults?: number,
     marker?: number | string | undefined,
     queryTime?: Date,
-    releaseTime?: number
+    protectTimeInMs?: number
   ): Promise<[IExtentModel[], number | undefined]> {
     const query: any = {};
     if (id !== undefined) {
@@ -163,12 +163,12 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
     if (maxResults === undefined) {
       maxResults = 5000;
     }
-    if (releaseTime === undefined) {
-      releaseTime = 0;
+    if (protectTimeInMs === undefined) {
+      protectTimeInMs = 0;
     }
     if (queryTime !== undefined) {
       query.lastModifiedInMS = {
-        [Op.lt]: queryTime.getTime() - releaseTime
+        [Op.lt]: queryTime.getTime() - protectTimeInMs
       };
     }
     if (marker !== undefined) {
