@@ -249,6 +249,7 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
    * @memberof IBlobMetadataStore
    */
   listContainers(
+    context: Context,
     account: string,
     prefix?: string,
     maxResults?: number,
@@ -480,10 +481,17 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
    * @memberof IBlobMetadataStore
    */
   listBlobs(
+    context: Context,
     account?: string,
     container?: string,
     blob?: string,
     prefix?: string,
+    maxResults?: number,
+    marker?: string,
+    includeSnapshots?: boolean
+  ): Promise<[BlobModel[], string | undefined]>;
+
+  listAllBlobs(
     maxResults?: number,
     marker?: string,
     includeSnapshots?: boolean

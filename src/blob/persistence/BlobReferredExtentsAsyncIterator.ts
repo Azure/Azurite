@@ -31,11 +31,7 @@ export default class BlobReferredExtentsAsyncIterator
 
   public async next(): Promise<IteratorResult<IPersistencyChunk[]>> {
     if (this.state === State.LISTING_EXTENTS_IN_BLOBS) {
-      const [blobs, marker] = await this.blobMetadataStore.listBlobs(
-        undefined,
-        undefined,
-        undefined,
-        undefined,
+      const [blobs, marker] = await this.blobMetadataStore.listAllBlobs(
         undefined,
         this.blobListingMarker,
         true

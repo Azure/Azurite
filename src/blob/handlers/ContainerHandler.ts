@@ -533,6 +533,7 @@ export default class ContainerHandler extends BaseHandler
     }
 
     const [blobs, nextMarker] = await this.metadataStore.listBlobs(
+      context,
       accountName,
       containerName,
       undefined,
@@ -615,6 +616,7 @@ export default class ContainerHandler extends BaseHandler
     }
 
     const [blobs, nextMarker] = await this.metadataStore.listBlobs(
+      context,
       accountName,
       containerName,
       undefined,
