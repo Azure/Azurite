@@ -9,6 +9,7 @@ azure-pipelines.yml
 .gitignore
 .npmignore
 Dockerfile
+__blobstorage__
 typings
 tests
 swagger

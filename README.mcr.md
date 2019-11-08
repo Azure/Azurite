@@ -26,7 +26,7 @@ docker run -p 10000:10000 -p 10001:10001 mcr.microsoft.com/azure-storage/azurite
 Just run blob service:
 
 ```bash
-docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite azurite-blob
+docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite azurite-blob --blobHost 0.0.0.0
 ```
 
 **Run Azurite V3 docker image with customized persisted data location**

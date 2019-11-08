@@ -2,13 +2,13 @@ import { Options as SequelizeOptions } from "sequelize";
 
 import ConfigurationBase from "../common/ConfigurationBase";
 import { StoreDestinationArray } from "../common/persistence/IExtentStore";
+import { DEFAULT_SQL_OPTIONS } from "../common/utils/constants";
 import {
   DEFAULT_BLOB_LISTENING_PORT,
   DEFAULT_BLOB_PERSISTENCE_ARRAY,
   DEFAULT_BLOB_SERVER_HOST_NAME,
   DEFAULT_ENABLE_ACCESS_LOG,
-  DEFAULT_ENABLE_DEBUG_LOG,
-  DEFAULT_SQL_OPTIONS
+  DEFAULT_ENABLE_DEBUG_LOG
 } from "./utils/constants";
 
 /**

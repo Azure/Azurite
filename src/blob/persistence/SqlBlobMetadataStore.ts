@@ -1,5 +1,3 @@
-import async from "async";
-import { promisify } from "bluebird";
 import {
   BOOLEAN,
   DATE,
@@ -53,7 +51,6 @@ import IBlobMetadataStore, {
 class ServicesModel extends Model {}
 class ContainersModel extends Model {}
 class BlobsModel extends Model {}
-class TestModel extends Model {}
 class BlocksModel extends Model {}
 // class PagesModel extends Model {}
 
@@ -1496,58 +1493,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           transaction: t
         }
       );
-    });
-  }
-
-  public async insertBlock(block: BlockModel): Promise<void> {
-    await TestModel.create({
-      blobName: block.blobName,
-      blockList: block.name
-    });
-  }
-
-  public async updateBlock(block: BlockModel): Promise<void> {
-    await TestModel.update(
-      {
-        blockList: block.name
-      },
-      {
-        where: { blobName: block.blobName }
-      }
-    );
-  }
-
-  public async updateBlocksTran(blocks: BlockModel[]): Promise<void> {
-    const mapLimitAsync = promisify(async.mapLimit);
-
-    await this.sequelize.transaction(t => {
-      return mapLimitAsync(blocks, 100, async block => {
-        return TestModel.update(
-          { blockList: block.name },
-          { transaction: t, where: { blobName: block.blobName } }
-        );
-      });
-    });
-  }
-
-  public async bulkInsertBlock(blocks: BlockModel[]): Promise<void> {
-    await TestModel.bulkCreate(
-      blocks.map(block => {
-        return { blobName: block.blobName, blockList: block.name };
-      })
-    );
-  }
-
-  public async bulkInsertBlockTran(blocks: BlockModel[]): Promise<void> {
-    const mapLimitAsync = promisify(async.mapLimit);
-
-    await this.sequelize.transaction(t => {
-      return mapLimitAsync(blocks, 100, async block => {
-        return TestModel.create(
-          { blobName: block.blobName, blockList: block.name },
-          { transaction: t }
-        );
-      });
     });
   }
 
