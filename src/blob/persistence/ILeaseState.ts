@@ -1,4 +1,5 @@
 import * as Models from "../generated/artifacts/models";
+import Context from "../generated/Context";
 
 export interface ILease {
   leaseId?: string;
@@ -10,6 +11,14 @@ export interface ILease {
   leaseBreakTime?: Date;
 }
 
+export interface ILeaseValidator {
+  validate(lease: ILease, context: Context): void;
+}
+
+export interface ILeaseSyncer<T> {
+  sync(lease: ILease): T;
+}
+
 export interface ILeaseState {
   lease: ILease;
   acquire(duration: number, proposedLeaseId?: string): ILeaseState;
@@ -17,4 +26,6 @@ export interface ILeaseState {
   renew(leaseId: string): ILeaseState;
   change(leaseId: string, proposedLeaseId: string): ILeaseState;
   release(leaseId: string): ILeaseState;
+  validate(validator: ILeaseValidator): ILeaseState;
+  sync<T>(syncer: ILeaseSyncer<T>): T;
 }

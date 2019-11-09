@@ -6,13 +6,14 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IPageBlobHandler from "../generated/handlers/IPageBlobHandler";
 import ILogger from "../generated/utils/ILogger";
+import BlobWriteLeaseValidator from "../persistence/BlobWriteLeaseValidator";
 import IBlobMetadataStore, {
   BlobModel
 } from "../persistence/IBlobMetadataStore";
+import LokiBlobLeaseAdapter from "../persistence/LokiBlobLeaseAdapter";
 import { BLOB_API_VERSION } from "../utils/constants";
 import { deserializePageBlobRangeHeader, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
-import BlobHandler from "./BlobHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
 /**
@@ -125,7 +126,7 @@ export default class PageBlobHandler extends BaseHandler
 
     // TODO: What's happens when create page blob right before commit block list? Or should we lock
     // Should we check if there is an uncommitted blob?
-    this.metadataStore.createBlob(context, blob);
+    this.metadataStore.createBlob(context, blob, options.leaseAccessConditions);
 
     const response: Models.PageBlobCreateResponse = {
       statusCode: 201,
@@ -177,10 +178,9 @@ export default class PageBlobHandler extends BaseHandler
     }
 
     // Check Lease status
-    BlobHandler.checkBlobLeaseOnWriteBlob(
-      context,
-      blob,
-      options.leaseAccessConditions
+    new BlobWriteLeaseValidator(options.leaseAccessConditions).validate(
+      new LokiBlobLeaseAdapter(blob),
+      context
     );
 
     const ranges = deserializePageBlobRangeHeader(
@@ -276,7 +276,13 @@ export default class PageBlobHandler extends BaseHandler
     const start = ranges[0];
     const end = ranges[1];
 
-    const res = await this.metadataStore.clearRange(context, blob, start, end);
+    const res = await this.metadataStore.clearRange(
+      context,
+      blob,
+      start,
+      end,
+      options.leaseAccessConditions
+    );
 
     const response: Models.PageBlobClearPagesResponse = {
       statusCode: 201,
