@@ -1,5 +1,6 @@
 import ICleaner from "../ICleaner";
 import { IDataStore } from "../IDataStore";
+import IGCExtentProvider from "../IGCExtentProvider";
 
 /**
  * Maintains mapping relationship between extent ID and relative local file path/name.
@@ -55,7 +56,10 @@ export interface IExtentModel {
  * @interface IExtentMetadata
  * @extends {IDataStore}
  */
-export default interface IExtentMetadataStore extends IDataStore, ICleaner {
+export default interface IExtentMetadataStore
+  extends IGCExtentProvider,
+    IDataStore,
+    ICleaner {
   /**
    * Update the extent status in DB. A new item will be created if the extent does not exists.
    *
@@ -101,12 +105,4 @@ export default interface IExtentMetadataStore extends IDataStore, ICleaner {
    * @memberof IExtentMetadataStore
    */
   getExtentPersistencyId(extentId: string): Promise<string>;
-
-  /**
-   * Create an async iterator to enumerate all extent IDs.
-   *
-   * @returns {AsyncIterator<string[]>}
-   * @memberof IExtentMetadataStore
-   */
-  getExtentIterator(): AsyncIterator<string[]>;
 }

@@ -1,4 +1,5 @@
 import { IDataStore } from "../../common/IDataStore";
+import IGCExtentProvider from "../../common/IGCExtentProvider";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { QUEUE_STATUSCODE } from "../utils/constants";
@@ -70,7 +71,7 @@ export interface IExtentChunk {
  * @interface IQueueMetadataStore
  * @extends {IDataStore}
  */
-export interface IQueueMetadataStore extends IDataStore {
+export interface IQueueMetadataStore extends IGCExtentProvider, IDataStore {
   /**
    * Update queue service properties. Create service properties document if not exists in persistency layer.
    * Assume service properties collection has been created during start method.
@@ -310,14 +311,6 @@ export interface IQueueMetadataStore extends IDataStore {
     maxResults?: number,
     marker?: number | undefined
   ): Promise<[MessageModel[], number | undefined]>;
-
-  /**
-   * Create an async iterator to enumerate all extent IDs.
-   *
-   * @returns {AsyncIterator<string[]>}
-   * @memberof IExtentMetadata
-   */
-  getExtentIterator(): AsyncIterator<string[]>;
 }
 
 export default IQueueMetadataStore;
