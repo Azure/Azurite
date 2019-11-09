@@ -1,4 +1,4 @@
-import { IDataStore } from "../../common/IDataStore";
+import IDataStore from "../../common/IDataStore";
 import IGCExtentProvider from "../../common/IGCExtentProvider";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";

@@ -4,7 +4,7 @@
  * @export
  * @interface IDataStore
  */
-export interface IDataStore {
+export default interface IDataStore {
   /**
    * Data store initial steps. Such as initial DB connections.
    *

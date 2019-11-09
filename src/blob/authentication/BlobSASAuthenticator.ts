@@ -460,9 +460,9 @@ export default class BlobSASAuthenticator implements IAuthenticator {
   ): Promise<AccessPolicy | undefined> {
     try {
       const containerModel = await this.blobMetadataStore.getContainerACL(
+        context,
         account,
-        container,
-        context
+        container
       );
       if (containerModel === undefined) {
         return undefined;

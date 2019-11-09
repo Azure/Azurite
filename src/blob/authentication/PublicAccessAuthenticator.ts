@@ -134,9 +134,9 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
   ): Promise<PublicAccessType | undefined> {
     try {
       const containerModel = await this.blobMetadataStore.getContainerACL(
+        context,
         account,
-        container,
-        context
+        container
       );
       if (containerModel === undefined) {
         return undefined;

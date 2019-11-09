@@ -12,7 +12,7 @@ import { Writable } from "stream";
 import { promisify } from "util";
 import uuid = require("uuid");
 
-import { ZERO_PERSISTENCY_CHUNK_ID } from "../../blob/persistence/IBlobMetadataStore";
+import { ZERO_EXTENT_ID } from "../../blob/persistence/IBlobMetadataStore";
 import ILogger from "../ILogger";
 import BufferStream from "../utils/BufferStream";
 import {
@@ -299,7 +299,7 @@ export default class FSExtentStore implements IExtentStore {
       return new ZeroBytesStream(0);
     }
 
-    if (extentChunk.id === ZERO_PERSISTENCY_CHUNK_ID) {
+    if (extentChunk.id === ZERO_EXTENT_ID) {
       const subRangeCount = Math.min(extentChunk.count);
       return new ZeroBytesStream(subRangeCount);
     }

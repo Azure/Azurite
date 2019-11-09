@@ -38,23 +38,20 @@ export default class ContainerHandler extends BaseHandler
     const lastModified = blobCtx.startTime!;
     const etag = newEtag();
 
-    await this.metadataStore.createContainer(
-      {
-        accountName,
-        name: containerName,
-        metadata: options.metadata,
-        properties: {
-          etag,
-          lastModified,
-          leaseStatus: Models.LeaseStatusType.Unlocked,
-          leaseState: Models.LeaseStateType.Available,
-          publicAccess: options.access,
-          hasImmutabilityPolicy: false,
-          hasLegalHold: false
-        }
-      },
-      context
-    );
+    await this.metadataStore.createContainer(context, {
+      accountName,
+      name: containerName,
+      metadata: options.metadata,
+      properties: {
+        etag,
+        lastModified,
+        leaseStatus: Models.LeaseStatusType.Unlocked,
+        leaseState: Models.LeaseStateType.Available,
+        publicAccess: options.access,
+        hasImmutabilityPolicy: false,
+        hasLegalHold: false
+      }
+    });
 
     const response: Models.ContainerCreateResponse = {
       statusCode: 201,
@@ -85,9 +82,9 @@ export default class ContainerHandler extends BaseHandler
     const containerName = blobCtx.container!;
 
     const containerProperties = await this.metadataStore.getContainerProperties(
+      context,
       accountName,
       containerName,
-      context,
       options.leaseAccessConditions
     );
 
@@ -142,9 +139,9 @@ export default class ContainerHandler extends BaseHandler
     // blobs under the container, but will not clean up blob data in disk
     // The current design will directly remove the container and all the blobs belong to it.
     await this.metadataStore.deleteContainer(
+      context,
       accountName,
       containerName,
-      context,
       options.leaseAccessConditions
     );
 
@@ -178,11 +175,11 @@ export default class ContainerHandler extends BaseHandler
     const eTag = newEtag();
 
     await this.metadataStore.setContainerMetadata(
+      context,
       accountName,
       containerName,
       date,
       eTag,
-      context,
       options.metadata,
       options.leaseAccessConditions
     );
@@ -216,9 +213,9 @@ export default class ContainerHandler extends BaseHandler
     const containerName = blobCtx.container!;
 
     const containerAcl = await this.metadataStore.getContainerACL(
+      context,
       accountName,
       containerName,
-      context,
       options.leaseAccessConditions
     );
 
@@ -266,6 +263,7 @@ export default class ContainerHandler extends BaseHandler
     const date = blobCtx.startTime!;
     const eTag = newEtag();
     await this.metadataStore.setContainerACL(
+      context,
       accountName,
       containerName,
       {
@@ -274,8 +272,7 @@ export default class ContainerHandler extends BaseHandler
         publicAccess: options.access,
         containerAcl: options.containerAcl,
         leaseAccessConditions: options.leaseAccessConditions
-      },
-      context
+      }
     );
 
     const response: Models.ContainerSetAccessPolicyResponse = {
@@ -310,10 +307,10 @@ export default class ContainerHandler extends BaseHandler
     const containerName = blobCtx.container!;
 
     const res = await this.metadataStore.acquireContainerLease(
+      context,
       accountName,
       containerName,
-      options,
-      context
+      options
     );
 
     const response: Models.ContainerAcquireLeaseResponse = {
@@ -351,10 +348,10 @@ export default class ContainerHandler extends BaseHandler
     const containerName = blobCtx.container!;
 
     const res = await this.metadataStore.releaseContainerLease(
+      context,
       accountName,
       containerName,
-      leaseId,
-      context
+      leaseId
     );
 
     const response: Models.ContainerReleaseLeaseResponse = {
@@ -391,10 +388,10 @@ export default class ContainerHandler extends BaseHandler
     const containerName = blobCtx.container!;
 
     const res = await this.metadataStore.renewContainerLease(
+      context,
       accountName,
       containerName,
-      leaseId,
-      context
+      leaseId
     );
 
     const response: Models.ContainerRenewLeaseResponse = {
@@ -430,10 +427,10 @@ export default class ContainerHandler extends BaseHandler
     const containerName = blobCtx.container!;
 
     const res = await this.metadataStore.breakContainerLease(
+      context,
       accountName,
       containerName,
-      options.breakPeriod,
-      context
+      options.breakPeriod
     );
 
     const response: Models.ContainerBreakLeaseResponse = {
@@ -473,11 +470,11 @@ export default class ContainerHandler extends BaseHandler
     const containerName = blobCtx.container!;
 
     const res = await this.metadataStore.changeContainerLease(
+      context,
       accountName,
       containerName,
       leaseId,
-      proposedLeaseId,
-      context
+      proposedLeaseId
     );
 
     const response: Models.ContainerChangeLeaseResponse = {
@@ -510,9 +507,9 @@ export default class ContainerHandler extends BaseHandler
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     await this.metadataStore.checkContainerExist(
+      context,
       accountName,
-      containerName,
-      context
+      containerName
     );
 
     const request = context.request!;
@@ -592,9 +589,9 @@ export default class ContainerHandler extends BaseHandler
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     await this.metadataStore.checkContainerExist(
+      context,
       accountName,
-      containerName,
-      context
+      containerName
     );
 
     const request = context.request!;

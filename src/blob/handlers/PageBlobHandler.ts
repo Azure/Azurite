@@ -210,11 +210,11 @@ export default class PageBlobHandler extends BaseHandler
     }
 
     const res = await this.metadataStore.uploadPages(
+      context,
       blob,
       start,
       end,
-      persistency,
-      context
+      persistency
     );
 
     const response: Models.PageBlobUploadPagesResponse = {
@@ -276,7 +276,7 @@ export default class PageBlobHandler extends BaseHandler
     const start = ranges[0];
     const end = ranges[1];
 
-    const res = await this.metadataStore.clearRange(blob, start, end, context);
+    const res = await this.metadataStore.clearRange(context, blob, start, end);
 
     const response: Models.PageBlobClearPagesResponse = {
       statusCode: 201,
@@ -376,11 +376,11 @@ export default class PageBlobHandler extends BaseHandler
     }
 
     const res = await this.metadataStore.resizePageBlob(
+      context,
       accountName,
       containerName,
       blobName,
-      blobContentLength,
-      context
+      blobContentLength
     );
 
     const response: Models.PageBlobResizeResponse = {
@@ -409,12 +409,12 @@ export default class PageBlobHandler extends BaseHandler
     const date = blobCtx.startTime!;
 
     const res = await this.metadataStore.updateSequenceNumber(
+      context,
       accountName,
       containerName,
       blobName,
       sequenceNumberAction,
-      options.blobSequenceNumber,
-      context
+      options.blobSequenceNumber
     );
 
     const response: Models.PageBlobUpdateSequenceNumberResponse = {
