@@ -10,7 +10,7 @@ import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
 import ServerBase from "../common/ServerBase";
-import QueueGCManager from "./gc/queueGCManager";
+import QueueGCManager from "./gc/QueueGCManager";
 import IQueueMetadataStore from "./persistence/IQueueMetadataStore";
 import LokiQueueMetadataStore from "./persistence/LokiQueueMetadataStore";
 import QueueConfiguration from "./QueueConfiguration";
@@ -19,8 +19,6 @@ import QueueRequestListenerFactory from "./QueueRequestListenerFactory";
 const BEFORE_CLOSE_MESSAGE = `Azurite Queue service is closing...`;
 const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Queue service is closing... Critical error happens during GC.`;
 const AFTER_CLOSE_MESSAGE = `Azurite Queue service successfully closed`;
-
-// modify comments
 
 /**
  * Default implementation of Azurite Blob HTTP server.
