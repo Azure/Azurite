@@ -1,4 +1,4 @@
-import { IDataStore } from "./IDataStore";
+import IDataStore from "./IDataStore";
 
 export default interface IGCExtentProvider extends IDataStore {
   /**

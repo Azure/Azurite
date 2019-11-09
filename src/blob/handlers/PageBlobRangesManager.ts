@@ -1,7 +1,7 @@
 import { PageRange } from "../generated/artifacts/models";
 import {
   PersistencyPageRange,
-  ZERO_PERSISTENCY_CHUNK_ID
+  ZERO_EXTENT_ID
 } from "../persistence/IBlobMetadataStore";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
 
@@ -253,7 +253,7 @@ export default class PageBlobRangesManager implements IPageBlobRangesManager {
           persistency: {
             offset: 0,
             count: range.end + 1 - range.start,
-            id: ZERO_PERSISTENCY_CHUNK_ID
+            id: ZERO_EXTENT_ID
           }
         }
       ];
@@ -269,7 +269,7 @@ export default class PageBlobRangesManager implements IPageBlobRangesManager {
         persistency: {
           offset: 0,
           count: firstRange.start - range.start,
-          id: ZERO_PERSISTENCY_CHUNK_ID
+          id: ZERO_EXTENT_ID
         }
       });
     }
@@ -289,7 +289,7 @@ export default class PageBlobRangesManager implements IPageBlobRangesManager {
           persistency: {
             offset: 0,
             count: gap,
-            id: ZERO_PERSISTENCY_CHUNK_ID
+            id: ZERO_EXTENT_ID
           }
         });
       }
@@ -304,7 +304,7 @@ export default class PageBlobRangesManager implements IPageBlobRangesManager {
         persistency: {
           offset: 0,
           count: range.end - lastRange.end,
-          id: ZERO_PERSISTENCY_CHUNK_ID
+          id: ZERO_EXTENT_ID
         }
       });
     }

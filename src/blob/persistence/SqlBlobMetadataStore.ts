@@ -22,29 +22,29 @@ import Context from "../generated/Context";
 import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
 import IBlobMetadataStore, {
-  AcquireBlobLeaseRes,
-  AcquireContainerLeaseRes,
+  AcquireBlobLeaseResponse,
+  AcquireContainerLeaseResponse,
   BlobId,
   BlobModel,
   BlockModel,
-  BreakBlobLeaseRes,
-  BreakContainerLeaseRes,
-  ChangeBlobLeaseRes,
-  ChangeContainerLeaseRes,
+  BreakBlobLeaseResponse,
+  BreakContainerLeaseResponse,
+  ChangeBlobLeaseResponse,
+  ChangeContainerLeaseResponse,
   ContainerModel,
-  CreateSnapshotRes,
+  CreateSnapshotResponse,
   GetBlobPropertiesRes,
-  GetContainerAccessPolicyRes,
-  GetContainerPropertiesRes,
-  GetPageRangeRes,
+  GetContainerAccessPolicyResponse,
+  GetContainerPropertiesResponse,
+  GetPageRangeResponse,
   IContainerMetadata,
-  IPersistencyChunk,
+  IExtentChunk,
   PersistencyBlockModel,
-  ReleaseBlobLeaseRes,
-  RenewBlobLeaseRes,
-  RenewContainerLeaseRes,
+  ReleaseBlobLeaseResponse,
+  RenewBlobLeaseResponse,
+  RenewContainerLeaseResponse,
   ServicePropertiesModel,
-  SetContainerAccessPolicyParam
+  SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 
 // tslint:disable: max-classes-per-file
@@ -445,6 +445,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * @memberof SqlBlobMetadataStore
    */
   public async setServiceProperties(
+    context: Context,
     serviceProperties: ServicePropertiesModel
   ): Promise<ServicePropertiesModel> {
     // TODO: Optimize to reduce first query IO, or caching
@@ -511,6 +512,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * @memberof SqlBlobMetadataStore
    */
   public async getServiceProperties(
+    context: Context,
     account: string
   ): Promise<ServicePropertiesModel | undefined> {
     return ServicesModel.findByPk(account).then(res => {
@@ -672,8 +674,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * @memberof SqlBlobMetadataStore
    */
   public async createContainer(
-    container: ContainerModel,
-    context?: Context
+    context: Context,
+    container: ContainerModel
   ): Promise<ContainerModel> {
     try {
       return await ContainersModel.create({
@@ -711,14 +713,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * @param {string} account
    * @param {string} container
    * @param {Context} [context]
-   * @returns {Promise<GetContainerPropertiesRes>}
+   * @returns {Promise<GetContainerPropertiesResponse>}
    * @memberof SqlBlobMetadataStore
    */
   public async getContainerProperties(
+    context: Context,
     account: string,
-    container: string,
-    context?: Context
-  ): Promise<GetContainerPropertiesRes> {
+    container: string
+  ): Promise<GetContainerPropertiesResponse> {
     return ContainersModel.findOne({
       where: {
         accountName: account,
@@ -840,9 +842,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * @memberof SqlBlobMetadataStore
    */
   public async deleteContainer(
+    context: Context,
     account: string,
     container: string,
-    context: Context,
     leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<void> {
     await this.sequelize.transaction(async t => {
@@ -981,11 +983,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * @memberof SqlBlobMetadataStore
    */
   public async setContainerMetadata(
+    context: Context,
     account: string,
     container: string,
     lastModified: Date,
     etag: string,
-    context: Context,
     metadata?: IContainerMetadata
   ): Promise<void> {
     return ContainersModel.update(
@@ -1595,11 +1597,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async getContainerACL(
+    context: Context,
     account: string,
     container: string,
-    context: Context,
     leaseAccessConditions?: Models.LeaseAccessConditions | undefined
-  ): Promise<GetContainerAccessPolicyRes> {
+  ): Promise<GetContainerAccessPolicyResponse> {
     return ContainersModel.findOne({
       where: {
         accountName: account,
@@ -1698,10 +1700,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async setContainerACL(
+    context: Context,
     account: string,
     container: string,
-    setAclModel: SetContainerAccessPolicyParam,
-    context?: Context | undefined
+    setAclModel: SetContainerAccessPolicyOptions
   ): Promise<void> {
     await this.sequelize.transaction(async t => {
       const res = await ContainersModel.findOne({
@@ -1803,15 +1805,15 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * @param {string} container
    * @param {Models.ContainerAcquireLeaseOptionalParams} options
    * @param {Context} context
-   * @returns {Promise<AcquireContainerLeaseRes>}
+   * @returns {Promise<AcquireContainerLeaseResponse>}
    * @memberof SqlBlobMetadataStore
    */
   public async acquireContainerLease(
+    context: Context,
     account: string,
     container: string,
-    options: Models.ContainerAcquireLeaseOptionalParams,
-    context: Context
-  ): Promise<AcquireContainerLeaseRes> {
+    options: Models.ContainerAcquireLeaseOptionalParams
+  ): Promise<AcquireContainerLeaseResponse> {
     return this.sequelize.transaction(async t => {
       /* Transaction starts */
       const res = await ContainersModel.findOne({
@@ -1965,10 +1967,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * @memberof SqlBlobMetadataStore
    */
   public async releaseContainerLease(
+    context: Context,
     account: string,
     container: string,
-    leaseId: string,
-    context: Context
+    leaseId: string
   ): Promise<Models.ContainerProperties> {
     return this.sequelize.transaction(async t => {
       /* Transaction starts */
@@ -2104,15 +2106,15 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * @param {string} container
    * @param {string} leaseId
    * @param {Context} context
-   * @returns {Promise<RenewContainerLeaseRes>}
+   * @returns {Promise<RenewContainerLeaseResponse>}
    * @memberof SqlBlobMetadataStore
    */
   public async renewContainerLease(
+    context: Context,
     account: string,
     container: string,
-    leaseId: string,
-    context: Context
-  ): Promise<RenewContainerLeaseRes> {
+    leaseId: string
+  ): Promise<RenewContainerLeaseResponse> {
     return this.sequelize.transaction(async t => {
       /* Transaction starts */
       // TODO: Filter out unnecessary fields in select query
@@ -2259,11 +2261,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async breakContainerLease(
+    context: Context,
     account: string,
     container: string,
-    breakPeriod: number | undefined,
-    context: Context
-  ): Promise<BreakContainerLeaseRes> {
+    breakPeriod: number | undefined
+  ): Promise<BreakContainerLeaseResponse> {
     return this.sequelize.transaction(async t => {
       const res = await ContainersModel.findOne({
         where: {
@@ -2430,12 +2432,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async changeContainerLease(
+    context: Context,
     account: string,
     container: string,
     leaseId: string,
-    proposedLeaseId: string,
-    context: Context
-  ): Promise<ChangeContainerLeaseRes> {
+    proposedLeaseId: string
+  ): Promise<ChangeContainerLeaseResponse> {
     return this.sequelize.transaction(async t => {
       const res = await ContainersModel.findOne({
         where: {
@@ -2572,9 +2574,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public async checkContainerExist(
+    context: Context,
     account: string,
-    container: string,
-    context?: Context | undefined
+    container: string
   ): Promise<void> {
     const res = await ContainersModel.findOne({
       where: {
@@ -2595,7 +2597,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: string,
     leaseAccessConditions?: Models.LeaseAccessConditions,
     metadata?: Models.BlobMetadata
-  ): Promise<CreateSnapshotRes> {
+  ): Promise<CreateSnapshotResponse> {
     return this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
         attributes: ["accountName"],
@@ -3062,7 +3064,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: string,
     duration: number,
     proposedLeaseId?: string
-  ): Promise<AcquireBlobLeaseRes> {
+  ): Promise<AcquireBlobLeaseResponse> {
     return this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
         attributes: ["accountName"],
@@ -3172,7 +3174,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: string,
     blob: string,
     leaseId: string
-  ): Promise<ReleaseBlobLeaseRes> {
+  ): Promise<ReleaseBlobLeaseResponse> {
     return this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
         attributes: ["accountName"],
@@ -3271,7 +3273,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: string,
     blob: string,
     leaseId: string
-  ): Promise<RenewBlobLeaseRes> {
+  ): Promise<RenewBlobLeaseResponse> {
     return this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
         attributes: ["accountName"],
@@ -3388,7 +3390,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: string,
     leaseId: string,
     proposedLeaseId: string
-  ): Promise<ChangeBlobLeaseRes> {
+  ): Promise<ChangeBlobLeaseResponse> {
     return this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
         attributes: ["accountName"],
@@ -3491,7 +3493,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: string,
     blob: string,
     breakPeriod: number | undefined
-  ): Promise<BreakBlobLeaseRes> {
+  ): Promise<BreakBlobLeaseResponse> {
     return this.sequelize.transaction(async t => {
       const containerRes = await ContainersModel.findOne({
         attributes: ["accountName"],
@@ -3810,19 +3812,19 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
   public uploadPages(
+    context: Context,
     blob: BlobModel,
     start: number,
     end: number,
-    persistencycontext: import("./IBlobMetadataStore").IPersistencyChunk,
-    context?: Context | undefined
+    persistencycontext: import("./IBlobMetadataStore").IExtentChunk
   ): Promise<Models.BlobProperties> {
     throw new Error("Method not implemented.");
   }
   public clearRange(
+    context: Context,
     blob: BlobModel,
     start: number,
-    end: number,
-    context?: Context | undefined
+    end: number
   ): Promise<Models.BlobProperties> {
     throw new Error("Method not implemented.");
   }
@@ -3832,25 +3834,25 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: string,
     blob: string,
     snapshot?: string | undefined
-  ): Promise<GetPageRangeRes> {
+  ): Promise<GetPageRangeResponse> {
     throw new Error("Method not implemented.");
   }
   public resizePageBlob(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    blobContentLength: number,
-    context: Context
+    blobContentLength: number
   ): Promise<Models.BlobProperties> {
     throw new Error("Method not implemented.");
   }
   public updateSequenceNumber(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     sequenceNumberAction: Models.SequenceNumberActionType,
-    blobSequenceNumber: number | undefined,
-    context: Context
+    blobSequenceNumber: number | undefined
   ): Promise<Models.BlobProperties> {
     throw new Error("Method not implemented.");
   }
@@ -3858,7 +3860,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   public async listUncommittedBlockPersistencyChunks(
     marker: string = "-1",
     maxResults: number = 2000
-  ): Promise<[IPersistencyChunk[], string | undefined]> {
+  ): Promise<[IExtentChunk[], string | undefined]> {
     return BlocksModel.findAll({
       attributes: ["id", "persistency"],
       where: {

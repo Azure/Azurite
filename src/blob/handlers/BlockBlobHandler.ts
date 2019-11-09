@@ -44,9 +44,9 @@ export default class BlockBlobHandler extends BaseHandler
       : undefined;
 
     await this.metadataStore.checkContainerExist(
+      context,
       accountName,
-      containerName,
-      context
+      containerName
     );
 
     const persistency = await this.extentStore.appendExtent(
@@ -164,9 +164,9 @@ export default class BlockBlobHandler extends BaseHandler
     const date = blobCtx.startTime!;
 
     await this.metadataStore.checkContainerExist(
+      context,
       accountName,
-      containerName,
-      context
+      containerName
     );
 
     const persistency = await this.extentStore.appendExtent(

@@ -109,7 +109,7 @@ export default class ServiceHandler extends BaseHandler
       storageServiceProperties.cors = undefined;
     }
 
-    await this.metadataStore.setServiceProperties({
+    await this.metadataStore.setServiceProperties(context, {
       ...storageServiceProperties,
       accountName
     });
@@ -138,7 +138,10 @@ export default class ServiceHandler extends BaseHandler
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
 
-    let properties = await this.metadataStore.getServiceProperties(accountName);
+    let properties = await this.metadataStore.getServiceProperties(
+      context,
+      accountName
+    );
     if (!properties) {
       properties = { ...this.defaultServiceProperties, accountName };
     }

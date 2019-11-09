@@ -1,5 +1,5 @@
 import ICleaner from "../ICleaner";
-import { IDataStore } from "../IDataStore";
+import IDataStore from "../IDataStore";
 import IExtentMetadataStore from "./IExtentMetadataStore";
 
 /**

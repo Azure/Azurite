@@ -1,4 +1,4 @@
-import { IDataStore } from "../IDataStore";
+import IDataStore from "../IDataStore";
 
 /**
  * Maintains mapping relationship between extent ID and relative local file path/name.

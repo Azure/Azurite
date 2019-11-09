@@ -14,30 +14,30 @@ import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
 import IBlobMetadataStore, {
-  AcquireBlobLeaseRes,
-  AcquireContainerLeaseRes,
+  AcquireBlobLeaseResponse,
+  AcquireContainerLeaseResponse,
   BlobId,
   BlobModel,
   BlockModel,
-  BreakBlobLeaseRes,
-  BreakContainerLeaseRes,
-  ChangeBlobLeaseRes,
-  ChangeContainerLeaseRes,
+  BreakBlobLeaseResponse,
+  BreakContainerLeaseResponse,
+  ChangeBlobLeaseResponse,
+  ChangeContainerLeaseResponse,
   ContainerModel,
-  CreateSnapshotRes,
+  CreateSnapshotResponse,
   GetBlobPropertiesRes,
-  GetContainerAccessPolicyRes,
-  GetContainerPropertiesRes,
-  GetPageRangeRes,
+  GetContainerAccessPolicyResponse,
+  GetContainerPropertiesResponse,
+  GetPageRangeResponse,
   IContainerMetadata,
-  IPersistencyChunk,
+  IExtentChunk,
   PersistencyBlockModel,
-  ReleaseBlobLeaseRes,
-  ReleaseContainerLeaseRes,
-  RenewBlobLeaseRes,
-  RenewContainerLeaseRes,
+  ReleaseBlobLeaseResponse,
+  ReleaseContainerLeaseResponse,
+  RenewBlobLeaseResponse,
+  RenewContainerLeaseResponse,
   ServicePropertiesModel,
-  SetContainerAccessPolicyParam
+  SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import { ILease } from "./ILeaseState";
 import LeaseFactory from "./LeaseFactory";
@@ -215,6 +215,7 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   public async setServiceProperties(
+    context: Context,
     serviceProperties: ServicePropertiesModel
   ): Promise<ServicePropertiesModel> {
     const coll = this.db.getCollection(this.SERVICES_COLLECTION);
@@ -270,6 +271,7 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   public async getServiceProperties(
+    context: Context,
     account: string
   ): Promise<ServicePropertiesModel | undefined> {
     const coll = this.db.getCollection(this.SERVICES_COLLECTION);
@@ -351,8 +353,8 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   public async createContainer(
-    container: ContainerModel,
-    context?: Context
+    context: Context,
+    container: ContainerModel
   ): Promise<ContainerModel> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = coll.findOne({
@@ -375,15 +377,15 @@ export default class LokiBlobMetadataStore
    * @param {string} container
    * @param {Context} context
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
-   * @returns {Promise<GetContainerPropertiesRes>}
+   * @returns {Promise<GetContainerPropertiesResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async getContainerProperties(
+    context: Context,
     account: string,
     container: string,
-    context: Context,
     leaseAccessConditions?: Models.LeaseAccessConditions
-  ): Promise<GetContainerPropertiesRes> {
+  ): Promise<GetContainerPropertiesResponse> {
     const doc = await this.getContainerWithLeaseUpdated(
       account,
       container,
@@ -392,7 +394,7 @@ export default class LokiBlobMetadataStore
 
     this.validateLeaseOnReadContainer(doc, context, leaseAccessConditions);
 
-    const res: GetContainerPropertiesRes = {
+    const res: GetContainerPropertiesResponse = {
       name: container,
       properties: doc.properties,
       metadata: doc.metadata
@@ -417,9 +419,9 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   public async deleteContainer(
+    context: Context,
     account: string,
     container: string,
-    context: Context,
     leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<void> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
@@ -485,11 +487,11 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   public async setContainerMetadata(
+    context: Context,
     account: string,
     container: string,
     lastModified: Date,
     etag: string,
-    context: Context,
     metadata?: IContainerMetadata,
     leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<void> {
@@ -516,15 +518,15 @@ export default class LokiBlobMetadataStore
    * @param {string} container
    * @param {Context} context
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
-   * @returns {Promise<GetContainerAccessPolicyRes>}
+   * @returns {Promise<GetContainerAccessPolicyResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async getContainerACL(
+    context: Context,
     account: string,
     container: string,
-    context: Context,
     leaseAccessConditions?: Models.LeaseAccessConditions
-  ): Promise<GetContainerAccessPolicyRes> {
+  ): Promise<GetContainerAccessPolicyResponse> {
     const doc = await this.getContainerWithLeaseUpdated(
       account,
       container,
@@ -533,7 +535,7 @@ export default class LokiBlobMetadataStore
 
     this.validateLeaseOnReadContainer(doc, context, leaseAccessConditions);
 
-    const res: GetContainerAccessPolicyRes = {
+    const res: GetContainerAccessPolicyResponse = {
       properties: doc.properties,
       containerAcl: doc.containerAcl
     };
@@ -546,16 +548,16 @@ export default class LokiBlobMetadataStore
    *
    * @param {string} account
    * @param {string} container
-   * @param {SetContainerAccessPolicyParam} setAclModel
+   * @param {SetContainerAccessPolicyOptions} setAclModel
    * @param {Context} context
    * @returns {Promise<void>}
    * @memberof LokiBlobMetadataStore
    */
   public async setContainerACL(
+    context: Context,
     account: string,
     container: string,
-    setAclModel: SetContainerAccessPolicyParam,
-    context: Context
+    setAclModel: SetContainerAccessPolicyOptions
   ): Promise<void> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainerWithLeaseUpdated(
@@ -585,15 +587,15 @@ export default class LokiBlobMetadataStore
    * @param {string} container
    * @param {Models.ContainerAcquireLeaseOptionalParams} options
    * @param {Context} context
-   * @returns {Promise<AcquireContainerLeaseRes>}
+   * @returns {Promise<AcquireContainerLeaseResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async acquireContainerLease(
+    context: Context,
     account: string,
     container: string,
-    options: Models.ContainerAcquireLeaseOptionalParams,
-    context: Context
-  ): Promise<AcquireContainerLeaseRes> {
+    options: Models.ContainerAcquireLeaseOptionalParams
+  ): Promise<AcquireContainerLeaseResponse> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainer(account, container, context);
 
@@ -615,15 +617,15 @@ export default class LokiBlobMetadataStore
    * @param {string} container
    * @param {string} leaseId
    * @param {Context} context
-   * @returns {Promise<ReleaseContainerLeaseRes>}
+   * @returns {Promise<ReleaseContainerLeaseResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async releaseContainerLease(
+    context: Context,
     account: string,
     container: string,
-    leaseId: string,
-    context: Context
-  ): Promise<ReleaseContainerLeaseRes> {
+    leaseId: string
+  ): Promise<ReleaseContainerLeaseResponse> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainer(account, container, context);
 
@@ -645,15 +647,15 @@ export default class LokiBlobMetadataStore
    * @param {string} container
    * @param {string} leaseId
    * @param {Context} context
-   * @returns {Promise<RenewContainerLeaseRes>}
+   * @returns {Promise<RenewContainerLeaseResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async renewContainerLease(
+    context: Context,
     account: string,
     container: string,
-    leaseId: string,
-    context: Context
-  ): Promise<RenewContainerLeaseRes> {
+    leaseId: string
+  ): Promise<RenewContainerLeaseResponse> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainer(account, container, context);
 
@@ -675,15 +677,15 @@ export default class LokiBlobMetadataStore
    * @param {string} container
    * @param {(number | undefined)} breakPeriod
    * @param {Context} context
-   * @returns {Promise<BreakContainerLeaseRes>}
+   * @returns {Promise<BreakContainerLeaseResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async breakContainerLease(
+    context: Context,
     account: string,
     container: string,
-    breakPeriod: number | undefined,
-    context: Context
-  ): Promise<BreakContainerLeaseRes> {
+    breakPeriod: number | undefined
+  ): Promise<BreakContainerLeaseResponse> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainer(account, container, context);
 
@@ -715,16 +717,16 @@ export default class LokiBlobMetadataStore
    * @param {string} leaseId
    * @param {string} proposedLeaseId
    * @param {Context} context
-   * @returns {Promise<ChangeContainerLeaseRes>}
+   * @returns {Promise<ChangeContainerLeaseResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async changeContainerLease(
+    context: Context,
     account: string,
     container: string,
     leaseId: string,
-    proposedLeaseId: string,
-    context: Context
-  ): Promise<ChangeContainerLeaseRes> {
+    proposedLeaseId: string
+  ): Promise<ChangeContainerLeaseResponse> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainer(account, container, context);
 
@@ -749,9 +751,9 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   public async checkContainerExist(
+    context: Context,
     account: string,
-    container: string,
-    context?: Context
+    container: string
   ): Promise<void> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = coll.findOne({ accountName: account, name: container });
@@ -920,9 +922,9 @@ export default class LokiBlobMetadataStore
     leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<void> {
     await this.checkContainerExist(
+      context,
       blob.accountName,
-      blob.containerName,
-      context
+      blob.containerName
     );
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const blobDoc = coll.findOne({
@@ -960,7 +962,7 @@ export default class LokiBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions] Optional. Will validate lease if provided
-   * @returns {Promise<CreateSnapshotRes>}
+   * @returns {Promise<CreateSnapshotResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async createSnapshot(
@@ -970,7 +972,7 @@ export default class LokiBlobMetadataStore
     blob: string,
     leaseAccessConditions?: Models.LeaseAccessConditions,
     metadata?: Models.BlobMetadata
-  ): Promise<CreateSnapshotRes> {
+  ): Promise<CreateSnapshotResponse> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = await this.getBlobWithLeaseUpdated(
       account,
@@ -1068,6 +1070,7 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   public async getBlob(
+    context: Context,
     account: string,
     container: string,
     blob: string,
@@ -1143,7 +1146,7 @@ export default class LokiBlobMetadataStore
     options: Models.BlobDeleteMethodOptionalParams
   ): Promise<void> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    await this.checkContainerExist(account, container, context);
+    await this.checkContainerExist(context, account, container);
 
     const doc = await this.getBlobWithLeaseUpdated(
       account,
@@ -1327,7 +1330,7 @@ export default class LokiBlobMetadataStore
    * @param {string} blob
    * @param {number} duration
    * @param {string} [proposedLeaseId]
-   * @returns {Promise<AcquireBlobLeaseRes>}
+   * @returns {Promise<AcquireBlobLeaseResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async acquireBlobLease(
@@ -1337,7 +1340,7 @@ export default class LokiBlobMetadataStore
     blob: string,
     duration: number,
     proposedLeaseId?: string
-  ): Promise<AcquireBlobLeaseRes> {
+  ): Promise<AcquireBlobLeaseResponse> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = await this.getBlobWithLeaseUpdated(
       account,
@@ -1370,7 +1373,7 @@ export default class LokiBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {string} leaseId
-   * @returns {Promise<ReleaseBlobLeaseRes>}
+   * @returns {Promise<ReleaseBlobLeaseResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async releaseBlobLease(
@@ -1379,7 +1382,7 @@ export default class LokiBlobMetadataStore
     container: string,
     blob: string,
     leaseId: string
-  ): Promise<ReleaseBlobLeaseRes> {
+  ): Promise<ReleaseBlobLeaseResponse> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = await this.getBlobWithLeaseUpdated(
       account,
@@ -1412,7 +1415,7 @@ export default class LokiBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {string} leaseId
-   * @returns {Promise<RenewBlobLeaseRes>}
+   * @returns {Promise<RenewBlobLeaseResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async renewBlobLease(
@@ -1421,7 +1424,7 @@ export default class LokiBlobMetadataStore
     container: string,
     blob: string,
     leaseId: string
-  ): Promise<RenewBlobLeaseRes> {
+  ): Promise<RenewBlobLeaseResponse> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = await this.getBlobWithLeaseUpdated(
       account,
@@ -1455,7 +1458,7 @@ export default class LokiBlobMetadataStore
    * @param {string} blob
    * @param {string} leaseId
    * @param {string} proposedLeaseId
-   * @returns {Promise<ChangeBlobLeaseRes>}
+   * @returns {Promise<ChangeBlobLeaseResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async changeBlobLease(
@@ -1465,7 +1468,7 @@ export default class LokiBlobMetadataStore
     blob: string,
     leaseId: string,
     proposedLeaseId: string
-  ): Promise<ChangeBlobLeaseRes> {
+  ): Promise<ChangeBlobLeaseResponse> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = await this.getBlobWithLeaseUpdated(
       account,
@@ -1498,7 +1501,7 @@ export default class LokiBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {(number | undefined)} breakPeriod
-   * @returns {Promise<BreakBlobLeaseRes>}
+   * @returns {Promise<BreakBlobLeaseResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async breakBlobLease(
@@ -1507,7 +1510,7 @@ export default class LokiBlobMetadataStore
     container: string,
     blob: string,
     breakPeriod: number | undefined
-  ): Promise<BreakBlobLeaseRes> {
+  ): Promise<BreakBlobLeaseResponse> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = await this.getBlobWithLeaseUpdated(
       account,
@@ -1559,7 +1562,7 @@ export default class LokiBlobMetadataStore
     blob: string,
     snapshot: string = ""
   ): Promise<void> {
-    await this.checkContainerExist(account, container, context);
+    await this.checkContainerExist(context, account, container);
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = coll.findOne({
@@ -1664,7 +1667,11 @@ export default class LokiBlobMetadataStore
       throw StorageErrorFactory.getBlobArchived(context.contextId!);
     }
 
-    await this.checkContainerExist(destination.account, destination.container);
+    await this.checkContainerExist(
+      context,
+      destination.account,
+      destination.container
+    );
 
     // Deep clone a copied blob
     const copiedBlob: BlobModel = {
@@ -1812,9 +1819,9 @@ export default class LokiBlobMetadataStore
     leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<void> {
     await this.checkContainerExist(
+      context,
       block.accountName,
-      block.containerName,
-      context
+      block.containerName
     );
 
     const blobColl = this.db.getCollection(this.BLOBS_COLLECTION);
@@ -2059,22 +2066,22 @@ export default class LokiBlobMetadataStore
   }
 
   /**
-   * Upload new pages for pageblob.
+   * Upload new pages for page blob.
    *
    * @param {BlobModel} blob
    * @param {number} start
    * @param {number} end
-   * @param {IPersistencyChunk} persistency
+   * @param {IExtentChunk} persistency
    * @param {Context} [context]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof LokiBlobMetadataStore
    */
   public async uploadPages(
+    context: Context,
     blob: BlobModel,
     start: number,
     end: number,
-    persistency: IPersistencyChunk,
-    context?: Context
+    persistency: IExtentChunk
   ): Promise<Models.BlobProperties> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     let doc = await this.getBlobWithLeaseUpdated(
@@ -2102,7 +2109,7 @@ export default class LokiBlobMetadataStore
   }
 
   /**
-   * Clear range for a pageblob.
+   * Clear range for a page blob.
    *
    * @param {BlobModel} blob
    * @param {number} start
@@ -2112,10 +2119,10 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   public async clearRange(
+    context: Context,
     blob: BlobModel,
     start: number,
-    end: number,
-    context?: Context
+    end: number
   ): Promise<Models.BlobProperties> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     let doc = await this.getBlobWithLeaseUpdated(
@@ -2149,7 +2156,7 @@ export default class LokiBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {string} [snapshot]
-   * @returns {Promise<GetPageRangeRes>}
+   * @returns {Promise<GetPageRangeResponse>}
    * @memberof LokiBlobMetadataStore
    */
   public async getPageRanges(
@@ -2158,7 +2165,7 @@ export default class LokiBlobMetadataStore
     container: string,
     blob: string,
     snapshot?: string
-  ): Promise<GetPageRangeRes> {
+  ): Promise<GetPageRangeResponse> {
     const doc = await this.getBlobWithLeaseUpdated(
       account,
       container,
@@ -2185,11 +2192,11 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   public async resizePageBlob(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    blobContentLength: number,
-    context: Context
+    blobContentLength: number
   ): Promise<Models.BlobProperties> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = await this.getBlobWithLeaseUpdated(
@@ -2240,12 +2247,12 @@ export default class LokiBlobMetadataStore
    * @memberof LokiBlobMetadataStore
    */
   public async updateSequenceNumber(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     sequenceNumberAction: Models.SequenceNumberActionType,
-    blobSequenceNumber: number | undefined,
-    context: Context
+    blobSequenceNumber: number | undefined
   ): Promise<Models.BlobProperties> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = await this.getBlobWithLeaseUpdated(
@@ -2314,7 +2321,7 @@ export default class LokiBlobMetadataStore
   public async listUncommittedBlockPersistencyChunks(
     marker: string = "-1",
     maxResults: number = 2000
-  ): Promise<[IPersistencyChunk[], string | undefined]> {
+  ): Promise<[IExtentChunk[], string | undefined]> {
     const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
     const blockDocs = coll
       .chain()
@@ -2578,7 +2585,7 @@ export default class LokiBlobMetadataStore
     context: Context,
     forceExist?: boolean
   ): Promise<BlobModel | undefined> {
-    await this.checkContainerExist(account, container, context);
+    await this.checkContainerExist(context, account, container);
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = coll.findOne({

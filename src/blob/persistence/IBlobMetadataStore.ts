@@ -1,5 +1,5 @@
 import ICleaner from "../../common/ICleaner";
-import { IDataStore } from "../../common/IDataStore";
+import IDataStore from "../../common/IDataStore";
 import IGCExtentProvider from "../../common/IGCExtentProvider";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -11,13 +11,13 @@ import Context from "../generated/Context";
  * @export
  * @interface IPersistencyChunk
  */
-export interface IPersistencyChunk {
+export interface IExtentChunk {
   id: string; // The persistency layer storage extent ID where the chunk belongs to
   offset: number; // Chunk offset inside the extent where chunk starts in bytes
   count: number; // Chunk length in bytes
 }
 
-export const ZERO_PERSISTENCY_CHUNK_ID = "*ZERO*";
+export const ZERO_EXTENT_ID = "*ZERO*";
 
 /** MODELS FOR SERVICE */
 interface IServiceAdditionalProperties {
@@ -45,60 +45,56 @@ export interface IContainerMetadata {
 }
 
 // The response model for getContainerProperties.
-export type GetContainerPropertiesRes = Models.ContainerItem;
+export type GetContainerPropertiesResponse = Models.ContainerItem;
 
 // The response for getContainerAccessPolicy.
-interface IGetContainerAccessPolicyRes {
+interface IGetContainerAccessPolicyResponse {
   properties: Models.ContainerProperties;
   containerAcl?: Models.SignedIdentifier[];
 }
-export type GetContainerAccessPolicyRes = IGetContainerAccessPolicyRes;
+export type GetContainerAccessPolicyResponse = IGetContainerAccessPolicyResponse;
 
 // The params for setContainerAccessPolicy.
-interface ISetContainerAccessPolicyParam {
+interface ISetContainerAccessPolicyOptions {
   lastModified: Date;
   etag: string;
   containerAcl?: Models.SignedIdentifier[];
   publicAccess?: Models.PublicAccessType;
   leaseAccessConditions?: Models.LeaseAccessConditions;
 }
-export type SetContainerAccessPolicyParam = ISetContainerAccessPolicyParam;
+export type SetContainerAccessPolicyOptions = ISetContainerAccessPolicyOptions;
 
 // The response model for each lease-related request.
-interface IContainerLeaseResModel {
+interface IContainerLeaseResponse {
   properties: Models.ContainerProperties;
   leaseId?: string;
   leaseTime?: number;
 }
-export type AcquireContainerLeaseRes = IContainerLeaseResModel;
-
-export type ReleaseContainerLeaseRes = Models.ContainerProperties;
-
-export type RenewContainerLeaseRes = IContainerLeaseResModel;
-
-export type BreakContainerLeaseRes = IContainerLeaseResModel;
-
-export type ChangeContainerLeaseRes = IContainerLeaseResModel;
+export type AcquireContainerLeaseResponse = IContainerLeaseResponse;
+export type ReleaseContainerLeaseResponse = Models.ContainerProperties;
+export type RenewContainerLeaseResponse = IContainerLeaseResponse;
+export type BreakContainerLeaseResponse = IContainerLeaseResponse;
+export type ChangeContainerLeaseResponse = IContainerLeaseResponse;
 
 /** MODELS FOR BLOBS */
 interface IPersistencyPropertiesRequired {
   /**
    * A reference to persistency layer chunk of data.
    *
-   * @type {IPersistencyChunk}
+   * @type {IExtentChunk}
    * @memberof IPersistencyProperties
    */
-  persistency: IPersistencyChunk;
+  persistency: IExtentChunk;
 }
 
 interface IPersistencyPropertiesOptional {
   /**
    * A reference to persistency layer chunk of data.
    *
-   * @type {IPersistencyChunk}
+   * @type {IExtentChunk}
    * @memberof IPersistencyProperties
    */
-  persistency?: IPersistencyChunk;
+  persistency?: IExtentChunk;
 }
 
 interface IBlockBlobAdditionalProperties {
@@ -152,27 +148,23 @@ interface IGetBlobPropertiesRes {
 export type GetBlobPropertiesRes = IGetBlobPropertiesRes;
 
 // The response model for each lease-related request.
-interface IBlobLeaseResModel {
+interface IBlobLeaseResponse {
   properties: Models.BlobProperties;
   leaseId?: string;
   leaseTime?: number;
 }
-export type AcquireBlobLeaseRes = IBlobLeaseResModel;
-
-export type ReleaseBlobLeaseRes = Models.ContainerProperties;
-
-export type RenewBlobLeaseRes = IBlobLeaseResModel;
-
-export type BreakBlobLeaseRes = IBlobLeaseResModel;
-
-export type ChangeBlobLeaseRes = IBlobLeaseResModel;
+export type AcquireBlobLeaseResponse = IBlobLeaseResponse;
+export type ReleaseBlobLeaseResponse = Models.ContainerProperties;
+export type RenewBlobLeaseResponse = IBlobLeaseResponse;
+export type BreakBlobLeaseResponse = IBlobLeaseResponse;
+export type ChangeBlobLeaseResponse = IBlobLeaseResponse;
 
 // The response model for create snapshot.
-interface ICreateSnapshotRes {
+interface ICreateSnapshotResponse {
   properties: Models.BlobProperties;
   snapshot: string;
 }
-export type CreateSnapshotRes = ICreateSnapshotRes;
+export type CreateSnapshotResponse = ICreateSnapshotResponse;
 
 // The model contain account name, container name, blob name and snapshot for blob.
 interface IBlobId {
@@ -184,11 +176,11 @@ interface IBlobId {
 export type BlobId = IBlobId;
 
 // The model contain required attributes of pageblob for request getPageRanges.
-interface IGetPageRangeRes {
+interface IGetPageRangeResponse {
   pageRangesInOrder?: PersistencyPageRange[];
   properties: Models.BlobProperties;
 }
-export type GetPageRangeRes = IGetPageRangeRes;
+export type GetPageRangeResponse = IGetPageRangeResponse;
 
 /** MODELS FOR BLOCKS */
 interface IBlockAdditionalProperties {
@@ -228,6 +220,7 @@ export interface IBlobMetadataStore
    * @memberof IBlobMetadataStore
    */
   setServiceProperties(
+    context: Context,
     serviceProperties: ServicePropertiesModel
   ): Promise<ServicePropertiesModel>;
 
@@ -239,6 +232,7 @@ export interface IBlobMetadataStore
    * @memberof IBlobMetadataStore
    */
   getServiceProperties(
+    context: Context,
     account: string
   ): Promise<ServicePropertiesModel | undefined>;
 
@@ -269,8 +263,8 @@ export interface IBlobMetadataStore
    * @memberof IBlobMetadataStore
    */
   createContainer(
-    container: ContainerModel,
-    context: Context
+    context: Context,
+    container: ContainerModel
   ): Promise<ContainerModel>;
 
   /**
@@ -280,15 +274,15 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {Context} context
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
-   * @returns {Promise<GetContainerPropertiesRes>}
+   * @returns {Promise<GetContainerPropertiesResponse>}
    * @memberof IBlobMetadataStore
    */
   getContainerProperties(
+    context: Context,
     account: string,
     container: string,
-    context: Context,
     leaseAccessConditions?: Models.LeaseAccessConditions
-  ): Promise<GetContainerPropertiesRes>;
+  ): Promise<GetContainerPropertiesResponse>;
 
   /**
    * Delete container item if exists from persistency layer.
@@ -307,9 +301,9 @@ export interface IBlobMetadataStore
    * @memberof IBlobMetadataStore
    */
   deleteContainer(
+    context: Context,
     account: string,
     container: string,
-    context: Context,
     leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<void>;
 
@@ -326,11 +320,11 @@ export interface IBlobMetadataStore
    * @memberof IBlobMetadataStore
    */
   setContainerMetadata(
+    context: Context,
     account: string,
     container: string,
     lastModified: Date,
     etag: string,
-    context: Context,
     metadata?: IContainerMetadata,
     leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<void>;
@@ -342,31 +336,31 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {Context} context
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
-   * @returns {Promise<GetContainerAccessPolicyRes>}
+   * @returns {Promise<GetContainerAccessPolicyResponse>}
    * @memberof IBlobMetadataStore
    */
   getContainerACL(
+    context: Context,
     account: string,
     container: string,
-    context: Context,
     leaseAccessConditions?: Models.LeaseAccessConditions
-  ): Promise<GetContainerAccessPolicyRes>;
+  ): Promise<GetContainerAccessPolicyResponse>;
 
   /**
    * Set container access policy.
    *
    * @param {string} account
    * @param {string} container
-   * @param {SetContainerAccessPolicyParam} setAclModel
+   * @param {SetContainerAccessPolicyOptions} setAclModel
    * @param {Context} context
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
   setContainerACL(
+    context: Context,
     account: string,
     container: string,
-    setAclModel: SetContainerAccessPolicyParam,
-    context: Context
+    setAclModel: SetContainerAccessPolicyOptions
   ): Promise<void>;
 
   /**
@@ -376,15 +370,15 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {Models.ContainerAcquireLeaseOptionalParams} options
    * @param {Context} context
-   * @returns {Promise<AcquireContainerLeaseRes>}
+   * @returns {Promise<AcquireContainerLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
   acquireContainerLease(
+    context: Context,
     account: string,
     container: string,
-    options: Models.ContainerAcquireLeaseOptionalParams,
-    context: Context
-  ): Promise<AcquireContainerLeaseRes>;
+    options: Models.ContainerAcquireLeaseOptionalParams
+  ): Promise<AcquireContainerLeaseResponse>;
 
   /**
    * Release container lease
@@ -393,15 +387,15 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {string} leaseId
    * @param {Context} context
-   * @returns {Promise<ReleaseContainerLeaseRes>}
+   * @returns {Promise<ReleaseContainerLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
   releaseContainerLease(
+    context: Context,
     account: string,
     container: string,
-    leaseId: string,
-    context: Context
-  ): Promise<ReleaseContainerLeaseRes>;
+    leaseId: string
+  ): Promise<ReleaseContainerLeaseResponse>;
 
   /**
    * Renew container lease
@@ -410,15 +404,15 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {string} leaseId
    * @param {Context} context
-   * @returns {Promise<RenewContainerLeaseRes>}
+   * @returns {Promise<RenewContainerLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
   renewContainerLease(
+    context: Context,
     account: string,
     container: string,
-    leaseId: string,
-    context: Context
-  ): Promise<RenewContainerLeaseRes>;
+    leaseId: string
+  ): Promise<RenewContainerLeaseResponse>;
 
   /**
    * Break container lease
@@ -427,15 +421,15 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {(number | undefined)} breakPeriod
    * @param {Context} context
-   * @returns {Promise<BreakContainerLeaseRes>}
+   * @returns {Promise<BreakContainerLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
   breakContainerLease(
+    context: Context,
     account: string,
     container: string,
-    breakPeriod: number | undefined,
-    context: Context
-  ): Promise<BreakContainerLeaseRes>;
+    breakPeriod: number | undefined
+  ): Promise<BreakContainerLeaseResponse>;
 
   /**
    * Change container lease
@@ -445,16 +439,16 @@ export interface IBlobMetadataStore
    * @param {string} leaseId
    * @param {string} proposedLeaseId
    * @param {Context} context
-   * @returns {Promise<ChangeContainerLeaseRes>}
+   * @returns {Promise<ChangeContainerLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
   changeContainerLease(
+    context: Context,
     account: string,
     container: string,
     leaseId: string,
-    proposedLeaseId: string,
-    context: Context
-  ): Promise<ChangeContainerLeaseRes>;
+    proposedLeaseId: string
+  ): Promise<ChangeContainerLeaseResponse>;
 
   /**
    * Check the existence of a container.
@@ -466,9 +460,9 @@ export interface IBlobMetadataStore
    * @memberof IBlobMetadataStore
    */
   checkContainerExist(
+    context: Context,
     account: string,
-    container: string,
-    context: Context
+    container: string
   ): Promise<void>;
 
   /**
@@ -524,7 +518,7 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions] Optional. Will validate lease if provided
-   * @returns {Promise<CreateSnapshotRes>}
+   * @returns {Promise<CreateSnapshotResponse>}
    * @memberof IBlobMetadataStore
    */
   createSnapshot(
@@ -534,7 +528,7 @@ export interface IBlobMetadataStore
     blob: string,
     leaseAccessConditions?: Models.LeaseAccessConditions,
     metadata?: Models.BlobMetadata
-  ): Promise<CreateSnapshotRes>;
+  ): Promise<CreateSnapshotResponse>;
 
   /**
    * Gets a blob item from metadata store by account name, container name and blob name.
@@ -649,7 +643,7 @@ export interface IBlobMetadataStore
    * @param {string} blob
    * @param {number} duration
    * @param {string} [proposedLeaseId]
-   * @returns {Promise<AcquireBlobLeaseRes>}
+   * @returns {Promise<AcquireBlobLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
   acquireBlobLease(
@@ -659,7 +653,7 @@ export interface IBlobMetadataStore
     blob: string,
     duration: number,
     proposedLeaseId?: string
-  ): Promise<AcquireBlobLeaseRes>;
+  ): Promise<AcquireBlobLeaseResponse>;
 
   /**
    * Release blob.
@@ -669,7 +663,7 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {string} leaseId
-   * @returns {Promise<ReleaseBlobLeaseRes>}
+   * @returns {Promise<ReleaseBlobLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
   releaseBlobLease(
@@ -678,7 +672,7 @@ export interface IBlobMetadataStore
     container: string,
     blob: string,
     leaseId: string
-  ): Promise<ReleaseBlobLeaseRes>;
+  ): Promise<ReleaseBlobLeaseResponse>;
 
   /**
    * Renew blob lease.
@@ -688,7 +682,7 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {string} leaseId
-   * @returns {Promise<RenewBlobLeaseRes>}
+   * @returns {Promise<RenewBlobLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
   renewBlobLease(
@@ -697,7 +691,7 @@ export interface IBlobMetadataStore
     container: string,
     blob: string,
     leaseId: string
-  ): Promise<RenewBlobLeaseRes>;
+  ): Promise<RenewBlobLeaseResponse>;
 
   /**
    * Change blob lease.
@@ -708,7 +702,7 @@ export interface IBlobMetadataStore
    * @param {string} blob
    * @param {string} leaseId
    * @param {string} proposedLeaseId
-   * @returns {Promise<ChangeBlobLeaseRes>}
+   * @returns {Promise<ChangeBlobLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
   changeBlobLease(
@@ -718,7 +712,7 @@ export interface IBlobMetadataStore
     blob: string,
     leaseId: string,
     proposedLeaseId: string
-  ): Promise<ChangeBlobLeaseRes>;
+  ): Promise<ChangeBlobLeaseResponse>;
 
   /**
    * Break blob lease
@@ -728,7 +722,7 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {number} [breakPeriod]
-   * @returns {Promise<BreakBlobLeaseRes>}
+   * @returns {Promise<BreakBlobLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
   breakBlobLease(
@@ -737,7 +731,7 @@ export interface IBlobMetadataStore
     container: string,
     blob: string,
     breakPeriod?: number
-  ): Promise<BreakBlobLeaseRes>;
+  ): Promise<BreakBlobLeaseResponse>;
 
   /**
    * Check the existence of a blob.
@@ -889,17 +883,17 @@ export interface IBlobMetadataStore
    * @param {BlobModel} blob
    * @param {number} start
    * @param {number} end
-   * @param {IPersistencyChunk} persistencycontext
+   * @param {IExtentChunk} persistencycontext
    * @param {Context} [context]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
   uploadPages(
+    context: Context,
     blob: BlobModel,
     start: number,
     end: number,
-    persistencycontext: IPersistencyChunk,
-    context: Context
+    persistencycontext: IExtentChunk
   ): Promise<Models.BlobProperties>;
 
   /**
@@ -913,10 +907,10 @@ export interface IBlobMetadataStore
    * @memberof IBlobMetadataStore
    */
   clearRange(
+    context: Context,
     blob: BlobModel,
     start: number,
-    end: number,
-    context: Context
+    end: number
   ): Promise<Models.BlobProperties>;
 
   /**
@@ -927,7 +921,7 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {string} [snapshot]
-   * @returns {Promise<GetPageRangeRes>}
+   * @returns {Promise<GetPageRangeResponse>}
    * @memberof IBlobMetadataStore
    */
   getPageRanges(
@@ -936,7 +930,7 @@ export interface IBlobMetadataStore
     container: string,
     blob: string,
     snapshot?: string
-  ): Promise<GetPageRangeRes>;
+  ): Promise<GetPageRangeResponse>;
 
   /**
    * Resize a page blob.
@@ -950,11 +944,11 @@ export interface IBlobMetadataStore
    * @memberof IBlobMetadataStore
    */
   resizePageBlob(
+    context: Context,
     account: string,
     container: string,
     blob: string,
-    blobContentLength: number,
-    context: Context
+    blobContentLength: number
   ): Promise<Models.BlobProperties>;
 
   /**
@@ -970,12 +964,12 @@ export interface IBlobMetadataStore
    * @memberof IBlobMetadataStore
    */
   updateSequenceNumber(
+    context: Context,
     account: string,
     container: string,
     blob: string,
     sequenceNumberAction: Models.SequenceNumberActionType,
-    blobSequenceNumber: number | undefined,
-    context: Context
+    blobSequenceNumber: number | undefined
   ): Promise<Models.BlobProperties>;
 
   /**
@@ -984,7 +978,7 @@ export interface IBlobMetadataStore
   listUncommittedBlockPersistencyChunks(
     marker?: string,
     maxResults?: number
-  ): Promise<[IPersistencyChunk[], string | undefined]>;
+  ): Promise<[IExtentChunk[], string | undefined]>;
 }
 
 export default IBlobMetadataStore;
