@@ -10,7 +10,7 @@ import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
 import ServerBase from "../common/ServerBase";
-import QueueGCManager from "./gc/QueueGCMagager";
+import QueueGCManager from "./gc/queueGCManager";
 import IQueueMetadataStore from "./persistence/IQueueMetadataStore";
 import LokiQueueMetadataStore from "./persistence/LokiQueueMetadataStore";
 import QueueConfiguration from "./QueueConfiguration";
