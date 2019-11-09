@@ -10,11 +10,10 @@ import Context from "../generated/Context";
 import { ILease, ILeaseState } from "./ILeaseState";
 import LeaseAvailableState from "./LeaseAvailableState";
 import LeaseLeasedState from "./LeaseLeasedState";
+import LeaseStateBase from "./LeaseStateBase";
 
-export default class LeaseBrokenState implements ILeaseState {
-  public readonly lease: ILease;
-
-  public constructor(lease: ILease, private readonly context: Context) {
+export default class LeaseBrokenState extends LeaseStateBase {
+  public constructor(lease: ILease, context: Context) {
     if (context.startTime === undefined) {
       throw RangeError(
         `LeaseBrokenState:constructor() error, context.startTime is undefined.`
@@ -68,7 +67,7 @@ export default class LeaseBrokenState implements ILeaseState {
       }
 
       // Deep copy
-      this.lease = { ...lease };
+      super({ ...lease }, context);
     } else if (lease.leaseState === LeaseStateType.Breaking) {
       /*
        * LeaseState: Breaking
@@ -118,15 +117,18 @@ export default class LeaseBrokenState implements ILeaseState {
         );
       }
 
-      this.lease = {
-        leaseId: lease.leaseId,
-        leaseState: LeaseStateType.Broken,
-        leaseStatus: LeaseStatusType.Unlocked,
-        leaseDurationType: undefined,
-        leaseDurationSeconds: undefined,
-        leaseExpireTime: undefined,
-        leaseBreakTime: undefined
-      };
+      super(
+        {
+          leaseId: lease.leaseId,
+          leaseState: LeaseStateType.Broken,
+          leaseStatus: LeaseStatusType.Unlocked,
+          leaseDurationType: undefined,
+          leaseDurationSeconds: undefined,
+          leaseExpireTime: undefined,
+          leaseBreakTime: undefined
+        },
+        context
+      );
     } else {
       throw RangeError(
         `LeaseBrokenState:constructor() error, incoming lease state ${lease.leaseState} is neither ${LeaseStateType.Broken} or ${LeaseStateType.Breaking}.`

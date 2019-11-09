@@ -12,11 +12,10 @@ import { ILease, ILeaseState } from "./ILeaseState";
 import LeaseAvailableState from "./LeaseAvailableState";
 import LeaseBreakingState from "./LeaseBreakingState";
 import LeaseBrokenState from "./LeaseBrokenState";
+import LeaseStateBase from "./LeaseStateBase";
 
-export default class LeaseLeasedState implements ILeaseState {
-  public readonly lease: ILease;
-
-  public constructor(lease: ILease, private readonly context: Context) {
+export default class LeaseLeasedState extends LeaseStateBase {
+  public constructor(lease: ILease, context: Context) {
     /*
      * LeaseState: Leased
      * LeaseStatus: Locked
@@ -83,7 +82,7 @@ export default class LeaseLeasedState implements ILeaseState {
     }
 
     // Deep copy
-    this.lease = { ...lease };
+    super({ ...lease }, context);
   }
 
   public acquire(duration: number, proposedLeaseId: string = ""): ILeaseState {

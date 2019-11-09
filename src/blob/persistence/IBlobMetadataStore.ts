@@ -878,12 +878,12 @@ export interface IBlobMetadataStore
   }>;
 
   /**
-   * Upload new pages for pageblob.
+   * Upload new pages for page blob.
    *
    * @param {BlobModel} blob
    * @param {number} start
    * @param {number} end
-   * @param {IExtentChunk} persistencycontext
+   * @param {IExtentChunk} persistency
    * @param {Context} [context]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
@@ -893,11 +893,12 @@ export interface IBlobMetadataStore
     blob: BlobModel,
     start: number,
     end: number,
-    persistencycontext: IExtentChunk
+    persistency: IExtentChunk,
+    leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<Models.BlobProperties>;
 
   /**
-   * Clear range for a pageblob.
+   * Clear range for a page blob.
    *
    * @param {BlobModel} blob
    * @param {number} start
@@ -910,7 +911,8 @@ export interface IBlobMetadataStore
     context: Context,
     blob: BlobModel,
     start: number,
-    end: number
+    end: number,
+    leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<Models.BlobProperties>;
 
   /**
@@ -929,7 +931,8 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    snapshot?: string
+    snapshot?: string,
+    leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<GetPageRangeResponse>;
 
   /**
@@ -948,11 +951,12 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    blobContentLength: number
+    blobContentLength: number,
+    leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<Models.BlobProperties>;
 
   /**
-   * Upadate the sequence number of a page blob.
+   * Update the sequence number of a page blob.
    *
    * @param {string} account
    * @param {string} container
@@ -969,7 +973,8 @@ export interface IBlobMetadataStore
     container: string,
     blob: string,
     sequenceNumberAction: Models.SequenceNumberActionType,
-    blobSequenceNumber: number | undefined
+    blobSequenceNumber: number | undefined,
+    leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<Models.BlobProperties>;
 
   /**
