@@ -199,13 +199,7 @@ export default class LokiExtentMetadata implements IExtentMetadataStore {
     return coll.findAndRemove({ id: extentId });
   }
 
-  /**
-   * Create an async iterator to enumerate all extent IDs.
-   *
-   * @returns {AsyncIterator<string[]>}
-   * @memberof IExtentMetadata
-   */
-  public getExtentIterator(): AsyncIterator<string[]> {
+  public iteratorExtents(): AsyncIterator<string[]> {
     return new AllExtentsAsyncIterator(this);
   }
 

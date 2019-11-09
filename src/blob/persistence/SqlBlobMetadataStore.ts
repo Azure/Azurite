@@ -3892,7 +3892,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
-  public iteratorReferredExtents(): AsyncIterator<IPersistencyChunk[]> {
+  public iteratorExtents(): AsyncIterator<string[]> {
     return new BlobReferredExtentsAsyncIterator(this);
   }
 

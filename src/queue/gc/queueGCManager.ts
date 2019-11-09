@@ -1,10 +1,9 @@
 import { EventEmitter } from "events";
 
+import IGCExtentProvider from "../../common/IGCExtentProvider";
 import IGCManager from "../../common/IGCManager";
-import IExtentMetadataStore from "../../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../../common/persistence/IExtentStore";
 import ILogger from "../generated/utils/ILogger";
-import IQueueMetadataStore from "../persistence/IQueueMetadataStore";
 import { DEFAULT_GC_INTERVAL_MS } from "../utils/constants";
 
 enum Status {
@@ -30,8 +29,8 @@ export default class QueueGCManager implements IGCManager {
   private emitter: EventEmitter = new EventEmitter();
 
   constructor(
-    private readonly queueMetadata: IQueueMetadataStore,
-    private readonly extentMetadata: IExtentMetadataStore,
+    private readonly referredExtentsProvider: IGCExtentProvider,
+    private readonly allExtentsProvider: IGCExtentProvider,
     private readonly extentStore: IExtentStore,
     private readonly errorHandler: (err: Error) => void,
     private readonly logger: ILogger,
@@ -71,11 +70,11 @@ export default class QueueGCManager implements IGCManager {
     );
     this._status = Status.Initializing;
 
-    if (!this.queueMetadata.isInitialized()) {
+    if (!this.referredExtentsProvider.isInitialized()) {
       this.logger.info(
         `QueueGCManager:start() queueMetadata does not boot up. Starting queueMetadata.`
       );
-      await this.queueMetadata.init();
+      await this.referredExtentsProvider.init();
       this.logger.info(
         `QueueGCManager:start() queueMetadata successfully started.`
       );
@@ -178,7 +177,7 @@ export default class QueueGCManager implements IGCManager {
     this.logger.info(
       `QueueGCManager:markSweep() Get referred extents, then remove from allExtents.`
     );
-    const itr = this.queueMetadata.getExtentIterator();
+    const itr = this.referredExtentsProvider.iteratorExtents();
     for (
       let bucket = await itr.next();
       bucket.done === false;
@@ -211,7 +210,7 @@ export default class QueueGCManager implements IGCManager {
   private async getAllExtents(): Promise<Set<string>> {
     const res: Set<string> = new Set<string>();
 
-    const itr = this.extentMetadata.getExtentIterator();
+    const itr = this.allExtentsProvider.iteratorExtents();
     for (
       let bucket = await itr.next();
       bucket.done === false;

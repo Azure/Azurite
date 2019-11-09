@@ -246,7 +246,7 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
     });
   }
 
-  public getExtentIterator(): AsyncIterator<string[]> {
+  public iteratorExtents(): AsyncIterator<string[]> {
     return new AllExtentsAsyncIterator(this);
   }
 

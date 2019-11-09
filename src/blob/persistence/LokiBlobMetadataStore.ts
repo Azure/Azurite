@@ -199,20 +199,8 @@ export default class LokiBlobMetadataStore
     throw new Error(`Cannot clean LokiBlobMetadataStore, it's not closed.`);
   }
 
-  // TODO
-  public iteratorAllExtents(): AsyncIterator<string[]> {
-    throw new Error("Method not implemented.");
-  }
-
-  /**
-   * Create an async iterator to enumerate all extent records referred or being used.
-   *
-   * @returns {AsyncIterator<IPersistencyChunk[]>}
-   * @memberof IBlobMetadataStore
-   */
-  public iteratorReferredExtents(): AsyncIterator<IPersistencyChunk[]> {
-    // By default, we disable detailed log for GC
-    return new BlobReferredExtentsAsyncIterator(this /*, this.logger*/);
+  public iteratorExtents(): AsyncIterator<string[]> {
+    return new BlobReferredExtentsAsyncIterator(this);
   }
 
   /**

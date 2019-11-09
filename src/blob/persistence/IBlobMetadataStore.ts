@@ -1,5 +1,6 @@
 import ICleaner from "../../common/ICleaner";
 import { IDataStore } from "../../common/IDataStore";
+import IGCExtentProvider from "../../common/IGCExtentProvider";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 
@@ -211,7 +212,10 @@ export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
  * @interface IBlobMetadataStore
  * @extends {IDataStore}
  */
-export interface IBlobMetadataStore extends IDataStore, ICleaner {
+export interface IBlobMetadataStore
+  extends IGCExtentProvider,
+    IDataStore,
+    ICleaner {
   /**
    * Update blob service properties. Create service properties if not exists in persistency layer.
    *
@@ -981,14 +985,6 @@ export interface IBlobMetadataStore extends IDataStore, ICleaner {
     marker?: string,
     maxResults?: number
   ): Promise<[IPersistencyChunk[], string | undefined]>;
-
-  /**
-   * Return a referred extent iterator for GC.
-   *
-   * @returns {AsyncIterator<IPersistencyChunk[]>}
-   * @memberof IBlobMetadataStore
-   */
-  iteratorReferredExtents(): AsyncIterator<IPersistencyChunk[]>;
 }
 
 export default IBlobMetadataStore;

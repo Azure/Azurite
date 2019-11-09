@@ -1,7 +1,6 @@
 import ILogger from "../../common/ILogger";
 import { Logger } from "../../common/Logger";
 import NoLoggerStrategy from "../../common/NoLoggerStrategy";
-import { IPersistencyChunk } from "./IBlobMetadataStore";
 import IBlobMetadataStore from "./IBlobMetadataStore";
 
 enum State {
@@ -15,10 +14,10 @@ enum State {
  *
  * @export
  * @class BlobReferredExtentsAsyncIterator
- * @implements {AsyncIterator<IPersistencyChunk[]>}
+ * @implements {AsyncIterator<string[]>}
  */
 export default class BlobReferredExtentsAsyncIterator
-  implements AsyncIterator<IPersistencyChunk[]> {
+  implements AsyncIterator<string[]> {
   private state: State = State.LISTING_EXTENTS_IN_BLOBS;
 
   private blobListingMarker: string | undefined;
@@ -29,7 +28,7 @@ export default class BlobReferredExtentsAsyncIterator
     private readonly logger: ILogger = new Logger(new NoLoggerStrategy())
   ) {}
 
-  public async next(): Promise<IteratorResult<IPersistencyChunk[]>> {
+  public async next(): Promise<IteratorResult<string[]>> {
     if (this.state === State.LISTING_EXTENTS_IN_BLOBS) {
       const [blobs, marker] = await this.blobMetadataStore.listAllBlobs(
         undefined,
@@ -54,13 +53,13 @@ export default class BlobReferredExtentsAsyncIterator
         );
 
         for (const block of blob.committedBlocksInOrder || []) {
-          extents.push(block.persistency);
+          extents.push(block.persistency.id);
         }
         for (const range of blob.pageRangesInOrder || []) {
-          extents.push(range.persistency);
+          extents.push(range.persistency.id);
         }
         if (blob.persistency) {
-          extents.push(blob.persistency);
+          extents.push(blob.persistency.id);
         }
       }
       return {
@@ -85,7 +84,7 @@ export default class BlobReferredExtentsAsyncIterator
 
       return {
         done: false,
-        value: blocks
+        value: blocks.map(block => block.id)
       };
     } else {
       return {

@@ -7,7 +7,7 @@ import IQueueMetadataStore from "./IQueueMetadataStore";
  * @class ReferredExtentsAsyncIterator
  * @implements {AsyncIterator<string[]>}
  */
-export default class ReferredExtentsAsyncIterator
+export default class QueueReferredExtentsAsyncIterator
   implements AsyncIterator<string[]> {
   private unit: number = 1000;
   private done: boolean = false;
