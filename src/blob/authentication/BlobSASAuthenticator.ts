@@ -112,7 +112,8 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     const values = this.getBlobSASSignatureValuesFromRequest(
       req,
       containerName,
-      blobName
+      blobName,
+      context
     );
     if (values === undefined) {
       this.logger.info(
@@ -349,7 +350,8 @@ export default class BlobSASAuthenticator implements IAuthenticator {
   private getBlobSASSignatureValuesFromRequest(
     req: IRequest,
     containerName: string,
-    blobName?: string
+    blobName?: string,
+    context?: Context
   ): IBlobSASSignatureValues | undefined {
     const version = this.decodeIfExist(req.getQuery("sv"));
     const protocol = this.decodeIfExist(req.getQuery("spr"));
@@ -369,7 +371,8 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     if (!identifier && (!permissions || !expiryTime)) {
       this.logger.warn(
         // tslint:disable-next-line:max-line-length
-        `BlobSASAuthenticator:generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided.`
+        `BlobSASAuthenticator:generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided.`,
+        context ? context.contextId : undefined
       );
       return undefined;
     }
@@ -377,7 +380,8 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     if (version === undefined) {
       this.logger.warn(
         // tslint:disable-next-line:max-line-length
-        `BlobSASAuthenticator:generateBlobSASSignature(): Must provide 'version'.`
+        `BlobSASAuthenticator:generateBlobSASSignature(): Must provide 'version'.`,
+        context ? context.contextId : undefined
       );
       return undefined;
     }
