@@ -78,25 +78,9 @@ interface IBlobContentProperties {
   cacheControl?: string;
 }
 
-/*
- * Preparations before starting with Sql based metadata store implementation
- * 1. Setup a database, like MySql, MariaDB, Sql Server or SqlLite
- * 2. (For development) Update database connection configurations under migrations/blob/metadata/config/config.json;
- *    (For production) Update environment variables `AZURITE_DB_USERNAME`, `AZURITE_DB_PASSWORD`, `AZURITE_DB_NAME`,
- *    `AZURITE_DB_HOSTNAME`, `AZURITE_DB_DIALECT`
- * 3. Create a database by `npm run db:create:blob:metadata` or create it manually
- * 4. Migrate database by `npm run db:migrate:blob:metadata`
- *
- * Steps to setup database in docker:
- * - docker run --name mariadb -p 3306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mariadb:latest
- *
- * - docker run --name mysql1 -p 3306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql:latest
- * - docker exec -it mysql1 /bin/bash
- *
- */
-
 /**
  * A SQL based Blob metadata storage implementation based on Sequelize.
+ * Refer to CONTRIBUTION.md for how to setup SQL database environment.
  *
  * @export
  * @class SqlBlobMetadataStore
@@ -225,7 +209,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           type: "VARCHAR(255)",
           allowNull: false
         },
-        // TODO: Check max blob name length
         blobName: {
           type: "VARCHAR(255)",
           allowNull: false
@@ -274,27 +257,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         lease: {
           type: "VARCHAR(1023)"
-        },
-        leaseId: {
-          type: "VARCHAR(127)"
-        },
-        leaseStatus: {
-          type: "VARCHAR(31)"
-        },
-        leaseState: {
-          type: "VARCHAR(31)"
-        },
-        leaseDuration: {
-          type: "VARCHAR(31)"
-        },
-        leasedurationNumber: {
-          type: "VARCHAR(63)"
-        },
-        leaseExpireTime: {
-          type: DATE(6)
-        },
-        leaseBreakExpireTime: {
-          type: DATE(6)
         },
         deleting: {
           type: INTEGER.UNSIGNED,

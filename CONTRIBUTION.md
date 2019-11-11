@@ -26,6 +26,24 @@ npm install
 npm run blob
 ```
 
+## Debug with SQL based Persisted Metadata Storage
+
+By default, Azurite leverages loki as metadata database.
+However, loki limits Azurite's scalability and extensibility.
+Set environment variable `AZURITE_DB=dialect://[username][:password][@]host:port/database` to make Azurite blob service switch to a SQL database based metadata storage, like MySql, SqlServer, MariaDB.
+
+For example, connect to MariaDB, MySql or SqlServer by set environment variables:
+
+```bash
+set AZURITE_DB=mariadb://root:my-secret-pw@127.0.0.1:3306/azurite_blob
+set AZURITE_DB=mysql://localhost:3306/azurite_blob
+set AZURITE_DB=mssql://username:password@localhost:1024/azurite_blob
+```
+
+> Note. Need to manually create database before starting Azurite instance.
+
+> Tips. Create database instance quickly with docker, for example `docker run --name mariadb -p 3306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mariadb:latest`.
+
 ## Develop for Visual Studio Code Extension
 
 Select and start Visual Studio Code debug configuration "Run Extension".

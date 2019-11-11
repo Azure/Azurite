@@ -12,25 +12,9 @@ import IExtentMetadataStore, { IExtentModel } from "./IExtentMetadataStore";
 // tslint:disable: max-classes-per-file
 class ExtentsModel extends Model {}
 
-/*
- * Preparations before starting with Sql based metadata store implementation
- * 1. Setup a database, like MySql, MariaDB, Sql Server or SqlLite
- * 2. (For development) Update database connection configurations under migrations/extent/metadata/config/config.json;
- *    (For production) Update environment variables `AZURITE_DB_USERNAME`, `AZURITE_DB_PASSWORD`, `AZURITE_DB_NAME`,
- *    `AZURITE_DB_HOSTNAME`, `AZURITE_DB_DIALECT`
- * 3. Create a database by `npm run db:create:extent:metadata` or create it manually
- * 4. Migrate database by `npm run db:migrate:extent:metadata`
- *
- * Steps to setup database in docker:
- * - docker run --name mariadb -p 3306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mariadb:latest
- *
- * - docker run --name mysql1 -p 3306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql:latest
- * - docker exec -it mysql1 /bin/bash
- *
- */
-
 /**
  * A SQL based extent metadata storage implementation based on Sequelize.
+ * Refer to CONTRIBUTION.md for how to setup SQL database environment.
  *
  * @export
  * @class SqlExtentMetadataStore
@@ -58,7 +42,6 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
   public async init(): Promise<void> {
     await this.sequelize.authenticate();
 
-    // TODO: Duplicate models definition here with migrations files; Should update them together to avoid inconsistency
     ExtentsModel.init(
       {
         id: {
