@@ -6,11 +6,11 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IPageBlobHandler from "../generated/handlers/IPageBlobHandler";
 import ILogger from "../generated/utils/ILogger";
+import BlobLeaseAdapter from "../persistence/BlobLeaseAdapter";
 import BlobWriteLeaseValidator from "../persistence/BlobWriteLeaseValidator";
 import IBlobMetadataStore, {
   BlobModel
 } from "../persistence/IBlobMetadataStore";
-import LokiBlobLeaseAdapter from "../persistence/LokiBlobLeaseAdapter";
 import { BLOB_API_VERSION } from "../utils/constants";
 import { deserializePageBlobRangeHeader, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -179,7 +179,7 @@ export default class PageBlobHandler extends BaseHandler
 
     // Check Lease status
     new BlobWriteLeaseValidator(options.leaseAccessConditions).validate(
-      new LokiBlobLeaseAdapter(blob),
+      new BlobLeaseAdapter(blob),
       context
     );
 

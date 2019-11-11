@@ -5,9 +5,9 @@ import IServiceHandler from "../generated/handlers/IServiceHandler";
 import { parseXML } from "../generated/utils/xml";
 import {
   BLOB_API_VERSION,
+  DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
   EMULATOR_ACCOUNT_KIND,
-  EMULATOR_ACCOUNT_SKUNAME,
-  DEFAULT_LIST_CONTAINERS_MAX_RESULTS
+  EMULATOR_ACCOUNT_SKUNAME
 } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
 

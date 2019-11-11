@@ -14,12 +14,14 @@ import {
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS
 } from "../utils/constants";
 import { newEtag } from "../utils/utils";
+import BlobLeaseAdapter from "./BlobLeaseAdapter";
 import BlobLeaseSyncer from "./BlobLeaseSyncer";
 import BlobReadLeaseValidator from "./BlobReadLeaseValidator";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
 import BlobWriteLeaseSyncer from "./BlobWriteLeaseSyncer";
 import BlobWriteLeaseValidator from "./BlobWriteLeaseValidator";
 import ContainerDeleteLeaseValidator from "./ContainerDeleteLeaseValidator";
+import ContainerLeaseAdapter from "./ContainerLeaseAdapter";
 import ContainerLeaseSyncer from "./ContainerLeaseSyncer";
 import ContainerReadLeaseValidator from "./ContainerReadLeaseValidator";
 import IBlobMetadataStore, {
@@ -49,8 +51,6 @@ import IBlobMetadataStore, {
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import LeaseFactory from "./LeaseFactory";
-import LokiBlobLeaseAdapter from "./LokiBlobLeaseAdapter";
-import LokiContainerLeaseAdapter from "./LokiContainerLeaseAdapter";
 
 /**
  * This is a metadata source implementation for blob based on loki DB.
@@ -325,7 +325,7 @@ export default class LokiBlobMetadataStore
       return [
         docs.map(doc => {
           return LeaseFactory.createLeaseState(
-            new LokiContainerLeaseAdapter(doc),
+            new ContainerLeaseAdapter(doc),
             context
           ).sync(new ContainerLeaseSyncer(doc));
         }),
@@ -338,7 +338,7 @@ export default class LokiBlobMetadataStore
       return [
         docs.map(doc => {
           return LeaseFactory.createLeaseState(
-            new LokiContainerLeaseAdapter(doc),
+            new ContainerLeaseAdapter(doc),
             context
           ).sync(new ContainerLeaseSyncer(doc));
         }),
@@ -395,7 +395,7 @@ export default class LokiBlobMetadataStore
     );
 
     new ContainerReadLeaseValidator(leaseAccessConditions).validate(
-      new LokiContainerLeaseAdapter(doc),
+      new ContainerLeaseAdapter(doc),
       context
     );
 
@@ -437,7 +437,7 @@ export default class LokiBlobMetadataStore
     );
 
     new ContainerDeleteLeaseValidator(leaseAccessConditions).validate(
-      new LokiContainerLeaseAdapter(doc),
+      new ContainerLeaseAdapter(doc),
       context
     );
 
@@ -486,7 +486,7 @@ export default class LokiBlobMetadataStore
     );
 
     new ContainerReadLeaseValidator(leaseAccessConditions).validate(
-      new LokiContainerLeaseAdapter(doc),
+      new ContainerLeaseAdapter(doc),
       context
     );
 
@@ -520,7 +520,7 @@ export default class LokiBlobMetadataStore
     );
 
     new ContainerReadLeaseValidator(leaseAccessConditions).validate(
-      new LokiContainerLeaseAdapter(doc),
+      new ContainerLeaseAdapter(doc),
       context
     );
 
@@ -556,7 +556,7 @@ export default class LokiBlobMetadataStore
     );
 
     new ContainerReadLeaseValidator(setAclModel.leaseAccessConditions).validate(
-      new LokiContainerLeaseAdapter(doc),
+      new ContainerLeaseAdapter(doc),
       context
     );
 
@@ -587,7 +587,7 @@ export default class LokiBlobMetadataStore
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainer(account, container, context);
 
-    LeaseFactory.createLeaseState(new LokiContainerLeaseAdapter(doc), context)
+    LeaseFactory.createLeaseState(new ContainerLeaseAdapter(doc), context)
       .acquire(options.duration!, options.proposedLeaseId)
       .sync(new ContainerLeaseSyncer(doc));
 
@@ -615,7 +615,7 @@ export default class LokiBlobMetadataStore
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainer(account, container, context);
 
-    LeaseFactory.createLeaseState(new LokiContainerLeaseAdapter(doc), context)
+    LeaseFactory.createLeaseState(new ContainerLeaseAdapter(doc), context)
       .release(leaseId)
       .sync(new ContainerLeaseSyncer(doc));
 
@@ -643,7 +643,7 @@ export default class LokiBlobMetadataStore
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainer(account, container, context);
 
-    LeaseFactory.createLeaseState(new LokiContainerLeaseAdapter(doc), context)
+    LeaseFactory.createLeaseState(new ContainerLeaseAdapter(doc), context)
       .renew(leaseId)
       .sync(new ContainerLeaseSyncer(doc));
 
@@ -671,7 +671,7 @@ export default class LokiBlobMetadataStore
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainer(account, container, context);
 
-    LeaseFactory.createLeaseState(new LokiContainerLeaseAdapter(doc), context)
+    LeaseFactory.createLeaseState(new ContainerLeaseAdapter(doc), context)
       .break(breakPeriod)
       .sync(new ContainerLeaseSyncer(doc));
 
@@ -709,7 +709,7 @@ export default class LokiBlobMetadataStore
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
     const doc = await this.getContainer(account, container, context);
 
-    LeaseFactory.createLeaseState(new LokiContainerLeaseAdapter(doc), context)
+    LeaseFactory.createLeaseState(new ContainerLeaseAdapter(doc), context)
       .change(leaseId, proposedLeaseId)
       .sync(new ContainerLeaseSyncer(doc));
 
@@ -813,7 +813,7 @@ export default class LokiBlobMetadataStore
       return [
         docs.map(doc => {
           return LeaseFactory.createLeaseState(
-            new LokiBlobLeaseAdapter(doc),
+            new BlobLeaseAdapter(doc),
             context
           ).sync(new BlobLeaseSyncer(doc));
         }),
@@ -825,7 +825,7 @@ export default class LokiBlobMetadataStore
       return [
         docs.map(doc => {
           return LeaseFactory.createLeaseState(
-            new LokiBlobLeaseAdapter(doc),
+            new BlobLeaseAdapter(doc),
             context
           ).sync(new BlobLeaseSyncer(doc));
         }),
@@ -907,7 +907,7 @@ export default class LokiBlobMetadataStore
 
     if (blobDoc) {
       LeaseFactory.createLeaseState(
-        new LokiBlobLeaseAdapter(blobDoc),
+        new BlobLeaseAdapter(blobDoc),
         context
       ).validate(new BlobWriteLeaseValidator(leaseAccessConditions));
 
@@ -952,7 +952,7 @@ export default class LokiBlobMetadataStore
     );
 
     new BlobReadLeaseValidator(leaseAccessConditions).validate(
-      new LokiBlobLeaseAdapter(doc),
+      new BlobLeaseAdapter(doc),
       context
     );
 
@@ -1025,7 +1025,7 @@ export default class LokiBlobMetadataStore
     );
 
     new BlobReadLeaseValidator(leaseAccessConditions).validate(
-      new LokiBlobLeaseAdapter(doc),
+      new BlobLeaseAdapter(doc),
       context
     );
 
@@ -1097,7 +1097,7 @@ export default class LokiBlobMetadataStore
     );
 
     new BlobReadLeaseValidator(leaseAccessConditions).validate(
-      new LokiBlobLeaseAdapter(doc),
+      new BlobLeaseAdapter(doc),
       context
     );
 
@@ -1143,7 +1143,7 @@ export default class LokiBlobMetadataStore
     }
 
     new BlobWriteLeaseValidator(options.leaseAccessConditions).validate(
-      new LokiBlobLeaseAdapter(doc),
+      new BlobLeaseAdapter(doc),
       context
     );
 
@@ -1232,7 +1232,7 @@ export default class LokiBlobMetadataStore
       context
     );
 
-    const lease = new LokiBlobLeaseAdapter(doc);
+    const lease = new BlobLeaseAdapter(doc);
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
 
     const blobHeaders = blobHTTPHeaders;
@@ -1291,7 +1291,7 @@ export default class LokiBlobMetadataStore
       context
     );
 
-    const lease = new LokiBlobLeaseAdapter(doc);
+    const lease = new BlobLeaseAdapter(doc);
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
     new BlobWriteLeaseSyncer(doc).sync(lease);
     doc.metadata = metadata;
@@ -1332,7 +1332,7 @@ export default class LokiBlobMetadataStore
       throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextId!);
     }
 
-    LeaseFactory.createLeaseState(new LokiBlobLeaseAdapter(doc), context)
+    LeaseFactory.createLeaseState(new BlobLeaseAdapter(doc), context)
       .acquire(duration, proposedLeaseId)
       .sync(new BlobLeaseSyncer(doc));
 
@@ -1372,7 +1372,7 @@ export default class LokiBlobMetadataStore
       throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextId!);
     }
 
-    LeaseFactory.createLeaseState(new LokiBlobLeaseAdapter(doc), context)
+    LeaseFactory.createLeaseState(new BlobLeaseAdapter(doc), context)
       .release(leaseId)
       .sync(new BlobLeaseSyncer(doc));
 
@@ -1412,7 +1412,7 @@ export default class LokiBlobMetadataStore
       throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextId!);
     }
 
-    LeaseFactory.createLeaseState(new LokiBlobLeaseAdapter(doc), context)
+    LeaseFactory.createLeaseState(new BlobLeaseAdapter(doc), context)
       .renew(leaseId)
       .sync(new BlobLeaseSyncer(doc));
 
@@ -1454,7 +1454,7 @@ export default class LokiBlobMetadataStore
       throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextId!);
     }
 
-    LeaseFactory.createLeaseState(new LokiBlobLeaseAdapter(doc), context)
+    LeaseFactory.createLeaseState(new BlobLeaseAdapter(doc), context)
       .change(leaseId, proposedLeaseId)
       .sync(new BlobLeaseSyncer(doc));
 
@@ -1494,7 +1494,7 @@ export default class LokiBlobMetadataStore
       throw StorageErrorFactory.getBlobSnapshotsPresent(context.contextId!);
     }
 
-    LeaseFactory.createLeaseState(new LokiBlobLeaseAdapter(doc), context)
+    LeaseFactory.createLeaseState(new BlobLeaseAdapter(doc), context)
       .break(breakPeriod)
       .sync(new BlobLeaseSyncer(doc));
 
@@ -1619,7 +1619,7 @@ export default class LokiBlobMetadataStore
 
     if (destBlob) {
       new BlobWriteLeaseValidator(leaseAccessConditions).validate(
-        new LokiBlobLeaseAdapter(destBlob),
+        new BlobLeaseAdapter(destBlob),
         context
       );
     }
@@ -1737,7 +1737,7 @@ export default class LokiBlobMetadataStore
     // Check the lease action aligned with current lease state.
     // API reference doesn't mention there is x-ms-lease-id header supported by this API,
     // however, it fails to set tier for a leased blocked blob with LeaseIdMissing
-    const lease = new LokiBlobLeaseAdapter(doc);
+    const lease = new BlobLeaseAdapter(doc);
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
 
     // Check Blob is not snapshot
@@ -1822,7 +1822,7 @@ export default class LokiBlobMetadataStore
       };
       blobColl.insert(newBlob);
     } else {
-      LeaseFactory.createLeaseState(new LokiBlobLeaseAdapter(blobDoc), context)
+      LeaseFactory.createLeaseState(new BlobLeaseAdapter(blobDoc), context)
         .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
         .sync(new BlobWriteLeaseSyncer(blobDoc));
     }
@@ -1869,7 +1869,7 @@ export default class LokiBlobMetadataStore
       context
     );
 
-    const lease = new LokiBlobLeaseAdapter(doc);
+    const lease = new BlobLeaseAdapter(doc);
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
 
     // Get all blocks in persistency layer
@@ -1999,7 +1999,7 @@ export default class LokiBlobMetadataStore
     );
 
     new BlobReadLeaseValidator(leaseAccessConditions).validate(
-      new LokiBlobLeaseAdapter(doc),
+      new BlobLeaseAdapter(doc),
       context
     );
 
@@ -2065,7 +2065,7 @@ export default class LokiBlobMetadataStore
       context!
     );
 
-    const lease = new LokiBlobLeaseAdapter(doc);
+    const lease = new BlobLeaseAdapter(doc);
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
 
     this.pageBlobRangesManager.mergeRange(doc.pageRangesInOrder || [], {
@@ -2110,7 +2110,7 @@ export default class LokiBlobMetadataStore
       context!
     );
 
-    const lease = new LokiBlobLeaseAdapter(doc);
+    const lease = new BlobLeaseAdapter(doc);
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
 
     this.pageBlobRangesManager.clearRange(doc.pageRangesInOrder || [], {
@@ -2156,7 +2156,7 @@ export default class LokiBlobMetadataStore
     );
 
     new BlobReadLeaseValidator(leaseAccessConditions).validate(
-      new LokiBlobLeaseAdapter(doc),
+      new BlobLeaseAdapter(doc),
       context
     );
 
@@ -2202,7 +2202,7 @@ export default class LokiBlobMetadataStore
       );
     }
 
-    const lease = new LokiBlobLeaseAdapter(doc);
+    const lease = new BlobLeaseAdapter(doc);
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
 
     doc.pageRangesInOrder = doc.pageRangesInOrder || [];
@@ -2262,7 +2262,7 @@ export default class LokiBlobMetadataStore
       );
     }
 
-    const lease = new LokiBlobLeaseAdapter(doc);
+    const lease = new BlobLeaseAdapter(doc);
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
 
     if (doc.properties.blobSequenceNumber === undefined) {
@@ -2409,10 +2409,9 @@ export default class LokiBlobMetadataStore
       throw StorageErrorFactory.getContainerNotFound(context.contextId);
     }
 
-    LeaseFactory.createLeaseState(
-      new LokiContainerLeaseAdapter(doc),
-      context
-    ).sync(new ContainerLeaseSyncer(doc));
+    LeaseFactory.createLeaseState(new ContainerLeaseAdapter(doc), context).sync(
+      new ContainerLeaseSyncer(doc)
+    );
 
     return doc;
   }
@@ -2523,10 +2522,9 @@ export default class LokiBlobMetadataStore
         leaseStatus: LeaseStatusType.Unlocked // TODO: Lease state & status should be undefined for snapshots
       });
     } else {
-      LeaseFactory.createLeaseState(
-        new LokiBlobLeaseAdapter(doc),
-        context
-      ).sync(new BlobLeaseSyncer(doc));
+      LeaseFactory.createLeaseState(new BlobLeaseAdapter(doc), context).sync(
+        new BlobLeaseSyncer(doc)
+      );
     }
 
     return doc;
