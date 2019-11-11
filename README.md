@@ -290,7 +290,7 @@ Azurite will refresh customized account name and key from environment variable e
 
 > Note. Use `export` keyword to set environment variable in Linux like environment, `set` in Windows.
 
-### Customized Metadata Storage by External Database
+### Customized Metadata Storage by External Database (Preview)
 
 By default, Azurite leverages [loki](https://github.com/techfort/LokiJS) as metadata database.
 However, loki limits Azurite's scalability and extensibility.
@@ -305,6 +305,8 @@ set AZURITE_DB=mssql://username:password@localhost:1024/azurite_blob
 ```
 
 > Note. Need to manually create database before starting Azurite instance.
+
+> Note. Blob Copy & Page Blob are not supported by SQL based metadata implementation.
 
 > Tips. Create database instance quickly with docker, for example `docker run --name mariadb -p 3306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mariadb:latest`.
 
