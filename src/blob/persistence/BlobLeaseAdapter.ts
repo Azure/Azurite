@@ -6,7 +6,7 @@ import {
 import { BlobModel } from "./IBlobMetadataStore";
 import { ILease } from "./ILeaseState";
 
-export default class LokiBlobLeaseAdapter implements ILease {
+export default class BlobLeaseAdapter implements ILease {
   public leaseId?: string | undefined;
   public leaseState: LeaseStateType;
   public leaseStatus: LeaseStatusType;
@@ -15,18 +15,18 @@ export default class LokiBlobLeaseAdapter implements ILease {
   public leaseExpireTime?: Date | undefined;
   public leaseBreakTime?: Date | undefined;
 
-  public constructor(private readonly blob: BlobModel) {
+  public constructor(blob: BlobModel) {
     if (blob.properties.leaseState === undefined) {
       blob.properties.leaseState = LeaseStateType.Available;
       // throw RangeError(
-      //   `LokiBlobLeaseAdapter:constructor() blob leaseState cannot be undefined.`
+      //   `BlobLeaseAdapter:constructor() blob leaseState cannot be undefined.`
       // );
     }
 
     if (blob.properties.leaseStatus === undefined) {
       blob.properties.leaseStatus = LeaseStatusType.Unlocked;
       // throw RangeError(
-      //   `LokiBlobLeaseAdapter:constructor() blob leaseStatus cannot be undefined.`
+      //   `BlobLeaseAdapter:constructor() blob leaseStatus cannot be undefined.`
       // );
     }
 
@@ -39,13 +39,15 @@ export default class LokiBlobLeaseAdapter implements ILease {
     this.leaseBreakTime = blob.leaseBreakTime;
   }
 
-  public sync() {
-    this.blob.leaseId = this.leaseId;
-    this.blob.properties.leaseState = this.leaseState;
-    this.blob.properties.leaseStatus = this.leaseStatus;
-    this.blob.properties.leaseDuration = this.leaseDurationType;
-    this.blob.leaseDurationSeconds = this.leaseDurationSeconds;
-    this.blob.leaseExpireTime = this.leaseExpireTime;
-    this.blob.leaseBreakTime = this.leaseBreakTime;
+  public toString(): string {
+    return JSON.stringify({
+      leaseId: this.leaseId,
+      leaseState: this.leaseState,
+      leaseStatus: this.leaseStatus,
+      leaseDurationType: this.leaseDurationType,
+      leaseDurationSeconds: this.leaseDurationSeconds,
+      leaseExpireTime: this.leaseExpireTime,
+      leaseBreakTime: this.leaseBreakTime
+    });
   }
 }

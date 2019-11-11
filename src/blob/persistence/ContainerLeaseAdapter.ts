@@ -6,7 +6,7 @@ import {
 import { ContainerModel } from "./IBlobMetadataStore";
 import { ILease } from "./ILeaseState";
 
-export default class LokiContainerLeaseAdapter implements ILease {
+export default class ContainerLeaseAdapter implements ILease {
   public leaseId?: string | undefined;
   public leaseState: LeaseStateType;
   public leaseStatus: LeaseStatusType;
@@ -18,13 +18,13 @@ export default class LokiContainerLeaseAdapter implements ILease {
   public constructor(container: ContainerModel) {
     if (container.properties.leaseState === undefined) {
       throw RangeError(
-        `LokiContainerLeaseAdapter:constructor() container leaseState cannot be undefined.`
+        `ContainerLeaseAdapter:constructor() container leaseState cannot be undefined.`
       );
     }
 
     if (container.properties.leaseStatus === undefined) {
       throw RangeError(
-        `LokiContainerLeaseAdapter:constructor() container leaseStatus cannot be undefined.`
+        `ContainerLeaseAdapter:constructor() container leaseStatus cannot be undefined.`
       );
     }
 

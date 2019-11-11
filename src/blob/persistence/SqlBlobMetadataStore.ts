@@ -26,6 +26,7 @@ import {
 } from "../utils/constants";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
 import ContainerDeleteLeaseValidator from "./ContainerDeleteLeaseValidator";
+import ContainerLeaseAdapter from "./ContainerLeaseAdapter";
 import ContainerLeaseSyncer from "./ContainerLeaseSyncer";
 import ContainerReadLeaseValidator from "./ContainerReadLeaseValidator";
 import IBlobMetadataStore, {
@@ -55,7 +56,6 @@ import IBlobMetadataStore, {
 } from "./IBlobMetadataStore";
 import { ILease } from "./ILeaseState";
 import LeaseFactory from "./LeaseFactory";
-import LokiContainerLeaseAdapter from "./LokiContainerLeaseAdapter";
 
 // tslint:disable: max-classes-per-file
 class ServicesModel extends Model {}
@@ -548,7 +548,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     const leaseUpdateMapper = (model: ContainersModel) => {
       const containerModel = this.convertDbModelToContainerModel(model);
       return LeaseFactory.createLeaseState(
-        new LokiContainerLeaseAdapter(containerModel),
+        new ContainerLeaseAdapter(containerModel),
         context
       ).sync(new ContainerLeaseSyncer(containerModel));
     };
@@ -607,7 +607,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     const containerModel = this.convertDbModelToContainerModel(findResult);
 
     return LeaseFactory.createLeaseState(
-      new LokiContainerLeaseAdapter(containerModel),
+      new ContainerLeaseAdapter(containerModel),
       context
     )
       .validate(new ContainerReadLeaseValidator(leaseAccessConditions))
@@ -1316,7 +1316,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     const containerModel = this.convertDbModelToContainerModel(findResult);
 
     LeaseFactory.createLeaseState(
-      new LokiContainerLeaseAdapter(containerModel),
+      new ContainerLeaseAdapter(containerModel),
       context
     )
       .validate(new ContainerReadLeaseValidator(leaseAccessConditions))
@@ -1399,16 +1399,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
       const containerModel = this.convertDbModelToContainerModel(findResult);
       LeaseFactory.createLeaseState(
-        new LokiContainerLeaseAdapter(containerModel),
+        new ContainerLeaseAdapter(containerModel),
         context
       )
         .acquire(options.duration!, options.proposedLeaseId)
         .sync(new ContainerLeaseSyncer(containerModel));
 
       await ContainersModel.update(
-        this.convertLeaseToDbModel(
-          new LokiContainerLeaseAdapter(containerModel)
-        ),
+        this.convertLeaseToDbModel(new ContainerLeaseAdapter(containerModel)),
         {
           where: {
             accountName: account,
@@ -1449,16 +1447,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       const containerModel = this.convertDbModelToContainerModel(findResult);
 
       LeaseFactory.createLeaseState(
-        new LokiContainerLeaseAdapter(containerModel),
+        new ContainerLeaseAdapter(containerModel),
         context
       )
         .release(leaseId)
         .sync(new ContainerLeaseSyncer(containerModel));
 
       await ContainersModel.update(
-        this.convertLeaseToDbModel(
-          new LokiContainerLeaseAdapter(containerModel)
-        ),
+        this.convertLeaseToDbModel(new ContainerLeaseAdapter(containerModel)),
         {
           where: {
             accountName: account,
@@ -1497,16 +1493,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       const containerModel = this.convertDbModelToContainerModel(findResult);
 
       LeaseFactory.createLeaseState(
-        new LokiContainerLeaseAdapter(containerModel),
+        new ContainerLeaseAdapter(containerModel),
         context
       )
         .renew(leaseId)
         .sync(new ContainerLeaseSyncer(containerModel));
 
       await ContainersModel.update(
-        this.convertLeaseToDbModel(
-          new LokiContainerLeaseAdapter(containerModel)
-        ),
+        this.convertLeaseToDbModel(new ContainerLeaseAdapter(containerModel)),
         {
           where: {
             accountName: account,
@@ -1546,16 +1540,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       const containerModel = this.convertDbModelToContainerModel(findResult);
 
       LeaseFactory.createLeaseState(
-        new LokiContainerLeaseAdapter(containerModel),
+        new ContainerLeaseAdapter(containerModel),
         context
       )
         .break(breakPeriod)
         .sync(new ContainerLeaseSyncer(containerModel));
 
       await ContainersModel.update(
-        this.convertLeaseToDbModel(
-          new LokiContainerLeaseAdapter(containerModel)
-        ),
+        this.convertLeaseToDbModel(new ContainerLeaseAdapter(containerModel)),
         {
           where: {
             accountName: account,
@@ -1605,16 +1597,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       const containerModel = this.convertDbModelToContainerModel(findResult);
 
       LeaseFactory.createLeaseState(
-        new LokiContainerLeaseAdapter(containerModel),
+        new ContainerLeaseAdapter(containerModel),
         context
       )
         .change(leaseId, proposedLeaseId)
         .sync(new ContainerLeaseSyncer(containerModel));
 
       await ContainersModel.update(
-        this.convertLeaseToDbModel(
-          new LokiContainerLeaseAdapter(containerModel)
-        ),
+        this.convertLeaseToDbModel(new ContainerLeaseAdapter(containerModel)),
         {
           where: {
             accountName: account,
@@ -3401,7 +3391,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   private convertContainerModelToDbModel(container: ContainerModel): object {
-    const lease = new LokiContainerLeaseAdapter(container).toString();
+    const lease = new ContainerLeaseAdapter(container).toString();
     return {
       accountName: container.accountName,
       containerName: container.name,
@@ -3433,7 +3423,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
   private convertLeaseToDbModel(lease: ILease): object {
     let leaseString = "";
-    if (lease instanceof LokiContainerLeaseAdapter) {
+    if (lease instanceof ContainerLeaseAdapter) {
       leaseString = lease.toString();
     } else {
       leaseString = JSON.stringify(lease);
