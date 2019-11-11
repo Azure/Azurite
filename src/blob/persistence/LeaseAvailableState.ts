@@ -34,6 +34,22 @@ export default class LeaseAvailableState extends LeaseStateBase {
       );
     }
 
+    if (lease.leaseState === undefined) {
+      super(
+        {
+          leaseId: undefined,
+          leaseState: undefined,
+          leaseStatus: undefined,
+          leaseDurationType: undefined,
+          leaseDurationSeconds: undefined,
+          leaseExpireTime: undefined,
+          leaseBreakTime: undefined
+        },
+        context
+      );
+      return;
+    }
+
     if (lease.leaseState !== LeaseStateType.Available) {
       throw RangeError(
         `LeaseAvailableState:constructor() error, incoming lease state ${lease.leaseState} is not ${LeaseStateType.Available}.`

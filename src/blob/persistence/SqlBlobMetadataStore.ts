@@ -18,9 +18,16 @@ import {
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import { BlobType } from "../generated/artifacts/models";
+import { LeaseAccessConditions } from "../generated/artifacts/models";
 import Context from "../generated/Context";
-import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
+import {
+  DEFAULT_LIST_BLOBS_MAX_RESULTS,
+  DEFAULT_LIST_CONTAINERS_MAX_RESULTS
+} from "../utils/constants";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
+import ContainerDeleteLeaseValidator from "./ContainerDeleteLeaseValidator";
+import ContainerLeaseSyncer from "./ContainerLeaseSyncer";
+import ContainerReadLeaseValidator from "./ContainerReadLeaseValidator";
 import IBlobMetadataStore, {
   AcquireBlobLeaseResponse,
   AcquireContainerLeaseResponse,
@@ -46,6 +53,9 @@ import IBlobMetadataStore, {
   ServicePropertiesModel,
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
+import { ILease } from "./ILeaseState";
+import LeaseFactory from "./LeaseFactory";
+import LokiContainerLeaseAdapter from "./LokiContainerLeaseAdapter";
 
 // tslint:disable: max-classes-per-file
 class ServicesModel extends Model {}
@@ -53,26 +63,6 @@ class ContainersModel extends Model {}
 class BlobsModel extends Model {}
 class BlocksModel extends Model {}
 // class PagesModel extends Model {}
-
-interface IContainerLease {
-  leaseStatus?: Models.LeaseStatusType;
-  leaseState?: Models.LeaseStateType;
-  leaseDurationType?: Models.LeaseDurationType;
-  leaseDurationSeconds?: number;
-  leaseId?: string;
-  leaseExpireTime?: Date;
-  leaseBreakExpireTime?: Date;
-}
-
-interface IBlobLease {
-  leaseStatus?: Models.LeaseStatusType;
-  leaseState?: Models.LeaseStateType;
-  leaseDuration?: Models.LeaseDurationType;
-  leasedurationNumber?: number;
-  leaseId?: string;
-  leaseExpireTime?: Date;
-  leaseBreakExpireTime?: Date;
-}
 
 interface IBlobContentProperties {
   contentLength?: number;
@@ -201,26 +191,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         publicAccess: {
           type: "VARCHAR(31)"
         },
-        leaseId: {
-          type: "VARCHAR(127)"
-        },
-        leaseStatus: {
-          type: "VARCHAR(31)"
-        },
-        leaseState: {
-          type: "VARCHAR(31)"
-        },
-        leaseDuration: {
-          type: "VARCHAR(31)"
-        },
-        leasedurationNumber: {
-          type: "VARCHAR(63)"
-        },
-        leaseExpireTime: {
-          type: DATE(6)
-        },
-        leaseBreakExpireTime: {
-          type: DATE(6)
+        lease: {
+          type: "VARCHAR(1023)"
         },
         hasImmutabilityPolicy: {
           type: BOOLEAN
@@ -433,236 +405,161 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     // TODO: Implement cleanup in database
   }
 
-  /**
-   * Update blob service properties. Create service properties if not exists in persistency layer.
-   *
-   * TODO: Account's service property should be created when storage account is created or metadata
-   * storage initialization. This method should only be responsible for updating existing record.
-   * In this way, we can reduce one I/O call to get account properties.
-   *
-   * @param {ServicePropertiesModel} serviceProperties
-   * @returns {Promise<ServicePropertiesModel>}
-   * @memberof SqlBlobMetadataStore
-   */
   public async setServiceProperties(
     context: Context,
     serviceProperties: ServicePropertiesModel
   ): Promise<ServicePropertiesModel> {
-    // TODO: Optimize to reduce first query IO, or caching
-    return this.sequelize
-      .transaction(t => {
-        return ServicesModel.findByPk(serviceProperties.accountName, {
+    return this.sequelize.transaction(async t => {
+      const findResult = await ServicesModel.findByPk(
+        serviceProperties.accountName,
+        {
           transaction: t
-        }).then(res => {
-          const updateValues = {
-            defaultServiceVersion: serviceProperties.defaultServiceVersion,
-            cors: this.serializeModelValue(serviceProperties.cors),
-            logging: this.serializeModelValue(serviceProperties.logging),
-            minuteMetrics: this.serializeModelValue(
-              serviceProperties.minuteMetrics
-            ),
-            hourMetrics: this.serializeModelValue(
-              serviceProperties.hourMetrics
-            ),
-            staticWebsite: this.serializeModelValue(
-              serviceProperties.staticWebsite
-            ),
-            deleteRetentionPolicy: this.serializeModelValue(
-              serviceProperties.deleteRetentionPolicy
-            )
-          };
-
-          if (res === null) {
-            return ServicesModel.create(
-              {
-                accountName: serviceProperties.accountName,
-                ...updateValues
-              },
-              { transaction: t }
-            );
-          } else {
-            return ServicesModel.update(updateValues, {
-              transaction: t,
-              where: {
-                accountName: serviceProperties.accountName
-              }
-            }).then(updateResult => {
-              // TODO: set the exactly equal properties will affect 0 rows.
-              const updateNumber = updateResult[0];
-              if (updateNumber > 1) {
-                throw Error(
-                  `SqlBlobMetadataStore:updateServiceProperties() failed. Update operation affect ${updateNumber} rows.`
-                );
-              }
-              return undefined;
-            });
+        }
+      );
+      const updateValues = {
+        defaultServiceVersion: serviceProperties.defaultServiceVersion,
+        cors: this.serializeModelValue(serviceProperties.cors),
+        logging: this.serializeModelValue(serviceProperties.logging),
+        minuteMetrics: this.serializeModelValue(
+          serviceProperties.minuteMetrics
+        ),
+        hourMetrics: this.serializeModelValue(serviceProperties.hourMetrics),
+        staticWebsite: this.serializeModelValue(
+          serviceProperties.staticWebsite
+        ),
+        deleteRetentionPolicy: this.serializeModelValue(
+          serviceProperties.deleteRetentionPolicy
+        )
+      };
+      if (findResult === null) {
+        await ServicesModel.create(
+          {
+            accountName: serviceProperties.accountName,
+            ...updateValues
+          },
+          { transaction: t }
+        );
+      } else {
+        const updateResult = await ServicesModel.update(updateValues, {
+          transaction: t,
+          where: {
+            accountName: serviceProperties.accountName
           }
         });
-      })
-      .then(() => {
-        return serviceProperties;
-      });
+
+        // Set the exactly equal properties will affect 0 rows.
+        const updatedRows = updateResult[0];
+        if (updatedRows > 1) {
+          throw Error(
+            `SqlBlobMetadataStore:updateServiceProperties() failed. Update operation affect ${updatedRows} rows.`
+          );
+        }
+      }
+
+      return serviceProperties;
+    });
   }
 
-  /**
-   * Get service properties for specific storage account.
-   *
-   * @param {string} account
-   * @returns {(Promise<ServicePropertiesModel | undefined>)}
-   * @memberof SqlBlobMetadataStore
-   */
   public async getServiceProperties(
     context: Context,
     account: string
   ): Promise<ServicePropertiesModel | undefined> {
-    return ServicesModel.findByPk(account).then(res => {
-      if (res === null) {
-        return undefined;
-      }
+    const findResult = await ServicesModel.findByPk(account);
+    if (findResult === null) {
+      return undefined;
+    }
 
-      const logging = this.deserializeModelValue(res, "logging");
-      const hourMetrics = this.deserializeModelValue(res, "hourMetrics");
-      const minuteMetrics = this.deserializeModelValue(res, "minuteMetrics");
-      const cors = this.deserializeModelValue(res, "cors");
-      const deleteRetentionPolicy = this.deserializeModelValue(
-        res,
-        "deleteRetentionPolicy"
-      );
-      const staticWebsite = this.deserializeModelValue(res, "staticWebsite");
-      const defaultServiceVersion = this.getModelValue<string>(
-        res,
-        "defaultServiceVersion"
-      );
+    const logging = this.deserializeModelValue(findResult, "logging");
+    const hourMetrics = this.deserializeModelValue(findResult, "hourMetrics");
+    const minuteMetrics = this.deserializeModelValue(
+      findResult,
+      "minuteMetrics"
+    );
+    const cors = this.deserializeModelValue(findResult, "cors");
+    const deleteRetentionPolicy = this.deserializeModelValue(
+      findResult,
+      "deleteRetentionPolicy"
+    );
+    const staticWebsite = this.deserializeModelValue(
+      findResult,
+      "staticWebsite"
+    );
+    const defaultServiceVersion = this.getModelValue<string>(
+      findResult,
+      "defaultServiceVersion"
+    );
 
-      const ret: ServicePropertiesModel = {
-        accountName: account
-      };
+    const ret: ServicePropertiesModel = {
+      accountName: account
+    };
 
-      if (logging !== undefined) {
-        ret.logging = logging;
-      }
-      if (hourMetrics !== undefined) {
-        ret.hourMetrics = hourMetrics;
-      }
-      if (minuteMetrics !== undefined) {
-        ret.minuteMetrics = minuteMetrics;
-      }
-      if (cors !== undefined) {
-        ret.cors = cors;
-      }
-      if (deleteRetentionPolicy !== undefined) {
-        ret.deleteRetentionPolicy = deleteRetentionPolicy;
-      }
-      if (staticWebsite !== undefined) {
-        ret.staticWebsite = staticWebsite;
-      }
-      if (defaultServiceVersion !== undefined) {
-        ret.defaultServiceVersion = defaultServiceVersion;
-      }
+    if (logging !== undefined) {
+      ret.logging = logging;
+    }
+    if (hourMetrics !== undefined) {
+      ret.hourMetrics = hourMetrics;
+    }
+    if (minuteMetrics !== undefined) {
+      ret.minuteMetrics = minuteMetrics;
+    }
+    if (cors !== undefined) {
+      ret.cors = cors;
+    }
+    if (deleteRetentionPolicy !== undefined) {
+      ret.deleteRetentionPolicy = deleteRetentionPolicy;
+    }
+    if (staticWebsite !== undefined) {
+      ret.staticWebsite = staticWebsite;
+    }
+    if (defaultServiceVersion !== undefined) {
+      ret.defaultServiceVersion = defaultServiceVersion;
+    }
 
-      return ret;
-    });
+    return ret;
   }
 
-  /**
-   * List containers with query conditions specified.
-   *
-   * @param {string} account
-   * @param {string} [prefix=""]
-   * @param {number} [maxResults=5000]
-   * @param {(number | undefined)} marker
-   * @returns {(Promise<[ContainerModel[], number | undefined]>)}
-   * @memberof SqlBlobMetadataStore
-   */
   public async listContainers(
     context: Context,
     account: string,
     prefix: string = "",
-    maxResults: number = 5000,
+    maxResults: number = DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
     marker: number | undefined
   ): Promise<[ContainerModel[], number | undefined]> {
     const whereQuery: any = { accountName: account };
+
     if (prefix.length > 0) {
       whereQuery.containerName = {
         [Op.like]: `${prefix}%`
       };
     }
+
     if (marker !== undefined) {
       whereQuery.containerId = {
         [Op.gt]: marker
       };
     }
 
-    const modelConvert = (dbModel: ContainersModel): ContainerModel => {
-      const model: ContainerModel = {
-        accountName: this.getModelValue<string>(dbModel, "accountName", true),
-        name: this.getModelValue<string>(dbModel, "containerName", true),
-        containerAcl: this.deserializeModelValue(dbModel, "containerAcl"),
-        metadata: this.deserializeModelValue(dbModel, "metadata"),
-        leaseBreakTime: this.getModelValue<Date>(
-          dbModel,
-          "leaseBreakExpireTime"
-        ),
-        leaseExpireTime: this.getModelValue<Date>(dbModel, "leaseExpireTime"),
-        leaseId: this.getModelValue<string>(dbModel, "leaseId"),
-        leaseDurationSeconds: this.getModelValue<number>(
-          dbModel,
-          "leasedurationNumber"
-        ),
-        properties: {
-          lastModified: this.getModelValue<Date>(dbModel, "lastModified", true),
-          etag: this.getModelValue<string>(dbModel, "etag", true),
-          publicAccess: this.deserializeModelValue(dbModel, "publicAccess"),
-          leaseStatus: this.getModelValue(dbModel, "leaseStatus"),
-          leaseState: this.getModelValue(dbModel, "leaseState"),
-          leaseDuration: this.getModelValue(dbModel, "leaseDuration"),
-          hasImmutabilityPolicy: this.getModelValue<boolean>(
-            dbModel,
-            "hasImmutabilityPolicy"
-          ),
-          hasLegalHold: this.getModelValue<boolean>(dbModel, "hasLegalHold")
-        }
-      };
-      return model;
-    };
-
-    return ContainersModel.findAll({
+    const findResult = await ContainersModel.findAll({
       limit: maxResults,
       where: whereQuery as any,
       order: [["containerId", "ASC"]]
-    }).then(res => {
-      if (res.length < maxResults) {
-        return [
-          res.map(val => {
-            const container = modelConvert(val);
-            this.calculateContainerLeaseAttributes(
-              container,
-              context.startTime!
-            );
-            return container;
-          }),
-          undefined
-        ];
-      } else {
-        const tail = res[res.length - 1];
-        const nextMarker = this.getModelValue<number>(
-          tail,
-          "containerId",
-          true
-        );
-        return [
-          res.map(val => {
-            const container = modelConvert(val);
-            this.calculateContainerLeaseAttributes(
-              container,
-              context.startTime!
-            );
-            return container;
-          }),
-          nextMarker
-        ];
-      }
     });
+
+    const leaseUpdateMapper = (model: ContainersModel) => {
+      const containerModel = this.convertDbModelToContainerModel(model);
+      return LeaseFactory.createLeaseState(
+        new LokiContainerLeaseAdapter(containerModel),
+        context
+      ).sync(new ContainerLeaseSyncer(containerModel));
+    };
+
+    if (findResult.length < maxResults) {
+      return [findResult.map(leaseUpdateMapper), undefined];
+    } else {
+      const tail = findResult[findResult.length - 1];
+      const nextMarker = this.getModelValue<number>(tail, "containerId", true);
+      return [findResult.map(leaseUpdateMapper), nextMarker];
+    }
   }
 
   /**
@@ -678,169 +575,45 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: ContainerModel
   ): Promise<ContainerModel> {
     try {
-      return await ContainersModel.create({
-        accountName: container.accountName,
-        containerName: container.name,
-        lastModified: container.properties.lastModified,
-        etag: container.properties.etag,
-        metadata: this.serializeModelValue(container.metadata),
-        containerAcl: this.serializeModelValue(container.containerAcl),
-        publicAccess: this.serializeModelValue(
-          container.properties.publicAccess
-        ),
-        leaseStatus: container.properties.leaseStatus,
-        leaseState: container.properties.leaseState,
-        leaseDuration: container.properties.leaseDuration,
-        leaseId: container.leaseId,
-        leasedurationNumber: container.leaseDurationSeconds,
-        leaseExpireTime: container.leaseExpireTime,
-        leaseBreakExpireTime: container.leaseBreakTime,
-        hasImmutabilityPolicy: container.properties.hasImmutabilityPolicy,
-        hasLegalHold: container.properties.hasLegalHold
-      }).then(() => container);
+      await ContainersModel.create(
+        this.convertContainerModelToDbModel(container)
+      );
+      return container;
     } catch (err) {
       if (err.name === "SequelizeUniqueConstraintError") {
-        const requestId = context ? context.contextId : undefined;
-        throw StorageErrorFactory.getContainerAlreadyExists(requestId);
+        throw StorageErrorFactory.getContainerAlreadyExists(context.contextId);
       }
       throw err;
     }
   }
 
-  /**
-   * Get a container properties.
-   *
-   * @param {string} account
-   * @param {string} container
-   * @param {Context} [context]
-   * @returns {Promise<GetContainerPropertiesResponse>}
-   * @memberof SqlBlobMetadataStore
-   */
   public async getContainerProperties(
     context: Context,
     account: string,
-    container: string
+    container: string,
+    leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<GetContainerPropertiesResponse> {
-    return ContainersModel.findOne({
+    const findResult = await ContainersModel.findOne({
       where: {
         accountName: account,
         containerName: container
       }
-    }).then(res => {
-      const requestId = context ? context.contextId : undefined;
-      if (res === null || res === undefined) {
-        throw StorageErrorFactory.getContainerNotFound(requestId);
-      }
-
-      const lastModified = this.getModelValue<Date>(res, "lastModified", true);
-      const etag = this.getModelValue<string>(res, "etag", true);
-      const leaseId = this.getModelValue<string>(res, "leaseId");
-      const leaseStatus = this.getModelValue<Models.LeaseStatusType>(
-        res,
-        "leaseStatus"
-      );
-      const leaseDuration = this.getModelValue<Models.LeaseDurationType>(
-        res,
-        "leaseDuration"
-      );
-      const leaseState = this.getModelValue<Models.LeaseStateType>(
-        res,
-        "leaseState"
-      );
-      const leasedurationNumber = this.getModelValue<number>(
-        res,
-        "leasedurationNumber"
-      );
-      const leaseExpireTime = this.getModelValue<Date>(res, "leaseExpireTime");
-      const leaseBreakExpireTime = this.getModelValue<Date>(
-        res,
-        "leaseBreakExpireTime"
-      );
-
-      let lease: IContainerLease = {
-        leaseId,
-        leaseStatus,
-        leaseBreakExpireTime,
-        leaseDurationType: leaseDuration,
-        leaseExpireTime,
-        leaseState,
-        leaseDurationSeconds: leasedurationNumber
-      };
-
-      lease = this.calculateContainerLeaseAttributes(
-        lease,
-        context ? context.startTime! : new Date()
-      );
-
-      const metadata = this.deserializeModelValue(res, "metadata");
-      const containerAcl = this.deserializeModelValue(res, "containerAcl");
-      const publicAccess = this.deserializeModelValue(res, "publicAccess");
-      const hasImmutabilityPolicy = this.getModelValue<boolean>(
-        res,
-        "hasImmutabilityPolicy"
-      );
-      const hasLegalHold = this.getModelValue<boolean>(res, "hasLegalHold");
-
-      const ret: ContainerModel = {
-        accountName: account,
-        name: container,
-        properties: {
-          lastModified,
-          etag,
-          leaseStatus: lease.leaseStatus,
-          leaseDuration: lease.leaseDurationType,
-          leaseState: lease.leaseState
-        },
-        leaseId: lease.leaseId,
-        leaseBreakTime: lease.leaseBreakExpireTime,
-        leaseExpireTime: lease.leaseExpireTime,
-        leaseDurationSeconds: lease.leaseDurationSeconds
-      };
-
-      if (metadata !== undefined) {
-        ret.metadata = metadata;
-      }
-
-      if (containerAcl !== undefined) {
-        ret.containerAcl = containerAcl;
-      }
-
-      if (publicAccess !== undefined) {
-        ret.properties.publicAccess = publicAccess;
-      }
-
-      if (hasImmutabilityPolicy !== undefined) {
-        ret.properties.hasImmutabilityPolicy = hasImmutabilityPolicy;
-      }
-
-      if (hasLegalHold !== undefined) {
-        ret.properties.hasLegalHold = hasLegalHold;
-      }
-
-      return {
-        name: ret.name,
-        properties: ret.properties,
-        metadata: ret.metadata
-      };
     });
+
+    if (findResult === null || findResult === undefined) {
+      throw StorageErrorFactory.getContainerNotFound(context.contextId);
+    }
+
+    const containerModel = this.convertDbModelToContainerModel(findResult);
+
+    return LeaseFactory.createLeaseState(
+      new LokiContainerLeaseAdapter(containerModel),
+      context
+    )
+      .validate(new ContainerReadLeaseValidator(leaseAccessConditions))
+      .sync(new ContainerLeaseSyncer(containerModel));
   }
 
-  /**
-   * Delete container item if exists from persistency layer.
-   *
-   * Sql based implementation will delete container row from Containers table.
-   * TODO: But blob rows from Blobs table, and blocks rows from Blocks table will be marked as deleting status,
-   * waiting for GC.
-   *
-   * Persisted extents data will be deleted by GC.
-   *
-   * @param {string} account
-   * @param {string} container
-   * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
-   * @param {Context} [context]
-   * @returns {Promise<void>}
-   * @memberof SqlBlobMetadataStore
-   */
   public async deleteContainer(
     context: Context,
     account: string,
@@ -849,16 +622,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<void> {
     await this.sequelize.transaction(async t => {
       /* Transaction starts */
-      const res = await ContainersModel.findOne({
-        attributes: [
-          "leaseId",
-          "leaseStatus",
-          "leaseDuration",
-          "leaseState",
-          "leasedurationNumber",
-          "leaseExpireTime",
-          "leaseBreakExpireTime"
-        ],
+      const findResult = await ContainersModel.findOne({
+        attributes: ["lease"],
         where: {
           accountName: account,
           containerName: container
@@ -866,74 +631,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      const requestId = context ? context.contextId : undefined;
-      if (res === null || res === undefined) {
-        throw StorageErrorFactory.getContainerNotFound(requestId);
+      if (findResult === null || findResult === undefined) {
+        throw StorageErrorFactory.getContainerNotFound(context.contextId);
       }
 
-      const leaseId = this.getModelValue<string>(res, "leaseId");
-      const leaseStatus = this.getModelValue<Models.LeaseStatusType>(
-        res,
-        "leaseStatus"
-      );
-      const leaseDuration = this.getModelValue<Models.LeaseDurationType>(
-        res,
-        "leaseDuration"
-      );
-      const leaseState = this.getModelValue<Models.LeaseStateType>(
-        res,
-        "leaseState"
-      );
-      const leasedurationNumber = this.getModelValue<number>(
-        res,
-        "leasedurationNumber"
-      );
-      const leaseExpireTime = this.getModelValue<Date>(res, "leaseExpireTime");
-      const leaseBreakExpireTime = this.getModelValue<Date>(
-        res,
-        "leaseBreakExpireTime"
-      );
-
-      let lease: IContainerLease = {
-        leaseId,
-        leaseStatus,
-        leaseBreakExpireTime,
-        leaseDurationType: leaseDuration,
-        leaseExpireTime,
-        leaseState,
-        leaseDurationSeconds: leasedurationNumber
-      };
-
-      lease = this.calculateContainerLeaseAttributes(
-        lease,
-        context ? context.startTime! : new Date()
-      );
-
-      // Check Lease status
-      if (lease.leaseStatus === Models.LeaseStatusType.Locked) {
-        if (
-          leaseAccessConditions === undefined ||
-          leaseAccessConditions.leaseId === undefined ||
-          leaseAccessConditions.leaseId === null
-        ) {
-          throw StorageErrorFactory.getContainerLeaseIdMissing(requestId);
-        } else if (
-          lease.leaseId !== undefined &&
-          leaseAccessConditions.leaseId.toLowerCase() !==
-            lease.leaseId.toLowerCase()
-        ) {
-          throw StorageErrorFactory.getContainerLeaseIdMismatchWithContainerOperation(
-            requestId
-          );
-        }
-      } else if (
-        leaseAccessConditions !== undefined &&
-        leaseAccessConditions.leaseId !== undefined &&
-        leaseAccessConditions.leaseId !== null &&
-        leaseAccessConditions.leaseId !== ""
-      ) {
-        throw StorageErrorFactory.getContainerLeaseLost(requestId);
-      }
+      LeaseFactory.createLeaseState(
+        this.convertDbModelToLease(findResult),
+        context
+      ).validate(new ContainerDeleteLeaseValidator(leaseAccessConditions));
 
       await ContainersModel.destroy({
         where: {
@@ -974,41 +679,50 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
-  /**
-   * Set container metadata.
-   *
-   * @template T
-   * @param {T} container
-   * @returns {Promise<T>}
-   * @memberof SqlBlobMetadataStore
-   */
   public async setContainerMetadata(
     context: Context,
     account: string,
     container: string,
     lastModified: Date,
     etag: string,
-    metadata?: IContainerMetadata
+    metadata?: IContainerMetadata,
+    leaseAccessConditions?: LeaseAccessConditions
   ): Promise<void> {
-    return ContainersModel.update(
-      {
-        lastModified,
-        etag,
-        metadata: this.serializeModelValue(metadata) || null
-      },
-      {
+    return this.sequelize.transaction(async t => {
+      /* Transaction starts */
+      const findResult = await ContainersModel.findOne({
+        attributes: ["lease"],
         where: {
           accountName: account,
           containerName: container
+        },
+        transaction: t
+      });
+
+      if (findResult === null || findResult === undefined) {
+        throw StorageErrorFactory.getContainerNotFound(context.contextId);
+      }
+
+      LeaseFactory.createLeaseState(
+        this.convertDbModelToLease(findResult),
+        context
+      ).validate(new ContainerReadLeaseValidator(leaseAccessConditions));
+
+      await ContainersModel.update(
+        {
+          lastModified,
+          etag,
+          metadata: this.serializeModelValue(metadata) || null
+        },
+        {
+          where: {
+            accountName: account,
+            containerName: container
+          },
+          transaction: t
         }
-      }
-    ).then(updateResult => {
-      const updateNumber = updateResult[0];
-      if (updateNumber === 0) {
-        const requestId = context ? context.contextId : undefined;
-        throw StorageErrorFactory.getContainerNotFound(requestId);
-      }
-      return undefined;
+      );
+      /* Transaction ends */
     });
   }
 
@@ -1098,13 +812,13 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         const lease = this.getBlobLease(res, context);
 
         const blobRes: BlobModel = this.blobModelConvert(res);
-        blobRes.leaseBreakTime = lease.leaseBreakExpireTime;
+        blobRes.leaseBreakTime = lease.leaseBreakTime;
         blobRes.leaseExpireTime = lease.leaseExpireTime;
         blobRes.leaseId = lease.leaseId;
-        blobRes.leaseDurationSeconds = lease.leasedurationNumber;
+        blobRes.leaseDurationSeconds = lease.leaseDurationSeconds;
         blobRes.properties.leaseStatus = lease.leaseStatus;
         blobRes.properties.leaseState = lease.leaseState;
-        blobRes.properties.leaseDuration = lease.leaseDuration;
+        blobRes.properties.leaseDuration = lease.leaseDurationType;
 
         return blobRes;
       });
@@ -1498,25 +1212,15 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
-  public deleteAllBlocks(
-    account: string,
-    container: string,
-    blob: string
-  ): Promise<void> {
+  public deleteAllBlocks(): Promise<void> {
     throw new Error("Method not implemented.");
   }
 
-  public insertBlocks<T extends BlockModel>(blocks: T[]): Promise<T[]> {
+  public insertBlocks<T extends BlockModel>(): Promise<T[]> {
     throw new Error("Method not implemented.");
   }
 
-  public getBlock<T extends BlockModel>(
-    account: string,
-    container: string,
-    blob: string,
-    block: string,
-    isCommitted: boolean
-  ): Promise<T | undefined> {
+  public getBlock<T extends BlockModel>(): Promise<T | undefined> {
     throw new Error("Method not implemented.");
   }
 
@@ -1568,13 +1272,13 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         }
         const blobRes: BlobModel = this.blobModelConvert(res);
 
-        blobRes.leaseBreakTime = lease.leaseBreakExpireTime;
+        blobRes.leaseBreakTime = lease.leaseBreakTime;
         blobRes.leaseExpireTime = lease.leaseExpireTime;
         blobRes.leaseId = lease.leaseId;
-        blobRes.leaseDurationSeconds = lease.leasedurationNumber;
+        blobRes.leaseDurationSeconds = lease.leaseDurationSeconds;
         blobRes.properties.leaseStatus = lease.leaseStatus;
         blobRes.properties.leaseState = lease.leaseState;
-        blobRes.properties.leaseDuration = lease.leaseDuration;
+        blobRes.properties.leaseDuration = lease.leaseDurationType;
 
         const metadata = this.deserializeModelValue(res, "metadata");
 
@@ -1588,11 +1292,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
-  public undeleteBlob(
-    account: string,
-    container: string,
-    blob: string
-  ): Promise<void> {
+  public undeleteBlob(): Promise<void> {
     throw new Error("Method not implemented.");
   }
 
@@ -1602,101 +1302,30 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: string,
     leaseAccessConditions?: Models.LeaseAccessConditions | undefined
   ): Promise<GetContainerAccessPolicyResponse> {
-    return ContainersModel.findOne({
+    const findResult = await ContainersModel.findOne({
       where: {
         accountName: account,
         containerName: container
       }
-    }).then(res => {
-      const requestId = context ? context.contextId : undefined;
-      if (res === null || res === undefined) {
-        throw StorageErrorFactory.getContainerNotFound(requestId);
-      }
-
-      const leaseId = this.getModelValue<string>(res, "leaseId");
-      const leaseStatus = this.getModelValue<Models.LeaseStatusType>(
-        res,
-        "leaseStatus"
-      );
-      const leaseDuration = this.getModelValue<Models.LeaseDurationType>(
-        res,
-        "leaseDuration"
-      );
-      const leaseState = this.getModelValue<Models.LeaseStateType>(
-        res,
-        "leaseState"
-      );
-      const leasedurationNumber = this.getModelValue<number>(
-        res,
-        "leasedurationNumber"
-      );
-      const leaseExpireTime = this.getModelValue<Date>(res, "leaseExpireTime");
-      const leaseBreakExpireTime = this.getModelValue<Date>(
-        res,
-        "leaseBreakExpireTime"
-      );
-
-      let lease: IContainerLease = {
-        leaseId,
-        leaseStatus,
-        leaseBreakExpireTime,
-        leaseDurationType: leaseDuration,
-        leaseExpireTime,
-        leaseState,
-        leaseDurationSeconds: leasedurationNumber
-      };
-
-      lease = this.calculateContainerLeaseAttributes(
-        lease,
-        context ? context.startTime! : new Date()
-      );
-
-      this.checkLeaseOnReadContainer(
-        lease.leaseId,
-        lease.leaseStatus,
-        leaseAccessConditions,
-        requestId
-      );
-
-      const lastModified = this.getModelValue<Date>(res, "lastModified");
-      if (lastModified === undefined) {
-        throw Error(
-          `SqlBlobMetadataStore:getContainer() Error. lastModified is undefined.`
-        );
-      }
-
-      const etag = this.getModelValue<string>(res, "etag");
-      if (etag === undefined) {
-        throw Error(
-          `SqlBlobMetadataStore:getContainer() Error. etag is undefined.`
-        );
-      }
-
-      const containerAcl = this.deserializeModelValue(res, "containerAcl");
-      const publicAccess = this.deserializeModelValue(res, "publicAccess");
-
-      const ret: ContainerModel = {
-        accountName: account,
-        name: container,
-        properties: {
-          lastModified,
-          etag
-        }
-      };
-
-      if (containerAcl !== undefined) {
-        ret.containerAcl = containerAcl;
-      }
-
-      if (publicAccess !== undefined) {
-        ret.properties.publicAccess = publicAccess;
-      }
-
-      return {
-        properties: ret.properties,
-        containerAcl: ret.containerAcl
-      };
     });
+
+    if (findResult === null || findResult === undefined) {
+      throw StorageErrorFactory.getContainerNotFound(context.contextId);
+    }
+
+    const containerModel = this.convertDbModelToContainerModel(findResult);
+
+    LeaseFactory.createLeaseState(
+      new LokiContainerLeaseAdapter(containerModel),
+      context
+    )
+      .validate(new ContainerReadLeaseValidator(leaseAccessConditions))
+      .sync(new ContainerLeaseSyncer(containerModel));
+
+    return {
+      properties: containerModel.properties,
+      containerAcl: containerModel.containerAcl
+    };
   }
 
   public async setContainerACL(
@@ -1706,16 +1335,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     setAclModel: SetContainerAccessPolicyOptions
   ): Promise<void> {
     await this.sequelize.transaction(async t => {
-      const res = await ContainersModel.findOne({
-        attributes: [
-          "leaseId",
-          "leaseStatus",
-          "leaseDuration",
-          "leaseState",
-          "leasedurationNumber",
-          "leaseExpireTime",
-          "leaseBreakExpireTime"
-        ],
+      const findResult = await ContainersModel.findOne({
+        attributes: ["lease"],
         where: {
           accountName: account,
           containerName: container
@@ -1723,57 +1344,17 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      const requestId = context ? context.contextId : undefined;
-      if (res === null || res === undefined) {
-        throw StorageErrorFactory.getContainerNotFound(requestId);
+      if (findResult === null || findResult === undefined) {
+        throw StorageErrorFactory.getContainerNotFound(context.contextId);
       }
 
-      const leaseId = this.getModelValue<string>(res, "leaseId");
-      const leaseStatus = this.getModelValue<Models.LeaseStatusType>(
-        res,
-        "leaseStatus"
-      );
-      const leaseDuration = this.getModelValue<Models.LeaseDurationType>(
-        res,
-        "leaseDuration"
-      );
-      const leaseState = this.getModelValue<Models.LeaseStateType>(
-        res,
-        "leaseState"
-      );
-      const leasedurationNumber = this.getModelValue<number>(
-        res,
-        "leasedurationNumber"
-      );
-      const leaseExpireTime = this.getModelValue<Date>(res, "leaseExpireTime");
-      const leaseBreakExpireTime = this.getModelValue<Date>(
-        res,
-        "leaseBreakExpireTime"
+      const lease = this.convertDbModelToLease(findResult);
+
+      LeaseFactory.createLeaseState(lease, context).validate(
+        new ContainerReadLeaseValidator(setAclModel.leaseAccessConditions)
       );
 
-      let lease: IContainerLease = {
-        leaseId,
-        leaseStatus,
-        leaseBreakExpireTime,
-        leaseDurationType: leaseDuration,
-        leaseExpireTime,
-        leaseState,
-        leaseDurationSeconds: leasedurationNumber
-      };
-
-      lease = this.calculateContainerLeaseAttributes(
-        lease,
-        context ? context.startTime! : new Date()
-      );
-
-      this.checkLeaseOnReadContainer(
-        leaseId,
-        leaseStatus,
-        setAclModel.leaseAccessConditions,
-        requestId
-      );
-
-      await ContainersModel.update(
+      const updateResult = await ContainersModel.update(
         {
           lastModified: setAclModel.lastModified,
           etag: setAclModel.etag,
@@ -1788,26 +1369,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           },
           transaction: t
         }
-      ).then(updateResult => {
-        const updateNumber = updateResult[0];
-        if (updateNumber === 0) {
-          throw StorageErrorFactory.getContainerNotFound(requestId);
-        }
-        return undefined;
-      });
+      );
+
+      if (updateResult[0] === 0) {
+        throw StorageErrorFactory.getContainerNotFound(context.contextId);
+      }
     });
   }
 
-  /**
-   * Acquire container lease.
-   *
-   * @param {string} account
-   * @param {string} container
-   * @param {Models.ContainerAcquireLeaseOptionalParams} options
-   * @param {Context} context
-   * @returns {Promise<AcquireContainerLeaseResponse>}
-   * @memberof SqlBlobMetadataStore
-   */
   public async acquireContainerLease(
     context: Context,
     account: string,
@@ -1816,7 +1385,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<AcquireContainerLeaseResponse> {
     return this.sequelize.transaction(async t => {
       /* Transaction starts */
-      const res = await ContainersModel.findOne({
+      const findResult = await ContainersModel.findOne({
         where: {
           accountName: account,
           containerName: container
@@ -1824,124 +1393,22 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      const requestId = context ? context.contextId : undefined;
-      if (res === null || res === undefined) {
-        throw StorageErrorFactory.getContainerNotFound(requestId);
+      if (findResult === null || findResult === undefined) {
+        throw StorageErrorFactory.getContainerNotFound(context.contextId);
       }
 
-      const leaseId = this.getModelValue<string>(res, "leaseId");
-      const leaseStatus = this.getModelValue<Models.LeaseStatusType>(
-        res,
-        "leaseStatus"
-      );
-      const leaseDuration = this.getModelValue<Models.LeaseDurationType>(
-        res,
-        "leaseDuration"
-      );
-      const leaseState = this.getModelValue<Models.LeaseStateType>(
-        res,
-        "leaseState"
-      );
-      const leasedurationNumber = this.getModelValue<number>(
-        res,
-        "leasedurationNumber"
-      );
-      const leaseExpireTime = this.getModelValue<Date>(res, "leaseExpireTime");
-      const leaseBreakExpireTime = this.getModelValue<Date>(
-        res,
-        "leaseBreakExpireTime"
-      );
-
-      let lease: IContainerLease = {
-        leaseId,
-        leaseStatus,
-        leaseBreakExpireTime,
-        leaseDurationType: leaseDuration,
-        leaseExpireTime,
-        leaseState,
-        leaseDurationSeconds: leasedurationNumber
-      };
-
-      lease = this.calculateContainerLeaseAttributes(lease, context.startTime!);
-
-      // TODO: Check proposed lease ID should follow GUID, otherwise should return 400
-
-      // tslint:disable-next-line:max-line-length
-      // Refer https://docs.microsoft.com/en-us/rest/api/storageservices/lease-container#outcomes-of-lease-operations-on-containers-by-lease-state
-
-      // Cannot acquire lease for a breaking container
-      if (lease.leaseState === Models.LeaseStateType.Breaking) {
-        throw StorageErrorFactory.getLeaseAlreadyPresent(requestId);
-      }
-
-      // Cannot acquire lease for a leased container with mismatched lease ID
-      if (
-        lease.leaseState === Models.LeaseStateType.Leased &&
-        options.proposedLeaseId !== lease.leaseId
-      ) {
-        throw StorageErrorFactory.getLeaseAlreadyPresent(requestId);
-      }
-
-      if (options.duration === -1 || options.duration === undefined) {
-        lease.leaseDurationType = Models.LeaseDurationType.Infinite;
-        lease.leaseExpireTime = undefined;
-        lease.leaseDurationSeconds = undefined;
-      } else {
-        // Verify options.duration between 15 and 60
-        if (options.duration > 60 || options.duration < 15) {
-          throw StorageErrorFactory.getInvalidLeaseDuration(requestId);
-        }
-        lease.leaseDurationType = Models.LeaseDurationType.Fixed;
-        lease.leaseExpireTime = context.startTime!;
-        lease.leaseExpireTime.setSeconds(
-          lease.leaseExpireTime.getSeconds() + options.duration
-        );
-        lease.leaseDurationSeconds = options.duration;
-      }
-      lease.leaseState = Models.LeaseStateType.Leased;
-      lease.leaseStatus = Models.LeaseStatusType.Locked;
-      lease.leaseId =
-        options.proposedLeaseId !== "" && options.proposedLeaseId !== undefined
-          ? options.proposedLeaseId
-          : uuid();
-      lease.leaseBreakExpireTime = undefined;
-
-      const lastModified = this.getModelValue<Date>(res, "lastModified", true);
-      const etag = this.getModelValue<string>(res, "etag", true);
-      const publicAccess = this.deserializeModelValue(res, "publicAccess");
-      const hasImmutabilityPolicy = this.getModelValue<boolean>(
-        res,
-        "hasImmutabilityPolicy"
-      );
-      const hasLegalHold = this.getModelValue<boolean>(res, "hasLegalHold");
-
-      const properties: Models.ContainerProperties = {
-        etag,
-        lastModified,
-        publicAccess,
-        hasImmutabilityPolicy,
-        hasLegalHold,
-        leaseDuration: lease.leaseDurationType,
-        leaseState: lease.leaseState,
-        leaseStatus: lease.leaseStatus
-      };
+      const containerModel = this.convertDbModelToContainerModel(findResult);
+      LeaseFactory.createLeaseState(
+        new LokiContainerLeaseAdapter(containerModel),
+        context
+      )
+        .acquire(options.duration!, options.proposedLeaseId)
+        .sync(new ContainerLeaseSyncer(containerModel));
 
       await ContainersModel.update(
-        {
-          leaseStatus: lease.leaseStatus ? lease.leaseStatus : null,
-          leaseState: lease.leaseState ? lease.leaseState : null,
-          leaseDuration: lease.leaseDurationType
-            ? lease.leaseDurationType
-            : null,
-          leaseId: lease.leaseId ? lease.leaseId : null,
-          leasedurationNumber: lease.leaseDurationSeconds
-            ? lease.leaseDurationSeconds
-            : null,
-          leaseExpireTime: lease.leaseExpireTime ? lease.leaseExpireTime : null,
-          leaseBreakExpireTime: lease.leaseBreakExpireTime
-            ? lease.leaseBreakExpireTime
-            : null
-        },
+        this.convertLeaseToDbModel(
+          new LokiContainerLeaseAdapter(containerModel)
+        ),
         {
           where: {
             accountName: account,
@@ -1951,21 +1418,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         }
       );
 
-      return { properties, leaseId: lease.leaseId };
+      return {
+        properties: containerModel.properties,
+        leaseId: containerModel.leaseId
+      };
       /* Transaction ends */
     });
   }
 
-  /**
-   * Release container lease.
-   *
-   * @param {string} account
-   * @param {string} container
-   * @param {string} leaseId
-   * @param {Context} context
-   * @returns {Promise<Models.ContainerProperties>}
-   * @memberof SqlBlobMetadataStore
-   */
   public async releaseContainerLease(
     context: Context,
     account: string,
@@ -1974,7 +1434,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<Models.ContainerProperties> {
     return this.sequelize.transaction(async t => {
       /* Transaction starts */
-      const res = await ContainersModel.findOne({
+      const findResult = await ContainersModel.findOne({
         where: {
           accountName: account,
           containerName: container
@@ -1982,109 +1442,23 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      const requestId = context ? context.contextId : undefined;
-      if (res === null || res === undefined) {
-        throw StorageErrorFactory.getContainerNotFound(requestId);
+      if (findResult === null || findResult === undefined) {
+        throw StorageErrorFactory.getContainerNotFound(context.contextId);
       }
 
-      const storedLeaseId = this.getModelValue<string>(res, "leaseId");
-      const leaseStatus = this.getModelValue<Models.LeaseStatusType>(
-        res,
-        "leaseStatus"
-      );
-      const leaseDuration = this.getModelValue<Models.LeaseDurationType>(
-        res,
-        "leaseDuration"
-      );
-      const leaseState = this.getModelValue<Models.LeaseStateType>(
-        res,
-        "leaseState"
-      );
-      const leasedurationNumber = this.getModelValue<number>(
-        res,
-        "leasedurationNumber"
-      );
-      const leaseExpireTime = this.getModelValue<Date>(res, "leaseExpireTime");
-      const leaseBreakExpireTime = this.getModelValue<Date>(
-        res,
-        "leaseBreakExpireTime"
-      );
+      const containerModel = this.convertDbModelToContainerModel(findResult);
 
-      let lease: IContainerLease = {
-        leaseId: storedLeaseId,
-        leaseStatus,
-        leaseBreakExpireTime,
-        leaseDurationType: leaseDuration,
-        leaseExpireTime,
-        leaseState,
-        leaseDurationSeconds: leasedurationNumber
-      };
-
-      lease = this.calculateContainerLeaseAttributes(lease, context.startTime!);
-
-      // tslint:disable-next-line:max-line-length
-      // Refer https://docs.microsoft.com/en-us/rest/api/storageservices/lease-container#outcomes-of-lease-operations-on-containers-by-lease-state
-
-      // Cannot release for a container without any release
-      if (lease.leaseState === Models.LeaseStateType.Available) {
-        throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(
-          requestId
-        );
-      }
-
-      // Cannot release when leaseId in request doesn't match with existing leaseId
-      if (lease.leaseId !== leaseId) {
-        throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(
-          requestId
-        );
-      }
-
-      // Update the lease properties
-      // Must update all below 7 properties at the same time
-      lease.leaseState = Models.LeaseStateType.Available;
-      lease.leaseStatus = Models.LeaseStatusType.Unlocked;
-      lease.leaseDurationType = undefined;
-      lease.leaseDurationSeconds = undefined;
-      lease.leaseId = undefined;
-      lease.leaseExpireTime = undefined;
-      lease.leaseBreakExpireTime = undefined;
-
-      const lastModified = this.getModelValue<Date>(res, "lastModified", true);
-      const etag = this.getModelValue<string>(res, "etag", true);
-      const publicAccess = this.deserializeModelValue(res, "publicAccess");
-      const hasImmutabilityPolicy = this.getModelValue<boolean>(
-        res,
-        "hasImmutabilityPolicy"
-      );
-      const hasLegalHold = this.getModelValue<boolean>(res, "hasLegalHold");
-
-      const properties: Models.ContainerProperties = {
-        etag,
-        lastModified,
-        publicAccess,
-        hasImmutabilityPolicy,
-        hasLegalHold,
-        leaseDuration: lease.leaseDurationType,
-        leaseState: lease.leaseState,
-        leaseStatus: lease.leaseStatus
-      };
+      LeaseFactory.createLeaseState(
+        new LokiContainerLeaseAdapter(containerModel),
+        context
+      )
+        .release(leaseId)
+        .sync(new ContainerLeaseSyncer(containerModel));
 
       await ContainersModel.update(
-        {
-          leaseStatus: lease.leaseStatus ? lease.leaseStatus : null,
-          leaseState: lease.leaseState ? lease.leaseState : null,
-          leaseDuration: lease.leaseDurationType
-            ? lease.leaseDurationType
-            : null,
-          leaseId: lease.leaseId ? lease.leaseId : null,
-          leasedurationNumber: lease.leaseDurationSeconds
-            ? lease.leaseDurationSeconds
-            : null,
-          leaseExpireTime: lease.leaseExpireTime ? lease.leaseExpireTime : null,
-          leaseBreakExpireTime: lease.leaseBreakExpireTime
-            ? lease.leaseBreakExpireTime
-            : null
-        },
+        this.convertLeaseToDbModel(
+          new LokiContainerLeaseAdapter(containerModel)
+        ),
         {
           where: {
             accountName: account,
@@ -2094,21 +1468,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         }
       );
 
-      return properties;
+      return containerModel.properties;
       /* Transaction ends */
     });
   }
 
-  /**
-   * Renew container lease.
-   *
-   * @param {string} account
-   * @param {string} container
-   * @param {string} leaseId
-   * @param {Context} context
-   * @returns {Promise<RenewContainerLeaseResponse>}
-   * @memberof SqlBlobMetadataStore
-   */
   public async renewContainerLease(
     context: Context,
     account: string,
@@ -2118,7 +1482,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     return this.sequelize.transaction(async t => {
       /* Transaction starts */
       // TODO: Filter out unnecessary fields in select query
-      const res = await ContainersModel.findOne({
+      const findResult = await ContainersModel.findOne({
         where: {
           accountName: account,
           containerName: container
@@ -2126,126 +1490,23 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      const requestId = context ? context.contextId : undefined;
-      if (res === null || res === undefined) {
-        throw StorageErrorFactory.getContainerNotFound(requestId);
+      if (findResult === null || findResult === undefined) {
+        throw StorageErrorFactory.getContainerNotFound(context.contextId);
       }
 
-      const storedLeaseId = this.getModelValue<string>(res, "leaseId");
-      const leaseStatus = this.getModelValue<Models.LeaseStatusType>(
-        res,
-        "leaseStatus"
-      );
-      const leaseDuration = this.getModelValue<Models.LeaseDurationType>(
-        res,
-        "leaseDuration"
-      );
-      const leaseState = this.getModelValue<Models.LeaseStateType>(
-        res,
-        "leaseState"
-      );
-      const leasedurationNumber = this.getModelValue<number>(
-        res,
-        "leasedurationNumber"
-      );
-      const leaseExpireTime = this.getModelValue<Date>(res, "leaseExpireTime");
-      const leaseBreakExpireTime = this.getModelValue<Date>(
-        res,
-        "leaseBreakExpireTime"
-      );
+      const containerModel = this.convertDbModelToContainerModel(findResult);
 
-      let lease: IContainerLease = {
-        leaseId: storedLeaseId,
-        leaseStatus,
-        leaseBreakExpireTime,
-        leaseDurationType: leaseDuration,
-        leaseExpireTime,
-        leaseState,
-        leaseDurationSeconds: leasedurationNumber
-      };
-
-      lease = this.calculateContainerLeaseAttributes(lease, context.startTime!);
-
-      // tslint:disable-next-line:max-line-length
-      // Refer https://docs.microsoft.com/en-us/rest/api/storageservices/lease-container#outcomes-of-lease-operations-on-containers-by-lease-state
-
-      // Only Leased and Expired status can be renewed
-      if (lease.leaseState === Models.LeaseStateType.Available) {
-        throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(
-          requestId
-        );
-      }
-
-      // Only Leased and Expired status can be renewed
-      if (
-        lease.leaseState === Models.LeaseStateType.Breaking ||
-        lease.leaseState === Models.LeaseStateType.Broken
-      ) {
-        throw StorageErrorFactory.getLeaseIsBrokenAndCannotBeRenewed(requestId);
-      }
-
-      // Now the existing container must have an lease in Leased or Expired status
-      // Make sure lease ID matches
-      if (lease.leaseId !== leaseId) {
-        throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(
-          requestId
-        );
-      }
-
-      // Update the lease information
-      lease.leaseState = Models.LeaseStateType.Leased;
-      lease.leaseStatus = Models.LeaseStatusType.Locked;
-
-      // When leaseDurationSeconds has value and it's not -1, means existing lease is fixed duration
-      if (
-        lease.leaseDurationSeconds !== undefined &&
-        lease.leaseDurationSeconds !== -1
-      ) {
-        lease.leaseExpireTime = context.startTime!;
-        lease.leaseExpireTime.setSeconds(
-          lease.leaseExpireTime.getSeconds() + lease.leaseDurationSeconds
-        );
-        lease.leaseDurationType = Models.LeaseDurationType.Fixed;
-      } else {
-        lease.leaseDurationType = Models.LeaseDurationType.Infinite;
-      }
-
-      const lastModified = this.getModelValue<Date>(res, "lastModified", true);
-      const etag = this.getModelValue<string>(res, "etag", true);
-      const publicAccess = this.deserializeModelValue(res, "publicAccess");
-      const hasImmutabilityPolicy = this.getModelValue<boolean>(
-        res,
-        "hasImmutabilityPolicy"
-      );
-      const hasLegalHold = this.getModelValue<boolean>(res, "hasLegalHold");
-
-      const properties: Models.ContainerProperties = {
-        etag,
-        lastModified,
-        publicAccess,
-        hasImmutabilityPolicy,
-        hasLegalHold,
-        leaseDuration: lease.leaseDurationType,
-        leaseState: lease.leaseState,
-        leaseStatus: lease.leaseStatus
-      };
+      LeaseFactory.createLeaseState(
+        new LokiContainerLeaseAdapter(containerModel),
+        context
+      )
+        .renew(leaseId)
+        .sync(new ContainerLeaseSyncer(containerModel));
 
       await ContainersModel.update(
-        {
-          leaseStatus: lease.leaseStatus ? lease.leaseStatus : null,
-          leaseState: lease.leaseState ? lease.leaseState : null,
-          leaseDuration: lease.leaseDurationType
-            ? lease.leaseDurationType
-            : null,
-          leaseId: lease.leaseId ? lease.leaseId : null,
-          leasedurationNumber: lease.leaseDurationSeconds
-            ? lease.leaseDurationSeconds
-            : null,
-          leaseExpireTime: lease.leaseExpireTime ? lease.leaseExpireTime : null,
-          leaseBreakExpireTime: lease.leaseBreakExpireTime
-            ? lease.leaseBreakExpireTime
-            : null
-        },
+        this.convertLeaseToDbModel(
+          new LokiContainerLeaseAdapter(containerModel)
+        ),
         {
           where: {
             accountName: account,
@@ -2255,7 +1516,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         }
       );
 
-      return { properties, leaseId: lease.leaseId };
+      return {
+        properties: containerModel.properties,
+        leaseId: containerModel.leaseId
+      };
       /* Transaction ends */
     });
   }
@@ -2267,7 +1531,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     breakPeriod: number | undefined
   ): Promise<BreakContainerLeaseResponse> {
     return this.sequelize.transaction(async t => {
-      const res = await ContainersModel.findOne({
+      const findResult = await ContainersModel.findOne({
         where: {
           accountName: account,
           containerName: container
@@ -2275,149 +1539,23 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      const requestId = context ? context.contextId : undefined;
-      if (res === null || res === undefined) {
-        throw StorageErrorFactory.getContainerNotFound(requestId);
+      if (findResult === null || findResult === undefined) {
+        throw StorageErrorFactory.getContainerNotFound(context.contextId);
       }
 
-      const storedLeaseId = this.getModelValue<string>(res, "leaseId");
-      const leaseStatus = this.getModelValue<Models.LeaseStatusType>(
-        res,
-        "leaseStatus"
-      );
-      const leaseDuration = this.getModelValue<Models.LeaseDurationType>(
-        res,
-        "leaseDuration"
-      );
-      const leaseState = this.getModelValue<Models.LeaseStateType>(
-        res,
-        "leaseState"
-      );
-      const leasedurationNumber = this.getModelValue<number>(
-        res,
-        "leasedurationNumber"
-      );
-      const leaseExpireTime = this.getModelValue<Date>(res, "leaseExpireTime");
-      const leaseBreakExpireTime = this.getModelValue<Date>(
-        res,
-        "leaseBreakExpireTime"
-      );
+      const containerModel = this.convertDbModelToContainerModel(findResult);
 
-      let lease: IContainerLease = {
-        leaseId: storedLeaseId,
-        leaseStatus,
-        leaseBreakExpireTime,
-        leaseDurationType: leaseDuration,
-        leaseExpireTime,
-        leaseState,
-        leaseDurationSeconds: leasedurationNumber
-      };
-
-      lease = this.calculateContainerLeaseAttributes(lease, context.startTime!);
-
-      let leaseTimeinSecond: number;
-      leaseTimeinSecond = 0;
-      // check the lease action aligned with current lease state.
-      if (lease.leaseState === Models.LeaseStateType.Available) {
-        throw StorageErrorFactory.getLeaseNotPresentWithLeaseOperation(
-          requestId
-        );
-      }
-
-      // update the lease information
-      // verify options.breakPeriod between 0 and 60
-      if (breakPeriod !== undefined && (breakPeriod > 60 || breakPeriod < 0)) {
-        throw StorageErrorFactory.getInvalidLeaseBreakPeriod(requestId);
-      }
-      if (
-        lease.leaseState === Models.LeaseStateType.Expired ||
-        lease.leaseState === Models.LeaseStateType.Broken ||
-        breakPeriod === 0 ||
-        breakPeriod === undefined
-      ) {
-        lease.leaseState = Models.LeaseStateType.Broken;
-        lease.leaseStatus = Models.LeaseStatusType.Unlocked;
-        lease.leaseDurationType = undefined;
-        lease.leaseDurationSeconds = undefined;
-        lease.leaseExpireTime = undefined;
-        lease.leaseBreakExpireTime = undefined;
-        leaseTimeinSecond = 0;
-      } else {
-        lease.leaseState = Models.LeaseStateType.Breaking;
-        lease.leaseStatus = Models.LeaseStatusType.Locked;
-        lease.leaseDurationSeconds = undefined;
-        if (lease.leaseDurationType === Models.LeaseDurationType.Infinite) {
-          lease.leaseDurationType = undefined;
-          lease.leaseExpireTime = undefined;
-          lease.leaseBreakExpireTime = new Date(context.startTime!);
-          lease.leaseBreakExpireTime.setSeconds(
-            lease.leaseBreakExpireTime.getSeconds() + breakPeriod
-          );
-          leaseTimeinSecond = breakPeriod;
-        } else {
-          let newleaseBreakExpireTime = new Date(context.startTime!);
-          newleaseBreakExpireTime.setSeconds(
-            newleaseBreakExpireTime.getSeconds() + breakPeriod
-          );
-          if (
-            lease.leaseExpireTime !== undefined &&
-            newleaseBreakExpireTime > lease.leaseExpireTime
-          ) {
-            newleaseBreakExpireTime = lease.leaseExpireTime;
-          }
-          if (
-            lease.leaseBreakExpireTime === undefined ||
-            lease.leaseBreakExpireTime > newleaseBreakExpireTime
-          ) {
-            lease.leaseBreakExpireTime = newleaseBreakExpireTime;
-          }
-          leaseTimeinSecond = Math.round(
-            Math.abs(
-              lease.leaseBreakExpireTime.getTime() -
-                context.startTime!.getTime()
-            ) / 1000
-          );
-          lease.leaseExpireTime = undefined;
-          lease.leaseDurationType = undefined;
-        }
-      }
-
-      const lastModified = this.getModelValue<Date>(res, "lastModified", true);
-      const etag = this.getModelValue<string>(res, "etag", true);
-      const publicAccess = this.deserializeModelValue(res, "publicAccess");
-      const hasImmutabilityPolicy = this.getModelValue<boolean>(
-        res,
-        "hasImmutabilityPolicy"
-      );
-      const hasLegalHold = this.getModelValue<boolean>(res, "hasLegalHold");
-
-      const properties: Models.ContainerProperties = {
-        etag,
-        lastModified,
-        publicAccess,
-        hasImmutabilityPolicy,
-        hasLegalHold,
-        leaseDuration: lease.leaseDurationType,
-        leaseState: lease.leaseState,
-        leaseStatus: lease.leaseStatus
-      };
+      LeaseFactory.createLeaseState(
+        new LokiContainerLeaseAdapter(containerModel),
+        context
+      )
+        .break(breakPeriod)
+        .sync(new ContainerLeaseSyncer(containerModel));
 
       await ContainersModel.update(
-        {
-          leaseStatus: lease.leaseStatus ? lease.leaseStatus : null,
-          leaseState: lease.leaseState ? lease.leaseState : null,
-          leaseDuration: lease.leaseDurationType
-            ? lease.leaseDurationType
-            : null,
-          leaseId: lease.leaseId ? lease.leaseId : null,
-          leasedurationNumber: lease.leaseDurationSeconds
-            ? lease.leaseDurationSeconds
-            : null,
-          leaseExpireTime: lease.leaseExpireTime ? lease.leaseExpireTime : null,
-          leaseBreakExpireTime: lease.leaseBreakExpireTime
-            ? lease.leaseBreakExpireTime
-            : null
-        },
+        this.convertLeaseToDbModel(
+          new LokiContainerLeaseAdapter(containerModel)
+        ),
         {
           where: {
             accountName: account,
@@ -2427,7 +1565,20 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         }
       );
 
-      return { properties, leaseTime: leaseTimeinSecond };
+      const leaseTimeSeconds: number =
+        containerModel.properties.leaseState ===
+          Models.LeaseStateType.Breaking && containerModel.leaseBreakTime
+          ? Math.round(
+              (containerModel.leaseBreakTime.getTime() -
+                context.startTime!.getTime()) /
+                1000
+            )
+          : 0;
+
+      return {
+        properties: containerModel.properties,
+        leaseTime: leaseTimeSeconds
+      };
     });
   }
 
@@ -2439,7 +1590,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     proposedLeaseId: string
   ): Promise<ChangeContainerLeaseResponse> {
     return this.sequelize.transaction(async t => {
-      const res = await ContainersModel.findOne({
+      const findResult = await ContainersModel.findOne({
         where: {
           accountName: account,
           containerName: container
@@ -2447,119 +1598,23 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      const requestId = context ? context.contextId : undefined;
-      if (res === null || res === undefined) {
-        throw StorageErrorFactory.getContainerNotFound(requestId);
+      if (findResult === null || findResult === undefined) {
+        throw StorageErrorFactory.getContainerNotFound(context.contextId);
       }
 
-      const storedLeaseId = this.getModelValue<string>(res, "leaseId");
-      const leaseStatus = this.getModelValue<Models.LeaseStatusType>(
-        res,
-        "leaseStatus"
-      );
-      const leaseDuration = this.getModelValue<Models.LeaseDurationType>(
-        res,
-        "leaseDuration"
-      );
-      const leaseState = this.getModelValue<Models.LeaseStateType>(
-        res,
-        "leaseState"
-      );
-      const leasedurationNumber = this.getModelValue<number>(
-        res,
-        "leasedurationNumber"
-      );
-      const leaseExpireTime = this.getModelValue<Date>(res, "leaseExpireTime");
-      const leaseBreakExpireTime = this.getModelValue<Date>(
-        res,
-        "leaseBreakExpireTime"
-      );
+      const containerModel = this.convertDbModelToContainerModel(findResult);
 
-      let lease: IContainerLease = {
-        leaseId: storedLeaseId,
-        leaseStatus,
-        leaseBreakExpireTime,
-        leaseDurationType: leaseDuration,
-        leaseExpireTime,
-        leaseState,
-        leaseDurationSeconds: leasedurationNumber
-      };
-
-      lease = this.calculateContainerLeaseAttributes(lease, context.startTime!);
-
-      // check the lease action aligned with current lease state.
-      if (
-        lease.leaseState === Models.LeaseStateType.Available ||
-        lease.leaseState === Models.LeaseStateType.Expired ||
-        lease.leaseState === Models.LeaseStateType.Broken
-      ) {
-        throw StorageErrorFactory.getLeaseNotPresentWithLeaseOperation(
-          requestId
-        );
-      }
-      if (lease.leaseState === Models.LeaseStateType.Breaking) {
-        throw StorageErrorFactory.getLeaseIsBreakingAndCannotBeChanged(
-          requestId
-        );
-      }
-
-      // Check lease ID
-      if (lease.leaseId !== leaseId && lease.leaseId !== proposedLeaseId) {
-        throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(
-          requestId
-        );
-      }
-
-      // update the lease information, only need update lease ID
-      lease.leaseId = proposedLeaseId;
-
-      const lastModified = this.getModelValue<Date>(res, "lastModified");
-      if (lastModified === undefined) {
-        throw Error(
-          `SqlBlobMetadataStore:getContainer() Error. lastModified is undefined.`
-        );
-      }
-
-      const etag = this.getModelValue<string>(res, "etag");
-      if (etag === undefined) {
-        throw Error(
-          `SqlBlobMetadataStore:getContainer() Error. etag is undefined.`
-        );
-      }
-      const publicAccess = this.deserializeModelValue(res, "publicAccess");
-      const hasImmutabilityPolicy = this.getModelValue<boolean>(
-        res,
-        "hasImmutabilityPolicy"
-      );
-      const hasLegalHold = this.getModelValue<boolean>(res, "hasLegalHold");
-
-      const properties: Models.ContainerProperties = {
-        etag,
-        lastModified,
-        publicAccess,
-        hasImmutabilityPolicy,
-        hasLegalHold,
-        leaseDuration: lease.leaseDurationType,
-        leaseState: lease.leaseState,
-        leaseStatus: lease.leaseStatus
-      };
+      LeaseFactory.createLeaseState(
+        new LokiContainerLeaseAdapter(containerModel),
+        context
+      )
+        .change(leaseId, proposedLeaseId)
+        .sync(new ContainerLeaseSyncer(containerModel));
 
       await ContainersModel.update(
-        {
-          leaseStatus: lease.leaseStatus ? lease.leaseStatus : null,
-          leaseState: lease.leaseState ? lease.leaseState : null,
-          leaseDuration: lease.leaseDurationType
-            ? lease.leaseDurationType
-            : null,
-          leaseId: lease.leaseId ? lease.leaseId : null,
-          leasedurationNumber: lease.leaseDurationSeconds
-            ? lease.leaseDurationSeconds
-            : null,
-          leaseExpireTime: lease.leaseExpireTime ? lease.leaseExpireTime : null,
-          leaseBreakExpireTime: lease.leaseBreakExpireTime
-            ? lease.leaseBreakExpireTime
-            : null
-        },
+        this.convertLeaseToDbModel(
+          new LokiContainerLeaseAdapter(containerModel)
+        ),
         {
           where: {
             accountName: account,
@@ -2569,7 +1624,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         }
       );
 
-      return { properties, leaseId: lease.leaseId };
+      return {
+        properties: containerModel.properties,
+        leaseId: containerModel.leaseId
+      };
     });
   }
 
@@ -2585,8 +1643,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       }
     });
     if (res === undefined || res === null) {
-      const requestId = context ? context.contextId : undefined;
-      throw StorageErrorFactory.getContainerNotFound(requestId);
+      throw StorageErrorFactory.getContainerNotFound(context.contextId);
     }
   }
 
@@ -2928,14 +1985,16 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           contentProperties: this.serializeModelValue(contentProperties),
           leaseStatus: lease.leaseStatus ? lease.leaseStatus : null,
           leaseState: lease.leaseState ? lease.leaseState : null,
-          leaseDuration: lease.leaseDuration ? lease.leaseDuration : null,
+          leaseDuration: lease.leaseDurationType
+            ? lease.leaseDurationType
+            : null,
           leaseId: lease.leaseId ? lease.leaseId : null,
-          leasedurationNumber: lease.leasedurationNumber
-            ? lease.leasedurationNumber
+          leasedurationNumber: lease.leaseDurationSeconds
+            ? lease.leaseDurationSeconds
             : null,
           leaseExpireTime: lease.leaseExpireTime ? lease.leaseExpireTime : null,
-          leaseBreakExpireTime: lease.leaseBreakExpireTime
-            ? lease.leaseBreakExpireTime
+          leaseBreakExpireTime: lease.leaseBreakTime
+            ? lease.leaseBreakTime
             : null
         },
         {
@@ -2958,7 +2017,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         blobSequenceNumber,
         accessTier,
         leaseStatus: lease.leaseStatus,
-        leaseDuration: lease.leaseDuration,
+        leaseDuration: lease.leaseDurationType,
         leaseState: lease.leaseState
       };
       return ret;
@@ -3023,14 +2082,16 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           lastModified,
           leaseStatus: lease.leaseStatus ? lease.leaseStatus : null,
           leaseState: lease.leaseState ? lease.leaseState : null,
-          leaseDuration: lease.leaseDuration ? lease.leaseDuration : null,
+          leaseDuration: lease.leaseDurationType
+            ? lease.leaseDurationType
+            : null,
           leaseId: lease.leaseId ? lease.leaseId : null,
-          leasedurationNumber: lease.leasedurationNumber
-            ? lease.leasedurationNumber
+          leasedurationNumber: lease.leaseDurationSeconds
+            ? lease.leaseDurationSeconds
             : null,
           leaseExpireTime: lease.leaseExpireTime ? lease.leaseExpireTime : null,
-          leaseBreakExpireTime: lease.leaseBreakExpireTime
-            ? lease.leaseBreakExpireTime
+          leaseBreakExpireTime: lease.leaseBreakTime
+            ? lease.leaseBreakTime
             : null
         },
         {
@@ -3049,7 +2110,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         lastModified,
         etag,
         leaseStatus: lease.leaseStatus,
-        leaseDuration: lease.leaseDuration,
+        leaseDuration: lease.leaseDurationType,
         leaseState: lease.leaseState
       };
 
@@ -3113,18 +2174,18 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
       // update the lease information
       if (duration === -1 || duration === undefined) {
-        lease.leaseDuration = Models.LeaseDurationType.Infinite;
+        lease.leaseDurationType = Models.LeaseDurationType.Infinite;
       } else {
         // verify duration between 15 and 60
         if (duration > 60 || duration < 15) {
           throw StorageErrorFactory.getInvalidLeaseDuration(context.contextId!);
         }
-        lease.leaseDuration = Models.LeaseDurationType.Fixed;
+        lease.leaseDurationType = Models.LeaseDurationType.Fixed;
         lease.leaseExpireTime = context.startTime!;
         lease.leaseExpireTime.setSeconds(
           lease.leaseExpireTime.getSeconds() + duration
         );
-        lease.leasedurationNumber = duration;
+        lease.leaseDurationSeconds = duration;
       }
       lease.leaseState = Models.LeaseStateType.Leased;
       lease.leaseStatus = Models.LeaseStatusType.Locked;
@@ -3132,7 +2193,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         proposedLeaseId !== "" && proposedLeaseId !== undefined
           ? proposedLeaseId
           : uuid();
-      lease.leaseBreakExpireTime = undefined;
+      lease.leaseBreakTime = undefined;
 
       const properties: Models.BlobProperties = {
         etag: this.getModelValue<string>(res, "etag", true),
@@ -3143,14 +2204,16 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         {
           leaseStatus: lease.leaseStatus ? lease.leaseStatus : null,
           leaseState: lease.leaseState ? lease.leaseState : null,
-          leaseDuration: lease.leaseDuration ? lease.leaseDuration : null,
+          leaseDuration: lease.leaseDurationType
+            ? lease.leaseDurationType
+            : null,
           leaseId: lease.leaseId ? lease.leaseId : null,
-          leasedurationNumber: lease.leasedurationNumber
-            ? lease.leasedurationNumber
+          leasedurationNumber: lease.leaseDurationSeconds
+            ? lease.leaseDurationSeconds
             : null,
           leaseExpireTime: lease.leaseExpireTime ? lease.leaseExpireTime : null,
-          leaseBreakExpireTime: lease.leaseBreakExpireTime
-            ? lease.leaseBreakExpireTime
+          leaseBreakExpireTime: lease.leaseBreakTime
+            ? lease.leaseBreakTime
             : null
         },
         {
@@ -3228,11 +2291,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       // update the lease information
       lease.leaseState = Models.LeaseStateType.Available;
       lease.leaseStatus = Models.LeaseStatusType.Unlocked;
-      lease.leaseDuration = undefined;
-      lease.leasedurationNumber = undefined;
+      lease.leaseDurationType = undefined;
+      lease.leaseDurationSeconds = undefined;
       lease.leaseId = undefined;
       lease.leaseExpireTime = undefined;
-      lease.leaseBreakExpireTime = undefined;
+      lease.leaseBreakTime = undefined;
 
       const properties: Models.BlobProperties = {
         etag: this.getModelValue<string>(res, "etag", true),
@@ -3243,14 +2306,16 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         {
           leaseStatus: lease.leaseStatus ? lease.leaseStatus : null,
           leaseState: lease.leaseState ? lease.leaseState : null,
-          leaseDuration: lease.leaseDuration ? lease.leaseDuration : null,
+          leaseDuration: lease.leaseDurationType
+            ? lease.leaseDurationType
+            : null,
           leaseId: lease.leaseId ? lease.leaseId : null,
-          leasedurationNumber: lease.leasedurationNumber
-            ? lease.leasedurationNumber
+          leasedurationNumber: lease.leaseDurationSeconds
+            ? lease.leaseDurationSeconds
             : null,
           leaseExpireTime: lease.leaseExpireTime ? lease.leaseExpireTime : null,
-          leaseBreakExpireTime: lease.leaseBreakExpireTime
-            ? lease.leaseBreakExpireTime
+          leaseBreakExpireTime: lease.leaseBreakTime
+            ? lease.leaseBreakTime
             : null
         },
         {
@@ -3337,16 +2402,16 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       lease.leaseStatus = Models.LeaseStatusType.Locked;
       // when container.leaseduration has value (not -1), means fixed duration
       if (
-        lease.leasedurationNumber !== undefined &&
-        lease.leasedurationNumber !== -1
+        lease.leaseDurationSeconds !== undefined &&
+        lease.leaseDurationSeconds !== -1
       ) {
         lease.leaseExpireTime = context.startTime!;
         lease.leaseExpireTime.setSeconds(
-          lease.leaseExpireTime.getSeconds() + lease.leasedurationNumber
+          lease.leaseExpireTime.getSeconds() + lease.leaseDurationSeconds
         );
-        lease.leaseDuration = Models.LeaseDurationType.Fixed;
+        lease.leaseDurationType = Models.LeaseDurationType.Fixed;
       } else {
-        lease.leaseDuration = Models.LeaseDurationType.Infinite;
+        lease.leaseDurationType = Models.LeaseDurationType.Infinite;
       }
 
       const properties: Models.BlobProperties = {
@@ -3358,14 +2423,16 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         {
           leaseStatus: lease.leaseStatus ? lease.leaseStatus : null,
           leaseState: lease.leaseState ? lease.leaseState : null,
-          leaseDuration: lease.leaseDuration ? lease.leaseDuration : null,
+          leaseDuration: lease.leaseDurationType
+            ? lease.leaseDurationType
+            : null,
           leaseId: lease.leaseId ? lease.leaseId : null,
-          leasedurationNumber: lease.leasedurationNumber
-            ? lease.leasedurationNumber
+          leasedurationNumber: lease.leaseDurationSeconds
+            ? lease.leaseDurationSeconds
             : null,
           leaseExpireTime: lease.leaseExpireTime ? lease.leaseExpireTime : null,
-          leaseBreakExpireTime: lease.leaseBreakExpireTime
-            ? lease.leaseBreakExpireTime
+          leaseBreakExpireTime: lease.leaseBreakTime
+            ? lease.leaseBreakTime
             : null
         },
         {
@@ -3462,14 +2529,16 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         {
           leaseStatus: lease.leaseStatus ? lease.leaseStatus : null,
           leaseState: lease.leaseState ? lease.leaseState : null,
-          leaseDuration: lease.leaseDuration ? lease.leaseDuration : null,
+          leaseDuration: lease.leaseDurationType
+            ? lease.leaseDurationType
+            : null,
           leaseId: lease.leaseId ? lease.leaseId : null,
-          leasedurationNumber: lease.leasedurationNumber
-            ? lease.leasedurationNumber
+          leasedurationNumber: lease.leaseDurationSeconds
+            ? lease.leaseDurationSeconds
             : null,
           leaseExpireTime: lease.leaseExpireTime ? lease.leaseExpireTime : null,
-          leaseBreakExpireTime: lease.leaseBreakExpireTime
-            ? lease.leaseBreakExpireTime
+          leaseBreakExpireTime: lease.leaseBreakTime
+            ? lease.leaseBreakTime
             : null
         },
         {
@@ -3553,21 +2622,21 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       ) {
         lease.leaseState = Models.LeaseStateType.Broken;
         lease.leaseStatus = Models.LeaseStatusType.Unlocked;
-        lease.leaseDuration = undefined;
-        lease.leasedurationNumber = undefined;
+        lease.leaseDurationType = undefined;
+        lease.leaseDurationSeconds = undefined;
         lease.leaseExpireTime = undefined;
-        lease.leaseBreakExpireTime = undefined;
+        lease.leaseBreakTime = undefined;
         leaseTimeinSecond = 0;
       } else {
         lease.leaseState = Models.LeaseStateType.Breaking;
         lease.leaseStatus = Models.LeaseStatusType.Locked;
-        lease.leasedurationNumber = undefined;
-        if (lease.leaseDuration === Models.LeaseDurationType.Infinite) {
-          lease.leaseDuration = undefined;
+        lease.leaseDurationSeconds = undefined;
+        if (lease.leaseDurationType === Models.LeaseDurationType.Infinite) {
+          lease.leaseDurationType = undefined;
           lease.leaseExpireTime = undefined;
-          lease.leaseBreakExpireTime = new Date(context.startTime!);
-          lease.leaseBreakExpireTime.setSeconds(
-            lease.leaseBreakExpireTime.getSeconds() + breakPeriod
+          lease.leaseBreakTime = new Date(context.startTime!);
+          lease.leaseBreakTime.setSeconds(
+            lease.leaseBreakTime.getSeconds() + breakPeriod
           );
           leaseTimeinSecond = breakPeriod;
         } else {
@@ -3582,19 +2651,18 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
             newleaseBreakExpireTime = lease.leaseExpireTime;
           }
           if (
-            lease.leaseBreakExpireTime === undefined ||
-            lease.leaseBreakExpireTime > newleaseBreakExpireTime
+            lease.leaseBreakTime === undefined ||
+            lease.leaseBreakTime > newleaseBreakExpireTime
           ) {
-            lease.leaseBreakExpireTime = newleaseBreakExpireTime;
+            lease.leaseBreakTime = newleaseBreakExpireTime;
           }
           leaseTimeinSecond = Math.round(
             Math.abs(
-              lease.leaseBreakExpireTime.getTime() -
-                context.startTime!.getTime()
+              lease.leaseBreakTime.getTime() - context.startTime!.getTime()
             ) / 1000
           );
           lease.leaseExpireTime = undefined;
-          lease.leaseDuration = undefined;
+          lease.leaseDurationType = undefined;
         }
       }
 
@@ -3607,14 +2675,16 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         {
           leaseStatus: lease.leaseStatus ? lease.leaseStatus : null,
           leaseState: lease.leaseState ? lease.leaseState : null,
-          leaseDuration: lease.leaseDuration ? lease.leaseDuration : null,
+          leaseDuration: lease.leaseDurationType
+            ? lease.leaseDurationType
+            : null,
           leaseId: lease.leaseId ? lease.leaseId : null,
-          leasedurationNumber: lease.leasedurationNumber
-            ? lease.leasedurationNumber
+          leasedurationNumber: lease.leaseDurationSeconds
+            ? lease.leaseDurationSeconds
             : null,
           leaseExpireTime: lease.leaseExpireTime ? lease.leaseExpireTime : null,
-          leaseBreakExpireTime: lease.leaseBreakExpireTime
-            ? lease.leaseBreakExpireTime
+          leaseBreakExpireTime: lease.leaseBreakTime
+            ? lease.leaseBreakTime
             : null
         },
         {
@@ -3948,43 +3018,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   /**
-   * Check Container lease status on Read Container.
-   *
-   * @private
-   * @param {(string | undefined)} leaseId
-   * @param {(Models.LeaseStatusType | undefined)} leaseStatus
-   * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
-   * @param {string} [requestId]
-   * @memberof SqlBlobMetadataStore
-   */
-  private checkLeaseOnReadContainer(
-    leaseId: string | undefined,
-    leaseStatus: Models.LeaseStatusType | undefined,
-    leaseAccessConditions?: Models.LeaseAccessConditions,
-    requestId?: string
-  ): void {
-    // check only when input Leased Id is not empty
-    if (
-      leaseAccessConditions !== undefined &&
-      leaseAccessConditions.leaseId !== undefined &&
-      leaseAccessConditions.leaseId !== ""
-    ) {
-      // return error when lease is unlocked
-      if (leaseStatus === Models.LeaseStatusType.Unlocked) {
-        throw StorageErrorFactory.getContainerLeaseLost(requestId);
-      } else if (
-        leaseId !== undefined &&
-        leaseAccessConditions.leaseId.toLowerCase() !== leaseId.toLowerCase()
-      ) {
-        // return error when lease is locked but lease ID not match
-        throw StorageErrorFactory.getContainerLeaseIdMismatchWithContainerOperation(
-          requestId
-        );
-      }
-    }
-  }
-
-  /**
    * Check Blob lease status on Read blob.
    *
    * @private
@@ -4071,22 +3104,22 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    * Need run the funtion on: PutBlob, SetBlobMetadata, SetBlobProperties,
    * DeleteBlob, PutBlock, PutBlockList, PutPage, AppendBlock, CopyBlob(dest)
    * @private
-   * @param {IBlobLease} blob
-   * @returns {IBlobLease}
+   * @param {ILease} blob
+   * @returns {ILease}
    * @memberof SqlBlobMetadataStore
    */
-  private UpdateBlobLeaseStateOnWriteBlob(blob: IBlobLease): IBlobLease {
+  private UpdateBlobLeaseStateOnWriteBlob(blob: ILease): ILease {
     if (
       blob.leaseState === Models.LeaseStateType.Expired ||
       blob.leaseState === Models.LeaseStateType.Broken
     ) {
       blob.leaseState = Models.LeaseStateType.Available;
       blob.leaseStatus = Models.LeaseStatusType.Unlocked;
-      blob.leaseDuration = undefined;
-      blob.leasedurationNumber = undefined;
+      blob.leaseDurationType = undefined;
+      blob.leaseDurationSeconds = undefined;
       blob.leaseId = undefined;
       blob.leaseExpireTime = undefined;
-      blob.leaseBreakExpireTime = undefined;
+      blob.leaseBreakTime = undefined;
     }
     return blob;
   }
@@ -4094,66 +3127,20 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   /**
    * Calculate container lease attributes from raw values in database records according to the current time.
    *
-   * @private
-   * @param {IContainerLease} container
-   * @param {Date} currentTime
-   * @returns {IContainerLease}
-   * @memberof SqlBlobMetadataStore
-   */
-  private calculateContainerLeaseAttributes(
-    container: IContainerLease,
-    currentTime: Date
-  ): IContainerLease {
-    // check Leased -> Expired
-    if (
-      container.leaseState === Models.LeaseStateType.Leased &&
-      container.leaseDurationType === Models.LeaseDurationType.Fixed
-    ) {
-      if (
-        container.leaseExpireTime !== undefined &&
-        currentTime > container.leaseExpireTime
-      ) {
-        container.leaseState = Models.LeaseStateType.Expired;
-        container.leaseStatus = Models.LeaseStatusType.Unlocked;
-        container.leaseDurationType = undefined;
-        container.leaseExpireTime = undefined;
-        container.leaseBreakExpireTime = undefined;
-      }
-    }
-
-    // check Breaking -> Broken
-    if (container.leaseState === Models.LeaseStateType.Breaking) {
-      if (
-        container.leaseBreakExpireTime !== undefined &&
-        currentTime > container.leaseBreakExpireTime
-      ) {
-        container.leaseState = Models.LeaseStateType.Broken;
-        container.leaseStatus = Models.LeaseStatusType.Unlocked;
-        container.leaseDurationType = undefined;
-        container.leaseExpireTime = undefined;
-        container.leaseBreakExpireTime = undefined;
-      }
-    }
-    return container;
-  }
-
-  /**
-   * Calculate container lease attributes from raw values in database records according to the current time.
-   *
    * @static
-   * @param {IBlobLease} blob
+   * @param {ILease} blob
    * @param {Date} currentTime
-   * @returns {IBlobLease}
+   * @returns {ILease}
    * @memberof SqlBlobMetadataStore
    */
   private calculateBlobLeaseAttributes(
-    blob: IBlobLease,
+    blob: ILease,
     currentTime: Date
-  ): IBlobLease {
+  ): ILease {
     // check Leased -> Expired
     if (
       blob.leaseState === Models.LeaseStateType.Leased &&
-      blob.leaseDuration === Models.LeaseDurationType.Fixed
+      blob.leaseDurationType === Models.LeaseDurationType.Fixed
     ) {
       if (
         blob.leaseExpireTime !== undefined &&
@@ -4161,35 +3148,35 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       ) {
         blob.leaseState = Models.LeaseStateType.Expired;
         blob.leaseStatus = Models.LeaseStatusType.Unlocked;
-        blob.leaseDuration = undefined;
+        blob.leaseDurationType = undefined;
         blob.leaseExpireTime = undefined;
-        blob.leaseBreakExpireTime = undefined;
+        blob.leaseBreakTime = undefined;
       }
     }
 
     // check Breaking -> Broken
     if (blob.leaseState === Models.LeaseStateType.Breaking) {
       if (
-        blob.leaseBreakExpireTime !== undefined &&
-        currentTime > blob.leaseBreakExpireTime
+        blob.leaseBreakTime !== undefined &&
+        currentTime > blob.leaseBreakTime
       ) {
         blob.leaseState = Models.LeaseStateType.Broken;
         blob.leaseStatus = Models.LeaseStatusType.Unlocked;
-        blob.leaseDuration = undefined;
+        blob.leaseDurationType = undefined;
         blob.leaseExpireTime = undefined;
-        blob.leaseBreakExpireTime = undefined;
+        blob.leaseBreakTime = undefined;
       }
     }
     return blob;
   }
 
-  private getBlobLease(blob: BlobsModel, context?: Context): IBlobLease {
+  private getBlobLease(blob: BlobsModel, context?: Context): ILease {
     const leaseId = this.getModelValue<string>(blob, "leaseId");
     const leaseStatus = this.getModelValue<Models.LeaseStatusType>(
       blob,
       "leaseStatus"
     );
-    const leaseDuration = this.getModelValue<Models.LeaseDurationType>(
+    const leaseDurationType = this.getModelValue<Models.LeaseDurationType>(
       blob,
       "leaseDuration"
     );
@@ -4202,19 +3189,19 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       "leasedurationNumber"
     );
     const leaseExpireTime = this.getModelValue<Date>(blob, "leaseExpireTime");
-    const leaseBreakExpireTime = this.getModelValue<Date>(
+    const leaseBreakTime = this.getModelValue<Date>(
       blob,
       "leaseBreakExpireTime"
     );
 
-    let lease: IBlobLease = {
+    let lease: ILease = {
       leaseId,
       leaseStatus,
-      leaseBreakExpireTime,
-      leaseDuration,
+      leaseBreakTime,
+      leaseDurationType,
       leaseExpireTime,
       leaseState,
-      leasedurationNumber
+      leaseDurationSeconds: leasedurationNumber
     };
 
     lease = this.calculateBlobLeaseAttributes(
@@ -4339,5 +3326,118 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     }
 
     return arr;
+  }
+
+  private convertDbModelToContainerModel(
+    dbModel: ContainersModel
+  ): ContainerModel {
+    const accountName = this.getModelValue<string>(
+      dbModel,
+      "accountName",
+      true
+    );
+    const name = this.getModelValue<string>(dbModel, "containerName", true);
+    const containerAcl = this.deserializeModelValue(dbModel, "containerAcl");
+    const metadata = this.deserializeModelValue(dbModel, "metadata");
+
+    const lastModified = this.getModelValue<Date>(
+      dbModel,
+      "lastModified",
+      true
+    );
+    const etag = this.getModelValue<string>(dbModel, "etag", true);
+    const publicAccess = this.deserializeModelValue(dbModel, "publicAccess");
+    const lease = this.convertDbModelToLease(dbModel);
+    const leaseBreakTime = lease.leaseBreakTime;
+    const leaseExpireTime = lease.leaseExpireTime;
+    const leaseId = lease.leaseId;
+    const leaseDurationSeconds = lease.leaseDurationSeconds;
+    const leaseStatus = lease.leaseStatus;
+    const leaseState = lease.leaseState;
+    const leaseDuration = lease.leaseDurationType;
+    const hasImmutabilityPolicy = this.getModelValue<boolean>(
+      dbModel,
+      "hasImmutabilityPolicy"
+    );
+    const hasLegalHold = this.getModelValue<boolean>(dbModel, "hasLegalHold");
+
+    const ret: ContainerModel = {
+      accountName,
+      name,
+      properties: {
+        lastModified,
+        etag,
+        leaseStatus,
+        leaseDuration,
+        leaseState
+      },
+      leaseId,
+      leaseBreakTime,
+      leaseExpireTime,
+      leaseDurationSeconds
+    };
+
+    if (metadata !== undefined) {
+      ret.metadata = metadata;
+    }
+
+    if (containerAcl !== undefined) {
+      ret.containerAcl = containerAcl;
+    }
+
+    if (publicAccess !== undefined) {
+      ret.properties.publicAccess = publicAccess;
+    }
+
+    if (hasImmutabilityPolicy !== undefined) {
+      ret.properties.hasImmutabilityPolicy = hasImmutabilityPolicy;
+    }
+
+    if (hasLegalHold !== undefined) {
+      ret.properties.hasLegalHold = hasLegalHold;
+    }
+
+    return ret;
+  }
+
+  private convertContainerModelToDbModel(container: ContainerModel): object {
+    const lease = new LokiContainerLeaseAdapter(container).toString();
+    return {
+      accountName: container.accountName,
+      containerName: container.name,
+      lastModified: container.properties.lastModified,
+      etag: container.properties.etag,
+      metadata: this.serializeModelValue(container.metadata),
+      containerAcl: this.serializeModelValue(container.containerAcl),
+      publicAccess: this.serializeModelValue(container.properties.publicAccess),
+      lease,
+      hasImmutabilityPolicy: container.properties.hasImmutabilityPolicy,
+      hasLegalHold: container.properties.hasLegalHold
+    };
+  }
+
+  private convertDbModelToLease(dbModel: ContainersModel | BlobsModel): ILease {
+    const lease =
+      (this.deserializeModelValue(dbModel, "lease") as ILease) || {};
+
+    if (lease.leaseBreakTime && typeof lease.leaseBreakTime === "string") {
+      lease.leaseBreakTime = new Date(lease.leaseBreakTime);
+    }
+
+    if (lease.leaseExpireTime && typeof lease.leaseExpireTime === "string") {
+      lease.leaseExpireTime = new Date(lease.leaseExpireTime);
+    }
+
+    return lease;
+  }
+
+  private convertLeaseToDbModel(lease: ILease): object {
+    let leaseString = "";
+    if (lease instanceof LokiContainerLeaseAdapter) {
+      leaseString = lease.toString();
+    } else {
+      leaseString = JSON.stringify(lease);
+    }
+    return { lease: leaseString };
   }
 }
