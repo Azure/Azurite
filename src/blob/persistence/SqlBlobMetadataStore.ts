@@ -24,7 +24,12 @@ import {
   DEFAULT_LIST_BLOBS_MAX_RESULTS,
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS
 } from "../utils/constants";
+import BlobLeaseAdapter from "./BlobLeaseAdapter";
+import BlobLeaseSyncer from "./BlobLeaseSyncer";
+import BlobReadLeaseValidator from "./BlobReadLeaseValidator";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
+import BlobWriteLeaseSyncer from "./BlobWriteLeaseSyncer";
+import BlobWriteLeaseValidator from "./BlobWriteLeaseValidator";
 import ContainerDeleteLeaseValidator from "./ContainerDeleteLeaseValidator";
 import ContainerLeaseAdapter from "./ContainerLeaseAdapter";
 import ContainerLeaseSyncer from "./ContainerLeaseSyncer";
@@ -199,11 +204,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         hasLegalHold: {
           type: BOOLEAN
-        },
-        deleting: {
-          type: INTEGER.UNSIGNED,
-          defaultValue: 0, // 0 means container is not under deleting or GC
-          allowNull: false
         }
       },
       {
@@ -562,14 +562,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     }
   }
 
-  /**
-   * Create a container.
-   *
-   * @param {ContainerModel} container
-   * @param {Context} [context]
-   * @returns {Promise<ContainerModel>}
-   * @memberof SqlBlobMetadataStore
-   */
   public async createContainer(
     context: Context,
     container: ContainerModel
@@ -724,576 +716,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       );
       /* Transaction ends */
     });
-  }
-
-  public async createBlob(context: Context, blob: BlobModel): Promise<void> {
-    // TODO: Check account & container status
-    const contentProperties =
-      this.serializeModelValue({
-        contentLength: blob.properties.contentLength,
-        contentType: blob.properties.contentType,
-        contentEncoding: blob.properties.contentEncoding,
-        contentLanguage: blob.properties.contentLanguage,
-        contentMD5: blob.properties.contentMD5,
-        contentDisposition: blob.properties.contentDisposition,
-        cacheControl: blob.properties.cacheControl
-      }) || null;
-    await BlobsModel.upsert({
-      accountName: blob.accountName,
-      containerName: blob.containerName,
-      blobName: blob.name,
-      snapshot: blob.snapshot,
-      blobType: blob.properties.blobType,
-      blobSequenceNumber: blob.properties.blobSequenceNumber,
-      isCommitted: true,
-      lastModified: blob.properties.lastModified,
-      creationTime: blob.properties.creationTime,
-      etag: blob.properties.etag,
-      accessTier: blob.properties.accessTier,
-      accessTierChangeTime: blob.properties.accessTierChangeTime,
-      accessTierInferred: blob.properties.accessTierInferred,
-      leaseBreakExpireTime: blob.leaseBreakTime,
-      leaseExpireTime: blob.leaseExpireTime,
-      leaseId: blob.leaseId,
-      leasedurationNumber: blob.leaseDurationSeconds,
-      leaseDuration: blob.properties.leaseDuration,
-      leaseStatus: blob.properties.leaseStatus,
-      leaseState: blob.properties.leaseState,
-      persistency: this.serializeModelValue(blob.persistency),
-      committedBlocksInOrder: this.serializeModelValue(
-        blob.committedBlocksInOrder
-      ),
-      metadata: this.serializeModelValue(blob.metadata) || null,
-      contentProperties
-    });
-  }
-
-  public async downloadBlob(
-    context: Context,
-    account: string,
-    container: string,
-    blob: string,
-    snapshot: string = ""
-  ): Promise<BlobModel> {
-    const requestId = context ? context.contextId : undefined;
-    return ContainersModel.findOne({
-      where: {
-        accountName: account,
-        containerName: container
-      }
-    }).then(containerRes => {
-      if (containerRes === null || containerRes === undefined) {
-        throw StorageErrorFactory.getContainerNotFound(requestId);
-      }
-      return BlobsModel.findOne({
-        where: {
-          accountName: account,
-          containerName: container,
-          blobName: blob,
-          snapshot,
-          deleting: 0
-        }
-      }).then(res => {
-        if (res === null || res === undefined) {
-          throw StorageErrorFactory.getBlobNotFound(requestId);
-        }
-
-        const isCommitted = this.getModelValue<boolean>(
-          res,
-          "isCommitted",
-          true
-        );
-        // TODO: If it needs another error message?
-        if (!isCommitted) {
-          throw StorageErrorFactory.getBlobNotFound(requestId);
-        }
-
-        // Process Lease
-        const lease = this.getBlobLease(res, context);
-
-        const blobRes: BlobModel = this.blobModelConvert(res);
-        blobRes.leaseBreakTime = lease.leaseBreakTime;
-        blobRes.leaseExpireTime = lease.leaseExpireTime;
-        blobRes.leaseId = lease.leaseId;
-        blobRes.leaseDurationSeconds = lease.leaseDurationSeconds;
-        blobRes.properties.leaseStatus = lease.leaseStatus;
-        blobRes.properties.leaseState = lease.leaseState;
-        blobRes.properties.leaseDuration = lease.leaseDurationType;
-
-        return blobRes;
-      });
-    });
-  }
-
-  public async listBlobs(
-    context: Context,
-    account?: string,
-    container?: string,
-    blob?: string,
-    prefix: string = "",
-    maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
-    marker?: string,
-    includeSnapshots?: boolean
-  ): Promise<[BlobModel[], any | undefined]> {
-    // TODO: Validate container exists
-
-    const whereQuery: any = {};
-
-    if (account !== undefined) {
-      whereQuery.accountName = account;
-    }
-
-    if (container !== undefined) {
-      whereQuery.containerName = container;
-    }
-
-    if (blob !== undefined) {
-      whereQuery.blobName = blob;
-    }
-
-    if (prefix.length > 0) {
-      whereQuery.blobName = {
-        [Op.like]: `${prefix}%`
-      };
-    }
-    if (marker !== undefined) {
-      whereQuery.blobName = {
-        [Op.gt]: marker
-      };
-    }
-    // TODO: Query snapshot
-    if (!includeSnapshots) {
-      whereQuery.snapshot = "";
-    }
-
-    whereQuery.deleting = 0;
-
-    // const modelConvert = (res: BlobsModel): BlobModel => {
-    //   return {
-    //     accountName: this.getModelValue<string>(res, "accountName", true),
-    //     containerName: this.getModelValue<string>(res, "containerName", true),
-    //     name: this.getModelValue<string>(res, "blobName", true),
-    //     snapshot: this.getModelValue<string>(res, "snapshot", true),
-    //     isCommitted: this.getModelValue<boolean>(res, "isCommitted", true),
-    //     leaseBreakTime: this.getModelValue<Date>(res, "leaseBreakExpireTime"),
-    //     leaseExpireTime: this.getModelValue<Date>(res, "leaseExpireTime"),
-    //     leaseDurationSeconds: this.getModelValue<number>(
-    //       res,
-    //       "leasedurationNumber"
-    //     ),
-    //     leaseId: this.getModelValue<string>(res, "leaseId"),
-    //     properties: {
-    //       lastModified: this.getModelValue<Date>(res, "lastModified", true),
-    //       creationTime: this.getModelValue<Date>(res, "creationTime"),
-    //       etag: this.getModelValue<string>(res, "etag", true),
-    //       leaseStatus: this.getModelValue(res, "leaseStatus"),
-    //       leaseState: this.getModelValue(res, "leaseState"),
-    //       leaseDuration: this.getModelValue(res, "leaseDuration"),
-    //       accessTier: this.getModelValue<Models.AccessTier>(res, "accessTier"),
-    //       accessTierInferred: this.getModelValue<boolean>(
-    //         res,
-    //         "accessTierInferred"
-    //       ),
-    //       accessTierChangeTime: this.getModelValue<Date>(
-    //         res,
-    //         "accessTierChangeTime"
-    //       )
-    //     },
-    //     persistency: this.deserializeModelValue(res, "persistency"),
-    //     committedBlocksInOrder: this.deserializeModelValue(
-    //       res,
-    //       "committedBlocksInOrder"
-    //     ),
-    //     metadata: this.deserializeModelValue(res, "metadata")
-    //   };
-    // };
-
-    return BlobsModel.findAll({
-      limit: maxResults,
-      where: whereQuery as any,
-      // TODO: Should use ASC order index?
-      order: [["blobName", "ASC"]]
-    }).then(res => {
-      if (res.length < maxResults) {
-        return [
-          res.map(val => {
-            const blobModel = this.blobModelConvert(val);
-            this.calculateBlobLeaseAttributes(blobModel, context.startTime!);
-            return blobModel;
-          }),
-          undefined
-        ];
-      } else {
-        const tail = res[res.length - 1];
-        const nextMarker = this.getModelValue<string>(tail, "blobName", true);
-        return [
-          res.map(val => {
-            const blobModel = this.blobModelConvert(val);
-            this.calculateBlobLeaseAttributes(blobModel, context.startTime!);
-            return blobModel;
-          }),
-          nextMarker
-        ];
-      }
-    });
-  }
-
-  public async listAllBlobs(
-    maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
-    marker?: string,
-    includeSnapshots?: boolean
-  ): Promise<[BlobModel[], any | undefined]> {
-    const whereQuery: any = {};
-    if (marker !== undefined) {
-      whereQuery.blobName = {
-        [Op.gt]: marker
-      };
-    }
-    // TODO: Query snapshot
-    if (!includeSnapshots) {
-      whereQuery.snapshot = "";
-    }
-
-    whereQuery.deleting = 0;
-
-    const modelConvert = (res: BlobsModel): BlobModel => {
-      return {
-        accountName: this.getModelValue<string>(res, "accountName", true),
-        containerName: this.getModelValue<string>(res, "containerName", true),
-        name: this.getModelValue<string>(res, "blobName", true),
-        snapshot: this.getModelValue<string>(res, "snapshot", true),
-        isCommitted: this.getModelValue<boolean>(res, "isCommitted", true),
-        properties: {
-          lastModified: this.getModelValue<Date>(res, "lastModified", true),
-          etag: this.getModelValue<string>(res, "etag", true)
-        },
-        persistency: this.deserializeModelValue(res, "persistency"),
-        committedBlocksInOrder: this.deserializeModelValue(
-          res,
-          "committedBlocksInOrder"
-        ),
-        metadata: this.deserializeModelValue(res, "metadata")
-      };
-    };
-
-    return BlobsModel.findAll({
-      limit: maxResults,
-      where: whereQuery as any,
-      // TODO: Should use ASC order index?
-      order: [["blobName", "ASC"]]
-    }).then(res => {
-      if (res.length < maxResults) {
-        return [res.map(val => modelConvert(val)), undefined];
-      } else {
-        const tail = res[res.length - 1];
-        const nextMarker = this.getModelValue<string>(tail, "blobName", true);
-        return [res.map(val => modelConvert(val)), nextMarker];
-      }
-    });
-  }
-
-  public async stageBlock(context: Context, block: BlockModel): Promise<void> {
-    await BlocksModel.upsert({
-      accountName: block.accountName,
-      containerName: block.containerName,
-      blobName: block.blobName,
-      blockName: block.name,
-      size: block.size,
-      persistency: this.serializeModelValue(block.persistency)
-    });
-  }
-
-  public async getBlockList(
-    context: Context,
-    account: string,
-    container: string,
-    blob: string,
-    isCommitted: boolean | undefined
-  ): Promise<any> {
-    const res: {
-      uncommittedBlocks: Models.Block[];
-      committedBlocks: Models.Block[];
-    } = {
-      uncommittedBlocks: [],
-      committedBlocks: []
-    };
-
-    await this.sequelize.transaction(async t => {
-      if (isCommitted !== false) {
-        const blobModel = await BlobsModel.findOne({
-          attributes: ["committedBlocksInOrder"],
-          where: {
-            accountName: account,
-            containerName: container,
-            blobName: blob,
-            snapshot: "",
-            deleting: 0
-          },
-          transaction: t
-        });
-
-        if (blobModel !== null && res !== undefined) {
-          res.committedBlocks = this.deserializeModelValue(
-            blobModel,
-            "committedBlocksInOrder"
-          );
-        }
-      }
-
-      if (isCommitted !== true) {
-        const blocks = await BlocksModel.findAll({
-          attributes: ["blockName", "size"],
-          where: {
-            accountName: account,
-            containerName: container,
-            blobName: blob,
-            deleting: 0
-          },
-          order: [["id", "ASC"]],
-          transaction: t
-        });
-        for (const item of blocks) {
-          const block = {
-            name: this.getModelValue<string>(item, "blockName", true),
-            size: this.getModelValue<number>(item, "size", true)
-          };
-          res.uncommittedBlocks.push(block);
-        }
-      }
-    });
-
-    return res;
-  }
-
-  public async commitBlockList(
-    context: Context,
-    blob: BlobModel,
-    blockList: { blockName: string; blockCommitType: string }[]
-  ): Promise<void> {
-    // TODO: Validate account, container
-    // Steps:
-    // 1. Check blob exist
-    // 2. Get committed block list
-    // 3. Get uncommitted block list
-    // 4. Check incoming block list
-    // 5. Update blob model
-    // 6. GC uncommitted blocks
-
-    await this.sequelize.transaction(async t => {
-      const pCommittedBlocksMap: Map<string, PersistencyBlockModel> = new Map(); // persistencyCommittedBlocksMap
-      const pUncommittedBlocksMap: Map<
-        string,
-        PersistencyBlockModel
-      > = new Map(); // persistencyUncommittedBlocksMap
-
-      // TODO: Fill in context id
-      const badRequestError = StorageErrorFactory.getInvalidOperation("");
-
-      const res = await BlobsModel.findOne({
-        where: {
-          accountName: blob.accountName,
-          containerName: blob.containerName,
-          blobName: blob.name,
-          snapshot: blob.snapshot,
-          deleting: 0
-        },
-        transaction: t
-      });
-      if (res !== null && res !== undefined) {
-        const committedBlocksInOrder = this.deserializeModelValue(
-          res!,
-          "committedBlocksInOrder"
-        );
-        for (const pBlock of committedBlocksInOrder || []) {
-          pCommittedBlocksMap.set(pBlock.name, pBlock);
-        }
-      }
-      const res_1 = await BlocksModel.findAll({
-        where: {
-          accountName: blob.accountName,
-          containerName: blob.containerName,
-          blobName: blob.name,
-          deleting: 0
-        },
-        transaction: t
-      });
-      for (const item of res_1) {
-        const block = {
-          name: this.getModelValue<string>(item, "blockName", true),
-          size: this.getModelValue<number>(item, "size", true),
-          persistency: this.deserializeModelValue(item, "persistency")
-        };
-        pUncommittedBlocksMap.set(block.name, block);
-      }
-      const selectedBlockList: PersistencyBlockModel[] = [];
-      for (const block_1 of blockList) {
-        switch (block_1.blockCommitType.toLowerCase()) {
-          case "uncommitted":
-            const pUncommittedBlock = pUncommittedBlocksMap.get(
-              block_1.blockName
-            );
-            if (pUncommittedBlock === undefined) {
-              throw badRequestError;
-            } else {
-              selectedBlockList.push(pUncommittedBlock);
-            }
-            break;
-          case "committed":
-            const pCommittedBlock = pCommittedBlocksMap.get(block_1.blockName);
-            if (pCommittedBlock === undefined) {
-              throw badRequestError;
-            } else {
-              selectedBlockList.push(pCommittedBlock);
-            }
-            break;
-          case "latest":
-            const pLatestBlock =
-              pUncommittedBlocksMap.get(block_1.blockName) ||
-              pCommittedBlocksMap.get(block_1.blockName);
-            if (pLatestBlock === undefined) {
-              throw badRequestError;
-            } else {
-              selectedBlockList.push(pLatestBlock);
-            }
-            break;
-          default:
-            throw badRequestError;
-        }
-      }
-      const contentProperties =
-        this.serializeModelValue({
-          contentLength: selectedBlockList
-            .map(block => block.size)
-            .reduce((total, val) => {
-              return total + val;
-            }),
-          contentType: blob.properties.contentType,
-          contentEncoding: blob.properties.contentEncoding,
-          contentLanguage: blob.properties.contentLanguage,
-          contentMD5: blob.properties.contentMD5,
-          contentDisposition: blob.properties.contentDisposition,
-          cacheControl: blob.properties.cacheControl
-        }) || null;
-      await BlobsModel.upsert(
-        {
-          accountName: blob.accountName,
-          containerName: blob.containerName,
-          blobName: blob.name,
-          blobType: BlobType.BlockBlob,
-          snapshot: "",
-          isCommitted: true,
-          lastModified: blob.properties.lastModified,
-          creationTime: blob.properties.creationTime || context.startTime,
-          accessTier: blob.properties.accessTier,
-          accessTierInferred: blob.properties.accessTierInferred,
-          accessTierChangeTime: blob.properties.accessTierChangeTime,
-          etag: blob.properties.etag,
-          persistency: null,
-          committedBlocksInOrder: this.serializeModelValue(selectedBlockList),
-          metadata: this.serializeModelValue(blob.metadata) || null,
-          contentProperties
-        },
-        { transaction: t }
-      );
-
-      await BlocksModel.update(
-        {
-          deleting: literal("deleting + 1")
-        },
-        {
-          where: {
-            accountName: blob.accountName,
-            containerName: blob.containerName,
-            blobName: blob.name
-          },
-          transaction: t
-        }
-      );
-    });
-  }
-
-  public deleteAllBlocks(): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-
-  public insertBlocks<T extends BlockModel>(): Promise<T[]> {
-    throw new Error("Method not implemented.");
-  }
-
-  public getBlock<T extends BlockModel>(): Promise<T | undefined> {
-    throw new Error("Method not implemented.");
-  }
-
-  public async getBlobProperties(
-    context: Context,
-    account: string,
-    container: string,
-    blob: string,
-    snapshot: string = "",
-    leaseAccessConditions: Models.LeaseAccessConditions | undefined
-  ): Promise<GetBlobPropertiesRes> {
-    const requestId = context ? context.contextId : undefined;
-    return ContainersModel.findOne({
-      where: {
-        accountName: account,
-        containerName: container
-      }
-    }).then(containerRes => {
-      if (containerRes === null || containerRes === undefined) {
-        throw StorageErrorFactory.getContainerNotFound(requestId);
-      }
-      return BlobsModel.findOne({
-        where: {
-          accountName: account,
-          containerName: container,
-          blobName: blob,
-          snapshot,
-          deleting: 0
-        }
-      }).then(res => {
-        if (res === null || res === undefined) {
-          throw StorageErrorFactory.getBlobNotFound(requestId);
-        }
-
-        const lease = this.getBlobLease(res, context);
-
-        const storedSnapshot = this.getModelValue<string>(
-          res,
-          "snapshot",
-          true
-        );
-        if (storedSnapshot === "") {
-          this.checkLeaseOnReadBlob(
-            lease.leaseId,
-            lease.leaseStatus,
-            leaseAccessConditions,
-            requestId
-          );
-        }
-        const blobRes: BlobModel = this.blobModelConvert(res);
-
-        blobRes.leaseBreakTime = lease.leaseBreakTime;
-        blobRes.leaseExpireTime = lease.leaseExpireTime;
-        blobRes.leaseId = lease.leaseId;
-        blobRes.leaseDurationSeconds = lease.leaseDurationSeconds;
-        blobRes.properties.leaseStatus = lease.leaseStatus;
-        blobRes.properties.leaseState = lease.leaseState;
-        blobRes.properties.leaseDuration = lease.leaseDurationType;
-
-        const metadata = this.deserializeModelValue(res, "metadata");
-
-        const ret: GetBlobPropertiesRes = {
-          properties: blobRes!.properties,
-          metadata
-        };
-
-        return ret;
-      });
-    });
-  }
-
-  public undeleteBlob(): Promise<void> {
-    throw new Error("Method not implemented.");
   }
 
   public async getContainerACL(
@@ -1637,6 +1059,498 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     }
   }
 
+  public async createBlob(
+    context: Context,
+    blob: BlobModel,
+    leaseAccessConditions?: Models.LeaseAccessConditions
+  ): Promise<void> {
+    return this.sequelize.transaction(async t => {
+      const containerFindResult = await ContainersModel.findOne({
+        where: {
+          accountName: blob.accountName,
+          containerName: blob.containerName
+        },
+        transaction: t
+      });
+
+      if (containerFindResult === null || containerFindResult === undefined) {
+        throw StorageErrorFactory.getContainerNotFound(context.contextId);
+      }
+
+      const blobFindResult = await BlobsModel.findOne({
+        where: {
+          accountName: blob.accountName,
+          containerName: blob.containerName,
+          blobName: blob.name,
+          snapshot: blob.snapshot,
+          deleting: 0,
+          isCommitted: true
+        },
+        transaction: t
+      });
+
+      if (blobFindResult) {
+        const blobModel: BlobModel = this.convertDbModelToBlobModel(
+          blobFindResult
+        );
+
+        LeaseFactory.createLeaseState(
+          new BlobLeaseAdapter(blobModel),
+          context
+        ).validate(new BlobWriteLeaseValidator(leaseAccessConditions));
+
+        if (
+          blobModel.properties !== undefined &&
+          blobModel.properties.accessTier === Models.AccessTier.Archive
+        ) {
+          throw StorageErrorFactory.getBlobArchived(context.contextId);
+        }
+      }
+
+      await BlobsModel.upsert(this.convertBlobModelToDbModel(blob), {
+        transaction: t
+      });
+    });
+  }
+
+  public async downloadBlob(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string,
+    snapshot: string = "",
+    leaseAccessConditions?: Models.LeaseAccessConditions
+  ): Promise<BlobModel> {
+    return this.sequelize.transaction(async t => {
+      const containerFindResult = await ContainersModel.findOne({
+        where: {
+          accountName: account,
+          containerName: container
+        },
+        transaction: t
+      });
+
+      if (containerFindResult === null || containerFindResult === undefined) {
+        throw StorageErrorFactory.getContainerNotFound(context.contextId);
+      }
+
+      const blobFindResult = await BlobsModel.findOne({
+        where: {
+          accountName: account,
+          containerName: container,
+          blobName: blob,
+          snapshot,
+          deleting: 0,
+          isCommitted: true
+        },
+        transaction: t
+      });
+
+      if (blobFindResult === null || blobFindResult === undefined) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
+
+      const blobModel: BlobModel = this.convertDbModelToBlobModel(
+        blobFindResult
+      );
+
+      return LeaseFactory.createLeaseState(
+        new BlobLeaseAdapter(blobModel),
+        context
+      )
+        .validate(new BlobReadLeaseValidator(leaseAccessConditions))
+        .sync(new BlobLeaseSyncer(blobModel));
+    });
+  }
+
+  // TODO: Filter uncommitted blobs
+  public async listBlobs(
+    context: Context,
+    account: string,
+    container: string,
+    blob?: string,
+    prefix: string = "",
+    maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
+    marker?: string,
+    includeSnapshots?: boolean
+  ): Promise<[BlobModel[], any | undefined]> {
+    return this.sequelize.transaction(async t => {
+      const containerFindResult = await ContainersModel.findOne({
+        where: {
+          accountName: account,
+          containerName: container
+        },
+        transaction: t
+      });
+
+      if (containerFindResult === null || containerFindResult === undefined) {
+        throw StorageErrorFactory.getContainerNotFound(context.contextId);
+      }
+
+      const whereQuery: any = {
+        accountName: account,
+        containerName: container
+      };
+      if (blob !== undefined) {
+        whereQuery.blobName = blob;
+      }
+      if (prefix.length > 0) {
+        whereQuery.blobName = {
+          [Op.like]: `${prefix}%`
+        };
+      }
+      if (marker !== undefined) {
+        whereQuery.blobName = {
+          [Op.gt]: marker
+        };
+      }
+      if (!includeSnapshots) {
+        whereQuery.snapshot = "";
+      }
+      whereQuery.deleting = 0;
+
+      const blobFindResult = await BlobsModel.findAll({
+        limit: maxResults + 1,
+        where: whereQuery as any,
+        order: [["blobName", "ASC"]],
+        transaction: t
+      });
+
+      const leaseUpdateMapper = (model: BlobsModel) => {
+        const blobModel = this.convertDbModelToBlobModel(model);
+        return LeaseFactory.createLeaseState(
+          new BlobLeaseAdapter(blobModel),
+          context
+        ).sync(new BlobLeaseSyncer(blobModel));
+      };
+
+      if (blobFindResult.length <= maxResults) {
+        return [blobFindResult.map(leaseUpdateMapper), undefined];
+      } else {
+        blobFindResult.pop();
+        const tail = blobFindResult[blobFindResult.length - 1];
+        const nextMarker = this.getModelValue<string>(tail, "blobName", true);
+        return [blobFindResult.map(leaseUpdateMapper), nextMarker];
+      }
+    });
+  }
+
+  public async listAllBlobs(
+    maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
+    marker?: string,
+    includeSnapshots?: boolean
+  ): Promise<[BlobModel[], any | undefined]> {
+    const whereQuery: any = {};
+    if (marker !== undefined) {
+      whereQuery.blobName = {
+        [Op.gt]: marker
+      };
+    }
+    if (!includeSnapshots) {
+      whereQuery.snapshot = "";
+    }
+    whereQuery.deleting = 0;
+
+    const blobFindResult = await BlobsModel.findAll({
+      limit: maxResults + 1,
+      where: whereQuery as any,
+      order: [["blobName", "ASC"]]
+    });
+
+    if (blobFindResult.length <= maxResults) {
+      return [
+        blobFindResult.map(this.convertDbModelToBlobModel.bind(this)),
+        undefined
+      ];
+    } else {
+      blobFindResult.pop();
+      const tail = blobFindResult[blobFindResult.length - 1];
+      const nextMarker = this.getModelValue<string>(tail, "blobName", true);
+      return [
+        blobFindResult.map(this.convertDbModelToBlobModel.bind(this)),
+        nextMarker
+      ];
+    }
+  }
+
+  public async stageBlock(context: Context, block: BlockModel): Promise<void> {
+    await BlocksModel.upsert({
+      accountName: block.accountName,
+      containerName: block.containerName,
+      blobName: block.blobName,
+      blockName: block.name,
+      size: block.size,
+      persistency: this.serializeModelValue(block.persistency)
+    });
+  }
+
+  public async getBlockList(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string,
+    isCommitted?: boolean,
+    leaseAccessConditions?: Models.LeaseAccessConditions
+  ): Promise<any> {
+    const res: {
+      uncommittedBlocks: Models.Block[];
+      committedBlocks: Models.Block[];
+    } = {
+      uncommittedBlocks: [],
+      committedBlocks: []
+    };
+
+    await this.sequelize.transaction(async t => {
+      if (isCommitted !== false) {
+        const blobFindResult = await BlobsModel.findOne({
+          where: {
+            accountName: account,
+            containerName: container,
+            blobName: blob,
+            snapshot: "",
+            deleting: 0,
+            isCommitted: true
+          },
+          transaction: t
+        });
+
+        if (blobFindResult !== null && blobFindResult !== undefined) {
+          const blobModel = this.convertDbModelToBlobModel(blobFindResult);
+
+          LeaseFactory.createLeaseState(
+            new BlobLeaseAdapter(blobModel),
+            context
+          ).validate(new BlobReadLeaseValidator(leaseAccessConditions));
+
+          res.committedBlocks = blobModel.committedBlocksInOrder || [];
+        }
+      }
+
+      if (isCommitted !== true) {
+        const blocks = await BlocksModel.findAll({
+          attributes: ["blockName", "size"],
+          where: {
+            accountName: account,
+            containerName: container,
+            blobName: blob,
+            deleting: 0
+          },
+          order: [["id", "ASC"]],
+          transaction: t
+        });
+        for (const item of blocks) {
+          const block = {
+            name: this.getModelValue<string>(item, "blockName", true),
+            size: this.getModelValue<number>(item, "size", true)
+          };
+          res.uncommittedBlocks.push(block);
+        }
+      }
+    });
+
+    return res;
+  }
+
+  public async commitBlockList(
+    context: Context,
+    blob: BlobModel,
+    blockList: { blockName: string; blockCommitType: string }[],
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined
+  ): Promise<void> {
+    await this.sequelize.transaction(async t => {
+      const containerFindResult = await ContainersModel.findOne({
+        where: {
+          accountName: blob.accountName,
+          containerName: blob.containerName
+        },
+        transaction: t
+      });
+
+      if (containerFindResult === null || containerFindResult === undefined) {
+        throw StorageErrorFactory.getContainerNotFound(context.contextId);
+      }
+
+      const pCommittedBlocksMap: Map<string, PersistencyBlockModel> = new Map(); // persistencyCommittedBlocksMap
+      const pUncommittedBlocksMap: Map<
+        string,
+        PersistencyBlockModel
+      > = new Map(); // persistencyUncommittedBlocksMap
+
+      const badRequestError = StorageErrorFactory.getInvalidOperation(
+        context.contextId
+      );
+
+      const blobFindResult = await BlobsModel.findOne({
+        where: {
+          accountName: blob.accountName,
+          containerName: blob.containerName,
+          blobName: blob.name,
+          snapshot: blob.snapshot,
+          deleting: 0
+        },
+        transaction: t
+      });
+
+      if (blobFindResult !== null && blobFindResult !== undefined) {
+        const blobModel: BlobModel = this.convertDbModelToBlobModel(
+          blobFindResult
+        );
+
+        LeaseFactory.createLeaseState(
+          new BlobLeaseAdapter(blobModel),
+          context
+        ).validate(new BlobWriteLeaseValidator(leaseAccessConditions));
+
+        const committedBlocksInOrder = blobModel.committedBlocksInOrder;
+        for (const pBlock of committedBlocksInOrder || []) {
+          pCommittedBlocksMap.set(pBlock.name, pBlock);
+        }
+      }
+
+      const blockFindResult = await BlocksModel.findAll({
+        where: {
+          accountName: blob.accountName,
+          containerName: blob.containerName,
+          blobName: blob.name,
+          deleting: 0
+        },
+        transaction: t
+      });
+      for (const item of blockFindResult) {
+        const block = {
+          name: this.getModelValue<string>(item, "blockName", true),
+          size: this.getModelValue<number>(item, "size", true),
+          persistency: this.deserializeModelValue(item, "persistency")
+        };
+        pUncommittedBlocksMap.set(block.name, block);
+      }
+      const selectedBlockList: PersistencyBlockModel[] = [];
+      for (const block of blockList) {
+        switch (block.blockCommitType.toLowerCase()) {
+          case "uncommitted":
+            const pUncommittedBlock = pUncommittedBlocksMap.get(
+              block.blockName
+            );
+            if (pUncommittedBlock === undefined) {
+              throw badRequestError;
+            } else {
+              selectedBlockList.push(pUncommittedBlock);
+            }
+            break;
+          case "committed":
+            const pCommittedBlock = pCommittedBlocksMap.get(block.blockName);
+            if (pCommittedBlock === undefined) {
+              throw badRequestError;
+            } else {
+              selectedBlockList.push(pCommittedBlock);
+            }
+            break;
+          case "latest":
+            const pLatestBlock =
+              pUncommittedBlocksMap.get(block.blockName) ||
+              pCommittedBlocksMap.get(block.blockName);
+            if (pLatestBlock === undefined) {
+              throw badRequestError;
+            } else {
+              selectedBlockList.push(pLatestBlock);
+            }
+            break;
+          default:
+            throw badRequestError;
+        }
+      }
+
+      const commitBlockBlob: BlobModel = {
+        ...blob,
+        deleted: false,
+        committedBlocksInOrder: selectedBlockList,
+        properties: {
+          ...blob.properties,
+          creationTime: blob.properties.creationTime || context.startTime,
+          lastModified: blob.properties.lastModified || context.startTime,
+          contentLength: selectedBlockList
+            .map(block => block.size)
+            .reduce((total, val) => {
+              return total + val;
+            }),
+          blobType: BlobType.BlockBlob
+        }
+      };
+
+      await BlobsModel.upsert(this.convertBlobModelToDbModel(commitBlockBlob), {
+        transaction: t
+      });
+
+      await BlocksModel.update(
+        {
+          deleting: literal("deleting + 1")
+        },
+        {
+          where: {
+            accountName: blob.accountName,
+            containerName: blob.containerName,
+            blobName: blob.name
+          },
+          transaction: t
+        }
+      );
+    });
+  }
+
+  public async getBlobProperties(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string,
+    snapshot: string = "",
+    leaseAccessConditions?: Models.LeaseAccessConditions
+  ): Promise<GetBlobPropertiesRes> {
+    return this.sequelize.transaction(async t => {
+      const containerFindResult = await ContainersModel.findOne({
+        where: {
+          accountName: account,
+          containerName: container
+        },
+        transaction: t
+      });
+
+      if (containerFindResult === null || containerFindResult === undefined) {
+        throw StorageErrorFactory.getContainerNotFound(context.contextId);
+      }
+
+      const blobFindResult = await BlobsModel.findOne({
+        where: {
+          accountName: account,
+          containerName: container,
+          blobName: blob,
+          snapshot,
+          deleting: 0,
+          isCommitted: true
+        },
+        transaction: t
+      });
+
+      if (blobFindResult === null || blobFindResult === undefined) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
+
+      const blobModel: BlobModel = this.convertDbModelToBlobModel(
+        blobFindResult
+      );
+
+      return LeaseFactory.createLeaseState(
+        new BlobLeaseAdapter(blobModel),
+        context
+      )
+        .validate(new BlobReadLeaseValidator(leaseAccessConditions))
+        .sync(new BlobLeaseSyncer(blobModel));
+    });
+  }
+
+  public undeleteBlob(): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
   public async createSnapshot(
     context: Context,
     account: string,
@@ -1646,57 +1560,59 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     metadata?: Models.BlobMetadata
   ): Promise<CreateSnapshotResponse> {
     return this.sequelize.transaction(async t => {
-      const containerRes = await ContainersModel.findOne({
-        attributes: ["accountName"],
+      const containerFindResult = await ContainersModel.findOne({
+        attributes: ["accountName"], // TODO: Optimize select attributes for all queries
         where: {
           accountName: account,
           containerName: container
-        }
+        },
+        transaction: t
       });
-      if (containerRes === undefined || containerRes === null) {
-        const requestId = context ? context.contextId : undefined;
-        throw StorageErrorFactory.getContainerNotFound(requestId);
+
+      if (containerFindResult === null || containerFindResult === undefined) {
+        throw StorageErrorFactory.getContainerNotFound(context.contextId);
       }
 
-      const res = await BlobsModel.findOne({
+      const blobFindResult = await BlobsModel.findOne({
         where: {
           accountName: account,
           containerName: container,
           blobName: blob,
           snapshot: "",
-          deleting: 0
+          deleting: 0,
+          isCommitted: true
         },
         transaction: t
       });
 
-      if (res === undefined || res === null) {
-        const requestId = context ? context.contextId : undefined;
-        throw StorageErrorFactory.getBlobNotFound(requestId);
+      if (blobFindResult === null || blobFindResult === undefined) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
       }
 
-      const snapshotBlob = this.blobModelConvert(res);
+      const snapshotBlob: BlobModel = this.convertDbModelToBlobModel(
+        blobFindResult
+      );
+
+      LeaseFactory.createLeaseState(
+        new BlobLeaseAdapter(snapshotBlob),
+        context
+      ).validate(new BlobReadLeaseValidator(leaseAccessConditions));
 
       snapshotBlob.snapshot = context.startTime!.toISOString();
+      snapshotBlob.metadata = metadata || snapshotBlob.metadata;
 
-      await BlobsModel.upsert({
-        accountName: snapshotBlob.accountName,
-        containerName: snapshotBlob.containerName,
-        blobName: snapshotBlob.name,
-        snapshot: snapshotBlob.snapshot,
-        blobType: snapshotBlob.properties.blobType,
-        blobSequenceNumber: snapshotBlob.properties.blobSequenceNumber,
-        isCommitted: true,
-        lastModified: snapshotBlob.properties.lastModified,
-        creationTime: snapshotBlob.properties.creationTime,
-        etag: snapshotBlob.properties.etag,
-        persistency: this.serializeModelValue(snapshotBlob.persistency),
-        committedBlocksInOrder: this.serializeModelValue(
-          snapshotBlob.committedBlocksInOrder
-        ),
-        metadata:
-          this.serializeModelValue(metadata) ||
-          this.serializeModelValue(snapshotBlob.metadata) ||
-          null
+      new BlobLeaseSyncer(snapshotBlob).sync({
+        leaseId: undefined,
+        leaseExpireTime: undefined,
+        leaseDurationSeconds: undefined,
+        leaseBreakTime: undefined,
+        leaseDurationType: undefined,
+        leaseState: undefined,
+        leaseStatus: undefined
+      });
+
+      await BlobsModel.upsert(this.convertBlobModelToDbModel(snapshotBlob), {
+        transaction: t
       });
 
       return {
@@ -1892,6 +1808,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       }
     });
   }
+
   public async setBlobHTTPHeaders(
     context: Context,
     account: string,
@@ -1901,7 +1818,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blobHTTPHeaders: Models.BlobHTTPHeaders | undefined
   ): Promise<Models.BlobProperties> {
     return this.sequelize.transaction(async t => {
-      const containerRes = await ContainersModel.findOne({
+      const containerFindResult = await ContainersModel.findOne({
         attributes: ["accountName"],
         where: {
           accountName: account,
@@ -1910,81 +1827,83 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      const requestId = context ? context.contextId : undefined;
-      if (containerRes === null || containerRes === undefined) {
-        throw StorageErrorFactory.getContainerNotFound(requestId);
+      if (containerFindResult === null || containerFindResult === undefined) {
+        throw StorageErrorFactory.getContainerNotFound(context.contextId);
       }
 
-      const res = await BlobsModel.findOne({
+      const blobFindResult = await BlobsModel.findOne({
         where: {
           accountName: account,
           containerName: container,
           blobName: blob,
           snapshot: "",
-          deleting: 0
+          deleting: 0,
+          isCommitted: true
         },
         transaction: t
       });
 
-      if (res === null || res === undefined) {
-        throw StorageErrorFactory.getBlobNotFound(requestId);
+      if (blobFindResult === null || blobFindResult === undefined) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
       }
 
-      let lease = this.getBlobLease(res, context);
-
-      // Check Lease status
-      this.checkBlobLeaseOnWriteBlob(
-        lease.leaseId,
-        lease.leaseStatus,
-        leaseAccessConditions,
-        requestId
+      const blobModel: BlobModel = this.convertDbModelToBlobModel(
+        blobFindResult
       );
 
-      lease = this.UpdateBlobLeaseStateOnWriteBlob(lease);
-
-      const etag = this.getModelValue<string>(res, "etag", true);
-      const blobType = this.getModelValue<Models.BlobType>(res, "blobType");
-      const accessTier = this.getModelValue<Models.AccessTier>(
-        res,
-        "accessTier"
-      );
-      const blobSequenceNumber = this.getModelValue<number>(
-        res,
-        "blobSequenceNumber"
-      );
-      let lastModified = this.getModelValue<Date>(res, "lastModified", true);
-      const contentProperties: IBlobContentProperties = this.deserializeModelValue(
-        res,
-        "contentProperties"
-      );
+      LeaseFactory.createLeaseState(new BlobLeaseAdapter(blobModel), context)
+        .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
+        .sync(new BlobWriteLeaseSyncer(blobModel));
 
       if (blobHTTPHeaders !== undefined) {
-        contentProperties.cacheControl = blobHTTPHeaders.blobCacheControl;
-        contentProperties.contentType = blobHTTPHeaders.blobContentType;
-        contentProperties.contentMD5 = blobHTTPHeaders.blobContentMD5;
-        contentProperties.contentEncoding = blobHTTPHeaders.blobContentEncoding;
-        contentProperties.contentLanguage = blobHTTPHeaders.blobContentLanguage;
-        contentProperties.contentDisposition =
+        blobModel.properties.cacheControl = blobHTTPHeaders.blobCacheControl;
+        blobModel.properties.contentType = blobHTTPHeaders.blobContentType;
+        blobModel.properties.contentMD5 = blobHTTPHeaders.blobContentMD5;
+        blobModel.properties.contentEncoding =
+          blobHTTPHeaders.blobContentEncoding;
+        blobModel.properties.contentLanguage =
+          blobHTTPHeaders.blobContentLanguage;
+        blobModel.properties.contentDisposition =
           blobHTTPHeaders.blobContentDisposition;
-        lastModified = context.startTime ? context.startTime : new Date();
+        blobModel.properties.lastModified = context.startTime
+          ? context.startTime
+          : new Date();
       }
+
+      const contentProperties =
+        this.serializeModelValue({
+          contentLength: blobModel.properties.contentLength,
+          contentType: blobModel.properties.contentType,
+          contentEncoding: blobModel.properties.contentEncoding,
+          contentLanguage: blobModel.properties.contentLanguage,
+          contentMD5: blobModel.properties.contentMD5,
+          contentDisposition: blobModel.properties.contentDisposition,
+          cacheControl: blobModel.properties.cacheControl
+        }) || null;
 
       await BlobsModel.update(
         {
-          lastModified,
-          contentProperties: this.serializeModelValue(contentProperties),
-          leaseStatus: lease.leaseStatus ? lease.leaseStatus : null,
-          leaseState: lease.leaseState ? lease.leaseState : null,
-          leaseDuration: lease.leaseDurationType
-            ? lease.leaseDurationType
+          etag: uuid(),
+          lastModified: blobModel.properties.lastModified,
+          contentProperties,
+          leaseStatus: blobModel.properties.leaseStatus
+            ? blobModel.properties.leaseStatus
             : null,
-          leaseId: lease.leaseId ? lease.leaseId : null,
-          leasedurationNumber: lease.leaseDurationSeconds
-            ? lease.leaseDurationSeconds
+          leaseState: blobModel.properties.leaseState
+            ? blobModel.properties.leaseState
             : null,
-          leaseExpireTime: lease.leaseExpireTime ? lease.leaseExpireTime : null,
-          leaseBreakExpireTime: lease.leaseBreakTime
-            ? lease.leaseBreakTime
+          leaseDuration: blobModel.properties.leaseDuration
+            ? blobModel.properties.leaseDuration
+            : null,
+          leaseId: blobModel.leaseId ? blobModel.leaseId : null,
+          leasedurationNumber: blobModel.leaseDurationSeconds
+            ? blobModel.leaseDurationSeconds
+            : null,
+          leaseExpireTime: blobModel.leaseExpireTime
+            ? blobModel.leaseExpireTime
+            : null,
+          leaseBreakExpireTime: blobModel.leaseBreakTime
+            ? blobModel.leaseBreakTime
             : null
         },
         {
@@ -1999,20 +1918,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         }
       );
 
-      const ret: Models.BlobProperties = {
-        ...contentProperties,
-        lastModified,
-        etag,
-        blobType,
-        blobSequenceNumber,
-        accessTier,
-        leaseStatus: lease.leaseStatus,
-        leaseDuration: lease.leaseDurationType,
-        leaseState: lease.leaseState
-      };
-      return ret;
+      return blobModel.properties;
     });
   }
+
   public setBlobMetadata(
     context: Context,
     account: string,
@@ -2322,6 +2231,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       return properties;
     });
   }
+
   public async renewBlobLease(
     context: Context,
     account: string,
@@ -2871,6 +2781,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       return responseCode;
     });
   }
+
   public uploadPages(
     context: Context,
     blob: BlobModel,
@@ -2880,6 +2791,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<Models.BlobProperties> {
     throw new Error("Method not implemented.");
   }
+
   public clearRange(
     context: Context,
     blob: BlobModel,
@@ -2888,6 +2800,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<Models.BlobProperties> {
     throw new Error("Method not implemented.");
   }
+
   public getPageRanges(
     context: Context,
     account: string,
@@ -2897,6 +2810,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<GetPageRangeResponse> {
     throw new Error("Method not implemented.");
   }
+
   public resizePageBlob(
     context: Context,
     account: string,
@@ -2906,6 +2820,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<Models.BlobProperties> {
     throw new Error("Method not implemented.");
   }
+
   public updateSequenceNumber(
     context: Context,
     account: string,
@@ -3005,43 +2920,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     }
 
     return JSON.stringify(value);
-  }
-
-  /**
-   * Check Blob lease status on Read blob.
-   *
-   * @private
-   * @param {(string | undefined)} leaseId
-   * @param {(Models.LeaseStatusType | undefined)} leaseStatus
-   * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
-   * @param {string} [requestId]
-   * @memberof SqlBlobMetadataStore
-   */
-  private checkLeaseOnReadBlob(
-    leaseId: string | undefined,
-    leaseStatus: Models.LeaseStatusType | undefined,
-    leaseAccessConditions?: Models.LeaseAccessConditions,
-    requestId?: string
-  ): void {
-    // check only when input Leased Id is not empty
-    if (
-      leaseAccessConditions !== undefined &&
-      leaseAccessConditions.leaseId !== undefined &&
-      leaseAccessConditions.leaseId !== ""
-    ) {
-      // return error when lease is unlocked
-      if (leaseStatus === Models.LeaseStatusType.Unlocked) {
-        throw StorageErrorFactory.getBlobLeaseLost(requestId);
-      } else if (
-        leaseId !== undefined &&
-        leaseAccessConditions.leaseId.toLowerCase() !== leaseId.toLowerCase()
-      ) {
-        // return error when lease is locked but lease ID not match
-        throw StorageErrorFactory.getBlobLeaseIdMismatchWithBlobOperation(
-          requestId
-        );
-      }
-    }
   }
 
   /**
@@ -3202,85 +3080,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     return lease;
   }
 
-  private blobModelConvert(res: BlobsModel): BlobModel {
-    const contentProperties: IBlobContentProperties = this.deserializeModelValue(
-      res,
-      "contentProperties"
-    );
-    return {
-      accountName: this.getModelValue<string>(res, "accountName", true),
-      containerName: this.getModelValue<string>(res, "containerName", true),
-      name: this.getModelValue<string>(res, "blobName", true),
-      snapshot: this.getModelValue<string>(res, "snapshot", true),
-      isCommitted: this.getModelValue<boolean>(res, "isCommitted", true),
-      properties: {
-        lastModified: this.getModelValue<Date>(res, "lastModified", true),
-        etag: this.getModelValue<string>(res, "etag", true),
-        leaseDuration: this.getModelValue<Models.LeaseDurationType>(
-          res,
-          "leaseDuration"
-        ),
-        creationTime: this.getModelValue<Date>(res, "creationTime"),
-        leaseState: this.getModelValue<Models.LeaseStateType>(
-          res,
-          "leaseState"
-        ),
-        leaseStatus: this.getModelValue<Models.LeaseStatusType>(
-          res,
-          "leaseStatus"
-        ),
-        accessTier: this.getModelValue<Models.AccessTier>(res, "accessTier"),
-        accessTierInferred: this.getModelValue<boolean>(
-          res,
-          "accessTierInferred"
-        ),
-        accessTierChangeTime: this.getModelValue<Date>(
-          res,
-          "accessTierChangeTime"
-        ),
-        blobSequenceNumber: this.getModelValue<number>(
-          res,
-          "blobSequenceNumber"
-        ),
-        blobType: this.getModelValue<Models.BlobType>(res, "blobType"),
-        contentMD5: contentProperties
-          ? this.restoreUint8Array(contentProperties.contentMD5)
-          : undefined,
-        contentDisposition: contentProperties
-          ? contentProperties.contentDisposition
-          : undefined,
-        contentEncoding: contentProperties
-          ? contentProperties.contentEncoding
-          : undefined,
-        contentLanguage: contentProperties
-          ? contentProperties.contentLanguage
-          : undefined,
-        contentLength: contentProperties
-          ? contentProperties.contentLength
-          : undefined,
-        contentType: contentProperties
-          ? contentProperties.contentType
-          : undefined,
-        cacheControl: contentProperties
-          ? contentProperties.cacheControl
-          : undefined
-      },
-      leaseDurationSeconds: this.getModelValue<number>(
-        res,
-        "leasedurationNumber"
-      ),
-      leaseBreakTime: this.getModelValue<Date>(res, "leaseBreakExpireTime"),
-      leaseExpireTime: this.getModelValue<Date>(res, "leaseExpireTime"),
-      leaseId: this.getModelValue<string>(res, "leaseId"),
-      persistency: this.deserializeModelValue(res, "persistency"),
-      committedBlocksInOrder: this.deserializeModelValue(
-        res,
-        "committedBlocksInOrder"
-      ),
-      metadata: this.deserializeModelValue(res, "metadata")
-    };
-  }
-
   /**
    * This method will restore object to Uint8Array.
    *
@@ -3403,6 +3202,145 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       lease,
       hasImmutabilityPolicy: container.properties.hasImmutabilityPolicy,
       hasLegalHold: container.properties.hasLegalHold
+    };
+  }
+
+  private convertDbModelToBlobModel(dbModel: BlobsModel): BlobModel {
+    const contentProperties: IBlobContentProperties = this.convertDbModelToBlobContentProperties(
+      dbModel
+    );
+
+    return {
+      accountName: this.getModelValue<string>(dbModel, "accountName", true),
+      containerName: this.getModelValue<string>(dbModel, "containerName", true),
+      name: this.getModelValue<string>(dbModel, "blobName", true),
+      snapshot: this.getModelValue<string>(dbModel, "snapshot", true),
+      isCommitted: this.getModelValue<boolean>(dbModel, "isCommitted", true),
+      properties: {
+        lastModified: this.getModelValue<Date>(dbModel, "lastModified", true),
+        etag: this.getModelValue<string>(dbModel, "etag", true),
+        leaseDuration: this.getModelValue<Models.LeaseDurationType>(
+          dbModel,
+          "leaseDuration"
+        ),
+        creationTime: this.getModelValue<Date>(dbModel, "creationTime"),
+        leaseState: this.getModelValue<Models.LeaseStateType>(
+          dbModel,
+          "leaseState"
+        ),
+        leaseStatus: this.getModelValue<Models.LeaseStatusType>(
+          dbModel,
+          "leaseStatus"
+        ),
+        accessTier: this.getModelValue<Models.AccessTier>(
+          dbModel,
+          "accessTier"
+        ),
+        accessTierInferred: this.getModelValue<boolean>(
+          dbModel,
+          "accessTierInferred"
+        ),
+        accessTierChangeTime: this.getModelValue<Date>(
+          dbModel,
+          "accessTierChangeTime"
+        ),
+        blobSequenceNumber: this.getModelValue<number>(
+          dbModel,
+          "blobSequenceNumber"
+        ),
+        blobType: this.getModelValue<Models.BlobType>(dbModel, "blobType"),
+        contentMD5: contentProperties
+          ? this.restoreUint8Array(contentProperties.contentMD5)
+          : undefined,
+        contentDisposition: contentProperties
+          ? contentProperties.contentDisposition
+          : undefined,
+        contentEncoding: contentProperties
+          ? contentProperties.contentEncoding
+          : undefined,
+        contentLanguage: contentProperties
+          ? contentProperties.contentLanguage
+          : undefined,
+        contentLength: contentProperties
+          ? contentProperties.contentLength
+          : undefined,
+        contentType: contentProperties
+          ? contentProperties.contentType
+          : undefined,
+        cacheControl: contentProperties
+          ? contentProperties.cacheControl
+          : undefined
+      },
+      leaseDurationSeconds: this.getModelValue<number>(
+        dbModel,
+        "leasedurationNumber"
+      ),
+      leaseBreakTime: this.getModelValue<Date>(dbModel, "leaseBreakExpireTime"),
+      leaseExpireTime: this.getModelValue<Date>(dbModel, "leaseExpireTime"),
+      leaseId: this.getModelValue<string>(dbModel, "leaseId"),
+      persistency: this.deserializeModelValue(dbModel, "persistency"),
+      committedBlocksInOrder: this.deserializeModelValue(
+        dbModel,
+        "committedBlocksInOrder"
+      ),
+      metadata: this.deserializeModelValue(dbModel, "metadata")
+    };
+  }
+
+  private convertBlobModelToDbModel(blob: BlobModel): object {
+    const contentProperties = this.convertBlobContentPropertiesToDbModel(
+      blob.properties
+    );
+
+    return {
+      accountName: blob.accountName,
+      containerName: blob.containerName,
+      blobName: blob.name,
+      snapshot: blob.snapshot,
+      blobType: blob.properties.blobType,
+      blobSequenceNumber: blob.properties.blobSequenceNumber || null,
+      isCommitted: true,
+      lastModified: blob.properties.lastModified,
+      creationTime: blob.properties.creationTime || null,
+      etag: blob.properties.etag,
+      accessTier: blob.properties.accessTier || null,
+      accessTierChangeTime: blob.properties.accessTierChangeTime || null,
+      accessTierInferred: blob.properties.accessTierInferred || null,
+      leaseBreakExpireTime: blob.leaseBreakTime || null,
+      leaseExpireTime: blob.leaseExpireTime || null,
+      leaseId: blob.leaseId || null,
+      leasedurationNumber: blob.leaseDurationSeconds || null,
+      leaseDuration: blob.properties.leaseDuration || null,
+      leaseStatus: blob.properties.leaseStatus || null,
+      leaseState: blob.properties.leaseState || null,
+      persistency: this.serializeModelValue(blob.persistency) || null,
+      committedBlocksInOrder:
+        this.serializeModelValue(blob.committedBlocksInOrder) || null,
+      metadata: this.serializeModelValue(blob.metadata) || null,
+      ...contentProperties
+    };
+  }
+
+  private convertDbModelToBlobContentProperties(
+    dbModel: BlobsModel
+  ): IBlobContentProperties {
+    return this.deserializeModelValue(dbModel, "contentProperties");
+  }
+
+  private convertBlobContentPropertiesToDbModel(
+    contentProperties: IBlobContentProperties
+  ): object {
+    return {
+      contentProperties:
+        this.serializeModelValue({
+          contentLength: contentProperties.contentLength,
+          contentType: contentProperties.contentType,
+          contentEncoding: contentProperties.contentEncoding,
+          contentLanguage: contentProperties.contentLanguage,
+          contentMD5: contentProperties.contentMD5,
+          contentDisposition: contentProperties.contentDisposition,
+          cacheControl: contentProperties.cacheControl
+        }) || null
     };
   }
 

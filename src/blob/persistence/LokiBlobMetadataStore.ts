@@ -740,23 +740,10 @@ export default class LokiBlobMetadataStore
     }
   }
 
-  /**
-   * List blobs with query conditions specified.
-   *
-   * @param {string} [account]
-   * @param {string} [container]
-   * @param {string} [blob]
-   * @param {string} [prefix=""]
-   * @param {number} [maxResults=DEFAULT_LIST_BLOBS_MAX_RESULTS]
-   * @param {string} [marker=""]
-   * @param {boolean} [includeSnapshots]
-   * @returns {(Promise<[BlobModel[], string | undefined]>)}
-   * @memberof LokiBlobMetadataStore
-   */
   public async listBlobs(
     context: Context,
-    account?: string,
-    container?: string,
+    account: string,
+    container: string,
     blob?: string,
     prefix: string = "",
     maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
@@ -915,7 +902,7 @@ export default class LokiBlobMetadataStore
         blobDoc.properties !== undefined &&
         blobDoc.properties.accessTier === Models.AccessTier.Archive
       ) {
-        throw StorageErrorFactory.getBlobArchived();
+        throw StorageErrorFactory.getBlobArchived(context.contextId);
       }
       coll.remove(blobDoc);
     }
@@ -983,8 +970,8 @@ export default class LokiBlobMetadataStore
       leaseDurationSeconds: undefined,
       leaseBreakTime: undefined,
       leaseDurationType: undefined,
-      leaseState: Models.LeaseStateType.Available, // TODO: Lease state & status should be undefined for snapshots
-      leaseStatus: LeaseStatusType.Unlocked // TODO: Lease state & status should be undefined for snapshots
+      leaseState: undefined,
+      leaseStatus: undefined
     });
 
     coll.insert(snapshotBlob);
@@ -1255,6 +1242,7 @@ export default class LokiBlobMetadataStore
         : new Date();
     }
     doc.properties = blobProps;
+    doc.properties.etag = uuid();
 
     new BlobWriteLeaseSyncer(doc).sync(lease);
 
