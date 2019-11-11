@@ -465,23 +465,10 @@ export interface IBlobMetadataStore
     container: string
   ): Promise<void>;
 
-  /**
-   * List blobs with query conditions specified.
-   *
-   * @param {string} [account]
-   * @param {string} [container]
-   * @param {string} [blob]
-   * @param {string} [prefix]
-   * @param {number} [maxResults]
-   * @param {string} [marker]
-   * @param {boolean} [includeSnapshots]
-   * @returns {(Promise<[BlobModel[], string | undefined]>)}
-   * @memberof IBlobMetadataStore
-   */
   listBlobs(
     context: Context,
-    account?: string,
-    container?: string,
+    account: string,
+    container: string,
     blob?: string,
     prefix?: string,
     maxResults?: number,
