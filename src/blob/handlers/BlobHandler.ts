@@ -299,7 +299,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * Acquire Blob Lease
+   * Acquire Blob Lease.
    *
    * @param {Models.BlobAcquireLeaseOptionalParams} options
    * @param {Context} context
@@ -314,6 +314,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const account = blobCtx.account!;
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
+    const snapshot = blobCtx.request!.getQuery("snapshot");
+
+    if (snapshot !== undefined && snapshot !== "") {
+      throw StorageErrorFactory.getInvalidOperation(
+        context.contextId,
+        "A lease cannot be granted for a blob snapshot"
+      );
+    }
+
     const res = await this.metadataStore.acquireBlobLease(
       context,
       account,

@@ -11,7 +11,7 @@
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
       "args": ["${workspaceFolder}/src/queue/main.ts", "-d", "debug.log"],
-      "envFile": "${workspaceFolder}/loki.env",
+      "env": { "AZURITE_ACCOUNTS": "" },
       "outputCapture": "std"
     },
     {
@@ -21,7 +21,7 @@
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
       "args": ["${workspaceFolder}/src/blob/main.ts", "-d", "debug.log"],
-      "envFile": "${workspaceFolder}/loki.env",
+      "env": { "AZURITE_ACCOUNTS": "" },
       "outputCapture": "std"
     },
     {
@@ -31,7 +31,10 @@
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
       "args": ["${workspaceFolder}/src/blob/main.ts", "-d", "debug.log"],
-      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "AZURITE_DB": "mariadb://root:my-secret-pw@127.0.0.1:3306/azurite_blob",
+        "AZURITE_ACCOUNTS": ""
+      },
       "outputCapture": "std"
     },
     {
@@ -78,6 +81,7 @@
         "${workspaceFolder}/${relativeFile}"
       ],
       "env": {
+        "AZURITE_ACCOUNTS": "",
         "AZURITE_TEST_DB": "mariadb://root:my-secret-pw@127.0.0.1:3306/azurite_blob_test"
       },
       "internalConsoleOptions": "openOnSessionStart",

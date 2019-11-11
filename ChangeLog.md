@@ -9,7 +9,7 @@
 - Handled race condition of GC when sometimes newly created extents will be removed.
 - Fixed a bug when uploading blob will fail when md5 header is empty string.
 - Fixed a bug when sometimes list containers or blobs doesn't have proper lease status.
-- [Breaking] This version cannot guarantee compatible with persisted database models file by previous version. Remove previous metadata file and restart Azurite in case any errors.
+- [Breaking] This version cannot guarantee compatible with persisted database models in Azurite workspace used by previous version. Clean Azurite workspace folder and restart Azurite in case any errors. Notice that, data will be lost after cleaning Azurite workspace folder.
 
 Blob:
 - Fixed a bug that snapshot blob doesn't honor metadata options.
