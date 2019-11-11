@@ -3,13 +3,7 @@ import { access } from "fs";
 import { dirname, join } from "path";
 import { promisify } from "util";
 
-import BlobConfiguration from "./blob/BlobConfiguration";
-import BlobServer from "./blob/BlobServer";
-import {
-  DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
-  DEFAULT_BLOB_LOKI_DB_PATH,
-  DEFAULT_BLOB_PERSISTENCE_ARRAY
-} from "./blob/utils/constants";
+import { BlobServerFactory } from "./blob/BlobServerFactory";
 import Environment from "./common/Environment";
 import * as Logger from "./common/Logger";
 import QueueConfiguration from "./queue/QueueConfiguration";
@@ -40,18 +34,9 @@ async function main() {
     await accessAsync(dirname(debugFilePath!));
   }
 
-  // Initialize server configuration
-  const blobConfig = new BlobConfiguration(
-    env.blobHost(),
-    env.blobPort(),
-    join(location, DEFAULT_BLOB_LOKI_DB_PATH),
-    join(location, DEFAULT_BLOB_EXTENT_LOKI_DB_PATH),
-    DEFAULT_BLOB_PERSISTENCE_ARRAY,
-    !env.silent(),
-    undefined,
-    env.debug() !== undefined,
-    env.debug()
-  );
+  const blobServerFactory = new BlobServerFactory();
+  const blobServer = await blobServerFactory.createServer();
+  const blobConfig = blobServer.config;
 
   // TODO: Align with blob DEFAULT_BLOB_PERSISTENCE_ARRAY
   // TODO: Join for all paths in the array
@@ -78,7 +63,6 @@ async function main() {
   Logger.configLogger(blobConfig.enableDebugLog, blobConfig.debugLogFilePath);
 
   // Create server instance
-  const blobServer = new BlobServer(blobConfig);
   const queueServer = new QueueServer(queueConfig);
 
   // Start server
