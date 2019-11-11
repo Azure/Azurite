@@ -1776,7 +1776,7 @@ export default class LokiBlobMetadataStore
   public async stageBlock(
     context: Context,
     block: BlockModel,
-    leaseAccessConditions: Models.LeaseAccessConditions | undefined
+    leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<void> {
     await this.checkContainerExist(
       context,
