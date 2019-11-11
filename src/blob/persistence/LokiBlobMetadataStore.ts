@@ -9,7 +9,10 @@ import * as Models from "../generated/artifacts/models";
 import { LeaseStatusType } from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import PageBlobRangesManager from "../handlers/PageBlobRangesManager";
-import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
+import {
+  DEFAULT_LIST_BLOBS_MAX_RESULTS,
+  DEFAULT_LIST_CONTAINERS_MAX_RESULTS
+} from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BlobLeaseSyncer from "./BlobLeaseSyncer";
 import BlobReadLeaseValidator from "./BlobReadLeaseValidator";
@@ -298,7 +301,7 @@ export default class LokiBlobMetadataStore
     context: Context,
     account: string,
     prefix: string = "",
-    maxResults: number = 5000,
+    maxResults: number = DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
     marker: number = 0
   ): Promise<[ContainerModel[], number | undefined]> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);

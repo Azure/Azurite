@@ -15,7 +15,7 @@ export default class LokiContainerLeaseAdapter implements ILease {
   public leaseExpireTime?: Date | undefined;
   public leaseBreakTime?: Date | undefined;
 
-  public constructor(private readonly container: ContainerModel) {
+  public constructor(container: ContainerModel) {
     if (container.properties.leaseState === undefined) {
       throw RangeError(
         `LokiContainerLeaseAdapter:constructor() container leaseState cannot be undefined.`
@@ -37,13 +37,15 @@ export default class LokiContainerLeaseAdapter implements ILease {
     this.leaseBreakTime = container.leaseBreakTime;
   }
 
-  public sync() {
-    this.container.leaseId = this.leaseId;
-    this.container.properties.leaseState = this.leaseState;
-    this.container.properties.leaseStatus = this.leaseStatus;
-    this.container.properties.leaseDuration = this.leaseDurationType;
-    this.container.leaseDurationSeconds = this.leaseDurationSeconds;
-    this.container.leaseExpireTime = this.leaseExpireTime;
-    this.container.leaseBreakTime = this.leaseBreakTime;
+  public toString(): string {
+    return JSON.stringify({
+      leaseId: this.leaseId,
+      leaseState: this.leaseState,
+      leaseStatus: this.leaseStatus,
+      leaseDurationType: this.leaseDurationType,
+      leaseDurationSeconds: this.leaseDurationSeconds,
+      leaseExpireTime: this.leaseExpireTime,
+      leaseBreakTime: this.leaseBreakTime
+    });
   }
 }

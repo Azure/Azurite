@@ -3,8 +3,8 @@ import Context from "../generated/Context";
 
 export interface ILease {
   leaseId?: string;
-  leaseState: Models.LeaseStateType; // Available, Leased, Breaking, Broken, Expired
-  leaseStatus: Models.LeaseStatusType; // Locked, Unlocked
+  leaseState?: Models.LeaseStateType; // undefined, Available, Leased, Breaking, Broken, Expired
+  leaseStatus?: Models.LeaseStatusType; // undefined, Locked, Unlocked
   leaseDurationType?: Models.LeaseDurationType; // Fixed, Infinity, undefined
   leaseDurationSeconds?: number; // number, undefined, -1
   leaseExpireTime?: Date;

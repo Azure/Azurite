@@ -15,7 +15,10 @@ export default class LeaseFactory {
       );
     }
 
-    if (lease.leaseState === LeaseStateType.Available) {
+    if (
+      lease.leaseState === LeaseStateType.Available ||
+      lease.leaseState === undefined
+    ) {
       return new LeaseAvailableState(lease, context);
     }
 

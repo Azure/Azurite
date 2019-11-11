@@ -6,7 +6,8 @@ import { parseXML } from "../generated/utils/xml";
 import {
   BLOB_API_VERSION,
   EMULATOR_ACCOUNT_KIND,
-  EMULATOR_ACCOUNT_SKUNAME
+  EMULATOR_ACCOUNT_SKUNAME,
+  DEFAULT_LIST_CONTAINERS_MAX_RESULTS
 } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
 
@@ -19,14 +20,6 @@ import BaseHandler from "./BaseHandler";
  */
 export default class ServiceHandler extends BaseHandler
   implements IServiceHandler {
-  /**
-   * Default listing containers max number.
-   *
-   * @private
-   * @memberof ServiceHandler
-   */
-  private readonly LIST_CONTAINERS_MAX_RESULTS_DEFAULT = 5000;
-
   /**
    * Default service properties.
    *
@@ -219,7 +212,7 @@ export default class ServiceHandler extends BaseHandler
     const accountName = blobCtx.account!;
 
     options.maxresults =
-      options.maxresults || this.LIST_CONTAINERS_MAX_RESULTS_DEFAULT;
+      options.maxresults || DEFAULT_LIST_CONTAINERS_MAX_RESULTS;
     options.prefix = options.prefix || "";
 
     const marker = parseInt(options.marker || "0", 10);
