@@ -319,6 +319,7 @@ export default class LokiBlobMetadataStore
       .chain()
       .find(query)
       .limit(maxResults + 1)
+      .simplesort("name")
       .data();
 
     if (docs.length <= maxResults) {

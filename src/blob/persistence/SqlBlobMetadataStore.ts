@@ -506,7 +506,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     const findResult = await ContainersModel.findAll({
       limit: maxResults,
       where: whereQuery as any,
-      order: [["containerId", "ASC"]]
+      order: [["containerName", "ASC"]]
     });
 
     const leaseUpdateMapper = (model: ContainersModel) => {
