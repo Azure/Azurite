@@ -159,9 +159,9 @@ describe("ServiceAPIs", () => {
       serviceURL,
       containerName3
     );
-    await containerURL1.create(Aborter.none, { metadata: { key: "val" } });
-    await containerURL2.create(Aborter.none, { metadata: { key: "val" } });
-    await containerURL3.create(Aborter.none, { metadata: { key: "val" } });
+    await containerURL1.create(Aborter.none);
+    await containerURL2.create(Aborter.none);
+    await containerURL3.create(Aborter.none);
     const result = await serviceURL.listContainersSegment(
       Aborter.none,
       undefined
@@ -170,6 +170,9 @@ describe("ServiceAPIs", () => {
     assert.ok(result.containerItems[0].name.startsWith("aa"));
     assert.ok(result.containerItems[1].name.startsWith("bb"));
     assert.ok(result.containerItems[2].name.startsWith("cc"));
+    await containerURL1.delete(Aborter.none);
+    await containerURL2.delete(Aborter.none);
+    await containerURL3.delete(Aborter.none);
   });
 
   it("ListContainers with default parameters", async () => {
