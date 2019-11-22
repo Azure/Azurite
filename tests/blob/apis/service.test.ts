@@ -200,8 +200,8 @@ describe("ServiceAPIs", () => {
       containerName2
     );
     assert.equal(result.containerItems.length, 2);
-    assert.ok(result.containerItems[0].name.startsWith("bb"));
-    assert.ok(result.containerItems[1].name.startsWith("cc"));
+    assert.equal(result.containerItems[0].name, containerName3);
+    assert.equal(result.containerItems[1].name, containerName1);
     await containerURL1.delete(Aborter.none);
     await containerURL2.delete(Aborter.none);
     await containerURL3.delete(Aborter.none);
@@ -234,7 +234,7 @@ describe("ServiceAPIs", () => {
     );
 
     assert.equal(result1.containerItems.length, 1);
-    assert.ok(result1.containerItems[0].name.startsWith("bb"));
+    assert.equal(result1.containerItems[0].name, containerName3);
     assert.equal(result1.nextMarker, containerName3);
 
     const result2 = await serviceURL.listContainersSegment(
@@ -243,7 +243,7 @@ describe("ServiceAPIs", () => {
       { maxresults: 1 }
     );
     assert.equal(result2.containerItems.length, 1);
-    assert.ok(result2.containerItems[0].name.startsWith("cc"));
+    assert.ok(result2.containerItems[0].name, containerName1);
     assert.equal(result2.nextMarker, "");
 
     await containerURL1.delete(Aborter.none);
