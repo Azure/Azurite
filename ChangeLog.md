@@ -9,6 +9,7 @@
 - Handled race condition of GC when sometimes newly created extents will be removed.
 - Fixed a bug when uploading blob will fail when md5 header is empty string.
 - Fixed a bug when sometimes list containers or blobs doesn't have proper lease status.
+- Fixed a bug that did not return list of containers in sorted order.
 - [Breaking] This version cannot guarantee compatible with persisted database models in Azurite workspace used by previous version. Clean Azurite workspace folder and restart Azurite in case any errors. Notice that, data will be lost after cleaning Azurite workspace folder.
 
 Blob:
