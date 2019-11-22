@@ -175,6 +175,71 @@ describe("ServiceAPIs", () => {
     await containerURL3.delete(Aborter.none);
   });
 
+  it("List containers with marker", async () => {
+    const containerNamePostfix = getUniqueName("container");
+    const containerName1 = `cc${containerNamePostfix}`;
+    const containerName2 = `aa${containerNamePostfix}`;
+    const containerName3 = `bb${containerNamePostfix}`;
+    const containerURL1 = ContainerURL.fromServiceURL(
+      serviceURL,
+      containerName1
+    );
+    const containerURL2 = ContainerURL.fromServiceURL(
+      serviceURL,
+      containerName2
+    );
+    const containerURL3 = ContainerURL.fromServiceURL(
+      serviceURL,
+      containerName3
+    );
+    await containerURL1.create(Aborter.none);
+    await containerURL2.create(Aborter.none);
+    await containerURL3.create(Aborter.none);
+    const result = await serviceURL.listContainersSegment(
+      Aborter.none,
+      containerName2
+    );
+    assert.equal(result.containerItems.length, 2);
+    assert.ok(result.containerItems[0].name.startsWith("bb"));
+    assert.ok(result.containerItems[1].name.startsWith("cc"));
+    await containerURL1.delete(Aborter.none);
+    await containerURL2.delete(Aborter.none);
+    await containerURL3.delete(Aborter.none);
+  });
+
+  it("List containers with marker and max result length less than result size", async () => {
+    const containerNamePostfix = getUniqueName("container");
+    const containerName1 = `cc${containerNamePostfix}`;
+    const containerName2 = `aa${containerNamePostfix}`;
+    const containerName3 = `bb${containerNamePostfix}`;
+    const containerURL1 = ContainerURL.fromServiceURL(
+      serviceURL,
+      containerName1
+    );
+    const containerURL2 = ContainerURL.fromServiceURL(
+      serviceURL,
+      containerName2
+    );
+    const containerURL3 = ContainerURL.fromServiceURL(
+      serviceURL,
+      containerName3
+    );
+    await containerURL1.create(Aborter.none);
+    await containerURL2.create(Aborter.none);
+    await containerURL3.create(Aborter.none);
+    const result = await serviceURL.listContainersSegment(
+      Aborter.none,
+      containerName2,
+      { maxresults: 1 }
+    );
+    assert.equal(result.containerItems.length, 1);
+    assert.ok(result.containerItems[0].name.startsWith("bb"));
+    assert.equal(result.nextMarker, containerName3);
+    await containerURL1.delete(Aborter.none);
+    await containerURL2.delete(Aborter.none);
+    await containerURL3.delete(Aborter.none);
+  });
+
   it("ListContainers with default parameters", async () => {
     const result = await serviceURL.listContainersSegment(Aborter.none);
     assert.ok(typeof result.requestId);

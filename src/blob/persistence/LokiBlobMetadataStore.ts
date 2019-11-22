@@ -293,8 +293,8 @@ export default class LokiBlobMetadataStore
    * @param {string} account
    * @param {string} [prefix=""]
    * @param {number} [maxResults=5000]
-   * @param {number} [marker=0]
-   * @returns {(Promise<[ContainerModel[], number | undefined]>)}
+   * @param {string} [marker=""]
+   * @returns {(Promise<[ContainerModel[], string | undefined]>)}
    * @memberof LokiBlobMetadataStore
    */
   public async listContainers(
@@ -302,16 +302,15 @@ export default class LokiBlobMetadataStore
     account: string,
     prefix: string = "",
     maxResults: number = DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
-    marker: number = 0
-  ): Promise<[ContainerModel[], number | undefined]> {
+    marker: string = ""
+  ): Promise<[ContainerModel[], string | undefined]> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
 
     const query =
       prefix === ""
-        ? { $loki: { $gt: marker }, accountName: account }
+        ? { name: { $gt: marker }, accountName: account }
         : {
             name: { $regex: `^${this.escapeRegex(prefix)}` },
-            $loki: { $gt: marker },
             accountName: account
           };
 
@@ -334,7 +333,7 @@ export default class LokiBlobMetadataStore
       ];
     } else {
       // In this case, the last item is the one we get in addition, should set the Marker before it.
-      const nextMarker = docs[docs.length - 1].$loki - 1;
+      const nextMarker = docs[docs.length - 2].name;
       docs.pop();
       return [
         docs.map(doc => {

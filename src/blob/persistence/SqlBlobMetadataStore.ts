@@ -487,8 +487,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     prefix: string = "",
     maxResults: number = DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
-    marker: number | undefined
-  ): Promise<[ContainerModel[], number | undefined]> {
+    marker: string
+  ): Promise<[ContainerModel[], string | undefined]> {
     const whereQuery: any = { accountName: account };
 
     if (prefix.length > 0) {
@@ -497,8 +497,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       };
     }
 
-    if (marker !== undefined) {
-      whereQuery.containerId = {
+    if (marker !== "") {
+      whereQuery.containerName = {
         [Op.gt]: marker
       };
     }
@@ -521,7 +521,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       return [findResult.map(leaseUpdateMapper), undefined];
     } else {
       const tail = findResult[findResult.length - 1];
-      const nextMarker = this.getModelValue<number>(tail, "containerId", true);
+      const nextMarker = this.getModelValue<string>(
+        tail,
+        "containerName",
+        true
+      );
       return [findResult.map(leaseUpdateMapper), nextMarker];
     }
   }
