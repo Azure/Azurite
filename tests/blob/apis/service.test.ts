@@ -227,14 +227,25 @@ describe("ServiceAPIs", () => {
     await containerURL1.create(Aborter.none);
     await containerURL2.create(Aborter.none);
     await containerURL3.create(Aborter.none);
-    const result = await serviceURL.listContainersSegment(
+    const result1 = await serviceURL.listContainersSegment(
       Aborter.none,
       containerName2,
       { maxresults: 1 }
     );
-    assert.equal(result.containerItems.length, 1);
-    assert.ok(result.containerItems[0].name.startsWith("bb"));
-    assert.equal(result.nextMarker, containerName3);
+
+    assert.equal(result1.containerItems.length, 1);
+    assert.ok(result1.containerItems[0].name.startsWith("bb"));
+    assert.equal(result1.nextMarker, containerName3);
+
+    const result2 = await serviceURL.listContainersSegment(
+      Aborter.none,
+      result1.nextMarker,
+      { maxresults: 1 }
+    );
+    assert.equal(result2.containerItems.length, 1);
+    assert.ok(result2.containerItems[0].name.startsWith("cc"));
+    assert.equal(result2.nextMarker, "");
+
     await containerURL1.delete(Aborter.none);
     await containerURL2.delete(Aborter.none);
     await containerURL3.delete(Aborter.none);

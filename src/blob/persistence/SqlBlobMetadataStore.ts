@@ -517,7 +517,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       ).sync(new ContainerLeaseSyncer(containerModel));
     };
 
-    if (findResult.length < maxResults) {
+    if (findResult.length <= maxResults) {
       return [findResult.map(leaseUpdateMapper), undefined];
     } else {
       const tail = findResult[findResult.length - 1];
