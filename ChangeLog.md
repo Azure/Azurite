@@ -2,6 +2,10 @@
 
 > Note. This file includes changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
+Upcoming Release
+
+- Fixed a bug that to return the list of containers in sorted order.
+
 2019.11 Version 3.3.0-preview
 
 - Azurite now supports customized account names and keys by environment variable `AZURITE_ACCOUNTS`.
@@ -9,7 +13,6 @@
 - Handled race condition of GC when sometimes newly created extents will be removed.
 - Fixed a bug when uploading blob will fail when md5 header is empty string.
 - Fixed a bug when sometimes list containers or blobs doesn't have proper lease status.
-- Fixed a bug that did not return list of containers in sorted order.
 - [Breaking] This version cannot guarantee compatible with persisted database models in Azurite workspace used by previous version. Clean Azurite workspace folder and restart Azurite in case any errors. Notice that, data will be lost after cleaning Azurite workspace folder.
 
 Blob:
