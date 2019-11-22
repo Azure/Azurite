@@ -310,7 +310,7 @@ export default class LokiBlobMetadataStore
       prefix === ""
         ? { name: { $gt: marker }, accountName: account }
         : {
-            name: { $regex: `^${this.escapeRegex(prefix)}` },
+            name: { $regex: `^${this.escapeRegex(prefix)}`, $gt: marker },
             accountName: account
           };
 
