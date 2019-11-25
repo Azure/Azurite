@@ -215,7 +215,7 @@ export default class ServiceHandler extends BaseHandler
       options.maxresults || DEFAULT_LIST_CONTAINERS_MAX_RESULTS;
     options.prefix = options.prefix || "";
 
-    const marker = parseInt(options.marker || "0", 10);
+    const marker = options.marker || "";
 
     const containers = await this.metadataStore.listContainers(
       context,

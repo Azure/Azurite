@@ -4,6 +4,7 @@
 
 Upcoming Release
 
+- Fixed a bug that to return the list of containers in sorted order.
 
 2019.11 Version 3.3.0-preview
 
