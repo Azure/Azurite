@@ -423,4 +423,30 @@ export default class StorageErrorFactory {
       additionalMessages
     );
   }
+
+  public static getInvalidCorsHeaderValue(
+    contextID: string = "",
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    return new StorageError(
+      400,
+      "InvalidHeaderValue",
+      "A required CORS header is not present.",
+      contextID,
+      additionalMessages
+    );
+  }
+
+  public static corsPreflightFailure(
+    contextID: string = "",
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    return new StorageError(
+      403,
+      "CorsPreflightFailure",
+      "CORS not enabled or no matching rule found for this request.",
+      contextID,
+      additionalMessages
+    );
+  }
 }
