@@ -2,11 +2,13 @@ import { NextFunction, Request, Response } from "express";
 import uuid from "uuid/v4";
 
 import logger from "../../common/Logger";
+import { checkApiVersion } from "../../common/utils/utils";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import {
   DEFAULT_QUEUE_CONTEXT_PATH,
   HeaderConstants,
   SECONDARY_SUFFIX,
+  ValidAPIVersions,
   VERSION
 } from "../utils/constants";
 import { isValidName, nameValidateCode } from "../utils/utils";
@@ -28,13 +30,19 @@ export default function queueStorageContextMiddleware(
   // Set server header in every Azurite response
   res.setHeader(HeaderConstants.SERVER, `Azurite-Queue/${VERSION}`);
 
+  const requestID = uuid();
+
+  const apiVersion = req.header(HeaderConstants.X_MS_VERSION);
+  if (apiVersion !== undefined) {
+    checkApiVersion(apiVersion, ValidAPIVersions, requestID);
+  }
+
   const queueContext = new QueueStorageContext(
     res.locals,
     DEFAULT_QUEUE_CONTEXT_PATH
   );
   queueContext.startTime = new Date();
 
-  const requestID = uuid();
   queueContext.xMsRequestID = requestID;
 
   logger.info(
@@ -96,9 +104,7 @@ export default function queueStorageContextMiddleware(
     );
 
     logger.error(
-      `QueueStorageContextMiddleware: QueueStorageContextMiddleware: ${
-        handlerError.message
-      }`,
+      `QueueStorageContextMiddleware: QueueStorageContextMiddleware: ${handlerError.message}`,
       requestID
     );
 

@@ -15,6 +15,7 @@ import {
   DEFAULT_SQL_CHARSET,
   DEFAULT_SQL_COLLATE
 } from "../../common/utils/constants";
+import { convertDateTimeStringMsTo7Digital } from "../../common/utils/utils";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import { BlobType, LeaseAccessConditions } from "../generated/artifacts/models";
@@ -1619,7 +1620,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         context
       ).validate(new BlobReadLeaseValidator(leaseAccessConditions));
 
-      snapshotBlob.snapshot = context.startTime!.toISOString();
+      snapshotBlob.snapshot = convertDateTimeStringMsTo7Digital(
+        context.startTime!.toISOString()
+      );
       snapshotBlob.metadata = metadata || snapshotBlob.metadata;
 
       new BlobLeaseSyncer(snapshotBlob).sync({

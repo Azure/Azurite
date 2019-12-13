@@ -2,11 +2,13 @@ import { NextFunction, Request, Response } from "express";
 import uuid from "uuid/v4";
 
 import logger from "../../common/Logger";
+import { checkApiVersion } from "../../common/utils/utils";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import {
   DEFAULT_CONTEXT_PATH,
   HeaderConstants,
   SECONDARY_SUFFIX,
+  ValidAPIVersions,
   VERSION
 } from "../utils/constants";
 import BlobStorageContext from "./BlobStorageContext";
@@ -26,11 +28,16 @@ export default function blobStorageContextMiddleware(
 ): void {
   // Set server header in every Azurite response
   res.setHeader(HeaderConstants.SERVER, `Azurite-Blob/${VERSION}`);
+  const requestID = uuid();
+
+  const apiVersion = req.header(HeaderConstants.X_MS_VERSION);
+  if (apiVersion !== undefined) {
+    checkApiVersion(apiVersion, ValidAPIVersions, requestID);
+  }
 
   const blobContext = new BlobStorageContext(res.locals, DEFAULT_CONTEXT_PATH);
   blobContext.startTime = new Date();
 
-  const requestID = uuid();
   blobContext.xMsRequestID = requestID;
 
   logger.info(
@@ -76,9 +83,7 @@ export default function blobStorageContextMiddleware(
     );
 
     logger.error(
-      `BlobStorageContextMiddleware: BlobStorageContextMiddleware: ${
-        handlerError.message
-      }`,
+      `BlobStorageContextMiddleware: BlobStorageContextMiddleware: ${handlerError.message}`,
       requestID
     );
 
