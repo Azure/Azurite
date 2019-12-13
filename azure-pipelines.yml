@@ -360,3 +360,14 @@ jobs:
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-queue -v
         workingDirectory: "./"
         displayName: "Validate docker image"
+
+  - job: governance
+    displayName: Component Governance Component Detection
+    pool:
+      vmImage: "ubuntu-16.04"
+    steps:
+      - task: ComponentGovernanceComponentDetection@0
+        inputs:
+          scanType: 'Register'
+          verbosity: 'Verbose'
+          alertWarningLevel: 'High'
