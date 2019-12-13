@@ -1,5 +1,3 @@
-import * as assert from "assert";
-
 import {
   Aborter,
   QueueURL,
@@ -7,6 +5,7 @@ import {
   SharedKeyCredential,
   StorageURL
 } from "@azure/storage-queue";
+import * as assert from "assert";
 
 import { configLogger } from "../../../src/common/Logger";
 import { StoreDestinationArray } from "../../../src/common/persistence/IExtentStore";
@@ -88,6 +87,25 @@ describe("QueueServiceAPIs", () => {
       assert.ok(result.cors![0].exposedHeaders.length > 0);
       assert.ok(result.cors![0].maxAgeInSeconds >= 0);
     }
+  });
+
+  it("Set CORS with empty AllowedHeaders, ExposedHeaders", async () => {
+    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+
+    const newCORS = {
+      allowedHeaders: "",
+      allowedMethods: "GET",
+      allowedOrigins: "example.com",
+      exposedHeaders: "",
+      maxAgeInSeconds: 8888
+    };
+
+    serviceProperties.cors = [newCORS];
+
+    await serviceURL.setProperties(Aborter.none, serviceProperties);
+
+    const result = await serviceURL.getProperties(Aborter.none);
+    assert.deepStrictEqual(result.cors![0], newCORS);
   });
 
   it("Set Queue service properties", async () => {

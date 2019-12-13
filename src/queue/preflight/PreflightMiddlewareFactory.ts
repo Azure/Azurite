@@ -95,7 +95,7 @@ export default class PreflightMiddlewareFactory {
               }
               if (
                 requestHeaders !== undefined &&
-                !this.checkHeaders(requestHeaders, cors.allowedHeaders)
+                !this.checkHeaders(requestHeaders, cors.allowedHeaders || "")
               ) {
                 continue;
               }
@@ -177,7 +177,7 @@ export default class PreflightMiddlewareFactory {
             ) {
               const exposedHeaders = this.getExposedHeaders(
                 resHeaders,
-                cors.exposedHeaders
+                cors.exposedHeaders || ""
               );
 
               res.setHeader(

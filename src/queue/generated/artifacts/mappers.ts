@@ -164,7 +164,6 @@ export const CorsRule: msRest.CompositeMapper = {
       },
       allowedHeaders: {
         xmlName: "AllowedHeaders",
-        required: true,
         serializedName: "AllowedHeaders",
         type: {
           name: "String"
@@ -172,7 +171,6 @@ export const CorsRule: msRest.CompositeMapper = {
       },
       exposedHeaders: {
         xmlName: "ExposedHeaders",
-        required: true,
         serializedName: "ExposedHeaders",
         type: {
           name: "String"

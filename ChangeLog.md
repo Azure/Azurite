@@ -8,6 +8,10 @@ Upcoming Release
 
 Blob:
 - Added support for CORS.
+- AllowedHeaders and ExposedHeaders are optional now when setting CORS.
+
+Queue:
+- AllowedHeaders and ExposedHeaders are optional now when setting CORS.
 
 2019.11 Version 3.3.0-preview
 

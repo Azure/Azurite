@@ -95,7 +95,7 @@ export default class PreflightMiddlewareFactory {
               }
               if (
                 requestHeaders !== undefined &&
-                !this.checkHeaders(requestHeaders, cors.allowedHeaders)
+                !this.checkHeaders(requestHeaders, cors.allowedHeaders || "")
               ) {
                 continue;
               }
@@ -174,7 +174,7 @@ export default class PreflightMiddlewareFactory {
             ) {
               const exposedHeaders = this.getExposedHeaders(
                 resHeaders,
-                cors.exposedHeaders
+                cors.exposedHeaders || ""
               );
 
               res.setHeader(
@@ -184,7 +184,7 @@ export default class PreflightMiddlewareFactory {
 
               res.setHeader(
                 HeaderConstants.ACCESS_CONTROL_ALLOW_ORIGIN,
-                cors.allowedOrigins
+                cors.allowedOrigins || ""
               );
 
               if (cors.allowedOrigins !== "*") {
