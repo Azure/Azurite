@@ -80,10 +80,10 @@ export default interface IExtentStore extends IDataStore, ICleaner {
    * Delete the extents from persistency layer.
    *
    * @param {Iterable<string>} persistency
-   * @returns {Promise<void>}
+   * @returns {Promise<number>} Number of extents deleted
    * @memberof IExtentStore
    */
-  deleteExtents(persistency: Iterable<string>): Promise<void>;
+  deleteExtents(persistency: Iterable<string>): Promise<number>;
 
   /**
    * Return its metadata store.
