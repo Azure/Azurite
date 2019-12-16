@@ -1,6 +1,7 @@
 import {
   createReadStream,
   createWriteStream,
+  fdatasync,
   mkdir,
   open,
   stat,
@@ -245,7 +246,7 @@ export default class FSExtentStore implements IExtentStore {
           );
 
           try {
-            count = await this.streamPipe(rs, ws);
+            count = await this.streamPipe(rs, ws, fd);
             const offset = appendExtent.offset;
             appendExtent.offset += count;
 
@@ -463,7 +464,8 @@ export default class FSExtentStore implements IExtentStore {
 
   private async streamPipe(
     rs: NodeJS.ReadableStream,
-    ws: Writable
+    ws: Writable,
+    fd?: number
   ): Promise<number> {
     return new Promise<number>((resolve, reject) => {
       let count: number = 0;
@@ -495,7 +497,17 @@ export default class FSExtentStore implements IExtentStore {
         rs.resume();
       })
         .on("finish", () => {
-          resolve(count);
+          if (typeof fd === "number") {
+            fdatasync(fd, err => {
+              if (err) {
+                reject(err);
+              } else {
+                resolve(count);
+              }
+            });
+          } else {
+            resolve(count);
+          }
         })
         .on("error", reject);
     });
