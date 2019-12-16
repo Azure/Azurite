@@ -49,6 +49,7 @@ export const HeaderConstants = {
   X_MS_DATE: "x-ms-date",
   SERVER: "Server",
   X_MS_META: "x-ms-meta-",
+  X_MS_VERSION: "x-ms-version",
   ORIGIN: "origin",
   VARY: "Vary",
   ACCESS_CONTROL_EXPOSED_HEADER: "Access-Control-Exposed-Headers",
@@ -73,4 +74,25 @@ export const DEFAULT_BLOB_PERSISTENCE_ARRAY: StoreDestinationArray = [
     persistencyPath: DEFAULT_BLOB_PERSISTENCE_PATH,
     maxConcurrency: 10
   }
+];
+
+export const ValidAPIVersions = [
+  "2019-02-02",
+  "2018-11-09",
+  "2018-03-28",
+  "2017-11-09",
+  "2017-07-29",
+  "2017-04-17",
+  "2016-05-31",
+  "2015-12-11",
+  "2015-07-08",
+  "2015-04-05",
+  "2015-02-21",
+  "2014-02-14",
+  "2013-08-15",
+  "2012-02-12",
+  "2011-08-18",
+  "2009-09-19",
+  "2009-07-17",
+  "2009-04-14"
 ];

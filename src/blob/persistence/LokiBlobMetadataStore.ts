@@ -3,7 +3,10 @@ import Loki from "lokijs";
 import uuid from "uuid/v4";
 
 import IGCExtentProvider from "../../common/IGCExtentProvider";
-import { rimrafAsync } from "../../common/utils/utils";
+import {
+  convertDateTimeStringMsTo7Digital,
+  rimrafAsync
+} from "../../common/utils/utils";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import { LeaseStatusType } from "../generated/artifacts/models";
@@ -946,7 +949,9 @@ export default class LokiBlobMetadataStore
     const snapshotBlob: BlobModel = {
       name: doc.name,
       deleted: false,
-      snapshot: context.startTime!.toISOString(),
+      snapshot: convertDateTimeStringMsTo7Digital(
+        context.startTime!.toISOString()
+      ),
       properties: { ...doc.properties },
       metadata: metadata ? { ...metadata } : { ...doc.metadata },
       accountName: doc.accountName,
