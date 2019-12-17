@@ -197,12 +197,11 @@ export default class QueueGCManager implements IGCManager {
 
     if (allExtents.size > 0) {
       this.logger.info(
-        `QueueGCManager:markSweep() Start to delete unreferenced extents.`
+        `QueueGCManager:markSweep() Start to delete ${allExtents.size} unreferenced extents.`
       );
-      await this.extentStore.deleteExtents(allExtents);
+      const deletedCount = await this.extentStore.deleteExtents(allExtents);
       this.logger.info(
-        `QueueGCManager:markSweep() Finish Deleting
-         unreferenced extents.`
+        `QueueGCManager:markSweep() Deleted ${deletedCount} unreferenced extents, after excluding active write extents.`
       );
     }
   }

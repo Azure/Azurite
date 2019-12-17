@@ -6,7 +6,9 @@ Upcoming Release
 
 - Fixed a bug that to return the list of containers in sorted order.
 - Fixed a bug that get/download blob snapshot fail.
-- Check input request "x-ms-version" Header, only valid version are allowed
+- Check input request "x-ms-version" Header, only valid version are allowed.
+- Fixed a race condition that GC will delete active write extents.
+- Force flush data into disk before data upload request returns.
 
 Blob:
 - Added support for CORS.

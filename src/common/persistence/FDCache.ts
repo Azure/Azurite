@@ -73,10 +73,10 @@ export default class FDCache implements IFDCache {
    * Return -1 if the fd does not exist in the cache.
    *
    * @param {string} id
-   * @returns {(number | undefined)}
+   * @returns {Promise<(number | undefined)>}
    * @memberof FDCache
    */
-  public get(id: string): number | undefined {
+  public async get(id: string): Promise<number | undefined> {
     const fd = this.cache.get(id);
     return fd;
   }
@@ -87,17 +87,17 @@ export default class FDCache implements IFDCache {
    *
    * @param {string} id
    * @param {number} fd
-   * @returns {void}
+   * @returns {Promise<void>}
    * @memberof IFDCache
    */
-  public insert(id: string, fd: number): void {
+  public async insert(id: string, fd: number): Promise<void> {
     const count = this.queue.length;
     if (count === this.size) {
       const head = this.queue.shift();
       const cachedfd = this.cache.get(head!);
       if (cachedfd !== undefined) {
-        closeAsync(cachedfd);
         this.cache.delete(head!);
+        await closeAsync(cachedfd);
       }
     }
     this.queue.push(id);
