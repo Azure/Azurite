@@ -1387,7 +1387,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         PersistencyBlockModel
       > = new Map(); // persistencyUncommittedBlocksMap
 
-      const badRequestError = StorageErrorFactory.getInvalidOperation(
+      const badRequestError = StorageErrorFactory.getInvalidBlockList(
         context.contextId
       );
 
@@ -1484,7 +1484,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
             .map(block => block.size)
             .reduce((total, val) => {
               return total + val;
-            }),
+            }, 0),
           blobType: BlobType.BlockBlob
         }
       };

@@ -53,6 +53,7 @@ import IBlobMetadataStore, {
   ServicePropertiesModel,
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
+import { ILease } from "./ILeaseState";
 import LeaseFactory from "./LeaseFactory";
 
 /**
@@ -1859,11 +1860,20 @@ export default class LokiBlobMetadataStore
       blob.containerName,
       blob.name,
       blob.snapshot,
-      context
+      context,
+      // XStore allows commit block list with empty block list to create a block blob without stage block call
+      // In this case, there will no existing blob doc exists
+      false
     );
 
-    const lease = new BlobLeaseAdapter(doc);
-    new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
+    let lease: ILease | undefined;
+    if (doc) {
+      lease = new BlobLeaseAdapter(doc);
+      new BlobWriteLeaseValidator(leaseAccessConditions).validate(
+        lease,
+        context
+      );
+    }
 
     // Get all blocks in persistency layer
     const blockColl = this.db.getCollection(this.BLOCKS_COLLECTION);
@@ -1877,8 +1887,10 @@ export default class LokiBlobMetadataStore
       .data();
 
     const pCommittedBlocksMap: Map<string, PersistencyBlockModel> = new Map(); // persistencyCommittedBlocksMap
-    for (const pBlock of blob.committedBlocksInOrder || []) {
-      pCommittedBlocksMap.set(pBlock.name, pBlock);
+    if (doc) {
+      for (const pBlock of doc.committedBlocksInOrder || []) {
+        pCommittedBlocksMap.set(pBlock.name, pBlock);
+      }
     }
 
     const pUncommittedBlocksMap: Map<string, PersistencyBlockModel> = new Map(); // persistencyUncommittedBlocksMap
@@ -1896,7 +1908,7 @@ export default class LokiBlobMetadataStore
             block_1.blockName
           );
           if (pUncommittedBlock === undefined) {
-            throw StorageErrorFactory.getInvalidOperation(context.contextId!);
+            throw StorageErrorFactory.getInvalidBlockList(context.contextId!);
           } else {
             selectedBlockList.push(pUncommittedBlock);
           }
@@ -1904,7 +1916,7 @@ export default class LokiBlobMetadataStore
         case "committed":
           const pCommittedBlock = pCommittedBlocksMap.get(block_1.blockName);
           if (pCommittedBlock === undefined) {
-            throw StorageErrorFactory.getInvalidOperation(context.contextId!);
+            throw StorageErrorFactory.getInvalidBlockList(context.contextId!);
           } else {
             selectedBlockList.push(pCommittedBlock);
           }
@@ -1914,40 +1926,52 @@ export default class LokiBlobMetadataStore
             pUncommittedBlocksMap.get(block_1.blockName) ||
             pCommittedBlocksMap.get(block_1.blockName);
           if (pLatestBlock === undefined) {
-            throw StorageErrorFactory.getInvalidOperation(context.contextId!);
+            throw StorageErrorFactory.getInvalidBlockList(context.contextId!);
           } else {
             selectedBlockList.push(pLatestBlock);
           }
           break;
         default:
-          throw StorageErrorFactory.getInvalidOperation(context.contextId!);
+          throw StorageErrorFactory.getInvalidBlockList(context.contextId!);
       }
     }
 
-    // Commit block list
-    doc.committedBlocksInOrder = selectedBlockList;
-    doc.isCommitted = true;
+    if (doc) {
+      // Commit block list
+      doc.properties.blobType = blob.properties.blobType;
+      doc.committedBlocksInOrder = selectedBlockList;
+      doc.isCommitted = true;
+      doc.metadata = blob.metadata;
+      doc.properties.accessTier = blob.properties.accessTier;
+      doc.properties.accessTierInferred = blob.properties.accessTierInferred;
+      doc.properties.etag = blob.properties.etag;
+      doc.properties.cacheControl = blob.properties.cacheControl;
+      doc.properties.contentType = blob.properties.contentType;
+      doc.properties.contentMD5 = blob.properties.contentMD5;
+      doc.properties.contentEncoding = blob.properties.contentEncoding;
+      doc.properties.contentLanguage = blob.properties.contentLanguage;
+      doc.properties.contentDisposition = blob.properties.contentDisposition;
+      doc.properties.contentLength = selectedBlockList
+        .map(block => block.size)
+        .reduce((total, val) => {
+          return total + val;
+        }, 0);
 
-    doc.metadata = blob.metadata;
-    doc.properties.accessTier = blob.properties.accessTier;
-    doc.properties.etag = blob.properties.etag;
-    doc.properties.accessTierInferred = true;
-    doc.properties.cacheControl = blob.properties.cacheControl;
-    doc.properties.contentType = blob.properties.contentType;
-    doc.properties.contentMD5 = blob.properties.contentMD5;
-    doc.properties.contentEncoding = blob.properties.contentEncoding;
-    doc.properties.contentLanguage = blob.properties.contentLanguage;
-    doc.properties.contentDisposition = blob.properties.contentDisposition;
-    doc.properties.contentLength = selectedBlockList
-      .map(block => block.size)
-      .reduce((total, val) => {
-        return total + val;
-      });
+      // set lease state to available if it's expired
+      if (lease) {
+        new BlobWriteLeaseSyncer(doc).sync(lease);
+      }
 
-    // set lease state to available if it's expired
-    new BlobWriteLeaseSyncer(doc).sync(lease);
-
-    coll.update(doc);
+      coll.update(doc);
+    } else {
+      blob.committedBlocksInOrder = selectedBlockList;
+      blob.properties.contentLength = selectedBlockList
+        .map(block => block.size)
+        .reduce((total, val) => {
+          return total + val;
+        }, 0);
+      coll.insert(blob);
+    }
 
     blockColl.findAndRemove({
       accountName: blob.accountName,

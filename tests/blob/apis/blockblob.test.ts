@@ -84,6 +84,12 @@ describe("BlockBlobAPIs", () => {
     );
   });
 
+  it("upload empty blob", async () => {
+    await blockBlobURL.upload(Aborter.none, "", 0);
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.deepStrictEqual(await bodyToString(result, 0), "");
+  });
+
   it("upload with string body and all parameters set", async () => {
     const body: string = getUniqueName("randomstring");
     const options = {
@@ -195,6 +201,19 @@ describe("BlockBlobAPIs", () => {
       listResponse._response.request.headers.get("x-ms-client-request-id"),
       listResponse.clientRequestId
     );
+  });
+
+  it("commitBlockList with empty list should create an empty block blob", async () => {
+    await blockBlobURL.commitBlockList(Aborter.none, []);
+
+    const listResponse = await blockBlobURL.getBlockList(
+      Aborter.none,
+      "committed"
+    );
+    assert.equal(listResponse.committedBlocks!.length, 0);
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.deepStrictEqual(await bodyToString(result, 0), "");
   });
 
   it("commitBlockList with all parameters set", async () => {

@@ -56,6 +56,17 @@ export default class StorageErrorFactory {
     return new StorageError(400, "InvalidOperation", message, contextID);
   }
 
+  public static getInvalidBlockList(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      400,
+      "InvalidBlockList",
+      "The specified block list is invalid.",
+      contextID
+    );
+  }
+
   public static getInvalidPageRange(contextID: string): StorageError {
     return new StorageError(
       416,

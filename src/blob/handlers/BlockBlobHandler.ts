@@ -234,9 +234,7 @@ export default class BlockBlobHandler extends BaseHandler
 
     options.blobHTTPHeaders = options.blobHTTPHeaders || {};
     const contentType =
-      options.blobHTTPHeaders.blobContentType ||
-      context.request!.getHeader("content-type") ||
-      "application/octet-stream";
+      options.blobHTTPHeaders.blobContentType || "application/octet-stream";
 
     // Here we leveraged generated code utils to parser xml
     // Re-parsing request body to get destination blocks
@@ -283,6 +281,7 @@ export default class BlockBlobHandler extends BaseHandler
       isCommitted: true
     };
 
+    blob.properties.blobType = Models.BlobType.BlockBlob;
     blob.metadata = options.metadata;
     blob.properties.accessTier = Models.AccessTier.Hot;
     blob.properties.cacheControl = options.blobHTTPHeaders.blobCacheControl;
@@ -303,6 +302,9 @@ export default class BlockBlobHandler extends BaseHandler
           HeaderValue: `${options.tier}`
         });
       }
+    } else {
+      blob.properties.accessTier = Models.AccessTier.Hot;
+      blob.properties.accessTierInferred = true;
     }
 
     await this.metadataStore.commitBlockList(
