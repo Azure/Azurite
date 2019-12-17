@@ -65,6 +65,23 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
+  it("Should work with special container and blob names with unicode", async () => {
+    const blobName: string = getUniqueName("unicod\u00e9");
+    const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
+
+    await blockBlobURL.upload(Aborter.none, "A", 1);
+    const response = await containerURL.listBlobHierarchySegment(
+      Aborter.none,
+      "$",
+      undefined,
+      {
+        prefix: blobName
+      }
+    );
+    assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
+  });
+
   it("Should work with special container and blob names with spaces in URL string", async () => {
     const blobName: string = getUniqueName("blob empty");
     const blockBlobURL = new BlockBlobURL(
