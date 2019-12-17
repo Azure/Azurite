@@ -8,14 +8,14 @@ import {
 } from "express";
 
 import ILogger from "../../common/ILogger";
-import QueueStorageContext from "../context/QueueStorageContext";
+import BlobStorageContext from "../context/BlobStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Mappers from "../generated/artifacts/mappers";
 import Specifications from "../generated/artifacts/specifications";
 import MiddlewareError from "../generated/errors/MiddlewareError";
-import IQueueMetadataStore from "../persistence/IQueueMetadataStore";
+import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import {
-  DEFAULT_QUEUE_CONTEXT_PATH,
+  DEFAULT_CONTEXT_PATH,
   HeaderConstants,
   MethodConstants
 } from "../utils/constants";
@@ -24,7 +24,7 @@ export default class PreflightMiddlewareFactory {
   constructor(private readonly logger: ILogger) {}
 
   public createOptionsHandlerMiddleware(
-    metadataStore: IQueueMetadataStore
+    metadataStore: IBlobMetadataStore
   ): ErrorRequestHandler {
     return (
       err: MiddlewareError | Error,
@@ -33,12 +33,12 @@ export default class PreflightMiddlewareFactory {
       next: NextFunction
     ) => {
       if (req.method.toUpperCase() === MethodConstants.OPTIONS) {
-        const context = new QueueStorageContext(
+        const context = new BlobStorageContext(
           res.locals,
-          DEFAULT_QUEUE_CONTEXT_PATH
+          DEFAULT_CONTEXT_PATH
         );
 
-        const requestId = context.contextID;
+        const requestId = context.contextId;
         const account = context.account!;
 
         this.logger.info(
@@ -75,7 +75,7 @@ export default class PreflightMiddlewareFactory {
         ] as string;
 
         metadataStore
-          .getServiceProperties(account)
+          .getServiceProperties(context, account)
           .then(properties => {
             if (properties === undefined || properties.cors === undefined) {
               return next(
@@ -139,19 +139,16 @@ export default class PreflightMiddlewareFactory {
   }
 
   public createCorsRequestMiddleware(
-    metadataStore: IQueueMetadataStore
+    metadataStore: IBlobMetadataStore
   ): RequestHandler {
     return (req: Request, res: Response, next: NextFunction) => {
       if (req.method.toUpperCase() === MethodConstants.OPTIONS) {
         return next();
       }
 
-      const context = new QueueStorageContext(
-        res.locals,
-        DEFAULT_QUEUE_CONTEXT_PATH
-      );
+      const context = new BlobStorageContext(res.locals, DEFAULT_CONTEXT_PATH);
 
-      // const requestId = res.locals.azurite_queue_context.contextID;
+      // const requestId = res.locals.azurite_queue_context.contextId;
       const account = context.account!;
 
       const origin = req.headers[HeaderConstants.ORIGIN] as string | undefined;
@@ -162,7 +159,7 @@ export default class PreflightMiddlewareFactory {
       }
 
       metadataStore
-        .getServiceProperties(account)
+        .getServiceProperties(context, account)
         .then(properties => {
           if (properties === undefined || properties.cors === undefined) {
             return next();
@@ -187,7 +184,7 @@ export default class PreflightMiddlewareFactory {
 
               res.setHeader(
                 HeaderConstants.ACCESS_CONTROL_ALLOW_ORIGIN,
-                cors.allowedOrigins
+                cors.allowedOrigins || ""
               );
 
               if (cors.allowedOrigins !== "*") {
@@ -270,9 +267,10 @@ export default class PreflightMiddlewareFactory {
   }
 
   private getResponseHeaders(res: Response): string[] {
-    const handlerResponse = res.locals.azurite_queue_context.handlerResponses;
+    const context = new BlobStorageContext(res.locals, DEFAULT_CONTEXT_PATH);
+    const handlerResponse = context.handlerResponses;
     const statusCodeInResponse: number = handlerResponse.statusCode;
-    const spec = Specifications[res.locals.azurite_queue_context.operation];
+    const spec = Specifications[context.operation!];
     const responseSpec = spec.responses[statusCodeInResponse];
     if (!responseSpec) {
       throw new TypeError(

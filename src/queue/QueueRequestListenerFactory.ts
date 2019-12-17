@@ -1,4 +1,5 @@
 import express from "express";
+import morgan = require("morgan");
 
 import IAccountDataStore from "../common/IAccountDataStore";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
@@ -21,7 +22,6 @@ import { IQueueMetadataStore } from "./persistence/IQueueMetadataStore";
 import PreflightMiddlewareFactory from "./preflight/PreflightMiddlewareFactory";
 import { DEFAULT_QUEUE_CONTEXT_PATH } from "./utils/constants";
 
-import morgan = require("morgan");
 /**
  * Default RequestListenerFactory based on express framework.
  *
@@ -120,9 +120,7 @@ export default class QueueRequestListenerFactory
     // tslint:disable-next-line:max-line-length
     // See as https://docs.microsoft.com/en-us/rest/api/storageservices/cross-origin-resource-sharing--cors--support-for-the-azure-storage-services
     app.use(
-      preflightMiddlewareFactory.createActualCorsRequestMiddleware(
-        this.metadataStore
-      )
+      preflightMiddlewareFactory.createCorsRequestMiddleware(this.metadataStore)
     );
 
     // Generated, will serialize response models into HTTP response
@@ -131,7 +129,7 @@ export default class QueueRequestListenerFactory
     // CORS preflight request handling, processing OPTIONS requests.
     // TODO: Should support OPTIONS in swagger and autorest, then this handling can be moved to ServiceHandler.
     app.use(
-      preflightMiddlewareFactory.createOPTIONSHandlerMiddleware(
+      preflightMiddlewareFactory.createOptionsHandlerMiddleware(
         this.metadataStore
       )
     );

@@ -23,6 +23,7 @@ import PageBlobHandler from "./handlers/PageBlobHandler";
 import PageBlobRangesManager from "./handlers/PageBlobRangesManager";
 import ServiceHandler from "./handlers/ServiceHandler";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
+import PreflightMiddlewareFactory from "./preflight/PreflightMiddlewareFactory";
 import { DEFAULT_CONTEXT_PATH } from "./utils/constants";
 
 /**
@@ -88,8 +89,12 @@ export default class BlobRequestListenerFactory
         this.metadataStore,
         this.extentStore,
         logger
-      )
+      ),
+      directoryHandler: {} as any
     };
+
+    // CORS request handling, preflight request and the corresponding actual request
+    const preflightMiddlewareFactory = new PreflightMiddlewareFactory(logger);
 
     /*
      * Generated middleware should follow strict orders
@@ -134,8 +139,20 @@ export default class BlobRequestListenerFactory
     // Generated, inject handlers to create a handler middleware
     app.use(middlewareFactory.createHandlerMiddleware(handlers));
 
+    // CORS
+    app.use(
+      preflightMiddlewareFactory.createCorsRequestMiddleware(this.metadataStore)
+    );
+
     // Generated, will serialize response models into HTTP response
     app.use(middlewareFactory.createSerializerMiddleware());
+
+    // Preflight
+    app.use(
+      preflightMiddlewareFactory.createOptionsHandlerMiddleware(
+        this.metadataStore
+      )
+    );
 
     // Generated, will return MiddlewareError and Errors thrown in previous middleware/handlers to HTTP response
     app.use(middlewareFactory.createErrorMiddleware());

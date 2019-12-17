@@ -41,6 +41,10 @@ export const UPDATE_VISIBILITYTIMEOUT_MAX = 604800;
 
 export const EMPTY_EXTENT_CHUNK = { id: "", offset: 0, count: 0 };
 
+export const MethodConstants = {
+  OPTIONS: "OPTIONS"
+};
+
 export const HeaderConstants = {
   AUTHORIZATION: "authorization",
   AUTHORIZATION_SCHEME: "Bearer",

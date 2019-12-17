@@ -48,7 +48,22 @@ export const HeaderConstants = {
   X_MS_CLIENT_REQUEST_ID: "x-ms-client-request-id",
   X_MS_DATE: "x-ms-date",
   SERVER: "Server",
-  X_MS_VERSION: "x-ms-version"
+  X_MS_META: "x-ms-meta-",
+  X_MS_VERSION: "x-ms-version",
+  ORIGIN: "origin",
+  VARY: "Vary",
+  ACCESS_CONTROL_EXPOSED_HEADER: "Access-Control-Exposed-Headers",
+  ACCESS_CONTROL_ALLOW_ORIGIN: "Access-Control-Allow-Origin",
+  ACCESS_CONTROL_ALLOW_CREDENTIALS: "Access-Control-Allow-Credentials",
+  ACCESS_CONTROL_ALLOW_METHODS: "Access-Control-Allow-Methods",
+  ACCESS_CONTROL_ALLOW_HEADERS: "Access-Control-Allow-Headers",
+  ACCESS_CONTROL_MAX_AGE: "Access-Control-Max-Age",
+  ACCESS_CONTROL_REQUEST_METHOD: "access-control-request-method",
+  ACCESS_CONTROL_REQUEST_HEADERS: "access-control-request-headers"
+};
+
+export const MethodConstants = {
+  OPTIONS: "OPTIONS"
 };
 
 export const SECONDARY_SUFFIX = "-secondary";

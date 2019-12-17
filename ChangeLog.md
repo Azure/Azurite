@@ -8,6 +8,13 @@ Upcoming Release
 - Fixed a bug that get/download blob snapshot fail.
 - Check input request "x-ms-version" Header, only valid version are allowed
 
+Blob:
+- Added support for CORS.
+- AllowedHeaders and ExposedHeaders are optional now when setting CORS.
+
+Queue:
+- AllowedHeaders and ExposedHeaders are optional now when setting CORS.
+
 2019.11 Version 3.3.0-preview
 
 - Azurite now supports customized account names and keys by environment variable `AZURITE_ACCOUNTS`.

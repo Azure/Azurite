@@ -1318,8 +1318,6 @@
       "required": [
         "AllowedOrigins",
         "AllowedMethods",
-        "AllowedHeaders",
-        "ExposedHeaders",
         "MaxAgeInSeconds"
       ],
       "properties": {

@@ -64,6 +64,7 @@ export default class ServiceHandler extends BaseHandler
   ): Promise<Models.ServiceGetUserDelegationKeyResponse> {
     throw new Error("Method not implemented.");
   }
+
   public submitBatch(
     body: NodeJS.ReadableStream,
     contentLength: number,
@@ -100,6 +101,13 @@ export default class ServiceHandler extends BaseHandler
       !parsedBody.hasOwnProperty("Cors")
     ) {
       storageServiceProperties.cors = undefined;
+    }
+
+    // Azure Storage allows allowedHeaders and exposedHeaders to be empty,
+    // Azurite will set to empty string for this scenario
+    for (const cors of storageServiceProperties.cors || []) {
+      cors.allowedHeaders = cors.allowedHeaders || "";
+      cors.exposedHeaders = cors.exposedHeaders || "";
     }
 
     await this.metadataStore.setServiceProperties(context, {

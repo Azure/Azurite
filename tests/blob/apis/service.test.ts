@@ -67,6 +67,25 @@ describe("ServiceAPIs", () => {
     );
   });
 
+  it("Set CORS with empty AllowedHeaders, ExposedHeaders", async () => {
+    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+
+    const newCORS = {
+      allowedHeaders: "",
+      allowedMethods: "GET",
+      allowedOrigins: "example.com",
+      exposedHeaders: "",
+      maxAgeInSeconds: 8888
+    };
+
+    serviceProperties.cors = [newCORS];
+
+    await serviceURL.setProperties(Aborter.none, serviceProperties);
+
+    const result = await serviceURL.getProperties(Aborter.none);
+    assert.deepStrictEqual(result.cors![0], newCORS);
+  });
+
   it("SetServiceProperties", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
 
