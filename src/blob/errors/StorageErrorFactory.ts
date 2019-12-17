@@ -40,12 +40,65 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getInvalidQueryParameterValue(contextID: string): StorageError {
+  public static getInvalidQueryParameterValue(
+    contextID: string = DefaultID,
+    parameterName?: string,
+    parameterValue?: string,
+    reason?: string
+  ): StorageError {
+    const additionalMessages: {
+      [key: string]: string;
+    } = {};
+
+    if (parameterName) {
+      additionalMessages.QueryParameterName = parameterName;
+    }
+
+    if (parameterValue) {
+      additionalMessages.QueryParameterValue = parameterValue;
+    }
+
+    if (reason) {
+      additionalMessages.Reason = reason;
+    }
+
     return new StorageError(
       400,
       "InvalidQueryParameterValue",
       `Value for one of the query parameters specified in the request URI is invalid.`,
-      contextID
+      contextID,
+      additionalMessages
+    );
+  }
+
+  public static getOutOfRangeInput(
+    contextID: string = DefaultID,
+    parameterName?: string,
+    parameterValue?: string,
+    reason?: string
+  ): StorageError {
+    const additionalMessages: {
+      [key: string]: string;
+    } = {};
+
+    if (parameterName) {
+      additionalMessages.QueryParameterName = parameterName;
+    }
+
+    if (parameterValue) {
+      additionalMessages.QueryParameterValue = parameterValue;
+    }
+
+    if (reason) {
+      additionalMessages.Reason = reason;
+    }
+
+    return new StorageError(
+      400,
+      "OutOfRangeInput",
+      `One of the request inputs is out of range.`,
+      contextID,
+      additionalMessages
     );
   }
 
