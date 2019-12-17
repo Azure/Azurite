@@ -110,11 +110,15 @@ export default class FDCache implements IFDCache {
       const cachedfd = this.cache.get(head!);
       if (cachedfd !== undefined) {
         this.logger.debug(
-          `FDCache:insert() Shift cached fd:${cachedfd} for cache entry:${head}. Close unused fd:${cachedfd}`
+          `FDCache:insert() Shift cached fd:${cachedfd} for cache entry:${head}. Close unused fd:${cachedfd}`,
+          contextId
         );
         this.cache.delete(head!);
         await closeAsync(cachedfd);
-        this.logger.debug(`FDCache:insert() Closed unused fd:${cachedfd}`);
+        this.logger.debug(
+          `FDCache:insert() Closed unused fd:${cachedfd}`,
+          contextId
+        );
       }
     }
     this.queue.push(id);

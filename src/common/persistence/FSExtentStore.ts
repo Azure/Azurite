@@ -1,4 +1,5 @@
 import {
+  close,
   createReadStream,
   createWriteStream,
   fdatasync,
@@ -22,13 +23,11 @@ import {
 } from "../utils/constants";
 import { rimrafAsync } from "../utils/utils";
 import ZeroBytesStream from "../ZeroBytesStream";
-import FDCache from "./FDCache";
 import IExtentMetadataStore, { IExtentModel } from "./IExtentMetadataStore";
 import IExtentStore, {
   IExtentChunk,
   StoreDestinationArray
 } from "./IExtentStore";
-import IFDCache from "./IFDCache";
 import IOperationQueue from "./IOperationQueue";
 import OperationQueue from "./OperationQueue";
 
@@ -48,10 +47,12 @@ interface IAppendExtent {
   id: string;
   offset: number;
   appendStatus: AppendStatusCode; // 0 for idle, 1 for appending
-  persistencyId: string;
+  locationId: string;
+  fd?: number;
 }
 
 const openAsync = promisify(open);
+const closeAsync = promisify(close);
 
 /**
  * Persistency layer data store source implementation interacting with the storage media.
@@ -65,7 +66,6 @@ export default class FSExtentStore implements IExtentStore {
   private readonly metadataStore: IExtentMetadataStore;
   private readonly appendQueue: IOperationQueue;
   private readonly readQueue: IOperationQueue;
-  private readonly fdWriteCache: IFDCache;
 
   private initialized: boolean = false;
   private closed: boolean = false;
@@ -97,7 +97,6 @@ export default class FSExtentStore implements IExtentStore {
       }
     }
     this.activeWriteExtentsNumber = this.activeWriteExtents.length;
-    this.fdWriteCache = new FDCache(this.logger, this.activeWriteExtentsNumber);
 
     this.metadataStore = metadata;
     this.appendQueue = new OperationQueue(
@@ -128,19 +127,11 @@ export default class FSExtentStore implements IExtentStore {
       await this.metadataStore.init();
     }
 
-    if (!this.fdWriteCache.isInitialized()) {
-      await this.fdWriteCache.init();
-    }
-
     this.initialized = true;
     this.closed = false;
   }
 
   public async close(): Promise<void> {
-    if (!this.fdWriteCache.isClosed()) {
-      await this.fdWriteCache.close();
-    }
-
     if (!this.metadataStore.isClosed()) {
       await this.metadataStore.close();
     }
@@ -200,9 +191,32 @@ export default class FSExtentStore implements IExtentStore {
           if (
             this.activeWriteExtents[appendExtentIdx].offset >= MAX_EXTENT_SIZE
           ) {
-            this.getNewExtent(this.activeWriteExtents[appendExtentIdx]);
             this.logger.info(
-              `FSExtentStore:appendExtent() Size of selected extent offset is larger than maximum extent size ${MAX_EXTENT_SIZE} bytes, try appending to new extent. New extent LocationID:${appendExtentIdx} extentId:${this.activeWriteExtents[appendExtentIdx].id} offset:${this.activeWriteExtents[appendExtentIdx].offset} MAX_EXTENT_SIZE:${MAX_EXTENT_SIZE} `,
+              `FSExtentStore:appendExtent() Size of selected extent offset is larger than maximum extent size ${MAX_EXTENT_SIZE} bytes, try appending to new extent.`,
+              contextId
+            );
+
+            const selectedFd = this.activeWriteExtents[appendExtentIdx].fd;
+            if (selectedFd) {
+              this.logger.info(
+                `FSExtentStore:appendExtent() Close unused fd:${selectedFd}.`,
+                contextId
+              );
+              try {
+                await closeAsync(selectedFd);
+              } catch (err) {
+                this.logger.error(
+                  `FSExtentStore:appendExtent() Close unused fd:${selectedFd} error:${JSON.stringify(
+                    err
+                  )}.`,
+                  contextId
+                );
+              }
+            }
+
+            await this.getNewExtent(this.activeWriteExtents[appendExtentIdx]);
+            this.logger.info(
+              `FSExtentStore:appendExtent() Allocated new extent LocationID:${appendExtentIdx} extentId:${this.activeWriteExtents[appendExtentIdx].id} offset:${this.activeWriteExtents[appendExtentIdx].offset} MAX_EXTENT_SIZE:${MAX_EXTENT_SIZE} `,
               contextId
             );
           }
@@ -216,16 +230,15 @@ export default class FSExtentStore implements IExtentStore {
 
           const appendExtent = this.activeWriteExtents[appendExtentIdx];
           const id = appendExtent.id;
-          const path = this.generateExtentPath(appendExtent.persistencyId, id);
-
-          let fd = await this.fdWriteCache.get(id, contextId);
+          const path = this.generateExtentPath(appendExtent.locationId, id);
+          let fd = appendExtent.fd;
           this.logger.debug(
             `FSExtentStore:appendExtent() Get fd:${fd} for extent:${id} from cache.`,
             contextId
           );
           if (fd === undefined) {
             fd = await openAsync(path, "a");
-            await this.fdWriteCache.insert(id, fd, contextId);
+            appendExtent.fd = fd;
             this.logger.debug(
               `FSExtentStore:appendExtent() Open file:${path} for extent:${id}, get new fd:${fd}`,
               contextId
@@ -256,7 +269,7 @@ export default class FSExtentStore implements IExtentStore {
 
             const extent: IExtentModel = {
               id,
-              persistencyId: appendExtent.persistencyId,
+              persistencyId: appendExtent.locationId,
               path: id,
               size: count + offset,
               lastModifiedInMS: Date.now()
@@ -604,7 +617,7 @@ export default class FSExtentStore implements IExtentStore {
       id: uuid(),
       offset: 0,
       appendStatus: AppendStatusCode.Idle,
-      persistencyId
+      locationId: persistencyId
     };
   }
 
@@ -618,6 +631,7 @@ export default class FSExtentStore implements IExtentStore {
   private getNewExtent(appendExtent: IAppendExtent) {
     appendExtent.id = uuid();
     appendExtent.offset = 0;
+    appendExtent.fd = undefined;
   }
 
   /**
