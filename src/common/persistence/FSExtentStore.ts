@@ -97,7 +97,7 @@ export default class FSExtentStore implements IExtentStore {
       }
     }
     this.activeWriteExtentsNumber = this.activeWriteExtents.length;
-    this.fdWriteCache = new FDCache(this.activeWriteExtentsNumber);
+    this.fdWriteCache = new FDCache(this.logger, this.activeWriteExtentsNumber);
 
     this.metadataStore = metadata;
     this.appendQueue = new OperationQueue(
@@ -198,7 +198,7 @@ export default class FSExtentStore implements IExtentStore {
           );
 
           if (
-            this.activeWriteExtents[appendExtentIdx].offset > MAX_EXTENT_SIZE
+            this.activeWriteExtents[appendExtentIdx].offset >= MAX_EXTENT_SIZE
           ) {
             this.getNewExtent(this.activeWriteExtents[appendExtentIdx]);
             this.logger.info(
@@ -218,14 +218,14 @@ export default class FSExtentStore implements IExtentStore {
           const id = appendExtent.id;
           const path = this.generateExtentPath(appendExtent.persistencyId, id);
 
-          let fd = await this.fdWriteCache.get(id);
+          let fd = await this.fdWriteCache.get(id, contextId);
           this.logger.debug(
             `FSExtentStore:appendExtent() Get fd:${fd} for extent:${id} from cache.`,
             contextId
           );
           if (fd === undefined) {
             fd = await openAsync(path, "a");
-            await this.fdWriteCache.insert(id, fd);
+            await this.fdWriteCache.insert(id, fd, contextId);
             this.logger.debug(
               `FSExtentStore:appendExtent() Open file:${path} for extent:${id}, get new fd:${fd}`,
               contextId
@@ -233,10 +233,14 @@ export default class FSExtentStore implements IExtentStore {
           }
 
           const ws = createWriteStream(path, {
-            flags: "a",
             fd,
             autoClose: false
           });
+
+          this.logger.debug(
+            `FSExtentStore:appendExtent() Created write stream for fd:${fd}`,
+            contextId
+          );
 
           let count = 0;
 
@@ -246,7 +250,7 @@ export default class FSExtentStore implements IExtentStore {
           );
 
           try {
-            count = await this.streamPipe(rs, ws, fd);
+            count = await this.streamPipe(rs, ws, fd, contextId);
             const offset = appendExtent.offset;
             appendExtent.offset += count;
 
@@ -465,9 +469,15 @@ export default class FSExtentStore implements IExtentStore {
   private async streamPipe(
     rs: NodeJS.ReadableStream,
     ws: Writable,
-    fd?: number
+    fd?: number,
+    contextId?: string
   ): Promise<number> {
     return new Promise<number>((resolve, reject) => {
+      this.logger.debug(
+        `FSExtentStore:streamPipe() Start piping data to write stream`,
+        contextId
+      );
+
       let count: number = 0;
       let wsEnd = false;
 
@@ -478,18 +488,42 @@ export default class FSExtentStore implements IExtentStore {
         }
       })
         .on("end", () => {
+          this.logger.debug(
+            `FSExtentStore:streamPipe() Readable stream triggers close event, ${count} bytes piped`,
+            contextId
+          );
+
           if (!wsEnd) {
+            this.logger.debug(
+              `FSExtentStore:streamPipe() Invoke write stream end()`,
+              contextId
+            );
             ws.end();
             wsEnd = true;
           }
         })
         .on("close", () => {
+          this.logger.debug(
+            `FSExtentStore:streamPipe() Readable stream triggers close event, ${count} bytes piped`,
+            contextId
+          );
+
           if (!wsEnd) {
+            this.logger.debug(
+              `FSExtentStore:streamPipe() Invoke write stream end()`,
+              contextId
+            );
             ws.end();
             wsEnd = true;
           }
         })
         .on("error", err => {
+          this.logger.debug(
+            `FSExtentStore:streamPipe() Readable stream triggers error event, error:${JSON.stringify(
+              err
+            )}, after ${count} bytes piped. Invoke write stream destroy() method.`,
+            contextId
+          );
           ws.destroy(err);
         });
 
@@ -498,18 +532,44 @@ export default class FSExtentStore implements IExtentStore {
       })
         .on("finish", () => {
           if (typeof fd === "number") {
+            this.logger.debug(
+              `FSExtentStore:streamPipe() Writable stream triggers finish event, after ${count} bytes piped. Flush data to fd:${fd}.`,
+              contextId
+            );
             fdatasync(fd, err => {
               if (err) {
+                this.logger.debug(
+                  `FSExtentStore:streamPipe() Flush data to fd:${fd} failed with error:${JSON.stringify(
+                    err
+                  )}. Reject streamPipe().`,
+                  contextId
+                );
                 reject(err);
               } else {
+                this.logger.debug(
+                  `FSExtentStore:streamPipe() Flush data to fd:${fd} successfully. Resolve streamPipe().`,
+                  contextId
+                );
                 resolve(count);
               }
             });
           } else {
+            this.logger.debug(
+              `FSExtentStore:streamPipe() Resolve streamPipe() without flushing data.`,
+              contextId
+            );
             resolve(count);
           }
         })
-        .on("error", reject);
+        .on("error", err => {
+          this.logger.debug(
+            `FSExtentStore:streamPipe() Writable stream triggers error event, error:${JSON.stringify(
+              err
+            )}, after ${count} bytes piped. Reject streamPipe().`,
+            contextId
+          );
+          reject(err);
+        });
     });
   }
 

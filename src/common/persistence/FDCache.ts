@@ -1,6 +1,7 @@
 import { close } from "fs";
 import { promisify } from "util";
 
+import ILogger from "../ILogger";
 import {
   DEFAULT_FD_CACHE_NUMBER,
   FD_CACHE_NUMBER_MAX,
@@ -18,7 +19,10 @@ export default class FDCache implements IFDCache {
   private queue: string[];
   private cache: Map<string, number>;
 
-  public constructor(size: number = DEFAULT_FD_CACHE_NUMBER) {
+  public constructor(
+    private readonly logger: ILogger,
+    size: number = DEFAULT_FD_CACHE_NUMBER
+  ) {
     if (size < FD_CACHE_NUMBER_MIN || size > FD_CACHE_NUMBER_MAX) {
       size = DEFAULT_FD_CACHE_NUMBER;
     }
@@ -59,7 +63,7 @@ export default class FDCache implements IFDCache {
   }
 
   /**
-   * Whether the fd has benn closed.
+   * Whether the fd has been closed.
    *
    * @returns {boolean}
    * @memberof IFDCache
@@ -73,10 +77,14 @@ export default class FDCache implements IFDCache {
    * Return -1 if the fd does not exist in the cache.
    *
    * @param {string} id
+   * @param {string} contextId
    * @returns {Promise<(number | undefined)>}
    * @memberof FDCache
    */
-  public async get(id: string): Promise<number | undefined> {
+  public async get(
+    id: string,
+    contextId: string = ""
+  ): Promise<number | undefined> {
     const fd = this.cache.get(id);
     return fd;
   }
@@ -87,17 +95,26 @@ export default class FDCache implements IFDCache {
    *
    * @param {string} id
    * @param {number} fd
+   * @param {string} contextId
    * @returns {Promise<void>}
    * @memberof IFDCache
    */
-  public async insert(id: string, fd: number): Promise<void> {
+  public async insert(
+    id: string,
+    fd: number,
+    contextId: string = ""
+  ): Promise<void> {
     const count = this.queue.length;
     if (count === this.size) {
       const head = this.queue.shift();
       const cachedfd = this.cache.get(head!);
       if (cachedfd !== undefined) {
+        this.logger.debug(
+          `FDCache:insert() Shift cached fd:${cachedfd} for cache entry:${head}. Close unused fd:${cachedfd}`
+        );
         this.cache.delete(head!);
         await closeAsync(cachedfd);
+        this.logger.debug(`FDCache:insert() Closed unused fd:${cachedfd}`);
       }
     }
     this.queue.push(id);

@@ -36,18 +36,20 @@ export default interface IFDCache {
    * Return -1 if the fd does not exist in the cache.
    *
    * @param {string} id
-   * @returns {Promise<(number | undefined)>}
+   * @param {string} contextId
+   * @returns {(Promise<number | undefined>)}
    * @memberof IFDCache
    */
-  get(id: string): Promise<number | undefined>;
+  get(id: string, contextId?: string): Promise<number | undefined>;
 
   /**
    * Insert a new fd to the cache.
    *
    * @param {string} id
    * @param {number} fd
+   * @param {string} contextId
    * @returns {Promise<void>}
    * @memberof IFDCache
    */
-  insert(id: string, fd: number): Promise<void>;
+  insert(id: string, fd: number, contextId?: string): Promise<void>;
 }
