@@ -120,7 +120,16 @@ export default class QueueRequestListenerFactory
     // tslint:disable-next-line:max-line-length
     // See as https://docs.microsoft.com/en-us/rest/api/storageservices/cross-origin-resource-sharing--cors--support-for-the-azure-storage-services
     app.use(
-      preflightMiddlewareFactory.createCorsRequestMiddleware(this.metadataStore)
+      preflightMiddlewareFactory.createCorsRequestMiddleware(
+        this.metadataStore,
+        false
+      )
+    );
+    app.use(
+      preflightMiddlewareFactory.createCorsRequestMiddleware(
+        this.metadataStore,
+        true
+      )
     );
 
     // Generated, will serialize response models into HTTP response

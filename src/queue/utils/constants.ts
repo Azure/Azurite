@@ -68,7 +68,7 @@ export const HeaderConstants = {
   X_MS_META: "x-ms-meta-",
   ORIGIN: "origin",
   VARY: "Vary",
-  ACCESS_CONTROL_EXPOSED_HEADER: "Access-Control-Exposed-Headers",
+  ACCESS_CONTROL_EXPOSE_HEADER: "Access-Control-Expose-Headers",
   ACCESS_CONTROL_ALLOW_ORIGIN: "Access-Control-Allow-Origin",
   ACCESS_CONTROL_ALLOW_CREDENTIALS: "Access-Control-Allow-Credentials",
   ACCESS_CONTROL_ALLOW_METHODS: "Access-Control-Allow-Methods",
