@@ -157,10 +157,12 @@ export default class PreflightMiddlewareFactory {
         DEFAULT_QUEUE_CONTEXT_PATH
       );
 
-      // const requestId = res.locals.azurite_queue_context.contextID;
       const account = context.account!;
 
       const origin = req.headers[HeaderConstants.ORIGIN] as string | undefined;
+      if (origin === undefined) {
+        return next(err);
+      }
 
       const method = req.method;
       if (method === undefined || typeof method !== "string") {
@@ -174,8 +176,12 @@ export default class PreflightMiddlewareFactory {
             return next(err);
           }
           const corsSet = properties.cors;
-          const resHeaders = this.getResponseHeaders(res);
+          const resHeaders = this.getResponseHeaders(
+            res,
+            err instanceof MiddlewareError ? err : undefined
+          );
 
+          // Here we will match CORS settings in order and select first matched CORS
           for (const cors of corsSet) {
             if (
               this.checkOrigin(origin, cors.allowedOrigins) &&
@@ -187,13 +193,13 @@ export default class PreflightMiddlewareFactory {
               );
 
               res.setHeader(
-                HeaderConstants.ACCESS_CONTROL_EXPOSE_HEADER,
+                HeaderConstants.ACCESS_CONTROL_EXPOSE_HEADERS,
                 exposedHeaders
               );
 
               res.setHeader(
                 HeaderConstants.ACCESS_CONTROL_ALLOW_ORIGIN,
-                cors.allowedOrigins
+                cors.allowedOrigins === "*" ? "*" : origin! // origin is not undefined as checked in checkOrigin()
               );
 
               if (cors.allowedOrigins !== "*") {
@@ -231,12 +237,14 @@ export default class PreflightMiddlewareFactory {
     if (allowedOrigin === "*") {
       return true;
     }
+
     if (origin === undefined) {
       return false;
     }
+
     const allowedOriginArray = allowedOrigin.split(",");
     for (const corsOrigin of allowedOriginArray) {
-      if (origin.trim() === corsOrigin.trim()) {
+      if (origin.trim().toLowerCase() === corsOrigin.trim().toLowerCase()) {
         return true;
       }
     }
@@ -246,7 +254,7 @@ export default class PreflightMiddlewareFactory {
   private checkMethod(method: string, allowedMethod: string): boolean {
     const allowedMethodArray = allowedMethod.split(",");
     for (const corsMethod of allowedMethodArray) {
-      if (method.trim() === corsMethod.trim()) {
+      if (method.trim().toLowerCase() === corsMethod.trim().toLowerCase()) {
         return true;
       }
     }
@@ -283,7 +291,7 @@ export default class PreflightMiddlewareFactory {
     return true;
   }
 
-  private getResponseHeaders(res: Response): string[] {
+  private getResponseHeaders(res: Response, err?: MiddlewareError): string[] {
     const responseHeaderSet = [];
 
     const handlerResponse = res.locals.azurite_queue_context.handlerResponses;
@@ -369,6 +377,14 @@ export default class PreflightMiddlewareFactory {
     for (const header in headers) {
       if (typeof header === "string") {
         responseHeaderSet.push(header);
+      }
+    }
+
+    if (err) {
+      for (const key in err.headers) {
+        if (err.headers.hasOwnProperty(key)) {
+          responseHeaderSet.push(key);
+        }
       }
     }
 

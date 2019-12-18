@@ -122,13 +122,13 @@ export default class QueueRequestListenerFactory
     app.use(
       preflightMiddlewareFactory.createCorsRequestMiddleware(
         this.metadataStore,
-        false
+        true
       )
     );
     app.use(
       preflightMiddlewareFactory.createCorsRequestMiddleware(
         this.metadataStore,
-        true
+        false
       )
     );
 
