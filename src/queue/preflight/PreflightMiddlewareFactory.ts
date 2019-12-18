@@ -139,11 +139,17 @@ export default class PreflightMiddlewareFactory {
   }
 
   public createCorsRequestMiddleware(
-    metadataStore: IQueueMetadataStore
-  ): RequestHandler {
-    return (req: Request, res: Response, next: NextFunction) => {
+    metadataStore: IQueueMetadataStore,
+    blockErrorRequest: boolean = false
+  ): ErrorRequestHandler | RequestHandler {
+    const internalMethod = (
+      err: MiddlewareError | Error | undefined,
+      req: Request,
+      res: Response,
+      next: NextFunction
+    ) => {
       if (req.method.toUpperCase() === MethodConstants.OPTIONS) {
-        return next();
+        return next(err);
       }
 
       const context = new QueueStorageContext(
@@ -158,14 +164,14 @@ export default class PreflightMiddlewareFactory {
 
       const method = req.method;
       if (method === undefined || typeof method !== "string") {
-        return next();
+        return next(err);
       }
 
       metadataStore
         .getServiceProperties(account)
         .then(properties => {
           if (properties === undefined || properties.cors === undefined) {
-            return next();
+            return next(err);
           }
           const corsSet = properties.cors;
           const resHeaders = this.getResponseHeaders(res);
@@ -198,16 +204,24 @@ export default class PreflightMiddlewareFactory {
                 );
               }
 
-              return next();
+              return next(err);
             }
           }
           if (corsSet.length > 0) {
             res.setHeader(HeaderConstants.VARY, "Origin");
           }
-          return next();
+          return next(err);
         })
         .catch(next);
     };
+
+    if (blockErrorRequest) {
+      return internalMethod;
+    } else {
+      return (req: Request, res: Response, next: NextFunction) => {
+        internalMethod(undefined, req, res, next);
+      };
+    }
   }
 
   private checkOrigin(
@@ -270,81 +284,85 @@ export default class PreflightMiddlewareFactory {
   }
 
   private getResponseHeaders(res: Response): string[] {
-    const handlerResponse = res.locals.azurite_queue_context.handlerResponses;
-    const statusCodeInResponse: number = handlerResponse.statusCode;
-    const spec = Specifications[res.locals.azurite_queue_context.operation];
-    const responseSpec = spec.responses[statusCodeInResponse];
-    if (!responseSpec) {
-      throw new TypeError(
-        `Request specification doesn't include provided response status code`
-      );
-    }
-
-    // Serialize headers
-    const headerSerializer = new msRest.Serializer(Mappers);
-    const headersMapper = responseSpec.headersMapper;
-
     const responseHeaderSet = [];
-    if (headersMapper && headersMapper.type.name === "Composite") {
-      const mappersForAllHeaders = headersMapper.type.modelProperties || {};
 
-      // Handle headerMapper one by one
-      for (const key in mappersForAllHeaders) {
-        if (mappersForAllHeaders.hasOwnProperty(key)) {
-          const headerMapper = mappersForAllHeaders[key];
-          const headerName = headerMapper.serializedName;
-          const headerValueOriginal = handlerResponse[key];
-          const headerValueSerialized = headerSerializer.serialize(
-            headerMapper,
-            headerValueOriginal
-          );
+    const handlerResponse = res.locals.azurite_queue_context.handlerResponses;
 
-          // Handle collection of headers starting with same prefix, such as x-ms-meta prefix
-          const headerCollectionPrefix = (headerMapper as msRest.DictionaryMapper)
-            .headerCollectionPrefix;
-          if (
-            headerCollectionPrefix !== undefined &&
-            headerValueOriginal !== undefined
-          ) {
-            for (const collectionHeaderPartialName in headerValueSerialized) {
-              if (
-                headerValueSerialized.hasOwnProperty(
-                  collectionHeaderPartialName
-                )
-              ) {
-                const collectionHeaderValueSerialized =
-                  headerValueSerialized[collectionHeaderPartialName];
-                const collectionHeaderName = `${headerCollectionPrefix}${collectionHeaderPartialName}`;
+    if (handlerResponse) {
+      const statusCodeInResponse: number = handlerResponse.statusCode;
+      const spec = Specifications[res.locals.azurite_queue_context.operation];
+      const responseSpec = spec.responses[statusCodeInResponse];
+      if (!responseSpec) {
+        throw new TypeError(
+          `Request specification doesn't include provided response status code`
+        );
+      }
+
+      // Serialize headers
+      const headerSerializer = new msRest.Serializer(Mappers);
+      const headersMapper = responseSpec.headersMapper;
+
+      if (headersMapper && headersMapper.type.name === "Composite") {
+        const mappersForAllHeaders = headersMapper.type.modelProperties || {};
+
+        // Handle headerMapper one by one
+        for (const key in mappersForAllHeaders) {
+          if (mappersForAllHeaders.hasOwnProperty(key)) {
+            const headerMapper = mappersForAllHeaders[key];
+            const headerName = headerMapper.serializedName;
+            const headerValueOriginal = handlerResponse[key];
+            const headerValueSerialized = headerSerializer.serialize(
+              headerMapper,
+              headerValueOriginal
+            );
+
+            // Handle collection of headers starting with same prefix, such as x-ms-meta prefix
+            const headerCollectionPrefix = (headerMapper as msRest.DictionaryMapper)
+              .headerCollectionPrefix;
+            if (
+              headerCollectionPrefix !== undefined &&
+              headerValueOriginal !== undefined
+            ) {
+              for (const collectionHeaderPartialName in headerValueSerialized) {
                 if (
-                  collectionHeaderName &&
-                  collectionHeaderValueSerialized !== undefined
+                  headerValueSerialized.hasOwnProperty(
+                    collectionHeaderPartialName
+                  )
                 ) {
-                  responseHeaderSet.push(collectionHeaderName);
+                  const collectionHeaderValueSerialized =
+                    headerValueSerialized[collectionHeaderPartialName];
+                  const collectionHeaderName = `${headerCollectionPrefix}${collectionHeaderPartialName}`;
+                  if (
+                    collectionHeaderName &&
+                    collectionHeaderValueSerialized !== undefined
+                  ) {
+                    responseHeaderSet.push(collectionHeaderName);
+                  }
                 }
               }
-            }
-          } else {
-            if (headerName && headerValueSerialized !== undefined) {
-              responseHeaderSet.push(headerName);
+            } else {
+              if (headerName && headerValueSerialized !== undefined) {
+                responseHeaderSet.push(headerName);
+              }
             }
           }
         }
       }
-    }
 
-    if (
-      spec.isXML &&
-      responseSpec.bodyMapper &&
-      responseSpec.bodyMapper.type.name !== "Stream"
-    ) {
-      responseHeaderSet.push("content-type");
-      responseHeaderSet.push("content-length");
-    } else if (
-      handlerResponse.body &&
-      responseSpec.bodyMapper &&
-      responseSpec.bodyMapper.type.name === "Stream"
-    ) {
-      responseHeaderSet.push("content-length");
+      if (
+        spec.isXML &&
+        responseSpec.bodyMapper &&
+        responseSpec.bodyMapper.type.name !== "Stream"
+      ) {
+        responseHeaderSet.push("content-type");
+        responseHeaderSet.push("content-length");
+      } else if (
+        handlerResponse.body &&
+        responseSpec.bodyMapper &&
+        responseSpec.bodyMapper.type.name === "Stream"
+      ) {
+        responseHeaderSet.push("content-length");
+      }
     }
 
     const headers = res.getHeaders();
