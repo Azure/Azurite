@@ -13,6 +13,7 @@ Upcoming Release
 Blob:
 - Added support for CORS.
 - AllowedHeaders and ExposedHeaders are optional now when setting CORS.
+- Added support to create block blob with empty block list.
 - Stage block cannot have blockID longer than 64.
 
 Queue:
