@@ -141,7 +141,16 @@ export default class SqlBlobRequestListenerFactory
 
     // CORS
     app.use(
-      preflightMiddlewareFactory.createCorsRequestMiddleware(this.metadataStore)
+      preflightMiddlewareFactory.createCorsRequestMiddleware(
+        this.metadataStore,
+        true
+      )
+    );
+    app.use(
+      preflightMiddlewareFactory.createCorsRequestMiddleware(
+        this.metadataStore,
+        false
+      )
     );
 
     // Generated, will serialize response models into HTTP response

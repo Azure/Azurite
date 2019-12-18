@@ -1,9 +1,10 @@
 import {
   Aborter,
+  ContainerURL,
   ServiceURL,
   SharedKeyCredential,
   StorageURL
-} from "@azure/storage-queue";
+} from "@azure/storage-blob";
 import * as assert from "assert";
 
 import { configLogger } from "../../src/common/Logger";
@@ -521,7 +522,7 @@ describe("Blob Cors requests test", () => {
     assert.ok(res.vary !== undefined);
 
     res = await serviceURL.getProperties(Aborter.none);
-    assert.ok(res.vary !== undefined);
+    assert.ok(res.vary === undefined);
   });
 
   it("Request Match rule exists that allows all origins (*)", async () => {
@@ -557,9 +558,9 @@ describe("Blob Cors requests test", () => {
     assert.ok(res["access-control-expose-headers"] !== undefined);
 
     res = await serviceURL.getProperties(Aborter.none);
-    assert.ok(res["access-control-allow-origin"] === "*");
+    assert.ok(res["access-control-allow-origin"] === undefined);
     assert.ok(res.vary === undefined);
-    assert.ok(res["access-control-expose-headers"] !== undefined);
+    assert.ok(res["access-control-expose-headers"] === undefined);
   });
 
   it("Request Match rule exists for exact origin", async () => {
@@ -593,6 +594,53 @@ describe("Blob Cors requests test", () => {
     assert.ok(res["access-control-allow-origin"] === origin);
     assert.ok(res.vary !== undefined);
     assert.ok(res["access-control-expose-headers"] !== undefined);
+  });
+
+  it("Requests with error response should apply for CORS", async () => {
+    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+
+    const newCORS = {
+      allowedHeaders: "header",
+      allowedMethods: "GET",
+      allowedOrigins: "exactOrigin",
+      exposedHeaders: "*",
+      maxAgeInSeconds: 8888
+    };
+
+    serviceProperties.cors = [newCORS];
+
+    await serviceURL.setProperties(Aborter.none, serviceProperties);
+
+    await sleep(100);
+
+    const origin = "exactOrigin";
+    const pipeline = StorageURL.newPipeline(
+      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+      {
+        retryOptions: { maxTries: 1 }
+      }
+    );
+    pipeline.factories.unshift(new OriginPolicyFactory(origin));
+    const serviceURLwithOrigin = new ServiceURL(baseURL, pipeline);
+
+    const containerURLwithOrigin = ContainerURL.fromServiceURL(
+      serviceURLwithOrigin,
+      "notexistcontainer"
+    );
+
+    try {
+      await containerURLwithOrigin.getProperties(Aborter.none);
+    } catch (err) {
+      assert.ok(
+        err.response.headers._headersMap["access-control-allow-origin"]
+          .value === origin
+      );
+      assert.ok(err.response.headers._headersMap.vary !== undefined);
+      assert.ok(
+        err.response.headers._headersMap["access-control-expose-headers"] !==
+          undefined
+      );
+    }
   });
 
   it("Request Match rule in sequence", async () => {
