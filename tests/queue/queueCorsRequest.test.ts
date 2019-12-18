@@ -514,7 +514,7 @@ describe("Queue Cors requests test", () => {
     const res: any = await serviceURLwithOrigin.getProperties(Aborter.none);
 
     assert.ok(res["access-control-allow-origin"] === undefined);
-    assert.ok(res["access-control-exposed-headers"] === undefined);
+    assert.ok(res["access-control-expose-headers"] === undefined);
     assert.ok(res.vary === undefined);
   });
 
@@ -582,12 +582,12 @@ describe("Queue Cors requests test", () => {
     let res: any = await serviceURLwithOrigin.getProperties(Aborter.none);
     assert.ok(res["access-control-allow-origin"] === "*");
     assert.ok(res.vary === undefined);
-    assert.ok(res["access-control-exposed-headers"] !== undefined);
+    assert.ok(res["access-control-expose-headers"] !== undefined);
 
     res = await serviceURL.getProperties(Aborter.none);
     assert.ok(res["access-control-allow-origin"] === "*");
     assert.ok(res.vary === undefined);
-    assert.ok(res["access-control-exposed-headers"] !== undefined);
+    assert.ok(res["access-control-expose-headers"] !== undefined);
   });
 
   it("Request Match rule exists for exact origin", async () => {
@@ -620,7 +620,7 @@ describe("Queue Cors requests test", () => {
     const res: any = await serviceURLwithOrigin.getProperties(Aborter.none);
     assert.ok(res["access-control-allow-origin"] === origin);
     assert.ok(res.vary !== undefined);
-    assert.ok(res["access-control-exposed-headers"] !== undefined);
+    assert.ok(res["access-control-expose-headers"] !== undefined);
   });
 
   it("Request Match rule in sequence", async () => {
@@ -662,6 +662,6 @@ describe("Queue Cors requests test", () => {
     const res: any = await serviceURLwithOrigin.getProperties(Aborter.none);
     assert.ok(res["access-control-allow-origin"] === origin);
     assert.ok(res.vary !== undefined);
-    assert.ok(res["access-control-exposed-headers"] !== undefined);
+    assert.ok(res["access-control-expose-headers"] !== undefined);
   });
 });

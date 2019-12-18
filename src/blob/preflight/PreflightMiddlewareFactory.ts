@@ -110,7 +110,7 @@ export default class PreflightMiddlewareFactory {
               );
               if (requestHeaders !== undefined) {
                 res.setHeader(
-                  HeaderConstants.ACCESS_CONTROL_REQUEST_HEADERS,
+                  HeaderConstants.ACCESS_CONTROL_ALLOW_HEADERS,
                   requestHeaders
                 );
               }
@@ -178,7 +178,7 @@ export default class PreflightMiddlewareFactory {
               );
 
               res.setHeader(
-                HeaderConstants.ACCESS_CONTROL_EXPOSED_HEADER,
+                HeaderConstants.ACCESS_CONTROL_EXPOSE_HEADER,
                 exposedHeaders
               );
 
