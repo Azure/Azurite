@@ -156,12 +156,13 @@ export default class BlockBlobHandler extends BaseHandler
     options: Models.BlockBlobStageBlockOptionalParams,
     context: Context
   ): Promise<Models.BlockBlobStageBlockResponse> {
-    // TODO: Check Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
+
+    this.validateBlockId(blockId, blobCtx);
 
     await this.metadataStore.checkContainerExist(
       context,
@@ -389,5 +390,27 @@ export default class BlockBlobHandler extends BaseHandler
       return Models.AccessTier.Archive;
     }
     return undefined;
+  }
+
+  private validateBlockId(blockId: string, context: Context): void {
+    const rawBlockId = Buffer.from(blockId, "base64");
+
+    if (blockId !== rawBlockId.toString("base64")) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId,
+        "blockid",
+        blockId,
+        "Not a valid base64 string."
+      );
+    }
+
+    if (rawBlockId.length > 64) {
+      throw StorageErrorFactory.getOutOfRangeInput(
+        context.contextId!,
+        "blockid",
+        blockId,
+        "Block ID length cannot exceed 64."
+      );
+    }
   }
 }
