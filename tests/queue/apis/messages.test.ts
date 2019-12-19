@@ -173,7 +173,7 @@ describe("Messages APIs test", () => {
       visibilitytimeout: 5
     });
     await messagesURL.enqueue(Aborter.none, messageContent, {
-      messageTimeToLive: 20,
+      messageTimeToLive: Number.MAX_SAFE_INTEGER,
       visibilitytimeout: 19
     });
 
