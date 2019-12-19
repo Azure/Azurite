@@ -16,6 +16,10 @@ Blob:
 - AllowedHeaders and ExposedHeaders are optional now when setting CORS.
 - Added support to create block blob with empty block list.
 - Stage block cannot have blockID longer than 64.
+- Fix the issue that Copy Blob will overwrite the destination blob Lease status.
+- Fix the issue that Change Lease fail when blob lease id only matches the input ProposedLeaseId.
+- Fix the issue that UploadPage, ClearPage will fail on leased Page blob, even input correct lease id.
+- Change some lease error code to align with server.
 - Fixed a bug that set blob tier doesn't work with account SAS.
 - Fixed a bug that Azurite Blob service cannot start in Mac as Visual Studio Extension.
 

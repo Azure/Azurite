@@ -560,4 +560,97 @@ describe("BlobAPIs", () => {
     assert.ok(result.lastModified);
     assert.deepStrictEqual(result.metadata, metadata2);
   });
+
+  it("Copy blob should not override destination Lease status", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobURL = BlockBlobURL.fromContainerURL(
+      containerURL,
+      sourceBlob
+    );
+    const destBlobURL = BlockBlobURL.fromContainerURL(containerURL, destBlob);
+
+    await sourceBlobURL.upload(Aborter.none, "hello", 5);
+    await destBlobURL.upload(Aborter.none, "hello", 5);
+
+    const leaseResult = await destBlobURL.acquireLease(Aborter.none, "", -1);
+    const leaseId = leaseResult.leaseId;
+    assert.ok(leaseId);
+
+    const getResult = await destBlobURL.getProperties(Aborter.none);
+    assert.equal(getResult.leaseDuration, "infinite");
+    assert.equal(getResult.leaseState, "leased");
+    assert.equal(getResult.leaseStatus, "locked");
+
+    await destBlobURL.startCopyFromURL(Aborter.none, sourceBlobURL.url, {
+      blobAccessConditions: { leaseAccessConditions: { leaseId } }
+    });
+
+    const result = await destBlobURL.getProperties(Aborter.none);
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "BlockBlob");
+    assert.ok(result.lastModified);
+    assert.equal(getResult.leaseDuration, "infinite");
+    assert.equal(getResult.leaseState, "leased");
+    assert.equal(getResult.leaseStatus, "locked");
+
+    await destBlobURL.releaseLease(Aborter.none, leaseId!);
+  });
+
+  it("Acquire Lease on Breaking Lease status, if LeaseId not match, throw LeaseIdMismatchWithLease error", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Renew Lease on Breaking Lease status, if LeaseId not match, throw LeaseIdMismatchWithLease error", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Change Lease on Breaking Lease status, if LeaseId not match, throw LeaseIdMismatchWithLease error", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Renew: Lease on Breaking Lease status, if LeaseId not match, throw LeaseIdMismatchWithLease error", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Acquire Lease on Broken Lease status, if LeaseId not match, throw LeaseIdMismatchWithLease error", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Break Lease on Infinite Lease, if give valid breakPeriod, should be broken after breadperiod", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Break Lease on Infinite Lease, if not give breakPeriod, should be broken immidiately", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Renew: Lease on Leased status, if LeaseId not match, throw LeaseIdMismatchWithLease error", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Change Lease on Leased status, if input LeaseId not match anyone of leaseID or proposedLeaseId, throw LeaseIdMismatchWithLease error", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Change Lease on Leased status, if input LeaseId matches proposedLeaseId, will change success", async () => {
+    // TODO: implement the case later
+  });
+
+  it("UploadPage on a Leased page blob, if input LeaseId matches, will success", async () => {
+    // TODO: implement the case later
+  });
+
+  it("ClearPage on a Leased page blob, if input LeaseId matches, will success", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Resize a Leased page blob, if input LeaseId matches, will success", async () => {
+    // TODO: implement the case later
+  });
+
+  it("UpdateSequenceNumber a Leased page blob, if input LeaseId matches, will success", async () => {
+    // TODO: implement the case later
+  });
 });

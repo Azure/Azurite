@@ -74,7 +74,13 @@ export default class LeaseBreakingState extends LeaseStateBase {
   }
 
   public acquire(duration: number, proposedLeaseId: string = ""): ILeaseState {
-    throw StorageErrorFactory.getLeaseAlreadyPresent(this.context.contextId);
+    if (proposedLeaseId === this.lease.leaseId) {
+      throw StorageErrorFactory.getLeaseIsBreakingAndCannotBeAcquired(
+        this.context.contextId
+      );
+    } else {
+      throw StorageErrorFactory.getLeaseAlreadyPresent(this.context.contextId);
+    }
   }
 
   public break(breakPeriod?: number): ILeaseState {
@@ -120,16 +126,28 @@ export default class LeaseBreakingState extends LeaseStateBase {
     );
   }
 
-  public renew(): ILeaseState {
-    throw StorageErrorFactory.getLeaseIsBrokenAndCannotBeRenewed(
-      this.context.contextId
-    );
+  public renew(proposedLeaseId: string): ILeaseState {
+    if (proposedLeaseId === this.lease.leaseId) {
+      throw StorageErrorFactory.getLeaseIsBrokenAndCannotBeRenewed(
+        this.context.contextId
+      );
+    } else {
+      throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(
+        this.context.contextId
+      );
+    }
   }
 
-  public change(): ILeaseState {
-    throw StorageErrorFactory.getLeaseIsBreakingAndCannotBeChanged(
-      this.context.contextId
-    );
+  public change(proposedLeaseId: string): ILeaseState {
+    if (proposedLeaseId === this.lease.leaseId) {
+      throw StorageErrorFactory.getLeaseIsBreakingAndCannotBeChanged(
+        this.context.contextId
+      );
+    } else {
+      throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(
+        this.context.contextId
+      );
+    }
   }
 
   public release(leaseId: string): ILeaseState {

@@ -130,18 +130,35 @@ export default class LeaseLeasedState extends LeaseStateBase {
 
   public break(breakPeriod?: number): ILeaseState {
     if (this.lease.leaseDurationType === LeaseDurationType.Infinite) {
-      return new LeaseBrokenState(
-        {
-          leaseId: this.lease.leaseId,
-          leaseState: LeaseStateType.Broken,
-          leaseStatus: LeaseStatusType.Unlocked,
-          leaseDurationType: undefined,
-          leaseDurationSeconds: undefined,
-          leaseExpireTime: undefined,
-          leaseBreakTime: undefined
-        },
-        this.context
-      );
+      if (breakPeriod === 0 || breakPeriod === undefined) {
+        return new LeaseBrokenState(
+          {
+            leaseId: this.lease.leaseId,
+            leaseState: LeaseStateType.Broken,
+            leaseStatus: LeaseStatusType.Unlocked,
+            leaseDurationType: undefined,
+            leaseDurationSeconds: undefined,
+            leaseExpireTime: undefined,
+            leaseBreakTime: undefined
+          },
+          this.context
+        );
+      } else {
+        return new LeaseBreakingState(
+          {
+            leaseId: this.lease.leaseId,
+            leaseState: LeaseStateType.Breaking,
+            leaseStatus: LeaseStatusType.Locked,
+            leaseDurationType: undefined,
+            leaseDurationSeconds: undefined,
+            leaseExpireTime: undefined,
+            leaseBreakTime: new Date(
+              this.context.startTime!.getTime() + breakPeriod * 1000
+            )
+          },
+          this.context
+        );
+      }
     }
 
     // Following only cares about this.lease.leaseDurationType === LeaseDurationType.Fixed
@@ -202,7 +219,13 @@ export default class LeaseLeasedState extends LeaseStateBase {
     );
   }
 
-  public renew(): ILeaseState {
+  public renew(leaseId: string): ILeaseState {
+    if (this.lease.leaseId !== leaseId) {
+      throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(
+        this.context.contextId
+      );
+    }
+
     if (this.lease.leaseDurationType === LeaseDurationType.Infinite) {
       return this;
     }
@@ -226,7 +249,10 @@ export default class LeaseLeasedState extends LeaseStateBase {
   }
 
   public change(leaseId: string, proposedLeaseId: string): ILeaseState {
-    if (this.lease.leaseId !== leaseId) {
+    if (
+      this.lease.leaseId !== leaseId &&
+      this.lease.leaseId !== proposedLeaseId
+    ) {
       throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(
         this.context.contextId
       );
