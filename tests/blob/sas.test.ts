@@ -87,6 +87,52 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await serviceURLWithSAS.getAccountInfo(Aborter.none);
   });
 
+  it("generateAccountSASQueryParameters should work for set blob tier", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = serviceURL.pipeline.factories;
+    const sharedKeyCredential = factories[factories.length - 1];
+
+    const sas = generateAccountSASQueryParameters(
+      {
+        expiryTime: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: AccountSASPermissions.parse("w").toString(),
+        protocol: SASProtocol.HTTPSandHTTP,
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("btqf").toString(),
+        startTime: now,
+        version: "2016-05-31"
+      },
+      sharedKeyCredential as SharedKeyCredential
+    ).toString();
+
+    const sasURL = `${serviceURL.url}?${sas}`;
+    const serviceURLWithSAS = new ServiceURL(
+      sasURL,
+      StorageURL.newPipeline(new AnonymousCredential())
+    );
+
+    const containerURLWithSAS = ContainerURL.fromServiceURL(
+      serviceURLWithSAS,
+      getUniqueName("con")
+    );
+    await containerURLWithSAS.create(Aborter.none);
+
+    const blockBlobURLWithSAS = BlockBlobURL.fromContainerURL(
+      containerURLWithSAS,
+      getUniqueName("blob")
+    );
+    await blockBlobURLWithSAS.upload(Aborter.none, "abc", 3);
+
+    await blockBlobURLWithSAS.setTier(Aborter.none, "Hot");
+  });
+
   it("generateAccountSASQueryParameters should not work with invalid permission", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);

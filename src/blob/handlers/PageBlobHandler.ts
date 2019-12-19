@@ -171,7 +171,8 @@ export default class PageBlobHandler extends BaseHandler
       accountName,
       containerName,
       blobName,
-      undefined
+      undefined,
+      options.leaseAccessConditions
     );
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
@@ -218,7 +219,8 @@ export default class PageBlobHandler extends BaseHandler
       blob,
       start,
       end,
-      persistency
+      persistency,
+      options.leaseAccessConditions
     );
 
     const response: Models.PageBlobUploadPagesResponse = {
@@ -260,7 +262,8 @@ export default class PageBlobHandler extends BaseHandler
       accountName,
       containerName,
       blobName,
-      undefined
+      undefined,
+      options.leaseAccessConditions
     );
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
@@ -318,7 +321,8 @@ export default class PageBlobHandler extends BaseHandler
       accountName,
       containerName,
       blobName,
-      options.snapshot
+      options.snapshot,
+      options.leaseAccessConditions
     );
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
@@ -390,7 +394,8 @@ export default class PageBlobHandler extends BaseHandler
       accountName,
       containerName,
       blobName,
-      blobContentLength
+      blobContentLength,
+      options.leaseAccessConditions
     );
 
     const response: Models.PageBlobResizeResponse = {
@@ -424,7 +429,8 @@ export default class PageBlobHandler extends BaseHandler
       containerName,
       blobName,
       sequenceNumberAction,
-      options.blobSequenceNumber
+      options.blobSequenceNumber,
+      options.leaseAccessConditions
     );
 
     const response: Models.PageBlobUpdateSequenceNumberResponse = {

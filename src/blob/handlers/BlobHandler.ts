@@ -639,7 +639,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       accountName,
       containerName,
       blobName,
-      undefined
+      undefined,
+      options.leaseAccessConditions
     );
 
     if (blob.properties.copyId !== copyId) {
