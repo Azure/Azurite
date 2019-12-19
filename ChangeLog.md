@@ -16,6 +16,7 @@ Blob:
 - AllowedHeaders and ExposedHeaders are optional now when setting CORS.
 - Added support to create block blob with empty block list.
 - Stage block cannot have blockID longer than 64.
+- Fixed a bug that set blob tier doesn't work with account SAS.
 - Fixed a bug that Azurite Blob service cannot start in Mac as Visual Studio Extension.
 
 Queue:
