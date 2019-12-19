@@ -163,7 +163,7 @@
           "azurite.queuePort": {
             "type": "number",
             "default": 10001,
-            "description": "Queue service listening port, by default 10000"
+            "description": "Queue service listening port, by default 10001"
           }
         }
       }

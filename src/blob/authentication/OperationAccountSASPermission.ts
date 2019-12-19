@@ -515,4 +515,13 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   )
 );
 
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.Blob_SetTier,
+  new OperationAccountSASPermission(
+    AccountSASService.Blob,
+    AccountSASResourceType.Object,
+    AccountSASPermission.Write
+  )
+);
+
 export default OPERATION_ACCOUNT_SAS_PERMISSIONS;

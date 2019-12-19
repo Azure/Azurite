@@ -5,7 +5,8 @@ import BlobServer from "../blob/BlobServer";
 import {
   DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
   DEFAULT_BLOB_LOKI_DB_PATH,
-  DEFAULT_BLOB_PERSISTENCE_ARRAY
+  DEFAULT_BLOB_PERSISTENCE_ARRAY,
+  DEFAULT_BLOB_PERSISTENCE_PATH
 } from "../blob/utils/constants";
 import * as Logger from "./Logger";
 import NoLoggerStrategy from "./NoLoggerStrategy";
@@ -68,6 +69,11 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
   private async getConfiguration(): Promise<BlobConfiguration> {
     const env = new VSCEnvironment();
     const location = await env.location();
+
+    DEFAULT_BLOB_PERSISTENCE_ARRAY[0].persistencyPath = join(
+      location,
+      DEFAULT_BLOB_PERSISTENCE_PATH
+    );
 
     // Initialize server configuration
     const config = new BlobConfiguration(
