@@ -11,6 +11,7 @@ Upcoming Release
 - Force flush data into disk before data upload request returns.
 
 Blob:
+- In getBlockList, filter the returned block list with input BlockListingFilter. 
 - Added support for CORS.
 - AllowedHeaders and ExposedHeaders are optional now when setting CORS.
 - Added support to create block blob with empty block list.

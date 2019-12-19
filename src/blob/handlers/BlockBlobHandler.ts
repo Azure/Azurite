@@ -365,8 +365,24 @@ export default class BlockBlobHandler extends BaseHandler
       uncommittedBlocks: []
     };
 
-    response.uncommittedBlocks = res.uncommittedBlocks;
-    response.committedBlocks = res.committedBlocks;
+    if (
+      options.listType !== undefined &&
+      (options.listType.toLowerCase() ===
+        Models.BlockListType.All.toLowerCase() ||
+        options.listType.toLowerCase() ===
+          Models.BlockListType.Uncommitted.toLowerCase())
+    ) {
+      response.uncommittedBlocks = res.uncommittedBlocks;
+    }
+    if (
+      options.listType === undefined ||
+      options.listType.toLowerCase() ===
+        Models.BlockListType.All.toLowerCase() ||
+      options.listType.toLowerCase() ===
+        Models.BlockListType.Committed.toLowerCase()
+    ) {
+      response.committedBlocks = res.committedBlocks;
+    }
     response.clientRequestId = options.requestId;
 
     return response;

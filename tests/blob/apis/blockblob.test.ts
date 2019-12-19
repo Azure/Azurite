@@ -303,6 +303,60 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.committedBlocks![0].size, body.length);
   });
 
+  it.only("getBlockList_BlockListingFilter", async () => {
+    const body = "HelloWorld";
+    await blockBlobURL.stageBlock(
+      Aborter.none,
+      base64encode("1"),
+      body,
+      body.length
+    );
+    await blockBlobURL.stageBlock(
+      Aborter.none,
+      base64encode("2"),
+      body,
+      body.length
+    );
+    await blockBlobURL.commitBlockList(Aborter.none, [
+      base64encode("1"),
+      base64encode("2")
+    ]);
+
+    await blockBlobURL.stageBlock(
+      Aborter.none,
+      base64encode("3"),
+      body,
+      body.length
+    );
+
+    let listResponse = await blockBlobURL.getBlockList(
+      Aborter.none,
+      "committed"
+    );
+    assert.equal(listResponse.committedBlocks!.length, 2);
+    assert.equal(listResponse.committedBlocks![0].name, base64encode("1"));
+    assert.equal(listResponse.committedBlocks![0].size, body.length);
+    assert.equal(listResponse.committedBlocks![1].name, base64encode("2"));
+    assert.equal(listResponse.committedBlocks![1].size, body.length);
+    assert.equal(listResponse.uncommittedBlocks!.length, 0);
+
+    listResponse = await blockBlobURL.getBlockList(Aborter.none, "uncommitted");
+    assert.equal(listResponse.uncommittedBlocks!.length, 1);
+    assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("3"));
+    assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
+    assert.equal(listResponse.committedBlocks!.length, 0);
+
+    listResponse = await blockBlobURL.getBlockList(Aborter.none, "all");
+    assert.equal(listResponse.committedBlocks!.length, 2);
+    assert.equal(listResponse.committedBlocks![0].name, base64encode("1"));
+    assert.equal(listResponse.committedBlocks![0].size, body.length);
+    assert.equal(listResponse.committedBlocks![1].name, base64encode("2"));
+    assert.equal(listResponse.committedBlocks![1].size, body.length);
+    assert.equal(listResponse.uncommittedBlocks!.length, 1);
+    assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("3"));
+    assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
+  });
+
   it("upload with Readable stream body and default parameters", async () => {
     const body: string = getUniqueName("randomstring");
     const bodyBuffer = Buffer.from(body);
