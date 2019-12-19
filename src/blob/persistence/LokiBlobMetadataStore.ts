@@ -1647,9 +1647,18 @@ export default class LokiBlobMetadataStore
         creationTime: context.startTime!,
         lastModified: context.startTime!,
         etag: newEtag(),
-        leaseStatus: Models.LeaseStatusType.Unlocked,
-        leaseState: Models.LeaseStateType.Available,
-        leaseDuration: undefined,
+        leaseStatus:
+          destBlob !== undefined
+            ? destBlob.properties.leaseStatus
+            : Models.LeaseStatusType.Unlocked,
+        leaseState:
+          destBlob !== undefined
+            ? destBlob.properties.leaseState
+            : Models.LeaseStateType.Available,
+        leaseDuration:
+          destBlob !== undefined
+            ? destBlob.properties.leaseDuration
+            : undefined,
         copyId: uuid(),
         copyStatus: Models.CopyStatusType.Success,
         copySource,
@@ -1673,10 +1682,13 @@ export default class LokiBlobMetadataStore
       containerName: destination.container,
       pageRangesInOrder: sourceBlob.pageRangesInOrder,
       isCommitted: sourceBlob.isCommitted,
-      leaseDurationSeconds: undefined,
-      leaseId: undefined,
-      leaseExpireTime: undefined,
-      leaseBreakTime: undefined,
+      leaseDurationSeconds:
+        destBlob !== undefined ? destBlob.leaseDurationSeconds : undefined,
+      leaseId: destBlob !== undefined ? destBlob.leaseId : undefined,
+      leaseExpireTime:
+        destBlob !== undefined ? destBlob.leaseExpireTime : undefined,
+      leaseBreakTime:
+        destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
       committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
       persistency: sourceBlob.persistency
     };

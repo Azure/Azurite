@@ -178,10 +178,16 @@ export default class LeaseBrokenState extends LeaseStateBase {
     return this;
   }
 
-  public renew(): ILeaseState {
-    throw StorageErrorFactory.getLeaseIsBrokenAndCannotBeRenewed(
-      this.context.contextId
-    );
+  public renew(proposedLeaseId: string): ILeaseState {
+    if (proposedLeaseId === this.lease.leaseId) {
+      throw StorageErrorFactory.getLeaseIsBrokenAndCannotBeRenewed(
+        this.context.contextId
+      );
+    } else {
+      throw StorageErrorFactory.getLeaseIdMismatchWithLeaseOperation(
+        this.context.contextId
+      );
+    }
   }
 
   public change(): ILeaseState {

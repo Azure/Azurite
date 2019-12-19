@@ -171,6 +171,17 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getLeaseIsBreakingAndCannotBeAcquired(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      409,
+      "LeaseIsBreakingAndCannotBeAcquired",
+      "There is already a breaking lease, and can't  be acquired.",
+      contextID
+    );
+  }
+
   public static getLeaseNotPresentWithLeaseOperation(
     contextID: string = DefaultID
   ): StorageError {
@@ -242,7 +253,7 @@ export default class StorageErrorFactory {
   ): StorageError {
     return new StorageError(
       412,
-      "LeaseLost",
+      "LeaseNotPresentWithContainerOperation",
       "A lease ID was specified, but the lease for the container has expired.",
       contextID
     );
@@ -298,7 +309,7 @@ export default class StorageErrorFactory {
   ): StorageError {
     return new StorageError(
       412,
-      "LeaseIdMismatchWithBlobOperation ",
+      "LeaseIdMismatchWithBlobOperation",
       "The lease ID specified did not match the lease ID for the blob.",
       contextID
     );
@@ -307,7 +318,7 @@ export default class StorageErrorFactory {
   public static getBlobLeaseLost(contextID: string = DefaultID): StorageError {
     return new StorageError(
       412,
-      "LeaseLost ",
+      "LeaseNotPresentWithBlobOperation",
       "A lease ID was specified, but the lease for the blob has expired.",
       contextID
     );
