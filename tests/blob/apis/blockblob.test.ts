@@ -303,7 +303,7 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.committedBlocks![0].size, body.length);
   });
 
-  it.only("getBlockList_BlockListingFilter", async () => {
+  it("getBlockList_BlockListingFilter", async () => {
     const body = "HelloWorld";
     await blockBlobURL.stageBlock(
       Aborter.none,
