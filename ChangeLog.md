@@ -11,15 +11,18 @@ Upcoming Release
 - Force flush data into disk before data upload request returns.
 
 Blob:
+
 - Added support for CORS.
 - AllowedHeaders and ExposedHeaders are optional now when setting CORS.
 - Added support to create block blob with empty block list.
 - Stage block cannot have blockID longer than 64.
+- Fixed a bug that Azurite Blob service cannot start in Mac as Visual Studio Extension.
 
 Queue:
+
 - AllowedHeaders and ExposedHeaders are optional now when setting CORS.
 
-2019.11 Version 3.3.0-preview
+  2019.11 Version 3.3.0-preview
 
 - Azurite now supports customized account names and keys by environment variable `AZURITE_ACCOUNTS`.
 - Improved logging for underlayer operations, such as persistency data read and write operations.
@@ -29,6 +32,7 @@ Queue:
 - [Breaking] This version cannot guarantee compatible with persisted database models in Azurite workspace used by previous version. Clean Azurite workspace folder and restart Azurite in case any errors. Notice that, data will be lost after cleaning Azurite workspace folder.
 
 Blob:
+
 - Fixed a bug that snapshot blob doesn't honor metadata options.
 - Force alphabetical order for list blob results.
 - Updated Azure Storage API version to 2019-02-02, and added following new features:
@@ -40,21 +44,24 @@ Blob:
 - Added GC support for blob SQL metadata store.
 
 Queue:
+
 - Responses now includes x-ms-client-request-id when request provided client request ID.
 
-2019.08 Version 3.2.0-preview 
+  2019.08 Version 3.2.0-preview
 
 - Updated repository link to https to compatible with Visual Studio Code.
 
 Blob:
+
 - Fix listblobs order when filtering by prefix.
 
 Queue:
+
 - Added Azure Storage Queue Service features (API version: 2019-02-02).
 - Decoupled persistence layer into service metadata storage and extent file storage.
 - Supported Cors and Preflight in Queue service.
 
-2019.06 Version 3.1.2-preview
+  2019.06 Version 3.1.2-preview
 
 - Integrated Azurite with Visual Studio Code as an extension.
 - Added Visual Studio Code extension usage guidelines.
@@ -64,6 +71,6 @@ Queue:
 - Fixed an issue that metadata doesn't get copied when copy blob.
 - Fixed GetBlockBlob missing Content-Range header
 
-2019.05 Version 3.0.0-preview
+  2019.05 Version 3.0.0-preview
 
 - Initial Release of Azurite V3.
