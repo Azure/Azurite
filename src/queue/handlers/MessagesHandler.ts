@@ -271,9 +271,16 @@ export default class MessagesHandler extends BaseHandler
           }
         );
       } else {
-        message.expirationTime.setTime(
-          context.startTime!.getTime() + options.messageTimeToLive * 1000
-        );
+        if (
+          new Date(NEVER_EXPIRE_DATE).getTime() - context.startTime!.getTime() <
+          options.messageTimeToLive * 1000
+        ) {
+          message.expirationTime = new Date(NEVER_EXPIRE_DATE);
+        } else {
+          message.expirationTime.setTime(
+            context.startTime!.getTime() + options.messageTimeToLive * 1000
+          );
+        }
       }
     }
 

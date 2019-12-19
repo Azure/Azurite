@@ -19,6 +19,7 @@ Blob:
 
 Queue:
 - AllowedHeaders and ExposedHeaders are optional now when setting CORS.
+- Fix Put message fail with max messagettl.
 
 2019.11 Version 3.3.0-preview
 
