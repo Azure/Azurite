@@ -152,12 +152,11 @@ describe("PageBlobAPIs", () => {
       ranges._response.request.headers.get("x-ms-client-request-id"),
       ranges.clientRequestId
     );
-
-    const result = await blobURL.download(Aborter.none, 0, 512);
-    assert.deepStrictEqual(result.contentRange, `bytes 0-511/5120`);
+    const result = await blobURL.download(Aborter.none, 0, 10);
+    assert.deepStrictEqual(result.contentRange, `bytes 0-9/5120`);
     assert.deepStrictEqual(
       await bodyToString(result, length),
-      "\u0000".repeat(512)
+      "\u0000".repeat(10)
     );
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
