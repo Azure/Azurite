@@ -141,6 +141,30 @@ describe("PageBlobAPIs", () => {
     );
   });
 
+  it("download page blob with partial ranges", async () => {
+    const length = 512 * 10;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.equal(
+      ranges._response.request.headers.get("x-ms-client-request-id"),
+      ranges.clientRequestId
+    );
+
+    const result = await blobURL.download(Aborter.none, 0, 512);
+    assert.deepStrictEqual(result.contentRange, `bytes 0-511/5120`);
+    assert.deepStrictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(512)
+    );
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+  });
+
   it("download page blob with no ranges uploaded", async () => {
     const length = 512 * 10;
     await pageBlobURL.create(Aborter.none, length);

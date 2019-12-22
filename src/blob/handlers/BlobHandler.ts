@@ -929,6 +929,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       body = await bodyGetter();
     }
 
+    let contentRange: string | undefined;
+    if (
+      context.request!.getHeader("range") ||
+      context.request!.getHeader("x-ms-range")
+    ) {
+      contentRange = `bytes ${rangeStart}-${rangeEnd}/${blob.properties
+        .contentLength!}`;
+    }
+
     const response: Models.BlobDownloadResponse = {
       statusCode: rangesParts[1] === Infinity ? 200 : 206,
       body,
@@ -939,6 +948,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       version: BLOB_API_VERSION,
       ...blob.properties,
       contentLength,
+      contentRange,
       contentMD5,
       blobContentMD5: blob.properties.contentMD5,
       isServerEncrypted: true,

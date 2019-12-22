@@ -11,7 +11,8 @@ Upcoming Release
 - Force flush data into disk before data upload request returns.
 
 Blob:
-- In getBlockList, filter the returned block list with input BlockListingFilter. 
+
+- In getBlockList, filter the returned block list with input BlockListingFilter.
 - Added support for CORS.
 - AllowedHeaders and ExposedHeaders are optional now when setting CORS.
 - Added support to create block blob with empty block list.
@@ -22,6 +23,7 @@ Blob:
 - Change some lease error code to align with server.
 - Fixed a bug that set blob tier doesn't work with account SAS.
 - Fixed a bug that Azurite Blob service cannot start in Mac as Visual Studio Extension.
+- Fixed a bug that download page blob doesn't return content range header.
 
 Queue:
 
