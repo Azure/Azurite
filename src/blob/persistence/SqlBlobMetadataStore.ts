@@ -24,6 +24,7 @@ import {
   DEFAULT_LIST_BLOBS_MAX_RESULTS,
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS
 } from "../utils/constants";
+import { newEtag } from "../utils/utils";
 import BlobLeaseAdapter from "./BlobLeaseAdapter";
 import BlobLeaseSyncer from "./BlobLeaseSyncer";
 import BlobReadLeaseValidator from "./BlobReadLeaseValidator";
@@ -1282,16 +1283,38 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           new BlobLeaseAdapter(blobModel),
           context
         ).validate(new BlobWriteLeaseValidator(leaseAccessConditions));
+      } else {
+        const newBlob = {
+          deleted: false,
+          accountName: block.accountName,
+          containerName: block.containerName,
+          name: block.blobName,
+          properties: {
+            creationTime: context.startTime!,
+            lastModified: context.startTime!,
+            etag: newEtag(),
+            contentLength: 0,
+            blobType: Models.BlobType.BlockBlob
+          },
+          snapshot: "",
+          isCommitted: false
+        };
+        await BlobsModel.upsert(this.convertBlobModelToDbModel(newBlob), {
+          transaction: t
+        });
       }
 
-      await BlocksModel.upsert({
-        accountName: block.accountName,
-        containerName: block.containerName,
-        blobName: block.blobName,
-        blockName: block.name,
-        size: block.size,
-        persistency: this.serializeModelValue(block.persistency)
-      });
+      await BlocksModel.upsert(
+        {
+          accountName: block.accountName,
+          containerName: block.containerName,
+          blobName: block.blobName,
+          blockName: block.name,
+          size: block.size,
+          persistency: this.serializeModelValue(block.persistency)
+        },
+        { transaction: t }
+      );
     });
   }
 
@@ -2813,7 +2836,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       snapshot: blob.snapshot,
       blobType: blob.properties.blobType,
       blobSequenceNumber: blob.properties.blobSequenceNumber || null,
-      isCommitted: true,
+      isCommitted: blob.isCommitted,
       lastModified: blob.properties.lastModified,
       creationTime: blob.properties.creationTime || null,
       etag: blob.properties.etag,
