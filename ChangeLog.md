@@ -23,6 +23,7 @@ Blob:
 - Fixed a bug that set blob tier doesn't work with account SAS.
 - Fixed a bug that Azurite Blob service cannot start in Mac as Visual Studio Extension.
 - Fixed a bug that persistency location cannot be customized through -l parameter.
+- Fixed a bug that GC will remove uncommitted blocks.
 
 Queue:
 
