@@ -210,9 +210,9 @@ export default class LokiExtentMetadata implements IExtentMetadataStore {
    * @returns {Promise<string>}
    * @memberof IExtentMetadata
    */
-  public async getExtentPersistencyId(extentId: string): Promise<string> {
+  public async getExtentLocationId(extentId: string): Promise<string> {
     const coll = this.db.getCollection(this.EXTENTS_COLLECTION);
-    const doc = coll.findOne({ id: extentId });
-    return doc.persistencyId;
+    const doc = coll.findOne({ id: extentId }) as IExtentModel;
+    return doc.locationId;
   }
 }

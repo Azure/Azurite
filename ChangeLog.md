@@ -12,6 +12,7 @@ Upcoming Release
 
 Blob:
 
+- [Breaking] Azurite updates underline metadata schema which does not compatible with previous versions. Please clean up Azurite previous version workspace data files and restart Azurite.
 - In getBlockList, filter the returned block list with input BlockListingFilter.
 - Added support for CORS.
 - AllowedHeaders and ExposedHeaders are optional now when setting CORS.
@@ -26,7 +27,7 @@ Blob:
 - Fixed a bug that persistency location cannot be customized through -l parameter.
 - Fixed a bug that GC will remove uncommitted blocks.
 - Fixed a bug that download page blob doesn't return content range header.
-- Fixed a bug that uncommiited block blob invalid length.
+- Fixed a bug that uncommitted block blob invalid length.
 
 Queue:
 

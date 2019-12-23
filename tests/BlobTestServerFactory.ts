@@ -13,8 +13,8 @@ export default class BlobTestServerFactory {
     const host = "127.0.0.1";
     const persistenceArray: StoreDestinationArray = [
       {
-        persistencyId: "test",
-        persistencyPath: "__test_blob_extent__",
+        locationId: "test",
+        locationPath: "__test_blob_extent__",
         maxConcurrency: 10
       }
     ];

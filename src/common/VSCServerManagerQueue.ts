@@ -67,7 +67,7 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
     await rimrafAsync(config.extentDBPath);
     await rimrafAsync(config.metadataDBPath);
     for (const path of config.persistencePathArray) {
-      await rimrafAsync(path.persistencyPath);
+      await rimrafAsync(path.locationPath);
     }
   }
 
@@ -76,7 +76,7 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
     const location = await env.location();
     await accessAsync(location);
 
-    DEFAULT_QUEUE_PERSISTENCE_ARRAY[0].persistencyPath = join(
+    DEFAULT_QUEUE_PERSISTENCE_ARRAY[0].locationPath = join(
       location,
       DEFAULT_QUEUE_PERSISTENCE_PATH
     );

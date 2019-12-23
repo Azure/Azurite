@@ -40,7 +40,7 @@ async function main() {
 
   // TODO: Align with blob DEFAULT_BLOB_PERSISTENCE_ARRAY
   // TODO: Join for all paths in the array
-  DEFAULT_QUEUE_PERSISTENCE_ARRAY[0].persistencyPath = join(
+  DEFAULT_QUEUE_PERSISTENCE_ARRAY[0].locationPath = join(
     location,
     DEFAULT_QUEUE_PERSISTENCE_PATH
   );

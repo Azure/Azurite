@@ -23,7 +23,7 @@ export class BlobServerFactory {
       const location = await env.location();
       const debugFilePath = await env.debug();
 
-      DEFAULT_BLOB_PERSISTENCE_ARRAY[0].persistencyPath = join(
+      DEFAULT_BLOB_PERSISTENCE_ARRAY[0].locationPath = join(
         location,
         DEFAULT_BLOB_PERSISTENCE_PATH
       );
