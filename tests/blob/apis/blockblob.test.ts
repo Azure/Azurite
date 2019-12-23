@@ -151,6 +151,18 @@ describe("BlockBlobAPIs", () => {
       body,
       body.length
     );
+
+    const listBlobResponse = await containerURL.listBlobFlatSegment(
+      Aborter.none,
+      undefined,
+      { include: ["uncommittedblobs"] }
+    );
+    assert.equal(listBlobResponse.segment.blobItems.length, 1);
+    assert.deepStrictEqual(
+      listBlobResponse.segment.blobItems[0].properties.contentLength,
+      0
+    );
+
     const listResponse = await blockBlobURL.getBlockList(
       Aborter.none,
       "uncommitted"
