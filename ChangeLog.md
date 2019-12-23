@@ -2,7 +2,7 @@
 
 > Note. This file includes changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
-Upcoming Release
+# Upcoming Release
 
 - Fixed a bug that to return the list of containers in sorted order.
 - Fixed a bug that get/download blob snapshot fail.
@@ -12,6 +12,8 @@ Upcoming Release
 
 Blob:
 
+- [Breaking] Apply LokiFsStructuredAdapter as default blob metadata loki adapter to improve performance.
+  - This version cannot guarantee compatible with persisted database models file by previous version. Remove previous metadata file and restart Azurite in case any errors.
 - In getBlockList, filter the returned block list with input BlockListingFilter.
 - Added support for CORS.
 - AllowedHeaders and ExposedHeaders are optional now when setting CORS.
@@ -33,7 +35,7 @@ Queue:
 - AllowedHeaders and ExposedHeaders are optional now when setting CORS.
 - Fix Put message fail with max messagettl.
 
-  2019.11 Version 3.3.0-preview
+# 2019.11 Version 3.3.0-preview
 
 - Azurite now supports customized account names and keys by environment variable `AZURITE_ACCOUNTS`.
 - Improved logging for underlayer operations, such as persistency data read and write operations.
@@ -58,7 +60,7 @@ Queue:
 
 - Responses now includes x-ms-client-request-id when request provided client request ID.
 
-  2019.08 Version 3.2.0-preview
+# 2019.08 Version 3.2.0-preview
 
 - Updated repository link to https to compatible with Visual Studio Code.
 
@@ -72,7 +74,7 @@ Queue:
 - Decoupled persistence layer into service metadata storage and extent file storage.
 - Supported Cors and Preflight in Queue service.
 
-  2019.06 Version 3.1.2-preview
+# 2019.06 Version 3.1.2-preview
 
 - Integrated Azurite with Visual Studio Code as an extension.
 - Added Visual Studio Code extension usage guidelines.
@@ -82,6 +84,6 @@ Queue:
 - Fixed an issue that metadata doesn't get copied when copy blob.
 - Fixed GetBlockBlob missing Content-Range header
 
-  2019.05 Version 3.0.0-preview
+# 2019.05 Version 3.0.0-preview
 
 - Initial Release of Azurite V3.

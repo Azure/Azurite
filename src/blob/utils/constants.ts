@@ -19,6 +19,7 @@ export const DEFAULT_ENABLE_ACCESS_LOG = true;
 export const DEFAULT_CONTEXT_PATH = "azurite_blob_context";
 export const LOGGER_CONFIGS = {};
 export const DEFAULT_GC_INTERVAL_MS = 10 * 60 * 1000;
+export const DEFAULT_WRITE_CONCURRENCY_PER_LOCATION = 50;
 export const EMULATOR_ACCOUNT_NAME = "devstoreaccount1";
 export const EMULATOR_ACCOUNT_KEY = Buffer.from(
   "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
@@ -72,7 +73,7 @@ export const DEFAULT_BLOB_PERSISTENCE_ARRAY: StoreDestinationArray = [
   {
     persistencyId: "Default",
     persistencyPath: DEFAULT_BLOB_PERSISTENCE_PATH,
-    maxConcurrency: 10
+    maxConcurrency: DEFAULT_WRITE_CONCURRENCY_PER_LOCATION
   }
 ];
 
