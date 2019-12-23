@@ -151,6 +151,18 @@ describe("BlockBlobAPIs", () => {
       body,
       body.length
     );
+
+    const listBlobResponse = await containerURL.listBlobFlatSegment(
+      Aborter.none,
+      undefined,
+      { include: ["uncommittedblobs"] }
+    );
+    assert.equal(listBlobResponse.segment.blobItems.length, 1);
+    assert.deepStrictEqual(
+      listBlobResponse.segment.blobItems[0].properties.contentLength,
+      0
+    );
+
     const listResponse = await blockBlobURL.getBlockList(
       Aborter.none,
       "uncommitted"
@@ -201,6 +213,52 @@ describe("BlockBlobAPIs", () => {
       listResponse._response.request.headers.get("x-ms-client-request-id"),
       listResponse.clientRequestId
     );
+  });
+
+  it("commitBlockList with previous committed blocks", async () => {
+    const body = "HelloWorld";
+    await blockBlobURL.stageBlock(
+      Aborter.none,
+      base64encode("1"),
+      body,
+      body.length
+    );
+    await blockBlobURL.stageBlock(
+      Aborter.none,
+      base64encode("2"),
+      body,
+      body.length
+    );
+    const result_commit = await blockBlobURL.commitBlockList(Aborter.none, [
+      base64encode("1"),
+      base64encode("2")
+    ]);
+    assert.equal(
+      result_commit._response.request.headers.get("x-ms-client-request-id"),
+      result_commit.clientRequestId
+    );
+    const listResponse = await blockBlobURL.getBlockList(
+      Aborter.none,
+      "committed"
+    );
+    assert.equal(listResponse.committedBlocks!.length, 2);
+    assert.equal(listResponse.committedBlocks![0].name, base64encode("1"));
+    assert.equal(listResponse.committedBlocks![0].size, body.length);
+    assert.equal(listResponse.committedBlocks![1].name, base64encode("2"));
+    assert.equal(listResponse.committedBlocks![1].size, body.length);
+    assert.equal(
+      listResponse._response.request.headers.get("x-ms-client-request-id"),
+      listResponse.clientRequestId
+    );
+
+    await blockBlobURL.commitBlockList(Aborter.none, [base64encode("2")]);
+    const listResponse2 = await blockBlobURL.getBlockList(
+      Aborter.none,
+      "committed"
+    );
+    assert.equal(listResponse2.committedBlocks!.length, 1);
+    assert.equal(listResponse2.committedBlocks![0].name, base64encode("2"));
+    assert.equal(listResponse2.committedBlocks![0].size, body.length);
   });
 
   it("commitBlockList with empty list should create an empty block blob", async () => {

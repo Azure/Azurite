@@ -11,7 +11,8 @@ Upcoming Release
 - Force flush data into disk before data upload request returns.
 
 Blob:
-- In getBlockList, filter the returned block list with input BlockListingFilter. 
+
+- In getBlockList, filter the returned block list with input BlockListingFilter.
 - Added support for CORS.
 - AllowedHeaders and ExposedHeaders are optional now when setting CORS.
 - Added support to create block blob with empty block list.
@@ -24,6 +25,7 @@ Blob:
 - Fixed a bug that Azurite Blob service cannot start in Mac as Visual Studio Extension.
 - Fixed a bug that persistency location cannot be customized through -l parameter.
 - Fixed a bug that GC will remove uncommitted blocks.
+- Fixed a bug that uncommiited block blob invalid length.
 
 Queue:
 

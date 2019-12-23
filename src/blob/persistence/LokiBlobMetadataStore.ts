@@ -1820,7 +1820,7 @@ export default class LokiBlobMetadataStore
           creationTime: context.startTime,
           lastModified: context.startTime,
           etag,
-          contentLength: block.persistency.count,
+          contentLength: 0,
           blobType: Models.BlobType.BlockBlob
         },
         snapshot: "",
