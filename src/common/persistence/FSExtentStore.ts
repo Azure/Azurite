@@ -449,11 +449,18 @@ export default class FSExtentStore implements IExtentStore {
       // Will not throw error because GC doesn't know extent is active, and will call this method to
       // delete active extents
       if (this.isActiveExtent(id)) {
+        this.logger.debug(
+          `FSExtentStore:deleteExtents() Skip deleting active extent:${id}`
+        );
         continue;
       }
 
       const persistencyId = await this.metadataStore.getExtentPersistencyId(id);
       const path = this.generateExtentPath(persistencyId, id);
+
+      this.logger.debug(
+        `FSExtentStore:deleteExtents() Delete extent:${id} location:${persistencyId} path:${path}`
+      );
 
       try {
         await unlinkAsync(path);

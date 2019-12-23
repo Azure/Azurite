@@ -2358,11 +2358,11 @@ export default class LokiBlobMetadataStore
       .data();
 
     if (blockDocs.length <= maxResults) {
-      return [blockDocs, undefined];
+      return [blockDocs.map(block => block.persistency), undefined];
     } else {
       blockDocs.pop();
       const nextMarker = `${blockDocs[maxResults - 1].$loki}`;
-      return [blockDocs, nextMarker];
+      return [blockDocs.map(block => block.persistency), nextMarker];
     }
   }
 
