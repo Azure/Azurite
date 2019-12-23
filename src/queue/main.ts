@@ -35,7 +35,7 @@ async function main() {
 
   // Initialize server configuration
   // TODO: Should provide the absolute path directly.
-  DEFAULT_QUEUE_PERSISTENCE_ARRAY[0].persistencyPath = join(
+  DEFAULT_QUEUE_PERSISTENCE_ARRAY[0].locationPath = join(
     location,
     DEFAULT_QUEUE_PERSISTENCE_PATH
   );

@@ -71,8 +71,8 @@ export const SECONDARY_SUFFIX = "-secondary";
 
 export const DEFAULT_BLOB_PERSISTENCE_ARRAY: StoreDestinationArray = [
   {
-    persistencyId: "Default",
-    persistencyPath: DEFAULT_BLOB_PERSISTENCE_PATH,
+    locationId: "Default",
+    locationPath: DEFAULT_BLOB_PERSISTENCE_PATH,
     maxConcurrency: DEFAULT_WRITE_CONCURRENCY_PER_LOCATION
   }
 ];

@@ -88,8 +88,8 @@ export enum QUEUE_STATUSCODE {
 
 export const DEFAULT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
   {
-    persistencyId: "Default",
-    persistencyPath: DEFAULT_QUEUE_PERSISTENCE_PATH,
+    locationId: "Default",
+    locationPath: DEFAULT_QUEUE_PERSISTENCE_PATH,
     maxConcurrency: 1
   }
 ];

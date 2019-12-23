@@ -86,12 +86,12 @@ export default class FSExtentStore implements IExtentStore {
 
     for (const storeDestination of persistencyConfiguration) {
       this.persistencyPath.set(
-        storeDestination.persistencyId,
-        storeDestination.persistencyPath
+        storeDestination.locationId,
+        storeDestination.locationPath
       );
       for (let i = 0; i < storeDestination.maxConcurrency; i++) {
         const appendExtent = this.createAppendExtent(
-          storeDestination.persistencyId
+          storeDestination.locationId
         );
         this.activeWriteExtents.push(appendExtent);
       }
@@ -117,9 +117,9 @@ export default class FSExtentStore implements IExtentStore {
   public async init(): Promise<void> {
     for (const storeDestination of this.persistencyConfiguration) {
       try {
-        await statAsync(storeDestination.persistencyPath);
+        await statAsync(storeDestination.locationPath);
       } catch {
-        await mkdirAsync(storeDestination.persistencyPath);
+        await mkdirAsync(storeDestination.locationPath);
       }
     }
 
@@ -143,7 +143,7 @@ export default class FSExtentStore implements IExtentStore {
     if (this.isClosed()) {
       for (const path of this.persistencyConfiguration) {
         try {
-          await rimrafAsync(path.persistencyPath);
+          await rimrafAsync(path.locationPath);
         } catch {
           // TODO: Find out why sometimes it throws no permission error
           /* NOOP */
@@ -269,7 +269,7 @@ export default class FSExtentStore implements IExtentStore {
 
             const extent: IExtentModel = {
               id,
-              persistencyId: appendExtent.locationId,
+              locationId: appendExtent.locationId,
               path: id,
               size: count + offset,
               lastModifiedInMS: Date.now()
@@ -324,7 +324,7 @@ export default class FSExtentStore implements IExtentStore {
       return new ZeroBytesStream(subRangeCount);
     }
 
-    const persistencyId = await this.metadataStore.getExtentPersistencyId(
+    const persistencyId = await this.metadataStore.getExtentLocationId(
       extentChunk.id
     );
 
@@ -455,11 +455,11 @@ export default class FSExtentStore implements IExtentStore {
         continue;
       }
 
-      const persistencyId = await this.metadataStore.getExtentPersistencyId(id);
-      const path = this.generateExtentPath(persistencyId, id);
+      const locationId = await this.metadataStore.getExtentLocationId(id);
+      const path = this.generateExtentPath(locationId, id);
 
       this.logger.debug(
-        `FSExtentStore:deleteExtents() Delete extent:${id} location:${persistencyId} path:${path}`
+        `FSExtentStore:deleteExtents() Delete extent:${id} location:${locationId} path:${path}`
       );
 
       try {

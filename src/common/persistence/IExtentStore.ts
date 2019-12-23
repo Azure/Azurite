@@ -16,8 +16,8 @@ export interface IExtentChunk {
 }
 
 interface IStoreDestinationConfigure {
-  persistencyPath: string;
-  persistencyId: string;
+  locationPath: string;
+  locationId: string;
   maxConcurrency: number;
 }
 
