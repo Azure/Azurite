@@ -23,6 +23,7 @@ Blob:
 - Change some lease error code to align with server.
 - Fixed a bug that set blob tier doesn't work with account SAS.
 - Fixed a bug that Azurite Blob service cannot start in Mac as Visual Studio Extension.
+- Fixed a bug that download page blob doesn't return content range header.
 - Fixed a bug that uncommiited block blob invalid length.
 
 Queue:
