@@ -33,8 +33,8 @@ describe("Queue Authentication", () => {
 
   const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
     {
-      persistencyId: "queueTest",
-      persistencyPath: persistencePath,
+      locationId: "queueTest",
+      locationPath: persistencePath,
       maxConcurrency: 10
     }
   ];
