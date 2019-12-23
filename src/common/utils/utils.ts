@@ -2,6 +2,10 @@ import rimraf = require("rimraf");
 import { promisify } from "util";
 import StorageErrorFactory from "../../blob/errors/StorageErrorFactory";
 
+// LokiFsStructuredAdapter
+// tslint:disable-next-line:no-var-requires
+export const lfsa = require("lokijs/src/loki-fs-structured-adapter.js");
+
 export const rimrafAsync = promisify(rimraf);
 
 export function minDate(date1: Date, date2: Date): Date {
