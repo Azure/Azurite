@@ -55,7 +55,7 @@ Try with any of following ways to start an Azurite V3 instance.
 After cloning source code, execute following commands to install and start Azurite V3.
 
 ```bash
-npm install
+npm ci
 npm run build
 npm install -g
 azurite

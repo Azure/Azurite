@@ -15,14 +15,14 @@ In the root of the repository, we have provided pre-defined debugging scripts. T
 Manually follow following steps to build and run all services in Azurite:
 
 ```bash
-npm install
+npm ci
 npm run azurite
 ```
 
 Or build and run a certain service like Blob service:
 
 ```bash
-npm install
+npm ci
 npm run blob
 ```
 
@@ -57,7 +57,7 @@ We also provide a predefined Visual Studio Code debug configuration "Current Moc
 Or manually execute all test cases:
 
 ```bash
-npm install
+npm ci
 npm run test
 ```
 
