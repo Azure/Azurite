@@ -1,11 +1,11 @@
 import { NextFunction, Request, RequestHandler, Response } from "express";
 
 import ILogger from "../../common/ILogger";
+import IAuthenticator from "../authentication/IAuthenticator";
 import QueueStorageContext from "../context/QueueStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import ExpressRequestAdapter from "../generated/ExpressRequestAdapter";
 import { DEFAULT_QUEUE_CONTEXT_PATH } from "../utils/constants";
-import IAuthenticator from "./IAuthenticator";
 
 // TODO: Extract and move this part to common
 export default class AuthenticationMiddlewareFactory {

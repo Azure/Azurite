@@ -7,11 +7,9 @@ import logger from "../common/Logger";
 import IExtentStore from "../common/persistence/IExtentStore";
 import { RequestListener } from "../common/ServerBase";
 import AccountSASAuthenticator from "./authentication/AccountSASAuthenticator";
-import AuthenticationMiddlewareFactory from "./authentication/AuthenticationMiddlewareFactory";
 import BlobSASAuthenticator from "./authentication/BlobSASAuthenticator";
 import BlobSharedKeyAuthenticator from "./authentication/BlobSharedKeyAuthenticator";
 import PublicAccessAuthenticator from "./authentication/PublicAccessAuthenticator";
-import blobStorageContextMiddleware from "./context/blobStorageContext.middleware";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
 import IHandlers from "./generated/handlers/IHandlers";
 import MiddlewareFactory from "./generated/MiddlewareFactory";
@@ -22,8 +20,10 @@ import ContainerHandler from "./handlers/ContainerHandler";
 import PageBlobHandler from "./handlers/PageBlobHandler";
 import PageBlobRangesManager from "./handlers/PageBlobRangesManager";
 import ServiceHandler from "./handlers/ServiceHandler";
+import AuthenticationMiddlewareFactory from "./middlewares/AuthenticationMiddlewareFactory";
+import blobStorageContextMiddleware from "./middlewares/blobStorageContext.middleware";
+import PreflightMiddlewareFactory from "./middlewares/PreflightMiddlewareFactory";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
-import PreflightMiddlewareFactory from "./preflight/PreflightMiddlewareFactory";
 import { DEFAULT_CONTEXT_PATH } from "./utils/constants";
 
 /**

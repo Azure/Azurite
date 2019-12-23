@@ -3,6 +3,7 @@ import uuid from "uuid/v4";
 
 import logger from "../../common/Logger";
 import { checkApiVersion } from "../../common/utils/utils";
+import BlobStorageContext from "../context/BlobStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import {
   DEFAULT_CONTEXT_PATH,
@@ -11,7 +12,6 @@ import {
   ValidAPIVersions,
   VERSION
 } from "../utils/constants";
-import BlobStorageContext from "./BlobStorageContext";
 
 /**
  * A middleware extract related blob service context.

@@ -7,10 +7,8 @@ import logger from "../common/Logger";
 import IExtentStore from "../common/persistence/IExtentStore";
 import { RequestListener } from "../common/ServerBase";
 import AccountSASAuthenticator from "./authentication/AccountSASAuthenticator";
-import AuthenticationMiddlewareFactory from "./authentication/AuthenticationMiddlewareFactory";
 import QueueSASAuthenticator from "./authentication/QueueSASAuthenticator";
 import QueueSharedKeyAuthenticator from "./authentication/QueueSharedKeyAuthenticator";
-import queueStorageContextMiddleware from "./context/queueStorageContext.middleware";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
 import IHandlers from "./generated/handlers/IHandlers";
 import MiddlewareFactory from "./generated/MiddlewareFactory";
@@ -18,8 +16,10 @@ import MessageIdHandler from "./handlers/MessageIdHandler";
 import MessagesHandler from "./handlers/MessagesHandler";
 import QueueHandler from "./handlers/QueueHandler";
 import ServiceHandler from "./handlers/ServiceHandler";
+import AuthenticationMiddlewareFactory from "./middlewares/AuthenticationMiddlewareFactory";
+import PreflightMiddlewareFactory from "./middlewares/PreflightMiddlewareFactory";
+import queueStorageContextMiddleware from "./middlewares/queueStorageContext.middleware";
 import { IQueueMetadataStore } from "./persistence/IQueueMetadataStore";
-import PreflightMiddlewareFactory from "./preflight/PreflightMiddlewareFactory";
 import { DEFAULT_QUEUE_CONTEXT_PATH } from "./utils/constants";
 
 /**
