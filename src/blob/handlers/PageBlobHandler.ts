@@ -188,11 +188,14 @@ export default class PageBlobHandler extends BaseHandler
       context
     );
 
-    const ranges = deserializePageBlobRangeHeader(
-      blobCtx.request!.getHeader("range"),
-      blobCtx.request!.getHeader("x-ms-range")
-    );
-    if (!ranges) {
+    let ranges;
+    try {
+      ranges = deserializePageBlobRangeHeader(
+        blobCtx.request!.getHeader("range"),
+        blobCtx.request!.getHeader("x-ms-range"),
+        true
+      );
+    } catch (err) {
       throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextId!);
     }
 
@@ -273,13 +276,17 @@ export default class PageBlobHandler extends BaseHandler
       );
     }
 
-    const ranges = deserializePageBlobRangeHeader(
-      blobCtx.request!.getHeader("range"),
-      blobCtx.request!.getHeader("x-ms-range")
-    );
-    if (!ranges) {
+    let ranges;
+    try {
+      ranges = deserializePageBlobRangeHeader(
+        blobCtx.request!.getHeader("range"),
+        blobCtx.request!.getHeader("x-ms-range"),
+        true
+      );
+    } catch (err) {
       throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextId!);
     }
+
     const start = ranges[0];
     const end = ranges[1];
 
@@ -334,7 +341,8 @@ export default class PageBlobHandler extends BaseHandler
 
     let ranges = deserializePageBlobRangeHeader(
       blobCtx.request!.getHeader("range"),
-      blobCtx.request!.getHeader("x-ms-range")
+      blobCtx.request!.getHeader("x-ms-range"),
+      false
     );
     if (!ranges) {
       ranges = [0, blob.properties.contentLength! - 1];
