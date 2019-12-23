@@ -1,11 +1,11 @@
 import { NextFunction, Request, RequestHandler, Response } from "express";
 
 import ILogger from "../../common/ILogger";
+import IAuthenticator from "../authentication/IAuthenticator";
 import BlobStorageContext from "../context/BlobStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import ExpressRequestAdapter from "../generated/ExpressRequestAdapter";
 import { DEFAULT_CONTEXT_PATH } from "../utils/constants";
-import IAuthenticator from "./IAuthenticator";
 
 export default class AuthenticationMiddlewareFactory {
   constructor(private readonly logger: ILogger) {}

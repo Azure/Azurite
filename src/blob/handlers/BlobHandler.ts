@@ -2,13 +2,13 @@ import { URL } from "url";
 
 import IExtentStore from "../../common/persistence/IExtentStore";
 import BlobStorageContext from "../context/BlobStorageContext";
-import { extractStoragePartsFromPath } from "../context/blobStorageContext.middleware";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IBlobHandler from "../generated/handlers/IBlobHandler";
 import ILogger from "../generated/utils/ILogger";
+import { extractStoragePartsFromPath } from "../middlewares/blobStorageContext.middleware";
 import IBlobMetadataStore, {
   BlobModel
 } from "../persistence/IBlobMetadataStore";

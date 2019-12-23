@@ -1,4 +1,4 @@
-import { ContainerModel } from "./IBlobMetadataStore";
+import { ContainerModel } from "../persistence/IBlobMetadataStore";
 import { ILease, ILeaseSyncer } from "./ILeaseState";
 
 export default class ContainerLeaseSyncer

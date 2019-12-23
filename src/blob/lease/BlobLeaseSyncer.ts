@@ -1,4 +1,4 @@
-import { BlobModel } from "./IBlobMetadataStore";
+import { BlobModel } from "../persistence/IBlobMetadataStore";
 import { ILease, ILeaseSyncer } from "./ILeaseState";
 
 export default class BlobLeaseSyncer implements ILeaseSyncer<BlobModel> {

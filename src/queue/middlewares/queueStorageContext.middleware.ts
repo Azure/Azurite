@@ -3,6 +3,7 @@ import uuid from "uuid/v4";
 
 import logger from "../../common/Logger";
 import { checkApiVersion } from "../../common/utils/utils";
+import QueueStorageContext from "../context/QueueStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import {
   DEFAULT_QUEUE_CONTEXT_PATH,
@@ -12,7 +13,6 @@ import {
   VERSION
 } from "../utils/constants";
 import { isValidName, nameValidateCode } from "../utils/utils";
-import QueueStorageContext from "./QueueStorageContext";
 
 /**
  * A middleware extract related queue service context.

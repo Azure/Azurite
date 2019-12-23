@@ -3,7 +3,7 @@ import {
   LeaseStateType,
   LeaseStatusType
 } from "../generated/artifacts/models";
-import { BlobModel } from "./IBlobMetadataStore";
+import { BlobModel } from "../persistence/IBlobMetadataStore";
 import { ILease } from "./ILeaseState";
 
 export default class BlobLeaseAdapter implements ILease {

@@ -13,21 +13,23 @@ import * as Models from "../generated/artifacts/models";
 import { LeaseStatusType } from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import PageBlobRangesManager from "../handlers/PageBlobRangesManager";
+import BlobLeaseAdapter from "../lease/BlobLeaseAdapter";
+import BlobLeaseSyncer from "../lease/BlobLeaseSyncer";
+import BlobReadLeaseValidator from "../lease/BlobReadLeaseValidator";
+import BlobWriteLeaseSyncer from "../lease/BlobWriteLeaseSyncer";
+import BlobWriteLeaseValidator from "../lease/BlobWriteLeaseValidator";
+import ContainerDeleteLeaseValidator from "../lease/ContainerDeleteLeaseValidator";
+import ContainerLeaseAdapter from "../lease/ContainerLeaseAdapter";
+import ContainerLeaseSyncer from "../lease/ContainerLeaseSyncer";
+import ContainerReadLeaseValidator from "../lease/ContainerReadLeaseValidator";
+import { ILease } from "../lease/ILeaseState";
+import LeaseFactory from "../lease/LeaseFactory";
 import {
   DEFAULT_LIST_BLOBS_MAX_RESULTS,
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS
 } from "../utils/constants";
 import { newEtag } from "../utils/utils";
-import BlobLeaseAdapter from "./BlobLeaseAdapter";
-import BlobLeaseSyncer from "./BlobLeaseSyncer";
-import BlobReadLeaseValidator from "./BlobReadLeaseValidator";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
-import BlobWriteLeaseSyncer from "./BlobWriteLeaseSyncer";
-import BlobWriteLeaseValidator from "./BlobWriteLeaseValidator";
-import ContainerDeleteLeaseValidator from "./ContainerDeleteLeaseValidator";
-import ContainerLeaseAdapter from "./ContainerLeaseAdapter";
-import ContainerLeaseSyncer from "./ContainerLeaseSyncer";
-import ContainerReadLeaseValidator from "./ContainerReadLeaseValidator";
 import IBlobMetadataStore, {
   AcquireBlobLeaseResponse,
   AcquireContainerLeaseResponse,
@@ -54,8 +56,6 @@ import IBlobMetadataStore, {
   ServicePropertiesModel,
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
-import { ILease } from "./ILeaseState";
-import LeaseFactory from "./LeaseFactory";
 
 /**
  * This is a metadata source implementation for blob based on loki DB.

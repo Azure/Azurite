@@ -6,8 +6,8 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IPageBlobHandler from "../generated/handlers/IPageBlobHandler";
 import ILogger from "../generated/utils/ILogger";
-import BlobLeaseAdapter from "../persistence/BlobLeaseAdapter";
-import BlobWriteLeaseValidator from "../persistence/BlobWriteLeaseValidator";
+import BlobLeaseAdapter from "../lease/BlobLeaseAdapter";
+import BlobWriteLeaseValidator from "../lease/BlobWriteLeaseValidator";
 import IBlobMetadataStore, {
   BlobModel
 } from "../persistence/IBlobMetadataStore";
