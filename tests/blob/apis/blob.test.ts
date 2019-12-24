@@ -139,6 +139,26 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(result2.metadata, metadata);
   });
 
+  it("should not delete base blob without include snapshot header", async () => {
+    const result = await blobURL.createSnapshot(Aborter.none);
+    assert.ok(result.snapshot);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+    const blobSnapshotURL = blobURL.withSnapshot(result.snapshot!);
+    await blobSnapshotURL.getProperties(Aborter.none);
+
+    let err;
+    try {
+      await blobURL.delete(Aborter.none, {});
+    } catch (error) {
+      err = error;
+    }
+
+    assert.deepStrictEqual(err.statusCode, 409);
+  });
+
   it("should delete snapshot", async () => {
     const result = await blobURL.createSnapshot(Aborter.none);
     assert.ok(result.snapshot);

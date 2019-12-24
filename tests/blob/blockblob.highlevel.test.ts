@@ -357,15 +357,10 @@ describe("BlockBlobHighlevel", () => {
   });
 
   it.only("bloburl.download should success when internal stream unexpected ends at the stream end", async () => {
-    const uploadResponse = await uploadFileToBlockBlob(
-      Aborter.none,
-      tempFileSmall,
-      blockBlobURL,
-      {
-        blockSize: 4 * 1024 * 1024,
-        parallelism: 20
-      }
-    );
+    await uploadFileToBlockBlob(Aborter.none, tempFileSmall, blockBlobURL, {
+      blockSize: 4 * 1024 * 1024,
+      parallelism: 20
+    });
 
     let retirableReadableStreamOptions: any;
     const downloadResponse = await blockBlobURL.download(
@@ -408,15 +403,10 @@ describe("BlockBlobHighlevel", () => {
   });
 
   it("bloburl.download should download full data successfully when internal stream unexpected ends", async () => {
-    const uploadResponse = await uploadFileToBlockBlob(
-      Aborter.none,
-      tempFileSmall,
-      blockBlobURL,
-      {
-        blockSize: 4 * 1024 * 1024,
-        parallelism: 20
-      }
-    );
+    await uploadFileToBlockBlob(Aborter.none, tempFileSmall, blockBlobURL, {
+      blockSize: 4 * 1024 * 1024,
+      parallelism: 20
+    });
 
     let retirableReadableStreamOptions: any;
     let injectedErrors = 0;
@@ -456,15 +446,10 @@ describe("BlockBlobHighlevel", () => {
   });
 
   it("bloburl.download should download partial data when internal stream unexpected ends", async () => {
-    const uploadResponse = await uploadFileToBlockBlob(
-      Aborter.none,
-      tempFileSmall,
-      blockBlobURL,
-      {
-        blockSize: 4 * 1024 * 1024,
-        parallelism: 20
-      }
-    );
+    await uploadFileToBlockBlob(Aborter.none, tempFileSmall, blockBlobURL, {
+      blockSize: 4 * 1024 * 1024,
+      parallelism: 20
+    });
 
     const partialSize = 500 * 1024;
 
@@ -510,15 +495,10 @@ describe("BlockBlobHighlevel", () => {
   });
 
   it("bloburl.download should download data failed when exceeding max stream retry requests", async () => {
-    const uploadResponse = await uploadFileToBlockBlob(
-      Aborter.none,
-      tempFileSmall,
-      blockBlobURL,
-      {
-        blockSize: 4 * 1024 * 1024,
-        parallelism: 20
-      }
-    );
+    await uploadFileToBlockBlob(Aborter.none, tempFileSmall, blockBlobURL, {
+      blockSize: 4 * 1024 * 1024,
+      parallelism: 20
+    });
 
     const downloadedFile = join(tempFolderPath, getUniqueName("downloadfile."));
 

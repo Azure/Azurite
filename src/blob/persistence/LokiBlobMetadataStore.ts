@@ -1154,7 +1154,7 @@ export default class LokiBlobMetadataStore
       const count = coll.count({
         accountName: account,
         containerName: container,
-        blobName: blob
+        name: blob
       });
       if (count > 1) {
         throw StorageErrorFactory.getSnapshotsPresent(context.contextId!);
