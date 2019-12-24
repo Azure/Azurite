@@ -202,3 +202,19 @@ export function deserializePageBlobRangeHeader(
 
   return [startInclusive, endInclusive];
 }
+
+/**
+ * Remove double Quotation mark from ListBlob returned Etag, to align with server
+ *
+ * @param {string} [inputEtag]
+ * @returns {string}
+ */
+export function removeQuotationFromListBlobEtag(inputEtag: string): string {
+  if (inputEtag === undefined) {
+    return inputEtag;
+  }
+  if (inputEtag[0] === '"' && inputEtag[inputEtag.length - 1] === '"') {
+    return inputEtag.substring(1, inputEtag.length - 1);
+  }
+  return inputEtag;
+}

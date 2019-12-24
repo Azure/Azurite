@@ -1261,7 +1261,7 @@ export default class LokiBlobMetadataStore
         : new Date();
     }
     doc.properties = blobProps;
-    doc.properties.etag = uuid();
+    doc.properties.etag = newEtag();
 
     new BlobWriteLeaseSyncer(doc).sync(lease);
 
@@ -1302,6 +1302,7 @@ export default class LokiBlobMetadataStore
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
     new BlobWriteLeaseSyncer(doc).sync(lease);
     doc.metadata = metadata;
+    doc.properties.etag = newEtag();
     coll.update(doc);
     return doc.properties;
   }

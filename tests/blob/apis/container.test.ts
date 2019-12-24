@@ -264,6 +264,11 @@ describe("ContainerAPIs", () => {
       ...metadata
     });
     assert.ok(blobURLs[0].url.indexOf(result3.segment.blobItems![0].name));
+    const getResult = await blobURLs[0].getProperties(Aborter.none);
+    assert.equal(
+      getResult.eTag,
+      '"' + result3.segment.blobItems![0].properties.etag + '"'
+    );
 
     for (const blob of blobURLs) {
       await blob.delete(Aborter.none);
@@ -446,9 +451,15 @@ describe("ContainerAPIs", () => {
     assert.deepStrictEqual(result.nextMarker, "");
     assert.deepStrictEqual(result.segment.blobItems!.length, blobURLs.length);
 
+    let i = 0;
     for (const blob of blobURLs) {
-      let i = 0;
-      assert.ok(blob.url.indexOf(result.segment.blobItems![i++].name));
+      assert.ok(blob.url.indexOf(result.segment.blobItems![i].name));
+      const getResult = await blob.getProperties(Aborter.none);
+      assert.equal(
+        getResult.eTag,
+        '"' + result.segment.blobItems![i].properties.etag + '"'
+      );
+      i++;
     }
 
     for (const blob of blobURLs) {

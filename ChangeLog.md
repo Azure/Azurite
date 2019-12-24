@@ -31,6 +31,8 @@ Blob:
 - Fixed a bug that GC will remove uncommitted blocks.
 - Fixed a bug that download page blob doesn't return content range header.
 - Fixed a bug that uncommitted block blob invalid length.
+- Fixed a bug that SetHTTPHeaders, SetMetadata won't update blob etag.
+- Remove double quotation marks from list blob request returned blob etag, to align with Azure Server behavior.
 
 Queue:
 
