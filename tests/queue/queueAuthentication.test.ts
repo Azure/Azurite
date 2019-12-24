@@ -64,7 +64,7 @@ describe("Queue Authentication", () => {
     await rmRecursive(persistencePath);
   });
 
-  it("Should not work without credential", async () => {
+  it("Should not work without credential @loki", async () => {
     const serviceURL = new ServiceURL(
       baseURL,
       StorageURL.newPipeline(new AnonymousCredential(), {
@@ -92,7 +92,7 @@ describe("Queue Authentication", () => {
     }
   });
 
-  it("Should not work without correct account name", async () => {
+  it("Should not work without correct account name @loki", async () => {
     const serviceURL = new ServiceURL(
       baseURL,
       StorageURL.newPipeline(
@@ -123,7 +123,7 @@ describe("Queue Authentication", () => {
     }
   });
 
-  it("Should not work without correct account key", async () => {
+  it("Should not work without correct account key @loki", async () => {
     const serviceURL = new ServiceURL(
       baseURL,
       StorageURL.newPipeline(
@@ -154,7 +154,7 @@ describe("Queue Authentication", () => {
     }
   });
 
-  it("Should work with correct shared key", async () => {
+  it("Should work with correct shared key @loki", async () => {
     const serviceURL = new ServiceURL(
       baseURL,
       StorageURL.newPipeline(

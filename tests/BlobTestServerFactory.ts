@@ -3,6 +3,7 @@ import BlobServer from "../src/blob/BlobServer";
 import SqlBlobConfiguration from "../src/blob/SqlBlobConfiguration";
 import SqlBlobServer from "../src/blob/SqlBlobServer";
 import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
+import { DEFAULT_SQL_OPTIONS } from "../src/common/utils/constants";
 
 export default class BlobTestServerFactory {
   public createServer(): BlobServer | SqlBlobServer {
@@ -20,24 +21,11 @@ export default class BlobTestServerFactory {
     ];
 
     if (isSQL) {
-      const sqlOptions = {
-        logging: false,
-        pool: {
-          max: 100,
-          min: 0,
-          acquire: 30000,
-          idle: 10000
-        },
-        dialectOptions: {
-          timezone: "Etc/GMT-0"
-        }
-      };
-
       const config = new SqlBlobConfiguration(
         host,
         port,
         databaseConnectionString!,
-        sqlOptions,
+        DEFAULT_SQL_OPTIONS,
         persistenceArray,
         false,
         undefined,

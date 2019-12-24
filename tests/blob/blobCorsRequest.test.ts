@@ -44,7 +44,7 @@ describe("Blob Cors requests test", () => {
     await server.clean();
   });
 
-  it("OPTIONS request without cors rules in server should be fail", async () => {
+  it("OPTIONS request without cors rules in server should be fail @loki @sql", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
     serviceProperties.cors = [];
     await serviceURL.setProperties(Aborter.none, serviceProperties);
@@ -78,7 +78,7 @@ describe("Blob Cors requests test", () => {
     );
   });
 
-  it("OPTIONS request should not work without matching cors rules", async () => {
+  it("OPTIONS request should not work without matching cors rules @loki @sql", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
 
     const newCORS = {
@@ -141,7 +141,7 @@ describe("Blob Cors requests test", () => {
     assert.ok(res._response.status === 200);
   });
 
-  it("OPTIONS request should not work without Origin header or matching allowedOrigins", async () => {
+  it("OPTIONS request should not work without Origin header or matching allowedOrigins @loki @sql", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
 
     const newCORS = {
@@ -211,7 +211,7 @@ describe("Blob Cors requests test", () => {
     );
   });
 
-  it("OPTIONS request should not work without requestMethod header or matching allowedMethods", async () => {
+  it("OPTIONS request should not work without requestMethod header or matching allowedMethods @loki @sql", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
 
     const newCORS = {
@@ -279,7 +279,7 @@ describe("Blob Cors requests test", () => {
     );
   });
 
-  it("OPTIONS request should check the defined requestHeaders", async () => {
+  it("OPTIONS request should check the defined requestHeaders @loki @sql", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
 
     const newCORS = [
@@ -430,7 +430,7 @@ describe("Blob Cors requests test", () => {
     assert.ok(res._response.status === 200);
   });
 
-  it("OPTIONS request should work with matching rule containing Origion *", async () => {
+  it("OPTIONS request should work with matching rule containing Origion * @loki @sql", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
 
     const newCORS = {
@@ -465,7 +465,7 @@ describe("Blob Cors requests test", () => {
     assert.ok(res._response.status === 200);
   });
 
-  it("Response of request to service without cors rules should not contains cors info", async () => {
+  it("Response of request to service without cors rules should not contains cors info @loki @sql", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
 
     serviceProperties.cors = [];
@@ -491,7 +491,7 @@ describe("Blob Cors requests test", () => {
     assert.ok(res.vary === undefined);
   });
 
-  it("Service with mismatching cors rules should response header Vary", async () => {
+  it("Service with mismatching cors rules should response header Vary @loki @sql", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
 
     const newCORS = {
@@ -525,7 +525,7 @@ describe("Blob Cors requests test", () => {
     assert.ok(res.vary === undefined);
   });
 
-  it("Request Match rule exists that allows all origins (*)", async () => {
+  it("Request Match rule exists that allows all origins (*) @loki @sql", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
 
     const newCORS = {
@@ -563,7 +563,7 @@ describe("Blob Cors requests test", () => {
     assert.ok(res["access-control-expose-headers"] === undefined);
   });
 
-  it("Request Match rule exists for exact origin", async () => {
+  it("Request Match rule exists for exact origin @loki @sql", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
 
     const newCORS = {
@@ -596,7 +596,7 @@ describe("Blob Cors requests test", () => {
     assert.ok(res["access-control-expose-headers"] !== undefined);
   });
 
-  it("Requests with error response should apply for CORS", async () => {
+  it("Requests with error response should apply for CORS @loki @sql", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
 
     const newCORS = {
@@ -643,7 +643,7 @@ describe("Blob Cors requests test", () => {
     }
   });
 
-  it("Request Match rule in sequence", async () => {
+  it("Request Match rule in sequence @loki @sql", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
 
     const newCORS = [

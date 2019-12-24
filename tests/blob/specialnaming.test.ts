@@ -49,7 +49,7 @@ describe("SpecialNaming", () => {
     await server.clean();
   });
 
-  it("Should work with special container and blob names with spaces", async () => {
+  it("Should work with special container and blob names with spaces @loki @sql", async () => {
     const blobName: string = getUniqueName("blob empty");
     const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
 
@@ -65,7 +65,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special container and blob names with unicode", async () => {
+  it("Should work with special container and blob names with unicode @loki @sql", async () => {
     const blobName: string = getUniqueName("unicod\u00e9");
     const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
 
@@ -82,7 +82,7 @@ describe("SpecialNaming", () => {
     assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
 
-  it("Should work with special container and blob names with spaces in URL string", async () => {
+  it("Should work with special container and blob names with spaces in URL string @loki @sql", async () => {
     const blobName: string = getUniqueName("blob empty");
     const blockBlobURL = new BlockBlobURL(
       appendToURLPath(containerURL.url, blobName),
@@ -101,7 +101,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special container and blob names with /", async () => {
+  it("Should work with special container and blob names with / @loki @sql", async () => {
     const blobName: string = getUniqueName("////blob/empty /another");
     const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
 
@@ -118,7 +118,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special container and blob names with / in URL string", async () => {
+  it("Should work with special container and blob names with / in URL string @loki @sql", async () => {
     const blobName: string = getUniqueName("////blob/empty /another");
     const blockBlobURL = new BlockBlobURL(
       appendToURLPath(containerURL.url, blobName),
@@ -138,7 +138,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special container and blob names uppercase", async () => {
+  it("Should work with special container and blob names uppercase @loki @sql", async () => {
     const blobName: string = getUniqueName("////Upper/blob/empty /another");
     const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
 
@@ -155,7 +155,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special container and blob names uppercase in URL string", async () => {
+  it("Should work with special container and blob names uppercase in URL string @loki @sql", async () => {
     const blobName: string = getUniqueName("////Upper/blob/empty /another");
     const blockBlobURL = new BlockBlobURL(
       appendToURLPath(containerURL.url, blobName),
@@ -175,7 +175,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special blob names Chinese characters", async () => {
+  it("Should work with special blob names Chinese characters @loki @sql", async () => {
     const blobName: string = getUniqueName(
       "////Upper/blob/empty /another 汉字"
     );
@@ -194,7 +194,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special blob names Chinese characters in URL string", async () => {
+  it("Should work with special blob names Chinese characters in URL string @loki @sql", async () => {
     const blobName: string = getUniqueName(
       "////Upper/blob/empty /another 汉字"
     );
@@ -216,7 +216,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special blob name characters", async () => {
+  it("Should work with special blob name characters @loki @sql", async () => {
     const blobName: string = getUniqueName(
       "汉字. special ~!@#$%^&*()_+`1234567890-={}|[]\\:\";'<>?,/'"
     );
@@ -236,7 +236,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special blob name characters in URL string", async () => {
+  it("Should work with special blob name characters in URL string @loki @sql", async () => {
     const blobName: string = getUniqueName(
       "汉字. special ~!@#$%^&*()_+`1234567890-={}|[]\\:\";'<>?,/'"
     );
@@ -265,7 +265,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special blob name Russian URI encoded", async () => {
+  it("Should work with special blob name Russian URI encoded @loki @sql", async () => {
     const blobName: string = getUniqueName("ру́сский язы́к");
     const blobNameEncoded: string = encodeURIComponent(blobName);
     const blockBlobURL = BlockBlobURL.fromContainerURL(
@@ -286,7 +286,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special blob name Russian", async () => {
+  it("Should work with special blob name Russian @loki @sql", async () => {
     const blobName: string = getUniqueName("ру́сский язы́к");
     const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
 
@@ -303,7 +303,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special blob name Russian in URL string", async () => {
+  it("Should work with special blob name Russian in URL string @loki @sql", async () => {
     const blobName: string = getUniqueName("ру́сский язы́к");
     const blockBlobURL = new BlockBlobURL(
       appendToURLPath(containerURL.url, blobName),
@@ -323,7 +323,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special blob name Arabic URI encoded", async () => {
+  it("Should work with special blob name Arabic URI encoded @loki @sql", async () => {
     const blobName: string = getUniqueName("عربي/عربى");
     const blobNameEncoded: string = encodeURIComponent(blobName);
     const blockBlobURL = BlockBlobURL.fromContainerURL(
@@ -344,7 +344,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special blob name Arabic", async () => {
+  it("Should work with special blob name Arabic @loki @sql", async () => {
     const blobName: string = getUniqueName("عربي/عربى");
     const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
 
@@ -361,7 +361,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special blob name Arabic in URL string", async () => {
+  it("Should work with special blob name Arabic in URL string @loki @sql", async () => {
     const blobName: string = getUniqueName("عربي/عربى");
     const blockBlobURL = new BlockBlobURL(
       appendToURLPath(containerURL.url, blobName),
@@ -381,7 +381,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special blob name Japanese URI encoded", async () => {
+  it("Should work with special blob name Japanese URI encoded @loki @sql", async () => {
     const blobName: string = getUniqueName("にっぽんご/にほんご");
     const blobNameEncoded: string = encodeURIComponent(blobName);
     const blockBlobURL = BlockBlobURL.fromContainerURL(
@@ -402,7 +402,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special blob name Japanese", async () => {
+  it("Should work with special blob name Japanese @loki @sql", async () => {
     const blobName: string = getUniqueName("にっぽんご/にほんご");
     const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
 
@@ -419,7 +419,7 @@ describe("SpecialNaming", () => {
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
-  it("Should work with special blob name Japanese in URL string", async () => {
+  it("Should work with special blob name Japanese in URL string @loki @sql", async () => {
     const blobName: string = getUniqueName("にっぽんご/にほんご");
     const blockBlobURL = new BlockBlobURL(
       appendToURLPath(containerURL.url, blobName),

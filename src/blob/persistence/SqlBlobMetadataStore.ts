@@ -506,7 +506,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     }
 
     const findResult = await ContainersModel.findAll({
-      limit: maxResults,
+      limit: maxResults + 1,
       where: whereQuery as any,
       order: [["containerName", "ASC"]]
     });
@@ -522,7 +522,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     if (findResult.length <= maxResults) {
       return [findResult.map(leaseUpdateMapper), undefined];
     } else {
-      const tail = findResult[findResult.length - 1];
+      const tail = findResult[findResult.length - 2];
+      findResult.pop();
       const nextMarker = this.getModelValue<string>(
         tail,
         "containerName",
