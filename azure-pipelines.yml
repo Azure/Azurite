@@ -19,6 +19,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -26,9 +28,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
+        displayName: "npm ci"
 
       - script: |
           npm run lint
@@ -51,6 +53,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -58,9 +62,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
+        displayName: "npm ci"
 
       - script: |
           npm run lint
@@ -83,6 +87,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -90,9 +96,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
+        displayName: "npm ci"
 
       - script: |
           npm run lint
@@ -115,6 +121,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -122,9 +130,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
+        displayName: "npm ci"
 
       - script: |
           npm run lint
@@ -146,7 +154,9 @@ jobs:
         node_8_x:
           node_version: 8.x
         node_10_x:
-          node_version: 10.x
+          node_version: 10.
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -154,9 +164,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
+        displayName: "npm ci"
 
       - script: |
           npm run lint
@@ -179,6 +189,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -186,9 +198,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
+        displayName: "npm ci"
 
       - script: |
           npm run lint
@@ -200,7 +212,7 @@ jobs:
         workingDirectory: "./"
         displayName: "npm run test:queue"
         env: {}
-  
+
   - job: azuritenodejslinux
     displayName: Azurite Linux
     pool:
@@ -211,6 +223,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -218,9 +232,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
+        displayName: "npm ci"
 
       - script: |
           npm run lint
@@ -240,7 +254,7 @@ jobs:
       - script: |
           sudo npm uninstall -g azurite
           npm run build
-          sudo npm install -g
+          sudo npm ci -g
           azurite -v
           azurite-blob -v
           azurite-queue -v
@@ -257,6 +271,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -264,9 +280,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
+        displayName: "npm ci"
 
       - script: |
           npm run lint
@@ -286,7 +302,7 @@ jobs:
       - script: |
           npm uninstall -g azurite
           npm run build
-          npm install -g
+          npm ci -g
           azurite -v
           azurite-blob -v
           azurite-queue -v
@@ -303,6 +319,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -310,9 +328,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
+        displayName: "npm ci"
 
       - script: |
           npm run lint
@@ -332,22 +350,22 @@ jobs:
       - script: |
           sudo npm uninstall -g azurite
           npm run build
-          sudo npm install -g
+          sudo npm ci -g
           azurite -v
           azurite-blob -v
           azurite-queue -v
         workingDirectory: "./"
         displayName: "Validate npm global installation from GitHub code base"
-  
+
   - job: docker
     displayName: Docker Build
     pool:
       vmImage: "ubuntu-16.04"
     steps:
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
+        displayName: "npm ci"
 
       - script: |
           npm run docker:build
@@ -368,6 +386,6 @@ jobs:
     steps:
       - task: ComponentGovernanceComponentDetection@0
         inputs:
-          scanType: 'Register'
-          verbosity: 'Verbose'
-          alertWarningLevel: 'High'
+          scanType: "Register"
+          verbosity: "Verbose"
+          alertWarningLevel: "High"
