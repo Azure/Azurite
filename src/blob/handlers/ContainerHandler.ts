@@ -8,7 +8,7 @@ import {
   EMULATOR_ACCOUNT_SKUNAME
 } from "../utils/constants";
 import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
-import { newEtag } from "../utils/utils";
+import { newEtag, removeQuotationFromListBlobEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 /**
@@ -540,13 +540,6 @@ export default class ContainerHandler extends BaseHandler
       includeSnapshots
     );
 
-    const blobItems: Models.BlobItem[] = [];
-
-    for (const blob of blobs) {
-      blob.deleted = blob.deleted !== true ? undefined : true;
-      blobItems.push(blob);
-    }
-
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const response: Models.ContainerListBlobFlatSegmentResponse = {
       statusCode: 200,
@@ -561,7 +554,16 @@ export default class ContainerHandler extends BaseHandler
       maxResults: options.maxresults,
       delimiter,
       segment: {
-        blobItems
+        blobItems: blobs.map(item => {
+          return {
+            ...item,
+            deleted: item.deleted !== true ? undefined : true,
+            properties: {
+              ...item.properties,
+              etag: removeQuotationFromListBlobEtag(item.properties.etag)
+            }
+          };
+        })
       },
       clientRequestId: options.requestId,
       nextMarker: `${nextMarker || ""}`
@@ -665,8 +667,16 @@ export default class ContainerHandler extends BaseHandler
       maxResults: options.maxresults,
       delimiter,
       segment: {
-        blobItems,
-        blobPrefixes
+        blobPrefixes,
+        blobItems: blobItems.map(item => {
+          return {
+            ...item,
+            properties: {
+              ...item.properties,
+              etag: removeQuotationFromListBlobEtag(item.properties.etag)
+            }
+          };
+        })
       },
       clientRequestId: options.requestId,
       nextMarker: `${nextMarker || ""}`

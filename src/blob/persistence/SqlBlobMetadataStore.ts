@@ -9,7 +9,6 @@ import {
   Sequelize,
   TEXT
 } from "sequelize";
-import uuid from "uuid/v4";
 
 import {
   DEFAULT_SQL_CHARSET,
@@ -1906,7 +1905,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           : new Date();
       }
 
-      blobModel.properties.etag = uuid();
+      blobModel.properties.etag = newEtag();
 
       await BlobsModel.update(this.convertBlobModelToDbModel(blobModel), {
         where: {
@@ -1968,7 +1967,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         .sync(new BlobWriteLeaseSyncer(blobModel));
 
       const lastModified = context.startTime! || new Date();
-      const etag = uuid();
+      const etag = newEtag();
 
       await BlobsModel.update(
         {
