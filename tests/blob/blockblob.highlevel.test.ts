@@ -32,7 +32,8 @@ configLogger(false);
 // tslint:disable:no-empty
 describe("BlockBlobHighlevel", () => {
   const factory = new BlobTestServerFactory();
-  const server = factory.createServer();
+  // Loose model to bypass if-match header used by download retry
+  const server = factory.createServer(true);
 
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
   const serviceURL = new ServiceURL(
@@ -356,7 +357,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(eventTriggered);
   });
 
-  it.only("bloburl.download should success when internal stream unexpected ends at the stream end", async () => {
+  it("bloburl.download should success when internal stream unexpected ends at the stream end", async () => {
     await uploadFileToBlockBlob(Aborter.none, tempFileSmall, blockBlobURL, {
       blockSize: 4 * 1024 * 1024,
       parallelism: 20
