@@ -68,7 +68,7 @@ export default class FSExtentStore implements IExtentStore {
   private readonly readQueue: IOperationQueue;
 
   private initialized: boolean = false;
-  private closed: boolean = false;
+  private closed: boolean = true;
 
   // The active extents to be appended data.
   private activeWriteExtents: IAppendExtent[];

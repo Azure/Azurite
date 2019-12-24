@@ -10,11 +10,11 @@ import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import SqlExtentMetadataStore from "../common/persistence/SqlExtentMetadataStore";
 import ServerBase, { ServerStatus } from "../common/ServerBase";
+import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
 import BlobGCManager from "./gc/BlobGCManager";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import SqlBlobMetadataStore from "./persistence/SqlBlobMetadataStore";
 import SqlBlobConfiguration from "./SqlBlobConfiguration";
-import SqlBlobRequestListenerFactory from "./SqlBlobRequestListenerFactory";
 
 const BEFORE_CLOSE_MESSAGE = `Azurite Blob service is closing...`;
 const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Blob service is closing... Critical error happens during GC.`;
@@ -76,12 +76,13 @@ export default class SqlBlobServer extends ServerBase {
     // We can also change the HTTP framework here by
     // creating a new XXXListenerFactory implementing IRequestListenerFactory interface
     // and replace the default Express based request listener
-    const requestListenerFactory: IRequestListenerFactory = new SqlBlobRequestListenerFactory(
+    const requestListenerFactory: IRequestListenerFactory = new BlobRequestListenerFactory(
       metadataStore,
       extentStore,
       accountDataStore,
       configuration.enableAccessLog, // Access log includes every handled HTTP request
-      configuration.accessLogWriteStream
+      configuration.accessLogWriteStream,
+      configuration.loose
     );
 
     super(host, port, httpServer, requestListenerFactory, configuration);

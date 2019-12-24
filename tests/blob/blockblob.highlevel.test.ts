@@ -356,7 +356,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(eventTriggered);
   });
 
-  it("bloburl.download should success when internal stream unexpected ends at the stream end", async () => {
+  it.only("bloburl.download should success when internal stream unexpected ends at the stream end", async () => {
     const uploadResponse = await uploadFileToBlockBlob(
       Aborter.none,
       tempFileSmall,
@@ -374,9 +374,9 @@ describe("BlockBlobHighlevel", () => {
       undefined,
       {
         blobAccessConditions: {
-          modifiedAccessConditions: {
-            ifMatch: uploadResponse.eTag
-          }
+          // modifiedAccessConditions: {
+          //   ifMatch: uploadResponse.eTag
+          // }
         },
         maxRetryRequests: 1,
         progress: ev => {
@@ -407,7 +407,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(downloadedData.equals(uploadedData));
   });
 
-  it("bloburl.download should download full data successfully when internal stream unexcepted ends", async () => {
+  it("bloburl.download should download full data successfully when internal stream unexpected ends", async () => {
     const uploadResponse = await uploadFileToBlockBlob(
       Aborter.none,
       tempFileSmall,
@@ -426,9 +426,9 @@ describe("BlockBlobHighlevel", () => {
       undefined,
       {
         blobAccessConditions: {
-          modifiedAccessConditions: {
-            ifMatch: uploadResponse.eTag
-          }
+          // modifiedAccessConditions: {
+          //   ifMatch: uploadResponse.eTag
+          // }
         },
         maxRetryRequests: 3,
         progress: () => {
@@ -476,9 +476,9 @@ describe("BlockBlobHighlevel", () => {
       partialSize,
       {
         blobAccessConditions: {
-          modifiedAccessConditions: {
-            ifMatch: uploadResponse.eTag
-          }
+          // modifiedAccessConditions: {
+          //   ifMatch: uploadResponse.eTag
+          // }
         },
         maxRetryRequests: 3,
         progress: () => {
@@ -533,9 +533,9 @@ describe("BlockBlobHighlevel", () => {
         undefined,
         {
           blobAccessConditions: {
-            modifiedAccessConditions: {
-              ifMatch: uploadResponse.eTag
-            }
+            // modifiedAccessConditions: {
+            //   ifMatch: uploadResponse.eTag
+            // }
           },
           maxRetryRequests: 0,
           progress: () => {

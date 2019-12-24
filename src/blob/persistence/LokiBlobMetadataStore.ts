@@ -89,7 +89,7 @@ export default class LokiBlobMetadataStore
   private readonly db: Loki;
 
   private initialized: boolean = false;
-  private closed: boolean = false;
+  private closed: boolean = true;
 
   private readonly SERVICES_COLLECTION = "$SERVICES_COLLECTION$";
   private readonly CONTAINERS_COLLECTION = "$CONTAINERS_COLLECTION$";

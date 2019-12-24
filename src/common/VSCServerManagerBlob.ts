@@ -10,7 +10,6 @@ import {
 } from "../blob/utils/constants";
 import * as Logger from "./Logger";
 import NoLoggerStrategy from "./NoLoggerStrategy";
-import { rimrafAsync } from "./utils/utils";
 import VSCChannelLoggerStrategy from "./VSCChannelLoggerStrategy";
 import VSCChannelWriteStream from "./VSCChannelWriteStream";
 import VSCEnvironment from "./VSCEnvironment";
@@ -58,12 +57,8 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
   }
 
   public async cleanImpl(): Promise<void> {
-    const config = await this.getConfiguration();
-    await rimrafAsync(config.extentDBPath);
-    await rimrafAsync(config.metadataDBPath);
-    for (const path of config.persistencePathArray) {
-      await rimrafAsync(path.locationPath);
-    }
+    await this.createImpl();
+    await this.server!.clean();
   }
 
   private async getConfiguration(): Promise<BlobConfiguration> {
@@ -84,8 +79,9 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       DEFAULT_BLOB_PERSISTENCE_ARRAY,
       !env.silent(),
       this.accessChannelStream,
-      env.debug() === true,
-      undefined
+      (await env.debug()) === true,
+      undefined,
+      env.loose()
     );
     return config;
   }

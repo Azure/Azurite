@@ -3,5 +3,6 @@ export default interface IQueueEnvironment {
   queuePort(): number | undefined;
   location(): Promise<string>;
   silent(): boolean;
-  debug(): string | boolean | undefined;
+  loose(): boolean;
+  debug(): Promise<string | boolean | undefined>;
 }
