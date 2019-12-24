@@ -21,7 +21,7 @@ export default class LokiExtentMetadata implements IExtentMetadataStore {
   private readonly db: Loki;
 
   private initialized: boolean = false;
-  private closed: boolean = false;
+  private closed: boolean = true;
 
   private readonly EXTENTS_COLLECTION = "$EXTENTS_COLLECTION$";
 

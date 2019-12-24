@@ -6,7 +6,7 @@ import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
 import { DEFAULT_SQL_OPTIONS } from "../src/common/utils/constants";
 
 export default class BlobTestServerFactory {
-  public createServer(): BlobServer | SqlBlobServer {
+  public createServer(loose: boolean = false): BlobServer | SqlBlobServer {
     const databaseConnectionString = process.env.AZURITE_TEST_DB;
     const isSQL = databaseConnectionString !== undefined;
 
@@ -30,7 +30,8 @@ export default class BlobTestServerFactory {
         false,
         undefined,
         false,
-        undefined
+        undefined,
+        loose
       );
 
       return new SqlBlobServer(config);
@@ -46,7 +47,8 @@ export default class BlobTestServerFactory {
         false,
         undefined,
         false,
-        undefined
+        undefined,
+        loose
       );
       return new BlobServer(config);
     }

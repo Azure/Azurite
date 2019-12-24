@@ -4,6 +4,7 @@ import {
   BlobURL,
   BlockBlobURL,
   ContainerURL,
+  PageBlobURL,
   ServiceURL,
   SharedKeyCredential,
   StorageURL
@@ -136,6 +137,26 @@ describe("BlobAPIs", () => {
       .withSnapshot(result.snapshot!)
       .getProperties(Aborter.none);
     assert.deepStrictEqual(result2.metadata, metadata);
+  });
+
+  it("should not delete base blob without include snapshot header @loki @sql", async () => {
+    const result = await blobURL.createSnapshot(Aborter.none);
+    assert.ok(result.snapshot);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+    const blobSnapshotURL = blobURL.withSnapshot(result.snapshot!);
+    await blobSnapshotURL.getProperties(Aborter.none);
+
+    let err;
+    try {
+      await blobURL.delete(Aborter.none, {});
+    } catch (error) {
+      err = error;
+    }
+
+    assert.deepStrictEqual(err.statusCode, 409);
   });
 
   it("should delete snapshot @loki @sql", async () => {
@@ -596,6 +617,108 @@ describe("BlobAPIs", () => {
     assert.equal(getResult.leaseStatus, "locked");
 
     await destBlobURL.releaseLease(Aborter.none, leaseId!);
+  });
+
+  it("Copy blob should work for page blob @loki", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobURL = PageBlobURL.fromContainerURL(
+      containerURL,
+      sourceBlob
+    );
+    const destBlobURL = PageBlobURL.fromContainerURL(containerURL, destBlob);
+
+    const metadata = { key: "value" };
+    const blobHTTPHeaders = {
+      blobCacheControl: "blobCacheControl",
+      blobContentDisposition: "blobContentDisposition",
+      blobContentEncoding: "blobContentEncoding",
+      blobContentLanguage: "blobContentLanguage",
+      blobContentType: "blobContentType"
+    };
+
+    const result_upload = await sourceBlobURL.create(Aborter.none, 512, {
+      metadata,
+      blobHTTPHeaders
+    });
+    assert.equal(
+      result_upload._response.request.headers.get("x-ms-client-request-id"),
+      result_upload.clientRequestId
+    );
+
+    const result_startcopy = await destBlobURL.startCopyFromURL(
+      Aborter.none,
+      sourceBlobURL.url
+    );
+    assert.equal(
+      result_startcopy._response.request.headers.get("x-ms-client-request-id"),
+      result_startcopy.clientRequestId
+    );
+
+    const result = await destBlobURL.getProperties(Aborter.none);
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "PageBlob");
+    assert.ok(result.lastModified);
+    assert.deepStrictEqual(result.metadata, metadata);
+    assert.deepStrictEqual(
+      result.cacheControl,
+      blobHTTPHeaders.blobCacheControl
+    );
+    assert.deepStrictEqual(result.contentType, blobHTTPHeaders.blobContentType);
+    assert.deepStrictEqual(
+      result.contentEncoding,
+      blobHTTPHeaders.blobContentEncoding
+    );
+    assert.deepStrictEqual(
+      result.contentLanguage,
+      blobHTTPHeaders.blobContentLanguage
+    );
+    assert.deepStrictEqual(
+      result.contentDisposition,
+      blobHTTPHeaders.blobContentDisposition
+    );
+  });
+
+  it("Copy blob should not work for page blob and set tier @loki", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobURL = PageBlobURL.fromContainerURL(
+      containerURL,
+      sourceBlob
+    );
+    const destBlobURL = PageBlobURL.fromContainerURL(containerURL, destBlob);
+
+    const metadata = { key: "value" };
+    const blobHTTPHeaders = {
+      blobCacheControl: "blobCacheControl",
+      blobContentDisposition: "blobContentDisposition",
+      blobContentEncoding: "blobContentEncoding",
+      blobContentLanguage: "blobContentLanguage",
+      blobContentType: "blobContentType"
+    };
+
+    const result_upload = await sourceBlobURL.create(Aborter.none, 512, {
+      metadata,
+      blobHTTPHeaders
+    });
+    assert.equal(
+      result_upload._response.request.headers.get("x-ms-client-request-id"),
+      result_upload.clientRequestId
+    );
+
+    let err;
+
+    try {
+      await destBlobURL.startCopyFromURL(Aborter.none, sourceBlobURL.url, {
+        tier: "P10"
+      });
+    } catch (error) {
+      err = error;
+    }
+
+    assert.deepStrictEqual(err.statusCode, 400);
   });
 
   it("Acquire Lease on Breaking Lease status, if LeaseId not match, throw LeaseIdMismatchWithLease error @loki @sql", async () => {

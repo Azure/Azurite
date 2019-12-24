@@ -142,6 +142,11 @@
             "default": false,
             "description": "Disable access log into Visual Studio Code channel"
           },
+          "azurite.loose": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable loose mode which ignores unsupported headers and parameters"
+          },
           "azurite.location": {
             "type": "string",
             "description": "Workspace location folder path, by default Visual Studio Code current opened folder"

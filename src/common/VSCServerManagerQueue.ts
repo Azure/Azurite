@@ -14,7 +14,7 @@ import * as Logger from "./Logger";
 import NoLoggerStrategy from "./NoLoggerStrategy";
 import VSCChannelLoggerStrategy from "./VSCChannelLoggerStrategy";
 import VSCChannelWriteStream from "./VSCChannelWriteStream";
-import VSCEnvironment from "./VSCQueueEnvironment";
+import VSCEnvironment from "./VSCEnvironment";
 import VSCServerManagerBase from "./VSCServerManagerBase";
 import VSCServerManagerClosedState from "./VSCServerManagerClosedState";
 
@@ -90,8 +90,9 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       DEFAULT_QUEUE_PERSISTENCE_ARRAY,
       !env.silent(),
       this.accessChannelStream,
-      env.debug() === true,
-      undefined
+      (await env.debug()) === true,
+      undefined,
+      env.loose()
     );
     return config;
   }

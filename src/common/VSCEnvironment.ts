@@ -67,7 +67,11 @@ export default class VSCEnvironment implements IEnvironment {
     return this.workspaceConfiguration.get<boolean>("silent") || false;
   }
 
-  public debug(): boolean {
+  public loose(): boolean {
+    return this.workspaceConfiguration.get<boolean>("loose") || false;
+  }
+
+  public async debug(): Promise<boolean> {
     return this.workspaceConfiguration.get<boolean>("debug") || false;
   }
 }

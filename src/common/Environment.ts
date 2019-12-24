@@ -32,13 +32,17 @@ args
     DEFAULT_QUEUE_LISTENING_PORT
   )
   .option(
-    "location",
+    ["l", "location"],
     "Optional. Use an existing folder as workspace path, default is current working directory",
     process.cwd()
   )
-  .option("silent", "Optional. Disable access log displayed in console")
+  .option(["s", "silent"], "Optional. Disable access log displayed in console")
   .option(
-    "debug",
+    ["L", "loose"],
+    "Optional. Enable loose mode which ignores unsupported headers and parameters"
+  )
+  .option(
+    ["d", "debug"],
     "Optional. Enable debug log by providing a valid local file path as log destination"
   );
 
@@ -74,7 +78,15 @@ export default class Environment implements IEnvironment {
     return false;
   }
 
-  public debug(): string | undefined {
+  public loose(): boolean {
+    if (this.flags.loose !== undefined) {
+      return true;
+    }
+    // default is false which will block not supported APIs, headers and parameters
+    return false;
+  }
+
+  public async debug(): Promise<string | undefined> {
     if (typeof this.flags.debug === "string") {
       // Enable debug log to file
       return this.flags.debug;

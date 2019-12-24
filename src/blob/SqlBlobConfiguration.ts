@@ -28,7 +28,8 @@ export default class SqlBlobConfiguration extends ConfigurationBase {
     enableAccessLog: boolean = DEFAULT_ENABLE_ACCESS_LOG,
     accessLogWriteStream?: NodeJS.WritableStream,
     enableDebugLog: boolean = DEFAULT_ENABLE_DEBUG_LOG,
-    debugLogFilePath?: string
+    debugLogFilePath?: string,
+    loose: boolean = false
   ) {
     super(
       host,
@@ -36,7 +37,8 @@ export default class SqlBlobConfiguration extends ConfigurationBase {
       enableAccessLog,
       accessLogWriteStream,
       enableDebugLog,
-      debugLogFilePath
+      debugLogFilePath,
+      loose
     );
   }
 }

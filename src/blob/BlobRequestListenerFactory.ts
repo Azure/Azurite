@@ -23,6 +23,10 @@ import ServiceHandler from "./handlers/ServiceHandler";
 import AuthenticationMiddlewareFactory from "./middlewares/AuthenticationMiddlewareFactory";
 import blobStorageContextMiddleware from "./middlewares/blobStorageContext.middleware";
 import PreflightMiddlewareFactory from "./middlewares/PreflightMiddlewareFactory";
+import StrictModelMiddlewareFactory, {
+  UnsupportedHeadersBlocker,
+  UnsupportedParametersBlocker
+} from "./middlewares/StrictModelMiddlewareFactory";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import { DEFAULT_CONTEXT_PATH } from "./utils/constants";
 
@@ -43,7 +47,8 @@ export default class BlobRequestListenerFactory
     private readonly extentStore: IExtentStore,
     private readonly accountDataStore: IAccountDataStore,
     private readonly enableAccessLog: boolean,
-    private readonly accessLogWriteStream?: NodeJS.WritableStream
+    private readonly accessLogWriteStream?: NodeJS.WritableStream,
+    private readonly loose?: boolean
   ) {}
 
   public createRequestListener(): RequestListener {
@@ -96,6 +101,12 @@ export default class BlobRequestListenerFactory
     // CORS request handling, preflight request and the corresponding actual request
     const preflightMiddlewareFactory = new PreflightMiddlewareFactory(logger);
 
+    // Strict mode unsupported features blocker
+    const strictModelMiddlewareFactory = new StrictModelMiddlewareFactory(
+      logger,
+      [UnsupportedHeadersBlocker, UnsupportedParametersBlocker]
+    );
+
     /*
      * Generated middleware should follow strict orders
      * Manually created middleware can be injected into any points
@@ -111,6 +122,11 @@ export default class BlobRequestListenerFactory
 
     // Dispatch incoming HTTP request to specific operation
     app.use(middlewareFactory.createDispatchMiddleware());
+
+    // Block unsupported features in strict mode by default
+    if (this.loose === false || this.loose === undefined) {
+      app.use(strictModelMiddlewareFactory.createStrictModelMiddleware());
+    }
 
     // AuthN middleware, like shared key auth or SAS auth
     const authenticationMiddlewareFactory = new AuthenticationMiddlewareFactory(

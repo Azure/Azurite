@@ -28,7 +28,7 @@ async function main() {
   const location = await env.location();
   await accessAsync(location);
 
-  const debugFilePath = env.debug();
+  const debugFilePath = await env.debug();
   if (debugFilePath !== undefined) {
     await accessAsync(dirname(debugFilePath!));
   }
@@ -47,8 +47,9 @@ async function main() {
     DEFAULT_QUEUE_PERSISTENCE_ARRAY,
     !env.silent(),
     undefined,
-    env.debug() !== undefined,
-    env.debug()
+    (await env.debug()) !== undefined,
+    await env.debug(),
+    env.loose()
   );
 
   // We use logger singleton as global debugger logger to track detailed outputs cross layers

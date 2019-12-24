@@ -9,6 +9,7 @@
 - Check input request "x-ms-version" Header, only valid version are allowed.
 - Fixed a race condition that GC will delete active write extents.
 - Force flush data into disk before data upload request returns.
+- [Breaking] By default Azurite will block requests with unsupported headers or parameters which may impact data integrity. Skip this by switching to loose mode by Azurite parameter "--loose".
 
 Blob:
 

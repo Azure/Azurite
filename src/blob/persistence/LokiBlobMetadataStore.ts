@@ -89,7 +89,7 @@ export default class LokiBlobMetadataStore
   private readonly db: Loki;
 
   private initialized: boolean = false;
-  private closed: boolean = false;
+  private closed: boolean = true;
 
   private readonly SERVICES_COLLECTION = "$SERVICES_COLLECTION$";
   private readonly CONTAINERS_COLLECTION = "$CONTAINERS_COLLECTION$";
@@ -1158,7 +1158,7 @@ export default class LokiBlobMetadataStore
       const count = coll.count({
         accountName: account,
         containerName: container,
-        blobName: blob
+        name: blob
       });
       if (count > 1) {
         throw StorageErrorFactory.getSnapshotsPresent(context.contextId!);
@@ -1718,6 +1718,16 @@ export default class LokiBlobMetadataStore
           HeaderValue: `${tier}`
         });
       }
+    }
+
+    if (
+      copiedBlob.properties.blobType === Models.BlobType.PageBlob &&
+      tier !== undefined
+    ) {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+        HeaderName: "x-ms-access-tier",
+        HeaderValue: `${tier}`
+      });
     }
 
     coll.insert(copiedBlob);

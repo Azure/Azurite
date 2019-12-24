@@ -32,7 +32,8 @@ configLogger(false);
 // tslint:disable:no-empty
 describe("BlockBlobHighlevel", () => {
   const factory = new BlobTestServerFactory();
-  const server = factory.createServer();
+  // Loose model to bypass if-match header used by download retry
+  const server = factory.createServer(true);
 
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
   const serviceURL = new ServiceURL(
@@ -357,15 +358,10 @@ describe("BlockBlobHighlevel", () => {
   });
 
   it("bloburl.download should success when internal stream unexpected ends at the stream end @loki @sql", async () => {
-    const uploadResponse = await uploadFileToBlockBlob(
-      Aborter.none,
-      tempFileSmall,
-      blockBlobURL,
-      {
-        blockSize: 4 * 1024 * 1024,
-        parallelism: 20
-      }
-    );
+    await uploadFileToBlockBlob(Aborter.none, tempFileSmall, blockBlobURL, {
+      blockSize: 4 * 1024 * 1024,
+      parallelism: 20
+    });
 
     let retirableReadableStreamOptions: any;
     const downloadResponse = await blockBlobURL.download(
@@ -374,9 +370,9 @@ describe("BlockBlobHighlevel", () => {
       undefined,
       {
         blobAccessConditions: {
-          modifiedAccessConditions: {
-            ifMatch: uploadResponse.eTag
-          }
+          // modifiedAccessConditions: {
+          //   ifMatch: uploadResponse.eTag
+          // }
         },
         maxRetryRequests: 1,
         progress: ev => {
@@ -407,16 +403,11 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(downloadedData.equals(uploadedData));
   });
 
-  it("bloburl.download should download full data successfully when internal stream unexcepted ends @loki @sql", async () => {
-    const uploadResponse = await uploadFileToBlockBlob(
-      Aborter.none,
-      tempFileSmall,
-      blockBlobURL,
-      {
-        blockSize: 4 * 1024 * 1024,
-        parallelism: 20
-      }
-    );
+  it("bloburl.download should download full data successfully when internal stream unexpected ends @loki @sql", async () => {
+    await uploadFileToBlockBlob(Aborter.none, tempFileSmall, blockBlobURL, {
+      blockSize: 4 * 1024 * 1024,
+      parallelism: 20
+    });
 
     let retirableReadableStreamOptions: any;
     let injectedErrors = 0;
@@ -426,9 +417,9 @@ describe("BlockBlobHighlevel", () => {
       undefined,
       {
         blobAccessConditions: {
-          modifiedAccessConditions: {
-            ifMatch: uploadResponse.eTag
-          }
+          // modifiedAccessConditions: {
+          //   ifMatch: uploadResponse.eTag
+          // }
         },
         maxRetryRequests: 3,
         progress: () => {
@@ -456,15 +447,10 @@ describe("BlockBlobHighlevel", () => {
   });
 
   it("bloburl.download should download partial data when internal stream unexpected ends @loki @sql", async () => {
-    const uploadResponse = await uploadFileToBlockBlob(
-      Aborter.none,
-      tempFileSmall,
-      blockBlobURL,
-      {
-        blockSize: 4 * 1024 * 1024,
-        parallelism: 20
-      }
-    );
+    await uploadFileToBlockBlob(Aborter.none, tempFileSmall, blockBlobURL, {
+      blockSize: 4 * 1024 * 1024,
+      parallelism: 20
+    });
 
     const partialSize = 500 * 1024;
 
@@ -476,9 +462,9 @@ describe("BlockBlobHighlevel", () => {
       partialSize,
       {
         blobAccessConditions: {
-          modifiedAccessConditions: {
-            ifMatch: uploadResponse.eTag
-          }
+          // modifiedAccessConditions: {
+          //   ifMatch: uploadResponse.eTag
+          // }
         },
         maxRetryRequests: 3,
         progress: () => {
@@ -510,15 +496,10 @@ describe("BlockBlobHighlevel", () => {
   });
 
   it("bloburl.download should download data failed when exceeding max stream retry requests @loki @sql", async () => {
-    const uploadResponse = await uploadFileToBlockBlob(
-      Aborter.none,
-      tempFileSmall,
-      blockBlobURL,
-      {
-        blockSize: 4 * 1024 * 1024,
-        parallelism: 20
-      }
-    );
+    await uploadFileToBlockBlob(Aborter.none, tempFileSmall, blockBlobURL, {
+      blockSize: 4 * 1024 * 1024,
+      parallelism: 20
+    });
 
     const downloadedFile = join(tempFolderPath, getUniqueName("downloadfile."));
 
@@ -533,9 +514,9 @@ describe("BlockBlobHighlevel", () => {
         undefined,
         {
           blobAccessConditions: {
-            modifiedAccessConditions: {
-              ifMatch: uploadResponse.eTag
-            }
+            // modifiedAccessConditions: {
+            //   ifMatch: uploadResponse.eTag
+            // }
           },
           maxRetryRequests: 0,
           progress: () => {
