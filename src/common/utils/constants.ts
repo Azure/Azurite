@@ -21,6 +21,6 @@ export const DEFAULT_SQL_OPTIONS = {
   charset: DEFAULT_SQL_CHARSET,
   collate: DEFAULT_SQL_COLLATE,
   dialectOptions: {
-    timezone: "Etc/GMT-0"
+    timezone: "+00:00"
   }
 };

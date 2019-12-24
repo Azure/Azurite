@@ -561,7 +561,13 @@ export default class ContainerHandler extends BaseHandler
       maxResults: options.maxresults,
       delimiter,
       segment: {
-        blobItems
+        blobItems: blobs.map(item => {
+          return {
+            ...item,
+            deleted: item.deleted !== true ? undefined : true,
+            properties: { ...item.properties, etag: item.properties.etag }
+          };
+        })
       },
       clientRequestId: options.requestId,
       nextMarker: `${nextMarker || ""}`

@@ -33,11 +33,6 @@ jobs:
         displayName: "npm ci"
 
       - script: |
-          npm run lint
-        workingDirectory: "./"
-        displayName: "tslint"
-
-      - script: |
           npm run test:blob
         workingDirectory: "./"
         displayName: "npm run test:blob"
@@ -65,11 +60,6 @@ jobs:
           npm ci
         workingDirectory: "./"
         displayName: "npm ci"
-
-      - script: |
-          npm run lint
-        workingDirectory: "./"
-        displayName: "tslint"
 
       - script: |
           npm run test:blob
@@ -101,12 +91,44 @@ jobs:
         displayName: "npm ci"
 
       - script: |
-          npm run lint
+          npm run test:blob
         workingDirectory: "./"
-        displayName: "tslint"
+        displayName: "npm run test:blob"
+        env: {}
+
+  - job: blobtestmysql
+    displayName: Blob Test Mysql
+    pool:
+      vmImage: "ubuntu-16.04"
+    strategy:
+      matrix:
+        node_8_x:
+          node_version: 8.x
+        node_10_x:
+          node_version: 10.x
+        node_12_x:
+          node_version: 12.x
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(node_version)"
+        displayName: "Install Node.js"
 
       - script: |
-          npm run test:blob
+          npm ci
+        workingDirectory: "./"
+        displayName: "npm ci"
+
+      - script: |
+          docker run --name mysql -p 13306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql
+          sleep 60
+          docker exec mysql mysql -u root -pmy-secret-pw -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+          docker exec mysql mysql -u root -pmy-secret-pw -e "create database azurite_blob_test;"
+        workingDirectory: "./"
+        displayName: "Setup mysql docker instance"
+
+      - script: |
+          npm run test:blob:sql:ci
         workingDirectory: "./"
         displayName: "npm run test:blob"
         env: {}
@@ -135,11 +157,6 @@ jobs:
         displayName: "npm ci"
 
       - script: |
-          npm run lint
-        workingDirectory: "./"
-        displayName: "tslint"
-
-      - script: |
           npm run test:queue
         workingDirectory: "./"
         displayName: "npm run test:queue"
@@ -154,7 +171,7 @@ jobs:
         node_8_x:
           node_version: 8.x
         node_10_x:
-          node_version: 10.
+          node_version: 10.x
         node_12_x:
           node_version: 12.x
     steps:
@@ -167,11 +184,6 @@ jobs:
           npm ci
         workingDirectory: "./"
         displayName: "npm ci"
-
-      - script: |
-          npm run lint
-        workingDirectory: "./"
-        displayName: "tslint"
 
       - script: |
           npm run test:queue
@@ -201,11 +213,6 @@ jobs:
           npm ci
         workingDirectory: "./"
         displayName: "npm ci"
-
-      - script: |
-          npm run lint
-        workingDirectory: "./"
-        displayName: "tslint"
 
       - script: |
           npm run test:queue
@@ -254,7 +261,7 @@ jobs:
       - script: |
           sudo npm uninstall -g azurite
           npm run build
-          sudo npm ci -g
+          sudo npm install -g
           azurite -v
           azurite-blob -v
           azurite-queue -v
@@ -350,7 +357,7 @@ jobs:
       - script: |
           sudo npm uninstall -g azurite
           npm run build
-          sudo npm ci -g
+          sudo npm install -g
           azurite -v
           azurite-blob -v
           azurite-queue -v

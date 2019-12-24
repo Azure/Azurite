@@ -30,19 +30,18 @@ npm run blob
 
 By default, Azurite leverages loki as metadata database.
 However, loki limits Azurite's scalability and extensibility.
-Set environment variable `AZURITE_DB=dialect://[username][:password][@]host:port/database` to make Azurite blob service switch to a SQL database based metadata storage, like MySql, SqlServer, MariaDB.
+Set environment variable `AZURITE_DB=dialect://[username][:password][@]host:port/database` to make Azurite blob service switch to a SQL database based metadata storage, like MySql, SqlServer.
 
-For example, connect to MariaDB, MySql or SqlServer by set environment variables:
+For example, connect to MySql or SqlServer by set environment variables:
 
 ```bash
-set AZURITE_DB=mariadb://root:my-secret-pw@127.0.0.1:3306/azurite_blob
-set AZURITE_DB=mysql://localhost:3306/azurite_blob
+set AZURITE_DB=mysql://root:my-secret-pw@127.0.0.1:3306/azurite_blob
 set AZURITE_DB=mssql://username:password@localhost:1024/azurite_blob
 ```
 
 > Note. Need to manually create database before starting Azurite instance.
 
-> Tips. Create database instance quickly with docker, for example `docker run --name mariadb -p 3306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mariadb:latest`.
+> Tips. Create database instance quickly with docker, for example `docker run --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql:latest`. And grant external access and create database `azurite_blob` using `docker exec mysql mysql -u root -pmy-secret-pw -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES; create database azurite_blob;"`. Notice that, above commands are examples, you need to carefully define the access permissions in your production environment.
 
 ## Develop for Visual Studio Code Extension
 
