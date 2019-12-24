@@ -327,9 +327,13 @@ export default class LokiBlobMetadataStore
             accountName: account
           };
 
+    // Workaround for loki which will ignore $gt when providing $regex
+    const query2 = { name: { $gt: marker } };
+
     const docs = coll
       .chain()
       .find(query)
+      .find(query2)
       .limit(maxResults + 1)
       .simplesort("name")
       .data();

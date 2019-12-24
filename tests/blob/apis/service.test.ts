@@ -46,7 +46,7 @@ describe("ServiceAPIs", () => {
     await server.clean();
   });
 
-  it("GetServiceProperties", async () => {
+  it("GetServiceProperties @loki @sql", async () => {
     const result = await serviceURL.getProperties(Aborter.none);
 
     assert.ok(typeof result.requestId);
@@ -55,10 +55,10 @@ describe("ServiceAPIs", () => {
     assert.ok(result.version!.length > 0);
 
     if (result.cors && result.cors!.length > 0) {
-      assert.ok(result.cors![0].allowedHeaders.length > 0);
+      assert.ok(result.cors![0].allowedHeaders.length >= 0);
       assert.ok(result.cors![0].allowedMethods.length > 0);
       assert.ok(result.cors![0].allowedOrigins.length > 0);
-      assert.ok(result.cors![0].exposedHeaders.length > 0);
+      assert.ok(result.cors![0].exposedHeaders.length >= 0);
       assert.ok(result.cors![0].maxAgeInSeconds >= 0);
     }
     assert.equal(
@@ -67,7 +67,7 @@ describe("ServiceAPIs", () => {
     );
   });
 
-  it("Set CORS with empty AllowedHeaders, ExposedHeaders", async () => {
+  it("Set CORS with empty AllowedHeaders, ExposedHeaders @loki @sql", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
 
     const newCORS = {
@@ -86,7 +86,7 @@ describe("ServiceAPIs", () => {
     assert.deepStrictEqual(result.cors![0], newCORS);
   });
 
-  it("SetServiceProperties", async () => {
+  it("SetServiceProperties @loki @sql", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
 
     serviceProperties.logging = {
@@ -161,11 +161,11 @@ describe("ServiceAPIs", () => {
     );
   });
 
-  it("List containers in sorted order", async () => {
-    const containerNamePostfix = getUniqueName("container");
-    const containerName1 = `cc${containerNamePostfix}`;
-    const containerName2 = `aa${containerNamePostfix}`;
-    const containerName3 = `bb${containerNamePostfix}`;
+  it("List containers in sorted order @loki @sql", async () => {
+    const containerNamePrefix = getUniqueName("container");
+    const containerName1 = `${containerNamePrefix}cc`;
+    const containerName2 = `${containerNamePrefix}aa`;
+    const containerName3 = `${containerNamePrefix}bb`;
     const containerURL1 = ContainerURL.fromServiceURL(
       serviceURL,
       containerName1
@@ -183,22 +183,25 @@ describe("ServiceAPIs", () => {
     await containerURL3.create(Aborter.none);
     const result = await serviceURL.listContainersSegment(
       Aborter.none,
-      undefined
+      undefined,
+      {
+        prefix: containerNamePrefix
+      }
     );
     assert.equal(result.containerItems.length, 3);
-    assert.ok(result.containerItems[0].name.startsWith("aa"));
-    assert.ok(result.containerItems[1].name.startsWith("bb"));
-    assert.ok(result.containerItems[2].name.startsWith("cc"));
+    assert.ok(result.containerItems[0].name.endsWith("aa"));
+    assert.ok(result.containerItems[1].name.endsWith("bb"));
+    assert.ok(result.containerItems[2].name.endsWith("cc"));
     await containerURL1.delete(Aborter.none);
     await containerURL2.delete(Aborter.none);
     await containerURL3.delete(Aborter.none);
   });
 
-  it("List containers with marker", async () => {
-    const containerNamePostfix = getUniqueName("container");
-    const containerName1 = `cc${containerNamePostfix}`;
-    const containerName2 = `aa${containerNamePostfix}`;
-    const containerName3 = `bb${containerNamePostfix}`;
+  it("List containers with marker @loki @sql", async () => {
+    const containerNamePrefix = getUniqueName("container");
+    const containerName1 = `${containerNamePrefix}cc`;
+    const containerName2 = `${containerNamePrefix}aa`;
+    const containerName3 = `${containerNamePrefix}bb`;
     const containerURL1 = ContainerURL.fromServiceURL(
       serviceURL,
       containerName1
@@ -216,7 +219,10 @@ describe("ServiceAPIs", () => {
     await containerURL3.create(Aborter.none);
     const result = await serviceURL.listContainersSegment(
       Aborter.none,
-      containerName2
+      containerName2,
+      {
+        prefix: containerNamePrefix
+      }
     );
     assert.equal(result.containerItems.length, 2);
     assert.equal(result.containerItems[0].name, containerName3);
@@ -226,11 +232,11 @@ describe("ServiceAPIs", () => {
     await containerURL3.delete(Aborter.none);
   });
 
-  it("List containers with marker and max result length less than result size", async () => {
-    const containerNamePostfix = getUniqueName("container");
-    const containerName1 = `cc${containerNamePostfix}`;
-    const containerName2 = `aa${containerNamePostfix}`;
-    const containerName3 = `bb${containerNamePostfix}`;
+  it("List containers with marker and max result length less than result size @loki @sql", async () => {
+    const containerNamePrefix = getUniqueName("container");
+    const containerName1 = `${containerNamePrefix}cc`;
+    const containerName2 = `${containerNamePrefix}aa`;
+    const containerName3 = `${containerNamePrefix}bb`;
     const containerURL1 = ContainerURL.fromServiceURL(
       serviceURL,
       containerName1
@@ -249,7 +255,7 @@ describe("ServiceAPIs", () => {
     const result1 = await serviceURL.listContainersSegment(
       Aborter.none,
       containerName2,
-      { maxresults: 1 }
+      { maxresults: 1, prefix: containerNamePrefix }
     );
 
     assert.equal(result1.containerItems.length, 1);
@@ -259,7 +265,7 @@ describe("ServiceAPIs", () => {
     const result2 = await serviceURL.listContainersSegment(
       Aborter.none,
       result1.nextMarker,
-      { maxresults: 1 }
+      { maxresults: 1, prefix: containerNamePrefix }
     );
     assert.equal(result2.containerItems.length, 1);
     assert.ok(result2.containerItems[0].name, containerName1);
@@ -270,7 +276,7 @@ describe("ServiceAPIs", () => {
     await containerURL3.delete(Aborter.none);
   });
 
-  it("ListContainers with default parameters", async () => {
+  it("ListContainers with default parameters @loki @sql", async () => {
     const result = await serviceURL.listContainersSegment(Aborter.none);
     assert.ok(typeof result.requestId);
     assert.ok(result.requestId!.length > 0);
@@ -292,7 +298,7 @@ describe("ServiceAPIs", () => {
     );
   });
 
-  it("ListContainers with all parameters configured", async () => {
+  it("ListContainers with all parameters configured @loki @sql", async () => {
     const containerNamePrefix = getUniqueName("container");
     const containerName1 = `${containerNamePrefix}x1`;
     const containerName2 = `${containerNamePrefix}x2`;
@@ -368,7 +374,7 @@ describe("ServiceAPIs", () => {
     await containerURL2.delete(Aborter.none);
   });
 
-  it("get Account info", async () => {
+  it("get Account info @loki @sql", async () => {
     const result = await serviceURL.getAccountInfo(Aborter.none);
     assert.equal(result.accountKind, EMULATOR_ACCOUNT_KIND);
     assert.equal(result.skuName, EMULATOR_ACCOUNT_SKUNAME);

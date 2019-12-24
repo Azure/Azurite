@@ -72,7 +72,7 @@ describe("QueueServiceAPIs", () => {
     await rmRecursive(persistencePath);
   });
 
-  it("Get Queue service properties", async () => {
+  it("Get Queue service properties @loki", async () => {
     const result = await serviceURL.getProperties(Aborter.none);
 
     assert.ok(typeof result.requestId);
@@ -89,7 +89,7 @@ describe("QueueServiceAPIs", () => {
     }
   });
 
-  it("Set CORS with empty AllowedHeaders, ExposedHeaders", async () => {
+  it("Set CORS with empty AllowedHeaders, ExposedHeaders @loki", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
 
     const newCORS = {
@@ -108,7 +108,7 @@ describe("QueueServiceAPIs", () => {
     assert.deepStrictEqual(result.cors![0], newCORS);
   });
 
-  it("Set Queue service properties", async () => {
+  it("Set Queue service properties @loki", async () => {
     const serviceProperties = await serviceURL.getProperties(Aborter.none);
     assert.equal(
       serviceProperties._response.request.headers.get("x-ms-client-request-id"),
@@ -178,7 +178,7 @@ describe("QueueServiceAPIs", () => {
     assert.deepEqual(result.hourMetrics, serviceProperties.hourMetrics);
   });
 
-  it("listQueuesSegment with default parameters", async () => {
+  it("listQueuesSegment with default parameters @loki", async () => {
     const result = await serviceURL.listQueuesSegment(Aborter.none);
     assert.ok(typeof result.requestId);
     assert.ok(result.requestId!.length > 0);
@@ -198,7 +198,7 @@ describe("QueueServiceAPIs", () => {
     }
   });
 
-  it("listQueuesSegment with all parameters", async () => {
+  it("listQueuesSegment with all parameters @loki", async () => {
     const queueNamePrefix = getUniqueName("queue");
     const queueName1 = `${queueNamePrefix}x1`;
     const queueName2 = `${queueNamePrefix}x2`;

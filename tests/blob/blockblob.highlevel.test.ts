@@ -100,7 +100,7 @@ describe("BlockBlobHighlevel", () => {
     await server.clean();
   });
 
-  it("uploadFileToBlockBlob should success when blob >= BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES", async () => {
+  it("uploadFileToBlockBlob should success when blob >= BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES @loki @sql", async () => {
     const result = await uploadFileToBlockBlob(
       Aborter.none,
       tempFileLarge,
@@ -129,7 +129,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(downloadedData.equals(uploadedData));
   });
 
-  it("uploadFileToBlockBlob should success when blob < BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES", async () => {
+  it("uploadFileToBlockBlob should success when blob < BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES @loki @sql", async () => {
     await uploadFileToBlockBlob(Aborter.none, tempFileSmall, blockBlobURL, {
       blockSize: 4 * 1024 * 1024,
       parallelism: 20
@@ -150,7 +150,7 @@ describe("BlockBlobHighlevel", () => {
   });
 
   // tslint:disable-next-line:max-line-length
-  it("uploadFileToBlockBlob should success when blob < BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES and configured maxSingleShotSize", async () => {
+  it("uploadFileToBlockBlob should success when blob < BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES and configured maxSingleShotSize @loki @sql", async () => {
     await uploadFileToBlockBlob(Aborter.none, tempFileSmall, blockBlobURL, {
       maxSingleShotSize: 0
     });
@@ -169,7 +169,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(downloadedData.equals(uploadedData));
   });
 
-  it("uploadFileToBlockBlob should update progress when blob >= BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES", async () => {
+  it("uploadFileToBlockBlob should update progress when blob >= BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES @loki @sql", async () => {
     let eventTriggered = false;
     const aborter = Aborter.none;
 
@@ -187,7 +187,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(eventTriggered);
   });
 
-  it("uploadFileToBlockBlob should update progress when blob < BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES", async () => {
+  it("uploadFileToBlockBlob should update progress when blob < BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES @loki @sql", async () => {
     let eventTriggered = false;
     const aborter = Aborter.none;
 
@@ -205,7 +205,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(eventTriggered);
   });
 
-  it("uploadStreamToBlockBlob should success", async () => {
+  it("uploadStreamToBlockBlob should success @loki @sql", async () => {
     const rs = fs.createReadStream(tempFileLarge);
     const result = await uploadStreamToBlockBlob(
       Aborter.none,
@@ -237,7 +237,7 @@ describe("BlockBlobHighlevel", () => {
     fs.unlinkSync(downloadFilePath);
   });
 
-  it("uploadStreamToBlockBlob should success for tiny buffers", async () => {
+  it("uploadStreamToBlockBlob should success for tiny buffers @loki @sql", async () => {
     const buf = Buffer.from([0x62, 0x75, 0x66, 0x66, 0x65, 0x72]);
     const bufferStream = new PassThrough();
     bufferStream.end(buf);
@@ -267,7 +267,7 @@ describe("BlockBlobHighlevel", () => {
     fs.unlinkSync(downloadFilePath);
   });
 
-  it("uploadStreamToBlockBlob should abort", async () => {
+  it("uploadStreamToBlockBlob should abort @loki @sql", async () => {
     const rs = fs.createReadStream(tempFileLarge);
     const aborter = Aborter.timeout(1);
 
@@ -285,7 +285,7 @@ describe("BlockBlobHighlevel", () => {
     }
   });
 
-  it("uploadStreamToBlockBlob should update progress event", async () => {
+  it("uploadStreamToBlockBlob should update progress event @loki @sql", async () => {
     const rs = fs.createReadStream(tempFileLarge);
     let eventTriggered = false;
 
@@ -305,7 +305,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(eventTriggered);
   });
 
-  it("downloadBlobToBuffer should success", async () => {
+  it("downloadBlobToBuffer should success @loki @sql", async () => {
     const rs = fs.createReadStream(tempFileLarge);
     const result = await uploadStreamToBlockBlob(
       Aborter.none,
@@ -330,7 +330,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(localFileContent.equals(buf));
   });
 
-  it("downloadBlobToBuffer should update progress event", async () => {
+  it("downloadBlobToBuffer should update progress event @loki @sql", async () => {
     const rs = fs.createReadStream(tempFileSmall);
     await uploadStreamToBlockBlob(
       Aborter.none,
@@ -357,7 +357,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(eventTriggered);
   });
 
-  it("bloburl.download should success when internal stream unexpected ends at the stream end", async () => {
+  it("bloburl.download should success when internal stream unexpected ends at the stream end @loki @sql", async () => {
     await uploadFileToBlockBlob(Aborter.none, tempFileSmall, blockBlobURL, {
       blockSize: 4 * 1024 * 1024,
       parallelism: 20
@@ -403,7 +403,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(downloadedData.equals(uploadedData));
   });
 
-  it("bloburl.download should download full data successfully when internal stream unexpected ends", async () => {
+  it("bloburl.download should download full data successfully when internal stream unexpected ends @loki @sql", async () => {
     await uploadFileToBlockBlob(Aborter.none, tempFileSmall, blockBlobURL, {
       blockSize: 4 * 1024 * 1024,
       parallelism: 20
@@ -446,7 +446,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(downloadedData.equals(uploadedData));
   });
 
-  it("bloburl.download should download partial data when internal stream unexpected ends", async () => {
+  it("bloburl.download should download partial data when internal stream unexpected ends @loki @sql", async () => {
     await uploadFileToBlockBlob(Aborter.none, tempFileSmall, blockBlobURL, {
       blockSize: 4 * 1024 * 1024,
       parallelism: 20
@@ -495,7 +495,7 @@ describe("BlockBlobHighlevel", () => {
     );
   });
 
-  it("bloburl.download should download data failed when exceeding max stream retry requests", async () => {
+  it("bloburl.download should download data failed when exceeding max stream retry requests @loki @sql", async () => {
     await uploadFileToBlockBlob(Aborter.none, tempFileSmall, blockBlobURL, {
       blockSize: 4 * 1024 * 1024,
       parallelism: 20
