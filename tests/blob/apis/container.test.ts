@@ -58,7 +58,7 @@ describe("ContainerAPIs", () => {
     await containerURL.delete(Aborter.none);
   });
 
-  it("setMetadata", async () => {
+  it("setMetadata @loki @sql", async () => {
     const metadata = {
       key0: "val0",
       keya: "vala",
@@ -70,7 +70,7 @@ describe("ContainerAPIs", () => {
     assert.deepEqual(result.metadata, metadata);
   });
 
-  it("getProperties", async () => {
+  it("getProperties @loki @sql", async () => {
     const result = await containerURL.getProperties(Aborter.none);
     assert.ok(result.eTag!.length > 0);
     assert.ok(result.lastModified);
@@ -87,7 +87,7 @@ describe("ContainerAPIs", () => {
     );
   });
 
-  it("getProperties should return 404 for non existed container", async () => {
+  it("getProperties should return 404 for non existed container @loki @sql", async () => {
     const nonExistedContainerURL = ContainerURL.fromServiceURL(
       serviceURL,
       "404container_"
@@ -103,12 +103,12 @@ describe("ContainerAPIs", () => {
     assert.ok(expectedError);
   });
 
-  it("create with default parameters", done => {
+  it("create with default parameters @loki @sql", done => {
     // create() with default parameters has been tested in beforeEach
     done();
   });
 
-  it("create with all parameters configured", async () => {
+  it("create with all parameters configured @loki @sql", async () => {
     const cURL = ContainerURL.fromServiceURL(
       serviceURL,
       getUniqueName(containerName)
@@ -125,12 +125,12 @@ describe("ContainerAPIs", () => {
     assert.deepEqual(result.metadata, metadata);
   });
 
-  it("delete", done => {
+  it("delete @loki @sql", done => {
     // delete() with default parameters has been tested in afterEach
     done();
   });
 
-  it("listBlobHierarchySegment with default parameters", async () => {
+  it("listBlobHierarchySegment with default parameters @loki @sql", async () => {
     const blobURLs = [];
     for (let i = 0; i < 3; i++) {
       const blobURL = BlobURL.fromContainerURL(
@@ -170,7 +170,7 @@ describe("ContainerAPIs", () => {
     }
   });
 
-  it("listBlobHierarchySegment with all parameters configured", async () => {
+  it("listBlobHierarchySegment with all parameters configured @loki @sql", async () => {
     const blobURLs = [];
     const prefix = "blockblob";
     const metadata = {
@@ -275,7 +275,7 @@ describe("ContainerAPIs", () => {
     }
   });
 
-  it("acquireLease_available_proposedLeaseId_fixed", async () => {
+  it("acquireLease_available_proposedLeaseId_fixed @loki @sql", async () => {
     const guid = "ca761232-ed42-11ce-bacd-00aa0057b223";
     const duration = 30;
     const result_acquire = await containerURL.acquireLease(
@@ -304,7 +304,7 @@ describe("ContainerAPIs", () => {
     );
   });
 
-  it("acquireLease_available_NoproposedLeaseId_infinite", async () => {
+  it("acquireLease_available_NoproposedLeaseId_infinite @loki @sql", async () => {
     const leaseResult = await containerURL.acquireLease(Aborter.none, "", -1);
     const leaseId = leaseResult.leaseId;
     assert.ok(leaseId);
@@ -321,7 +321,7 @@ describe("ContainerAPIs", () => {
     await containerURL.releaseLease(Aborter.none, leaseId!);
   });
 
-  it("releaseLease", async () => {
+  it("releaseLease @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = -1;
     await containerURL.acquireLease(Aborter.none, guid, duration);
@@ -334,7 +334,7 @@ describe("ContainerAPIs", () => {
     await containerURL.releaseLease(Aborter.none, guid);
   });
 
-  it("renewLease", async () => {
+  it("renewLease @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 15;
     await containerURL.acquireLease(Aborter.none, guid, duration);
@@ -363,7 +363,7 @@ describe("ContainerAPIs", () => {
     await containerURL.releaseLease(Aborter.none, guid);
   });
 
-  it("changeLease", async () => {
+  it("changeLease @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 15;
     await containerURL.acquireLease(Aborter.none, guid, duration);
@@ -388,7 +388,7 @@ describe("ContainerAPIs", () => {
     await containerURL.releaseLease(Aborter.none, newGuid);
   });
 
-  it("breakLease", async () => {
+  it("breakLease @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 15;
     await containerURL.acquireLease(Aborter.none, guid, duration);
@@ -429,7 +429,7 @@ describe("ContainerAPIs", () => {
     assert.equal(result3.leaseStatus, "unlocked");
   });
 
-  it("should correctly list all blobs in the container using listBlobFlatSegment with default parameters", async () => {
+  it("should correctly list all blobs in the container using listBlobFlatSegment with default parameters @loki @sql", async () => {
     const blobURLs = [];
     for (let i = 0; i < 3; i++) {
       const blobURL = BlobURL.fromContainerURL(
@@ -467,7 +467,7 @@ describe("ContainerAPIs", () => {
     }
   });
 
-  it("should correctly order all blobs in the container", async () => {
+  it("should correctly order all blobs in the container @loki @sql", async () => {
     const blobURLs = [];
     const blobNames: Array<string> = [];
 
@@ -508,7 +508,7 @@ describe("ContainerAPIs", () => {
     }
   });
 
-  it("returns a valid, correct nextMarker", async () => {
+  it("returns a valid, correct nextMarker @loki @sql", async () => {
     const blobURLs = [];
     let blobNames: Array<string> = [
       "blockblob/abc-001",
@@ -603,7 +603,7 @@ describe("ContainerAPIs", () => {
     }
   });
 
-  it("getAccessPolicy", async () => {
+  it("getAccessPolicy @loki @sql", async () => {
     const result = await containerURL.getAccessPolicy(Aborter.none);
     assert.ok(result.eTag!.length > 0);
     assert.ok(result.lastModified);
@@ -616,7 +616,7 @@ describe("ContainerAPIs", () => {
     );
   });
 
-  it("setAccessPolicy_publicAccess", async () => {
+  it("setAccessPolicy_publicAccess @loki @sql", async () => {
     const access = "blob";
     const containerAcl = [
       {
@@ -639,7 +639,7 @@ describe("ContainerAPIs", () => {
   });
 
   // Skip since getAccessPolicy can't get signedIdentifiers now
-  it("setAccessPolicy_signedIdentifiers", async () => {
+  it("setAccessPolicy_signedIdentifiers @loki @sql", async () => {
     const access = "container";
     const containerAcl = [
       {

@@ -157,7 +157,7 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
         id: getId,
         locationId: this.getModelValue<string>(
           extentsModel,
-          "persistencyId",
+          "locationId",
           true
         ),
         path: this.getModelValue<string>(extentsModel, "path") || getId,

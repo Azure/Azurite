@@ -3,7 +3,7 @@ import assert = require("assert");
 import PageBlobRangesManager from "../../../src/blob/handlers/PageBlobRangesManager";
 
 describe("PageBlobRangesManager", () => {
-  it("selectImpactedRanges", () => {
+  it("selectImpactedRanges @loki @sql", () => {
     const testCases = [
       {
         ranges: [],

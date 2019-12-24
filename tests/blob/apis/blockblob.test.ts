@@ -65,7 +65,7 @@ describe("BlockBlobAPIs", () => {
     await containerURL.delete(Aborter.none);
   });
 
-  it("upload with string body and default parameters", async () => {
+  it("upload with string body and default parameters @loki @sql", async () => {
     const body: string = getUniqueName("randomstring");
     const result_upload = await blockBlobURL.upload(
       Aborter.none,
@@ -84,13 +84,13 @@ describe("BlockBlobAPIs", () => {
     );
   });
 
-  it("upload empty blob", async () => {
+  it("upload empty blob @loki @sql", async () => {
     await blockBlobURL.upload(Aborter.none, "", 0);
     const result = await blobURL.download(Aborter.none, 0);
     assert.deepStrictEqual(await bodyToString(result, 0), "");
   });
 
-  it("upload with string body and all parameters set", async () => {
+  it("upload with string body and all parameters set @loki @sql", async () => {
     const body: string = getUniqueName("randomstring");
     const options = {
       blobCacheControl: "blobCacheControl",
@@ -133,7 +133,7 @@ describe("BlockBlobAPIs", () => {
     );
   });
 
-  it("stageBlock", async () => {
+  it("stageBlock @loki @sql", async () => {
     const body = "HelloWorld";
     const result_stage = await blockBlobURL.stageBlock(
       Aborter.none,
@@ -178,7 +178,7 @@ describe("BlockBlobAPIs", () => {
     );
   });
 
-  it("commitBlockList", async () => {
+  it("commitBlockList @loki @sql", async () => {
     const body = "HelloWorld";
     await blockBlobURL.stageBlock(
       Aborter.none,
@@ -215,7 +215,7 @@ describe("BlockBlobAPIs", () => {
     );
   });
 
-  it("commitBlockList with previous committed blocks", async () => {
+  it("commitBlockList with previous committed blocks @loki @sql", async () => {
     const body = "HelloWorld";
     await blockBlobURL.stageBlock(
       Aborter.none,
@@ -261,7 +261,7 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse2.committedBlocks![0].size, body.length);
   });
 
-  it("commitBlockList with empty list should create an empty block blob", async () => {
+  it("commitBlockList with empty list should create an empty block blob @loki @sql", async () => {
     await blockBlobURL.commitBlockList(Aborter.none, []);
 
     const listResponse = await blockBlobURL.getBlockList(
@@ -274,7 +274,7 @@ describe("BlockBlobAPIs", () => {
     assert.deepStrictEqual(await bodyToString(result, 0), "");
   });
 
-  it("commitBlockList with all parameters set", async () => {
+  it("commitBlockList with all parameters set @loki @sql", async () => {
     const body = "HelloWorld";
     await blockBlobURL.stageBlock(
       Aborter.none,
@@ -339,7 +339,7 @@ describe("BlockBlobAPIs", () => {
     );
   });
 
-  it("getBlockList", async () => {
+  it("getBlockList @loki @sql", async () => {
     const body = "HelloWorld";
     await blockBlobURL.stageBlock(
       Aborter.none,
@@ -361,7 +361,7 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.committedBlocks![0].size, body.length);
   });
 
-  it("getBlockList_BlockListingFilter", async () => {
+  it("getBlockList_BlockListingFilter @loki @sql", async () => {
     const body = "HelloWorld";
     await blockBlobURL.stageBlock(
       Aborter.none,
@@ -415,7 +415,7 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
   });
 
-  it("upload with Readable stream body and default parameters", async () => {
+  it("upload with Readable stream body and default parameters @loki @sql", async () => {
     const body: string = getUniqueName("randomstring");
     const bodyBuffer = Buffer.from(body);
 
@@ -440,7 +440,7 @@ describe("BlockBlobAPIs", () => {
     assert.deepStrictEqual(downloadedBody, body);
   });
 
-  it("upload with Chinese string body and default parameters", async () => {
+  it("upload with Chinese string body and default parameters @loki @sql", async () => {
     const body: string = getUniqueName("randomstring你好");
     await blockBlobURL.upload(Aborter.none, body, Buffer.byteLength(body));
     const result = await blobURL.download(Aborter.none, 0);

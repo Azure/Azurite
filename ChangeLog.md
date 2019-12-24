@@ -15,6 +15,7 @@ Blob:
 - [Breaking] Apply LokiFsStructuredAdapter as default blob metadata loki adapter to improve performance.
   - This version cannot guarantee compatible with persisted database models file by previous version. Remove previous metadata file and restart Azurite in case any errors.
 - [Breaking] Azurite updates underline metadata schema which does not compatible with previous versions. Please clean up Azurite previous version workspace data files and restart Azurite.
+- [Breaking] Remove MariaDb from SQL support temporarily due to license issue.
 - In getBlockList, filter the returned block list with input BlockListingFilter.
 - Added support for CORS.
 - AllowedHeaders and ExposedHeaders are optional now when setting CORS.

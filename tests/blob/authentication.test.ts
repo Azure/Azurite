@@ -33,7 +33,7 @@ describe("Authentication", () => {
     await server.clean();
   });
 
-  it("Should not work without credential", async () => {
+  it("Should not work without credential @loki @sql", async () => {
     const serviceURL = new ServiceURL(
       baseURL,
       StorageURL.newPipeline(new AnonymousCredential(), {
@@ -61,7 +61,7 @@ describe("Authentication", () => {
     }
   });
 
-  it("Should not work without correct account name", async () => {
+  it("Should not work without correct account name @loki @sql", async () => {
     const serviceURL = new ServiceURL(
       baseURL,
       StorageURL.newPipeline(
@@ -92,7 +92,7 @@ describe("Authentication", () => {
     }
   });
 
-  it("Should not work without correct account key", async () => {
+  it("Should not work without correct account key @loki @sql", async () => {
     const serviceURL = new ServiceURL(
       baseURL,
       StorageURL.newPipeline(
@@ -123,7 +123,7 @@ describe("Authentication", () => {
     }
   });
 
-  it("Should work with correct shared key", async () => {
+  it("Should work with correct shared key @loki @sql", async () => {
     const serviceURL = new ServiceURL(
       baseURL,
       StorageURL.newPipeline(
