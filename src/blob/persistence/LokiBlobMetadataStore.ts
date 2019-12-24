@@ -1715,6 +1715,16 @@ export default class LokiBlobMetadataStore
       }
     }
 
+    if (
+      copiedBlob.properties.blobType === Models.BlobType.PageBlob &&
+      tier !== undefined
+    ) {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+        HeaderName: "x-ms-access-tier",
+        HeaderValue: `${tier}`
+      });
+    }
+
     coll.insert(copiedBlob);
     return copiedBlob.properties;
   }
