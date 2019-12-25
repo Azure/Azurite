@@ -10,7 +10,7 @@
 
 | Version                                                            | Azure Storage API Version | Service Support       | Description                                       | Reference Links                                                                                                                                                                                                         |
 | ------------------------------------------------------------------ | ------------------------- | --------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.3.0-preview                                                      | 2019-02-02                | Blob<br>Queue         | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| 3.4.0                                                              | 2019-02-02                | Blob<br>Queue         | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
 | [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
 ## Introduction
@@ -44,7 +44,7 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
   - Detailed debugging log support, easy bug locating and reporting
   - Works with storage .Net SDK basic and advanced sample
   - SharedKey, AccountSAS, ServiceSAS, Public Access authentication support
-  - API version targeting 2018-02-02 (Refer to support matrix)
+  - Keep updating with latest Azure Storage API version features (Refer to support matrix)
 
 ## Getting Started
 
@@ -171,7 +171,7 @@ Above command will try to start Azurite image with configurations:
 
 `--queueHost 0.0.0.0` defines queue service listening endpoint to accept requests from host machine.
 
-`--loose` enables loose mode which ignore unsupported headers and parameters
+`--loose` enables loose mode which ignore unsupported headers and parameters.
 
 > In above sample, you need to use **double first forward slash** for location and debug path parameters to avoid a [known issue](https://stackoverflow.com/questions/48427366/docker-build-command-add-c-program-files-git-to-the-path-passed-as-build-argu) for Git on Windows.
 
@@ -278,6 +278,8 @@ An option to bypass authentication is **NOT** provided in Azurite V3.
 
 ## Supported Environment Variable Options
 
+When starting Azurite from npm command line `azurite` or docker image, following environment variables are supported for advanced customization.
+
 ### Customized Storage Accounts & Keys
 
 Azurite V3 allows customizing storage account names and keys by providing environment variable `AZURITE_ACCOUNTS` with format `account1:key1[:key2];account2:key1[:key2];...`.
@@ -305,15 +307,18 @@ Azurite will refresh customized account name and key from environment variable e
 ### Customized Metadata Storage by External Database (Preview)
 
 By default, Azurite leverages [loki](https://github.com/techfort/LokiJS) as metadata database.
-However, loki limits Azurite's scalability and extensibility.
+However, as an in-memory database, loki limits Azurite's scalability and data persistency.
 Set environment variable `AZURITE_DB=dialect://[username][:password][@]host:port/database` to make Azurite blob service switch to a SQL database based metadata storage, like MySql, SqlServer.
 
 For example, connect to MySql or SqlServer by set environment variables:
 
 ```bash
-set AZURITE_DB=mysql://localhost:3306/azurite_blob
+set AZURITE_DB=mysql://username:password@localhost:3306/azurite_blob
 set AZURITE_DB=mssql://username:password@localhost:1024/azurite_blob
 ```
+
+When Azurite starts with above environment variable, it connects to the configured database, and creates tables if not exist.
+This feature is in preview, when Azurite changes database table schema, you need to drop existing tables and let Azurite regenerate database tables.
 
 > Note. Need to manually create database before starting Azurite instance.
 
@@ -441,18 +446,20 @@ Azurite V3 follows a **Try best to serve** compatible strategy with Azure Storag
   - A Swagger definition (OpenAPI doc) with the same API version will be used to generate protocol layer APIs and interfaces.
   - Azurite should implement all the possible features provided in this API service version.
 - If an incoming request has **the same API version** Azurite provides, Azurite should handle the request with parity to Azure Storage.
-- If an incoming request has a **higher API version** than Azurite, Azurite will return a VersionNotSupportedByEmulator error (HTTP status code 400 - Bad Request).
-- If an incoming request has a **lower API version** header than Azurite, Azurite will attempt to handle the request with Azurite’s baseline API version behavior instead of that specified in the request.
+- If an incoming request has a **higher API version** than Azurite, Azurite will return a InvalidHeaderValue error for `x-ms-version` (HTTP status code 400 - Bad Request).
+- If an incoming request has a **lower API version** header than Azurite, Azurite will attempt to handle the request with Azurite's baseline API version behavior instead of that specified in the request.
 - Azurite will return API version in response header as the baseline API version
 - SAS accepts pattern from API version 2015-04-05
 
 ### RA-GRS
 
-Azurite supports read-access geo-redundant replication (RA-GRS). For storage resources both in the cloud and in the local emulator, you can access the secondary location by appending -secondary to the account name. For example, the following address might be used for accessing a blob using the read-only secondary in Azurite:
+Azurite supports read-access geo-redundant replication (RA-GRS). For storage resources both in the cloud and in the local emulator, you can access the secondary location by appending -secondary to the account name. For example, the following address might be used for accessing a blob using the secondary in Azurite:
 
 ```
 http://127.0.0.1:10000/devstoreaccount1-secondary/mycontainer/myblob.txt
 ```
+
+> Note. Secondary endpoint is not read-only in Azurite, which diffs from Azure Storage.
 
 ## Differences between Azurite V3 and Azurite V2
 
@@ -495,10 +502,11 @@ All the generated code is kept in `generated` folder, including the generated mi
 
 ## Support Matrix
 
-3.3.0-preview release targets **2019-02-02** API version **blob** service.  
+3.4.0 release targets **2019-02-02** API version **blob** service.  
 Detailed support matrix:
 
 - Supported Vertical Features
+  - CORS and Preflight
   - SharedKey Authentication
   - Shared Access Signature Account Level
   - Shared Access Signature Service Level (Not support response header override in service SAS)
@@ -516,7 +524,7 @@ Detailed support matrix:
   - Get Container ACL
   - Set Container ACL
   - Delete Container
-  - Lease Container (Access control based on lease is partial support)
+  - Lease Container
   - List Blobs
   - Put Blob (Create append blob is not supported)
   - Get Blob
@@ -524,23 +532,22 @@ Detailed support matrix:
   - Set Blob Properties
   - Get Blob Metadata
   - Set Blob Metadata
-  - Lease Blob (access control based on lease is partial support)
+  - Lease Blob
   - Snapshot Blob
   - Copy Blob (Only supports copy within same account in Azurite)
   - Abort Copy Blob (Only supports copy within same account in Azurite)
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
 
   - OAuth authentication
-  - Access control based on conditional headers, container/blob lease (lease control is limited supported)
-  - CORS and Preflight
+  - Access control based on conditional headers (Requests will be blocked in strict mode)
   - Static Website
   - Soft delete & Undelete Blob
   - Put Block from URL
   - Incremental Copy Blob
   - Create Append Blob, Append Block
 
-    3.3.0-preview release added support for **2019-02-02** API version **queue** service.
-    Detailed support matrix:
+  3.4.0 release added support for **2019-02-02** API version **queue** service.
+  Detailed support matrix:
 
 - Supported Vertical Features
   - SharedKey Authentication

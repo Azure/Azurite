@@ -6,7 +6,7 @@
 # Full Tag Listing
 
 - latest
-- [changelog](https://github.com/Azure/Azurite/blob/master/ChangeLog.md)
+- [More history versions](https://github.com/Azure/Azurite/blob/master/ChangeLog.md)
 
 # About this Image
 
@@ -40,7 +40,7 @@ docker run -p 10000:10000 -p 10001:10001 -v c:/azurite:/data mcr.microsoft.com/a
 **Customize all Azurite V3 supported parameters for docker image**
 
 ```bash
-docker run -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 8888 --blobHost 0.0.0.0 --queuePort 9999 --queueHost 0.0.0.0
+docker run -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 8888 --blobHost 0.0.0.0 --queuePort 9999 --queueHost 0.0.0.0 --loose
 ```
 
 Above command will try to start Azurite image with configurations:
@@ -56,6 +56,8 @@ Above command will try to start Azurite image with configurations:
 `--queuePort 9999` makes Azurite queue service listen to port 9999, while `-p 9999:9999` redirects requests from host machine's port 9999 to docker instance.
 
 `--queueHost 0.0.0.0` defines queue service listening endpoint to accept requests from host machine.
+
+`--loose` enables loose mode which ignore unsupported headers and parameters.
 
 > In above sample, you need to use **double first forward slash** for location and debug path parameters to avoid a [known issue](https://stackoverflow.com/questions/48427366/docker-build-command-add-c-program-files-git-to-the-path-passed-as-build-argu) for Git on Windows.
 
