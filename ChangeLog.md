@@ -34,6 +34,7 @@ Blob:
 - Fixed a bug that uncommitted block blob invalid length.
 - Fixed a bug that SetHTTPHeaders, SetMetadata won't update blob etag.
 - Remove double quotation marks from list blob request returned blob etag, to align with Azure Server behavior.
+- Blocked set tier for page blob which requires premium storage account where Azurite provides standard storage account.
 
 Queue:
 

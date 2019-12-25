@@ -58,6 +58,12 @@ export default class PageBlobHandler extends BaseHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
+    if (options.pageBlobAccessTier !== undefined) {
+      throw StorageErrorFactory.getAccessTierNotSupportedForBlobType(
+        context.contextId!
+      );
+    }
+
     if (contentLength !== 0) {
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextId!,

@@ -343,6 +343,17 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getAccessTierNotSupportedForBlobType(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      400,
+      "AccessTierNotSupportedForBlobType",
+      "The access tier is not supported for this blob type.",
+      contextID
+    );
+  }
+
   public static getBlobSnapshotsPresent_hassnapshot(
     contextID: string
   ): StorageError {

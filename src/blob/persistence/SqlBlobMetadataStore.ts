@@ -2462,7 +2462,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
         accessTier = tier;
       } else {
-        throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId!);
+        throw StorageErrorFactory.getAccessTierNotSupportedForBlobType(
+          context.contextId!
+        );
       }
       await BlobsModel.update(
         {
