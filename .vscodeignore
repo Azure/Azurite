@@ -8,6 +8,7 @@ azure-pipelines.yml
 .lintstagedrc
 .gitignore
 .npmignore
+.dockerignore
 Dockerfile
 __blobstorage__
 typings
