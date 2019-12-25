@@ -39,6 +39,7 @@ Queue:
 
 - AllowedHeaders and ExposedHeaders are optional now when setting CORS.
 - Fix Put message fail with max messagettl.
+- Updated message size calculation when checking 64KB limitation. 
 
 # 2019.11 Version 3.3.0-preview
 

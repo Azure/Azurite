@@ -278,20 +278,7 @@ export async function readStreamToString(
  * @memberof LokiQueueDataStore
  */
 export function getUTF8ByteSize(text: string): number {
-  let byteSize = 0;
-  for (let i = 0; i < text.length; i++) {
-    const charCode = text.charCodeAt(i);
-    if (charCode <= 0x007f) {
-      byteSize += 1;
-    } else if (charCode <= 0x07ff) {
-      byteSize += 2;
-    } else if (charCode <= 0xffff) {
-      byteSize += 3;
-    } else {
-      byteSize += 4;
-    }
-  }
-  return byteSize;
+  return Buffer.from(text, "utf8").length;
 }
 
 /**
