@@ -30,6 +30,6 @@ export default class AppendBlobHandler extends BaseHandler
     options: Models.AppendBlobAppendBlockFromUrlOptionalParams,
     context: Context
   ): Promise<Models.AppendBlobAppendBlockFromUrlResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedError(context.contextId);
   }
 }

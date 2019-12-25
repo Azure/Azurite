@@ -43,7 +43,7 @@ export default class PageBlobHandler extends BaseHandler
     options: Models.PageBlobUploadPagesFromURLOptionalParams,
     context: Context
   ): Promise<Models.PageBlobUploadPagesFromURLResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedError(context.contextId);
   }
 
   public async create(
@@ -57,6 +57,12 @@ export default class PageBlobHandler extends BaseHandler
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
+
+    if (options.pageBlobAccessTier !== undefined) {
+      throw StorageErrorFactory.getAccessTierNotSupportedForBlobType(
+        context.contextId!
+      );
+    }
 
     if (contentLength !== 0) {
       throw StorageErrorFactory.getInvalidOperation(
@@ -373,6 +379,7 @@ export default class PageBlobHandler extends BaseHandler
   }
 
   public async getPageRangesDiff(
+    prevsnapshot: string,
     options: Models.PageBlobGetPageRangesDiffOptionalParams,
     context: Context
   ): Promise<Models.PageBlobGetPageRangesDiffResponse> {

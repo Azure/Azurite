@@ -524,4 +524,13 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   )
 );
 
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.PageBlob_UpdateSequenceNumber,
+  new OperationAccountSASPermission(
+    AccountSASService.Blob,
+    AccountSASResourceType.Object,
+    AccountSASPermission.Write
+  )
+);
+
 export default OPERATION_ACCOUNT_SAS_PERMISSIONS;

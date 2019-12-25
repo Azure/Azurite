@@ -1,4 +1,5 @@
 import BlobStorageContext from "../context/BlobStorageContext";
+import NotImplementedError from "../errors/NotImplementedError";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IServiceHandler from "../generated/handlers/IServiceHandler";
@@ -62,7 +63,7 @@ export default class ServiceHandler extends BaseHandler
     options: Models.ServiceGetUserDelegationKeyOptionalParams,
     context: Context
   ): Promise<Models.ServiceGetUserDelegationKeyResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedError(context.contextId);
   }
 
   public submitBatch(
@@ -72,7 +73,7 @@ export default class ServiceHandler extends BaseHandler
     options: Models.ServiceSubmitBatchOptionalParams,
     context: Context
   ): Promise<Models.ServiceSubmitBatchResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedError(context.contextId);
   }
 
   /**
