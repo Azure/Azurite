@@ -47,14 +47,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobSetAccessControlOptionalParams,
     context: Context
   ): Promise<Models.BlobSetAccessControlResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedError(context.contextId);
   }
 
   public getAccessControl(
     options: Models.BlobGetAccessControlOptionalParams,
     context: Context
   ): Promise<Models.BlobGetAccessControlResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedError(context.contextId);
   }
 
   public rename(
@@ -62,7 +62,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobRenameOptionalParams,
     context: Context
   ): Promise<Models.BlobRenameResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedError(context.contextId);
   }
 
   public copyFromURL(
@@ -70,7 +70,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobCopyFromURLOptionalParams,
     context: Context
   ): Promise<Models.BlobCopyFromURLResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedError(context.contextId);
   }
 
   /**

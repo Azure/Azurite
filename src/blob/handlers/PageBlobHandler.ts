@@ -43,7 +43,7 @@ export default class PageBlobHandler extends BaseHandler
     options: Models.PageBlobUploadPagesFromURLOptionalParams,
     context: Context
   ): Promise<Models.PageBlobUploadPagesFromURLResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedError(context.contextId);
   }
 
   public async create(
