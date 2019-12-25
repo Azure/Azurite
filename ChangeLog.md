@@ -36,6 +36,7 @@ Blob:
 - Remove double quotation marks from list blob request returned blob etag, to align with Azure Server behavior.
 - Blocked set tier for page blob which requires premium storage account where Azurite provides standard storage account.
 - GetPageRangesDiff API (incremental snapshot) now returns NotImplementedError.
+- Fixed a bug that listing containers won't honor prefix with marker when using external metadata database.
 
 Queue:
 

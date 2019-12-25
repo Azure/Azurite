@@ -499,9 +499,13 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     }
 
     if (marker !== "") {
-      whereQuery.containerName = {
-        [Op.gt]: marker
-      };
+      if (whereQuery.containerName === undefined) {
+        whereQuery.containerName = {
+          [Op.gt]: marker
+        };
+      } else {
+        whereQuery.containerName[Op.gt] = marker;
+      }
     }
 
     const findResult = await ContainersModel.findAll({
@@ -1161,18 +1165,25 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         accountName: account,
         containerName: container
       };
+
       if (blob !== undefined) {
         whereQuery.blobName = blob;
-      }
-      if (prefix.length > 0) {
-        whereQuery.blobName = {
-          [Op.like]: `${prefix}%`
-        };
-      }
-      if (marker !== undefined) {
-        whereQuery.blobName = {
-          [Op.gt]: marker
-        };
+      } else {
+        if (prefix.length > 0) {
+          whereQuery.blobName = {
+            [Op.like]: `${prefix}%`
+          };
+        }
+
+        if (marker !== undefined) {
+          if (whereQuery.blobName !== undefined) {
+            whereQuery.blobName[Op.gt] = marker;
+          } else {
+            whereQuery.blobName = {
+              [Op.gt]: marker
+            };
+          }
+        }
       }
       if (!includeSnapshots) {
         whereQuery.snapshot = "";
