@@ -32,7 +32,12 @@ export const UnsupportedHeadersBlocker: StrictModelRequestValidator = async (
     HeaderConstants.X_MS_IF_SEQUENCE_NUMBER_LT,
     HeaderConstants.X_MS_IF_SEQUENCE_NUMBER_EQ,
     HeaderConstants.X_MS_BLOB_CONDITION_MAXSIZE,
-    HeaderConstants.X_MS_BLOB_CONDITION_APPENDPOS
+    HeaderConstants.X_MS_BLOB_CONDITION_APPENDPOS,
+    HeaderConstants.X_MS_CONTENT_CRC64,
+    HeaderConstants.X_MS_RANGE_GET_CONTENT_CRC64,
+    HeaderConstants.X_MS_ENCRYPTION_KEY,
+    HeaderConstants.X_MS_ENCRYPTION_KEY_SHA256,
+    HeaderConstants.X_MS_ENCRYPTION_ALGORITHM
   ];
 
   for (const headerKey of UnsupportedHeaderKeys) {
