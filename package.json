@@ -185,7 +185,7 @@
     "docker:publish": "cross-var docker push xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version",
     "docker:publish:internal": "cross-var docker push xstoreazurite.azurecr.io/internal/azure-storage/azurite:$npm_package_version",
     "build": "tsc",
-    "build:autorestdebug": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
+    "build:autorest:debug": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorest:blob": "autorest ./swagger/blob.md --typescript  --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorest:queue": "autorest ./swagger/queue.md --typescript  --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
     "watch": "tsc -watch -p ./",

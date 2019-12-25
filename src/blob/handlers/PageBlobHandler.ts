@@ -379,6 +379,7 @@ export default class PageBlobHandler extends BaseHandler
   }
 
   public async getPageRangesDiff(
+    prevsnapshot: string,
     options: Models.PageBlobGetPageRangesDiffOptionalParams,
     context: Context
   ): Promise<Models.PageBlobGetPageRangesDiffResponse> {
