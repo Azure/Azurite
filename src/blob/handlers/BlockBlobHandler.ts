@@ -276,7 +276,8 @@ export default class BlockBlobHandler extends BaseHandler
       name: blobName,
       snapshot: "",
       properties: {
-        lastModified: new Date(),
+        lastModified: context.startTime!,
+        creationTime: context.startTime!,
         etag: newEtag()
       },
       isCommitted: true

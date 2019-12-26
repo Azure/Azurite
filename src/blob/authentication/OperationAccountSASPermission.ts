@@ -35,7 +35,12 @@ export class OperationAccountSASPermission {
   public validateResourceTypes(
     resourceTypes: AccountSASResourceTypes | string
   ): boolean {
-    return resourceTypes.toString().includes(this.resourceType);
+    for (const p of this.resourceType) {
+      if (resourceTypes.toString().includes(p)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public validatePermissions(
@@ -61,8 +66,17 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   Operation.Service_GetAccountInfo,
   new OperationAccountSASPermission(
     AccountSASService.Blob,
-    AccountSASResourceType.Service,
-    AccountSASPermission.Read
+    AccountSASResourceType.Service +
+      AccountSASResourceType.Container +
+      AccountSASResourceType.Object,
+    AccountSASPermission.Read +
+      AccountSASPermission.Create +
+      AccountSASPermission.Delete +
+      AccountSASPermission.List +
+      AccountSASPermission.Process +
+      AccountSASPermission.Read +
+      AccountSASPermission.Update +
+      AccountSASPermission.Write
   )
 );
 
@@ -70,8 +84,17 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   Operation.Service_GetAccountInfoWithHead,
   new OperationAccountSASPermission(
     AccountSASService.Blob,
-    AccountSASResourceType.Service,
-    AccountSASPermission.Read
+    AccountSASResourceType.Service +
+      AccountSASResourceType.Container +
+      AccountSASResourceType.Object,
+    AccountSASPermission.Read +
+      AccountSASPermission.Create +
+      AccountSASPermission.Delete +
+      AccountSASPermission.List +
+      AccountSASPermission.Process +
+      AccountSASPermission.Read +
+      AccountSASPermission.Update +
+      AccountSASPermission.Write
   )
 );
 
@@ -79,8 +102,17 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   Operation.Container_GetAccountInfo,
   new OperationAccountSASPermission(
     AccountSASService.Blob,
-    AccountSASResourceType.Service,
-    AccountSASPermission.Read
+    AccountSASResourceType.Service +
+      AccountSASResourceType.Container +
+      AccountSASResourceType.Object,
+    AccountSASPermission.Read +
+      AccountSASPermission.Create +
+      AccountSASPermission.Delete +
+      AccountSASPermission.List +
+      AccountSASPermission.Process +
+      AccountSASPermission.Read +
+      AccountSASPermission.Update +
+      AccountSASPermission.Write
   )
 );
 
@@ -88,8 +120,17 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   Operation.Container_GetAccountInfoWithHead,
   new OperationAccountSASPermission(
     AccountSASService.Blob,
-    AccountSASResourceType.Service,
-    AccountSASPermission.Read
+    AccountSASResourceType.Service +
+      AccountSASResourceType.Container +
+      AccountSASResourceType.Object,
+    AccountSASPermission.Read +
+      AccountSASPermission.Create +
+      AccountSASPermission.Delete +
+      AccountSASPermission.List +
+      AccountSASPermission.Process +
+      AccountSASPermission.Read +
+      AccountSASPermission.Update +
+      AccountSASPermission.Write
   )
 );
 
@@ -97,8 +138,17 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   Operation.Blob_GetAccountInfo,
   new OperationAccountSASPermission(
     AccountSASService.Blob,
-    AccountSASResourceType.Service,
-    AccountSASPermission.Read
+    AccountSASResourceType.Service +
+      AccountSASResourceType.Container +
+      AccountSASResourceType.Object,
+    AccountSASPermission.Read +
+      AccountSASPermission.Create +
+      AccountSASPermission.Delete +
+      AccountSASPermission.List +
+      AccountSASPermission.Process +
+      AccountSASPermission.Read +
+      AccountSASPermission.Update +
+      AccountSASPermission.Write
   )
 );
 
@@ -106,8 +156,17 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   Operation.Blob_GetAccountInfoWithHead,
   new OperationAccountSASPermission(
     AccountSASService.Blob,
-    AccountSASResourceType.Service,
-    AccountSASPermission.Read
+    AccountSASResourceType.Service +
+      AccountSASResourceType.Container +
+      AccountSASResourceType.Object,
+    AccountSASPermission.Read +
+      AccountSASPermission.Create +
+      AccountSASPermission.Delete +
+      AccountSASPermission.List +
+      AccountSASPermission.Process +
+      AccountSASPermission.Read +
+      AccountSASPermission.Update +
+      AccountSASPermission.Write
   )
 );
 

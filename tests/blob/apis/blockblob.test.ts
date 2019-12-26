@@ -237,6 +237,10 @@ describe("BlockBlobAPIs", () => {
       result_commit._response.request.headers.get("x-ms-client-request-id"),
       result_commit.clientRequestId
     );
+
+    const properties1 = await blockBlobURL.getProperties(Aborter.none);
+    assert.notDeepStrictEqual(properties1.creationTime, undefined);
+
     const listResponse = await blockBlobURL.getBlockList(
       Aborter.none,
       "committed"
@@ -259,6 +263,10 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse2.committedBlocks!.length, 1);
     assert.equal(listResponse2.committedBlocks![0].name, base64encode("2"));
     assert.equal(listResponse2.committedBlocks![0].size, body.length);
+
+    const properties2 = await blockBlobURL.getProperties(Aborter.none);
+    assert.notDeepStrictEqual(properties2.creationTime, undefined);
+    assert.deepStrictEqual(properties1.creationTime, properties2.creationTime);
   });
 
   it("commitBlockList with empty list should create an empty block blob @loki @sql", async () => {

@@ -1722,6 +1722,9 @@ export default class LokiBlobMetadataStore
       });
     }
 
+    if (destBlob) {
+      coll.remove(destBlob);
+    }
     coll.insert(copiedBlob);
     return copiedBlob.properties;
   }
@@ -1970,6 +1973,7 @@ export default class LokiBlobMetadataStore
     if (doc) {
       // Commit block list
       doc.properties.blobType = blob.properties.blobType;
+      doc.properties.lastModified = blob.properties.lastModified;
       doc.committedBlocksInOrder = selectedBlockList;
       doc.isCommitted = true;
       doc.metadata = blob.metadata;
