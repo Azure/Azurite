@@ -547,8 +547,8 @@ Detailed support matrix:
   - Incremental Copy Blob
   - Create Append Blob, Append Block
 
-    3.4.0 release added support for **2019-02-02** API version **queue** service.
-    Detailed support matrix:
+3.4.0 release added support for **2019-02-02** API version **queue** service.
+Detailed support matrix:
 
 - Supported Vertical Features
   - SharedKey Authentication
