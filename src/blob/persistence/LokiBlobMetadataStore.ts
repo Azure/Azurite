@@ -1722,6 +1722,9 @@ export default class LokiBlobMetadataStore
       });
     }
 
+    if (destBlob) {
+      coll.remove(destBlob);
+    }
     coll.insert(copiedBlob);
     return copiedBlob.properties;
   }
