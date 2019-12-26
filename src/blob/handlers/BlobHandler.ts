@@ -940,7 +940,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     const response: Models.BlobDownloadResponse = {
-      statusCode: rangesParts[1] === Infinity ? 200 : 206,
+      statusCode:
+        rangesParts[1] === Infinity && rangesParts[0] === 0 ? 200 : 206,
       body,
       metadata: blob.metadata,
       eTag: blob.properties.etag,

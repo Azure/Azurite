@@ -152,7 +152,7 @@ describe("PageBlobAPIs", () => {
       ranges._response.request.headers.get("x-ms-client-request-id"),
       ranges.clientRequestId
     );
-    const result = await blobURL.download(Aborter.none, 0, 10);
+    let result = await blobURL.download(Aborter.none, 0, 10);
     assert.deepStrictEqual(result.contentRange, `bytes 0-9/5120`);
     assert.deepStrictEqual(
       await bodyToString(result, length),
@@ -162,6 +162,10 @@ describe("PageBlobAPIs", () => {
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
+
+    result = await blobURL.download(Aborter.none, 1);
+    assert.deepStrictEqual(result.contentRange, `bytes 1-5119/5120`);
+    assert.deepStrictEqual(result._response.status, 206);
   });
 
   it("download page blob with no ranges uploaded @loki", async () => {
