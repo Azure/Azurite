@@ -6,8 +6,6 @@
 
 - [Breaking] By default Azurite will block requests with unsupported headers or parameters which may impact data integrity.
   - Skip this by switching to loose mode by Azurite configuration parameter `--loose`.
-- [Breaking] Apply `LokiFsStructuredAdapter` as default blob metadata loki adapter to improve performance.
-  - This version cannot guarantee compatible with persisted database models file by previous version. Remove previous metadata file and restart Azurite in case any errors.
 - [Breaking] Azurite updates underline metadata schema which does not compatible with previous versions.
   - This version cannot guarantee compatible with persisted database models file by previous version. Remove previous metadata file and restart Azurite in case any errors.
 

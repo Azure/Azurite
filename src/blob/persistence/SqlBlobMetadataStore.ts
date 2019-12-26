@@ -103,6 +103,13 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     connectionURI: string,
     sequelizeOptions?: SequelizeOptions
   ) {
+    // Enable encrypt connection for SQL Server
+    if (connectionURI.startsWith("mssql") && sequelizeOptions) {
+      sequelizeOptions.dialectOptions = sequelizeOptions.dialectOptions || {};
+      (sequelizeOptions.dialectOptions as any).options =
+        (sequelizeOptions.dialectOptions as any).options || {};
+      (sequelizeOptions.dialectOptions as any).options.encrypt = true;
+    }
     this.sequelize = new Sequelize(connectionURI, sequelizeOptions);
   }
 

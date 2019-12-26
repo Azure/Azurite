@@ -14,8 +14,6 @@
 
 Blob:
 
-- [Breaking] Apply `LokiFsStructuredAdapter` as default blob metadata loki adapter to improve performance.
-  - This version cannot guarantee compatible with persisted database models file by previous version. Remove previous metadata file and restart Azurite in case any errors.
 - [Breaking] Azurite updates underline metadata schema which does not compatible with previous versions.
   - This version cannot guarantee compatible with persisted database models file by previous version. Remove previous metadata file and restart Azurite in case any errors.
 - List blocks will filter the returned block list with input BlockListingFilter.
@@ -43,7 +41,7 @@ Queue:
 
 - AllowedHeaders and ExposedHeaders are optional now when setting CORS.
 - Fix Put message fail with max messagettl.
-- Updated message size calculation when checking 64KB limitation. 
+- Updated message size calculation when checking 64KB limitation.
 
 ## 2019.11 Version 3.3.0-preview
 

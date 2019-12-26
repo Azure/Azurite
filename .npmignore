@@ -23,3 +23,7 @@ __*__.json
 __*__
 *.env
 temp
+.gitattributes
+.dockerignore
+README.mcr.md
+icon.png
