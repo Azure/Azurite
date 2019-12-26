@@ -35,7 +35,12 @@ export class OperationAccountSASPermission {
   public validateResourceTypes(
     resourceTypes: AccountSASResourceTypes | string
   ): boolean {
-    return resourceTypes.toString().includes(this.resourceType);
+    for (const p of this.resourceType) {
+      if (resourceTypes.toString().includes(p)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public validatePermissions(
