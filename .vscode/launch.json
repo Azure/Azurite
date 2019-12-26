@@ -17,6 +17,16 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "Azurite Service - Loki, Loose",
+      "cwd": "${workspaceFolder}",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "args": ["${workspaceFolder}/src/azurite.ts", "-d", "debug.log", "-L"],
+      "env": { "AZURITE_ACCOUNTS": "" },
+      "outputCapture": "std"
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "Azurite Queue Service - Loki",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],

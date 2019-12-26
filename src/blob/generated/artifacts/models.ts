@@ -2355,15 +2355,6 @@ export interface PageBlobGetPageRangesDiffOptionalParams {
    */
   timeout?: number;
   /**
-   * Optional in version 2015-07-08 and newer. The prevsnapshot parameter is a DateTime value that
-   * specifies that the response will contain only pages that were changed between target blob and
-   * previous snapshot. Changed pages include both updated and cleared pages. The target blob may
-   * be a snapshot, as long as the snapshot specified by prevsnapshot is the older of the two. Note
-   * that incremental snapshots are currently supported only for blobs created on or after January
-   * 1, 2016.
-   */
-  prevsnapshot?: string;
-  /**
    * Return only the bytes of the blob in the specified range.
    */
   range?: string;

@@ -1,7 +1,7 @@
 import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 import * as Models from "../generated/artifacts/models";
 
-export const VERSION = "3.3.0-preview";
+export const VERSION = "3.4.0";
 export const BLOB_API_VERSION = "2019-02-02";
 export const DEFAULT_BLOB_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_LIST_BLOBS_MAX_RESULTS = 5000;
@@ -52,6 +52,11 @@ export const HeaderConstants = {
   X_MS_IF_SEQUENCE_NUMBER_EQ: "x-ms-if-sequence-number-eq",
   X_MS_BLOB_CONDITION_MAXSIZE: "x-ms-blob-condition-maxsize",
   X_MS_BLOB_CONDITION_APPENDPOS: "x-ms-blob-condition-appendpos",
+  X_MS_CONTENT_CRC64: "x-ms-content-crc64",
+  X_MS_RANGE_GET_CONTENT_CRC64: "x-ms-range-get-content-crc64",
+  X_MS_ENCRYPTION_KEY: "x-ms-encryption-key",
+  X_MS_ENCRYPTION_KEY_SHA256: "x-ms-encryption-key-sha256",
+  X_MS_ENCRYPTION_ALGORITHM: "x-ms-encryption-algorithm",
   PREFIX_FOR_STORAGE: "x-ms-",
   RANGE: "Range",
   USER_AGENT: "User-Agent",

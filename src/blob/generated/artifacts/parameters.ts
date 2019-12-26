@@ -1070,11 +1070,9 @@ export const prefix: msRest.OperationQueryParameter = {
   }
 };
 export const prevsnapshot: msRest.OperationQueryParameter = {
-  parameterPath: [
-    "options",
-    "prevsnapshot"
-  ],
+  parameterPath: "prevsnapshot",
   mapper: {
+    required: true,
     serializedName: "prevsnapshot",
     type: {
       name: "String"
