@@ -1444,10 +1444,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
+      let creationTime = blob.properties.creationTime || context.startTime;
+
       if (blobFindResult !== null && blobFindResult !== undefined) {
         const blobModel: BlobModel = this.convertDbModelToBlobModel(
           blobFindResult
         );
+
+        creationTime = blobModel.properties.creationTime || creationTime;
 
         LeaseFactory.createLeaseState(
           new BlobLeaseAdapter(blobModel),
@@ -1519,7 +1523,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         committedBlocksInOrder: selectedBlockList,
         properties: {
           ...blob.properties,
-          creationTime: blob.properties.creationTime || context.startTime,
+          creationTime,
           lastModified: blob.properties.lastModified || context.startTime,
           contentLength: selectedBlockList
             .map(block => block.size)
