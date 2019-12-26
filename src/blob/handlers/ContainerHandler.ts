@@ -560,7 +560,9 @@ export default class ContainerHandler extends BaseHandler
             deleted: item.deleted !== true ? undefined : true,
             properties: {
               ...item.properties,
-              etag: removeQuotationFromListBlobEtag(item.properties.etag)
+              etag: removeQuotationFromListBlobEtag(item.properties.etag),
+              accessTierInferred:
+                item.properties.accessTierInferred === true ? true : undefined
             }
           };
         })
@@ -673,7 +675,9 @@ export default class ContainerHandler extends BaseHandler
             ...item,
             properties: {
               ...item.properties,
-              etag: removeQuotationFromListBlobEtag(item.properties.etag)
+              etag: removeQuotationFromListBlobEtag(item.properties.etag),
+              accessTierInferred:
+                item.properties.accessTierInferred === true ? true : undefined
             }
           };
         })

@@ -33,6 +33,7 @@ Blob:
 - Fixed a bug that uncommitted block blob invalid length.
 - Fixed a bug that SetHTTPHeaders, SetMetadata won't update blob etag.
 - Remove double quotation marks from list blob request returned blob etag, to align with Azure Server behavior.
+- Fixed a bug that BlobTierInferred not change to false after SetBlobTier.
 - Blocked set tier for page blob which requires premium storage account where Azurite provides standard storage account.
 - GetPageRangesDiff API (incremental snapshot) now returns NotImplementedError.
 - Fixed a bug that listing containers won't honor prefix with marker when using external metadata database.
