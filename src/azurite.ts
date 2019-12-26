@@ -3,8 +3,10 @@ import { access } from "fs";
 import { dirname, join } from "path";
 import { promisify } from "util";
 
-import { BlobServerFactory } from "./blob/BlobServerFactory";
+// Load Environment before BlobServerFactory to make sure args works properly
 import Environment from "./common/Environment";
+// tslint:disable-next-line:ordered-imports
+import { BlobServerFactory } from "./blob/BlobServerFactory";
 import * as Logger from "./common/Logger";
 import QueueConfiguration from "./queue/QueueConfiguration";
 import QueueServer from "./queue/QueueServer";
@@ -29,18 +31,18 @@ async function main() {
   const location = await env.location();
   await accessAsync(location);
 
-  const debugFilePath = env.debug();
+  const debugFilePath = await env.debug();
   if (debugFilePath !== undefined) {
     await accessAsync(dirname(debugFilePath!));
   }
 
   const blobServerFactory = new BlobServerFactory();
-  const blobServer = await blobServerFactory.createServer();
+  const blobServer = await blobServerFactory.createServer(env);
   const blobConfig = blobServer.config;
 
   // TODO: Align with blob DEFAULT_BLOB_PERSISTENCE_ARRAY
   // TODO: Join for all paths in the array
-  DEFAULT_QUEUE_PERSISTENCE_ARRAY[0].persistencyPath = join(
+  DEFAULT_QUEUE_PERSISTENCE_ARRAY[0].locationPath = join(
     location,
     DEFAULT_QUEUE_PERSISTENCE_PATH
   );
@@ -53,7 +55,8 @@ async function main() {
     !env.silent(),
     undefined,
     env.debug() !== undefined,
-    env.debug()
+    await env.debug(),
+    env.loose()
   );
 
   // We use logger singleton as global debugger logger to track detailed outputs cross layers

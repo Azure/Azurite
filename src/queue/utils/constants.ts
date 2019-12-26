@@ -1,6 +1,6 @@
 import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 
-export const VERSION = "3.3.0-preview";
+export const VERSION = "3.4.0";
 export const QUEUE_API_VERSION = "2019-02-02";
 export const DEFAULT_QUEUE_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_QUEUE_LISTENING_PORT = 10001;
@@ -41,6 +41,10 @@ export const UPDATE_VISIBILITYTIMEOUT_MAX = 604800;
 
 export const EMPTY_EXTENT_CHUNK = { id: "", offset: 0, count: 0 };
 
+export const MethodConstants = {
+  OPTIONS: "OPTIONS"
+};
+
 export const HeaderConstants = {
   AUTHORIZATION: "authorization",
   AUTHORIZATION_SCHEME: "Bearer",
@@ -64,14 +68,15 @@ export const HeaderConstants = {
   X_MS_META: "x-ms-meta-",
   ORIGIN: "origin",
   VARY: "Vary",
-  ACCESS_CONTROL_EXPOSED_HEADER: "Access-Control-Exposed-Headers",
+  ACCESS_CONTROL_EXPOSE_HEADERS: "Access-Control-Expose-Headers",
   ACCESS_CONTROL_ALLOW_ORIGIN: "Access-Control-Allow-Origin",
   ACCESS_CONTROL_ALLOW_CREDENTIALS: "Access-Control-Allow-Credentials",
   ACCESS_CONTROL_ALLOW_METHODS: "Access-Control-Allow-Methods",
   ACCESS_CONTROL_ALLOW_HEADERS: "Access-Control-Allow-Headers",
   ACCESS_CONTROL_MAX_AGE: "Access-Control-Max-Age",
   ACCESS_CONTROL_REQUEST_METHOD: "access-control-request-method",
-  ACCESS_CONTROL_REQUEST_HEADERS: "access-control-request-headers"
+  ACCESS_CONTROL_REQUEST_HEADERS: "access-control-request-headers",
+  X_MS_VERSION: "x-ms-version"
 };
 
 export const SECONDARY_SUFFIX = "-secondary";
@@ -83,8 +88,29 @@ export enum QUEUE_STATUSCODE {
 
 export const DEFAULT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
   {
-    persistencyId: "Default",
-    persistencyPath: DEFAULT_QUEUE_PERSISTENCE_PATH,
+    locationId: "Default",
+    locationPath: DEFAULT_QUEUE_PERSISTENCE_PATH,
     maxConcurrency: 1
   }
+];
+
+export const ValidAPIVersions = [
+  "2019-02-02",
+  "2018-11-09",
+  "2018-03-28",
+  "2017-11-09",
+  "2017-07-29",
+  "2017-04-17",
+  "2016-05-31",
+  "2015-12-11",
+  "2015-07-08",
+  "2015-04-05",
+  "2015-02-21",
+  "2014-02-14",
+  "2013-08-15",
+  "2012-02-12",
+  "2011-08-18",
+  "2009-09-19",
+  "2009-07-17",
+  "2009-04-14"
 ];

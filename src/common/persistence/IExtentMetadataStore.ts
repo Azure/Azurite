@@ -17,12 +17,12 @@ export interface IExtentModel {
   id: string;
 
   /**
-   * Destination persistencyId or called location ID.
+   * Destination locationId.
    *
    * @type {string}
    * @memberof IExtentModel
    */
-  persistencyId: string;
+  locationId: string;
 
   /**
    * Relative local file path/name.
@@ -104,5 +104,5 @@ export default interface IExtentMetadataStore
    * @returns {Promise<string>}
    * @memberof IExtentMetadataStore
    */
-  getExtentPersistencyId(extentId: string): Promise<string>;
+  getExtentLocationId(extentId: string): Promise<string>;
 }

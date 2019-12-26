@@ -1,8 +1,10 @@
 import {
+  close,
   createReadStream,
   createWriteStream,
+  fdatasync,
   mkdir,
-  openSync,
+  open,
   stat,
   unlink
 } from "fs";
@@ -21,13 +23,11 @@ import {
 } from "../utils/constants";
 import { rimrafAsync } from "../utils/utils";
 import ZeroBytesStream from "../ZeroBytesStream";
-import FDCache from "./FDCache";
 import IExtentMetadataStore, { IExtentModel } from "./IExtentMetadataStore";
 import IExtentStore, {
   IExtentChunk,
   StoreDestinationArray
 } from "./IExtentStore";
-import IFDCache from "./IFDCache";
 import IOperationQueue from "./IOperationQueue";
 import OperationQueue from "./OperationQueue";
 
@@ -46,11 +46,13 @@ enum AppendStatusCode {
 interface IAppendExtent {
   id: string;
   offset: number;
-  appendStatus: AppendStatusCode; // 0 for idle, 1 for appeding
-  persistencyId: string;
+  appendStatus: AppendStatusCode; // 0 for idle, 1 for appending
+  locationId: string;
+  fd?: number;
 }
 
-// const openAsync = promisify(open);
+const openAsync = promisify(open);
+const closeAsync = promisify(close);
 
 /**
  * Persistency layer data store source implementation interacting with the storage media.
@@ -64,14 +66,13 @@ export default class FSExtentStore implements IExtentStore {
   private readonly metadataStore: IExtentMetadataStore;
   private readonly appendQueue: IOperationQueue;
   private readonly readQueue: IOperationQueue;
-  private readonly fdCache: IFDCache;
 
   private initialized: boolean = false;
-  private closed: boolean = false;
+  private closed: boolean = true;
 
-  // The current extents to be appended data.
-  private appendExtentArray: IAppendExtent[];
-  private appendExtentNumber: number;
+  // The active extents to be appended data.
+  private activeWriteExtents: IAppendExtent[];
+  private activeWriteExtentsNumber: number;
 
   private persistencyPath: Map<string, string>;
 
@@ -80,27 +81,28 @@ export default class FSExtentStore implements IExtentStore {
     private readonly persistencyConfiguration: StoreDestinationArray,
     private readonly logger: ILogger
   ) {
-    this.appendExtentArray = [];
+    this.activeWriteExtents = [];
     this.persistencyPath = new Map<string, string>();
-    this.fdCache = new FDCache(100);
 
     for (const storeDestination of persistencyConfiguration) {
       this.persistencyPath.set(
-        storeDestination.persistencyId,
-        storeDestination.persistencyPath
+        storeDestination.locationId,
+        storeDestination.locationPath
       );
       for (let i = 0; i < storeDestination.maxConcurrency; i++) {
         const appendExtent = this.createAppendExtent(
-          storeDestination.persistencyId
+          storeDestination.locationId
         );
-        this.appendExtentArray.push(appendExtent);
+        this.activeWriteExtents.push(appendExtent);
       }
     }
-    this.appendExtentNumber = this.appendExtentArray.length;
+    this.activeWriteExtentsNumber = this.activeWriteExtents.length;
 
     this.metadataStore = metadata;
-    this.appendQueue = new OperationQueue(this.appendExtentNumber, logger);
-    // TODO:Should add to interface to pass this parameter.
+    this.appendQueue = new OperationQueue(
+      this.activeWriteExtentsNumber,
+      logger
+    );
     this.readQueue = new OperationQueue(DEFAULT_READ_CONCURRENCY, logger);
   }
 
@@ -115,9 +117,9 @@ export default class FSExtentStore implements IExtentStore {
   public async init(): Promise<void> {
     for (const storeDestination of this.persistencyConfiguration) {
       try {
-        await statAsync(storeDestination.persistencyPath);
+        await statAsync(storeDestination.locationPath);
       } catch {
-        await mkdirAsync(storeDestination.persistencyPath);
+        await mkdirAsync(storeDestination.locationPath);
       }
     }
 
@@ -125,19 +127,11 @@ export default class FSExtentStore implements IExtentStore {
       await this.metadataStore.init();
     }
 
-    if (!this.fdCache.isInitialized()) {
-      await this.fdCache.init();
-    }
-
     this.initialized = true;
     this.closed = false;
   }
 
   public async close(): Promise<void> {
-    if (!this.fdCache.isClosed()) {
-      await this.fdCache.close();
-    }
-
     if (!this.metadataStore.isClosed()) {
       await this.metadataStore.close();
     }
@@ -149,7 +143,7 @@ export default class FSExtentStore implements IExtentStore {
     if (this.isClosed()) {
       for (const path of this.persistencyConfiguration) {
         try {
-          await rimrafAsync(path.persistencyPath);
+          await rimrafAsync(path.locationPath);
         } catch {
           // TODO: Find out why sometimes it throws no permission error
           /* NOOP */
@@ -178,28 +172,51 @@ export default class FSExtentStore implements IExtentStore {
         (async (): Promise<IExtentChunk> => {
           let appendExtentIdx = 0;
 
-          for (let i = 1; i < this.appendExtentNumber; i++) {
+          for (let i = 1; i < this.activeWriteExtentsNumber; i++) {
             if (
-              this.appendExtentArray[i].appendStatus === AppendStatusCode.Idle
+              this.activeWriteExtents[i].appendStatus === AppendStatusCode.Idle
             ) {
               appendExtentIdx = i;
               break;
             }
           }
-          this.appendExtentArray[appendExtentIdx].appendStatus =
+          this.activeWriteExtents[appendExtentIdx].appendStatus =
             AppendStatusCode.Appending;
 
           this.logger.info(
-            `FSExtentStore:appendExtent() Select extent from idle location for extent append operation. LocationId:${appendExtentIdx} extentId:${this.appendExtentArray[appendExtentIdx].id} offset:${this.appendExtentArray[appendExtentIdx].offset} MAX_EXTENT_SIZE:${MAX_EXTENT_SIZE} `,
+            `FSExtentStore:appendExtent() Select extent from idle location for extent append operation. LocationId:${appendExtentIdx} extentId:${this.activeWriteExtents[appendExtentIdx].id} offset:${this.activeWriteExtents[appendExtentIdx].offset} MAX_EXTENT_SIZE:${MAX_EXTENT_SIZE} `,
             contextId
           );
 
           if (
-            this.appendExtentArray[appendExtentIdx].offset > MAX_EXTENT_SIZE
+            this.activeWriteExtents[appendExtentIdx].offset >= MAX_EXTENT_SIZE
           ) {
-            this.getNewExtent(this.appendExtentArray[appendExtentIdx]);
             this.logger.info(
-              `FSExtentStore:appendExtent() Size of selected extent offset is larger than maximum extent size ${MAX_EXTENT_SIZE} bytes, try appending to new extent. New extent LocationID:${appendExtentIdx} extentId:${this.appendExtentArray[appendExtentIdx].id} offset:${this.appendExtentArray[appendExtentIdx].offset} MAX_EXTENT_SIZE:${MAX_EXTENT_SIZE} `,
+              `FSExtentStore:appendExtent() Size of selected extent offset is larger than maximum extent size ${MAX_EXTENT_SIZE} bytes, try appending to new extent.`,
+              contextId
+            );
+
+            const selectedFd = this.activeWriteExtents[appendExtentIdx].fd;
+            if (selectedFd) {
+              this.logger.info(
+                `FSExtentStore:appendExtent() Close unused fd:${selectedFd}.`,
+                contextId
+              );
+              try {
+                await closeAsync(selectedFd);
+              } catch (err) {
+                this.logger.error(
+                  `FSExtentStore:appendExtent() Close unused fd:${selectedFd} error:${JSON.stringify(
+                    err
+                  )}.`,
+                  contextId
+                );
+              }
+            }
+
+            await this.getNewExtent(this.activeWriteExtents[appendExtentIdx]);
+            this.logger.info(
+              `FSExtentStore:appendExtent() Allocated new extent LocationID:${appendExtentIdx} extentId:${this.activeWriteExtents[appendExtentIdx].id} offset:${this.activeWriteExtents[appendExtentIdx].offset} MAX_EXTENT_SIZE:${MAX_EXTENT_SIZE} `,
               contextId
             );
           }
@@ -211,18 +228,17 @@ export default class FSExtentStore implements IExtentStore {
             rs = data;
           }
 
-          const appendExtent = this.appendExtentArray[appendExtentIdx];
+          const appendExtent = this.activeWriteExtents[appendExtentIdx];
           const id = appendExtent.id;
-          const path = this.generateExtentPath(appendExtent.persistencyId, id);
-
-          let fd = this.fdCache.get(id);
+          const path = this.generateExtentPath(appendExtent.locationId, id);
+          let fd = appendExtent.fd;
           this.logger.debug(
             `FSExtentStore:appendExtent() Get fd:${fd} for extent:${id} from cache.`,
             contextId
           );
           if (fd === undefined) {
-            fd = openSync(path, "a"); // TODO: async
-            this.fdCache.insert(id, fd);
+            fd = await openAsync(path, "a");
+            appendExtent.fd = fd;
             this.logger.debug(
               `FSExtentStore:appendExtent() Open file:${path} for extent:${id}, get new fd:${fd}`,
               contextId
@@ -230,10 +246,14 @@ export default class FSExtentStore implements IExtentStore {
           }
 
           const ws = createWriteStream(path, {
-            flags: "a",
             fd,
             autoClose: false
           });
+
+          this.logger.debug(
+            `FSExtentStore:appendExtent() Created write stream for fd:${fd}`,
+            contextId
+          );
 
           let count = 0;
 
@@ -243,13 +263,13 @@ export default class FSExtentStore implements IExtentStore {
           );
 
           try {
-            count = await this.streamPipe(rs, ws);
+            count = await this.streamPipe(rs, ws, fd, contextId);
             const offset = appendExtent.offset;
             appendExtent.offset += count;
 
             const extent: IExtentModel = {
               id,
-              persistencyId: appendExtent.persistencyId,
+              locationId: appendExtent.locationId,
               path: id,
               size: count + offset,
               lastModifiedInMS: Date.now()
@@ -304,7 +324,7 @@ export default class FSExtentStore implements IExtentStore {
       return new ZeroBytesStream(subRangeCount);
     }
 
-    const persistencyId = await this.metadataStore.getExtentPersistencyId(
+    const persistencyId = await this.metadataStore.getExtentLocationId(
       extentChunk.id
     );
 
@@ -419,13 +439,28 @@ export default class FSExtentStore implements IExtentStore {
    * Delete the extents from persistency layer.
    *
    * @param {Iterable<string>} persistency
-   * @returns {Promise<void>}
+   * @returns {Promise<number>} Number of extents deleted
    * @memberof IExtentStore
    */
-  public async deleteExtents(extents: Iterable<string>): Promise<void> {
+  public async deleteExtents(extents: Iterable<string>): Promise<number> {
+    let count = 0;
     for (const id of extents) {
-      const persistencyId = await this.metadataStore.getExtentPersistencyId(id);
-      const path = this.generateExtentPath(persistencyId, id);
+      // Should not delete active write extents
+      // Will not throw error because GC doesn't know extent is active, and will call this method to
+      // delete active extents
+      if (this.isActiveExtent(id)) {
+        this.logger.debug(
+          `FSExtentStore:deleteExtents() Skip deleting active extent:${id}`
+        );
+        continue;
+      }
+
+      const locationId = await this.metadataStore.getExtentLocationId(id);
+      const path = this.generateExtentPath(locationId, id);
+
+      this.logger.debug(
+        `FSExtentStore:deleteExtents() Delete extent:${id} location:${locationId} path:${path}`
+      );
 
       try {
         await unlinkAsync(path);
@@ -435,8 +470,10 @@ export default class FSExtentStore implements IExtentStore {
           await this.metadataStore.deleteExtent(id);
         }
       }
+
+      count++;
     }
-    return;
+    return count;
   }
 
   /**
@@ -451,9 +488,16 @@ export default class FSExtentStore implements IExtentStore {
 
   private async streamPipe(
     rs: NodeJS.ReadableStream,
-    ws: Writable
+    ws: Writable,
+    fd?: number,
+    contextId?: string
   ): Promise<number> {
     return new Promise<number>((resolve, reject) => {
+      this.logger.debug(
+        `FSExtentStore:streamPipe() Start piping data to write stream`,
+        contextId
+      );
+
       let count: number = 0;
       let wsEnd = false;
 
@@ -464,18 +508,42 @@ export default class FSExtentStore implements IExtentStore {
         }
       })
         .on("end", () => {
+          this.logger.debug(
+            `FSExtentStore:streamPipe() Readable stream triggers close event, ${count} bytes piped`,
+            contextId
+          );
+
           if (!wsEnd) {
+            this.logger.debug(
+              `FSExtentStore:streamPipe() Invoke write stream end()`,
+              contextId
+            );
             ws.end();
             wsEnd = true;
           }
         })
         .on("close", () => {
+          this.logger.debug(
+            `FSExtentStore:streamPipe() Readable stream triggers close event, ${count} bytes piped`,
+            contextId
+          );
+
           if (!wsEnd) {
+            this.logger.debug(
+              `FSExtentStore:streamPipe() Invoke write stream end()`,
+              contextId
+            );
             ws.end();
             wsEnd = true;
           }
         })
         .on("error", err => {
+          this.logger.debug(
+            `FSExtentStore:streamPipe() Readable stream triggers error event, error:${JSON.stringify(
+              err
+            )}, after ${count} bytes piped. Invoke write stream destroy() method.`,
+            contextId
+          );
           ws.destroy(err);
         });
 
@@ -483,10 +551,64 @@ export default class FSExtentStore implements IExtentStore {
         rs.resume();
       })
         .on("finish", () => {
-          resolve(count);
+          if (typeof fd === "number") {
+            this.logger.debug(
+              `FSExtentStore:streamPipe() Writable stream triggers finish event, after ${count} bytes piped. Flush data to fd:${fd}.`,
+              contextId
+            );
+            fdatasync(fd, err => {
+              if (err) {
+                this.logger.debug(
+                  `FSExtentStore:streamPipe() Flush data to fd:${fd} failed with error:${JSON.stringify(
+                    err
+                  )}. Reject streamPipe().`,
+                  contextId
+                );
+                reject(err);
+              } else {
+                this.logger.debug(
+                  `FSExtentStore:streamPipe() Flush data to fd:${fd} successfully. Resolve streamPipe().`,
+                  contextId
+                );
+                resolve(count);
+              }
+            });
+          } else {
+            this.logger.debug(
+              `FSExtentStore:streamPipe() Resolve streamPipe() without flushing data.`,
+              contextId
+            );
+            resolve(count);
+          }
         })
-        .on("error", reject);
+        .on("error", err => {
+          this.logger.debug(
+            `FSExtentStore:streamPipe() Writable stream triggers error event, error:${JSON.stringify(
+              err
+            )}, after ${count} bytes piped. Reject streamPipe().`,
+            contextId
+          );
+          reject(err);
+        });
     });
+  }
+
+  /**
+   * Check an extent is one of active extents or not.
+   *
+   * @private
+   * @param {string} id
+   * @returns {boolean}
+   * @memberof FSExtentStore
+   */
+  private isActiveExtent(id: string): boolean {
+    // TODO: Use map instead of array to quick check
+    for (const extent of this.activeWriteExtents) {
+      if (extent.id === id) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -502,7 +624,7 @@ export default class FSExtentStore implements IExtentStore {
       id: uuid(),
       offset: 0,
       appendStatus: AppendStatusCode.Idle,
-      persistencyId
+      locationId: persistencyId
     };
   }
 
@@ -516,6 +638,7 @@ export default class FSExtentStore implements IExtentStore {
   private getNewExtent(appendExtent: IAppendExtent) {
     appendExtent.id = uuid();
     appendExtent.offset = 0;
+    appendExtent.fd = undefined;
   }
 
   /**

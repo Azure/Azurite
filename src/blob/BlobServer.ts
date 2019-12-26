@@ -86,7 +86,8 @@ export default class BlobServer extends ServerBase implements ICleaner {
       extentStore,
       accountDataStore,
       configuration.enableAccessLog, // Access log includes every handled HTTP request
-      configuration.accessLogWriteStream
+      configuration.accessLogWriteStream,
+      configuration.loose
     );
 
     super(host, port, httpServer, requestListenerFactory, configuration);

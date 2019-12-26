@@ -32,8 +32,8 @@ describe("Queue APIs test", () => {
 
   const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
     {
-      persistencyId: "queueTest",
-      persistencyPath: persistencePath,
+      locationId: "queueTest",
+      locationPath: persistencePath,
       maxConcurrency: 10
     }
   ];
@@ -84,7 +84,7 @@ describe("Queue APIs test", () => {
     await queueURL.delete(Aborter.none);
   });
 
-  it("setMetadata", async () => {
+  it("setMetadata @loki", async () => {
     const metadata = {
       key0: "val0",
       keya: "vala",
@@ -104,7 +104,7 @@ describe("Queue APIs test", () => {
     );
   });
 
-  it("getProperties with default/all parameters", async () => {
+  it("getProperties with default/all parameters @loki", async () => {
     const result = await queueURL.getProperties(Aborter.none);
     assert.ok(result.approximateMessagesCount! >= 0);
     assert.ok(result.requestId);
@@ -112,7 +112,7 @@ describe("Queue APIs test", () => {
     assert.ok(result.date);
   });
 
-  it("getProperties negative", async () => {
+  it("getProperties negative @loki", async () => {
     const queueName2 = getUniqueName("queue2");
     const queueURL2 = QueueURL.fromServiceURL(serviceURL, queueName2);
     let error;
@@ -134,7 +134,7 @@ describe("Queue APIs test", () => {
     done();
   });
 
-  it("create with all parameters", async () => {
+  it("create with all parameters @loki", async () => {
     const qURL = QueueURL.fromServiceURL(serviceURL, getUniqueName(queueName));
     const metadata = { key: "value" };
     await qURL.create(Aborter.none, { metadata });
@@ -143,7 +143,7 @@ describe("Queue APIs test", () => {
   });
 
   // create with invalid queue name
-  it("create negative", async () => {
+  it("create negative @loki", async () => {
     const qURL = QueueURL.fromServiceURL(serviceURL, "");
     let error;
     try {
@@ -159,12 +159,12 @@ describe("Queue APIs test", () => {
     assert.ok(error.response.body.includes("InvalidResourceName"));
   });
 
-  it("delete", done => {
+  it("delete @loki", done => {
     // delete() with default parameters has been tested in afterEach
     done();
   });
 
-  it("SetAccessPolicy should work", async () => {
+  it("SetAccessPolicy should work @loki", async () => {
     const queueAcl = [
       {
         accessPolicy: {
@@ -197,7 +197,7 @@ describe("Queue APIs test", () => {
       result.clientRequestId
     );
   });
-  it("setAccessPolicy negative", async () => {
+  it("setAccessPolicy negative @loki", async () => {
     const queueAcl = [
       {
         accessPolicy: {

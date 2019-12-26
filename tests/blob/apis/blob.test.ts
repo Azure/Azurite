@@ -4,6 +4,7 @@ import {
   BlobURL,
   BlockBlobURL,
   ContainerURL,
+  PageBlobURL,
   ServiceURL,
   SharedKeyCredential,
   StorageURL
@@ -69,7 +70,7 @@ describe("BlobAPIs", () => {
     await containerURL.delete(Aborter.none);
   });
 
-  it("download with with default parameters", async () => {
+  it("download with with default parameters @loki @sql", async () => {
     const result = await blobURL.download(Aborter.none, 0);
     assert.deepStrictEqual(await bodyToString(result, content.length), content);
     assert.equal(result.contentRange, undefined);
@@ -79,7 +80,7 @@ describe("BlobAPIs", () => {
     );
   });
 
-  it("download all parameters set", async () => {
+  it("download all parameters set @loki @sql", async () => {
     const result = await blobURL.download(Aborter.none, 0, 1, {
       rangeGetContentMD5: true
     });
@@ -91,7 +92,7 @@ describe("BlobAPIs", () => {
     );
   });
 
-  it("download entire with range", async () => {
+  it("download entire with range @loki @sql", async () => {
     const result = await blobURL.download(Aborter.none, 0, content.length);
     assert.deepStrictEqual(await bodyToString(result, content.length), content);
     assert.equal(
@@ -104,7 +105,7 @@ describe("BlobAPIs", () => {
     );
   });
 
-  it("delete", async () => {
+  it("delete @loki @sql", async () => {
     const result = await blobURL.delete(Aborter.none);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
@@ -112,7 +113,7 @@ describe("BlobAPIs", () => {
     );
   });
 
-  it("should create a snapshot from a blob", async () => {
+  it("should create a snapshot from a blob @loki @sql", async () => {
     const result = await blobURL.createSnapshot(Aborter.none);
     assert.ok(result.snapshot);
     assert.equal(
@@ -121,7 +122,7 @@ describe("BlobAPIs", () => {
     );
   });
 
-  it("should create a snapshot with metadata from a blob", async () => {
+  it("should create a snapshot with metadata from a blob @loki @sql", async () => {
     const metadata = {
       meta1: "val1",
       meta3: "val3"
@@ -138,7 +139,27 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(result2.metadata, metadata);
   });
 
-  it("should delete snapshot", async () => {
+  it("should not delete base blob without include snapshot header @loki @sql", async () => {
+    const result = await blobURL.createSnapshot(Aborter.none);
+    assert.ok(result.snapshot);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+    const blobSnapshotURL = blobURL.withSnapshot(result.snapshot!);
+    await blobSnapshotURL.getProperties(Aborter.none);
+
+    let err;
+    try {
+      await blobURL.delete(Aborter.none, {});
+    } catch (error) {
+      err = error;
+    }
+
+    assert.deepStrictEqual(err.statusCode, 409);
+  });
+
+  it("should delete snapshot @loki @sql", async () => {
     const result = await blobURL.createSnapshot(Aborter.none);
     assert.ok(result.snapshot);
     assert.equal(
@@ -164,7 +185,7 @@ describe("BlobAPIs", () => {
     );
   });
 
-  it("should also list snapshots", async () => {
+  it("should also list snapshots @loki @sql", async () => {
     const result = await blobURL.createSnapshot(Aborter.none);
     assert.ok(result.snapshot);
     const result2 = await containerURL.listBlobFlatSegment(
@@ -177,7 +198,7 @@ describe("BlobAPIs", () => {
     assert.strictEqual(result2.segment.blobItems!.length, 2);
   });
 
-  it("should setMetadata with new metadata set", async () => {
+  it("should setMetadata with new metadata set @loki @sql", async () => {
     const metadata = {
       a: "a",
       b: "b"
@@ -195,7 +216,7 @@ describe("BlobAPIs", () => {
     );
   });
 
-  it("acquireLease_available_proposedLeaseId_fixed", async () => {
+  it("acquireLease_available_proposedLeaseId_fixed @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 30;
     const result_acquire = await blobURL.acquireLease(
@@ -224,7 +245,7 @@ describe("BlobAPIs", () => {
     );
   });
 
-  it("acquireLease_available_NoproposedLeaseId_infinite", async () => {
+  it("acquireLease_available_NoproposedLeaseId_infinite @loki @sql", async () => {
     const leaseResult = await blobURL.acquireLease(Aborter.none, "", -1);
     const leaseId = leaseResult.leaseId;
     assert.ok(leaseId);
@@ -237,7 +258,7 @@ describe("BlobAPIs", () => {
     await blobURL.releaseLease(Aborter.none, leaseId!);
   });
 
-  it("releaseLease", async () => {
+  it("releaseLease @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = -1;
     await blobURL.acquireLease(Aborter.none, guid, duration);
@@ -254,7 +275,7 @@ describe("BlobAPIs", () => {
     assert.equal(result.leaseStatus, "unlocked");
   });
 
-  it("renewLease", async () => {
+  it("renewLease @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 15;
     await blobURL.acquireLease(Aborter.none, guid, duration);
@@ -283,7 +304,7 @@ describe("BlobAPIs", () => {
     await blobURL.releaseLease(Aborter.none, guid);
   });
 
-  it("changeLease", async () => {
+  it("changeLease @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 15;
     await blobURL.acquireLease(Aborter.none, guid, duration);
@@ -308,7 +329,7 @@ describe("BlobAPIs", () => {
     await blobURL.releaseLease(Aborter.none, newGuid);
   });
 
-  it("breakLease", async () => {
+  it("breakLease @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 15;
     await blobURL.acquireLease(Aborter.none, guid, duration);
@@ -350,7 +371,7 @@ describe("BlobAPIs", () => {
     assert.equal(result4.leaseStatus, "unlocked");
   });
 
-  it("should get the correct headers back when setting metadata", async () => {
+  it("should get the correct headers back when setting metadata @loki @sql", async () => {
     const metadata = {
       a: "a",
       b: "b"
@@ -376,7 +397,7 @@ describe("BlobAPIs", () => {
   // https://docs.microsoft.com/en-us/rest/api/storageservices/get-blob-properties
   // as properties retrieval is implemented, the properties should be added to the tests below
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Header
-  it("should get the correct properties set based on set HTTP headers", async () => {
+  it("should get the correct properties set based on set HTTP headers @loki @sql", async () => {
     const cacheControl = "no-cache";
     const contentType = "text/plain; charset=UTF-8";
     const md5 = new Uint8Array([1, 2, 3, 4, 5]);
@@ -404,18 +425,42 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(result.contentLanguage, contentLanguage);
   });
 
-  it("setTier set default to cool", async () => {
+  it("setTier set default to cool @loki @sql", async () => {
+    // Created Blob should have accessTierInferred as true in Get/list
+    let properties = await blockBlobURL.getProperties(Aborter.none);
+    assert.equal(properties.accessTier!.toLowerCase(), "hot");
+    assert.equal(true, properties.accessTierInferred);
+
+    let listResult = containerURL.listBlobFlatSegment(Aborter.none, undefined, {
+      prefix: blobName
+    });
+    assert.equal(
+      true,
+      (await listResult).segment.blobItems[0].properties.accessTierInferred
+    );
+
     const result = await blockBlobURL.setTier(Aborter.none, "Cool");
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
 
-    const properties = await blockBlobURL.getProperties(Aborter.none);
+    // After setTier, Blob should have accessTierInferred as false in Get
+    properties = await blockBlobURL.getProperties(Aborter.none);
     assert.equal(properties.accessTier!.toLowerCase(), "cool");
+    assert.equal(false, properties.accessTierInferred);
+
+    // After setTier, Blob should have accessTierInferred as undefined in list
+    listResult = containerURL.listBlobFlatSegment(Aborter.none, undefined, {
+      prefix: blobName
+    });
+    assert.equal(
+      undefined,
+      (await listResult).segment.blobItems[0].properties.accessTierInferred
+    );
   });
 
-  it("setTier set archive to hot", async () => {
+  it("setTier set archive to hot @loki @sql", async () => {
     await blockBlobURL.setTier(Aborter.none, "Archive");
     let properties = await blockBlobURL.getProperties(Aborter.none);
     assert.equal(properties.accessTier!.toLowerCase(), "archive");
@@ -430,7 +475,7 @@ describe("BlobAPIs", () => {
     }
   });
 
-  it("setHTTPHeaders with default parameters", async () => {
+  it("setHTTPHeaders with default parameters @loki @sql", async () => {
     await blobURL.setHTTPHeaders(Aborter.none, {});
     const result = await blobURL.getProperties(Aborter.none);
 
@@ -445,7 +490,7 @@ describe("BlobAPIs", () => {
     assert.ok(!result.contentDisposition);
   });
 
-  it("setHTTPHeaders with all parameters set", async () => {
+  it("setHTTPHeaders with all parameters set @loki @sql", async () => {
     const headers = {
       blobCacheControl: "blobCacheControl",
       blobContentDisposition: "blobContentDisposition",
@@ -473,7 +518,7 @@ describe("BlobAPIs", () => {
     );
   });
 
-  it("Copy blob should work", async () => {
+  it("Copy blob should work @loki", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
@@ -534,7 +579,7 @@ describe("BlobAPIs", () => {
     );
   });
 
-  it("Copy blob should work to override metadata", async () => {
+  it("Copy blob should work to override metadata @loki", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
@@ -559,5 +604,200 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(result.blobType, "BlockBlob");
     assert.ok(result.lastModified);
     assert.deepStrictEqual(result.metadata, metadata2);
+  });
+
+  it("Copy blob should not override destination Lease status @loki", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobURL = BlockBlobURL.fromContainerURL(
+      containerURL,
+      sourceBlob
+    );
+    const destBlobURL = BlockBlobURL.fromContainerURL(containerURL, destBlob);
+
+    await sourceBlobURL.upload(Aborter.none, "hello", 5);
+    await destBlobURL.upload(Aborter.none, "hello", 5);
+
+    const leaseResult = await destBlobURL.acquireLease(Aborter.none, "", -1);
+    const leaseId = leaseResult.leaseId;
+    assert.ok(leaseId);
+
+    const getResult = await destBlobURL.getProperties(Aborter.none);
+    assert.equal(getResult.leaseDuration, "infinite");
+    assert.equal(getResult.leaseState, "leased");
+    assert.equal(getResult.leaseStatus, "locked");
+
+    await destBlobURL.startCopyFromURL(Aborter.none, sourceBlobURL.url, {
+      blobAccessConditions: { leaseAccessConditions: { leaseId } }
+    });
+
+    const result = await destBlobURL.getProperties(Aborter.none);
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "BlockBlob");
+    assert.ok(result.lastModified);
+    assert.equal(getResult.leaseDuration, "infinite");
+    assert.equal(getResult.leaseState, "leased");
+    assert.equal(getResult.leaseStatus, "locked");
+
+    await destBlobURL.releaseLease(Aborter.none, leaseId!);
+  });
+
+  it("Copy blob should work for page blob @loki", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobURL = PageBlobURL.fromContainerURL(
+      containerURL,
+      sourceBlob
+    );
+    const destBlobURL = PageBlobURL.fromContainerURL(containerURL, destBlob);
+
+    const metadata = { key: "value" };
+    const blobHTTPHeaders = {
+      blobCacheControl: "blobCacheControl",
+      blobContentDisposition: "blobContentDisposition",
+      blobContentEncoding: "blobContentEncoding",
+      blobContentLanguage: "blobContentLanguage",
+      blobContentType: "blobContentType"
+    };
+
+    const result_upload = await sourceBlobURL.create(Aborter.none, 512, {
+      metadata,
+      blobHTTPHeaders
+    });
+    assert.equal(
+      result_upload._response.request.headers.get("x-ms-client-request-id"),
+      result_upload.clientRequestId
+    );
+
+    const result_startcopy = await destBlobURL.startCopyFromURL(
+      Aborter.none,
+      sourceBlobURL.url
+    );
+    assert.equal(
+      result_startcopy._response.request.headers.get("x-ms-client-request-id"),
+      result_startcopy.clientRequestId
+    );
+
+    const result = await destBlobURL.getProperties(Aborter.none);
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "PageBlob");
+    assert.ok(result.lastModified);
+    assert.deepStrictEqual(result.metadata, metadata);
+    assert.deepStrictEqual(
+      result.cacheControl,
+      blobHTTPHeaders.blobCacheControl
+    );
+    assert.deepStrictEqual(result.contentType, blobHTTPHeaders.blobContentType);
+    assert.deepStrictEqual(
+      result.contentEncoding,
+      blobHTTPHeaders.blobContentEncoding
+    );
+    assert.deepStrictEqual(
+      result.contentLanguage,
+      blobHTTPHeaders.blobContentLanguage
+    );
+    assert.deepStrictEqual(
+      result.contentDisposition,
+      blobHTTPHeaders.blobContentDisposition
+    );
+  });
+
+  it("Copy blob should not work for page blob and set tier @loki", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobURL = PageBlobURL.fromContainerURL(
+      containerURL,
+      sourceBlob
+    );
+    const destBlobURL = PageBlobURL.fromContainerURL(containerURL, destBlob);
+
+    const metadata = { key: "value" };
+    const blobHTTPHeaders = {
+      blobCacheControl: "blobCacheControl",
+      blobContentDisposition: "blobContentDisposition",
+      blobContentEncoding: "blobContentEncoding",
+      blobContentLanguage: "blobContentLanguage",
+      blobContentType: "blobContentType"
+    };
+
+    const result_upload = await sourceBlobURL.create(Aborter.none, 512, {
+      metadata,
+      blobHTTPHeaders
+    });
+    assert.equal(
+      result_upload._response.request.headers.get("x-ms-client-request-id"),
+      result_upload.clientRequestId
+    );
+
+    let err;
+
+    try {
+      await destBlobURL.startCopyFromURL(Aborter.none, sourceBlobURL.url, {
+        tier: "P10"
+      });
+    } catch (error) {
+      err = error;
+    }
+
+    assert.deepStrictEqual(err.statusCode, 400);
+  });
+
+  it("Acquire Lease on Breaking Lease status, if LeaseId not match, throw LeaseIdMismatchWithLease error @loki @sql", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Renew Lease on Breaking Lease status, if LeaseId not match, throw LeaseIdMismatchWithLease error @loki @sql", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Change Lease on Breaking Lease status, if LeaseId not match, throw LeaseIdMismatchWithLease error @loki @sql", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Renew: Lease on Breaking Lease status, if LeaseId not match, throw LeaseIdMismatchWithLease error @loki @sql", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Acquire Lease on Broken Lease status, if LeaseId not match, throw LeaseIdMismatchWithLease error @loki @sql", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Break Lease on Infinite Lease, if give valid breakPeriod, should be broken after breadperiod @loki @sql", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Break Lease on Infinite Lease, if not give breakPeriod, should be broken immidiately @loki @sql", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Renew: Lease on Leased status, if LeaseId not match, throw LeaseIdMismatchWithLease error @loki @sql", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Change Lease on Leased status, if input LeaseId not match anyone of leaseID or proposedLeaseId, throw LeaseIdMismatchWithLease error @loki @sql", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Change Lease on Leased status, if input LeaseId matches proposedLeaseId, will change success @loki @sql", async () => {
+    // TODO: implement the case later
+  });
+
+  it("UploadPage on a Leased page blob, if input LeaseId matches, will success @loki @sql", async () => {
+    // TODO: implement the case later
+  });
+
+  it("ClearPage on a Leased page blob, if input LeaseId matches, will success @loki @sql", async () => {
+    // TODO: implement the case later
+  });
+
+  it("Resize a Leased page blob, if input LeaseId matches, will success @loki @sql", async () => {
+    // TODO: implement the case later
+  });
+
+  it("UpdateSequenceNumber a Leased page blob, if input LeaseId matches, will success @loki @sql", async () => {
+    // TODO: implement the case later
   });
 });

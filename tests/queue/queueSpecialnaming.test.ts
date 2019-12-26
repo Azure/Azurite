@@ -31,8 +31,8 @@ describe("Queue SpecialNaming", () => {
 
   const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
     {
-      persistencyId: "queueTest",
-      persistencyPath: persistencePath,
+      locationId: "queueTest",
+      locationPath: persistencePath,
       maxConcurrency: 10
     }
   ];
@@ -71,7 +71,7 @@ describe("Queue SpecialNaming", () => {
     await rmRecursive(persistencePath);
   });
 
-  it("A queue name must be from 3 through 63 characters long", async () => {
+  it("A queue name must be from 3 through 63 characters long @loki", async () => {
     let queueName = new Array(65).join("a");
     let queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
     let error;
@@ -113,7 +113,7 @@ describe("Queue SpecialNaming", () => {
     await queueURL.delete(Aborter.none);
   });
 
-  it("All letters in a queue name must be lowercase.", async () => {
+  it("All letters in a queue name must be lowercase. @loki", async () => {
     let queueName = "Queue";
     let queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
     let error;
@@ -135,7 +135,7 @@ describe("Queue SpecialNaming", () => {
     await queueURL.delete(Aborter.none);
   });
 
-  it("A queue name contains only letters, numbers, and the dash (-) character in rules", async () => {
+  it("A queue name contains only letters, numbers, and the dash (-) character in rules @loki", async () => {
     let queueName = "-queue123";
     let queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
     let error;

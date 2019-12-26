@@ -7,7 +7,27 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Azurite Queue Service",
+      "name": "Azurite Service - Loki",
+      "cwd": "${workspaceFolder}",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "args": ["${workspaceFolder}/src/azurite.ts", "-d", "debug.log"],
+      "env": { "AZURITE_ACCOUNTS": "" },
+      "outputCapture": "std"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Azurite Service - Loki, Loose",
+      "cwd": "${workspaceFolder}",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "args": ["${workspaceFolder}/src/azurite.ts", "-d", "debug.log", "-L"],
+      "env": { "AZURITE_ACCOUNTS": "" },
+      "outputCapture": "std"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Azurite Queue Service - Loki",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
       "args": ["${workspaceFolder}/src/queue/main.ts", "-d", "debug.log"],
@@ -32,7 +52,7 @@
       "runtimeArgs": ["-r", "ts-node/register"],
       "args": ["${workspaceFolder}/src/blob/main.ts", "-d", "debug.log"],
       "env": {
-        "AZURITE_DB": "mariadb://root:my-secret-pw@127.0.0.1:3306/azurite_blob",
+        "AZURITE_DB": "mysql://root:my-secret-pw@127.0.0.1:3306/azurite_blob",
         "AZURITE_ACCOUNTS": ""
       },
       "outputCapture": "std"
@@ -82,7 +102,7 @@
       ],
       "env": {
         "AZURITE_ACCOUNTS": "",
-        "AZURITE_TEST_DB": "mariadb://root:my-secret-pw@127.0.0.1:3306/azurite_blob_test"
+        "AZURITE_TEST_DB": "mysql://root:my-secret-pw@127.0.0.1:3306/azurite_blob_test"
       },
       "internalConsoleOptions": "openOnSessionStart",
       "outputCapture": "std"

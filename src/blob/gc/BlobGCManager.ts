@@ -239,11 +239,11 @@ export default class BlobGCManager implements IGCManager {
     // sweep
     if (allExtents.size > 0) {
       this.logger.info(
-        `BlobGCManager:markSweep() Delete unreferenced extents.`
+        `BlobGCManager:markSweep() Try to delete ${allExtents.entries} unreferenced extents.`
       );
-      await this.extentStore.deleteExtents(allExtents);
+      const deletedCount = await this.extentStore.deleteExtents(allExtents);
       this.logger.info(
-        `BlobGCManager:markSweep() Deleted unreferenced extents.`
+        `BlobGCManager:markSweep() Deleted unreferenced ${deletedCount} extents, after excluding active write extents.`
       );
     }
   }

@@ -40,12 +40,65 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getInvalidQueryParameterValue(contextID: string): StorageError {
+  public static getInvalidQueryParameterValue(
+    contextID: string = DefaultID,
+    parameterName?: string,
+    parameterValue?: string,
+    reason?: string
+  ): StorageError {
+    const additionalMessages: {
+      [key: string]: string;
+    } = {};
+
+    if (parameterName) {
+      additionalMessages.QueryParameterName = parameterName;
+    }
+
+    if (parameterValue) {
+      additionalMessages.QueryParameterValue = parameterValue;
+    }
+
+    if (reason) {
+      additionalMessages.Reason = reason;
+    }
+
     return new StorageError(
       400,
       "InvalidQueryParameterValue",
       `Value for one of the query parameters specified in the request URI is invalid.`,
-      contextID
+      contextID,
+      additionalMessages
+    );
+  }
+
+  public static getOutOfRangeInput(
+    contextID: string = DefaultID,
+    parameterName?: string,
+    parameterValue?: string,
+    reason?: string
+  ): StorageError {
+    const additionalMessages: {
+      [key: string]: string;
+    } = {};
+
+    if (parameterName) {
+      additionalMessages.QueryParameterName = parameterName;
+    }
+
+    if (parameterValue) {
+      additionalMessages.QueryParameterValue = parameterValue;
+    }
+
+    if (reason) {
+      additionalMessages.Reason = reason;
+    }
+
+    return new StorageError(
+      400,
+      "OutOfRangeInput",
+      `One of the request inputs is out of range.`,
+      contextID,
+      additionalMessages
     );
   }
 
@@ -54,6 +107,17 @@ export default class StorageErrorFactory {
     message: string = ""
   ): StorageError {
     return new StorageError(400, "InvalidOperation", message, contextID);
+  }
+
+  public static getInvalidBlockList(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      400,
+      "InvalidBlockList",
+      "The specified block list is invalid.",
+      contextID
+    );
   }
 
   public static getInvalidPageRange(contextID: string): StorageError {
@@ -103,6 +167,17 @@ export default class StorageErrorFactory {
       409,
       "LeaseAlreadyPresent",
       "There is already a lease present.",
+      contextID
+    );
+  }
+
+  public static getLeaseIsBreakingAndCannotBeAcquired(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      409,
+      "LeaseIsBreakingAndCannotBeAcquired",
+      "There is already a breaking lease, and can't  be acquired.",
       contextID
     );
   }
@@ -178,7 +253,7 @@ export default class StorageErrorFactory {
   ): StorageError {
     return new StorageError(
       412,
-      "LeaseLost",
+      "LeaseNotPresentWithContainerOperation",
       "A lease ID was specified, but the lease for the container has expired.",
       contextID
     );
@@ -234,7 +309,7 @@ export default class StorageErrorFactory {
   ): StorageError {
     return new StorageError(
       412,
-      "LeaseIdMismatchWithBlobOperation ",
+      "LeaseIdMismatchWithBlobOperation",
       "The lease ID specified did not match the lease ID for the blob.",
       contextID
     );
@@ -243,7 +318,7 @@ export default class StorageErrorFactory {
   public static getBlobLeaseLost(contextID: string = DefaultID): StorageError {
     return new StorageError(
       412,
-      "LeaseLost ",
+      "LeaseNotPresentWithBlobOperation",
       "A lease ID was specified, but the lease for the blob has expired.",
       contextID
     );
@@ -264,6 +339,17 @@ export default class StorageErrorFactory {
       409,
       "InvalidBlobType",
       "The blob type is invalid for this operation.",
+      contextID
+    );
+  }
+
+  public static getAccessTierNotSupportedForBlobType(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      400,
+      "AccessTierNotSupportedForBlobType",
+      "The access tier is not supported for this blob type.",
       contextID
     );
   }
@@ -419,6 +505,32 @@ export default class StorageErrorFactory {
       409,
       "BlobArchived",
       "This operation is not permitted on an archived blob.",
+      contextID,
+      additionalMessages
+    );
+  }
+
+  public static getInvalidCorsHeaderValue(
+    contextID: string = "",
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    return new StorageError(
+      400,
+      "InvalidHeaderValue",
+      "A required CORS header is not present.",
+      contextID,
+      additionalMessages
+    );
+  }
+
+  public static corsPreflightFailure(
+    contextID: string = "",
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    return new StorageError(
+      403,
+      "CorsPreflightFailure",
+      "CORS not enabled or no matching rule found for this request.",
       contextID,
       additionalMessages
     );

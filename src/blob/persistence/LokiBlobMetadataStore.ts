@@ -3,27 +3,32 @@ import Loki from "lokijs";
 import uuid from "uuid/v4";
 
 import IGCExtentProvider from "../../common/IGCExtentProvider";
-import { rimrafAsync } from "../../common/utils/utils";
+import {
+  convertDateTimeStringMsTo7Digital,
+  rimrafAsync
+} from "../../common/utils/utils";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import { LeaseStatusType } from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import PageBlobRangesManager from "../handlers/PageBlobRangesManager";
+import BlobLeaseAdapter from "../lease/BlobLeaseAdapter";
+import BlobLeaseSyncer from "../lease/BlobLeaseSyncer";
+import BlobReadLeaseValidator from "../lease/BlobReadLeaseValidator";
+import BlobWriteLeaseSyncer from "../lease/BlobWriteLeaseSyncer";
+import BlobWriteLeaseValidator from "../lease/BlobWriteLeaseValidator";
+import ContainerDeleteLeaseValidator from "../lease/ContainerDeleteLeaseValidator";
+import ContainerLeaseAdapter from "../lease/ContainerLeaseAdapter";
+import ContainerLeaseSyncer from "../lease/ContainerLeaseSyncer";
+import ContainerReadLeaseValidator from "../lease/ContainerReadLeaseValidator";
+import { ILease } from "../lease/ILeaseState";
+import LeaseFactory from "../lease/LeaseFactory";
 import {
   DEFAULT_LIST_BLOBS_MAX_RESULTS,
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS
 } from "../utils/constants";
 import { newEtag } from "../utils/utils";
-import BlobLeaseAdapter from "./BlobLeaseAdapter";
-import BlobLeaseSyncer from "./BlobLeaseSyncer";
-import BlobReadLeaseValidator from "./BlobReadLeaseValidator";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
-import BlobWriteLeaseSyncer from "./BlobWriteLeaseSyncer";
-import BlobWriteLeaseValidator from "./BlobWriteLeaseValidator";
-import ContainerDeleteLeaseValidator from "./ContainerDeleteLeaseValidator";
-import ContainerLeaseAdapter from "./ContainerLeaseAdapter";
-import ContainerLeaseSyncer from "./ContainerLeaseSyncer";
-import ContainerReadLeaseValidator from "./ContainerReadLeaseValidator";
 import IBlobMetadataStore, {
   AcquireBlobLeaseResponse,
   AcquireContainerLeaseResponse,
@@ -50,7 +55,6 @@ import IBlobMetadataStore, {
   ServicePropertiesModel,
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
-import LeaseFactory from "./LeaseFactory";
 
 /**
  * This is a metadata source implementation for blob based on loki DB.
@@ -84,7 +88,7 @@ export default class LokiBlobMetadataStore
   private readonly db: Loki;
 
   private initialized: boolean = false;
-  private closed: boolean = false;
+  private closed: boolean = true;
 
   private readonly SERVICES_COLLECTION = "$SERVICES_COLLECTION$";
   private readonly CONTAINERS_COLLECTION = "$CONTAINERS_COLLECTION$";
@@ -202,6 +206,7 @@ export default class LokiBlobMetadataStore
   public async clean(): Promise<void> {
     if (this.isClosed()) {
       await rimrafAsync(this.lokiDBPath);
+
       return;
     }
     throw new Error(`Cannot clean LokiBlobMetadataStore, it's not closed.`);
@@ -293,8 +298,8 @@ export default class LokiBlobMetadataStore
    * @param {string} account
    * @param {string} [prefix=""]
    * @param {number} [maxResults=5000]
-   * @param {number} [marker=0]
-   * @returns {(Promise<[ContainerModel[], number | undefined]>)}
+   * @param {string} [marker=""]
+   * @returns {(Promise<[ContainerModel[], string | undefined]>)}
    * @memberof LokiBlobMetadataStore
    */
   public async listContainers(
@@ -302,23 +307,27 @@ export default class LokiBlobMetadataStore
     account: string,
     prefix: string = "",
     maxResults: number = DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
-    marker: number = 0
-  ): Promise<[ContainerModel[], number | undefined]> {
+    marker: string = ""
+  ): Promise<[ContainerModel[], string | undefined]> {
     const coll = this.db.getCollection(this.CONTAINERS_COLLECTION);
 
     const query =
       prefix === ""
-        ? { $loki: { $gt: marker }, accountName: account }
+        ? { name: { $gt: marker }, accountName: account }
         : {
-            name: { $regex: `^${this.escapeRegex(prefix)}` },
-            $loki: { $gt: marker },
+            name: { $regex: `^${this.escapeRegex(prefix)}`, $gt: marker },
             accountName: account
           };
+
+    // Workaround for loki which will ignore $gt when providing $regex
+    const query2 = { name: { $gt: marker } };
 
     const docs = coll
       .chain()
       .find(query)
+      .find(query2)
       .limit(maxResults + 1)
+      .simplesort("name")
       .data();
 
     if (docs.length <= maxResults) {
@@ -333,7 +342,7 @@ export default class LokiBlobMetadataStore
       ];
     } else {
       // In this case, the last item is the one we get in addition, should set the Marker before it.
-      const nextMarker = docs[docs.length - 1].$loki - 1;
+      const nextMarker = docs[docs.length - 2].name;
       docs.pop();
       return [
         docs.map(doc => {
@@ -946,7 +955,9 @@ export default class LokiBlobMetadataStore
     const snapshotBlob: BlobModel = {
       name: doc.name,
       deleted: false,
-      snapshot: context.startTime!.toISOString(),
+      snapshot: convertDateTimeStringMsTo7Digital(
+        context.startTime!.toISOString()
+      ),
       properties: { ...doc.properties },
       metadata: metadata ? { ...metadata } : { ...doc.metadata },
       accountName: doc.accountName,
@@ -1139,7 +1150,7 @@ export default class LokiBlobMetadataStore
       const count = coll.count({
         accountName: account,
         containerName: container,
-        blobName: blob
+        name: blob
       });
       if (count > 1) {
         throw StorageErrorFactory.getSnapshotsPresent(context.contextId!);
@@ -1242,7 +1253,7 @@ export default class LokiBlobMetadataStore
         : new Date();
     }
     doc.properties = blobProps;
-    doc.properties.etag = uuid();
+    doc.properties.etag = newEtag();
 
     new BlobWriteLeaseSyncer(doc).sync(lease);
 
@@ -1283,6 +1294,7 @@ export default class LokiBlobMetadataStore
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
     new BlobWriteLeaseSyncer(doc).sync(lease);
     doc.metadata = metadata;
+    doc.properties.etag = newEtag();
     coll.update(doc);
     return doc.properties;
   }
@@ -1641,9 +1653,18 @@ export default class LokiBlobMetadataStore
         creationTime: context.startTime!,
         lastModified: context.startTime!,
         etag: newEtag(),
-        leaseStatus: Models.LeaseStatusType.Unlocked,
-        leaseState: Models.LeaseStateType.Available,
-        leaseDuration: undefined,
+        leaseStatus:
+          destBlob !== undefined
+            ? destBlob.properties.leaseStatus
+            : Models.LeaseStatusType.Unlocked,
+        leaseState:
+          destBlob !== undefined
+            ? destBlob.properties.leaseState
+            : Models.LeaseStateType.Available,
+        leaseDuration:
+          destBlob !== undefined
+            ? destBlob.properties.leaseDuration
+            : undefined,
         copyId: uuid(),
         copyStatus: Models.CopyStatusType.Success,
         copySource,
@@ -1667,10 +1688,13 @@ export default class LokiBlobMetadataStore
       containerName: destination.container,
       pageRangesInOrder: sourceBlob.pageRangesInOrder,
       isCommitted: sourceBlob.isCommitted,
-      leaseDurationSeconds: undefined,
-      leaseId: undefined,
-      leaseExpireTime: undefined,
-      leaseBreakTime: undefined,
+      leaseDurationSeconds:
+        destBlob !== undefined ? destBlob.leaseDurationSeconds : undefined,
+      leaseId: destBlob !== undefined ? destBlob.leaseId : undefined,
+      leaseExpireTime:
+        destBlob !== undefined ? destBlob.leaseExpireTime : undefined,
+      leaseBreakTime:
+        destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
       committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
       persistency: sourceBlob.persistency
     };
@@ -1688,6 +1712,19 @@ export default class LokiBlobMetadataStore
       }
     }
 
+    if (
+      copiedBlob.properties.blobType === Models.BlobType.PageBlob &&
+      tier !== undefined
+    ) {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+        HeaderName: "x-ms-access-tier",
+        HeaderValue: `${tier}`
+      });
+    }
+
+    if (destBlob) {
+      coll.remove(destBlob);
+    }
     coll.insert(copiedBlob);
     return copiedBlob.properties;
   }
@@ -1753,9 +1790,12 @@ export default class LokiBlobMetadataStore
       }
 
       doc.properties.accessTier = tier;
+      doc.properties.accessTierInferred = false;
       doc.properties.accessTierChangeTime = context.startTime;
     } else {
-      throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId!);
+      throw StorageErrorFactory.getAccessTierNotSupportedForBlobType(
+        context.contextId!
+      );
     }
 
     new BlobWriteLeaseSyncer(doc).sync(lease);
@@ -1802,7 +1842,7 @@ export default class LokiBlobMetadataStore
           creationTime: context.startTime,
           lastModified: context.startTime,
           etag,
-          contentLength: block.persistency.count,
+          contentLength: 0,
           blobType: Models.BlobType.BlockBlob
         },
         snapshot: "",
@@ -1854,11 +1894,20 @@ export default class LokiBlobMetadataStore
       blob.containerName,
       blob.name,
       blob.snapshot,
-      context
+      context,
+      // XStore allows commit block list with empty block list to create a block blob without stage block call
+      // In this case, there will no existing blob doc exists
+      false
     );
 
-    const lease = new BlobLeaseAdapter(doc);
-    new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
+    let lease: ILease | undefined;
+    if (doc) {
+      lease = new BlobLeaseAdapter(doc);
+      new BlobWriteLeaseValidator(leaseAccessConditions).validate(
+        lease,
+        context
+      );
+    }
 
     // Get all blocks in persistency layer
     const blockColl = this.db.getCollection(this.BLOCKS_COLLECTION);
@@ -1872,8 +1921,10 @@ export default class LokiBlobMetadataStore
       .data();
 
     const pCommittedBlocksMap: Map<string, PersistencyBlockModel> = new Map(); // persistencyCommittedBlocksMap
-    for (const pBlock of blob.committedBlocksInOrder || []) {
-      pCommittedBlocksMap.set(pBlock.name, pBlock);
+    if (doc) {
+      for (const pBlock of doc.committedBlocksInOrder || []) {
+        pCommittedBlocksMap.set(pBlock.name, pBlock);
+      }
     }
 
     const pUncommittedBlocksMap: Map<string, PersistencyBlockModel> = new Map(); // persistencyUncommittedBlocksMap
@@ -1891,7 +1942,7 @@ export default class LokiBlobMetadataStore
             block_1.blockName
           );
           if (pUncommittedBlock === undefined) {
-            throw StorageErrorFactory.getInvalidOperation(context.contextId!);
+            throw StorageErrorFactory.getInvalidBlockList(context.contextId!);
           } else {
             selectedBlockList.push(pUncommittedBlock);
           }
@@ -1899,7 +1950,7 @@ export default class LokiBlobMetadataStore
         case "committed":
           const pCommittedBlock = pCommittedBlocksMap.get(block_1.blockName);
           if (pCommittedBlock === undefined) {
-            throw StorageErrorFactory.getInvalidOperation(context.contextId!);
+            throw StorageErrorFactory.getInvalidBlockList(context.contextId!);
           } else {
             selectedBlockList.push(pCommittedBlock);
           }
@@ -1909,40 +1960,53 @@ export default class LokiBlobMetadataStore
             pUncommittedBlocksMap.get(block_1.blockName) ||
             pCommittedBlocksMap.get(block_1.blockName);
           if (pLatestBlock === undefined) {
-            throw StorageErrorFactory.getInvalidOperation(context.contextId!);
+            throw StorageErrorFactory.getInvalidBlockList(context.contextId!);
           } else {
             selectedBlockList.push(pLatestBlock);
           }
           break;
         default:
-          throw StorageErrorFactory.getInvalidOperation(context.contextId!);
+          throw StorageErrorFactory.getInvalidBlockList(context.contextId!);
       }
     }
 
-    // Commit block list
-    doc.committedBlocksInOrder = selectedBlockList;
-    doc.isCommitted = true;
+    if (doc) {
+      // Commit block list
+      doc.properties.blobType = blob.properties.blobType;
+      doc.properties.lastModified = blob.properties.lastModified;
+      doc.committedBlocksInOrder = selectedBlockList;
+      doc.isCommitted = true;
+      doc.metadata = blob.metadata;
+      doc.properties.accessTier = blob.properties.accessTier;
+      doc.properties.accessTierInferred = blob.properties.accessTierInferred;
+      doc.properties.etag = blob.properties.etag;
+      doc.properties.cacheControl = blob.properties.cacheControl;
+      doc.properties.contentType = blob.properties.contentType;
+      doc.properties.contentMD5 = blob.properties.contentMD5;
+      doc.properties.contentEncoding = blob.properties.contentEncoding;
+      doc.properties.contentLanguage = blob.properties.contentLanguage;
+      doc.properties.contentDisposition = blob.properties.contentDisposition;
+      doc.properties.contentLength = selectedBlockList
+        .map(block => block.size)
+        .reduce((total, val) => {
+          return total + val;
+        }, 0);
 
-    doc.metadata = blob.metadata;
-    doc.properties.accessTier = blob.properties.accessTier;
-    doc.properties.etag = blob.properties.etag;
-    doc.properties.accessTierInferred = true;
-    doc.properties.cacheControl = blob.properties.cacheControl;
-    doc.properties.contentType = blob.properties.contentType;
-    doc.properties.contentMD5 = blob.properties.contentMD5;
-    doc.properties.contentEncoding = blob.properties.contentEncoding;
-    doc.properties.contentLanguage = blob.properties.contentLanguage;
-    doc.properties.contentDisposition = blob.properties.contentDisposition;
-    doc.properties.contentLength = selectedBlockList
-      .map(block => block.size)
-      .reduce((total, val) => {
-        return total + val;
-      });
+      // set lease state to available if it's expired
+      if (lease) {
+        new BlobWriteLeaseSyncer(doc).sync(lease);
+      }
 
-    // set lease state to available if it's expired
-    new BlobWriteLeaseSyncer(doc).sync(lease);
-
-    coll.update(doc);
+      coll.update(doc);
+    } else {
+      blob.committedBlocksInOrder = selectedBlockList;
+      blob.properties.contentLength = selectedBlockList
+        .map(block => block.size)
+        .reduce((total, val) => {
+          return total + val;
+        }, 0);
+      coll.insert(blob);
+    }
 
     blockColl.findAndRemove({
       accountName: blob.accountName,
@@ -2317,11 +2381,11 @@ export default class LokiBlobMetadataStore
       .data();
 
     if (blockDocs.length <= maxResults) {
-      return [blockDocs, undefined];
+      return [blockDocs.map(block => block.persistency), undefined];
     } else {
       blockDocs.pop();
       const nextMarker = `${blockDocs[maxResults - 1].$loki}`;
-      return [blockDocs, nextMarker];
+      return [blockDocs.map(block => block.persistency), nextMarker];
     }
   }
 

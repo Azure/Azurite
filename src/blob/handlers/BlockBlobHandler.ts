@@ -156,12 +156,13 @@ export default class BlockBlobHandler extends BaseHandler
     options: Models.BlockBlobStageBlockOptionalParams,
     context: Context
   ): Promise<Models.BlockBlobStageBlockResponse> {
-    // TODO: Check Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
+
+    this.validateBlockId(blockId, blobCtx);
 
     await this.metadataStore.checkContainerExist(
       context,
@@ -234,9 +235,7 @@ export default class BlockBlobHandler extends BaseHandler
 
     options.blobHTTPHeaders = options.blobHTTPHeaders || {};
     const contentType =
-      options.blobHTTPHeaders.blobContentType ||
-      context.request!.getHeader("content-type") ||
-      "application/octet-stream";
+      options.blobHTTPHeaders.blobContentType || "application/octet-stream";
 
     // Here we leveraged generated code utils to parser xml
     // Re-parsing request body to get destination blocks
@@ -277,12 +276,14 @@ export default class BlockBlobHandler extends BaseHandler
       name: blobName,
       snapshot: "",
       properties: {
-        lastModified: new Date(),
+        lastModified: context.startTime!,
+        creationTime: context.startTime!,
         etag: newEtag()
       },
       isCommitted: true
     };
 
+    blob.properties.blobType = Models.BlobType.BlockBlob;
     blob.metadata = options.metadata;
     blob.properties.accessTier = Models.AccessTier.Hot;
     blob.properties.cacheControl = options.blobHTTPHeaders.blobCacheControl;
@@ -303,6 +304,9 @@ export default class BlockBlobHandler extends BaseHandler
           HeaderValue: `${options.tier}`
         });
       }
+    } else {
+      blob.properties.accessTier = Models.AccessTier.Hot;
+      blob.properties.accessTierInferred = true;
     }
 
     await this.metadataStore.commitBlockList(
@@ -362,8 +366,24 @@ export default class BlockBlobHandler extends BaseHandler
       uncommittedBlocks: []
     };
 
-    response.uncommittedBlocks = res.uncommittedBlocks;
-    response.committedBlocks = res.committedBlocks;
+    if (
+      options.listType !== undefined &&
+      (options.listType.toLowerCase() ===
+        Models.BlockListType.All.toLowerCase() ||
+        options.listType.toLowerCase() ===
+          Models.BlockListType.Uncommitted.toLowerCase())
+    ) {
+      response.uncommittedBlocks = res.uncommittedBlocks;
+    }
+    if (
+      options.listType === undefined ||
+      options.listType.toLowerCase() ===
+        Models.BlockListType.All.toLowerCase() ||
+      options.listType.toLowerCase() ===
+        Models.BlockListType.Committed.toLowerCase()
+    ) {
+      response.committedBlocks = res.committedBlocks;
+    }
     response.clientRequestId = options.requestId;
 
     return response;
@@ -389,5 +409,27 @@ export default class BlockBlobHandler extends BaseHandler
       return Models.AccessTier.Archive;
     }
     return undefined;
+  }
+
+  private validateBlockId(blockId: string, context: Context): void {
+    const rawBlockId = Buffer.from(blockId, "base64");
+
+    if (blockId !== rawBlockId.toString("base64")) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId,
+        "blockid",
+        blockId,
+        "Not a valid base64 string."
+      );
+    }
+
+    if (rawBlockId.length > 64) {
+      throw StorageErrorFactory.getOutOfRangeInput(
+        context.contextId!,
+        "blockid",
+        blockId,
+        "Block ID length cannot exceed 64."
+      );
+    }
   }
 }

@@ -6,8 +6,8 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IPageBlobHandler from "../generated/handlers/IPageBlobHandler";
 import ILogger from "../generated/utils/ILogger";
-import BlobLeaseAdapter from "../persistence/BlobLeaseAdapter";
-import BlobWriteLeaseValidator from "../persistence/BlobWriteLeaseValidator";
+import BlobLeaseAdapter from "../lease/BlobLeaseAdapter";
+import BlobWriteLeaseValidator from "../lease/BlobWriteLeaseValidator";
 import IBlobMetadataStore, {
   BlobModel
 } from "../persistence/IBlobMetadataStore";
@@ -43,7 +43,7 @@ export default class PageBlobHandler extends BaseHandler
     options: Models.PageBlobUploadPagesFromURLOptionalParams,
     context: Context
   ): Promise<Models.PageBlobUploadPagesFromURLResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedError(context.contextId);
   }
 
   public async create(
@@ -57,6 +57,12 @@ export default class PageBlobHandler extends BaseHandler
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
+
+    if (options.pageBlobAccessTier !== undefined) {
+      throw StorageErrorFactory.getAccessTierNotSupportedForBlobType(
+        context.contextId!
+      );
+    }
 
     if (contentLength !== 0) {
       throw StorageErrorFactory.getInvalidOperation(
@@ -171,14 +177,12 @@ export default class PageBlobHandler extends BaseHandler
       accountName,
       containerName,
       blobName,
-      undefined
+      undefined,
+      options.leaseAccessConditions
     );
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
-      throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextId!,
-        "Get Page Ranges could only be against a page blob."
-      );
+      throw StorageErrorFactory.getBlobInvalidBlobType(blobCtx.contextId!);
     }
 
     // Check Lease status
@@ -187,11 +191,14 @@ export default class PageBlobHandler extends BaseHandler
       context
     );
 
-    const ranges = deserializePageBlobRangeHeader(
-      blobCtx.request!.getHeader("range"),
-      blobCtx.request!.getHeader("x-ms-range")
-    );
-    if (!ranges) {
+    let ranges;
+    try {
+      ranges = deserializePageBlobRangeHeader(
+        blobCtx.request!.getHeader("range"),
+        blobCtx.request!.getHeader("x-ms-range"),
+        true
+      );
+    } catch (err) {
       throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextId!);
     }
 
@@ -218,7 +225,8 @@ export default class PageBlobHandler extends BaseHandler
       blob,
       start,
       end,
-      persistency
+      persistency,
+      options.leaseAccessConditions
     );
 
     const response: Models.PageBlobUploadPagesResponse = {
@@ -260,23 +268,25 @@ export default class PageBlobHandler extends BaseHandler
       accountName,
       containerName,
       blobName,
-      undefined
+      undefined,
+      options.leaseAccessConditions
     );
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
-      throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextId!,
-        "Get Page Ranges could only be against a page blob."
-      );
+      throw StorageErrorFactory.getBlobInvalidBlobType(blobCtx.contextId!);
     }
 
-    const ranges = deserializePageBlobRangeHeader(
-      blobCtx.request!.getHeader("range"),
-      blobCtx.request!.getHeader("x-ms-range")
-    );
-    if (!ranges) {
+    let ranges;
+    try {
+      ranges = deserializePageBlobRangeHeader(
+        blobCtx.request!.getHeader("range"),
+        blobCtx.request!.getHeader("x-ms-range"),
+        true
+      );
+    } catch (err) {
       throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextId!);
     }
+
     const start = ranges[0];
     const end = ranges[1];
 
@@ -318,19 +328,18 @@ export default class PageBlobHandler extends BaseHandler
       accountName,
       containerName,
       blobName,
-      options.snapshot
+      options.snapshot,
+      options.leaseAccessConditions
     );
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
-      throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextId!,
-        "Get Page Ranges could only be against a page blob."
-      );
+      throw StorageErrorFactory.getBlobInvalidBlobType(blobCtx.contextId!);
     }
 
     let ranges = deserializePageBlobRangeHeader(
       blobCtx.request!.getHeader("range"),
-      blobCtx.request!.getHeader("x-ms-range")
+      blobCtx.request!.getHeader("x-ms-range"),
+      false
     );
     if (!ranges) {
       ranges = [0, blob.properties.contentLength! - 1];
@@ -361,6 +370,7 @@ export default class PageBlobHandler extends BaseHandler
   }
 
   public async getPageRangesDiff(
+    prevsnapshot: string,
     options: Models.PageBlobGetPageRangesDiffOptionalParams,
     context: Context
   ): Promise<Models.PageBlobGetPageRangesDiffResponse> {
@@ -390,7 +400,8 @@ export default class PageBlobHandler extends BaseHandler
       accountName,
       containerName,
       blobName,
-      blobContentLength
+      blobContentLength,
+      options.leaseAccessConditions
     );
 
     const response: Models.PageBlobResizeResponse = {
@@ -424,7 +435,8 @@ export default class PageBlobHandler extends BaseHandler
       containerName,
       blobName,
       sequenceNumberAction,
-      options.blobSequenceNumber
+      options.blobSequenceNumber,
+      options.leaseAccessConditions
     );
 
     const response: Models.PageBlobUpdateSequenceNumberResponse = {

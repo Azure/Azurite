@@ -33,8 +33,8 @@ describe("Messages APIs test", () => {
 
   const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
     {
-      persistencyId: "queueTest",
-      persistencyPath: persistencePath,
+      locationId: "queueTest",
+      locationPath: persistencePath,
       maxConcurrency: 10
     }
   ];
@@ -86,7 +86,7 @@ describe("Messages APIs test", () => {
     await queueURL.delete(Aborter.none);
   });
 
-  it("enqueue, peek, dequeue and clear message with default parameters", async () => {
+  it("enqueue, peek, dequeue and clear message with default parameters @loki", async () => {
     let messagesURL = MessagesURL.fromQueueURL(queueURL);
     let eResult = await messagesURL.enqueue(Aborter.none, messageContent);
     assert.ok(eResult.date);
@@ -148,7 +148,7 @@ describe("Messages APIs test", () => {
     assert.deepStrictEqual(pResult2.peekedMessageItems.length, 0);
   });
 
-  it("enqueue, peek, dequeue and clear message with all parameters", async () => {
+  it("enqueue, peek, dequeue and clear message with all parameters @loki", async () => {
     let messagesURL = MessagesURL.fromQueueURL(queueURL);
 
     let eResult = await messagesURL.enqueue(Aborter.none, messageContent, {
@@ -173,7 +173,7 @@ describe("Messages APIs test", () => {
       visibilitytimeout: 5
     });
     await messagesURL.enqueue(Aborter.none, messageContent, {
-      messageTimeToLive: 20,
+      messageTimeToLive: Number.MAX_SAFE_INTEGER,
       visibilitytimeout: 19
     });
 
@@ -257,7 +257,7 @@ describe("Messages APIs test", () => {
     assert.deepStrictEqual(pResult2.peekedMessageItems.length, 0);
   });
 
-  it("enqueue, peek, dequeue empty message, and peek, dequeue with numberOfMessages > count(messages)", async () => {
+  it("enqueue, peek, dequeue empty message, and peek, dequeue with numberOfMessages > count(messages) @loki", async () => {
     let messagesURL = MessagesURL.fromQueueURL(queueURL);
 
     let eResult = await messagesURL.enqueue(Aborter.none, "", {
@@ -319,7 +319,7 @@ describe("Messages APIs test", () => {
     assert.ok(dResult.dequeuedMessageItems[0].timeNextVisible);
   });
 
-  it("enqueue, peek, dequeue special characters", async () => {
+  it("enqueue, peek, dequeue special characters @loki", async () => {
     let messagesURL = MessagesURL.fromQueueURL(queueURL);
 
     let specialMessage =
@@ -390,7 +390,7 @@ describe("Messages APIs test", () => {
     assert.ok(dResult.dequeuedMessageItems[0].timeNextVisible);
   });
 
-  it("enqueue, peek, dequeue with 64KB characters size which is computed after encoding", async () => {
+  it("enqueue, peek, dequeue with 64KB characters size which is computed after encoding @loki", async () => {
     let messagesURL = MessagesURL.fromQueueURL(queueURL);
     let messageContent = new Array(64 * 1024 + 1).join("a");
 
@@ -459,7 +459,7 @@ describe("Messages APIs test", () => {
     assert.ok(dResult.dequeuedMessageItems[0].timeNextVisible);
   });
 
-  it("enqueue, peek and dequeue negative", async () => {
+  it("enqueue, peek and dequeue negative @loki", async () => {
     let messagesURL = MessagesURL.fromQueueURL(queueURL);
     let eResult = await messagesURL.enqueue(Aborter.none, messageContent, {
       messageTimeToLive: 40
@@ -520,7 +520,7 @@ describe("Messages APIs test", () => {
     });
   });
 
-  it("enqueue negative with 65537B(64KB+1B) characters size which is computed after encoding", async () => {
+  it("enqueue negative with 65537B(64KB+1B) characters size which is computed after encoding @loki", async () => {
     let messagesURL = MessagesURL.fromQueueURL(queueURL);
     let messageContent = new Array(64 * 1024 + 2).join("a");
 

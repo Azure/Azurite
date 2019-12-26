@@ -7,14 +7,14 @@ import QueueServer from "../queue/QueueServer";
 import {
   DEFAULT_QUEUE_EXTENT_LOKI_DB_PATH,
   DEFAULT_QUEUE_LOKI_DB_PATH,
+  DEFAULT_QUEUE_PERSISTENCE_ARRAY,
   DEFAULT_QUEUE_PERSISTENCE_PATH
 } from "../queue/utils/constants";
 import * as Logger from "./Logger";
 import NoLoggerStrategy from "./NoLoggerStrategy";
-import { StoreDestinationArray } from "./persistence/IExtentStore";
 import VSCChannelLoggerStrategy from "./VSCChannelLoggerStrategy";
 import VSCChannelWriteStream from "./VSCChannelWriteStream";
-import VSCEnvironment from "./VSCQueueEnvironment";
+import VSCEnvironment from "./VSCEnvironment";
 import VSCServerManagerBase from "./VSCServerManagerBase";
 import VSCServerManagerClosedState from "./VSCServerManagerClosedState";
 
@@ -67,7 +67,7 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
     await rimrafAsync(config.extentDBPath);
     await rimrafAsync(config.metadataDBPath);
     for (const path of config.persistencePathArray) {
-      await rimrafAsync(path.persistencyPath);
+      await rimrafAsync(path.locationPath);
     }
   }
 
@@ -76,13 +76,10 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
     const location = await env.location();
     await accessAsync(location);
 
-    const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
-      {
-        persistencyId: "Default",
-        persistencyPath: join(location, DEFAULT_QUEUE_PERSISTENCE_PATH),
-        maxConcurrency: 10
-      }
-    ];
+    DEFAULT_QUEUE_PERSISTENCE_ARRAY[0].locationPath = join(
+      location,
+      DEFAULT_QUEUE_PERSISTENCE_PATH
+    );
 
     // Initialize server configuration
     const config = new QueueConfiguration(
@@ -90,11 +87,12 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       env.queuePort(),
       join(location, DEFAULT_QUEUE_LOKI_DB_PATH),
       join(location, DEFAULT_QUEUE_EXTENT_LOKI_DB_PATH),
-      DEFUALT_QUEUE_PERSISTENCE_ARRAY,
+      DEFAULT_QUEUE_PERSISTENCE_ARRAY,
       !env.silent(),
       this.accessChannelStream,
-      env.debug() === true,
-      undefined
+      (await env.debug()) === true,
+      undefined,
+      env.loose()
     );
     return config;
   }

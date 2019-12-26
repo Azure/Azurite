@@ -1,4 +1,5 @@
 import BlobStorageContext from "../context/BlobStorageContext";
+import NotImplementedError from "../errors/NotImplementedError";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IServiceHandler from "../generated/handlers/IServiceHandler";
@@ -62,8 +63,9 @@ export default class ServiceHandler extends BaseHandler
     options: Models.ServiceGetUserDelegationKeyOptionalParams,
     context: Context
   ): Promise<Models.ServiceGetUserDelegationKeyResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedError(context.contextId);
   }
+
   public submitBatch(
     body: NodeJS.ReadableStream,
     contentLength: number,
@@ -71,7 +73,7 @@ export default class ServiceHandler extends BaseHandler
     options: Models.ServiceSubmitBatchOptionalParams,
     context: Context
   ): Promise<Models.ServiceSubmitBatchResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedError(context.contextId);
   }
 
   /**
@@ -100,6 +102,13 @@ export default class ServiceHandler extends BaseHandler
       !parsedBody.hasOwnProperty("Cors")
     ) {
       storageServiceProperties.cors = undefined;
+    }
+
+    // Azure Storage allows allowedHeaders and exposedHeaders to be empty,
+    // Azurite will set to empty string for this scenario
+    for (const cors of storageServiceProperties.cors || []) {
+      cors.allowedHeaders = cors.allowedHeaders || "";
+      cors.exposedHeaders = cors.exposedHeaders || "";
     }
 
     await this.metadataStore.setServiceProperties(context, {
@@ -215,7 +224,7 @@ export default class ServiceHandler extends BaseHandler
       options.maxresults || DEFAULT_LIST_CONTAINERS_MAX_RESULTS;
     options.prefix = options.prefix || "";
 
-    const marker = parseInt(options.marker || "0", 10);
+    const marker = options.marker || "";
 
     const containers = await this.metadataStore.listContainers(
       context,

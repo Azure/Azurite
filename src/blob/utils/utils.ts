@@ -69,7 +69,9 @@ export async function getMD5FromStream(
       .on("end", () => {
         resolve(hash.digest());
       })
-      .on("error", reject);
+      .on("error", err => {
+        reject(err);
+      });
   });
 }
 
@@ -175,23 +177,44 @@ export function deserializeRangeHeader(
  */
 export function deserializePageBlobRangeHeader(
   rangeHeaderValue?: string,
-  xMsRangeHeaderValue?: string
+  xMsRangeHeaderValue?: string,
+  force512boundary = true
 ): [number, number] {
   const ranges = deserializeRangeHeader(rangeHeaderValue, xMsRangeHeaderValue);
   const startInclusive = ranges[0];
   const endInclusive = ranges[1];
 
-  if (startInclusive % 512 !== 0) {
+  if (force512boundary && startInclusive % 512 !== 0) {
     throw new RangeError(
       `deserializePageBlobRangeHeader: range start value ${startInclusive} doesn't align with 512 boundary.`
     );
   }
 
-  if (endInclusive !== Infinity && (endInclusive + 1) % 512 !== 0) {
+  if (
+    force512boundary &&
+    endInclusive !== Infinity &&
+    (endInclusive + 1) % 512 !== 0
+  ) {
     throw new RangeError(
       `deserializePageBlobRangeHeader: range end value ${endInclusive} doesn't align with 512 boundary.`
     );
   }
 
   return [startInclusive, endInclusive];
+}
+
+/**
+ * Remove double Quotation mark from ListBlob returned Etag, to align with server
+ *
+ * @param {string} [inputEtag]
+ * @returns {string}
+ */
+export function removeQuotationFromListBlobEtag(inputEtag: string): string {
+  if (inputEtag === undefined) {
+    return inputEtag;
+  }
+  if (inputEtag[0] === '"' && inputEtag[inputEtag.length - 1] === '"') {
+    return inputEtag.substring(1, inputEtag.length - 1);
+  }
+  return inputEtag;
 }

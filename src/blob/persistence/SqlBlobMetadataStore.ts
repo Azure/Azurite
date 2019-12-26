@@ -9,30 +9,33 @@ import {
   Sequelize,
   TEXT
 } from "sequelize";
-import uuid from "uuid/v4";
 
 import {
   DEFAULT_SQL_CHARSET,
   DEFAULT_SQL_COLLATE
 } from "../../common/utils/constants";
+import { convertDateTimeStringMsTo7Digital } from "../../common/utils/utils";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import { BlobType, LeaseAccessConditions } from "../generated/artifacts/models";
 import Context from "../generated/Context";
+import BlobLeaseAdapter from "../lease/BlobLeaseAdapter";
+import BlobLeaseSyncer from "../lease/BlobLeaseSyncer";
+import BlobReadLeaseValidator from "../lease/BlobReadLeaseValidator";
+import BlobWriteLeaseSyncer from "../lease/BlobWriteLeaseSyncer";
+import BlobWriteLeaseValidator from "../lease/BlobWriteLeaseValidator";
+import ContainerDeleteLeaseValidator from "../lease/ContainerDeleteLeaseValidator";
+import ContainerLeaseAdapter from "../lease/ContainerLeaseAdapter";
+import ContainerLeaseSyncer from "../lease/ContainerLeaseSyncer";
+import ContainerReadLeaseValidator from "../lease/ContainerReadLeaseValidator";
+import { ILease } from "../lease/ILeaseState";
+import LeaseFactory from "../lease/LeaseFactory";
 import {
   DEFAULT_LIST_BLOBS_MAX_RESULTS,
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS
 } from "../utils/constants";
-import BlobLeaseAdapter from "./BlobLeaseAdapter";
-import BlobLeaseSyncer from "./BlobLeaseSyncer";
-import BlobReadLeaseValidator from "./BlobReadLeaseValidator";
+import { newEtag } from "../utils/utils";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
-import BlobWriteLeaseSyncer from "./BlobWriteLeaseSyncer";
-import BlobWriteLeaseValidator from "./BlobWriteLeaseValidator";
-import ContainerDeleteLeaseValidator from "./ContainerDeleteLeaseValidator";
-import ContainerLeaseAdapter from "./ContainerLeaseAdapter";
-import ContainerLeaseSyncer from "./ContainerLeaseSyncer";
-import ContainerReadLeaseValidator from "./ContainerReadLeaseValidator";
 import IBlobMetadataStore, {
   AcquireBlobLeaseResponse,
   AcquireContainerLeaseResponse,
@@ -58,8 +61,6 @@ import IBlobMetadataStore, {
   ServicePropertiesModel,
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
-import { ILease } from "./ILeaseState";
-import LeaseFactory from "./LeaseFactory";
 
 // tslint:disable: max-classes-per-file
 class ServicesModel extends Model {}
@@ -102,6 +103,13 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     connectionURI: string,
     sequelizeOptions?: SequelizeOptions
   ) {
+    // Enable encrypt connection for SQL Server
+    if (connectionURI.startsWith("mssql") && sequelizeOptions) {
+      sequelizeOptions.dialectOptions = sequelizeOptions.dialectOptions || {};
+      (sequelizeOptions.dialectOptions as any).options =
+        (sequelizeOptions.dialectOptions as any).options || {};
+      (sequelizeOptions.dialectOptions as any).options.encrypt = true;
+    }
     this.sequelize = new Sequelize(connectionURI, sequelizeOptions);
   }
 
@@ -487,8 +495,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     prefix: string = "",
     maxResults: number = DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
-    marker: number | undefined
-  ): Promise<[ContainerModel[], number | undefined]> {
+    marker: string
+  ): Promise<[ContainerModel[], string | undefined]> {
     const whereQuery: any = { accountName: account };
 
     if (prefix.length > 0) {
@@ -497,16 +505,20 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       };
     }
 
-    if (marker !== undefined) {
-      whereQuery.containerId = {
-        [Op.gt]: marker
-      };
+    if (marker !== "") {
+      if (whereQuery.containerName === undefined) {
+        whereQuery.containerName = {
+          [Op.gt]: marker
+        };
+      } else {
+        whereQuery.containerName[Op.gt] = marker;
+      }
     }
 
     const findResult = await ContainersModel.findAll({
-      limit: maxResults,
+      limit: maxResults + 1,
       where: whereQuery as any,
-      order: [["containerId", "ASC"]]
+      order: [["containerName", "ASC"]]
     });
 
     const leaseUpdateMapper = (model: ContainersModel) => {
@@ -517,11 +529,16 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       ).sync(new ContainerLeaseSyncer(containerModel));
     };
 
-    if (findResult.length < maxResults) {
+    if (findResult.length <= maxResults) {
       return [findResult.map(leaseUpdateMapper), undefined];
     } else {
-      const tail = findResult[findResult.length - 1];
-      const nextMarker = this.getModelValue<number>(tail, "containerId", true);
+      const tail = findResult[findResult.length - 2];
+      findResult.pop();
+      const nextMarker = this.getModelValue<string>(
+        tail,
+        "containerName",
+        true
+      );
       return [findResult.map(leaseUpdateMapper), nextMarker];
     }
   }
@@ -1155,18 +1172,25 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         accountName: account,
         containerName: container
       };
+
       if (blob !== undefined) {
         whereQuery.blobName = blob;
-      }
-      if (prefix.length > 0) {
-        whereQuery.blobName = {
-          [Op.like]: `${prefix}%`
-        };
-      }
-      if (marker !== undefined) {
-        whereQuery.blobName = {
-          [Op.gt]: marker
-        };
+      } else {
+        if (prefix.length > 0) {
+          whereQuery.blobName = {
+            [Op.like]: `${prefix}%`
+          };
+        }
+
+        if (marker !== undefined) {
+          if (whereQuery.blobName !== undefined) {
+            whereQuery.blobName[Op.gt] = marker;
+          } else {
+            whereQuery.blobName = {
+              [Op.gt]: marker
+            };
+          }
+        }
       }
       if (!includeSnapshots) {
         whereQuery.snapshot = "";
@@ -1277,16 +1301,38 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           new BlobLeaseAdapter(blobModel),
           context
         ).validate(new BlobWriteLeaseValidator(leaseAccessConditions));
+      } else {
+        const newBlob = {
+          deleted: false,
+          accountName: block.accountName,
+          containerName: block.containerName,
+          name: block.blobName,
+          properties: {
+            creationTime: context.startTime!,
+            lastModified: context.startTime!,
+            etag: newEtag(),
+            contentLength: 0,
+            blobType: Models.BlobType.BlockBlob
+          },
+          snapshot: "",
+          isCommitted: false
+        };
+        await BlobsModel.upsert(this.convertBlobModelToDbModel(newBlob), {
+          transaction: t
+        });
       }
 
-      await BlocksModel.upsert({
-        accountName: block.accountName,
-        containerName: block.containerName,
-        blobName: block.blobName,
-        blockName: block.name,
-        size: block.size,
-        persistency: this.serializeModelValue(block.persistency)
-      });
+      await BlocksModel.upsert(
+        {
+          accountName: block.accountName,
+          containerName: block.containerName,
+          blobName: block.blobName,
+          blockName: block.name,
+          size: block.size,
+          persistency: this.serializeModelValue(block.persistency)
+        },
+        { transaction: t }
+      );
     });
   }
 
@@ -1382,7 +1428,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         PersistencyBlockModel
       > = new Map(); // persistencyUncommittedBlocksMap
 
-      const badRequestError = StorageErrorFactory.getInvalidOperation(
+      const badRequestError = StorageErrorFactory.getInvalidBlockList(
         context.contextId
       );
 
@@ -1398,10 +1444,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
+      let creationTime = blob.properties.creationTime || context.startTime;
+
       if (blobFindResult !== null && blobFindResult !== undefined) {
         const blobModel: BlobModel = this.convertDbModelToBlobModel(
           blobFindResult
         );
+
+        creationTime = blobModel.properties.creationTime || creationTime;
 
         LeaseFactory.createLeaseState(
           new BlobLeaseAdapter(blobModel),
@@ -1473,13 +1523,13 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         committedBlocksInOrder: selectedBlockList,
         properties: {
           ...blob.properties,
-          creationTime: blob.properties.creationTime || context.startTime,
+          creationTime,
           lastModified: blob.properties.lastModified || context.startTime,
           contentLength: selectedBlockList
             .map(block => block.size)
             .reduce((total, val) => {
               return total + val;
-            }),
+            }, 0),
           blobType: BlobType.BlockBlob
         }
       };
@@ -1615,7 +1665,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         context
       ).validate(new BlobReadLeaseValidator(leaseAccessConditions));
 
-      snapshotBlob.snapshot = context.startTime!.toISOString();
+      snapshotBlob.snapshot = convertDateTimeStringMsTo7Digital(
+        context.startTime!.toISOString()
+      );
       snapshotBlob.metadata = metadata || snapshotBlob.metadata;
 
       new BlobLeaseSyncer(snapshotBlob).sync({
@@ -1876,7 +1928,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           : new Date();
       }
 
-      blobModel.properties.etag = uuid();
+      blobModel.properties.etag = newEtag();
 
       await BlobsModel.update(this.convertBlobModelToDbModel(blobModel), {
         where: {
@@ -1938,7 +1990,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         .sync(new BlobWriteLeaseSyncer(blobModel));
 
       const lastModified = context.startTime! || new Date();
-      const etag = uuid();
+      const etag = newEtag();
 
       await BlobsModel.update(
         {
@@ -2432,7 +2484,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
         accessTier = tier;
       } else {
-        throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId!);
+        throw StorageErrorFactory.getAccessTierNotSupportedForBlobType(
+          context.contextId!
+        );
       }
       await BlobsModel.update(
         {
@@ -2806,7 +2860,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       snapshot: blob.snapshot,
       blobType: blob.properties.blobType,
       blobSequenceNumber: blob.properties.blobSequenceNumber || null,
-      isCommitted: true,
+      isCommitted: blob.isCommitted,
       lastModified: blob.properties.lastModified,
       creationTime: blob.properties.creationTime || null,
       etag: blob.properties.etag,

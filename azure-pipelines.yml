@@ -19,6 +19,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -26,14 +28,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
-
-      - script: |
-          npm run lint
-        workingDirectory: "./"
-        displayName: "tslint"
+        displayName: "npm ci"
 
       - script: |
           npm run test:blob
@@ -51,6 +48,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -58,14 +57,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
-
-      - script: |
-          npm run lint
-        workingDirectory: "./"
-        displayName: "tslint"
+        displayName: "npm ci"
 
       - script: |
           npm run test:blob
@@ -83,6 +77,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -90,17 +86,49 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
-
-      - script: |
-          npm run lint
-        workingDirectory: "./"
-        displayName: "tslint"
+        displayName: "npm ci"
 
       - script: |
           npm run test:blob
+        workingDirectory: "./"
+        displayName: "npm run test:blob"
+        env: {}
+
+  - job: blobtestmysql
+    displayName: Blob Test Mysql
+    pool:
+      vmImage: "ubuntu-16.04"
+    strategy:
+      matrix:
+        node_8_x:
+          node_version: 8.x
+        node_10_x:
+          node_version: 10.x
+        node_12_x:
+          node_version: 12.x
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(node_version)"
+        displayName: "Install Node.js"
+
+      - script: |
+          npm ci
+        workingDirectory: "./"
+        displayName: "npm ci"
+
+      - script: |
+          docker run --name mysql -p 13306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql
+          sleep 60
+          docker exec mysql mysql -u root -pmy-secret-pw -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+          docker exec mysql mysql -u root -pmy-secret-pw -e "create database azurite_blob_test;"
+        workingDirectory: "./"
+        displayName: "Setup mysql docker instance"
+
+      - script: |
+          npm run test:blob:sql:ci
         workingDirectory: "./"
         displayName: "npm run test:blob"
         env: {}
@@ -115,6 +143,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -122,14 +152,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
-
-      - script: |
-          npm run lint
-        workingDirectory: "./"
-        displayName: "tslint"
+        displayName: "npm ci"
 
       - script: |
           npm run test:queue
@@ -147,6 +172,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -154,14 +181,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
-
-      - script: |
-          npm run lint
-        workingDirectory: "./"
-        displayName: "tslint"
+        displayName: "npm ci"
 
       - script: |
           npm run test:queue
@@ -179,6 +201,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -186,21 +210,16 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
-
-      - script: |
-          npm run lint
-        workingDirectory: "./"
-        displayName: "tslint"
+        displayName: "npm ci"
 
       - script: |
           npm run test:queue
         workingDirectory: "./"
         displayName: "npm run test:queue"
         env: {}
-  
+
   - job: azuritenodejslinux
     displayName: Azurite Linux
     pool:
@@ -211,6 +230,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -218,9 +239,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
+        displayName: "npm ci"
 
       - script: |
           npm run lint
@@ -257,6 +278,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -264,9 +287,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
+        displayName: "npm ci"
 
       - script: |
           npm run lint
@@ -286,7 +309,7 @@ jobs:
       - script: |
           npm uninstall -g azurite
           npm run build
-          npm install -g
+          npm ci -g
           azurite -v
           azurite-blob -v
           azurite-queue -v
@@ -303,6 +326,8 @@ jobs:
           node_version: 8.x
         node_10_x:
           node_version: 10.x
+        node_12_x:
+          node_version: 12.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -310,9 +335,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
+        displayName: "npm ci"
 
       - script: |
           npm run lint
@@ -338,16 +363,16 @@ jobs:
           azurite-queue -v
         workingDirectory: "./"
         displayName: "Validate npm global installation from GitHub code base"
-  
+
   - job: docker
     displayName: Docker Build
     pool:
       vmImage: "ubuntu-16.04"
     steps:
       - script: |
-          npm install
+          npm ci
         workingDirectory: "./"
-        displayName: "npm install"
+        displayName: "npm ci"
 
       - script: |
           npm run docker:build
@@ -360,3 +385,14 @@ jobs:
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-queue -v
         workingDirectory: "./"
         displayName: "Validate docker image"
+
+  - job: governance
+    displayName: Component Governance Component Detection
+    pool:
+      vmImage: "ubuntu-16.04"
+    steps:
+      - task: ComponentGovernanceComponentDetection@0
+        inputs:
+          scanType: "Register"
+          verbosity: "Verbose"
+          alertWarningLevel: "High"

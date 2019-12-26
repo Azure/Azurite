@@ -8,8 +8,9 @@ VOLUME [ "/data" ]
 COPY . .
 
 RUN npm config set unsafe-perm=true
-RUN npm install
+RUN npm ci
 RUN npm run build
+RUN ls -l
 RUN npm install -g
 
 # Blob Storage Port

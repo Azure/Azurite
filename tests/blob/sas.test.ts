@@ -53,7 +53,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await server.clean();
   });
 
-  it("generateAccountSASQueryParameters should work", async () => {
+  it("generateAccountSASQueryParameters should work @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -87,7 +87,53 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await serviceURLWithSAS.getAccountInfo(Aborter.none);
   });
 
-  it("generateAccountSASQueryParameters should not work with invalid permission", async () => {
+  it("generateAccountSASQueryParameters should work for set blob tier @loki @sql", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = serviceURL.pipeline.factories;
+    const sharedKeyCredential = factories[factories.length - 1];
+
+    const sas = generateAccountSASQueryParameters(
+      {
+        expiryTime: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: AccountSASPermissions.parse("w").toString(),
+        protocol: SASProtocol.HTTPSandHTTP,
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("btqf").toString(),
+        startTime: now,
+        version: "2016-05-31"
+      },
+      sharedKeyCredential as SharedKeyCredential
+    ).toString();
+
+    const sasURL = `${serviceURL.url}?${sas}`;
+    const serviceURLWithSAS = new ServiceURL(
+      sasURL,
+      StorageURL.newPipeline(new AnonymousCredential())
+    );
+
+    const containerURLWithSAS = ContainerURL.fromServiceURL(
+      serviceURLWithSAS,
+      getUniqueName("con")
+    );
+    await containerURLWithSAS.create(Aborter.none);
+
+    const blockBlobURLWithSAS = BlockBlobURL.fromContainerURL(
+      containerURLWithSAS,
+      getUniqueName("blob")
+    );
+    await blockBlobURLWithSAS.upload(Aborter.none, "abc", 3);
+
+    await blockBlobURLWithSAS.setTier(Aborter.none, "Hot");
+  });
+
+  it("generateAccountSASQueryParameters should not work with invalid permission @loki @sql", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -121,7 +167,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.ok(error);
   });
 
-  it("generateAccountSASQueryParameters should not work with invalid service", async () => {
+  it("generateAccountSASQueryParameters should not work with invalid service @loki @sql", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -155,7 +201,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.ok(error);
   });
 
-  it("generateAccountSASQueryParameters should not work with invalid resource type", async () => {
+  it("generateAccountSASQueryParameters should not work with invalid resource type @loki @sql", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -192,7 +238,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.ok(error);
   });
 
-  it("Copy blob should work with write permission in account SAS to override an existing blob", async () => {
+  it("Copy blob should work with write permission in account SAS to override an existing blob @loki", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -238,7 +284,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await blob2.startCopyFromURL(Aborter.none, blob1.url);
   });
 
-  it("Copy blob shouldn't work without write permission in account SAS to override an existing blob", async () => {
+  it("Copy blob shouldn't work without write permission in account SAS to override an existing blob @loki", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -291,7 +337,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.ok(error !== undefined);
   });
 
-  it("Copy blob should work without write permission in account SAS to an nonexisting blob", async () => {
+  it("Copy blob should work without write permission in account SAS to an nonexisting blob @loki", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -336,7 +382,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await blob2.startCopyFromURL(Aborter.none, blob1.url);
   });
 
-  it("generateBlobSASQueryParameters should work for container", async () => {
+  it("generateBlobSASQueryParameters should work for container @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -374,7 +420,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await containerURL.delete(Aborter.none);
   });
 
-  it("generateBlobSASQueryParameters should work for blob", async () => {
+  it("generateBlobSASQueryParameters should work for blob @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -400,12 +446,12 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const blobSAS = generateBlobSASQueryParameters(
       {
         blobName,
-        cacheControl: "cache-control-override",
+        // cacheControl: "cache-control-override",
         containerName,
-        contentDisposition: "content-disposition-override",
-        contentEncoding: "content-encoding-override",
-        contentLanguage: "content-language-override",
-        contentType: "content-type-override",
+        // contentDisposition: "content-disposition-override",
+        // contentEncoding: "content-encoding-override",
+        // contentLanguage: "content-language-override",
+        // contentType: "content-type-override",
         expiryTime: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
         permissions: BlobSASPermissions.parse("racwd").toString(),
@@ -435,7 +481,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await containerURL.delete(Aborter.none);
   });
 
-  it("generateBlobSASQueryParameters should work for blob with special naming", async () => {
+  it("generateBlobSASQueryParameters should work for blob with special naming @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -465,12 +511,12 @@ describe("Shared Access Signature (SAS) authentication", () => {
       {
         // NOTICE: Azure Storage Server will replace "\" with "/" in the blob names
         blobName: blobName.replace(/\\/g, "/"),
-        cacheControl: "cache-control-override",
+        // cacheControl: "cache-control-override",
         containerName,
-        contentDisposition: "content-disposition-override",
-        contentEncoding: "content-encoding-override",
-        contentLanguage: "content-language-override",
-        contentType: "content-type-override",
+        // contentDisposition: "content-disposition-override",
+        // contentEncoding: "content-encoding-override",
+        // contentLanguage: "content-language-override",
+        // contentType: "content-type-override",
         expiryTime: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
         permissions: BlobSASPermissions.parse("racwd").toString(),
@@ -500,7 +546,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await containerURL.delete(Aborter.none);
   });
 
-  it("generateBlobSASQueryParameters should work for blob with access policy", async () => {
+  it("generateBlobSASQueryParameters should work for blob with access policy @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -553,7 +599,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await containerURL.delete(Aborter.none);
   });
 
-  it("Copy blob should work with write permission in blob SAS to override an existing blob", async () => {
+  it("Copy blob should work with write permission in blob SAS to override an existing blob @loki", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -603,7 +649,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await blob2SAS.startCopyFromURL(Aborter.none, blob1.url);
   });
 
-  it("Copy blob shouldn't work without write permission in blob SAS to override an existing blob", async () => {
+  it("Copy blob shouldn't work without write permission in blob SAS to override an existing blob @loki", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -660,7 +706,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.ok(error !== undefined);
   });
 
-  it("Copy blob should work without write permission in account SAS to an nonexisting blob", async () => {
+  it("Copy blob should work without write permission in account SAS to an nonexisting blob @loki", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -708,7 +754,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await blob2SAS.startCopyFromURL(Aborter.none, blob1.url);
   });
 
-  it("GenerateUserDelegationSAS should work for blob snapshot", async () => {
+  it("GenerateUserDelegationSAS should work for blob snapshot @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -735,12 +781,12 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const blobSAS = generateBlobSASQueryParameters(
       {
         blobName,
-        cacheControl: "cache-control-override",
+        // cacheControl: "cache-control-override",
         containerName,
-        contentDisposition: "content-disposition-override",
-        contentEncoding: "content-encoding-override",
-        contentLanguage: "content-language-override",
-        contentType: "content-type-override",
+        // contentDisposition: "content-disposition-override",
+        // contentEncoding: "content-encoding-override",
+        // contentLanguage: "content-language-override",
+        // contentType: "content-type-override",
         expiryTime: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
         permissions: BlobSASPermissions.parse("racwd").toString(),

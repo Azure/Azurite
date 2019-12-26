@@ -64,7 +64,7 @@ describe("PageBlobAPIs", () => {
     await containerURL.delete(Aborter.none);
   });
 
-  it("create with default parameters", async () => {
+  it("create with default parameters @loki", async () => {
     const reuslt_create = await pageBlobURL.create(Aborter.none, 512);
     assert.equal(
       reuslt_create._response.request.headers.get("x-ms-client-request-id"),
@@ -82,7 +82,7 @@ describe("PageBlobAPIs", () => {
     );
   });
 
-  it("create with all parameters set", async () => {
+  it("create with all parameters set @loki", async () => {
     const options = {
       blobHTTPHeaders: {
         blobCacheControl: "blobCacheControl",
@@ -141,7 +141,34 @@ describe("PageBlobAPIs", () => {
     );
   });
 
-  it("download page blob with no ranges uploaded", async () => {
+  it("download page blob with partial ranges @loki", async () => {
+    const length = 512 * 10;
+    await pageBlobURL.create(Aborter.none, length);
+
+    const ranges = await pageBlobURL.getPageRanges(Aborter.none, 0, length);
+    assert.deepStrictEqual((ranges.pageRange || []).length, 0);
+    assert.deepStrictEqual((ranges.clearRange || []).length, 0);
+    assert.equal(
+      ranges._response.request.headers.get("x-ms-client-request-id"),
+      ranges.clientRequestId
+    );
+    let result = await blobURL.download(Aborter.none, 0, 10);
+    assert.deepStrictEqual(result.contentRange, `bytes 0-9/5120`);
+    assert.deepStrictEqual(
+      await bodyToString(result, length),
+      "\u0000".repeat(10)
+    );
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+
+    result = await blobURL.download(Aborter.none, 1);
+    assert.deepStrictEqual(result.contentRange, `bytes 1-5119/5120`);
+    assert.deepStrictEqual(result._response.status, 206);
+  });
+
+  it("download page blob with no ranges uploaded @loki", async () => {
     const length = 512 * 10;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -164,7 +191,7 @@ describe("PageBlobAPIs", () => {
     );
   });
 
-  it("download page blob with no ranges uploaded after resize to bigger size", async () => {
+  it("download page blob with no ranges uploaded after resize to bigger size @loki", async () => {
     let length = 512 * 10;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -207,7 +234,7 @@ describe("PageBlobAPIs", () => {
     );
   });
 
-  it("download page blob with no ranges uploaded after resize to smaller size", async () => {
+  it("download page blob with no ranges uploaded after resize to smaller size @loki", async () => {
     let length = 512 * 10;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -238,7 +265,7 @@ describe("PageBlobAPIs", () => {
     );
   });
 
-  it("uploadPages", async () => {
+  it("uploadPages @loki", async () => {
     await pageBlobURL.create(Aborter.none, 1024);
 
     const result = await blobURL.download(Aborter.none, 0);
@@ -263,7 +290,7 @@ describe("PageBlobAPIs", () => {
     assert.equal(await bodyToString(page2, 512), "b".repeat(512));
   });
 
-  it("uploadPages with sequential pages", async () => {
+  it("uploadPages with sequential pages @loki", async () => {
     const length = 512 * 3;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -296,7 +323,7 @@ describe("PageBlobAPIs", () => {
     assert.deepStrictEqual(ranges.pageRange![2], { start: 1024, end: 1535 });
   });
 
-  it("uploadPages with one big page range", async () => {
+  it("uploadPages with one big page range @loki", async () => {
     const length = 512 * 3;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -330,7 +357,7 @@ describe("PageBlobAPIs", () => {
     assert.deepStrictEqual(ranges.pageRange![0], { start: 0, end: 1535 });
   });
 
-  it("uploadPages with non-sequential pages", async () => {
+  it("uploadPages with non-sequential pages @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -369,7 +396,7 @@ describe("PageBlobAPIs", () => {
     assert.deepStrictEqual(ranges.pageRange![1], { start: 1536, end: 2047 });
   });
 
-  it("uploadPages to internally override a sequential range", async () => {
+  it("uploadPages to internally override a sequential range @loki", async () => {
     const length = 512 * 3;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -407,7 +434,7 @@ describe("PageBlobAPIs", () => {
     assert.deepStrictEqual(ranges.pageRange![2], { start: 1024, end: 1535 });
   });
 
-  it("uploadPages to internally right align override a sequential range", async () => {
+  it("uploadPages to internally right align override a sequential range @loki", async () => {
     const length = 512 * 3;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -444,7 +471,7 @@ describe("PageBlobAPIs", () => {
     assert.deepStrictEqual(ranges.pageRange![1], { start: 1024, end: 1535 });
   });
 
-  it("uploadPages to internally left align override a sequential range", async () => {
+  it("uploadPages to internally left align override a sequential range @loki", async () => {
     const length = 512 * 3;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -481,7 +508,7 @@ describe("PageBlobAPIs", () => {
     assert.deepStrictEqual(ranges.pageRange![1], { start: 512, end: 1535 });
   });
 
-  it("uploadPages to totally override a sequential range", async () => {
+  it("uploadPages to totally override a sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -533,7 +560,7 @@ describe("PageBlobAPIs", () => {
     assert.deepStrictEqual(ranges.pageRange![0], { start: 0, end: length - 1 });
   });
 
-  it("uploadPages to left override a sequential range", async () => {
+  it("uploadPages to left override a sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -583,7 +610,7 @@ describe("PageBlobAPIs", () => {
     assert.deepStrictEqual(ranges.pageRange![1], { start: 1024, end: 2047 });
   });
 
-  it("uploadPages to right override a sequential range", async () => {
+  it("uploadPages to right override a sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -639,7 +666,7 @@ describe("PageBlobAPIs", () => {
     });
   });
 
-  it("resize override a sequential range", async () => {
+  it("resize override a sequential range @loki", async () => {
     let length = 512 * 3;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -680,7 +707,7 @@ describe("PageBlobAPIs", () => {
     assert.deepStrictEqual(ranges.pageRange![0], { start: 0, end: length - 1 });
   });
 
-  it("uploadPages to internally override a non-sequential range", async () => {
+  it("uploadPages to internally override a non-sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -747,7 +774,7 @@ describe("PageBlobAPIs", () => {
     });
   });
 
-  it("uploadPages to internally insert into a non-sequential range", async () => {
+  it("uploadPages to internally insert into a non-sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -814,7 +841,7 @@ describe("PageBlobAPIs", () => {
     });
   });
 
-  it("uploadPages to totally override a non-sequential range", async () => {
+  it("uploadPages to totally override a non-sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -873,7 +900,7 @@ describe("PageBlobAPIs", () => {
     });
   });
 
-  it("uploadPages to left override a non-sequential range", async () => {
+  it("uploadPages to left override a non-sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -936,7 +963,7 @@ describe("PageBlobAPIs", () => {
     });
   });
 
-  it("uploadPages to insert into a non-sequential range", async () => {
+  it("uploadPages to insert into a non-sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -1003,7 +1030,7 @@ describe("PageBlobAPIs", () => {
     });
   });
 
-  it("uploadPages to right override a non-sequential range", async () => {
+  it("uploadPages to right override a non-sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -1066,7 +1093,7 @@ describe("PageBlobAPIs", () => {
     });
   });
 
-  it("clearPages", async () => {
+  it("clearPages @loki", async () => {
     await pageBlobURL.create(Aborter.none, 1024);
     let result = await blobURL.download(Aborter.none, 0);
     assert.deepStrictEqual(
@@ -1090,7 +1117,7 @@ describe("PageBlobAPIs", () => {
     );
   });
 
-  it("clearPages to internally override a sequential range", async () => {
+  it("clearPages to internally override a sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -1141,7 +1168,7 @@ describe("PageBlobAPIs", () => {
     });
   });
 
-  it("clearPages to totally override a sequential range", async () => {
+  it("clearPages to totally override a sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -1184,7 +1211,7 @@ describe("PageBlobAPIs", () => {
     assert.deepStrictEqual((ranges.clearRange || []).length, 0);
   });
 
-  it("clearPages to left override a sequential range", async () => {
+  it("clearPages to left override a sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -1231,7 +1258,7 @@ describe("PageBlobAPIs", () => {
     });
   });
 
-  it("clearPages to right override a sequential range", async () => {
+  it("clearPages to right override a sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -1278,7 +1305,7 @@ describe("PageBlobAPIs", () => {
     });
   });
 
-  it("clearPages to internally override a non-sequential range", async () => {
+  it("clearPages to internally override a non-sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -1326,7 +1353,7 @@ describe("PageBlobAPIs", () => {
     });
   });
 
-  it("clearPages to internally insert into a non-sequential range", async () => {
+  it("clearPages to internally insert into a non-sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -1378,7 +1405,7 @@ describe("PageBlobAPIs", () => {
     });
   });
 
-  it("clearPages to totally override a non-sequential range", async () => {
+  it("clearPages to totally override a non-sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -1418,7 +1445,7 @@ describe("PageBlobAPIs", () => {
     assert.deepStrictEqual((ranges.clearRange || []).length, 0);
   });
 
-  it("clearPages to left override a non-sequential range", async () => {
+  it("clearPages to left override a non-sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -1470,7 +1497,7 @@ describe("PageBlobAPIs", () => {
     });
   });
 
-  it("clearPages to right override a non-sequential range", async () => {
+  it("clearPages to right override a non-sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
 
@@ -1518,7 +1545,7 @@ describe("PageBlobAPIs", () => {
     });
   });
 
-  it("getPageRanges", async () => {
+  it("getPageRanges @loki", async () => {
     await pageBlobURL.create(Aborter.none, 1024);
 
     const result = await blobURL.download(Aborter.none, 0);
@@ -1537,7 +1564,7 @@ describe("PageBlobAPIs", () => {
     assert.equal(page2.pageRange![0].end, 1023);
   });
 
-  it("updateSequenceNumber", async () => {
+  it("updateSequenceNumber @loki", async () => {
     await pageBlobURL.create(Aborter.none, 1024);
     let propertiesResponse = await pageBlobURL.getProperties(Aborter.none);
 
@@ -1562,7 +1589,7 @@ describe("PageBlobAPIs", () => {
   });
 
   // devstoreaccount1 is standard storage account which doesn't support premium page blob tiers
-  it.skip("setTier for Page blob", async () => {
+  it.skip("setTier for Page blob @loki", async () => {
     const length = 512 * 5;
     await pageBlobURL.create(Aborter.none, length);
     let propertiesResponse = await pageBlobURL.getProperties(Aborter.none);

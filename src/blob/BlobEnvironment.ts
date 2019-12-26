@@ -11,29 +11,38 @@ import {
 
 const accessAsync = promisify(access);
 
-args
-  .option(
-    ["", "blobHost"],
-    "Optional. Customize listening address for blob",
-    DEFAULT_BLOB_SERVER_HOST_NAME
-  )
-  .option(
-    ["", "blobPort"],
-    "Optional. Customize listening port for blob",
-    DEFAULT_BLOB_LISTENING_PORT
-  )
-  .option(
-    "location",
-    "Optional. Use an existing folder as workspace path, default is current working directory",
-    process.cwd()
-  )
-  .option("silent", "Optional. Disable access log displayed in console")
-  .option(
-    "debug",
-    "Optional. Enable debug log by providing a valid local file path as log destination"
-  );
+if (!(args as any).config.name) {
+  args
+    .option(
+      ["", "blobHost"],
+      "Optional. Customize listening address for blob",
+      DEFAULT_BLOB_SERVER_HOST_NAME
+    )
+    .option(
+      ["", "blobPort"],
+      "Optional. Customize listening port for blob",
+      DEFAULT_BLOB_LISTENING_PORT
+    )
+    .option(
+      ["l", "location"],
+      "Optional. Use an existing folder as workspace path, default is current working directory",
+      process.cwd()
+    )
+    .option(
+      ["s", "silent"],
+      "Optional. Disable access log displayed in console"
+    )
+    .option(
+      ["L", "loose"],
+      "Optional. Enable loose mode which ignores unsupported headers and parameters"
+    )
+    .option(
+      ["d", "debug"],
+      "Optional. Enable debug log by providing a valid local file path as log destination"
+    );
 
-(args as any).config.name = "azurite-queue";
+  (args as any).config.name = "azurite-blob";
+}
 
 export default class BlobEnvironment implements IBlobEnvironment {
   private flags = args.parse(process.argv);
@@ -56,6 +65,14 @@ export default class BlobEnvironment implements IBlobEnvironment {
     if (this.flags.silent !== undefined) {
       return true;
     }
+    return false;
+  }
+
+  public loose(): boolean {
+    if (this.flags.loose !== undefined) {
+      return true;
+    }
+    // default is false which will block not supported APIs, headers and parameters
     return false;
   }
 

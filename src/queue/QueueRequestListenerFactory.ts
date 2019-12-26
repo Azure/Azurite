@@ -1,4 +1,5 @@
 import express from "express";
+import morgan = require("morgan");
 
 import IAccountDataStore from "../common/IAccountDataStore";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
@@ -6,10 +7,8 @@ import logger from "../common/Logger";
 import IExtentStore from "../common/persistence/IExtentStore";
 import { RequestListener } from "../common/ServerBase";
 import AccountSASAuthenticator from "./authentication/AccountSASAuthenticator";
-import AuthenticationMiddlewareFactory from "./authentication/AuthenticationMiddlewareFactory";
 import QueueSASAuthenticator from "./authentication/QueueSASAuthenticator";
 import QueueSharedKeyAuthenticator from "./authentication/QueueSharedKeyAuthenticator";
-import queueStorageContextMiddleware from "./context/queueStorageContext.middleware";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
 import IHandlers from "./generated/handlers/IHandlers";
 import MiddlewareFactory from "./generated/MiddlewareFactory";
@@ -17,11 +16,12 @@ import MessageIdHandler from "./handlers/MessageIdHandler";
 import MessagesHandler from "./handlers/MessagesHandler";
 import QueueHandler from "./handlers/QueueHandler";
 import ServiceHandler from "./handlers/ServiceHandler";
+import AuthenticationMiddlewareFactory from "./middlewares/AuthenticationMiddlewareFactory";
+import PreflightMiddlewareFactory from "./middlewares/PreflightMiddlewareFactory";
+import queueStorageContextMiddleware from "./middlewares/queueStorageContext.middleware";
 import { IQueueMetadataStore } from "./persistence/IQueueMetadataStore";
-import PreflightMiddlewareFactory from "./preflight/PreflightMiddlewareFactory";
 import { DEFAULT_QUEUE_CONTEXT_PATH } from "./utils/constants";
 
-import morgan = require("morgan");
 /**
  * Default RequestListenerFactory based on express framework.
  *
@@ -120,8 +120,15 @@ export default class QueueRequestListenerFactory
     // tslint:disable-next-line:max-line-length
     // See as https://docs.microsoft.com/en-us/rest/api/storageservices/cross-origin-resource-sharing--cors--support-for-the-azure-storage-services
     app.use(
-      preflightMiddlewareFactory.createActualCorsRequestMiddleware(
-        this.metadataStore
+      preflightMiddlewareFactory.createCorsRequestMiddleware(
+        this.metadataStore,
+        true
+      )
+    );
+    app.use(
+      preflightMiddlewareFactory.createCorsRequestMiddleware(
+        this.metadataStore,
+        false
       )
     );
 
@@ -131,7 +138,7 @@ export default class QueueRequestListenerFactory
     // CORS preflight request handling, processing OPTIONS requests.
     // TODO: Should support OPTIONS in swagger and autorest, then this handling can be moved to ServiceHandler.
     app.use(
-      preflightMiddlewareFactory.createOPTIONSHandlerMiddleware(
+      preflightMiddlewareFactory.createOptionsHandlerMiddleware(
         this.metadataStore
       )
     );

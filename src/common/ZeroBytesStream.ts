@@ -21,9 +21,9 @@ export default class ZeroBytesStream extends Readable {
       this.leftBytes -= zeroBytesRangeUnit;
       this.push(zeroBytesChunk);
     } else {
-      this.leftBytes -= zeroBytesRangeUnit;
       process.nextTick(() => {
         this.push(Buffer.alloc(this.leftBytes));
+        this.leftBytes = 0;
       });
     }
   }

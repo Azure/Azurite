@@ -36,6 +36,13 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
     connectionURI: string,
     sequelizeOptions?: SequelizeOptions
   ) {
+    // Enable encrypt connection for SQL Server
+    if (connectionURI.startsWith("mssql") && sequelizeOptions) {
+      sequelizeOptions.dialectOptions = sequelizeOptions.dialectOptions || {};
+      (sequelizeOptions.dialectOptions as any).options =
+        (sequelizeOptions.dialectOptions as any).options || {};
+      (sequelizeOptions.dialectOptions as any).options.encrypt = true;
+    }
     this.sequelize = new Sequelize(connectionURI, sequelizeOptions);
   }
 
@@ -48,7 +55,7 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
           type: "VARCHAR(255)",
           primaryKey: true
         },
-        persistencyId: {
+        locationId: {
           allowNull: false,
           type: "VARCHAR(255)"
         },
@@ -155,9 +162,9 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
       const getId = this.getModelValue<string>(extentsModel, "id", true);
       return {
         id: getId,
-        persistencyId: this.getModelValue<string>(
+        locationId: this.getModelValue<string>(
           extentsModel,
-          "persistencyId",
+          "locationId",
           true
         ),
         path: this.getModelValue<string>(extentsModel, "path") || getId,
@@ -203,13 +210,13 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
   }
 
   /**
-   * Get the persistencyId for a given extentId.
+   * Get the locationId for a given extentId.
    *
    * @param {string} extentId
    * @returns {Promise<string>}
    * @memberof IExtentMetadata
    */
-  public async getExtentPersistencyId(extentId: string): Promise<string> {
+  public async getExtentLocationId(extentId: string): Promise<string> {
     return ExtentsModel.findOne({
       where: {
         id: extentId
@@ -217,15 +224,11 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
     }).then(res => {
       if (res === null || res === undefined) {
         throw Error(
-          `SqlExtentMetadataStore:getExtentPersistencyId() Error. Extent not exists.`
+          `SqlExtentMetadataStore:getExtentLocationId() Error. Extent not exists.`
         );
       }
-      const persistencyId = this.getModelValue<string>(
-        res,
-        "persistencyId",
-        true
-      );
-      return persistencyId;
+      const locationId = this.getModelValue<string>(res, "locationId", true);
+      return locationId;
     });
   }
 

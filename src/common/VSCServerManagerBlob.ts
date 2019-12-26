@@ -5,11 +5,11 @@ import BlobServer from "../blob/BlobServer";
 import {
   DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
   DEFAULT_BLOB_LOKI_DB_PATH,
-  DEFAULT_BLOB_PERSISTENCE_ARRAY
+  DEFAULT_BLOB_PERSISTENCE_ARRAY,
+  DEFAULT_BLOB_PERSISTENCE_PATH
 } from "../blob/utils/constants";
 import * as Logger from "./Logger";
 import NoLoggerStrategy from "./NoLoggerStrategy";
-import { rimrafAsync } from "./utils/utils";
 import VSCChannelLoggerStrategy from "./VSCChannelLoggerStrategy";
 import VSCChannelWriteStream from "./VSCChannelWriteStream";
 import VSCEnvironment from "./VSCEnvironment";
@@ -57,17 +57,18 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
   }
 
   public async cleanImpl(): Promise<void> {
-    const config = await this.getConfiguration();
-    await rimrafAsync(config.extentDBPath);
-    await rimrafAsync(config.metadataDBPath);
-    for (const path of config.persistencePathArray) {
-      await rimrafAsync(path.persistencyPath);
-    }
+    await this.createImpl();
+    await this.server!.clean();
   }
 
   private async getConfiguration(): Promise<BlobConfiguration> {
     const env = new VSCEnvironment();
     const location = await env.location();
+
+    DEFAULT_BLOB_PERSISTENCE_ARRAY[0].locationPath = join(
+      location,
+      DEFAULT_BLOB_PERSISTENCE_PATH
+    );
 
     // Initialize server configuration
     const config = new BlobConfiguration(
@@ -78,8 +79,9 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       DEFAULT_BLOB_PERSISTENCE_ARRAY,
       !env.silent(),
       this.accessChannelStream,
-      env.debug() === true,
-      undefined
+      (await env.debug()) === true,
+      undefined,
+      env.loose()
     );
     return config;
   }

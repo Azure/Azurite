@@ -43,8 +43,8 @@ describe("Queue SAS test", () => {
 
   const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
     {
-      persistencyId: "queueTest",
-      persistencyPath: persistencePath,
+      locationId: "queueTest",
+      locationPath: persistencePath,
       maxConcurrency: 10
     }
   ];
@@ -83,7 +83,7 @@ describe("Queue SAS test", () => {
     await rmRecursive(persistencePath);
   });
 
-  it("generateAccountSASQueryParameters should work", async () => {
+  it("generateAccountSASQueryParameters should work @loki", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -117,7 +117,7 @@ describe("Queue SAS test", () => {
     await serviceURLWithSAS.getProperties(Aborter.none);
   });
 
-  it("generateAccountSASQueryParameters should not work with invalid permission", async () => {
+  it("generateAccountSASQueryParameters should not work with invalid permission @loki", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -152,7 +152,7 @@ describe("Queue SAS test", () => {
     assert.deepEqual(error.statusCode, 403);
   });
 
-  it("generateAccountSASQueryParameters should not work with invalid service", async () => {
+  it("generateAccountSASQueryParameters should not work with invalid service @loki", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -186,7 +186,7 @@ describe("Queue SAS test", () => {
     assert.deepEqual(error.statusCode, 403);
   });
 
-  it("generateAccountSASQueryParameters should not work with invalid resource type", async () => {
+  it("generateAccountSASQueryParameters should not work with invalid resource type @loki", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -223,7 +223,7 @@ describe("Queue SAS test", () => {
     assert.deepEqual(error.statusCode, 403);
   });
 
-  it("Create queue should work with write (w) or create (c) permission in account SAS", async () => {
+  it("Create queue should work with write (w) or create (c) permission in account SAS @loki", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -282,7 +282,7 @@ describe("Queue SAS test", () => {
     await queueURL2.delete(Aborter.none);
   });
 
-  it("Create queue shouldn't work without write (w) and create (c) permission in account SAS", async () => {
+  it("Create queue shouldn't work without write (w) and create (c) permission in account SAS @loki", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -322,7 +322,7 @@ describe("Queue SAS test", () => {
     assert.ok(error !== undefined);
   });
 
-  it("generateAccountSASQueryParameters should work for queue", async () => {
+  it("generateAccountSASQueryParameters should work for queue @loki", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -361,7 +361,7 @@ describe("Queue SAS test", () => {
     await queueURL.delete(Aborter.none);
   });
 
-  it("Get/Set ACL with AccountSAS is not allowed", async () => {
+  it("Get/Set ACL with AccountSAS is not allowed @loki", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -421,7 +421,7 @@ describe("Queue SAS test", () => {
     await queueURL.delete(Aborter.none);
   });
 
-  it("generateAccountSASQueryParameters should work for messages", async () => {
+  it("generateAccountSASQueryParameters should work for messages @loki", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -474,7 +474,7 @@ describe("Queue SAS test", () => {
     await queueURL.delete(Aborter.none);
   });
 
-  it("generateAccountSASQueryParameters should work for messages", async () => {
+  it("generateAccountSASQueryParameters should work for messages @loki", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -527,7 +527,7 @@ describe("Queue SAS test", () => {
     await queueURL.delete(Aborter.none);
   });
 
-  it("generateQueueSASQueryParameters should work for queue", async () => {
+  it("generateQueueSASQueryParameters should work for queue @loki", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -565,7 +565,7 @@ describe("Queue SAS test", () => {
     await queueURL.delete(Aborter.none);
   });
 
-  it("generateQueueSASQueryParameters should work for messages", async () => {
+  it("generateQueueSASQueryParameters should work for messages @loki", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -627,7 +627,7 @@ describe("Queue SAS test", () => {
     await queueURL.delete(Aborter.none);
   });
 
-  it("generateQueueSASQueryParameters should work for queue with access policy", async () => {
+  it("generateQueueSASQueryParameters should work for queue with access policy @loki", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 

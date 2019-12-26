@@ -35,8 +35,8 @@ describe("MessageId APIs test", () => {
 
   const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
     {
-      persistencyId: "queueTest",
-      persistencyPath: persistencePath,
+      locationId: "queueTest",
+      locationPath: persistencePath,
       maxConcurrency: 10
     }
   ];
@@ -89,7 +89,7 @@ describe("MessageId APIs test", () => {
     await queueURL.delete(Aborter.none);
   });
 
-  it("update and delete empty message with default parameters", async () => {
+  it("update and delete empty message with default parameters @loki", async () => {
     let messagesURL = MessagesURL.fromQueueURL(queueURL);
     let eResult = await messagesURL.enqueue(Aborter.none, messageContent);
     assert.ok(eResult.date);
@@ -150,7 +150,7 @@ describe("MessageId APIs test", () => {
     assert.equal(pResult.peekedMessageItems.length, 0);
   });
 
-  it("update and delete message with all parameters", async () => {
+  it("update and delete message with all parameters @loki", async () => {
     let messagesURL = MessagesURL.fromQueueURL(queueURL);
     let eResult = await messagesURL.enqueue(Aborter.none, messageContent);
     assert.ok(eResult.date);
@@ -204,7 +204,7 @@ describe("MessageId APIs test", () => {
     );
   });
 
-  it("update message with 64KB characters size which is computed after encoding", async () => {
+  it("update message with 64KB characters size which is computed after encoding @loki", async () => {
     let messagesURL = MessagesURL.fromQueueURL(queueURL);
     let eResult = await messagesURL.enqueue(Aborter.none, messageContent);
     assert.ok(eResult.date);
@@ -253,7 +253,7 @@ describe("MessageId APIs test", () => {
     );
   });
 
-  it("update message negative with 65537B (64KB+1B) characters size which is computed after encoding", async () => {
+  it("update message negative with 65537B (64KB+1B) characters size which is computed after encoding @loki", async () => {
     let messagesURL = MessagesURL.fromQueueURL(queueURL);
     let eResult = await messagesURL.enqueue(Aborter.none, messageContent);
     assert.ok(eResult.date);
@@ -291,7 +291,7 @@ describe("MessageId APIs test", () => {
     );
   });
 
-  it("delete message negative", async () => {
+  it("delete message negative @loki", async () => {
     let messagesURL = MessagesURL.fromQueueURL(queueURL);
     let eResult = await messagesURL.enqueue(Aborter.none, messageContent);
 

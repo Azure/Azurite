@@ -415,6 +415,7 @@ operationHandlerMapping[Operation.PageBlob_GetPageRanges] = {
 };
 operationHandlerMapping[Operation.PageBlob_GetPageRangesDiff] = {
   arguments: [
+    "prevsnapshot",
     "options"
   ],
   handler: "pageBlobHandler",

@@ -77,12 +77,12 @@ export interface CorsRule {
   /**
    * the request headers that the origin domain may specify on the CORS request.
    */
-  allowedHeaders: string;
+  allowedHeaders?: string;
   /**
    * The response headers that may be sent in the response to the CORS request and exposed by the
    * browser to the request issuer
    */
-  exposedHeaders: string;
+  exposedHeaders?: string;
   /**
    * The maximum amount time that a browser should cache the preflight OPTIONS request.
    */

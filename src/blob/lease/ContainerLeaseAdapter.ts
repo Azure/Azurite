@@ -3,7 +3,7 @@ import {
   LeaseStateType,
   LeaseStatusType
 } from "../generated/artifacts/models";
-import { ContainerModel } from "./IBlobMetadataStore";
+import { ContainerModel } from "../persistence/IBlobMetadataStore";
 import { ILease } from "./ILeaseState";
 
 export default class ContainerLeaseAdapter implements ILease {

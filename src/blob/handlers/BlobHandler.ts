@@ -2,13 +2,13 @@ import { URL } from "url";
 
 import IExtentStore from "../../common/persistence/IExtentStore";
 import BlobStorageContext from "../context/BlobStorageContext";
-import { extractStoragePartsFromPath } from "../context/blobStorageContext.middleware";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IBlobHandler from "../generated/handlers/IBlobHandler";
 import ILogger from "../generated/utils/ILogger";
+import { extractStoragePartsFromPath } from "../middlewares/blobStorageContext.middleware";
 import IBlobMetadataStore, {
   BlobModel
 } from "../persistence/IBlobMetadataStore";
@@ -47,14 +47,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobSetAccessControlOptionalParams,
     context: Context
   ): Promise<Models.BlobSetAccessControlResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedError(context.contextId);
   }
 
   public getAccessControl(
     options: Models.BlobGetAccessControlOptionalParams,
     context: Context
   ): Promise<Models.BlobGetAccessControlResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedError(context.contextId);
   }
 
   public rename(
@@ -62,7 +62,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobRenameOptionalParams,
     context: Context
   ): Promise<Models.BlobRenameResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedError(context.contextId);
   }
 
   public copyFromURL(
@@ -70,7 +70,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobCopyFromURLOptionalParams,
     context: Context
   ): Promise<Models.BlobCopyFromURLResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedError(context.contextId);
   }
 
   /**
@@ -639,7 +639,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       accountName,
       containerName,
       blobName,
-      undefined
+      undefined,
+      options.leaseAccessConditions
     );
 
     if (blob.properties.copyId !== copyId) {
@@ -862,7 +863,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     // Deserializer doesn't handle range header currently, manually parse range headers here
     const rangesParts = deserializePageBlobRangeHeader(
       context.request!.getHeader("range"),
-      context.request!.getHeader("x-ms-range")
+      context.request!.getHeader("x-ms-range"),
+      false
     );
     const rangeStart = rangesParts[0];
     let rangeEnd = rangesParts[1];
@@ -928,8 +930,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       body = await bodyGetter();
     }
 
+    let contentRange: string | undefined;
+    if (
+      context.request!.getHeader("range") ||
+      context.request!.getHeader("x-ms-range")
+    ) {
+      contentRange = `bytes ${rangeStart}-${rangeEnd}/${blob.properties
+        .contentLength!}`;
+    }
+
     const response: Models.BlobDownloadResponse = {
-      statusCode: rangesParts[1] === Infinity ? 200 : 206,
+      statusCode:
+        rangesParts[1] === Infinity && rangesParts[0] === 0 ? 200 : 206,
       body,
       metadata: blob.metadata,
       eTag: blob.properties.etag,
@@ -938,6 +950,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       version: BLOB_API_VERSION,
       ...blob.properties,
       contentLength,
+      contentRange,
       contentMD5,
       blobContentMD5: blob.properties.contentMD5,
       isServerEncrypted: true,

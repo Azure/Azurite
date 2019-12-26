@@ -3,7 +3,7 @@ export const DEFAULT_ACCOUNTS_REFRESH_INTERVAL = 60 * 1000; // 60s
 export const DEFAULT_FD_CACHE_NUMBER = 100;
 export const FD_CACHE_NUMBER_MIN = 1;
 export const FD_CACHE_NUMBER_MAX = 100;
-export const DEFAULT_MAX_EXTENT_SIZE = 4 * 1024 * 1024;
+export const DEFAULT_MAX_EXTENT_SIZE = 64 * 1024 * 1024; // 64 MB
 export const DEFAULT_READ_CONCURRENCY = 100;
 export const DEFAULT_EXTENT_GC_PROTECT_TIME_IN_MS = 10 * 60 * 1000; // 10mins
 export const DEFAULT_SQL_CHARSET = "utf8mb4";
@@ -21,6 +21,6 @@ export const DEFAULT_SQL_OPTIONS = {
   charset: DEFAULT_SQL_CHARSET,
   collate: DEFAULT_SQL_COLLATE,
   dialectOptions: {
-    timezone: "Etc/GMT-0"
+    timezone: "+00:00"
   }
 };

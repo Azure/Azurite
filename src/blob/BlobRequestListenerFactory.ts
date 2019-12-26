@@ -7,11 +7,9 @@ import logger from "../common/Logger";
 import IExtentStore from "../common/persistence/IExtentStore";
 import { RequestListener } from "../common/ServerBase";
 import AccountSASAuthenticator from "./authentication/AccountSASAuthenticator";
-import AuthenticationMiddlewareFactory from "./authentication/AuthenticationMiddlewareFactory";
 import BlobSASAuthenticator from "./authentication/BlobSASAuthenticator";
 import BlobSharedKeyAuthenticator from "./authentication/BlobSharedKeyAuthenticator";
 import PublicAccessAuthenticator from "./authentication/PublicAccessAuthenticator";
-import blobStorageContextMiddleware from "./context/blobStorageContext.middleware";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
 import IHandlers from "./generated/handlers/IHandlers";
 import MiddlewareFactory from "./generated/MiddlewareFactory";
@@ -22,6 +20,13 @@ import ContainerHandler from "./handlers/ContainerHandler";
 import PageBlobHandler from "./handlers/PageBlobHandler";
 import PageBlobRangesManager from "./handlers/PageBlobRangesManager";
 import ServiceHandler from "./handlers/ServiceHandler";
+import AuthenticationMiddlewareFactory from "./middlewares/AuthenticationMiddlewareFactory";
+import blobStorageContextMiddleware from "./middlewares/blobStorageContext.middleware";
+import PreflightMiddlewareFactory from "./middlewares/PreflightMiddlewareFactory";
+import StrictModelMiddlewareFactory, {
+  UnsupportedHeadersBlocker,
+  UnsupportedParametersBlocker
+} from "./middlewares/StrictModelMiddlewareFactory";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import { DEFAULT_CONTEXT_PATH } from "./utils/constants";
 
@@ -42,7 +47,8 @@ export default class BlobRequestListenerFactory
     private readonly extentStore: IExtentStore,
     private readonly accountDataStore: IAccountDataStore,
     private readonly enableAccessLog: boolean,
-    private readonly accessLogWriteStream?: NodeJS.WritableStream
+    private readonly accessLogWriteStream?: NodeJS.WritableStream,
+    private readonly loose?: boolean
   ) {}
 
   public createRequestListener(): RequestListener {
@@ -88,8 +94,18 @@ export default class BlobRequestListenerFactory
         this.metadataStore,
         this.extentStore,
         logger
-      )
+      ),
+      directoryHandler: {} as any
     };
+
+    // CORS request handling, preflight request and the corresponding actual request
+    const preflightMiddlewareFactory = new PreflightMiddlewareFactory(logger);
+
+    // Strict mode unsupported features blocker
+    const strictModelMiddlewareFactory = new StrictModelMiddlewareFactory(
+      logger,
+      [UnsupportedHeadersBlocker, UnsupportedParametersBlocker]
+    );
 
     /*
      * Generated middleware should follow strict orders
@@ -106,6 +122,11 @@ export default class BlobRequestListenerFactory
 
     // Dispatch incoming HTTP request to specific operation
     app.use(middlewareFactory.createDispatchMiddleware());
+
+    // Block unsupported features in strict mode by default
+    if (this.loose === false || this.loose === undefined) {
+      app.use(strictModelMiddlewareFactory.createStrictModelMiddleware());
+    }
 
     // AuthN middleware, like shared key auth or SAS auth
     const authenticationMiddlewareFactory = new AuthenticationMiddlewareFactory(
@@ -134,8 +155,29 @@ export default class BlobRequestListenerFactory
     // Generated, inject handlers to create a handler middleware
     app.use(middlewareFactory.createHandlerMiddleware(handlers));
 
+    // CORS
+    app.use(
+      preflightMiddlewareFactory.createCorsRequestMiddleware(
+        this.metadataStore,
+        true
+      )
+    );
+    app.use(
+      preflightMiddlewareFactory.createCorsRequestMiddleware(
+        this.metadataStore,
+        false
+      )
+    );
+
     // Generated, will serialize response models into HTTP response
     app.use(middlewareFactory.createSerializerMiddleware());
+
+    // Preflight
+    app.use(
+      preflightMiddlewareFactory.createOptionsHandlerMiddleware(
+        this.metadataStore
+      )
+    );
 
     // Generated, will return MiddlewareError and Errors thrown in previous middleware/handlers to HTTP response
     app.use(middlewareFactory.createErrorMiddleware());

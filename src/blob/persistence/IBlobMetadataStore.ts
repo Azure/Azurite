@@ -251,8 +251,8 @@ export interface IBlobMetadataStore
     account: string,
     prefix?: string,
     maxResults?: number,
-    marker?: number
-  ): Promise<[ContainerModel[], number | undefined]>;
+    marker?: string
+  ): Promise<[ContainerModel[], string | undefined]>;
 
   /**
    * Create a container.

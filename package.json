@@ -3,8 +3,7 @@
   "displayName": "Azurite",
   "description": "An open source Azure Storage API compatible server",
   "icon": "icon.png",
-  "version": "3.3.0-preview",
-  "preview": true,
+  "version": "3.4.0",
   "publisher": "Azurite",
   "categories": [
     "Other"
@@ -21,16 +20,16 @@
   },
   "dependencies": {
     "@azure/ms-rest-js": "^1.5.0",
-    "@types/validator": "^10.11.3",
     "args": "^5.0.1",
     "etag": "^1.8.1",
     "express": "^4.16.4",
     "lokijs": "^1.5.6",
-    "mariadb": "^2.1.1",
     "morgan": "^1.9.1",
     "multistream": "^2.1.1",
+    "mysql2": "^2.1.0",
     "rimraf": "^2.6.3",
     "sequelize": "^5.18.4",
+    "tedious": "^6.6.5",
     "tslib": "^1.9.3",
     "uri-templates": "^0.2.0",
     "uuid": "^3.3.2",
@@ -38,6 +37,7 @@
     "xml2js": "^0.4.19"
   },
   "devDependencies": {
+    "@types/validator": "^10.11.3",
     "@azure/storage-blob": "^10.4.1",
     "@azure/storage-queue": "^10.2.0",
     "@types/args": "^3.0.0",
@@ -49,7 +49,7 @@
     "@types/mocha": "^5.2.6",
     "@types/morgan": "^1.7.35",
     "@types/multistream": "^2.1.1",
-    "@types/node": "^11.13.0",
+    "@types/node": "^13.1.0",
     "@types/rimraf": "^2.0.2",
     "@types/uri-templates": "^0.1.29",
     "@types/uuid": "^3.4.4",
@@ -141,6 +141,11 @@
             "default": false,
             "description": "Disable access log into Visual Studio Code channel"
           },
+          "azurite.loose": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable loose mode which ignores unsupported headers and parameters"
+          },
           "azurite.location": {
             "type": "string",
             "description": "Workspace location folder path, by default Visual Studio Code current opened folder"
@@ -163,7 +168,7 @@
           "azurite.queuePort": {
             "type": "number",
             "default": 10001,
-            "description": "Queue service listening port, by default 10000"
+            "description": "Queue service listening port, by default 10001"
           }
         }
       }
@@ -179,19 +184,20 @@
     "docker:publish": "cross-var docker push xstoreazurite.azurecr.io/public/azure-storage/azurite:$npm_package_version",
     "docker:publish:internal": "cross-var docker push xstoreazurite.azurecr.io/internal/azure-storage/azurite:$npm_package_version",
     "build": "tsc",
-    "build:autorestdebug": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
-    "build:autorest:blob": "autorest ./swagger/blob.md --typescript  --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
-    "build:autorest:queue": "autorest ./swagger/queue.md --typescript  --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
+    "build:autorest:debug": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=E:/GitHub/XiaoningLiu/autorest.typescript.server",
+    "build:autorest:blob": "autorest ./swagger/blob.md --typescript  --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
+    "build:autorest:queue": "autorest ./swagger/queue.md --typescript  --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
     "watch": "tsc -watch -p ./",
     "blob": "node -r ts-node/register src/blob/main.ts",
     "queue": "node -r ts-node/register src/queue/main.ts",
     "azurite": "node -r ts-node/register src/azurite.ts",
     "lint": "tslint -p tsconfig.json -c tslint.json src/**/*.ts",
-    "test": "npm run lint && mocha --compilers ts-node/register --no-timeouts --recursive tests/**/*.test.ts tests/**/**/*.test.ts",
-    "test:blob": "npm run lint && mocha --compilers ts-node/register --no-timeouts --recursive tests/blob/*.test.ts tests/blob/**/*.test.ts",
-    "test:blob:sql": "npm run lint && cross-env AZURITE_TEST_DB=mariadb://root:my-secret-pw@127.0.0.1:3306/azurite_blob_test mocha --compilers ts-node/register --no-timeouts --recursive tests/blob/*.test.ts tests/blob/**/*.test.ts",
+    "test": "npm run lint && mocha --compilers ts-node/register --no-timeouts --grep @loki --recursive tests/**/*.test.ts tests/**/**/*.test.ts",
+    "test:blob": "npm run lint && mocha --compilers ts-node/register --no-timeouts --grep @loki --recursive tests/blob/*.test.ts tests/blob/**/*.test.ts",
+    "test:blob:sql": "npm run lint && cross-env AZURITE_TEST_DB=mysql://root:my-secret-pw@127.0.0.1:3306/azurite_blob_test mocha --compilers ts-node/register --no-timeouts --grep @sql --recursive tests/blob/*.test.ts tests/blob/**/*.test.ts",
+    "test:blob:sql:ci": "npm run lint && cross-env AZURITE_TEST_DB=mysql://root:my-secret-pw@127.0.0.1:13306/azurite_blob_test mocha --compilers ts-node/register --no-timeouts --grep @sql --recursive tests/blob/*.test.ts tests/blob/**/*.test.ts",
     "test:queue": "npm run lint && mocha --compilers ts-node/register --no-timeouts --recursive tests/queue/*.test.ts tests/queue/**/*.test.ts",
-    "clean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log *.vsix",
+    "clean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log *.vsix *.tgz",
     "clean:deep": "npm run clean && rimraf debug.log __*",
     "validate:npmpack:win": "npm install && npm run build && npm pack && cross-var npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v && azurite-queue -v",
     "validate:npmpack:linux_mac": "npm install && npm run build && npm pack && cross-var sudo npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v && azurite-queue -v",

@@ -52,6 +52,17 @@ export default class BlobReferredExtentsAsyncIterator
           }`
         );
 
+        // this._logger.debug(
+        //   `BlobReferredExtentsAsyncIterator:next() committedBlocksInOrder:${JSON.stringify(
+        //     blob.committedBlocksInOrder
+        //   )}`
+        // );
+        // this._logger.debug(
+        //   `BlobReferredExtentsAsyncIterator:next() pageRangesInOrder:${JSON.stringify(
+        //     blob.pageRangesInOrder
+        //   )}`
+        // );
+
         for (const block of blob.committedBlocksInOrder || []) {
           extents.push(block.persistency.id);
         }
@@ -78,9 +89,11 @@ export default class BlobReferredExtentsAsyncIterator
         this.state = State.DONE;
       }
 
-      this.logger.debug(
-        `BlobReferredExtentsAsyncIterator:next() Handle blocks ${blocks.length}`
-      );
+      // this._logger.debug(
+      //   `BlobReferredExtentsAsyncIterator:next() Handle uncommitted blocks ${
+      //     blocks.length
+      //   } ${JSON.stringify(blocks)}`
+      // );
 
       return {
         done: false,

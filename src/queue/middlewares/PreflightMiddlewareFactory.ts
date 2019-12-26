@@ -1,3 +1,4 @@
+import * as msRest from "@azure/ms-rest-js";
 import {
   ErrorRequestHandler,
   NextFunction,
@@ -6,20 +7,23 @@ import {
   Response
 } from "express";
 
-import * as msRest from "@azure/ms-rest-js";
-
 import ILogger from "../../common/ILogger";
+import QueueStorageContext from "../context/QueueStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Mappers from "../generated/artifacts/mappers";
 import Specifications from "../generated/artifacts/specifications";
 import MiddlewareError from "../generated/errors/MiddlewareError";
 import IQueueMetadataStore from "../persistence/IQueueMetadataStore";
-import { HeaderConstants } from "../utils/constants";
+import {
+  DEFAULT_QUEUE_CONTEXT_PATH,
+  HeaderConstants,
+  MethodConstants
+} from "../utils/constants";
 
 export default class PreflightMiddlewareFactory {
   constructor(private readonly logger: ILogger) {}
 
-  public createOPTIONSHandlerMiddleware(
+  public createOptionsHandlerMiddleware(
     metadataStore: IQueueMetadataStore
   ): ErrorRequestHandler {
     return (
@@ -28,30 +32,40 @@ export default class PreflightMiddlewareFactory {
       res: Response,
       next: NextFunction
     ) => {
-      if (req.method === "OPTIONS") {
-        this.logger.info(`preflightMiddleware: Get an option request.`);
+      if (req.method.toUpperCase() === MethodConstants.OPTIONS) {
+        const context = new QueueStorageContext(
+          res.locals,
+          DEFAULT_QUEUE_CONTEXT_PATH
+        );
 
-        const requestId = res.locals.azurite_queue_context.contextID;
-        const account = res.locals.azurite_queue_context.account;
+        const requestId = context.contextID;
+        const account = context.account!;
 
-        const originHeader = HeaderConstants.ORIGIN;
-        const origin = req.headers[originHeader] as string;
-        if (origin === undefined) {
+        this.logger.info(
+          `PreflightMiddlewareFactory.createOptionsHandlerMiddleware(): OPTIONS request.`,
+          requestId
+        );
+
+        const origin = req.header(HeaderConstants.ORIGIN);
+        if (origin === undefined || typeof origin !== "string") {
           return next(
             StorageErrorFactory.getInvalidCorsHeaderValue(requestId, {
-              MessageDetails: "Missing required CORS header Origin"
+              MessageDetails: `Invalid required CORS header Origin ${JSON.stringify(
+                origin
+              )}`
             })
           );
         }
 
-        const requestMethod = req.headers[
+        const requestMethod = req.header(
           HeaderConstants.ACCESS_CONTROL_REQUEST_METHOD
-        ] as string;
-        if (requestMethod === undefined) {
+        );
+        if (requestMethod === undefined || typeof requestMethod !== "string") {
           return next(
             StorageErrorFactory.getInvalidCorsHeaderValue(requestId, {
-              MessageDetails:
-                "Missing required CORS header Access-Control-Request-Method"
+              MessageDetails: `Invalid required CORS header Access-Control-Request-Method ${JSON.stringify(
+                requestMethod
+              )}`
             })
           );
         }
@@ -70,8 +84,8 @@ export default class PreflightMiddlewareFactory {
                 })
               );
             }
-            const corsSet = properties!.cors!;
 
+            const corsSet = properties.cors;
             for (const cors of corsSet) {
               if (
                 !this.checkOrigin(origin, cors.allowedOrigins) ||
@@ -81,7 +95,7 @@ export default class PreflightMiddlewareFactory {
               }
               if (
                 requestHeaders !== undefined &&
-                !this.checkHeaders(requestHeaders, cors.allowedHeaders)
+                !this.checkHeaders(requestHeaders, cors.allowedHeaders || "")
               ) {
                 continue;
               }
@@ -96,7 +110,7 @@ export default class PreflightMiddlewareFactory {
               );
               if (requestHeaders !== undefined) {
                 res.setHeader(
-                  HeaderConstants.ACCESS_CONTROL_ALLOW_METHODS,
+                  HeaderConstants.ACCESS_CONTROL_ALLOW_HEADERS,
                   requestHeaders
                 );
               }
@@ -124,45 +138,70 @@ export default class PreflightMiddlewareFactory {
     };
   }
 
-  public createActualCorsRequestMiddleware(
-    metadataStore: IQueueMetadataStore
-  ): RequestHandler {
-    return (req: Request, res: Response, next: NextFunction) => {
-      if (req.method === "OPTIONS") {
-        return next();
+  public createCorsRequestMiddleware(
+    metadataStore: IQueueMetadataStore,
+    blockErrorRequest: boolean = false
+  ): ErrorRequestHandler | RequestHandler {
+    const internalMethod = (
+      err: MiddlewareError | Error | undefined,
+      req: Request,
+      res: Response,
+      next: NextFunction
+    ) => {
+      if (req.method.toUpperCase() === MethodConstants.OPTIONS) {
+        return next(err);
       }
 
-      // const requestId = res.locals.azurite_queue_context.contextID;
-      const account = res.locals.azurite_queue_context.account;
+      const context = new QueueStorageContext(
+        res.locals,
+        DEFAULT_QUEUE_CONTEXT_PATH
+      );
 
-      const originHeader = HeaderConstants.ORIGIN;
-      const origin = req.headers[originHeader] as string | undefined;
+      const account = context.account!;
+
+      const origin = req.headers[HeaderConstants.ORIGIN] as string | undefined;
+      if (origin === undefined) {
+        return next(err);
+      }
+
+      const method = req.method;
+      if (method === undefined || typeof method !== "string") {
+        return next(err);
+      }
 
       metadataStore
         .getServiceProperties(account)
         .then(properties => {
           if (properties === undefined || properties.cors === undefined) {
-            return next();
+            return next(err);
           }
-          const corsSet = properties!.cors!;
-          const resHeaders = this.getResponseHeaders(res);
+          const corsSet = properties.cors;
+          const resHeaders = this.getResponseHeaders(
+            res,
+            err instanceof MiddlewareError ? err : undefined
+          );
 
+          // Here we will match CORS settings in order and select first matched CORS
           for (const cors of corsSet) {
-            if (this.checkOrigin(origin, cors.allowedOrigins)) {
+            if (
+              this.checkOrigin(origin, cors.allowedOrigins) &&
+              this.checkMethod(method, cors.allowedMethods)
+            ) {
               const exposedHeaders = this.getExposedHeaders(
                 resHeaders,
-                cors.exposedHeaders
+                cors.exposedHeaders || ""
               );
 
               res.setHeader(
-                HeaderConstants.ACCESS_CONTROL_EXPOSED_HEADER,
+                HeaderConstants.ACCESS_CONTROL_EXPOSE_HEADERS,
                 exposedHeaders
               );
 
               res.setHeader(
                 HeaderConstants.ACCESS_CONTROL_ALLOW_ORIGIN,
-                cors.allowedOrigins
+                cors.allowedOrigins === "*" ? "*" : origin! // origin is not undefined as checked in checkOrigin()
               );
+
               if (cors.allowedOrigins !== "*") {
                 res.setHeader(HeaderConstants.VARY, "Origin");
                 res.setHeader(
@@ -171,16 +210,24 @@ export default class PreflightMiddlewareFactory {
                 );
               }
 
-              return next();
+              return next(err);
             }
           }
           if (corsSet.length > 0) {
             res.setHeader(HeaderConstants.VARY, "Origin");
           }
-          return next();
+          return next(err);
         })
         .catch(next);
     };
+
+    if (blockErrorRequest) {
+      return internalMethod;
+    } else {
+      return (req: Request, res: Response, next: NextFunction) => {
+        internalMethod(undefined, req, res, next);
+      };
+    }
   }
 
   private checkOrigin(
@@ -190,12 +237,14 @@ export default class PreflightMiddlewareFactory {
     if (allowedOrigin === "*") {
       return true;
     }
+
     if (origin === undefined) {
       return false;
     }
+
     const allowedOriginArray = allowedOrigin.split(",");
     for (const corsOrigin of allowedOriginArray) {
-      if (origin.trimLeft().trimRight() === corsOrigin.trimLeft().trimRight()) {
+      if (origin.trim().toLowerCase() === corsOrigin.trim().toLowerCase()) {
         return true;
       }
     }
@@ -205,7 +254,7 @@ export default class PreflightMiddlewareFactory {
   private checkMethod(method: string, allowedMethod: string): boolean {
     const allowedMethodArray = allowedMethod.split(",");
     for (const corsMethod of allowedMethodArray) {
-      if (method.trimLeft().trimRight() === corsMethod.trimLeft().trimRight()) {
+      if (method.trim().toLowerCase() === corsMethod.trim().toLowerCase()) {
         return true;
       }
     }
@@ -217,22 +266,16 @@ export default class PreflightMiddlewareFactory {
     const allowedHeadersArray = allowedHeaders.split(",");
     for (const header of headersArray) {
       let flag = false;
-      const trimedHeader = header
-        .trimLeft()
-        .trimRight()
-        .toLowerCase();
+      const trimmedHeader = header.trim().toLowerCase();
 
       for (const allowedHeader of allowedHeadersArray) {
         // TODO: Should remove the wrapping blank when set CORS through set properties for service.
-        const trimedAllowedHeader = allowedHeader
-          .trimLeft()
-          .trimRight()
-          .toLowerCase();
+        const trimmedAllowedHeader = allowedHeader.trim().toLowerCase();
         if (
-          trimedHeader === trimedAllowedHeader ||
-          (trimedAllowedHeader[trimedAllowedHeader.length - 1] === "*" &&
-            trimedHeader.startsWith(
-              trimedAllowedHeader.substr(0, trimedAllowedHeader.length - 1)
+          trimmedHeader === trimmedAllowedHeader ||
+          (trimmedAllowedHeader[trimmedAllowedHeader.length - 1] === "*" &&
+            trimmedHeader.startsWith(
+              trimmedAllowedHeader.substr(0, trimmedAllowedHeader.length - 1)
             ))
         ) {
           flag = true;
@@ -248,88 +291,100 @@ export default class PreflightMiddlewareFactory {
     return true;
   }
 
-  private getResponseHeaders(res: Response): string[] {
-    const handlerResponse = res.locals.azurite_queue_context.handlerResponses;
-    const statusCodeInResponse: number = handlerResponse.statusCode;
-    const spec = Specifications[res.locals.azurite_queue_context.operation];
-    const responseSpec = spec.responses[statusCodeInResponse];
-    if (!responseSpec) {
-      throw new TypeError(
-        `Request specification doesn't include provided response status code`
-      );
-    }
-
-    // Serialize headers
-    const headerSerializer = new msRest.Serializer(Mappers);
-    const headersMapper = responseSpec.headersMapper;
-
+  private getResponseHeaders(res: Response, err?: MiddlewareError): string[] {
     const responseHeaderSet = [];
-    if (headersMapper && headersMapper.type.name === "Composite") {
-      const mappersForAllHeaders = headersMapper.type.modelProperties || {};
 
-      // Handle headerMapper one by one
-      for (const key in mappersForAllHeaders) {
-        if (mappersForAllHeaders.hasOwnProperty(key)) {
-          const headerMapper = mappersForAllHeaders[key];
-          const headerName = headerMapper.serializedName;
-          const headerValueOriginal = handlerResponse[key];
-          const headerValueSerialized = headerSerializer.serialize(
-            headerMapper,
-            headerValueOriginal
-          );
+    const handlerResponse = res.locals.azurite_queue_context.handlerResponses;
 
-          // Handle collection of headers starting with same prefix, such as x-ms-meta prefix
-          const headerCollectionPrefix = (headerMapper as msRest.DictionaryMapper)
-            .headerCollectionPrefix;
-          if (
-            headerCollectionPrefix !== undefined &&
-            headerValueOriginal !== undefined
-          ) {
-            for (const collectionHeaderPartialName in headerValueSerialized) {
-              if (
-                headerValueSerialized.hasOwnProperty(
-                  collectionHeaderPartialName
-                )
-              ) {
-                const collectionHeaderValueSerialized =
-                  headerValueSerialized[collectionHeaderPartialName];
-                const collectionHeaderName = `${headerCollectionPrefix}${collectionHeaderPartialName}`;
+    if (handlerResponse) {
+      const statusCodeInResponse: number = handlerResponse.statusCode;
+      const spec = Specifications[res.locals.azurite_queue_context.operation];
+      const responseSpec = spec.responses[statusCodeInResponse];
+      if (!responseSpec) {
+        throw new TypeError(
+          `Request specification doesn't include provided response status code`
+        );
+      }
+
+      // Serialize headers
+      const headerSerializer = new msRest.Serializer(Mappers);
+      const headersMapper = responseSpec.headersMapper;
+
+      if (headersMapper && headersMapper.type.name === "Composite") {
+        const mappersForAllHeaders = headersMapper.type.modelProperties || {};
+
+        // Handle headerMapper one by one
+        for (const key in mappersForAllHeaders) {
+          if (mappersForAllHeaders.hasOwnProperty(key)) {
+            const headerMapper = mappersForAllHeaders[key];
+            const headerName = headerMapper.serializedName;
+            const headerValueOriginal = handlerResponse[key];
+            const headerValueSerialized = headerSerializer.serialize(
+              headerMapper,
+              headerValueOriginal
+            );
+
+            // Handle collection of headers starting with same prefix, such as x-ms-meta prefix
+            const headerCollectionPrefix = (headerMapper as msRest.DictionaryMapper)
+              .headerCollectionPrefix;
+            if (
+              headerCollectionPrefix !== undefined &&
+              headerValueOriginal !== undefined
+            ) {
+              for (const collectionHeaderPartialName in headerValueSerialized) {
                 if (
-                  collectionHeaderName &&
-                  collectionHeaderValueSerialized !== undefined
+                  headerValueSerialized.hasOwnProperty(
+                    collectionHeaderPartialName
+                  )
                 ) {
-                  responseHeaderSet.push(collectionHeaderName);
+                  const collectionHeaderValueSerialized =
+                    headerValueSerialized[collectionHeaderPartialName];
+                  const collectionHeaderName = `${headerCollectionPrefix}${collectionHeaderPartialName}`;
+                  if (
+                    collectionHeaderName &&
+                    collectionHeaderValueSerialized !== undefined
+                  ) {
+                    responseHeaderSet.push(collectionHeaderName);
+                  }
                 }
               }
-            }
-          } else {
-            if (headerName && headerValueSerialized !== undefined) {
-              responseHeaderSet.push(headerName);
+            } else {
+              if (headerName && headerValueSerialized !== undefined) {
+                responseHeaderSet.push(headerName);
+              }
             }
           }
         }
       }
-    }
 
-    if (
-      spec.isXML &&
-      responseSpec.bodyMapper &&
-      responseSpec.bodyMapper.type.name !== "Stream"
-    ) {
-      responseHeaderSet.push("content-type");
-      responseHeaderSet.push("content-length");
-    } else if (
-      handlerResponse.body &&
-      responseSpec.bodyMapper &&
-      responseSpec.bodyMapper.type.name === "Stream"
-    ) {
-      responseHeaderSet.push("content-length");
+      if (
+        spec.isXML &&
+        responseSpec.bodyMapper &&
+        responseSpec.bodyMapper.type.name !== "Stream"
+      ) {
+        responseHeaderSet.push("content-type");
+        responseHeaderSet.push("content-length");
+      } else if (
+        handlerResponse.body &&
+        responseSpec.bodyMapper &&
+        responseSpec.bodyMapper.type.name === "Stream"
+      ) {
+        responseHeaderSet.push("content-length");
+      }
     }
 
     const headers = res.getHeaders();
     for (const header in headers) {
       if (typeof header === "string") {
         responseHeaderSet.push(header);
+      }
+    }
+
+    if (err) {
+      for (const key in err.headers) {
+        if (err.headers.hasOwnProperty(key)) {
+          responseHeaderSet.push(key);
+        }
       }
     }
 
@@ -350,7 +405,7 @@ export default class PreflightMiddlewareFactory {
     const prefixRules = [];
     const simpleHeaders = [];
     for (let i = 0; i < exposedHeaderRules.length; i++) {
-      exposedHeaderRules[i] = exposedHeaderRules[i].trimLeft().trimRight();
+      exposedHeaderRules[i] = exposedHeaderRules[i].trim();
       if (exposedHeaderRules[i].endsWith("*")) {
         prefixRules.push(
           exposedHeaderRules[i]
