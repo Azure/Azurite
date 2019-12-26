@@ -182,10 +182,7 @@ export default class PageBlobHandler extends BaseHandler
     );
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
-      throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextId!,
-        "Get Page Ranges could only be against a page blob."
-      );
+      throw StorageErrorFactory.getBlobInvalidBlobType(blobCtx.contextId!);
     }
 
     // Check Lease status
@@ -276,10 +273,7 @@ export default class PageBlobHandler extends BaseHandler
     );
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
-      throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextId!,
-        "Get Page Ranges could only be against a page blob."
-      );
+      throw StorageErrorFactory.getBlobInvalidBlobType(blobCtx.contextId!);
     }
 
     let ranges;
@@ -339,10 +333,7 @@ export default class PageBlobHandler extends BaseHandler
     );
 
     if (blob.properties.blobType !== Models.BlobType.PageBlob) {
-      throw StorageErrorFactory.getInvalidOperation(
-        blobCtx.contextId!,
-        "Get Page Ranges could only be against a page blob."
-      );
+      throw StorageErrorFactory.getBlobInvalidBlobType(blobCtx.contextId!);
     }
 
     let ranges = deserializePageBlobRangeHeader(
