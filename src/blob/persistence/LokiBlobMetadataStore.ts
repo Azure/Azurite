@@ -1795,6 +1795,7 @@ export default class LokiBlobMetadataStore
       }
 
       doc.properties.accessTier = tier;
+      doc.properties.accessTierInferred = false;
       doc.properties.accessTierChangeTime = context.startTime;
     } else {
       throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId!);

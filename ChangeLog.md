@@ -34,6 +34,7 @@ Blob:
 - Fixed a bug that uncommitted block blob invalid length.
 - Fixed a bug that SetHTTPHeaders, SetMetadata won't update blob etag.
 - Remove double quotation marks from list blob request returned blob etag, to align with Azure Server behavior.
+- Fixed a bug that BlobTierInferred not change to false after SetBlobTier.
 
 Queue:
 
