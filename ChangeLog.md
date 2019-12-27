@@ -2,6 +2,12 @@
 
 > Note. This file includes changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
+Upcoming Release
+
+Blob:
+
+- Change the etag format to align with Azure Server behavior.
+
 ## 2019.12 Version 3.4.0
 
 - Return the list of containers will be in sorted order.
