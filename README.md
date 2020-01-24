@@ -16,7 +16,7 @@ We were struggling to maintain parity with our APIs, community contributions wer
 
 The plan is to implement blob storage, followed by table storage, then queues.  Each with persistent storage.  
 
-Contributors and maintainers can then focus on emulation and simulation of storage behaviour, rather than reverse engineering our APIs and API documenation.  
+Contributors and maintainers can then focus on emulation and simulation of storage behaviour, rather than reverse engineering our APIs and API documentation.  
 
 The blob API work should be completed in the next couple of months, with the rest following on close behind.
 
@@ -106,6 +106,15 @@ $ az storage container create --name 'test' --connection-string 'DefaultEndpoint
 {
   "created": true
 }
+```
+
+## Shared Key Credential
+
+The Shared Key Credential account and access key is 
+
+```
+ACCOUNT_NAME: devstoreaccount1
+ACCOUNT_ACCESS_KEY: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
 ```
 
 ## Current List of Command Line Options
