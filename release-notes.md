@@ -1,4 +1,6 @@
 # 2.0  
+## 2.7.2
+- merged PR [#134](https://github.com/Azure/Azurite/pull/284) -> Thanks to cognot - Escaped quotation marks replacement fix    
 ## 2.7.1
 - using correct process termination for cleanup on exit in windows 
 - updated dependencies to address package vulnerabilities  
