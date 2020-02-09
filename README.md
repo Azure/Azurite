@@ -10,7 +10,7 @@
 
 | Version                                                            | Azure Storage API Version | Service Support       | Description                                       | Reference Links                                                                                                                                                                                                         |
 | ------------------------------------------------------------------ | ------------------------- | --------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.4.0                                                              | 2019-02-02                | Blob<br>Queue         | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| 3.5.0                                                              | 2019-07-07                | Blob<br>Queue         | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
 | [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
 ## Introduction
@@ -25,13 +25,13 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
 
 ## Features & Key Changes in Azurite V3
 
-- Blob storage features align with Azure Storage API version 2019-02-02 (Refer to support matrix section below)
+- Blob storage features align with Azure Storage API version 2019-07-07 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/Public Access Authentications
   - Get/Set Blob Service Properties
   - Create/List/Delete Containers
   - Create/Read/List/Update/Delete Block Blobs
   - Create/Read/List/Update/Delete Page Blobs
-- Queue storage features align with Azure Storage API version 2019-02-02 (Refer to support matrix section below)
+- Queue storage features align with Azure Storage API version 2019-07-07 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS
   - Get/Set Queue Service Properties
   - Preflight Request
@@ -491,7 +491,7 @@ Legacy Azurite V2 supports Azure Storage Blob, Queue and Table services.
 Azurite V3 currently only supports Azure Storage blob service. Queue service is supported after V3.2.0-preview.
 Table service support is currently under discussion.
 
-Azurite V3 supports features from Azure Storage API version 2019-02-02, and will maintain parity with the latest API versions, in a more frequent update frequency than legacy Azurite V2.
+Azurite V3 supports features from Azure Storage API version 2019-07-07, and will maintain parity with the latest API versions, in a more frequent update frequency than legacy Azurite V2.
 
 ## TypeScript Server Code Generator
 
@@ -502,7 +502,7 @@ All the generated code is kept in `generated` folder, including the generated mi
 
 ## Support Matrix
 
-3.4.0 release targets **2019-02-02** API version **blob** service.  
+3.5.0 release targets **2019-07-07** API version **blob** service.  
 Detailed support matrix:
 
 - Supported Vertical Features
@@ -547,8 +547,8 @@ Detailed support matrix:
   - Incremental Copy Blob
   - Create Append Blob, Append Block
 
-3.4.0 release added support for **2019-02-02** API version **queue** service.
-Detailed support matrix:
+    3.5.0 release added support for **2019-07-07** API version **queue** service.
+    Detailed support matrix:
 
 - Supported Vertical Features
   - SharedKey Authentication
