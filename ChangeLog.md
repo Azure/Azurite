@@ -5,6 +5,7 @@
 ## 2020.02 Version 3.5.0
 
 - Bump up Azure Storage service API version to 2019-07-07.
+- Added description to clean up Azurite.
 
 Blob:
 

@@ -379,6 +379,19 @@ UseDevelopmentStorage=true;
 
 Connect to Azurite by click "Add Account" icon, then select "Attach to a local emulator" and click "Connect".
 
+## Workspace Structure
+
+Following files or folders may be created when initializing Azurite in selected workspace location.
+
+- `azurite_db_blob.json` Metadata file used by Azurite blob service. (No when starting Azurite against external database)
+- `azurite_db_blob_extent.json` Extent metadata file used by Azurite blob service. (No when starting Azurite against external database)
+- `blobstorage` Persisted bindary data by Azurite blob service.
+- `azurite_db_queue.json` Metadata file used by Azurite queue service. (No when starting Azurite against external database)
+- `azurite_db_queue_extent.json` Extent metadata file used by Azurite queue service. (No when starting Azurite against external database)
+- `queuestorage` Persisted bindary data by Azurite queue service.
+
+> Note. Delete above files and folders and restart Azurite to clean up Azurite. It will remove all data stored in Azurite!!
+
 ## Differences between Azurite and Azure Storage
 
 Because Azurite runs as a local instance for persistent data storage, there are differences in functionality between Azurite and an Azure storage account in the cloud.
