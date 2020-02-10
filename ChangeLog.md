@@ -6,6 +6,7 @@
 
 - Bump up Azure Storage service API version to 2019-07-07.
 - Added description to clean up Azurite.
+- Response for HEAD request will not return body and content-type.
 
 Blob:
 

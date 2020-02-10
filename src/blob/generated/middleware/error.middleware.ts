@@ -1,5 +1,6 @@
 import Context from "../Context";
 import MiddlewareError from "../errors/MiddlewareError";
+import IRequest from "../IRequest";
 import IResponse from "../IResponse";
 import { NextFunction } from "../MiddlewareFactory";
 import ILogger from "../utils/ILogger";
@@ -16,7 +17,7 @@ import ILogger from "../utils/ILogger";
  * @export
  * @param {Context} context
  * @param {(MiddlewareError | Error)} err A MiddlewareError or Error object
- * @param {Request} _req An express compatible Request object
+ * @param {Request} req An express compatible Request object
  * @param {Response} res An express compatible Response object
  * @param {NextFunction} next An express middleware next callback
  * @param {ILogger} logger A valid logger
@@ -25,14 +26,15 @@ import ILogger from "../utils/ILogger";
 export default function errorMiddleware(
   context: Context,
   err: MiddlewareError | Error,
+  req: IRequest,
   res: IResponse,
   next: NextFunction,
-  logger: ILogger
+  logger: ILogger,
 ): void {
   if (res.headersSent()) {
     logger.warn(
       `Error middleware received an error, but response.headersSent is true, pass error to next middleware`,
-      context.contextId
+      context.contextId,
     );
     return next(err);
   }
@@ -42,7 +44,7 @@ export default function errorMiddleware(
   if (err instanceof MiddlewareError) {
     logger.error(
       `ErrorMiddleware: Received a MiddlewareError, fill error information to HTTP response`,
-      context.contextId
+      context.contextId,
     );
 
     logger.error(
@@ -51,23 +53,23 @@ export default function errorMiddleware(
       }  ErrorHTTPStatusCode=${err.statusCode} ErrorHTTPStatusMessage=${
         err.statusMessage
       } ErrorHTTPHeaders=${JSON.stringify(
-        err.headers
+        err.headers,
       )} ErrorHTTPBody=${JSON.stringify(err.body)} ErrorStack=${JSON.stringify(
-        err.stack
+        err.stack,
       )}`,
-      context.contextId
+      context.contextId,
     );
 
     logger.error(
       `ErrorMiddleware: Set HTTP code: ${err.statusCode}`,
-      context.contextId
+      context.contextId,
     );
 
     res.setStatusCode(err.statusCode);
     if (err.statusMessage) {
       logger.error(
         `ErrorMiddleware: Set HTTP status message: ${err.statusMessage}`,
-        context.contextId
+        context.contextId,
       );
       res.setStatusMessage(err.statusMessage);
     }
@@ -79,7 +81,7 @@ export default function errorMiddleware(
           if (value) {
             logger.error(
               `ErrorMiddleware: Set HTTP Header: ${key}=${value}`,
-              context.contextId
+              context.contextId,
             );
             res.setHeader(key, value);
           }
@@ -87,31 +89,32 @@ export default function errorMiddleware(
       }
     }
 
-    if (err.contentType) {
+    if (err.contentType && req.getMethod() !== "HEAD") {
       logger.error(
         `ErrorMiddleware: Set content type: ${err.contentType}`,
-        context.contextId
+        context.contextId,
       );
       res.setContentType(err.contentType);
     }
 
-    logger.error(
-      `ErrorMiddleware: Set HTTP body: ${JSON.stringify(err.body)}`,
-      context.contextId
-    );
-    if (err.body) {
+    if (err.body && req.getMethod() !== "HEAD") {
+      logger.error(
+        `ErrorMiddleware: Set HTTP body: ${JSON.stringify(err.body)}`,
+        context.contextId,
+      );
+
       res.getBodyStream().write(err.body);
     }
   } else if (err instanceof Error) {
     logger.error(
       `ErrorMiddleware: Received an error, fill error information to HTTP response`,
-      context.contextId
+      context.contextId,
     );
     logger.error(
       `ErrorMiddleware: ErrorName=${err.name} ErrorMessage=${
         err.message
       } ErrorStack=${JSON.stringify(err.stack)}`,
-      context.contextId
+      context.contextId,
     );
     logger.error(`ErrorMiddleware: Set HTTP code: ${500}`, context.contextId);
     res.setStatusCode(500);
@@ -124,7 +127,7 @@ export default function errorMiddleware(
   } else {
     logger.warn(
       `ErrorMiddleware: Received unhandled error object`,
-      context.contextId
+      context.contextId,
     );
   }
 
