@@ -2,11 +2,16 @@
 
 > Note. This file includes changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
-Upcoming Release
+## 2020.02 Version 3.5.0
+
+- Bump up Azure Storage service API version to 2019-07-07.
+- Added description to clean up Azurite.
+- Response for HEAD request will not return body and content-type.
 
 Blob:
 
 - Change the etag format to align with Azure Server behavior.
+- Added missing last-modified header for get blob metadata request.
 
 ## 2019.12 Version 3.4.0
 

@@ -147,7 +147,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           requestId: context.contextId,
           version: BLOB_API_VERSION,
           date: context.startTime,
-          clientRequestId: options.requestId
+          clientRequestId: options.requestId,
+          contentLength: res.properties.contentLength,
+          lastModified: res.properties.lastModified
         }
       : {
           statusCode: 200,

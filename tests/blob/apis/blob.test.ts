@@ -105,6 +105,21 @@ describe("BlobAPIs", () => {
     );
   });
 
+  it("get properties response should not set content-type @loki @sql", async () => {
+    const blobURL404 = BlobURL.fromContainerURL(containerURL, "UN_EXIST_BLOB_");
+    try {
+      await blobURL404.getProperties(Aborter.none);
+    } catch (err) {
+      assert.ok(!err.response.headers.get("content-type"));
+    }
+
+    try {
+      await blobURL404.download(Aborter.none, 0, 0);
+    } catch (err) {
+      assert.notEqual(err.response.headers.get("content-type"), undefined);
+    }
+  });
+
   it("delete @loki @sql", async () => {
     const result = await blobURL.delete(Aborter.none);
     assert.equal(
