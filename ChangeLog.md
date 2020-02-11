@@ -11,6 +11,7 @@
 Blob:
 
 - Change the etag format to align with Azure Server behavior.
+- Added missing last-modified header for get blob metadata request.
 
 ## 2019.12 Version 3.4.0
 
