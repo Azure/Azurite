@@ -1,10 +1,4 @@
-import {
-  ErrorRequestHandler,
-  NextFunction,
-  Request,
-  RequestHandler,
-  Response,
-} from "express";
+import { ErrorRequestHandler, NextFunction, Request, RequestHandler, Response } from "express";
 
 import Context from "./Context";
 import ExpressRequestAdapter from "./ExpressRequestAdapter";
@@ -42,7 +36,7 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
    */
   public constructor(
     logger: ILogger,
-    private readonly contextPath: string = "default_context",
+    private readonly contextPath: string = "default_context"
   ) {
     super(logger);
   }
@@ -61,7 +55,7 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
         new Context(res.locals, this.contextPath, request, response),
         request,
         next,
-        this.logger,
+        this.logger
       );
     };
   }
@@ -80,7 +74,7 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
         new Context(res.locals, this.contextPath, request, response),
         request,
         next,
-        this.logger,
+        this.logger
       );
     };
   }
@@ -95,14 +89,14 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
   public createHandlerMiddleware(handlers: IHandlers): RequestHandler {
     const handlerMiddlewareFactory = new HandlerMiddlewareFactory(
       handlers,
-      this.logger,
+      this.logger
     );
     return (req: Request, res: Response, next: NextFunction) => {
       const request = new ExpressRequestAdapter(req);
       const response = new ExpressResponseAdapter(res);
       handlerMiddlewareFactory.createHandlerMiddleware()(
         new Context(res.locals, this.contextPath, request, response),
-        next,
+        next
       );
     };
   }
@@ -121,7 +115,7 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
         new Context(res.locals, this.contextPath, request, response),
         new ExpressResponseAdapter(res),
         next,
-        this.logger,
+        this.logger
       );
     };
   }
@@ -142,7 +136,7 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
         new ExpressRequestAdapter(req),
         new ExpressResponseAdapter(res),
         next,
-        this.logger,
+        this.logger
       );
     };
   }
@@ -160,7 +154,7 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
       endMiddleware(
         new Context(res.locals, this.contextPath, request, response),
         new ExpressResponseAdapter(res),
-        this.logger,
+        this.logger
       );
     };
   }
