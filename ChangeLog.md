@@ -12,6 +12,7 @@ General:
 Blob:
 
 - Support Copy Blob From URL API when use different source and destination account (in same Azurite instance).
+- Add SharedKeyLite auth support to blob service.
 
 Table:
 

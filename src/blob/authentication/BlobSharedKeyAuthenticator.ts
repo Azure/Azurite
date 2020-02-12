@@ -12,7 +12,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
   public constructor(
     private readonly dataStore: IAccountDataStore,
     private readonly logger: ILogger
-  ) {}
+  ) { }
 
   public async validate(
     req: IRequest,
@@ -49,24 +49,27 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       );
     }
 
+    const authHeaderValues = authHeaderValue.split(" ");
+    let authType: "SharedKey" | "SharedKeyLite";
+    if (authHeaderValues[0].match(/^SharedKey(Lite)?$/)) {
+      authType = authHeaderValues[0] as "SharedKey" | "SharedKeyLite";
+    } else {
+      this.logger.error(
+        `BlobSharedKeyAuthenticator:validate() Invalid auth type ${authHeaderValues[0]}.`,
+        blobContext.contextId
+      );
+      throw StorageErrorFactory.getInvalidOperation(
+        blobContext.contextId!,
+        "Invalid auth type."
+      );
+    }
+    const authValue = authHeaderValues[1];
+    const headersToSign = this.getHeadersToSign(authType, req);
+
     const stringToSign: string =
-      [
-        req.getMethod().toUpperCase(),
-        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_ENCODING),
-        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LANGUAGE),
-        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LENGTH),
-        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
-        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
-        this.getHeaderValueToSign(req, HeaderConstants.DATE),
-        this.getHeaderValueToSign(req, HeaderConstants.IF_MODIFIED_SINCE),
-        this.getHeaderValueToSign(req, HeaderConstants.IF_MATCH),
-        this.getHeaderValueToSign(req, HeaderConstants.IF_NONE_MATCH),
-        this.getHeaderValueToSign(req, HeaderConstants.IF_UNMODIFIED_SINCE),
-        this.getHeaderValueToSign(req, HeaderConstants.RANGE)
-      ].join("\n") +
-      "\n" +
-      this.getCanonicalizedHeadersString(req) +
+      headersToSign +
       this.getCanonicalizedResourceString(
+        authType,
         req,
         account,
         blobContext.authenticationPath
@@ -80,12 +83,12 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
     );
 
     const signature1 = computeHMACSHA256(stringToSign, accountProperties.key1);
-    const authValue1 = `SharedKey ${account}:${signature1}`;
+    const authValue1 = `${account}:${signature1}`;
     this.logger.info(
       `BlobSharedKeyAuthenticator:validate() Calculated authentication header based on key1: ${authValue1}`,
       blobContext.contextId
     );
-    if (authHeaderValue === authValue1) {
+    if (authValue === authValue1) {
       this.logger.info(
         `BlobSharedKeyAuthenticator:validate() Signature 1 matched.`,
         blobContext.contextId
@@ -98,12 +101,12 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
         stringToSign,
         accountProperties.key2
       );
-      const authValue2 = `SharedKey ${account}:${signature2}`;
+      const authValue2 = `${account}:${signature2}`;
       this.logger.info(
         `BlobSharedKeyAuthenticator:validate() Calculated authentication header based on key2: ${authValue2}`,
         blobContext.contextId
       );
-      if (authHeaderValue === authValue2) {
+      if (authValue === authValue2) {
         this.logger.info(
           `BlobSharedKeyAuthenticator:validate() Signature 2 matched.`,
           blobContext.contextId
@@ -112,27 +115,12 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       }
     }
 
-    if (context.context.isSecondary && blobContext.authenticationPath?.indexOf(account) === 1)
-    {
-        // JS/.net Track2 SDK will generate stringToSign from IP style Uri with "-secondary" in authenticationPath, so will also compare signature with this kind stringToSign
-        const stringToSign_secondary: string =
-        [
-          req.getMethod().toUpperCase(),
-          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_ENCODING),
-          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LANGUAGE),
-          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LENGTH),
-          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
-          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
-          this.getHeaderValueToSign(req, HeaderConstants.DATE),
-          this.getHeaderValueToSign(req, HeaderConstants.IF_MODIFIED_SINCE),
-          this.getHeaderValueToSign(req, HeaderConstants.IF_MATCH),
-          this.getHeaderValueToSign(req, HeaderConstants.IF_NONE_MATCH),
-          this.getHeaderValueToSign(req, HeaderConstants.IF_UNMODIFIED_SINCE),
-          this.getHeaderValueToSign(req, HeaderConstants.RANGE)
-        ].join("\n") +
-        "\n" +
-        this.getCanonicalizedHeadersString(req) +
+    if (context.context.isSecondary && blobContext.authenticationPath?.indexOf(account) === 1) {
+      // JS/.net Track2 SDK will generate stringToSign from IP style Uri with "-secondary" in authenticationPath, so will also compare signature with this kind stringToSign
+      const stringToSign_secondary: string =
+        headersToSign +
         this.getCanonicalizedResourceString(
+          authType,
           req,
           account,
           // The authenticationPath looks like "/devstoreaccount1/container", add "-secondary" after account name to "/devstoreaccount1-secondary/container"
@@ -146,7 +134,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
         blobContext.contextId
       );
 
-      const signature1_secondary= computeHMACSHA256(stringToSign_secondary, accountProperties.key1);
+      const signature1_secondary = computeHMACSHA256(stringToSign_secondary, accountProperties.key1);
       const authValue1_secondary = `SharedKey ${account}:${signature1_secondary}`;
       this.logger.info(
         `BlobSharedKeyAuthenticator:validate() Calculated authentication header based on key1 and stringToSign with "-secondary": ${authValue1_secondary}`,
@@ -275,11 +263,13 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
    * Retrieves canonicalized resource string.
    *
    * @private
+   * @param {"SharedKey" | "SharedKeyLite"} type
    * @param {IRequest} request
    * @returns {string}
    * @memberof SharedKeyCredentialPolicy
    */
   private getCanonicalizedResourceString(
+    type: "SharedKey" | "SharedKeyLite",
     request: IRequest,
     account: string,
     authenticationPath?: string
@@ -297,23 +287,80 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
     const queries = getURLQueries(request.getUrl());
     const lowercaseQueries: { [key: string]: string } = {};
     if (queries) {
-      const queryKeys: string[] = [];
-      for (const key in queries) {
-        if (queries.hasOwnProperty(key)) {
-          const lowercaseKey = key.toLowerCase();
-          lowercaseQueries[lowercaseKey] = queries[key];
-          queryKeys.push(lowercaseKey);
+      if (type === "SharedKey") {
+        const queryKeys: string[] = [];
+        for (const key in queries) {
+          if (queries.hasOwnProperty(key)) {
+            const lowercaseKey = key.toLowerCase();
+            lowercaseQueries[lowercaseKey] = queries[key];
+            queryKeys.push(lowercaseKey);
+          }
         }
-      }
 
-      queryKeys.sort();
-      for (const key of queryKeys) {
-        canonicalizedResourceString += `\n${key}:${decodeURIComponent(
-          lowercaseQueries[key].replace(/\+/g, '%20')
-        )}`;
+        queryKeys.sort();
+        for (const key of queryKeys) {
+          canonicalizedResourceString += `\n${key}:${decodeURIComponent(
+            lowercaseQueries[key].replace(/\+/g, '%20')
+          )}`;
+        }
+      } else if (type === "SharedKeyLite") {
+        for (const key in queries) {
+          if (queries.hasOwnProperty(key) && key.toLowerCase() === "comp") {
+            canonicalizedResourceString += `?comp=${decodeURIComponent(
+              queries[key].replace(/\+/g, '%20')
+            )}`;
+          }
+        }
       }
     }
 
     return canonicalizedResourceString;
+  }
+
+  /**
+   * Get the StringToSign of headers for SharedKey or SharedKeyLite
+   *
+   * @private
+   * @param {"SharedKey" | "SharedKeyLite"} type
+   * @param {IRequest} req
+   * @returns {string}
+   * @memberof BlobSharedKeyAuthenticator
+   */
+  private getHeadersToSign(
+    type: "SharedKey" | "SharedKeyLite",
+    req: IRequest
+  ): string {
+    if (type === "SharedKey") {
+      return (
+        [
+          req.getMethod().toUpperCase(),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_ENCODING),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LANGUAGE),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LENGTH),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
+          this.getHeaderValueToSign(req, HeaderConstants.DATE),
+          this.getHeaderValueToSign(req, HeaderConstants.IF_MODIFIED_SINCE),
+          this.getHeaderValueToSign(req, HeaderConstants.IF_MATCH),
+          this.getHeaderValueToSign(req, HeaderConstants.IF_NONE_MATCH),
+          this.getHeaderValueToSign(req, HeaderConstants.IF_UNMODIFIED_SINCE),
+          this.getHeaderValueToSign(req, HeaderConstants.RANGE)
+        ].join("\n") +
+        "\n" +
+        this.getCanonicalizedHeadersString(req)
+      );
+    } else if (type === "SharedKeyLite") {
+      return (
+        [
+          req.getMethod().toUpperCase(),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
+          this.getHeaderValueToSign(req, HeaderConstants.DATE)
+        ].join("\n") +
+        "\n" +
+        this.getCanonicalizedHeadersString(req)
+      );
+    }
+    return "";
   }
 }
