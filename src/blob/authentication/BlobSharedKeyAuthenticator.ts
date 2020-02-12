@@ -49,24 +49,16 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       );
     }
 
+    const authType = authHeaderValue.split(" ")[0] as
+      | "SharedKey"
+      | "SharedKeyLite";
+    const authValue = authHeaderValue.split(" ")[1];
+    const headersToSign = this.getHeadersToSign(authType, req);
+
     const stringToSign: string =
-      [
-        req.getMethod().toUpperCase(),
-        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LANGUAGE),
-        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_ENCODING),
-        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LENGTH),
-        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
-        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
-        this.getHeaderValueToSign(req, HeaderConstants.DATE),
-        this.getHeaderValueToSign(req, HeaderConstants.IF_MODIFIED_SINCE),
-        this.getHeaderValueToSign(req, HeaderConstants.IF_MATCH),
-        this.getHeaderValueToSign(req, HeaderConstants.IF_NONE_MATCH),
-        this.getHeaderValueToSign(req, HeaderConstants.IF_UNMODIFIED_SINCE),
-        this.getHeaderValueToSign(req, HeaderConstants.RANGE)
-      ].join("\n") +
-      "\n" +
-      this.getCanonicalizedHeadersString(req) +
+      headersToSign +
       this.getCanonicalizedResourceString(
+        authType,
         req,
         account,
         blobContext.authenticationPath
@@ -80,12 +72,12 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
     );
 
     const signature1 = computeHMACSHA256(stringToSign, accountProperties.key1);
-    const authValue1 = `SharedKey ${account}:${signature1}`;
+    const authValue1 = `${account}:${signature1}`;
     this.logger.info(
       `BlobSharedKeyAuthenticator:validate() Calculated authentication header based on key1: ${authValue1}`,
       blobContext.contextId
     );
-    if (authHeaderValue === authValue1) {
+    if (authValue === authValue1) {
       this.logger.info(
         `BlobSharedKeyAuthenticator:validate() Signature 1 matched.`,
         blobContext.contextId
@@ -98,12 +90,12 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
         stringToSign,
         accountProperties.key2
       );
-      const authValue2 = `SharedKey ${account}:${signature2}`;
+      const authValue2 = `${account}:${signature2}`;
       this.logger.info(
         `BlobSharedKeyAuthenticator:validate() Calculated authentication header based on key2: ${authValue2}`,
         blobContext.contextId
       );
-      if (authHeaderValue === authValue2) {
+      if (authValue === authValue2) {
         this.logger.info(
           `BlobSharedKeyAuthenticator:validate() Signature 2 matched.`,
           blobContext.contextId
@@ -206,11 +198,13 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
    * Retrieves canonicalized resource string.
    *
    * @private
+   * @param {"SharedKey" | "SharedKeyLite"} type
    * @param {IRequest} request
    * @returns {string}
    * @memberof SharedKeyCredentialPolicy
    */
   private getCanonicalizedResourceString(
+    type: "SharedKey" | "SharedKeyLite",
     request: IRequest,
     account: string,
     authenticationPath?: string
@@ -228,23 +222,80 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
     const queries = getURLQueries(request.getUrl());
     const lowercaseQueries: { [key: string]: string } = {};
     if (queries) {
-      const queryKeys: string[] = [];
-      for (const key in queries) {
-        if (queries.hasOwnProperty(key)) {
-          const lowercaseKey = key.toLowerCase();
-          lowercaseQueries[lowercaseKey] = queries[key];
-          queryKeys.push(lowercaseKey);
+      if (type === "SharedKey") {
+        const queryKeys: string[] = [];
+        for (const key in queries) {
+          if (queries.hasOwnProperty(key)) {
+            const lowercaseKey = key.toLowerCase();
+            lowercaseQueries[lowercaseKey] = queries[key];
+            queryKeys.push(lowercaseKey);
+          }
         }
-      }
 
-      queryKeys.sort();
-      for (const key of queryKeys) {
-        canonicalizedResourceString += `\n${key}:${decodeURIComponent(
-          lowercaseQueries[key]
-        )}`;
+        queryKeys.sort();
+        for (const key of queryKeys) {
+          canonicalizedResourceString += `\n${key}:${decodeURIComponent(
+            lowercaseQueries[key]
+          )}`;
+        }
+      } else if (type === "SharedKeyLite") {
+        for (const key in queries) {
+          if (queries.hasOwnProperty(key) && key.toLowerCase() === "comp") {
+            canonicalizedResourceString += `?comp=${decodeURIComponent(
+              queries[key]
+            )}`;
+          }
+        }
       }
     }
 
     return canonicalizedResourceString;
+  }
+
+  /**
+   * Get the StringToSign of headers for SharedKey or SharedKeyLite
+   *
+   * @private
+   * @param {"SharedKey" | "SharedKeyLite"} type
+   * @param {IRequest} req
+   * @returns {string}
+   * @memberof BlobSharedKeyAuthenticator
+   */
+  private getHeadersToSign(
+    type: "SharedKey" | "SharedKeyLite",
+    req: IRequest
+  ): string {
+    if (type === "SharedKey") {
+      return (
+        [
+          req.getMethod().toUpperCase(),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LANGUAGE),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_ENCODING),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LENGTH),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
+          this.getHeaderValueToSign(req, HeaderConstants.DATE),
+          this.getHeaderValueToSign(req, HeaderConstants.IF_MODIFIED_SINCE),
+          this.getHeaderValueToSign(req, HeaderConstants.IF_MATCH),
+          this.getHeaderValueToSign(req, HeaderConstants.IF_NONE_MATCH),
+          this.getHeaderValueToSign(req, HeaderConstants.IF_UNMODIFIED_SINCE),
+          this.getHeaderValueToSign(req, HeaderConstants.RANGE)
+        ].join("\n") +
+        "\n" +
+        this.getCanonicalizedHeadersString(req)
+      );
+    } else if (type === "SharedKeyLite") {
+      return (
+        [
+          req.getMethod().toUpperCase(),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
+          this.getHeaderValueToSign(req, HeaderConstants.DATE)
+        ].join("\n") +
+        "\n" +
+        this.getCanonicalizedHeadersString(req)
+      );
+    }
+    return "";
   }
 }
