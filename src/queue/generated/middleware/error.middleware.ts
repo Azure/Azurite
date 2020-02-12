@@ -1,5 +1,6 @@
 import Context from "../Context";
 import MiddlewareError from "../errors/MiddlewareError";
+import IRequest from "../IRequest";
 import IResponse from "../IResponse";
 import { NextFunction } from "../MiddlewareFactory";
 import ILogger from "../utils/ILogger";
@@ -16,7 +17,7 @@ import ILogger from "../utils/ILogger";
  * @export
  * @param {Context} context
  * @param {(MiddlewareError | Error)} err A MiddlewareError or Error object
- * @param {Request} _req An express compatible Request object
+ * @param {Request} req An express compatible Request object
  * @param {Response} res An express compatible Response object
  * @param {NextFunction} next An express middleware next callback
  * @param {ILogger} logger A valid logger
@@ -25,6 +26,7 @@ import ILogger from "../utils/ILogger";
 export default function errorMiddleware(
   context: Context,
   err: MiddlewareError | Error,
+  req: IRequest,
   res: IResponse,
   next: NextFunction,
   logger: ILogger
@@ -87,7 +89,7 @@ export default function errorMiddleware(
       }
     }
 
-    if (err.contentType) {
+    if (err.contentType && req.getMethod() !== "HEAD") {
       logger.error(
         `ErrorMiddleware: Set content type: ${err.contentType}`,
         context.contextID
@@ -99,7 +101,7 @@ export default function errorMiddleware(
       `ErrorMiddleware: Set HTTP body: ${JSON.stringify(err.body)}`,
       context.contextID
     );
-    if (err.body) {
+    if (err.body && req.getMethod() !== "HEAD") {
       res.getBodyStream().write(err.body);
     }
   } else if (err instanceof Error) {
