@@ -21,6 +21,7 @@ import PreflightMiddlewareFactory from "./middlewares/PreflightMiddlewareFactory
 import queueStorageContextMiddleware from "./middlewares/queueStorageContext.middleware";
 import { IQueueMetadataStore } from "./persistence/IQueueMetadataStore";
 import { DEFAULT_QUEUE_CONTEXT_PATH } from "./utils/constants";
+import QueueTokenAuthenticator from "./authentication/QueueTokenAuthenticator";
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -103,7 +104,8 @@ export default class QueueRequestListenerFactory
           this.accountDataStore,
           this.metadataStore,
           logger
-        )
+        ),
+        new QueueTokenAuthenticator(this.accountDataStore, logger)
       ])
     );
 
