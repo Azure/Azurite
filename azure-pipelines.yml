@@ -309,7 +309,7 @@ jobs:
       - script: |
           npm uninstall -g azurite
           npm run build
-          npm ci -g
+          npm install -g
           azurite -v
           azurite-blob -v
           azurite-queue -v

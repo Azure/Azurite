@@ -1,5 +1,4 @@
 import { createHash, createHmac } from "crypto";
-import etag from "etag";
 import { createWriteStream, PathLike } from "fs";
 import { parse } from "url";
 
@@ -37,9 +36,17 @@ export function truncatedISO8061Date(
     : dateString.substring(0, dateString.length - 5) + "Z";
 }
 
-// TODO: Align eTag with Azure Storage Service
 export function newEtag(): string {
-  return etag(`${new Date().getTime()}`);
+  // Etag should match ^"0x[A-F0-9]{15,}"$
+  // Date().getTime().toString(16) only has 11 digital
+  // so multiply a number between 70000-100000, can get a 16 based 15+ digital number
+  return (
+    '"0x' +
+    (new Date().getTime() * Math.round(Math.random() * 30000 + 70000))
+      .toString(16)
+      .toUpperCase() +
+    '"'
+  );
 }
 
 export async function streamToLocalFile(

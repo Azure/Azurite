@@ -133,6 +133,7 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
       errorMiddleware(
         new Context(res.locals, this.contextPath, request, response),
         err,
+        new ExpressRequestAdapter(req),
         new ExpressResponseAdapter(res),
         next,
         this.logger
