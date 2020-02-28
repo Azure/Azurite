@@ -11,7 +11,9 @@
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
       "args": ["${workspaceFolder}/src/azurite.ts", "-d", "debug.log"],
-      "env": { "AZURITE_ACCOUNTS": "" },
+      "env": {
+        "AZURITE_ACCOUNTS": ""
+      },
       "outputCapture": "std"
     },
     {
@@ -21,7 +23,28 @@
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
       "args": ["${workspaceFolder}/src/azurite.ts", "-d", "debug.log", "-L"],
-      "env": { "AZURITE_ACCOUNTS": "" },
+      "env": {
+        "AZURITE_ACCOUNTS": ""
+      },
+      "outputCapture": "std"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Azurite Service - Loki, Loose, HTTPS",
+      "cwd": "${workspaceFolder}",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "args": [
+        "${workspaceFolder}/src/azurite.ts",
+        "-L",
+        "--cert",
+        "C:\\temp\\sslsite\\127.0.0.1.pem",
+        "--key",
+        "C:\\temp\\sslsite\\127.0.0.1-key.pem"
+      ],
+      "env": {
+        "AZURITE_ACCOUNTS": ""
+      },
       "outputCapture": "std"
     },
     {
@@ -31,7 +54,9 @@
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
       "args": ["${workspaceFolder}/src/queue/main.ts", "-d", "debug.log"],
-      "env": { "AZURITE_ACCOUNTS": "" },
+      "env": {
+        "AZURITE_ACCOUNTS": ""
+      },
       "outputCapture": "std"
     },
     {
@@ -41,7 +66,9 @@
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
       "args": ["${workspaceFolder}/src/blob/main.ts", "-d", "debug.log"],
-      "env": { "AZURITE_ACCOUNTS": "" },
+      "env": {
+        "AZURITE_ACCOUNTS": ""
+      },
       "outputCapture": "std"
     },
     {
@@ -81,7 +108,9 @@
         "--colors",
         "${workspaceFolder}/${relativeFile}"
       ],
-      "env": { "AZURITE_ACCOUNTS": "" },
+      "env": {
+        "AZURITE_ACCOUNTS": ""
+      },
       "internalConsoleOptions": "openOnSessionStart",
       "outputCapture": "std"
     },

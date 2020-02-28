@@ -67,7 +67,9 @@ export class BlobServerFactory {
           undefined,
           debugFilePath !== undefined,
           debugFilePath,
-          env.loose()
+          env.loose(),
+          env.cert(),
+          env.key()
         );
         return new BlobServer(config);
       }

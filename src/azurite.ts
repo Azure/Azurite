@@ -56,7 +56,9 @@ async function main() {
     undefined,
     env.debug() !== undefined,
     await env.debug(),
-    env.loose()
+    env.loose(),
+    env.cert(),
+    env.key()
   );
 
   // We use logger singleton as global debugger logger to track detailed outputs cross layers
@@ -70,20 +72,20 @@ async function main() {
 
   // Start server
   console.log(
-    `Azurite Blob service is starting on ${blobConfig.host}:${blobConfig.port}`
+    `Azurite Blob service is starting at ${blobConfig.getHttpServerAddress()}`
   );
   await blobServer.start();
   console.log(
-    `Azurite Blob service successfully listens on ${blobServer.getHttpServerAddress()}`
+    `Azurite Blob service is successfully listening at ${blobServer.getHttpServerAddress()}`
   );
 
   // Start server
   console.log(
-    `Azurite Queue service is starting on ${queueConfig.host}:${queueConfig.port}`
+    `Azurite Queue service is starting at ${queueConfig.getHttpServerAddress()}`
   );
   await queueServer.start();
   console.log(
-    `Azurite Queue service successfully listens on ${queueServer.getHttpServerAddress()}`
+    `Azurite Queue service is successfully listening at ${queueServer.getHttpServerAddress()}`
   );
 
   // Handle close event
