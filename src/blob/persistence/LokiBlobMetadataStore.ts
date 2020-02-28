@@ -1094,6 +1094,11 @@ export default class LokiBlobMetadataStore
       context
     );
 
+    // When block blob don't have commited block, should return 404
+    if (!doc.isCommitted) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }
+
     new BlobReadLeaseValidator(leaseAccessConditions).validate(
       new BlobLeaseAdapter(doc),
       context
@@ -1831,6 +1836,8 @@ export default class LokiBlobMetadataStore
       name: block.blobName
     });
 
+    let blobExist = false;
+
     if (!blobDoc) {
       const etag = newEtag();
       const newBlob = {
@@ -1853,9 +1860,28 @@ export default class LokiBlobMetadataStore
       LeaseFactory.createLeaseState(new BlobLeaseAdapter(blobDoc), context)
         .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
         .sync(new BlobWriteLeaseSyncer(blobDoc));
+      blobExist = true;
     }
 
     const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
+
+    // If the new block ID does not have same length with before uncommited block ID, return failure.
+    if (blobExist) {
+      const existBlockDoc = coll.findOne({
+        accountName: block.accountName,
+        containerName: block.containerName,
+        blobName: block.blobName
+      });
+      if (existBlockDoc) {
+        if (
+          Buffer.from(existBlockDoc.name, "base64").length !==
+          Buffer.from(block.name, "base64").length
+        ) {
+          throw StorageErrorFactory.getInvalidBlobOrBlock(context.contextId);
+        }
+      }
+    }
+
     const blockDoc = coll.findOne({
       accountName: block.accountName,
       containerName: block.containerName,

@@ -383,6 +383,29 @@ describe("BlockBlobAPIs", () => {
       body,
       body.length
     );
+
+    // Getproperties on a block blob without commited block will return 404
+    let err;
+    try {
+      await blockBlobURL.getProperties(Aborter.none);
+    } catch (error) {
+      err = error;
+    }
+    assert.deepStrictEqual(err.statusCode, 404);
+
+    // Stage block with block Id length different than the exist uncommited blocks will fail with 400
+    try {
+      await blockBlobURL.stageBlock(
+        Aborter.none,
+        base64encode("123"),
+        body,
+        body.length
+      );
+    } catch (error) {
+      err = error;
+    }
+    assert.deepStrictEqual(err.statusCode, 400);
+
     await blockBlobURL.commitBlockList(Aborter.none, [
       base64encode("1"),
       base64encode("2")
@@ -390,7 +413,7 @@ describe("BlockBlobAPIs", () => {
 
     await blockBlobURL.stageBlock(
       Aborter.none,
-      base64encode("3"),
+      base64encode("123"),
       body,
       body.length
     );
@@ -408,7 +431,7 @@ describe("BlockBlobAPIs", () => {
 
     listResponse = await blockBlobURL.getBlockList(Aborter.none, "uncommitted");
     assert.equal(listResponse.uncommittedBlocks!.length, 1);
-    assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("3"));
+    assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("123"));
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
     assert.equal(listResponse.committedBlocks!.length, 0);
 
@@ -419,7 +442,7 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.committedBlocks![1].name, base64encode("2"));
     assert.equal(listResponse.committedBlocks![1].size, body.length);
     assert.equal(listResponse.uncommittedBlocks!.length, 1);
-    assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("3"));
+    assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("123"));
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
   });
 

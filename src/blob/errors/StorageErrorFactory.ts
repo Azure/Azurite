@@ -160,6 +160,17 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getInvalidBlobOrBlock(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      400,
+      "InvalidBlobOrBlock",
+      "The specified blob or block content is invalid.",
+      contextID
+    );
+  }
+
   public static getLeaseAlreadyPresent(
     contextID: string = DefaultID
   ): StorageError {

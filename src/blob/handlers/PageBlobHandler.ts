@@ -114,7 +114,9 @@ export default class PageBlobHandler extends BaseHandler
         contentMD5: options.blobHTTPHeaders.blobContentMD5,
         contentDisposition: options.blobHTTPHeaders.blobContentDisposition,
         cacheControl: options.blobHTTPHeaders.blobCacheControl,
-        blobSequenceNumber: options.blobSequenceNumber,
+        blobSequenceNumber: options.blobSequenceNumber
+          ? options.blobSequenceNumber
+          : 0,
         blobType: Models.BlobType.PageBlob,
         leaseStatus: Models.LeaseStatusType.Unlocked,
         leaseState: Models.LeaseStateType.Available,
