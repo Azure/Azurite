@@ -576,7 +576,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       sourceAccount,
       sourceContainer,
       sourceBlob
-    ] = extractStoragePartsFromPath(url.pathname);
+    ] = extractStoragePartsFromPath(url.hostname, url.pathname);
     const snapshot = url.searchParams.get("snapshot") || "";
 
     if (

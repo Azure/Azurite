@@ -5,6 +5,7 @@ import logger from "../../common/Logger";
 import { checkApiVersion } from "../../common/utils/utils";
 import QueueStorageContext from "../context/QueueStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
+import { PRODUCTION_STYLE_URL_HOSTNAME } from "../../common/utils/constants";
 import {
   DEFAULT_QUEUE_CONTEXT_PATH,
   HeaderConstants,
@@ -62,7 +63,7 @@ export default function queueStorageContextMiddleware(
     message,
     messageId,
     isSecondary
-  ] = extractStoragePartsFromPath(req.path);
+  ] = extractStoragePartsFromPath(req.hostname, req.path);
 
   queueContext.account = account;
   queueContext.queue = queue;
@@ -70,7 +71,7 @@ export default function queueStorageContextMiddleware(
   queueContext.messageId = messageId;
   queueContext.isSecondary = isSecondary;
 
-  // Emulator's URL pattern is like http://hostname:port/account/queue/messages
+  // Emulator's URL pattern is like http://hostname[:port]/account/queue/messages (or, alternatively, http[s]://account.localhost[:port]/queue/messages)
   // Create a router to exclude account name from req.path, as url path in swagger doesn't include account
   // Exclude account name from req.path for dispatchMiddleware
   queueContext.dispatchPattern =
@@ -149,6 +150,7 @@ export default function queueStorageContextMiddleware(
  * @returns {([string | undefined, string | undefined, string | undefined, boolean | undefined])}
  */
 export function extractStoragePartsFromPath(
+  hostname: string,
   path: string
 ): [
   string | undefined,
@@ -170,11 +172,19 @@ export function extractStoragePartsFromPath(
 
   const parts = normalizedPath.split("/");
 
-  account = parts[0];
-  queue = parts[1];
+  var urlPartIndex = 0;
+  if (hostname.endsWith(PRODUCTION_STYLE_URL_HOSTNAME)) {
+    account = hostname.substring(
+      0,
+      hostname.length - PRODUCTION_STYLE_URL_HOSTNAME.length
+    );
+  } else {
+    account = parts[urlPartIndex++];
+  }
+  queue = parts[urlPartIndex++];
   // For delete and update, it is messages/messageid?popreceipt=string-value
-  message = parts[2];
-  messageId = parts[3];
+  message = parts[urlPartIndex++];
+  messageId = parts[urlPartIndex++];
 
   if (account.endsWith(SECONDARY_SUFFIX)) {
     account = account.substr(0, account.length - SECONDARY_SUFFIX.length);
