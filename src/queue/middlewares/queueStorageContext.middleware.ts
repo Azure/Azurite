@@ -2,10 +2,10 @@ import { NextFunction, Request, Response } from "express";
 import uuid from "uuid/v4";
 
 import logger from "../../common/Logger";
+import { PRODUCTION_STYLE_URL_HOSTNAME } from "../../common/utils/constants";
 import { checkApiVersion } from "../../common/utils/utils";
 import QueueStorageContext from "../context/QueueStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
-import { PRODUCTION_STYLE_URL_HOSTNAME } from "../../common/utils/constants";
 import {
   DEFAULT_QUEUE_CONTEXT_PATH,
   HeaderConstants,
@@ -71,7 +71,8 @@ export default function queueStorageContextMiddleware(
   queueContext.messageId = messageId;
   queueContext.isSecondary = isSecondary;
 
-  // Emulator's URL pattern is like http://hostname[:port]/account/queue/messages (or, alternatively, http[s]://account.localhost[:port]/queue/messages)
+  // Emulator's URL pattern is like http://hostname[:port]/account/queue/messages
+  // (or, alternatively, http[s]://account.localhost[:port]/queue/messages)
   // Create a router to exclude account name from req.path, as url path in swagger doesn't include account
   // Exclude account name from req.path for dispatchMiddleware
   queueContext.dispatchPattern =
@@ -172,7 +173,7 @@ export function extractStoragePartsFromPath(
 
   const parts = normalizedPath.split("/");
 
-  var urlPartIndex = 0;
+  let urlPartIndex = 0;
   if (hostname.endsWith(PRODUCTION_STYLE_URL_HOSTNAME)) {
     account = hostname.substring(
       0,

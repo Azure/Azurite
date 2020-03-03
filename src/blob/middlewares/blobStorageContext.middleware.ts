@@ -2,10 +2,10 @@ import { NextFunction, Request, Response } from "express";
 import uuid from "uuid/v4";
 
 import logger from "../../common/Logger";
+import { PRODUCTION_STYLE_URL_HOSTNAME } from "../../common/utils/constants";
 import { checkApiVersion } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
-import { PRODUCTION_STYLE_URL_HOSTNAME } from "../../common/utils/constants";
 import {
   DEFAULT_CONTEXT_PATH,
   HeaderConstants,
@@ -62,7 +62,8 @@ export default function blobStorageContextMiddleware(
   blobContext.blob = blob;
   blobContext.isSecondary = isSecondary;
 
-  // Emulator's URL pattern is like http://hostname[:port]/account/container (or, alternatively, http[s]://account.localhost[:port]/container)
+  // Emulator's URL pattern is like http://hostname[:port]/account/container
+  // (or, alternatively, http[s]://account.localhost[:port]/container)
   // Create a router to exclude account name from req.path, as url path in swagger doesn't include account
   // Exclude account name from req.path for dispatchMiddleware
   blobContext.dispatchPattern = container
@@ -126,7 +127,7 @@ export function extractStoragePartsFromPath(
 
   const parts = normalizedPath.split("/");
 
-  var urlPartIndex = 0;
+  let urlPartIndex = 0;
   if (hostname.endsWith(PRODUCTION_STYLE_URL_HOSTNAME)) {
     account = hostname.substring(
       0,
