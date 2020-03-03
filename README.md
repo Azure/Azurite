@@ -353,7 +353,7 @@ Or customize multi storage accounts and each has 2 keys:
 set AZURITE_ACCOUNTS="account1:key1:key2;account2:key1:key2"
 ```
 
-### HTTP Setup
+### HTTPS Setup
 
 You can generate a local certificate for 127.0.0.1 with `mkcert`. See the mkcert GitHub repo for [installation instructions](https://github.com/FiloSottile/mkcert), and then run the following commands.
 
@@ -427,9 +427,9 @@ unable to verify the first certificate.
 Follow these steps to add the HTTPS endpoints to Storage Explorer:
 
 1. Right click on Local & Attached->Storage Accounts and select "Connect to Azure Storage...".
-1. Select "Use a connection string" and click Next.
-1. Enter a name, i.e https.
-1. Enter the HTTPS connection string from the previous section of this document and click Next.
+2. Select "Use a connection string" and click Next.
+3. Enter a name, i.e https.
+4. Enter the HTTPS connection string from the previous section of this document and click Next.
 
 You can now explore the Azurite HTTPS endpoints with Storage Explorer.
 
