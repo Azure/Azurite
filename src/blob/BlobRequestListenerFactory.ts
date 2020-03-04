@@ -48,8 +48,10 @@ export default class BlobRequestListenerFactory
     private readonly accountDataStore: IAccountDataStore,
     private readonly enableAccessLog: boolean,
     private readonly accessLogWriteStream?: NodeJS.WritableStream,
-    private readonly loose?: boolean
-  ) {}
+    private readonly loose?: boolean,
+    private readonly cert?: string,
+    private readonly key?: string
+  ) { }
 
   public createRequestListener(): RequestListener {
     const app = express().disable("x-powered-by");

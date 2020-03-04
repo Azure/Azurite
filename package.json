@@ -146,6 +146,16 @@
             "default": false,
             "description": "Enable loose mode which ignores unsupported headers and parameters"
           },
+          "azurite.cert": {
+            "type": "string",
+            "default": "",
+            "description": "Locally-trusted certificate"
+          },
+          "azurite.key": {
+            "type": "string",
+            "default": "",
+            "description": "Locally-trusted key file"
+          },
           "azurite.location": {
             "type": "string",
             "description": "Workspace location folder path, by default Visual Studio Code current opened folder"
