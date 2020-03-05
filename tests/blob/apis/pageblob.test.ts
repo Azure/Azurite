@@ -133,6 +133,7 @@ describe("PageBlobAPIs", () => {
       properties.contentType,
       options.blobHTTPHeaders.blobContentType
     );
+    assert.equal(0, properties.blobSequenceNumber);
     assert.equal(properties.metadata!.key1, options.metadata.key1);
     assert.equal(properties.metadata!.key2, options.metadata.key2);
     assert.equal(

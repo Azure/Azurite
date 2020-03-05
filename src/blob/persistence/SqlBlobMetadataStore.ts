@@ -1286,8 +1286,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           containerName: block.containerName,
           blobName: block.blobName,
           snapshot: "",
-          deleting: 0,
-          isCommitted: true
+          deleting: 0
         },
         transaction: t
       });
@@ -1297,10 +1296,34 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           blobFindResult
         );
 
-        LeaseFactory.createLeaseState(
-          new BlobLeaseAdapter(blobModel),
-          context
-        ).validate(new BlobWriteLeaseValidator(leaseAccessConditions));
+        if (blobModel.isCommitted === true) {
+          LeaseFactory.createLeaseState(
+            new BlobLeaseAdapter(blobModel),
+            context
+          ).validate(new BlobWriteLeaseValidator(leaseAccessConditions));
+        }
+
+        // If the new block ID does not have same length with before uncommited block ID, return failure.
+        const existBlock = await BlocksModel.findOne({
+          attributes: ["blockName"],
+          where: {
+            accountName: block.accountName,
+            containerName: block.containerName,
+            blobName: block.blobName,
+            deleting: 0
+          },
+          order: [["id", "ASC"]],
+          transaction: t
+        });
+        if (
+          existBlock &&
+          Buffer.from(
+            this.getModelValue<string>(existBlock, "blockName", true),
+            "base64"
+          ).length !== Buffer.from(block.name, "base64").length
+        ) {
+          throw StorageErrorFactory.getInvalidBlobOrBlock(context.contextId);
+        }
       } else {
         const newBlob = {
           deleted: false,
@@ -1604,6 +1627,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       const blobModel: BlobModel = this.convertDbModelToBlobModel(
         blobFindResult
       );
+
+      if (!blobModel.isCommitted) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
 
       return LeaseFactory.createLeaseState(
         new BlobLeaseAdapter(blobModel),
