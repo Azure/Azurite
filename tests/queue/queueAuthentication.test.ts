@@ -24,151 +24,155 @@ import {
 configLogger(false);
 
 describe("Queue Authentication", () => {
-  // TODO: Create a server factory as tests utils
   const host = "127.0.0.1";
   const port = 11001;
-  const metadataDbPath = "__queueTestsStorage__";
-  const extentDbPath = "__extentTestsStorage__";
-  const persistencePath = "__queueTestsPersistence__";
+  [
+    { baseURL: `http://${host}:${port}/devstoreaccount1` },
+    { baseURL: `https://${host}:${port}/devstoreaccount1` }
+  ].forEach(testName => {
+    // TODO: Create a server factory as tests utils
 
-  const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
-    {
-      locationId: "queueTest",
-      locationPath: persistencePath,
-      maxConcurrency: 10
-    }
-  ];
+    const metadataDbPath = "__queueTestsStorage__";
+    const extentDbPath = "__extentTestsStorage__";
+    const persistencePath = "__queueTestsPersistence__";
 
-  const config = new QueueConfiguration(
-    host,
-    port,
-    metadataDbPath,
-    extentDbPath,
-    DEFUALT_QUEUE_PERSISTENCE_ARRAY,
-    false
-  );
-
-  const baseURL = `http://${host}:${port}/devstoreaccount1`;
-
-  let server: Server;
-
-  before(async () => {
-    server = new Server(config);
-    await server.start();
-  });
-
-  after(async () => {
-    await server.close();
-    await rmRecursive(metadataDbPath);
-    await rmRecursive(extentDbPath);
-    await rmRecursive(persistencePath);
-  });
-
-  it("Should not work without credential @loki", async () => {
-    const serviceURL = new ServiceURL(
-      baseURL,
-      StorageURL.newPipeline(new AnonymousCredential(), {
-        retryOptions: { maxTries: 1 }
-      })
-    );
-
-    const queueName: string = getUniqueName("queue-with-dash");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-
-    let err;
-    try {
-      await queueURL.create(Aborter.none);
-    } catch (error) {
-      err = error;
-    } finally {
-      if (err === undefined) {
-        try {
-          await queueURL.delete(Aborter.none);
-        } catch (error) {
-          /* Noop */
-        }
-        assert.fail();
+    const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
+      {
+        locationId: "queueTest",
+        locationPath: persistencePath,
+        maxConcurrency: 10
       }
-    }
-  });
+    ];
 
-  it("Should not work without correct account name @loki", async () => {
-    const serviceURL = new ServiceURL(
-      baseURL,
-      StorageURL.newPipeline(
-        new SharedKeyCredential("invalid", EMULATOR_ACCOUNT_KEY),
-        {
-          retryOptions: { maxTries: 1 }
-        }
-      )
+    const config = new QueueConfiguration(
+      host,
+      port,
+      metadataDbPath,
+      extentDbPath,
+      DEFUALT_QUEUE_PERSISTENCE_ARRAY,
+      false
     );
 
-    const queueName: string = getUniqueName("queue-with-dash");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+    let server: Server;
 
-    let err;
-    try {
-      await queueURL.create(Aborter.none);
-    } catch (error) {
-      err = error;
-    } finally {
-      if (err === undefined) {
-        try {
-          await queueURL.delete(Aborter.none);
-        } catch (error) {
-          /* Noop */
+    before(async () => {
+      server = new Server(config);
+      await server.start();
+    });
+
+    after(async () => {
+      await server.close();
+      await rmRecursive(metadataDbPath);
+      await rmRecursive(extentDbPath);
+      await rmRecursive(persistencePath);
+    });
+
+    it("Should not work without credential @loki", async () => {
+      const serviceURL = new ServiceURL(
+        testName.baseURL,
+        StorageURL.newPipeline(new AnonymousCredential(), {
+          retryOptions: { maxTries: 1 }
+        })
+      );
+
+      const queueName: string = getUniqueName("queue-with-dash");
+      const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+
+      let err;
+      try {
+        await queueURL.create(Aborter.none);
+      } catch (error) {
+        err = error;
+      } finally {
+        if (err === undefined) {
+          try {
+            await queueURL.delete(Aborter.none);
+          } catch (error) {
+            /* Noop */
+          }
+          assert.fail();
         }
-        assert.fail();
       }
-    }
-  });
+    });
 
-  it("Should not work without correct account key @loki", async () => {
-    const serviceURL = new ServiceURL(
-      baseURL,
-      StorageURL.newPipeline(
-        new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, "invalidkey"),
-        {
-          retryOptions: { maxTries: 1 }
+    it("Should not work without correct account name @loki", async () => {
+      const serviceURL = new ServiceURL(
+        testName.baseURL,
+        StorageURL.newPipeline(
+          new SharedKeyCredential("invalid", EMULATOR_ACCOUNT_KEY),
+          {
+            retryOptions: { maxTries: 1 }
+          }
+        )
+      );
+
+      const queueName: string = getUniqueName("queue-with-dash");
+      const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+
+      let err;
+      try {
+        await queueURL.create(Aborter.none);
+      } catch (error) {
+        err = error;
+      } finally {
+        if (err === undefined) {
+          try {
+            await queueURL.delete(Aborter.none);
+          } catch (error) {
+            /* Noop */
+          }
+          assert.fail();
         }
-      )
-    );
-
-    const queueName: string = getUniqueName("queue-with-dash");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-
-    let err;
-    try {
-      await queueURL.create(Aborter.none);
-    } catch (error) {
-      err = error;
-    } finally {
-      if (err === undefined) {
-        try {
-          await queueURL.delete(Aborter.none);
-        } catch (error) {
-          /* Noop */
-        }
-        assert.fail();
       }
-    }
-  });
+    });
 
-  it("Should work with correct shared key @loki", async () => {
-    const serviceURL = new ServiceURL(
-      baseURL,
-      StorageURL.newPipeline(
-        new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
-        {
-          retryOptions: { maxTries: 1 }
+    it("Should not work without correct account key @loki", async () => {
+      const serviceURL = new ServiceURL(
+        testName.baseURL,
+        StorageURL.newPipeline(
+          new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, "invalidkey"),
+          {
+            retryOptions: { maxTries: 1 }
+          }
+        )
+      );
+
+      const queueName: string = getUniqueName("queue-with-dash");
+      const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+
+      let err;
+      try {
+        await queueURL.create(Aborter.none);
+      } catch (error) {
+        err = error;
+      } finally {
+        if (err === undefined) {
+          try {
+            await queueURL.delete(Aborter.none);
+          } catch (error) {
+            /* Noop */
+          }
+          assert.fail();
         }
-      )
-    );
+      }
+    });
 
-    const queueName: string = getUniqueName("queue-with-dash");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+    it("Should work with correct shared key @loki", async () => {
+      const serviceURL = new ServiceURL(
+        testName.baseURL,
+        StorageURL.newPipeline(
+          new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+          {
+            retryOptions: { maxTries: 1 }
+          }
+        )
+      );
 
-    await queueURL.create(Aborter.none);
-    await queueURL.delete(Aborter.none);
+      const queueName: string = getUniqueName("queue-with-dash");
+      const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+
+      await queueURL.create(Aborter.none);
+      await queueURL.delete(Aborter.none);
+    });
   });
 });
