@@ -365,6 +365,17 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getMultipleConditionHeadersNotSupported(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      400,
+      "MultipleConditionHeadersNotSupported",
+      "Multiple condition headers are not supported.",
+      contextID
+    );
+  }
+
   public static getBlobSnapshotsPresent_hassnapshot(
     contextID: string
   ): StorageError {
@@ -485,6 +496,33 @@ export default class StorageErrorFactory {
       409,
       "SnapshotsPresent",
       "This operation is not permitted while the blob has snapshots.",
+      contextID
+    );
+  }
+
+  public static getConditionNotMet(contextID: string): StorageError {
+    return new StorageError(
+      412,
+      "ConditionNotMet",
+      "The condition specified using HTTP conditional header(s) is not met.",
+      contextID
+    );
+  }
+
+  public static getNotModified(contextID: string): StorageError {
+    return new StorageError(
+      304,
+      "ConditionNotMet",
+      "The condition specified using HTTP conditional header(s) is not met.",
+      contextID
+    );
+  }
+
+  public static getUnsatisfiableCondition(contextID: string): StorageError {
+    return new StorageError(
+      400,
+      "UnsatisfiableCondition",
+      "The request includes an unsatisfiable condition for this operation.",
       contextID
     );
   }

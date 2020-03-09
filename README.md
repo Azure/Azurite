@@ -549,11 +549,11 @@ Detailed support matrix:
   - Snapshot Blob
   - Copy Blob (Only supports copy within same account in Azurite)
   - Abort Copy Blob (Only supports copy within same account in Azurite)
+  - Access control based on conditional headers
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
 
   - SharedKey Lite
   - OAuth authentication
-  - Access control based on conditional headers (Requests will be blocked in strict mode)
   - Static Website
   - Soft delete & Undelete Blob
   - Put Block from URL

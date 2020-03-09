@@ -142,7 +142,7 @@ export default class ContainerHandler extends BaseHandler
       context,
       accountName,
       containerName,
-      options.leaseAccessConditions
+      options
     );
 
     const response: Models.ContainerDeleteResponse = {
@@ -181,7 +181,8 @@ export default class ContainerHandler extends BaseHandler
       date,
       eTag,
       options.metadata,
-      options.leaseAccessConditions
+      options.leaseAccessConditions,
+      options.modifiedAccessConditions
     );
 
     const response: Models.ContainerSetMetadataResponse = {
@@ -271,7 +272,8 @@ export default class ContainerHandler extends BaseHandler
         etag: eTag,
         publicAccess: options.access,
         containerAcl: options.containerAcl,
-        leaseAccessConditions: options.leaseAccessConditions
+        leaseAccessConditions: options.leaseAccessConditions,
+        modifiedAccessConditions: options.modifiedAccessConditions
       }
     );
 
@@ -351,7 +353,8 @@ export default class ContainerHandler extends BaseHandler
       context,
       accountName,
       containerName,
-      leaseId
+      leaseId,
+      options
     );
 
     const response: Models.ContainerReleaseLeaseResponse = {
@@ -391,7 +394,8 @@ export default class ContainerHandler extends BaseHandler
       context,
       accountName,
       containerName,
-      leaseId
+      leaseId,
+      options
     );
 
     const response: Models.ContainerRenewLeaseResponse = {
@@ -430,7 +434,8 @@ export default class ContainerHandler extends BaseHandler
       context,
       accountName,
       containerName,
-      options.breakPeriod
+      options.breakPeriod,
+      options
     );
 
     const response: Models.ContainerBreakLeaseResponse = {
@@ -474,7 +479,8 @@ export default class ContainerHandler extends BaseHandler
       accountName,
       containerName,
       leaseId,
-      proposedLeaseId
+      proposedLeaseId,
+      options
     );
 
     const response: Models.ContainerChangeLeaseResponse = {

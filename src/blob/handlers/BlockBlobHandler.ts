@@ -131,7 +131,8 @@ export default class BlockBlobHandler extends BaseHandler
     await this.metadataStore.createBlob(
       context,
       blob,
-      options.leaseAccessConditions
+      options.leaseAccessConditions,
+      options.modifiedAccessConditions
     );
 
     const response: Models.BlockBlobUploadResponse = {
@@ -313,7 +314,8 @@ export default class BlockBlobHandler extends BaseHandler
       context,
       blob,
       commitBlockList,
-      options.leaseAccessConditions
+      options.leaseAccessConditions,
+      options.modifiedAccessConditions
     );
 
     const contentMD5 = await getMD5FromString(rawBody);
@@ -352,6 +354,8 @@ export default class BlockBlobHandler extends BaseHandler
     );
 
     // TODO: Create uncommitted blockblob when stage block
+    // TODO: Conditional headers support?
+
     res.properties = res.properties || {};
     const response: Models.BlockBlobGetBlockListResponse = {
       statusCode: 200,
