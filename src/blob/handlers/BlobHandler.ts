@@ -96,7 +96,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       containerName,
       blobName,
       options.snapshot,
-      options.leaseAccessConditions
+      options.leaseAccessConditions,
+      options.modifiedAccessConditions
     );
 
     if (blob.properties.blobType === Models.BlobType.BlockBlob) {
@@ -133,7 +134,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       options.snapshot,
-      options.leaseAccessConditions
+      options.leaseAccessConditions,
+      options.modifiedAccessConditions
     );
 
     // TODO: Create get metadata specific request in swagger
@@ -242,7 +244,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       options.leaseAccessConditions,
-      options.blobHTTPHeaders
+      options.blobHTTPHeaders,
+      options.modifiedAccessConditions
     );
 
     // ToDo: return correct headers and test for these.
@@ -282,7 +285,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       options.leaseAccessConditions,
-      options.metadata
+      options.metadata,
+      options.modifiedAccessConditions
     );
 
     // ToDo: return correct headers and test for these.
@@ -331,7 +335,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       options.duration!,
-      options.proposedLeaseId
+      options.proposedLeaseId,
+      options
     );
 
     const response: Models.BlobAcquireLeaseResponse = {
@@ -371,7 +376,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       account,
       container,
       blob,
-      leaseId
+      leaseId,
+      options
     );
 
     const response: Models.BlobReleaseLeaseResponse = {
@@ -410,7 +416,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       account,
       container,
       blob,
-      leaseId
+      leaseId,
+      options
     );
 
     const response: Models.BlobRenewLeaseResponse = {
@@ -453,7 +460,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       leaseId,
-      proposedLeaseId
+      proposedLeaseId,
+      options
     );
 
     const response: Models.BlobChangeLeaseResponse = {
@@ -491,7 +499,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       account,
       container,
       blob,
-      options.breakPeriod
+      options.breakPeriod,
+      options
     );
 
     const response: Models.BlobBreakLeaseResponse = {
@@ -534,7 +543,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       options.leaseAccessConditions,
       !options.metadata || JSON.stringify(options.metadata) === "{}"
         ? undefined
-        : options.metadata
+        : options.metadata,
+      options.modifiedAccessConditions
     );
 
     const response: Models.BlobCreateSnapshotResponse = {
@@ -600,7 +610,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       copySource,
       options.metadata,
       options.tier,
-      options.leaseAccessConditions
+      options
     );
 
     const response: Models.BlobStartCopyFromURLResponse = {
