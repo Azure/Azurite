@@ -22,10 +22,9 @@ configLogger(false);
 describe("Authentication", () => {
   const factory = new BlobTestServerFactory();
   const server = factory.createServer();
-  const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
 
   before(async () => {
-    await server.start();
+    server.start();
   });
 
   after(async () => {
@@ -33,111 +32,126 @@ describe("Authentication", () => {
     await server.clean();
   });
 
-  it("Should not work without credential @loki @sql", async () => {
-    const serviceURL = new ServiceURL(
-      baseURL,
-      StorageURL.newPipeline(new AnonymousCredential(), {
-        retryOptions: { maxTries: 1 }
-      })
-    );
-
-    const containerName: string = getUniqueName("1container-with-dash");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
-
-    let err;
-    try {
-      await containerURL.create(Aborter.none);
-    } catch (error) {
-      err = error;
-    } finally {
-      if (err === undefined) {
-        try {
-          await containerURL.delete(Aborter.none);
-        } catch (error) {
-          /* Noop */
-        }
-        assert.fail();
-      }
-    }
-  });
-
-  it("Should not work without correct account name @loki @sql", async () => {
-    const serviceURL = new ServiceURL(
-      baseURL,
-      StorageURL.newPipeline(
-        new SharedKeyCredential("invalid", EMULATOR_ACCOUNT_KEY),
-        {
+  [{ prefix: "http" }, { prefix: "https" }].forEach(async testName => {
+    const baseURL = `${testName.prefix}://${server.config.host}:${server.config.port}/devstoreaccount1`;
+    it(`Should not work without credential @loki @sql when using ${testName.prefix}`, async () => {
+      const serviceURL = new ServiceURL(
+        baseURL,
+        StorageURL.newPipeline(new AnonymousCredential(), {
           retryOptions: { maxTries: 1 }
-        }
-      )
-    );
+        })
+      );
 
-    const containerName: string = getUniqueName("1container-with-dash");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+      const containerName: string = getUniqueName("1container-with-dash");
+      const containerURL = ContainerURL.fromServiceURL(
+        serviceURL,
+        containerName
+      );
 
-    let err;
-    try {
-      await containerURL.create(Aborter.none);
-    } catch (error) {
-      err = error;
-    } finally {
-      if (err === undefined) {
-        try {
-          await containerURL.delete(Aborter.none);
-        } catch (error) {
-          /* Noop */
+      let err;
+      try {
+        await containerURL.create(Aborter.none);
+      } catch (error) {
+        err = error;
+      } finally {
+        if (err === undefined) {
+          try {
+            await containerURL.delete(Aborter.none);
+          } catch (error) {
+            /* Noop */
+          }
+          assert.fail();
         }
-        assert.fail();
       }
-    }
-  });
+    });
 
-  it("Should not work without correct account key @loki @sql", async () => {
-    const serviceURL = new ServiceURL(
-      baseURL,
-      StorageURL.newPipeline(
-        new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, "invalidkey"),
-        {
-          retryOptions: { maxTries: 1 }
+    it(`Should not work without correct account name @loki @sql when using ${testName.prefix}`, async () => {
+      const serviceURL = new ServiceURL(
+        baseURL,
+        StorageURL.newPipeline(
+          new SharedKeyCredential("invalid", EMULATOR_ACCOUNT_KEY),
+          {
+            retryOptions: { maxTries: 1 }
+          }
+        )
+      );
+
+      const containerName: string = getUniqueName("1container-with-dash");
+      const containerURL = ContainerURL.fromServiceURL(
+        serviceURL,
+        containerName
+      );
+
+      let err;
+      try {
+        await containerURL.create(Aborter.none);
+      } catch (error) {
+        err = error;
+      } finally {
+        if (err === undefined) {
+          try {
+            await containerURL.delete(Aborter.none);
+          } catch (error) {
+            /* Noop */
+          }
+          assert.fail();
         }
-      )
-    );
-
-    const containerName: string = getUniqueName("1container-with-dash");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
-
-    let err;
-    try {
-      await containerURL.create(Aborter.none);
-    } catch (error) {
-      err = error;
-    } finally {
-      if (err === undefined) {
-        try {
-          await containerURL.delete(Aborter.none);
-        } catch (error) {
-          /* Noop */
-        }
-        assert.fail();
       }
-    }
-  });
+    });
 
-  it("Should work with correct shared key @loki @sql", async () => {
-    const serviceURL = new ServiceURL(
-      baseURL,
-      StorageURL.newPipeline(
-        new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
-        {
-          retryOptions: { maxTries: 1 }
+    it(`Should not work without correct account key @loki @sql when using ${testName.prefix}`, async () => {
+      const serviceURL = new ServiceURL(
+        baseURL,
+        StorageURL.newPipeline(
+          new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, "invalidkey"),
+          {
+            retryOptions: { maxTries: 1 }
+          }
+        )
+      );
+
+      const containerName: string = getUniqueName("1container-with-dash");
+      const containerURL = ContainerURL.fromServiceURL(
+        serviceURL,
+        containerName
+      );
+
+      let err;
+      try {
+        await containerURL.create(Aborter.none);
+      } catch (error) {
+        err = error;
+      } finally {
+        if (err === undefined) {
+          try {
+            await containerURL.delete(Aborter.none);
+          } catch (error) {
+            /* Noop */
+          }
+          assert.fail();
         }
-      )
-    );
+      }
+    });
 
-    const containerName: string = getUniqueName("1container-with-dash");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+    it(`Should work with correct shared key @loki @sql when using ${testName.prefix}`, async () => {
+      const serviceURL = new ServiceURL(
+        baseURL,
+        StorageURL.newPipeline(
+          new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+          {
+            retryOptions: { maxTries: 1 }
+          }
+        )
+      );
 
-    await containerURL.create(Aborter.none);
-    await containerURL.delete(Aborter.none);
+      const containerName: string = getUniqueName("1container-with-dash");
+      const containerURL = ContainerURL.fromServiceURL(
+        serviceURL,
+        containerName
+      );
+
+      await containerURL.create(Aborter.none);
+      await containerURL.delete(Aborter.none);
+    });
   });
 });
