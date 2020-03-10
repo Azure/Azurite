@@ -52,6 +52,8 @@ export const HeaderConstants = {
   X_MS_IF_SEQUENCE_NUMBER_EQ: "x-ms-if-sequence-number-eq",
   X_MS_BLOB_CONDITION_MAXSIZE: "x-ms-blob-condition-maxsize",
   X_MS_BLOB_CONDITION_APPENDPOS: "x-ms-blob-condition-appendpos",
+  X_MS_SEQUENCE_NUMBER_ACTION: "x-ms-sequence-number-action",
+  X_MS_BLOB_SEQUENCE_NUMBER: "x-ms-blob-sequence-number",
   X_MS_CONTENT_CRC64: "x-ms-content-crc64",
   X_MS_RANGE_GET_CONTENT_CRC64: "x-ms-range-get-content-crc64",
   X_MS_ENCRYPTION_KEY: "x-ms-encryption-key",

@@ -15,7 +15,8 @@ import IBlobMetadataStore, {
 import {
   BLOB_API_VERSION,
   EMULATOR_ACCOUNT_KIND,
-  EMULATOR_ACCOUNT_SKUNAME
+  EMULATOR_ACCOUNT_SKUNAME,
+  HeaderConstants
 } from "../utils/constants";
 import {
   deserializePageBlobRangeHeader,
@@ -238,17 +239,43 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const account = blobCtx.account!;
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
-    const res = await this.metadataStore.setBlobHTTPHeaders(
-      context,
-      account,
-      container,
-      blob,
-      options.leaseAccessConditions,
-      options.blobHTTPHeaders,
-      options.modifiedAccessConditions
-    );
 
-    // ToDo: return correct headers and test for these.
+    let res;
+
+    // Workaround for https://github.com/Azure/Azurite/issues/332
+    const sequenceNumberAction = context.request!.getHeader(
+      HeaderConstants.X_MS_SEQUENCE_NUMBER_ACTION
+    );
+    const sequenceNumber = context.request!.getHeader(
+      HeaderConstants.X_MS_BLOB_SEQUENCE_NUMBER
+    );
+    if (sequenceNumberAction !== undefined) {
+      this.logger.verbose(
+        "BlobHandler:setHTTPHeaders() Redirect to updateSequenceNumber...",
+        context.contextId
+      );
+      res = await this.metadataStore.updateSequenceNumber(
+        context,
+        account,
+        container,
+        blob,
+        sequenceNumberAction.toLowerCase() as Models.SequenceNumberActionType,
+        sequenceNumber === undefined ? undefined : parseInt(sequenceNumber, 10),
+        options.leaseAccessConditions,
+        options.modifiedAccessConditions
+      );
+    } else {
+      res = await this.metadataStore.setBlobHTTPHeaders(
+        context,
+        account,
+        container,
+        blob,
+        options.leaseAccessConditions,
+        options.blobHTTPHeaders,
+        options.modifiedAccessConditions
+      );
+    }
+
     const response: Models.BlobSetHTTPHeadersResponse = {
       statusCode: 200,
       eTag: res.etag,

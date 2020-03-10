@@ -2,6 +2,10 @@
 
 > Note. This file includes changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
+## 2020.03 Version 3.6.0
+
+- Compatible with upper case or lower case of x-ms-sequence-number-action values.
+
 ## 2020.02 Version 3.5.0
 
 - Bump up Azure Storage service API version to 2019-07-07.
