@@ -911,6 +911,7 @@ export interface IBlobMetadataStore
    * @param {IExtentChunk} persistency
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @param {Models.SequenceNumberAccessConditions} [sequenceNumberAccessConditions]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
@@ -921,7 +922,8 @@ export interface IBlobMetadataStore
     end: number,
     persistency: IExtentChunk,
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    sequenceNumberAccessConditions?: Models.SequenceNumberAccessConditions
   ): Promise<Models.BlobProperties>;
 
   /**
@@ -933,6 +935,7 @@ export interface IBlobMetadataStore
    * @param {number} end
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @param {Models.SequenceNumberAccessConditions} [sequenceNumberAccessConditions]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
@@ -942,7 +945,8 @@ export interface IBlobMetadataStore
     start: number,
     end: number,
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    sequenceNumberAccessConditions?: Models.SequenceNumberAccessConditions
   ): Promise<Models.BlobProperties>;
 
   /**

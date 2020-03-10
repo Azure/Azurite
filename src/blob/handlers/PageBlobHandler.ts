@@ -230,7 +230,8 @@ export default class PageBlobHandler extends BaseHandler
       end,
       persistency,
       options.leaseAccessConditions,
-      options.modifiedAccessConditions
+      options.modifiedAccessConditions,
+      options.sequenceNumberAccessConditions
     );
 
     const response: Models.PageBlobUploadPagesResponse = {
@@ -300,7 +301,8 @@ export default class PageBlobHandler extends BaseHandler
       start,
       end,
       options.leaseAccessConditions,
-      options.modifiedAccessConditions
+      options.modifiedAccessConditions,
+      options.sequenceNumberAccessConditions
     );
 
     const response: Models.PageBlobClearPagesResponse = {
