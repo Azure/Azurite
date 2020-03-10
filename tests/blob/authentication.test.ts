@@ -24,7 +24,7 @@ describe("Authentication", () => {
   const server = factory.createServer();
 
   before(async () => {
-    server.start();
+    await server.start();
   });
 
   after(async () => {
@@ -32,9 +32,9 @@ describe("Authentication", () => {
     await server.clean();
   });
 
-  [{ prefix: "http" }, { prefix: "https" }].forEach(async testName => {
-    const baseURL = `${testName.prefix}://${server.config.host}:${server.config.port}/devstoreaccount1`;
-    it(`Should not work without credential @loki @sql when using ${testName.prefix}`, async () => {
+  [{ serverType: "http" }, { serverType: "https" }].forEach(async test => {
+    const baseURL = `${test.serverType}://${server.config.host}:${server.config.port}/devstoreaccount1`;
+    it(`Should not work without credential @loki @sql when using ${test.serverType}`, async () => {
       const serviceURL = new ServiceURL(
         baseURL,
         StorageURL.newPipeline(new AnonymousCredential(), {
@@ -65,7 +65,7 @@ describe("Authentication", () => {
       }
     });
 
-    it(`Should not work without correct account name @loki @sql when using ${testName.prefix}`, async () => {
+    it(`Should not work without correct account name @loki @sql when using ${test.serverType}`, async () => {
       const serviceURL = new ServiceURL(
         baseURL,
         StorageURL.newPipeline(
@@ -99,7 +99,7 @@ describe("Authentication", () => {
       }
     });
 
-    it(`Should not work without correct account key @loki @sql when using ${testName.prefix}`, async () => {
+    it(`Should not work without correct account key @loki @sql when using ${test.serverType}`, async () => {
       const serviceURL = new ServiceURL(
         baseURL,
         StorageURL.newPipeline(
@@ -133,7 +133,7 @@ describe("Authentication", () => {
       }
     });
 
-    it(`Should work with correct shared key @loki @sql when using ${testName.prefix}`, async () => {
+    it(`Should work with correct shared key @loki @sql when using ${test.serverType}`, async () => {
       const serviceURL = new ServiceURL(
         baseURL,
         StorageURL.newPipeline(

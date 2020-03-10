@@ -62,9 +62,9 @@ describe("Queue Authentication", () => {
     await rmRecursive(persistencePath);
   });
 
-  [{ prefix: "http" }, { prefix: "https" }].forEach(testName => {
-    const baseURL = `${testName.prefix}://${host}:${port}/devstoreaccount1`;
-    it(`Should not work without credential @loki when using ${testName.prefix}`, async () => {
+  [{ serverType: "http" }, { serverType: "https" }].forEach(test => {
+    const baseURL = `${test.serverType}://${host}:${port}/devstoreaccount1`;
+    it(`Should not work without credential @loki when using ${test.serverType}`, async () => {
       const serviceURL = new ServiceURL(
         baseURL,
         StorageURL.newPipeline(new AnonymousCredential(), {
@@ -92,7 +92,7 @@ describe("Queue Authentication", () => {
       }
     });
 
-    it(`Should not work without correct account name @loki when using ${testName.prefix}`, async () => {
+    it(`Should not work without correct account name @loki when using ${test.serverType}`, async () => {
       const serviceURL = new ServiceURL(
         baseURL,
         StorageURL.newPipeline(
@@ -123,7 +123,7 @@ describe("Queue Authentication", () => {
       }
     });
 
-    it(`Should not work without correct account key @loki when using ${testName.prefix}`, async () => {
+    it(`Should not work without correct account key @loki when using ${test.serverType}`, async () => {
       const serviceURL = new ServiceURL(
         baseURL,
         StorageURL.newPipeline(
@@ -154,7 +154,7 @@ describe("Queue Authentication", () => {
       }
     });
 
-    it(`Should work with correct shared key @loki when using ${testName.prefix}`, async () => {
+    it(`Should work with correct shared key @loki when using ${test.serverType}`, async () => {
       const serviceURL = new ServiceURL(
         baseURL,
         StorageURL.newPipeline(
