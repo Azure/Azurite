@@ -282,6 +282,44 @@ describe("BlockBlobAPIs", () => {
     assert.deepStrictEqual(await bodyToString(result, 0), "");
   });
 
+  it("commitBlockList with empty list should not work with ifNoneMatch=* for existing blob @loki @sql", async () => {
+    await blockBlobURL.commitBlockList(Aborter.none, []);
+
+    try {
+      await blockBlobURL.commitBlockList(Aborter.none, [], {
+        accessConditions: {
+          modifiedAccessConditions: {
+            ifNoneMatch: "*"
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 409);
+      return;
+    }
+
+    assert.fail();
+  });
+
+  it("upload should not work with ifNoneMatch=* for existing blob @loki @sql", async () => {
+    await blockBlobURL.commitBlockList(Aborter.none, []);
+
+    try {
+      await blockBlobURL.upload(Aborter.none, "hello", 5, {
+        accessConditions: {
+          modifiedAccessConditions: {
+            ifNoneMatch: "*"
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 409);
+      return;
+    }
+
+    assert.fail();
+  });
+
   it("commitBlockList with all parameters set @loki @sql", async () => {
     const body = "HelloWorld";
     await blockBlobURL.stageBlock(

@@ -967,6 +967,15 @@ export default class LokiBlobMetadataStore
 
     validateWriteConditions(context, modifiedAccessConditions, blobDoc);
 
+    // Create if not exists
+    if (
+      modifiedAccessConditions &&
+      modifiedAccessConditions.ifNoneMatch === "*" &&
+      blobDoc
+    ) {
+      throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+    }
+
     if (blobDoc) {
       LeaseFactory.createLeaseState(
         new BlobLeaseAdapter(blobDoc),
@@ -2123,6 +2132,16 @@ export default class LokiBlobMetadataStore
     );
 
     validateWriteConditions(context, modifiedAccessConditions, doc);
+
+    // Create if not exists
+    if (
+      modifiedAccessConditions &&
+      modifiedAccessConditions.ifNoneMatch === "*" &&
+      doc &&
+      doc.isCommitted
+    ) {
+      throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+    }
 
     let lease: ILease | undefined;
     if (doc) {

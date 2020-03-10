@@ -31,6 +31,17 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getBlobAlreadyExists(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      409,
+      "BlobAlreadyExists",
+      "The specified blob already exists.",
+      contextID
+    );
+  }
+
   public static getBlobNotFound(contextID: string = DefaultID): StorageError {
     return new StorageError(
       404,
