@@ -1145,6 +1145,23 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
+      validateWriteConditions(
+        context,
+        modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult)
+          : undefined
+      );
+
+      // Create if not exists
+      if (
+        modifiedAccessConditions &&
+        modifiedAccessConditions.ifNoneMatch === "*" &&
+        blobFindResult
+      ) {
+        throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+      }
+
       if (blobFindResult) {
         const blobModel: BlobModel = this.convertDbModelToBlobModel(
           blobFindResult
@@ -1552,12 +1569,30 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
+      validateWriteConditions(
+        context,
+        modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult) // TODO: Reduce duplicated convert
+          : undefined
+      );
+
       let creationTime = blob.properties.creationTime || context.startTime;
 
       if (blobFindResult !== null && blobFindResult !== undefined) {
         const blobModel: BlobModel = this.convertDbModelToBlobModel(
           blobFindResult
         );
+
+        // Create if not exists
+        if (
+          modifiedAccessConditions &&
+          modifiedAccessConditions.ifNoneMatch === "*" &&
+          blobModel &&
+          blobModel.isCommitted
+        ) {
+          throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+        }
 
         creationTime = blobModel.properties.creationTime || creationTime;
 
