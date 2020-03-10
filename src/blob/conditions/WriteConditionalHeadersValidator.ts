@@ -1,5 +1,8 @@
 import StorageErrorFactory from "../errors/StorageErrorFactory";
-import { ModifiedAccessConditions } from "../generated/artifacts/models";
+import {
+  ModifiedAccessConditions,
+  SequenceNumberAccessConditions
+} from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { BlobModel, ContainerModel } from "../persistence/IBlobMetadataStore";
 import ConditionalHeadersAdapter from "./ConditionalHeadersAdapter";
@@ -7,6 +10,46 @@ import ConditionResourceAdapter from "./ConditionResourceAdapter";
 import { IConditionalHeaders } from "./IConditionalHeaders";
 import { IConditionalHeadersValidator } from "./IConditionalHeadersValidator";
 import IConditionResource from "./IConditionResource";
+
+export function validateSequenceNumberWriteConditions(
+  context: Context,
+  conditionalHeaders?: SequenceNumberAccessConditions,
+  model?: BlobModel
+) {
+  if (!conditionalHeaders || !model) {
+    return;
+  }
+
+  if (!model.properties || model.properties.blobSequenceNumber === undefined) {
+    throw Error(
+      `validateSequenceNumberWriteConditions() Invalid blob model, blobSequenceNumber is not specified.`
+    );
+  }
+
+  if (
+    conditionalHeaders.ifSequenceNumberLessThanOrEqualTo !== undefined &&
+    conditionalHeaders.ifSequenceNumberLessThanOrEqualTo <
+      model.properties.blobSequenceNumber
+  ) {
+    throw StorageErrorFactory.getConditionNotMet(context.contextId!);
+  }
+
+  if (
+    conditionalHeaders.ifSequenceNumberLessThan !== undefined &&
+    conditionalHeaders.ifSequenceNumberLessThan <=
+      model.properties.blobSequenceNumber
+  ) {
+    throw StorageErrorFactory.getConditionNotMet(context.contextId!);
+  }
+
+  if (
+    conditionalHeaders.ifSequenceNumberEqualTo !== undefined &&
+    conditionalHeaders.ifSequenceNumberEqualTo !==
+      model.properties.blobSequenceNumber
+  ) {
+    throw StorageErrorFactory.getConditionNotMet(context.contextId!);
+  }
+}
 
 export function validateWriteConditions(
   context: Context,

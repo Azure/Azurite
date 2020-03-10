@@ -8,7 +8,10 @@ import {
   rimrafAsync
 } from "../../common/utils/utils";
 import { validateReadConditions } from "../conditions/ReadConditionalHeadersValidator";
-import { validateWriteConditions } from "../conditions/WriteConditionalHeadersValidator";
+import {
+  validateSequenceNumberWriteConditions,
+  validateWriteConditions
+} from "../conditions/WriteConditionalHeadersValidator";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -2342,6 +2345,7 @@ export default class LokiBlobMetadataStore
    * @param {IExtentChunk} persistency
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @param {Models.SequenceNumberAccessConditions} [sequenceNumberAccessConditions]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof LokiBlobMetadataStore
    */
@@ -2352,7 +2356,8 @@ export default class LokiBlobMetadataStore
     end: number,
     persistency: IExtentChunk,
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    sequenceNumberAccessConditions?: Models.SequenceNumberAccessConditions
   ): Promise<Models.BlobProperties> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = await this.getBlobWithLeaseUpdated(
@@ -2366,6 +2371,12 @@ export default class LokiBlobMetadataStore
     );
 
     validateWriteConditions(context, modifiedAccessConditions, doc);
+
+    validateSequenceNumberWriteConditions(
+      context,
+      sequenceNumberAccessConditions,
+      doc
+    );
 
     if (!doc) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId);
@@ -2400,6 +2411,7 @@ export default class LokiBlobMetadataStore
    * @param {number} end
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @param {Models.SequenceNumberAccessConditions} [sequenceNumberAccessConditions]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof LokiBlobMetadataStore
    */
@@ -2409,7 +2421,8 @@ export default class LokiBlobMetadataStore
     start: number,
     end: number,
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    sequenceNumberAccessConditions?: Models.SequenceNumberAccessConditions
   ): Promise<Models.BlobProperties> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const doc = await this.getBlobWithLeaseUpdated(
@@ -2423,6 +2436,13 @@ export default class LokiBlobMetadataStore
     );
 
     validateWriteConditions(context, modifiedAccessConditions, doc);
+
+    validateSequenceNumberWriteConditions(
+      context,
+      sequenceNumberAccessConditions,
+      doc
+    );
+
     if (!doc) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId);
     }
