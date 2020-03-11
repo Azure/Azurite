@@ -1,4 +1,5 @@
 import IExtentStore from "../../common/persistence/IExtentStore";
+import { convertRawHeadersToMetadata } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -96,10 +97,15 @@ export default class PageBlobHandler extends BaseHandler
     //   );
     // }
 
+    // Preserve metadata key case
+    const metadata = convertRawHeadersToMetadata(
+      blobCtx.request!.getRawHeaders()
+    );
+
     const etag = newEtag();
     const blob: BlobModel = {
       deleted: false,
-      metadata: options.metadata,
+      metadata,
       accountName,
       containerName,
       name: blobName,
