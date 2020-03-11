@@ -4,7 +4,11 @@
 
 ## 2020.03 Version 3.6.0
 
+- Supported conditional headers.
 - Compatible with upper case or lower case of x-ms-sequence-number-action values.
+- Fixed issue that x-ms-blob-sequence-number of 0 should be returned for HEAD requests on Page blob.
+- Uploading blocks with different lengths of IDs to the same blob will fail.
+- Check if block blob exists should fail if blocks are all uncommitted.
 
 ## 2020.02 Version 3.5.0
 
