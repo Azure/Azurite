@@ -31,6 +31,7 @@ export default class ConditionResourceAdapter implements IConditionResource {
       this.etag = this.etag.substring(1, this.etag.length - 1);
     }
 
-    this.lastModified = resource.properties.lastModified;
+    this.lastModified = new Date(resource.properties.lastModified);
+    this.lastModified.setMilliseconds(0); // Precision to seconds
   }
 }

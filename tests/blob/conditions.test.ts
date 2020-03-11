@@ -1,4 +1,5 @@
 import assert = require("assert");
+
 import ConditionalHeadersAdapter from "../../src/blob/conditions/ConditionalHeadersAdapter";
 import ConditionResourceAdapter from "../../src/blob/conditions/ConditionResourceAdapter";
 import ReadConditionalHeadersValidator from "../../src/blob/conditions/ReadConditionalHeadersValidator";
@@ -113,7 +114,7 @@ describe("ConditionResourceAdapter", () => {
     const blobModel = {
       properties: {
         etag: "etag1",
-        lastModified: new Date()
+        lastModified: new Date("2018/01/01")
       }
     } as BlobModel;
 
@@ -137,6 +138,8 @@ describe("ConditionResourceAdapter", () => {
     const conditionResourceAdapter = new ConditionResourceAdapter(blobModel);
     assert.deepStrictEqual(conditionResourceAdapter.exist, true);
     assert.deepStrictEqual(conditionResourceAdapter.etag, "etag1");
+
+    blobModel.properties.lastModified.setMilliseconds(0);
     assert.deepStrictEqual(
       conditionResourceAdapter.lastModified,
       blobModel.properties.lastModified
@@ -154,6 +157,8 @@ describe("ConditionResourceAdapter", () => {
     const conditionResourceAdapter = new ConditionResourceAdapter(blobModel);
     assert.deepStrictEqual(conditionResourceAdapter.exist, true);
     assert.deepStrictEqual(conditionResourceAdapter.etag, "etag1");
+
+    blobModel.properties.lastModified.setMilliseconds(0);
     assert.deepStrictEqual(
       conditionResourceAdapter.lastModified,
       blobModel.properties.lastModified
@@ -868,6 +873,63 @@ describe("WriteConditionalHeadersValidator for exist resource", () => {
       new ConditionalHeadersAdapter(context, modifiedAccessConditions),
       new ConditionResourceAdapter(blobModel)
     );
+  });
+
+  it("Should return 200 for if-unmodified-since equal with lastModified @loki @sql", () => {
+    const validator = new WriteConditionalHeadersValidator();
+    const modifiedAccessConditions = {
+      ifUnmodifiedSince: new Date()
+    };
+
+    const blobModel = {
+      properties: {
+        etag: "etag1",
+        lastModified: modifiedAccessConditions.ifUnmodifiedSince
+      }
+    } as BlobModel;
+
+    validator.validate(
+      context,
+      new ConditionalHeadersAdapter(context, modifiedAccessConditions),
+      new ConditionResourceAdapter(blobModel)
+    );
+  });
+
+  it("Should return 412 for if-modified-since equal with lastModifiedSince @loki @sql", () => {
+    const validator = new WriteConditionalHeadersValidator();
+    const modifiedAccessConditions = {
+      ifModifiedSince: new Date()
+    };
+    const blobModel = {
+      properties: {
+        etag: "etag1",
+        lastModified: modifiedAccessConditions.ifModifiedSince
+      }
+    } as BlobModel;
+
+    const expectedError = StorageErrorFactory.getConditionNotMet(
+      context.contextId!
+    );
+    try {
+      validator.validate(
+        context,
+        new ConditionalHeadersAdapter(context, modifiedAccessConditions),
+        new ConditionResourceAdapter(blobModel)
+      );
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, expectedError.statusCode);
+      assert.deepStrictEqual(
+        error.storageErrorCode,
+        expectedError.storageErrorCode
+      );
+      assert.deepStrictEqual(
+        error.storageErrorMessage,
+        expectedError.storageErrorMessage
+      );
+      return;
+    }
+
+    assert.fail();
   });
 
   it("Should return 412 for failed if-modified-since results @loki @sql", () => {

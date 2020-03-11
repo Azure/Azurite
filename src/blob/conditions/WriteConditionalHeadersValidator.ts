@@ -31,7 +31,9 @@ export function validateSequenceNumberWriteConditions(
     conditionalHeaders.ifSequenceNumberLessThanOrEqualTo <
       model.properties.blobSequenceNumber
   ) {
-    throw StorageErrorFactory.getConditionNotMet(context.contextId!);
+    throw StorageErrorFactory.getSequenceNumberConditionNotMet(
+      context.contextId!
+    );
   }
 
   if (
@@ -39,7 +41,9 @@ export function validateSequenceNumberWriteConditions(
     conditionalHeaders.ifSequenceNumberLessThan <=
       model.properties.blobSequenceNumber
   ) {
-    throw StorageErrorFactory.getConditionNotMet(context.contextId!);
+    throw StorageErrorFactory.getSequenceNumberConditionNotMet(
+      context.contextId!
+    );
   }
 
   if (
@@ -47,7 +51,9 @@ export function validateSequenceNumberWriteConditions(
     conditionalHeaders.ifSequenceNumberEqualTo !==
       model.properties.blobSequenceNumber
   ) {
-    throw StorageErrorFactory.getConditionNotMet(context.contextId!);
+    throw StorageErrorFactory.getSequenceNumberConditionNotMet(
+      context.contextId!
+    );
   }
 }
 
@@ -149,14 +155,14 @@ export default class WriteConditionalHeadersValidator
       }
 
       if (conditionalHeaders.ifModifiedSince) {
-        if (resource.lastModified < conditionalHeaders.ifModifiedSince) {
+        if (resource.lastModified <= conditionalHeaders.ifModifiedSince) {
           throw StorageErrorFactory.getConditionNotMet(context.contextId!);
         }
         return;
       }
 
       if (conditionalHeaders.ifUnmodifiedSince) {
-        if (conditionalHeaders.ifUnmodifiedSince <= resource.lastModified) {
+        if (conditionalHeaders.ifUnmodifiedSince < resource.lastModified) {
           throw StorageErrorFactory.getConditionNotMet(context.contextId!);
         }
         return;

@@ -35,6 +35,13 @@ export default class ConditionalHeadersAdapter implements IConditionalHeaders {
 
     // If-Modified-Since & If-Unmodified-Since don't support multi values
     this.ifModifiedSince = modifiedAccessConditions.ifModifiedSince;
+    if (this.ifModifiedSince) {
+      this.ifModifiedSince.setMilliseconds(0); // Precision to seconds
+    }
+
     this.ifUnmodifiedSince = modifiedAccessConditions.ifUnmodifiedSince;
+    if (this.ifUnmodifiedSince) {
+      this.ifUnmodifiedSince.setMilliseconds(0); // Precision to seconds
+    }
   }
 }
