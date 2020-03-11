@@ -520,6 +520,17 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getSequenceNumberConditionNotMet(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      412,
+      "SequenceNumberConditionNotMet",
+      "The condition specified using HTTP conditional header(s) is not met.",
+      contextID
+    );
+  }
+
   public static getNotModified(contextID: string): StorageError {
     return new StorageError(
       304,
