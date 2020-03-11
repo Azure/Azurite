@@ -1,6 +1,7 @@
 import { URL } from "url";
 
 import IExtentStore from "../../common/persistence/IExtentStore";
+import { convertRawHeadersToMetadata } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -306,13 +307,19 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const account = blobCtx.account!;
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
+
+    // Preserve metadata key case
+    const metadata = convertRawHeadersToMetadata(
+      blobCtx.request!.getRawHeaders()
+    );
+
     const res = await this.metadataStore.setBlobMetadata(
       context,
       account,
       container,
       blob,
       options.leaseAccessConditions,
-      options.metadata,
+      metadata,
       options.modifiedAccessConditions
     );
 
@@ -562,6 +569,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const account = blobCtx.account!;
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
+
+    // Preserve metadata key case
+    const metadata = convertRawHeadersToMetadata(
+      blobCtx.request!.getRawHeaders()
+    );
+
     const res = await this.metadataStore.createSnapshot(
       context,
       account,
@@ -570,7 +583,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       options.leaseAccessConditions,
       !options.metadata || JSON.stringify(options.metadata) === "{}"
         ? undefined
-        : options.metadata,
+        : metadata,
       options.modifiedAccessConditions
     );
 
@@ -625,6 +638,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getBlobNotFound(context.contextId!);
     }
 
+    // Preserve metadata key case
+    const metadata = convertRawHeadersToMetadata(
+      blobCtx.request!.getRawHeaders()
+    );
+
     const res = await this.metadataStore.startCopyFromURL(
       context,
       {
@@ -635,7 +653,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       },
       { account, container, blob },
       copySource,
-      options.metadata,
+      metadata,
       options.tier,
       options
     );

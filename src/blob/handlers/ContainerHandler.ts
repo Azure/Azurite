@@ -1,3 +1,4 @@
+import { convertRawHeadersToMetadata } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -38,10 +39,15 @@ export default class ContainerHandler extends BaseHandler
     const lastModified = blobCtx.startTime!;
     const etag = newEtag();
 
+    // Preserve metadata key case
+    const metadata = convertRawHeadersToMetadata(
+      blobCtx.request!.getRawHeaders()
+    );
+
     await this.metadataStore.createContainer(context, {
       accountName,
       name: containerName,
-      metadata: options.metadata,
+      metadata,
       properties: {
         etag,
         lastModified,
@@ -174,13 +180,18 @@ export default class ContainerHandler extends BaseHandler
     const date = blobCtx.startTime!;
     const eTag = newEtag();
 
+    // Preserve metadata key case
+    const metadata = convertRawHeadersToMetadata(
+      blobCtx.request!.getRawHeaders()
+    );
+
     await this.metadataStore.setContainerMetadata(
       context,
       accountName,
       containerName,
       date,
       eTag,
-      options.metadata,
+      metadata,
       options.leaseAccessConditions,
       options.modifiedAccessConditions
     );

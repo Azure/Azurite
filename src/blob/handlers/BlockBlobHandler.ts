@@ -1,3 +1,4 @@
+import { convertRawHeadersToMetadata } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -89,7 +90,8 @@ export default class BlockBlobHandler extends BaseHandler
 
     const blob: BlobModel = {
       deleted: false,
-      metadata: options.metadata,
+      // Preserve metadata key case
+      metadata: convertRawHeadersToMetadata(blobCtx.request!.getRawHeaders()),
       accountName,
       containerName,
       name: blobName,
@@ -285,7 +287,10 @@ export default class BlockBlobHandler extends BaseHandler
     };
 
     blob.properties.blobType = Models.BlobType.BlockBlob;
-    blob.metadata = options.metadata;
+    blob.metadata = convertRawHeadersToMetadata(
+      // Preserve metadata key case
+      blobCtx.request!.getRawHeaders()
+    );
     blob.properties.accessTier = Models.AccessTier.Hot;
     blob.properties.cacheControl = options.blobHTTPHeaders.blobCacheControl;
     blob.properties.contentType = contentType;
