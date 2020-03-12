@@ -80,6 +80,127 @@ describe("BlobAPIs", () => {
     );
   });
 
+  it("download should work with conditional headers @loki @sql", async () => {
+    const properties = await blobURL.getProperties(Aborter.none);
+    const result = await blobURL.download(Aborter.none, 0, undefined, {
+      blobAccessConditions: {
+        modifiedAccessConditions: {
+          ifMatch: properties.eTag,
+          ifNoneMatch: "invalidetag",
+          ifModifiedSince: new Date("2018/01/01"),
+          ifUnmodifiedSince: new Date("2188/01/01")
+        }
+      }
+    });
+    assert.deepStrictEqual(await bodyToString(result, content.length), content);
+    assert.equal(result.contentRange, undefined);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+  });
+
+  it("download should work with ifMatch value * @loki @sql", async () => {
+    const result = await blobURL.download(Aborter.none, 0, undefined, {
+      blobAccessConditions: {
+        modifiedAccessConditions: {
+          ifMatch: "*,abc",
+          ifNoneMatch: "invalidetag",
+          ifModifiedSince: new Date("2018/01/01"),
+          ifUnmodifiedSince: new Date("2188/01/01")
+        }
+      }
+    });
+    assert.deepStrictEqual(await bodyToString(result, content.length), content);
+    assert.equal(result.contentRange, undefined);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+  });
+
+  it("download should not work with invalid conditional header ifMatch @loki @sql", async () => {
+    const properties = await blobURL.getProperties(Aborter.none);
+    try {
+      await blobURL.download(Aborter.none, 0, undefined, {
+        blobAccessConditions: {
+          modifiedAccessConditions: {
+            ifMatch: properties.eTag + "invalid"
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("download should not work with conditional header ifNoneMatch @loki @sql", async () => {
+    const properties = await blobURL.getProperties(Aborter.none);
+    try {
+      await blobURL.download(Aborter.none, 0, undefined, {
+        blobAccessConditions: {
+          modifiedAccessConditions: {
+            ifNoneMatch: properties.eTag
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 304);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("download should not work with conditional header ifNoneMatch * @loki @sql", async () => {
+    try {
+      await blobURL.download(Aborter.none, 0, undefined, {
+        blobAccessConditions: {
+          modifiedAccessConditions: {
+            ifNoneMatch: "*"
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 400);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("download should not work with conditional header ifModifiedSince @loki @sql", async () => {
+    try {
+      await blobURL.download(Aborter.none, 0, undefined, {
+        blobAccessConditions: {
+          modifiedAccessConditions: {
+            ifModifiedSince: new Date("2120/01/01")
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 304);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("download should not work with conditional header ifUnmodifiedSince @loki @sql", async () => {
+    try {
+      await blobURL.download(Aborter.none, 0, undefined, {
+        blobAccessConditions: {
+          modifiedAccessConditions: {
+            ifUnmodifiedSince: new Date("2018/01/01")
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      return;
+    }
+    assert.fail();
+  });
+
   it("download all parameters set @loki @sql", async () => {
     const result = await blobURL.download(Aborter.none, 0, 1, {
       rangeGetContentMD5: true
@@ -126,6 +247,146 @@ describe("BlobAPIs", () => {
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
+  });
+
+  it("delete should work for valid ifMatch @loki @sql", async () => {
+    const properties = await blobURL.getProperties(Aborter.none);
+
+    const result = await blobURL.delete(Aborter.none, {
+      blobAccessConditions: {
+        modifiedAccessConditions: {
+          ifMatch: properties.eTag
+        }
+      }
+    });
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+  });
+
+  it("delete should work for * ifMatch @loki @sql", async () => {
+    const result = await blobURL.delete(Aborter.none, {
+      blobAccessConditions: {
+        modifiedAccessConditions: {
+          ifMatch: "*"
+        }
+      }
+    });
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+  });
+
+  it("delete should not work for invalid ifMatch @loki @sql", async () => {
+    try {
+      await blobURL.delete(Aborter.none, {
+        blobAccessConditions: {
+          modifiedAccessConditions: {
+            ifMatch: "invalid"
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("delete should work for valid ifNoneMatch @loki @sql", async () => {
+    const result = await blobURL.delete(Aborter.none, {
+      blobAccessConditions: {
+        modifiedAccessConditions: {
+          ifNoneMatch: "unmatchetag"
+        }
+      }
+    });
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+  });
+
+  it("delete should not work for invalid ifNoneMatch @loki @sql", async () => {
+    const properties = await blobURL.getProperties(Aborter.none);
+
+    try {
+      await blobURL.delete(Aborter.none, {
+        blobAccessConditions: {
+          modifiedAccessConditions: {
+            ifNoneMatch: properties.eTag
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("delete should work for ifNoneMatch * @loki @sql", async () => {
+    await blobURL.delete(Aborter.none, {
+      blobAccessConditions: {
+        modifiedAccessConditions: {
+          ifNoneMatch: "*"
+        }
+      }
+    });
+  });
+
+  it("delete should work for valid ifModifiedSince * @loki @sql", async () => {
+    await blobURL.delete(Aborter.none, {
+      blobAccessConditions: {
+        modifiedAccessConditions: {
+          ifModifiedSince: new Date("2018/01/01")
+        }
+      }
+    });
+  });
+
+  it("delete should not work for invalid ifModifiedSince @loki @sql", async () => {
+    try {
+      await blobURL.delete(Aborter.none, {
+        blobAccessConditions: {
+          modifiedAccessConditions: {
+            ifModifiedSince: new Date("2118/01/01")
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("delete should work for valid ifUnmodifiedSince * @loki @sql", async () => {
+    await blobURL.delete(Aborter.none, {
+      blobAccessConditions: {
+        modifiedAccessConditions: {
+          ifUnmodifiedSince: new Date("2118/01/01")
+        }
+      }
+    });
+  });
+
+  it("delete should not work for invalid ifUnmodifiedSince @loki @sql", async () => {
+    try {
+      await blobURL.delete(Aborter.none, {
+        blobAccessConditions: {
+          modifiedAccessConditions: {
+            ifUnmodifiedSince: new Date("2018/01/01")
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      return;
+    }
+    assert.fail();
   });
 
   it("should create a snapshot from a blob @loki @sql", async () => {

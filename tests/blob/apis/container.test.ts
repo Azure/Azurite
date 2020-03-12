@@ -70,6 +70,42 @@ describe("ContainerAPIs", () => {
     assert.deepEqual(result.metadata, metadata);
   });
 
+  it("setMetadata should work with conditional headers @loki @sql", async () => {
+    // const properties = await containerURL.getProperties(Aborter.none);
+    await containerURL.setMetadata(
+      Aborter.none,
+      {},
+      {
+        containerAccessConditions: {
+          modifiedAccessConditions: {
+            ifModifiedSince: new Date("2018/01/01")
+          }
+        }
+      }
+    );
+  });
+
+  it("setMetadata should not work with invalid conditional headers @loki @sql", async () => {
+    try {
+      await containerURL.setMetadata(
+        Aborter.none,
+        {},
+        {
+          containerAccessConditions: {
+            modifiedAccessConditions: {
+              ifModifiedSince: new Date("2118/01/01")
+            }
+          }
+        }
+      );
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      return;
+    }
+
+    assert.fail();
+  });
+
   it("getProperties @loki @sql", async () => {
     const result = await containerURL.getProperties(Aborter.none);
     assert.ok(result.eTag!.length > 0);
