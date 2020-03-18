@@ -70,7 +70,7 @@ jobs:
   - job: blobtestmac
     displayName: Blob Test Mac
     pool:
-      vmImage: "macOS-10.13"
+      vmImage: "macOS-10.14"
     strategy:
       matrix:
         node_8_x:
@@ -194,7 +194,7 @@ jobs:
   - job: queuetestmac
     displayName: Queue Test Mac
     pool:
-      vmImage: "macOS-10.13"
+      vmImage: "macOS-10.14"
     strategy:
       matrix:
         node_8_x:
@@ -319,7 +319,7 @@ jobs:
   - job: azuritenodejsmac
     displayName: Azurite Mac
     pool:
-      vmImage: "macOS-10.13"
+      vmImage: "macOS-10.14"
     strategy:
       matrix:
         node_8_x:

@@ -1,3 +1,5 @@
+import dns = require("dns");
+
 import {
   Aborter,
   BlockBlobURL,
@@ -25,6 +27,8 @@ describe("SpecialNaming", () => {
   const server = factory.createServer();
 
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
+  const productionStyleHostName = "devstoreaccount1.localhost"; // Use hosts file to make this resolve
+
   const serviceURL = new ServiceURL(
     baseURL,
     StorageURL.newPipeline(
@@ -437,5 +441,57 @@ describe("SpecialNaming", () => {
       }
     );
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+  });
+
+  it(`Should work with production style URL when ${productionStyleHostName} is resolvable`, async () => {
+    await dns.promises.lookup(productionStyleHostName).then(
+      async lookupAddress => {
+        const baseURLProductionStyle = `http://${productionStyleHostName}:${server.config.port}`;
+        const serviceURLProductionStyle = new ServiceURL(
+          baseURLProductionStyle,
+          StorageURL.newPipeline(
+            new SharedKeyCredential(
+              EMULATOR_ACCOUNT_NAME,
+              EMULATOR_ACCOUNT_KEY
+            ),
+            {
+              retryOptions: { maxTries: 1 }
+            }
+          )
+        );
+        const containerURLProductionStyle = ContainerURL.fromServiceURL(
+          serviceURLProductionStyle,
+          containerName
+        );
+
+        const blobName: string = getUniqueName("myblob");
+        const blockBlobURL = BlockBlobURL.fromContainerURL(
+          containerURLProductionStyle,
+          blobName
+        );
+
+        await blockBlobURL.upload(Aborter.none, "ABC", 3);
+        const response = await containerURLProductionStyle.listBlobHierarchySegment(
+          Aborter.none,
+          "$",
+          undefined,
+          {
+            prefix: blobName
+          }
+        );
+        assert.notDeepEqual(response.segment.blobItems.length, 0);
+      },
+      () => {
+        // Cannot perform this test. We need devstoreaccount1.localhost to resolve to 127.0.0.1.
+        // On Linux, this should just work,
+        // On Windows, we can't spoof DNS record for specific process.
+        // So we have options of running our own DNS server (overkill),
+        // or editing hosts files (machine global operation; and requires running as admin).
+        // So skip the test case.
+        assert.ok(
+          `Skipping test case - it needs ${productionStyleHostName} to be resolvable`
+        );
+      }
+    );
   });
 });

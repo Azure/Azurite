@@ -15,9 +15,10 @@ import {
   DEFAULT_SQL_COLLATE
 } from "../../common/utils/constants";
 import { convertDateTimeStringMsTo7Digital } from "../../common/utils/utils";
+import { validateReadConditions } from "../conditions/ReadConditionalHeadersValidator";
+import { validateWriteConditions } from "../conditions/WriteConditionalHeadersValidator";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
-import { BlobType, LeaseAccessConditions } from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import BlobLeaseAdapter from "../lease/BlobLeaseAdapter";
 import BlobLeaseSyncer from "../lease/BlobLeaseSyncer";
@@ -591,18 +592,30 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     context: Context,
     account: string,
     container: string,
-    leaseAccessConditions?: Models.LeaseAccessConditions
+    options: Models.ContainerDeleteMethodOptionalParams = {}
   ): Promise<void> {
     await this.sequelize.transaction(async t => {
       /* Transaction starts */
       const findResult = await ContainersModel.findOne({
-        attributes: ["lease"],
+        attributes: [
+          "accountName",
+          "containerName",
+          "etag",
+          "lastModified",
+          "lease"
+        ],
         where: {
           accountName: account,
           containerName: container
         },
         transaction: t
       });
+
+      validateWriteConditions(
+        context,
+        options.modifiedAccessConditions,
+        findResult ? this.convertDbModelToContainerModel(findResult) : undefined
+      );
 
       if (findResult === null || findResult === undefined) {
         throw StorageErrorFactory.getContainerNotFound(context.contextId);
@@ -611,7 +624,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       LeaseFactory.createLeaseState(
         this.convertDbModelToLease(findResult),
         context
-      ).validate(new ContainerDeleteLeaseValidator(leaseAccessConditions));
+      ).validate(
+        new ContainerDeleteLeaseValidator(options.leaseAccessConditions)
+      );
 
       await ContainersModel.destroy({
         where: {
@@ -659,18 +674,31 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     lastModified: Date,
     etag: string,
     metadata?: IContainerMetadata,
-    leaseAccessConditions?: LeaseAccessConditions
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<void> {
     return this.sequelize.transaction(async t => {
       /* Transaction starts */
       const findResult = await ContainersModel.findOne({
-        attributes: ["lease"],
+        attributes: [
+          "accountName",
+          "containerName",
+          "etag",
+          "lastModified",
+          "lease"
+        ],
         where: {
           accountName: account,
           containerName: container
         },
         transaction: t
       });
+
+      validateWriteConditions(
+        context,
+        modifiedAccessConditions,
+        findResult ? this.convertDbModelToContainerModel(findResult) : undefined
+      );
 
       if (findResult === null || findResult === undefined) {
         throw StorageErrorFactory.getContainerNotFound(context.contextId);
@@ -739,13 +767,25 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   ): Promise<void> {
     await this.sequelize.transaction(async t => {
       const findResult = await ContainersModel.findOne({
-        attributes: ["lease"],
+        attributes: [
+          "accountName",
+          "containerName",
+          "etag",
+          "lastModified",
+          "lease"
+        ],
         where: {
           accountName: account,
           containerName: container
         },
         transaction: t
       });
+
+      validateWriteConditions(
+        context,
+        setAclModel.modifiedAccessConditions,
+        findResult ? this.convertDbModelToContainerModel(findResult) : undefined
+      );
 
       if (findResult === null || findResult === undefined) {
         throw StorageErrorFactory.getContainerNotFound(context.contextId);
@@ -796,6 +836,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
+      validateWriteConditions(
+        context,
+        options.modifiedAccessConditions,
+        findResult ? this.convertDbModelToContainerModel(findResult) : undefined
+      );
+
       if (findResult === null || findResult === undefined) {
         throw StorageErrorFactory.getContainerNotFound(context.contextId);
       }
@@ -831,7 +877,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     context: Context,
     account: string,
     container: string,
-    leaseId: string
+    leaseId: string,
+    options: Models.ContainerReleaseLeaseOptionalParams = {}
   ): Promise<Models.ContainerProperties> {
     return this.sequelize.transaction(async t => {
       /* Transaction starts */
@@ -842,6 +889,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
+
+      validateWriteConditions(
+        context,
+        options.modifiedAccessConditions,
+        findResult ? this.convertDbModelToContainerModel(findResult) : undefined
+      );
 
       if (findResult === null || findResult === undefined) {
         throw StorageErrorFactory.getContainerNotFound(context.contextId);
@@ -876,7 +929,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     context: Context,
     account: string,
     container: string,
-    leaseId: string
+    leaseId: string,
+    options: Models.ContainerRenewLeaseOptionalParams = {}
   ): Promise<RenewContainerLeaseResponse> {
     return this.sequelize.transaction(async t => {
       /* Transaction starts */
@@ -888,6 +942,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
+
+      validateWriteConditions(
+        context,
+        options.modifiedAccessConditions,
+        findResult ? this.convertDbModelToContainerModel(findResult) : undefined
+      );
 
       if (findResult === null || findResult === undefined) {
         throw StorageErrorFactory.getContainerNotFound(context.contextId);
@@ -925,7 +985,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     context: Context,
     account: string,
     container: string,
-    breakPeriod: number | undefined
+    breakPeriod: number | undefined,
+    options: Models.ContainerBreakLeaseOptionalParams = {}
   ): Promise<BreakContainerLeaseResponse> {
     return this.sequelize.transaction(async t => {
       const findResult = await ContainersModel.findOne({
@@ -935,6 +996,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
+
+      validateWriteConditions(
+        context,
+        options.modifiedAccessConditions,
+        findResult ? this.convertDbModelToContainerModel(findResult) : undefined
+      );
 
       if (findResult === null || findResult === undefined) {
         throw StorageErrorFactory.getContainerNotFound(context.contextId);
@@ -982,7 +1049,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     leaseId: string,
-    proposedLeaseId: string
+    proposedLeaseId: string,
+    options: Models.ContainerChangeLeaseOptionalParams = {}
   ): Promise<ChangeContainerLeaseResponse> {
     return this.sequelize.transaction(async t => {
       const findResult = await ContainersModel.findOne({
@@ -992,6 +1060,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
+
+      validateWriteConditions(
+        context,
+        options.modifiedAccessConditions,
+        findResult ? this.convertDbModelToContainerModel(findResult) : undefined
+      );
 
       if (findResult === null || findResult === undefined) {
         throw StorageErrorFactory.getContainerNotFound(context.contextId);
@@ -1043,7 +1117,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   public async createBlob(
     context: Context,
     blob: BlobModel,
-    leaseAccessConditions?: Models.LeaseAccessConditions
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<void> {
     return this.sequelize.transaction(async t => {
       const containerFindResult = await ContainersModel.findOne({
@@ -1069,6 +1144,23 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
+
+      validateWriteConditions(
+        context,
+        modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult)
+          : undefined
+      );
+
+      // Create if not exists
+      if (
+        modifiedAccessConditions &&
+        modifiedAccessConditions.ifNoneMatch === "*" &&
+        blobFindResult
+      ) {
+        throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+      }
 
       if (blobFindResult) {
         const blobModel: BlobModel = this.convertDbModelToBlobModel(
@@ -1100,7 +1192,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: string,
     blob: string,
     snapshot: string = "",
-    leaseAccessConditions?: Models.LeaseAccessConditions
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<BlobModel> {
     return this.sequelize.transaction(async t => {
       const containerFindResult = await ContainersModel.findOne({
@@ -1126,6 +1219,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
+
+      validateReadConditions(
+        context,
+        modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult)
+          : undefined
+      );
 
       if (blobFindResult === null || blobFindResult === undefined) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
@@ -1286,8 +1387,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           containerName: block.containerName,
           blobName: block.blobName,
           snapshot: "",
-          deleting: 0,
-          isCommitted: true
+          deleting: 0
         },
         transaction: t
       });
@@ -1297,10 +1397,34 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           blobFindResult
         );
 
-        LeaseFactory.createLeaseState(
-          new BlobLeaseAdapter(blobModel),
-          context
-        ).validate(new BlobWriteLeaseValidator(leaseAccessConditions));
+        if (blobModel.isCommitted === true) {
+          LeaseFactory.createLeaseState(
+            new BlobLeaseAdapter(blobModel),
+            context
+          ).validate(new BlobWriteLeaseValidator(leaseAccessConditions));
+        }
+
+        // If the new block ID does not have same length with before uncommited block ID, return failure.
+        const existBlock = await BlocksModel.findOne({
+          attributes: ["blockName"],
+          where: {
+            accountName: block.accountName,
+            containerName: block.containerName,
+            blobName: block.blobName,
+            deleting: 0
+          },
+          order: [["id", "ASC"]],
+          transaction: t
+        });
+        if (
+          existBlock &&
+          Buffer.from(
+            this.getModelValue<string>(existBlock, "blockName", true),
+            "base64"
+          ).length !== Buffer.from(block.name, "base64").length
+        ) {
+          throw StorageErrorFactory.getInvalidBlobOrBlock(context.contextId);
+        }
       } else {
         const newBlob = {
           deleted: false,
@@ -1407,7 +1531,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     context: Context,
     blob: BlobModel,
     blockList: { blockName: string; blockCommitType: string }[],
-    leaseAccessConditions: Models.LeaseAccessConditions | undefined
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<void> {
     await this.sequelize.transaction(async t => {
       const containerFindResult = await ContainersModel.findOne({
@@ -1444,12 +1569,30 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
+      validateWriteConditions(
+        context,
+        modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult) // TODO: Reduce duplicated convert
+          : undefined
+      );
+
       let creationTime = blob.properties.creationTime || context.startTime;
 
       if (blobFindResult !== null && blobFindResult !== undefined) {
         const blobModel: BlobModel = this.convertDbModelToBlobModel(
           blobFindResult
         );
+
+        // Create if not exists
+        if (
+          modifiedAccessConditions &&
+          modifiedAccessConditions.ifNoneMatch === "*" &&
+          blobModel &&
+          blobModel.isCommitted
+        ) {
+          throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+        }
 
         creationTime = blobModel.properties.creationTime || creationTime;
 
@@ -1530,7 +1673,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
             .reduce((total, val) => {
               return total + val;
             }, 0),
-          blobType: BlobType.BlockBlob
+          blobType: Models.BlobType.BlockBlob
         }
       };
 
@@ -1570,7 +1713,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: string,
     blob: string,
     snapshot: string = "",
-    leaseAccessConditions?: Models.LeaseAccessConditions
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<GetBlobPropertiesRes> {
     return this.sequelize.transaction(async t => {
       const containerFindResult = await ContainersModel.findOne({
@@ -1597,6 +1741,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
+      validateReadConditions(
+        context,
+        modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult)
+          : undefined
+      );
+
       if (blobFindResult === null || blobFindResult === undefined) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
       }
@@ -1604,6 +1756,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       const blobModel: BlobModel = this.convertDbModelToBlobModel(
         blobFindResult
       );
+
+      if (!blobModel.isCommitted) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
 
       return LeaseFactory.createLeaseState(
         new BlobLeaseAdapter(blobModel),
@@ -1624,7 +1780,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: string,
     blob: string,
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    metadata?: Models.BlobMetadata
+    metadata?: Models.BlobMetadata,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<CreateSnapshotResponse> {
     return this.sequelize.transaction(async t => {
       const containerFindResult = await ContainersModel.findOne({
@@ -1651,6 +1808,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
+
+      validateReadConditions(
+        context,
+        modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult) // TODO: Reduce double convert
+          : undefined
+      );
 
       if (blobFindResult === null || blobFindResult === undefined) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
@@ -1719,10 +1884,18 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           blobName: blob,
           snapshot: options.snapshot === undefined ? "" : options.snapshot,
           deleting: 0,
-          isCommitted: true
+          isCommitted: true // TODO: Support deleting uncommitted block blob
         },
         transaction: t
       });
+
+      validateWriteConditions(
+        context,
+        options.modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult) // TODO: Reduce double convert
+          : undefined
+      );
 
       if (blobFindResult === null || blobFindResult === undefined) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
@@ -1873,7 +2046,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: string,
     blob: string,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    blobHTTPHeaders: Models.BlobHTTPHeaders | undefined
+    blobHTTPHeaders: Models.BlobHTTPHeaders | undefined,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobProperties> {
     return this.sequelize.transaction(async t => {
       const containerFindResult = await ContainersModel.findOne({
@@ -1900,6 +2074,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
+
+      validateWriteConditions(
+        context,
+        modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult) // TODO: Reduce double convert
+          : undefined
+      );
 
       if (blobFindResult === null || blobFindResult === undefined) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
@@ -1923,12 +2105,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           blobHTTPHeaders.blobContentLanguage;
         blobModel.properties.contentDisposition =
           blobHTTPHeaders.blobContentDisposition;
-        blobModel.properties.lastModified = context.startTime
-          ? context.startTime
-          : new Date();
       }
 
       blobModel.properties.etag = newEtag();
+      blobModel.properties.lastModified = context.startTime
+        ? context.startTime
+        : new Date();
 
       await BlobsModel.update(this.convertBlobModelToDbModel(blobModel), {
         where: {
@@ -1951,7 +2133,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: string,
     blob: string,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    metadata: Models.BlobMetadata | undefined
+    metadata: Models.BlobMetadata | undefined,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobProperties> {
     return this.sequelize.transaction(async t => {
       const containerFindResult = await ContainersModel.findOne({
@@ -1978,6 +2161,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
+
+      validateWriteConditions(
+        context,
+        modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult) // TODO: Reduce double convert
+          : undefined
+      );
 
       if (blobFindResult === null || blobFindResult === undefined) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
@@ -2029,7 +2220,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: string,
     blob: string,
     duration: number,
-    proposedLeaseId?: string
+    proposedLeaseId?: string,
+    options: Models.BlobAcquireLeaseOptionalParams = {}
   ): Promise<AcquireBlobLeaseResponse> {
     return this.sequelize.transaction(async t => {
       const containerFindResult = await ContainersModel.findOne({
@@ -2056,6 +2248,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
+
+      validateWriteConditions(
+        context,
+        options.modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult) // TODO: Reduce double convert
+          : undefined
+      );
 
       if (blobFindResult === null || blobFindResult === undefined) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
@@ -2087,7 +2287,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    leaseId: string
+    leaseId: string,
+    options: Models.BlobReleaseLeaseOptionalParams = {}
   ): Promise<ReleaseBlobLeaseResponse> {
     return this.sequelize.transaction(async t => {
       const containerFindResult = await ContainersModel.findOne({
@@ -2114,6 +2315,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
+
+      validateWriteConditions(
+        context,
+        options.modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult) // TODO: Reduce double convert
+          : undefined
+      );
 
       if (blobFindResult === null || blobFindResult === undefined) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
@@ -2145,7 +2354,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    leaseId: string
+    leaseId: string,
+    options: Models.BlobRenewLeaseOptionalParams = {}
   ): Promise<RenewBlobLeaseResponse> {
     return this.sequelize.transaction(async t => {
       const containerFindResult = await ContainersModel.findOne({
@@ -2172,6 +2382,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
+
+      validateWriteConditions(
+        context,
+        options.modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult) // TODO: Reduce double convert
+          : undefined
+      );
 
       if (blobFindResult === null || blobFindResult === undefined) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
@@ -2204,7 +2422,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: string,
     blob: string,
     leaseId: string,
-    proposedLeaseId: string
+    proposedLeaseId: string,
+    options: Models.BlobChangeLeaseOptionalParams = {}
   ): Promise<ChangeBlobLeaseResponse> {
     return this.sequelize.transaction(async t => {
       const containerFindResult = await ContainersModel.findOne({
@@ -2231,6 +2450,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
+
+      validateWriteConditions(
+        context,
+        options.modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult) // TODO: Reduce double convert
+          : undefined
+      );
 
       if (blobFindResult === null || blobFindResult === undefined) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
@@ -2262,7 +2489,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    breakPeriod: number | undefined
+    breakPeriod: number | undefined,
+    options: Models.BlobBreakLeaseOptionalParams = {}
   ): Promise<BreakBlobLeaseResponse> {
     return this.sequelize.transaction(async t => {
       const containerFindResult = await ContainersModel.findOne({
@@ -2289,6 +2517,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
+
+      validateWriteConditions(
+        context,
+        options.modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult) // TODO: Reduce double convert
+          : undefined
+      );
 
       if (blobFindResult === null || blobFindResult === undefined) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
@@ -2515,7 +2751,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: BlobModel,
     start: number,
     end: number,
-    persistencycontext: import("./IBlobMetadataStore").IExtentChunk
+    persistency: IExtentChunk,
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobProperties> {
     throw new Error("Method not implemented.");
   }
@@ -2524,7 +2762,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     context: Context,
     blob: BlobModel,
     start: number,
-    end: number
+    end: number,
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobProperties> {
     throw new Error("Method not implemented.");
   }
@@ -2534,7 +2774,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    snapshot?: string | undefined
+    snapshot?: string | undefined,
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<GetPageRangeResponse> {
     throw new Error("Method not implemented.");
   }
@@ -2544,7 +2786,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
-    blobContentLength: number
+    blobContentLength: number,
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobProperties> {
     throw new Error("Method not implemented.");
   }
