@@ -133,25 +133,30 @@ describe("Authentication", () => {
       }
     });
 
-    it(`Should work with correct shared key @loki @sql when using ${test.serverType}`, async () => {
-      const serviceURL = new ServiceURL(
-        baseURL,
-        StorageURL.newPipeline(
-          new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
-          {
-            retryOptions: { maxTries: 1 }
-          }
-        )
-      );
+    if (test.serverType == "http") {
+      it(`Should work with correct shared key @loki @sql when using ${test.serverType}`, async () => {
+        const serviceURL = new ServiceURL(
+          baseURL,
+          StorageURL.newPipeline(
+            new SharedKeyCredential(
+              EMULATOR_ACCOUNT_NAME,
+              EMULATOR_ACCOUNT_KEY
+            ),
+            {
+              retryOptions: { maxTries: 1 }
+            }
+          )
+        );
 
-      const containerName: string = getUniqueName("1container-with-dash");
-      const containerURL = ContainerURL.fromServiceURL(
-        serviceURL,
-        containerName
-      );
+        const containerName: string = getUniqueName("1container-with-dash");
+        const containerURL = ContainerURL.fromServiceURL(
+          serviceURL,
+          containerName
+        );
 
-      await containerURL.create(Aborter.none);
-      await containerURL.delete(Aborter.none);
-    });
+        await containerURL.create(Aborter.none);
+        await containerURL.delete(Aborter.none);
+      });
+    }
   });
 });
