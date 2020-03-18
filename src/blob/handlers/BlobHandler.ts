@@ -1,6 +1,7 @@
 import { URL } from "url";
 
 import IExtentStore from "../../common/persistence/IExtentStore";
+import { convertRawHeadersToMetadata } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -15,7 +16,8 @@ import IBlobMetadataStore, {
 import {
   BLOB_API_VERSION,
   EMULATOR_ACCOUNT_KIND,
-  EMULATOR_ACCOUNT_SKUNAME
+  EMULATOR_ACCOUNT_SKUNAME,
+  HeaderConstants
 } from "../utils/constants";
 import {
   deserializePageBlobRangeHeader,
@@ -96,7 +98,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       containerName,
       blobName,
       options.snapshot,
-      options.leaseAccessConditions
+      options.leaseAccessConditions,
+      options.modifiedAccessConditions
     );
 
     if (blob.properties.blobType === Models.BlobType.BlockBlob) {
@@ -133,7 +136,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       options.snapshot,
-      options.leaseAccessConditions
+      options.leaseAccessConditions,
+      options.modifiedAccessConditions
     );
 
     // TODO: Create get metadata specific request in swagger
@@ -236,16 +240,43 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const account = blobCtx.account!;
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
-    const res = await this.metadataStore.setBlobHTTPHeaders(
-      context,
-      account,
-      container,
-      blob,
-      options.leaseAccessConditions,
-      options.blobHTTPHeaders
-    );
 
-    // ToDo: return correct headers and test for these.
+    let res;
+
+    // Workaround for https://github.com/Azure/Azurite/issues/332
+    const sequenceNumberAction = context.request!.getHeader(
+      HeaderConstants.X_MS_SEQUENCE_NUMBER_ACTION
+    );
+    const sequenceNumber = context.request!.getHeader(
+      HeaderConstants.X_MS_BLOB_SEQUENCE_NUMBER
+    );
+    if (sequenceNumberAction !== undefined) {
+      this.logger.verbose(
+        "BlobHandler:setHTTPHeaders() Redirect to updateSequenceNumber...",
+        context.contextId
+      );
+      res = await this.metadataStore.updateSequenceNumber(
+        context,
+        account,
+        container,
+        blob,
+        sequenceNumberAction.toLowerCase() as Models.SequenceNumberActionType,
+        sequenceNumber === undefined ? undefined : parseInt(sequenceNumber, 10),
+        options.leaseAccessConditions,
+        options.modifiedAccessConditions
+      );
+    } else {
+      res = await this.metadataStore.setBlobHTTPHeaders(
+        context,
+        account,
+        container,
+        blob,
+        options.leaseAccessConditions,
+        options.blobHTTPHeaders,
+        options.modifiedAccessConditions
+      );
+    }
+
     const response: Models.BlobSetHTTPHeadersResponse = {
       statusCode: 200,
       eTag: res.etag,
@@ -276,13 +307,20 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const account = blobCtx.account!;
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
+
+    // Preserve metadata key case
+    const metadata = convertRawHeadersToMetadata(
+      blobCtx.request!.getRawHeaders()
+    );
+
     const res = await this.metadataStore.setBlobMetadata(
       context,
       account,
       container,
       blob,
       options.leaseAccessConditions,
-      options.metadata
+      metadata,
+      options.modifiedAccessConditions
     );
 
     // ToDo: return correct headers and test for these.
@@ -331,7 +369,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       options.duration!,
-      options.proposedLeaseId
+      options.proposedLeaseId,
+      options
     );
 
     const response: Models.BlobAcquireLeaseResponse = {
@@ -371,7 +410,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       account,
       container,
       blob,
-      leaseId
+      leaseId,
+      options
     );
 
     const response: Models.BlobReleaseLeaseResponse = {
@@ -410,7 +450,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       account,
       container,
       blob,
-      leaseId
+      leaseId,
+      options
     );
 
     const response: Models.BlobRenewLeaseResponse = {
@@ -453,7 +494,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       leaseId,
-      proposedLeaseId
+      proposedLeaseId,
+      options
     );
 
     const response: Models.BlobChangeLeaseResponse = {
@@ -491,7 +533,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       account,
       container,
       blob,
-      options.breakPeriod
+      options.breakPeriod,
+      options
     );
 
     const response: Models.BlobBreakLeaseResponse = {
@@ -526,6 +569,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const account = blobCtx.account!;
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
+
+    // Preserve metadata key case
+    const metadata = convertRawHeadersToMetadata(
+      blobCtx.request!.getRawHeaders()
+    );
+
     const res = await this.metadataStore.createSnapshot(
       context,
       account,
@@ -534,7 +583,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       options.leaseAccessConditions,
       !options.metadata || JSON.stringify(options.metadata) === "{}"
         ? undefined
-        : options.metadata
+        : metadata,
+      options.modifiedAccessConditions
     );
 
     const response: Models.BlobCreateSnapshotResponse = {
@@ -576,7 +626,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       sourceAccount,
       sourceContainer,
       sourceBlob
-    ] = extractStoragePartsFromPath(url.pathname);
+    ] = extractStoragePartsFromPath(url.hostname, url.pathname);
     const snapshot = url.searchParams.get("snapshot") || "";
 
     if (
@@ -588,6 +638,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getBlobNotFound(context.contextId!);
     }
 
+    // Preserve metadata key case
+    const metadata = convertRawHeadersToMetadata(
+      blobCtx.request!.getRawHeaders()
+    );
+
     const res = await this.metadataStore.startCopyFromURL(
       context,
       {
@@ -598,9 +653,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       },
       { account, container, blob },
       copySource,
-      options.metadata,
+      metadata,
       options.tier,
-      options.leaseAccessConditions
+      options
     );
 
     const response: Models.BlobStartCopyFromURLResponse = {

@@ -1,3 +1,4 @@
+import { convertRawHeadersToMetadata } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -38,10 +39,15 @@ export default class ContainerHandler extends BaseHandler
     const lastModified = blobCtx.startTime!;
     const etag = newEtag();
 
+    // Preserve metadata key case
+    const metadata = convertRawHeadersToMetadata(
+      blobCtx.request!.getRawHeaders()
+    );
+
     await this.metadataStore.createContainer(context, {
       accountName,
       name: containerName,
-      metadata: options.metadata,
+      metadata,
       properties: {
         etag,
         lastModified,
@@ -142,7 +148,7 @@ export default class ContainerHandler extends BaseHandler
       context,
       accountName,
       containerName,
-      options.leaseAccessConditions
+      options
     );
 
     const response: Models.ContainerDeleteResponse = {
@@ -174,14 +180,20 @@ export default class ContainerHandler extends BaseHandler
     const date = blobCtx.startTime!;
     const eTag = newEtag();
 
+    // Preserve metadata key case
+    const metadata = convertRawHeadersToMetadata(
+      blobCtx.request!.getRawHeaders()
+    );
+
     await this.metadataStore.setContainerMetadata(
       context,
       accountName,
       containerName,
       date,
       eTag,
-      options.metadata,
-      options.leaseAccessConditions
+      metadata,
+      options.leaseAccessConditions,
+      options.modifiedAccessConditions
     );
 
     const response: Models.ContainerSetMetadataResponse = {
@@ -271,7 +283,8 @@ export default class ContainerHandler extends BaseHandler
         etag: eTag,
         publicAccess: options.access,
         containerAcl: options.containerAcl,
-        leaseAccessConditions: options.leaseAccessConditions
+        leaseAccessConditions: options.leaseAccessConditions,
+        modifiedAccessConditions: options.modifiedAccessConditions
       }
     );
 
@@ -351,7 +364,8 @@ export default class ContainerHandler extends BaseHandler
       context,
       accountName,
       containerName,
-      leaseId
+      leaseId,
+      options
     );
 
     const response: Models.ContainerReleaseLeaseResponse = {
@@ -391,7 +405,8 @@ export default class ContainerHandler extends BaseHandler
       context,
       accountName,
       containerName,
-      leaseId
+      leaseId,
+      options
     );
 
     const response: Models.ContainerRenewLeaseResponse = {
@@ -430,7 +445,8 @@ export default class ContainerHandler extends BaseHandler
       context,
       accountName,
       containerName,
-      options.breakPeriod
+      options.breakPeriod,
+      options
     );
 
     const response: Models.ContainerBreakLeaseResponse = {
@@ -474,7 +490,8 @@ export default class ContainerHandler extends BaseHandler
       accountName,
       containerName,
       leaseId,
-      proposedLeaseId
+      proposedLeaseId,
+      options
     );
 
     const response: Models.ContainerChangeLeaseResponse = {
