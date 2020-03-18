@@ -137,7 +137,7 @@ describe("Authentication", () => {
      * Exclude this test temporary since we can't make this pass for https with t1 storage sdk.
      * Will add back while migrate tests to t2 storage sdk.
      */
-    if (test.serverType != "http") {
+    if (test.serverType != "https") {
       it(`Should work with correct shared key @loki @sql when using ${test.serverType}`, async () => {
         const serviceURL = new ServiceURL(
           baseURL,
