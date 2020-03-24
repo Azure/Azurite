@@ -36,8 +36,8 @@ if (!(args as any).config.name) {
       ["L", "loose"],
       "Optional. Enable loose mode which ignores unsupported headers and parameters"
     )
-    .option(["", "cert"], "Optional. Path to certificate .cert file.")
-    .option(["", "key"], "Optional. Path to certificate key .cert file.")
+    .option(["", "cert"], "Optional. Path to certificate file.")
+    .option(["", "key"], "Optional. Path to certificate key .pem file.")
     .option(
       ["d", "debug"],
       "Optional. Enable debug log by providing a valid local file path as log destination"

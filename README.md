@@ -10,7 +10,7 @@
 
 | Version                                                            | Azure Storage API Version | Service Support       | Description                                       | Reference Links                                                                                                                                                                                                         |
 | ------------------------------------------------------------------ | ------------------------- | --------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.6.0                                                              | 2019-07-07                | Blob<br>Queue         | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| 3.5.0                                                              | 2019-07-07                | Blob<br>Queue         | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
 | [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
 ## Introduction
@@ -369,7 +369,7 @@ This will output the location of the generated cert and key files in pem format.
 When you start Azurite, pass those files to the `--cert` and `--key` parameters as follows:
 
 ```bash
-azurite --cert 127.0.0.1.cert --key 127.0.0.1-key.cert
+azurite --cert 127.0.0.1.pem --key 127.0.0.1-key.pem
 ```
 
 #### Dotnet dev-certs
@@ -587,7 +587,7 @@ All the generated code is kept in `generated` folder, including the generated mi
 
 ## Support Matrix
 
-Latest release targets **2019-07-07** API version **blob** service.  
+3.5.0 release targets **2019-07-07** API version **blob** service.  
 Detailed support matrix:
 
 - Supported Vertical Features
@@ -621,19 +621,19 @@ Detailed support matrix:
   - Snapshot Blob
   - Copy Blob (Only supports copy within same account in Azurite)
   - Abort Copy Blob (Only supports copy within same account in Azurite)
-  - Access control based on conditional headers
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
 
   - SharedKey Lite
   - OAuth authentication
+  - Access control based on conditional headers (Requests will be blocked in strict mode)
   - Static Website
   - Soft delete & Undelete Blob
   - Put Block from URL
   - Incremental Copy Blob
   - Create Append Blob, Append Block
 
-Latest version supports for **2019-07-07** API version **queue** service.
-Detailed support matrix:
+    3.5.0 release added support for **2019-07-07** API version **queue** service.
+    Detailed support matrix:
 
 - Supported Vertical Features
   - SharedKey Authentication
