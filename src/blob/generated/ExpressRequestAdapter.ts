@@ -43,6 +43,10 @@ export default class ExpressRequestAdapter implements IRequest {
     return this.req.headers;
   }
 
+  public getRawHeaders(): string[] {
+    return this.req.rawHeaders;
+  }
+
   public getQuery(key: string): string | undefined {
     return this.req.query[key];
   }

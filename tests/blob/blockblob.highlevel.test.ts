@@ -169,6 +169,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(downloadedData.equals(uploadedData));
   });
 
+  // tslint:disable-next-line: max-line-length
   it("uploadFileToBlockBlob should update progress when blob >= BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES @loki @sql", async () => {
     let eventTriggered = false;
     const aborter = Aborter.none;
@@ -187,6 +188,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(eventTriggered);
   });
 
+  // tslint:disable-next-line: max-line-length
   it("uploadFileToBlockBlob should update progress when blob < BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES @loki @sql", async () => {
     let eventTriggered = false;
     const aborter = Aborter.none;
@@ -403,6 +405,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(downloadedData.equals(uploadedData));
   });
 
+  // tslint:disable-next-line: max-line-length
   it("bloburl.download should download full data successfully when internal stream unexpected ends @loki @sql", async () => {
     await uploadFileToBlockBlob(Aborter.none, tempFileSmall, blockBlobURL, {
       blockSize: 4 * 1024 * 1024,

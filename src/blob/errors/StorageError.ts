@@ -9,6 +9,10 @@ import { jsonToXML } from "../generated/utils/xml";
  * @extends {MiddlewareError}
  */
 export default class StorageError extends MiddlewareError {
+  public readonly storageErrorCode: string;
+  public readonly storageErrorMessage: string;
+  public readonly storageRequestID: string;
+
   /**
    * Creates an instance of StorageError.
    *
@@ -54,5 +58,8 @@ export default class StorageError extends MiddlewareError {
     );
 
     this.name = "StorageError";
+    this.storageErrorCode = storageErrorCode;
+    this.storageErrorMessage = storageErrorMessage;
+    this.storageRequestID = storageRequestID;
   }
 }

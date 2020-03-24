@@ -61,6 +61,7 @@ interface ISetContainerAccessPolicyOptions {
   containerAcl?: Models.SignedIdentifier[];
   publicAccess?: Models.PublicAccessType;
   leaseAccessConditions?: Models.LeaseAccessConditions;
+  modifiedAccessConditions?: Models.ModifiedAccessConditions;
 }
 export type SetContainerAccessPolicyOptions = ISetContainerAccessPolicyOptions;
 
@@ -296,7 +297,7 @@ export interface IBlobMetadataStore
    * @param {string} account
    * @param {string} container
    * @param {Context} context
-   * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
+   * @param {Models.ContainerDeleteMethodOptionalParams} [options]
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
@@ -304,18 +305,20 @@ export interface IBlobMetadataStore
     context: Context,
     account: string,
     container: string,
-    leaseAccessConditions?: Models.LeaseAccessConditions
+    options?: Models.ContainerDeleteMethodOptionalParams
   ): Promise<void>;
 
-  /** Set container metadata.
+  /**
+   * Set container metadata.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {Date} lastModified
    * @param {string} etag
-   * @param {Context} context
    * @param {IContainerMetadata} [metadata]
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
@@ -326,7 +329,8 @@ export interface IBlobMetadataStore
     lastModified: Date,
     etag: string,
     metadata?: IContainerMetadata,
-    leaseAccessConditions?: Models.LeaseAccessConditions
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<void>;
 
   /**
@@ -368,7 +372,7 @@ export interface IBlobMetadataStore
    *
    * @param {string} account
    * @param {string} container
-   * @param {Models.ContainerAcquireLeaseOptionalParams} options
+   * @param {Models.ContainerAcquireLeaseOptionalParams} [options]
    * @param {Context} context
    * @returns {Promise<AcquireContainerLeaseResponse>}
    * @memberof IBlobMetadataStore
@@ -377,16 +381,17 @@ export interface IBlobMetadataStore
     context: Context,
     account: string,
     container: string,
-    options: Models.ContainerAcquireLeaseOptionalParams
+    options?: Models.ContainerAcquireLeaseOptionalParams
   ): Promise<AcquireContainerLeaseResponse>;
 
   /**
-   * Release container lease
+   * Release container lease.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} leaseId
-   * @param {Context} context
+   * @param {Models.ContainerReleaseLeaseOptionalParams} [options]
    * @returns {Promise<ReleaseContainerLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
@@ -394,16 +399,18 @@ export interface IBlobMetadataStore
     context: Context,
     account: string,
     container: string,
-    leaseId: string
+    leaseId: string,
+    options?: Models.ContainerReleaseLeaseOptionalParams
   ): Promise<ReleaseContainerLeaseResponse>;
 
   /**
-   * Renew container lease
+   * Renew container lease.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} leaseId
-   * @param {Context} context
+   * @param {Models.ContainerRenewLeaseOptionalParams} [options]
    * @returns {Promise<RenewContainerLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
@@ -411,16 +418,18 @@ export interface IBlobMetadataStore
     context: Context,
     account: string,
     container: string,
-    leaseId: string
+    leaseId: string,
+    options?: Models.ContainerRenewLeaseOptionalParams
   ): Promise<RenewContainerLeaseResponse>;
 
   /**
-   * Break container lease
+   * Break container lease.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {(number | undefined)} breakPeriod
-   * @param {Context} context
+   * @param {Models.ContainerBreakLeaseOptionalParams} [options]
    * @returns {Promise<BreakContainerLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
@@ -428,17 +437,19 @@ export interface IBlobMetadataStore
     context: Context,
     account: string,
     container: string,
-    breakPeriod: number | undefined
+    breakPeriod: number | undefined,
+    options?: Models.ContainerBreakLeaseOptionalParams
   ): Promise<BreakContainerLeaseResponse>;
 
   /**
-   * Change container lease
+   * Change container lease.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} leaseId
    * @param {string} proposedLeaseId
-   * @param {Context} context
+   * @param {Models.ContainerChangeLeaseOptionalParams} [options]
    * @returns {Promise<ChangeContainerLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
@@ -447,7 +458,8 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     leaseId: string,
-    proposedLeaseId: string
+    proposedLeaseId: string,
+    options?: Models.ContainerChangeLeaseOptionalParams
   ): Promise<ChangeContainerLeaseResponse>;
 
   /**
@@ -488,13 +500,15 @@ export interface IBlobMetadataStore
    * @param {Context} context
    * @param {BlobModel} blob
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions] Optional. Will validate lease if provided
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
   createBlob(
     context: Context,
     blob: BlobModel,
-    leaseAccessConditions?: Models.LeaseAccessConditions
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<void>;
 
   /**
@@ -505,6 +519,8 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions] Optional. Will validate lease if provided
+   * @param {Models.BlobMetadata} [metadata]
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
    * @returns {Promise<CreateSnapshotResponse>}
    * @memberof IBlobMetadataStore
    */
@@ -514,7 +530,8 @@ export interface IBlobMetadataStore
     container: string,
     blob: string,
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    metadata?: Models.BlobMetadata
+    metadata?: Models.BlobMetadata,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<CreateSnapshotResponse>;
 
   /**
@@ -527,6 +544,7 @@ export interface IBlobMetadataStore
    * @param {string} blob
    * @param {(string | undefined)} snapshot
    * @param {Models.LeaseAccessConditions} [leaseAccessConditions] Optional. Will validate lease if provided
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
    * @returns {Promise<BlobModel>}
    * @memberof IBlobMetadataStore
    */
@@ -536,7 +554,8 @@ export interface IBlobMetadataStore
     container: string,
     blob: string,
     snapshot: string | undefined,
-    leaseAccessConditions?: Models.LeaseAccessConditions
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<BlobModel>;
 
   /**
@@ -548,6 +567,7 @@ export interface IBlobMetadataStore
    * @param {string} blob
    * @param {(string | undefined)} snapshot
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
    * @returns {Promise<GetBlobPropertiesRes>}
    * @memberof IBlobMetadataStore
    */
@@ -557,7 +577,8 @@ export interface IBlobMetadataStore
     container: string,
     blob: string,
     snapshot: string | undefined,
-    leaseAccessConditions: Models.LeaseAccessConditions | undefined
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<GetBlobPropertiesRes>;
 
   /**
@@ -588,6 +609,7 @@ export interface IBlobMetadataStore
    * @param {string} blob
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @param {(Models.BlobHTTPHeaders | undefined)} blobHTTPHeaders
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
@@ -597,7 +619,8 @@ export interface IBlobMetadataStore
     container: string,
     blob: string,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    blobHTTPHeaders: Models.BlobHTTPHeaders | undefined
+    blobHTTPHeaders: Models.BlobHTTPHeaders | undefined,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobProperties>;
 
   /**
@@ -609,6 +632,7 @@ export interface IBlobMetadataStore
    * @param {string} blob
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @param {(Models.BlobMetadata | undefined)} metadata
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
@@ -618,7 +642,8 @@ export interface IBlobMetadataStore
     container: string,
     blob: string,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    metadata: Models.BlobMetadata | undefined
+    metadata: Models.BlobMetadata | undefined,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobProperties>;
 
   /**
@@ -630,6 +655,7 @@ export interface IBlobMetadataStore
    * @param {string} blob
    * @param {number} duration
    * @param {string} [proposedLeaseId]
+   * @param {Models.BlobAcquireLeaseOptionalParams} [options]
    * @returns {Promise<AcquireBlobLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
@@ -639,7 +665,8 @@ export interface IBlobMetadataStore
     container: string,
     blob: string,
     duration: number,
-    proposedLeaseId?: string
+    proposedLeaseId?: string,
+    options?: Models.BlobAcquireLeaseOptionalParams
   ): Promise<AcquireBlobLeaseResponse>;
 
   /**
@@ -650,6 +677,7 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {string} leaseId
+   * @param {Models.BlobReleaseLeaseOptionalParams} [options]
    * @returns {Promise<ReleaseBlobLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
@@ -658,7 +686,8 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    leaseId: string
+    leaseId: string,
+    options?: Models.BlobReleaseLeaseOptionalParams
   ): Promise<ReleaseBlobLeaseResponse>;
 
   /**
@@ -669,6 +698,7 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {string} leaseId
+   * @param {Models.BlobRenewLeaseOptionalParams} [options]
    * @returns {Promise<RenewBlobLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
@@ -677,7 +707,8 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    leaseId: string
+    leaseId: string,
+    options?: Models.BlobRenewLeaseOptionalParams
   ): Promise<RenewBlobLeaseResponse>;
 
   /**
@@ -689,6 +720,7 @@ export interface IBlobMetadataStore
    * @param {string} blob
    * @param {string} leaseId
    * @param {string} proposedLeaseId
+   * @param {Models.BlobChangeLeaseOptionalParams} [option]
    * @returns {Promise<ChangeBlobLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
@@ -698,17 +730,19 @@ export interface IBlobMetadataStore
     container: string,
     blob: string,
     leaseId: string,
-    proposedLeaseId: string
+    proposedLeaseId: string,
+    option?: Models.BlobChangeLeaseOptionalParams
   ): Promise<ChangeBlobLeaseResponse>;
 
   /**
-   * Break blob lease
+   * Break blob lease.
    *
    * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {number} [breakPeriod]
+   * @param {Models.BlobBreakLeaseOptionalParams} [option]
    * @returns {Promise<BreakBlobLeaseResponse>}
    * @memberof IBlobMetadataStore
    */
@@ -717,7 +751,8 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    breakPeriod?: number
+    breakPeriod?: number,
+    option?: Models.BlobBreakLeaseOptionalParams
   ): Promise<BreakBlobLeaseResponse>;
 
   /**
@@ -769,7 +804,7 @@ export interface IBlobMetadataStore
    * @param {string} copySource
    * @param {(Models.BlobMetadata | undefined)} metadata
    * @param {(Models.AccessTier | undefined)} tier
-   * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
+   * @param {Models.BlobStartCopyFromURLOptionalParams} [leaseAccessConditions]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
@@ -780,7 +815,7 @@ export interface IBlobMetadataStore
     copySource: string,
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
-    leaseAccessConditions: Models.LeaseAccessConditions | undefined
+    leaseAccessConditions?: Models.BlobStartCopyFromURLOptionalParams
   ): Promise<Models.BlobProperties>;
 
   /**
@@ -822,10 +857,11 @@ export interface IBlobMetadataStore
   /**
    * Commit block list for a blob.
    *
+   * @param {Context} context
    * @param {BlobModel} blob
    * @param {{ blockName: string; blockCommitType: string }[]} blockList
-   * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
-   * @param {Context} context
+   * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
@@ -833,7 +869,8 @@ export interface IBlobMetadataStore
     context: Context,
     blob: BlobModel,
     blockList: { blockName: string; blockCommitType: string }[],
-    leaseAccessConditions: Models.LeaseAccessConditions | undefined
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<void>;
 
   /**
@@ -867,11 +904,14 @@ export interface IBlobMetadataStore
   /**
    * Upload new pages for page blob.
    *
+   * @param {Context} context
    * @param {BlobModel} blob
    * @param {number} start
    * @param {number} end
    * @param {IExtentChunk} persistency
-   * @param {Context} [context]
+   * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @param {Models.SequenceNumberAccessConditions} [sequenceNumberAccessConditions]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
@@ -881,16 +921,21 @@ export interface IBlobMetadataStore
     start: number,
     end: number,
     persistency: IExtentChunk,
-    leaseAccessConditions?: Models.LeaseAccessConditions
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    sequenceNumberAccessConditions?: Models.SequenceNumberAccessConditions
   ): Promise<Models.BlobProperties>;
 
   /**
    * Clear range for a page blob.
    *
+   * @param {Context} context
    * @param {BlobModel} blob
    * @param {number} start
    * @param {number} end
-   * @param {Context} [context]
+   * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @param {Models.SequenceNumberAccessConditions} [sequenceNumberAccessConditions]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
@@ -899,7 +944,9 @@ export interface IBlobMetadataStore
     blob: BlobModel,
     start: number,
     end: number,
-    leaseAccessConditions?: Models.LeaseAccessConditions
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    sequenceNumberAccessConditions?: Models.SequenceNumberAccessConditions
   ): Promise<Models.BlobProperties>;
 
   /**
@@ -910,6 +957,8 @@ export interface IBlobMetadataStore
    * @param {string} container
    * @param {string} blob
    * @param {string} [snapshot]
+   * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
    * @returns {Promise<GetPageRangeResponse>}
    * @memberof IBlobMetadataStore
    */
@@ -919,17 +968,20 @@ export interface IBlobMetadataStore
     container: string,
     blob: string,
     snapshot?: string,
-    leaseAccessConditions?: Models.LeaseAccessConditions
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<GetPageRangeResponse>;
 
   /**
    * Resize a page blob.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {number} blobContentLength
-   * @param {Context} context
+   * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
@@ -939,18 +991,21 @@ export interface IBlobMetadataStore
     container: string,
     blob: string,
     blobContentLength: number,
-    leaseAccessConditions?: Models.LeaseAccessConditions
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobProperties>;
 
   /**
    * Update the sequence number of a page blob.
    *
+   * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
    * @param {Models.SequenceNumberActionType} sequenceNumberAction
    * @param {(number | undefined)} blobSequenceNumber
-   * @param {Context} context
+   * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
    */
@@ -961,7 +1016,8 @@ export interface IBlobMetadataStore
     blob: string,
     sequenceNumberAction: Models.SequenceNumberActionType,
     blobSequenceNumber: number | undefined,
-    leaseAccessConditions?: Models.LeaseAccessConditions
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobProperties>;
 
   /**

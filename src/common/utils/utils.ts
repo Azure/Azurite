@@ -31,3 +31,30 @@ export function convertDateTimeStringMsTo7Digital(
 ): string {
   return dateTimeString.replace("Z", "0000Z");
 }
+
+export function convertRawHeadersToMetadata(
+  rawHeaders: string[] = []
+): { [propertyName: string]: string } | undefined {
+  const metadataPrefix = "x-ms-meta-";
+  const res: { [propertyName: string]: string } = {};
+  let isEmpty = true;
+
+  for (let i = 0; i < rawHeaders.length; i = i + 2) {
+    const header = rawHeaders[i];
+    if (
+      header.startsWith(metadataPrefix) &&
+      header.length > metadataPrefix.length
+    ) {
+      const key = header.substr(metadataPrefix.length);
+      let value = rawHeaders[i + 1] || "";
+      if (res[key] !== undefined) {
+        value = `${res[key]},${value}`;
+      }
+      res[key] = value;
+      isEmpty = false;
+      continue;
+    }
+  }
+
+  return isEmpty ? undefined : res;
+}

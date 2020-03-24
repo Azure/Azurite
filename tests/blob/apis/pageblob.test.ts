@@ -9,6 +9,7 @@ import {
 } from "@azure/storage-blob";
 import assert = require("assert");
 
+import { SequenceNumberActionType } from "../../../src/blob/generated/artifacts/models";
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
 import {
@@ -133,6 +134,7 @@ describe("PageBlobAPIs", () => {
       properties.contentType,
       options.blobHTTPHeaders.blobContentType
     );
+    assert.equal(0, properties.blobSequenceNumber);
     assert.equal(properties.metadata!.key1, options.metadata.key1);
     assert.equal(properties.metadata!.key2, options.metadata.key2);
     assert.equal(
@@ -288,6 +290,141 @@ describe("PageBlobAPIs", () => {
 
     assert.equal(await bodyToString(page1, 512), "a".repeat(512));
     assert.equal(await bodyToString(page2, 512), "b".repeat(512));
+  });
+
+  it("uploadPages should work with sequence number conditions @loki", async () => {
+    await pageBlobURL.create(Aborter.none, 1024);
+
+    await pageBlobURL.updateSequenceNumber(
+      Aborter.none,
+      SequenceNumberActionType.Update,
+      10
+    );
+
+    const result = await blobURL.download(Aborter.none, 0);
+    assert.equal(await bodyToString(result, 1024), "\u0000".repeat(1024));
+
+    await pageBlobURL.uploadPages(Aborter.none, "a".repeat(512), 0, 512, {
+      accessConditions: {
+        sequenceNumberAccessConditions: {
+          ifSequenceNumberEqualTo: 10,
+          ifSequenceNumberLessThan: 11,
+          ifSequenceNumberLessThanOrEqualTo: 10
+        }
+      }
+    });
+    const result_upload = await pageBlobURL.uploadPages(
+      Aborter.none,
+      "b".repeat(512),
+      512,
+      512
+    );
+    assert.equal(
+      result_upload._response.request.headers.get("x-ms-client-request-id"),
+      result_upload.clientRequestId
+    );
+
+    const page1 = await pageBlobURL.download(Aborter.none, 0, 512);
+    const page2 = await pageBlobURL.download(Aborter.none, 512, 512);
+
+    assert.equal(await bodyToString(page1, 512), "a".repeat(512));
+    assert.equal(await bodyToString(page2, 512), "b".repeat(512));
+  });
+
+  it("uploadPages should not work if ifSequenceNumberEqualTo doesn't match @loki", async () => {
+    await pageBlobURL.create(Aborter.none, 1024);
+
+    await pageBlobURL.updateSequenceNumber(
+      Aborter.none,
+      SequenceNumberActionType.Update,
+      10
+    );
+
+    try {
+      await pageBlobURL.uploadPages(Aborter.none, "a".repeat(512), 0, 512, {
+        accessConditions: {
+          sequenceNumberAccessConditions: {
+            ifSequenceNumberEqualTo: 11
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      return;
+    }
+
+    assert.fail();
+  });
+
+  it("uploadPages should not work if ifSequenceNumberLessThan doesn't match @loki", async () => {
+    await pageBlobURL.create(Aborter.none, 1024);
+
+    await pageBlobURL.updateSequenceNumber(
+      Aborter.none,
+      SequenceNumberActionType.Update,
+      10
+    );
+
+    try {
+      await pageBlobURL.uploadPages(Aborter.none, "a".repeat(512), 0, 512, {
+        accessConditions: {
+          sequenceNumberAccessConditions: {
+            ifSequenceNumberLessThan: 10
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      return;
+    }
+
+    try {
+      await pageBlobURL.uploadPages(Aborter.none, "a".repeat(512), 0, 512, {
+        accessConditions: {
+          sequenceNumberAccessConditions: {
+            ifSequenceNumberLessThan: 9
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      return;
+    }
+
+    assert.fail();
+  });
+
+  it("uploadPages should not work if ifSequenceNumberLessThanOrEqualTo doesn't match @loki", async () => {
+    await pageBlobURL.create(Aborter.none, 1024);
+
+    await pageBlobURL.updateSequenceNumber(
+      Aborter.none,
+      SequenceNumberActionType.Update,
+      10
+    );
+
+    await pageBlobURL.uploadPages(Aborter.none, "a".repeat(512), 0, 512, {
+      accessConditions: {
+        sequenceNumberAccessConditions: {
+          ifSequenceNumberLessThanOrEqualTo: 10
+        }
+      }
+    });
+
+    try {
+      await pageBlobURL.uploadPages(Aborter.none, "a".repeat(512), 0, 512, {
+        accessConditions: {
+          sequenceNumberAccessConditions: {
+            ifSequenceNumberLessThanOrEqualTo: 9
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      return;
+    }
+
+    assert.fail();
   });
 
   it("uploadPages with sequential pages @loki", async () => {
@@ -1115,6 +1252,96 @@ describe("PageBlobAPIs", () => {
       await bodyToString(result, 512),
       "\u0000".repeat(512)
     );
+  });
+
+  it("clearPages should work with sequence number conditions @loki", async () => {
+    await pageBlobURL.create(Aborter.none, 1024);
+    await pageBlobURL.clearPages(Aborter.none, 0, 512, {
+      accessConditions: {
+        sequenceNumberAccessConditions: {
+          ifSequenceNumberEqualTo: 0,
+          ifSequenceNumberLessThan: 1,
+          ifSequenceNumberLessThanOrEqualTo: 0
+        }
+      }
+    });
+  });
+
+  it("clearPages should not work with invalid ifSequenceNumberEqualTo @loki", async () => {
+    await pageBlobURL.create(Aborter.none, 1024);
+    try {
+      await pageBlobURL.clearPages(Aborter.none, 0, 512, {
+        accessConditions: {
+          sequenceNumberAccessConditions: {
+            ifSequenceNumberEqualTo: 1
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("clearPages should not work with invalid ifSequenceNumberLessThan @loki", async () => {
+    await pageBlobURL.create(Aborter.none, 1024);
+    await pageBlobURL.updateSequenceNumber(
+      Aborter.none,
+      SequenceNumberActionType.Increment
+    );
+
+    await pageBlobURL.clearPages(Aborter.none, 0, 512, {
+      accessConditions: {
+        sequenceNumberAccessConditions: {
+          ifSequenceNumberLessThan: 2
+        }
+      }
+    });
+
+    try {
+      await pageBlobURL.clearPages(Aborter.none, 0, 512, {
+        accessConditions: {
+          sequenceNumberAccessConditions: {
+            ifSequenceNumberLessThan: 1
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("clearPages should not work with invalid ifSequenceNumberLessThanOrEqualTo @loki", async () => {
+    await pageBlobURL.create(Aborter.none, 1024);
+    await pageBlobURL.updateSequenceNumber(
+      Aborter.none,
+      SequenceNumberActionType.Increment
+    );
+
+    await pageBlobURL.clearPages(Aborter.none, 0, 512, {
+      accessConditions: {
+        sequenceNumberAccessConditions: {
+          ifSequenceNumberLessThanOrEqualTo: 1
+        }
+      }
+    });
+
+    try {
+      await pageBlobURL.clearPages(Aborter.none, 0, 512, {
+        accessConditions: {
+          sequenceNumberAccessConditions: {
+            ifSequenceNumberLessThanOrEqualTo: 0
+          }
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      return;
+    }
+    assert.fail();
   });
 
   it("clearPages to internally override a sequential range @loki", async () => {
