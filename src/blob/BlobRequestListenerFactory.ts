@@ -132,7 +132,7 @@ export default class BlobRequestListenerFactory
       app.use(strictModelMiddlewareFactory.createStrictModelMiddleware());
     }
 
-    if (this.cert && this.key) {
+    if (this.cert && this.key && this.pwd) {
       app.use("");
     }
 
