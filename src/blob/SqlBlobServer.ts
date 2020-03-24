@@ -84,7 +84,8 @@ export default class SqlBlobServer extends ServerBase {
       configuration.accessLogWriteStream,
       configuration.loose,
       configuration.cert,
-      configuration.key
+      configuration.key,
+      configuration.pwd
     );
 
     super(host, port, httpServer, requestListenerFactory, configuration);

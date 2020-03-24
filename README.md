@@ -355,6 +355,8 @@ set AZURITE_ACCOUNTS="account1:key1:key2;account2:key1:key2"
 
 ### HTTPS Setup
 
+#### Mkcert
+
 You can generate a local certificate for 127.0.0.1 with `mkcert`. See the mkcert GitHub repo for [installation instructions](https://github.com/FiloSottile/mkcert), and then run the following commands.
 
 ```bash
@@ -367,7 +369,23 @@ This will output the location of the generated cert and key files in pem format.
 When you start Azurite, pass those files to the `--cert` and `--key` parameters as follows:
 
 ```bash
-azurite --cert 127.0.0.1.pem --key 127.0.0.1-key.pem
+azurite --cert 127.0.0.1.cert --key 127.0.0.1-key.cert
+```
+
+#### Dotnet dev-certs
+
+You can generate a local certificate for localhost with `dotnet dev-certs`. See the [blob](https://www.hanselman.com/blog/DevelopingLocallyWithASPNETCoreUnderHTTPSSSLAndSelfSignedCerts.aspx) for detail, and then run the following commands.
+
+```bash
+dotnet dev-certs https -ep 127.0.0.1.pfx -p <your password>
+```
+
+This will output the generated cert files in pfx format.
+
+When you start Azurite, pass those files to the `--cert` and `--pwd` parameters as follows:
+
+```bash
+azurite --cert 127.0.0.1.pfx --pwd <your password>
 ```
 
 ### Connection String

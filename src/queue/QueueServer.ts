@@ -16,6 +16,7 @@ import IQueueMetadataStore from "./persistence/IQueueMetadataStore";
 import LokiQueueMetadataStore from "./persistence/LokiQueueMetadataStore";
 import QueueConfiguration from "./QueueConfiguration";
 import QueueRequestListenerFactory from "./QueueRequestListenerFactory";
+import { CertOptions } from "../common/ConfigurationBase";
 
 const BEFORE_CLOSE_MESSAGE = `Azurite Queue service is closing...`;
 const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Queue service is closing... Critical error happens during GC.`;
@@ -56,9 +57,15 @@ export default class QueueServer extends ServerBase {
     const port = configuration.port;
 
     // We can create a HTTP server or a HTTPS server here
-    const httpServer = !configuration.hasCert()
-      ? http.createServer()
-      : https.createServer(configuration.getCert());
+    let httpServer;
+    let certOption = configuration.hasCert();
+    switch (certOption) {
+      case CertOptions.MkCert || CertOptions.DevCert:
+        httpServer = https.createServer(configuration.getCert(certOption)!);
+        break;
+      default:
+        httpServer = http.createServer();
+    }
 
     // We can change the persistency layer implementation by
     // creating a new XXXDataStore class implementing IBlobDataStore interface

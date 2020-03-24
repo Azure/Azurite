@@ -29,7 +29,6 @@ import StrictModelMiddlewareFactory, {
 } from "./middlewares/StrictModelMiddlewareFactory";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import { DEFAULT_CONTEXT_PATH } from "./utils/constants";
-import BlobTokenAuthenticator from "./authentication/BlobTokenAuthenticator";
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -51,8 +50,9 @@ export default class BlobRequestListenerFactory
     private readonly accessLogWriteStream?: NodeJS.WritableStream,
     private readonly loose?: boolean,
     private readonly cert?: string,
-    private readonly key?: string
-  ) { }
+    private readonly key?: string,
+    private readonly pwd?: string
+  ) {}
 
   public createRequestListener(): RequestListener {
     const app = express().disable("x-powered-by");
@@ -131,6 +131,14 @@ export default class BlobRequestListenerFactory
       app.use(strictModelMiddlewareFactory.createStrictModelMiddleware());
     }
 
+    if (this.cert && this.key) {
+      app.use("");
+    }
+
+    if (this.cert && this.pwd) {
+      app.use("");
+    }
+
     // AuthN middleware, like shared key auth or SAS auth
     const authenticationMiddlewareFactory = new AuthenticationMiddlewareFactory(
       logger
@@ -148,8 +156,7 @@ export default class BlobRequestListenerFactory
           this.accountDataStore,
           this.metadataStore,
           logger
-        ),
-        new BlobTokenAuthenticator(this.accountDataStore, logger)
+        )
       ])
     );
 

@@ -31,7 +31,8 @@ export default class SqlBlobConfiguration extends ConfigurationBase {
     debugLogFilePath?: string,
     loose: boolean = false,
     cert: string = "",
-    key: string = ""
+    key: string = "",
+    pwd: string = ""
   ) {
     super(
       host,
@@ -42,7 +43,8 @@ export default class SqlBlobConfiguration extends ConfigurationBase {
       debugLogFilePath,
       loose,
       cert,
-      key
+      key,
+      pwd
     );
   }
 }

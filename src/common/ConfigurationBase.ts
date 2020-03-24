@@ -1,5 +1,11 @@
 const fs = require("fs");
 
+export enum CertOptions {
+  Default,
+  MkCert,
+  DevCert
+}
+
 export default abstract class ConfigurationBase {
   public constructor(
     public readonly host: string,
@@ -10,21 +16,41 @@ export default abstract class ConfigurationBase {
     public readonly debugLogFilePath?: string,
     public readonly loose: boolean = false,
     public readonly cert: string = "",
-    public readonly key: string = ""
+    public readonly key: string = "",
+    public readonly pwd: string = ""
   ) {}
 
-  hasCert(): boolean {
-    return this.cert.length > 0 && this.key.length > 0;
+  public hasCert() {
+    if (this.cert.length > 0 && this.key.length > 0) {
+      return CertOptions.MkCert;
+    }
+    if (this.cert.length > 0 && this.pwd.toString().length > 0) {
+      return CertOptions.DevCert;
+    }
+
+    return CertOptions.Default;
   }
 
-  getCert() {
-    return {
-      cert: fs.readFileSync(this.cert),
-      key: fs.readFileSync(this.key)
-    };
+  public getCert(option: any) {
+    switch (option) {
+      case CertOptions.MkCert:
+        return {
+          cert: fs.readFileSync(this.cert),
+          key: fs.readFileSync(this.key)
+        };
+      case CertOptions.DevCert:
+        return {
+          pfx: fs.readFileSync(this.cert),
+          passphrase: this.pwd.toString()
+        };
+      default:
+        throw Error("Http server do not need cert");
+    }
   }
 
-  getHttpServerAddress(): string {
-    return `http${this.hasCert() ? "s" : ""}://${this.host}:${this.port}`;
+  public getHttpServerAddress(): string {
+    return `http${this.hasCert() == CertOptions.Default ? "" : "s"}://${
+      this.host
+    }:${this.port}`;
   }
 }
