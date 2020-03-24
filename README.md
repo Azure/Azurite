@@ -626,7 +626,6 @@ Detailed support matrix:
 
   - SharedKey Lite
   - OAuth authentication
-  - Access control based on conditional headers (Requests will be blocked in strict mode)
   - Static Website
   - Soft delete & Undelete Blob
   - Put Block from URL
