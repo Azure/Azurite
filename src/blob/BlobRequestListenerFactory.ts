@@ -49,10 +49,7 @@ export default class BlobRequestListenerFactory
     private readonly accountDataStore: IAccountDataStore,
     private readonly enableAccessLog: boolean,
     private readonly accessLogWriteStream?: NodeJS.WritableStream,
-    private readonly loose?: boolean,
-    private readonly cert?: string,
-    private readonly key?: string,
-    private readonly pwd?: string
+    private readonly loose?: boolean
   ) {}
 
   public createRequestListener(): RequestListener {
@@ -130,10 +127,6 @@ export default class BlobRequestListenerFactory
     // Block unsupported features in strict mode by default
     if (this.loose === false || this.loose === undefined) {
       app.use(strictModelMiddlewareFactory.createStrictModelMiddleware());
-    }
-
-    if (this.cert && this.key && this.pwd) {
-      app.use("");
     }
 
     // AuthN middleware, like shared key auth or SAS auth
