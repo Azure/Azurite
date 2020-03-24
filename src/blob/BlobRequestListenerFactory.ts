@@ -29,6 +29,7 @@ import StrictModelMiddlewareFactory, {
 } from "./middlewares/StrictModelMiddlewareFactory";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import { DEFAULT_CONTEXT_PATH } from "./utils/constants";
+import BlobTokenAuthenticator from "./authentication/BlobTokenAuthenticator";
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -48,10 +49,8 @@ export default class BlobRequestListenerFactory
     private readonly accountDataStore: IAccountDataStore,
     private readonly enableAccessLog: boolean,
     private readonly accessLogWriteStream?: NodeJS.WritableStream,
-    private readonly loose?: boolean,
-    private readonly cert?: string,
-    private readonly key?: string
-  ) { }
+    private readonly loose?: boolean
+  ) {}
 
   public createRequestListener(): RequestListener {
     const app = express().disable("x-powered-by");
@@ -147,7 +146,8 @@ export default class BlobRequestListenerFactory
           this.accountDataStore,
           this.metadataStore,
           logger
-        )
+        ),
+        new BlobTokenAuthenticator(this.accountDataStore, logger)
       ])
     );
 
