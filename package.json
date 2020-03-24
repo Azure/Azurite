@@ -23,6 +23,7 @@
     "args": "^5.0.1",
     "etag": "^1.8.1",
     "express": "^4.16.4",
+    "fs": "0.0.1-security",
     "lokijs": "^1.5.6",
     "morgan": "^1.9.1",
     "multistream": "^2.1.1",
@@ -37,6 +38,7 @@
     "xml2js": "^0.4.19"
   },
   "devDependencies": {
+    "@types/validator": "^10.11.3",
     "@azure/storage-blob": "^10.4.1",
     "@azure/storage-queue": "^10.2.0",
     "@types/args": "^3.0.0",
@@ -156,6 +158,11 @@
             "type": "string",
             "default": "",
             "description": "Locally-trusted key file"
+          },
+          "azurite.pwd": {
+            "type": "string",
+            "default": "",
+            "description": "Password for pfx file"
           },
           "azurite.location": {
             "type": "string",
