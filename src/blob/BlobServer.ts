@@ -61,7 +61,8 @@ export default class BlobServer extends ServerBase implements ICleaner {
     let httpServer;
     let certOption = configuration.hasCert();
     switch (certOption) {
-      case CertOptions.MkCert || CertOptions.DevCert:
+      case CertOptions.MkCert:
+      case CertOptions.DevCert:
         httpServer = https.createServer(configuration.getCert(certOption)!);
         break;
       default:

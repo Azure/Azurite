@@ -73,20 +73,20 @@ async function main() {
 
   // Start server
   console.log(
-    `Azurite Blob service is starting at ${blobConfig.getHttpServerAddress()}`
+    `Azurite Blob service is starting on ${blobConfig.host}:${blobConfig.port}`
   );
   await blobServer.start();
   console.log(
-    `Azurite Blob service is successfully listening at ${blobServer.getHttpServerAddress()}`
+    `Azurite Blob service successfully listens on ${blobServer.getHttpServerAddress()}`
   );
 
   // Start server
   console.log(
-    `Azurite Queue service is starting at ${queueConfig.getHttpServerAddress()}`
+    `Azurite Queue service is starting on ${queueConfig.host}:${queueConfig.port}`
   );
   await queueServer.start();
   console.log(
-    `Azurite Queue service is successfully listening at ${queueServer.getHttpServerAddress()}`
+    `Azurite Queue service successfully listens on ${queueServer.getHttpServerAddress()}`
   );
 
   // Handle close event

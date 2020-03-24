@@ -44,7 +44,7 @@ export default abstract class ConfigurationBase {
           passphrase: this.pwd.toString()
         };
       default:
-        throw Error("Http server do not need cert");
+        return null;
     }
   }
 
