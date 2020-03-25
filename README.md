@@ -369,7 +369,7 @@ When choco is installed, download `mkcert` with choco in Bash.
 choco install mkcert
 ```
 
-Then, You can generate a local certificate for 127.0.0.1 with `mkcert`. and run the following commands in Bash.
+Then, You can generate a local certificate with `mkcert`. and run the following commands in Bash.
 
 ```bash
 mkcert -install
@@ -381,7 +381,7 @@ This will output the location of the generated cert and key files in pem format.
 When you start Azurite, pass those files to the `--cert` and `--key` parameters as follows in Bash:
 
 ```bash
-azurite --cert <CertName>.pem --key <KeyName>.pem
+azurite --cert <CertName>.pem --key <CertName>-key.pem
 ```
 
 #### PFX
