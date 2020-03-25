@@ -378,7 +378,7 @@ mkcert <CertName>
 
 This will output the location of the generated cert and key files in pem format.
 
-When you start Azurite, pass those files to the `--cert` and `--key` parameters as follows in Bash:
+Finally, start Azurite with cert and key:
 
 ```bash
 azurite --cert <CertName>.pem --key <CertName>-key.pem
@@ -400,7 +400,7 @@ dotnet dev-certs https -ep <CertName>.pfx -p <YourPassword>
 
 This will output the generated cert files in pfx format.
 
-When you start Azurite, pass those files to the `--cert` and `--pwd` parameters as follows in Bash:
+Finally, start Azurite with cert and password:
 
 ```bash
 azurite --cert <CertName>.pfx --pwd <YourPassword>
