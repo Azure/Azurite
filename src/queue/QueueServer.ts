@@ -60,8 +60,8 @@ export default class QueueServer extends ServerBase {
     let httpServer;
     let certOption = configuration.hasCert();
     switch (certOption) {
-      case CertOptions.MkCert:
-      case CertOptions.DevCert:
+      case CertOptions.PEM:
+      case CertOptions.PFX:
         httpServer = https.createServer(configuration.getCert(certOption)!);
         break;
       default:

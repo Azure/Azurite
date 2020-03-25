@@ -355,37 +355,55 @@ set AZURITE_ACCOUNTS="account1:key1:key2;account2:key1:key2"
 
 ### HTTPS Setup
 
-#### Mkcert
+#### PEM
 
-You can generate a local certificate for 127.0.0.1 with `mkcert`. See the mkcert GitHub repo for [installation instructions](https://github.com/FiloSottile/mkcert), and then run the following commands.
+First, you need download `choco` by run the following commands in PowerShell.
+
+```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+```
+
+When choco is installed, download `mkcert` with choco in Bash.
+
+```bash
+choco install mkcert
+```
+
+Then, You can generate a local certificate for 127.0.0.1 with `mkcert`. and run the following commands in Bash.
 
 ```bash
 mkcert -install
-mkcert 127.0.0.1
+mkcert azurite
 ```
 
 This will output the location of the generated cert and key files in pem format.
 
-When you start Azurite, pass those files to the `--cert` and `--key` parameters as follows:
+When you start Azurite, pass those files to the `--cert` and `--key` parameters as follows in Bash:
 
 ```bash
-azurite --cert 127.0.0.1.pem --key 127.0.0.1-key.pem
+azurite --cert azurite.pem --key azurite-key.pem
 ```
 
-#### Dotnet dev-certs
+#### PFX
 
-You can generate a local certificate for localhost with `dotnet dev-certs`. See the [blob](https://www.hanselman.com/blog/DevelopingLocallyWithASPNETCoreUnderHTTPSSSLAndSelfSignedCerts.aspx) for detail, and then run the following commands.
+First, you need install [the dotnet-install scripts](https://dot.net/v1/dotnet-install.ps1). Then, use the following command to install the current release of .NET Core in PowerShell.
+
+```powershell
+dotnet-install.ps1 -Channel Current
+```
+
+You can generate a local certificate for localhost with `dotnet dev-certs`. See the [blob](https://www.hanselman.com/blog/DevelopingLocallyWithASPNETCoreUnderHTTPSSSLAndSelfSignedCerts.aspx) for detail, and then run the following commands in Bash.
 
 ```bash
-dotnet dev-certs https -ep 127.0.0.1.pfx -p <your password>
+dotnet dev-certs https -ep azurite.pfx -p <your password>
 ```
 
 This will output the generated cert files in pfx format.
 
-When you start Azurite, pass those files to the `--cert` and `--pwd` parameters as follows:
+When you start Azurite, pass those files to the `--cert` and `--pwd` parameters as follows in Bash:
 
 ```bash
-azurite --cert 127.0.0.1.pfx --pwd <your password>
+azurite --cert azurite.pfx --pwd <your password>
 ```
 
 ### Connection String

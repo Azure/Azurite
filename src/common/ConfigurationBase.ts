@@ -2,8 +2,8 @@ const fs = require("fs");
 
 export enum CertOptions {
   Default,
-  MkCert,
-  DevCert
+  PEM,
+  PFX
 }
 
 export default abstract class ConfigurationBase {
@@ -22,10 +22,10 @@ export default abstract class ConfigurationBase {
 
   public hasCert() {
     if (this.cert.length > 0 && this.key.length > 0) {
-      return CertOptions.MkCert;
+      return CertOptions.PEM;
     }
     if (this.cert.length > 0 && this.pwd.toString().length > 0) {
-      return CertOptions.DevCert;
+      return CertOptions.PFX;
     }
 
     return CertOptions.Default;
@@ -33,12 +33,12 @@ export default abstract class ConfigurationBase {
 
   public getCert(option: any) {
     switch (option) {
-      case CertOptions.MkCert:
+      case CertOptions.PEM:
         return {
           cert: fs.readFileSync(this.cert),
           key: fs.readFileSync(this.key)
         };
-      case CertOptions.DevCert:
+      case CertOptions.PFX:
         return {
           pfx: fs.readFileSync(this.cert),
           passphrase: this.pwd.toString()
