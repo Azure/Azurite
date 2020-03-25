@@ -373,7 +373,7 @@ Then, You can generate a local certificate for 127.0.0.1 with `mkcert`. and run 
 
 ```bash
 mkcert -install
-mkcert azurite
+mkcert <CertName>
 ```
 
 This will output the location of the generated cert and key files in pem format.
@@ -381,7 +381,7 @@ This will output the location of the generated cert and key files in pem format.
 When you start Azurite, pass those files to the `--cert` and `--key` parameters as follows in Bash:
 
 ```bash
-azurite --cert azurite.pem --key azurite-key.pem
+azurite --cert <CertName>.pem --key <KeyName>.pem
 ```
 
 #### PFX
@@ -395,7 +395,7 @@ dotnet-install.ps1 -Channel Current
 You can generate a local certificate for localhost with `dotnet dev-certs`. See the [blob](https://www.hanselman.com/blog/DevelopingLocallyWithASPNETCoreUnderHTTPSSSLAndSelfSignedCerts.aspx) for detail, and then run the following commands in Bash.
 
 ```bash
-dotnet dev-certs https -ep azurite.pfx -p <your password>
+dotnet dev-certs https -ep <CertName>.pfx -p <YourPassword>
 ```
 
 This will output the generated cert files in pfx format.
@@ -403,7 +403,7 @@ This will output the generated cert files in pfx format.
 When you start Azurite, pass those files to the `--cert` and `--pwd` parameters as follows in Bash:
 
 ```bash
-azurite --cert azurite.pfx --pwd <your password>
+azurite --cert <CertName>.pfx --pwd <YourPassword>
 ```
 
 ### Connection String
