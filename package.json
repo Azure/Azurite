@@ -23,7 +23,6 @@
     "args": "^5.0.1",
     "etag": "^1.8.1",
     "express": "^4.16.4",
-    "fs": "0.0.1-security",
     "lokijs": "^1.5.6",
     "morgan": "^1.9.1",
     "multistream": "^2.1.1",
