@@ -1,5 +1,4 @@
 import express from "express";
-import morgan = require("morgan");
 
 import IAccountDataStore from "../common/IAccountDataStore";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
@@ -9,6 +8,7 @@ import { RequestListener } from "../common/ServerBase";
 import AccountSASAuthenticator from "./authentication/AccountSASAuthenticator";
 import BlobSASAuthenticator from "./authentication/BlobSASAuthenticator";
 import BlobSharedKeyAuthenticator from "./authentication/BlobSharedKeyAuthenticator";
+import BlobTokenAuthenticator from "./authentication/BlobTokenAuthenticator";
 import PublicAccessAuthenticator from "./authentication/PublicAccessAuthenticator";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
 import IHandlers from "./generated/handlers/IHandlers";
@@ -29,7 +29,8 @@ import StrictModelMiddlewareFactory, {
 } from "./middlewares/StrictModelMiddlewareFactory";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import { DEFAULT_CONTEXT_PATH } from "./utils/constants";
-import BlobTokenAuthenticator from "./authentication/BlobTokenAuthenticator";
+
+import morgan = require("morgan");
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -118,7 +119,7 @@ export default class BlobRequestListenerFactory
       app.use(morgan("common", { stream: this.accessLogWriteStream }));
     }
 
-    // Manually created middleware to deserialize feature related context which swagger doesn't know
+    // Manually created middleware to deserialize feature related context which swagger doesn"t know
     app.use(blobStorageContextMiddleware);
 
     // Dispatch incoming HTTP request to specific operation
