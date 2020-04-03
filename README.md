@@ -357,28 +357,7 @@ set AZURITE_ACCOUNTS="account1:key1:key2;account2:key1:key2"
 
 #### PEM
 
-First, you need download `choco` by run the following commands in PowerShell.
-
-```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-```
-
-When choco is installed, download `mkcert` with choco in Bash.
-
-```bash
-choco install mkcert
-```
-
-Then, You can generate a local certificate with `mkcert`. and run the following commands in Bash.
-
-```bash
-mkcert -install
-mkcert <CertName>
-```
-
-This will output the location of the generated cert and key files in pem format.
-
-Finally, start Azurite with cert and key:
+You first need to generate a PEM file to use with Azurite. Once you have the file, you can start Azurite with the `--cert` and `--key` options:
 
 ```bash
 azurite --cert <CertName>.pem --key <CertName>-key.pem
@@ -386,24 +365,16 @@ azurite --cert <CertName>.pem --key <CertName>-key.pem
 
 #### PFX
 
-First, you need install [the dotnet-install scripts](https://dot.net/v1/dotnet-install.ps1). Then, use the following command to install the current release of .NET Core in PowerShell.
-
-```powershell
-dotnet-install.ps1 -Channel Current
-```
-
-You can generate a local certificate for localhost with `dotnet dev-certs`. See the [blob](https://www.hanselman.com/blog/DevelopingLocallyWithASPNETCoreUnderHTTPSSSLAndSelfSignedCerts.aspx) for detail, and then run the following commands in Bash.
-
-```bash
-dotnet dev-certs https -ep <CertName>.pfx -p <YourPassword>
-```
-
-This will output the generated cert files in pfx format.
-
-Finally, start Azurite with cert and password:
+You first need to generate a PFX file to use with Azurite. Once you have the file, you can start Azurite with the `--cert` and `--pwd` options:
 
 ```bash
 azurite --cert <CertName>.pfx --pwd <YourPassword>
+```
+
+You could use the following command to generate a PFX file with `dotnet dev-certs`, which is installed with the [.NET Core SDK](https://dotnet.microsoft.com/download).
+
+```bash
+dotnet dev-certs https -ep <CertName>.pfx -p <YourPassword>
 ```
 
 ### Connection String
@@ -448,7 +419,7 @@ Connect to Azurite by click "Add Account" icon, then select "Attach to a local e
 
 #### Storage Explorer with HTTPS
 
-Storage Explorer is a Node.js application that does not work with local CA, so if you are using a local CA, like what you get with `mkcert`, then you need to set the following environment variable.
+NOTE: Storage Explorer is a Node.js application that does not work with a local CA, so if you are using a local CA, then you need to set the following environment variable.
 
 ```
 NODE_TLS_REJECT_UNAUTHORIZED=0
