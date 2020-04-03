@@ -37,6 +37,7 @@
     "xml2js": "^0.4.19"
   },
   "devDependencies": {
+    "@types/validator": "^10.11.3",
     "@azure/storage-blob": "^10.4.1",
     "@azure/storage-queue": "^10.2.0",
     "@types/args": "^3.0.0",
@@ -52,7 +53,6 @@
     "@types/rimraf": "^2.0.2",
     "@types/uri-templates": "^0.1.29",
     "@types/uuid": "^3.4.4",
-    "@types/validator": "^10.11.3",
     "@types/vscode": "^1.39.0",
     "@types/xml2js": "^0.4.3",
     "autorest": "^2.0.4283",
@@ -156,6 +156,11 @@
             "type": "string",
             "default": "",
             "description": "Locally-trusted key file"
+          },
+          "azurite.pwd": {
+            "type": "string",
+            "default": "",
+            "description": "Password for pfx file"
           },
           "azurite.location": {
             "type": "string",

@@ -69,7 +69,8 @@ export class BlobServerFactory {
           debugFilePath,
           env.loose(),
           env.cert(),
-          env.key()
+          env.key(),
+          env.pwd()
         );
         return new BlobServer(config);
       }

@@ -41,8 +41,9 @@ args
     ["L", "loose"],
     "Optional. Enable loose mode which ignores unsupported headers and parameters"
   )
-  .option(["", "cert"], "Optional. Path to certificate .pem file.")
+  .option(["", "cert"], "Optional. Path to certificate file.")
   .option(["", "key"], "Optional. Path to certificate key .pem file.")
+  .option(["", "pwd"], "Optional. Password for .pfx file.")
   .option(
     ["d", "debug"],
     "Optional. Enable debug log by providing a valid local file path as log destination"
@@ -94,6 +95,10 @@ export default class Environment implements IEnvironment {
 
   public key(): string | undefined {
     return this.flags.key;
+  }
+
+  public pwd(): string | undefined {
+    return this.flags.pwd;
   }
 
   public async debug(): Promise<string | undefined> {

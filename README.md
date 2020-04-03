@@ -355,19 +355,26 @@ set AZURITE_ACCOUNTS="account1:key1:key2;account2:key1:key2"
 
 ### HTTPS Setup
 
-You can generate a local certificate for 127.0.0.1 with `mkcert`. See the mkcert GitHub repo for [installation instructions](https://github.com/FiloSottile/mkcert), and then run the following commands.
+#### PEM
+
+You first need to generate a PEM file to use with Azurite. Once you have the file, you can start Azurite with the `--cert` and `--key` options:
 
 ```bash
-mkcert -install
-mkcert 127.0.0.1
+azurite --cert <CertName>.pem --key <CertName>-key.pem
 ```
 
-This will output the location of the generated cert and key files in pem format.
+#### PFX
 
-When you start Azurite, pass those files to the `--cert` and `--key` parameters as follows:
+You first need to generate a PFX file to use with Azurite. Once you have the file, you can start Azurite with the `--cert` and `--pwd` options:
 
 ```bash
-azurite --cert 127.0.0.1.pem --key 127.0.0.1-key.pem
+azurite --cert <CertName>.pfx --pwd <YourPassword>
+```
+
+You could use the following command to generate a PFX file with `dotnet dev-certs`, which is installed with the [.NET Core SDK](https://dotnet.microsoft.com/download).
+
+```bash
+dotnet dev-certs https -ep <CertName>.pfx -p <YourPassword>
 ```
 
 ### Connection String
@@ -412,7 +419,7 @@ Connect to Azurite by click "Add Account" icon, then select "Attach to a local e
 
 #### Storage Explorer with HTTPS
 
-Storage Explorer is a Node.js application that does not work with local CA, so if you are using a local CA, like what you get with `mkcert`, then you need to set the following environment variable.
+NOTE: Storage Explorer is a Node.js application that does not work with a local CA, so if you are using a local CA, then you need to set the following environment variable.
 
 ```
 NODE_TLS_REJECT_UNAUTHORIZED=0
