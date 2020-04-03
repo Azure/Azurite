@@ -1,4 +1,4 @@
-const fs = require("fs");
+import * as fs from "fs";
 
 export enum CertOptions {
   Default,
@@ -49,7 +49,7 @@ export default abstract class ConfigurationBase {
   }
 
   public getHttpServerAddress(): string {
-    return `http${this.hasCert() == CertOptions.Default ? "" : "s"}://${
+    return `http${this.hasCert() === CertOptions.Default ? "" : "s"}://${
       this.host
     }:${this.port}`;
   }

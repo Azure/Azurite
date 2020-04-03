@@ -2,6 +2,7 @@ import * as http from "http";
 import * as https from "https";
 
 import AccountDataStore from "../common/AccountDataStore";
+import { CertOptions } from "../common/ConfigurationBase";
 import IAccountDataStore from "../common/IAccountDataStore";
 import ICleaner from "../common/ICleaner";
 import IGCManager from "../common/IGCManager";
@@ -17,7 +18,6 @@ import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
 import BlobGCManager from "./gc/BlobGCManager";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import LokiBlobMetadataStore from "./persistence/LokiBlobMetadataStore";
-import { CertOptions } from "../common/ConfigurationBase";
 
 const BEFORE_CLOSE_MESSAGE = `Azurite Blob service is closing...`;
 const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Blob service is closing... Critical error happens during GC.`;
@@ -59,7 +59,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
 
     // We can create a HTTP server or a HTTPS server here
     let httpServer;
-    let certOption = configuration.hasCert();
+    const certOption = configuration.hasCert();
     switch (certOption) {
       case CertOptions.PEM:
       case CertOptions.PFX:

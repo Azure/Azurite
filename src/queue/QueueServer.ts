@@ -2,6 +2,7 @@ import * as http from "http";
 import * as https from "https";
 
 import AccountDataStore from "../common/AccountDataStore";
+import { CertOptions } from "../common/ConfigurationBase";
 import IAccountDataStore from "../common/IAccountDataStore";
 import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
@@ -16,7 +17,6 @@ import IQueueMetadataStore from "./persistence/IQueueMetadataStore";
 import LokiQueueMetadataStore from "./persistence/LokiQueueMetadataStore";
 import QueueConfiguration from "./QueueConfiguration";
 import QueueRequestListenerFactory from "./QueueRequestListenerFactory";
-import { CertOptions } from "../common/ConfigurationBase";
 
 const BEFORE_CLOSE_MESSAGE = `Azurite Queue service is closing...`;
 const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Queue service is closing... Critical error happens during GC.`;
@@ -58,7 +58,7 @@ export default class QueueServer extends ServerBase {
 
     // We can create a HTTP server or a HTTPS server here
     let httpServer;
-    let certOption = configuration.hasCert();
+    const certOption = configuration.hasCert();
     switch (certOption) {
       case CertOptions.PEM:
       case CertOptions.PFX:
