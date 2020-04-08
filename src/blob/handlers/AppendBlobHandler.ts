@@ -101,7 +101,6 @@ export default class AppendBlobHandler extends BaseHandler
     options: Models.AppendBlobAppendBlockOptionalParams,
     context: Context
   ): Promise<Models.AppendBlobAppendBlockResponse> {
-    // TODO: Check Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
@@ -109,7 +108,6 @@ export default class AppendBlobHandler extends BaseHandler
     const date = blobCtx.startTime!;
 
     if (contentLength > MAX_APPEND_BLOB_BLOCK_SIZE) {
-      // TODO: Check error msg
       throw StorageErrorFactory.getRequestEntityTooLarge(blobCtx.contextId);
     }
 
@@ -136,7 +134,6 @@ export default class AppendBlobHandler extends BaseHandler
     if (
       (blob.committedBlocksInOrder || []).length >= MAX_APPEND_BLOB_BLOCK_COUNT
     ) {
-      // TODO: Check error msg
       throw StorageErrorFactory.getBlockCountExceedsLimit(blobCtx.contextId);
     }
 

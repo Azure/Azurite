@@ -37,7 +37,7 @@ export default class StorageErrorFactory {
     return new StorageError(
       409,
       "BlockCountExceedsLimit",
-      "Block count exceeds limit.",
+      "The committed block count cannot exceed the maximum limit of 50,000 blocks.",
       contextID
     );
   }
