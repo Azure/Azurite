@@ -119,7 +119,7 @@ export default class BlobRequestListenerFactory
       app.use(morgan("common", { stream: this.accessLogWriteStream }));
     }
 
-    // Manually created middleware to deserialize feature related context which swagger doesn't know
+    // Manually created middleware to deserialize feature related context which swagger doesn"t know
     app.use(blobStorageContextMiddleware);
 
     // Dispatch incoming HTTP request to specific operation
