@@ -103,12 +103,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     );
 
     if (blob.properties.blobType === Models.BlobType.BlockBlob) {
-      return this.downloadBlockBlob(options, context, blob);
+      return this.downloadBlockBlobOrAppendBlob(options, context, blob);
     } else if (blob.properties.blobType === Models.BlobType.PageBlob) {
       return this.downloadPageBlob(options, context, blob);
     } else if (blob.properties.blobType === Models.BlobType.AppendBlob) {
-      // TODO: Handle append blob
-      throw new NotImplementedError(context.contextId);
+      return this.downloadBlockBlobOrAppendBlob(options, context, blob);
     } else {
       throw StorageErrorFactory.getInvalidOperation(context.contextId!);
     }
@@ -164,7 +163,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           version: BLOB_API_VERSION,
           date: context.startTime,
           acceptRanges: "bytes",
-          blobCommittedBlockCount: undefined, // TODO: Append blob
+          blobCommittedBlockCount:
+            res.properties.blobType === Models.BlobType.AppendBlob
+              ? res.blobCommittedBlockCount
+              : undefined,
           isServerEncrypted: true,
           clientRequestId: options.requestId,
           ...res.properties
@@ -792,7 +794,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * Download block blob.
+   * Download block blob or append blob.
    *
    * @private
    * @param {Models.BlobDownloadOptionalParams} options
@@ -801,7 +803,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
    * @returns {Promise<Models.BlobDownloadResponse>}
    * @memberof BlobHandler
    */
-  private async downloadBlockBlob(
+  private async downloadBlockBlobOrAppendBlob(
     options: Models.BlobDownloadOptionalParams,
     context: Context,
     blob: BlobModel
@@ -828,7 +830,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     this.logger.info(
       // tslint:disable-next-line:max-line-length
-      `BlobHandler:downloadBlockBlob() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
+      `BlobHandler:downloadBlockBlobOrAppendBlob() NormalizedDownloadRange=bytes=${rangeStart}-${rangeEnd} RequiredContentLength=${contentLength}`,
       context.contextId
     );
 
@@ -892,11 +894,16 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       version: BLOB_API_VERSION,
       ...blob.properties,
       blobContentMD5: blob.properties.contentMD5,
+      acceptRanges: "bytes",
       contentLength,
       contentRange,
       contentMD5,
       isServerEncrypted: true,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      blobCommittedBlockCount:
+        blob.properties.blobType === Models.BlobType.AppendBlob
+          ? (blob.committedBlocksInOrder || []).length
+          : undefined
     };
 
     return response;

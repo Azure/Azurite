@@ -235,7 +235,9 @@ OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
 );
 OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
   Operation.AppendBlob_AppendBlock,
-  new OperationBlobSASPermission(BlobSASPermission.Add)
+  new OperationBlobSASPermission(
+    BlobSASPermission.Add + BlobSASPermission.Write
+  )
 );
 OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
   Operation.BlockBlob_Upload,
@@ -476,7 +478,9 @@ OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.AppendBlob_AppendBlock,
-  new OperationBlobSASPermission(BlobSASPermission.Add)
+  new OperationBlobSASPermission(
+    BlobSASPermission.Add + BlobSASPermission.Write
+  )
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.BlockBlob_Upload,

@@ -2,6 +2,10 @@
 
 > Note. This file includes changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
+## 2020.04 Version 3.7.0
+
+- Supported append blob.
+
 ## 2020.03 Version 3.6.0
 
 - Supported conditional headers.

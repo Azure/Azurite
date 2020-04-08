@@ -20,6 +20,28 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getRequestEntityTooLarge(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      413,
+      "RequestEntityTooLarge",
+      "The uploaded entity blob is too large.",
+      contextID
+    );
+  }
+
+  public static getBlockCountExceedsLimit(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      409,
+      "BlockCountExceedsLimit",
+      "Block count exceeds limit.",
+      contextID
+    );
+  }
+
   public static getContainerAlreadyExists(
     contextID: string = DefaultID
   ): StorageError {
@@ -128,6 +150,23 @@ export default class StorageErrorFactory {
       "InvalidBlockList",
       "The specified block list is invalid.",
       contextID
+    );
+  }
+
+  public static getMd5Mismatch(
+    contextID: string = DefaultID,
+    userSpecifiedMd5: string,
+    serverCalculatedMd5: string
+  ): StorageError {
+    return new StorageError(
+      400,
+      "Md5Mismatch",
+      "The MD5 value specified in the request did not match with the MD5 value calculated by the server.",
+      contextID,
+      {
+        UserSpecifiedMd5: userSpecifiedMd5,
+        ServerCalculatedMd5: serverCalculatedMd5
+      }
     );
   }
 
@@ -356,7 +395,9 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getBlobInvalidBlobType(contextID: string): StorageError {
+  public static getBlobInvalidBlobType(
+    contextID: string = DefaultID
+  ): StorageError {
     return new StorageError(
       409,
       "InvalidBlobType",
@@ -516,6 +557,28 @@ export default class StorageErrorFactory {
       412,
       "ConditionNotMet",
       "The condition specified using HTTP conditional header(s) is not met.",
+      contextID
+    );
+  }
+
+  public static getMaxBlobSizeConditionNotMet(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      412,
+      "MaxBlobSizeConditionNotMet",
+      "The max blob size condition specified was not met.",
+      contextID
+    );
+  }
+
+  public static getAppendPositionConditionNotMet(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      412,
+      "AppendPositionConditionNotMet",
+      "The append position condition specified was not met.",
       contextID
     );
   }

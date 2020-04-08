@@ -114,3 +114,6 @@ export const ValidAPIVersions = [
   "2009-07-17",
   "2009-04-14"
 ];
+
+export const MAX_APPEND_BLOB_BLOCK_SIZE = 4 * 1024 * 1024; // 4MB
+export const MAX_APPEND_BLOB_BLOCK_COUNT = 50000;
