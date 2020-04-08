@@ -1,6 +1,8 @@
 import * as http from "http";
+import * as https from "https";
 
 import AccountDataStore from "../common/AccountDataStore";
+import { CertOptions } from "../common/ConfigurationBase";
 import IAccountDataStore from "../common/IAccountDataStore";
 import ICleaner from "../common/ICleaner";
 import IGCManager from "../common/IGCManager";
@@ -55,8 +57,17 @@ export default class BlobServer extends ServerBase implements ICleaner {
     const host = configuration.host;
     const port = configuration.port;
 
-    // We can crate a HTTP server or a HTTPS server here
-    const httpServer = http.createServer();
+    // We can create a HTTP server or a HTTPS server here
+    let httpServer;
+    const certOption = configuration.hasCert();
+    switch (certOption) {
+      case CertOptions.PEM:
+      case CertOptions.PFX:
+        httpServer = https.createServer(configuration.getCert(certOption)!);
+        break;
+      default:
+        httpServer = http.createServer();
+    }
 
     // We can change the persistency layer implementation by
     // creating a new XXXDataStore class implementing IBlobMetadataStore interface

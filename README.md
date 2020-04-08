@@ -353,9 +353,33 @@ Or customize multi storage accounts and each has 2 keys:
 set AZURITE_ACCOUNTS="account1:key1:key2;account2:key1:key2"
 ```
 
+### HTTPS Setup
+
+#### PEM
+
+You first need to generate a PEM file to use with Azurite. Once you have the file, you can start Azurite with the `--cert` and `--key` options:
+
+```bash
+azurite --cert <CertName>.pem --key <CertName>-key.pem
+```
+
+#### PFX
+
+You first need to generate a PFX file to use with Azurite. Once you have the file, you can start Azurite with the `--cert` and `--pwd` options:
+
+```bash
+azurite --cert <CertName>.pfx --pwd <YourPassword>
+```
+
+You could use the following command to generate a PFX file with `dotnet dev-certs`, which is installed with the [.NET Core SDK](https://dotnet.microsoft.com/download).
+
+```bash
+dotnet dev-certs https -ep <CertName>.pfx -p <YourPassword>
+```
+
 ### Connection String
 
-Typically you can pass following connection strings to SDKs or tools (like Azure CLI2.0 or Storage Explorer)
+Typically you can pass following connection strings to SDKs or tools (like Azure CLI 2.0 or Storage Explorer)
 
 The full connection string is:
 
@@ -375,9 +399,46 @@ Or if the SDK or tools support following short connection string:
 UseDevelopmentStorage=true;
 ```
 
+#### HTTPS
+
+The full https connection string is:
+
+```
+DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://127.0.0.1:10000/devstoreaccount1;QueueEndpoint=https://127.0.0.1:10001/devstoreaccount1;
+```
+
+Take blob service only, the https connection string is:
+
+```
+DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://127.0.0.1:10000/devstoreaccount1;
+```
+
 ### Storage Explorer
 
 Connect to Azurite by click "Add Account" icon, then select "Attach to a local emulator" and click "Connect".
+
+#### Storage Explorer with HTTPS
+
+NOTE: Storage Explorer is a Node.js application that does not work with a local CA, so if you are using a local CA, then you need to set the following environment variable.
+
+```
+NODE_TLS_REJECT_UNAUTHORIZED=0
+```
+
+If you do not set this, then you will get the following error:
+
+```
+unable to verify the first certificate.
+```
+
+Follow these steps to add the HTTPS endpoints to Storage Explorer:
+
+1. Right click on Local & Attached->Storage Accounts and select "Connect to Azure Storage...".
+2. Select "Use a connection string" and click Next.
+3. Enter a name, i.e https.
+4. Enter the HTTPS connection string from the previous section of this document and click Next.
+
+You can now explore the Azurite HTTPS endpoints with Storage Explorer.
 
 ## Workspace Structure
 

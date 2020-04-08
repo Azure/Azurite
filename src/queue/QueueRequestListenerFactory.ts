@@ -1,5 +1,4 @@
 import express from "express";
-import morgan = require("morgan");
 
 import IAccountDataStore from "../common/IAccountDataStore";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
@@ -9,6 +8,7 @@ import { RequestListener } from "../common/ServerBase";
 import AccountSASAuthenticator from "./authentication/AccountSASAuthenticator";
 import QueueSASAuthenticator from "./authentication/QueueSASAuthenticator";
 import QueueSharedKeyAuthenticator from "./authentication/QueueSharedKeyAuthenticator";
+import QueueTokenAuthenticator from "./authentication/QueueTokenAuthenticator";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
 import IHandlers from "./generated/handlers/IHandlers";
 import MiddlewareFactory from "./generated/MiddlewareFactory";
@@ -21,6 +21,8 @@ import PreflightMiddlewareFactory from "./middlewares/PreflightMiddlewareFactory
 import queueStorageContextMiddleware from "./middlewares/queueStorageContext.middleware";
 import { IQueueMetadataStore } from "./persistence/IQueueMetadataStore";
 import { DEFAULT_QUEUE_CONTEXT_PATH } from "./utils/constants";
+
+import morgan = require("morgan");
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -103,7 +105,8 @@ export default class QueueRequestListenerFactory
           this.accountDataStore,
           this.metadataStore,
           logger
-        )
+        ),
+        new QueueTokenAuthenticator(this.accountDataStore, logger)
       ])
     );
 

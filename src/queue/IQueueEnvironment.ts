@@ -4,5 +4,8 @@ export default interface IQueueEnvironment {
   location(): Promise<string>;
   silent(): boolean;
   loose(): boolean;
+  cert(): string | undefined;
+  key(): string | undefined;
+  pwd(): string | undefined;
   debug(): Promise<string | boolean | undefined>;
 }
