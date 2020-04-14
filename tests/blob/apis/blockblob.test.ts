@@ -178,6 +178,47 @@ describe("BlockBlobAPIs", () => {
     );
   });
 
+  it("stageBlock with double commit block should work @loki @sql", async () => {
+    const body = "HelloWorld";
+
+    await blockBlobURL.stageBlock(
+      Aborter.none,
+      base64encode("1"),
+      body,
+      body.length
+    );
+
+    await blockBlobURL.stageBlock(
+      Aborter.none,
+      base64encode("1"),
+      body,
+      body.length
+    );
+
+    const listBlobResponse = await containerURL.listBlobFlatSegment(
+      Aborter.none,
+      undefined,
+      { include: ["uncommittedblobs"] }
+    );
+    assert.equal(listBlobResponse.segment.blobItems.length, 1);
+    assert.deepStrictEqual(
+      listBlobResponse.segment.blobItems[0].properties.contentLength,
+      0
+    );
+
+    const listResponse = await blockBlobURL.getBlockList(
+      Aborter.none,
+      "uncommitted"
+    );
+    assert.equal(listResponse.uncommittedBlocks!.length, 1);
+    assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("1"));
+    assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
+    assert.equal(
+      listResponse._response.request.headers.get("x-ms-client-request-id"),
+      listResponse.clientRequestId
+    );
+  });
+
   it("commitBlockList @loki @sql", async () => {
     const body = "HelloWorld";
     await blockBlobURL.stageBlock(

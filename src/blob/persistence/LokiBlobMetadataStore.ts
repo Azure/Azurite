@@ -2110,10 +2110,10 @@ export default class LokiBlobMetadataStore
 
     if (blockDoc) {
       coll.remove(blockDoc);
-    } else {
-      delete (block as any).$loki;
-      coll.insert(block);
     }
+
+    delete (block as any).$loki;
+    coll.insert(block);
   }
 
   public async appendBlock(
