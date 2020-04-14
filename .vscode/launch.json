@@ -38,9 +38,9 @@
         "${workspaceFolder}/src/azurite.ts",
         "-L",
         "--cert",
-        "C:\\temp\\sslsite\\127.0.0.1.pem",
+        "${workspaceFolder}/tests/server.cert",
         "--key",
-        "C:\\temp\\sslsite\\127.0.0.1-key.pem"
+        "${workspaceFolder}/tests/server.key"
       ],
       "env": {
         "AZURITE_ACCOUNTS": ""
@@ -109,7 +109,8 @@
         "${workspaceFolder}/${relativeFile}"
       ],
       "env": {
-        "AZURITE_ACCOUNTS": ""
+        "AZURITE_ACCOUNTS": "",
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
       },
       "internalConsoleOptions": "openOnSessionStart",
       "outputCapture": "std"
@@ -131,7 +132,8 @@
       ],
       "env": {
         "AZURITE_ACCOUNTS": "",
-        "AZURITE_TEST_DB": "mysql://root:my-secret-pw@127.0.0.1:3306/azurite_blob_test"
+        "AZURITE_TEST_DB": "mysql://root:my-secret-pw@127.0.0.1:3306/azurite_blob_test",
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
       },
       "internalConsoleOptions": "openOnSessionStart",
       "outputCapture": "std"
