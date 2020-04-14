@@ -49,7 +49,10 @@ async function main() {
     undefined,
     (await env.debug()) !== undefined,
     await env.debug(),
-    env.loose()
+    env.loose(),
+    env.cert(),
+    env.key(),
+    env.pwd()
   );
 
   // We use logger singleton as global debugger logger to track detailed outputs cross layers

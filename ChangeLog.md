@@ -4,6 +4,10 @@
 
 ## 2020.04 Version 3.7.0
 
+- Supported HTTPS endpoint.
+
+Blob:
+
 - Supported append blob.
 - Fixed a bug that stageBlock retry will remove existing block in Loki based implementation.
 
