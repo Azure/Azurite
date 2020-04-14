@@ -145,6 +145,7 @@ export type BlobModel = IBlobAdditionalProperties &
 interface IGetBlobPropertiesRes {
   properties: Models.BlobProperties;
   metadata?: Models.BlobMetadata;
+  blobCommittedBlockCount?: number; // AppendBlobOnly
 }
 export type GetBlobPropertiesRes = IGetBlobPropertiesRes;
 
@@ -853,6 +854,25 @@ export interface IBlobMetadataStore
     block: BlockModel,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<void>;
+
+  /**
+   * Append block to an append blob.
+   *
+   * @param {Context} context
+   * @param {BlockModel} block
+   * @param {Models.LeaseAccessConditions} [leaseAccessConditions]
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @param {Models.AppendPositionAccessConditions} [appendPositionAccessConditions]
+   * @returns {Promise<Models.BlobProperties>}
+   * @memberof IBlobMetadataStore
+   */
+  appendBlock(
+    context: Context,
+    block: BlockModel,
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    appendPositionAccessConditions?: Models.AppendPositionAccessConditions
+  ): Promise<Models.BlobProperties>;
 
   /**
    * Commit block list for a blob.

@@ -29,7 +29,8 @@ import { ILease } from "../lease/ILeaseState";
 import LeaseFactory from "../lease/LeaseFactory";
 import {
   DEFAULT_LIST_BLOBS_MAX_RESULTS,
-  DEFAULT_LIST_CONTAINERS_MAX_RESULTS
+  DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
+  MAX_APPEND_BLOB_BLOCK_COUNT
 } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
@@ -1208,7 +1209,14 @@ export default class LokiBlobMetadataStore
       context
     );
 
-    return { properties: doc.properties, metadata: doc.metadata };
+    return {
+      properties: doc.properties,
+      metadata: doc.metadata,
+      blobCommittedBlockCount:
+        doc.properties.blobType === Models.BlobType.AppendBlob
+          ? (doc.committedBlocksInOrder || []).length
+          : undefined
+    };
   }
 
   /**
@@ -2063,6 +2071,10 @@ export default class LokiBlobMetadataStore
       };
       blobColl.insert(newBlob);
     } else {
+      if (blobDoc.properties.blobType !== Models.BlobType.BlockBlob) {
+        throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId);
+      }
+
       LeaseFactory.createLeaseState(new BlobLeaseAdapter(blobDoc), context)
         .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
         .sync(new BlobWriteLeaseSyncer(blobDoc));
@@ -2102,6 +2114,78 @@ export default class LokiBlobMetadataStore
       delete (block as any).$loki;
       coll.insert(block);
     }
+  }
+
+  public async appendBlock(
+    context: Context,
+    block: BlockModel,
+    leaseAccessConditions: Models.LeaseAccessConditions = {},
+    modifiedAccessConditions: Models.ModifiedAccessConditions = {},
+    appendPositionAccessConditions: Models.AppendPositionAccessConditions = {}
+  ): Promise<Models.BlobProperties> {
+    const doc = await this.getBlobWithLeaseUpdated(
+      block.accountName,
+      block.containerName,
+      block.blobName,
+      undefined,
+      context,
+      false,
+      true
+    );
+
+    validateWriteConditions(context, modifiedAccessConditions, doc);
+
+    if (!doc) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }
+
+    new BlobWriteLeaseValidator(leaseAccessConditions).validate(
+      new BlobLeaseAdapter(doc),
+      context
+    );
+
+    if (doc.properties.blobType !== Models.BlobType.AppendBlob) {
+      throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId);
+    }
+
+    if (
+      (doc.committedBlocksInOrder || []).length >= MAX_APPEND_BLOB_BLOCK_COUNT
+    ) {
+      throw StorageErrorFactory.getBlockCountExceedsLimit(context.contextId);
+    }
+
+    if (appendPositionAccessConditions.appendPosition !== undefined) {
+      if (
+        (doc.properties.contentLength || 0) !==
+        appendPositionAccessConditions.appendPosition
+      ) {
+        throw StorageErrorFactory.getAppendPositionConditionNotMet(
+          context.contextId
+        );
+      }
+    }
+
+    if (appendPositionAccessConditions.maxSize !== undefined) {
+      if (
+        (doc.properties.contentLength || 0) + block.size >
+        appendPositionAccessConditions.maxSize
+      ) {
+        throw StorageErrorFactory.getMaxBlobSizeConditionNotMet(
+          context.contextId
+        );
+      }
+    }
+
+    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    doc.committedBlocksInOrder = doc.committedBlocksInOrder || [];
+    doc.committedBlocksInOrder.push(block);
+    doc.properties.etag = newEtag();
+    doc.properties.lastModified = context.startTime || new Date();
+    doc.properties.contentLength =
+      (doc.properties.contentLength || 0) + block.size;
+    coll.update(doc);
+
+    return doc.properties;
   }
 
   /**
@@ -2148,6 +2232,10 @@ export default class LokiBlobMetadataStore
 
     let lease: ILease | undefined;
     if (doc) {
+      if (doc.properties.blobType !== Models.BlobType.BlockBlob) {
+        throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId);
+      }
+
       lease = new BlobLeaseAdapter(doc);
       new BlobWriteLeaseValidator(leaseAccessConditions).validate(
         lease,
@@ -2301,6 +2389,10 @@ export default class LokiBlobMetadataStore
       context
     );
 
+    if (doc.properties.blobType !== Models.BlobType.BlockBlob) {
+      throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId);
+    }
+
     const res: {
       properties: Models.BlobProperties;
       uncommittedBlocks: Models.Block[];
@@ -2380,6 +2472,10 @@ export default class LokiBlobMetadataStore
 
     if (!doc) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }
+
+    if (doc.properties.blobType !== Models.BlobType.PageBlob) {
+      throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId);
     }
 
     const lease = new BlobLeaseAdapter(doc);
@@ -2503,6 +2599,10 @@ export default class LokiBlobMetadataStore
 
     if (!doc) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }
+
+    if (doc.properties.blobType !== Models.BlobType.PageBlob) {
+      throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId);
     }
 
     new BlobReadLeaseValidator(leaseAccessConditions).validate(

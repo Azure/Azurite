@@ -20,8 +20,6 @@ export const UnsupportedHeadersBlocker: StrictModelRequestValidator = async (
   logger: ILogger
 ): Promise<void> => {
   const UnsupportedHeaderKeys = [
-    HeaderConstants.X_MS_BLOB_CONDITION_MAXSIZE,
-    HeaderConstants.X_MS_BLOB_CONDITION_APPENDPOS,
     HeaderConstants.X_MS_CONTENT_CRC64,
     HeaderConstants.X_MS_RANGE_GET_CONTENT_CRC64,
     HeaderConstants.X_MS_ENCRYPTION_KEY,
