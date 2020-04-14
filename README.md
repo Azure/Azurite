@@ -363,6 +363,14 @@ You first need to generate a PEM file to use with Azurite. Once you have the fil
 azurite --cert <CertName>.pem --key <CertName>-key.pem
 ```
 
+You could use following command to generate a cert and key using openssl.
+
+```base
+openssl genrsa -out server.key 2048
+openssl req -new -x509 -key server.key -out server.cert -days 365
+azurite --cert server.cert --key server.key
+```
+
 #### PFX
 
 You first need to generate a PFX file to use with Azurite. Once you have the file, you can start Azurite with the `--cert` and `--pwd` options:
