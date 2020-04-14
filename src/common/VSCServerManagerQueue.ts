@@ -92,7 +92,10 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       this.accessChannelStream,
       (await env.debug()) === true,
       undefined,
-      env.loose()
+      env.loose(),
+      env.cert(),
+      env.key(),
+      env.pwd()
     );
     return config;
   }
