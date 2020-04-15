@@ -349,6 +349,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         timestamps: false,
         indexes: [
           {
+            unique: true,
             fields: ["accountName", "containerName", "blobName", "blockName"]
           }
         ]
