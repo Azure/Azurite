@@ -27,6 +27,22 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getInvalidHeaderValue(
+    contextID: string = "",
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    if (additionalMessages === undefined) {
+      additionalMessages = {};
+    }
+    return new StorageError(
+      400,
+      "InvalidHeaderValue",
+      "The value for one of the HTTP headers is not in the correct format.",
+      contextID,
+      additionalMessages
+    );
+  }
+
   public static getInvaidXmlDocument(
     contextID: string = defaultID
   ): StorageError {
@@ -60,6 +76,32 @@ export default class StorageErrorFactory {
       "InvalidUri",
       "The specifed resource name contains invalid characters.",
       contextID
+    );
+  }
+
+  public static getInvalidAuthenticationInfo(
+    contextID: string = defaultID
+  ): StorageError {
+    return new StorageError(
+      400,
+      "InvalidAuthenticationInfo",
+      "Authentication information is not given in the correct format. Check the value of Authorization header.",
+      contextID
+    );
+  }
+
+  public static getAuthenticationFailed(
+    contextID: string = defaultID,
+    authenticationErrorDetail: string
+  ): StorageError {
+    return new StorageError(
+      403,
+      "AuthenticationFailed",
+      "Server failed to authenticate the request. Make sure the value of the Authorization header is formed correctly including the signature.",
+      contextID,
+      {
+        AuthenticationErrorDetail: authenticationErrorDetail
+      }
     );
   }
 

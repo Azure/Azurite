@@ -3,7 +3,6 @@ import uuid from "uuid/v4";
 
 import logger from "../../common/Logger";
 import { PRODUCTION_STYLE_URL_HOSTNAME } from "../../common/utils/constants";
-import { checkApiVersion } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import {
@@ -13,6 +12,7 @@ import {
   ValidAPIVersions,
   VERSION
 } from "../utils/constants";
+import { checkApiVersion } from "../utils/utils";
 
 /**
  * A middleware extract related blob service context.

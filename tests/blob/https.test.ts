@@ -17,7 +17,7 @@ import {
 // Set true to enable debug log
 configLogger(false);
 
-describe("Authentication", () => {
+describe("Blob HTTPS", () => {
   const factory = new BlobTestServerFactory();
   const server = factory.createServer(false, true);
   const baseURL = `https://${server.config.host}:${server.config.port}/devstoreaccount1`;

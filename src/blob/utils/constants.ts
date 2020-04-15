@@ -117,3 +117,24 @@ export const ValidAPIVersions = [
 
 export const MAX_APPEND_BLOB_BLOCK_SIZE = 4 * 1024 * 1024; // 4MB
 export const MAX_APPEND_BLOB_BLOCK_COUNT = 50000;
+
+// Validate audience, accept following audience patterns
+// https://storage.azure.com
+// https://storage.azure.com/
+// e406a681-f3d4-42a8-90b6-c2b029497af1
+// https://*.blob.core.windows.net
+// https://*.blob.core.windows.net/
+// https://*.blob.core.chinacloudapi.cn
+// https://*.blob.core.chinacloudapi.cn/
+// https://*.blob.core.usgovcloudapi.net
+// https://*.blob.core.usgovcloudapi.net/
+// https://*.blob.core.cloudapi.de
+// https://*.blob.core.cloudapi.de/
+export const VALID_BLOB_AUDIENCES = [
+  /^https:\/\/storage\.azure\.com[\/]?$/,
+  /^e406a681-f3d4-42a8-90b6-c2b029497af1$/,
+  /^https:\/\/(.*)\.blob\.core\.windows\.net[\/]?$/,
+  /^https:\/\/(.*)\.blob\.core\.chinacloudapi\.cn[\/]?$/,
+  /^https:\/\/(.*)\.blob\.core\.usgovcloudapi\.net[\/]?$/,
+  /^https:\/\/(.*)\.blob\.core\.cloudapi\.de[\/]?$/
+];

@@ -96,7 +96,8 @@ export default class QueueServer extends ServerBase {
       extentStore,
       accountDataStore,
       configuration.enableAccessLog, // Access log includes every handled HTTP request
-      configuration.accessLogWriteStream
+      configuration.accessLogWriteStream,
+      configuration.getOAuthLevel()
     );
 
     super(host, port, httpServer, requestListenerFactory, configuration);

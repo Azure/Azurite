@@ -23,6 +23,8 @@ import { IQueueMetadataStore } from "./persistence/IQueueMetadataStore";
 import { DEFAULT_QUEUE_CONTEXT_PATH } from "./utils/constants";
 
 import morgan = require("morgan");
+import { OAuthLevel } from "../common/models";
+import IAuthenticator from "./authentication/IAuthenticator";
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -41,7 +43,8 @@ export default class QueueRequestListenerFactory
     private readonly extentStore: IExtentStore,
     private readonly accountDataStore: IAccountDataStore,
     private readonly enableAccessLog: boolean,
-    private readonly accessLogWriteStream?: NodeJS.WritableStream
+    private readonly accessLogWriteStream?: NodeJS.WritableStream,
+    private readonly oauth?: OAuthLevel
   ) {}
 
   public createRequestListener(): RequestListener {
@@ -97,17 +100,24 @@ export default class QueueRequestListenerFactory
     const authenticationMiddlewareFactory = new AuthenticationMiddlewareFactory(
       logger
     );
+    const authenticators: IAuthenticator[] = [
+      new QueueSharedKeyAuthenticator(this.accountDataStore, logger),
+      new AccountSASAuthenticator(this.accountDataStore, logger),
+      new QueueSASAuthenticator(
+        this.accountDataStore,
+        this.metadataStore,
+        logger
+      )
+    ];
+    if (this.oauth !== undefined) {
+      authenticators.push(
+        new QueueTokenAuthenticator(this.accountDataStore, this.oauth, logger)
+      );
+    }
     app.use(
-      authenticationMiddlewareFactory.createAuthenticationMiddleware([
-        new QueueSharedKeyAuthenticator(this.accountDataStore, logger),
-        new AccountSASAuthenticator(this.accountDataStore, logger),
-        new QueueSASAuthenticator(
-          this.accountDataStore,
-          this.metadataStore,
-          logger
-        ),
-        new QueueTokenAuthenticator(this.accountDataStore, logger)
-      ])
+      authenticationMiddlewareFactory.createAuthenticationMiddleware(
+        authenticators
+      )
     );
 
     // Generated, will do basic validation defined in swagger

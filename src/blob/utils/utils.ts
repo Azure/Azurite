@@ -1,6 +1,7 @@
 import { createHash, createHmac } from "crypto";
 import { createWriteStream, PathLike } from "fs";
 import { parse } from "url";
+import StorageErrorFactory from "../errors/StorageErrorFactory";
 
 /**
  * Generates a hash signature for an HTTP request or for a SAS.
@@ -13,6 +14,19 @@ export function computeHMACSHA256(stringToSign: string, key: Buffer): string {
   return createHmac("sha256", key)
     .update(stringToSign, "utf8")
     .digest("base64");
+}
+
+export function checkApiVersion(
+  inputApiVersion: string,
+  validApiVersions: Array<string>,
+  requestId: string
+): void {
+  if (!validApiVersions.includes(inputApiVersion)) {
+    throw StorageErrorFactory.getInvalidHeaderValue(requestId, {
+      HeaderName: "x-ms-version",
+      HeaderValue: inputApiVersion
+    });
+  }
 }
 
 /**

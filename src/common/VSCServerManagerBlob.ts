@@ -84,7 +84,8 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       env.loose(),
       env.cert(),
       env.key(),
-      env.pwd()
+      env.pwd(),
+      env.oauth()
     );
     return config;
   }

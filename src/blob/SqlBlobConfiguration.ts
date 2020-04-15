@@ -32,7 +32,8 @@ export default class SqlBlobConfiguration extends ConfigurationBase {
     loose: boolean = false,
     cert: string = "",
     key: string = "",
-    pwd: string = ""
+    pwd: string = "",
+    oauth?: string
   ) {
     super(
       host,
@@ -44,7 +45,8 @@ export default class SqlBlobConfiguration extends ConfigurationBase {
       loose,
       cert,
       key,
-      pwd
+      pwd,
+      oauth
     );
   }
 }

@@ -20,7 +20,7 @@ import {
 // Set true to enable debug log
 configLogger(false);
 
-describe("Queue Authentication", () => {
+describe("Queue HTTPS", () => {
   // TODO: Create a server factory as tests utils
   const host = "127.0.0.1";
   const port = 11001;

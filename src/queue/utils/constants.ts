@@ -115,3 +115,24 @@ export const ValidAPIVersions = [
   "2009-07-17",
   "2009-04-14"
 ];
+
+// Validate audience, accept following audience patterns
+// https://storage.azure.com
+// https://storage.azure.com/
+// e406a681-f3d4-42a8-90b6-c2b029497af1
+// https://*.queue.core.windows.net
+// https://*.queue.core.windows.net/
+// https://*.queue.core.chinacloudapi.cn
+// https://*.queue.core.chinacloudapi.cn/
+// https://*.queue.core.usgovcloudapi.net
+// https://*.queue.core.usgovcloudapi.net/
+// https://*.queue.core.cloudapi.de
+// https://*.queue.core.cloudapi.de/
+export const VALID_QUEUE_AUDIENCES = [
+  /^https:\/\/storage\.azure\.com[\/]?$/,
+  /^e406a681-f3d4-42a8-90b6-c2b029497af1$/,
+  /^https:\/\/(.*)\.queue\.core\.windows\.net[\/]?$/,
+  /^https:\/\/(.*)\.queue\.core\.chinacloudapi\.cn[\/]?$/,
+  /^https:\/\/(.*)\.queue\.core\.usgovcloudapi\.net[\/]?$/,
+  /^https:\/\/(.*)\.queue\.core\.cloudapi\.de[\/]?$/
+];

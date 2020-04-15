@@ -31,7 +31,7 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Azurite Service - Loki, Loose, HTTPS",
+      "name": "Azurite Service - Loki, Loose, HTTPS, OAuth",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
       "args": [
@@ -40,7 +40,11 @@
         "--cert",
         "${workspaceFolder}/tests/server.cert",
         "--key",
-        "${workspaceFolder}/tests/server.key"
+        "${workspaceFolder}/tests/server.key",
+        "-d",
+        "debug.log",
+        "--oauth",
+        "basic"
       ],
       "env": {
         "AZURITE_ACCOUNTS": ""
@@ -50,10 +54,20 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Azurite Queue Service - Loki",
+      "name": "Azurite Queue Service - Loki, HTTPS, OAuth",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
-      "args": ["${workspaceFolder}/src/queue/main.ts", "-d", "debug.log"],
+      "args": [
+        "${workspaceFolder}/src/queue/main.ts",
+        "-d",
+        "debug.log",
+        "--cert",
+        "${workspaceFolder}/tests/server.cert",
+        "--key",
+        "${workspaceFolder}/tests/server.key",
+        "--oauth",
+        "basic"
+      ],
       "env": {
         "AZURITE_ACCOUNTS": ""
       },
@@ -62,10 +76,20 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Azurite Blob Service - Loki",
+      "name": "Azurite Blob Service - Loki, HTTPS, OAuth",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
-      "args": ["${workspaceFolder}/src/blob/main.ts", "-d", "debug.log"],
+      "args": [
+        "${workspaceFolder}/src/blob/main.ts",
+        "-d",
+        "debug.log",
+        "--cert",
+        "${workspaceFolder}/tests/server.cert",
+        "--key",
+        "${workspaceFolder}/tests/server.key",
+        "--oauth",
+        "basic"
+      ],
       "env": {
         "AZURITE_ACCOUNTS": ""
       },
@@ -139,7 +163,7 @@
       "outputCapture": "std"
     },
     {
-      "name": "Run Extension",
+      "name": "VSC Extension",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",

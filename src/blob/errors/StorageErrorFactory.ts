@@ -153,6 +153,17 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getInvalidAuthenticationInfo(
+    contextID: string = DefaultID
+  ): StorageError {
+    return new StorageError(
+      400,
+      "InvalidAuthenticationInfo",
+      "Authentication information is not given in the correct format. Check the value of Authorization header.",
+      contextID
+    );
+  }
+
   public static getMd5Mismatch(
     contextID: string = DefaultID,
     userSpecifiedMd5: string,
@@ -392,6 +403,21 @@ export default class StorageErrorFactory {
       // tslint:disable-next-line:max-line-length
       "Server failed to authenticate the request. Make sure the value of the Authorization header is formed correctly including the signature.",
       contextID
+    );
+  }
+
+  public static getAuthenticationFailed(
+    contextID: string = DefaultID,
+    authenticationErrorDetail: string
+  ): StorageError {
+    return new StorageError(
+      403,
+      "AuthenticationFailed",
+      "Server failed to authenticate the request. Make sure the value of the Authorization header is formed correctly including the signature.",
+      contextID,
+      {
+        AuthenticationErrorDetail: authenticationErrorDetail
+      }
     );
   }
 

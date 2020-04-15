@@ -23,6 +23,7 @@
     "args": "^5.0.1",
     "etag": "^1.8.1",
     "express": "^4.16.4",
+    "jsonwebtoken": "^8.5.1",
     "lokijs": "^1.5.6",
     "morgan": "^1.9.1",
     "multistream": "^2.1.1",
@@ -37,7 +38,6 @@
     "xml2js": "^0.4.19"
   },
   "devDependencies": {
-    "@types/validator": "^10.11.3",
     "@azure/storage-blob": "^10.4.1",
     "@azure/storage-queue": "^10.2.0",
     "@types/args": "^3.0.0",
@@ -45,6 +45,7 @@
     "@types/bluebird": "^3.5.27",
     "@types/etag": "^1.8.0",
     "@types/express": "^4.16.0",
+    "@types/jsonwebtoken": "^8.3.9",
     "@types/lokijs": "^1.5.2",
     "@types/mocha": "^5.2.6",
     "@types/morgan": "^1.7.35",
@@ -53,6 +54,7 @@
     "@types/rimraf": "^2.0.2",
     "@types/uri-templates": "^0.1.29",
     "@types/uuid": "^3.4.4",
+    "@types/validator": "^10.11.3",
     "@types/vscode": "^1.39.0",
     "@types/xml2js": "^0.4.3",
     "autorest": "^2.0.4283",
@@ -150,17 +152,22 @@
           "azurite.cert": {
             "type": "string",
             "default": "",
-            "description": "Locally-trusted certificate"
+            "description": "Path to a locally-trusted pem or pfx certificate file path to enable HTTPS mode"
           },
           "azurite.key": {
             "type": "string",
             "default": "",
-            "description": "Locally-trusted key file"
+            "description": "Path to a locally-trusted pem key file, required when cert points to a pem file"
           },
           "azurite.pwd": {
             "type": "string",
             "default": "",
-            "description": "Password for pfx file"
+            "description": "Password for pfx file, required when cert points to a pfx file"
+          },
+          "azurite.oauth": {
+            "type": "string",
+            "default": "",
+            "description": "Optional. OAuth level. Candidate values: \"basic\""
           },
           "azurite.location": {
             "type": "string",
