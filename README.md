@@ -10,7 +10,7 @@
 
 | Version                                                            | Azure Storage API Version | Service Support       | Description                                       | Reference Links                                                                                                                                                                                                         |
 | ------------------------------------------------------------------ | ------------------------- | --------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.6.0                                                              | 2019-07-07                | Blob<br>Queue         | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| 3.7.0                                                              | 2019-07-07                | Blob<br>Queue         | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
 | [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
 ## Introduction
@@ -628,6 +628,7 @@ Detailed support matrix:
 - Supported Vertical Features
   - CORS and Preflight
   - SharedKey Authentication
+  - OAuth authentication
   - Shared Access Signature Account Level
   - Shared Access Signature Service Level (Not support response header override in service SAS)
   - Container Public Access
@@ -660,7 +661,6 @@ Detailed support matrix:
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
 
   - SharedKey Lite
-  - OAuth authentication
   - Static Website
   - Soft delete & Undelete Blob
   - Put Block from URL
@@ -674,6 +674,7 @@ Detailed support matrix:
   - SharedKey Authentication
   - Shared Access Signature Account Level
   - Shared Access Signature Service Level
+  - OAuth authentication
 - Supported REST APIs
   - List Queues
   - Set Service Properties
@@ -694,7 +695,6 @@ Detailed support matrix:
   - Clear Message
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
   - SharedKey Lite
-  - OAuth authentication
 
 ## License
 
