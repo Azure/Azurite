@@ -55,7 +55,8 @@ export class BlobServerFactory {
           env.loose(),
           env.cert(),
           env.key(),
-          env.pwd()
+          env.pwd(),
+          env.oauth()
         );
 
         return new SqlBlobServer(config);
@@ -73,7 +74,8 @@ export class BlobServerFactory {
           env.loose(),
           env.cert(),
           env.key(),
-          env.pwd()
+          env.pwd(),
+          env.oauth()
         );
         return new BlobServer(config);
       }

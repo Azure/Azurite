@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import { OAuthLevel } from "./models";
 
 export enum CertOptions {
   Default,
@@ -17,7 +18,8 @@ export default abstract class ConfigurationBase {
     public readonly loose: boolean = false,
     public readonly cert: string = "",
     public readonly key: string = "",
-    public readonly pwd: string = ""
+    public readonly pwd: string = "",
+    public readonly oauth?: string
   ) {}
 
   public hasCert() {
@@ -46,6 +48,16 @@ export default abstract class ConfigurationBase {
       default:
         return null;
     }
+  }
+
+  public getOAuthLevel(): undefined | OAuthLevel {
+    if (this.oauth) {
+      if (this.oauth.toLowerCase() === "basic") {
+        return OAuthLevel.BASIC;
+      }
+    }
+
+    return;
   }
 
   public getHttpServerAddress(): string {

@@ -4,7 +4,8 @@
 
 ## 2020.04 Version 3.7.0
 
-- Supported HTTPS endpoint.
+- Supported HTTPS endpoint. Specific parameter `azurite --cert server.cert --key server.key` to enable HTTPS mode.
+- Supported basic level of OAuth autentication. Specific parameter `azurite --oauth basic` to enable OAuth autentication.
 
 Blob:
 

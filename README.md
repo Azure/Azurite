@@ -125,6 +125,10 @@ Following extension configurations are supported:
 - `azurite.silent` Silent mode to disable access log in Visual Studio channel, by default false
 - `azurite.debug` Output debug log into Azurite channel, by default false
 - `azurite.loose` Enable loose mode which ignores unsupported headers and parameters, by default false
+- `azurite.cert` Path to a pem or pfx cert file. Required by HTTPS mode.
+- `azurite.key` Path to a pem key file. Required when `azurite.cert` points to a pem file.
+- `azurite.pwd` Pfx cert password. Required when `azurite.cert` points to a pfx file.
+- `azurite.oauth` OAuth oauthentication level. Candidate level values: `basic`.
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
@@ -269,6 +273,40 @@ Optional. By default Azurite will apply strict mode. Strict mode will block unsu
 -L
 --loose
 ```
+
+### Certificate Configuration (HTTPS)
+
+Optional. By default Azurite will listen on HTTP protocol. Provide a pem or pfx certificate file path to enable HTTPS mode:
+
+```cmd
+--cert path/server.pem
+```
+
+When `--cert` is provided for a pem file, must provide coresponding `--key`.
+
+```cmd
+--key path/key.pem
+```
+
+When `--cert` is provided for a pfx file, must provide coresponding `--pwd`
+
+```cmd
+--pwd pfxpassword
+```
+
+### OAuth Configuration
+
+Optional. By default, Azurite doesn't support OAuth and bearer token. Enable OAuth authentication for Azurite by:
+
+```
+--oauth basic
+```
+
+Currently, Azurite supports following OAuth authentication levels:
+
+#### Basic
+
+In basic level, `--oauth basic`, Azurite will do basic authentication, like validating incoming bearer token, checking issuer, audience, expiry. But Azurite will NOT check token signature and permission.
 
 ### Command Line Options Differences between Azurite V2
 

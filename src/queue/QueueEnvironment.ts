@@ -27,9 +27,10 @@ args
     ["L", "loose"],
     "Optional. Enable loose mode which ignores unsupported headers and parameters"
   )
-  .option(["", "cert"], "Optional. Path to certificate file.")
-  .option(["", "key"], "Optional. Path to certificate key .pem file.")
-  .option(["", "pwd"], "Optional. Password for .pfx file.")
+  .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic"')
+  .option(["", "cert"], "Optional. Path to certificate file")
+  .option(["", "key"], "Optional. Path to certificate key .pem file")
+  .option(["", "pwd"], "Optional. Password for .pfx file")
   .option(
     ["d", "debug"],
     "Optional. Enable debug log by providing a valid local file path as log destination"
@@ -77,6 +78,10 @@ export default class QueueEnvironment implements IQueueEnvironment {
 
   public pwd(): string | undefined {
     return this.flags.pwd;
+  }
+
+  public oauth(): string | undefined {
+    return this.flags.oauth;
   }
 
   public async debug(): Promise<string | undefined> {

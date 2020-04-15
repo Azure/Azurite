@@ -1,5 +1,6 @@
 import { randomBytes } from "crypto";
-import { createWriteStream } from "fs";
+import { createWriteStream, readFileSync } from "fs";
+import { sign } from "jsonwebtoken";
 import { join } from "path";
 import rimraf from "rimraf";
 import { URL } from "url";
@@ -172,4 +173,28 @@ export async function readStreamToLocalFile(
     ws.on("error", reject);
     ws.on("finish", resolve);
   });
+}
+
+export function generateJWTToken(
+  nbf: Date,
+  iat: Date,
+  exp: Date,
+  iss: string,
+  aud: string,
+  scp: string
+) {
+  const privateKey = readFileSync("./tests/server.key");
+  const token = sign(
+    {
+      nbf: Math.floor(nbf.getTime() / 1000),
+      iat: Math.floor(iat.getTime() / 1000),
+      exp: Math.floor(exp.getTime() / 1000),
+      iss,
+      aud,
+      scp
+    },
+    privateKey,
+    { algorithm: "RS256" }
+  );
+  return token;
 }

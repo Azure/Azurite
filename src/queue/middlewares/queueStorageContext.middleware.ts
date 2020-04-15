@@ -3,7 +3,6 @@ import uuid from "uuid/v4";
 
 import logger from "../../common/Logger";
 import { PRODUCTION_STYLE_URL_HOSTNAME } from "../../common/utils/constants";
-import { checkApiVersion } from "../../common/utils/utils";
 import QueueStorageContext from "../context/QueueStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import {
@@ -13,7 +12,7 @@ import {
   ValidAPIVersions,
   VERSION
 } from "../utils/constants";
-import { isValidName, nameValidateCode } from "../utils/utils";
+import { checkApiVersion, isValidName, nameValidateCode } from "../utils/utils";
 
 /**
  * A middleware extract related queue service context.

@@ -8,4 +8,5 @@ export default interface IBlobEnvironment {
   key(): string | undefined;
   pwd(): string | undefined;
   debug(): Promise<string | boolean | undefined>;
+  oauth(): string | undefined;
 }

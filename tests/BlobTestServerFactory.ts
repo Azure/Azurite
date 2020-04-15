@@ -8,7 +8,8 @@ import { DEFAULT_SQL_OPTIONS } from "../src/common/utils/constants";
 export default class BlobTestServerFactory {
   public createServer(
     loose: boolean = false,
-    https: boolean = false
+    https: boolean = false,
+    oauth?: string
   ): BlobServer | SqlBlobServer {
     const databaseConnectionString = process.env.AZURITE_TEST_DB;
     const isSQL = databaseConnectionString !== undefined;
@@ -38,7 +39,9 @@ export default class BlobTestServerFactory {
         undefined,
         loose,
         cert,
-        key
+        key,
+        undefined,
+        oauth
       );
 
       return new SqlBlobServer(config);
@@ -57,7 +60,9 @@ export default class BlobTestServerFactory {
         undefined,
         loose,
         cert,
-        key
+        key,
+        undefined,
+        oauth
       );
       return new BlobServer(config);
     }
