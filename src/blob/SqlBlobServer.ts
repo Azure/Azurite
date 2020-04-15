@@ -93,7 +93,8 @@ export default class SqlBlobServer extends ServerBase {
       accountDataStore,
       configuration.enableAccessLog, // Access log includes every handled HTTP request
       configuration.accessLogWriteStream,
-      configuration.loose
+      configuration.loose,
+      configuration.getOAuthLevel()
     );
 
     super(host, port, httpServer, requestListenerFactory, configuration);
