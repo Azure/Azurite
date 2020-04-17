@@ -1,5 +1,4 @@
 import express from "express";
-import morgan = require("morgan");
 
 import IAccountDataStore from "../common/IAccountDataStore";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
@@ -9,6 +8,7 @@ import { RequestListener } from "../common/ServerBase";
 import AccountSASAuthenticator from "./authentication/AccountSASAuthenticator";
 import QueueSASAuthenticator from "./authentication/QueueSASAuthenticator";
 import QueueSharedKeyAuthenticator from "./authentication/QueueSharedKeyAuthenticator";
+import QueueTokenAuthenticator from "./authentication/QueueTokenAuthenticator";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
 import IHandlers from "./generated/handlers/IHandlers";
 import MiddlewareFactory from "./generated/MiddlewareFactory";
@@ -21,6 +21,10 @@ import PreflightMiddlewareFactory from "./middlewares/PreflightMiddlewareFactory
 import queueStorageContextMiddleware from "./middlewares/queueStorageContext.middleware";
 import { IQueueMetadataStore } from "./persistence/IQueueMetadataStore";
 import { DEFAULT_QUEUE_CONTEXT_PATH } from "./utils/constants";
+
+import morgan = require("morgan");
+import { OAuthLevel } from "../common/models";
+import IAuthenticator from "./authentication/IAuthenticator";
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -39,7 +43,8 @@ export default class QueueRequestListenerFactory
     private readonly extentStore: IExtentStore,
     private readonly accountDataStore: IAccountDataStore,
     private readonly enableAccessLog: boolean,
-    private readonly accessLogWriteStream?: NodeJS.WritableStream
+    private readonly accessLogWriteStream?: NodeJS.WritableStream,
+    private readonly oauth?: OAuthLevel
   ) {}
 
   public createRequestListener(): RequestListener {
@@ -95,16 +100,24 @@ export default class QueueRequestListenerFactory
     const authenticationMiddlewareFactory = new AuthenticationMiddlewareFactory(
       logger
     );
+    const authenticators: IAuthenticator[] = [
+      new QueueSharedKeyAuthenticator(this.accountDataStore, logger),
+      new AccountSASAuthenticator(this.accountDataStore, logger),
+      new QueueSASAuthenticator(
+        this.accountDataStore,
+        this.metadataStore,
+        logger
+      )
+    ];
+    if (this.oauth !== undefined) {
+      authenticators.push(
+        new QueueTokenAuthenticator(this.accountDataStore, this.oauth, logger)
+      );
+    }
     app.use(
-      authenticationMiddlewareFactory.createAuthenticationMiddleware([
-        new QueueSharedKeyAuthenticator(this.accountDataStore, logger),
-        new AccountSASAuthenticator(this.accountDataStore, logger),
-        new QueueSASAuthenticator(
-          this.accountDataStore,
-          this.metadataStore,
-          logger
-        )
-      ])
+      authenticationMiddlewareFactory.createAuthenticationMiddleware(
+        authenticators
+      )
     );
 
     // Generated, will do basic validation defined in swagger

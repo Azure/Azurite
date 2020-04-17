@@ -1,6 +1,6 @@
 import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 
-export const VERSION = "3.6.0";
+export const VERSION = "3.7.0";
 export const QUEUE_API_VERSION = "2019-07-07";
 export const DEFAULT_QUEUE_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_QUEUE_LISTENING_PORT = 10001;
@@ -114,4 +114,25 @@ export const ValidAPIVersions = [
   "2009-09-19",
   "2009-07-17",
   "2009-04-14"
+];
+
+// Validate audience, accept following audience patterns
+// https://storage.azure.com
+// https://storage.azure.com/
+// e406a681-f3d4-42a8-90b6-c2b029497af1
+// https://*.queue.core.windows.net
+// https://*.queue.core.windows.net/
+// https://*.queue.core.chinacloudapi.cn
+// https://*.queue.core.chinacloudapi.cn/
+// https://*.queue.core.usgovcloudapi.net
+// https://*.queue.core.usgovcloudapi.net/
+// https://*.queue.core.cloudapi.de
+// https://*.queue.core.cloudapi.de/
+export const VALID_QUEUE_AUDIENCES = [
+  /^https:\/\/storage\.azure\.com[\/]?$/,
+  /^e406a681-f3d4-42a8-90b6-c2b029497af1$/,
+  /^https:\/\/(.*)\.queue\.core\.windows\.net[\/]?$/,
+  /^https:\/\/(.*)\.queue\.core\.chinacloudapi\.cn[\/]?$/,
+  /^https:\/\/(.*)\.queue\.core\.usgovcloudapi\.net[\/]?$/,
+  /^https:\/\/(.*)\.queue\.core\.cloudapi\.de[\/]?$/
 ];

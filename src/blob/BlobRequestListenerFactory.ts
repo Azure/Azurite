@@ -1,5 +1,4 @@
 import express from "express";
-import morgan = require("morgan");
 
 import IAccountDataStore from "../common/IAccountDataStore";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
@@ -9,6 +8,7 @@ import { RequestListener } from "../common/ServerBase";
 import AccountSASAuthenticator from "./authentication/AccountSASAuthenticator";
 import BlobSASAuthenticator from "./authentication/BlobSASAuthenticator";
 import BlobSharedKeyAuthenticator from "./authentication/BlobSharedKeyAuthenticator";
+import BlobTokenAuthenticator from "./authentication/BlobTokenAuthenticator";
 import PublicAccessAuthenticator from "./authentication/PublicAccessAuthenticator";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
 import IHandlers from "./generated/handlers/IHandlers";
@@ -30,6 +30,10 @@ import StrictModelMiddlewareFactory, {
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import { DEFAULT_CONTEXT_PATH } from "./utils/constants";
 
+import morgan = require("morgan");
+import { OAuthLevel } from "../common/models";
+import IAuthenticator from "./authentication/IAuthenticator";
+
 /**
  * Default RequestListenerFactory based on express framework.
  *
@@ -48,7 +52,8 @@ export default class BlobRequestListenerFactory
     private readonly accountDataStore: IAccountDataStore,
     private readonly enableAccessLog: boolean,
     private readonly accessLogWriteStream?: NodeJS.WritableStream,
-    private readonly loose?: boolean
+    private readonly loose?: boolean,
+    private readonly oauth?: OAuthLevel
   ) {}
 
   public createRequestListener(): RequestListener {
@@ -117,7 +122,7 @@ export default class BlobRequestListenerFactory
       app.use(morgan("common", { stream: this.accessLogWriteStream }));
     }
 
-    // Manually created middleware to deserialize feature related context which swagger doesn't know
+    // Manually created middleware to deserialize feature related context which swagger doesn"t know
     app.use(blobStorageContextMiddleware);
 
     // Dispatch incoming HTTP request to specific operation
@@ -132,21 +137,29 @@ export default class BlobRequestListenerFactory
     const authenticationMiddlewareFactory = new AuthenticationMiddlewareFactory(
       logger
     );
+    const authenticators: IAuthenticator[] = [
+      new PublicAccessAuthenticator(this.metadataStore, logger),
+      new BlobSharedKeyAuthenticator(this.accountDataStore, logger),
+      new AccountSASAuthenticator(
+        this.accountDataStore,
+        this.metadataStore,
+        logger
+      ),
+      new BlobSASAuthenticator(
+        this.accountDataStore,
+        this.metadataStore,
+        logger
+      )
+    ];
+    if (this.oauth !== undefined) {
+      authenticators.push(
+        new BlobTokenAuthenticator(this.accountDataStore, this.oauth, logger)
+      );
+    }
     app.use(
-      authenticationMiddlewareFactory.createAuthenticationMiddleware([
-        new PublicAccessAuthenticator(this.metadataStore, logger),
-        new BlobSharedKeyAuthenticator(this.accountDataStore, logger),
-        new AccountSASAuthenticator(
-          this.accountDataStore,
-          this.metadataStore,
-          logger
-        ),
-        new BlobSASAuthenticator(
-          this.accountDataStore,
-          this.metadataStore,
-          logger
-        )
-      ])
+      authenticationMiddlewareFactory.createAuthenticationMiddleware(
+        authenticators
+      )
     );
 
     // Generated, will do basic validation defined in swagger

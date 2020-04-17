@@ -349,6 +349,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         timestamps: false,
         indexes: [
           {
+            unique: true,
             fields: ["accountName", "containerName", "blobName", "blockName"]
           }
         ]
@@ -1761,6 +1762,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
       }
 
+      // TODO: Return blobCommittedBlockCount for append blob
+
       return LeaseFactory.createLeaseState(
         new BlobLeaseAdapter(blobModel),
         context
@@ -2800,6 +2803,18 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: string,
     sequenceNumberAction: Models.SequenceNumberActionType,
     blobSequenceNumber: number | undefined
+  ): Promise<Models.BlobProperties> {
+    throw new Error("Method not implemented.");
+  }
+
+  public appendBlock(
+    context: Context,
+    block: BlockModel,
+    leaseAccessConditions?: Models.LeaseAccessConditions | undefined,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions | undefined,
+    appendPositionAccessConditions?:
+      | Models.AppendPositionAccessConditions
+      | undefined
   ): Promise<Models.BlobProperties> {
     throw new Error("Method not implemented.");
   }

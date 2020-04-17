@@ -6,7 +6,11 @@ import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
 import { DEFAULT_SQL_OPTIONS } from "../src/common/utils/constants";
 
 export default class BlobTestServerFactory {
-  public createServer(loose: boolean = false): BlobServer | SqlBlobServer {
+  public createServer(
+    loose: boolean = false,
+    https: boolean = false,
+    oauth?: string
+  ): BlobServer | SqlBlobServer {
     const databaseConnectionString = process.env.AZURITE_TEST_DB;
     const isSQL = databaseConnectionString !== undefined;
 
@@ -19,6 +23,8 @@ export default class BlobTestServerFactory {
         maxConcurrency: 10
       }
     ];
+    const cert = https ? "tests/server.cert" : undefined;
+    const key = https ? "tests/server.key" : undefined;
 
     if (isSQL) {
       const config = new SqlBlobConfiguration(
@@ -31,7 +37,11 @@ export default class BlobTestServerFactory {
         undefined,
         false,
         undefined,
-        loose
+        loose,
+        cert,
+        key,
+        undefined,
+        oauth
       );
 
       return new SqlBlobServer(config);
@@ -48,7 +58,11 @@ export default class BlobTestServerFactory {
         undefined,
         false,
         undefined,
-        loose
+        loose,
+        cert,
+        key,
+        undefined,
+        oauth
       );
       return new BlobServer(config);
     }

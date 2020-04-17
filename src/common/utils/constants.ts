@@ -30,3 +30,20 @@ export const DEFAULT_SQL_OPTIONS = {
 // (as opposed to default emulator style http[s]://hostname[:port]/devstoreaccount1/container/path/blob.dat
 // When URL's hostname ends with .localhost, we assume user wants to use production-style URL format.
 export const PRODUCTION_STYLE_URL_HOSTNAME = ".localhost";
+
+export const BEARER_TOKEN_PREFIX = "Bearer";
+export const HTTPS = "https";
+
+// Validate issuer
+// Only check prefix and bypass AAD tenant ID match
+// BlackForest: https://sts.microsoftonline.de/
+// Fairfax: https://sts.windows.net/
+// Mooncake: https://sts.chinacloudapi.cn/
+// Production: https://sts.windows.net/
+// Test: https://sts.windows-ppe.net/
+export const VALID_ISSUE_PREFIXES = [
+  "https://sts.windows.net/",
+  "https://sts.microsoftonline.de/",
+  "https://sts.chinacloudapi.cn/",
+  "https://sts.windows-ppe.net"
+];

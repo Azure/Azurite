@@ -62,10 +62,14 @@ export default abstract class ServerBase implements ICleaner {
    */
   public getHttpServerAddress(): string {
     const address = this.httpServer.address();
-    if (typeof address === "string" || address === null) {
-      return address || "";
+    const protocol = `http${this.config.hasCert() ? "s" : ""}://`;
+
+    if (typeof address === "string") {
+      return protocol + address;
+    } else if (address === null) {
+      return "";
     } else {
-      return `${address.address}:${address.port}`;
+      return `${protocol}${address.address}:${address.port}`;
     }
   }
 

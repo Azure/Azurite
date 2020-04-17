@@ -1,7 +1,7 @@
 import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 import * as Models from "../generated/artifacts/models";
 
-export const VERSION = "3.6.0";
+export const VERSION = "3.7.0";
 export const BLOB_API_VERSION = "2019-07-07";
 export const DEFAULT_BLOB_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_LIST_BLOBS_MAX_RESULTS = 5000;
@@ -113,4 +113,28 @@ export const ValidAPIVersions = [
   "2009-09-19",
   "2009-07-17",
   "2009-04-14"
+];
+
+export const MAX_APPEND_BLOB_BLOCK_SIZE = 4 * 1024 * 1024; // 4MB
+export const MAX_APPEND_BLOB_BLOCK_COUNT = 50000;
+
+// Validate audience, accept following audience patterns
+// https://storage.azure.com
+// https://storage.azure.com/
+// e406a681-f3d4-42a8-90b6-c2b029497af1
+// https://*.blob.core.windows.net
+// https://*.blob.core.windows.net/
+// https://*.blob.core.chinacloudapi.cn
+// https://*.blob.core.chinacloudapi.cn/
+// https://*.blob.core.usgovcloudapi.net
+// https://*.blob.core.usgovcloudapi.net/
+// https://*.blob.core.cloudapi.de
+// https://*.blob.core.cloudapi.de/
+export const VALID_BLOB_AUDIENCES = [
+  /^https:\/\/storage\.azure\.com[\/]?$/,
+  /^e406a681-f3d4-42a8-90b6-c2b029497af1$/,
+  /^https:\/\/(.*)\.blob\.core\.windows\.net[\/]?$/,
+  /^https:\/\/(.*)\.blob\.core\.chinacloudapi\.cn[\/]?$/,
+  /^https:\/\/(.*)\.blob\.core\.usgovcloudapi\.net[\/]?$/,
+  /^https:\/\/(.*)\.blob\.core\.cloudapi\.de[\/]?$/
 ];

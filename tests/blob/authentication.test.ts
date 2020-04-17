@@ -22,6 +22,7 @@ configLogger(false);
 describe("Authentication", () => {
   const factory = new BlobTestServerFactory();
   const server = factory.createServer();
+
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
 
   before(async () => {
@@ -33,7 +34,7 @@ describe("Authentication", () => {
     await server.clean();
   });
 
-  it("Should not work without credential @loki @sql", async () => {
+  it(`Should not work without credential @loki @sql`, async () => {
     const serviceURL = new ServiceURL(
       baseURL,
       StorageURL.newPipeline(new AnonymousCredential(), {
@@ -61,7 +62,7 @@ describe("Authentication", () => {
     }
   });
 
-  it("Should not work without correct account name @loki @sql", async () => {
+  it(`Should not work without correct account name @loki @sql`, async () => {
     const serviceURL = new ServiceURL(
       baseURL,
       StorageURL.newPipeline(
@@ -92,7 +93,7 @@ describe("Authentication", () => {
     }
   });
 
-  it("Should not work without correct account key @loki @sql", async () => {
+  it(`Should not work without correct account key @loki @sql`, async () => {
     const serviceURL = new ServiceURL(
       baseURL,
       StorageURL.newPipeline(
@@ -123,7 +124,7 @@ describe("Authentication", () => {
     }
   });
 
-  it("Should work with correct shared key @loki @sql", async () => {
+  it(`Should work with correct shared key @loki @sql`, async () => {
     const serviceURL = new ServiceURL(
       baseURL,
       StorageURL.newPipeline(

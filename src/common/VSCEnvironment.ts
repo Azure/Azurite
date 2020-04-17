@@ -74,4 +74,20 @@ export default class VSCEnvironment implements IEnvironment {
   public async debug(): Promise<boolean> {
     return this.workspaceConfiguration.get<boolean>("debug") || false;
   }
+
+  public cert(): string | undefined {
+    return this.workspaceConfiguration.get<string>("cert");
+  }
+
+  public key(): string | undefined {
+    return this.workspaceConfiguration.get<string>("key");
+  }
+
+  public pwd(): string | undefined {
+    return this.workspaceConfiguration.get<string>("pwd");
+  }
+
+  public oauth(): string | undefined {
+    return this.workspaceConfiguration.get<string>("oauth");
+  }
 }

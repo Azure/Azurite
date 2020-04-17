@@ -52,7 +52,11 @@ export class BlobServerFactory {
           undefined,
           debugFilePath !== undefined,
           debugFilePath,
-          env.loose()
+          env.loose(),
+          env.cert(),
+          env.key(),
+          env.pwd(),
+          env.oauth()
         );
 
         return new SqlBlobServer(config);
@@ -67,7 +71,11 @@ export class BlobServerFactory {
           undefined,
           debugFilePath !== undefined,
           debugFilePath,
-          env.loose()
+          env.loose(),
+          env.cert(),
+          env.key(),
+          env.pwd(),
+          env.oauth()
         );
         return new BlobServer(config);
       }

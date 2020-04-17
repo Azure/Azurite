@@ -36,10 +36,14 @@ if (!(args as any).config.name) {
       ["L", "loose"],
       "Optional. Enable loose mode which ignores unsupported headers and parameters"
     )
+    .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic"')
+    .option(["", "cert"], "Optional. Path to certificate file")
+    .option(["", "key"], "Optional. Path to certificate key .pem file")
     .option(
       ["d", "debug"],
       "Optional. Enable debug log by providing a valid local file path as log destination"
-    );
+    )
+    .option(["", "pwd"], "Optional. Password for .pfx file");
 
   (args as any).config.name = "azurite-blob";
 }
@@ -74,6 +78,22 @@ export default class BlobEnvironment implements IBlobEnvironment {
     }
     // default is false which will block not supported APIs, headers and parameters
     return false;
+  }
+
+  public cert(): string | undefined {
+    return this.flags.cert;
+  }
+
+  public key(): string | undefined {
+    return this.flags.key;
+  }
+
+  public pwd(): string | undefined {
+    return this.flags.pwd;
+  }
+
+  public oauth(): string | undefined {
+    return this.flags.oauth;
   }
 
   public async debug(): Promise<string | undefined> {

@@ -33,7 +33,11 @@ export default class BlobConfiguration extends ConfigurationBase {
     accessLogWriteStream?: NodeJS.WritableStream,
     enableDebugLog: boolean = DEFAULT_ENABLE_DEBUG_LOG,
     debugLogFilePath?: string,
-    loose: boolean = false
+    loose: boolean = false,
+    cert: string = "",
+    key: string = "",
+    pwd: string = "",
+    oauth?: string
   ) {
     super(
       host,
@@ -42,7 +46,11 @@ export default class BlobConfiguration extends ConfigurationBase {
       accessLogWriteStream,
       enableDebugLog,
       debugLogFilePath,
-      loose
+      loose,
+      cert,
+      key,
+      pwd,
+      oauth
     );
   }
 }

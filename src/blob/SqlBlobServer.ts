@@ -1,6 +1,8 @@
 import * as http from "http";
+import * as https from "https";
 
 import AccountDataStore from "../common/AccountDataStore";
+import { CertOptions } from "../common/ConfigurationBase";
 import IAccountDataStore from "../common/IAccountDataStore";
 import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
@@ -51,7 +53,16 @@ export default class SqlBlobServer extends ServerBase {
     const port = configuration.port;
 
     // We can crate a HTTP server or a HTTPS server here
-    const httpServer = http.createServer();
+    let httpServer;
+    const certOption = configuration.hasCert();
+    switch (certOption) {
+      case CertOptions.PEM:
+      case CertOptions.PFX:
+        httpServer = https.createServer(configuration.getCert(certOption)!);
+        break;
+      default:
+        httpServer = http.createServer();
+    }
 
     const metadataStore: IBlobMetadataStore = new SqlBlobMetadataStore(
       configuration.sqlURL,
@@ -82,7 +93,8 @@ export default class SqlBlobServer extends ServerBase {
       accountDataStore,
       configuration.enableAccessLog, // Access log includes every handled HTTP request
       configuration.accessLogWriteStream,
-      configuration.loose
+      configuration.loose,
+      configuration.getOAuthLevel()
     );
 
     super(host, port, httpServer, requestListenerFactory, configuration);
