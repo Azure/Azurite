@@ -465,16 +465,59 @@ Connect to Azurite by click "Add Account" icon, then select "Attach to a local e
 
 #### Storage Explorer with HTTPS
 
-NOTE: Storage Explorer is a Node.js application that does not work with a local CA, so if you are using a local CA, then you need to set the following environment variable.
+NOTE: Storage Explorer is a Node.js application that does not work with a local CA, so if you are using a local CA, then you need start Storage Explorer with the following steps.
+
+> Warning: Any Node.js application that you launch after setting the following value will not validate the HTTPS certificate, including Storage Explorer.
+
+1. Open a terminal
+2. Navigate to the Storage Explorer directory:
+
+**Windows**
+
+```bash
+cd "C:\Program Files (x86)\Microsoft Azure Storage Explorer"
+```
+
+**Linux**
+
+```bash
 
 ```
-NODE_TLS_REJECT_UNAUTHORIZED=0
+
+3. Set the NODE_TLS_REJECT_UNAUTHORIZED
+
+**Windows**
+
+```
+set NODE_TLS_REJECT_UNAUTHORIZED=0
+```
+
+**Linux**
+
+```
+export NODE_TLS_REJECT_UNAUTHORIZED=0
+```
+
+4. Launch Storage Explorer
+
+**Windows**
+
+Run the following command:
+
+```bash
+StorageExplorer.exe
 ```
 
 If you do not set this, then you will get the following error:
 
 ```
 unable to verify the first certificate.
+```
+
+or
+
+```
+self signed certificate in chain
 ```
 
 Follow these steps to add the HTTPS endpoints to Storage Explorer:
