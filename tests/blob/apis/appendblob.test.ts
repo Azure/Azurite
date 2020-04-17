@@ -15,7 +15,6 @@ import { getMD5FromString } from "../../../src/blob/utils/utils";
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
 import {
-  // bodyToString,
   bodyToString,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
@@ -274,7 +273,12 @@ describe("AppendBlobAPIs", () => {
 
   it("Append block should work @loki", async () => {
     await appendBlobURL.create(Aborter.none);
-    await appendBlobURL.appendBlock(Aborter.none, "abcdef", 6);
+    let appendBlockResponse = await appendBlobURL.appendBlock(
+      Aborter.none,
+      "abcdef",
+      6
+    );
+    assert.deepStrictEqual(appendBlockResponse.blobAppendOffset, "0");
 
     const properties1 = await appendBlobURL.getProperties(Aborter.none);
     assert.deepStrictEqual(properties1.blobType, "AppendBlob");
@@ -289,11 +293,20 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(properties1.cacheControl, undefined);
     assert.deepStrictEqual(properties1.blobSequenceNumber, undefined);
     assert.deepStrictEqual(properties1.blobCommittedBlockCount, 1);
+    assert.deepStrictEqual(properties1.eTag, appendBlockResponse.eTag);
 
-    await sleep(1000); // Sleep 1 seond to make sure last modified time changed
-    await appendBlobURL.appendBlock(Aborter.none, "123456", 6);
-    await appendBlobURL.appendBlock(Aborter.none, "T", 1);
-    await appendBlobURL.appendBlock(Aborter.none, "@", 2);
+    await sleep(1000); // Sleep 1 second to make sure last modified time changed
+    appendBlockResponse = await appendBlobURL.appendBlock(
+      Aborter.none,
+      "123456",
+      6
+    );
+    assert.deepStrictEqual(appendBlockResponse.blobAppendOffset, "6");
+    assert.notDeepStrictEqual(appendBlockResponse.eTag, properties1.eTag);
+    appendBlockResponse = await appendBlobURL.appendBlock(Aborter.none, "T", 1);
+    assert.deepStrictEqual(appendBlockResponse.blobAppendOffset, "12");
+    appendBlockResponse = await appendBlobURL.appendBlock(Aborter.none, "@", 2);
+    assert.deepStrictEqual(appendBlockResponse.blobAppendOffset, "13");
 
     const properties2 = await appendBlobURL.getProperties(Aborter.none);
     assert.deepStrictEqual(properties2.blobType, "AppendBlob");

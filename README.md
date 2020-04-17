@@ -128,7 +128,7 @@ Following extension configurations are supported:
 - `azurite.cert` Path to a pem or pfx cert file. Required by HTTPS mode.
 - `azurite.key` Path to a pem key file. Required when `azurite.cert` points to a pem file.
 - `azurite.pwd` Pfx cert password. Required when `azurite.cert` points to a pfx file.
-- `azurite.oauth` OAuth oauthentication level. Candidate level values: `basic`.
+- `azurite.oauth` OAuth authentication level. Candidate level values: `basic`.
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
@@ -301,6 +301,8 @@ Optional. By default, Azurite doesn't support OAuth and bearer token. Enable OAu
 ```
 --oauth basic
 ```
+
+> Note. OAuth requires HTTPS endpoint. Make sure HTTPS is enabled by providing `--cert` parameter along with `--oauth` parameter.
 
 Currently, Azurite supports following OAuth authentication levels:
 
@@ -653,6 +655,7 @@ Detailed support matrix:
   - Set Blob Properties
   - Get Blob Metadata
   - Set Blob Metadata
+  - Create Append Blob, Append Block
   - Lease Blob
   - Snapshot Blob
   - Copy Blob (Only supports copy within same account in Azurite)
@@ -665,7 +668,6 @@ Detailed support matrix:
   - Soft delete & Undelete Blob
   - Put Block from URL
   - Incremental Copy Blob
-  - Create Append Blob, Append Block
 
 Latest version supports for **2019-07-07** API version **queue** service.
 Detailed support matrix:

@@ -7,10 +7,11 @@ import Context from "../generated/Context";
 import IAppendBlobHandler from "../generated/handlers/IAppendBlobHandler";
 import { BlobModel } from "../persistence/IBlobMetadataStore";
 import {
+  BLOB_API_VERSION,
+  HeaderConstants,
   MAX_APPEND_BLOB_BLOCK_COUNT,
   MAX_APPEND_BLOB_BLOCK_SIZE
 } from "../utils/constants";
-import { BLOB_API_VERSION, HeaderConstants } from "../utils/constants";
 import { getMD5FromStream, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
@@ -131,9 +132,8 @@ export default class AppendBlobHandler extends BaseHandler
       throw StorageErrorFactory.getBlobInvalidBlobType(blobCtx.contextId);
     }
 
-    if (
-      (blob.committedBlocksInOrder || []).length >= MAX_APPEND_BLOB_BLOCK_COUNT
-    ) {
+    const committedBlockCount = (blob.committedBlocksInOrder || []).length;
+    if (committedBlockCount >= MAX_APPEND_BLOB_BLOCK_COUNT) {
       throw StorageErrorFactory.getBlockCountExceedsLimit(blobCtx.contextId);
     }
 
@@ -179,6 +179,8 @@ export default class AppendBlobHandler extends BaseHandler
       }
     }
 
+    const originOffset = blob.properties.contentLength;
+
     const properties = await this.metadataStore.appendBlock(
       blobCtx,
       {
@@ -204,8 +206,8 @@ export default class AppendBlobHandler extends BaseHandler
       clientRequestId: options.requestId,
       version: BLOB_API_VERSION,
       date,
-      blobAppendOffset: `${blob.properties.contentLength}`,
-      blobCommittedBlockCount: (blob.committedBlocksInOrder || []).length + 1,
+      blobAppendOffset: `${originOffset}`,
+      blobCommittedBlockCount: committedBlockCount + 1,
       isServerEncrypted: true
     };
 
