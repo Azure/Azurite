@@ -43,7 +43,7 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
   - Flexible structure and architecture, supports customizing handler layer implementation, persistency layer implementation, HTTP pipeline middleware injection
   - Detailed debugging log support, easy bug locating and reporting
   - Works with storage .Net SDK basic and advanced sample
-  - SharedKey, AccountSAS, ServiceSAS, Public Access authentication support
+  - SharedKey, AccountSAS, ServiceSAS, OAuth, Public Access authentication support
   - Keep updating with latest Azure Storage API version features (Refer to support matrix)
 
 ## Getting Started
@@ -310,7 +310,7 @@ In basic level, `--oauth basic`, Azurite will do basic authentication, like vali
 
 ### Command Line Options Differences between Azurite V2
 
-Azurite V3 supports SharedKey, Account Shared Access Signature (SAS), Service SAS and Public Container Access authentications, you can use any Azure Storage SDKs or tools like Storage Explorer to connect Azurite V3 with any authentication strategy.
+Azurite V3 supports SharedKey, Account Shared Access Signature (SAS), Service SAS, OAuth, and Public Container Access authentications, you can use any Azure Storage SDKs or tools like Storage Explorer to connect Azurite V3 with any authentication strategy.
 
 An option to bypass authentication is **NOT** provided in Azurite V3.
 
@@ -373,7 +373,7 @@ Azurite V3 provides support for a default storage account as General Storage Acc
 - Account name: `devstoreaccount1`
 - Account key: `Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==`
 
-> Note. Besides SharedKey authentication, Azurite V3 supports account and service SAS authentication. Anonymous access is also available when container is set to allow public access.
+> Note. Besides SharedKey authentication, Azurite V3 supports account, OAuth, and service SAS authentication. Anonymous access is also available when container is set to allow public access.
 
 ### Customized Storage Accounts & Keys
 
@@ -423,9 +423,11 @@ You could use the following command to generate a PFX file with `dotnet dev-cert
 dotnet dev-certs https -ep <CertName>.pfx -p <YourPassword>
 ```
 
-### Connection String
+### Connection Strings
 
-Typically you can pass following connection strings to SDKs or tools (like Azure CLI 2.0 or Storage Explorer)
+#### HTTP Connection Strings
+
+You can pass following connection strings to SDKs or tools (like Azure CLI 2.0 or Storage Explorer)
 
 The full connection string is:
 
@@ -445,73 +447,75 @@ Or if the SDK or tools support following short connection string:
 UseDevelopmentStorage=true;
 ```
 
-#### HTTPS
+#### HTTPS Connection Strings
 
-The full https connection string is:
+The full HTTPS connection string is:
 
 ```
 DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://127.0.0.1:10000/devstoreaccount1;QueueEndpoint=https://127.0.0.1:10001/devstoreaccount1;
 ```
 
-Take blob service only, the https connection string is:
+To use the Blob service only, the HTTP connection string is:
 
 ```
 DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://127.0.0.1:10000/devstoreaccount1;
 ```
 
+### Azure SDKs
+
+To use Azurite with the [Azure SDKs](https://aka.ms/azsdk), you must use OAuth and HTTPs options:
+
+`azurite --oauth basic --cert certname.pem --key certname-key.pem`
+
+#### Azure Blob Storage
+
+You can then instantiate BlobContainerClient, BlobServiceClient, or BlobClient.
+
+```csharp
+// With container url and DefaultAzureCredential
+var client = new BlobContainerCLient(new Uri("https://127.0.0.1:10000/devstoreaccount1/container-name"), new DefaultAzureCredential());
+
+// With connection string
+var client = new BlobContainerClient("DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://127.0.0.1:10000/devstoreaccount1;QueueEndpoint=https://127.0.0.1:10001/devstoreaccount1;", "container-name");
+
+// With account name and key
+var client = new BlobContainerClient(new Uri("https://127.0.0.1:10000/devstoreaccount1/container-name"), new StorageSharedKeyCredential("devstoreaccount1", "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="));
+```
+
+#### Azure Queue Storage
+
+You can also instantiate QueueClient or QueueServiceClient.
+
+```csharp
+// With queue url and DefaultAzureCredential
+var client = new QueueCLient(new Uri("https://127.0.0.1:10001/devstoreaccount1/queue-name"), new DefaultAzureCredential());
+
+// With connection string
+var client = new QueueClient("DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://127.0.0.1:10000/devstoreaccount1;QueueEndpoint=https://127.0.0.1:10001/devstoreaccount1;", "queue-name");
+
+// With account name and key
+var client = new QueueClient(new Uri("https://127.0.0.1:10001/devstoreaccount1/queue-name"), new StorageSharedKeyCredential("devstoreaccount1", "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="));
+```
+
 ### Storage Explorer
+
+#### Storage Explorer with Azurite HTTP
 
 Connect to Azurite by click "Add Account" icon, then select "Attach to a local emulator" and click "Connect".
 
-#### Storage Explorer with HTTPS
+#### Storage Explorer with Azurite HTTPS
 
-NOTE: Storage Explorer is a Node.js application that does not work with a local CA, so if you are using a local CA, then you need start Storage Explorer with the following steps.
+By default Storage Explorer will not open an HTTPS endpoint that uses a self-signed certificate. If you are running Azurite with HTTPS, then you are likely using a self-signed certificate. Fortunately, Storage Explorer allows you to import SSL certificates via the Edit -> SSL Certificates -> Import Certificates dialog.
 
-> Warning: Any Node.js application that you launch after setting the following value will not validate the HTTPS certificate, including Storage Explorer.
+##### Import Root CA
 
-1. Open a terminal
-2. Navigate to the Storage Explorer directory:
-
-**Windows**
-
-```bash
-cd "C:\Program Files (x86)\Microsoft Azure Storage Explorer"
-```
-
-**Linux**
-
-```bash
-
-```
-
-3. Set the NODE_TLS_REJECT_UNAUTHORIZED
-
-**Windows**
-
-```
-set NODE_TLS_REJECT_UNAUTHORIZED=0
-```
-
-**Linux**
-
-```
-export NODE_TLS_REJECT_UNAUTHORIZED=0
-```
-
-4. Launch Storage Explorer
-
-**Windows**
-
-Run the following command:
-
-```bash
-StorageExplorer.exe
-```
+1. Find the "Root Certificate aka Root CA" on your local machine.
+2. Open Storage Explorer -> Edit -> SSL Certificates -> Import Certificates and import your Root CA.
 
 If you do not set this, then you will get the following error:
 
 ```
-unable to verify the first certificate.
+unable to verify the first certificate
 ```
 
 or
@@ -520,11 +524,13 @@ or
 self signed certificate in chain
 ```
 
-Follow these steps to add the HTTPS endpoints to Storage Explorer:
+##### Add Azurite via HTTPS Connection String
 
-1. Right click on Local & Attached->Storage Accounts and select "Connect to Azure Storage...".
+Follow these steps to add Azurite HTTPS to Storage Explorer:
+
+1. Right click on Local & Attached -> Storage Accounts and select "Connect to Azure Storage...".
 2. Select "Use a connection string" and click Next.
-3. Enter a name, i.e https.
+3. Enter a name, i.e Azurite.
 4. Enter the HTTPS connection string from the previous section of this document and click Next.
 
 You can now explore the Azurite HTTPS endpoints with Storage Explorer.
