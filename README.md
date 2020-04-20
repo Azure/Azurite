@@ -427,7 +427,7 @@ dotnet dev-certs https -ep <CertName>.pfx -p <YourPassword>
 
 #### HTTP Connection Strings
 
-You can pass following connection strings to SDKs or tools (like Azure CLI 2.0 or Storage Explorer)
+You can pass the following connection strings to the [Azure SDKs](https://aka.ms/azsdk) or tools (like Azure CLI 2.0 or Storage Explorer)
 
 The full connection string is:
 
