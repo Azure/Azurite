@@ -125,9 +125,9 @@ Following extension configurations are supported:
 - `azurite.silent` Silent mode to disable access log in Visual Studio channel, by default false
 - `azurite.debug` Output debug log into Azurite channel, by default false
 - `azurite.loose` Enable loose mode which ignores unsupported headers and parameters, by default false
-- `azurite.cert` Path to a pem or pfx cert file. Required by HTTPS mode.
-- `azurite.key` Path to a pem key file. Required when `azurite.cert` points to a pem file.
-- `azurite.pwd` Pfx cert password. Required when `azurite.cert` points to a pfx file.
+- `azurite.cert` Path to a PEM or PFX cert file. Required by HTTPS mode.
+- `azurite.key` Path to a PEM key file. Required when `azurite.cert` points to a PEM file.
+- `azurite.pwd` PFX cert password. Required when `azurite.cert` points to a PFX file.
 - `azurite.oauth` OAuth oauthentication level. Candidate level values: `basic`.
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
@@ -244,8 +244,6 @@ You can provide a customized path as the workspace location, or by default, Curr
 --location c:\azurite
 ```
 
-###
-
 ### Access Log Configuration
 
 Optional. By default Azurite will display access log in console. **Disable** it by:
@@ -276,19 +274,19 @@ Optional. By default Azurite will apply strict mode. Strict mode will block unsu
 
 ### Certificate Configuration (HTTPS)
 
-Optional. By default Azurite will listen on HTTP protocol. Provide a pem or pfx certificate file path to enable HTTPS mode:
+Optional. By default Azurite will listen on HTTP protocol. Provide a PEM or PFX certificate file path to enable HTTPS mode:
 
 ```cmd
 --cert path/server.pem
 ```
 
-When `--cert` is provided for a pem file, must provide coresponding `--key`.
+When `--cert` is provided for a PEM file, must provide coresponding `--key`.
 
 ```cmd
 --key path/key.pem
 ```
 
-When `--cert` is provided for a pfx file, must provide coresponding `--pwd`
+When `--cert` is provided for a PFX file, must provide coresponding `--pwd`
 
 ```cmd
 --pwd pfxpassword
@@ -364,6 +362,112 @@ This feature is in preview, when Azurite changes database table schema, you need
 
 > Tips. Create database instance quickly with docker, for example `docker run --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql:latest`. Grant external access and create database `azurite_blob` using `docker exec mysql mysql -u root -pmy-secret-pw -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES; create database azurite_blob;"`. Notice that, above commands are examples, you need to carefully define the access permissions in your production environment.
 
+## HTTPS Setup
+
+Azurite natively supports HTTPS with self-signed certificates via the `--cert` and `--key`/`--pwd` options. You have two certificate type options: PEM or PFX. PEM certificates are split into "cert" and "key" files. PFX certificates are a single certificate file, but require a password to use.
+
+### PEM
+
+#### Generate PEM Certificate and Key
+
+You have a few options to generate PEM certificate and key files. We'll show you how to use [mkcert](https://github.com/FiloSottile/mkcert) and [OpenSSL](https://www.openssl.org/).
+
+##### mkcert
+
+[mkcert](https://github.com/FiloSottile/mkcert) is a utility that makes the entire self-signed certificate process much easier because it wraps a lot of the complex commands that you need to execute with other utilities.
+
+###### Generate Certificate and Key with mkcert
+
+1. Install mkcert: https://github.com/FiloSottile/mkcert#installation, we like to use choco `choco install mkcert`, but you can install with any mechanism you'd like.
+2. Run the following commands to install the Root CA and generate a cert for Azurite.
+
+```bash
+mkcert -install
+mkcert 127.0.0.1
+```
+
+That will create two files. A certificate file: `127.0.0.1.pem` and a key file: `127.0.0.1-key.pem`.
+
+###### Start Azurite with HTTPS and PEM
+
+Then you start azurite with that cert and key.
+
+```bash
+azurite --cert 127.0.0.1.pem --key 127.0.0.1-key.pem
+```
+
+NOTE: If you are using the Azure SDKs, then you will also need to pass the `--oauth basic` option.
+
+##### OpenSSL
+
+[OpenSSL](https://www.openssl.org/) is a TLS/SSL toolkit. You can use it to generate certificates. It is more involved than mkcert, but has more options.
+
+###### Install OpenSSL on Windows
+
+1. Download and install the OpenSSL v1.1.1a+ EXE from http://slproweb.com/products/Win32OpenSSL.html
+2. Set the following environment variables
+
+```bash
+set OPENSSL_CONF=c:\OpenSSL-Win32\bin\openssl.cfg
+set Path=%PATH%;c:\OpenSSL-Win32\bin
+```
+
+###### Generate Certificate and Key
+
+Execute the following command to generate a cert and key with [OpenSSL](https://www.openssl.org/).
+
+```bash
+openssl req -newkey rsa:2048 -x509 -nodes -keyout key.pem -new -out cert.pem -sha256 -days 365 -addext "subjectAltName=IP:127.0.0.1" -subj "/C=CO/ST=ST/L=LO/O=OR/OU=OU/CN=CN"
+```
+
+The `-subj` values are required, but do not have to be valid. The `subjectAltName` must contain the Azurite IP address.
+
+###### Add Certificate to Trusted Root Store
+
+You then need to add that certificate to the Trusted Root Certification Authorities. This is required to work with Azure SDKs and Storage Explorer.
+
+Here's how to do that on Windows:
+
+```bash
+certutil –addstore -enterprise –f "Root" cert.pem
+```
+
+#### Start Azurite with HTTPS and PEM
+
+Then you start azurite with that cert and key.
+
+```bash
+azurite --cert cert.pem --key key.pem
+```
+
+NOTE: If you are using the Azure SDKs, then you will also need to pass the `--oauth basic` option.
+
+#### PFX
+
+##### Generate PFX Certificate
+
+You first need to generate a PFX file to use with Azurite.
+
+You can use the following command to generate a PFX file with `dotnet dev-certs`, which is installed with the [.NET Core SDK](https://dotnet.microsoft.com/download).
+
+```bash
+dotnet dev-certs https --trust -ep cert.pfx -p <password>
+```
+
+> Storage Explorer does not currently work with certificates produced by `dotnet dev-certs`. While you can use them for Azurite and Azure SDKs, you won't be able to access the Azurite endpoints with Storage Explorer if you are using the certs created with dotnet dev-certs. We are tracking this issue on GitHub here: https://github.com/microsoft/AzureStorageExplorer/issues/2859
+
+##### Start Azurite with HTTPS and PFX
+
+Then you start azurite with that cert and key.
+
+```bash
+azurite --cert cert.pem --key key.pem
+```
+
+NOTE: If you are using the Azure SDKs, then you will also need to pass the `--oauth basic` option.
+
+##### Start Azurite
+
 ## Usage with Azure Storage SDKs or Tools
 
 ### Default Storage Account
@@ -391,38 +495,6 @@ Or customize multi storage accounts and each has 2 keys:
 set AZURITE_ACCOUNTS="account1:key1:key2;account2:key1:key2"
 ```
 
-### HTTPS Setup
-
-#### PEM
-
-You first need to generate a PEM file to use with Azurite. Once you have the file, you can start Azurite with the `--cert` and `--key` options:
-
-```bash
-azurite --cert <CertName>.pem --key <CertName>-key.pem
-```
-
-You could use following command to generate a cert and key using openssl.
-
-```base
-openssl genrsa -out server.key 2048
-openssl req -new -x509 -key server.key -out server.cert -days 365
-azurite --cert server.cert --key server.key
-```
-
-#### PFX
-
-You first need to generate a PFX file to use with Azurite. Once you have the file, you can start Azurite with the `--cert` and `--pwd` options:
-
-```bash
-azurite --cert <CertName>.pfx --pwd <YourPassword>
-```
-
-You could use the following command to generate a PFX file with `dotnet dev-certs`, which is installed with the [.NET Core SDK](https://dotnet.microsoft.com/download).
-
-```bash
-dotnet dev-certs https -ep <CertName>.pfx -p <YourPassword>
-```
-
 ### Connection Strings
 
 #### HTTP Connection Strings
@@ -431,19 +503,19 @@ You can pass the following connection strings to the [Azure SDKs](https://aka.ms
 
 The full connection string is:
 
-```
+```bash
 DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;QueueEndpoint=http://127.0.0.1:10001/devstoreaccount1;
 ```
 
 Take blob service only, the full connection string is:
 
-```
+```bash
 DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;
 ```
 
 Or if the SDK or tools support following short connection string:
 
-```
+```bash
 UseDevelopmentStorage=true;
 ```
 
@@ -451,14 +523,20 @@ UseDevelopmentStorage=true;
 
 The full HTTPS connection string is:
 
-```
+```bash
 DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://127.0.0.1:10000/devstoreaccount1;QueueEndpoint=https://127.0.0.1:10001/devstoreaccount1;
 ```
 
-To use the Blob service only, the HTTP connection string is:
+To use the Blob service only, the HTTPS connection string is:
 
-```
+```bash
 DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://127.0.0.1:10000/devstoreaccount1;
+```
+
+If you used `dotnet dev-certs` to generate your self-signed certificate, then you need to use the following connection string, because that only generates a cert for `localhost`, not `127.0.0.1`.
+
+```bash
+DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://localhost:10000/devstoreaccount1;QueueEndpoint=https://localhost:10001/devstoreaccount1;
 ```
 
 ### Azure SDKs
@@ -507,10 +585,13 @@ Connect to Azurite by click "Add Account" icon, then select "Attach to a local e
 
 By default Storage Explorer will not open an HTTPS endpoint that uses a self-signed certificate. If you are running Azurite with HTTPS, then you are likely using a self-signed certificate. Fortunately, Storage Explorer allows you to import SSL certificates via the Edit -> SSL Certificates -> Import Certificates dialog.
 
-##### Import Root CA
+##### Import Certificate to Storage Explorer
 
-1. Find the "Root Certificate aka Root CA" on your local machine.
-2. Open Storage Explorer -> Edit -> SSL Certificates -> Import Certificates and import your Root CA.
+1. Find the certificate on your local machine.
+   - **OpenSSL**: You can find the PEM file at the location you created in the [HTTPS Setup](#https-setup) section above.
+   - **mkcert**: You need to import the RootCA.pem file, which can be found by executing this command in the terminal: `mkcert -CAROOT`. For mkcert, you want to import the RootCA.pem file, not the certificate file you created.
+   - **dotnet dev-certs**: Storage Explorer doesn't currently work with certs produced by `dotnet dev-certs`. We are tracking this issue on GitHub here: https://github.com/microsoft/AzureStorageExplorer/issues/2859
+2. Open Storage Explorer -> Edit -> SSL Certificates -> Import Certificates and import your certificate.
 
 If you do not set this, then you will get the following error:
 
@@ -531,7 +612,7 @@ Follow these steps to add Azurite HTTPS to Storage Explorer:
 1. Right click on Local & Attached -> Storage Accounts and select "Connect to Azure Storage...".
 2. Select "Use a connection string" and click Next.
 3. Enter a name, i.e Azurite.
-4. Enter the HTTPS connection string from the previous section of this document and click Next.
+4. Enter the [HTTPS connection string](#https-connection-strings) from the previous section of this document and click Next.
 
 You can now explore the Azurite HTTPS endpoints with Storage Explorer.
 
