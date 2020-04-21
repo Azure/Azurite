@@ -364,7 +364,7 @@ This feature is in preview, when Azurite changes database table schema, you need
 
 ## HTTPS Setup
 
-Azurite natively supports HTTPS with self-signed certificates via the `--cert` and `--key`/`--pwd` options. You have two certificate type options: PEM or PFX. PEM certificates are split into "cert" and "key" files. PFX certificates are a single certificate file, but require a password to use.
+Azurite natively supports HTTPS with self-signed certificates via the `--cert` and `--key`/`--pwd` options. You have two certificate type options: PEM or PFX. PEM certificates are split into "cert" and "key" files. A PFX certificate is a single file that can be assigned a password.
 
 ### PEM
 
@@ -374,11 +374,11 @@ You have a few options to generate PEM certificate and key files. We'll show you
 
 ##### mkcert
 
-[mkcert](https://github.com/FiloSottile/mkcert) is a utility that makes the entire self-signed certificate process much easier because it wraps a lot of the complex commands that you need to execute with other utilities.
+[mkcert](https://github.com/FiloSottile/mkcert) is a utility that makes the entire self-signed certificate process much easier because it wraps a lot of the complex commands that you need to manually execute with other utilities.
 
 ###### Generate Certificate and Key with mkcert
 
-1. Install mkcert: https://github.com/FiloSottile/mkcert#installation, we like to use choco `choco install mkcert`, but you can install with any mechanism you'd like.
+1. Install mkcert: https://github.com/FiloSottile/mkcert#installation. We like to use choco `choco install mkcert`, but you can install with any mechanism you'd like.
 2. Run the following commands to install the Root CA and generate a cert for Azurite.
 
 ```bash
@@ -390,7 +390,7 @@ That will create two files. A certificate file: `127.0.0.1.pem` and a key file: 
 
 ###### Start Azurite with HTTPS and PEM
 
-Then you start azurite with that cert and key.
+Then you start Azurite with that cert and key.
 
 ```bash
 azurite --cert 127.0.0.1.pem --key 127.0.0.1-key.pem
@@ -434,10 +434,10 @@ certutil –addstore -enterprise –f "Root" cert.pem
 
 #### Start Azurite with HTTPS and PEM
 
-Then you start azurite with that cert and key.
+Then you start Azurite with that cert and key.
 
 ```bash
-azurite --cert cert.pem --key key.pem
+Azurite --cert cert.pem --key key.pem
 ```
 
 NOTE: If you are using the Azure SDKs, then you will also need to pass the `--oauth basic` option.
@@ -458,7 +458,7 @@ dotnet dev-certs https --trust -ep cert.pfx -p <password>
 
 ##### Start Azurite with HTTPS and PFX
 
-Then you start azurite with that cert and key.
+Then you start Azurite with that cert and key.
 
 ```bash
 azurite --cert cert.pem --key key.pem
