@@ -300,6 +300,8 @@ Optional. By default, Azurite doesn't support OAuth and bearer token. Enable OAu
 --oauth basic
 ```
 
+> Note. OAuth requires HTTPS endpoint. Make sure HTTPS is enabled by providing `--cert` parameter along with `--oauth` parameter.
+
 Currently, Azurite supports following OAuth authentication levels:
 
 #### Basic
@@ -783,6 +785,7 @@ Detailed support matrix:
   - Set Blob Properties
   - Get Blob Metadata
   - Set Blob Metadata
+  - Create Append Blob, Append Block
   - Lease Blob
   - Snapshot Blob
   - Copy Blob (Only supports copy within same account in Azurite)
@@ -795,7 +798,6 @@ Detailed support matrix:
   - Soft delete & Undelete Blob
   - Put Block from URL
   - Incremental Copy Blob
-  - Create Append Blob, Append Block
 
 Latest version supports for **2019-07-07** API version **queue** service.
 Detailed support matrix:
