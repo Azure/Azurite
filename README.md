@@ -5,20 +5,19 @@
 
 A lightweight server clone of Azure Blob, Queue, and Table Storage that simulates most of the commands supported by it with minimal dependencies.
 
-# Important Update on Azurite Direction & Future Work
+# Important Update on Azurite Direction & Future Work - Legacy Branch
 
 Dear Azurite community, many thanks for your interest and support.  
 We thought we might be able to reduce some of our testing overhead by incorporating the Azure Storage Node tests in the dev pipeline, but that just showed us how far we really had to go.
 
 We were struggling to maintain parity with our APIs, community contributions were growing, as was our number of issues.  
 
-**To fix this**, we have been focusing on the completion of a new more easily maintainable architecture for Azurite, using Typescript and automatically generated interfaces.
+**To fix this**, we have created a more easily maintainable architecture for Azurite, using Typescript and automatically generated interfaces.
 
-The plan is to implement blob storage, followed by table storage, then queues.  Each with persistent storage.  
+Please use the v3 version unless you need cross platform table storage emulation, which is currently only available in v2, or via the [Cosmos emulator in Windows](https://docs.microsoft.com/en-us/azure/cosmos-db/local-emulator). 
 
-Contributors and maintainers can then focus on emulation and simulation of storage behaviour, rather than reverse engineering our APIs and API documentation.  
+Contributors and maintainers to v3 can focus on emulation and simulation of storage behaviour, rather than reverse engineering our APIs and API documentation.  
 
-The blob API work should be completed in the next couple of months, with the rest following on close behind.
 
 # Installation and Usage
 ## NPM
@@ -62,23 +61,21 @@ a single self-contained executable, thanks to [pkg](https://www.npmjs.com/packag
 ## Docker image
 
 ### Pulling from Docker Hub
-Every release of Azurite starting with version 0.9.7 is available at [Docker Hub](https://hub.docker.com/r/arafato/azurite/) and ready to be pulled with:
-```bash
-$ docker pull arafato/azurite
-```
-Please note that the `latest` tag will always refer to the latest release.
+Azurite v2 is not available on Docker Hub.  
+You must build the docker image yourself.
 
 ### Build the Docker image 
 To build the Docker image yourself, execute the following:
 ```bash
-$ docker build -t arafato/azurite .
+$ docker build -t myazurite/azurite .
 ```
 
 ### Run the Docker image
 To run the Docker image, execute the following command:
 ```bash
-$ docker run -d -t -p 10000:10000 -p 10001:10001 -p 10002:10002 -v /path/to/folder:/opt/azurite/folder arafato/azurite
+$ docker run -d -t -p 10002:10002 -v /path/to/folder:/opt/azurite/folder myazurite/azurite
 ```
+The expectation is that Azureite v2 is only being used for table storage, and only 1 port is being forwarded to the docker container for this purpose.
 
 #### Configure the executable when running the container
 By default, the container starts all services available (currently blob, queue, and table).
@@ -90,7 +87,7 @@ Using the environment variable `executable`, specific executables can be specife
 
 ##### Usage example:
 ```bash
-$ docker run -e executable=blob -d -t -p 10000:10000 -v /path/to/folder:/opt/azurite/folder arafato/azurite
+$ docker run -e executable=blob -d -t -p 10000:10000 -v /path/to/folder:/opt/azurite/folder myazurite/azurite
 ```
 
 ## Usage with Azure Cross-Platform CLI 2.0
