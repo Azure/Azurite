@@ -18,13 +18,13 @@ import QueueHandler from "./handlers/QueueHandler";
 import ServiceHandler from "./handlers/ServiceHandler";
 import AuthenticationMiddlewareFactory from "./middlewares/AuthenticationMiddlewareFactory";
 import PreflightMiddlewareFactory from "./middlewares/PreflightMiddlewareFactory";
-import queueStorageContextMiddleware from "./middlewares/queueStorageContext.middleware";
 import { IQueueMetadataStore } from "./persistence/IQueueMetadataStore";
 import { DEFAULT_QUEUE_CONTEXT_PATH } from "./utils/constants";
 
 import morgan = require("morgan");
 import { OAuthLevel } from "../common/models";
 import IAuthenticator from "./authentication/IAuthenticator";
+import createQueueStorageContextMiddleware from "./middlewares/queueStorageContext.middleware";
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -44,6 +44,7 @@ export default class QueueRequestListenerFactory
     private readonly accountDataStore: IAccountDataStore,
     private readonly enableAccessLog: boolean,
     private readonly accessLogWriteStream?: NodeJS.WritableStream,
+    private readonly skipApiVersionCheck?: boolean,
     private readonly oauth?: OAuthLevel
   ) {}
 
@@ -91,7 +92,7 @@ export default class QueueRequestListenerFactory
     }
 
     // Manually created middleware to deserialize feature related context which swagger doesn't know
-    app.use(queueStorageContextMiddleware);
+    app.use(createQueueStorageContextMiddleware(this.skipApiVersionCheck));
 
     // Dispatch incoming HTTP request to specific operation
     app.use(middlewareFactory.createDispatchMiddleware());

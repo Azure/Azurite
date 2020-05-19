@@ -192,6 +192,11 @@
             "type": "number",
             "default": 10001,
             "description": "Queue service listening port, by default 10001"
+          },
+          "azurite.skipApiVersionCheck": {
+            "type": "boolean",
+            "default": false,
+            "description": "Skip the request API version check, request with all Api versions will be allowed."
           }
         }
       }

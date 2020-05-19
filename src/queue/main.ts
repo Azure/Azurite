@@ -50,6 +50,7 @@ async function main() {
     (await env.debug()) !== undefined,
     await env.debug(),
     env.loose(),
+    env.skipApiVersionCheck(),
     env.cert(),
     env.key(),
     env.pwd(),
