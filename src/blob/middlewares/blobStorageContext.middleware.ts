@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response, RequestHandler } from "express";
+import { NextFunction, Request, RequestHandler, Response } from "express";
 import uuid from "uuid/v4";
 
 import logger from "../../common/Logger";

@@ -408,6 +408,7 @@ describe("Queue OAuth Basic", () => {
         undefined,
         undefined,
         false,
+        false,
         undefined,
         undefined,
         undefined,
