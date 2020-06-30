@@ -503,15 +503,14 @@ describe("ContainerAPIs", () => {
       await blob.delete(Aborter.none);
     }
   });
-  
-  // This is expected to break because listBlobs currently does not filter uncommitted blobs.
+
   it("should only show uncommitted blobs in listBlobFlatSegment with uncommittedblobs option @loki @sql", async () => {
     const blobURL = BlobURL.fromContainerURL(
       containerURL,
-      getUniqueName('uncommittedblob')
+      getUniqueName("uncommittedblob")
     );
-    const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL)
-      
+    const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
+
     const body = "HelloWorld";
     await blockBlobURL.stageBlock(
       Aborter.none,
@@ -519,14 +518,12 @@ describe("ContainerAPIs", () => {
       body,
       body.length
     );
-    
+
     const result1 = await containerURL.listBlobFlatSegment(
       Aborter.none,
       undefined,
       {
-        include: [
-          "uncommittedblobs"
-        ]
+        include: ["uncommittedblobs"]
       }
     );
     assert.equal(result1.segment.blobItems.length, 1);
@@ -536,6 +533,42 @@ describe("ContainerAPIs", () => {
       undefined
     );
     assert.equal(result2.segment.blobItems.length, 0);
+
+    await blobURL.delete(Aborter.none);
+  });
+
+  it("should only show uncommitted blobs in listBlobHierarchySegment with uncommittedblobs option @loki @sql", async () => {
+    const delimiter = "/";
+    const blobURL = BlobURL.fromContainerURL(
+      containerURL,
+      getUniqueName("path/uncommittedblob")
+    );
+    const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
+
+    const body = "HelloWorld";
+    await blockBlobURL.stageBlock(
+      Aborter.none,
+      base64encode("1"),
+      body,
+      body.length
+    );
+
+    const result1 = await containerURL.listBlobHierarchySegment(
+      Aborter.none,
+      delimiter,
+      undefined,
+      {
+        include: ["uncommittedblobs"]
+      }
+    );
+    assert.equal(result1.segment.blobPrefixes!.length, 1);
+
+    const result2 = await containerURL.listBlobHierarchySegment(
+      Aborter.none,
+      delimiter,
+      undefined
+    );
+    assert.equal(result2.segment.blobPrefixes!.length, 0);
 
     await blobURL.delete(Aborter.none);
   });
