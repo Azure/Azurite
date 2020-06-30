@@ -533,8 +533,6 @@ describe("ContainerAPIs", () => {
       undefined
     );
     assert.equal(result2.segment.blobItems.length, 0);
-
-    await blobURL.delete(Aborter.none);
   });
 
   it("should only show uncommitted blobs in listBlobHierarchySegment with uncommittedblobs option @loki @sql", async () => {
@@ -569,8 +567,6 @@ describe("ContainerAPIs", () => {
       undefined
     );
     assert.equal(result2.segment.blobPrefixes!.length, 0);
-
-    await blobURL.delete(Aborter.none);
   });
 
   it("should correctly order all blobs in the container @loki @sql", async () => {
