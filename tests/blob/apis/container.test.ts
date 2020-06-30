@@ -12,6 +12,7 @@ import assert = require("assert");
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
 import {
+  base64encode,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
@@ -501,6 +502,42 @@ describe("ContainerAPIs", () => {
     for (const blob of blobURLs) {
       await blob.delete(Aborter.none);
     }
+  });
+  
+  // This is expected to break because listBlobs currently does not filter uncommitted blobs.
+  it("should only show uncommitted blobs in listBlobFlatSegment with uncommittedblobs option @loki @sql", async () => {
+    const blobURL = BlobURL.fromContainerURL(
+      containerURL,
+      getUniqueName('uncommittedblob')
+    );
+    const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL)
+      
+    const body = "HelloWorld";
+    await blockBlobURL.stageBlock(
+      Aborter.none,
+      base64encode("1"),
+      body,
+      body.length
+    );
+    
+    const result1 = await containerURL.listBlobFlatSegment(
+      Aborter.none,
+      undefined,
+      {
+        include: [
+          "uncommittedblobs"
+        ]
+      }
+    );
+    assert.equal(result1.segment.blobItems.length, 1);
+
+    const result2 = await containerURL.listBlobFlatSegment(
+      Aborter.none,
+      undefined
+    );
+    assert.equal(result2.segment.blobItems.length, 0);
+
+    await blobURL.delete(Aborter.none);
   });
 
   it("should correctly order all blobs in the container @loki @sql", async () => {
