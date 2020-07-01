@@ -1246,7 +1246,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
-  // TODO: Filter uncommitted blobs
   public async listBlobs(
     context: Context,
     account: string,
@@ -1255,7 +1254,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     prefix: string = "",
     maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
     marker?: string,
-    includeSnapshots?: boolean
+    includeSnapshots?: boolean,
+    includeUncommittedBlobs?: boolean
   ): Promise<[BlobModel[], any | undefined]> {
     return this.sequelize.transaction(async t => {
       const containerFindResult = await ContainersModel.findOne({
@@ -1297,6 +1297,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       if (!includeSnapshots) {
         whereQuery.snapshot = "";
       }
+      if (!includeUncommittedBlobs) {
+        whereQuery.isCommitted = true;
+      }
       whereQuery.deleting = 0;
 
       const blobFindResult = await BlobsModel.findAll({
@@ -1328,7 +1331,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   public async listAllBlobs(
     maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
     marker?: string,
-    includeSnapshots?: boolean
+    includeSnapshots?: boolean,
+    includeUncommittedBlobs?: boolean
   ): Promise<[BlobModel[], any | undefined]> {
     const whereQuery: any = {};
     if (marker !== undefined) {
@@ -1338,6 +1342,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     }
     if (!includeSnapshots) {
       whereQuery.snapshot = "";
+    }
+    if (!includeUncommittedBlobs) {
+      whereQuery.isCommitted = true;
     }
     whereQuery.deleting = 0;
 

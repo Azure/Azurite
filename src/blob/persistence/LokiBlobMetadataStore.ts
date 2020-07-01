@@ -823,7 +823,8 @@ export default class LokiBlobMetadataStore
     prefix: string = "",
     maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
     marker: string = "",
-    includeSnapshots?: boolean
+    includeSnapshots?: boolean,
+    includeUncommittedBlobs?: boolean
   ): Promise<[BlobModel[], string | undefined]> {
     const query: any = {};
     if (prefix !== "") {
@@ -841,28 +842,21 @@ export default class LokiBlobMetadataStore
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
 
-    let docs;
-    if (includeSnapshots === true) {
-      docs = await coll
-        .chain()
-        .find(query)
-        .where(obj => {
-          return obj.name > marker!;
-        })
-        .simplesort("name")
-        .limit(maxResults + 1)
-        .data();
-    } else {
-      docs = await coll
-        .chain()
-        .find(query)
-        .where(obj => {
-          return obj.snapshot.length === 0 && obj.name > marker!;
-        })
-        .simplesort("name")
-        .limit(maxResults + 1)
-        .data();
-    }
+    const docs = await coll
+      .chain()
+      .find(query)
+      .where(obj => {
+        return obj.name > marker!;
+      })
+      .where(obj => {
+        return includeSnapshots ? true : obj.snapshot.length === 0;
+      })
+      .where(obj => {
+        return includeUncommittedBlobs ? true : obj.isCommitted;
+      })
+      .simplesort("name")
+      .limit(maxResults + 1)
+      .data();
 
     for (const doc of docs) {
       const blobDoc = doc as BlobModel;
@@ -899,30 +893,25 @@ export default class LokiBlobMetadataStore
   public async listAllBlobs(
     maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
     marker: string = "",
-    includeSnapshots?: boolean
+    includeSnapshots?: boolean,
+    includeUncommittedBlobs?: boolean
   ): Promise<[BlobModel[], string | undefined]> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
 
-    let docs;
-    if (includeSnapshots === true) {
-      docs = await coll
-        .chain()
-        .where(obj => {
-          return obj.name > marker!;
-        })
-        .simplesort("name")
-        .limit(maxResults + 1)
-        .data();
-    } else {
-      docs = await coll
-        .chain()
-        .where(obj => {
-          return obj.snapshot.length === 0 && obj.name > marker!;
-        })
-        .simplesort("name")
-        .limit(maxResults + 1)
-        .data();
-    }
+    const docs = await coll
+      .chain()
+      .where(obj => {
+        return obj.name > marker!;
+      })
+      .where(obj => {
+        return includeSnapshots ? true : obj.snapshot.length === 0;
+      })
+      .where(obj => {
+        return includeUncommittedBlobs ? true : obj.isCommitted;
+      })
+      .simplesort("name")
+      .limit(maxResults + 1)
+      .data();
 
     for (const doc of docs) {
       const blobDoc = doc as BlobModel;
