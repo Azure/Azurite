@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Request, RequestHandler, Response } from "express";
 import uuid from "uuid/v4";
 
 import logger from "../../common/Logger";
@@ -14,6 +14,14 @@ import {
 } from "../utils/constants";
 import { checkApiVersion, isValidName, nameValidateCode } from "../utils/utils";
 
+export default function createQueueStorageContextMiddleware(
+  skipApiVersionCheck?: boolean
+): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction) => {
+    return queueStorageContextMiddleware(req, res, next, skipApiVersionCheck);
+  };
+}
+
 /**
  * A middleware extract related queue service context.
  *
@@ -22,19 +30,22 @@ import { checkApiVersion, isValidName, nameValidateCode } from "../utils/utils";
  * @param {Response} res An express compatible Response object
  * @param {NextFunction} next An express middleware next callback
  */
-export default function queueStorageContextMiddleware(
+export function queueStorageContextMiddleware(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
+  skipApiVersionCheck?: boolean
 ): void {
   // Set server header in every Azurite response
   res.setHeader(HeaderConstants.SERVER, `Azurite-Queue/${VERSION}`);
 
   const requestID = uuid();
 
-  const apiVersion = req.header(HeaderConstants.X_MS_VERSION);
-  if (apiVersion !== undefined) {
-    checkApiVersion(apiVersion, ValidAPIVersions, requestID);
+  if (!skipApiVersionCheck) {
+    const apiVersion = req.header(HeaderConstants.X_MS_VERSION);
+    if (apiVersion !== undefined) {
+      checkApiVersion(apiVersion, ValidAPIVersions, requestID);
+    }
   }
 
   const queueContext = new QueueStorageContext(

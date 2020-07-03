@@ -47,6 +47,7 @@ describe("Queue HTTPS", () => {
     undefined,
     undefined,
     false,
+    false,
     "tests/server.cert",
     "tests/server.key"
   );

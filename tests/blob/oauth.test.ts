@@ -17,7 +17,7 @@ configLogger(false);
 
 describe("Blob OAuth Basic", () => {
   const factory = new BlobTestServerFactory();
-  let server = factory.createServer(false, true, "basic");
+  let server = factory.createServer(false, false, true, "basic");
   const baseURL = `https://${server.config.host}:${server.config.port}/devstoreaccount1`;
 
   before(async () => {
@@ -366,7 +366,7 @@ describe("Blob OAuth Basic", () => {
     await server.close();
     await server.clean();
 
-    server = factory.createServer(false, false, "basic");
+    server = factory.createServer(false, false, false, "basic");
     await server.start();
 
     const httpBaseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;

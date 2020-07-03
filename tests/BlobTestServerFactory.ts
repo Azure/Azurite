@@ -8,6 +8,7 @@ import { DEFAULT_SQL_OPTIONS } from "../src/common/utils/constants";
 export default class BlobTestServerFactory {
   public createServer(
     loose: boolean = false,
+    skipApiVersionCheck: boolean = false,
     https: boolean = false,
     oauth?: string
   ): BlobServer | SqlBlobServer {
@@ -38,6 +39,7 @@ export default class BlobTestServerFactory {
         false,
         undefined,
         loose,
+        skipApiVersionCheck,
         cert,
         key,
         undefined,
@@ -59,6 +61,7 @@ export default class BlobTestServerFactory {
         false,
         undefined,
         loose,
+        skipApiVersionCheck,
         cert,
         key,
         undefined,
