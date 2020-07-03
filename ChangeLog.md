@@ -7,6 +7,8 @@
 - Bump up Azure Storage service API version to 2019-12-12.
 - Support skip request API version check by Azurite configuration parameter `--skipApiVersionCheck`.
 - Fixed an issue that list blobs doesn't honor uncommitted include option.
+- Updated docker base image to lts-alpine.
+- Removed testing certs from docker image.
 
 ## 2020.04 Version 3.7.0
 
