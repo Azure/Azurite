@@ -10,7 +10,7 @@
 
 | Version                                                            | Azure Storage API Version | Service Support       | Description                                       | Reference Links                                                                                                                                                                                                         |
 | ------------------------------------------------------------------ | ------------------------- | --------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.7.0                                                              | 2019-07-07                | Blob<br>Queue         | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| 3.8.0                                                              | 2019-07-07                | Blob<br>Queue         | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
 | [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
 ## Introduction
@@ -134,6 +134,8 @@ Following extension configurations are supported:
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
 #### Run Azurite V3 docker image
+
+> Note. Find more docker images tags in https://mcr.microsoft.com/v2/azure-storage/azurite/tags/list
 
 ```bash
 docker run -p 10000:10000 -p 10001:10001 mcr.microsoft.com/azure-storage/azurite
