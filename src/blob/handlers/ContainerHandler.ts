@@ -534,9 +534,15 @@ export default class ContainerHandler extends BaseHandler
     const delimiter = "";
     options.marker = options.marker || "";
     let includeSnapshots: boolean = false;
+    let includeUncommittedBlobs: boolean = false;
     if (options.include !== undefined) {
       if (options.include.includes(Models.ListBlobsIncludeItem.Snapshots)) {
         includeSnapshots = true;
+      }
+      if (
+        options.include.includes(Models.ListBlobsIncludeItem.Uncommittedblobs)
+      ) {
+        includeUncommittedBlobs = true;
       }
     }
     if (
@@ -554,7 +560,8 @@ export default class ContainerHandler extends BaseHandler
       options.prefix,
       options.maxresults,
       marker,
-      includeSnapshots
+      includeSnapshots,
+      includeUncommittedBlobs
     );
 
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
@@ -621,9 +628,15 @@ export default class ContainerHandler extends BaseHandler
     options.prefix = options.prefix || "";
     options.marker = options.marker || "";
     let includeSnapshots: boolean = false;
+    let includeUncommittedBlobs: boolean = false;
     if (options.include !== undefined) {
       if (options.include.includes(Models.ListBlobsIncludeItem.Snapshots)) {
         includeSnapshots = true;
+      }
+      if (
+        options.include.includes(Models.ListBlobsIncludeItem.Uncommittedblobs)
+      ) {
+        includeUncommittedBlobs = true;
       }
     }
     if (
@@ -641,7 +654,8 @@ export default class ContainerHandler extends BaseHandler
       options.prefix,
       options.maxresults,
       marker,
-      includeSnapshots
+      includeSnapshots,
+      includeUncommittedBlobs
     );
 
     const blobItems: Models.BlobItem[] = [];

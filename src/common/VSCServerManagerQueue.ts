@@ -93,6 +93,7 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       (await env.debug()) === true,
       undefined,
       env.loose(),
+      env.skipApiVersionCheck(),
       env.cert(),
       env.key(),
       env.pwd(),

@@ -21,7 +21,6 @@ import PageBlobHandler from "./handlers/PageBlobHandler";
 import PageBlobRangesManager from "./handlers/PageBlobRangesManager";
 import ServiceHandler from "./handlers/ServiceHandler";
 import AuthenticationMiddlewareFactory from "./middlewares/AuthenticationMiddlewareFactory";
-import blobStorageContextMiddleware from "./middlewares/blobStorageContext.middleware";
 import PreflightMiddlewareFactory from "./middlewares/PreflightMiddlewareFactory";
 import StrictModelMiddlewareFactory, {
   UnsupportedHeadersBlocker,
@@ -33,6 +32,7 @@ import { DEFAULT_CONTEXT_PATH } from "./utils/constants";
 import morgan = require("morgan");
 import { OAuthLevel } from "../common/models";
 import IAuthenticator from "./authentication/IAuthenticator";
+import createStorageBlobContextMiddleware from "./middlewares/blobStorageContext.middleware";
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -53,6 +53,7 @@ export default class BlobRequestListenerFactory
     private readonly enableAccessLog: boolean,
     private readonly accessLogWriteStream?: NodeJS.WritableStream,
     private readonly loose?: boolean,
+    private readonly skipApiVersionCheck?: boolean,
     private readonly oauth?: OAuthLevel
   ) {}
 
@@ -123,7 +124,7 @@ export default class BlobRequestListenerFactory
     }
 
     // Manually created middleware to deserialize feature related context which swagger doesn"t know
-    app.use(blobStorageContextMiddleware);
+    app.use(createStorageBlobContextMiddleware(this.skipApiVersionCheck));
 
     // Dispatch incoming HTTP request to specific operation
     app.use(middlewareFactory.createDispatchMiddleware());

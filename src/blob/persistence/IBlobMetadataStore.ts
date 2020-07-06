@@ -486,13 +486,15 @@ export interface IBlobMetadataStore
     prefix?: string,
     maxResults?: number,
     marker?: string,
-    includeSnapshots?: boolean
+    includeSnapshots?: boolean,
+    includeUncommittedBlobs?: boolean
   ): Promise<[BlobModel[], string | undefined]>;
 
   listAllBlobs(
     maxResults?: number,
     marker?: string,
-    includeSnapshots?: boolean
+    includeSnapshots?: boolean,
+    includeUncommittedBlobs?: boolean
   ): Promise<[BlobModel[], string | undefined]>;
 
   /**

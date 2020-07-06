@@ -71,6 +71,12 @@ export default class VSCEnvironment implements IEnvironment {
     return this.workspaceConfiguration.get<boolean>("loose") || false;
   }
 
+  public skipApiVersionCheck(): boolean {
+    return (
+      this.workspaceConfiguration.get<boolean>("skipApiVersionCheck") || false
+    );
+  }
+
   public async debug(): Promise<boolean> {
     return this.workspaceConfiguration.get<boolean>("debug") || false;
   }

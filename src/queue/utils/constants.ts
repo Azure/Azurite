@@ -1,7 +1,7 @@
 import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 
-export const VERSION = "3.7.0";
-export const QUEUE_API_VERSION = "2019-07-07";
+export const VERSION = "3.8.0";
+export const QUEUE_API_VERSION = "2019-12-12";
 export const DEFAULT_QUEUE_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_QUEUE_LISTENING_PORT = 10001;
 export const IS_PRODUCTION = process.env.NODE_ENV === "production";
@@ -95,6 +95,7 @@ export const DEFAULT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
 ];
 
 export const ValidAPIVersions = [
+  "2019-12-12",
   "2019-07-07",
   "2019-02-02",
   "2018-11-09",

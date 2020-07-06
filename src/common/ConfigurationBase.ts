@@ -16,6 +16,7 @@ export default abstract class ConfigurationBase {
     public readonly enableDebugLog: boolean = false,
     public readonly debugLogFilePath?: string,
     public readonly loose: boolean = false,
+    public readonly skipApiVersionCheck: boolean = false,
     public readonly cert: string = "",
     public readonly key: string = "",
     public readonly pwd: string = "",

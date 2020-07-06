@@ -41,6 +41,10 @@ args
     ["L", "loose"],
     "Optional. Enable loose mode which ignores unsupported headers and parameters"
   )
+  .option(
+    ["", "skipApiVersionCheck"],
+    "Optional. Skip the request API version check, request with all Api versions will be allowed"
+  )
   .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic"')
   .option(["", "cert"], "Optional. Path to certificate file")
   .option(["", "key"], "Optional. Path to certificate key .pem file")
@@ -87,6 +91,14 @@ export default class Environment implements IEnvironment {
       return true;
     }
     // default is false which will block not supported APIs, headers and parameters
+    return false;
+  }
+
+  public skipApiVersionCheck(): boolean {
+    if (this.flags.skipApiVersionCheck !== undefined) {
+      return true;
+    }
+    // default is false which will check API veresion
     return false;
   }
 
