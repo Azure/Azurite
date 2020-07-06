@@ -6,7 +6,7 @@
 # Full Tag Listing
 
 - latest
-- [More history versions](https://github.com/Azure/Azurite/blob/master/ChangeLog.md)
+- [More history tags](https://mcr.microsoft.com/v2/azure-storage/azurite/tags/list)
 
 # About this Image
 
