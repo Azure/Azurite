@@ -213,7 +213,6 @@ describe("AppendBlobAPIs", () => {
     assert.ok(properties.copyCompletionTime);
     assert.deepStrictEqual(properties.copyProgress, "5/5");
     assert.deepStrictEqual(properties.copySource, appendBlobSnapshotURL.url);
-    assert.deepStrictEqual(properties.copyStatus, "success");
   });
 
   it("Copy append blob snapshot should work @loki", async () => {
