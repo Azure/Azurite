@@ -176,6 +176,46 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(properties.blobCommittedBlockCount, 0);
   });
 
+  it("Synchronized copy append blob snapshot should work @loki", async () => {
+    await appendBlobURL.create(Aborter.none);
+    await appendBlobURL.appendBlock(Aborter.none, "hello", 5);
+
+    const response = await appendBlobURL.createSnapshot(Aborter.none);
+    const appendBlobSnapshotURL = appendBlobURL.withSnapshot(
+      response.snapshot!
+    );
+
+    await appendBlobURL.appendBlock(Aborter.none, "world", 5);
+
+    const destAppendBlobURL = AppendBlobURL.fromContainerURL(
+      containerURL,
+      "copiedAppendBlob"
+    );
+    await destAppendBlobURL.syncCopyFromURL(
+      Aborter.none,
+      appendBlobSnapshotURL.url
+    );
+
+    let properties = await appendBlobURL.getProperties(Aborter.none);
+    assert.deepStrictEqual(properties.contentLength, 10);
+    assert.deepStrictEqual(properties.blobCommittedBlockCount, 2);
+
+    properties = await appendBlobSnapshotURL.getProperties(Aborter.none);
+    assert.deepStrictEqual(properties.contentLength, 5);
+    assert.deepStrictEqual(properties.blobCommittedBlockCount, 1);
+
+    await appendBlobURL.delete(Aborter.none, { deleteSnapshots: "include" });
+
+    properties = await destAppendBlobURL.getProperties(Aborter.none);
+    assert.deepStrictEqual(properties.contentLength, 5);
+    assert.deepStrictEqual(properties.blobCommittedBlockCount, 1);
+    assert.ok(properties.copyId);
+    assert.ok(properties.copyCompletionTime);
+    assert.deepStrictEqual(properties.copyProgress, "5/5");
+    assert.deepStrictEqual(properties.copySource, appendBlobSnapshotURL.url);
+    assert.deepStrictEqual(properties.copyStatus, "success");
+  });
+
   it("Copy append blob snapshot should work @loki", async () => {
     await appendBlobURL.create(Aborter.none);
     await appendBlobURL.appendBlock(Aborter.none, "hello", 5);

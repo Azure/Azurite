@@ -5013,7 +5013,7 @@ export interface BlobCopyFromURLHeaders {
   /**
    * State of the copy operation identified by x-ms-copy-id. Possible values include: 'success'
    */
-  copyStatus?: SyncCopyStatusType;
+  copyStatus?: CopyStatusType;
   errorCode?: string;
 }
 
@@ -5864,8 +5864,8 @@ export interface AppendBlobAppendBlockFromUrlHeaders {
  * @enum {string}
  */
 export enum PublicAccessType {
-  Container = 'container',
-  Blob = 'blob',
+  Container = "container",
+  Blob = "blob"
 }
 
 /**
@@ -5875,10 +5875,10 @@ export enum PublicAccessType {
  * @enum {string}
  */
 export enum CopyStatusType {
-  Pending = 'pending',
-  Success = 'success',
-  Aborted = 'aborted',
-  Failed = 'failed',
+  Pending = "pending",
+  Success = "success",
+  Aborted = "aborted",
+  Failed = "failed"
 }
 
 /**
@@ -5888,8 +5888,8 @@ export enum CopyStatusType {
  * @enum {string}
  */
 export enum LeaseDurationType {
-  Infinite = 'infinite',
-  Fixed = 'fixed',
+  Infinite = "infinite",
+  Fixed = "fixed"
 }
 
 /**
@@ -5899,11 +5899,11 @@ export enum LeaseDurationType {
  * @enum {string}
  */
 export enum LeaseStateType {
-  Available = 'available',
-  Leased = 'leased',
-  Expired = 'expired',
-  Breaking = 'breaking',
-  Broken = 'broken',
+  Available = "available",
+  Leased = "leased",
+  Expired = "expired",
+  Breaking = "breaking",
+  Broken = "broken"
 }
 
 /**
@@ -5913,8 +5913,8 @@ export enum LeaseStateType {
  * @enum {string}
  */
 export enum LeaseStatusType {
-  Locked = 'locked',
-  Unlocked = 'unlocked',
+  Locked = "locked",
+  Unlocked = "unlocked"
 }
 
 /**
@@ -5925,20 +5925,20 @@ export enum LeaseStatusType {
  * @enum {string}
  */
 export enum AccessTier {
-  P4 = 'P4',
-  P6 = 'P6',
-  P10 = 'P10',
-  P15 = 'P15',
-  P20 = 'P20',
-  P30 = 'P30',
-  P40 = 'P40',
-  P50 = 'P50',
-  P60 = 'P60',
-  P70 = 'P70',
-  P80 = 'P80',
-  Hot = 'Hot',
-  Cool = 'Cool',
-  Archive = 'Archive',
+  P4 = "P4",
+  P6 = "P6",
+  P10 = "P10",
+  P15 = "P15",
+  P20 = "P20",
+  P30 = "P30",
+  P40 = "P40",
+  P50 = "P50",
+  P60 = "P60",
+  P70 = "P70",
+  P80 = "P80",
+  Hot = "Hot",
+  Cool = "Cool",
+  Archive = "Archive"
 }
 
 /**
@@ -5948,8 +5948,8 @@ export enum AccessTier {
  * @enum {string}
  */
 export enum ArchiveStatus {
-  RehydratePendingToHot = 'rehydrate-pending-to-hot',
-  RehydratePendingToCool = 'rehydrate-pending-to-cool',
+  RehydratePendingToHot = "rehydrate-pending-to-hot",
+  RehydratePendingToCool = "rehydrate-pending-to-cool"
 }
 
 /**
@@ -5959,9 +5959,9 @@ export enum ArchiveStatus {
  * @enum {string}
  */
 export enum BlobType {
-  BlockBlob = 'BlockBlob',
-  PageBlob = 'PageBlob',
-  AppendBlob = 'AppendBlob',
+  BlockBlob = "BlockBlob",
+  PageBlob = "PageBlob",
+  AppendBlob = "AppendBlob"
 }
 
 /**
@@ -6003,110 +6003,110 @@ export enum BlobType {
  * @enum {string}
  */
 export enum StorageErrorCode {
-  AccountAlreadyExists = 'AccountAlreadyExists',
-  AccountBeingCreated = 'AccountBeingCreated',
-  AccountIsDisabled = 'AccountIsDisabled',
-  AuthenticationFailed = 'AuthenticationFailed',
-  ConditionHeadersNotSupported = 'ConditionHeadersNotSupported',
-  ConditionNotMet = 'ConditionNotMet',
-  EmptyMetadataKey = 'EmptyMetadataKey',
-  InsufficientAccountPermissions = 'InsufficientAccountPermissions',
-  InternalError = 'InternalError',
-  InvalidAuthenticationInfo = 'InvalidAuthenticationInfo',
-  InvalidHeaderValue = 'InvalidHeaderValue',
-  InvalidHttpVerb = 'InvalidHttpVerb',
-  InvalidInput = 'InvalidInput',
-  InvalidMd5 = 'InvalidMd5',
-  InvalidMetadata = 'InvalidMetadata',
-  InvalidQueryParameterValue = 'InvalidQueryParameterValue',
-  InvalidRange = 'InvalidRange',
-  InvalidResourceName = 'InvalidResourceName',
-  InvalidUri = 'InvalidUri',
-  InvalidXmlDocument = 'InvalidXmlDocument',
-  InvalidXmlNodeValue = 'InvalidXmlNodeValue',
-  Md5Mismatch = 'Md5Mismatch',
-  MetadataTooLarge = 'MetadataTooLarge',
-  MissingContentLengthHeader = 'MissingContentLengthHeader',
-  MissingRequiredQueryParameter = 'MissingRequiredQueryParameter',
-  MissingRequiredHeader = 'MissingRequiredHeader',
-  MissingRequiredXmlNode = 'MissingRequiredXmlNode',
-  MultipleConditionHeadersNotSupported = 'MultipleConditionHeadersNotSupported',
-  OperationTimedOut = 'OperationTimedOut',
-  OutOfRangeInput = 'OutOfRangeInput',
-  OutOfRangeQueryParameterValue = 'OutOfRangeQueryParameterValue',
-  RequestBodyTooLarge = 'RequestBodyTooLarge',
-  ResourceTypeMismatch = 'ResourceTypeMismatch',
-  RequestUrlFailedToParse = 'RequestUrlFailedToParse',
-  ResourceAlreadyExists = 'ResourceAlreadyExists',
-  ResourceNotFound = 'ResourceNotFound',
-  ServerBusy = 'ServerBusy',
-  UnsupportedHeader = 'UnsupportedHeader',
-  UnsupportedXmlNode = 'UnsupportedXmlNode',
-  UnsupportedQueryParameter = 'UnsupportedQueryParameter',
-  UnsupportedHttpVerb = 'UnsupportedHttpVerb',
-  AppendPositionConditionNotMet = 'AppendPositionConditionNotMet',
-  BlobAlreadyExists = 'BlobAlreadyExists',
-  BlobNotFound = 'BlobNotFound',
-  BlobOverwritten = 'BlobOverwritten',
-  BlobTierInadequateForContentLength = 'BlobTierInadequateForContentLength',
-  BlockCountExceedsLimit = 'BlockCountExceedsLimit',
-  BlockListTooLong = 'BlockListTooLong',
-  CannotChangeToLowerTier = 'CannotChangeToLowerTier',
-  CannotVerifyCopySource = 'CannotVerifyCopySource',
-  ContainerAlreadyExists = 'ContainerAlreadyExists',
-  ContainerBeingDeleted = 'ContainerBeingDeleted',
-  ContainerDisabled = 'ContainerDisabled',
-  ContainerNotFound = 'ContainerNotFound',
-  ContentLengthLargerThanTierLimit = 'ContentLengthLargerThanTierLimit',
-  CopyAcrossAccountsNotSupported = 'CopyAcrossAccountsNotSupported',
-  CopyIdMismatch = 'CopyIdMismatch',
-  FeatureVersionMismatch = 'FeatureVersionMismatch',
-  IncrementalCopyBlobMismatch = 'IncrementalCopyBlobMismatch',
-  IncrementalCopyOfEralierVersionSnapshotNotAllowed = 'IncrementalCopyOfEralierVersionSnapshotNotAllowed',
-  IncrementalCopySourceMustBeSnapshot = 'IncrementalCopySourceMustBeSnapshot',
-  InfiniteLeaseDurationRequired = 'InfiniteLeaseDurationRequired',
-  InvalidBlobOrBlock = 'InvalidBlobOrBlock',
-  InvalidBlobTier = 'InvalidBlobTier',
-  InvalidBlobType = 'InvalidBlobType',
-  InvalidBlockId = 'InvalidBlockId',
-  InvalidBlockList = 'InvalidBlockList',
-  InvalidOperation = 'InvalidOperation',
-  InvalidPageRange = 'InvalidPageRange',
-  InvalidSourceBlobType = 'InvalidSourceBlobType',
-  InvalidSourceBlobUrl = 'InvalidSourceBlobUrl',
-  InvalidVersionForPageBlobOperation = 'InvalidVersionForPageBlobOperation',
-  LeaseAlreadyPresent = 'LeaseAlreadyPresent',
-  LeaseAlreadyBroken = 'LeaseAlreadyBroken',
-  LeaseIdMismatchWithBlobOperation = 'LeaseIdMismatchWithBlobOperation',
-  LeaseIdMismatchWithContainerOperation = 'LeaseIdMismatchWithContainerOperation',
-  LeaseIdMismatchWithLeaseOperation = 'LeaseIdMismatchWithLeaseOperation',
-  LeaseIdMissing = 'LeaseIdMissing',
-  LeaseIsBreakingAndCannotBeAcquired = 'LeaseIsBreakingAndCannotBeAcquired',
-  LeaseIsBreakingAndCannotBeChanged = 'LeaseIsBreakingAndCannotBeChanged',
-  LeaseIsBrokenAndCannotBeRenewed = 'LeaseIsBrokenAndCannotBeRenewed',
-  LeaseLost = 'LeaseLost',
-  LeaseNotPresentWithBlobOperation = 'LeaseNotPresentWithBlobOperation',
-  LeaseNotPresentWithContainerOperation = 'LeaseNotPresentWithContainerOperation',
-  LeaseNotPresentWithLeaseOperation = 'LeaseNotPresentWithLeaseOperation',
-  MaxBlobSizeConditionNotMet = 'MaxBlobSizeConditionNotMet',
-  NoPendingCopyOperation = 'NoPendingCopyOperation',
-  OperationNotAllowedOnIncrementalCopyBlob = 'OperationNotAllowedOnIncrementalCopyBlob',
-  PendingCopyOperation = 'PendingCopyOperation',
-  PreviousSnapshotCannotBeNewer = 'PreviousSnapshotCannotBeNewer',
-  PreviousSnapshotNotFound = 'PreviousSnapshotNotFound',
-  PreviousSnapshotOperationNotSupported = 'PreviousSnapshotOperationNotSupported',
-  SequenceNumberConditionNotMet = 'SequenceNumberConditionNotMet',
-  SequenceNumberIncrementTooLarge = 'SequenceNumberIncrementTooLarge',
-  SnapshotCountExceeded = 'SnapshotCountExceeded',
-  SnaphotOperationRateExceeded = 'SnaphotOperationRateExceeded',
-  SnapshotsPresent = 'SnapshotsPresent',
-  SourceConditionNotMet = 'SourceConditionNotMet',
-  SystemInUse = 'SystemInUse',
-  TargetConditionNotMet = 'TargetConditionNotMet',
-  UnauthorizedBlobOverwrite = 'UnauthorizedBlobOverwrite',
-  BlobBeingRehydrated = 'BlobBeingRehydrated',
-  BlobArchived = 'BlobArchived',
-  BlobNotArchived = 'BlobNotArchived',
+  AccountAlreadyExists = "AccountAlreadyExists",
+  AccountBeingCreated = "AccountBeingCreated",
+  AccountIsDisabled = "AccountIsDisabled",
+  AuthenticationFailed = "AuthenticationFailed",
+  ConditionHeadersNotSupported = "ConditionHeadersNotSupported",
+  ConditionNotMet = "ConditionNotMet",
+  EmptyMetadataKey = "EmptyMetadataKey",
+  InsufficientAccountPermissions = "InsufficientAccountPermissions",
+  InternalError = "InternalError",
+  InvalidAuthenticationInfo = "InvalidAuthenticationInfo",
+  InvalidHeaderValue = "InvalidHeaderValue",
+  InvalidHttpVerb = "InvalidHttpVerb",
+  InvalidInput = "InvalidInput",
+  InvalidMd5 = "InvalidMd5",
+  InvalidMetadata = "InvalidMetadata",
+  InvalidQueryParameterValue = "InvalidQueryParameterValue",
+  InvalidRange = "InvalidRange",
+  InvalidResourceName = "InvalidResourceName",
+  InvalidUri = "InvalidUri",
+  InvalidXmlDocument = "InvalidXmlDocument",
+  InvalidXmlNodeValue = "InvalidXmlNodeValue",
+  Md5Mismatch = "Md5Mismatch",
+  MetadataTooLarge = "MetadataTooLarge",
+  MissingContentLengthHeader = "MissingContentLengthHeader",
+  MissingRequiredQueryParameter = "MissingRequiredQueryParameter",
+  MissingRequiredHeader = "MissingRequiredHeader",
+  MissingRequiredXmlNode = "MissingRequiredXmlNode",
+  MultipleConditionHeadersNotSupported = "MultipleConditionHeadersNotSupported",
+  OperationTimedOut = "OperationTimedOut",
+  OutOfRangeInput = "OutOfRangeInput",
+  OutOfRangeQueryParameterValue = "OutOfRangeQueryParameterValue",
+  RequestBodyTooLarge = "RequestBodyTooLarge",
+  ResourceTypeMismatch = "ResourceTypeMismatch",
+  RequestUrlFailedToParse = "RequestUrlFailedToParse",
+  ResourceAlreadyExists = "ResourceAlreadyExists",
+  ResourceNotFound = "ResourceNotFound",
+  ServerBusy = "ServerBusy",
+  UnsupportedHeader = "UnsupportedHeader",
+  UnsupportedXmlNode = "UnsupportedXmlNode",
+  UnsupportedQueryParameter = "UnsupportedQueryParameter",
+  UnsupportedHttpVerb = "UnsupportedHttpVerb",
+  AppendPositionConditionNotMet = "AppendPositionConditionNotMet",
+  BlobAlreadyExists = "BlobAlreadyExists",
+  BlobNotFound = "BlobNotFound",
+  BlobOverwritten = "BlobOverwritten",
+  BlobTierInadequateForContentLength = "BlobTierInadequateForContentLength",
+  BlockCountExceedsLimit = "BlockCountExceedsLimit",
+  BlockListTooLong = "BlockListTooLong",
+  CannotChangeToLowerTier = "CannotChangeToLowerTier",
+  CannotVerifyCopySource = "CannotVerifyCopySource",
+  ContainerAlreadyExists = "ContainerAlreadyExists",
+  ContainerBeingDeleted = "ContainerBeingDeleted",
+  ContainerDisabled = "ContainerDisabled",
+  ContainerNotFound = "ContainerNotFound",
+  ContentLengthLargerThanTierLimit = "ContentLengthLargerThanTierLimit",
+  CopyAcrossAccountsNotSupported = "CopyAcrossAccountsNotSupported",
+  CopyIdMismatch = "CopyIdMismatch",
+  FeatureVersionMismatch = "FeatureVersionMismatch",
+  IncrementalCopyBlobMismatch = "IncrementalCopyBlobMismatch",
+  IncrementalCopyOfEralierVersionSnapshotNotAllowed = "IncrementalCopyOfEralierVersionSnapshotNotAllowed",
+  IncrementalCopySourceMustBeSnapshot = "IncrementalCopySourceMustBeSnapshot",
+  InfiniteLeaseDurationRequired = "InfiniteLeaseDurationRequired",
+  InvalidBlobOrBlock = "InvalidBlobOrBlock",
+  InvalidBlobTier = "InvalidBlobTier",
+  InvalidBlobType = "InvalidBlobType",
+  InvalidBlockId = "InvalidBlockId",
+  InvalidBlockList = "InvalidBlockList",
+  InvalidOperation = "InvalidOperation",
+  InvalidPageRange = "InvalidPageRange",
+  InvalidSourceBlobType = "InvalidSourceBlobType",
+  InvalidSourceBlobUrl = "InvalidSourceBlobUrl",
+  InvalidVersionForPageBlobOperation = "InvalidVersionForPageBlobOperation",
+  LeaseAlreadyPresent = "LeaseAlreadyPresent",
+  LeaseAlreadyBroken = "LeaseAlreadyBroken",
+  LeaseIdMismatchWithBlobOperation = "LeaseIdMismatchWithBlobOperation",
+  LeaseIdMismatchWithContainerOperation = "LeaseIdMismatchWithContainerOperation",
+  LeaseIdMismatchWithLeaseOperation = "LeaseIdMismatchWithLeaseOperation",
+  LeaseIdMissing = "LeaseIdMissing",
+  LeaseIsBreakingAndCannotBeAcquired = "LeaseIsBreakingAndCannotBeAcquired",
+  LeaseIsBreakingAndCannotBeChanged = "LeaseIsBreakingAndCannotBeChanged",
+  LeaseIsBrokenAndCannotBeRenewed = "LeaseIsBrokenAndCannotBeRenewed",
+  LeaseLost = "LeaseLost",
+  LeaseNotPresentWithBlobOperation = "LeaseNotPresentWithBlobOperation",
+  LeaseNotPresentWithContainerOperation = "LeaseNotPresentWithContainerOperation",
+  LeaseNotPresentWithLeaseOperation = "LeaseNotPresentWithLeaseOperation",
+  MaxBlobSizeConditionNotMet = "MaxBlobSizeConditionNotMet",
+  NoPendingCopyOperation = "NoPendingCopyOperation",
+  OperationNotAllowedOnIncrementalCopyBlob = "OperationNotAllowedOnIncrementalCopyBlob",
+  PendingCopyOperation = "PendingCopyOperation",
+  PreviousSnapshotCannotBeNewer = "PreviousSnapshotCannotBeNewer",
+  PreviousSnapshotNotFound = "PreviousSnapshotNotFound",
+  PreviousSnapshotOperationNotSupported = "PreviousSnapshotOperationNotSupported",
+  SequenceNumberConditionNotMet = "SequenceNumberConditionNotMet",
+  SequenceNumberIncrementTooLarge = "SequenceNumberIncrementTooLarge",
+  SnapshotCountExceeded = "SnapshotCountExceeded",
+  SnaphotOperationRateExceeded = "SnaphotOperationRateExceeded",
+  SnapshotsPresent = "SnapshotsPresent",
+  SourceConditionNotMet = "SourceConditionNotMet",
+  SystemInUse = "SystemInUse",
+  TargetConditionNotMet = "TargetConditionNotMet",
+  UnauthorizedBlobOverwrite = "UnauthorizedBlobOverwrite",
+  BlobBeingRehydrated = "BlobBeingRehydrated",
+  BlobArchived = "BlobArchived",
+  BlobNotArchived = "BlobNotArchived"
 }
 
 /**
@@ -6116,9 +6116,9 @@ export enum StorageErrorCode {
  * @enum {string}
  */
 export enum GeoReplicationStatusType {
-  Live = 'live',
-  Bootstrap = 'bootstrap',
-  Unavailable = 'unavailable',
+  Live = "live",
+  Bootstrap = "bootstrap",
+  Unavailable = "unavailable"
 }
 
 /**
@@ -6128,8 +6128,8 @@ export enum GeoReplicationStatusType {
  * @enum {string}
  */
 export enum RehydratePriority {
-  High = 'High',
-  Standard = 'Standard',
+  High = "High",
+  Standard = "Standard"
 }
 
 /**
@@ -6140,17 +6140,17 @@ export enum RehydratePriority {
  * @enum {string}
  */
 export enum PageBlobAccessTier {
-  P4 = 'P4',
-  P6 = 'P6',
-  P10 = 'P10',
-  P15 = 'P15',
-  P20 = 'P20',
-  P30 = 'P30',
-  P40 = 'P40',
-  P50 = 'P50',
-  P60 = 'P60',
-  P70 = 'P70',
-  P80 = 'P80',
+  P4 = "P4",
+  P6 = "P6",
+  P10 = "P10",
+  P15 = "P15",
+  P20 = "P20",
+  P30 = "P30",
+  P40 = "P40",
+  P50 = "P50",
+  P60 = "P60",
+  P70 = "P70",
+  P80 = "P80"
 }
 
 /**
@@ -6160,9 +6160,9 @@ export enum PageBlobAccessTier {
  * @enum {string}
  */
 export enum BlockListType {
-  Committed = 'committed',
-  Uncommitted = 'uncommitted',
-  All = 'all',
+  Committed = "committed",
+  Uncommitted = "uncommitted",
+  All = "all"
 }
 
 /**
@@ -6172,8 +6172,8 @@ export enum BlockListType {
  * @enum {string}
  */
 export enum DeleteSnapshotsOptionType {
-  Include = 'include',
-  Only = 'only',
+  Include = "include",
+  Only = "only"
 }
 
 /**
@@ -6183,7 +6183,7 @@ export enum DeleteSnapshotsOptionType {
  * @enum {string}
  */
 export enum EncryptionAlgorithmType {
-  AES256 = 'AES256',
+  AES256 = "AES256"
 }
 
 /**
@@ -6193,11 +6193,11 @@ export enum EncryptionAlgorithmType {
  * @enum {string}
  */
 export enum ListBlobsIncludeItem {
-  Copy = 'copy',
-  Deleted = 'deleted',
-  Metadata = 'metadata',
-  Snapshots = 'snapshots',
-  Uncommittedblobs = 'uncommittedblobs',
+  Copy = "copy",
+  Deleted = "deleted",
+  Metadata = "metadata",
+  Snapshots = "snapshots",
+  Uncommittedblobs = "uncommittedblobs"
 }
 
 /**
@@ -6207,7 +6207,7 @@ export enum ListBlobsIncludeItem {
  * @enum {string}
  */
 export enum ListContainersIncludeType {
-  Metadata = 'metadata',
+  Metadata = "metadata"
 }
 
 /**
@@ -6217,8 +6217,8 @@ export enum ListContainersIncludeType {
  * @enum {string}
  */
 export enum PathRenameMode {
-  Legacy = 'legacy',
-  Posix = 'posix',
+  Legacy = "legacy",
+  Posix = "posix"
 }
 
 /**
@@ -6228,9 +6228,9 @@ export enum PathRenameMode {
  * @enum {string}
  */
 export enum SequenceNumberActionType {
-  Max = 'max',
-  Update = 'update',
-  Increment = 'increment',
+  Max = "max",
+  Update = "update",
+  Increment = "increment"
 }
 
 /**
@@ -6241,11 +6241,11 @@ export enum SequenceNumberActionType {
  * @enum {string}
  */
 export enum SkuName {
-  StandardLRS = 'Standard_LRS',
-  StandardGRS = 'Standard_GRS',
-  StandardRAGRS = 'Standard_RAGRS',
-  StandardZRS = 'Standard_ZRS',
-  PremiumLRS = 'Premium_LRS',
+  StandardLRS = "Standard_LRS",
+  StandardGRS = "Standard_GRS",
+  StandardRAGRS = "Standard_RAGRS",
+  StandardZRS = "Standard_ZRS",
+  PremiumLRS = "Premium_LRS"
 }
 
 /**
@@ -6255,9 +6255,9 @@ export enum SkuName {
  * @enum {string}
  */
 export enum AccountKind {
-  Storage = 'Storage',
-  BlobStorage = 'BlobStorage',
-  StorageV2 = 'StorageV2',
+  Storage = "Storage",
+  BlobStorage = "BlobStorage",
+  StorageV2 = "StorageV2"
 }
 
 /**
@@ -6267,7 +6267,7 @@ export enum AccountKind {
  * @enum {string}
  */
 export enum SyncCopyStatusType {
-  Success = 'success',
+  Success = "success"
 }
 
 /**
@@ -6283,42 +6283,46 @@ export type ServiceSetPropertiesResponse = ServiceSetPropertiesHeaders & {
 /**
  * Contains response data for the getProperties operation.
  */
-export type ServiceGetPropertiesResponse = StorageServiceProperties & ServiceGetPropertiesHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
+export type ServiceGetPropertiesResponse = StorageServiceProperties &
+  ServiceGetPropertiesHeaders & {
+    /**
+     * The response status code.
+     */
+    statusCode: 200;
+  };
 
 /**
  * Contains response data for the getStatistics operation.
  */
-export type ServiceGetStatisticsResponse = StorageServiceStats & ServiceGetStatisticsHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
+export type ServiceGetStatisticsResponse = StorageServiceStats &
+  ServiceGetStatisticsHeaders & {
+    /**
+     * The response status code.
+     */
+    statusCode: 200;
+  };
 
 /**
  * Contains response data for the listContainersSegment operation.
  */
-export type ServiceListContainersSegmentResponse = ListContainersSegmentResponse & ServiceListContainersSegmentHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
+export type ServiceListContainersSegmentResponse = ListContainersSegmentResponse &
+  ServiceListContainersSegmentHeaders & {
+    /**
+     * The response status code.
+     */
+    statusCode: 200;
+  };
 
 /**
  * Contains response data for the getUserDelegationKey operation.
  */
-export type ServiceGetUserDelegationKeyResponse = UserDelegationKey & ServiceGetUserDelegationKeyHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
+export type ServiceGetUserDelegationKeyResponse = UserDelegationKey &
+  ServiceGetUserDelegationKeyHeaders & {
+    /**
+     * The response status code.
+     */
+    statusCode: 200;
+  };
 
 /**
  * Contains response data for the getAccountInfo operation.
@@ -6408,12 +6412,13 @@ export type ContainerSetMetadataResponse = ContainerSetMetadataHeaders & {
 /**
  * Contains response data for the getAccessPolicy operation.
  */
-export type ContainerGetAccessPolicyResponse = Array<SignedIdentifier> & ContainerGetAccessPolicyHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
+export type ContainerGetAccessPolicyResponse = Array<SignedIdentifier> &
+  ContainerGetAccessPolicyHeaders & {
+    /**
+     * The response status code.
+     */
+    statusCode: 200;
+  };
 
 /**
  * Contains response data for the setAccessPolicy operation.
@@ -6478,22 +6483,24 @@ export type ContainerChangeLeaseResponse = ContainerChangeLeaseHeaders & {
 /**
  * Contains response data for the listBlobFlatSegment operation.
  */
-export type ContainerListBlobFlatSegmentResponse = ListBlobsFlatSegmentResponse & ContainerListBlobFlatSegmentHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
+export type ContainerListBlobFlatSegmentResponse = ListBlobsFlatSegmentResponse &
+  ContainerListBlobFlatSegmentHeaders & {
+    /**
+     * The response status code.
+     */
+    statusCode: 200;
+  };
 
 /**
  * Contains response data for the listBlobHierarchySegment operation.
  */
-export type ContainerListBlobHierarchySegmentResponse = ListBlobsHierarchySegmentResponse & ContainerListBlobHierarchySegmentHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
+export type ContainerListBlobHierarchySegmentResponse = ListBlobsHierarchySegmentResponse &
+  ContainerListBlobHierarchySegmentHeaders & {
+    /**
+     * The response status code.
+     */
+    statusCode: 200;
+  };
 
 /**
  * Contains response data for the getAccountInfo operation.
@@ -6823,22 +6830,24 @@ export type PageBlobUploadPagesFromURLResponse = PageBlobUploadPagesFromURLHeade
 /**
  * Contains response data for the getPageRanges operation.
  */
-export type PageBlobGetPageRangesResponse = PageList & PageBlobGetPageRangesHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
+export type PageBlobGetPageRangesResponse = PageList &
+  PageBlobGetPageRangesHeaders & {
+    /**
+     * The response status code.
+     */
+    statusCode: 200;
+  };
 
 /**
  * Contains response data for the getPageRangesDiff operation.
  */
-export type PageBlobGetPageRangesDiffResponse = PageList & PageBlobGetPageRangesDiffHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
+export type PageBlobGetPageRangesDiffResponse = PageList &
+  PageBlobGetPageRangesDiffHeaders & {
+    /**
+     * The response status code.
+     */
+    statusCode: 200;
+  };
 
 /**
  * Contains response data for the resize operation.
@@ -6943,9 +6952,10 @@ export type BlockBlobCommitBlockListResponse = BlockBlobCommitBlockListHeaders &
 /**
  * Contains response data for the getBlockList operation.
  */
-export type BlockBlobGetBlockListResponse = BlockList & BlockBlobGetBlockListHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
+export type BlockBlobGetBlockListResponse = BlockList &
+  BlockBlobGetBlockListHeaders & {
+    /**
+     * The response status code.
+     */
+    statusCode: 200;
+  };

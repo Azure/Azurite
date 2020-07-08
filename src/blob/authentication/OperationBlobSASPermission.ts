@@ -178,6 +178,13 @@ OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
   new OperationBlobSASPermission(BlobSASPermission.Write)
 );
 OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
+  Operation.Blob_CopyFromURL,
+  // TODO: When destination blob doesn't exist, needs create permission
+  new OperationBlobSASPermission(
+    BlobSASPermission.Write + BlobSASPermission.Create
+  )
+);
+OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
   Operation.Blob_SetTier,
   new OperationBlobSASPermission(BlobSASPermission.Write) // TODO: Not sure
 );
@@ -419,6 +426,13 @@ OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_AbortCopyFromURL,
   new OperationBlobSASPermission(BlobSASPermission.Write)
+);
+OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
+  Operation.Blob_CopyFromURL,
+  // TODO: If destination is an existing blob, create permission is not enough
+  new OperationBlobSASPermission(
+    BlobSASPermission.Write + BlobSASPermission.Create
+  )
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_SetTier,

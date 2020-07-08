@@ -67,14 +67,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     throw new NotImplementedError(context.contextId);
   }
 
-  public copyFromURL(
-    copySource: string,
-    options: Models.BlobCopyFromURLOptionalParams,
-    context: Context
-  ): Promise<Models.BlobCopyFromURLResponse> {
-    throw new NotImplementedError(context.contextId);
-  }
-
   /**
    * Download blob.
    *
@@ -715,6 +707,78 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       requestId: context.contextId,
       version: BLOB_API_VERSION,
       date: context.startTime,
+      clientRequestId: options.requestId
+    };
+
+    return response;
+  }
+
+  /**
+   * Start copy from Url.
+   *
+   * @param {string} copySource
+   * @param {Models.BlobStartCopyFromURLOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobStartCopyFromURLResponse>}
+   * @memberof BlobHandler
+   */
+  public async copyFromURL(
+    copySource: string,
+    options: Models.BlobCopyFromURLOptionalParams,
+    context: Context
+  ): Promise<Models.BlobCopyFromURLResponse> {
+    const blobCtx = new BlobStorageContext(context);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+
+    // TODO: Check dest Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
+    const url = new URL(copySource);
+    const [
+      sourceAccount,
+      sourceContainer,
+      sourceBlob
+    ] = extractStoragePartsFromPath(url.hostname, url.pathname);
+    const snapshot = url.searchParams.get("snapshot") || "";
+
+    if (
+      sourceAccount !== blobCtx.account ||
+      sourceAccount === undefined ||
+      sourceContainer === undefined ||
+      sourceBlob === undefined
+    ) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId!);
+    }
+
+    // Preserve metadata key case
+    const metadata = convertRawHeadersToMetadata(
+      blobCtx.request!.getRawHeaders()
+    );
+
+    const res = await this.metadataStore.copyFromURL(
+      context,
+      {
+        account: sourceAccount,
+        container: sourceContainer,
+        blob: sourceBlob,
+        snapshot
+      },
+      { account, container, blob },
+      copySource,
+      metadata,
+      options.tier,
+      options
+    );
+
+    const response: Models.BlobCopyFromURLResponse = {
+      statusCode: 202,
+      eTag: res.etag,
+      lastModified: res.lastModified,
+      requestId: context.contextId,
+      version: BLOB_API_VERSION,
+      date: context.startTime,
+      copyId: res.copyId,
+      copyStatus: res.copyStatus,
       clientRequestId: options.requestId
     };
 

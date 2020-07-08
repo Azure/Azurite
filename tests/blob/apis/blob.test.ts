@@ -794,6 +794,192 @@ describe("BlobAPIs", () => {
     );
   });
 
+  it("Synchronized copy blob should work @loki", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobURL = BlockBlobURL.fromContainerURL(
+      containerURL,
+      sourceBlob
+    );
+    const destBlobURL = BlockBlobURL.fromContainerURL(containerURL, destBlob);
+
+    const metadata = { key: "value" };
+    const blobHTTPHeaders = {
+      blobCacheControl: "blobCacheControl",
+      blobContentDisposition: "blobContentDisposition",
+      blobContentEncoding: "blobContentEncoding",
+      blobContentLanguage: "blobContentLanguage",
+      blobContentType: "blobContentType"
+    };
+
+    const result_upload = await sourceBlobURL.upload(Aborter.none, "hello", 5, {
+      metadata,
+      blobHTTPHeaders
+    });
+    assert.equal(
+      result_upload._response.request.headers.get("x-ms-client-request-id"),
+      result_upload.clientRequestId
+    );
+
+    const result_startcopy = await destBlobURL.syncCopyFromURL(
+      Aborter.none,
+      sourceBlobURL.url
+    );
+    assert.equal(
+      result_startcopy._response.request.headers.get("x-ms-client-request-id"),
+      result_startcopy.clientRequestId
+    );
+
+    const result = await destBlobURL.getProperties(Aborter.none);
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "BlockBlob");
+    assert.ok(result.lastModified);
+    assert.deepStrictEqual(result.metadata, metadata);
+    assert.deepStrictEqual(
+      result.cacheControl,
+      blobHTTPHeaders.blobCacheControl
+    );
+    assert.deepStrictEqual(result.contentType, blobHTTPHeaders.blobContentType);
+    assert.deepStrictEqual(
+      result.contentEncoding,
+      blobHTTPHeaders.blobContentEncoding
+    );
+    assert.deepStrictEqual(
+      result.contentLanguage,
+      blobHTTPHeaders.blobContentLanguage
+    );
+    assert.deepStrictEqual(
+      result.contentDisposition,
+      blobHTTPHeaders.blobContentDisposition
+    );
+  });
+
+  it("Synchronized copy blob should work to override metadata @loki", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobURL = BlockBlobURL.fromContainerURL(
+      containerURL,
+      sourceBlob
+    );
+    const destBlobURL = BlockBlobURL.fromContainerURL(containerURL, destBlob);
+
+    const metadata = { key: "value" };
+    const metadata2 = { key: "value2" };
+    await sourceBlobURL.upload(Aborter.none, "hello", 5, {
+      metadata
+    });
+
+    await destBlobURL.syncCopyFromURL(Aborter.none, sourceBlobURL.url, {
+      metadata: metadata2
+    });
+
+    const result = await destBlobURL.getProperties(Aborter.none);
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "BlockBlob");
+    assert.ok(result.lastModified);
+    assert.deepStrictEqual(result.metadata, metadata2);
+  });
+
+  it("Synchronized copy blob should not override destination Lease status @loki", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobURL = BlockBlobURL.fromContainerURL(
+      containerURL,
+      sourceBlob
+    );
+    const destBlobURL = BlockBlobURL.fromContainerURL(containerURL, destBlob);
+
+    await sourceBlobURL.upload(Aborter.none, "hello", 5);
+    await destBlobURL.upload(Aborter.none, "hello", 5);
+
+    const leaseResult = await destBlobURL.acquireLease(Aborter.none, "", -1);
+    const leaseId = leaseResult.leaseId;
+    assert.ok(leaseId);
+
+    const getResult = await destBlobURL.getProperties(Aborter.none);
+    assert.equal(getResult.leaseDuration, "infinite");
+    assert.equal(getResult.leaseState, "leased");
+    assert.equal(getResult.leaseStatus, "locked");
+
+    await destBlobURL.syncCopyFromURL(Aborter.none, sourceBlobURL.url, {
+      blobAccessConditions: { leaseAccessConditions: { leaseId } }
+    });
+
+    const result = await destBlobURL.getProperties(Aborter.none);
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "BlockBlob");
+    assert.ok(result.lastModified);
+    assert.equal(getResult.leaseDuration, "infinite");
+    assert.equal(getResult.leaseState, "leased");
+    assert.equal(getResult.leaseStatus, "locked");
+
+    await destBlobURL.releaseLease(Aborter.none, leaseId!);
+  });
+
+  it("Synchronized copy blob should work for page blob @loki", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobURL = PageBlobURL.fromContainerURL(
+      containerURL,
+      sourceBlob
+    );
+    const destBlobURL = PageBlobURL.fromContainerURL(containerURL, destBlob);
+
+    const metadata = { key: "value" };
+    const blobHTTPHeaders = {
+      blobCacheControl: "blobCacheControl",
+      blobContentDisposition: "blobContentDisposition",
+      blobContentEncoding: "blobContentEncoding",
+      blobContentLanguage: "blobContentLanguage",
+      blobContentType: "blobContentType"
+    };
+
+    const result_upload = await sourceBlobURL.create(Aborter.none, 512, {
+      metadata,
+      blobHTTPHeaders
+    });
+    assert.equal(
+      result_upload._response.request.headers.get("x-ms-client-request-id"),
+      result_upload.clientRequestId
+    );
+
+    const result_startcopy = await destBlobURL.syncCopyFromURL(
+      Aborter.none,
+      sourceBlobURL.url
+    );
+    assert.equal(
+      result_startcopy._response.request.headers.get("x-ms-client-request-id"),
+      result_startcopy.clientRequestId
+    );
+
+    const result = await destBlobURL.getProperties(Aborter.none);
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "PageBlob");
+    assert.ok(result.lastModified);
+    assert.deepStrictEqual(result.metadata, metadata);
+    assert.deepStrictEqual(
+      result.cacheControl,
+      blobHTTPHeaders.blobCacheControl
+    );
+    assert.deepStrictEqual(result.contentType, blobHTTPHeaders.blobContentType);
+    assert.deepStrictEqual(
+      result.contentEncoding,
+      blobHTTPHeaders.blobContentEncoding
+    );
+    assert.deepStrictEqual(
+      result.contentLanguage,
+      blobHTTPHeaders.blobContentLanguage
+    );
+    assert.deepStrictEqual(
+      result.contentDisposition,
+      blobHTTPHeaders.blobContentDisposition
+    );
+  });
+
   it("Copy blob should work @loki", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
