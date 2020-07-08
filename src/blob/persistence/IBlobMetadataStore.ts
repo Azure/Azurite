@@ -829,6 +829,7 @@ export interface IBlobMetadataStore
    * @param {BlobId} destination
    * @param {string} copySource
    * @param {(Models.BlobMetadata | undefined)} metadata
+   * @param {(Models.AccessTier | undefined)} tier
    * @param {Models.BlobCopyFromURLOptionalParams} [leaseAccessConditions]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof IBlobMetadataStore
@@ -839,6 +840,7 @@ export interface IBlobMetadataStore
     destination: BlobId,
     copySource: string,
     metadata: Models.BlobMetadata | undefined,
+    tier: Models.AccessTier | undefined,
     leaseAccessConditions?: Models.BlobCopyFromURLOptionalParams
   ): Promise<Models.BlobProperties>;
 

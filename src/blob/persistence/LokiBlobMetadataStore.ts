@@ -1936,13 +1936,14 @@ export default class LokiBlobMetadataStore
   }
 
   /**
-   * Start copy from Url.
+   * Copy from Url.
    *
    * @param {Context} context
    * @param {BlobId} source
    * @param {BlobId} destination
    * @param {string} copySource
    * @param {(Models.BlobMetadata | undefined)} metadata
+   * @param {(Models.AccessTier | undefined)} tier
    * @param {Models.BlobCopyFromURLOptionalParams} [leaseAccessConditions]
    * @returns {Promise<Models.BlobProperties>}
    * @memberof LokiBlobMetadataStore
@@ -1953,6 +1954,7 @@ export default class LokiBlobMetadataStore
     destination: BlobId,
     copySource: string,
     metadata: Models.BlobMetadata | undefined,
+    tier: Models.AccessTier | undefined,
     options: Models.BlobCopyFromURLOptionalParams = {}
   ): Promise<Models.BlobProperties> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);

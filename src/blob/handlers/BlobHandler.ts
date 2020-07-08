@@ -714,7 +714,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   }
 
   /**
-   * Start copy from Url.
+   * Copy from Url.
    *
    * @param {string} copySource
    * @param {Models.BlobStartCopyFromURLOptionalParams} options
