@@ -154,6 +154,7 @@ export interface BlobProperties {
    * Possible values include: 'pending', 'success', 'aborted', 'failed'
    */
   copyStatus?: CopyStatusType;
+  syncCopyStatus?: SyncCopyStatusType;
   copySource?: string;
   copyProgress?: string;
   copyCompletionTime?: Date;
