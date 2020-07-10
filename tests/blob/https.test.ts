@@ -19,7 +19,7 @@ configLogger(false);
 
 describe("Blob HTTPS", () => {
   const factory = new BlobTestServerFactory();
-  const server = factory.createServer(false, true);
+  const server = factory.createServer(false, false, true);
   const baseURL = `https://${server.config.host}:${server.config.port}/devstoreaccount1`;
 
   before(async () => {

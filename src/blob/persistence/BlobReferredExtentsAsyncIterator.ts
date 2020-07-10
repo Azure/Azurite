@@ -33,7 +33,8 @@ export default class BlobReferredExtentsAsyncIterator
       const [blobs, marker] = await this.blobMetadataStore.listAllBlobs(
         undefined,
         this.blobListingMarker,
-        true
+        true, // includeSnapshots
+        true // includeUncommitedBlobs
       );
       this.blobListingMarker = marker;
       if (marker === undefined) {

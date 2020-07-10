@@ -20,3 +20,5 @@ swagger
 .vscode
 .vscodeignore
 dist
+**/*.cert
+**/*.key

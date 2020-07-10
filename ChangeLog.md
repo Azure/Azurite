@@ -2,6 +2,14 @@
 
 > Note. This file includes changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
+## 2020.07 Version 3.8.0
+
+- Bump up Azure Storage service API version to 2019-12-12.
+- Support skip request API version check by Azurite configuration parameter `--skipApiVersionCheck`.
+- Fixed an issue that list blobs doesn't honor uncommitted include option.
+- Updated docker base image to lts-alpine.
+- Removed testing certs from docker image.
+
 ## 2020.04 Version 3.7.0
 
 - Supported HTTPS endpoint. Specific parameter `azurite --cert server.cert --key server.key` to enable HTTPS mode.

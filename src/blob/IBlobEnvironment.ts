@@ -4,6 +4,7 @@ export default interface IBlobEnvironment {
   location(): Promise<string>;
   silent(): boolean;
   loose(): boolean;
+  skipApiVersionCheck(): boolean;
   cert(): string | undefined;
   key(): string | undefined;
   pwd(): string | undefined;
