@@ -1,16 +1,11 @@
-import {
-  Aborter,
-  ContainerURL,
-  ServiceURL,
-  StorageURL,
-  TokenCredential
-} from "@azure/storage-blob";
+import { BlobServiceClient, newPipeline } from "@azure/storage-blob";
 
 import * as assert from "assert";
 
 import { configLogger } from "../../src/common/Logger";
 import BlobTestServerFactory from "../BlobTestServerFactory";
 import { generateJWTToken, getUniqueName } from "../testutils";
+import { SimpleTokenCredential } from "../simpleTokenCredential";
 
 // Set true to enable debug log
 configLogger(false);
@@ -39,34 +34,34 @@ describe("Blob OAuth Basic", () => {
       "user_impersonation"
     );
 
-    const serviceURL = new ServiceURL(
+    const serviceClient = new BlobServiceClient(
       baseURL,
-      StorageURL.newPipeline(new TokenCredential(token), {
+      newPipeline(new SimpleTokenCredential(token), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const containerName: string = getUniqueName("1container-with-dash");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+    const containerClient = serviceClient.getContainerClient(containerName);
 
-    await containerURL.create(Aborter.none);
-    await containerURL.delete(Aborter.none);
+    await containerClient.create();
+    await containerClient.delete();
   });
 
   it(`Should not work with invalid JWT token @loki @sql`, async () => {
-    const serviceURL = new ServiceURL(
+    const serviceClient = new BlobServiceClient(
       baseURL,
-      StorageURL.newPipeline(new TokenCredential("invalid token"), {
+      newPipeline(new SimpleTokenCredential("invalid token"), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const containerName: string = getUniqueName("1container-with-dash");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+    const containerClient = serviceClient.getContainerClient(containerName);
 
     try {
-      await containerURL.create(Aborter.none);
-      await containerURL.delete(Aborter.none);
+      await containerClient.create();
+      await containerClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
@@ -102,21 +97,18 @@ describe("Blob OAuth Basic", () => {
         "user_impersonation"
       );
 
-      const serviceURL = new ServiceURL(
+      const serviceClient = new BlobServiceClient(
         baseURL,
-        StorageURL.newPipeline(new TokenCredential(token), {
+        newPipeline(new SimpleTokenCredential(token), {
           retryOptions: { maxTries: 1 }
         })
       );
 
       const containerName: string = getUniqueName("1container-with-dash");
-      const containerURL = ContainerURL.fromServiceURL(
-        serviceURL,
-        containerName
-      );
+      const containerClient = serviceClient.getContainerClient(containerName);
 
-      await containerURL.create(Aborter.none);
-      await containerURL.delete(Aborter.none);
+      await containerClient.create();
+      await containerClient.delete();
     }
   });
 
@@ -130,19 +122,19 @@ describe("Blob OAuth Basic", () => {
       "user_impersonation"
     );
 
-    const serviceURL = new ServiceURL(
+    const serviceClient = new BlobServiceClient(
       baseURL,
-      StorageURL.newPipeline(new TokenCredential(token), {
+      newPipeline(new SimpleTokenCredential(token), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const containerName: string = getUniqueName("1container-with-dash");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+    const containerClient = serviceClient.getContainerClient(containerName);
 
     try {
-      await containerURL.create(Aborter.none);
-      await containerURL.delete(Aborter.none);
+      await containerClient.create();
+      await containerClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
@@ -172,21 +164,18 @@ describe("Blob OAuth Basic", () => {
         "user_impersonation"
       );
 
-      const serviceURL = new ServiceURL(
+      const serviceClient = new BlobServiceClient(
         baseURL,
-        StorageURL.newPipeline(new TokenCredential(token), {
+        newPipeline(new SimpleTokenCredential(token), {
           retryOptions: { maxTries: 1 }
         })
       );
 
       const containerName: string = getUniqueName("1container-with-dash");
-      const containerURL = ContainerURL.fromServiceURL(
-        serviceURL,
-        containerName
-      );
+      const containerClient = serviceClient.getContainerClient(containerName);
 
-      await containerURL.create(Aborter.none);
-      await containerURL.delete(Aborter.none);
+      await containerClient.create();
+      await containerClient.delete();
     }
   });
 
@@ -200,19 +189,19 @@ describe("Blob OAuth Basic", () => {
       "user_impersonation"
     );
 
-    const serviceURL = new ServiceURL(
+    const serviceClient = new BlobServiceClient(
       baseURL,
-      StorageURL.newPipeline(new TokenCredential(token), {
+      newPipeline(new SimpleTokenCredential(token), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const containerName: string = getUniqueName("1container-with-dash");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+    const containerClient = serviceClient.getContainerClient(containerName);
 
     try {
-      await containerURL.create(Aborter.none);
-      await containerURL.delete(Aborter.none);
+      await containerClient.create();
+      await containerClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
@@ -234,19 +223,19 @@ describe("Blob OAuth Basic", () => {
       "user_impersonation"
     );
 
-    const serviceURL = new ServiceURL(
+    const serviceClient = new BlobServiceClient(
       baseURL,
-      StorageURL.newPipeline(new TokenCredential(token), {
+      newPipeline(new SimpleTokenCredential(token), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const containerName: string = getUniqueName("1container-with-dash");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+    const containerClient = serviceClient.getContainerClient(containerName);
 
     try {
-      await containerURL.create(Aborter.none);
-      await containerURL.delete(Aborter.none);
+      await containerClient.create();
+      await containerClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
@@ -268,19 +257,19 @@ describe("Blob OAuth Basic", () => {
       "user_impersonation"
     );
 
-    const serviceURL = new ServiceURL(
+    const serviceClient = new BlobServiceClient(
       baseURL,
-      StorageURL.newPipeline(new TokenCredential(token), {
+      newPipeline(new SimpleTokenCredential(token), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const containerName: string = getUniqueName("1container-with-dash");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+    const containerClient = serviceClient.getContainerClient(containerName);
 
     try {
-      await containerURL.create(Aborter.none);
-      await containerURL.delete(Aborter.none);
+      await containerClient.create();
+      await containerClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
@@ -302,28 +291,28 @@ describe("Blob OAuth Basic", () => {
       "user_impersonation"
     );
 
-    const serviceURL = new ServiceURL(
+    const serviceClient = new BlobServiceClient(
       baseURL,
-      StorageURL.newPipeline(new TokenCredential(token), {
+      newPipeline(new SimpleTokenCredential(token), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const containerName: string = getUniqueName("1container-with-dash");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
-    await containerURL.create(Aborter.none);
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
 
     try {
-      await containerURL.getAccessPolicy(Aborter.none);
+      await containerClient.getAccessPolicy();
     } catch (err) {
       assert.deepStrictEqual(
         err.message.includes("AuthorizationFailure"),
         true
       );
-      await containerURL.delete(Aborter.none);
+      await containerClient.delete();
       return;
     }
-    await containerURL.delete(Aborter.none);
+    await containerClient.delete();
     assert.fail();
   });
 
@@ -337,28 +326,28 @@ describe("Blob OAuth Basic", () => {
       "user_impersonation"
     );
 
-    const serviceURL = new ServiceURL(
+    const serviceClient = new BlobServiceClient(
       baseURL,
-      StorageURL.newPipeline(new TokenCredential(token), {
+      newPipeline(new SimpleTokenCredential(token), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const containerName: string = getUniqueName("1container-with-dash");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
-    await containerURL.create(Aborter.none);
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
 
     try {
-      await containerURL.setAccessPolicy(Aborter.none, "container");
+      await containerClient.setAccessPolicy("container");
     } catch (err) {
       assert.deepStrictEqual(
         err.message.includes("AuthorizationFailure"),
         true
       );
-      await containerURL.delete(Aborter.none);
+      await containerClient.delete();
       return;
     }
-    await containerURL.delete(Aborter.none);
+    await containerClient.delete();
     assert.fail();
   });
 
@@ -380,19 +369,19 @@ describe("Blob OAuth Basic", () => {
       "user_impersonation"
     );
 
-    const serviceURL = new ServiceURL(
+    const serviceClient = new BlobServiceClient(
       httpBaseURL,
-      StorageURL.newPipeline(new TokenCredential(token), {
+      newPipeline(new SimpleTokenCredential(token), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const containerName: string = getUniqueName("1container-with-dash");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+    const containerClient = serviceClient.getContainerClient(containerName);
 
     try {
-      await containerURL.create(Aborter.none);
-      await containerURL.delete(Aborter.none);
+      await containerClient.create();
+      await containerClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),

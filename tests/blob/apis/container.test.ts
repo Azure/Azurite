@@ -1,11 +1,7 @@
 import {
-  Aborter,
-  BlobURL,
-  BlockBlobURL,
-  ContainerURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+  BlobServiceClient,
+  newPipeline,
+  StorageSharedKeyCredential
 } from "@azure/storage-blob";
 import assert = require("assert");
 
@@ -27,10 +23,13 @@ describe("ContainerAPIs", () => {
   const server = factory.createServer();
 
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
-  const serviceURL = new ServiceURL(
+  const serviceClient = new BlobServiceClient(
     baseURL,
-    StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -38,7 +37,8 @@ describe("ContainerAPIs", () => {
   );
 
   let containerName: string = getUniqueName("container");
-  let containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+  let containerClient = serviceClient.getContainerClient(containerName);
+  let blobLeaseClient = containerClient.getBlobLeaseClient();
 
   before(async () => {
     await server.start();
@@ -51,12 +51,13 @@ describe("ContainerAPIs", () => {
 
   beforeEach(async () => {
     containerName = getUniqueName("container");
-    containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
-    await containerURL.create(Aborter.none);
+    containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+    blobLeaseClient = containerClient.getBlobLeaseClient();
   });
 
   afterEach(async () => {
-    await containerURL.delete(Aborter.none);
+    await containerClient.delete();
   });
 
   it("setMetadata @loki @sql", async () => {
@@ -65,22 +66,19 @@ describe("ContainerAPIs", () => {
       keya: "vala",
       keyb: "valb"
     };
-    await containerURL.setMetadata(Aborter.none, metadata);
+    await containerClient.setMetadata(metadata);
 
-    const result = await containerURL.getProperties(Aborter.none);
+    const result = await containerClient.getProperties();
     assert.deepEqual(result.metadata, metadata);
   });
 
   it("setMetadata should work with conditional headers @loki @sql", async () => {
-    // const properties = await containerURL.getProperties(Aborter.none);
-    await containerURL.setMetadata(
-      Aborter.none,
+    // const properties = await containerClient.getProperties();
+    await containerClient.setMetadata(
       {},
       {
-        containerAccessConditions: {
-          modifiedAccessConditions: {
-            ifModifiedSince: new Date("2018/01/01")
-          }
+        conditions: {
+          ifModifiedSince: new Date("2018/01/01")
         }
       }
     );
@@ -88,14 +86,11 @@ describe("ContainerAPIs", () => {
 
   it("setMetadata should not work with invalid conditional headers @loki @sql", async () => {
     try {
-      await containerURL.setMetadata(
-        Aborter.none,
+      await containerClient.setMetadata(
         {},
         {
-          containerAccessConditions: {
-            modifiedAccessConditions: {
-              ifModifiedSince: new Date("2118/01/01")
-            }
+          conditions: {
+            ifModifiedSince: new Date("2118/01/01")
           }
         }
       );
@@ -108,8 +103,8 @@ describe("ContainerAPIs", () => {
   });
 
   it("getProperties @loki @sql", async () => {
-    const result = await containerURL.getProperties(Aborter.none);
-    assert.ok(result.eTag!.length > 0);
+    const result = await containerClient.getProperties();
+    assert.ok(result.etag!.length > 0);
     assert.ok(result.lastModified);
     assert.ok(!result.leaseDuration);
     assert.equal(result.leaseState, "available");
@@ -125,13 +120,12 @@ describe("ContainerAPIs", () => {
   });
 
   it("getProperties should return 404 for non existed container @loki @sql", async () => {
-    const nonExistedContainerURL = ContainerURL.fromServiceURL(
-      serviceURL,
+    const nonExistedContainerURL = serviceClient.getContainerClient(
       "404container_"
     );
     let expectedError = false;
     try {
-      await nonExistedContainerURL.getProperties(Aborter.none);
+      await nonExistedContainerURL.getProperties();
     } catch (err) {
       if (err.response.status === 404) {
         expectedError = true;
@@ -146,18 +140,15 @@ describe("ContainerAPIs", () => {
   });
 
   it("create with all parameters configured @loki @sql", async () => {
-    const cURL = ContainerURL.fromServiceURL(
-      serviceURL,
-      getUniqueName(containerName)
-    );
+    const cURL = serviceClient.getContainerClient(getUniqueName(containerName));
     const metadata = { key: "value" };
     const access = "container";
-    const result_create = await cURL.create(Aborter.none, { metadata, access });
+    const result_create = await cURL.create({ metadata, access });
     assert.equal(
       result_create._response.request.headers.get("x-ms-client-request-id"),
       result_create.clientRequestId
     );
-    const result = await cURL.getProperties(Aborter.none);
+    const result = await cURL.getProperties();
     assert.deepEqual(result.blobPublicAccess, access);
     assert.deepEqual(result.metadata, metadata);
   });
@@ -168,47 +159,46 @@ describe("ContainerAPIs", () => {
   });
 
   it("listBlobHierarchySegment with default parameters @loki @sql", async () => {
-    const blobURLs = [];
+    const blobClients = [];
     for (let i = 0; i < 3; i++) {
-      const blobURL = BlobURL.fromContainerURL(
-        containerURL,
+      const blobClient = containerClient.getBlobClient(
         getUniqueName(`blockblob${i}/${i}`)
       );
-      const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
-      await blockBlobURL.upload(Aborter.none, "", 0);
-      blobURLs.push(blobURL);
+      const blockBlobClient = blobClient.getBlockBlobClient();
+      await blockBlobClient.upload("", 0);
+      blobClients.push(blobClient);
     }
 
     const delimiter = "/";
-    const result = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      delimiter
-    );
+    const result = (await containerClient
+      .listBlobsByHierarchy(delimiter)
+      .byPage()
+      .next()).value;
     assert.ok(result.serviceEndpoint.length > 0);
-    assert.ok(containerURL.url.indexOf(result.containerName));
+    assert.ok(containerClient.url.indexOf(result.containerName));
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
-    assert.deepStrictEqual(result.nextMarker, "");
+    assert.deepStrictEqual(result.continuationToken, "");
     assert.deepStrictEqual(result.delimiter, delimiter);
     assert.deepStrictEqual(
       result.segment.blobPrefixes!.length,
-      blobURLs.length
+      blobClients.length
     );
 
-    for (const blob of blobURLs) {
+    for (const blob of blobClients) {
       let i = 0;
       assert.ok(blob.url.indexOf(result.segment.blobPrefixes![i++].name));
     }
 
-    for (const blob of blobURLs) {
-      await blob.delete(Aborter.none);
+    for (const blob of blobClients) {
+      await blob.delete();
     }
   });
 
   it("listBlobHierarchySegment with all parameters configured @loki @sql", async () => {
-    const blobURLs = [];
+    const blobClients = [];
     const prefix = "blockblob";
     const metadata = {
       keya: "a",
@@ -216,116 +206,101 @@ describe("ContainerAPIs", () => {
     };
     const delimiter = "/";
     for (let i = 0; i < 2; i++) {
-      const blobURL = BlobURL.fromContainerURL(
-        containerURL,
+      const blobClient = containerClient.getBlobClient(
         getUniqueName(`${prefix}${i}${delimiter}${i}`)
       );
-      const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
-      await blockBlobURL.upload(Aborter.none, "", 0, {
+      const blockBlobClient = blobClient.getBlockBlobClient();
+      await blockBlobClient.upload("", 0, {
         metadata
       });
-      blobURLs.push(blobURL);
+      blobClients.push(blobClient);
     }
 
-    const result = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      delimiter,
-      undefined,
-      {
-        include: [
-          "metadata",
-          "uncommittedblobs",
-          "copy",
-          "deleted",
-          "snapshots"
-        ],
-        maxresults: 1,
+    const result = (await containerClient
+      .listBlobsByHierarchy(delimiter, {
+        includeCopy: true,
+        includeDeleted: true,
+        includeMetadata: true,
+        includeSnapshots: true,
+        includeUncommitedBlobs: true,
         prefix
-      }
-    );
+      })
+      .byPage({ maxPageSize: 1 })
+      .next()).value;
     assert.ok(result.serviceEndpoint.length > 0);
-    assert.ok(containerURL.url.indexOf(result.containerName));
+    assert.ok(containerClient.url.indexOf(result.containerName));
     assert.deepStrictEqual(result.segment.blobPrefixes!.length, 1);
     assert.deepStrictEqual(result.segment.blobItems!.length, 0);
-    assert.ok(blobURLs[0].url.indexOf(result.segment.blobPrefixes![0].name));
+    assert.ok(blobClients[0].url.indexOf(result.segment.blobPrefixes![0].name));
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
 
-    const result2 = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      delimiter,
-      result.nextMarker,
-      {
-        include: [
-          "metadata",
-          "uncommittedblobs",
-          "copy",
-          "deleted",
-          "snapshots"
-        ],
-        maxresults: 2,
+    const result2 = (await containerClient
+      .listBlobsByHierarchy(delimiter, {
+        includeCopy: true,
+        includeDeleted: true,
+        includeMetadata: true,
+        includeSnapshots: true,
+        includeUncommitedBlobs: true,
         prefix
-      }
-    );
+      })
+      .byPage({
+        continuationToken: result.continuationToken,
+        maxPageSize: 2
+      })
+      .next()).value;
     assert.ok(result2.serviceEndpoint.length > 0);
-    assert.ok(containerURL.url.indexOf(result2.containerName));
+    assert.ok(containerClient.url.indexOf(result2.containerName));
     assert.deepStrictEqual(result2.segment.blobPrefixes!.length, 1);
     assert.deepStrictEqual(result2.segment.blobItems!.length, 0);
-    assert.ok(blobURLs[0].url.indexOf(result2.segment.blobPrefixes![0].name));
-
-    const result3 = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      delimiter,
-      undefined,
-      {
-        include: [
-          "metadata",
-          "uncommittedblobs",
-          "copy",
-          "deleted",
-          "snapshots"
-        ],
-        maxresults: 2,
-        prefix: `${prefix}0${delimiter}`
-      }
+    assert.ok(
+      blobClients[0].url.indexOf(result2.segment.blobPrefixes![0].name)
     );
+
+    const result3 = (await containerClient
+      .listBlobsByHierarchy(delimiter, {
+        includeCopy: true,
+        includeDeleted: true,
+        includeMetadata: true,
+        includeSnapshots: true,
+        includeUncommitedBlobs: true,
+        prefix: `${prefix}0${delimiter}`
+      })
+      .byPage({ maxPageSize: 2 })
+      .next()).value;
     assert.ok(result3.serviceEndpoint.length > 0);
-    assert.ok(containerURL.url.indexOf(result3.containerName));
-    assert.deepStrictEqual(result3.nextMarker, "");
+    assert.ok(containerClient.url.indexOf(result3.containerName));
+    assert.deepStrictEqual(result3.continuationToken, "");
     assert.deepStrictEqual(result3.delimiter, delimiter);
     assert.deepStrictEqual(result3.segment.blobItems!.length, 1);
     assert.deepStrictEqual(result3.segment.blobItems![0].metadata, {
-      encrypted: undefined,
       ...metadata
     });
-    assert.ok(blobURLs[0].url.indexOf(result3.segment.blobItems![0].name));
-    const getResult = await blobURLs[0].getProperties(Aborter.none);
+    assert.ok(blobClients[0].url.indexOf(result3.segment.blobItems![0].name));
+    const getResult = await blobClients[0].getProperties();
     assert.equal(
-      getResult.eTag,
+      getResult.etag,
       '"' + result3.segment.blobItems![0].properties.etag + '"'
     );
 
-    for (const blob of blobURLs) {
-      await blob.delete(Aborter.none);
+    for (const blob of blobClients) {
+      await blob.delete();
     }
   });
 
   it("acquireLease_available_proposedLeaseId_fixed @loki @sql", async () => {
     const guid = "ca761232-ed42-11ce-bacd-00aa0057b223";
     const duration = 30;
-    const result_acquire = await containerURL.acquireLease(
-      Aborter.none,
-      guid,
-      duration
-    );
+    blobLeaseClient = containerClient.getBlobLeaseClient(guid);
+    const result_acquire = await blobLeaseClient.acquireLease(duration);
     assert.equal(
       result_acquire._response.request.headers.get("x-ms-client-request-id"),
-      result_acquire.clientRequestId
+      result_acquire._response.request.requestId
     );
 
-    const result = await containerURL.getProperties(Aborter.none);
+    const result = await containerClient.getProperties();
     assert.equal(result.leaseDuration, "fixed");
     assert.equal(result.leaseState, "leased");
     assert.equal(result.leaseStatus, "locked");
@@ -334,19 +309,19 @@ describe("ContainerAPIs", () => {
       result.clientRequestId
     );
 
-    const result_release = await containerURL.releaseLease(Aborter.none, guid);
+    const result_release = await blobLeaseClient.releaseLease();
     assert.equal(
       result_release._response.request.headers.get("x-ms-client-request-id"),
-      result_release.clientRequestId
+      result_release._response.request.requestId
     );
   });
 
   it("acquireLease_available_NoproposedLeaseId_infinite @loki @sql", async () => {
-    const leaseResult = await containerURL.acquireLease(Aborter.none, "", -1);
+    const leaseResult = await blobLeaseClient.acquireLease(-1);
     const leaseId = leaseResult.leaseId;
     assert.ok(leaseId);
 
-    const result = await containerURL.getProperties(Aborter.none);
+    const result = await containerClient.getProperties();
     assert.equal(result.leaseDuration, "infinite");
     assert.equal(result.leaseState, "leased");
     assert.equal(result.leaseStatus, "locked");
@@ -355,82 +330,78 @@ describe("ContainerAPIs", () => {
       result.clientRequestId
     );
 
-    await containerURL.releaseLease(Aborter.none, leaseId!);
+    await blobLeaseClient.releaseLease();
   });
 
   it("releaseLease @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = -1;
-    await containerURL.acquireLease(Aborter.none, guid, duration);
+    blobLeaseClient = containerClient.getBlobLeaseClient(guid);
+    await blobLeaseClient.acquireLease(duration);
 
-    const result = await containerURL.getProperties(Aborter.none);
+    const result = await containerClient.getProperties();
     assert.equal(result.leaseDuration, "infinite");
     assert.equal(result.leaseState, "leased");
     assert.equal(result.leaseStatus, "locked");
 
-    await containerURL.releaseLease(Aborter.none, guid);
+    await blobLeaseClient.releaseLease();
   });
 
   it("renewLease @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 15;
-    await containerURL.acquireLease(Aborter.none, guid, duration);
+    blobLeaseClient = containerClient.getBlobLeaseClient(guid);
+    await blobLeaseClient.acquireLease(duration);
 
-    const result = await containerURL.getProperties(Aborter.none);
+    const result = await containerClient.getProperties();
     assert.equal(result.leaseDuration, "fixed");
     assert.equal(result.leaseState, "leased");
     assert.equal(result.leaseStatus, "locked");
 
     await sleep(16 * 1000);
-    const result2 = await containerURL.getProperties(Aborter.none);
+    const result2 = await containerClient.getProperties();
     assert.ok(!result2.leaseDuration);
     assert.equal(result2.leaseState, "expired");
     assert.equal(result2.leaseStatus, "unlocked");
 
-    const result_renew = await containerURL.renewLease(Aborter.none, guid);
-    const result3 = await containerURL.getProperties(Aborter.none);
+    await blobLeaseClient.renewLease();
+    const result3 = await containerClient.getProperties();
     assert.equal(result3.leaseDuration, "fixed");
     assert.equal(result3.leaseState, "leased");
     assert.equal(result3.leaseStatus, "locked");
-    assert.equal(
-      result_renew._response.request.headers.get("x-ms-client-request-id"),
-      result_renew.clientRequestId
-    );
 
-    await containerURL.releaseLease(Aborter.none, guid);
+    await blobLeaseClient.releaseLease();
   });
 
   it("changeLease @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 15;
-    await containerURL.acquireLease(Aborter.none, guid, duration);
+    blobLeaseClient = containerClient.getBlobLeaseClient(guid);
+    await blobLeaseClient.acquireLease(duration);
 
-    const result = await containerURL.getProperties(Aborter.none);
+    const result = await containerClient.getProperties();
     assert.equal(result.leaseDuration, "fixed");
     assert.equal(result.leaseState, "leased");
     assert.equal(result.leaseStatus, "locked");
 
     const newGuid = "3c7e72ebb4304526bc53d8ecef03798f";
-    const result_change = await containerURL.changeLease(
-      Aborter.none,
-      guid,
-      newGuid
-    );
+    const result_change = await blobLeaseClient.changeLease(newGuid);
     assert.equal(
       result_change._response.request.headers.get("x-ms-client-request-id"),
-      result_change.clientRequestId
+      result_change._response.request.requestId
     );
 
-    await containerURL.getProperties(Aborter.none);
-    await containerURL.releaseLease(Aborter.none, newGuid);
+    await containerClient.getProperties();
+    await blobLeaseClient.releaseLease();
   });
 
   it("breakLease @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 15;
-    await containerURL.acquireLease(Aborter.none, guid, duration);
+    blobLeaseClient = containerClient.getBlobLeaseClient(guid);
+    await blobLeaseClient.acquireLease(duration);
 
-    const result = await containerURL.getProperties(Aborter.none);
+    const result = await containerClient.getProperties();
     assert.equal(result.leaseDuration, "fixed");
     assert.equal(result.leaseState, "leased");
     assert.equal(result.leaseStatus, "locked");
@@ -438,19 +409,16 @@ describe("ContainerAPIs", () => {
     const breakDuration = 30;
     let breaklefttime = breakDuration;
     while (breaklefttime > 0) {
-      const breakResult = await containerURL.breakLease(
-        Aborter.none,
-        breakDuration
-      );
+      const breakResult = await blobLeaseClient.breakLease(breakDuration);
 
       assert.equal(breakResult.leaseTime! <= breaklefttime, true);
       assert.equal(
         breakResult._response.request.headers.get("x-ms-client-request-id"),
-        breakResult.clientRequestId
+        breakResult._response.request.requestId
       );
       breaklefttime = breakResult.leaseTime!;
 
-      const result2 = await containerURL.getProperties(Aborter.none);
+      const result2 = await containerClient.getProperties();
       assert.ok(!result2.leaseDuration);
       if (breaklefttime !== 0) {
         assert.equal(result2.leaseState, "breaking");
@@ -460,138 +428,123 @@ describe("ContainerAPIs", () => {
       await sleep(500);
     }
 
-    const result3 = await containerURL.getProperties(Aborter.none);
+    const result3 = await containerClient.getProperties();
     assert.ok(!result3.leaseDuration);
     assert.equal(result3.leaseState, "broken");
     assert.equal(result3.leaseStatus, "unlocked");
   });
 
   it("should correctly list all blobs in the container using listBlobFlatSegment with default parameters @loki @sql", async () => {
-    const blobURLs = [];
+    const blobClients = [];
     for (let i = 0; i < 3; i++) {
-      const blobURL = BlobURL.fromContainerURL(
-        containerURL,
+      const blobClient = containerClient.getBlobClient(
         getUniqueName(`blockblob${i}/${i}`)
       );
-      const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
-      await blockBlobURL.upload(Aborter.none, "", 0);
-      blobURLs.push(blobURL);
+      const blockBlobClient = blobClient.getBlockBlobClient();
+      await blockBlobClient.upload("", 0);
+      blobClients.push(blobClient);
     }
 
     const inputmarker = undefined;
-    const result = await containerURL.listBlobFlatSegment(
-      Aborter.none,
-      inputmarker
-    );
+    const result = (await containerClient
+      .listBlobsFlat()
+      .byPage({ continuationToken: inputmarker })
+      .next()).value;
     assert.ok(result.serviceEndpoint.length > 0);
-    assert.ok(containerURL.url.indexOf(result.containerName));
-    assert.deepStrictEqual(result.nextMarker, "");
-    assert.deepStrictEqual(result.segment.blobItems!.length, blobURLs.length);
+    assert.ok(containerClient.url.indexOf(result.containerName));
+    assert.deepStrictEqual(result.continuationToken, "");
+    assert.deepStrictEqual(
+      result.segment.blobItems!.length,
+      blobClients.length
+    );
 
     let i = 0;
-    for (const blob of blobURLs) {
+    for (const blob of blobClients) {
       assert.ok(blob.url.indexOf(result.segment.blobItems![i].name));
-      const getResult = await blob.getProperties(Aborter.none);
+      const getResult = await blob.getProperties();
       assert.equal(
-        getResult.eTag,
+        getResult.etag,
         '"' + result.segment.blobItems![i].properties.etag + '"'
       );
       i++;
     }
 
-    for (const blob of blobURLs) {
-      await blob.delete(Aborter.none);
+    for (const blob of blobClients) {
+      await blob.delete();
     }
   });
 
   it("should only show uncommitted blobs in listBlobFlatSegment with uncommittedblobs option @loki @sql", async () => {
-    const blobURL = BlobURL.fromContainerURL(
-      containerURL,
+    const blobClient = containerClient.getBlobClient(
       getUniqueName("uncommittedblob")
     );
-    const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
+    const blockBlobClient = blobClient.getBlockBlobClient();
 
     const body = "HelloWorld";
-    await blockBlobURL.stageBlock(
-      Aborter.none,
-      base64encode("1"),
-      body,
-      body.length
-    );
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
 
-    const result1 = await containerURL.listBlobFlatSegment(
-      Aborter.none,
-      undefined,
-      {
-        include: ["uncommittedblobs"]
-      }
-    );
+    const result1 = (await containerClient
+      .listBlobsFlat({
+        includeUncommitedBlobs: true
+      })
+      .byPage()
+      .next()).value;
     assert.equal(result1.segment.blobItems.length, 1);
 
-    const result2 = await containerURL.listBlobFlatSegment(
-      Aborter.none,
-      undefined
-    );
+    const result2 = (await containerClient
+      .listBlobsFlat()
+      .byPage()
+      .next()).value;
     assert.equal(result2.segment.blobItems.length, 0);
   });
 
   it("should only show uncommitted blobs in listBlobHierarchySegment with uncommittedblobs option @loki @sql", async () => {
     const delimiter = "/";
-    const blobURL = BlobURL.fromContainerURL(
-      containerURL,
+    const blobClient = containerClient.getBlobClient(
       getUniqueName("path/uncommittedblob")
     );
-    const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
+    const blockBlobClient = blobClient.getBlockBlobClient();
 
     const body = "HelloWorld";
-    await blockBlobURL.stageBlock(
-      Aborter.none,
-      base64encode("1"),
-      body,
-      body.length
-    );
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
 
-    const result1 = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      delimiter,
-      undefined,
-      {
-        include: ["uncommittedblobs"]
-      }
-    );
+    const result1 = (await containerClient
+      .listBlobsByHierarchy(delimiter, {
+        includeUncommitedBlobs: true
+      })
+      .byPage()
+      .next()).value;
     assert.equal(result1.segment.blobPrefixes!.length, 1);
 
-    const result2 = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      delimiter,
-      undefined
-    );
+    const result2 = (await containerClient
+      .listBlobsByHierarchy(delimiter)
+      .byPage()
+      .next()).value;
     assert.equal(result2.segment.blobPrefixes!.length, 0);
   });
 
   it("should correctly order all blobs in the container @loki @sql", async () => {
-    const blobURLs = [];
+    const blobClients = [];
     const blobNames: Array<string> = [];
 
     for (let i = 1; i < 4; i++) {
       const name = `blockblob${i}/abc-00${i}`;
-      const blobURL = BlobURL.fromContainerURL(containerURL, name);
-      const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
-      await blockBlobURL.upload(Aborter.none, "", 0);
-      blobURLs.push(blobURL);
+      const blobClient = containerClient.getBlobClient(name);
+      const blockBlobClient = blobClient.getBlockBlobClient();
+      await blockBlobClient.upload("", 0);
+      blobClients.push(blobClient);
       blobNames.push(name);
     }
 
     const inputmarker = undefined;
-    const result = await containerURL.listBlobFlatSegment(
-      Aborter.none,
-      inputmarker,
-      {
+    const result = (await containerClient
+      .listBlobsFlat({
         prefix: "blockblob"
-      }
-    );
+      })
+      .byPage({ continuationToken: inputmarker })
+      .next()).value;
     assert.ok(result.serviceEndpoint.length > 0);
-    assert.ok(containerURL.url.indexOf(result.containerName));
+    assert.ok(containerClient.url.indexOf(result.containerName));
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
@@ -605,13 +558,13 @@ describe("ContainerAPIs", () => {
 
     assert.deepStrictEqual(gotNames, blobNames);
 
-    for (const blob of blobURLs) {
-      await blob.delete(Aborter.none);
+    for (const blob of blobClients) {
+      await blob.delete();
     }
   });
 
-  it("returns a valid, correct nextMarker @loki @sql", async () => {
-    const blobURLs = [];
+  it("returns a valid, correct continuationToken @loki @sql", async () => {
+    const blobClients = [];
     let blobNames: Array<string> = [
       "blockblob/abc-001",
       "blockblob/abc-004",
@@ -626,26 +579,23 @@ describe("ContainerAPIs", () => {
     ];
 
     for (let i = 0; i < 10; i++) {
-      const blobURL = BlobURL.fromContainerURL(containerURL, blobNames[i]);
-      const blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
-      await blockBlobURL.upload(Aborter.none, "", 0);
-      blobURLs.push(blobURL);
+      const blobClient = containerClient.getBlobClient(blobNames[i]);
+      const blockBlobClient = blobClient.getBlockBlobClient();
+      await blockBlobClient.upload("", 0);
+      blobClients.push(blobClient);
     }
 
     // Sort blob names for comparison
     blobNames = blobNames.sort();
 
     const inputmarker = undefined;
-    let result = await containerURL.listBlobFlatSegment(
-      Aborter.none,
-      inputmarker,
-      {
-        maxresults: 4
-      }
-    );
+    let result = (await containerClient
+      .listBlobsFlat()
+      .byPage({ continuationToken: inputmarker, maxPageSize: 4 })
+      .next()).value;
     assert.ok(result.serviceEndpoint.length > 0);
-    assert.ok(containerURL.url.indexOf(result.containerName));
-    assert.equal(result.nextMarker, "blockblob/abc-003");
+    assert.ok(containerClient.url.indexOf(result.containerName));
+    assert.equal(result.continuationToken, "blockblob/abc-003");
     assert.equal(result.segment.blobItems.length, 4);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
@@ -658,16 +608,16 @@ describe("ContainerAPIs", () => {
       gotNames.push(item.name);
     }
 
-    result = await containerURL.listBlobFlatSegment(
-      Aborter.none,
-      result.nextMarker,
-      {
-        maxresults: 4
-      }
-    );
+    result = (await containerClient
+      .listBlobsFlat()
+      .byPage({
+        continuationToken: result.continuationToken,
+        maxPageSize: 4
+      })
+      .next()).value;
     assert.ok(result.serviceEndpoint.length > 0);
-    assert.ok(containerURL.url.indexOf(result.containerName));
-    assert.equal(result.nextMarker, "blockblob/abc-007");
+    assert.ok(containerClient.url.indexOf(result.containerName));
+    assert.equal(result.continuationToken, "blockblob/abc-007");
     assert.equal(result.segment.blobItems.length, 4);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
@@ -678,16 +628,16 @@ describe("ContainerAPIs", () => {
       gotNames.push(item.name);
     }
 
-    result = await containerURL.listBlobFlatSegment(
-      Aborter.none,
-      result.nextMarker,
-      {
-        maxresults: 4
-      }
-    );
+    result = (await containerClient
+      .listBlobsFlat()
+      .byPage({
+        continuationToken: result.continuationToken,
+        maxPageSize: 4
+      })
+      .next()).value;
     assert.ok(result.serviceEndpoint.length > 0);
-    assert.ok(containerURL.url.indexOf(result.containerName));
-    assert.strictEqual(result.nextMarker, "");
+    assert.ok(containerClient.url.indexOf(result.containerName));
+    assert.strictEqual(result.continuationToken, "");
     assert.equal(result.segment.blobItems.length, 2);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
@@ -700,14 +650,14 @@ describe("ContainerAPIs", () => {
 
     assert.deepStrictEqual(gotNames, blobNames);
 
-    for (const blob of blobURLs) {
-      await blob.delete(Aborter.none);
+    for (const blob of blobClients) {
+      await blob.delete();
     }
   });
 
   it("getAccessPolicy @loki @sql", async () => {
-    const result = await containerURL.getAccessPolicy(Aborter.none);
-    assert.ok(result.eTag!.length > 0);
+    const result = await containerClient.getAccessPolicy();
+    assert.ok(result.etag!.length > 0);
     assert.ok(result.lastModified);
     assert.ok(result.requestId);
     assert.ok(result.version);
@@ -723,15 +673,15 @@ describe("ContainerAPIs", () => {
     const containerAcl = [
       {
         accessPolicy: {
-          expiry: new Date("2018-12-31T11:22:33.4567890Z"),
-          permission: "rwd",
-          start: new Date("2017-12-31T11:22:33.4567890Z")
+          expiresOn: new Date("2018-12-31T11:22:33.4567890Z"),
+          permissions: "rwd",
+          startsOn: new Date("2017-12-31T11:22:33.4567890Z")
         },
         id: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
       }
     ];
-    await containerURL.setAccessPolicy(Aborter.none, access, containerAcl);
-    const result = await containerURL.getAccessPolicy(Aborter.none);
+    await containerClient.setAccessPolicy(access, containerAcl);
+    const result = await containerClient.getAccessPolicy();
     // assert.deepEqual(result.signedIdentifiers, containerAcl);
     assert.deepEqual(result.blobPublicAccess, access);
     assert.equal(
@@ -746,24 +696,23 @@ describe("ContainerAPIs", () => {
     const containerAcl = [
       {
         accessPolicy: {
-          expiry: new Date("2018-12-31T11:22:33.4567890Z"),
-          permission: "rwdl",
-          start: new Date("2017-12-31T11:22:33.4567890Z")
+          expiresOn: new Date("2018-12-31T11:22:33.4567890Z"),
+          permissions: "rwdl",
+          startsOn: new Date("2017-12-31T11:22:33.4567890Z")
         },
         id: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
       },
       {
         accessPolicy: {
-          expiry: new Date("2030-11-31T11:22:33.4567890Z"),
-          permission: "w",
-          start: new Date("2017-12-31T11:22:33.4567890Z")
+          expiresOn: new Date("2030-11-31T11:22:33.4567890Z"),
+          permissions: "w",
+          startsOn: new Date("2017-12-31T11:22:33.4567890Z")
         },
         id: "policy2"
       }
     ];
 
-    const result_set = await containerURL.setAccessPolicy(
-      Aborter.none,
+    const result_set = await containerClient.setAccessPolicy(
       access,
       containerAcl
     );
@@ -771,7 +720,7 @@ describe("ContainerAPIs", () => {
       result_set._response.request.headers.get("x-ms-client-request-id"),
       result_set.clientRequestId
     );
-    const result = await containerURL.getAccessPolicy(Aborter.none);
+    const result = await containerClient.getAccessPolicy();
     assert.deepEqual(result.signedIdentifiers, containerAcl);
     assert.deepEqual(result.blobPublicAccess, access);
   });
