@@ -1,43 +1,15 @@
+/**
+ * This file store table parameter from command line parameters
+ */
+
 import args from "args";
-
+import ITableEnvironment from "./ITableEnvironment";
 import {
-  DEFAULT_BLOB_LISTENING_PORT,
-  DEFAULT_BLOB_SERVER_HOST_NAME
-} from "../blob/utils/constants";
-
-import {
-  DEFAULT_QUEUE_LISTENING_PORT,
-  DEFAULT_QUEUE_SERVER_HOST_NAME
-} from "../queue/utils/constants";
-
-import {
-  DEFAULT_TABLE_LISTENING_PORT,
-  DEFAULT_TABLE_SERVER_HOST_NAME
-} from "../table/utils/constants";
-
-import IEnvironment from "./IEnvironment";
+  DEFAULT_TABLE_SERVER_HOST_NAME,
+  DEFAULT_TABLE_LISTENING_PORT
+} from "./utils/constants";
 
 args
-  .option(
-    ["", "blobHost"],
-    "Optional. Customize listening address for blob",
-    DEFAULT_BLOB_SERVER_HOST_NAME
-  )
-  .option(
-    ["", "blobPort"],
-    "Optional. Customize listening port for blob",
-    DEFAULT_BLOB_LISTENING_PORT
-  )
-  .option(
-    ["", "queueHost"],
-    "Optional. Customize listening address for queue",
-    DEFAULT_QUEUE_SERVER_HOST_NAME
-  )
-  .option(
-    ["", "queuePort"],
-    "Optional. Customize listening port for queue",
-    DEFAULT_QUEUE_LISTENING_PORT
-  )
   .option(
     ["", "tableHost"],
     "Optional. Customize listening address for table",
@@ -62,43 +34,27 @@ args
     ["", "skipApiVersionCheck"],
     "Optional. Skip the request API version check, request with all Api versions will be allowed"
   )
-  .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic"')
-  .option(["", "cert"], "Optional. Path to certificate file")
-  .option(["", "key"], "Optional. Path to certificate key .pem file")
-  .option(["", "pwd"], "Optional. Password for .pfx file")
   .option(
     ["d", "debug"],
     "Optional. Enable debug log by providing a valid local file path as log destination"
   );
 
-(args as any).config.name = "azurite";
+(args as any).config.name = "azurite-table";
 
-export default class Environment implements IEnvironment {
+/**
+ * This class store table configuration from command line parameters
+ * @export
+ *
+ */
+export default class TableEnvironment implements ITableEnvironment {
   private flags = args.parse(process.argv);
 
-  public blobHost(): string | undefined {
-    return this.flags.blobHost;
-  }
-
-  public blobPort(): number | undefined {
-    return this.flags.blobPort;
-  }
-
-  public queueHost(): string | undefined {
-    return this.flags.queueHost;
-  }
-
-  public queuePort(): number | undefined {
-    return this.flags.queuePort;
-  }
-
-  // IM: Add tableHost() and tablePort()
   public tableHost(): string | undefined {
     return this.flags.tableHost;
   }
 
   public tablePort(): number | undefined {
-    return;
+    return this.flags.tablePort;
   }
 
   public async location(): Promise<string> {
@@ -126,22 +82,6 @@ export default class Environment implements IEnvironment {
     }
     // default is false which will check API veresion
     return false;
-  }
-
-  public cert(): string | undefined {
-    return this.flags.cert;
-  }
-
-  public key(): string | undefined {
-    return this.flags.key;
-  }
-
-  public pwd(): string | undefined {
-    return this.flags.pwd;
-  }
-
-  public oauth(): string | undefined {
-    return this.flags.oauth;
   }
 
   public async debug(): Promise<string | undefined> {

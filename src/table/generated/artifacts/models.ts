@@ -10,6 +10,11 @@
 // tslint:disable:interface-name
 // tslint:disable:quotemark
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> Add table draft
 /**
  * Table Service error.
  */

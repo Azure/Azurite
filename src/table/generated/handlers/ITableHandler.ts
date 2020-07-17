@@ -24,4 +24,8 @@ export default interface ITableHandler {
   insertEntity(table: string, options: Models.TableInsertEntityOptionalParams, context: Context): Promise<Models.TableInsertEntityResponse>;
   getAccessPolicy(table: string, options: Models.TableGetAccessPolicyOptionalParams, context: Context): Promise<Models.TableGetAccessPolicyResponse>;
   setAccessPolicy(table: string, options: Models.TableSetAccessPolicyOptionalParams, context: Context): Promise<Models.TableSetAccessPolicyResponse>;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> Add table draft

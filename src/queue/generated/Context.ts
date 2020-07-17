@@ -32,7 +32,7 @@ export default class Context {
    * Context holds generated server context information.
    * Every incoming HTTP request will initialize a new context.
    *
-   * @param {Object} holder Holder is an Object which used to keep context information
+   * @param {Object} holder Holder is an Object which∂ used to keep context information
    * @param {string} [path="context"] holder[path] is used as context object by default
    * @param {IRequest} [req]
    * @param {IResponse} [res]

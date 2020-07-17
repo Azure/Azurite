@@ -7,6 +7,7 @@ import { promisify } from "util";
 import Environment from "./common/Environment";
 // tslint:disable-next-line:ordered-imports
 import { BlobServerFactory } from "./blob/BlobServerFactory";
+
 import * as Logger from "./common/Logger";
 import QueueConfiguration from "./queue/QueueConfiguration";
 import QueueServer from "./queue/QueueServer";
@@ -16,6 +17,16 @@ import {
   DEFAULT_QUEUE_PERSISTENCE_ARRAY,
   DEFAULT_QUEUE_PERSISTENCE_PATH
 } from "./queue/utils/constants";
+
+import TableConfiguration from "./table/TableConfiguration";
+import TableServer from "./table/TableServer";
+
+import {
+  DEFAULT_TABLE_EXTENT_LOKI_DB_PATH,
+  DEFAULT_TABLE_LOKI_DB_PATH,
+  DEFAULT_TABLE_PERSISTENCE_ARRAY,
+  DEFAULT_TABLE_PERSISTENCE_PATH
+} from "./table/utils/constants";
 
 // tslint:disable:no-console
 
@@ -46,11 +57,36 @@ async function main() {
     location,
     DEFAULT_QUEUE_PERSISTENCE_PATH
   );
+
   const queueConfig = new QueueConfiguration(
     env.queueHost(),
     env.queuePort(),
     join(location, DEFAULT_QUEUE_LOKI_DB_PATH),
     join(location, DEFAULT_QUEUE_EXTENT_LOKI_DB_PATH),
+    DEFAULT_QUEUE_PERSISTENCE_ARRAY,
+    !env.silent(),
+    undefined,
+    env.debug() !== undefined,
+    await env.debug(),
+    env.loose(),
+    env.skipApiVersionCheck(),
+    env.cert(),
+    env.key(),
+    env.pwd(),
+    env.oauth()
+  );
+
+  // Change the persistence table location with parameters
+  DEFAULT_TABLE_PERSISTENCE_ARRAY[0].locationPath = join(
+    location,
+    DEFAULT_TABLE_PERSISTENCE_PATH
+  );
+
+  const tableConfig = new TableConfiguration(
+    env.tableHost(),
+    env.tablePort(),
+    join(location, DEFAULT_TABLE_LOKI_DB_PATH),
+    join(location, DEFAULT_TABLE_EXTENT_LOKI_DB_PATH),
     DEFAULT_QUEUE_PERSISTENCE_ARRAY,
     !env.silent(),
     undefined,
@@ -70,8 +106,11 @@ async function main() {
   // Enable debug log by default before first release for debugging purpose
   Logger.configLogger(blobConfig.enableDebugLog, blobConfig.debugLogFilePath);
 
-  // Create server instance
+  // Create queue server instance
   const queueServer = new QueueServer(queueConfig);
+
+  // Create table server instance
+  const tableServer = new TableServer(tableConfig);
 
   // Start server
   console.log(
@@ -91,9 +130,20 @@ async function main() {
     `Azurite Queue service is successfully listening at ${queueServer.getHttpServerAddress()}`
   );
 
+  // Start server
+  console.log(
+    `Azurite Table service is starting at ${tableConfig.getHttpServerAddress()}`
+  );
+  await tableServer.start();
+  console.log(
+    `Azurite Table service is successfully listening at ${tableServer.getHttpServerAddress()}`
+  );
+
   // Handle close event
   const blobBeforeCloseMessage = `Azurite Blob service is closing...`;
   const blobAfterCloseMessage = `Azurite Blob service successfully closed`;
+  const tableBeforeCloseMessage = `Azurite Table service is closing...`;
+  const tableAfterCloseMessage = `Azurite Table service successfully closed`;
   const queueBeforeCloseMessage = `Azurite Queue service is closing...`;
   const queueAfterCloseMessage = `Azurite Queue service successfully closed`;
   process
@@ -102,6 +152,11 @@ async function main() {
         console.log(blobBeforeCloseMessage);
         blobServer.close().then(() => {
           console.log(blobAfterCloseMessage);
+        });
+
+        console.log(tableBeforeCloseMessage);
+        tableServer.close().then(() => {
+          console.log(tableAfterCloseMessage);
         });
 
         console.log(queueBeforeCloseMessage);
@@ -114,6 +169,11 @@ async function main() {
       console.log(blobBeforeCloseMessage);
       blobServer.close().then(() => {
         console.log(blobAfterCloseMessage);
+      });
+
+      console.log(tableBeforeCloseMessage);
+      tableServer.close().then(() => {
+        console.log(tableAfterCloseMessage);
       });
 
       console.log(queueBeforeCloseMessage);
