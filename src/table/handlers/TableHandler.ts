@@ -1,16 +1,17 @@
-import ITableHandler from "../generated/handlers/ITableHandler";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
-
 import BaseHandler from "./BaseHandler";
+
 import TableStorageContext from "../context/TableStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
+import ITableHandler from "../generated/handlers/ITableHandler";
 import { TableModel } from "../persistence/ITableMetadataStore";
+
 import {
-  TABLE_API_VERSION,
-  NO_METADATA_ACCEPT,
+  FULL_METADATA_ACCEPT,
   MINIMAL_METADATA_ACCEPT,
-  FULL_METADATA_ACCEPT
+  NO_METADATA_ACCEPT,
+  TABLE_API_VERSION,
 } from "../utils/constants";
 
 export default class TableHandler extends BaseHandler implements ITableHandler {

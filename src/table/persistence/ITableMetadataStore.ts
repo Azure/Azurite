@@ -1,5 +1,5 @@
-import Context from "../generated/Context";
 import * as Models from "../generated/artifacts/models";
+import Context from "../generated/Context";
 import { TABLE_STATUSCODE } from "../utils/constants";
 
 interface ITtableAdditionalProperties {

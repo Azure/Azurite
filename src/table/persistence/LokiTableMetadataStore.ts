@@ -1,11 +1,13 @@
 import * as Models from "../generated/artifacts/models";
-import ITableMetadataStore from "./ITableMetadataStore";
-import { TABLE_STATUSCODE } from "../utils/constants";
-import StorageErrorFactory from "../errors/StorageErrorFactory";
-import { TableModel } from "../persistence/ITableMetadataStore";
-import Loki from "lokijs";
 import Context from "../generated/Context";
+import ITableMetadataStore from "./ITableMetadataStore";
+
 import { stat } from "fs";
+import { TableModel } from "../persistence/ITableMetadataStore";
+import { TABLE_STATUSCODE } from "../utils/constants";
+
+import Loki from "lokijs";
+import StorageErrorFactory from "../errors/StorageErrorFactory";
 
 export default class LokiTableMetadataStore implements ITableMetadataStore {
   private readonly db: Loki;
