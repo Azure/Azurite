@@ -1,16 +1,17 @@
 import * as http from "http";
 import * as https from "https";
 
+import AccountDataStore from "../common/AccountDataStore";
 import { CertOptions } from "../common/ConfigurationBase";
-import ITableMetadataStore from "../table/persistence/ITableMetadataStore";
 import IAccountDataStore from "../common/IAccountDataStore";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
-import TableConfiguration from "./TableConfiguration";
-import LokiTableMetadataStore from "../table/persistence/LokiTableMetadataStore";
 import logger from "../common/Logger";
-import AccountDataStore from "../common/AccountDataStore";
-import TableRequestListenerFactory from "./TableRequestListenerFactory";
+import ITableMetadataStore from "../table/persistence/ITableMetadataStore";
+import LokiTableMetadataStore from "../table/persistence/LokiTableMetadataStore";
+
 import ServerBase from "../common/ServerBase";
+import TableConfiguration from "./TableConfiguration";
+import TableRequestListenerFactory from "./TableRequestListenerFactory";
 
 /**
  * Default implementation of Azurite Table HTTP server.

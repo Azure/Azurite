@@ -1,13 +1,13 @@
 import ConfigurationBase from "../common/ConfigurationBase";
 import { StoreDestinationArray } from "../common/persistence/IExtentStore";
 import {
-  DEFAULT_TABLE_SERVER_HOST_NAME,
-  DEFAULT_TABLE_LISTENING_PORT,
   DEFAULT_ENABLE_ACCESS_LOG,
   DEFAULT_ENABLE_DEBUG_LOG,
   DEFAULT_TABLE_EXTENT_LOKI_DB_PATH,
+  DEFAULT_TABLE_LISTENING_PORT,
   DEFAULT_TABLE_LOKI_DB_PATH,
-  DEFAULT_TABLE_PERSISTENCE_ARRAY
+  DEFAULT_TABLE_PERSISTENCE_ARRAY,
+  DEFAULT_TABLE_SERVER_HOST_NAME
 } from "./utils/constants";
 
 /**
@@ -29,7 +29,8 @@ export default class TableConfiguration extends ConfigurationBase {
     port: number = DEFAULT_TABLE_LISTENING_PORT,
     public readonly /* Store metadata */ metadataDBPath: string = DEFAULT_TABLE_LOKI_DB_PATH,
     public readonly /* Store data */ extentDBPath: string = DEFAULT_TABLE_EXTENT_LOKI_DB_PATH,
-    public readonly /* Store persistence config */ persistencePathArray: StoreDestinationArray = DEFAULT_TABLE_PERSISTENCE_ARRAY,
+    public readonly /* Store persistence config */ persistencePathArray
+            : StoreDestinationArray = DEFAULT_TABLE_PERSISTENCE_ARRAY,
     enableAccessLog: boolean = DEFAULT_ENABLE_ACCESS_LOG,
     accessLogWriteStream?: NodeJS.WritableStream,
     enableDebugLog: boolean = DEFAULT_ENABLE_DEBUG_LOG,

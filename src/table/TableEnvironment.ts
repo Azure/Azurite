@@ -5,8 +5,8 @@
 import args from "args";
 import ITableEnvironment from "./ITableEnvironment";
 import {
-  DEFAULT_TABLE_SERVER_HOST_NAME,
-  DEFAULT_TABLE_LISTENING_PORT
+  DEFAULT_TABLE_LISTENING_PORT,
+  DEFAULT_TABLE_SERVER_HOST_NAME
 } from "./utils/constants";
 
 args

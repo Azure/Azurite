@@ -19,6 +19,8 @@ import {
 
 import TableServer from "./TableServer";
 
+// tslint:disable:no-console
+
 /**
  * Entry for Azurite table service
  */

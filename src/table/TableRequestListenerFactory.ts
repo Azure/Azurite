@@ -1,21 +1,23 @@
+import createTableStorageContextMiddleware from "./middleware/tableStorageContext.middleware";
+
 import express from "express";
 import { RequestListener } from "http";
 
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
 
+import IHandlers from "./generated/handlers/IHandlers";
 import ITableMetadataStore from "./persistence/ITableMetadataStore";
-import { DEFAULT_TABLE_CONTEXT_PATH } from "./utils/constants";
-import TableHandler from "./handlers/TableHandler";
+
 import ServiceHandler from "./handlers/ServiceHandler";
-import createTableStorageContextMiddleware from "./middleware/tableStorageContext.middleware";
+import TableHandler from "./handlers/TableHandler";
+import { DEFAULT_TABLE_CONTEXT_PATH } from "./utils/constants";
 
 import morgan = require("morgan");
 
 // Generated
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
 import MiddlewareFactory from "./generated/MiddlewareFactory";
-import IHandlers from "./generated/handlers/IHandlers";
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -32,9 +34,8 @@ export default class TableRequestListenerFactory
   public constructor(
     private readonly metadataStore: ITableMetadataStore,
     private readonly enableAccessLog: boolean,
-    private readonly accessLogWriteStream?: NodeJS.WritableStream
-  ) // private readonly skipApiVersionCheck?: boolean,
-  {}
+    private readonly accessLogWriteStream?: NodeJS.WritableStream // private readonly skipApiVersionCheck?: boolean,
+  ) {}
 
   public createRequestListener(): RequestListener {
     const app = express().disable("x-powered-by");
