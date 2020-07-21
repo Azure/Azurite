@@ -71,7 +71,6 @@ export default class Context {
       }
 
       this.context = context[this.path];
-
       this.request = req;
       this.response = res;
     }

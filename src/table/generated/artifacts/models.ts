@@ -10,11 +10,6 @@
 // tslint:disable:interface-name
 // tslint:disable:quotemark
 
-<<<<<<< HEAD
-=======
-
-
->>>>>>> Add table draft
 /**
  * Table Service error.
  */
@@ -176,9 +171,13 @@ export interface TableProperties {
 }
 
 /**
- * The properties for the table response.
+ * The response for a single table.
  */
-export interface TableResponseProperties {
+export interface TableResponse {
+  /**
+   * The metadata response of the table.
+   */
+  odatametadata?: string;
   /**
    * The name of the table.
    */
@@ -198,13 +197,25 @@ export interface TableResponseProperties {
 }
 
 /**
- * The response for a single table.
+ * The properties for the table response.
  */
-export interface TableResponse {
+export interface TableResponseProperties {
   /**
-   * The metadata response of the table.
+   * The name of the table.
    */
-  odatametadata?: string;
+  tableName?: string;
+  /**
+   * The odata type of the table.
+   */
+  odatatype?: string;
+  /**
+   * The id of the table.
+   */
+  odataid?: string;
+  /**
+   * The edit link of the table.
+   */
+  odataeditLink?: string;
 }
 
 /**
@@ -297,6 +308,17 @@ export interface QueryOptions {
 }
 
 /**
+ * An interface representing AzuriteServerTableOptions.
+ */
+export interface AzuriteServerTableOptions {
+  /**
+   * Specifies the version of the operation to use for this request. Possible values include:
+   * '2019-02-02'
+   */
+  version?: Version;
+}
+
+/**
  * Optional Parameters.
  */
 export interface TableQueryOptionalParams {
@@ -305,6 +327,10 @@ export interface TableQueryOptionalParams {
    * analytics logs when analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * Specifies the data service version. Possible values include: '3.0'
+   */
+  dataServiceVersion?: DataServiceVersion;
   /**
    * A table query continuation token from a previous call.
    */
@@ -324,6 +350,10 @@ export interface TableCreateOptionalParams {
    * analytics logs when analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * Specifies the data service version. Possible values include: '3.0'
+   */
+  dataServiceVersion?: DataServiceVersion1;
   /**
    * Specifies whether the response should include the inserted entity in the payload. Possible
    * values are return-no-content and return-content. Possible values include: 'return-no-content',
@@ -361,6 +391,10 @@ export interface TableQueryEntitiesOptionalParams {
    */
   requestId?: string;
   /**
+   * Specifies the data service version. Possible values include: '3.0'
+   */
+  dataServiceVersion?: DataServiceVersion2;
+  /**
    * An entity query continuation token from a previous call.
    */
   nextPartitionKey?: string;
@@ -388,6 +422,10 @@ export interface TableQueryEntitiesWithPartitionAndRowKeyOptionalParams {
    */
   requestId?: string;
   /**
+   * Specifies the data service version. Possible values include: '3.0'
+   */
+  dataServiceVersion?: DataServiceVersion3;
+  /**
    * Additional parameters for the operation
    */
   queryOptions?: QueryOptions;
@@ -406,6 +444,10 @@ export interface TableUpdateEntityOptionalParams {
    * analytics logs when analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * Specifies the data service version. Possible values include: '3.0'
+   */
+  dataServiceVersion?: DataServiceVersion4;
   /**
    * The properties for the table entity.
    */
@@ -437,6 +479,10 @@ export interface TableMergeEntityOptionalParams {
    */
   requestId?: string;
   /**
+   * Specifies the data service version. Possible values include: '3.0'
+   */
+  dataServiceVersion?: DataServiceVersion5;
+  /**
    * The properties for the table entity.
    */
   tableEntityProperties?: { [propertyName: string]: any };
@@ -467,6 +513,10 @@ export interface TableDeleteEntityOptionalParams {
    */
   requestId?: string;
   /**
+   * Specifies the data service version. Possible values include: '3.0'
+   */
+  dataServiceVersion?: DataServiceVersion6;
+  /**
    * Additional parameters for the operation
    */
   queryOptions?: QueryOptions;
@@ -485,6 +535,10 @@ export interface TableInsertEntityOptionalParams {
    * analytics logs when analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * Specifies the data service version. Possible values include: '3.0'
+   */
+  dataServiceVersion?: DataServiceVersion7;
   /**
    * The properties for the table entity.
    */
@@ -1038,6 +1092,236 @@ export enum OdataMetadataFormat {
 export enum ResponseFormat {
   ReturnNoContent = 'return-no-content',
   ReturnContent = 'return-content',
+}
+
+/**
+ * Defines values for Version.
+ * Possible values include: '2019-02-02'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version {
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+}
+
+/**
+ * Defines values for DataServiceVersion.
+ * Possible values include: '3.0'
+ * @readonly
+ * @enum {string}
+ */
+export enum DataServiceVersion {
+  ThreeFullStopZero = '3.0',
+}
+
+/**
+ * Defines values for DataServiceVersion1.
+ * Possible values include: '3.0'
+ * @readonly
+ * @enum {string}
+ */
+export enum DataServiceVersion1 {
+  ThreeFullStopZero = '3.0',
+}
+
+/**
+ * Defines values for DataServiceVersion2.
+ * Possible values include: '3.0'
+ * @readonly
+ * @enum {string}
+ */
+export enum DataServiceVersion2 {
+  ThreeFullStopZero = '3.0',
+}
+
+/**
+ * Defines values for DataServiceVersion3.
+ * Possible values include: '3.0'
+ * @readonly
+ * @enum {string}
+ */
+export enum DataServiceVersion3 {
+  ThreeFullStopZero = '3.0',
+}
+
+/**
+ * Defines values for DataServiceVersion4.
+ * Possible values include: '3.0'
+ * @readonly
+ * @enum {string}
+ */
+export enum DataServiceVersion4 {
+  ThreeFullStopZero = '3.0',
+}
+
+/**
+ * Defines values for DataServiceVersion5.
+ * Possible values include: '3.0'
+ * @readonly
+ * @enum {string}
+ */
+export enum DataServiceVersion5 {
+  ThreeFullStopZero = '3.0',
+}
+
+/**
+ * Defines values for DataServiceVersion6.
+ * Possible values include: '3.0'
+ * @readonly
+ * @enum {string}
+ */
+export enum DataServiceVersion6 {
+  ThreeFullStopZero = '3.0',
+}
+
+/**
+ * Defines values for DataServiceVersion7.
+ * Possible values include: '3.0'
+ * @readonly
+ * @enum {string}
+ */
+export enum DataServiceVersion7 {
+  ThreeFullStopZero = '3.0',
+}
+
+/**
+ * Defines values for Version1.
+ * Possible values include: '2019-02-02'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version1 {
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+}
+
+/**
+ * Defines values for Version2.
+ * Possible values include: '2019-02-02'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version2 {
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+}
+
+/**
+ * Defines values for Version3.
+ * Possible values include: '2019-02-02'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version3 {
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+}
+
+/**
+ * Defines values for Version4.
+ * Possible values include: '2019-02-02'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version4 {
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+}
+
+/**
+ * Defines values for Version5.
+ * Possible values include: '2019-02-02'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version5 {
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+}
+
+/**
+ * Defines values for Version6.
+ * Possible values include: '2019-02-02'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version6 {
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+}
+
+/**
+ * Defines values for Version7.
+ * Possible values include: '2019-02-02'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version7 {
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+}
+
+/**
+ * Defines values for Version8.
+ * Possible values include: '2019-02-02'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version8 {
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+}
+
+/**
+ * Defines values for Version9.
+ * Possible values include: '2019-02-02'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version9 {
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+}
+
+/**
+ * Defines values for Version10.
+ * Possible values include: '2019-02-02'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version10 {
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+}
+
+/**
+ * Defines values for Version11.
+ * Possible values include: '2019-02-02'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version11 {
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+}
+
+/**
+ * Defines values for Version12.
+ * Possible values include: '2019-02-02'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version12 {
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+}
+
+/**
+ * Defines values for Version13.
+ * Possible values include: '2019-02-02'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version13 {
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+}
+
+/**
+ * Defines values for Version14.
+ * Possible values include: '2019-02-02'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version14 {
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
 }
 
 /**

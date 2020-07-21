@@ -50,12 +50,12 @@ export const comp2: msRest.OperationQueryParameter = {
   }
 };
 export const dataServiceVersion: msRest.OperationParameter = {
-  parameterPath: "dataServiceVersion",
+  parameterPath: [
+    "options",
+    "dataServiceVersion"
+  ],
   mapper: {
-    required: true,
-    isConstant: true,
     serializedName: "DataServiceVersion",
-    defaultValue: '3.0',
     type: {
       name: "String"
     }
@@ -270,10 +270,7 @@ export const url: msRest.OperationURLParameter = {
 export const version: msRest.OperationParameter = {
   parameterPath: "version",
   mapper: {
-    required: true,
-    isConstant: true,
     serializedName: "x-ms-version",
-    defaultValue: '2019-02-02',
     type: {
       name: "String"
     }

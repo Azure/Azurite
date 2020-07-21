@@ -24,4 +24,12 @@ export default class TableStorageContext extends Context {
   public set xMsRequestID(xMsRequestID: string | undefined) {
     this.contextID = xMsRequestID;
   }
+
+  public get accept(): string | undefined {
+    return this.context.accept;
+  }
+
+  public set accept(accept: string | undefined) {
+    this.context.accept = accept;
+  }
 }

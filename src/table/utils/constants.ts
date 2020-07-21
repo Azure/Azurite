@@ -31,3 +31,7 @@ export const HeaderConstants = {
   SERVER: "Server",
   VERSION: "3.8.0"
 };
+
+export const NO_METADATA_ACCEPT = "application/json;odata=nometadata";
+export const MINIMAL_METADATA_ACCEPT = "application/json;odata=minimalmetadata";
+export const FULL_METADATA_ACCEPT = "application/json;odata=fullmetadata";

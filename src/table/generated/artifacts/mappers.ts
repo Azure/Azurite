@@ -310,12 +310,19 @@ export const TableProperties: msRest.CompositeMapper = {
   }
 };
 
-export const TableResponseProperties: msRest.CompositeMapper = {
-  serializedName: "TableResponseProperties",
+export const TableResponse: msRest.CompositeMapper = {
+  serializedName: "TableResponse",
   type: {
     name: "Composite",
-    className: "TableResponseProperties",
+    className: "TableResponse",
     modelProperties: {
+      odatametadata: {
+        xmlName: "odata.metadata",
+        serializedName: "odata\\.metadata",
+        type: {
+          name: "String"
+        }
+      },
       tableName: {
         xmlName: "TableName",
         serializedName: "TableName",
@@ -348,16 +355,36 @@ export const TableResponseProperties: msRest.CompositeMapper = {
   }
 };
 
-export const TableResponse: msRest.CompositeMapper = {
-  serializedName: "TableResponse",
+export const TableResponseProperties: msRest.CompositeMapper = {
+  serializedName: "TableResponseProperties",
   type: {
     name: "Composite",
-    className: "TableResponse",
+    className: "TableResponseProperties",
     modelProperties: {
-      ...TableResponseProperties.type.modelProperties,
-      odatametadata: {
-        xmlName: "odata.metadata",
-        serializedName: "odata\\.metadata",
+      tableName: {
+        xmlName: "TableName",
+        serializedName: "TableName",
+        type: {
+          name: "String"
+        }
+      },
+      odatatype: {
+        xmlName: "odata.type",
+        serializedName: "odata\\.type",
+        type: {
+          name: "String"
+        }
+      },
+      odataid: {
+        xmlName: "odata.id",
+        serializedName: "odata\\.id",
+        type: {
+          name: "String"
+        }
+      },
+      odataeditLink: {
+        xmlName: "odata.editLink",
+        serializedName: "odata\\.editLink",
         type: {
           name: "String"
         }

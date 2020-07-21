@@ -40,6 +40,8 @@ export function tableStorageContextMiddleware(
     res.locals,
     DEFAULT_TABLE_CONTEXT_PATH
   );
+
+  tableContext.accept = req.headers.accept;
   tableContext.startTime = new Date();
   tableContext.xMsRequestID = requestID;
 
@@ -81,7 +83,7 @@ export function tableStorageContextMiddleware(
 }
 
 /**
- * Extract storage account, table, and massages from URL path.
+ * Extract storage account, table, and messages from URL path.
  *
  * @param {string} path
  * @returns {([string | undefined, string | undefined, string | undefined, boolean | undefined])}
@@ -110,11 +112,6 @@ export function extractStoragePartsFromPath(
     account = parts[urlPartIndex++];
   }
   table = parts[urlPartIndex++];
-
-  // if (account.endsWith(SECONDARY_SUFFIX)) {
-  //   account = account.substr(0, account.length - SECONDARY_SUFFIX.length);
-  //   isSecondary = true;
-  // }
 
   return [account, table];
 }
