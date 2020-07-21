@@ -24,7 +24,7 @@ import {
 configLogger(false);
 
 // tslint:disable:no-empty
-describe("BlockBlobHighlevel", () => {
+describe("BlockBlobHighlevel", ()  => {
   const factory = new BlobTestServerFactory();
   // Loose model to bypass if-match header used by download retry
   const server = factory.createServer(true);
