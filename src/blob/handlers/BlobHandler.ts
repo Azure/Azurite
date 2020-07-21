@@ -778,7 +778,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       version: BLOB_API_VERSION,
       date: context.startTime,
       copyId: res.copyId,
-      copyStatus: res.copyStatus,
       clientRequestId: options.requestId
     };
 
