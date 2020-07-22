@@ -8,6 +8,8 @@ import ITableHandler from "../generated/handlers/ITableHandler";
 import { TableModel } from "../persistence/ITableMetadataStore";
 
 import {
+  DEFAULT_TABLE_LISTENING_PORT,
+  DEFAULT_TABLE_SERVER_HOST_NAME,
   FULL_METADATA_ACCEPT,
   MINIMAL_METADATA_ACCEPT,
   NO_METADATA_ACCEPT,
@@ -39,6 +41,11 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       statusCode
     };
 
+    let host = DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
+    if (tableCtx.request !== undefined) {
+        host = tableCtx.request.getHeader("host") as string;
+    }
+
     if (tableCtx.accept === NO_METADATA_ACCEPT) {
       response.tableName = tableName;
     }
@@ -46,16 +53,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     if (tableCtx.accept === MINIMAL_METADATA_ACCEPT) {
       response.tableName = tableName;
       response.odatametadata =
-        "http://127.0.0.1:10002/${accountName}/$metadata#Tables/@Element";
+        `http://${host}/${accountName}/$metadata#Tables/@Element`;
     }
 
     if (tableCtx.accept === FULL_METADATA_ACCEPT) {
       response.tableName = tableName;
       response.odatametadata =
-        "http://127.0.0.1:10002/${accountName}/$metadata#Tables/@Element";
+        `http://${host}/${accountName}/$metadata#Tables/@Element`;
       response.odatatype = "${accountName}.Tables";
-      response.odataid = "http://127.0.0.1:10002/Tables(${tableName})";
-      response.odataeditLink = "Tables(${tableName})";
+      response.odataid = `http://${host}/Tables(${tableName})`;
+      response.odataeditLink = `Tables(${tableName})`;
     }
     return response;
   }

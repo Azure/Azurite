@@ -13,7 +13,7 @@ import {
 /**
  * Default configurations for default implementation of TableServer.
  *
- * As default implementation of QueueServer class leverages LokiJS DB.
+ * As default implementation of TableServer class leverages LokiJS DB.
  * This configuration class also maintains configuration settings for LokiJS DB.
  *
  * When creating other server implementations, should also create a NEW

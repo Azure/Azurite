@@ -87,7 +87,7 @@ async function main() {
     env.tablePort(),
     join(location, DEFAULT_TABLE_LOKI_DB_PATH),
     join(location, DEFAULT_TABLE_EXTENT_LOKI_DB_PATH),
-    DEFAULT_QUEUE_PERSISTENCE_ARRAY,
+    DEFAULT_TABLE_PERSISTENCE_ARRAY,
     !env.silent(),
     undefined,
     env.debug() !== undefined,
