@@ -73,8 +73,6 @@ async function main() {
     env.oauth()
   );
 
-  console.log(`Table Port is ${env.tablePort}`);
-
   const tableConfig = new TableConfiguration(
     env.tableHost(),
     env.tablePort(),
