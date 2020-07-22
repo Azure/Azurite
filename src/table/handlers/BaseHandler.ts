@@ -6,7 +6,7 @@ import ITableMetadataStore from "../persistence/ITableMetadataStore";
  * So every inherited classes instances can reuse the persistency layer connection.
  *
  * @export
- * @class SimpleHandler
+ * @class BaseHandler
  * @implements {IHandler}
  */
 export default class BaseHandler {

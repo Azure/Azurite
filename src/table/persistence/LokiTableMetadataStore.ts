@@ -1,13 +1,13 @@
+import { stat } from "fs";
+import Loki from "lokijs";
+
+import NotImplementedError from "../errors/NotImplementedError";
+import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
-import ITableMetadataStore from "./ITableMetadataStore";
-
-import { stat } from "fs";
 import { TableModel } from "../persistence/ITableMetadataStore";
 import { TABLE_STATUSCODE } from "../utils/constants";
-
-import Loki from "lokijs";
-import StorageErrorFactory from "../errors/StorageErrorFactory";
+import ITableMetadataStore from "./ITableMetadataStore";
 
 export default class LokiTableMetadataStore implements ITableMetadataStore {
   private readonly db: Loki;
@@ -31,8 +31,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   }
 
   public async createTable(
-    table: TableModel,
-    context: Context
+    context: Context,
+    table: TableModel
   ): Promise<TABLE_STATUSCODE> {
     const coll = this.db.getCollection(this.TABLE_COLLECTION);
     const doc = coll.findOne({
@@ -43,7 +43,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     // If the metadata exists, we will throw getTableAlreadyExists error
     if (doc) {
       throw StorageErrorFactory.getTableAlreadyExists(
-        context ? context.contextID : undefined
+        context.contextID
       );
     }
 
@@ -51,78 +51,84 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     return 201;
   }
 
-  public async queryTable(): Promise<Models.TableResponseProperties[]> {
+  public async queryTable(context: Context): Promise<Models.TableResponseProperties[]> {
     // TODO
-
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
-  public async deleteTable(tableName: string): Promise<TABLE_STATUSCODE> {
-    // TODO
-    return undefined as any;
+  public async deleteTable(context: Context, tableName: string): Promise<TABLE_STATUSCODE> {
+    // TODO    context: Context
+    throw new NotImplementedError();
   }
 
   public async queryTableEntities(
+    context: Context,
     table: string,
     propertyName: Array<string>
   ): Promise<{ [propertyName: string]: any }[]> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async queryTableEntitiesWithPartitionAndRowKey(
+    context: Context,
     table: string,
     partitionKey: string,
     rowKey: string
   ): Promise<{ [propertyName: string]: any }[]> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async updateTableEntity(
+    context: Context,
     table: string,
     partitionKey: string,
     rowKey: string
   ): Promise<TABLE_STATUSCODE> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async mergeTableEntity(
+    context: Context,
     table: string,
     partitionKey: string,
     rowKey: string
   ): Promise<TABLE_STATUSCODE> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async deleteTableEntity(
+    context: Context,
     table: string,
     partitionKey: string,
     rowKey: string
   ): Promise<TABLE_STATUSCODE> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
-  public async insertTableEntity(table: string): Promise<TABLE_STATUSCODE> {
+  public async insertTableEntity(context: Context, table: string): Promise<TABLE_STATUSCODE> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async getTableAccessPolicy(
+    context: Context,
     table: string
   ): Promise<Models.TableGetAccessPolicyResponse> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async setTableAccessPolicy(
+    context: Context,
     table: string
   ): Promise<Models.TableSetAccessPolicyResponse> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async init(): Promise<void> {
@@ -143,7 +149,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       });
     });
 
-    // Create queues collection if not exists
+    // Create tables collection if not exists
     if (this.db.getCollection(this.TABLE_COLLECTION) === null) {
       this.db.addCollection(this.TABLE_COLLECTION, {
         // Optimization for indexing and searching

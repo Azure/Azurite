@@ -1,23 +1,11 @@
-import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
-
 export const DEFAULT_TABLE_EXTENT_LOKI_DB_PATH =
   "__azurite_db_table_extent__.json";
 export const DEFAULT_TABLE_LOKI_DB_PATH = "__azurite_db_table__.json";
-export const DEFAULT_TABLE_PERSISTENCE_PATH = "__tablestorage__";
-export const DEFAULT_TABLE_PERSISTENCE_ARRAY: StoreDestinationArray = [
-  {
-    locationId: "Default",
-    locationPath: DEFAULT_TABLE_PERSISTENCE_PATH,
-    maxConcurrency: 1
-  }
-];
 
 export const DEFAULT_TABLE_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_TABLE_LISTENING_PORT = 10002;
 export const DEFAULT_ENABLE_ACCESS_LOG = true;
 export const DEFAULT_ENABLE_DEBUG_LOG = true;
-
-export const DEFAULT_GC_INTERVAL_MS = 60 * 1000;
 
 export enum TABLE_STATUSCODE {
   CREATED = 201,

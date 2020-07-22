@@ -4,6 +4,7 @@ import BaseHandler from "./BaseHandler";
 
 import TableStorageContext from "../context/TableStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
+import StorageErrorFactory from "../errors/StorageErrorFactory";
 import ITableHandler from "../generated/handlers/ITableHandler";
 import { TableModel } from "../persistence/ITableMetadataStore";
 
@@ -13,7 +14,7 @@ import {
   FULL_METADATA_ACCEPT,
   MINIMAL_METADATA_ACCEPT,
   NO_METADATA_ACCEPT,
-  TABLE_API_VERSION,
+  TABLE_API_VERSION
 } from "../utils/constants";
 
 export default class TableHandler extends BaseHandler implements ITableHandler {
@@ -23,16 +24,32 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableCreateResponse> {
     const tableCtx = new TableStorageContext(context);
-    const accountName = tableCtx.account === undefined ? "" : tableCtx.account;
-    const tableName =
-      tableCtx.tableName === undefined ? "" : tableCtx.tableName;
+    const accountName = tableCtx.account;
+
+    if (accountName === undefined) {
+      throw StorageErrorFactory.getAccountNameEmpty();
+    }
+
+    const tableName = tableCtx.tableName;
+    if (tableName === undefined) {
+      throw StorageErrorFactory.getTableNameEmpty();
+    }
+
+    const metadata = `${accountName}/$metadata#Tables/@Element`;
+    const type = `${accountName}.Tables`;
+    const id = `Tables(${tableName})`;
+    const editLink = `Tables(${tableName})`;
 
     const table: TableModel = {
       account: accountName,
-      name: tableName
+      name: tableName,
+      odatametadata: metadata,
+      odatatype: type,
+      odataid: id,
+      odataeditLink: editLink
     };
 
-    const statusCode = await this.metadataStore.createTable(table, context);
+    const statusCode = await this.metadataStore.createTable(context, table);
     const response: Models.TableCreateResponse = {
       clientRequestId: options.requestId,
       requestId: tableCtx.contextID,
@@ -41,9 +58,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       statusCode
     };
 
-    let host = DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
+    let protocol = "http";
+    let host =
+      DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
     if (tableCtx.request !== undefined) {
-        host = tableCtx.request.getHeader("host") as string;
+      host = tableCtx.request.getHeader("host") as string;
+      protocol = tableCtx.request.getProtocol() as string;
     }
 
     if (tableCtx.accept === NO_METADATA_ACCEPT) {
@@ -52,17 +72,15 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     if (tableCtx.accept === MINIMAL_METADATA_ACCEPT) {
       response.tableName = tableName;
-      response.odatametadata =
-        `http://${host}/${accountName}/$metadata#Tables/@Element`;
+      response.odatametadata = `${protocol}://${host}/${metadata}`;
     }
 
     if (tableCtx.accept === FULL_METADATA_ACCEPT) {
       response.tableName = tableName;
-      response.odatametadata =
-        `http://${host}/${accountName}/$metadata#Tables/@Element`;
-      response.odatatype = "${accountName}.Tables";
-      response.odataid = `http://${host}/Tables(${tableName})`;
-      response.odataeditLink = `Tables(${tableName})`;
+      response.odatametadata = `${protocol}://${host}/${metadata}`;
+      response.odatatype = type;
+      response.odataid = `${protocol}://${host}/${id}`;
+      response.odataeditLink = editLink;
     }
     return response;
   }
@@ -81,7 +99,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableDeleteResponse> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async queryEntities(
@@ -90,7 +108,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableQueryEntitiesResponse> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async queryEntitiesWithPartitionAndRowKey(
@@ -101,7 +119,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableQueryEntitiesWithPartitionAndRowKeyResponse> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async updateEntity(
@@ -112,7 +130,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableUpdateEntityResponse> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async mergeEntity(
@@ -123,7 +141,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableMergeEntityResponse> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async deleteEntity(
@@ -135,7 +153,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableDeleteEntityResponse> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async insertEntity(
@@ -144,7 +162,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableInsertEntityResponse> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async getAccessPolicy(
@@ -153,7 +171,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableGetAccessPolicyResponse> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async setAccessPolicy(
@@ -162,6 +180,6 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableSetAccessPolicyResponse> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 }

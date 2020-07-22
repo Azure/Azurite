@@ -1,7 +1,7 @@
+import NotImplementedError from "../errors/NotImplementedError";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IServiceHandler from "../generated/handlers/IServiceHandler";
-
 import BaseHandler from "./BaseHandler";
 
 export default class ServiceHandler extends BaseHandler
@@ -12,7 +12,7 @@ export default class ServiceHandler extends BaseHandler
     context: Context
   ): Promise<Models.ServiceSetPropertiesResponse> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async getProperties(
@@ -20,7 +20,7 @@ export default class ServiceHandler extends BaseHandler
     context: Context
   ): Promise<Models.ServiceGetPropertiesResponse> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 
   public async getStatistics(
@@ -28,6 +28,6 @@ export default class ServiceHandler extends BaseHandler
     context: Context
   ): Promise<Models.ServiceGetStatisticsResponse> {
     // TODO
-    return undefined as any;
+    throw new NotImplementedError();
   }
 }

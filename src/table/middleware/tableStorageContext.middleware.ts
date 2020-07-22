@@ -67,14 +67,6 @@ export function tableStorageContextMiddleware(
   // Exclude account name from req.path for dispatchMiddleware
   tableContext.dispatchPattern = table !== undefined ? `/Tables` : "/";
 
-  // The value of table may be "" in some cases, e.g. list table with .../accountname/?comp=list...
-  if (
-    req.query &&
-    (req.query.restype === "service" || req.query.comp === "list")
-  ) {
-    tableContext.dispatchPattern = "/";
-  }
-
   logger.info(
     `tableStorageContextMiddleware: Account=${account} tableName=${table}}`,
     requestID

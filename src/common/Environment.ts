@@ -92,13 +92,12 @@ export default class Environment implements IEnvironment {
     return this.flags.queuePort;
   }
 
-  // IM: Add tableHost() and tablePort()
   public tableHost(): string | undefined {
     return this.flags.tableHost;
   }
 
   public tablePort(): number | undefined {
-    return;
+    return this.flags.tablePort;
   }
 
   public async location(): Promise<string> {

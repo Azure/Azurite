@@ -1,31 +1,25 @@
-import createTableStorageContextMiddleware from "./middleware/tableStorageContext.middleware";
-
 import express from "express";
 import { RequestListener } from "http";
 
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
-
+import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
 import IHandlers from "./generated/handlers/IHandlers";
-import ITableMetadataStore from "./persistence/ITableMetadataStore";
-
+import MiddlewareFactory from "./generated/MiddlewareFactory";
 import ServiceHandler from "./handlers/ServiceHandler";
 import TableHandler from "./handlers/TableHandler";
+import createTableStorageContextMiddleware from "./middleware/tableStorageContext.middleware";
+import ITableMetadataStore from "./persistence/ITableMetadataStore";
 import { DEFAULT_TABLE_CONTEXT_PATH } from "./utils/constants";
 
 import morgan = require("morgan");
-
-// Generated
-import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
-import MiddlewareFactory from "./generated/MiddlewareFactory";
-
 /**
  * Default RequestListenerFactory based on express framework.
  *
  * When creating other server implementations, such as based on Koa. Should also create a NEW
  * corresponding TableKoaRequestListenerFactory class by extending IRequestListenerFactory.
  *
- *  @export
+ * @export
  * @class TableRequestListenerFactory
  * @implements {IRequestListenerFactory}
  */

@@ -22,10 +22,7 @@ import TableConfiguration from "./table/TableConfiguration";
 import TableServer from "./table/TableServer";
 
 import {
-  DEFAULT_TABLE_EXTENT_LOKI_DB_PATH,
-  DEFAULT_TABLE_LOKI_DB_PATH,
-  DEFAULT_TABLE_PERSISTENCE_ARRAY,
-  DEFAULT_TABLE_PERSISTENCE_PATH
+  DEFAULT_TABLE_LOKI_DB_PATH
 } from "./table/utils/constants";
 
 // tslint:disable:no-console
@@ -76,18 +73,12 @@ async function main() {
     env.oauth()
   );
 
-  // Change the persistence table location with parameters
-  DEFAULT_TABLE_PERSISTENCE_ARRAY[0].locationPath = join(
-    location,
-    DEFAULT_TABLE_PERSISTENCE_PATH
-  );
+  console.log(`Table Port is ${env.tablePort}`);
 
   const tableConfig = new TableConfiguration(
     env.tableHost(),
     env.tablePort(),
     join(location, DEFAULT_TABLE_LOKI_DB_PATH),
-    join(location, DEFAULT_TABLE_EXTENT_LOKI_DB_PATH),
-    DEFAULT_TABLE_PERSISTENCE_ARRAY,
     !env.silent(),
     undefined,
     env.debug() !== undefined,

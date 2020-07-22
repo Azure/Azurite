@@ -1,7 +1,4 @@
-/**
- * This file is used to start table service alone.
- */
-
+#!/usr/bin/env node
 import { access } from "fs";
 import { dirname, join } from "path";
 import { promisify } from "util";
@@ -9,15 +6,8 @@ import { promisify } from "util";
 import * as Logger from "../common/Logger";
 import TableConfiguration from "./TableConfiguration";
 import TableEnvironment from "./TableEnvironment";
-
-import {
-  DEFAULT_TABLE_EXTENT_LOKI_DB_PATH,
-  DEFAULT_TABLE_LOKI_DB_PATH,
-  DEFAULT_TABLE_PERSISTENCE_ARRAY,
-  DEFAULT_TABLE_PERSISTENCE_PATH
-} from "./utils/constants";
-
 import TableServer from "./TableServer";
+import { DEFAULT_TABLE_LOKI_DB_PATH } from "./utils/constants";
 
 // tslint:disable:no-console
 
@@ -39,19 +29,11 @@ async function main() {
     await accessAsync(dirname(debugFilePath));
   }
 
-  // Modify the table path
-  DEFAULT_TABLE_PERSISTENCE_ARRAY[0].locationPath = join(
-    location,
-    DEFAULT_TABLE_PERSISTENCE_PATH
-  );
-
   // Store table configuation
   const config = new TableConfiguration(
     env.tableHost(),
     env.tablePort(),
     join(location, DEFAULT_TABLE_LOKI_DB_PATH),
-    join(location, DEFAULT_TABLE_EXTENT_LOKI_DB_PATH),
-    DEFAULT_TABLE_PERSISTENCE_ARRAY,
     !env.silent(),
     undefined,
     (await env.debug()) !== undefined,
@@ -76,7 +58,7 @@ async function main() {
 
   // Start Server
   console.log(beforeStartMessage);
-  server.start();
+  await server.start();
   console.log(afterStartMessage);
 
   // Handle close event

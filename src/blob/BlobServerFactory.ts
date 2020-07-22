@@ -62,7 +62,6 @@ export class BlobServerFactory {
 
         return new SqlBlobServer(config);
       } else {
-        // Do not use sql database
         const config = new BlobConfiguration(
           env.blobHost(),
           env.blobPort(),
