@@ -1,21 +1,22 @@
-import * as Models from "../generated/artifacts/models";
-import Context from "../generated/Context";
-import BaseHandler from "./BaseHandler";
-
 import TableStorageContext from "../context/TableStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
+import * as Models from "../generated/artifacts/models";
+import Context from "../generated/Context";
 import ITableHandler from "../generated/handlers/ITableHandler";
-import { TableModel } from "../persistence/ITableMetadataStore";
-
+import { IEntity, TableModel } from "../persistence/ITableMetadataStore";
 import {
   DEFAULT_TABLE_LISTENING_PORT,
   DEFAULT_TABLE_SERVER_HOST_NAME,
   FULL_METADATA_ACCEPT,
   MINIMAL_METADATA_ACCEPT,
   NO_METADATA_ACCEPT,
+  RETURN_CONTENT,
+  RETURN_NO_CONTENT,
   TABLE_API_VERSION
 } from "../utils/constants";
+import { newEtag } from "../utils/utils";
+import BaseHandler from "./BaseHandler";
 
 export default class TableHandler extends BaseHandler implements ITableHandler {
   public async create(
@@ -26,13 +27,24 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableCtx = new TableStorageContext(context);
     const accountName = tableCtx.account;
 
+    const accept = context.request!.getHeader("accept");
+
+    if (
+      accept !== NO_METADATA_ACCEPT &&
+      accept !== MINIMAL_METADATA_ACCEPT &&
+      accept !== FULL_METADATA_ACCEPT
+    ) {
+      throw StorageErrorFactory.contentTypeNotSupported();
+    }
+
     if (accountName === undefined) {
       throw StorageErrorFactory.getAccountNameEmpty();
     }
 
-    const tableName = tableCtx.tableName;
+    // Here table name is in request body, not in url
+    const tableName = tableProperties.tableName;
     if (tableName === undefined) {
-      throw StorageErrorFactory.getTableNameEmpty();
+      throw StorageErrorFactory.getTableNameEmpty;
     }
 
     const metadata = `${accountName}/$metadata#Tables/@Element`;
@@ -42,7 +54,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     const table: TableModel = {
       account: accountName,
-      name: tableName,
+      tableName,
       odatametadata: metadata,
       odatatype: type,
       odataid: id,
@@ -82,6 +94,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       response.odataid = `${protocol}://${host}/${id}`;
       response.odataeditLink = editLink;
     }
+
     return response;
   }
 
@@ -157,12 +170,97 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   }
 
   public async insertEntity(
-    table: string,
+    tableName: string,
     options: Models.TableInsertEntityOptionalParams,
     context: Context
   ): Promise<Models.TableInsertEntityResponse> {
-    // TODO
-    throw new NotImplementedError();
+    const tableCtx = new TableStorageContext(context);
+    const entityString = context.request!.getBody();
+    const entityObj = JSON.parse(entityString!);
+    const eTag = newEtag();
+
+    const partitionKey = entityObj.PartitionKey;
+    const rowKey = entityObj.RowKey;
+
+    const entity: IEntity = {
+      partitionKey,
+      rowKey
+    };
+
+    entity.eTag = eTag;
+
+    for (const key of Object.keys(entityObj)) {
+      entity[key] = entityObj[key];
+    }
+
+    const accountName = tableCtx.account;
+    let protocol = "http";
+    let host =
+      DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
+    if (tableCtx.request !== undefined) {
+      host = tableCtx.request.getHeader("host") as string;
+      protocol = tableCtx.request.getProtocol() as string;
+    }
+
+    const metadata = `${protocol}://${host}/${accountName}/$metadata#Tables/@Element`;
+    const type = `${accountName}.Tables`;
+    const id = `${protocol}://${host}/Tables(${tableName})`;
+    const editLink = `Tables(${tableName})`;
+
+    entity.metadata = metadata;
+    entity.type = type;
+    entity.id = id;
+    entity.editLink = editLink;
+
+    await this.metadataStore.insertTableEntity(context, tableName, entity);
+
+    const response: Models.TableInsertEntityResponse = {
+      clientRequestId: options.requestId,
+      requestId: tableCtx.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      statusCode: 201
+    };
+
+    const accept = tableCtx.accept;
+
+    // Set contentType in response according to accept
+    if (
+      accept !== NO_METADATA_ACCEPT &&
+      accept !== MINIMAL_METADATA_ACCEPT &&
+      accept !== FULL_METADATA_ACCEPT
+    ) {
+      throw StorageErrorFactory.contentTypeNotSupported();
+    }
+
+    response.contentType = "application/json";
+
+    if (context.request!.getHeader("Prefer") === RETURN_NO_CONTENT) {
+      response.statusCode = 204;
+      response.preferenceApplied = RETURN_NO_CONTENT;
+    }
+
+    if (context.request!.getHeader("Prefer") === RETURN_CONTENT) {
+      response.statusCode = 201;
+      response.preferenceApplied = "return-content";
+
+      if (accept === MINIMAL_METADATA_ACCEPT) {
+        response["odata.metadata"] = metadata;
+      }
+
+      if (accept === FULL_METADATA_ACCEPT) {
+        response["odata.metadata"] = metadata;
+        response["odata.type"] = type;
+        response["odata.id"] = id;
+        response["odata.etag"] = eTag;
+        response["odata.editLink"] = editLink;
+      }
+
+      for (const key of Object.keys(entityObj)) {
+        response[key] = entityObj[key];
+      }
+    }
+    return response;
   }
 
   public async getAccessPolicy(

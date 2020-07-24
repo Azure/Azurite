@@ -21,34 +21,34 @@ import {
  */
 
 export default class TableConfiguration extends ConfigurationBase {
-  public constructor(
-    host: string = DEFAULT_TABLE_SERVER_HOST_NAME,
-    port: number = DEFAULT_TABLE_LISTENING_PORT,
-    public readonly /* Store metadata */ metadataDBPath: string = DEFAULT_TABLE_LOKI_DB_PATH,
-    enableAccessLog: boolean = DEFAULT_ENABLE_ACCESS_LOG,
-    accessLogWriteStream?: NodeJS.WritableStream,
-    enableDebugLog: boolean = DEFAULT_ENABLE_DEBUG_LOG,
-    debugLogFilePath?: string,
-    loose: boolean = false,
-    skipApiVersionCheck: boolean = false,
-    cert: string = "",
-    key: string = "",
-    pwd: string = "",
-    oauth?: string
-  ) {
-    super(
-      host,
-      port,
-      enableAccessLog,
-      accessLogWriteStream,
-      enableDebugLog,
-      debugLogFilePath,
-      loose,
-      skipApiVersionCheck,
-      cert,
-      key,
-      pwd,
-      oauth
-    );
-  }
-}
+                 public constructor(
+                   host: string = DEFAULT_TABLE_SERVER_HOST_NAME,
+                   port: number = DEFAULT_TABLE_LISTENING_PORT,
+                   public readonly /* Store metadata */ metadataDBPath: string = DEFAULT_TABLE_LOKI_DB_PATH,
+                   enableDebugLog: boolean = DEFAULT_ENABLE_DEBUG_LOG,
+                   enableAccessLog: boolean = DEFAULT_ENABLE_ACCESS_LOG,
+                   accessLogWriteStream?: NodeJS.WritableStream,
+                   debugLogFilePath?: string,
+                   loose: boolean = false,
+                   skipApiVersionCheck: boolean = false,
+                   cert: string = "",
+                   key: string = "",
+                   pwd: string = "",
+                   oauth?: string
+                 ) {
+                   super(
+                     host,
+                     port,
+                     enableAccessLog,
+                     accessLogWriteStream,
+                     enableDebugLog,
+                     debugLogFilePath,
+                     loose,
+                     skipApiVersionCheck,
+                     cert,
+                     key,
+                     pwd,
+                     oauth
+                   );
+                 }
+               }

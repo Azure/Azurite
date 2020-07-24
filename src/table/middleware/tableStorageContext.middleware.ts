@@ -59,7 +59,6 @@ export function tableStorageContextMiddleware(
   const [account, table] = extractStoragePartsFromPath(req.hostname, req.path);
 
   tableContext.account = account;
-  tableContext.tableName = table;
 
   // Emulator's URL pattern is like http://hostname[:port]/account/table
   // (or, alternatively, http[s]://account.localhost[:port]/table/)
