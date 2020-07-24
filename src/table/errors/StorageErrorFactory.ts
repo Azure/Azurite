@@ -86,5 +86,4 @@ export default class StorageErrorFactory {
       contextID
     );
   }
-
 }

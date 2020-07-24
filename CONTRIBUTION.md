@@ -62,7 +62,7 @@ npm run test
 
 ## PR
 
-Make sure test cases are added for the changes you made. And send a PR to `dev` branch for Azurite V3 or later development, `dev-legacy` branch for Azurite V2.
+Make sure test cases are added for the changes you made. And send a PR to `master` branch for Azurite V3 or later development, `dev-legacy` branch for Azurite V2.
 
 ## Regeneration Protocol Layer from Swagger by Autorest
 
