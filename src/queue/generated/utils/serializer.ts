@@ -136,7 +136,10 @@ export async function deserialize(
 
     const body = await readRequestIntoText(req);
     logger.debug(
-      `deserialize(): Raw request body string is ${body}`,
+      `deserialize(): Raw request body string is (removed all empty characters) ${body.replace(
+        /\s/g,
+        ""
+      )}`,
       context.contextID
     );
 
