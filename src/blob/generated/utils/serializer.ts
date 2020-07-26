@@ -355,9 +355,9 @@ export async function serialize(
     res.getBodyStream().write(jsonBody);
     logger.debug(
       `Serializer: Raw response body string is ${jsonBody}`,
-      context.contextID
+      context.contextId
     );
-    logger.info(`Serializer: Start returning stream body.`, context.contextID);
+    logger.info(`Serializer: Start returning stream body.`, context.contextId);
   }
 
   // Serialize stream body
