@@ -37,6 +37,12 @@ describe("table APIs test", () => {
   });
 
   it("createTable @loki", done => {
+    /* TODO: Azure Storage Table SDK doesn't support customize Accept header,
+      thus we cannot test following 3 OData levels and respones.
+    - application/json;odata=nometadata
+    - application/json;odata=minimalmetadata
+    - application/json;odata=fullmetadata
+    */
     const tableService = Azure.createTableService(connectionString);
 
     tableService.createTable(tableName, (error, result, response) => {

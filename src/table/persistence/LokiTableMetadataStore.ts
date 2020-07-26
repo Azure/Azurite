@@ -51,7 +51,13 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     if (extentColl) {
       throw StorageErrorFactory.TableAlreadyExists(context);
     }
-    this.db.addCollection(table.tableName);
+
+    this.db.addCollection(table.tableName, {
+      // Optimization for indexing and searching
+      // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
+      indices: ["ParititionKey", "RowKey"]
+    }); // Optimize for find operation
+
     return 201;
   }
 
@@ -75,9 +81,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       throw StorageErrorFactory.insertEntityAlreadyExist(context);
     }
 
-    entity.lastModifiedTime = new Date().toUTCString();
+    entity.lastModifiedTime = context.startTime!.toUTCString();
 
-    // TODO: duplicate entity error
     tableColl.insert(entity);
     return;
   }

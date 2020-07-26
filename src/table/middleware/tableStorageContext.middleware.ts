@@ -66,7 +66,8 @@ export function tableStorageContextMiddleware(
   // Tables - Create Tables, Query Tables
   // Tables('mytable')	- Delete Tables
   // mytable - Get/Set Table ACL, Insert Entity
-  // mytable(PartitionKey='<partition-key>',RowKey='<row-key>') - Query Entities, Update Entity, Merge Entity, Delete Entity
+  // mytable(PartitionKey='<partition-key>',RowKey='<row-key>') -
+  //        Query Entities, Update Entity, Merge Entity, Delete Entity
   // mytable() - Query Entities
   // TODO: Not allowed create Table with Tables as name
   if (tableSection === undefined) {
