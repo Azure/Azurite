@@ -11,7 +11,7 @@ export default class ServiceHandler extends BaseHandler
     options: Models.ServiceSetPropertiesOptionalParams,
     context: Context
   ): Promise<Models.ServiceSetPropertiesResponse> {
-    // TODO
+    // TODO Refer to Blob/Queue ServiceHandler implementation
     throw new NotImplementedError();
   }
 
@@ -19,7 +19,7 @@ export default class ServiceHandler extends BaseHandler
     options: Models.ServiceGetPropertiesOptionalParams,
     context: Context
   ): Promise<Models.ServiceGetPropertiesResponse> {
-    // TODO
+    // TODO Refer to Blob/Queue ServiceHandler implementation
     throw new NotImplementedError();
   }
 
@@ -27,7 +27,7 @@ export default class ServiceHandler extends BaseHandler
     options: Models.ServiceGetStatisticsOptionalParams,
     context: Context
   ): Promise<Models.ServiceGetStatisticsResponse> {
-    // TODO
+    // TODO Refer to Blob/Queue ServiceHandler implementation
     throw new NotImplementedError();
   }
 }

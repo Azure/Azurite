@@ -9,6 +9,7 @@ export default interface IResponse {
     field: string,
     value?: string | string[] | undefined | number | boolean
   ): IResponse;
+  getHeader(field: string): number | string | string[] | undefined;
   getHeaders(): OutgoingHttpHeaders;
   headersSent(): boolean;
   setContentType(value: string | undefined): IResponse;

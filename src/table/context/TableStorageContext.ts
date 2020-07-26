@@ -17,6 +17,22 @@ export default class TableStorageContext extends Context {
     this.context.tableName = tableName;
   }
 
+  public get partitionKey(): string | undefined {
+    return this.context.partitionKey;
+  }
+
+  public set partitionKey(partitionKey: string | undefined) {
+    this.context.partitionKey = partitionKey;
+  }
+
+  public get rowKey(): string | undefined {
+    return this.context.rowKey;
+  }
+
+  public set rowKey(rowKey: string | undefined) {
+    this.context.rowKey = rowKey;
+  }
+
   public get xMsRequestID(): string | undefined {
     return this.contextID;
   }

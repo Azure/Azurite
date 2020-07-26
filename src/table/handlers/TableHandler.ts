@@ -34,11 +34,11 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       accept !== MINIMAL_METADATA_ACCEPT &&
       accept !== FULL_METADATA_ACCEPT
     ) {
-      throw StorageErrorFactory.contentTypeNotSupported();
+      throw StorageErrorFactory.contentTypeNotSupported(context);
     }
 
     if (accountName === undefined) {
-      throw StorageErrorFactory.getAccountNameEmpty();
+      throw StorageErrorFactory.getAccountNameEmpty(context);
     }
 
     // Here table name is in request body, not in url
@@ -95,6 +95,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       response.odataeditLink = editLink;
     }
 
+    context.response!.setContentType(accept);
     return response;
   }
 
@@ -103,6 +104,23 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableQueryResponse2> {
     // TODO
+    // e.g
+    // return {
+    //   statusCode: 200,
+    //   clientRequestId: "clientRequestId",
+    //   requestId: "requestId",
+    //   version: "version",
+    //   xMsContinuationNextTableName: "xMsContinuationNextTableName",
+    //   odatametadata: "odatametadata",
+    //   value: [
+    //     {
+    //       tableName: "tableName",
+    //       odatatype: "odatatype",
+    //       odataid: "odataid",
+    //       odataeditLink: "odataeditLink"
+    //     }
+    //   ]
+    // };
     throw new NotImplementedError();
   }
 
@@ -111,6 +129,17 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableDeleteMethodOptionalParams,
     context: Context
   ): Promise<Models.TableDeleteResponse> {
+    // e.g
+    // const tableCtx = new TableStorageContext(context);
+    // const accountName = tableCtx.account;
+    // const tableName = tableCtx.tableName; // Get tableName from context
+    // return {
+    //   statusCode: 204,
+    //   clientRequestId: "clientRequestId",
+    //   requestId: "requestId",
+    //   version: "version"
+    // };
+
     // TODO
     throw new NotImplementedError();
   }
@@ -120,80 +149,170 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableQueryEntitiesOptionalParams,
     context: Context
   ): Promise<Models.TableQueryEntitiesResponse> {
+    // e.g
+    // const tableCtx = new TableStorageContext(context);
+    // const accountName = tableCtx.account;
+    // const tableName = tableCtx.tableName; // Get tableName from context
+    // return {
+    //   statusCode: 200,
+    //   date: tableCtx.startTime,
+    //   clientRequestId: "clientRequestId",
+    //   requestId: "requestId",
+    //   version: "version",
+    //   xMsContinuationNextPartitionKey: "xMsContinuationNextPartitionKey",
+    //   xMsContinuationNextRowKey: "xMsContinuationNextRowKey",
+    //   odatametadata: "odatametadata",
+    //   value: [
+    //     {
+    //       property1: "property1" + accountName,
+    //       property2: "property2" + tableName,
+    //       property3: "property3"
+    //     },
+    //     {
+    //       property1: "property1"
+    //     }
+    //   ]
+    // };
     // TODO
     throw new NotImplementedError();
   }
 
   public async queryEntitiesWithPartitionAndRowKey(
-    table: string,
-    partitionKey: string,
-    rowKey: string,
+    _table: string,
+    _partitionKey: string,
+    _rowKey: string,
     options: Models.TableQueryEntitiesWithPartitionAndRowKeyOptionalParams,
     context: Context
   ): Promise<Models.TableQueryEntitiesWithPartitionAndRowKeyResponse> {
+    // e.g
+    // const tableCtx = new TableStorageContext(context);
+    // const accountName = tableCtx.account;
+    // const tableName = tableCtx.tableName; // Get tableName from context
+    // const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
+    // const rowKey = tableCtx.rowKey!; // Get rowKey from context
+    // return {
+    //   statusCode: 200,
+    //   date: tableCtx.startTime,
+    //   clientRequestId: "clientRequestId",
+    //   requestId: "requestId",
+    //   version: "version",
+    //   xMsContinuationNextPartitionKey: partitionKeyFromContext,
+    //   xMsContinuationNextRowKey: rowKeyFromContext,
+    //   odatametadata: "odatametadata",
+    //   value: [
+    //     {
+    //       property1: "property1" + accountName,
+    //       property2: "property2" + tableName,
+    //       property3: "property3"
+    //     },
+    //     {
+    //       property1: "property1"
+    //     }
+    //   ]
+    // };
     // TODO
     throw new NotImplementedError();
   }
 
   public async updateEntity(
-    table: string,
-    partitionKey: string,
-    rowKey: string,
+    _table: string,
+    _partitionKey: string,
+    _rowKey: string,
     options: Models.TableUpdateEntityOptionalParams,
     context: Context
   ): Promise<Models.TableUpdateEntityResponse> {
+    // e.g
+    // const tableCtx = new TableStorageContext(context);
+    // const accountName = tableCtx.account;
+    // const tableName = tableCtx.tableName; // Get tableName from context
+    // const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
+    // const rowKey = tableCtx.rowKey!; // Get rowKey from context
+    // const entity = options.tableEntityProperties!;
+    // return {
+    //   statusCode: 204,
+    //   date: tableCtx.startTime,
+    //   clientRequestId: "clientRequestId",
+    //   requestId: "requestId",
+    //   version: "version"
+    // };
     // TODO
     throw new NotImplementedError();
   }
 
   public async mergeEntity(
-    table: string,
-    partitionKey: string,
-    rowKey: string,
+    _table: string,
+    _partitionKey: string,
+    _rowKey: string,
     options: Models.TableMergeEntityOptionalParams,
     context: Context
   ): Promise<Models.TableMergeEntityResponse> {
+    // e.g
+    // const tableCtx = new TableStorageContext(context);
+    // const accountName = tableCtx.account;
+    // const tableName = tableCtx.tableName; // Get tableName from context
+    // const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
+    // const rowKey = tableCtx.rowKey!; // Get rowKey from context
+    // const entity = options.tableEntityProperties!;
+    // return {
+    //   statusCode: 204,
+    //   date: tableCtx.startTime,
+    //   clientRequestId: "clientRequestId",
+    //   requestId: "requestId",
+    //   version: "version"
+    // };
     // TODO
     throw new NotImplementedError();
   }
 
   public async deleteEntity(
-    table: string,
-    partitionKey: string,
-    rowKey: string,
+    _table: string,
+    _partitionKey: string,
+    _rowKey: string,
     ifMatch: string,
     options: Models.TableDeleteEntityOptionalParams,
     context: Context
   ): Promise<Models.TableDeleteEntityResponse> {
+    // e.g
+    // const tableCtx = new TableStorageContext(context);
+    // const accountName = tableCtx.account;
+    // const tableName = tableCtx.tableName; // Get tableName from context
+    // const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
+    // const rowKey = tableCtx.rowKey!; // Get rowKey from context
+    // return {
+    //   statusCode: 204,
+    //   date: tableCtx.startTime,
+    //   clientRequestId: "clientRequestId",
+    //   requestId: "requestId",
+    //   version: "version"
+    // };
     // TODO
     throw new NotImplementedError();
   }
 
   public async insertEntity(
-    tableName: string,
+    _tableName: string,
     options: Models.TableInsertEntityOptionalParams,
     context: Context
   ): Promise<Models.TableInsertEntityResponse> {
     const tableCtx = new TableStorageContext(context);
-    const entityString = context.request!.getBody();
-    const entityObj = JSON.parse(entityString!);
+    const accountName = tableCtx.account;
+    const tableName = tableCtx.tableName!; // Get tableName from context
+
+    if (
+      !options.tableEntityProperties ||
+      !options.tableEntityProperties.PartitionKey ||
+      !options.tableEntityProperties.RowKey
+    ) {
+      // TODO: Check error code and error message
+      throw new Error("Invalid entity");
+    }
+
+    const entity: IEntity = options.tableEntityProperties as IEntity;
     const eTag = newEtag();
-
-    const partitionKey = entityObj.PartitionKey;
-    const rowKey = entityObj.RowKey;
-
-    const entity: IEntity = {
-      partitionKey,
-      rowKey
-    };
 
     entity.eTag = eTag;
 
-    for (const key of Object.keys(entityObj)) {
-      entity[key] = entityObj[key];
-    }
-
-    const accountName = tableCtx.account;
+    // TODO: Move logic to get host into utility methods
     let protocol = "http";
     let host =
       DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
@@ -230,7 +349,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       accept !== MINIMAL_METADATA_ACCEPT &&
       accept !== FULL_METADATA_ACCEPT
     ) {
-      throw StorageErrorFactory.contentTypeNotSupported();
+      throw StorageErrorFactory.contentTypeNotSupported(context);
     }
 
     response.contentType = "application/json";
@@ -256,8 +375,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         response["odata.editLink"] = editLink;
       }
 
-      for (const key of Object.keys(entityObj)) {
-        response[key] = entityObj[key];
+      // TODO: Filter out non entity properties in response body (how about update swagger to response stream type?)
+      for (const key of Object.keys(entity)) {
+        response[key] = entity[key];
       }
     }
     return response;
@@ -268,6 +388,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableGetAccessPolicyOptionalParams,
     context: Context
   ): Promise<Models.TableGetAccessPolicyResponse> {
+    // e.g
+    // const tableCtx = new TableStorageContext(context);
+    // const accountName = tableCtx.account;
+    // const tableName = tableCtx.tableName; // Get tableName from context
     // TODO
     throw new NotImplementedError();
   }
@@ -277,6 +401,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableSetAccessPolicyOptionalParams,
     context: Context
   ): Promise<Models.TableSetAccessPolicyResponse> {
+    // e.g
+    // const tableCtx = new TableStorageContext(context);
+    // const accountName = tableCtx.account;
+    // const tableName = tableCtx.tableName; // Get tableName from context
     // TODO
     throw new NotImplementedError();
   }
