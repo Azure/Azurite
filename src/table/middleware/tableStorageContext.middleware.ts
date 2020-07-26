@@ -56,7 +56,68 @@ export function tableStorageContextMiddleware(
     requestID
   );
 
-  const [account, table] = extractStoragePartsFromPath(req.hostname, req.path);
+  const [account, tableSection] = extractStoragePartsFromPath(
+    req.hostname,
+    req.path
+  );
+
+  // Candidate tableSection
+  // undefined - Set Table Service Properties
+  // Tables - Create Tables, Query Tables
+  // Tables('mytable')	- Delete Tables
+  // mytable - Get/Set Table ACL, Insert Entity
+  // mytable(PartitionKey='<partition-key>',RowKey='<row-key>') - Query Entities, Update Entity, Merge Entity, Delete Entity
+  // mytable() - Query Entities
+  // TODO: Not allowed create Table with Tables as name
+  if (tableSection === undefined) {
+    // Service level operation
+    tableContext.tableName = undefined;
+  } else if (tableSection === "Tables") {
+    // Table name in request body
+    tableContext.tableName = undefined;
+  } else if (
+    tableSection.startsWith("Tables('") &&
+    tableSection.endsWith("')")
+  ) {
+    // Tables('mytable')
+    tableContext.tableName = tableSection.substring(8, tableSection.length - 2);
+  } else if (!tableSection.includes("(") && !tableSection.includes(")")) {
+    // mytable
+    tableContext.tableName = tableSection;
+  } else if (
+    tableSection.includes("(") &&
+    tableSection.includes(")") &&
+    tableSection.includes("PartitionKey='") &&
+    tableSection.includes("RowKey='")
+  ) {
+    // mytable(PartitionKey='<partition-key>',RowKey='<row-key>')
+    tableContext.tableName = tableSection.substring(
+      0,
+      tableSection.indexOf("(")
+    );
+    const firstQuoteIndex = tableSection.indexOf("'");
+    const secondQuoteIndex = tableSection.indexOf("'", firstQuoteIndex + 1);
+    const thridQuoteIndex = tableSection.indexOf("'", secondQuoteIndex + 1);
+    const fourthQuoteIndex = tableSection.indexOf("'", thridQuoteIndex + 1);
+    tableContext.partitionKey = tableSection.substring(
+      firstQuoteIndex + 1,
+      secondQuoteIndex
+    );
+    tableContext.rowKey = tableSection.substring(
+      thridQuoteIndex + 1,
+      fourthQuoteIndex
+    );
+  } else {
+    logger.error(
+      `tableStorageContextMiddleware: Cannot extract table name from URL path=${req.path}`,
+      requestID
+    );
+    return next(
+      new Error(
+        `tableStorageContextMiddleware: Cannot extract table name from URL path=${req.path}`
+      )
+    );
+  }
 
   tableContext.account = account;
 
@@ -64,10 +125,11 @@ export function tableStorageContextMiddleware(
   // (or, alternatively, http[s]://account.localhost[:port]/table/)
   // Create a router to exclude account name from req.path, as url path in swagger doesn't include account
   // Exclude account name from req.path for dispatchMiddleware
-  tableContext.dispatchPattern = table !== undefined ? `/Tables` : "/";
+  tableContext.dispatchPattern =
+    tableSection !== undefined ? `/${tableSection}` : "/";
 
   logger.info(
-    `tableStorageContextMiddleware: Account=${account} tableName=${table}}`,
+    `tableStorageContextMiddleware: Account=${account} tableName=${tableSection}}`,
     requestID
   );
   next();

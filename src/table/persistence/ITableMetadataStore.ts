@@ -14,8 +14,8 @@ interface ITtableAdditionalProperties {
 }
 
 export interface IEntity {
-  partitionKey: string;
-  rowKey: string;
+  PartitionKey: string;
+  RowKey: string;
   [propertyName: string]: string | number;
 }
 

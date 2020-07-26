@@ -17,7 +17,8 @@ export const TABLE_API_VERSION = "2019-12-12";
 
 export const HeaderConstants = {
   SERVER: "Server",
-  VERSION: "3.8.0"
+  VERSION: "3.8.0",
+  APPLICATION_JSON: "application/json"
 };
 
 export const NO_METADATA_ACCEPT = "application/json;odata=nometadata";

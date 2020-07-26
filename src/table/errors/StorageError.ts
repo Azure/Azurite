@@ -29,7 +29,7 @@ export default class StorageError extends MiddlewareError {
    * @param {string} storageRequestID Azure Storage server request ID
    * @param {{ [key: string]: string }} [storageAdditionalErrorMessages={}]
    *                                  Additional error messages will be included in XML body
-   * @param {Context} context
+   * @param [Context] context
    * @memberof StorageError
    */
   constructor(
@@ -38,10 +38,10 @@ export default class StorageError extends MiddlewareError {
     storageErrorMessage: string,
     storageRequestID: string,
     storageAdditionalErrorMessages: { [key: string]: string } = {},
-    context: Context
+    context?: Context
   ) {
     let isJSON = false;
-    const accept = context.request!.getHeader("accept");
+    const accept = context ? context.request!.getHeader("accept") : undefined;
     if (
       accept === NO_METADATA_ACCEPT ||
       accept === MINIMAL_METADATA_ACCEPT ||
