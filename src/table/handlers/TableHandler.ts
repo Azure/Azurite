@@ -34,11 +34,11 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       accept !== MINIMAL_METADATA_ACCEPT &&
       accept !== FULL_METADATA_ACCEPT
     ) {
-      throw StorageErrorFactory.contentTypeNotSupported();
+      throw StorageErrorFactory.contentTypeNotSupported(context);
     }
 
     if (accountName === undefined) {
-      throw StorageErrorFactory.getAccountNameEmpty();
+      throw StorageErrorFactory.getAccountNameEmpty(context);
     }
 
     // Here table name is in request body, not in url
@@ -95,6 +95,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       response.odataeditLink = editLink;
     }
 
+    context.response!.setContentType(accept);
     return response;
   }
 
@@ -230,7 +231,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       accept !== MINIMAL_METADATA_ACCEPT &&
       accept !== FULL_METADATA_ACCEPT
     ) {
-      throw StorageErrorFactory.contentTypeNotSupported();
+      throw StorageErrorFactory.contentTypeNotSupported(context);
     }
 
     response.contentType = "application/json";

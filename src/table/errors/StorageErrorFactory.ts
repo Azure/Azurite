@@ -5,85 +5,86 @@
  * @class StorageErrorFactory
  */
 
+import Context from "../generated/Context";
 import StorageError from "./StorageError";
 
 const defaultID: string = "DefaultID";
 
 export default class StorageErrorFactory {
-  public static getTableAlreadyExists(
-    contextID: string = defaultID
-  ): StorageError {
+  public static getTableAlreadyExists(context: Context): StorageError {
     return new StorageError(
       409,
       "TableAlreadyExists",
       "The specified table already exists.",
-      contextID
+      context.contextID || defaultID,
+      undefined,
+      context
     );
   }
 
-  public static getTableNameEmpty(
-    contextID: string = defaultID
-  ): StorageError {
+  public static getTableNameEmpty(context: Context): StorageError {
     return new StorageError(
       400,
       "TableNameEmpty",
       "The specified table name is empty.",
-      contextID
+      context.contextID || defaultID,
+      undefined,
+      context
     );
   }
 
-  public static getAccountNameEmpty(
-    contextID: string = defaultID
-  ): StorageError {
+  public static getAccountNameEmpty(context: Context): StorageError {
     return new StorageError(
       400,
       "AccountNameEmpty",
       "The specified account name is empty.",
-      contextID
+      context.contextID || defaultID,
+      undefined,
+      context
     );
   }
 
-  public static TableAlreadyExists(
-    contextID: string = defaultID
-  ): StorageError {
+  public static TableAlreadyExists(context: Context): StorageError {
     return new StorageError(
       400,
       "TableAlreadyExists",
       "The table to create already exists.",
-      contextID
+      context.contextID || defaultID,
+      undefined,
+      context
     );
   }
 
-  public static TableNotExist(
-    contextID: string = defaultID
-  ): StorageError {
+  public static TableNotExist(context: Context): StorageError {
     return new StorageError(
       400,
       "AccountNameEmpty",
       "The table to insert doesn't exist",
-      contextID
+      context.contextID || defaultID,
+      undefined,
+      context
     );
   }
 
-  public static insertEntityAlreadyExist(
-    contextID: string = defaultID
-  ): StorageError {
+  public static insertEntityAlreadyExist(context: Context): StorageError {
     return new StorageError(
       400,
       "insertEntityAlreadyExist",
       "The entity to insert already exists in the table",
-      contextID
+      context.contextID || defaultID,
+      undefined,
+      context
     );
   }
 
-  public static contentTypeNotSupported(
-    contextID: string = defaultID
-  ): StorageError {
+  public static contentTypeNotSupported(context: Context): StorageError {
     return new StorageError(
       400,
       "contentTypeNotSupported",
       "Payload Type is not supported yet. Only support json.",
-      contextID
+      context.contextID || defaultID,
+      undefined,
+      context
     );
   }
 }

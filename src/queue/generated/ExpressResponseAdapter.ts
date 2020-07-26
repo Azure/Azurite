@@ -43,6 +43,10 @@ export default class ExpressResponseAdapter implements IResponse {
     return this;
   }
 
+  public getHeader(field: string): number | string | string[] | undefined {
+    return this.res.getHeader(field);
+  }
+
   public getHeaders(): OutgoingHttpHeaders {
     return this.res.getHeaders();
   }

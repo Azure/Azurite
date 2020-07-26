@@ -31,7 +31,7 @@ export function tableStorageContextMiddleware(
   // Set server header in every Azurite response
   res.setHeader(
     HeaderConstants.SERVER,
-    `Azurite-table/${HeaderConstants.VERSION}`
+    `Azurite-Table/${HeaderConstants.VERSION}`
   );
 
   const requestID = uuid();

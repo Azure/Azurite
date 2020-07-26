@@ -324,6 +324,42 @@ export async function serialize(
     logger.info(`Serializer: Start returning stream body.`, context.contextId);
   }
 
+  // Serialize JSON bodies
+  if (
+    !spec.isXML &&
+    responseSpec.bodyMapper &&
+    responseSpec.bodyMapper.type.name !== "Stream"
+  ) {
+    let body = spec.serializer.serialize(
+      responseSpec.bodyMapper!,
+      handlerResponse
+    );
+
+    // When root element is sequence type, should wrap with because serialize() doesn't do that
+    if (responseSpec.bodyMapper!.type.name === "Sequence") {
+      const sequenceElementName = responseSpec.bodyMapper!.xmlElementName;
+      if (sequenceElementName !== undefined) {
+        const newBody = {} as any;
+        newBody[sequenceElementName] = body;
+        body = newBody;
+      }
+    }
+
+    if (!res.getHeader("content-type")) {
+      res.setContentType("application/json");
+    }
+
+    const jsonBody = JSON.stringify(body);
+
+    // TODO: Should send response in a serializer?
+    res.getBodyStream().write(jsonBody);
+    logger.debug(
+      `Serializer: Raw response body string is ${jsonBody}`,
+      context.contextID
+    );
+    logger.info(`Serializer: Start returning stream body.`, context.contextID);
+  }
+
   // Serialize stream body
   // TODO: Move to end middleware for end tracking
   if (

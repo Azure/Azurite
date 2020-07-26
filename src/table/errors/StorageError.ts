@@ -1,4 +1,10 @@
-import { TABLE_API_VERSION } from "../../table/utils/constants";
+import {
+  FULL_METADATA_ACCEPT,
+  MINIMAL_METADATA_ACCEPT,
+  NO_METADATA_ACCEPT,
+  TABLE_API_VERSION
+} from "../../table/utils/constants";
+import Context from "../generated/Context";
 import MiddlewareError from "../generated/errors/MiddlewareError";
 import { jsonToXML } from "../generated/utils/xml";
 
@@ -23,6 +29,7 @@ export default class StorageError extends MiddlewareError {
    * @param {string} storageRequestID Azure Storage server request ID
    * @param {{ [key: string]: string }} [storageAdditionalErrorMessages={}]
    *                                  Additional error messages will be included in XML body
+   * @param {Context} context
    * @memberof StorageError
    */
   constructor(
@@ -30,12 +37,31 @@ export default class StorageError extends MiddlewareError {
     storageErrorCode: string,
     storageErrorMessage: string,
     storageRequestID: string,
-    storageAdditionalErrorMessages: { [key: string]: string } = {}
+    storageAdditionalErrorMessages: { [key: string]: string } = {},
+    context: Context
   ) {
-    const bodyInJSON: any = {
-      Code: storageErrorCode,
-      Message: `${storageErrorMessage}\nRequestId:${storageRequestID}\nTime:${new Date().toISOString()}`
-    };
+    let isJSON = false;
+    const accept = context.request!.getHeader("accept");
+    if (
+      accept === NO_METADATA_ACCEPT ||
+      accept === MINIMAL_METADATA_ACCEPT ||
+      accept === FULL_METADATA_ACCEPT
+    ) {
+      isJSON = true;
+    }
+
+    const bodyInJSON: any = isJSON
+      ? {
+          code: storageErrorCode,
+          message: {
+            lang: "en-US",
+            value: `${storageErrorMessage}\nRequestId:${storageRequestID}\nTime:${new Date().toISOString()}`
+          }
+        }
+      : {
+          Code: storageErrorCode,
+          Message: `${storageErrorMessage}\nRequestId:${storageRequestID}\nTime:${new Date().toISOString()}`
+        };
 
     for (const key in storageAdditionalErrorMessages) {
       if (storageAdditionalErrorMessages.hasOwnProperty(key)) {
@@ -44,7 +70,9 @@ export default class StorageError extends MiddlewareError {
       }
     }
 
-    const bodyInXML = jsonToXML({ Error: bodyInJSON });
+    const body = isJSON
+      ? JSON.stringify({ "odata.error": bodyInJSON })
+      : jsonToXML({ Error: bodyInJSON });
 
     super(
       statusCode,
@@ -55,8 +83,8 @@ export default class StorageError extends MiddlewareError {
         "x-ms-request-id": storageRequestID,
         "x-ms-version": TABLE_API_VERSION
       },
-      bodyInXML,
-      "application/xml"
+      body,
+      isJSON ? `${accept};streaming=true;charset=utf-8` : "application/xml"
     );
 
     this.name = "StorageError";

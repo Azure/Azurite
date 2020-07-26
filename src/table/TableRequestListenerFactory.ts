@@ -1,8 +1,12 @@
 import express from "express";
 import { RequestListener } from "http";
 
+import { OperationSpec } from "@azure/ms-rest-js/es/lib/operationSpec";
+
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
+import { Operation } from "./generated/artifacts/operation";
+import Specifications from "./generated/artifacts/specifications";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
 import IHandlers from "./generated/handlers/IHandlers";
 import MiddlewareFactory from "./generated/MiddlewareFactory";
@@ -32,6 +36,24 @@ export default class TableRequestListenerFactory
   ) {}
 
   public createRequestListener(): RequestListener {
+    // TODO: Workarounds for generated specification isXML issue. Ideally should fix in generator.
+    type MutableSpecification = {
+      -readonly [K in keyof OperationSpec]: OperationSpec[K];
+    };
+    [
+      Operation.Table_Create,
+      Operation.Table_Query,
+      Operation.Table_Delete,
+      Operation.Table_QueryEntities,
+      Operation.Table_QueryEntitiesWithPartitionAndRowKey,
+      Operation.Table_UpdateEntity,
+      Operation.Table_MergeEntity,
+      Operation.Table_DeleteEntity,
+      Operation.Table_InsertEntity
+    ].forEach(operation => {
+      (Specifications[operation] as MutableSpecification).isXML = false;
+    });
+
     const app = express().disable("x-powered-by");
 
     // MiddlewareFactory is a factory to create auto-generated middleware

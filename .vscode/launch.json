@@ -111,6 +111,18 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "Azurite Table Service - Loki",
+      "cwd": "${workspaceFolder}",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "args": ["${workspaceFolder}/src/table/main.ts", "-d", "debug.log"],
+      "env": {
+        "AZURITE_ACCOUNTS": ""
+      },
+      "outputCapture": "std"
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "Current TS File",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
