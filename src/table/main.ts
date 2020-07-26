@@ -34,9 +34,9 @@ async function main() {
     env.tableHost(),
     env.tablePort(),
     join(location, DEFAULT_TABLE_LOKI_DB_PATH),
+    (await env.debug()) !== undefined,
     !env.silent(),
     undefined,
-    (await env.debug()) !== undefined,
     await env.debug(),
     env.loose(),
     env.skipApiVersionCheck()

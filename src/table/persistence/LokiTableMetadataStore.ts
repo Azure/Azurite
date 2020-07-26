@@ -5,7 +5,7 @@ import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
-import { TableModel } from "../persistence/ITableMetadataStore";
+import { IEntity, TableModel } from "../persistence/ITableMetadataStore";
 import { TABLE_STATUSCODE } from "../utils/constants";
 import ITableMetadataStore from "./ITableMetadataStore";
 
@@ -37,26 +37,62 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     const coll = this.db.getCollection(this.TABLE_COLLECTION);
     const doc = coll.findOne({
       accountName: table.account,
-      name: table.name
+      name: table.tableName
     });
 
     // If the metadata exists, we will throw getTableAlreadyExists error
     if (doc) {
-      throw StorageErrorFactory.getTableAlreadyExists(
-        context.contextID
-      );
+      throw StorageErrorFactory.getTableAlreadyExists(context.contextID);
     }
 
     coll.insert(table);
+
+    const extentColl = this.db.getCollection(table.tableName);
+    if (extentColl) {
+      throw StorageErrorFactory.TableAlreadyExists();
+    }
+    this.db.addCollection(table.tableName);
     return 201;
   }
 
-  public async queryTable(context: Context): Promise<Models.TableResponseProperties[]> {
+  public async insertTableEntity(
+    context: Context,
+    tableName: string,
+    entity: IEntity
+  ): Promise<void> {
+    const tableColl = this.db.getCollection(tableName);
+    if (!tableColl) {
+      throw StorageErrorFactory.TableNotExist();
+    }
+
+    // If the entity already exists in the table, throw an error
+    const doc = tableColl.findOne({
+      partitionKey: entity.partitionKey,
+      rowKey: entity.rowKey
+    });
+
+    if (doc) {
+      throw StorageErrorFactory.insertEntityAlreadyExist();
+    }
+
+    entity.lastModifiedTime = new Date().toUTCString();
+
+    // TODO: duplicate entity error
+    tableColl.insert(entity);
+    return;
+  }
+
+  public async queryTable(
+    context: Context
+  ): Promise<Models.TableResponseProperties[]> {
     // TODO
     throw new NotImplementedError();
   }
 
-  public async deleteTable(context: Context, tableName: string): Promise<TABLE_STATUSCODE> {
+  public async deleteTable(
+    context: Context,
+    tableName: string
+  ): Promise<TABLE_STATUSCODE> {
     // TODO    context: Context
     throw new NotImplementedError();
   }
@@ -106,11 +142,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     partitionKey: string,
     rowKey: string
   ): Promise<TABLE_STATUSCODE> {
-    // TODO
-    throw new NotImplementedError();
-  }
-
-  public async insertTableEntity(context: Context, table: string): Promise<TABLE_STATUSCODE> {
     // TODO
     throw new NotImplementedError();
   }

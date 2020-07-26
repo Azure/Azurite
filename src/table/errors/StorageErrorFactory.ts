@@ -42,4 +42,48 @@ export default class StorageErrorFactory {
       contextID
     );
   }
+
+  public static TableAlreadyExists(
+    contextID: string = defaultID
+  ): StorageError {
+    return new StorageError(
+      400,
+      "TableAlreadyExists",
+      "The table to create already exists.",
+      contextID
+    );
+  }
+
+  public static TableNotExist(
+    contextID: string = defaultID
+  ): StorageError {
+    return new StorageError(
+      400,
+      "AccountNameEmpty",
+      "The table to insert doesn't exist",
+      contextID
+    );
+  }
+
+  public static insertEntityAlreadyExist(
+    contextID: string = defaultID
+  ): StorageError {
+    return new StorageError(
+      400,
+      "insertEntityAlreadyExist",
+      "The entity to insert already exists in the table",
+      contextID
+    );
+  }
+
+  public static contentTypeNotSupported(
+    contextID: string = defaultID
+  ): StorageError {
+    return new StorageError(
+      400,
+      "contentTypeNotSupported",
+      "Payload Type is not supported yet. Only support json.",
+      contextID
+    );
+  }
 }
