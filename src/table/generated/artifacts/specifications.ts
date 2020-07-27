@@ -340,13 +340,9 @@ const tableInsertEntityOperationSpec: msRest.OperationSpec = {
   responses: {
     201: {
       bodyMapper: {
+        serializedName: "Stream",
         type: {
-          name: "Dictionary",
-          value: {
-            type: {
-              name: "Object"
-            }
-          }
+          name: "Stream"
         }
       },
       headersMapper: Mappers.TableInsertEntityHeaders
@@ -544,8 +540,7 @@ Specifications[Operation.Table_Query] = tableQueryOperationSpec;
 Specifications[Operation.Table_Create] = tableCreateOperationSpec;
 Specifications[Operation.Table_Delete] = tableDeleteOperationSpec;
 Specifications[Operation.Table_QueryEntities] = tableQueryEntitiesOperationSpec;
-Specifications[Operation.Table_QueryEntitiesWithPartitionAndRowKey] =
-      tableQueryEntitiesWithPartitionAndRowKeyOperationSpec;
+Specifications[Operation.Table_QueryEntitiesWithPartitionAndRowKey] = tableQueryEntitiesWithPartitionAndRowKeyOperationSpec;
 Specifications[Operation.Table_UpdateEntity] = tableUpdateEntityOperationSpec;
 Specifications[Operation.Table_MergeEntity] = tableMergeEntityOperationSpec;
 Specifications[Operation.Table_DeleteEntity] = tableDeleteEntityOperationSpec;

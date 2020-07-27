@@ -49,7 +49,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     const extentColl = this.db.getCollection(table.tableName);
     if (extentColl) {
-      throw StorageErrorFactory.TableAlreadyExists(context);
+      throw StorageErrorFactory.getTableAlreadyExists(context);
     }
 
     this.db.addCollection(table.tableName, {
@@ -68,20 +68,17 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   ): Promise<void> {
     const tableColl = this.db.getCollection(tableName);
     if (!tableColl) {
-      throw StorageErrorFactory.TableNotExist(context);
+      throw StorageErrorFactory.getTableNotExist(context);
     }
 
-    // If the entity already exists in the table, throw an error
     const doc = tableColl.findOne({
-      partitionKey: entity.partitionKey,
-      rowKey: entity.rowKey
+      PartitionKey: entity.PartitionKey,
+      RowKey: entity.RowKey
     });
 
     if (doc) {
-      throw StorageErrorFactory.insertEntityAlreadyExist(context);
+      throw StorageErrorFactory.getEntityAlreadyExist(context);
     }
-
-    entity.lastModifiedTime = context.startTime!.toUTCString();
 
     tableColl.insert(entity);
     return;

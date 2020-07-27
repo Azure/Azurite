@@ -16,7 +16,11 @@ interface ITtableAdditionalProperties {
 export interface IEntity {
   PartitionKey: string;
   RowKey: string;
-  [propertyName: string]: string | number;
+  eTag: string;
+  lastModifiedTime: Date;
+  properties: {
+    [propertyName: string]: string | number;
+  };
 }
 
 export type TableModel = ITtableAdditionalProperties;

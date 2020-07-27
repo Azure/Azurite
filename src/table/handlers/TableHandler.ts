@@ -1,3 +1,4 @@
+import BufferStream from "../../common/utils/BufferStream";
 import TableStorageContext from "../context/TableStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -13,7 +14,7 @@ import {
   NO_METADATA_ACCEPT,
   RETURN_CONTENT,
   RETURN_NO_CONTENT,
-  TABLE_API_VERSION
+  TABLE_API_VERSION,
 } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -34,7 +35,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       accept !== MINIMAL_METADATA_ACCEPT &&
       accept !== FULL_METADATA_ACCEPT
     ) {
-      throw StorageErrorFactory.contentTypeNotSupported(context);
+      throw StorageErrorFactory.getContentTypeNotSupported(context);
     }
 
     if (accountName === undefined) {
@@ -303,14 +304,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       !options.tableEntityProperties.PartitionKey ||
       !options.tableEntityProperties.RowKey
     ) {
-      // TODO: Check error code and error message
-      throw new Error("Invalid entity");
+      throw StorageErrorFactory.getPropertiesNeedValue(context);
     }
 
-    const entity: IEntity = options.tableEntityProperties as IEntity;
-    const eTag = newEtag();
-
-    entity.eTag = eTag;
+    const entity: IEntity = {
+      PartitionKey: options.tableEntityProperties.PartitionKey,
+      RowKey: options.tableEntityProperties.RowKey,
+      properties: options.tableEntityProperties,
+      lastModifiedTime: context.startTime!,
+      eTag: newEtag()
+    };
 
     // TODO: Move logic to get host into utility methods
     let protocol = "http";
@@ -325,11 +328,6 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const type = `${accountName}.Tables`;
     const id = `${protocol}://${host}/Tables(${tableName})`;
     const editLink = `Tables(${tableName})`;
-
-    entity.metadata = metadata;
-    entity.type = type;
-    entity.id = id;
-    entity.editLink = editLink;
 
     await this.metadataStore.insertTableEntity(context, tableName, entity);
 
@@ -349,10 +347,11 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       accept !== MINIMAL_METADATA_ACCEPT &&
       accept !== FULL_METADATA_ACCEPT
     ) {
-      throw StorageErrorFactory.contentTypeNotSupported(context);
+      throw StorageErrorFactory.getContentTypeNotSupported(context);
     }
 
     response.contentType = "application/json";
+    const body = {} as any;
 
     if (context.request!.getHeader("Prefer") === RETURN_NO_CONTENT) {
       response.statusCode = 204;
@@ -364,21 +363,22 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       response.preferenceApplied = "return-content";
 
       if (accept === MINIMAL_METADATA_ACCEPT) {
-        response["odata.metadata"] = metadata;
+        body["odata.metadata"] = metadata;
       }
 
       if (accept === FULL_METADATA_ACCEPT) {
-        response["odata.metadata"] = metadata;
-        response["odata.type"] = type;
-        response["odata.id"] = id;
-        response["odata.etag"] = eTag;
-        response["odata.editLink"] = editLink;
+        body["odata.metadata"] = metadata;
+        body["odata.type"] = type;
+        body["body.id"] = id;
+        body["odata.etag"] = entity.eTag;
+        body["odata.editLink"] = editLink;
       }
 
-      // TODO: Filter out non entity properties in response body (how about update swagger to response stream type?)
-      for (const key of Object.keys(entity)) {
-        response[key] = entity[key];
+      for (const key of Object.keys(entity.properties)) {
+        body[key] = entity.properties[key];
       }
+
+      response.body = new BufferStream(Buffer.from(JSON.stringify(body)));
     }
     return response;
   }
