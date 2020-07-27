@@ -1407,12 +1407,12 @@ export type TableDeleteEntityResponse = TableDeleteEntityHeaders & {
 /**
  * Contains response data for the insertEntity operation.
  */
-export type TableInsertEntityResponse = {
+export type TableInsertEntityResponse = TableInsertEntityHeaders & {
   /**
-   * The response body properties.
+   * The response body as a node.js Readable stream.
    */
-  [propertyName: string]: any;
-} & TableInsertEntityHeaders & {
+  body?: NodeJS.ReadableStream;
+} & {
   /**
    * The response status code.
    */

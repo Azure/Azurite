@@ -67,3 +67,16 @@ directive:
       };
       $["TableResponse"]["allOf"] = undefined;
 ```
+
+### Update Table_InsertEntity response to file
+
+```yaml
+directive:
+  - from: swagger-document
+    where: $["paths"]["/{table}"].post.responses["201"]
+    transform: >
+      $.schema = {
+        "type": "object",
+        "format": "file"
+      };
+```

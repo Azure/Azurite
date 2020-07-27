@@ -6,7 +6,6 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { IEntity, TableModel } from "../persistence/ITableMetadataStore";
-import { TABLE_STATUSCODE } from "../utils/constants";
 import ITableMetadataStore from "./ITableMetadataStore";
 
 export default class LokiTableMetadataStore implements ITableMetadataStore {
@@ -33,7 +32,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   public async createTable(
     context: Context,
     table: TableModel
-  ): Promise<TABLE_STATUSCODE> {
+  ): Promise<void> {
     const coll = this.db.getCollection(this.TABLE_COLLECTION);
     const doc = coll.findOne({
       accountName: table.account,
@@ -49,7 +48,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     const extentColl = this.db.getCollection(table.tableName);
     if (extentColl) {
-      throw StorageErrorFactory.TableAlreadyExists(context);
+      throw StorageErrorFactory.getTableAlreadyExists(context);
     }
 
     this.db.addCollection(table.tableName, {
@@ -57,8 +56,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
       indices: ["ParititionKey", "RowKey"]
     }); // Optimize for find operation
-
-    return 201;
   }
 
   public async insertTableEntity(
@@ -68,20 +65,17 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   ): Promise<void> {
     const tableColl = this.db.getCollection(tableName);
     if (!tableColl) {
-      throw StorageErrorFactory.TableNotExist(context);
+      throw StorageErrorFactory.getTableNotExist(context);
     }
 
-    // If the entity already exists in the table, throw an error
     const doc = tableColl.findOne({
-      partitionKey: entity.partitionKey,
-      rowKey: entity.rowKey
+      PartitionKey: entity.PartitionKey,
+      RowKey: entity.RowKey
     });
 
     if (doc) {
-      throw StorageErrorFactory.insertEntityAlreadyExist(context);
+      throw StorageErrorFactory.getEntityAlreadyExist(context);
     }
-
-    entity.lastModifiedTime = context.startTime!.toUTCString();
 
     tableColl.insert(entity);
     return;
@@ -97,7 +91,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   public async deleteTable(
     context: Context,
     tableName: string
-  ): Promise<TABLE_STATUSCODE> {
+  ): Promise<void> {
     // TODO    context: Context
     throw new NotImplementedError();
   }
@@ -126,7 +120,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     partitionKey: string,
     rowKey: string
-  ): Promise<TABLE_STATUSCODE> {
+  ): Promise<void> {
     // TODO
     throw new NotImplementedError();
   }
@@ -136,7 +130,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     partitionKey: string,
     rowKey: string
-  ): Promise<TABLE_STATUSCODE> {
+  ): Promise<void> {
     // TODO
     throw new NotImplementedError();
   }
@@ -146,7 +140,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     partitionKey: string,
     rowKey: string
-  ): Promise<TABLE_STATUSCODE> {
+  ): Promise<void> {
     // TODO
     throw new NotImplementedError();
   }

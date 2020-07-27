@@ -4,7 +4,6 @@
  * @export
  * @class StorageErrorFactory
  */
-
 import Context from "../generated/Context";
 import StorageError from "./StorageError";
 
@@ -44,18 +43,7 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static TableAlreadyExists(context: Context): StorageError {
-    return new StorageError(
-      400,
-      "TableAlreadyExists",
-      "The table to create already exists.",
-      context.contextID || defaultID,
-      undefined,
-      context
-    );
-  }
-
-  public static TableNotExist(context: Context): StorageError {
+  public static getTableNotExist(context: Context): StorageError {
     return new StorageError(
       400,
       "AccountNameEmpty",
@@ -66,10 +54,10 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static insertEntityAlreadyExist(context: Context): StorageError {
+  public static getEntityAlreadyExist(context: Context): StorageError {
     return new StorageError(
-      400,
-      "insertEntityAlreadyExist",
+      409,
+      "EntityAlreadyExist",
       "The entity to insert already exists in the table",
       context.contextID || defaultID,
       undefined,
@@ -77,7 +65,18 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static contentTypeNotSupported(context: Context): StorageError {
+  public static getPropertiesNeedValue(context: Context): StorageError {
+    return new StorageError(
+      400,
+      "PropertiesNeedValue",
+      "The values are not specified for all properties in the entity.",
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
+
+  public static getContentTypeNotSupported(context: Context): StorageError {
     return new StorageError(
       400,
       "contentTypeNotSupported",
