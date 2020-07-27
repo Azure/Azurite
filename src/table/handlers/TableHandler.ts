@@ -14,7 +14,7 @@ import {
   NO_METADATA_ACCEPT,
   RETURN_CONTENT,
   RETURN_NO_CONTENT,
-  TABLE_API_VERSION,
+  TABLE_API_VERSION
 } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -138,23 +138,26 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   }
 
   public async delete(
-    table: string,
+    tablename: string,
     options: Models.TableDeleteMethodOptionalParams,
     context: Context
   ): Promise<Models.TableDeleteResponse> {
-    // e.g
-    // const tableCtx = new TableStorageContext(context);
+    const tableCtx = new TableStorageContext(context);
     // const accountName = tableCtx.account;
-    // const tableName = tableCtx.tableName; // Get tableName from context
-    // return {
-    //   statusCode: 204,
-    //   clientRequestId: "clientRequestId",
-    //   requestId: "requestId",
-    //   version: "version"
-    // };
+    // TODO: implement error handling logic etc.
+    // requires that we fix up the response model to allow other status codes in response
+    // this is a very naieve implementation to allow ups to improve testing and move ahead
+    // with the rest of the implementation.
+    await this.metadataStore.deleteTable(context, tablename);
+    const response: Models.TableDeleteResponse = {
+      clientRequestId: options.requestId,
+      requestId: tableCtx.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      statusCode: 204
+    };
 
-    // TODO
-    throw new NotImplementedError();
+    return response;
   }
 
   public async queryEntities(

@@ -27,7 +27,7 @@ export type TableModel = ITtableAdditionalProperties;
 export default interface ITableMetadataStore {
   queryTable(context: Context): Promise<Models.TableResponseProperties[]>;
   createTable(context: Context, table: TableModel): Promise<void>;
-  deleteTable(context: Context, tableName: string): Promise<void>;
+  deleteTable(context: Context, tableName: string): Promise<boolean>;
   queryTableEntities(
     context: Context,
     table: string,

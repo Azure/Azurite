@@ -5,7 +5,13 @@ import { configLogger } from "../../../src/common/Logger";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
 import { TABLE_API_VERSION } from "../../../src/table/utils/constants";
-import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName, overrideRequest } from "../../testutils";
+import {
+  EMULATOR_ACCOUNT_KEY,
+  EMULATOR_ACCOUNT_NAME,
+  getUniqueName,
+  overrideRequest
+} from "../../testutils";
+// import { options } from "args";
 
 // Set true to enable debug log
 configLogger(false);
@@ -119,5 +125,36 @@ describe("table APIs test", () => {
   it("createTable, prefer=return-content, accept=application/json;odata=nometadata @loki", done => {
     // TODO
     done();
+  });
+
+  it("deleteTable, prefer=return-content, accept=application/json;odata=fullmetadata @loki", done => {
+    /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
+    thus we workaround this by override request headers to test following 3 OData levels responses.
+  - application/json;odata=nometadata
+  - application/json;odata=minimalmetadata
+  - application/json;odata=fullmetadata
+  */
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+
+    const tableToDelete = tableName + "del";
+
+    tableService.createTable(tableToDelete, (error, result, response) => {
+      if (!error) {
+        tableService.deleteTable(tableToDelete, (error, result) => {
+          if (!error) {
+            assert.equal(result.statusCode, 204); // no body expected, we expect 204 no content on successful deletion
+          } else {
+            assert.ifError(error);
+          }
+          done();
+        });
+      } else {
+        assert.fail("Test failed to create the table");
+        done();
+      }
+    });
   });
 });

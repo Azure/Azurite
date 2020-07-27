@@ -29,10 +29,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     return this.closed;
   }
 
-  public async createTable(
-    context: Context,
-    table: TableModel
-  ): Promise<void> {
+  public async createTable(context: Context, table: TableModel): Promise<void> {
     const coll = this.db.getCollection(this.TABLE_COLLECTION);
     const doc = coll.findOne({
       accountName: table.account,
@@ -91,9 +88,14 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   public async deleteTable(
     context: Context,
     tableName: string
-  ): Promise<void> {
-    // TODO    context: Context
-    throw new NotImplementedError();
+  ): Promise<boolean> {
+    // TODO    Need to validate behaviour when we try to delete a non-existant table
+    const tableColl = this.db.getCollection(tableName);
+    if (tableColl != null) {
+      this.db.removeCollection(tableName);
+      return true;
+    }
+    return false;
   }
 
   public async queryTableEntities(
