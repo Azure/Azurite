@@ -2,7 +2,8 @@ import { AbortController } from "@azure/abort-controller";
 import {
   BlobServiceClient,
   newPipeline,
-  StorageSharedKeyCredential
+  StorageSharedKeyCredential,
+  ContainerClient
 } from "@azure/storage-blob";
 import assert = require("assert");
 import * as fs from "fs";
@@ -24,7 +25,7 @@ import {
 configLogger(false);
 
 // tslint:disable:no-empty
-describe("BlockBlobHighlevel", ()  => {
+describe("BlockBlobHighlevel", () => {
   const factory = new BlobTestServerFactory();
   // Loose model to bypass if-match header used by download retry
   const server = factory.createServer(true);
@@ -64,8 +65,22 @@ describe("BlockBlobHighlevel", ()  => {
     blockBlobClient = blobClient.getBlockBlobClient();
   });
 
-  afterEach(async function () {
-    await containerClient.delete();
+  afterEach(async function() {
+    const containerUrl = containerClient.url;
+    try {
+      await containerClient.delete();
+    } catch (error) {
+      this.timeout(10000);
+      // Delete again in case of first delete failed.
+      let containerClient2 = new ContainerClient(
+        containerUrl,
+        new StorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        )
+      );
+      await containerClient2.delete();
+    }
   });
 
   before(async () => {
@@ -330,7 +345,7 @@ describe("BlockBlobHighlevel", ()  => {
         // }
       },
       maxRetryRequests: 1,
-      onProgress: (ev) => {
+      onProgress: ev => {
         if (ev.loadedBytes >= tempFileSmallLength) {
           retirableReadableStreamOptions.doInjectErrorOnce = true;
         }
