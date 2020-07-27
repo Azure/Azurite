@@ -72,14 +72,14 @@ describe("BlockBlobHighlevel", () => {
     } catch (error) {
       this.timeout(10000);
       // Delete again in case of first delete failed.
-      let containerClient2 = new ContainerClient(
+      let newContainerClient = new ContainerClient(
         containerUrl,
         new StorageSharedKeyCredential(
           EMULATOR_ACCOUNT_NAME,
           EMULATOR_ACCOUNT_KEY
         )
       );
-      await containerClient2.delete();
+      await newContainerClient.delete();
     }
   });
 
