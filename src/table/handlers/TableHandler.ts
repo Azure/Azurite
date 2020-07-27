@@ -50,7 +50,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     const metadata = `${accountName}/$metadata#Tables/@Element`;
     const type = `${accountName}.Tables`;
-    const id = `Tables(${tableName})`;
+    const id = `${accountName}/Tables(${tableName})`;
     const editLink = `Tables(${tableName})`;
 
     const table: TableModel = {
@@ -62,18 +62,30 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       odataeditLink: editLink
     };
 
-    const statusCode = await this.metadataStore.createTable(context, table);
+    await this.metadataStore.createTable(context, table);
+
     const response: Models.TableCreateResponse = {
       clientRequestId: options.requestId,
       requestId: tableCtx.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
-      statusCode
+      statusCode: 204
     };
+
+    if (context.request!.getHeader("Prefer") === RETURN_NO_CONTENT) {
+      response.statusCode = 204;
+      response.preferenceApplied = RETURN_NO_CONTENT;
+    }
+
+    if (context.request!.getHeader("Prefer") === RETURN_CONTENT) {
+      response.statusCode = 201;
+      response.preferenceApplied = "return-content";
+    }
 
     let protocol = "http";
     let host =
       DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
+    // TODO: Get host and port from Azurite Server instance
     if (tableCtx.request !== undefined) {
       host = tableCtx.request.getHeader("host") as string;
       protocol = tableCtx.request.getProtocol() as string;

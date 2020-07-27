@@ -1,6 +1,5 @@
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
-import { TABLE_STATUSCODE } from "../utils/constants";
 
 // Since the host name may change, we don't store host in {@code odatametadata, odatatid}
 interface ITtableAdditionalProperties {
@@ -27,8 +26,8 @@ export type TableModel = ITtableAdditionalProperties;
 
 export default interface ITableMetadataStore {
   queryTable(context: Context): Promise<Models.TableResponseProperties[]>;
-  createTable(context: Context, table: TableModel): Promise<TABLE_STATUSCODE>;
-  deleteTable(context: Context, tableName: string): Promise<TABLE_STATUSCODE>;
+  createTable(context: Context, table: TableModel): Promise<void>;
+  deleteTable(context: Context, tableName: string): Promise<void>;
   queryTableEntities(
     context: Context,
     table: string,
@@ -45,19 +44,19 @@ export default interface ITableMetadataStore {
     table: string,
     partitionKey: string,
     rowKey: string
-  ): Promise<TABLE_STATUSCODE>;
+  ): Promise<void>;
   mergeTableEntity(
     context: Context,
     table: string,
     partitionKey: string,
     rowKey: string
-  ): Promise<TABLE_STATUSCODE>;
+  ): Promise<void>;
   deleteTableEntity(
     context: Context,
     table: string,
     partitionKey: string,
     rowKey: string
-  ): Promise<TABLE_STATUSCODE>;
+  ): Promise<void>;
   insertTableEntity(
     context: Context,
     tableName: string,
