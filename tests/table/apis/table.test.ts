@@ -127,7 +127,7 @@ describe("table APIs test", () => {
     done();
   });
 
-  it.only("deleteTable that exists, @loki", done => {
+  it("deleteTable that exists, @loki", done => {
     /*
     https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
     */

@@ -103,8 +103,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     if (tableColl != null) {
       this.db.removeCollection(name);
     } else {
-      // tslint:disable-next-line: no-console
-      console.log("DID NOT FIND:" + name);
       throw StorageErrorFactory.getTableNotFound(context);
     }
     // remove table reference from collection registry
