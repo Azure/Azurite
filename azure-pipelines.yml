@@ -470,6 +470,7 @@ jobs:
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite -v
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-blob -v
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-queue -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-table -v
         workingDirectory: "./"
         displayName: "Validate docker image"
 
