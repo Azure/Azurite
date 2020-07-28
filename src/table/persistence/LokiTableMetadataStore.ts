@@ -30,32 +30,32 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   }
 
   public async createTable(context: Context, table: TableModel): Promise<void> {
+    const tablename = this.getTableCollectionNameString(
+      table.account,
+      table.tableName
+    );
     const coll = this.db.getCollection(this.TABLE_COLLECTION);
     const doc = coll.findOne({
-      accountName: table.account,
-      name: table.tableName
+      // ToDO REMOVE: accountName: table.account,
+      tableName: tablename
     });
 
     // If the metadata exists, we will throw getTableAlreadyExists error
     if (doc) {
       throw StorageErrorFactory.getTableAlreadyExists(context);
     }
+    table.tableName = tablename;
     coll.insert(table);
-    const extentColl = this.db.getCollection(
-      this.getTableCollectionNameString(table.account, table.tableName)
-    );
+    const extentColl = this.db.getCollection(tablename);
     if (extentColl) {
       throw StorageErrorFactory.getTableAlreadyExists(context);
     }
 
-    this.db.addCollection(
-      this.getTableCollectionNameString(table.account, table.tableName),
-      {
-        // Optimization for indexing and searching
-        // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
-        indices: ["ParititionKey", "RowKey"]
-      }
-    ); // Optimize for find operation
+    this.db.addCollection(tablename, {
+      // Optimization for indexing and searching
+      // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
+      indices: ["ParititionKey", "RowKey"]
+    }); // Optimize for find operation
   }
 
   public async insertTableEntity(
@@ -96,20 +96,18 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     name: string,
     account: string
   ): Promise<void> {
-    const tableColl = this.db.getCollection(
-      this.getTableCollectionNameString(account, name)
-    );
+    const tablename = this.getTableCollectionNameString(account, name);
+    const tableColl = this.db.getCollection(tablename);
     // delete the collection / table
     if (tableColl != null) {
-      this.db.removeCollection(name);
+      this.db.removeCollection(tablename);
     } else {
       throw StorageErrorFactory.getTableNotFound(context);
     }
     // remove table reference from collection registry
     const coll = this.db.getCollection(this.TABLE_COLLECTION);
-    const doc = coll.find({
-      accountName: account,
-      tableName: name
+    const doc = coll.findOne({
+      tableName: tablename
     });
     if (doc != null) {
       coll.remove(doc);
@@ -241,6 +239,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     accountName: string,
     tableName: string
   ): string {
-    return accountName + "_" + tableName;
+    return accountName + tableName;
   }
 }
