@@ -86,4 +86,15 @@ export default class StorageErrorFactory {
       context
     );
   }
+
+  public static getTableNotFound(context: Context): StorageError {
+    return new StorageError(
+      404,
+      "TableNotFound",
+      "The table specified does not exist.",
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
 }

@@ -143,12 +143,13 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableDeleteResponse> {
     const tableCtx = new TableStorageContext(context);
-    // const accountName = tableCtx.account;
-    // TODO: implement error handling logic etc.
-    // requires that we fix up the response model to allow other status codes in response
-    // this is a very naieve implementation to allow ups to improve testing and move ahead
-    // with the rest of the implementation.
-    await this.metadataStore.deleteTable(context, tablename);
+    const accountName = tableCtx.account;
+    // currently the tableName is not coming through, so we take it from the table context
+    await this.metadataStore.deleteTable(
+      context,
+      tableCtx.tableName!,
+      accountName!
+    );
     const response: Models.TableDeleteResponse = {
       clientRequestId: options.requestId,
       requestId: tableCtx.contextID,
@@ -344,7 +345,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const id = `${protocol}://${host}/Tables(${tableName})`;
     const editLink = `Tables(${tableName})`;
 
-    await this.metadataStore.insertTableEntity(context, tableName, entity);
+    await this.metadataStore.insertTableEntity(
+      context,
+      tableName,
+      accountName!,
+      entity
+    );
 
     const response: Models.TableInsertEntityResponse = {
       clientRequestId: options.requestId,

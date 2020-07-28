@@ -127,13 +127,10 @@ describe("table APIs test", () => {
     done();
   });
 
-  it("deleteTable, prefer=return-content, accept=application/json;odata=fullmetadata @loki", done => {
-    /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
-    thus we workaround this by override request headers to test following 3 OData levels responses.
-  - application/json;odata=nometadata
-  - application/json;odata=minimalmetadata
-  - application/json;odata=fullmetadata
-  */
+  it.only("deleteTable that exists, @loki", done => {
+    /*
+    https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
+    */
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
@@ -143,11 +140,12 @@ describe("table APIs test", () => {
 
     tableService.createTable(tableToDelete, (error, result, response) => {
       if (!error) {
-        tableService.deleteTable(tableToDelete, (error, result) => {
-          if (!error) {
-            assert.equal(result.statusCode, 204); // no body expected, we expect 204 no content on successful deletion
+        tableService.deleteTable(tableToDelete, (deleteError, deleteResult) => {
+          if (!deleteError) {
+            // no body expected, we expect 204 no content on successful deletion
+            assert.equal(deleteResult.statusCode, 204);
           } else {
-            assert.ifError(error);
+            assert.ifError(deleteError);
           }
           done();
         });
@@ -155,6 +153,22 @@ describe("table APIs test", () => {
         assert.fail("Test failed to create the table");
         done();
       }
+    });
+  });
+
+  it("deleteTable that does not exist, @loki", done => {
+    /*
+    https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
+    */
+    requestOverride.headers = {
+      accept: "application/json;"
+    };
+
+    const tableToDelete = tableName + "causeerror";
+
+    tableService.deleteTable(tableToDelete, (error, result) => {
+      assert.equal(result.statusCode, 404); // no body expected, we expect 404
+      done();
     });
   });
 });

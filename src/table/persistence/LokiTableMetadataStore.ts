@@ -40,27 +40,33 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     if (doc) {
       throw StorageErrorFactory.getTableAlreadyExists(context);
     }
-
     coll.insert(table);
-
-    const extentColl = this.db.getCollection(table.tableName);
+    const extentColl = this.db.getCollection(
+      this.getTableCollectionNameString(table.account, table.tableName)
+    );
     if (extentColl) {
       throw StorageErrorFactory.getTableAlreadyExists(context);
     }
 
-    this.db.addCollection(table.tableName, {
-      // Optimization for indexing and searching
-      // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
-      indices: ["ParititionKey", "RowKey"]
-    }); // Optimize for find operation
+    this.db.addCollection(
+      this.getTableCollectionNameString(table.account, table.tableName),
+      {
+        // Optimization for indexing and searching
+        // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
+        indices: ["ParititionKey", "RowKey"]
+      }
+    ); // Optimize for find operation
   }
 
   public async insertTableEntity(
     context: Context,
     tableName: string,
+    account: string,
     entity: IEntity
   ): Promise<void> {
-    const tableColl = this.db.getCollection(tableName);
+    const tableColl = this.db.getCollection(
+      this.getTableCollectionNameString(account, tableName)
+    );
     if (!tableColl) {
       throw StorageErrorFactory.getTableNotExist(context);
     }
@@ -87,15 +93,31 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
   public async deleteTable(
     context: Context,
-    tableName: string
-  ): Promise<boolean> {
-    // TODO    Need to validate behaviour when we try to delete a non-existant table
-    const tableColl = this.db.getCollection(tableName);
+    name: string,
+    account: string
+  ): Promise<void> {
+    const tableColl = this.db.getCollection(
+      this.getTableCollectionNameString(account, name)
+    );
+    // delete the collection / table
     if (tableColl != null) {
-      this.db.removeCollection(tableName);
-      return true;
+      this.db.removeCollection(name);
+    } else {
+      // tslint:disable-next-line: no-console
+      console.log("DID NOT FIND:" + name);
+      throw StorageErrorFactory.getTableNotFound(context);
     }
-    return false;
+    // remove table reference from collection registry
+    const coll = this.db.getCollection(this.TABLE_COLLECTION);
+    const doc = coll.find({
+      accountName: account,
+      tableName: name
+    });
+    if (doc != null) {
+      coll.remove(doc);
+    } else {
+      throw StorageErrorFactory.getTableNotFound(context);
+    }
   }
 
   public async queryTableEntities(
@@ -186,7 +208,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       this.db.addCollection(this.TABLE_COLLECTION, {
         // Optimization for indexing and searching
         // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
-        indices: ["accountName", "name"]
+        indices: ["accountName", "tableName"]
       }); // Optimize for find operation
     }
 
@@ -216,5 +238,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     });
 
     this.closed = true;
+  }
+  private getTableCollectionNameString(
+    accountName: string,
+    tableName: string
+  ): string {
+    return accountName + "_" + tableName;
   }
 }
