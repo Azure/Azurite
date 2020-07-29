@@ -70,7 +70,7 @@ describe("BlockBlobHighlevel", () => {
     try {
       await containerClient.delete();
     } catch (error) {
-      this.timeout(1000);
+      this.timeout(3000);
       // Delete again in case of first delete failed.
       let newContainerClient = new ContainerClient(
         containerUrl,
