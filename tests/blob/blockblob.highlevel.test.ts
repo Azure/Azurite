@@ -65,12 +65,12 @@ describe("BlockBlobHighlevel", () => {
     blockBlobClient = blobClient.getBlockBlobClient();
   });
 
-  afterEach(async function() {
+  afterEach(async function () {
     const containerUrl = containerClient.url;
     try {
       await containerClient.delete();
     } catch (error) {
-      this.timeout(10000);
+      this.timeout(3000);
       // Delete again in case of first delete failed.
       let newContainerClient = new ContainerClient(
         containerUrl,
@@ -345,7 +345,7 @@ describe("BlockBlobHighlevel", () => {
         // }
       },
       maxRetryRequests: 1,
-      onProgress: ev => {
+      onProgress: (ev) => {
         if (ev.loadedBytes >= tempFileSmallLength) {
           retirableReadableStreamOptions.doInjectErrorOnce = true;
         }
