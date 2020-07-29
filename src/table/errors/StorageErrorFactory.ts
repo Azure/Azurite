@@ -108,4 +108,15 @@ export default class StorageErrorFactory {
       context
     );
   }
+
+  public static getPreconditionFailed(context: Context): StorageError {
+    return new StorageError(
+      412,
+      "UpdateConditionNotSatisfied",
+      "The update condition specified in the request was not satisfied.",
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
 }

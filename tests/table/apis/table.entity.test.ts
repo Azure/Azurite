@@ -9,7 +9,8 @@ import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
-  overrideRequest
+  overrideRequest,
+  sleep
 } from "../../testutils";
 
 // Set true to enable debug log
@@ -59,12 +60,11 @@ describe("table Entity APIs test", () => {
   });
 
   after(async () => {
-    tableService.deleteTable(tableName, (error, result) => {
-      // test table is cleaned up
-    });
     await server.close();
   });
 
+  // Simple test in here until we have the full set checked in, as we need
+  // a starting point for delete and query entity APIs
   it("Should insert new Entity, @loki", done => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-entity
     const entity = {
@@ -83,12 +83,106 @@ describe("table Entity APIs test", () => {
     const entity = {
       PartitionKey: "part1",
       RowKey: "row1",
-      myValue: "value1"
+      myValue: "somevalue"
+    };
+
+    /* https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1#request-headers
+    If-Match	Required. The client may specify the ETag for the entity on the request in
+    order to compare to the ETag maintained by the service for the purpose of optimistic concurrency.
+    The delete operation will be performed only if the ETag sent by the client matches the value
+    maintained by the server, indicating that the entity has not been modified since it was retrieved by the client.
+    To force an unconditional delete, set If-Match to the wildcard character (*). */
+    requestOverride.headers = {
+      Match: "*"
     };
 
     tableService.deleteEntity(tableName, entity, (error, response) => {
       assert.equal(response.statusCode, 204);
       done();
     });
+  });
+
+  it("Should not delete an Entity not matching Etag, @loki", done => {
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
+    const entity = {
+      PartitionKey: "part1",
+      RowKey: "row2",
+      myValue: "shouldnotmatchetag"
+    };
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertEntity(
+      tableName,
+      entity,
+      (inserterror, insertresult, insertresponse) => {
+        if (!inserterror) {
+          sleep(10);
+          requestOverride.headers = {
+            Match: "0x2252C97588D4000" // just a random etag
+          };
+          // this delete should fail as we modified the etag, but we get ECONRESET???
+          tableService.deleteEntity(
+            tableName,
+            entity,
+            (deleteerror, deleteresponse) => {
+              if (!deleteerror) {
+                assert.equal(deleteresponse.statusCode, 412); // Precondition failed
+                done();
+              } else {
+                assert.ifError(deleteerror);
+                done();
+              }
+            }
+          );
+        } else {
+          assert.ifError(inserterror);
+          done();
+        }
+      }
+    );
+  });
+
+  it("Should not delete an matching Etag, @loki", done => {
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
+    const entity = {
+      PartitionKey: "part1",
+      RowKey: "row3",
+      myValue: "shouldmatchetag"
+    };
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertEntity(
+      tableName,
+      entity,
+      (error, result, insertresponse) => {
+        if (!error) {
+          const etag: string = result[".metadata"].etag;
+          requestOverride.headers = {
+            Match: etag
+          };
+          // this delete should fail as we modify the etag
+          tableService.deleteEntity(
+            tableName,
+            entity,
+            (deleteerror, deleteresponse) => {
+              if (!deleteerror) {
+                assert.equal(deleteresponse.statusCode, 204); // Precondition succeeded
+                done();
+              } else {
+                assert.ifError(deleteerror);
+                done();
+              }
+            }
+          );
+        } else {
+          assert.ifError(error);
+          done();
+        }
+      }
+    );
   });
 });

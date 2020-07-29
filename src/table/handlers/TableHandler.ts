@@ -289,37 +289,28 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableDeleteEntityOptionalParams,
     context: Context
   ): Promise<Models.TableDeleteEntityResponse> {
-    // e.g
-    // const tableCtx = new TableStorageContext(context);
-    // const accountName = tableCtx.account;
-    // const tableName = tableCtx.tableName; // Get tableName from context
-    // const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
-    // const rowKey = tableCtx.rowKey!; // Get rowKey from context
-    // return {
-    //   statusCode: 204,
-    //   date: tableCtx.startTime,
-    //   clientRequestId: "clientRequestId",
-    //   requestId: "requestId",
-    //   version: "version"
-    // };
-    // TODO
-
     const tableCtx = new TableStorageContext(context);
     const accountName = tableCtx.account;
     const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
     const rowKey = tableCtx.rowKey!; // Get rowKey from context
-
+    let etag: string = "";
+    if (tableCtx.request !== undefined) {
+      etag = tableCtx.request.getHeader("match") as string;
+    }
     if (!partitionKey || !rowKey) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
     }
-
+    if (etag === "" || etag === undefined) {
+      throw StorageErrorFactory.getPreconditionFailed(context);
+    }
     // currently the props are not coming through as args, so we take them from the table context
     await this.metadataStore.deleteTableEntity(
       context,
       tableCtx.tableName!,
       accountName!,
       partitionKey,
-      rowKey
+      rowKey,
+      etag!
     );
 
     return {
