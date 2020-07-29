@@ -11,7 +11,6 @@ import {
   getUniqueName,
   overrideRequest
 } from "../../testutils";
-// import { options } from "args";
 
 // Set true to enable debug log
 configLogger(false);
@@ -131,10 +130,7 @@ describe("table APIs test", () => {
     /*
     https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
     */
-    requestOverride.headers = {
-      Prefer: "return-content",
-      accept: "application/json;odata=fullmetadata"
-    };
+    requestOverride.headers = {};
 
     const tableToDelete = tableName + "del";
 
@@ -160,14 +156,14 @@ describe("table APIs test", () => {
     /*
     https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
     */
-    requestOverride.headers = {
-      accept: "application/json;"
-    };
+    requestOverride.headers = {};
 
     const tableToDelete = tableName + "causeerror";
 
     tableService.deleteTable(tableToDelete, (error, result) => {
       assert.equal(result.statusCode, 404); // no body expected, we expect 404
+      const storageError = error as any;
+      assert.equal(storageError.code, "TableNotFound");
       done();
     });
   });

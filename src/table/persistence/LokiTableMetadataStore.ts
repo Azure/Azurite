@@ -30,28 +30,30 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   }
 
   public async createTable(context: Context, table: TableModel): Promise<void> {
-    const tablename = this.getTableCollectionNameString(
-      table.account,
-      table.tableName
-    );
+    // Check for table entry in the table registry collection
     const coll = this.db.getCollection(this.TABLE_COLLECTION);
     const doc = coll.findOne({
-      // ToDO REMOVE: accountName: table.account,
-      tableName: tablename
+      account: table.account,
+      name: table.tableName
     });
 
     // If the metadata exists, we will throw getTableAlreadyExists error
     if (doc) {
       throw StorageErrorFactory.getTableAlreadyExists(context);
     }
-    table.tableName = tablename;
     coll.insert(table);
-    const extentColl = this.db.getCollection(tablename);
+
+    // now we create the collection to represent the table using a unique string
+    const uniqueTableName = this.getUniqueTableCollectionName(
+      table.account,
+      table.tableName
+    );
+    const extentColl = this.db.getCollection(uniqueTableName);
     if (extentColl) {
       throw StorageErrorFactory.getTableAlreadyExists(context);
     }
 
-    this.db.addCollection(tablename, {
+    this.db.addCollection(uniqueTableName, {
       // Optimization for indexing and searching
       // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
       indices: ["ParititionKey", "RowKey"]
@@ -65,7 +67,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     entity: IEntity
   ): Promise<void> {
     const tableColl = this.db.getCollection(
-      this.getTableCollectionNameString(account, tableName)
+      this.getUniqueTableCollectionName(account, tableName)
     );
     if (!tableColl) {
       throw StorageErrorFactory.getTableNotExist(context);
@@ -94,20 +96,24 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   public async deleteTable(
     context: Context,
     name: string,
-    account: string
+    accountName: string
   ): Promise<void> {
-    const tablename = this.getTableCollectionNameString(account, name);
-    const tableColl = this.db.getCollection(tablename);
+    const uniqueTableName = this.getUniqueTableCollectionName(
+      accountName,
+      name
+    );
+    const tableColl = this.db.getCollection(uniqueTableName);
     // delete the collection / table
     if (tableColl != null) {
-      this.db.removeCollection(tablename);
+      this.db.removeCollection(uniqueTableName);
     } else {
       throw StorageErrorFactory.getTableNotFound(context);
     }
     // remove table reference from collection registry
     const coll = this.db.getCollection(this.TABLE_COLLECTION);
     const doc = coll.findOne({
-      tableName: tablename
+      account: accountName,
+      tableName: name
     });
     if (doc != null) {
       coll.remove(doc);
@@ -204,7 +210,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       this.db.addCollection(this.TABLE_COLLECTION, {
         // Optimization for indexing and searching
         // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
-        indices: ["accountName", "tableName"]
+        indices: ["accountName", "name"]
       }); // Optimize for find operation
     }
 
@@ -235,10 +241,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     this.closed = true;
   }
-  private getTableCollectionNameString(
+
+  private getUniqueTableCollectionName(
     accountName: string,
     tableName: string
   ): string {
-    return accountName + tableName;
+    return `${accountName}$${tableName}`;
   }
 }
