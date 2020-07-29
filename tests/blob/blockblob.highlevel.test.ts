@@ -2,8 +2,7 @@ import { AbortController } from "@azure/abort-controller";
 import {
   BlobServiceClient,
   newPipeline,
-  StorageSharedKeyCredential,
-  ContainerClient
+  StorageSharedKeyCredential
 } from "@azure/storage-blob";
 import assert = require("assert");
 import * as fs from "fs";
@@ -39,7 +38,8 @@ describe("BlockBlobHighlevel", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        keepAliveOptions: { enable: false }
       }
     )
   );
@@ -66,21 +66,7 @@ describe("BlockBlobHighlevel", () => {
   });
 
   afterEach(async function() {
-    const containerUrl = containerClient.url;
-    try {
-      await containerClient.delete();
-    } catch (error) {
-      this.timeout(3000);
-      // Delete again in case of first delete failed.
-      let newContainerClient = new ContainerClient(
-        containerUrl,
-        new StorageSharedKeyCredential(
-          EMULATOR_ACCOUNT_NAME,
-          EMULATOR_ACCOUNT_KEY
-        )
-      );
-      await newContainerClient.delete();
-    }
+    await containerClient.delete();
   });
 
   before(async () => {
