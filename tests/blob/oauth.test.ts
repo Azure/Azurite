@@ -37,7 +37,9 @@ describe("Blob OAuth Basic", () => {
     const serviceClient = new BlobServiceClient(
       baseURL,
       newPipeline(new SimpleTokenCredential(token), {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       })
     );
 
@@ -52,7 +54,9 @@ describe("Blob OAuth Basic", () => {
     const serviceClient = new BlobServiceClient(
       baseURL,
       newPipeline(new SimpleTokenCredential("invalid token"), {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       })
     );
 
@@ -100,7 +104,9 @@ describe("Blob OAuth Basic", () => {
       const serviceClient = new BlobServiceClient(
         baseURL,
         newPipeline(new SimpleTokenCredential(token), {
-          retryOptions: { maxTries: 1 }
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
         })
       );
 
@@ -125,7 +131,9 @@ describe("Blob OAuth Basic", () => {
     const serviceClient = new BlobServiceClient(
       baseURL,
       newPipeline(new SimpleTokenCredential(token), {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       })
     );
 
@@ -167,7 +175,9 @@ describe("Blob OAuth Basic", () => {
       const serviceClient = new BlobServiceClient(
         baseURL,
         newPipeline(new SimpleTokenCredential(token), {
-          retryOptions: { maxTries: 1 }
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
         })
       );
 
@@ -192,7 +202,9 @@ describe("Blob OAuth Basic", () => {
     const serviceClient = new BlobServiceClient(
       baseURL,
       newPipeline(new SimpleTokenCredential(token), {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       })
     );
 
@@ -226,7 +238,9 @@ describe("Blob OAuth Basic", () => {
     const serviceClient = new BlobServiceClient(
       baseURL,
       newPipeline(new SimpleTokenCredential(token), {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       })
     );
 
@@ -260,7 +274,9 @@ describe("Blob OAuth Basic", () => {
     const serviceClient = new BlobServiceClient(
       baseURL,
       newPipeline(new SimpleTokenCredential(token), {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       })
     );
 
@@ -294,7 +310,9 @@ describe("Blob OAuth Basic", () => {
     const serviceClient = new BlobServiceClient(
       baseURL,
       newPipeline(new SimpleTokenCredential(token), {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       })
     );
 
@@ -329,7 +347,9 @@ describe("Blob OAuth Basic", () => {
     const serviceClient = new BlobServiceClient(
       baseURL,
       newPipeline(new SimpleTokenCredential(token), {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       })
     );
 
@@ -372,7 +392,9 @@ describe("Blob OAuth Basic", () => {
     const serviceClient = new BlobServiceClient(
       httpBaseURL,
       newPipeline(new SimpleTokenCredential(token), {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       })
     );
 

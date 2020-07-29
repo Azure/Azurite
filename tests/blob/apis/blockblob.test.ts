@@ -31,7 +31,9 @@ describe("BlockBlobAPIs", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     )
   );
@@ -136,12 +138,10 @@ describe("BlockBlobAPIs", () => {
     );
     await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
 
-    const listBlobResponse = await (
-      await containerClient
-        .listBlobsFlat({ includeUncommitedBlobs: true })
-        .byPage()
-        .next()
-    ).value;
+    const listBlobResponse = await (await containerClient
+      .listBlobsFlat({ includeUncommitedBlobs: true })
+      .byPage()
+      .next()).value;
     assert.equal(listBlobResponse.segment.blobItems.length, 1);
     assert.deepStrictEqual(
       listBlobResponse.segment.blobItems[0].properties.contentLength,
@@ -167,12 +167,10 @@ describe("BlockBlobAPIs", () => {
 
     await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
 
-    const listBlobResponse = (
-      await containerClient
-        .listBlobsFlat({ includeUncommitedBlobs: true })
-        .byPage()
-        .next()
-    ).value;
+    const listBlobResponse = (await containerClient
+      .listBlobsFlat({ includeUncommitedBlobs: true })
+      .byPage()
+      .next()).value;
     assert.equal(listBlobResponse.segment.blobItems.length, 1);
     assert.deepStrictEqual(
       listBlobResponse.segment.blobItems[0].properties.contentLength,

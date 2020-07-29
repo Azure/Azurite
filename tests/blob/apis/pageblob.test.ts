@@ -31,7 +31,9 @@ describe("PageBlobAPIs", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     )
   );

@@ -40,7 +40,9 @@ describe("Shared Access Signature (SAS) authentication", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     )
   );
@@ -82,7 +84,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const sasURL = `${serviceClient.url}?${sas}`;
     const serviceClientWithSAS = new BlobServiceClient(
       sasURL,
-      newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
     );
 
     await serviceClientWithSAS.getAccountInfo();
@@ -116,7 +121,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const sasURL = `${serviceClient.url}?${sas}`;
     const serviceClientWithSAS = new BlobServiceClient(
       sasURL,
-      newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
     );
 
     const containerClientWithSAS = serviceClientWithSAS.getContainerClient(
@@ -153,7 +161,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const sasURL = `${serviceClient.url}?${sas}`;
     const serviceClientWithSAS = new BlobServiceClient(
       sasURL,
-      newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
     );
 
     let error;
@@ -187,7 +198,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const sasURL = `${serviceClient.url}?${sas}`;
     const serviceClientWithSAS = new BlobServiceClient(
       sasURL,
-      newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
     );
 
     let error;
@@ -224,7 +238,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const sasURL = `${serviceClient.url}?${sas}`;
     const serviceClientWithSAS = new BlobServiceClient(
       sasURL,
-      newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
     );
 
     let error;
@@ -261,7 +278,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const sasURL = `${serviceClient.url}?${sas}`;
     const serviceClientWithSAS = new BlobServiceClient(
       sasURL,
-      newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
     );
 
     const containerName = getUniqueName("con");
@@ -306,7 +326,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const sasURL = `${serviceClient.url}?${sas}`;
     const serviceClientWithSAS = new BlobServiceClient(
       sasURL,
-      newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
     );
 
     const containerName = getUniqueName("con");
@@ -358,7 +381,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const sasURL = `${serviceClient.url}?${sas}`;
     const serviceClientWithSAS = new BlobServiceClient(
       sasURL,
-      newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
     );
 
     const containerName = getUniqueName("con");

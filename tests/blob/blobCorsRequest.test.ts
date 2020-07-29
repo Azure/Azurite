@@ -31,7 +31,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     )
   );
@@ -59,7 +61,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
@@ -108,7 +112,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
@@ -139,7 +145,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
@@ -177,7 +185,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
@@ -205,7 +215,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
@@ -253,7 +265,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
@@ -281,7 +295,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
@@ -343,7 +359,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
@@ -376,7 +394,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
@@ -398,7 +418,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
@@ -420,7 +442,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
@@ -453,7 +477,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
@@ -491,7 +517,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
@@ -519,7 +547,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
@@ -556,7 +586,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
@@ -593,7 +625,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
@@ -634,7 +668,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
@@ -670,7 +706,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
@@ -728,7 +766,9 @@ describe("Blob Cors requests test", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));

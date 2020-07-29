@@ -33,7 +33,9 @@ describe("BlobAPIs", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     )
   );
@@ -412,14 +414,12 @@ describe("BlobAPIs", () => {
     await blobSnapshotURL.getProperties();
     await blobSnapshotURL.delete();
     await blobClient.delete();
-    const result2 = (
-      await containerClient
-        .listBlobsFlat({
-          includeSnapshots: true
-        })
-        .byPage()
-        .next()
-    ).value;
+    const result2 = (await containerClient
+      .listBlobsFlat({
+        includeSnapshots: true
+      })
+      .byPage()
+      .next()).value;
     // Verify that the snapshot is deleted
     assert.equal(result2.segment.blobItems!.length, 0);
     assert.equal(
@@ -431,12 +431,10 @@ describe("BlobAPIs", () => {
   it("should also list snapshots @loki @sql", async () => {
     const result = await blobClient.createSnapshot();
     assert.ok(result.snapshot);
-    const result2 = (
-      await containerClient
-        .listBlobsFlat({ includeSnapshots: true })
-        .byPage()
-        .next()
-    ).value;
+    const result2 = (await containerClient
+      .listBlobsFlat({ includeSnapshots: true })
+      .byPage()
+      .next()).value;
     assert.strictEqual(result2.segment.blobItems!.length, 2);
   });
 
@@ -667,14 +665,12 @@ describe("BlobAPIs", () => {
     assert.equal(properties.accessTier!.toLowerCase(), "hot");
     assert.equal(true, properties.accessTierInferred);
 
-    let listResult = (
-      await containerClient
-        .listBlobsFlat({
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    let listResult = (await containerClient
+      .listBlobsFlat({
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.equal(
       true,
       (await listResult).segment.blobItems[0].properties.accessTierInferred
@@ -692,14 +688,12 @@ describe("BlobAPIs", () => {
     assert.equal(false, properties.accessTierInferred);
 
     // After setTier, Blob should have accessTierInferred as undefined in list
-    listResult = (
-      await containerClient
-        .listBlobsFlat({
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    listResult = (await containerClient
+      .listBlobsFlat({
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.equal(
       undefined,
       (await listResult).segment.blobItems[0].properties.accessTierInferred

@@ -36,7 +36,9 @@ describe("Authentication", () => {
     const serviceClient = new BlobServiceClient(
       baseURL,
       newPipeline(new AnonymousCredential(), {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       })
     );
 
@@ -66,7 +68,9 @@ describe("Authentication", () => {
       newPipeline(
         new StorageSharedKeyCredential("invalid", EMULATOR_ACCOUNT_KEY),
         {
-          retryOptions: { maxTries: 1 }
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
         }
       )
     );
@@ -97,7 +101,9 @@ describe("Authentication", () => {
       newPipeline(
         new StorageSharedKeyCredential(EMULATOR_ACCOUNT_NAME, "invalidkey"),
         {
-          retryOptions: { maxTries: 1 }
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
         }
       )
     );
@@ -131,7 +137,9 @@ describe("Authentication", () => {
           EMULATOR_ACCOUNT_KEY
         ),
         {
-          retryOptions: { maxTries: 1 }
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
         }
       )
     );

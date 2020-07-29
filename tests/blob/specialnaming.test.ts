@@ -35,7 +35,9 @@ describe("SpecialNaming", () => {
         EMULATOR_ACCOUNT_KEY
       ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     )
   );
@@ -59,14 +61,12 @@ describe("SpecialNaming", () => {
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
     await blockBlobClient.upload("A", 1);
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -75,14 +75,12 @@ describe("SpecialNaming", () => {
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
     await blockBlobClient.upload("A", 1);
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
     assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
@@ -95,14 +93,12 @@ describe("SpecialNaming", () => {
     );
 
     await blockBlobClient.upload("A", 1);
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -112,14 +108,12 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -132,14 +126,12 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -149,14 +141,12 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -169,14 +159,12 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -188,14 +176,12 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -210,14 +196,12 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -229,18 +213,16 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy(
-          "b", // A char doesn't exist in blob name
-          {
-            // NOTICE: Azure Storage Server will replace "\" with "/" in the blob names
-            prefix: blobName.replace(/\\/g, "/")
-          }
-        )
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy(
+        "b", // A char doesn't exist in blob name
+        {
+          // NOTICE: Azure Storage Server will replace "\" with "/" in the blob names
+          prefix: blobName.replace(/\\/g, "/")
+        }
+      )
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -261,18 +243,16 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy(
-          "b", // "b" doesn't exist in blob name
-          {
-            // NOTICE: Azure Storage Server will replace "\" with "/" in the blob names
-            prefix: blobName.replace(/\\/g, "/")
-          }
-        )
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy(
+        "b", // "b" doesn't exist in blob name
+        {
+          // NOTICE: Azure Storage Server will replace "\" with "/" in the blob names
+          prefix: blobName.replace(/\\/g, "/")
+        }
+      )
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -283,14 +263,12 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobNameEncoded
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobNameEncoded
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -300,14 +278,12 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -320,14 +296,12 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -338,14 +312,12 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobNameEncoded
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobNameEncoded
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -355,14 +327,12 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -375,14 +345,12 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -393,14 +361,12 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobNameEncoded
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobNameEncoded
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -410,14 +376,12 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -430,14 +394,12 @@ describe("SpecialNaming", () => {
 
     await blockBlobClient.upload("A", 1);
     await blockBlobClient.getProperties();
-    const response = (
-      await containerClient
-        .listBlobsByHierarchy("$", {
-          prefix: blobName
-        })
-        .byPage()
-        .next()
-    ).value;
+    const response = (await containerClient
+      .listBlobsByHierarchy("$", {
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -453,7 +415,9 @@ describe("SpecialNaming", () => {
               EMULATOR_ACCOUNT_KEY
             ),
             {
-              retryOptions: { maxTries: 1 }
+              retryOptions: { maxTries: 1 },
+              // Make sure socket is closed once the operation is done.
+              keepAliveOptions: { enable: false }
             }
           )
         );
@@ -467,14 +431,12 @@ describe("SpecialNaming", () => {
         );
 
         await blockBlobClient.upload("ABC", 3);
-        const response = (
-          await containerClientProductionStyle
-            .listBlobsByHierarchy("$", {
-              prefix: blobName
-            })
-            .byPage()
-            .next()
-        ).value;
+        const response = (await containerClientProductionStyle
+          .listBlobsByHierarchy("$", {
+            prefix: blobName
+          })
+          .byPage()
+          .next()).value;
         assert.notDeepEqual(response.segment.blobItems.length, 0);
       },
       () => {
