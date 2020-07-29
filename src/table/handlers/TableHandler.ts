@@ -14,7 +14,7 @@ import {
   NO_METADATA_ACCEPT,
   RETURN_CONTENT,
   RETURN_NO_CONTENT,
-  TABLE_API_VERSION,
+  TABLE_API_VERSION
 } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -138,23 +138,27 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   }
 
   public async delete(
-    table: string,
+    tablename: string,
     options: Models.TableDeleteMethodOptionalParams,
     context: Context
   ): Promise<Models.TableDeleteResponse> {
-    // e.g
-    // const tableCtx = new TableStorageContext(context);
-    // const accountName = tableCtx.account;
-    // const tableName = tableCtx.tableName; // Get tableName from context
-    // return {
-    //   statusCode: 204,
-    //   clientRequestId: "clientRequestId",
-    //   requestId: "requestId",
-    //   version: "version"
-    // };
+    const tableCtx = new TableStorageContext(context);
+    const accountName = tableCtx.account;
+    // currently the tableName is not coming through, so we take it from the table context
+    await this.metadataStore.deleteTable(
+      context,
+      tableCtx.tableName!,
+      accountName!
+    );
+    const response: Models.TableDeleteResponse = {
+      clientRequestId: options.requestId,
+      requestId: tableCtx.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      statusCode: 204
+    };
 
-    // TODO
-    throw new NotImplementedError();
+    return response;
   }
 
   public async queryEntities(
@@ -341,7 +345,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const id = `${protocol}://${host}/Tables(${tableName})`;
     const editLink = `Tables(${tableName})`;
 
-    await this.metadataStore.insertTableEntity(context, tableName, entity);
+    await this.metadataStore.insertTableEntity(
+      context,
+      tableName,
+      accountName!,
+      entity
+    );
 
     const response: Models.TableInsertEntityResponse = {
       clientRequestId: options.requestId,

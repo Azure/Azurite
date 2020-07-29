@@ -5,7 +5,12 @@ import { configLogger } from "../../../src/common/Logger";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
 import { TABLE_API_VERSION } from "../../../src/table/utils/constants";
-import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName, overrideRequest } from "../../testutils";
+import {
+  EMULATOR_ACCOUNT_KEY,
+  EMULATOR_ACCOUNT_NAME,
+  getUniqueName,
+  overrideRequest
+} from "../../testutils";
 
 // Set true to enable debug log
 configLogger(false);
@@ -119,5 +124,47 @@ describe("table APIs test", () => {
   it("createTable, prefer=return-content, accept=application/json;odata=nometadata @loki", done => {
     // TODO
     done();
+  });
+
+  it("deleteTable that exists, @loki", done => {
+    /*
+    https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
+    */
+    requestOverride.headers = {};
+
+    const tableToDelete = tableName + "del";
+
+    tableService.createTable(tableToDelete, (error, result, response) => {
+      if (!error) {
+        tableService.deleteTable(tableToDelete, (deleteError, deleteResult) => {
+          if (!deleteError) {
+            // no body expected, we expect 204 no content on successful deletion
+            assert.equal(deleteResult.statusCode, 204);
+          } else {
+            assert.ifError(deleteError);
+          }
+          done();
+        });
+      } else {
+        assert.fail("Test failed to create the table");
+        done();
+      }
+    });
+  });
+
+  it("deleteTable that does not exist, @loki", done => {
+    /*
+    https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
+    */
+    requestOverride.headers = {};
+
+    const tableToDelete = tableName + "causeerror";
+
+    tableService.deleteTable(tableToDelete, (error, result) => {
+      assert.equal(result.statusCode, 404); // no body expected, we expect 404
+      const storageError = error as any;
+      assert.equal(storageError.code, "TableNotFound");
+      done();
+    });
   });
 });
