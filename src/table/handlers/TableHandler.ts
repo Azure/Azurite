@@ -303,7 +303,32 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     //   version: "version"
     // };
     // TODO
-    throw new NotImplementedError();
+
+    const tableCtx = new TableStorageContext(context);
+    const accountName = tableCtx.account;
+    const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
+    const rowKey = tableCtx.rowKey!; // Get rowKey from context
+
+    if (!partitionKey || !rowKey) {
+      throw StorageErrorFactory.getPropertiesNeedValue(context);
+    }
+
+    // currently the props are not coming through as args, so we take them from the table context
+    await this.metadataStore.deleteTableEntity(
+      context,
+      tableCtx.tableName!,
+      accountName!,
+      partitionKey,
+      rowKey
+    );
+
+    return {
+      statusCode: 204,
+      date: tableCtx.startTime,
+      clientRequestId: options.requestId,
+      requestId: tableCtx.contextID,
+      version: TABLE_API_VERSION
+    };
   }
 
   public async insertEntity(
