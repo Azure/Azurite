@@ -97,4 +97,26 @@ export default class StorageErrorFactory {
       context
     );
   }
+
+  public static getEntityNotFound(context: Context): StorageError {
+    return new StorageError(
+      404,
+      "EntityNotFound",
+      "The specified entity does not exist.",
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
+
+  public static getPreconditionFailed(context: Context): StorageError {
+    return new StorageError(
+      412,
+      "UpdateConditionNotSatisfied",
+      "The update condition specified in the request was not satisfied.",
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
 }

@@ -7,6 +7,7 @@
     "arrow-parens": false,
     "variable-name": false,
     "object-literal-sort-keys": false,
+    "object-literal-key-quotes": false,
     "array-type": false
   },
   "rulesDirectory": [],
