@@ -293,14 +293,11 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const accountName = tableCtx.account;
     const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
     const rowKey = tableCtx.rowKey!; // Get rowKey from context
-    let etag: string = "";
-    if (tableCtx.request !== undefined) {
-      etag = tableCtx.request.getHeader("match") as string;
-    }
+
     if (!partitionKey || !rowKey) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
     }
-    if (etag === "" || etag === undefined) {
+    if (ifMatch === "" || ifMatch === undefined) {
       throw StorageErrorFactory.getPreconditionFailed(context);
     }
     // currently the props are not coming through as args, so we take them from the table context
@@ -310,7 +307,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       accountName!,
       partitionKey,
       rowKey,
-      etag!
+      ifMatch
     );
 
     return {

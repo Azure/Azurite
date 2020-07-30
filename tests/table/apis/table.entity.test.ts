@@ -9,8 +9,7 @@ import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
-  overrideRequest,
-  sleep
+  overrideRequest
 } from "../../testutils";
 
 // Set true to enable debug log
@@ -78,12 +77,15 @@ describe("table Entity APIs test", () => {
     });
   });
 
-  it("Should delete an Entity given partition key and row key in the URL, @loki", done => {
+  it("Should delete an Entity using etag wildcard, @loki", done => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
     const entity = {
       PartitionKey: "part1",
       RowKey: "row1",
-      myValue: "somevalue"
+      myValue: "somevalue",
+      ".metadata": {
+        etag: "*" // forcing unconditional etag match to delete
+      }
     };
 
     /* https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1#request-headers
@@ -92,9 +94,6 @@ describe("table Entity APIs test", () => {
     The delete operation will be performed only if the ETag sent by the client matches the value
     maintained by the server, indicating that the entity has not been modified since it was retrieved by the client.
     To force an unconditional delete, set If-Match to the wildcard character (*). */
-    requestOverride.headers = {
-      Match: "*"
-    };
 
     tableService.deleteEntity(tableName, entity, (error, response) => {
       assert.equal(response.statusCode, 204);
@@ -104,10 +103,18 @@ describe("table Entity APIs test", () => {
 
   it("Should not delete an Entity not matching Etag, @loki", done => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
-    const entity = {
+    const entityInsert = {
       PartitionKey: "part1",
       RowKey: "row2",
-      myValue: "shouldnotmatchetag"
+      myValue: "shouldNotMatchetag"
+    };
+    const entityDelete = {
+      PartitionKey: "part1",
+      RowKey: "row2",
+      myValue: "shouldNotMatchetag",
+      ".metadata": {
+        etag: "0x2252C97588D4000"
+      }
     };
     requestOverride.headers = {
       Prefer: "return-content",
@@ -115,41 +122,32 @@ describe("table Entity APIs test", () => {
     };
     tableService.insertEntity(
       tableName,
-      entity,
-      (inserterror, insertresult, insertresponse) => {
-        if (!inserterror) {
-          sleep(10);
-          requestOverride.headers = {
-            Match: "0x2252C97588D4000" // just a random etag
-          };
-          // this delete should fail as we modified the etag, but we get ECONRESET???
+      entityInsert,
+      (insertError, insertResult, insertResponse) => {
+        if (!insertError) {
+          requestOverride.headers = {};
           tableService.deleteEntity(
             tableName,
-            entity,
-            (deleteerror, deleteresponse) => {
-              if (!deleteerror) {
-                assert.equal(deleteresponse.statusCode, 412); // Precondition failed
-                done();
-              } else {
-                assert.ifError(deleteerror);
-                done();
-              }
+            entityDelete,
+            (deleteError, deleteResponse) => {
+              assert.equal(deleteResponse.statusCode, 412); // Precondition failed
+              done();
             }
           );
         } else {
-          assert.ifError(inserterror);
+          assert.ifError(insertError);
           done();
         }
       }
     );
   });
 
-  it("Should not delete an matching Etag, @loki", done => {
+  it("Should delete a matching Etag, @loki", done => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
-    const entity = {
+    const entityInsert = {
       PartitionKey: "part1",
       RowKey: "row3",
-      myValue: "shouldmatchetag"
+      myValue: "shouldMatchEtag"
     };
     requestOverride.headers = {
       Prefer: "return-content",
@@ -157,23 +155,19 @@ describe("table Entity APIs test", () => {
     };
     tableService.insertEntity(
       tableName,
-      entity,
+      entityInsert,
       (error, result, insertresponse) => {
         if (!error) {
-          const etag: string = result[".metadata"].etag;
-          requestOverride.headers = {
-            Match: etag
-          };
-          // this delete should fail as we modify the etag
+          requestOverride.headers = {};
           tableService.deleteEntity(
             tableName,
-            entity,
-            (deleteerror, deleteresponse) => {
-              if (!deleteerror) {
-                assert.equal(deleteresponse.statusCode, 204); // Precondition succeeded
+            result, // SDK defined entity type...
+            (deleteError, deleteResponse) => {
+              if (!deleteError) {
+                assert.equal(deleteResponse.statusCode, 204); // Precondition succeeded
                 done();
               } else {
-                assert.ifError(deleteerror);
+                assert.ifError(deleteError);
                 done();
               }
             }
