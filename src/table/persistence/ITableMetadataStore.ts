@@ -57,9 +57,11 @@ export default interface ITableMetadataStore {
   ): Promise<void>;
   deleteTableEntity(
     context: Context,
-    table: string,
+    tableName: string,
+    accountName: string,
     partitionKey: string,
-    rowKey: string
+    rowKey: string,
+    eatg: string
   ): Promise<void>;
   insertTableEntity(
     context: Context,

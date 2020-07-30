@@ -153,9 +153,7 @@ describe("table APIs test", () => {
   });
 
   it("deleteTable that does not exist, @loki", done => {
-    /*
-    https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
-    */
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
     requestOverride.headers = {};
 
     const tableToDelete = tableName + "causeerror";

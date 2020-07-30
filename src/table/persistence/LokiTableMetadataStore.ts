@@ -163,12 +163,37 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
   public async deleteTableEntity(
     context: Context,
-    table: string,
+    tableName: string,
+    accountName: string,
     partitionKey: string,
-    rowKey: string
+    rowKey: string,
+    etag: string
   ): Promise<void> {
-    // TODO
-    throw new NotImplementedError();
+    const tableColl = this.db.getCollection(
+      this.getUniqueTableCollectionName(accountName, tableName)
+    );
+    if (!tableColl) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
+
+    if (partitionKey !== undefined && rowKey !== undefined) {
+      const doc = tableColl.findOne({
+        PartitionKey: partitionKey,
+        RowKey: rowKey
+      }) as IEntity;
+
+      if (!doc) {
+        throw StorageErrorFactory.getEntityNotFound(context);
+      } else {
+        if (etag !== "*" && doc.eTag !== etag) {
+          throw StorageErrorFactory.getPreconditionFailed(context);
+        }
+      }
+      tableColl.remove(doc);
+      return;
+    }
+
+    throw StorageErrorFactory.getPropertiesNeedValue(context);
   }
 
   public async getTableAccessPolicy(
