@@ -1,9 +1,7 @@
 import {
-  Aborter,
-  QueueURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+  QueueServiceClient,
+  newPipeline,
+  StorageSharedKeyCredential
 } from "@azure/storage-queue";
 import * as assert from "assert";
 
@@ -48,10 +46,13 @@ describe("QueueServiceAPIs", () => {
   );
 
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
-  const serviceURL = new ServiceURL(
+  const serviceClient = new QueueServiceClient(
     baseURL,
-    StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -73,7 +74,7 @@ describe("QueueServiceAPIs", () => {
   });
 
   it("Get Queue service properties @loki", async () => {
-    const result = await serviceURL.getProperties(Aborter.none);
+    const result = await serviceClient.getProperties();
 
     assert.ok(typeof result.requestId);
     assert.ok(result.requestId!.length > 0);
@@ -90,7 +91,7 @@ describe("QueueServiceAPIs", () => {
   });
 
   it("Set CORS with empty AllowedHeaders, ExposedHeaders @loki", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "",
@@ -102,20 +103,20 @@ describe("QueueServiceAPIs", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
-    const result = await serviceURL.getProperties(Aborter.none);
+    const result = await serviceClient.getProperties();
     assert.deepStrictEqual(result.cors![0], newCORS);
   });
 
   it("Set Queue service properties @loki", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
     assert.equal(
       serviceProperties._response.request.headers.get("x-ms-client-request-id"),
       serviceProperties.clientRequestId
     );
 
-    serviceProperties.logging = {
+    serviceProperties.queueAnalyticsLogging = {
       deleteProperty: true,
       read: true,
       retentionPolicy: {
@@ -159,10 +160,7 @@ describe("QueueServiceAPIs", () => {
       serviceProperties.cors.push(newCORS);
     }
 
-    const sResult = await serviceURL.setProperties(
-      Aborter.none,
-      serviceProperties
-    );
+    const sResult = await serviceClient.setProperties(serviceProperties);
     assert.equal(
       sResult._response.request.headers.get("x-ms-client-request-id"),
       sResult.clientRequestId
@@ -170,7 +168,7 @@ describe("QueueServiceAPIs", () => {
 
     await sleep(1 * 1000);
 
-    const result = await serviceURL.getProperties(Aborter.none);
+    const result = await serviceClient.getProperties();
     assert.ok(typeof result.requestId);
     assert.ok(result.requestId!.length > 0);
     assert.ok(typeof result.version);
@@ -179,7 +177,12 @@ describe("QueueServiceAPIs", () => {
   });
 
   it("listQueuesSegment with default parameters @loki", async () => {
-    const result = await serviceURL.listQueuesSegment(Aborter.none);
+    const result = (
+      await serviceClient
+        .listQueues()
+        .byPage()
+        .next()
+    ).value;
     assert.ok(typeof result.requestId);
     assert.ok(result.requestId!.length > 0);
     assert.ok(typeof result.version);
@@ -202,10 +205,10 @@ describe("QueueServiceAPIs", () => {
     const queueNamePrefix = getUniqueName("queue");
     const queueName1 = `${queueNamePrefix}x1`;
     const queueName2 = `${queueNamePrefix}x2`;
-    const queueURL1 = QueueURL.fromServiceURL(serviceURL, queueName1);
-    const queueURL2 = QueueURL.fromServiceURL(serviceURL, queueName2);
-    await queueURL1.create(Aborter.none, { metadata: { key: "val" } });
-    const cResult = await queueURL2.create(Aborter.none, {
+    const queueClient1 = serviceClient.getQueueClient(queueName1);
+    const queueClient2 = serviceClient.getQueueClient(queueName2);
+    await queueClient1.create({ metadata: { key: "val" } });
+    const cResult = await queueClient2.create({
       metadata: { key: "val" }
     });
     assert.equal(
@@ -213,38 +216,41 @@ describe("QueueServiceAPIs", () => {
       cResult.clientRequestId
     );
 
-    const result1 = await serviceURL.listQueuesSegment(
-      Aborter.none,
-      undefined,
-      {
-        include: "metadata",
-        maxresults: 1,
-        prefix: queueNamePrefix
-      }
-    );
+    const result1 = (
+      await serviceClient
+        .listQueues({
+          includeMetadata: true,
+          prefix: queueNamePrefix
+        })
+        .byPage({ maxPageSize: 1 })
+        .next()
+    ).value;
 
-    assert.ok(result1.nextMarker);
+    assert.ok(result1.continuationToken);
     assert.equal(result1.queueItems!.length, 1);
     assert.ok(result1.queueItems![0].name.startsWith(queueNamePrefix));
     assert.deepEqual(result1.queueItems![0].metadata!.key, "val");
 
-    const result2 = await serviceURL.listQueuesSegment(
-      Aborter.none,
-      result1.nextMarker,
-      {
-        include: "metadata",
-        maxresults: 1,
-        prefix: queueNamePrefix
-      }
-    );
+    const result2 = (
+      await serviceClient
+        .listQueues({
+          includeMetadata: true,
+          prefix: queueNamePrefix
+        })
+        .byPage({
+          continuationToken: result1.continuationToken,
+          maxPageSize: 1
+        })
+        .next()
+    ).value;
 
-    assert.ok(!result2.nextMarker);
+    assert.ok(!result2.continuationToken);
     assert.equal(result2.queueItems!.length, 1);
     assert.ok(result2.queueItems![0].name.startsWith(queueNamePrefix));
     assert.deepEqual(result2.queueItems![0].metadata!.key, "val");
 
-    await queueURL1.delete(Aborter.none);
-    const dResult = await queueURL2.delete(Aborter.none);
+    await queueClient1.delete();
+    const dResult = await queueClient2.delete();
     assert.equal(
       dResult._response.request.headers.get("x-ms-client-request-id"),
       dResult.clientRequestId

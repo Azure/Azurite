@@ -1,13 +1,8 @@
 import { isNode } from "@azure/ms-rest-js";
 import {
-  Aborter,
-  BlobURL,
-  BlockBlobURL,
-  ContainerURL,
-  PageBlobURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+  StorageSharedKeyCredential,
+  newPipeline,
+  BlobServiceClient
 } from "@azure/storage-blob";
 import assert = require("assert");
 
@@ -30,21 +25,27 @@ describe("BlobAPIs", () => {
   const server = factory.createServer();
 
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
-  const serviceURL = new ServiceURL(
+  const serviceClient = new BlobServiceClient(
     baseURL,
-    StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     )
   );
 
   let containerName: string = getUniqueName("container");
-  let containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+  let containerClient = serviceClient.getContainerClient(containerName);
   let blobName: string = getUniqueName("blob");
-  let blobURL = BlobURL.fromContainerURL(containerURL, blobName);
-  let blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
+  let blobClient = containerClient.getBlobClient(blobName);
+  let blockBlobClient = blobClient.getBlockBlobClient();
+  let blobLeaseClient = blobClient.getBlobLeaseClient();
   const content = "Hello World";
 
   before(async () => {
@@ -58,20 +59,21 @@ describe("BlobAPIs", () => {
 
   beforeEach(async () => {
     containerName = getUniqueName("container");
-    containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
-    await containerURL.create(Aborter.none);
+    containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
     blobName = getUniqueName("blob");
-    blobURL = BlobURL.fromContainerURL(containerURL, blobName);
-    blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
-    await blockBlobURL.upload(Aborter.none, content, content.length);
+    blobClient = containerClient.getBlobClient(blobName);
+    blockBlobClient = blobClient.getBlockBlobClient();
+    blobLeaseClient = blobClient.getBlobLeaseClient();
+    await blockBlobClient.upload(content, content.length);
   });
 
   afterEach(async () => {
-    await containerURL.delete(Aborter.none);
+    await containerClient.delete();
   });
 
   it("download with with default parameters @loki @sql", async () => {
-    const result = await blobURL.download(Aborter.none, 0);
+    const result = await blobClient.download(0);
     assert.deepStrictEqual(await bodyToString(result, content.length), content);
     assert.equal(result.contentRange, undefined);
     assert.equal(
@@ -81,15 +83,13 @@ describe("BlobAPIs", () => {
   });
 
   it("download should work with conditional headers @loki @sql", async () => {
-    const properties = await blobURL.getProperties(Aborter.none);
-    const result = await blobURL.download(Aborter.none, 0, undefined, {
-      blobAccessConditions: {
-        modifiedAccessConditions: {
-          ifMatch: properties.eTag,
-          ifNoneMatch: "invalidetag",
-          ifModifiedSince: new Date("2018/01/01"),
-          ifUnmodifiedSince: new Date("2188/01/01")
-        }
+    const properties = await blobClient.getProperties();
+    const result = await blobClient.download(0, undefined, {
+      conditions: {
+        ifMatch: properties.etag,
+        ifNoneMatch: "invalidetag",
+        ifModifiedSince: new Date("2018/01/01"),
+        ifUnmodifiedSince: new Date("2188/01/01")
       }
     });
     assert.deepStrictEqual(await bodyToString(result, content.length), content);
@@ -101,14 +101,12 @@ describe("BlobAPIs", () => {
   });
 
   it("download should work with ifMatch value * @loki @sql", async () => {
-    const result = await blobURL.download(Aborter.none, 0, undefined, {
-      blobAccessConditions: {
-        modifiedAccessConditions: {
-          ifMatch: "*,abc",
-          ifNoneMatch: "invalidetag",
-          ifModifiedSince: new Date("2018/01/01"),
-          ifUnmodifiedSince: new Date("2188/01/01")
-        }
+    const result = await blobClient.download(0, undefined, {
+      conditions: {
+        ifMatch: "*,abc",
+        ifNoneMatch: "invalidetag",
+        ifModifiedSince: new Date("2018/01/01"),
+        ifUnmodifiedSince: new Date("2188/01/01")
       }
     });
     assert.deepStrictEqual(await bodyToString(result, content.length), content);
@@ -120,13 +118,11 @@ describe("BlobAPIs", () => {
   });
 
   it("download should not work with invalid conditional header ifMatch @loki @sql", async () => {
-    const properties = await blobURL.getProperties(Aborter.none);
+    const properties = await blobClient.getProperties();
     try {
-      await blobURL.download(Aborter.none, 0, undefined, {
-        blobAccessConditions: {
-          modifiedAccessConditions: {
-            ifMatch: properties.eTag + "invalid"
-          }
+      await blobClient.download(0, undefined, {
+        conditions: {
+          ifMatch: properties.etag + "invalid"
         }
       });
     } catch (error) {
@@ -137,13 +133,11 @@ describe("BlobAPIs", () => {
   });
 
   it("download should not work with conditional header ifNoneMatch @loki @sql", async () => {
-    const properties = await blobURL.getProperties(Aborter.none);
+    const properties = await blobClient.getProperties();
     try {
-      await blobURL.download(Aborter.none, 0, undefined, {
-        blobAccessConditions: {
-          modifiedAccessConditions: {
-            ifNoneMatch: properties.eTag
-          }
+      await blobClient.download(0, undefined, {
+        conditions: {
+          ifNoneMatch: properties.etag
         }
       });
     } catch (error) {
@@ -155,11 +149,9 @@ describe("BlobAPIs", () => {
 
   it("download should not work with conditional header ifNoneMatch * @loki @sql", async () => {
     try {
-      await blobURL.download(Aborter.none, 0, undefined, {
-        blobAccessConditions: {
-          modifiedAccessConditions: {
-            ifNoneMatch: "*"
-          }
+      await blobClient.download(0, undefined, {
+        conditions: {
+          ifNoneMatch: "*"
         }
       });
     } catch (error) {
@@ -171,11 +163,9 @@ describe("BlobAPIs", () => {
 
   it("download should not work with conditional header ifModifiedSince @loki @sql", async () => {
     try {
-      await blobURL.download(Aborter.none, 0, undefined, {
-        blobAccessConditions: {
-          modifiedAccessConditions: {
-            ifModifiedSince: new Date("2120/01/01")
-          }
+      await blobClient.download(0, undefined, {
+        conditions: {
+          ifModifiedSince: new Date("2120/01/01")
         }
       });
     } catch (error) {
@@ -187,11 +177,9 @@ describe("BlobAPIs", () => {
 
   it("download should not work with conditional header ifUnmodifiedSince @loki @sql", async () => {
     try {
-      await blobURL.download(Aborter.none, 0, undefined, {
-        blobAccessConditions: {
-          modifiedAccessConditions: {
-            ifUnmodifiedSince: new Date("2018/01/01")
-          }
+      await blobClient.download(0, undefined, {
+        conditions: {
+          ifUnmodifiedSince: new Date("2018/01/01")
         }
       });
     } catch (error) {
@@ -202,7 +190,7 @@ describe("BlobAPIs", () => {
   });
 
   it("download all parameters set @loki @sql", async () => {
-    const result = await blobURL.download(Aborter.none, 0, 1, {
+    const result = await blobClient.download(0, 1, {
       rangeGetContentMD5: true
     });
     assert.deepStrictEqual(await bodyToString(result, 1), content[0]);
@@ -214,7 +202,7 @@ describe("BlobAPIs", () => {
   });
 
   it("download entire with range @loki @sql", async () => {
-    const result = await blobURL.download(Aborter.none, 0, content.length);
+    const result = await blobClient.download(0, content.length);
     assert.deepStrictEqual(await bodyToString(result, content.length), content);
     assert.equal(
       result.contentRange,
@@ -227,22 +215,22 @@ describe("BlobAPIs", () => {
   });
 
   it("get properties response should not set content-type @loki @sql", async () => {
-    const blobURL404 = BlobURL.fromContainerURL(containerURL, "UN_EXIST_BLOB_");
+    const blobURL404 = containerClient.getBlobClient("UN_EXIST_BLOB_");
     try {
-      await blobURL404.getProperties(Aborter.none);
+      await blobURL404.getProperties();
     } catch (err) {
       assert.ok(!err.response.headers.get("content-type"));
     }
 
     try {
-      await blobURL404.download(Aborter.none, 0, 0);
+      await blobURL404.download(0, 0);
     } catch (err) {
       assert.notEqual(err.response.headers.get("content-type"), undefined);
     }
   });
 
   it("delete @loki @sql", async () => {
-    const result = await blobURL.delete(Aborter.none);
+    const result = await blobClient.delete();
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
@@ -250,13 +238,11 @@ describe("BlobAPIs", () => {
   });
 
   it("delete should work for valid ifMatch @loki @sql", async () => {
-    const properties = await blobURL.getProperties(Aborter.none);
+    const properties = await blobClient.getProperties();
 
-    const result = await blobURL.delete(Aborter.none, {
-      blobAccessConditions: {
-        modifiedAccessConditions: {
-          ifMatch: properties.eTag
-        }
+    const result = await blobClient.delete({
+      conditions: {
+        ifMatch: properties.etag
       }
     });
     assert.equal(
@@ -266,11 +252,9 @@ describe("BlobAPIs", () => {
   });
 
   it("delete should work for * ifMatch @loki @sql", async () => {
-    const result = await blobURL.delete(Aborter.none, {
-      blobAccessConditions: {
-        modifiedAccessConditions: {
-          ifMatch: "*"
-        }
+    const result = await blobClient.delete({
+      conditions: {
+        ifMatch: "*"
       }
     });
     assert.equal(
@@ -281,11 +265,9 @@ describe("BlobAPIs", () => {
 
   it("delete should not work for invalid ifMatch @loki @sql", async () => {
     try {
-      await blobURL.delete(Aborter.none, {
-        blobAccessConditions: {
-          modifiedAccessConditions: {
-            ifMatch: "invalid"
-          }
+      await blobClient.delete({
+        conditions: {
+          ifMatch: "invalid"
         }
       });
     } catch (error) {
@@ -296,11 +278,9 @@ describe("BlobAPIs", () => {
   });
 
   it("delete should work for valid ifNoneMatch @loki @sql", async () => {
-    const result = await blobURL.delete(Aborter.none, {
-      blobAccessConditions: {
-        modifiedAccessConditions: {
-          ifNoneMatch: "unmatchetag"
-        }
+    const result = await blobClient.delete({
+      conditions: {
+        ifNoneMatch: "unmatchetag"
       }
     });
     assert.equal(
@@ -310,14 +290,12 @@ describe("BlobAPIs", () => {
   });
 
   it("delete should not work for invalid ifNoneMatch @loki @sql", async () => {
-    const properties = await blobURL.getProperties(Aborter.none);
+    const properties = await blobClient.getProperties();
 
     try {
-      await blobURL.delete(Aborter.none, {
-        blobAccessConditions: {
-          modifiedAccessConditions: {
-            ifNoneMatch: properties.eTag
-          }
+      await blobClient.delete({
+        conditions: {
+          ifNoneMatch: properties.etag
         }
       });
     } catch (error) {
@@ -328,32 +306,26 @@ describe("BlobAPIs", () => {
   });
 
   it("delete should work for ifNoneMatch * @loki @sql", async () => {
-    await blobURL.delete(Aborter.none, {
-      blobAccessConditions: {
-        modifiedAccessConditions: {
-          ifNoneMatch: "*"
-        }
+    await blobClient.delete({
+      conditions: {
+        ifNoneMatch: "*"
       }
     });
   });
 
   it("delete should work for valid ifModifiedSince * @loki @sql", async () => {
-    await blobURL.delete(Aborter.none, {
-      blobAccessConditions: {
-        modifiedAccessConditions: {
-          ifModifiedSince: new Date("2018/01/01")
-        }
+    await blobClient.delete({
+      conditions: {
+        ifModifiedSince: new Date("2018/01/01")
       }
     });
   });
 
   it("delete should not work for invalid ifModifiedSince @loki @sql", async () => {
     try {
-      await blobURL.delete(Aborter.none, {
-        blobAccessConditions: {
-          modifiedAccessConditions: {
-            ifModifiedSince: new Date("2118/01/01")
-          }
+      await blobClient.delete({
+        conditions: {
+          ifModifiedSince: new Date("2118/01/01")
         }
       });
     } catch (error) {
@@ -364,22 +336,18 @@ describe("BlobAPIs", () => {
   });
 
   it("delete should work for valid ifUnmodifiedSince * @loki @sql", async () => {
-    await blobURL.delete(Aborter.none, {
-      blobAccessConditions: {
-        modifiedAccessConditions: {
-          ifUnmodifiedSince: new Date("2118/01/01")
-        }
+    await blobClient.delete({
+      conditions: {
+        ifUnmodifiedSince: new Date("2118/01/01")
       }
     });
   });
 
   it("delete should not work for invalid ifUnmodifiedSince @loki @sql", async () => {
     try {
-      await blobURL.delete(Aborter.none, {
-        blobAccessConditions: {
-          modifiedAccessConditions: {
-            ifUnmodifiedSince: new Date("2018/01/01")
-          }
+      await blobClient.delete({
+        conditions: {
+          ifUnmodifiedSince: new Date("2018/01/01")
         }
       });
     } catch (error) {
@@ -390,7 +358,7 @@ describe("BlobAPIs", () => {
   });
 
   it("should create a snapshot from a blob @loki @sql", async () => {
-    const result = await blobURL.createSnapshot(Aborter.none);
+    const result = await blobClient.createSnapshot();
     assert.ok(result.snapshot);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
@@ -403,31 +371,31 @@ describe("BlobAPIs", () => {
       meta1: "val1",
       meta3: "val3"
     };
-    const result = await blobURL.createSnapshot(Aborter.none, { metadata });
+    const result = await blobClient.createSnapshot({ metadata });
     assert.ok(result.snapshot);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
-    const result2 = await blobURL
+    const result2 = await blobClient
       .withSnapshot(result.snapshot!)
-      .getProperties(Aborter.none);
+      .getProperties();
     assert.deepStrictEqual(result2.metadata, metadata);
   });
 
   it("should not delete base blob without include snapshot header @loki @sql", async () => {
-    const result = await blobURL.createSnapshot(Aborter.none);
+    const result = await blobClient.createSnapshot();
     assert.ok(result.snapshot);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
-    const blobSnapshotURL = blobURL.withSnapshot(result.snapshot!);
-    await blobSnapshotURL.getProperties(Aborter.none);
+    const blobSnapshotURL = blobClient.withSnapshot(result.snapshot!);
+    await blobSnapshotURL.getProperties();
 
     let err;
     try {
-      await blobURL.delete(Aborter.none, {});
+      await blobClient.delete({});
     } catch (error) {
       err = error;
     }
@@ -436,23 +404,22 @@ describe("BlobAPIs", () => {
   });
 
   it("should delete snapshot @loki @sql", async () => {
-    const result = await blobURL.createSnapshot(Aborter.none);
+    const result = await blobClient.createSnapshot();
     assert.ok(result.snapshot);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
-    const blobSnapshotURL = blobURL.withSnapshot(result.snapshot!);
-    await blobSnapshotURL.getProperties(Aborter.none);
-    await blobSnapshotURL.delete(Aborter.none);
-    await blobURL.delete(Aborter.none);
-    const result2 = await containerURL.listBlobFlatSegment(
-      Aborter.none,
-      undefined,
-      {
-        include: ["snapshots"]
-      }
-    );
+    const blobSnapshotURL = blobClient.withSnapshot(result.snapshot!);
+    await blobSnapshotURL.getProperties();
+    await blobSnapshotURL.delete();
+    await blobClient.delete();
+    const result2 = (await containerClient
+      .listBlobsFlat({
+        includeSnapshots: true
+      })
+      .byPage()
+      .next()).value;
     // Verify that the snapshot is deleted
     assert.equal(result2.segment.blobItems!.length, 0);
     assert.equal(
@@ -462,15 +429,12 @@ describe("BlobAPIs", () => {
   });
 
   it("should also list snapshots @loki @sql", async () => {
-    const result = await blobURL.createSnapshot(Aborter.none);
+    const result = await blobClient.createSnapshot();
     assert.ok(result.snapshot);
-    const result2 = await containerURL.listBlobFlatSegment(
-      Aborter.none,
-      undefined,
-      {
-        include: ["snapshots"]
-      }
-    );
+    const result2 = (await containerClient
+      .listBlobsFlat({ includeSnapshots: true })
+      .byPage()
+      .next()).value;
     assert.strictEqual(result2.segment.blobItems!.length, 2);
   });
 
@@ -479,12 +443,12 @@ describe("BlobAPIs", () => {
       a: "a",
       b: "b"
     };
-    const result_setmeta = await blobURL.setMetadata(Aborter.none, metadata);
+    const result_setmeta = await blobClient.setMetadata(metadata);
     assert.equal(
       result_setmeta._response.request.headers.get("x-ms-client-request-id"),
       result_setmeta.clientRequestId
     );
-    const result = await blobURL.getProperties(Aborter.none);
+    const result = await blobClient.getProperties();
     assert.deepStrictEqual(result.metadata, metadata);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
@@ -495,17 +459,14 @@ describe("BlobAPIs", () => {
   it("acquireLease_available_proposedLeaseId_fixed @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 30;
-    const result_acquire = await blobURL.acquireLease(
-      Aborter.none,
-      guid,
-      duration
-    );
+    blobLeaseClient = await blobClient.getBlobLeaseClient(guid);
+    const result_acquire = await blobLeaseClient.acquireLease(duration);
     assert.equal(
       result_acquire._response.request.headers.get("x-ms-client-request-id"),
-      result_acquire.clientRequestId
+      result_acquire._response.request.requestId
     );
 
-    const result = await blobURL.getProperties(Aborter.none);
+    const result = await blobClient.getProperties();
     assert.equal(result.leaseDuration, "fixed");
     assert.equal(result.leaseState, "leased");
     assert.equal(result.leaseStatus, "locked");
@@ -514,38 +475,39 @@ describe("BlobAPIs", () => {
       result.clientRequestId
     );
 
-    const result_release = await blobURL.releaseLease(Aborter.none, guid);
+    const result_release = await blobLeaseClient.releaseLease();
     assert.equal(
       result_release._response.request.headers.get("x-ms-client-request-id"),
-      result_release.clientRequestId
+      result_release._response.request.requestId
     );
   });
 
   it("acquireLease_available_NoproposedLeaseId_infinite @loki @sql", async () => {
-    const leaseResult = await blobURL.acquireLease(Aborter.none, "", -1);
+    const leaseResult = await blobLeaseClient.acquireLease(-1);
     const leaseId = leaseResult.leaseId;
     assert.ok(leaseId);
 
-    const result = await blobURL.getProperties(Aborter.none);
+    const result = await blobClient.getProperties();
     assert.equal(result.leaseDuration, "infinite");
     assert.equal(result.leaseState, "leased");
     assert.equal(result.leaseStatus, "locked");
 
-    await blobURL.releaseLease(Aborter.none, leaseId!);
+    await blobLeaseClient.releaseLease();
   });
 
   it("releaseLease @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = -1;
-    await blobURL.acquireLease(Aborter.none, guid, duration);
+    blobLeaseClient = await blobClient.getBlobLeaseClient(guid);
+    await blobLeaseClient.acquireLease(duration);
 
-    let result = await blobURL.getProperties(Aborter.none);
+    let result = await blobClient.getProperties();
     assert.equal(result.leaseDuration, "infinite");
     assert.equal(result.leaseState, "leased");
     assert.equal(result.leaseStatus, "locked");
 
-    await blobURL.releaseLease(Aborter.none, guid);
-    result = await blobURL.getProperties(Aborter.none);
+    await blobLeaseClient.releaseLease();
+    result = await blobClient.getProperties();
     assert.equal(result.leaseDuration, undefined);
     assert.equal(result.leaseState, "available");
     assert.equal(result.leaseStatus, "unlocked");
@@ -554,63 +516,59 @@ describe("BlobAPIs", () => {
   it("renewLease @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 15;
-    await blobURL.acquireLease(Aborter.none, guid, duration);
+    blobLeaseClient = await blobClient.getBlobLeaseClient(guid);
+    await blobLeaseClient.acquireLease(duration);
 
-    const result = await blobURL.getProperties(Aborter.none);
+    const result = await blobClient.getProperties();
     assert.equal(result.leaseDuration, "fixed");
     assert.equal(result.leaseState, "leased");
     assert.equal(result.leaseStatus, "locked");
 
     await sleep(16 * 1000);
-    const result2 = await blobURL.getProperties(Aborter.none);
+    const result2 = await blobClient.getProperties();
     assert.ok(!result2.leaseDuration);
     assert.equal(result2.leaseState, "expired");
     assert.equal(result2.leaseStatus, "unlocked");
 
-    const result_renew = await blobURL.renewLease(Aborter.none, guid);
-    assert.equal(
-      result_renew._response.request.headers.get("x-ms-client-request-id"),
-      result_renew.clientRequestId
-    );
-    const result3 = await blobURL.getProperties(Aborter.none);
+    await blobLeaseClient.renewLease();
+
+    const result3 = await blobClient.getProperties();
     assert.equal(result3.leaseDuration, "fixed");
     assert.equal(result3.leaseState, "leased");
     assert.equal(result3.leaseStatus, "locked");
 
-    await blobURL.releaseLease(Aborter.none, guid);
+    await blobLeaseClient.releaseLease();
   });
 
   it("changeLease @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 15;
-    await blobURL.acquireLease(Aborter.none, guid, duration);
+    blobLeaseClient = blobClient.getBlobLeaseClient(guid);
+    await blobLeaseClient.acquireLease(duration);
 
-    const result = await blobURL.getProperties(Aborter.none);
+    const result = await blobClient.getProperties();
     assert.equal(result.leaseDuration, "fixed");
     assert.equal(result.leaseState, "leased");
     assert.equal(result.leaseStatus, "locked");
 
     const newGuid = "3c7e72ebb4304526bc53d8ecef03798f";
-    const result_change = await blobURL.changeLease(
-      Aborter.none,
-      guid,
-      newGuid
-    );
+    const result_change = await blobLeaseClient.changeLease(newGuid);
     assert.equal(
       result_change._response.request.headers.get("x-ms-client-request-id"),
-      result_change.clientRequestId
+      result_change._response.request.requestId
     );
 
-    await blobURL.getProperties(Aborter.none);
-    await blobURL.releaseLease(Aborter.none, newGuid);
+    await blobClient.getProperties();
+    await blobLeaseClient.releaseLease();
   });
 
   it("breakLease @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 15;
-    await blobURL.acquireLease(Aborter.none, guid, duration);
+    blobLeaseClient = blobClient.getBlobLeaseClient(guid);
+    await blobLeaseClient.acquireLease(duration);
 
-    const result = await blobURL.getProperties(Aborter.none);
+    const result = await blobClient.getProperties();
     assert.equal(result.leaseDuration, "fixed");
     assert.equal(result.leaseState, "leased");
     assert.equal(result.leaseStatus, "locked");
@@ -618,16 +576,16 @@ describe("BlobAPIs", () => {
     const breakDuration = 3;
     let breaklefttime = breakDuration;
     while (breaklefttime > 0) {
-      const breakResult = await blobURL.breakLease(Aborter.none, breakDuration);
+      const breakResult = await blobLeaseClient.breakLease(breakDuration);
       assert.equal(
         breakResult._response.request.headers.get("x-ms-client-request-id"),
-        breakResult.clientRequestId
+        breakResult._response.request.requestId
       );
 
       assert.equal(breakResult.leaseTime! <= breaklefttime, true);
       breaklefttime = breakResult.leaseTime!;
 
-      const result2 = await blobURL.getProperties(Aborter.none);
+      const result2 = await blobClient.getProperties();
       assert.ok(!result2.leaseDuration);
       assert.equal(result2.leaseState, "breaking");
       assert.equal(result2.leaseStatus, "locked");
@@ -635,13 +593,13 @@ describe("BlobAPIs", () => {
       await sleep(500);
     }
 
-    const result3 = await blobURL.getProperties(Aborter.none);
+    const result3 = await blobClient.getProperties();
     assert.ok(!result3.leaseDuration);
     assert.equal(result3.leaseState, "broken");
     assert.equal(result3.leaseStatus, "unlocked");
 
-    await blobURL.releaseLease(Aborter.none, guid);
-    const result4 = await blobURL.getProperties(Aborter.none);
+    await blobLeaseClient.releaseLease();
+    const result4 = await blobClient.getProperties();
     assert.equal(result4.leaseDuration, undefined);
     assert.equal(result4.leaseState, "available");
     assert.equal(result4.leaseStatus, "unlocked");
@@ -652,18 +610,18 @@ describe("BlobAPIs", () => {
       a: "a",
       b: "b"
     };
-    const setResult = await blobURL.setMetadata(Aborter.none, metadata);
+    const setResult = await blobClient.setMetadata(metadata);
     assert.equal(
       setResult._response.request.headers.get("x-ms-client-request-id"),
       setResult.clientRequestId
     );
     assert.notEqual(setResult.date, undefined);
-    assert.notEqual(setResult.eTag, undefined);
+    assert.notEqual(setResult.etag, undefined);
     assert.notEqual(setResult.isServerEncrypted, undefined);
     assert.notEqual(setResult.lastModified, undefined);
     assert.notEqual(setResult.requestId, undefined);
     assert.notEqual(setResult.version, undefined);
-    const result = await blobURL.getProperties(Aborter.none);
+    const result = await blobClient.getProperties();
     assert.deepStrictEqual(result.metadata, metadata);
     assert.deepStrictEqual(result.accessTier, "Hot");
     assert.deepStrictEqual(result.acceptRanges, "bytes");
@@ -688,12 +646,12 @@ describe("BlobAPIs", () => {
       blobContentLanguage: contentLanguage,
       blobContentEncoding: contentEncoding
     };
-    const result_set = await blobURL.setHTTPHeaders(Aborter.none, headers);
+    const result_set = await blobClient.setHTTPHeaders(headers);
     assert.equal(
       result_set._response.request.headers.get("x-ms-client-request-id"),
       result_set.clientRequestId
     );
-    const result = await blobURL.getProperties(Aborter.none);
+    const result = await blobClient.getProperties();
     assert.deepStrictEqual(result.cacheControl, cacheControl);
     assert.deepStrictEqual(result.contentType, contentType);
     assert.deepEqual(result.contentMD5, md5);
@@ -703,33 +661,39 @@ describe("BlobAPIs", () => {
 
   it("setTier set default to cool @loki @sql", async () => {
     // Created Blob should have accessTierInferred as true in Get/list
-    let properties = await blockBlobURL.getProperties(Aborter.none);
+    let properties = await blockBlobClient.getProperties();
     assert.equal(properties.accessTier!.toLowerCase(), "hot");
     assert.equal(true, properties.accessTierInferred);
 
-    let listResult = containerURL.listBlobFlatSegment(Aborter.none, undefined, {
-      prefix: blobName
-    });
+    let listResult = (await containerClient
+      .listBlobsFlat({
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.equal(
       true,
       (await listResult).segment.blobItems[0].properties.accessTierInferred
     );
 
-    const result = await blockBlobURL.setTier(Aborter.none, "Cool");
+    const result = await blockBlobClient.setAccessTier("Cool");
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
 
     // After setTier, Blob should have accessTierInferred as false in Get
-    properties = await blockBlobURL.getProperties(Aborter.none);
+    properties = await blockBlobClient.getProperties();
     assert.equal(properties.accessTier!.toLowerCase(), "cool");
     assert.equal(false, properties.accessTierInferred);
 
     // After setTier, Blob should have accessTierInferred as undefined in list
-    listResult = containerURL.listBlobFlatSegment(Aborter.none, undefined, {
-      prefix: blobName
-    });
+    listResult = (await containerClient
+      .listBlobsFlat({
+        prefix: blobName
+      })
+      .byPage()
+      .next()).value;
     assert.equal(
       undefined,
       (await listResult).segment.blobItems[0].properties.accessTierInferred
@@ -737,12 +701,12 @@ describe("BlobAPIs", () => {
   });
 
   it("setTier set archive to hot @loki @sql", async () => {
-    await blockBlobURL.setTier(Aborter.none, "Archive");
-    let properties = await blockBlobURL.getProperties(Aborter.none);
+    await blockBlobClient.setAccessTier("Archive");
+    let properties = await blockBlobClient.getProperties();
     assert.equal(properties.accessTier!.toLowerCase(), "archive");
 
-    await blockBlobURL.setTier(Aborter.none, "Hot");
-    properties = await blockBlobURL.getProperties(Aborter.none);
+    await blockBlobClient.setAccessTier("Hot");
+    properties = await blockBlobClient.getProperties();
     if (properties.archiveStatus) {
       assert.equal(
         properties.archiveStatus.toLowerCase(),
@@ -752,8 +716,8 @@ describe("BlobAPIs", () => {
   });
 
   it("setHTTPHeaders with default parameters @loki @sql", async () => {
-    await blobURL.setHTTPHeaders(Aborter.none, {});
-    const result = await blobURL.getProperties(Aborter.none);
+    await blobClient.setHTTPHeaders({});
+    const result = await blobClient.getProperties();
 
     assert.deepStrictEqual(result.blobType, "BlockBlob");
     assert.ok(result.lastModified);
@@ -777,8 +741,8 @@ describe("BlobAPIs", () => {
         : new Uint8Array([1, 2, 3, 4]),
       blobContentType: "blobContentType"
     };
-    await blobURL.setHTTPHeaders(Aborter.none, headers);
-    const result = await blobURL.getProperties(Aborter.none);
+    await blobClient.setHTTPHeaders(headers);
+    const result = await blobClient.getProperties();
     assert.ok(result.date);
     assert.deepStrictEqual(result.blobType, "BlockBlob");
     assert.ok(result.lastModified);
@@ -798,11 +762,8 @@ describe("BlobAPIs", () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
-    const sourceBlobURL = BlockBlobURL.fromContainerURL(
-      containerURL,
-      sourceBlob
-    );
-    const destBlobURL = BlockBlobURL.fromContainerURL(containerURL, destBlob);
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
 
     const metadata = { key: "value" };
     const blobHTTPHeaders = {
@@ -813,7 +774,7 @@ describe("BlobAPIs", () => {
       blobContentType: "blobContentType"
     };
 
-    const result_upload = await sourceBlobURL.upload(Aborter.none, "hello", 5, {
+    const result_upload = await sourceBlobClient.upload("hello", 5, {
       metadata,
       blobHTTPHeaders
     });
@@ -822,16 +783,17 @@ describe("BlobAPIs", () => {
       result_upload.clientRequestId
     );
 
-    const result_startcopy = await destBlobURL.startCopyFromURL(
-      Aborter.none,
-      sourceBlobURL.url
+    const result_startcopy = await destBlobClient.beginCopyFromURL(
+      sourceBlobClient.url
     );
     assert.equal(
-      result_startcopy._response.request.headers.get("x-ms-client-request-id"),
-      result_startcopy.clientRequestId
+      result_startcopy
+        .getResult()!
+        ._response.request.headers.get("x-ms-client-request-id"),
+      result_startcopy.getResult()!._response.request.requestId
     );
 
-    const result = await destBlobURL.getProperties(Aborter.none);
+    const result = await destBlobClient.getProperties();
     assert.ok(result.date);
     assert.deepStrictEqual(result.blobType, "BlockBlob");
     assert.ok(result.lastModified);
@@ -859,23 +821,20 @@ describe("BlobAPIs", () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
-    const sourceBlobURL = BlockBlobURL.fromContainerURL(
-      containerURL,
-      sourceBlob
-    );
-    const destBlobURL = BlockBlobURL.fromContainerURL(containerURL, destBlob);
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
 
     const metadata = { key: "value" };
     const metadata2 = { key: "value2" };
-    await sourceBlobURL.upload(Aborter.none, "hello", 5, {
+    await sourceBlobClient.upload("hello", 5, {
       metadata
     });
 
-    await destBlobURL.startCopyFromURL(Aborter.none, sourceBlobURL.url, {
+    await destBlobClient.beginCopyFromURL(sourceBlobClient.url, {
       metadata: metadata2
     });
 
-    const result = await destBlobURL.getProperties(Aborter.none);
+    const result = await destBlobClient.getProperties();
     assert.ok(result.date);
     assert.deepStrictEqual(result.blobType, "BlockBlob");
     assert.ok(result.lastModified);
@@ -886,29 +845,27 @@ describe("BlobAPIs", () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
-    const sourceBlobURL = BlockBlobURL.fromContainerURL(
-      containerURL,
-      sourceBlob
-    );
-    const destBlobURL = BlockBlobURL.fromContainerURL(containerURL, destBlob);
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
 
-    await sourceBlobURL.upload(Aborter.none, "hello", 5);
-    await destBlobURL.upload(Aborter.none, "hello", 5);
+    await sourceBlobClient.upload("hello", 5);
+    await destBlobClient.upload("hello", 5);
 
-    const leaseResult = await destBlobURL.acquireLease(Aborter.none, "", -1);
+    let destLeaseClient = destBlobClient.getBlobLeaseClient();
+    const leaseResult = await destLeaseClient.acquireLease(-1);
     const leaseId = leaseResult.leaseId;
     assert.ok(leaseId);
 
-    const getResult = await destBlobURL.getProperties(Aborter.none);
+    const getResult = await destBlobClient.getProperties();
     assert.equal(getResult.leaseDuration, "infinite");
     assert.equal(getResult.leaseState, "leased");
     assert.equal(getResult.leaseStatus, "locked");
 
-    await destBlobURL.startCopyFromURL(Aborter.none, sourceBlobURL.url, {
-      blobAccessConditions: { leaseAccessConditions: { leaseId } }
+    await destBlobClient.beginCopyFromURL(sourceBlobClient.url, {
+      conditions: { leaseId }
     });
 
-    const result = await destBlobURL.getProperties(Aborter.none);
+    const result = await destBlobClient.getProperties();
     assert.ok(result.date);
     assert.deepStrictEqual(result.blobType, "BlockBlob");
     assert.ok(result.lastModified);
@@ -916,18 +873,15 @@ describe("BlobAPIs", () => {
     assert.equal(getResult.leaseState, "leased");
     assert.equal(getResult.leaseStatus, "locked");
 
-    await destBlobURL.releaseLease(Aborter.none, leaseId!);
+    await destLeaseClient.releaseLease();
   });
 
   it("Copy blob should work for page blob @loki", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
-    const sourceBlobURL = PageBlobURL.fromContainerURL(
-      containerURL,
-      sourceBlob
-    );
-    const destBlobURL = PageBlobURL.fromContainerURL(containerURL, destBlob);
+    const sourceBlobClient = containerClient.getPageBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getPageBlobClient(destBlob);
 
     const metadata = { key: "value" };
     const blobHTTPHeaders = {
@@ -938,7 +892,7 @@ describe("BlobAPIs", () => {
       blobContentType: "blobContentType"
     };
 
-    const result_upload = await sourceBlobURL.create(Aborter.none, 512, {
+    const result_upload = await sourceBlobClient.create(512, {
       metadata,
       blobHTTPHeaders
     });
@@ -947,16 +901,17 @@ describe("BlobAPIs", () => {
       result_upload.clientRequestId
     );
 
-    const result_startcopy = await destBlobURL.startCopyFromURL(
-      Aborter.none,
-      sourceBlobURL.url
+    const result_startcopy = await destBlobClient.beginCopyFromURL(
+      sourceBlobClient.url
     );
     assert.equal(
-      result_startcopy._response.request.headers.get("x-ms-client-request-id"),
-      result_startcopy.clientRequestId
+      result_startcopy
+        .getResult()!
+        ._response.request.headers.get("x-ms-client-request-id"),
+      result_startcopy.getResult()!._response.request.requestId
     );
 
-    const result = await destBlobURL.getProperties(Aborter.none);
+    const result = await destBlobClient.getProperties();
     assert.ok(result.date);
     assert.deepStrictEqual(result.blobType, "PageBlob");
     assert.ok(result.lastModified);
@@ -984,11 +939,8 @@ describe("BlobAPIs", () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
-    const sourceBlobURL = PageBlobURL.fromContainerURL(
-      containerURL,
-      sourceBlob
-    );
-    const destBlobURL = PageBlobURL.fromContainerURL(containerURL, destBlob);
+    const sourceBlobClient = containerClient.getPageBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getPageBlobClient(destBlob);
 
     const metadata = { key: "value" };
     const blobHTTPHeaders = {
@@ -999,7 +951,7 @@ describe("BlobAPIs", () => {
       blobContentType: "blobContentType"
     };
 
-    const result_upload = await sourceBlobURL.create(Aborter.none, 512, {
+    const result_upload = await sourceBlobClient.create(512, {
       metadata,
       blobHTTPHeaders
     });
@@ -1011,7 +963,7 @@ describe("BlobAPIs", () => {
     let err;
 
     try {
-      await destBlobURL.startCopyFromURL(Aborter.none, sourceBlobURL.url, {
+      await destBlobClient.beginCopyFromURL(sourceBlobClient.url, {
         tier: "P10"
       });
     } catch (error) {

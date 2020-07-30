@@ -1,10 +1,4 @@
-import {
-  Aborter,
-  QueueURL,
-  ServiceURL,
-  StorageURL,
-  TokenCredential
-} from "@azure/storage-queue";
+import { QueueServiceClient, newPipeline } from "@azure/storage-queue";
 
 import * as assert from "assert";
 import Server from "../../src/queue/QueueServer";
@@ -13,6 +7,7 @@ import { configLogger } from "../../src/common/Logger";
 import { StoreDestinationArray } from "../../src/common/persistence/IExtentStore";
 import QueueConfiguration from "../../src/queue/QueueConfiguration";
 import { generateJWTToken, getUniqueName } from "../testutils";
+import { SimpleTokenCredential } from "../simpleTokenCredential";
 
 // Set true to enable debug log
 configLogger(false);
@@ -75,34 +70,34 @@ describe("Queue OAuth Basic", () => {
       "user_impersonation"
     );
 
-    const serviceURL = new ServiceURL(
+    const serviceClient = new QueueServiceClient(
       baseURL,
-      StorageURL.newPipeline(new TokenCredential(token), {
+      newPipeline(new SimpleTokenCredential(token), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const queueName: string = getUniqueName("1queue-with-dash");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+    const queueClient = serviceClient.getQueueClient(queueName);
 
-    await queueURL.create(Aborter.none);
-    await queueURL.delete(Aborter.none);
+    await queueClient.create();
+    await queueClient.delete();
   });
 
   it(`Should not work with invalid JWT token @loki @sql`, async () => {
-    const serviceURL = new ServiceURL(
+    const serviceClient = new QueueServiceClient(
       baseURL,
-      StorageURL.newPipeline(new TokenCredential("invalid token"), {
+      newPipeline(new SimpleTokenCredential("invalid token"), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const queueName: string = getUniqueName("1queue-with-dash");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+    const queueClient = serviceClient.getQueueClient(queueName);
 
     try {
-      await queueURL.create(Aborter.none);
-      await queueURL.delete(Aborter.none);
+      await queueClient.create();
+      await queueClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
@@ -138,18 +133,18 @@ describe("Queue OAuth Basic", () => {
         "user_impersonation"
       );
 
-      const serviceURL = new ServiceURL(
+      const serviceClient = new QueueServiceClient(
         baseURL,
-        StorageURL.newPipeline(new TokenCredential(token), {
+        newPipeline(new SimpleTokenCredential(token), {
           retryOptions: { maxTries: 1 }
         })
       );
 
       const queueName: string = getUniqueName("1queue-with-dash");
-      const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+      const queueClient = serviceClient.getQueueClient(queueName);
 
-      await queueURL.create(Aborter.none);
-      await queueURL.delete(Aborter.none);
+      await queueClient.create();
+      await queueClient.delete();
     }
   });
 
@@ -163,19 +158,19 @@ describe("Queue OAuth Basic", () => {
       "user_impersonation"
     );
 
-    const serviceURL = new ServiceURL(
+    const serviceClient = new QueueServiceClient(
       baseURL,
-      StorageURL.newPipeline(new TokenCredential(token), {
+      newPipeline(new SimpleTokenCredential(token), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const queueName: string = getUniqueName("1queue-with-dash");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+    const queueClient = serviceClient.getQueueClient(queueName);
 
     try {
-      await queueURL.create(Aborter.none);
-      await queueURL.delete(Aborter.none);
+      await queueClient.create();
+      await queueClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
@@ -205,18 +200,18 @@ describe("Queue OAuth Basic", () => {
         "user_impersonation"
       );
 
-      const serviceURL = new ServiceURL(
+      const serviceClient = new QueueServiceClient(
         baseURL,
-        StorageURL.newPipeline(new TokenCredential(token), {
+        newPipeline(new SimpleTokenCredential(token), {
           retryOptions: { maxTries: 1 }
         })
       );
 
       const queueName: string = getUniqueName("1queue-with-dash");
-      const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+      const queueClient = serviceClient.getQueueClient(queueName);
 
-      await queueURL.create(Aborter.none);
-      await queueURL.delete(Aborter.none);
+      await queueClient.create();
+      await queueClient.delete();
     }
   });
 
@@ -230,19 +225,19 @@ describe("Queue OAuth Basic", () => {
       "user_impersonation"
     );
 
-    const serviceURL = new ServiceURL(
+    const serviceClient = new QueueServiceClient(
       baseURL,
-      StorageURL.newPipeline(new TokenCredential(token), {
+      newPipeline(new SimpleTokenCredential(token), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const queueName: string = getUniqueName("1queue-with-dash");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+    const queueClient = serviceClient.getQueueClient(queueName);
 
     try {
-      await queueURL.create(Aborter.none);
-      await queueURL.delete(Aborter.none);
+      await queueClient.create();
+      await queueClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
@@ -264,19 +259,19 @@ describe("Queue OAuth Basic", () => {
       "user_impersonation"
     );
 
-    const serviceURL = new ServiceURL(
+    const serviceClient = new QueueServiceClient(
       baseURL,
-      StorageURL.newPipeline(new TokenCredential(token), {
+      newPipeline(new SimpleTokenCredential(token), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const queueName: string = getUniqueName("1queue-with-dash");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+    const queueClient = serviceClient.getQueueClient(queueName);
 
     try {
-      await queueURL.create(Aborter.none);
-      await queueURL.delete(Aborter.none);
+      await queueClient.create();
+      await queueClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
@@ -298,19 +293,19 @@ describe("Queue OAuth Basic", () => {
       "user_impersonation"
     );
 
-    const serviceURL = new ServiceURL(
+    const serviceClient = new QueueServiceClient(
       baseURL,
-      StorageURL.newPipeline(new TokenCredential(token), {
+      newPipeline(new SimpleTokenCredential(token), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const queueName: string = getUniqueName("1queue-with-dash");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+    const queueClient = serviceClient.getQueueClient(queueName);
 
     try {
-      await queueURL.create(Aborter.none);
-      await queueURL.delete(Aborter.none);
+      await queueClient.create();
+      await queueClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
@@ -332,28 +327,28 @@ describe("Queue OAuth Basic", () => {
       "user_impersonation"
     );
 
-    const serviceURL = new ServiceURL(
+    const serviceClient = new QueueServiceClient(
       baseURL,
-      StorageURL.newPipeline(new TokenCredential(token), {
+      newPipeline(new SimpleTokenCredential(token), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const queueName: string = getUniqueName("1queue-with-dash");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-    await queueURL.create(Aborter.none);
+    const queueClient = serviceClient.getQueueClient(queueName);
+    await queueClient.create();
 
     try {
-      await queueURL.getAccessPolicy(Aborter.none);
+      await queueClient.getAccessPolicy();
     } catch (err) {
       assert.deepStrictEqual(
         err.message.includes("AuthorizationFailure"),
         true
       );
-      await queueURL.delete(Aborter.none);
+      await queueClient.delete();
       return;
     }
-    await queueURL.delete(Aborter.none);
+    await queueClient.delete();
     assert.fail();
   });
 
@@ -367,28 +362,28 @@ describe("Queue OAuth Basic", () => {
       "user_impersonation"
     );
 
-    const serviceURL = new ServiceURL(
+    const serviceClient = new QueueServiceClient(
       baseURL,
-      StorageURL.newPipeline(new TokenCredential(token), {
+      newPipeline(new SimpleTokenCredential(token), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const queueName: string = getUniqueName("1queue-with-dash");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-    await queueURL.create(Aborter.none);
+    const queueClient = serviceClient.getQueueClient(queueName);
+    await queueClient.create();
 
     try {
-      await queueURL.setAccessPolicy(Aborter.none, []);
+      await queueClient.setAccessPolicy([]);
     } catch (err) {
       assert.deepStrictEqual(
         err.message.includes("AuthorizationFailure"),
         true
       );
-      await queueURL.delete(Aborter.none);
+      await queueClient.delete();
       return;
     }
-    await queueURL.delete(Aborter.none);
+    await queueClient.delete();
     assert.fail();
   });
 
@@ -428,19 +423,19 @@ describe("Queue OAuth Basic", () => {
       "user_impersonation"
     );
 
-    const serviceURL = new ServiceURL(
+    const serviceClient = new QueueServiceClient(
       httpBaseURL,
-      StorageURL.newPipeline(new TokenCredential(token), {
+      newPipeline(new SimpleTokenCredential(token), {
         retryOptions: { maxTries: 1 }
       })
     );
 
     const queueName: string = getUniqueName("1queue-with-dash");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+    const queueClient = serviceClient.getQueueClient(queueName);
 
     try {
-      await queueURL.create(Aborter.none);
-      await queueURL.delete(Aborter.none);
+      await queueClient.create();
+      await queueClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
