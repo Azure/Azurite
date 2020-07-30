@@ -1,11 +1,9 @@
 import * as assert from "assert";
 
 import {
-  Aborter,
-  QueueURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+  newPipeline,
+  QueueServiceClient,
+  StorageSharedKeyCredential
 } from "@azure/storage-queue";
 
 import { configLogger } from "../../src/common/Logger";
@@ -47,10 +45,13 @@ describe("Queue SpecialNaming", () => {
   );
 
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
-  const serviceURL = new ServiceURL(
+  const serviceClient = new QueueServiceClient(
     baseURL,
-    StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -73,10 +74,10 @@ describe("Queue SpecialNaming", () => {
 
   it("A queue name must be from 3 through 63 characters long @loki", async () => {
     let queueName = new Array(65).join("a");
-    let queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+    let queueClient = serviceClient.getQueueClient(queueName);
     let error;
     try {
-      await queueURL.create(Aborter.none);
+      await queueClient.create();
     } catch (err) {
       error = err;
     }
@@ -88,10 +89,10 @@ describe("Queue SpecialNaming", () => {
     );
 
     queueName = new Array(3).join("a");
-    queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+    queueClient = serviceClient.getQueueClient(queueName);
     error = undefined;
     try {
-      await queueURL.create(Aborter.none);
+      await queueClient.create();
     } catch (err) {
       error = err;
     }
@@ -103,22 +104,22 @@ describe("Queue SpecialNaming", () => {
     );
 
     queueName = new Array(4).join("a");
-    queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-    await queueURL.create(Aborter.none);
-    await queueURL.delete(Aborter.none);
+    queueClient = serviceClient.getQueueClient(queueName);
+    await queueClient.create();
+    await queueClient.delete();
 
     queueName = new Array(64).join("a");
-    queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-    await queueURL.create(Aborter.none);
-    await queueURL.delete(Aborter.none);
+    queueClient = serviceClient.getQueueClient(queueName);
+    await queueClient.create();
+    await queueClient.delete();
   });
 
   it("All letters in a queue name must be lowercase. @loki", async () => {
     let queueName = "Queue";
-    let queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+    let queueClient = serviceClient.getQueueClient(queueName);
     let error;
     try {
-      await queueURL.create(Aborter.none);
+      await queueClient.create();
     } catch (err) {
       error = err;
     }
@@ -130,17 +131,17 @@ describe("Queue SpecialNaming", () => {
     );
 
     queueName = "queue";
-    queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-    await queueURL.create(Aborter.none);
-    await queueURL.delete(Aborter.none);
+    queueClient = serviceClient.getQueueClient(queueName);
+    await queueClient.create();
+    await queueClient.delete();
   });
 
   it("A queue name contains only letters, numbers, and the dash (-) character in rules @loki", async () => {
     let queueName = "-queue123";
-    let queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+    let queueClient = serviceClient.getQueueClient(queueName);
     let error;
     try {
-      await queueURL.create(Aborter.none);
+      await queueClient.create();
     } catch (err) {
       error = err;
     }
@@ -152,10 +153,10 @@ describe("Queue SpecialNaming", () => {
     );
 
     queueName = "queue123-";
-    queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+    queueClient = serviceClient.getQueueClient(queueName);
     error = undefined;
     try {
-      await queueURL.create(Aborter.none);
+      await queueClient.create();
     } catch (err) {
       error = err;
     }
@@ -167,15 +168,15 @@ describe("Queue SpecialNaming", () => {
     );
 
     queueName = "queue-123";
-    queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-    await queueURL.create(Aborter.none);
-    await queueURL.delete(Aborter.none);
+    queueClient = serviceClient.getQueueClient(queueName);
+    await queueClient.create();
+    await queueClient.delete();
 
     queueName = "queue--123";
-    queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+    queueClient = serviceClient.getQueueClient(queueName);
     error = undefined;
     try {
-      await queueURL.create(Aborter.none);
+      await queueClient.create();
     } catch (err) {
       error = err;
     }

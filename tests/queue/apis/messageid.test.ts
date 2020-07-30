@@ -1,13 +1,10 @@
 import * as assert from "assert";
 
 import {
-  Aborter,
-  MessageIdURL,
-  MessagesURL,
-  QueueURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+  QueueServiceClient,
+  newPipeline,
+  StorageSharedKeyCredential,
+  QueueClient
 } from "@azure/storage-queue";
 
 import { configLogger } from "../../../src/common/Logger";
@@ -51,10 +48,13 @@ describe("MessageId APIs test", () => {
   );
 
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
-  const serviceURL = new ServiceURL(
+  const serviceClient = new QueueServiceClient(
     baseURL,
-    StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -64,7 +64,7 @@ describe("MessageId APIs test", () => {
   let server: Server;
 
   let queueName: string;
-  let queueURL: QueueURL;
+  let queueClient: QueueClient;
   const messageContent = "Hello World";
 
   before(async () => {
@@ -81,24 +81,23 @@ describe("MessageId APIs test", () => {
 
   beforeEach(async function() {
     queueName = getUniqueName("queue");
-    queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-    await queueURL.create(Aborter.none);
+    queueClient = serviceClient.getQueueClient(queueName);
+    await queueClient.create();
   });
 
   afterEach(async () => {
-    await queueURL.delete(Aborter.none);
+    await queueClient.delete();
   });
 
   it("update and delete empty message with default parameters @loki", async () => {
-    let messagesURL = MessagesURL.fromQueueURL(queueURL);
-    let eResult = await messagesURL.enqueue(Aborter.none, messageContent);
+    const eResult = await queueClient.sendMessage(messageContent);
     assert.ok(eResult.date);
-    assert.ok(eResult.expirationTime);
-    assert.ok(eResult.insertionTime);
+    assert.ok(eResult.expiresOn);
+    assert.ok(eResult.insertedOn);
     assert.ok(eResult.messageId);
     assert.ok(eResult.popReceipt);
     assert.ok(eResult.requestId);
-    assert.ok(eResult.timeNextVisible);
+    assert.ok(eResult.nextVisibleOn);
     assert.ok(eResult.version);
     assert.equal(
       eResult._response.request.headers.get("x-ms-client-request-id"),
@@ -106,18 +105,14 @@ describe("MessageId APIs test", () => {
     );
 
     let newMessage = "";
-    let messageIdURL = MessageIdURL.fromMessagesURL(
-      messagesURL,
-      eResult.messageId
-    );
-    let uResult = await messageIdURL.update(
-      Aborter.none,
+    const uResult = await queueClient.updateMessage(
+      eResult.messageId,
       eResult.popReceipt,
-      0,
-      newMessage
+      newMessage,
+      0
     );
     assert.ok(uResult.version);
-    assert.ok(uResult.timeNextVisible);
+    assert.ok(uResult.nextVisibleOn);
     assert.ok(uResult.date);
     assert.ok(uResult.requestId);
     assert.ok(uResult.popReceipt);
@@ -126,7 +121,7 @@ describe("MessageId APIs test", () => {
       uResult.clientRequestId
     );
 
-    let pResult = await messagesURL.peek(Aborter.none);
+    let pResult = await queueClient.peekMessages();
     assert.equal(pResult.peekedMessageItems.length, 1);
     assert.deepStrictEqual(
       pResult.peekedMessageItems[0].messageText,
@@ -137,7 +132,10 @@ describe("MessageId APIs test", () => {
       pResult.clientRequestId
     );
 
-    let dResult = await messageIdURL.delete(Aborter.none, uResult.popReceipt!);
+    const dResult = await queueClient.deleteMessage(
+      eResult.messageId,
+      uResult.popReceipt!
+    );
     assert.ok(dResult.date);
     assert.ok(dResult.requestId);
     assert.ok(dResult.version);
@@ -146,20 +144,19 @@ describe("MessageId APIs test", () => {
       dResult.clientRequestId
     );
 
-    pResult = await messagesURL.peek(Aborter.none);
+    pResult = await queueClient.peekMessages();
     assert.equal(pResult.peekedMessageItems.length, 0);
   });
 
   it("update and delete message with all parameters @loki", async () => {
-    let messagesURL = MessagesURL.fromQueueURL(queueURL);
-    let eResult = await messagesURL.enqueue(Aborter.none, messageContent);
+    const eResult = await queueClient.sendMessage(messageContent);
     assert.ok(eResult.date);
-    assert.ok(eResult.expirationTime);
-    assert.ok(eResult.insertionTime);
+    assert.ok(eResult.expiresOn);
+    assert.ok(eResult.insertedOn);
     assert.ok(eResult.messageId);
     assert.ok(eResult.popReceipt);
     assert.ok(eResult.requestId);
-    assert.ok(eResult.timeNextVisible);
+    assert.ok(eResult.nextVisibleOn);
     assert.ok(eResult.version);
     assert.equal(
       eResult._response.request.headers.get("x-ms-client-request-id"),
@@ -167,18 +164,14 @@ describe("MessageId APIs test", () => {
     );
 
     let newMessage = "New Message";
-    let messageIdURL = MessageIdURL.fromMessagesURL(
-      messagesURL,
-      eResult.messageId
-    );
-    let uResult = await messageIdURL.update(
-      Aborter.none,
+    const uResult = await queueClient.updateMessage(
+      eResult.messageId,
       eResult.popReceipt,
-      5,
-      newMessage
+      newMessage,
+      5
     );
     assert.ok(uResult.version);
-    assert.ok(uResult.timeNextVisible);
+    assert.ok(uResult.nextVisibleOn);
     assert.ok(uResult.date);
     assert.ok(uResult.requestId);
     assert.ok(uResult.popReceipt);
@@ -187,7 +180,7 @@ describe("MessageId APIs test", () => {
       uResult.clientRequestId
     );
 
-    let pResult = await messagesURL.peek(Aborter.none);
+    let pResult = await queueClient.peekMessages();
     assert.equal(pResult.peekedMessageItems.length, 0);
     assert.equal(
       pResult._response.request.headers.get("x-ms-client-request-id"),
@@ -196,7 +189,7 @@ describe("MessageId APIs test", () => {
 
     await sleep(6 * 1000);
 
-    let pResult2 = await messagesURL.peek(Aborter.none);
+    let pResult2 = await queueClient.peekMessages();
     assert.equal(pResult2.peekedMessageItems.length, 1);
     assert.deepStrictEqual(
       pResult2.peekedMessageItems[0].messageText,
@@ -205,15 +198,14 @@ describe("MessageId APIs test", () => {
   });
 
   it("update message with 64KB characters size which is computed after encoding @loki", async () => {
-    let messagesURL = MessagesURL.fromQueueURL(queueURL);
-    let eResult = await messagesURL.enqueue(Aborter.none, messageContent);
+    const eResult = await queueClient.sendMessage(messageContent);
     assert.ok(eResult.date);
-    assert.ok(eResult.expirationTime);
-    assert.ok(eResult.insertionTime);
+    assert.ok(eResult.expiresOn);
+    assert.ok(eResult.insertedOn);
     assert.ok(eResult.messageId);
     assert.ok(eResult.popReceipt);
     assert.ok(eResult.requestId);
-    assert.ok(eResult.timeNextVisible);
+    assert.ok(eResult.nextVisibleOn);
     assert.ok(eResult.version);
     assert.equal(
       eResult._response.request.headers.get("x-ms-client-request-id"),
@@ -221,18 +213,14 @@ describe("MessageId APIs test", () => {
     );
 
     let newMessage = new Array(64 * 1024 + 1).join("a");
-    let messageIdURL = MessageIdURL.fromMessagesURL(
-      messagesURL,
-      eResult.messageId
-    );
-    let uResult = await messageIdURL.update(
-      Aborter.none,
+    const uResult = await queueClient.updateMessage(
+      eResult.messageId,
       eResult.popReceipt,
-      0,
-      newMessage
+      newMessage,
+      0
     );
     assert.ok(uResult.version);
-    assert.ok(uResult.timeNextVisible);
+    assert.ok(uResult.nextVisibleOn);
     assert.ok(uResult.date);
     assert.ok(uResult.requestId);
     assert.ok(uResult.popReceipt);
@@ -241,7 +229,7 @@ describe("MessageId APIs test", () => {
       uResult.clientRequestId
     );
 
-    let pResult = await messagesURL.peek(Aborter.none);
+    let pResult = await queueClient.peekMessages();
     assert.equal(pResult.peekedMessageItems.length, 1);
     assert.deepStrictEqual(
       pResult.peekedMessageItems[0].messageText,
@@ -254,31 +242,25 @@ describe("MessageId APIs test", () => {
   });
 
   it("update message negative with 65537B (64KB+1B) characters size which is computed after encoding @loki", async () => {
-    let messagesURL = MessagesURL.fromQueueURL(queueURL);
-    let eResult = await messagesURL.enqueue(Aborter.none, messageContent);
+    const eResult = await queueClient.sendMessage(messageContent);
     assert.ok(eResult.date);
-    assert.ok(eResult.expirationTime);
-    assert.ok(eResult.insertionTime);
+    assert.ok(eResult.expiresOn);
+    assert.ok(eResult.insertedOn);
     assert.ok(eResult.messageId);
     assert.ok(eResult.popReceipt);
     assert.ok(eResult.requestId);
-    assert.ok(eResult.timeNextVisible);
+    assert.ok(eResult.nextVisibleOn);
     assert.ok(eResult.version);
 
     let newMessage = new Array(64 * 1024 + 2).join("a");
 
-    let messageIdURL = MessageIdURL.fromMessagesURL(
-      messagesURL,
-      eResult.messageId
-    );
-
     let error;
     try {
-      await messageIdURL.update(
-        Aborter.none,
+      await queueClient.updateMessage(
+        eResult.messageId,
         eResult.popReceipt,
-        0,
-        newMessage
+        newMessage,
+        0
       );
     } catch (err) {
       error = err;
@@ -292,17 +274,11 @@ describe("MessageId APIs test", () => {
   });
 
   it("delete message negative @loki", async () => {
-    let messagesURL = MessagesURL.fromQueueURL(queueURL);
-    let eResult = await messagesURL.enqueue(Aborter.none, messageContent);
-
-    let messageIdURL = MessageIdURL.fromMessagesURL(
-      messagesURL,
-      eResult.messageId
-    );
+    const eResult = await queueClient.sendMessage(messageContent);
 
     let error;
     try {
-      await messageIdURL.delete(Aborter.none, "invalid");
+      await queueClient.deleteMessage(eResult.messageId, "invalid");
     } catch (err) {
       error = err;
     }
