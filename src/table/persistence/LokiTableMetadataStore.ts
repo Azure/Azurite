@@ -143,12 +143,31 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
   public async updateTableEntity(
     context: Context,
-    table: string,
-    partitionKey: string,
-    rowKey: string
+    tableName: string,
+    account: string,
+    entity: IEntity
   ): Promise<void> {
-    // TODO
-    throw new NotImplementedError();
+    const tableColl = this.db.getCollection(
+      this.getUniqueTableCollectionName(account, tableName)
+    );
+
+    // Throw errow, when table not exists
+    if (!tableColl) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
+
+    // Get Current Doc
+    const currentDoc = tableColl.findOne({
+      PartitionKey: entity.PartitionKey,
+      RowKey: entity.RowKey
+    });
+
+    if (!currentDoc) {
+      throw StorageErrorFactory.getEntityNotExist;
+    }
+
+    tableColl.insert(entity);
+    tableColl.remove(currentDoc);
   }
 
   public async mergeTableEntity(

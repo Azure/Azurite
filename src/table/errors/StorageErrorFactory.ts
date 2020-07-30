@@ -47,7 +47,18 @@ export default class StorageErrorFactory {
     return new StorageError(
       400,
       "AccountNameEmpty",
-      "The table to insert doesn't exist",
+      "The table you want to manipulate doesn't exist",
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
+
+  public static getEntityNotExist(context: Context): StorageError {
+    return new StorageError(
+      409,
+      "EntityDoesNotExist",
+      "The entity to update doesn't exist in the table",
       context.contextID || defaultID,
       undefined,
       context
