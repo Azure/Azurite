@@ -4,7 +4,6 @@ import * as Azure from "azure-storage";
 import { configLogger } from "../../../src/common/Logger";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
-// import { TABLE_API_VERSION } from "../../../src/table/utils/constants";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
