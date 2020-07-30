@@ -1999,8 +1999,10 @@ export default class LokiBlobMetadataStore
     );
 
     if (destBlob) {
+      const lease = new BlobLeaseAdapter(destBlob);
+      new BlobWriteLeaseSyncer(destBlob).sync(lease);
       new BlobWriteLeaseValidator(options.leaseAccessConditions).validate(
-        new BlobLeaseAdapter(destBlob),
+        lease,
         context
       );
     }
@@ -2047,7 +2049,6 @@ export default class LokiBlobMetadataStore
             ? destBlob.properties.leaseDuration
             : undefined,
         copyId: uuid(),
-        syncCopyStatus: Models.SyncCopyStatusType.Success,
         copySource,
         copyProgress: sourceBlob.properties.contentLength
           ? `${sourceBlob.properties.contentLength}/${sourceBlob.properties.contentLength}`

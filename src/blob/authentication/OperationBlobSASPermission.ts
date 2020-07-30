@@ -418,7 +418,6 @@ OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Blob_StartCopyFromURL,
-  // TODO: If destination is an existing blob, create permission is not enough
   new OperationBlobSASPermission(
     BlobSASPermission.Write + BlobSASPermission.Create
   )

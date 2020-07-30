@@ -259,45 +259,47 @@ describe("Shared Access Signature (SAS) authentication", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const sas = generateAccountSASQueryParameters(
       {
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: AccountSASPermissions.parse("rwdlacup").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
+        permissions: AccountSASPermissions.parse("rwdlacup"),
+        protocol: SASProtocol.HttpsAndHttp,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
         version: "2016-05-31"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
-    const sasURL = `${serviceURL.url}?${sas}`;
-    const serviceURLWithSAS = new ServiceURL(
+    const sasURL = `${serviceClient.url}?${sas}`;
+    const serviceClientWithSAS = new BlobServiceClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
     );
 
     const containerName = getUniqueName("con");
-    const containerURL = ContainerURL.fromServiceURL(
-      serviceURLWithSAS,
+    const containerClient = serviceClientWithSAS.getContainerClient(
       containerName
     );
-    await containerURL.create(Aborter.none);
+    await containerClient.create();
 
     const blobName1 = getUniqueName("blob");
     const blobName2 = getUniqueName("blob");
-    const blob1 = BlockBlobURL.fromContainerURL(containerURL, blobName1);
-    const blob2 = BlockBlobURL.fromContainerURL(containerURL, blobName2);
+    const blob1 = containerClient.getBlockBlobClient(blobName1);
+    const blob2 = containerClient.getBlockBlobClient(blobName2);
 
-    await blob1.upload(Aborter.none, "hello", 5);
-    await blob2.syncCopyFromURL(Aborter.none, blob1.url);
+    await blob1.upload("hello", 5);
+    await blob2.syncCopyFromURL(blob1.url);
 
     // this copy should not throw any errors
-    await blob2.syncCopyFromURL(Aborter.none, blob1.url);
+    await blob2.syncCopyFromURL(blob1.url);
   });
 
   it("Synchronized copy blob shouldn't work without write permission in account SAS to override an existing blob @loki", async () => {
@@ -305,47 +307,49 @@ describe("Shared Access Signature (SAS) authentication", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const sas = generateAccountSASQueryParameters(
       {
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: AccountSASPermissions.parse("rdlacup").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
+        permissions: AccountSASPermissions.parse("rdlacup"),
+        protocol: SASProtocol.HttpsAndHttp,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
         version: "2016-05-31"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
-    const sasURL = `${serviceURL.url}?${sas}`;
-    const serviceURLWithSAS = new ServiceURL(
+    const sasURL = `${serviceClient.url}?${sas}`;
+    const serviceClientWithSAS = new BlobServiceClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
     );
 
     const containerName = getUniqueName("con");
-    const containerURL = ContainerURL.fromServiceURL(
-      serviceURLWithSAS,
+    const containerClient = serviceClientWithSAS.getContainerClient(
       containerName
     );
-    await containerURL.create(Aborter.none);
+    await containerClient.create();
 
     const blobName1 = getUniqueName("blob");
     const blobName2 = getUniqueName("blob");
-    const blob1 = BlockBlobURL.fromContainerURL(containerURL, blobName1);
-    const blob2 = BlockBlobURL.fromContainerURL(containerURL, blobName2);
+    const blob1 = containerClient.getBlockBlobClient(blobName1);
+    const blob2 = containerClient.getBlockBlobClient(blobName2);
 
-    await blob1.upload(Aborter.none, "hello", 5);
-    await blob2.syncCopyFromURL(Aborter.none, blob1.url);
+    await blob1.upload("hello", 5);
+    await blob2.syncCopyFromURL(blob1.url);
 
     // this copy should throw 403 error
     let error;
     try {
-      await blob2.syncCopyFromURL(Aborter.none, blob1.url);
+      await blob2.syncCopyFromURL(blob1.url);
     } catch (err) {
       error = err;
     }
@@ -358,44 +362,46 @@ describe("Shared Access Signature (SAS) authentication", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const sas = generateAccountSASQueryParameters(
       {
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: AccountSASPermissions.parse("c").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
+        permissions: AccountSASPermissions.parse("c"),
+        protocol: SASProtocol.HttpsAndHttp,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
         version: "2016-05-31"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
-    const sasURL = `${serviceURL.url}?${sas}`;
-    const serviceURLWithSAS = new ServiceURL(
+    const sasURL = `${serviceClient.url}?${sas}`;
+    const serviceClientWithSAS = new BlobServiceClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
     );
 
     const containerName = getUniqueName("con");
-    const containerURL = ContainerURL.fromServiceURL(
-      serviceURLWithSAS,
+    const containerClient = serviceClientWithSAS.getContainerClient(
       containerName
     );
-    await containerURL.create(Aborter.none);
+    await containerClient.create();
 
     const blobName1 = getUniqueName("blob");
     const blobName2 = getUniqueName("blob");
-    const blob1 = BlockBlobURL.fromContainerURL(containerURL, blobName1);
-    const blob2 = BlockBlobURL.fromContainerURL(containerURL, blobName2);
+    const blob1 = containerClient.getBlockBlobClient(blobName1);
+    const blob2 = containerClient.getBlockBlobClient(blobName2);
 
-    await blob1.upload(Aborter.none, "hello", 5);
+    await blob1.upload("hello", 5);
 
     // this copy should work
-    await blob2.syncCopyFromURL(Aborter.none, blob1.url);
+    await blob2.syncCopyFromURL(blob1.url);
   });
 
   it("Copy blob should work with write permission in account SAS to override an existing blob @loki", async () => {
@@ -773,46 +779,43 @@ describe("Shared Access Signature (SAS) authentication", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const containerName = getUniqueName("container");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
-    await containerURL.create(Aborter.none);
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
 
     const containerSAS = generateBlobSASQueryParameters(
       {
         containerName,
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: ContainerSASPermissions.parse("w").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
-        startTime: now,
+        permissions: ContainerSASPermissions.parse("w"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
         version: "2016-05-31"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     );
 
-    const sasURL = `${containerURL.url}?${containerSAS}`;
-    const containerURLwithSAS = new ContainerURL(
+    const sasURL = `${containerClient.url}?${containerSAS}`;
+    const containerClientWithSAS = new ContainerClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
 
     const blobName1 = getUniqueName("blob");
     const blobName2 = getUniqueName("blob");
-    const blob1 = BlockBlobURL.fromContainerURL(containerURL, blobName1);
-    const blob2 = BlockBlobURL.fromContainerURL(containerURL, blobName2);
-    const blob2SAS = BlockBlobURL.fromContainerURL(
-      containerURLwithSAS,
-      blobName2
-    );
+    const blob1 = containerClient.getBlockBlobClient(blobName1);
+    const blob2 = containerClient.getBlockBlobClient(blobName2);
+    const blob2SAS = containerClientWithSAS.getBlockBlobClient(blobName2);
 
-    await blob1.upload(Aborter.none, "hello", 5);
-    await blob2.upload(Aborter.none, "world", 5);
+    await blob1.upload("hello", 5);
+    await blob2.upload("world", 5);
 
     // this copy should not throw any errors
-    await blob2SAS.syncCopyFromURL(Aborter.none, blob1.url);
+    await blob2SAS.syncCopyFromURL(blob1.url);
   });
 
   it("Synchronized copy blob shouldn't work without write permission in blob SAS to override an existing blob @loki", async () => {
@@ -823,48 +826,45 @@ describe("Shared Access Signature (SAS) authentication", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const containerName = getUniqueName("container");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
-    await containerURL.create(Aborter.none);
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
 
     const containerSAS = generateBlobSASQueryParameters(
       {
         containerName,
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: ContainerSASPermissions.parse("c").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
-        startTime: now,
+        permissions: ContainerSASPermissions.parse("c"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
         version: "2016-05-31"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     );
 
-    const sasURL = `${containerURL.url}?${containerSAS}`;
-    const containerURLwithSAS = new ContainerURL(
+    const sasURL = `${containerClient.url}?${containerSAS}`;
+    const containerClientWithSAS = new ContainerClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
 
     const blobName1 = getUniqueName("blob");
     const blobName2 = getUniqueName("blob");
-    const blob1 = BlockBlobURL.fromContainerURL(containerURL, blobName1);
-    const blob2 = BlockBlobURL.fromContainerURL(containerURL, blobName2);
-    const blob2SAS = BlockBlobURL.fromContainerURL(
-      containerURLwithSAS,
-      blobName2
-    );
+    const blob1 = containerClient.getBlockBlobClient(blobName1);
+    const blob2 = containerClient.getBlockBlobClient(blobName2);
+    const blob2SAS = containerClientWithSAS.getBlockBlobClient(blobName2);
 
-    await blob1.upload(Aborter.none, "hello", 5);
-    await blob2.upload(Aborter.none, "world", 5);
+    await blob1.upload("hello", 5);
+    await blob2.upload("world", 5);
 
     // this copy should throw 403 error
     let error;
     try {
-      await blob2SAS.syncCopyFromURL(Aborter.none, blob1.url);
+      await blob2SAS.syncCopyFromURL(blob1.url);
     } catch (err) {
       error = err;
     }
@@ -880,44 +880,41 @@ describe("Shared Access Signature (SAS) authentication", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const containerName = getUniqueName("container");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
-    await containerURL.create(Aborter.none);
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
 
     const containerSAS = generateBlobSASQueryParameters(
       {
         containerName,
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: ContainerSASPermissions.parse("c").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
-        startTime: now,
+        permissions: ContainerSASPermissions.parse("c"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
         version: "2016-05-31"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     );
 
-    const sasURL = `${containerURL.url}?${containerSAS}`;
-    const containerURLwithSAS = new ContainerURL(
+    const sasURL = `${containerClient.url}?${containerSAS}`;
+    const containerClientWithSAS = new ContainerClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
 
     const blobName1 = getUniqueName("blob");
     const blobName2 = getUniqueName("blob");
-    const blob1 = BlockBlobURL.fromContainerURL(containerURL, blobName1);
-    const blob2SAS = BlockBlobURL.fromContainerURL(
-      containerURLwithSAS,
-      blobName2
-    );
+    const blob1 = containerClient.getBlockBlobClient(blobName1);
+    const blob2SAS = containerClientWithSAS.getBlockBlobClient(blobName2);
 
-    await blob1.upload(Aborter.none, "hello", 5);
+    await blob1.upload("hello", 5);
 
     // this copy should work
-    await blob2SAS.syncCopyFromURL(Aborter.none, blob1.url);
+    await blob2SAS.syncCopyFromURL(blob1.url);
   });
 
   it("Copy blob should work with write permission in blob SAS to override an existing blob @loki", async () => {
