@@ -1,11 +1,10 @@
 import * as assert from "assert";
 
 import {
-  Aborter,
-  QueueURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+  newPipeline,
+  QueueServiceClient,
+  QueueClient,
+  StorageSharedKeyCredential
 } from "@azure/storage-queue";
 
 import { configLogger } from "../../../src/common/Logger";
@@ -48,10 +47,13 @@ describe("Queue APIs test", () => {
   );
 
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
-  const serviceURL = new ServiceURL(
+  const serviceClient = new QueueServiceClient(
     baseURL,
-    StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -60,7 +62,7 @@ describe("Queue APIs test", () => {
 
   let server: Server;
   let queueName: string;
-  let queueURL: QueueURL;
+  let queueClient: QueueClient;
 
   before(async () => {
     server = new Server(config);
@@ -76,12 +78,12 @@ describe("Queue APIs test", () => {
 
   beforeEach(async function() {
     queueName = getUniqueName("queue");
-    queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-    await queueURL.create(Aborter.none);
+    queueClient = serviceClient.getQueueClient(queueName);
+    await queueClient.create();
   });
 
   afterEach(async () => {
-    await queueURL.delete(Aborter.none);
+    await queueClient.delete();
   });
 
   it("setMetadata @loki", async () => {
@@ -90,13 +92,13 @@ describe("Queue APIs test", () => {
       keya: "vala",
       keyb: "valb"
     };
-    const mResult = await queueURL.setMetadata(Aborter.none, metadata);
+    const mResult = await queueClient.setMetadata(metadata);
     assert.equal(
       mResult._response.request.headers.get("x-ms-client-request-id"),
       mResult.clientRequestId
     );
 
-    const result = await queueURL.getProperties(Aborter.none);
+    const result = await queueClient.getProperties();
     assert.deepEqual(result.metadata, metadata);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
@@ -105,7 +107,7 @@ describe("Queue APIs test", () => {
   });
 
   it("getProperties with default/all parameters @loki", async () => {
-    const result = await queueURL.getProperties(Aborter.none);
+    const result = await queueClient.getProperties();
     assert.ok(result.approximateMessagesCount! >= 0);
     assert.ok(result.requestId);
     assert.ok(result.version);
@@ -114,10 +116,10 @@ describe("Queue APIs test", () => {
 
   it("getProperties negative @loki", async () => {
     const queueName2 = getUniqueName("queue2");
-    const queueURL2 = QueueURL.fromServiceURL(serviceURL, queueName2);
+    const queueClient2 = serviceClient.getQueueClient(queueName2);
     let error;
     try {
-      await queueURL2.getProperties(Aborter.none);
+      await queueClient2.getProperties();
     } catch (err) {
       error = err;
     }
@@ -125,8 +127,8 @@ describe("Queue APIs test", () => {
     assert.ok(error.statusCode);
     assert.deepEqual(error.statusCode, 404);
     assert.ok(error.response);
-    assert.ok(error.response.body);
-    assert.ok(error.response.body.includes("QueueNotFound"));
+    assert.ok(error.response.bodyAsText);
+    assert.ok(error.response.bodyAsText.includes("QueueNotFound"));
   });
 
   it("create with default parameters", done => {
@@ -135,28 +137,28 @@ describe("Queue APIs test", () => {
   });
 
   it("create with all parameters @loki", async () => {
-    const qURL = QueueURL.fromServiceURL(serviceURL, getUniqueName(queueName));
+    const qClient = serviceClient.getQueueClient(getUniqueName(queueName));
     const metadata = { key: "value" };
-    await qURL.create(Aborter.none, { metadata });
-    const result = await qURL.getProperties(Aborter.none);
+    await qClient.create({ metadata });
+    const result = await qClient.getProperties();
     assert.deepEqual(result.metadata, metadata);
   });
 
   // create with invalid queue name
   it("create negative @loki", async () => {
-    const qURL = QueueURL.fromServiceURL(serviceURL, "");
     let error;
     try {
-      await qURL.create(Aborter.none);
+      const qClient = serviceClient.getQueueClient("");
+      await qClient.create();
     } catch (err) {
       error = err;
     }
     assert.ok(error);
-    assert.ok(error.statusCode);
-    assert.deepEqual(error.statusCode, 400);
-    assert.ok(error.response);
-    assert.ok(error.response.body);
-    assert.ok(error.response.body.includes("InvalidResourceName"));
+    assert.equal(
+      error.message,
+      "Unable to extract queueName with provided information.",
+      "Unexpected error caught: " + error
+    );
   });
 
   it("delete @loki", done => {
@@ -168,29 +170,29 @@ describe("Queue APIs test", () => {
     const queueAcl = [
       {
         accessPolicy: {
-          expiry: new Date("2018-12-31T11:22:33.4567890Z"),
-          permission: "raup",
-          start: new Date("2017-12-31T11:22:33.4567890Z")
+          expiresOn: new Date("2018-12-31T11:22:33.4567890Z"),
+          permissions: "raup",
+          startsOn: new Date("2017-12-31T11:22:33.4567890Z")
         },
         id: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
       },
       {
         accessPolicy: {
-          expiry: new Date("2030-11-31T11:22:33.4567890Z"),
-          permission: "a",
-          start: new Date("2017-12-31T11:22:33.4567890Z")
+          expiresOn: new Date("2030-11-31T11:22:33.4567890Z"),
+          permissions: "a",
+          startsOn: new Date("2017-12-31T11:22:33.4567890Z")
         },
         id: "policy2"
       }
     ];
 
-    const sResult = await queueURL.setAccessPolicy(Aborter.none, queueAcl);
+    const sResult = await queueClient.setAccessPolicy(queueAcl);
     assert.equal(
       sResult._response.request.headers.get("x-ms-client-request-id"),
       sResult.clientRequestId
     );
 
-    const result = await queueURL.getAccessPolicy(Aborter.none);
+    const result = await queueClient.getAccessPolicy();
     assert.deepEqual(result.signedIdentifiers, queueAcl);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
@@ -201,17 +203,17 @@ describe("Queue APIs test", () => {
     const queueAcl = [
       {
         accessPolicy: {
-          expiry: new Date("2018-12-31T11:22:33.4567890Z"),
-          permission: "rwdl",
-          start: new Date("2017-12-31T11:22:33.4567890Z")
+          expiresOn: new Date("2018-12-31T11:22:33.4567890Z"),
+          permissions: "rwdl",
+          startsOn: new Date("2017-12-31T11:22:33.4567890Z")
         },
         id: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
       },
       {
         accessPolicy: {
-          expiry: new Date("2030-11-31T11:22:33.4567890Z"),
-          permission: "a",
-          start: new Date("2017-12-31T11:22:33.4567890Z")
+          expiresOn: new Date("2030-11-31T11:22:33.4567890Z"),
+          permissions: "a",
+          startsOn: new Date("2017-12-31T11:22:33.4567890Z")
         },
         id: "policy2"
       }
@@ -219,7 +221,7 @@ describe("Queue APIs test", () => {
 
     let error;
     try {
-      await queueURL.setAccessPolicy(Aborter.none, queueAcl);
+      await queueClient.setAccessPolicy(queueAcl);
     } catch (err) {
       error = err;
     }
