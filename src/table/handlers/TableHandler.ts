@@ -241,12 +241,6 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableCtx = new TableStorageContext(context);
     const accountName = tableCtx.account;
     const tableName = tableCtx.tableName!; // Get tableName from context
-    const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
-    const rowKey = tableCtx.rowKey!; // Get rowKey from context
-
-    if (!options.tableEntityProperties || !partitionKey || !rowKey) {
-      throw StorageErrorFactory.getPropertiesNeedValue(context);
-    }
 
     if (
       !options.tableEntityProperties ||

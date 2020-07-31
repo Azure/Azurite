@@ -151,7 +151,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       this.getUniqueTableCollectionName(account, tableName)
     );
 
-    // Throw errow, when table not exists
+    // Throw error, when table not exists
     if (!tableColl) {
       throw StorageErrorFactory.getTableNotExist(context);
     }
@@ -162,8 +162,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       RowKey: entity.RowKey
     });
 
+    // Throw err
     if (!currentDoc) {
-      throw StorageErrorFactory.getEntityNotExist;
+      throw StorageErrorFactory.getEntityNotExist(context);
     }
 
     tableColl.insert(entity);

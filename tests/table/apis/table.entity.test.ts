@@ -10,6 +10,7 @@ import {
   getUniqueName,
   overrideRequest
 } from "../../testutils";
+import StorageError from "../../../src/blob/errors/StorageError";
 
 // Set true to enable debug log
 configLogger(false);
@@ -174,6 +175,55 @@ describe("table Entity APIs test", () => {
         } else {
           assert.ifError(error);
           done();
+        }
+      }
+    );
+  });
+
+  it("Update an Entity that exists, @loki", done => {
+    const entityInsert = {
+      PartitionKey: "part1",
+      RowKey: "row3",
+      myValue: "shouldMatchEtag"
+    };
+    tableService.insertEntity(
+      tableName,
+      entityInsert,
+      (error, result, insertresponse) => {
+        if (!error) {
+          requestOverride.headers = {};
+          tableService.replaceEntity(
+            tableName,
+            { PartitionKey: "part1", RowKey: "row3", myValue: "newValue" },
+            (updateError, updateResult, updateResponse) => {
+              if (!updateError) {
+                assert.equal(updateResponse.statusCode, 204); // Precondition succeeded
+                done();
+              } else {
+                assert.ifError(updateError);
+                done();
+              }
+            }
+          );
+        } else {
+          assert.ifError(error);
+          done();
+        }
+      }
+    );
+  });
+
+  it("Update an Entity that does not exist, @loki", done => {
+    tableService.replaceEntity(
+      tableName,
+      { PartitionKey: "part1", RowKey: "row4", myValue: "newValue" },
+      (updateError, updateResult, updateResponse) => {
+        const castUpdateStatusCode = (updateError as StorageError).statusCode;
+        if (updateError) {
+          assert.equal(castUpdateStatusCode, 409);
+          done();
+        } else {
+          assert.fail("Test failed to throw the right Error" + updateError);
         }
       }
     );
