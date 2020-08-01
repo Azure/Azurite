@@ -145,7 +145,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     context: Context,
     tableName: string,
     account: string,
-    entity: IEntity
+    entity: IEntity,
+    etag: string
   ): Promise<void> {
     const tableColl = this.db.getCollection(
       this.getUniqueTableCollectionName(account, tableName)
@@ -160,11 +161,15 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     const currentDoc = tableColl.findOne({
       PartitionKey: entity.PartitionKey,
       RowKey: entity.RowKey
-    });
+    }) as IEntity;
 
     // Throw err
     if (!currentDoc) {
       throw StorageErrorFactory.getEntityNotExist(context);
+    } else {
+      if (etag !== "*" && currentDoc.eTag !== etag) {
+        throw StorageErrorFactory.getPreconditionFailed(context);
+      }
     }
 
     tableColl.insert(entity);

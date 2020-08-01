@@ -47,7 +47,8 @@ export default interface ITableMetadataStore {
     context: Context,
     tableName: string,
     account: string,
-    entity: IEntity
+    entity: IEntity,
+    eatg: string
   ): Promise<void>;
   mergeTableEntity(
     context: Context,

@@ -241,6 +241,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableCtx = new TableStorageContext(context);
     const accountName = tableCtx.account;
     const tableName = tableCtx.tableName!; // Get tableName from context
+    const ifMatch = options.ifMatch;
 
     if (
       !options.tableEntityProperties ||
@@ -248,6 +249,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       !options.tableEntityProperties.RowKey
     ) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
+    }
+
+    if (ifMatch === "" || ifMatch === undefined) {
+      throw StorageErrorFactory.getPreconditionFailed(context);
     }
 
     const entity: IEntity = {
@@ -262,7 +267,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       context,
       tableName,
       accountName!,
-      entity
+      entity,
+      ifMatch
     );
 
     const response: Models.TableUpdateEntityResponse = {
