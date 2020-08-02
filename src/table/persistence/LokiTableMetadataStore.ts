@@ -152,7 +152,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       this.getUniqueTableCollectionName(account, tableName)
     );
 
-    // Throw error, when table not exists
+    // Throw error, if table not exists
     if (!tableColl) {
       throw StorageErrorFactory.getTableNotExist(context);
     }
@@ -163,10 +163,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       RowKey: entity.RowKey
     }) as IEntity;
 
-    // Throw err
+    // Throw error, if doc does not exist
     if (!currentDoc) {
       throw StorageErrorFactory.getEntityNotExist(context);
     } else {
+      // Test if etag value is valid
       if (etag !== "*" && currentDoc.eTag !== etag) {
         throw StorageErrorFactory.getPreconditionFailed(context);
       }

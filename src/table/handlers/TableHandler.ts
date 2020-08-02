@@ -243,6 +243,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableName = tableCtx.tableName!; // Get tableName from context
     const ifMatch = options.ifMatch;
 
+    // Test if all required parameter exist
     if (
       !options.tableEntityProperties ||
       !options.tableEntityProperties.PartitionKey ||
@@ -251,10 +252,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
     }
 
+    // Test if etag is available
     if (ifMatch === "" || ifMatch === undefined) {
       throw StorageErrorFactory.getPreconditionFailed(context);
     }
 
+    // Entity, which is used to update an existing entity
     const entity: IEntity = {
       PartitionKey: options.tableEntityProperties.PartitionKey,
       RowKey: options.tableEntityProperties.RowKey,
@@ -263,6 +266,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       eTag: newEtag()
     };
 
+    // Update entity
     await this.metadataStore.updateTableEntity(
       context,
       tableName,
@@ -271,6 +275,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       ifMatch
     );
 
+    // Response definition
     const response: Models.TableUpdateEntityResponse = {
       clientRequestId: options.requestId,
       requestId: tableCtx.contextID,
