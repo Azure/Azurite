@@ -2648,6 +2648,16 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new Error("Method not implemented.");
   }
 
+  public copyFromURL(
+    context: Context,
+    source: BlobId,
+    destination: BlobId,
+    copySource: string,
+    metadata: Models.BlobMetadata | undefined
+  ): Promise<Models.BlobProperties> {
+    throw new Error("Method not implemented.");
+  }
+
   public setTier(
     context: Context,
     account: string,

@@ -212,6 +212,41 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(properties.copyStatus, "success");
   });
 
+  it("Synchronized copy append blob snapshot should work @loki", async () => {
+    await appendBlobClient.create();
+    await appendBlobClient.appendBlock("hello", 5);
+
+    const response = await appendBlobClient.createSnapshot();
+    const appendBlobSnapshotClient = appendBlobClient.withSnapshot(
+      response.snapshot!
+    );
+
+    await appendBlobClient.appendBlock("world", 5);
+
+    const destAppendBlobClient = containerClient.getAppendBlobClient(
+      "copiedAppendBlob"
+    );
+    await destAppendBlobClient.syncCopyFromURL(appendBlobSnapshotClient.url);
+
+    let properties = await appendBlobClient.getProperties();
+    assert.deepStrictEqual(properties.contentLength, 10);
+    assert.deepStrictEqual(properties.blobCommittedBlockCount, 2);
+
+    properties = await appendBlobSnapshotClient.getProperties();
+    assert.deepStrictEqual(properties.contentLength, 5);
+    assert.deepStrictEqual(properties.blobCommittedBlockCount, 1);
+
+    await appendBlobClient.delete({ deleteSnapshots: "include" });
+
+    properties = await destAppendBlobClient.getProperties();
+    assert.deepStrictEqual(properties.contentLength, 5);
+    assert.deepStrictEqual(properties.blobCommittedBlockCount, 1);
+    assert.ok(properties.copyId);
+    assert.ok(properties.copyCompletedOn);
+    assert.deepStrictEqual(properties.copyProgress, "5/5");
+    assert.deepStrictEqual(properties.copySource, appendBlobSnapshotClient.url);
+  });
+
   it("Set append blob metadata should work @loki", async () => {
     await appendBlobClient.create();
 

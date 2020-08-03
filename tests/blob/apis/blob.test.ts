@@ -973,6 +973,180 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(err.statusCode, 400);
   });
 
+  it("Synchronized copy blob should work @loki", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    const metadata = { key: "value" };
+    const blobHTTPHeaders = {
+      blobCacheControl: "blobCacheControl",
+      blobContentDisposition: "blobContentDisposition",
+      blobContentEncoding: "blobContentEncoding",
+      blobContentLanguage: "blobContentLanguage",
+      blobContentType: "blobContentType"
+    };
+
+    const result_upload = await sourceBlobClient.upload("hello", 5, {
+      metadata,
+      blobHTTPHeaders
+    });
+    assert.equal(
+      result_upload._response.request.headers.get("x-ms-client-request-id"),
+      result_upload.clientRequestId
+    );
+
+    const result_copy = await destBlobClient.syncCopyFromURL(
+      sourceBlobClient.url
+    );
+
+    assert.equal(
+      result_copy!._response.request.headers.get("x-ms-client-request-id"),
+      result_copy!._response.request.requestId
+    );
+
+    const result = await destBlobClient.getProperties();
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "BlockBlob");
+    assert.ok(result.lastModified);
+    assert.deepStrictEqual(result.metadata, metadata);
+    assert.deepStrictEqual(
+      result.cacheControl,
+      blobHTTPHeaders.blobCacheControl
+    );
+    assert.deepStrictEqual(result.contentType, blobHTTPHeaders.blobContentType);
+    assert.deepStrictEqual(
+      result.contentEncoding,
+      blobHTTPHeaders.blobContentEncoding
+    );
+    assert.deepStrictEqual(
+      result.contentLanguage,
+      blobHTTPHeaders.blobContentLanguage
+    );
+    assert.deepStrictEqual(
+      result.contentDisposition,
+      blobHTTPHeaders.blobContentDisposition
+    );
+  });
+
+  it("Synchronized copy blob should work to override metadata @loki", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    const metadata = { key: "value" };
+    const metadata2 = { key: "value2" };
+    await sourceBlobClient.upload("hello", 5, {
+      metadata
+    });
+
+    await destBlobClient.syncCopyFromURL(sourceBlobClient.url, {
+      metadata: metadata2
+    });
+
+    const result = await destBlobClient.getProperties();
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "BlockBlob");
+    assert.ok(result.lastModified);
+    assert.deepStrictEqual(result.metadata, metadata2);
+  });
+
+  it("Synchronized copy blob should not override destination Lease status @loki", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    await sourceBlobClient.upload("hello", 5);
+    await destBlobClient.upload("hello", 5);
+
+    let destLeaseClient = destBlobClient.getBlobLeaseClient();
+    const leaseResult = await destLeaseClient.acquireLease(-1);
+    const leaseId = leaseResult.leaseId;
+    assert.ok(leaseId);
+
+    const getResult = await destBlobClient.getProperties();
+    assert.equal(getResult.leaseDuration, "infinite");
+    assert.equal(getResult.leaseState, "leased");
+    assert.equal(getResult.leaseStatus, "locked");
+
+    await destBlobClient.syncCopyFromURL(sourceBlobClient.url, {
+      conditions: { leaseId }
+    });
+
+    const result = await destBlobClient.getProperties();
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "BlockBlob");
+    assert.ok(result.lastModified);
+    assert.equal(getResult.leaseDuration, "infinite");
+    assert.equal(getResult.leaseState, "leased");
+    assert.equal(getResult.leaseStatus, "locked");
+
+    await destLeaseClient.releaseLease();
+  });
+
+  it("Synchronized copy blob should work for page blob @loki", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getPageBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getPageBlobClient(destBlob);
+
+    const metadata = { key: "value" };
+    const blobHTTPHeaders = {
+      blobCacheControl: "blobCacheControl",
+      blobContentDisposition: "blobContentDisposition",
+      blobContentEncoding: "blobContentEncoding",
+      blobContentLanguage: "blobContentLanguage",
+      blobContentType: "blobContentType"
+    };
+
+    const result_upload = await sourceBlobClient.create(512, {
+      metadata,
+      blobHTTPHeaders
+    });
+    assert.equal(
+      result_upload._response.request.headers.get("x-ms-client-request-id"),
+      result_upload.clientRequestId
+    );
+
+    const result_copy = await destBlobClient.syncCopyFromURL(
+      sourceBlobClient.url
+    );
+    assert.equal(
+      result_copy!._response.request.headers.get("x-ms-client-request-id"),
+      result_copy!._response.request.requestId
+    );
+
+    const result = await destBlobClient.getProperties();
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "PageBlob");
+    assert.ok(result.lastModified);
+    assert.deepStrictEqual(result.metadata, metadata);
+    assert.deepStrictEqual(
+      result.cacheControl,
+      blobHTTPHeaders.blobCacheControl
+    );
+    assert.deepStrictEqual(result.contentType, blobHTTPHeaders.blobContentType);
+    assert.deepStrictEqual(
+      result.contentEncoding,
+      blobHTTPHeaders.blobContentEncoding
+    );
+    assert.deepStrictEqual(
+      result.contentLanguage,
+      blobHTTPHeaders.blobContentLanguage
+    );
+    assert.deepStrictEqual(
+      result.contentDisposition,
+      blobHTTPHeaders.blobContentDisposition
+    );
+  });
+
   it("Acquire Lease on Breaking Lease status, if LeaseId not match, throw LeaseIdMismatchWithLease error @loki @sql", async () => {
     // TODO: implement the case later
   });

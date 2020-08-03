@@ -485,6 +485,16 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
 );
 
 OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.Blob_CopyFromURL,
+  new OperationAccountSASPermission(
+    AccountSASService.Blob,
+    AccountSASResourceType.Object,
+    // If destination is an existing blob, create permission is not enough
+    AccountSASPermission.Write + AccountSASPermission.Create
+  )
+);
+
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   Operation.PageBlob_CopyIncremental,
   new OperationAccountSASPermission(
     AccountSASService.Blob,
