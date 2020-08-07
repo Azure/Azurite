@@ -10,6 +10,7 @@ import {
   getUniqueName,
   overrideRequest
 } from "../../testutils";
+import StorageError from "../../../src/blob/errors/StorageError";
 
 // Set true to enable debug log
 configLogger(false);
@@ -167,6 +168,143 @@ describe("table Entity APIs test", () => {
                 done();
               } else {
                 assert.ifError(deleteError);
+                done();
+              }
+            }
+          );
+        } else {
+          assert.ifError(error);
+          done();
+        }
+      }
+    );
+  });
+
+  it("Update an Entity that exists, @loki", done => {
+    const entityInsert = {
+      PartitionKey: "part1",
+      RowKey: "row3",
+      myValue: "oldValue"
+    };
+    tableService.insertEntity(
+      tableName,
+      entityInsert,
+      (error, result, insertresponse) => {
+        if (!error) {
+          requestOverride.headers = {};
+          tableService.replaceEntity(
+            tableName,
+            { PartitionKey: "part1", RowKey: "row3", myValue: "newValue" },
+            (updateError, updateResult, updateResponse) => {
+              if (!updateError) {
+                assert.equal(updateResponse.statusCode, 204); // Precondition succeeded
+                done();
+              } else {
+                assert.ifError(updateError);
+                done();
+              }
+            }
+          );
+        } else {
+          assert.ifError(error);
+          done();
+        }
+      }
+    );
+  });
+
+  it("Update an Entity that does not exist, @loki", done => {
+    tableService.replaceEntity(
+      tableName,
+      { PartitionKey: "part1", RowKey: "row4", myValue: "newValue" },
+      (updateError, updateResult, updateResponse) => {
+        const castUpdateStatusCode = (updateError as StorageError).statusCode;
+        if (updateError) {
+          assert.equal(castUpdateStatusCode, 409);
+          done();
+        } else {
+          assert.fail("Test failed to throw the right Error" + updateError);
+        }
+      }
+    );
+  });
+
+  it("Should not update an Entity not matching Etag, @loki", done => {
+    const entityInsert = {
+      PartitionKey: "part1",
+      RowKey: "row4",
+      myValue: "oldValue"
+    };
+    const entityUpdate = {
+      PartitionKey: "part1",
+      RowKey: "row4",
+      myValue: "oldValueUpdate",
+      ".metadata": {
+        etag: "0x2252C97588D4000"
+      }
+    };
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertEntity(
+      tableName,
+      entityInsert,
+      (insertError, insertResult, insertResponse) => {
+        if (!insertError) {
+          requestOverride.headers = {};
+          tableService.replaceEntity(
+            tableName,
+            entityUpdate,
+            (updateError, updateResponse) => {
+              const castUpdateStatusCode = (updateError as StorageError)
+                .statusCode;
+              assert.equal(castUpdateStatusCode, 412); // Precondition failed
+              done();
+            }
+          );
+        } else {
+          assert.ifError(insertError);
+          done();
+        }
+      }
+    );
+  });
+
+  it("Should update, if Etag matches, @loki", done => {
+    const entityInsert = {
+      PartitionKey: "part1",
+      RowKey: "row5",
+      myValue: "oldValue"
+    };
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertEntity(
+      tableName,
+      entityInsert,
+      (error, result, insertresponse) => {
+        const etagOld = result[".metadata"].etag;
+        const entityUpdate = {
+          PartitionKey: "part1",
+          RowKey: "row5",
+          myValue: "oldValueUpdate",
+          ".metadata": {
+            etag: etagOld
+          }
+        };
+        if (!error) {
+          requestOverride.headers = {};
+          tableService.replaceEntity(
+            tableName,
+            entityUpdate,
+            (updateError, updateResult, updateResponse) => {
+              if (!updateError) {
+                assert.equal(updateResponse.statusCode, 204); // Precondition succeeded
+                done();
+              } else {
+                assert.ifError(updateError);
                 done();
               }
             }

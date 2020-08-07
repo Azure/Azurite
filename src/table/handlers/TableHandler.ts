@@ -238,22 +238,54 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableUpdateEntityOptionalParams,
     context: Context
   ): Promise<Models.TableUpdateEntityResponse> {
-    // e.g
-    // const tableCtx = new TableStorageContext(context);
-    // const accountName = tableCtx.account;
-    // const tableName = tableCtx.tableName; // Get tableName from context
-    // const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
-    // const rowKey = tableCtx.rowKey!; // Get rowKey from context
-    // const entity = options.tableEntityProperties!;
-    // return {
-    //   statusCode: 204,
-    //   date: tableCtx.startTime,
-    //   clientRequestId: "clientRequestId",
-    //   requestId: "requestId",
-    //   version: "version"
-    // };
-    // TODO
-    throw new NotImplementedError();
+    const tableCtx = new TableStorageContext(context);
+    const accountName = tableCtx.account;
+    const tableName = tableCtx.tableName!; // Get tableName from context
+    const ifMatch = options.ifMatch;
+
+    // Test if all required parameter exist
+    if (
+      !options.tableEntityProperties ||
+      !options.tableEntityProperties.PartitionKey ||
+      !options.tableEntityProperties.RowKey
+    ) {
+      throw StorageErrorFactory.getPropertiesNeedValue(context);
+    }
+
+    // Test if etag is available
+    if (ifMatch === "" || ifMatch === undefined) {
+      throw StorageErrorFactory.getPreconditionFailed(context);
+    }
+
+    // Entity, which is used to update an existing entity
+    const entity: IEntity = {
+      PartitionKey: options.tableEntityProperties.PartitionKey,
+      RowKey: options.tableEntityProperties.RowKey,
+      properties: options.tableEntityProperties,
+      lastModifiedTime: context.startTime!,
+      eTag: newEtag()
+    };
+
+    // Update entity
+    await this.metadataStore.updateTableEntity(
+      context,
+      tableName,
+      accountName!,
+      entity,
+      ifMatch
+    );
+
+    // Response definition
+    const response: Models.TableUpdateEntityResponse = {
+      clientRequestId: options.requestId,
+      requestId: tableCtx.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      eTag: newEtag(),
+      statusCode: 204
+    };
+
+    return response;
   }
 
   public async mergeEntity(

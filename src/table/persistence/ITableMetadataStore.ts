@@ -45,9 +45,10 @@ export default interface ITableMetadataStore {
   ): Promise<{ [propertyName: string]: any }[]>;
   updateTableEntity(
     context: Context,
-    table: string,
-    partitionKey: string,
-    rowKey: string
+    tableName: string,
+    account: string,
+    entity: IEntity,
+    eatg: string
   ): Promise<void>;
   mergeTableEntity(
     context: Context,
