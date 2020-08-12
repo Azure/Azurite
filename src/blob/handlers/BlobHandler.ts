@@ -1,3 +1,4 @@
+import * as fetch from "node-fetch";
 import { URL } from "url";
 
 import IExtentStore from "../../common/persistence/IExtentStore";
@@ -624,12 +625,48 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const snapshot = url.searchParams.get("snapshot") || "";
 
     if (
-      sourceAccount !== blobCtx.account ||
       sourceAccount === undefined ||
       sourceContainer === undefined ||
       sourceBlob === undefined
     ) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId!);
+    }
+
+    if (sourceAccount !== blobCtx.account) {
+      // Currently the only cross-account copy support is from/to the same server. In either case access is determined
+      // by performing a request to the copy source to see if the authentication is valid.
+      const currentServer = blobCtx.request!.getHeader("Host") || "";
+      if (currentServer !== url.host) {
+        this.logger.error(
+          `BlobHandler:startCopyFromURL() Source account ${url} is not on the same server as target account ${account}`,
+          context.contextId
+        );
+
+        throw StorageErrorFactory.getBlobNotFound(context.contextId!);
+      }
+
+      this.logger.debug(
+        `BlobHandler:startCopyFromURL() Validating access to the source account ${sourceAccount}`,
+        context.contextId
+      );
+
+      const validationRequest = new fetch.Request(copySource, {
+        method: "HEAD"
+      });
+      const validationResponse = await fetch.default(validationRequest);
+      if (validationResponse.ok) {
+        this.logger.debug(
+          `BlobHandler:startCopyFromURL() Successfully validated access to source account ${sourceAccount}`,
+          context.contextId
+        );
+      } else {
+        this.logger.debug(
+          `BlobHandler:startCopyFromURL() Access denied to source account ${sourceAccount}. StatusCode=${validationResponse.status}`,
+          context.contextId
+        );
+
+        throw StorageErrorFactory.getBlobNotFound(context.contextId!);
+      }
     }
 
     // Preserve metadata key case
