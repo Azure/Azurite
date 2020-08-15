@@ -1169,10 +1169,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const sas = generateBlobSASQueryParameters(
       {
         containerName,
-        blobName: blobName,
+        blobName,
         expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: ContainerSASPermissions.parse("rl"),
+        permissions: BlobSASPermissions.parse("r"),
         protocol: SASProtocol.HttpsAndHttp,
         startsOn: now,
         version: "2016-05-31"
@@ -1184,11 +1184,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await sourceBlob.upload("hello", 5);
 
     const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
-    const sourceUriBuilder = URLBuilder.parse(sourceBlob.url);
 
     let error;
     try {
-      await targetBlob.beginCopyFromURL(sourceUriBuilder.toString());
+      await targetBlob.beginCopyFromURL(sourceBlob.url);
     } catch (err) {
       error = err;
     }
@@ -1196,8 +1195,13 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.ok(error !== undefined);
 
     // this copy should work
-    sourceUriBuilder.setQueryParameter("sv", sas);
-    await targetBlob.beginCopyFromURL(sourceUriBuilder.toString());
+    const operation = await targetBlob.beginCopyFromURL(
+      `${sourceBlob.url}?${sas}`
+    );
+    const copyResponse = await operation.pollUntilDone();
+    assert.equal("success", copyResponse.copyStatus);
+    const fileBuffer = await targetBlob.downloadToBuffer();
+    assert.equal(fileBuffer.toString(), "hello");
   });
 
   it("Copy blob across accounts should error if hosts mismatch @loki", async () => {
