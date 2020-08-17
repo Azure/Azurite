@@ -29,7 +29,7 @@ export const EMULATOR_ACCOUNT_KEY = Buffer.from(
 );
 export const EMULATOR_ACCOUNT2_NAME = "devstoreaccount2";
 export const EMULATOR_ACCOUNT2_KEY_STR =
-  "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
+  "MTAwCjE2NQoyMjUKMTAzCjIxOAoyNDEKNDAKNzgKMTkxCjE3OAoyMTQKMTY5CjIxMwo2MQoyNTIKMTQxCg==";
 export const EMULATOR_ACCOUNT2_KEY = Buffer.from(
   EMULATOR_ACCOUNT2_KEY_STR,
   "base64"
