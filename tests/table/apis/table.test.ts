@@ -137,31 +137,23 @@ describe("table APIs test", () => {
       accept: "application/json;odata=fullmetadata"
     };
 
-    tableService.queryEntities(
-      "Tables",
-      null,
-      null,
-      (error, result, response) => {
-        if (!error) {
-          const entries = result.entries![0] as any;
-          assert.ok(entries["TableResponseProperties"]);
-          assert.deepStrictEqual(
-            entries[".metadata"].metadata,
-            `${protocol}://${host}:${port}/${accountName}/$metadata#Tables`
-          );
-          assert.equal(response.statusCode, 200);
-          const headers = response.headers!;
-          assert.equal(headers["x-ms-version"], TABLE_API_VERSION);
-          const bodies = response.body! as any;
-          assert.deepStrictEqual(
-            bodies["odata.metadata"],
-            `${protocol}://${host}:${port}/${accountName}/$metadata#Tables`
-          );
-          assert.ok(bodies["TableResponseProperties"]);
-        }
-        done();
+    tableService.listTablesSegmented(null as any, (error, result, response) => {
+      if (!error) {
+        assert.equal(response.statusCode, 200);
+        const headers = response.headers!;
+        assert.equal(headers["x-ms-version"], TABLE_API_VERSION);
+        const bodies = response.body! as any;
+        assert.deepStrictEqual(
+          bodies["odata.metadata"],
+          `${protocol}://${host}:${port}/${accountName}/$metadata#Tables`
+        );
+        assert.ok(bodies.TableResponseProperties[0]["TableName"]);
+        assert.ok(bodies.TableResponseProperties[0]["odata.type"]);
+        assert.ok(bodies.TableResponseProperties[0]["odata.id"]);
+        assert.ok(bodies.TableResponseProperties[0]["odata.editLink"]);
       }
-    );
+      done();
+    });
   });
 
   it("queryTable, accept=application/json;odata=minimalmetadata @loki", done => {
@@ -175,31 +167,20 @@ describe("table APIs test", () => {
       accept: "application/json;odata=minimalmetadata"
     };
 
-    tableService.queryEntities(
-      "Tables",
-      null,
-      null,
-      (error, result, response) => {
-        if (!error) {
-          const entries = result.entries![0] as any;
-          assert.ok(entries["TableResponseProperties"]);
-          assert.deepStrictEqual(
-            entries[".metadata"].metadata,
-            `${protocol}://${host}:${port}/${accountName}/$metadata#Tables`
-          );
-          assert.equal(response.statusCode, 200);
-          const headers = response.headers!;
-          assert.equal(headers["x-ms-version"], TABLE_API_VERSION);
-          const bodies = response.body! as any;
-          assert.deepStrictEqual(
-            bodies["odata.metadata"],
-            `${protocol}://${host}:${port}/${accountName}/$metadata#Tables`
-          );
-          assert.ok(bodies["TableResponseProperties"]);
-        }
-        done();
+    tableService.listTablesSegmented(null as any, (error, result, response) => {
+      if (!error) {
+        assert.equal(response.statusCode, 200);
+        const headers = response.headers!;
+        assert.equal(headers["x-ms-version"], TABLE_API_VERSION);
+        const bodies = response.body! as any;
+        assert.deepStrictEqual(
+          bodies["odata.metadata"],
+          `${protocol}://${host}:${port}/${accountName}/$metadata#Tables`
+        );
+        assert.ok(bodies.TableResponseProperties[0]["TableName"]);
       }
-    );
+      done();
+    });
   });
 
   it("queryTable, accept=application/json;odata=nometadata @loki", done => {
@@ -213,23 +194,16 @@ describe("table APIs test", () => {
       accept: "application/json;odata=nometadata"
     };
 
-    tableService.queryEntities(
-      "Tables",
-      null,
-      null,
-      (error, result, response) => {
-        if (!error) {
-          const entries = result.entries![0] as any;
-          assert.ok(entries.TableResponseProperties);
-          assert.equal(response.statusCode, 200);
-          const headers = response.headers!;
-          assert.equal(headers["x-ms-version"], TABLE_API_VERSION);
-          const bodies = response.body! as any;
-          assert.ok(bodies["TableResponseProperties"]);
-        }
-        done();
+    tableService.listTablesSegmented(null as any, (error, result, response) => {
+      if (!error) {
+        assert.equal(response.statusCode, 200);
+        const headers = response.headers!;
+        assert.equal(headers["x-ms-version"], TABLE_API_VERSION);
+        const bodies = response.body! as any;
+        assert.ok(bodies.TableResponseProperties[0]["TableName"]);
       }
-    );
+      done();
+    });
   });
 
   it("deleteTable that exists, @loki", done => {

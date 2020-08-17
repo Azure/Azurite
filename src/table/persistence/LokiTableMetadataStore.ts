@@ -90,10 +90,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     context: Context
   ): Promise<Models.TableResponseProperties[]> {
     const coll = this.db.getCollection(this.TABLE_COLLECTION);
-    const docList: any[] = coll
-      .chain()
-      .find({ account: context.context.account })
-      .data();
+    const docList = coll.find({ account: context.context.account });
 
     if (!docList) {
       throw StorageErrorFactory.getEntityNotFound(context);
@@ -104,10 +101,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     if (docList.length > 0) {
       response = docList.map(item => {
         return {
-          tableName: item.tableName,
           odatatype: item.odatatype,
           odataid: item.odataid,
-          odataeditLink: item.odataeditLink
+          odataeditLink: item.odataeditLink,
+          tableName: item.tableName
         };
       });
     }

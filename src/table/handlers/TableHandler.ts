@@ -172,10 +172,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       response.odatametadata = `${protocol}://${host}/${metadata}`;
       response.value = tableResult.map(item => {
         return {
-          tableName: item.tableName,
           odatatype: item.odatatype,
           odataid: item.odataid,
-          odataeditLink: item.odataeditLink
+          odataeditLink: item.odataeditLink,
+          tableName: item.tableName
         };
       });
     }
