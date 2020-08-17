@@ -48,6 +48,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       table.account,
       table.tableName
     );
+
     const extentColl = this.db.getCollection(uniqueTableName);
     if (extentColl) {
       throw StorageErrorFactory.getTableAlreadyExists(context);
@@ -56,7 +57,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     this.db.addCollection(uniqueTableName, {
       // Optimization for indexing and searching
       // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
-      indices: ["PartitionKey", "RowKey"]
+      indices: ["ParititionKey", "RowKey"]
     }); // Optimize for find operation
   }
 
@@ -89,8 +90,30 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   public async queryTable(
     context: Context
   ): Promise<Models.TableResponseProperties[]> {
-    // TODO
-    throw new NotImplementedError();
+    const coll = this.db.getCollection(this.TABLE_COLLECTION);
+    let docList = coll
+      .chain()
+      .find({ account: context.context.account })
+      .data();
+
+    if (!docList) {
+      throw StorageErrorFactory.getEntityNotFound(context);
+    }
+
+    let response: Models.TableResponseProperties[] = [];
+
+    if (docList.length > 0) {
+      response = docList.map(item => {
+        return {
+          tableName: item.tableName,
+          odatatype: item.odatatype,
+          odataid: item.odataid,
+          odataeditLink: item.odataeditLink
+        };
+      });
+    }
+
+    return response;
   }
 
   public async deleteTable(
@@ -143,38 +166,12 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
   public async updateTableEntity(
     context: Context,
-    tableName: string,
-    account: string,
-    entity: IEntity,
-    etag: string
+    table: string,
+    partitionKey: string,
+    rowKey: string
   ): Promise<void> {
-    const tableColl = this.db.getCollection(
-      this.getUniqueTableCollectionName(account, tableName)
-    );
-
-    // Throw error, if table not exists
-    if (!tableColl) {
-      throw StorageErrorFactory.getTableNotExist(context);
-    }
-
-    // Get Current Doc
-    const currentDoc = tableColl.findOne({
-      PartitionKey: entity.PartitionKey,
-      RowKey: entity.RowKey
-    }) as IEntity;
-
-    // Throw error, if doc does not exist
-    if (!currentDoc) {
-      throw StorageErrorFactory.getEntityNotExist(context);
-    } else {
-      // Test if etag value is valid
-      if (etag !== "*" && currentDoc.eTag !== etag) {
-        throw StorageErrorFactory.getPreconditionFailed(context);
-      }
-    }
-
-    tableColl.remove(currentDoc);
-    tableColl.insert(entity);
+    // TODO
+    throw new NotImplementedError();
   }
 
   public async mergeTableEntity(
