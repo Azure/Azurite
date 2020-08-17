@@ -90,7 +90,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     context: Context
   ): Promise<Models.TableResponseProperties[]> {
     const coll = this.db.getCollection(this.TABLE_COLLECTION);
-    let docList = coll
+    const docList: any[] = coll
       .chain()
       .find({ account: context.context.account })
       .data();

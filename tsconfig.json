@@ -18,7 +18,8 @@
     "declarationDir": "./typings",
     "lib": ["es5", "es6", "es7", "esnext", "dom"],
     "esModuleInterop": true,
-    "downlevelIteration": true
+    "downlevelIteration": true,
+    "strictNullChecks": false
   },
   "compileOnSave": true,
   "exclude": ["node_modules"],

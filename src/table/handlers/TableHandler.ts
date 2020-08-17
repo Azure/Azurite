@@ -155,8 +155,6 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       protocol = tableCtx.request.getProtocol() as string;
     }
 
-    if (tableResult.length > 0) {
-    }
     if (tableCtx.accept === NO_METADATA_ACCEPT) {
       response.value = tableResult.map(item => {
         return { tableName: item.tableName };
