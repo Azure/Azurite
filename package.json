@@ -28,7 +28,6 @@
     "morgan": "^1.9.1",
     "multistream": "^2.1.1",
     "mysql2": "^2.1.0",
-    "node-fetch": "^2.6.0",
     "rimraf": "^2.6.3",
     "sequelize": "^5.18.4",
     "tedious": "^6.6.5",

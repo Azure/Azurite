@@ -1,4 +1,4 @@
-import * as fetch from "node-fetch";
+import * as axios from "axios";
 import { URL } from "url";
 
 import IExtentStore from "../../common/persistence/IExtentStore";
@@ -633,12 +633,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     if (sourceAccount !== blobCtx.account) {
-      // Currently the only cross-account copy support is from/to the same server. In either case access is determined
-      // by performing a request to the copy source to see if the authentication is valid.
+      // Currently the only cross-account copy support is from/to the same Azurite instance. In either case access
+      // is determined by performing a request to the copy source to see if the authentication is valid.
       const currentServer = blobCtx.request!.getHeader("Host") || "";
       if (currentServer !== url.host) {
         this.logger.error(
-          `BlobHandler:startCopyFromURL() Source account ${url} is not on the same server as target account ${account}`,
+          `BlobHandler:startCopyFromURL() Source account ${url} is not on the same Azurite instance as target account ${account}`,
           context.contextId
         );
 
@@ -650,11 +650,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         context.contextId
       );
 
-      const validationRequest = new fetch.Request(copySource, {
-        method: "HEAD"
+      const validationResponse = await axios.default.head(copySource, {
+        // Instructs axios to not throw an error for non-2xx responses
+        validateStatus: () => true
       });
-      const validationResponse = await fetch.default(validationRequest);
-      if (validationResponse.ok) {
+      if (validationResponse.status === 200) {
         this.logger.debug(
           `BlobHandler:startCopyFromURL() Successfully validated access to source account ${sourceAccount}`,
           context.contextId
