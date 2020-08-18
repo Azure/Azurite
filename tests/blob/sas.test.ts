@@ -1384,4 +1384,57 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.equal(properties2.metadata!["bar"], undefined);
     assert.equal(properties2.metadata!["baz"], "3");
   });
+
+  it("Copy blob across accounts should fail if source is archived @loki", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+
+    const containerName = getUniqueName("con");
+    const sourceContainerClient = serviceClient.getContainerClient(
+      containerName
+    );
+    const targetContainerClient = serviceClient2.getContainerClient(
+      containerName
+    );
+    await sourceContainerClient.create();
+    await targetContainerClient.create();
+
+    const blobName = getUniqueName("blob");
+    const sas = generateBlobSASQueryParameters(
+      {
+        containerName,
+        blobName,
+        expiresOn: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: BlobSASPermissions.parse("r"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
+        version: "2016-05-31"
+      },
+      sourceStorageSharedKeyCredential as StorageSharedKeyCredential
+    ).toString();
+
+    const sourceBlob = sourceContainerClient.getBlockBlobClient(blobName);
+    await sourceBlob.upload("hello", 5);
+    sourceBlob.setAccessTier("Archive");
+
+    const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
+
+    let error;
+    try {
+      await targetBlob.beginCopyFromURL(`${sourceBlob.url}?${sas}`);
+    } catch (err) {
+      error = err;
+    }
+    assert.ok(error !== undefined);
+    assert.equal(error.statusCode, 409);
+    assert.equal(error.details.Code, "BlobArchived");
+  });
 });
