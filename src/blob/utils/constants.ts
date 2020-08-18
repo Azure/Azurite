@@ -27,13 +27,6 @@ export const EMULATOR_ACCOUNT_KEY = Buffer.from(
   EMULATOR_ACCOUNT_KEY_STR,
   "base64"
 );
-export const EMULATOR_ACCOUNT2_NAME = "devstoreaccount2";
-export const EMULATOR_ACCOUNT2_KEY_STR =
-  "MTAwCjE2NQoyMjUKMTAzCjIxOAoyNDEKNDAKNzgKMTkxCjE3OAoyMTQKMTY5CjIxMwo2MQoyNTIKMTQxCg==";
-export const EMULATOR_ACCOUNT2_KEY = Buffer.from(
-  EMULATOR_ACCOUNT2_KEY_STR,
-  "base64"
-);
 
 export const EMULATOR_ACCOUNT_SKUNAME = Models.SkuName.StandardRAGRS;
 export const EMULATOR_ACCOUNT_KIND = Models.AccountKind.StorageV2;

@@ -9,10 +9,6 @@ export const EMULATOR_ACCOUNT_NAME = "devstoreaccount1";
 export const EMULATOR_ACCOUNT_KEY =
   "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
 
-export const EMULATOR_ACCOUNT2_NAME = "devstoreaccount2";
-export const EMULATOR_ACCOUNT2_KEY =
-  "MTAwCjE2NQoyMjUKMTAzCjIxOAoyNDEKNDAKNzgKMTkxCjE3OAoyMTQKMTY5CjIxMwo2MQoyNTIKMTQxCg==";
-
 export function getUniqueName(prefix: string): string {
   return `${prefix}${new Date().getTime()}${padStart(
     Math.floor(Math.random() * 10000).toString(),

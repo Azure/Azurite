@@ -21,16 +21,23 @@ import BlobTestServerFactory from "../BlobTestServerFactory";
 import { getUniqueName } from "../testutils";
 import {
   EMULATOR_ACCOUNT_KEY_STR,
-  EMULATOR_ACCOUNT_NAME,
-  EMULATOR_ACCOUNT2_KEY_STR,
-  EMULATOR_ACCOUNT2_NAME
+  EMULATOR_ACCOUNT_NAME
 } from "../../src/blob/utils/constants";
 import { URLBuilder } from "@azure/ms-rest-js";
+
+const EMULATOR_ACCOUNT2_NAME = "devstoreaccount2";
+const EMULATOR_ACCOUNT2_KEY_STR =
+  "MTAwCjE2NQoyMjUKMTAzCjIxOAoyNDEKNDAKNzgKMTkxCjE3OAoyMTQKMTY5CjIxMwo2MQoyNTIKMTQxCg==";
 
 // Set true to enable debug log
 configLogger(false);
 
 describe("Shared Access Signature (SAS) authentication", () => {
+  // Setup two accounts for validating cross-account copy operations
+  process.env[
+    "AZURITE_ACCOUNTS"
+  ] = `${EMULATOR_ACCOUNT_NAME}:${EMULATOR_ACCOUNT_KEY_STR};${EMULATOR_ACCOUNT2_NAME}:${EMULATOR_ACCOUNT2_KEY_STR}`;
+
   const factory = new BlobTestServerFactory();
   const server = factory.createServer();
 
@@ -1237,5 +1244,67 @@ describe("Shared Access Signature (SAS) authentication", () => {
     }
     assert.deepEqual(error.statusCode, 404);
     assert.ok(error !== undefined);
+  });
+
+  it("Copy blob across accounts should succeed for public blob access @loki", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const containerName = getUniqueName("con");
+    const sourceContainerClient = serviceClient.getContainerClient(
+      containerName
+    );
+    const targetContainerClient = serviceClient2.getContainerClient(
+      containerName
+    );
+    await sourceContainerClient.create({
+      access: "blob"
+    });
+    await targetContainerClient.create();
+
+    const blobName = getUniqueName("blob");
+    const sourceBlob = sourceContainerClient.getBlockBlobClient(blobName);
+    await sourceBlob.upload("hello", 5);
+
+    const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
+    const operation = await targetBlob.beginCopyFromURL(sourceBlob.url);
+    const copyResponse = await operation.pollUntilDone();
+    assert.equal("success", copyResponse.copyStatus);
+    const fileBuffer = await targetBlob.downloadToBuffer();
+    assert.equal(fileBuffer.toString(), "hello");
+  });
+
+  it("Copy blob across accounts should succeed for public container access @loki", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const containerName = getUniqueName("con");
+    const sourceContainerClient = serviceClient.getContainerClient(
+      containerName
+    );
+    const targetContainerClient = serviceClient2.getContainerClient(
+      containerName
+    );
+    await sourceContainerClient.create({
+      access: "container"
+    });
+    await targetContainerClient.create();
+
+    const blobName = getUniqueName("blob");
+    const sourceBlob = sourceContainerClient.getBlockBlobClient(blobName);
+    await sourceBlob.upload("hello", 5);
+
+    const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
+    const operation = await targetBlob.beginCopyFromURL(sourceBlob.url);
+    const copyResponse = await operation.pollUntilDone();
+    assert.equal("success", copyResponse.copyStatus);
+    const fileBuffer = await targetBlob.downloadToBuffer();
+    assert.equal(fileBuffer.toString(), "hello");
   });
 });
