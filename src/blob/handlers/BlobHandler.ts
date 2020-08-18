@@ -1,3 +1,4 @@
+import { URLBuilder } from "@azure/ms-rest-js";
 import * as axios from "axios";
 import { URL } from "url";
 
@@ -10,6 +11,7 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IBlobHandler from "../generated/handlers/IBlobHandler";
 import ILogger from "../generated/utils/ILogger";
+import { parseXML } from "../generated/utils/xml";
 import { extractStoragePartsFromPath } from "../middlewares/blobStorageContext.middleware";
 import IBlobMetadataStore, {
   BlobModel
@@ -642,7 +644,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           context.contextId
         );
 
-        throw StorageErrorFactory.getBlobNotFound(context.contextId!);
+        throw StorageErrorFactory.getCannotVerifyCopySource(
+          context.contextId!,
+          404,
+          "The specified resource does not exist"
+        );
       }
 
       this.logger.debug(
@@ -650,10 +656,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         context.contextId
       );
 
-      const validationResponse = await axios.default.head(copySource, {
-        // Instructs axios to not throw an error for non-2xx responses
-        validateStatus: () => true
-      });
+      // In order to retrieve proper error details we make a metadata request to the copy source. If we instead issue
+      // a HEAD request then the error details are not returned and reporting authentication failures to the caller
+      // becomes a black box.
+      const metadataUrl = URLBuilder.parse(copySource);
+      metadataUrl.setQueryParameter("comp", "metadata");
+      const validationResponse = await axios.default.get(
+        metadataUrl.toString(),
+        {
+          // Instructs axios to not throw an error for non-2xx responses
+          validateStatus: () => true
+        }
+      );
       if (validationResponse.status === 200) {
         this.logger.debug(
           `BlobHandler:startCopyFromURL() Successfully validated access to source account ${sourceAccount}`,
@@ -661,11 +675,36 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         );
       } else {
         this.logger.debug(
-          `BlobHandler:startCopyFromURL() Access denied to source account ${sourceAccount}. StatusCode=${validationResponse.status}`,
+          `BlobHandler:startCopyFromURL() Access denied to source account ${sourceAccount} StatusCode=${validationResponse.status}, AuthenticationErrorDetail=${validationResponse.data}`,
           context.contextId
         );
 
-        throw StorageErrorFactory.getBlobNotFound(context.contextId!);
+        if (validationResponse.status === 404) {
+          throw StorageErrorFactory.getCannotVerifyCopySource(
+            context.contextId!,
+            validationResponse.status,
+            "The specified resource does not exist"
+          );
+        } else {
+          // For non-successful responses attempt to unwrap the error message from the metadata call.
+          let message: string =
+            "Could not verify the copy source within the specified time.";
+          if (
+            validationResponse.headers[HeaderConstants.CONTENT_TYPE] ===
+            "application/xml"
+          ) {
+            const authenticationError = await parseXML(validationResponse.data);
+            if (authenticationError.Message !== undefined) {
+              message = authenticationError.Message.replace(/\n+/gm, "");
+            }
+          }
+
+          throw StorageErrorFactory.getCannotVerifyCopySource(
+            context.contextId!,
+            validationResponse.status,
+            message
+          );
+        }
       }
     }
 

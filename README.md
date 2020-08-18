@@ -801,7 +801,7 @@ Detailed support matrix:
   - Create Append Blob, Append Block
   - Lease Blob
   - Snapshot Blob
-  - Copy Blob (Only supports copy within same account in Azurite)
+  - Copy Blob (Only supports copy within same Azurite instance)
   - Abort Copy Blob (Only supports copy within same account in Azurite)
   - Access control based on conditional headers
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
