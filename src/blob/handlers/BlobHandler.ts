@@ -1,5 +1,5 @@
 import { URLBuilder } from "@azure/ms-rest-js";
-import * as axios from "axios";
+import axios, { AxiosResponse } from "axios";
 import { URL } from "url";
 
 import IExtentStore from "../../common/persistence/IExtentStore";
@@ -661,7 +661,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       // becomes a black box.
       const metadataUrl = URLBuilder.parse(copySource);
       metadataUrl.setQueryParameter("comp", "metadata");
-      const validationResponse = await axios.default.get(
+      const validationResponse: AxiosResponse = await axios.get(
         metadataUrl.toString(),
         {
           // Instructs axios to not throw an error for non-2xx responses
