@@ -29,7 +29,7 @@
     "multistream": "^2.1.1",
     "mysql2": "^2.1.0",
     "rimraf": "^2.6.3",
-    "sequelize": "^5.18.4",
+    "sequelize": "^6.3.0",
     "tedious": "^6.6.5",
     "tslib": "^1.9.3",
     "uri-templates": "^0.2.0",
