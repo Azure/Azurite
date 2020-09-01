@@ -87,10 +87,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   }
 
   public async queryTable(
-    context: Context
+    context: Context,
+    accountName: string
   ): Promise<Models.TableResponseProperties[]> {
     const coll = this.db.getCollection(this.TABLE_COLLECTION);
-    const docList = coll.find({ account: context.context.account });
+    const docList = coll.find({ account: accountName });
 
     if (!docList) {
       throw StorageErrorFactory.getEntityNotFound(context);

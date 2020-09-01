@@ -134,7 +134,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     }
 
     const metadata = `${accountName}/$metadata#Tables`;
-    const tableResult = await this.metadataStore.queryTable(context);
+    const tableResult = await this.metadataStore.queryTable(
+      context,
+      accountName
+    );
 
     const response: Models.TableQueryResponse2 = {
       clientRequestId: options.requestId,
