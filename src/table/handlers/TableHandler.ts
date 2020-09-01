@@ -176,7 +176,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       response.value = tableResult.map(item => {
         return {
           odatatype: item.odatatype,
-          odataid: item.odataid,
+          odataid: `${protocol}://${host}/${item.odataid}`,
           odataeditLink: item.odataeditLink,
           tableName: item.tableName
         };
