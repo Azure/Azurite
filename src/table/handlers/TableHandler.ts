@@ -14,7 +14,7 @@ import {
   NO_METADATA_ACCEPT,
   RETURN_CONTENT,
   RETURN_NO_CONTENT,
-  TABLE_API_VERSION
+  TABLE_API_VERSION,
 } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -311,6 +311,22 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     // };
     // TODO
     throw new NotImplementedError();
+  }
+
+  public async mergeEntityWithMerge(
+    table: string,
+    partitionKey: string,
+    rowKey: string,
+    options: Models.TableMergeEntityWithMergeOptionalParams,
+    context: Context
+  ): Promise<Models.TableMergeEntityWithMergeResponse> {
+    return this.mergeEntity(
+      table,
+      partitionKey,
+      rowKey,
+      options as any,
+      context
+    );
   }
 
   public async deleteEntity(
