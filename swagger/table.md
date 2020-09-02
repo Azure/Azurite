@@ -80,3 +80,14 @@ directive:
         "format": "file"
       };
 ```
+
+### Add Post Method for Table_MergeEntity
+
+```yaml
+directive:
+ - from: swagger-document
+   where: $["paths"]["/{table}(PartitionKey='{partitionKey}',RowKey='{rowKey}')"]
+   transform: >
+     $.post = {...$.patch};
+     $.post.operationId = "Table_MergeEntityWithMerge"
+```

@@ -302,6 +302,54 @@ const tableDeleteEntityOperationSpec: msRest.OperationSpec = {
   serializer
 };
 
+const tableMergeEntityWithMergeOperationSpec: msRest.OperationSpec = {
+  httpMethod: "POST",
+  path: "{table}(PartitionKey='{partitionKey}',RowKey='{rowKey}')",
+  urlParameters: [
+    Parameters.url,
+    Parameters.table,
+    Parameters.partitionKey,
+    Parameters.rowKey
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.format
+  ],
+  headerParameters: [
+    Parameters.version,
+    Parameters.requestId,
+    Parameters.dataServiceVersion,
+    Parameters.ifMatch0
+  ],
+  requestBody: {
+    parameterPath: [
+      "options",
+      "tableEntityProperties"
+    ],
+    mapper: {
+      serializedName: "tableEntityProperties",
+      type: {
+        name: "Dictionary",
+        value: {
+          type: {
+            name: "Object"
+          }
+        }
+      }
+    }
+  },
+  responses: {
+    204: {
+      headersMapper: Mappers.TableMergeEntityWithMergeHeaders
+    },
+    default: {
+      bodyMapper: Mappers.TableServiceError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
 const tableInsertEntityOperationSpec: msRest.OperationSpec = {
   httpMethod: "POST",
   path: "{table}",
@@ -540,11 +588,11 @@ Specifications[Operation.Table_Query] = tableQueryOperationSpec;
 Specifications[Operation.Table_Create] = tableCreateOperationSpec;
 Specifications[Operation.Table_Delete] = tableDeleteOperationSpec;
 Specifications[Operation.Table_QueryEntities] = tableQueryEntitiesOperationSpec;
-Specifications[Operation.Table_QueryEntitiesWithPartitionAndRowKey] =
-tableQueryEntitiesWithPartitionAndRowKeyOperationSpec;
+Specifications[Operation.Table_QueryEntitiesWithPartitionAndRowKey] = tableQueryEntitiesWithPartitionAndRowKeyOperationSpec;
 Specifications[Operation.Table_UpdateEntity] = tableUpdateEntityOperationSpec;
 Specifications[Operation.Table_MergeEntity] = tableMergeEntityOperationSpec;
 Specifications[Operation.Table_DeleteEntity] = tableDeleteEntityOperationSpec;
+Specifications[Operation.Table_MergeEntityWithMerge] = tableMergeEntityWithMergeOperationSpec;
 Specifications[Operation.Table_InsertEntity] = tableInsertEntityOperationSpec;
 Specifications[Operation.Table_GetAccessPolicy] = tableGetAccessPolicyOperationSpec;
 Specifications[Operation.Table_SetAccessPolicy] = tableSetAccessPolicyOperationSpec;
