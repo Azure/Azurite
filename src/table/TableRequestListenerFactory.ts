@@ -54,6 +54,17 @@ export default class TableRequestListenerFactory
       (Specifications[operation] as MutableSpecification).isXML = false;
     });
 
+    // TODO: MERGE verbs is not supported by auto generator yet,
+    //    So there we generate a post method and change the verb for MERGE here
+    Object.defineProperty(
+      Specifications[Operation.Table_MergeEntityWithMerge],
+      "httpMethod",
+      {
+        value: "MERGE",
+        writable: false
+      }
+    );
+
     const app = express().disable("x-powered-by");
 
     // MiddlewareFactory is a factory to create auto-generated middleware
@@ -75,7 +86,11 @@ export default class TableRequestListenerFactory
 
     // Access log per request
     if (this.enableAccessLog) {
-      app.use(morgan("common", { stream: this.accessLogWriteStream }));
+      app.use(
+        morgan("common", {
+          stream: this.accessLogWriteStream
+        })
+      );
     }
 
     // Manually created middleware to deserialize feature related context which swagger doesn't know
