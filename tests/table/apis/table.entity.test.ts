@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as Azure from "azure-storage";
 
+import StorageError from "../../../src/blob/errors/StorageError";
 import { configLogger } from "../../../src/common/Logger";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
@@ -10,7 +11,6 @@ import {
   getUniqueName,
   overrideRequest
 } from "../../testutils";
-import StorageError from "../../../src/blob/errors/StorageError";
 
 // Set true to enable debug log
 configLogger(false);
@@ -309,6 +309,30 @@ describe("table Entity APIs test", () => {
               }
             }
           );
+        } else {
+          assert.ifError(error);
+          done();
+        }
+      }
+    );
+  });
+  it("Should merge, if Etag matches, @loki", done => {
+    const entityInsert = {
+      PartitionKey: "part1",
+      RowKey: "row6",
+      myValue: "oldValue"
+    };
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertOrMergeEntity(
+      tableName,
+      entityInsert,
+      (error, result, insertresponse) => {
+        if (!error) {
+          assert.equal(insertresponse.statusCode, 204); // Precondition succeeded
+          done();
         } else {
           assert.ifError(error);
           done();

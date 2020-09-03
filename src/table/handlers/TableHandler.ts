@@ -295,22 +295,21 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableMergeEntityOptionalParams,
     context: Context
   ): Promise<Models.TableMergeEntityResponse> {
-    // e.g
-    // const tableCtx = new TableStorageContext(context);
+    const tableCtx = new TableStorageContext(context);
     // const accountName = tableCtx.account;
     // const tableName = tableCtx.tableName; // Get tableName from context
     // const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
     // const rowKey = tableCtx.rowKey!; // Get rowKey from context
     // const entity = options.tableEntityProperties!;
-    // return {
-    //   statusCode: 204,
-    //   date: tableCtx.startTime,
-    //   clientRequestId: "clientRequestId",
-    //   requestId: "requestId",
-    //   version: "version"
-    // };
+    return {
+      statusCode: 204,
+      date: tableCtx.startTime,
+      clientRequestId: "clientRequestId",
+      requestId: "requestId",
+      version: "version"
+    };
     // TODO
-    throw new NotImplementedError();
+    // throw new NotImplementedError();
   }
 
   public async mergeEntityWithMerge(
