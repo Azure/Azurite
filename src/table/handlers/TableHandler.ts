@@ -14,7 +14,7 @@ import {
   NO_METADATA_ACCEPT,
   RETURN_CONTENT,
   RETURN_NO_CONTENT,
-  TABLE_API_VERSION,
+  TABLE_API_VERSION
 } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -295,12 +295,104 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableMergeEntityOptionalParams,
     context: Context
   ): Promise<Models.TableMergeEntityResponse> {
+    // Values from the Context
     const tableCtx = new TableStorageContext(context);
-    // const accountName = tableCtx.account;
-    // const tableName = tableCtx.tableName; // Get tableName from context
-    // const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
-    // const rowKey = tableCtx.rowKey!; // Get rowKey from context
-    // const entity = options.tableEntityProperties!;
+    const accountName = tableCtx.account;
+    const tableName = tableCtx.tableName; // Get tableName from context
+    const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
+    const rowKey = tableCtx.rowKey!; // Get rowKey from context
+    //const entity = options.tableEntityProperties!;
+
+    // check if there are values set
+    if (
+      !options.tableEntityProperties ||
+      !options.tableEntityProperties.PartitionKey ||
+      !options.tableEntityProperties.RowKey
+    ) {
+      throw StorageErrorFactory.getPropertiesNeedValue(context);
+    }
+    // Create new Entity Item -> should I take old values for merge?
+    const entity: IEntity = {
+      PartitionKey: options.tableEntityProperties.PartitionKey,
+      RowKey: options.tableEntityProperties.RowKey,
+      properties: options.tableEntityProperties,
+      lastModifiedTime: context.startTime!,
+      eTag: newEtag()
+    };
+    // get Header and get Protocol
+    let protocol = "http";
+    let host =
+      DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
+    if (tableCtx.request !== undefined) {
+      host = tableCtx.request.getHeader("host") as string;
+      protocol = tableCtx.request.getProtocol() as string;
+    }
+    // set metadata
+    const metadata = `${protocol}://${host}/${accountName}/$metadata#Tables/@Element`;
+    const type = `${accountName}.Tables`;
+    const id = `${protocol}://${host}/Tables(${tableName})`;
+    const editLink = `Tables(${tableName})`;
+
+    // insertTableEntity
+    await this.metadataStore.insertTableEntity(
+      context,
+      tableName,
+      accountName!,
+      entity
+    );
+    // create response
+    const response: Models.TableInsertEntityResponse = {
+      clientRequestId: options.requestId,
+      requestId: tableCtx.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      statusCode: 201
+    };
+    // accept value for context
+    const accept = tableCtx.accept;
+
+    // Set contentType in response according to accept
+    if (
+      accept !== NO_METADATA_ACCEPT &&
+      accept !== MINIMAL_METADATA_ACCEPT &&
+      accept !== FULL_METADATA_ACCEPT
+    ) {
+      throw StorageErrorFactory.getContentTypeNotSupported(context);
+    }
+    // set contentype
+    response.contentType = "application/json";
+    const body = {} as any;
+
+    if (context.request!.getHeader("Prefer") === RETURN_NO_CONTENT) {
+      response.statusCode = 204;
+      response.preferenceApplied = RETURN_NO_CONTENT;
+    }
+
+    if (context.request!.getHeader("Prefer") === RETURN_CONTENT) {
+      response.statusCode = 201;
+      response.preferenceApplied = "return-content";
+
+      // accept criteria
+      if (accept === MINIMAL_METADATA_ACCEPT) {
+        body["odata.metadata"] = metadata;
+      }
+
+      if (accept === FULL_METADATA_ACCEPT) {
+        body["odata.metadata"] = metadata;
+        body["odata.type"] = type;
+        body["body.id"] = id;
+        body["odata.etag"] = entity.eTag;
+        body["odata.editLink"] = editLink;
+      }
+      // add properties to body matched by key
+      for (const key of Object.keys(entity.properties)) {
+        body[key] = entity.properties[key];
+      }
+
+      response.body = new BufferStream(Buffer.from(JSON.stringify(body)));
+    }
+    //return response;
+
     return {
       statusCode: 204,
       date: tableCtx.startTime,
