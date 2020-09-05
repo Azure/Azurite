@@ -14,7 +14,7 @@ import {
   NO_METADATA_ACCEPT,
   RETURN_CONTENT,
   RETURN_NO_CONTENT,
-  TABLE_API_VERSION,
+  TABLE_API_VERSION
 } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -347,7 +347,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   ): Promise<Models.TableMergeEntityResponse> {
     const tableCtx = new TableStorageContext(context);
     const accountName = tableCtx.account;
-    const tableName = tableCtx.tableName!; // Get tableName from context
+    const tableName = tableCtx.tableName!;
     const ifMatch = options.ifMatch;
 
     // Test if all required parameter exist
@@ -364,7 +364,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getPreconditionFailed(context);
     }
 
-    // Entity, which is used to update an existing entity
+    // Entity, which is used to merge an existing entity
     const entity: IEntity = {
       PartitionKey: options.tableEntityProperties.PartitionKey,
       RowKey: options.tableEntityProperties.RowKey,
@@ -373,7 +373,6 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       eTag: newEtag()
     };
 
-    // Update entity
     await this.metadataStore.mergeTableEntity(
       context,
       tableName,

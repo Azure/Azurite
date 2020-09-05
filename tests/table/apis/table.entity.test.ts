@@ -13,7 +13,7 @@ import {
 import StorageError from "../../../src/blob/errors/StorageError";
 
 // Set true to enable debug log
-configLogger(true);
+configLogger(false);
 
 describe("table Entity APIs test", () => {
   // TODO: Create a server factory as tests utils
