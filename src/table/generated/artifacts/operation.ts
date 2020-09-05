@@ -15,6 +15,7 @@ export enum Operation {
   Table_UpdateEntity,
   Table_MergeEntity,
   Table_DeleteEntity,
+  Table_MergeEntityWithMerge,
   Table_InsertEntity,
   Table_GetAccessPolicy,
   Table_SetAccessPolicy,

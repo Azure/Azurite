@@ -921,6 +921,52 @@ export const TableDeleteEntityHeaders: msRest.CompositeMapper = {
   }
 };
 
+export const TableMergeEntityWithMergeHeaders: msRest.CompositeMapper = {
+  serializedName: "table-mergeentitywithmerge-headers",
+  type: {
+    name: "Composite",
+    className: "TableMergeEntityWithMergeHeaders",
+    modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
 export const TableInsertEntityHeaders: msRest.CompositeMapper = {
   serializedName: "table-insertentity-headers",
   type: {

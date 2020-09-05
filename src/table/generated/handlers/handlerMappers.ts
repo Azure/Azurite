@@ -82,6 +82,16 @@ operationHandlerMapping[Operation.Table_DeleteEntity] = {
   handler: "tableHandler",
   method: "deleteEntity"
 };
+operationHandlerMapping[Operation.Table_MergeEntityWithMerge] = {
+  arguments: [
+    "table",
+    "partitionKey",
+    "rowKey",
+    "options"
+  ],
+  handler: "tableHandler",
+  method: "mergeEntityWithMerge"
+};
 operationHandlerMapping[Operation.Table_InsertEntity] = {
   arguments: [
     "table",
