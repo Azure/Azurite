@@ -332,12 +332,12 @@ describe("table Entity APIs test", () => {
           tableService.mergeEntity(
             tableName,
             { PartitionKey: "part1", RowKey: "row6", myValue: "newValue" },
-            (updateError, updateResult, updateResponse) => {
-              if (!updateError) {
-                assert.equal(updateResponse.statusCode, 204); // Precondition succeeded
+            (mergeError, mergeResult, mergeResponse) => {
+              if (!mergeError) {
+                assert.equal(mergeResponse.statusCode, 204); // Precondition succeeded
                 done();
               } else {
-                assert.ifError(updateError);
+                assert.ifError(mergeError);
                 done();
               }
             }
@@ -378,7 +378,7 @@ describe("table Entity APIs test", () => {
       RowKey: "row8",
       myValue: "oldValue"
     };
-    const entityUpdate = {
+    const entityMerge = {
       PartitionKey: "part1",
       RowKey: "row8",
       myValue: "oldValueUpdate",
@@ -398,11 +398,11 @@ describe("table Entity APIs test", () => {
           requestOverride.headers = {};
           tableService.mergeEntity(
             tableName,
-            entityUpdate,
-            (updateError, updateResponse) => {
-              const castUpdateStatusCode = (updateError as StorageError)
+            entityMerge,
+            (mergeError, mergeResponse) => {
+              const castMergeStatusCode = (mergeError as StorageError)
                 .statusCode;
-              assert.equal(castUpdateStatusCode, 412); // Precondition failed
+              assert.equal(castMergeStatusCode, 412); // Precondition failed
               done();
             }
           );
@@ -429,7 +429,7 @@ describe("table Entity APIs test", () => {
       entityInsert,
       (error, result, insertresponse) => {
         const etagOld = result[".metadata"].etag;
-        const entityUpdate = {
+        const entityMerge = {
           PartitionKey: "part1",
           RowKey: "row9",
           myValue: "oldValueUpdate",
@@ -441,7 +441,7 @@ describe("table Entity APIs test", () => {
           requestOverride.headers = {};
           tableService.mergeEntity(
             tableName,
-            entityUpdate,
+            entityMerge,
             (updateError, updateResult, updateResponse) => {
               if (!updateError) {
                 assert.equal(updateResponse.statusCode, 204); // Precondition succeeded
