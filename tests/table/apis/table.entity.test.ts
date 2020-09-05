@@ -13,7 +13,7 @@ import {
 import StorageError from "../../../src/blob/errors/StorageError";
 
 // Set true to enable debug log
-configLogger(false);
+configLogger(true);
 
 describe("table Entity APIs test", () => {
   // TODO: Create a server factory as tests utils
@@ -297,6 +297,149 @@ describe("table Entity APIs test", () => {
         if (!error) {
           requestOverride.headers = {};
           tableService.replaceEntity(
+            tableName,
+            entityUpdate,
+            (updateError, updateResult, updateResponse) => {
+              if (!updateError) {
+                assert.equal(updateResponse.statusCode, 204); // Precondition succeeded
+                done();
+              } else {
+                assert.ifError(updateError);
+                done();
+              }
+            }
+          );
+        } else {
+          assert.ifError(error);
+          done();
+        }
+      }
+    );
+  });
+
+  it("Merge an Entity that exists, @loki", done => {
+    const entityInsert = {
+      PartitionKey: "part1",
+      RowKey: "row6",
+      myValue: "oldValue"
+    };
+    tableService.insertEntity(
+      tableName,
+      entityInsert,
+      (error, result, insertresponse) => {
+        if (!error) {
+          requestOverride.headers = {};
+          tableService.mergeEntity(
+            tableName,
+            { PartitionKey: "part1", RowKey: "row6", myValue: "newValue" },
+            (updateError, updateResult, updateResponse) => {
+              if (!updateError) {
+                assert.equal(updateResponse.statusCode, 204); // Precondition succeeded
+                done();
+              } else {
+                assert.ifError(updateError);
+                done();
+              }
+            }
+          );
+        } else {
+          assert.ifError(error);
+          done();
+        }
+      }
+    );
+  });
+
+  it("Merge Entity that does not exists, @loki", done => {
+    const notExistingEntity = {
+      PartitionKey: "part1",
+      RowKey: "row7",
+      myValue: "newValue"
+    };
+
+    tableService.mergeEntity(
+      tableName,
+      notExistingEntity,
+      (mergeError, mergeResult, mergeResponse) => {
+        const castMergeStatusCode = (mergeError as StorageError).statusCode;
+        if (mergeError) {
+          assert.equal(castMergeStatusCode, 409);
+          done();
+        } else {
+          assert.fail("Test failed to throw the right Error" + mergeError);
+        }
+      }
+    );
+  });
+
+  it("Should not merge an Entity not matching Etag, @loki", done => {
+    const entityInsert = {
+      PartitionKey: "part1",
+      RowKey: "row8",
+      myValue: "oldValue"
+    };
+    const entityUpdate = {
+      PartitionKey: "part1",
+      RowKey: "row8",
+      myValue: "oldValueUpdate",
+      ".metadata": {
+        etag: "0x2252C97588D4000"
+      }
+    };
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertEntity(
+      tableName,
+      entityInsert,
+      (insertError, insertResult, insertResponse) => {
+        if (!insertError) {
+          requestOverride.headers = {};
+          tableService.mergeEntity(
+            tableName,
+            entityUpdate,
+            (updateError, updateResponse) => {
+              const castUpdateStatusCode = (updateError as StorageError)
+                .statusCode;
+              assert.equal(castUpdateStatusCode, 412); // Precondition failed
+              done();
+            }
+          );
+        } else {
+          assert.ifError(insertError);
+          done();
+        }
+      }
+    );
+  });
+
+  it("Should merge, if Etag matches, @loki", done => {
+    const entityInsert = {
+      PartitionKey: "part1",
+      RowKey: "row9",
+      myValue: "oldValue"
+    };
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertEntity(
+      tableName,
+      entityInsert,
+      (error, result, insertresponse) => {
+        const etagOld = result[".metadata"].etag;
+        const entityUpdate = {
+          PartitionKey: "part1",
+          RowKey: "row9",
+          myValue: "oldValueUpdate",
+          ".metadata": {
+            etag: etagOld
+          }
+        };
+        if (!error) {
+          requestOverride.headers = {};
+          tableService.mergeEntity(
             tableName,
             entityUpdate,
             (updateError, updateResult, updateResponse) => {
