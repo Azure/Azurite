@@ -108,6 +108,12 @@ export function tableStorageContextMiddleware(
       thridQuoteIndex + 1,
       fourthQuoteIndex
     );
+  } else if (
+    tableSection.includes("(") &&
+    tableSection.includes(")") &&
+    tableSection.indexOf(")") - tableSection.indexOf("(") === 1
+  ) {
+    tableContext.tableName = tableSection.substr(0, tableSection.indexOf("("));
   } else {
     logger.error(
       `tableStorageContextMiddleware: Cannot extract table name from URL path=${req.path}`,

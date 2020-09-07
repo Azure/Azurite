@@ -12,9 +12,10 @@ import {
   FULL_METADATA_ACCEPT,
   MINIMAL_METADATA_ACCEPT,
   NO_METADATA_ACCEPT,
+  QUERY_RESULT_MAX_NUM,
   RETURN_CONTENT,
   RETURN_NO_CONTENT,
-  TABLE_API_VERSION,
+  TABLE_API_VERSION
 } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -166,32 +167,46 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableQueryEntitiesOptionalParams,
     context: Context
   ): Promise<Models.TableQueryEntitiesResponse> {
-    // e.g
-    // const tableCtx = new TableStorageContext(context);
-    // const accountName = tableCtx.account;
-    // const tableName = tableCtx.tableName; // Get tableName from context
-    // return {
-    //   statusCode: 200,
-    //   date: tableCtx.startTime,
-    //   clientRequestId: "clientRequestId",
-    //   requestId: "requestId",
-    //   version: "version",
-    //   xMsContinuationNextPartitionKey: "xMsContinuationNextPartitionKey",
-    //   xMsContinuationNextRowKey: "xMsContinuationNextRowKey",
-    //   odatametadata: "odatametadata",
-    //   value: [
-    //     {
-    //       property1: "property1" + accountName,
-    //       property2: "property2" + tableName,
-    //       property3: "property3"
-    //     },
-    //     {
-    //       property1: "property1"
-    //     }
-    //   ]
-    // };
-    // TODO
-    throw new NotImplementedError();
+    const tableCtx = new TableStorageContext(context);
+    const tableName = tableCtx.tableName;
+    const accountName = tableCtx.account;
+
+    const result = await this.metadataStore.queryTableEntities(
+      context,
+      accountName!,
+      tableName!,
+      options.queryOptions!
+    );
+
+    const response: Models.TableQueryEntitiesResponse = {
+      clientRequestId: options.requestId,
+      requestId: tableCtx.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      statusCode: 200
+    };
+
+    const responseBody = this.getResponseBodyFromQueryResultBasedOnAccept(
+      tableCtx.accept!,
+      accountName!,
+      tableCtx,
+      result
+    );
+
+    // Set query result
+    response.value = responseBody.value;
+    if (responseBody["odata.metadata"] !== undefined) {
+      response.odatametadata = responseBody["odata.metadata"];
+    }
+
+    // Set x-ms-continuation-NextPartitionKey and x-ms-continuation-NextRowKey
+    if (result.length > QUERY_RESULT_MAX_NUM) {
+      response.xMsContinuationNextPartitionKey =
+        result[QUERY_RESULT_MAX_NUM].PartitionKey;
+      response.xMsContinuationNextRowKey = result[QUERY_RESULT_MAX_NUM].RowKey;
+    }
+
+    return response;
   }
 
   public async queryEntitiesWithPartitionAndRowKey(
@@ -257,13 +272,22 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getPreconditionFailed(context);
     }
 
+    const metadata = `${accountName}/$metadata#Tables/@Element`;
+    const type = `${accountName}.Tables`;
+    const id = `Tables(${tableName})`;
+    const editLink = `Tables(${tableName})`;
+
     // Entity, which is used to update an existing entity
     const entity: IEntity = {
       PartitionKey: options.tableEntityProperties.PartitionKey,
       RowKey: options.tableEntityProperties.RowKey,
       properties: options.tableEntityProperties,
       lastModifiedTime: context.startTime!,
-      eTag: newEtag()
+      eTag: newEtag(),
+      odataMetadata: metadata,
+      odataType: type,
+      odataId: id,
+      odataEditLink: editLink
     };
 
     // Update entity
@@ -384,27 +408,25 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
     }
 
+    const metadata = `${accountName}/$metadata#Tables/@Element`;
+    const type = `${accountName}.${tableName}`;
+    const id =
+      `${tableName}` +
+      `(PartitionKey='${options.tableEntityProperties.PartitionKey}',` +
+      `RowKey='${options.tableEntityProperties.RowKey}')`;
+    const editLink = id;
+
     const entity: IEntity = {
       PartitionKey: options.tableEntityProperties.PartitionKey,
       RowKey: options.tableEntityProperties.RowKey,
       properties: options.tableEntityProperties,
       lastModifiedTime: context.startTime!,
-      eTag: newEtag()
+      eTag: newEtag(),
+      odataMetadata: metadata, // Here we store value without protocol and host
+      odataType: type,
+      odataId: id,
+      odataEditLink: editLink
     };
-
-    // TODO: Move logic to get host into utility methods
-    let protocol = "http";
-    let host =
-      DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
-    if (tableCtx.request !== undefined) {
-      host = tableCtx.request.getHeader("host") as string;
-      protocol = tableCtx.request.getProtocol() as string;
-    }
-
-    const metadata = `${protocol}://${host}/${accountName}/$metadata#Tables/@Element`;
-    const type = `${accountName}.Tables`;
-    const id = `${protocol}://${host}/Tables(${tableName})`;
-    const editLink = `Tables(${tableName})`;
 
     await this.metadataStore.insertTableEntity(
       context,
@@ -444,14 +466,22 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       response.statusCode = 201;
       response.preferenceApplied = "return-content";
 
+      let protocol = "http";
+      let host =
+        DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
+      if (tableCtx.request !== undefined) {
+        host = tableCtx.request.getHeader("host") as string;
+        protocol = tableCtx.request.getProtocol() as string;
+      }
+
       if (accept === MINIMAL_METADATA_ACCEPT) {
-        body["odata.metadata"] = metadata;
+        body["odata.metadata"] = `${protocol}://${host}/` + metadata;
       }
 
       if (accept === FULL_METADATA_ACCEPT) {
-        body["odata.metadata"] = metadata;
+        body["odata.metadata"] = `${protocol}://${host}/` + metadata;
         body["odata.type"] = type;
-        body["body.id"] = id;
+        body["body.id"] = `${protocol}://${host}/` + id;
         body["odata.etag"] = entity.eTag;
         body["odata.editLink"] = editLink;
       }
@@ -489,5 +519,117 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     // const tableName = tableCtx.tableName; // Get tableName from context
     // TODO
     throw new NotImplementedError();
+  }
+
+  private getResponseBodyFromQueryResultBasedOnAccept(
+    accept: string,
+    accountName: string,
+    tableCtx: Context,
+    queryResult: { [propertyName: string]: any }[]
+  ) {
+    let protocol = "http";
+    let host =
+      DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
+
+    if (tableCtx.request !== undefined) {
+      host = tableCtx.request.getHeader("host") as string;
+      protocol = tableCtx.request.getProtocol() as string;
+    }
+
+    const resultWithMetaData: { [propertyName: string]: any }[] = [];
+    const responseBody: { [propertyName: string]: any } = {};
+
+    switch (accept) {
+      case MINIMAL_METADATA_ACCEPT: {
+        // Add odata.metadata
+        (responseBody as any)["odata.metadata"] =
+          `${protocol}://${host}/` + queryResult[0].odataMetadata;
+        for (const entity of queryResult) {
+          const filteredEntity = {};
+          for (const key of Object.keys(entity)) {
+            // Only need metadata and properties' odata type
+            if (
+              key === "odataMetadata" ||
+              key === "odataType" ||
+              key === "odataId" ||
+              key === "eTag" ||
+              key === "odataEditLink"
+            ) {
+              continue;
+            }
+            // Also add odataType to each field
+            (filteredEntity as any)[key] = entity[key];
+          }
+
+          resultWithMetaData.push(filteredEntity);
+        }
+        (responseBody as any).value = resultWithMetaData;
+        break;
+      }
+      case FULL_METADATA_ACCEPT: {
+        // Add odata.metadata
+        (responseBody as any)["odata.metadata"] = queryResult[0].odataMetadata;
+        for (const entity of queryResult) {
+          const filteredEntity = {};
+          for (const key of Object.keys(entity)) {
+            // Remove odataMetadata of each entity
+            if (key === "odataMetadata") {
+              continue;
+            }
+            (filteredEntity as any)[key] = entity[key];
+          }
+
+          // Add Timestamp@odata.type
+          (filteredEntity as any)["Timestamp@odata.type"] = "Edm.DateTime";
+
+          // Solve the name inconsistency of the response and entity
+          (filteredEntity as any)[
+            "odata.type"
+          ] = (filteredEntity as any).odataType;
+          delete (filteredEntity as any).odataType;
+
+          (filteredEntity as any)["odata.id"] =
+            `${protocol}://${host}/` + (filteredEntity as any).odataId;
+          delete (filteredEntity as any).odataId;
+
+          (filteredEntity as any)["odata.etag"] = (filteredEntity as any).eTag;
+          delete (filteredEntity as any).eTag;
+
+          (filteredEntity as any)[
+            "odata.editLink"
+          ] = (filteredEntity as any).odataEditLink;
+          delete (filteredEntity as any).odataEditLink;
+
+          // Add processed entity back
+          resultWithMetaData.push(filteredEntity);
+        }
+        (responseBody as any).value = resultWithMetaData;
+        break;
+      }
+      default: {
+        for (const entity of queryResult) {
+          const filteredEntity = {};
+          for (const key of Object.keys(entity)) {
+            // Don't need metadata and properties' odata type
+            if (
+              key === "odataMetadata" ||
+              key === "odataType" ||
+              key === "odataId" ||
+              key === "eTag" ||
+              key === "odataEditLink" ||
+              key.indexOf("@odata.type") > 0
+            ) {
+              continue;
+            }
+            (filteredEntity as any)[key] = entity[key];
+          }
+
+          resultWithMetaData.push(filteredEntity);
+        }
+        (responseBody as any).value = resultWithMetaData;
+        break;
+      }
+    }
+    return responseBody;
   }
 }

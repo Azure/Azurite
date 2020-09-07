@@ -98,6 +98,17 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getPreconditionFailed(context: Context): StorageError {
+    return new StorageError(
+      412,
+      "UpdateConditionNotSatisfied",
+      "The update condition specified in the request was not satisfied.",
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
+
   public static getTableNotFound(context: Context): StorageError {
     return new StorageError(
       404,
@@ -120,11 +131,11 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getPreconditionFailed(context: Context): StorageError {
+  public static getQueryConditionInvalid(context: Context): StorageError {
     return new StorageError(
-      412,
-      "UpdateConditionNotSatisfied",
-      "The update condition specified in the request was not satisfied.",
+      400,
+      "queryConditionsIncorrect",
+      "The query condition specified in the request was invalid.",
       context.contextID || defaultID,
       undefined,
       context
