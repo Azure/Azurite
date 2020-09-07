@@ -52,7 +52,10 @@ export default interface ITableMetadataStore {
   ): Promise<void>;
   mergeTableEntity(
     context: Context,
-    table: string,
+    tableName: string,
+    account: string,
+    entity: IEntity,
+    etag: string,
     partitionKey: string,
     rowKey: string
   ): Promise<void>;
