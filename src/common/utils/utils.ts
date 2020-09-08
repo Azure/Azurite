@@ -28,7 +28,7 @@ export function convertRawHeadersToMetadata(
   for (let i = 0; i < rawHeaders.length; i = i + 2) {
     const header = rawHeaders[i];
     if (
-      header.startsWith(metadataPrefix) &&
+      header.toLowerCase().startsWith(metadataPrefix) &&
       header.length > metadataPrefix.length
     ) {
       const key = header.substr(metadataPrefix.length);
