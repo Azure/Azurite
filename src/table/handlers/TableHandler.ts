@@ -14,7 +14,7 @@ import {
   NO_METADATA_ACCEPT,
   RETURN_CONTENT,
   RETURN_NO_CONTENT,
-  TABLE_API_VERSION,
+  TABLE_API_VERSION
 } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
@@ -303,35 +303,65 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     }
 
     // Test if etag is available
-    if (ifMatch === "" || ifMatch === undefined) {
+    // this is considered an upsert if no etag header, an empty header is an error.
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-or-replace-entity
+    if (ifMatch === "") {
       throw StorageErrorFactory.getPreconditionFailed(context);
     }
-
+    const updateEtag = newEtag();
     // Entity, which is used to update an existing entity
     const entity: IEntity = {
       PartitionKey: options.tableEntityProperties.PartitionKey,
       RowKey: options.tableEntityProperties.RowKey,
       properties: options.tableEntityProperties,
       lastModifiedTime: context.startTime!,
-      eTag: newEtag()
+      eTag: updateEtag
     };
 
-    // Update entity
-    await this.metadataStore.updateTableEntity(
-      context,
-      tableName,
-      accountName!,
-      entity,
-      ifMatch
-    );
+    if (ifMatch !== undefined) {
+      // Update entity
+      await this.metadataStore.updateTableEntity(
+        context,
+        tableName,
+        accountName!,
+        entity,
+        ifMatch!
+      );
+    } else {
+      // Upsert the entity
+      const exists = await this.metadataStore.queryTableEntitiesWithPartitionAndRowKey(
+        context,
+        tableName,
+        accountName!,
+        options.tableEntityProperties.PartitionKey,
+        options.tableEntityProperties.RowKey
+      );
 
+      if (exists !== null) {
+        // entity exists so we update
+        await this.metadataStore.updateTableEntity(
+          context,
+          tableName,
+          accountName!,
+          entity,
+          ifMatch!
+        );
+      } else {
+        await this.metadataStore.insertTableEntity(
+          context,
+          tableName,
+          accountName!,
+          entity
+        );
+      }
+    }
     // Response definition
     const response: Models.TableUpdateEntityResponse = {
       clientRequestId: options.requestId,
       requestId: tableCtx.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
-      eTag: newEtag(),
+      eTag: updateEtag,
       statusCode: 204
     };
 

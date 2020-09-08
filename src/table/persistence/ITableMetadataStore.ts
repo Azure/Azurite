@@ -43,9 +43,10 @@ export default interface ITableMetadataStore {
   queryTableEntitiesWithPartitionAndRowKey(
     context: Context,
     table: string,
+    accountName: string,
     partitionKey: string,
     rowKey: string
-  ): Promise<{ [propertyName: string]: any }[]>;
+  ): Promise<IEntity>;
   updateTableEntity(
     context: Context,
     tableName: string,
@@ -65,7 +66,7 @@ export default interface ITableMetadataStore {
     accountName: string,
     partitionKey: string,
     rowKey: string,
-    eatg: string
+    etag: string
   ): Promise<void>;
   insertTableEntity(
     context: Context,
