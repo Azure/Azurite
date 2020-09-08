@@ -18,7 +18,6 @@ import {
 } from "../utils/constants";
 import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
-import { partitionKey } from "../generated/artifacts/parameters";
 
 export default class TableHandler extends BaseHandler implements ITableHandler {
   public async create(
@@ -316,10 +315,11 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const existingEntity = await this.metadataStore.queryTableEntitiesWithPartitionAndRowKey(
       context,
       tableName!,
+      accountName!,
       partitionKey,
       rowKey
     );
-    const etagvalue = newEtag();
+    const etagValue = newEtag();
 
     if (existingEntity !== null) {
       const mergeEntity: IEntity = {
@@ -327,25 +327,26 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         RowKey: options.tableEntityProperties.RowKey,
         properties: options.tableEntityProperties,
         lastModifiedTime: context.startTime!,
-        eTag: etagvalue
+        eTag: etagValue
       };
+      // mergeTableEntity
       await this.metadataStore.mergeTableEntity(
         context,
         tableName!,
         accountName!,
         mergeEntity,
-        etagvalue,
+        etagValue,
         partitionKey,
         rowKey
       );
     } else {
-      // Create new Entity Item -> should I take old values for merge?
+      // Create new Entity Item
       const entity: IEntity = {
         PartitionKey: options.tableEntityProperties.PartitionKey,
         RowKey: options.tableEntityProperties.RowKey,
         properties: options.tableEntityProperties,
         lastModifiedTime: context.startTime!,
-        eTag: etagvalue
+        eTag: etagValue
       };
 
       // insertTableEntity
@@ -363,20 +364,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       version: TABLE_API_VERSION,
       date: context.startTime,
       statusCode: 204,
-      eTag: etagvalue
+      eTag: etagValue
     };
 
     return response;
-
-    /*return {
-      statusCode: 204,
-      date: tableCtx.startTime,
-      clientRequestId: "clientRequestId",
-      requestId: "requestId",
-      version: "version"
-    };*/
-    // TODO
-    // throw new NotImplementedError();
   }
 
   public async mergeEntityWithMerge(
