@@ -10,6 +10,22 @@ import StorageError from "./StorageError";
 const defaultID: string = "DefaultID";
 
 export default class StorageErrorFactory {
+  public static getInvalidHeaderValue(
+    contextID: string = "",
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    if (additionalMessages === undefined) {
+      additionalMessages = {};
+    }
+    return new StorageError(
+      400,
+      "InvalidHeaderValue",
+      "The value for one of the HTTP headers is not in the correct format.",
+      contextID,
+      additionalMessages
+    );
+  }
+
   public static getTableAlreadyExists(context: Context): StorageError {
     return new StorageError(
       409,
