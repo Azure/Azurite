@@ -200,16 +200,31 @@ export function generateJWTToken(
   return token;
 }
 
+export function restoreBuildRequestOptions(service: any) {
+  if ((service as any).__proto__.__proto__.__original_buildRequestOptions) {
+    // tslint:disable-next-line: max-line-length
+    (service as any).__proto__.__proto__._buildRequestOptions = (service as any).__proto__.__proto__.__original_buildRequestOptions;
+  }
+}
 export function overrideRequest(
   override: {
     headers: { [key: string]: string };
   } = { headers: {} },
-  serivce: StorageServiceClient
+  service: StorageServiceClient
 ) {
-  const _buildRequestOptions = (serivce as any).__proto__.__proto__._buildRequestOptions.bind(
-    serivce
-  );
-  (serivce as any).__proto__.__proto__._buildRequestOptions = (
+  const hasOriginal = !!(service as any).__proto__.__proto__
+    .__original_buildRequestOptions;
+
+  const original = hasOriginal
+    ? (service as any).__proto__.__proto__.__original_buildRequestOptions
+    : (service as any).__proto__.__proto__._buildRequestOptions;
+
+  if (!hasOriginal) {
+    (service as any).__proto__.__proto__.__original_buildRequestOptions = original;
+  }
+
+  const _buildRequestOptions = original.bind(service);
+  (service as any).__proto__.__proto__._buildRequestOptions = (
     webResource: any,
     body: any,
     options: any,

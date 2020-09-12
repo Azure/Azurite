@@ -1,4 +1,5 @@
 import BufferStream from "../../common/utils/BufferStream";
+import { newEtag } from "../../common/utils/utils";
 import TableStorageContext from "../context/TableStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -16,7 +17,6 @@ import {
   RETURN_NO_CONTENT,
   TABLE_API_VERSION
 } from "../utils/constants";
-import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 export default class TableHandler extends BaseHandler implements ITableHandler {

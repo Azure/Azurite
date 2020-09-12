@@ -7,6 +7,7 @@ import {
   convertDateTimeStringMsTo7Digital,
   rimrafAsync
 } from "../../common/utils/utils";
+import { newEtag } from "../../common/utils/utils";
 import { validateReadConditions } from "../conditions/ReadConditionalHeadersValidator";
 import {
   validateSequenceNumberWriteConditions,
@@ -32,7 +33,6 @@ import {
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
   MAX_APPEND_BLOB_BLOCK_COUNT
 } from "../utils/constants";
-import { newEtag } from "../utils/utils";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
 import IBlobMetadataStore, {
   AcquireBlobLeaseResponse,

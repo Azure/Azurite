@@ -1,6 +1,6 @@
 import { stat } from "fs";
 import Loki from "lokijs";
-import { newEtag } from "../../blob/utils/utils";
+import { newEtag } from "../../common/utils/utils";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";

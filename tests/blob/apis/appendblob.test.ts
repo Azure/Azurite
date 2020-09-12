@@ -11,8 +11,8 @@ import {
 import assert = require("assert");
 
 import { BlobType } from "../../../src/blob/generated/artifacts/models";
-import { getMD5FromString } from "../../../src/blob/utils/utils";
 import { configLogger } from "../../../src/common/Logger";
+import { getMD5FromString } from "../../../src/common/utils/utils";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
 import {
   bodyToString,
