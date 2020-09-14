@@ -2,6 +2,10 @@
 
 > Note. This file includes changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
+## Upcoming Release
+
+- Add support for copying blobs across storage accounts within the same Azurite instance.
+
 ## 2020.07 Version 3.8.0
 
 - Bump up Azure Storage service API version to 2019-12-12.

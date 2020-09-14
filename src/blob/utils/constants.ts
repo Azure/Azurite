@@ -21,8 +21,10 @@ export const LOGGER_CONFIGS = {};
 export const DEFAULT_GC_INTERVAL_MS = 10 * 60 * 1000;
 export const DEFAULT_WRITE_CONCURRENCY_PER_LOCATION = 50;
 export const EMULATOR_ACCOUNT_NAME = "devstoreaccount1";
+export const EMULATOR_ACCOUNT_KEY_STR =
+  "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
 export const EMULATOR_ACCOUNT_KEY = Buffer.from(
-  "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+  EMULATOR_ACCOUNT_KEY_STR,
   "base64"
 );
 

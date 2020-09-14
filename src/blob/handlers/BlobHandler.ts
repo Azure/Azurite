@@ -1,3 +1,5 @@
+import { URLBuilder } from "@azure/ms-rest-js";
+import axios, { AxiosResponse } from "axios";
 import { URL } from "url";
 
 import IExtentStore from "../../common/persistence/IExtentStore";
@@ -9,6 +11,7 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IBlobHandler from "../generated/handlers/IBlobHandler";
 import ILogger from "../generated/utils/ILogger";
+import { parseXML } from "../generated/utils/xml";
 import { extractStoragePartsFromPath } from "../middlewares/blobStorageContext.middleware";
 import IBlobMetadataStore, {
   BlobModel
@@ -624,12 +627,85 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const snapshot = url.searchParams.get("snapshot") || "";
 
     if (
-      sourceAccount !== blobCtx.account ||
       sourceAccount === undefined ||
       sourceContainer === undefined ||
       sourceBlob === undefined
     ) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId!);
+    }
+
+    if (sourceAccount !== blobCtx.account) {
+      // Currently the only cross-account copy support is from/to the same Azurite instance. In either case access
+      // is determined by performing a request to the copy source to see if the authentication is valid.
+      const currentServer = blobCtx.request!.getHeader("Host") || "";
+      if (currentServer !== url.host) {
+        this.logger.error(
+          `BlobHandler:startCopyFromURL() Source account ${url} is not on the same Azurite instance as target account ${account}`,
+          context.contextId
+        );
+
+        throw StorageErrorFactory.getCannotVerifyCopySource(
+          context.contextId!,
+          404,
+          "The specified resource does not exist"
+        );
+      }
+
+      this.logger.debug(
+        `BlobHandler:startCopyFromURL() Validating access to the source account ${sourceAccount}`,
+        context.contextId
+      );
+
+      // In order to retrieve proper error details we make a metadata request to the copy source. If we instead issue
+      // a HEAD request then the error details are not returned and reporting authentication failures to the caller
+      // becomes a black box.
+      const metadataUrl = URLBuilder.parse(copySource);
+      metadataUrl.setQueryParameter("comp", "metadata");
+      const validationResponse: AxiosResponse = await axios.get(
+        metadataUrl.toString(),
+        {
+          // Instructs axios to not throw an error for non-2xx responses
+          validateStatus: () => true
+        }
+      );
+      if (validationResponse.status === 200) {
+        this.logger.debug(
+          `BlobHandler:startCopyFromURL() Successfully validated access to source account ${sourceAccount}`,
+          context.contextId
+        );
+      } else {
+        this.logger.debug(
+          `BlobHandler:startCopyFromURL() Access denied to source account ${sourceAccount} StatusCode=${validationResponse.status}, AuthenticationErrorDetail=${validationResponse.data}`,
+          context.contextId
+        );
+
+        if (validationResponse.status === 404) {
+          throw StorageErrorFactory.getCannotVerifyCopySource(
+            context.contextId!,
+            validationResponse.status,
+            "The specified resource does not exist"
+          );
+        } else {
+          // For non-successful responses attempt to unwrap the error message from the metadata call.
+          let message: string =
+            "Could not verify the copy source within the specified time.";
+          if (
+            validationResponse.headers[HeaderConstants.CONTENT_TYPE] ===
+            "application/xml"
+          ) {
+            const authenticationError = await parseXML(validationResponse.data);
+            if (authenticationError.Message !== undefined) {
+              message = authenticationError.Message.replace(/\n+/gm, "");
+            }
+          }
+
+          throw StorageErrorFactory.getCannotVerifyCopySource(
+            context.contextId!,
+            validationResponse.status,
+            message
+          );
+        }
+      }
     }
 
     // Preserve metadata key case

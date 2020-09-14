@@ -18,16 +18,26 @@ import * as assert from "assert";
 
 import { configLogger } from "../../src/common/Logger";
 import BlobTestServerFactory from "../BlobTestServerFactory";
+import { getUniqueName } from "../testutils";
 import {
-  EMULATOR_ACCOUNT_KEY,
-  EMULATOR_ACCOUNT_NAME,
-  getUniqueName
-} from "../testutils";
+  EMULATOR_ACCOUNT_KEY_STR,
+  EMULATOR_ACCOUNT_NAME
+} from "../../src/blob/utils/constants";
+import { URLBuilder } from "@azure/ms-rest-js";
+
+const EMULATOR_ACCOUNT2_NAME = "devstoreaccount2";
+const EMULATOR_ACCOUNT2_KEY_STR =
+  "MTAwCjE2NQoyMjUKMTAzCjIxOAoyNDEKNDAKNzgKMTkxCjE3OAoyMTQKMTY5CjIxMwo2MQoyNTIKMTQxCg==";
 
 // Set true to enable debug log
 configLogger(false);
 
 describe("Shared Access Signature (SAS) authentication", () => {
+  // Setup two accounts for validating cross-account copy operations
+  process.env[
+    "AZURITE_ACCOUNTS"
+  ] = `${EMULATOR_ACCOUNT_NAME}:${EMULATOR_ACCOUNT_KEY_STR};${EMULATOR_ACCOUNT2_NAME}:${EMULATOR_ACCOUNT2_KEY_STR}`;
+
   const factory = new BlobTestServerFactory();
   const server = factory.createServer();
 
@@ -37,7 +47,23 @@ describe("Shared Access Signature (SAS) authentication", () => {
     newPipeline(
       new StorageSharedKeyCredential(
         EMULATOR_ACCOUNT_NAME,
-        EMULATOR_ACCOUNT_KEY
+        EMULATOR_ACCOUNT_KEY_STR
+      ),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    )
+  );
+
+  const baseURL2 = `http://${server.config.host}:${server.config.port}/devstoreaccount2`;
+  const serviceClient2 = new BlobServiceClient(
+    baseURL2,
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT2_NAME,
+        EMULATOR_ACCOUNT2_KEY_STR
       ),
       {
         retryOptions: { maxTries: 1 },
@@ -1123,5 +1149,292 @@ describe("Shared Access Signature (SAS) authentication", () => {
     // assert.equal(properties.contentType, "content-type-override");
 
     await containerClient.delete();
+  });
+
+  it("Copy blob across accounts should require SAS token @loki", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+
+    const containerName = getUniqueName("con");
+    const sourceContainerClient = serviceClient.getContainerClient(
+      containerName
+    );
+    const targetContainerClient = serviceClient2.getContainerClient(
+      containerName
+    );
+    await sourceContainerClient.create();
+    await targetContainerClient.create();
+
+    const blobName = getUniqueName("blob");
+    const sas = generateBlobSASQueryParameters(
+      {
+        containerName,
+        blobName,
+        expiresOn: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: BlobSASPermissions.parse("r"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
+        version: "2016-05-31"
+      },
+      sourceStorageSharedKeyCredential as StorageSharedKeyCredential
+    ).toString();
+
+    const sourceBlob = sourceContainerClient.getBlockBlobClient(blobName);
+    await sourceBlob.upload("hello", 5);
+
+    const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
+
+    let error;
+    try {
+      await targetBlob.beginCopyFromURL(sourceBlob.url);
+    } catch (err) {
+      error = err;
+    }
+    assert.ok(error !== undefined);
+    assert.equal(error.statusCode, 403);
+    assert.equal(error.details.errorCode, "CannotVerifyCopySource");
+    assert.equal(error.details.Code, "CannotVerifyCopySource");
+
+    // this copy should work
+    const operation = await targetBlob.beginCopyFromURL(
+      `${sourceBlob.url}?${sas}`
+    );
+    const copyResponse = await operation.pollUntilDone();
+    assert.equal("success", copyResponse.copyStatus);
+    const fileBuffer = await targetBlob.downloadToBuffer();
+    assert.equal(fileBuffer.toString(), "hello");
+  });
+
+  it("Copy blob across accounts should error if hosts mismatch @loki", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const containerName = getUniqueName("con");
+    const sourceContainerClient = serviceClient.getContainerClient(
+      containerName
+    );
+    const targetContainerClient = serviceClient2.getContainerClient(
+      containerName
+    );
+    await sourceContainerClient.create();
+    await targetContainerClient.create();
+
+    const blobName = getUniqueName("blob");
+    const sourceBlob = sourceContainerClient.getBlockBlobClient(blobName);
+    await sourceBlob.upload("hello", 5);
+
+    const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
+    const sourceUriBuilder = URLBuilder.parse(sourceBlob.url);
+    sourceUriBuilder.setHost("somewhereelse");
+
+    let error;
+    try {
+      await targetBlob.beginCopyFromURL(sourceUriBuilder.toString());
+    } catch (err) {
+      error = err;
+    }
+    assert.deepEqual(error.statusCode, 404);
+    assert.ok(error !== undefined);
+  });
+
+  it("Copy blob across accounts should succeed for public blob access @loki", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const containerName = getUniqueName("con");
+    const sourceContainerClient = serviceClient.getContainerClient(
+      containerName
+    );
+    const targetContainerClient = serviceClient2.getContainerClient(
+      containerName
+    );
+    await sourceContainerClient.create({
+      access: "blob"
+    });
+    await targetContainerClient.create();
+
+    const blobName = getUniqueName("blob");
+    const sourceBlob = sourceContainerClient.getBlockBlobClient(blobName);
+    await sourceBlob.upload("hello", 5);
+
+    const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
+    const operation = await targetBlob.beginCopyFromURL(sourceBlob.url);
+    const copyResponse = await operation.pollUntilDone();
+    assert.equal("success", copyResponse.copyStatus);
+    const fileBuffer = await targetBlob.downloadToBuffer();
+    assert.equal(fileBuffer.toString(), "hello");
+  });
+
+  it("Copy blob across accounts should succeed for public container access @loki", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const containerName = getUniqueName("con");
+    const sourceContainerClient = serviceClient.getContainerClient(
+      containerName
+    );
+    const targetContainerClient = serviceClient2.getContainerClient(
+      containerName
+    );
+    await sourceContainerClient.create({
+      access: "container"
+    });
+    await targetContainerClient.create();
+
+    const blobName = getUniqueName("blob");
+    const sourceBlob = sourceContainerClient.getBlockBlobClient(blobName);
+    await sourceBlob.upload("hello", 5);
+
+    const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
+    const operation = await targetBlob.beginCopyFromURL(sourceBlob.url);
+    const copyResponse = await operation.pollUntilDone();
+    assert.equal("success", copyResponse.copyStatus);
+    const fileBuffer = await targetBlob.downloadToBuffer();
+    assert.equal(fileBuffer.toString(), "hello");
+  });
+
+  it("Copy blob across accounts should honor metadata when provided @loki", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+
+    const containerName = getUniqueName("con");
+    const sourceContainerClient = serviceClient.getContainerClient(
+      containerName
+    );
+    const targetContainerClient = serviceClient2.getContainerClient(
+      containerName
+    );
+    await sourceContainerClient.create();
+    await targetContainerClient.create();
+
+    const blobName = getUniqueName("blob");
+    const blobName2 = getUniqueName("blob");
+    const sas = generateBlobSASQueryParameters(
+      {
+        containerName,
+        blobName,
+        expiresOn: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: BlobSASPermissions.parse("r"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
+        version: "2016-05-31"
+      },
+      sourceStorageSharedKeyCredential as StorageSharedKeyCredential
+    ).toString();
+
+    const sourceBlob = sourceContainerClient.getBlockBlobClient(blobName);
+    await sourceBlob.upload("hello", 5, {
+      metadata: {
+        foo: "1",
+        bar: "2"
+      }
+    });
+
+    const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
+    const operation = await targetBlob.beginCopyFromURL(
+      `${sourceBlob.url}?${sas}`
+    );
+    const copyResponse = await operation.pollUntilDone();
+    assert.equal("success", copyResponse.copyStatus);
+    const properties = await targetBlob.getProperties();
+    assert.equal(properties.metadata!["foo"], "1");
+    assert.equal(properties.metadata!["bar"], "2");
+
+    const targetBlobWithProps = targetContainerClient.getBlockBlobClient(
+      blobName2
+    );
+    const operation2 = await targetBlobWithProps.beginCopyFromURL(
+      `${sourceBlob.url}?${sas}`,
+      {
+        metadata: {
+          baz: "3"
+        }
+      }
+    );
+
+    const copyResponse2 = await operation2.pollUntilDone();
+    assert.equal("success", copyResponse2.copyStatus);
+    const properties2 = await targetBlobWithProps.getProperties();
+    assert.equal(properties2.metadata!["foo"], undefined);
+    assert.equal(properties2.metadata!["bar"], undefined);
+    assert.equal(properties2.metadata!["baz"], "3");
+  });
+
+  it("Copy blob across accounts should fail if source is archived @loki", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+
+    const containerName = getUniqueName("con");
+    const sourceContainerClient = serviceClient.getContainerClient(
+      containerName
+    );
+    const targetContainerClient = serviceClient2.getContainerClient(
+      containerName
+    );
+    await sourceContainerClient.create();
+    await targetContainerClient.create();
+
+    const blobName = getUniqueName("blob");
+    const sas = generateBlobSASQueryParameters(
+      {
+        containerName,
+        blobName,
+        expiresOn: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: BlobSASPermissions.parse("r"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
+        version: "2016-05-31"
+      },
+      sourceStorageSharedKeyCredential as StorageSharedKeyCredential
+    ).toString();
+
+    const sourceBlob = sourceContainerClient.getBlockBlobClient(blobName);
+    await sourceBlob.upload("hello", 5);
+    sourceBlob.setAccessTier("Archive");
+
+    const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
+
+    let error;
+    try {
+      await targetBlob.beginCopyFromURL(`${sourceBlob.url}?${sas}`);
+    } catch (err) {
+      error = err;
+    }
+    assert.ok(error !== undefined);
+    assert.equal(error.statusCode, 409);
+    assert.equal(error.details.Code, "BlobArchived");
   });
 });
