@@ -57,7 +57,7 @@
     "@types/validator": "^10.11.3",
     "@types/vscode": "^1.39.0",
     "@types/xml2js": "^0.4.3",
-    "autorest": "^2.0.4283",
+    "autorest": "^3.0.6244",
     "cross-env": "^6.0.3",
     "cross-var": "^1.1.0",
     "husky": "^1.3.1",
