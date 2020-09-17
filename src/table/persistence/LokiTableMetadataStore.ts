@@ -203,13 +203,14 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       throw StorageErrorFactory.getEntityNotExist(context);
     } else {
       // Test if etag value is valid
-      if (etag !== "*" && currentDoc.eTag !== etag) {
-        throw StorageErrorFactory.getPreconditionFailed(context);
+      if (etag === "*" || currentDoc.eTag === etag) {
+        tableColl.remove(currentDoc);
+        tableColl.insert(entity);
+        return;
       }
     }
 
-    tableColl.remove(currentDoc);
-    tableColl.insert(entity);
+    throw StorageErrorFactory.getPreconditionFailed(context);
   }
 
   public async mergeTableEntity(

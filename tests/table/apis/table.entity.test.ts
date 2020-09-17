@@ -326,7 +326,31 @@ describe("table Entity APIs test", () => {
       tableName,
       {
         PartitionKey: "part1",
-        RowKey: "row4",
+        RowKey: "row6",
+        myValue: "firstValue"
+      },
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 204); // No content
+          done();
+        }
+      }
+    );
+  });
+
+  it("Insert or Replace (upsert) on an Entity that exists, @loki", done => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertOrReplaceEntity(
+      tableName,
+      {
+        PartitionKey: "part1",
+        RowKey: "row6",
         myValue: "newValue"
       },
       (updateError, updateResult, updateResponse) => {

@@ -338,13 +338,13 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       );
 
       if (exists !== null) {
-        // entity exists so we update
+        // entity exists so we update and force with "*" etag
         await this.metadataStore.updateTableEntity(
           context,
           tableName,
           accountName!,
           entity,
-          ifMatch!
+          "*"
         );
       } else {
         await this.metadataStore.insertTableEntity(
