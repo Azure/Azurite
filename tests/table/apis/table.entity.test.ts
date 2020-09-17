@@ -1,6 +1,7 @@
 import * as assert from "assert";
 import * as Azure from "azure-storage";
 
+import StorageError from "../../../src/blob/errors/StorageError";
 import { configLogger } from "../../../src/common/Logger";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
@@ -10,7 +11,6 @@ import {
   getUniqueName,
   overrideRequest
 } from "../../testutils";
-import StorageError from "../../../src/blob/errors/StorageError";
 
 // Set true to enable debug log
 configLogger(false);
@@ -311,6 +311,54 @@ describe("table Entity APIs test", () => {
           );
         } else {
           assert.ifError(error);
+          done();
+        }
+      }
+    );
+  });
+
+  it("Insert or Replace (upsert) on an Entity that does not exist, @loki", done => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertOrReplaceEntity(
+      tableName,
+      {
+        PartitionKey: "part1",
+        RowKey: "row6",
+        myValue: "firstValue"
+      },
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 204); // No content
+          done();
+        }
+      }
+    );
+  });
+
+  it("Insert or Replace (upsert) on an Entity that exists, @loki", done => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertOrReplaceEntity(
+      tableName,
+      {
+        PartitionKey: "part1",
+        RowKey: "row6",
+        myValue: "newValue"
+      },
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 204); // No content
           done();
         }
       }
