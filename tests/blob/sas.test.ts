@@ -943,7 +943,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await blob2SAS.syncCopyFromURL(blob1.url);
   });
 
-  it("Copy blob should work with write permission in blob SAS to override an existing blob @loki", async () => {
+  it("Copy blob should work with write permission in blob SAS to override an existing blob @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -990,7 +990,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await blob2SAS.beginCopyFromURL(blob1.url);
   });
 
-  it("Copy blob shouldn't work without write permission in blob SAS to override an existing blob @loki", async () => {
+  it("Copy blob shouldn't work without write permission in blob SAS to override an existing blob @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -1044,7 +1044,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.ok(error !== undefined);
   });
 
-  it("Copy blob should work without write permission in account SAS to an nonexisting blob @loki", async () => {
+  it("Copy blob should work without write permission in account SAS to an nonexisting blob @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -1151,7 +1151,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await containerClient.delete();
   });
 
-  it("Copy blob across accounts should require SAS token @loki", async () => {
+  it("Copy blob across accounts should require SAS token @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -1213,7 +1213,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.equal(fileBuffer.toString(), "hello");
   });
 
-  it("Copy blob across accounts should error if hosts mismatch @loki", async () => {
+  it("Copy blob across accounts should error if hosts mismatch @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -1248,7 +1248,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.ok(error !== undefined);
   });
 
-  it("Copy blob across accounts should succeed for public blob access @loki", async () => {
+  it("Copy blob across accounts should succeed for public blob access @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -1279,7 +1279,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.equal(fileBuffer.toString(), "hello");
   });
 
-  it("Copy blob across accounts should succeed for public container access @loki", async () => {
+  it("Copy blob across accounts should succeed for public container access @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -1310,7 +1310,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.equal(fileBuffer.toString(), "hello");
   });
 
-  it("Copy blob across accounts should honor metadata when provided @loki", async () => {
+  it("Copy blob across accounts should honor metadata when provided @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -1385,7 +1385,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.equal(properties2.metadata!["baz"], "3");
   });
 
-  it("Copy blob across accounts should fail if source is archived @loki", async () => {
+  it("Copy blob across accounts should fail if source is archived @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
