@@ -1,13 +1,12 @@
 import { stat } from "fs";
 import Loki from "lokijs";
-
+import { newEtag } from "../../blob/utils/utils";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { IEntity, TableModel } from "../persistence/ITableMetadataStore";
 import ITableMetadataStore from "./ITableMetadataStore";
-import { newEtag } from "../../blob/utils/utils";
 
 export default class LokiTableMetadataStore implements ITableMetadataStore {
   private readonly db: Loki;
