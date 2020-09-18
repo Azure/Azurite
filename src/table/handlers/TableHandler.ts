@@ -375,15 +375,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableMergeEntityOptionalParams,
     context: Context
   ): Promise<Models.TableMergeEntityResponse> {
-    // Values from the Context
     const tableCtx = new TableStorageContext(context);
     const accountName = tableCtx.account;
-    const tableName = tableCtx.tableName; // Get tableName from context
-    const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
-    const rowKey = tableCtx.rowKey!; // Get rowKey from context
-    //const entity = options.tableEntityProperties!;
+    const tableName = tableCtx.tableName;
+    const partitionKey = tableCtx.partitionKey!;
+    const rowKey = tableCtx.rowKey!;
 
-    // check if there are values set
     if (
       !options.tableEntityProperties ||
       !options.tableEntityProperties.PartitionKey ||
@@ -399,7 +396,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       partitionKey,
       rowKey
     );
-    const etagValue = "*";
+    let etagValue = "*";
 
     if (existingEntity !== null) {
       const mergeEntity: IEntity = {
@@ -409,8 +406,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         lastModifiedTime: context.startTime!,
         eTag: etagValue
       };
-      // mergeTableEntity
-      await this.metadataStore.mergeTableEntity(
+
+      etagValue = await this.metadataStore.mergeTableEntity(
         context,
         tableName!,
         accountName!,
@@ -420,7 +417,6 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         rowKey
       );
     } else {
-      // Create new Entity Item
       const entity: IEntity = {
         PartitionKey: options.tableEntityProperties.PartitionKey,
         RowKey: options.tableEntityProperties.RowKey,
@@ -429,7 +425,6 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         eTag: etagValue
       };
 
-      // insertTableEntity
       await this.metadataStore.insertTableEntity(
         context,
         tableName!,
@@ -437,7 +432,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         entity
       );
     }
-    // create response
+
     const response: Models.TableMergeEntityResponse = {
       clientRequestId: options.requestId,
       requestId: tableCtx.contextID,

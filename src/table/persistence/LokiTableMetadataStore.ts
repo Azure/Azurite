@@ -7,6 +7,7 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { IEntity, TableModel } from "../persistence/ITableMetadataStore";
 import ITableMetadataStore from "./ITableMetadataStore";
+import { newEtag } from "../../blob/utils/utils";
 
 export default class LokiTableMetadataStore implements ITableMetadataStore {
   private readonly db: Loki;
@@ -219,7 +220,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     account: string,
     entity: IEntity,
     etag: string
-  ): Promise<void> {
+  ): Promise<string> {
     const tableColl = this.db.getCollection(
       this.getUniqueTableCollectionName(account, tableName)
     );
@@ -240,11 +241,14 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       throw StorageErrorFactory.getEntityNotExist(context);
     } else {
       // Test if etag value is valid
-      // TODO MERGE ENTITY
       if (etag === "*" || currentDoc.eTag === etag) {
-        tableColl.remove(currentDoc);
-        tableColl.insert(entity);
-        return;
+        const mergedDoc = {
+          ...currentDoc,
+          ...entity
+        };
+        mergedDoc.eTag = newEtag();
+        tableColl.update(mergedDoc);
+        return mergedDoc.eTag;
       }
     }
     throw StorageErrorFactory.getPreconditionFailed(context);

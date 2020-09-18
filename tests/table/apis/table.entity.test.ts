@@ -335,6 +335,7 @@ describe("table Entity APIs test", () => {
           done();
         } else {
           assert.equal(updateResponse.statusCode, 204); // No content
+          // TODO When QueryEntity is done - validate Entity Properties
           done();
         }
       }
@@ -359,6 +360,7 @@ describe("table Entity APIs test", () => {
           done();
         } else {
           assert.equal(updateResponse.statusCode, 204); // No content
+          // TODO When QueryEntity is done - validate Entity Properties
           done();
         }
       }
@@ -379,14 +381,10 @@ describe("table Entity APIs test", () => {
       tableName,
       entityInsert,
       (error, result, insertresponse) => {
-        //  const etagOld = result[".metadata"].etag;
         const entityUpdate = {
           PartitionKey: "part1",
           RowKey: "merge1",
           mergeValue: "newValue"
-          // ".metadata": {
-          //   etag: etagOld
-          // }
         };
         if (!error) {
           requestOverride.headers = {};
@@ -396,6 +394,7 @@ describe("table Entity APIs test", () => {
             (updateError, updateResult, updateResponse) => {
               if (!updateError) {
                 assert.equal(updateResponse.statusCode, 204); // Precondition succeeded
+                // TODO When QueryEntity is done - validate Entity Properties
                 done();
               } else {
                 assert.ifError(updateError);
@@ -429,6 +428,7 @@ describe("table Entity APIs test", () => {
           done();
         } else {
           assert.equal(updateResponse.statusCode, 204); // No content
+          // TODO When QueryEntity is done - validate Entity Properties
           done();
         }
       }

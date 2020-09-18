@@ -62,7 +62,7 @@ export default interface ITableMetadataStore {
     etag: string,
     partitionKey: string,
     rowKey: string
-  ): Promise<void>;
+  ): Promise<string>;
   deleteTableEntity(
     context: Context,
     tableName: string,
