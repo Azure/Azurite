@@ -116,25 +116,75 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableQueryOptionalParams,
     context: Context
   ): Promise<Models.TableQueryResponse2> {
-    // TODO
-    // e.g
-    // return {
-    //   statusCode: 200,
-    //   clientRequestId: "clientRequestId",
-    //   requestId: "requestId",
-    //   version: "version",
-    //   xMsContinuationNextTableName: "xMsContinuationNextTableName",
-    //   odatametadata: "odatametadata",
-    //   value: [
-    //     {
-    //       tableName: "tableName",
-    //       odatatype: "odatatype",
-    //       odataid: "odataid",
-    //       odataeditLink: "odataeditLink"
-    //     }
-    //   ]
-    // };
-    throw new NotImplementedError();
+    const tableCtx = new TableStorageContext(context);
+    const accountName = tableCtx.account;
+
+    const accept = context.request!.getHeader("accept");
+
+    if (
+      accept !== NO_METADATA_ACCEPT &&
+      accept !== MINIMAL_METADATA_ACCEPT &&
+      accept !== FULL_METADATA_ACCEPT
+    ) {
+      throw StorageErrorFactory.getContentTypeNotSupported(context);
+    }
+
+    if (accountName === undefined) {
+      throw StorageErrorFactory.getAccountNameEmpty(context);
+    }
+
+    const metadata = `${accountName}/$metadata#Tables`;
+    const tableResult = await this.metadataStore.queryTable(
+      context,
+      accountName
+    );
+
+    const response: Models.TableQueryResponse2 = {
+      clientRequestId: options.requestId,
+      requestId: tableCtx.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      statusCode: 200,
+      xMsContinuationNextTableName: options.nextTableName,
+      value: []
+    };
+
+    let protocol = "http";
+    let host =
+      DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
+    // TODO: Get host and port from Azurite Server instance
+    if (tableCtx.request !== undefined) {
+      host = tableCtx.request.getHeader("host") as string;
+      protocol = tableCtx.request.getProtocol() as string;
+    }
+
+    if (tableCtx.accept === NO_METADATA_ACCEPT) {
+      response.value = tableResult.map(item => {
+        return { tableName: item.tableName };
+      });
+    }
+
+    if (tableCtx.accept === MINIMAL_METADATA_ACCEPT) {
+      response.odatametadata = `${protocol}://${host}/${metadata}`;
+      response.value = tableResult.map(item => {
+        return { tableName: item.tableName };
+      });
+    }
+
+    if (tableCtx.accept === FULL_METADATA_ACCEPT) {
+      response.odatametadata = `${protocol}://${host}/${metadata}`;
+      response.value = tableResult.map(item => {
+        return {
+          odatatype: item.odatatype,
+          odataid: `${protocol}://${host}/${item.odataid}`,
+          odataeditLink: item.odataeditLink,
+          tableName: item.tableName
+        };
+      });
+    }
+
+    context.response!.setContentType(accept);
+    return response;
   }
 
   public async delete(
@@ -253,35 +303,65 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     }
 
     // Test if etag is available
-    if (ifMatch === "" || ifMatch === undefined) {
+    // this is considered an upsert if no etag header, an empty header is an error.
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-or-replace-entity
+    if (ifMatch === "") {
       throw StorageErrorFactory.getPreconditionFailed(context);
     }
-
+    const updateEtag = newEtag();
     // Entity, which is used to update an existing entity
     const entity: IEntity = {
       PartitionKey: options.tableEntityProperties.PartitionKey,
       RowKey: options.tableEntityProperties.RowKey,
       properties: options.tableEntityProperties,
       lastModifiedTime: context.startTime!,
-      eTag: newEtag()
+      eTag: updateEtag
     };
 
-    // Update entity
-    await this.metadataStore.updateTableEntity(
-      context,
-      tableName,
-      accountName!,
-      entity,
-      ifMatch
-    );
+    if (ifMatch !== undefined) {
+      // Update entity
+      await this.metadataStore.updateTableEntity(
+        context,
+        tableName,
+        accountName!,
+        entity,
+        ifMatch!
+      );
+    } else {
+      // Upsert the entity
+      const exists = await this.metadataStore.queryTableEntitiesWithPartitionAndRowKey(
+        context,
+        tableName,
+        accountName!,
+        options.tableEntityProperties.PartitionKey,
+        options.tableEntityProperties.RowKey
+      );
 
+      if (exists !== null) {
+        // entity exists so we update and force with "*" etag
+        await this.metadataStore.updateTableEntity(
+          context,
+          tableName,
+          accountName!,
+          entity,
+          "*"
+        );
+      } else {
+        await this.metadataStore.insertTableEntity(
+          context,
+          tableName,
+          accountName!,
+          entity
+        );
+      }
+    }
     // Response definition
     const response: Models.TableUpdateEntityResponse = {
       clientRequestId: options.requestId,
       requestId: tableCtx.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
-      eTag: newEtag(),
+      eTag: updateEtag,
       statusCode: 204
     };
 
@@ -319,7 +399,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       partitionKey,
       rowKey
     );
-    const etagValue = newEtag();
+    const etagValue = "*";
 
     if (existingEntity !== null) {
       const mergeEntity: IEntity = {

@@ -25,7 +25,10 @@ export interface IEntity {
 export type TableModel = ITtableAdditionalProperties;
 
 export default interface ITableMetadataStore {
-  queryTable(context: Context): Promise<Models.TableResponseProperties[]>;
+  queryTable(
+    context: Context,
+    accountName: string
+  ): Promise<Models.TableResponseProperties[]>;
   createTable(context: Context, table: TableModel): Promise<void>;
   deleteTable(
     context: Context,
@@ -66,7 +69,7 @@ export default interface ITableMetadataStore {
     accountName: string,
     partitionKey: string,
     rowKey: string,
-    eatg: string
+    etag: string
   ): Promise<void>;
   insertTableEntity(
     context: Context,

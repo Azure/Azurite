@@ -87,10 +87,30 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   }
 
   public async queryTable(
-    context: Context
+    context: Context,
+    accountName: string
   ): Promise<Models.TableResponseProperties[]> {
-    // TODO
-    throw new NotImplementedError();
+    const coll = this.db.getCollection(this.TABLE_COLLECTION);
+    const docList = coll.find({ account: accountName });
+
+    if (!docList) {
+      throw StorageErrorFactory.getEntityNotFound(context);
+    }
+
+    let response: Models.TableResponseProperties[] = [];
+
+    if (docList.length > 0) {
+      response = docList.map(item => {
+        return {
+          odatatype: item.odatatype,
+          odataid: item.odataid,
+          odataeditLink: item.odataeditLink,
+          tableName: item.tableName
+        };
+      });
+    }
+
+    return response;
   }
 
   public async deleteTable(
@@ -155,6 +175,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     return requestedDoc;
   }
+
   public async updateTableEntity(
     context: Context,
     tableName: string,
@@ -182,13 +203,14 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       throw StorageErrorFactory.getEntityNotExist(context);
     } else {
       // Test if etag value is valid
-      if (etag !== "*" && currentDoc.eTag !== etag) {
-        throw StorageErrorFactory.getPreconditionFailed(context);
+      if (etag === "*" || currentDoc.eTag === etag) {
+        tableColl.remove(currentDoc);
+        tableColl.insert(entity);
+        return;
       }
     }
 
-    tableColl.remove(currentDoc);
-    tableColl.insert(entity);
+    throw StorageErrorFactory.getPreconditionFailed(context);
   }
 
   public async mergeTableEntity(
@@ -218,13 +240,14 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       throw StorageErrorFactory.getEntityNotExist(context);
     } else {
       // Test if etag value is valid
-      if (etag !== "*" && currentDoc.eTag !== etag) {
-        throw StorageErrorFactory.getPreconditionFailed(context);
+      // TODO MERGE ENTITY
+      if (etag === "*" || currentDoc.eTag === etag) {
+        tableColl.remove(currentDoc);
+        tableColl.insert(entity);
+        return;
       }
     }
-
-    tableColl.remove(currentDoc);
-    tableColl.insert(entity);
+    throw StorageErrorFactory.getPreconditionFailed(context);
   }
 
   public async deleteTableEntity(

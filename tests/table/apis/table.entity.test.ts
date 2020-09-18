@@ -316,25 +316,119 @@ describe("table Entity APIs test", () => {
       }
     );
   });
-  it("Should merge, if Etag matches, @loki", done => {
+
+  it("Insert or Replace (upsert) on an Entity that does not exist, @loki", done => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertOrReplaceEntity(
+      tableName,
+      {
+        PartitionKey: "part1",
+        RowKey: "row6",
+        myValue: "firstValue"
+      },
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 204); // No content
+          done();
+        }
+      }
+    );
+  });
+
+  it("Insert or Replace (upsert) on an Entity that exists, @loki", done => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertOrReplaceEntity(
+      tableName,
+      {
+        PartitionKey: "part1",
+        RowKey: "row6",
+        myValue: "newValue"
+      },
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 204); // No content
+          done();
+        }
+      }
+    );
+  });
+
+  it("Insert or Merge on an Entity that exists, @loki", done => {
     const entityInsert = {
       PartitionKey: "part1",
-      RowKey: "row6",
+      RowKey: "merge1",
       myValue: "oldValue"
     };
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
-    tableService.insertOrMergeEntity(
+    tableService.insertEntity(
       tableName,
       entityInsert,
       (error, result, insertresponse) => {
+        //  const etagOld = result[".metadata"].etag;
+        const entityUpdate = {
+          PartitionKey: "part1",
+          RowKey: "merge1",
+          mergeValue: "newValue"
+          // ".metadata": {
+          //   etag: etagOld
+          // }
+        };
         if (!error) {
-          assert.equal(insertresponse.statusCode, 204); // Precondition succeeded
-          done();
+          requestOverride.headers = {};
+          tableService.insertOrMergeEntity(
+            tableName,
+            entityUpdate,
+            (updateError, updateResult, updateResponse) => {
+              if (!updateError) {
+                assert.equal(updateResponse.statusCode, 204); // Precondition succeeded
+                done();
+              } else {
+                assert.ifError(updateError);
+                done();
+              }
+            }
+          );
         } else {
           assert.ifError(error);
+          done();
+        }
+      }
+    );
+  });
+
+  it("Insert or Merge on an Entity that does not exist, @loki", done => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertOrMergeEntity(
+      tableName,
+      {
+        PartitionKey: "part1",
+        RowKey: "row8",
+        myValue: "firstValue"
+      },
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 204); // No content
           done();
         }
       }
