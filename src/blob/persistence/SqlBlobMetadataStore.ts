@@ -2467,7 +2467,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     }
 
     const blobType = this.getModelValue<Models.BlobType>(res, "blobType", true);
-    const isCommitted = this.getModelValue<boolean>(res, "iscommitted", true);
+    const isCommitted = this.getModelValue<boolean>(res, "isCommitted", true);
 
     return { blobType, isCommitted };
   }
