@@ -138,10 +138,12 @@ describe("BlockBlobAPIs", () => {
     );
     await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
 
-    const listBlobResponse = await (await containerClient
-      .listBlobsFlat({ includeUncommitedBlobs: true })
-      .byPage()
-      .next()).value;
+    const listBlobResponse = await (
+      await containerClient
+        .listBlobsFlat({ includeUncommitedBlobs: true })
+        .byPage()
+        .next()
+    ).value;
     assert.equal(listBlobResponse.segment.blobItems.length, 1);
     assert.deepStrictEqual(
       listBlobResponse.segment.blobItems[0].properties.contentLength,
@@ -167,10 +169,12 @@ describe("BlockBlobAPIs", () => {
 
     await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
 
-    const listBlobResponse = (await containerClient
-      .listBlobsFlat({ includeUncommitedBlobs: true })
-      .byPage()
-      .next()).value;
+    const listBlobResponse = (
+      await containerClient
+        .listBlobsFlat({ includeUncommitedBlobs: true })
+        .byPage()
+        .next()
+    ).value;
     assert.equal(listBlobResponse.segment.blobItems.length, 1);
     assert.deepStrictEqual(
       listBlobResponse.segment.blobItems[0].properties.contentLength,
@@ -408,6 +412,17 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.uncommittedBlocks!.length, 1);
     assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("123"));
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
+  });
+
+  it("getBlockList for non-existent blob @loki @sql", async () => {
+    try {
+      await blockBlobClient.getBlockList("committed");
+    } catch (error) {
+      assert.deepEqual(404, error.statusCode);
+      return;
+    }
+
+    assert.fail();
   });
 
   it("upload with Readable stream body and default parameters @loki @sql", async () => {
