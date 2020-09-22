@@ -1486,8 +1486,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           containerName: container,
           blobName: blob,
           snapshot: "",
-          deleting: 0,
-          isCommitted
+          deleting: 0
         },
         transaction: t
       });

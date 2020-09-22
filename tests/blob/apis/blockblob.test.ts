@@ -421,7 +421,21 @@ describe("BlockBlobAPIs", () => {
       assert.deepEqual(404, error.statusCode);
       return;
     }
+    assert.fail();
+  });
 
+  it("getBlockList for non-existent container @loki @sql", async () => {
+    const fakeContainer = getUniqueName("container");
+    const fakeContainerClient = serviceClient.getContainerClient(fakeContainer);
+    const fakeBlobClient = fakeContainerClient.getBlobClient(blobName);
+    const fakeBlockBlobClient = fakeBlobClient.getBlockBlobClient();
+
+    try {
+      await fakeBlockBlobClient.getBlockList("committed");
+    } catch (error) {
+      assert.deepEqual(404, error.statusCode);
+      return;
+    }
     assert.fail();
   });
 
