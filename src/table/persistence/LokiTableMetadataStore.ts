@@ -229,7 +229,12 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       }
     }
 
-    tableColl.update(currentDoc);
+    const mergedDoc = {
+      ...currentDoc,
+      ...entity
+    };
+
+    tableColl.update(mergedDoc);
   }
 
   public async deleteTableEntity(
