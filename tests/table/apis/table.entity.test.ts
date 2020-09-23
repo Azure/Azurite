@@ -335,6 +335,7 @@ describe("table Entity APIs test", () => {
             (mergeError, mergeResult, mergeResponse) => {
               if (!mergeError) {
                 assert.equal(mergeResponse.statusCode, 204); // Precondition succeeded
+                //TODO check if entity was merged properly
                 done();
               } else {
                 assert.ifError(mergeError);
@@ -445,6 +446,7 @@ describe("table Entity APIs test", () => {
             (updateError, updateResult, updateResponse) => {
               if (!updateError) {
                 assert.equal(updateResponse.statusCode, 204); // Precondition succeeded
+                //TODO check if entity was merged properly
                 done();
               } else {
                 assert.ifError(updateError);
