@@ -335,6 +335,7 @@ describe("table Entity APIs test", () => {
           done();
         } else {
           assert.equal(updateResponse.statusCode, 204); // No content
+          // TODO When QueryEntity is done - validate Entity Properties
           done();
         }
       }
@@ -359,6 +360,75 @@ describe("table Entity APIs test", () => {
           done();
         } else {
           assert.equal(updateResponse.statusCode, 204); // No content
+          // TODO When QueryEntity is done - validate Entity Properties
+          done();
+        }
+      }
+    );
+  });
+
+  it("Insert or Merge on an Entity that exists, @loki", done => {
+    const entityInsert = {
+      PartitionKey: "part1",
+      RowKey: "merge1",
+      myValue: "oldValue"
+    };
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertEntity(
+      tableName,
+      entityInsert,
+      (error, result, insertresponse) => {
+        const entityUpdate = {
+          PartitionKey: "part1",
+          RowKey: "merge1",
+          mergeValue: "newValue"
+        };
+        if (!error) {
+          requestOverride.headers = {};
+          tableService.insertOrMergeEntity(
+            tableName,
+            entityUpdate,
+            (updateError, updateResult, updateResponse) => {
+              if (!updateError) {
+                assert.equal(updateResponse.statusCode, 204); // Precondition succeeded
+                // TODO When QueryEntity is done - validate Entity Properties
+                done();
+              } else {
+                assert.ifError(updateError);
+                done();
+              }
+            }
+          );
+        } else {
+          assert.ifError(error);
+          done();
+        }
+      }
+    );
+  });
+
+  it("Insert or Merge on an Entity that does not exist, @loki", done => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertOrMergeEntity(
+      tableName,
+      {
+        PartitionKey: "part1",
+        RowKey: "row8",
+        myValue: "firstValue"
+      },
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 204); // No content
+          // TODO When QueryEntity is done - validate Entity Properties
           done();
         }
       }

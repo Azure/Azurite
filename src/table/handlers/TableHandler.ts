@@ -375,22 +375,74 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableMergeEntityOptionalParams,
     context: Context
   ): Promise<Models.TableMergeEntityResponse> {
-    // e.g
-    // const tableCtx = new TableStorageContext(context);
-    // const accountName = tableCtx.account;
-    // const tableName = tableCtx.tableName; // Get tableName from context
-    // const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
-    // const rowKey = tableCtx.rowKey!; // Get rowKey from context
-    // const entity = options.tableEntityProperties!;
-    // return {
-    //   statusCode: 204,
-    //   date: tableCtx.startTime,
-    //   clientRequestId: "clientRequestId",
-    //   requestId: "requestId",
-    //   version: "version"
-    // };
-    // TODO
-    throw new NotImplementedError();
+    const tableCtx = new TableStorageContext(context);
+    const accountName = tableCtx.account;
+    const tableName = tableCtx.tableName;
+    const partitionKey = tableCtx.partitionKey!;
+    const rowKey = tableCtx.rowKey!;
+
+    if (
+      !options.tableEntityProperties ||
+      !options.tableEntityProperties.PartitionKey ||
+      !options.tableEntityProperties.RowKey
+    ) {
+      throw StorageErrorFactory.getPropertiesNeedValue(context);
+    }
+
+    const existingEntity = await this.metadataStore.queryTableEntitiesWithPartitionAndRowKey(
+      context,
+      tableName!,
+      accountName!,
+      partitionKey,
+      rowKey
+    );
+    let etagValue = "*";
+
+    if (existingEntity !== null) {
+      const mergeEntity: IEntity = {
+        PartitionKey: options.tableEntityProperties.PartitionKey,
+        RowKey: options.tableEntityProperties.RowKey,
+        properties: options.tableEntityProperties,
+        lastModifiedTime: context.startTime!,
+        eTag: etagValue
+      };
+
+      etagValue = await this.metadataStore.mergeTableEntity(
+        context,
+        tableName!,
+        accountName!,
+        mergeEntity,
+        etagValue,
+        partitionKey,
+        rowKey
+      );
+    } else {
+      const entity: IEntity = {
+        PartitionKey: options.tableEntityProperties.PartitionKey,
+        RowKey: options.tableEntityProperties.RowKey,
+        properties: options.tableEntityProperties,
+        lastModifiedTime: context.startTime!,
+        eTag: etagValue
+      };
+
+      await this.metadataStore.insertTableEntity(
+        context,
+        tableName!,
+        accountName!,
+        entity
+      );
+    }
+
+    const response: Models.TableMergeEntityResponse = {
+      clientRequestId: options.requestId,
+      requestId: tableCtx.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      statusCode: 204,
+      eTag: etagValue
+    };
+
+    return response;
   }
 
   public async mergeEntityWithMerge(

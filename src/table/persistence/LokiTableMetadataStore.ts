@@ -1,6 +1,6 @@
 import { stat } from "fs";
 import Loki from "lokijs";
-
+import { newEtag } from "../../blob/utils/utils";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
@@ -215,12 +215,42 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
   public async mergeTableEntity(
     context: Context,
-    table: string,
-    partitionKey: string,
-    rowKey: string
-  ): Promise<void> {
-    // TODO
-    throw new NotImplementedError();
+    tableName: string,
+    account: string,
+    entity: IEntity,
+    etag: string
+  ): Promise<string> {
+    const tableColl = this.db.getCollection(
+      this.getUniqueTableCollectionName(account, tableName)
+    );
+
+    // Throw error, if table not exists
+    if (!tableColl) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
+
+    // Get Current Doc
+    const currentDoc = tableColl.findOne({
+      PartitionKey: entity.PartitionKey,
+      RowKey: entity.RowKey
+    }) as IEntity;
+
+    // Throw error, if doc does not exist
+    if (!currentDoc) {
+      throw StorageErrorFactory.getEntityNotExist(context);
+    } else {
+      // Test if etag value is valid
+      if (etag === "*" || currentDoc.eTag === etag) {
+        const mergedDoc = {
+          ...currentDoc,
+          ...entity
+        };
+        mergedDoc.eTag = newEtag();
+        tableColl.update(mergedDoc);
+        return mergedDoc.eTag;
+      }
+    }
+    throw StorageErrorFactory.getPreconditionFailed(context);
   }
 
   public async deleteTableEntity(
