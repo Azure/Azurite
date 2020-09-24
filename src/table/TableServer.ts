@@ -58,7 +58,8 @@ export default class TableServer extends ServerBase {
     const requestListenerFactory: IRequestListenerFactory = new TableRequestListenerFactory(
       metadataStore,
       configuration.enableAccessLog, // Access log includes every handled HTTP request
-      configuration.accessLogWriteStream
+      configuration.accessLogWriteStream,
+      configuration.skipApiVersionCheck
     );
 
     const host = configuration.host;

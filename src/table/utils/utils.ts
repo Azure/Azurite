@@ -1,3 +1,5 @@
+import StorageErrorFactory from "../errors/StorageErrorFactory";
+
 export function newEtag(): string {
   // Etag should match ^"0x[A-F0-9]{15,}"$
   // Date().getTime().toString(16) only has 11 digital
@@ -9,4 +11,17 @@ export function newEtag(): string {
       .toUpperCase() +
     '"'
   );
+}
+
+export function checkApiVersion(
+  inputApiVersion: string,
+  validApiVersions: Array<string>,
+  requestId: string
+): void {
+  if (!validApiVersions.includes(inputApiVersion)) {
+    throw StorageErrorFactory.getInvalidHeaderValue(requestId, {
+      HeaderName: "x-ms-version",
+      HeaderValue: inputApiVersion
+    });
+  }
 }
