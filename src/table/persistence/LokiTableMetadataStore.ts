@@ -231,7 +231,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     const mergedDoc = {
       ...currentDoc,
-      ...entity
+      ...entity,
+      properties: {
+        ...currentDoc.properties,
+        ...entity.properties
+      }
     };
 
     tableColl.update(mergedDoc);
