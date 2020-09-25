@@ -134,6 +134,8 @@ export function tableStorageContextMiddleware(
 
   tableContext.account = account;
 
+  tableContext.authenticationPath = req.path;
+
   // Emulator's URL pattern is like http://hostname[:port]/account/table
   // (or, alternatively, http[s]://account.localhost[:port]/table/)
   // Create a router to exclude account name from req.path, as url path in swagger doesn't include account

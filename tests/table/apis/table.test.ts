@@ -12,7 +12,8 @@ import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
-  overrideRequest
+  overrideRequest,
+  restoreBuildRequestOptions
 } from "../../testutils";
 
 // Set true to enable debug log
@@ -45,9 +46,9 @@ describe("table APIs test", () => {
   let tableName: string = getUniqueName("table");
 
   const requestOverride = { headers: {} };
-  overrideRequest(requestOverride, tableService);
 
   before(async () => {
+    overrideRequest(requestOverride, tableService);
     server = new TableServer(config);
     tableName = getUniqueName("table");
     await server.start();
@@ -55,6 +56,7 @@ describe("table APIs test", () => {
 
   after(async () => {
     await server.close();
+    restoreBuildRequestOptions(tableService);
   });
 
   it("createTable, prefer=return-no-content, accept=application/json;odata=minimalmetadata @loki", done => {

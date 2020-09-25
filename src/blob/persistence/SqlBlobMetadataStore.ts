@@ -15,6 +15,7 @@ import {
   DEFAULT_SQL_COLLATE
 } from "../../common/utils/constants";
 import { convertDateTimeStringMsTo7Digital } from "../../common/utils/utils";
+import { newEtag } from "../../common/utils/utils";
 import { validateReadConditions } from "../conditions/ReadConditionalHeadersValidator";
 import { validateWriteConditions } from "../conditions/WriteConditionalHeadersValidator";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -35,7 +36,6 @@ import {
   DEFAULT_LIST_BLOBS_MAX_RESULTS,
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS
 } from "../utils/constants";
-import { newEtag } from "../utils/utils";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
 import IBlobMetadataStore, {
   AcquireBlobLeaseResponse,

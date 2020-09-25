@@ -17,6 +17,14 @@ export default class TableStorageContext extends Context {
     this.context.tableName = tableName;
   }
 
+  public get authenticationPath(): string | undefined {
+    return this.context.authenticationPath;
+  }
+
+  public set authenticationPath(path: string | undefined) {
+    this.context.authenticationPath = path;
+  }
+
   public get partitionKey(): string | undefined {
     return this.context.partitionKey;
   }

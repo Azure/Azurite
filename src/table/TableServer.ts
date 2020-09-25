@@ -57,6 +57,7 @@ export default class TableServer extends ServerBase {
     // Here we use express request listener and register table handler
     const requestListenerFactory: IRequestListenerFactory = new TableRequestListenerFactory(
       metadataStore,
+      accountDataStore,
       configuration.enableAccessLog, // Access log includes every handled HTTP request
       configuration.accessLogWriteStream,
       configuration.skipApiVersionCheck
