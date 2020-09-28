@@ -4,8 +4,17 @@
 
 ## Upcoming Release
 
-- Add support for copying blobs across storage accounts within the same Azurite instance.
-- Add handling of SIGTERM to gracefully stop the docker container
+- Bump up Azure Storage service API version to 2020-02-10.
+- Update Azurite and Azurite tests to reference Azure Storage SDK v12.
+- Add handling of SIGTERM to gracefully stop the docker container.
+
+Blob:
+
+- Add support for async copy blobs across storage accounts within the same Azurite instance.
+- Add support for async copy blobs on sql metadata store.
+- Add support for blob syncCopyFromURL within same Azurite instance on loki metadata store.
+- Allow mixed case characters for blob metadata prefix.
+- Fix SqlBlobMetadataStore.getBlockList, to make it fail for non-existent blobs.
 
 ## 2020.07 Version 3.8.0
 
