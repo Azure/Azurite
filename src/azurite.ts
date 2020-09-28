@@ -16,10 +16,32 @@ import {
   DEFAULT_QUEUE_PERSISTENCE_ARRAY,
   DEFAULT_QUEUE_PERSISTENCE_PATH
 } from "./queue/utils/constants";
+import SqlBlobServer from "./blob/SqlBlobServer";
+import BlobServer from "./blob/BlobServer";
 
 // tslint:disable:no-console
 
 const accessAsync = promisify(access);
+
+function shutdown(
+  blobServer: BlobServer | SqlBlobServer,
+  queueServer: QueueServer
+) {
+  const blobBeforeCloseMessage = `Azurite Blob service is closing...`;
+  const blobAfterCloseMessage = `Azurite Blob service successfully closed`;
+  const queueBeforeCloseMessage = `Azurite Queue service is closing...`;
+  const queueAfterCloseMessage = `Azurite Queue service successfully closed`;
+
+  console.log(blobBeforeCloseMessage);
+  blobServer.close().then(() => {
+    console.log(blobAfterCloseMessage);
+  });
+
+  console.log(queueBeforeCloseMessage);
+  queueServer.close().then(() => {
+    console.log(queueAfterCloseMessage);
+  });
+}
 
 /**
  * Entry for Azurite services.
@@ -92,38 +114,18 @@ async function main() {
   );
 
   // Handle close event
-  const blobBeforeCloseMessage = `Azurite Blob service is closing...`;
-  const blobAfterCloseMessage = `Azurite Blob service successfully closed`;
-  const queueBeforeCloseMessage = `Azurite Queue service is closing...`;
-  const queueAfterCloseMessage = `Azurite Queue service successfully closed`;
-  process
-    .once("message", msg => {
-      if (msg === "shutdown") {
-        console.log(blobBeforeCloseMessage);
-        blobServer.close().then(() => {
-          console.log(blobAfterCloseMessage);
-        });
 
-        console.log(queueBeforeCloseMessage);
-        queueServer.close().then(() => {
-          console.log(queueAfterCloseMessage);
-        });
+  process
+    .once("message", (msg) => {
+      if (msg === "shutdown") {
+        shutdown(blobServer, queueServer);
       }
     })
-    .once("SIGINT", () => {
-      console.log(blobBeforeCloseMessage);
-      blobServer.close().then(() => {
-        console.log(blobAfterCloseMessage);
-      });
-
-      console.log(queueBeforeCloseMessage);
-      queueServer.close().then(() => {
-        console.log(queueAfterCloseMessage);
-      });
-    });
+    .once("SIGINT", () => shutdown(blobServer, queueServer))
+    .once("SIGTERM", () => shutdown(blobServer, queueServer));
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(`Exit due to unhandled error: ${err.message}`);
   process.exit(1);
 });

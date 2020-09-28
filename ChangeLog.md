@@ -5,6 +5,7 @@
 ## Upcoming Release
 
 - Add support for copying blobs across storage accounts within the same Azurite instance.
+- Add handling of SIGTERM to gracefully stop the docker container
 
 ## 2020.07 Version 3.8.0
 
