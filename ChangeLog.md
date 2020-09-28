@@ -4,6 +4,8 @@
 
 ## Upcoming Release
 
+## 2020.10 Version 3.9.0
+
 - Bump up Azure Storage service API version to 2020-02-10.
 - Update Azurite and Azurite tests to reference Azure Storage SDK v12.
 - Add handling of SIGTERM to gracefully stop the docker container.
