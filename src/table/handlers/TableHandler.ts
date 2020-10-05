@@ -6,7 +6,11 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import ITableHandler from "../generated/handlers/ITableHandler";
-import { IEntity, TableModel } from "../persistence/ITableMetadataStore";
+import ILogger from "../generated/utils/ILogger";
+import ITableMetadataStore, {
+  IEntity,
+  TableModel
+} from "../persistence/ITableMetadataStore";
 import {
   DEFAULT_TABLE_LISTENING_PORT,
   DEFAULT_TABLE_SERVER_HOST_NAME,
@@ -20,6 +24,10 @@ import {
 import BaseHandler from "./BaseHandler";
 
 export default class TableHandler extends BaseHandler implements ITableHandler {
+  constructor(metadataStore: ITableMetadataStore, logger: ILogger) {
+    super(metadataStore, logger);
+  }
+
   public async create(
     tableProperties: Models.TableProperties,
     options: Models.TableCreateOptionalParams,
