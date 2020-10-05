@@ -1,6 +1,7 @@
 import { stat } from "fs";
 import Loki from "lokijs";
 import { newEtag } from "../../common/utils/utils";
+import ILogger from "../../queue/generated/utils/ILogger";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
@@ -14,7 +15,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   private initialized: boolean = false;
   private closed: boolean = false;
 
-  public constructor(public readonly lokiDBPath: string) {
+  public constructor(
+    public readonly lokiDBPath: string,
+    protected readonly logger: ILogger
+  ) {
     this.db = new Loki(lokiDBPath, {
       autosave: true,
       autosaveInterval: 5000
