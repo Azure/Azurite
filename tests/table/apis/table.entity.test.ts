@@ -14,7 +14,7 @@ import {
 } from "../../testutils";
 
 // Set true to enable debug log
-configLogger(false);
+configLogger(true, "debug.log");
 
 describe("table Entity APIs test", () => {
   // TODO: Create a server factory as tests utils
