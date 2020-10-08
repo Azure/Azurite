@@ -26,7 +26,6 @@ import BaseHandler from "./BaseHandler";
 export default class TableHandler extends BaseHandler implements ITableHandler {
   constructor(metadataStore: ITableMetadataStore, logger: ILogger) {
     super(metadataStore, logger);
-    this.logger.verbose("Table Handler initiated", "base context");
   }
 
   public async create(
