@@ -49,6 +49,16 @@ export const comp2: msRest.OperationQueryParameter = {
     }
   }
 };
+export const contentLength: msRest.OperationParameter = {
+  parameterPath: "contentLength",
+  mapper: {
+    required: true,
+    serializedName: "Content-Length",
+    type: {
+      name: "Number"
+    }
+  }
+};
 export const dataServiceVersion: msRest.OperationParameter = {
   parameterPath: [
     "options",
@@ -104,6 +114,16 @@ export const ifMatch1: msRest.OperationParameter = {
   mapper: {
     required: true,
     serializedName: "If-Match",
+    type: {
+      name: "String"
+    }
+  }
+};
+export const multipartContentType: msRest.OperationParameter = {
+  parameterPath: "multipartContentType",
+  mapper: {
+    required: true,
+    serializedName: "Content-Type",
     type: {
       name: "String"
     }

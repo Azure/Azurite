@@ -129,3 +129,12 @@ OPERATION_TABLE_SAS_TABLE_PERMISSIONS.set(
   Operation.Table_MergeEntityWithMerge,
   new OperationTableSASPermission(TableSASPermission.Update)
 );
+OPERATION_TABLE_SAS_TABLE_PERMISSIONS.set(
+  Operation.Table_Batch,
+  new OperationTableSASPermission(
+    TableSASPermission.Add +
+      TableSASPermission.Delete +
+      TableSASPermission.Query +
+      TableSASPermission.Update
+  )
+);
