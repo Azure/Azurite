@@ -25,6 +25,16 @@ operationHandlerMapping[Operation.Table_Create] = {
   handler: "tableHandler",
   method: "create"
 };
+operationHandlerMapping[Operation.Table_Batch] = {
+  arguments: [
+    "body",
+    "multipartContentType",
+    "contentLength",
+    "options"
+  ],
+  handler: "tableHandler",
+  method: "batch"
+};
 operationHandlerMapping[Operation.Table_Delete] = {
   arguments: [
     "table",

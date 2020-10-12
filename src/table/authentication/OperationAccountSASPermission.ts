@@ -1,8 +1,4 @@
-import {
-  AccountSASPermissions,
-  AccountSASResourceTypes,
-  AccountSASServices
-} from "@azure/storage-blob";
+import { AccountSASPermissions, AccountSASResourceTypes, AccountSASServices } from "@azure/storage-blob";
 
 import Operation from "../generated/artifacts/operation";
 import { AccountSASPermission } from "./AccountSASPermissions";
@@ -199,6 +195,24 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
     AccountSASService.Table,
     AccountSASResourceType.Object,
     AccountSASPermission.Delete
+  )
+);
+
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.Table_Batch,
+  new OperationAccountSASPermission(
+    AccountSASService.Table,
+    AccountSASResourceType.Object +
+      AccountSASResourceType.Service +
+      AccountSASResourceType.Container,
+    AccountSASPermission.Delete +
+      AccountSASPermission.Add +
+      AccountSASPermission.Create +
+      AccountSASPermission.List +
+      AccountSASPermission.Process +
+      AccountSASPermission.Read +
+      AccountSASPermission.Update +
+      AccountSASPermission.Write
   )
 );
 

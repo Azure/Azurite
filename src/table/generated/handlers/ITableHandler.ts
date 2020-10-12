@@ -15,6 +15,7 @@ import Context from "../Context";
 export default interface ITableHandler {
   query(options: Models.TableQueryOptionalParams, context: Context): Promise<Models.TableQueryResponse2>;
   create(tableProperties: Models.TableProperties, options: Models.TableCreateOptionalParams, context: Context): Promise<Models.TableCreateResponse>;
+  batch(body: NodeJS.ReadableStream, multipartContentType: string, contentLength: number, options: Models.TableBatchOptionalParams, context: Context): Promise<Models.TableBatchResponse>;
   delete(table: string, options: Models.TableDeleteMethodOptionalParams, context: Context): Promise<Models.TableDeleteResponse>;
   queryEntities(table: string, options: Models.TableQueryEntitiesOptionalParams, context: Context): Promise<Models.TableQueryEntitiesResponse>;
   queryEntitiesWithPartitionAndRowKey(table: string, partitionKey: string, rowKey: string, options: Models.TableQueryEntitiesWithPartitionAndRowKeyOptionalParams, context: Context): Promise<Models.TableQueryEntitiesWithPartitionAndRowKeyResponse>;
