@@ -160,6 +160,30 @@ describe("Table HTTP Api tests", () => {
       });
     });
 
+    it("should retrieve only first entity", (done) => {
+      const query = new azureStorage.TableQuery().top(1);
+      const retrievalTableService = createDevTableService();
+      retrievalTableService.queryEntities(tableName, query, null, function(
+        error,
+        results,
+        response
+      ) {
+        expect(error).to.equal(null);
+        expect(results.entries.length).to.equal(1);
+        const sortedResults = results.entries.sort();
+        expect(sortedResults[0].description._).to.equal(
+          tableEntity1.description._
+        );
+        expect(sortedResults[0].RowKey._).to.equal(rowKeyForTestEntity1);
+        expect(
+          sortedResults[0].dueDate._.toISOString().split(".")[0] + "Z"
+        ).to.equal(
+          new Date(Date.UTC(2018, 12, 25)).toISOString().split(".")[0] + "Z"
+        );
+        done();
+      });
+    });
+
     it("should fail to retrieve a non-existing row with 404 EntityNotFound", (done) => {
       const faillingLookupTableService = createDevTableService();
       faillingLookupTableService.retrieveEntity(
