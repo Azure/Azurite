@@ -18,7 +18,14 @@ export const TABLE_API_VERSION = "2019-12-12";
 export const HeaderConstants = {
   SERVER: "Server",
   VERSION: "3.8.0",
-  APPLICATION_JSON: "application/json"
+  APPLICATION_JSON: "application/json",
+  AUTHORIZATION: "authorization",
+  CONTENT_MD5: "content-md5",
+  CONTENT_TYPE: "content-type",
+  CONTENT_LENGTH: "content-length",
+  DATE: "date",
+  X_MS_DATE: "x-ms-date",
+  X_MS_VERSION: "x-ms-version"
 };
 
 export const NO_METADATA_ACCEPT = "application/json;odata=nometadata";
@@ -27,3 +34,26 @@ export const FULL_METADATA_ACCEPT = "application/json;odata=fullmetadata";
 
 export const RETURN_NO_CONTENT = "return-no-content";
 export const RETURN_CONTENT = "return-content";
+
+export const ValidAPIVersions = [
+  "2019-12-12",
+  "2019-07-07",
+  "2019-02-02",
+  "2018-11-09",
+  "2018-03-28",
+  "2017-11-09",
+  "2017-07-29",
+  "2017-04-17",
+  "2016-05-31",
+  "2015-12-11",
+  "2015-07-08",
+  "2015-04-05",
+  "2015-02-21",
+  "2014-02-14",
+  "2013-08-15",
+  "2012-02-12",
+  "2011-08-18",
+  "2009-09-19",
+  "2009-07-17",
+  "2009-04-14"
+];

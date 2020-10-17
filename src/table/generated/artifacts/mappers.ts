@@ -639,6 +639,46 @@ export const TableCreateHeaders: msRest.CompositeMapper = {
   }
 };
 
+export const TableBatchHeaders: msRest.CompositeMapper = {
+  serializedName: "table-batch-headers",
+  type: {
+    name: "Composite",
+    className: "TableBatchHeaders",
+    modelProperties: {
+      contentType: {
+        serializedName: "content-type",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
 export const TableDeleteHeaders: msRest.CompositeMapper = {
   serializedName: "table-delete-headers",
   type: {

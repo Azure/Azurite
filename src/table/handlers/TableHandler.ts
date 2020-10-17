@@ -1,4 +1,5 @@
 import BufferStream from "../../common/utils/BufferStream";
+import { newEtag } from "../../common/utils/utils";
 import TableStorageContext from "../context/TableStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -16,10 +17,27 @@ import {
   RETURN_NO_CONTENT,
   TABLE_API_VERSION
 } from "../utils/constants";
-import { newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 export default class TableHandler extends BaseHandler implements ITableHandler {
+  public async batch(
+    body: NodeJS.ReadableStream,
+    multipartContentType: string,
+    contentLength: number,
+    options: Models.TableBatchOptionalParams,
+    context: Context
+  ): Promise<Models.TableBatchResponse> {
+    const tableCtx = new TableStorageContext(context);
+    // TODO: Implement batch operation logic here
+    return {
+      requestId: tableCtx.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      statusCode: 202,
+      body // Use incoming request body as Batch operation response body as demo
+    };
+  }
+
   public async create(
     tableProperties: Models.TableProperties,
     options: Models.TableCreateOptionalParams,
@@ -303,35 +321,65 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     }
 
     // Test if etag is available
-    if (ifMatch === "" || ifMatch === undefined) {
+    // this is considered an upsert if no etag header, an empty header is an error.
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-or-replace-entity
+    if (ifMatch === "") {
       throw StorageErrorFactory.getPreconditionFailed(context);
     }
-
+    const updateEtag = newEtag();
     // Entity, which is used to update an existing entity
     const entity: IEntity = {
       PartitionKey: options.tableEntityProperties.PartitionKey,
       RowKey: options.tableEntityProperties.RowKey,
       properties: options.tableEntityProperties,
       lastModifiedTime: context.startTime!,
-      eTag: newEtag()
+      eTag: updateEtag
     };
 
-    // Update entity
-    await this.metadataStore.updateTableEntity(
-      context,
-      tableName,
-      accountName!,
-      entity,
-      ifMatch
-    );
+    if (ifMatch !== undefined) {
+      // Update entity
+      await this.metadataStore.updateTableEntity(
+        context,
+        tableName,
+        accountName!,
+        entity,
+        ifMatch!
+      );
+    } else {
+      // Upsert the entity
+      const exists = await this.metadataStore.queryTableEntitiesWithPartitionAndRowKey(
+        context,
+        tableName,
+        accountName!,
+        options.tableEntityProperties.PartitionKey,
+        options.tableEntityProperties.RowKey
+      );
 
+      if (exists !== null) {
+        // entity exists so we update and force with "*" etag
+        await this.metadataStore.updateTableEntity(
+          context,
+          tableName,
+          accountName!,
+          entity,
+          "*"
+        );
+      } else {
+        await this.metadataStore.insertTableEntity(
+          context,
+          tableName,
+          accountName!,
+          entity
+        );
+      }
+    }
     // Response definition
     const response: Models.TableUpdateEntityResponse = {
       clientRequestId: options.requestId,
       requestId: tableCtx.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
-      eTag: newEtag(),
+      eTag: updateEtag,
       statusCode: 204
     };
 
@@ -348,7 +396,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableCtx = new TableStorageContext(context);
     const accountName = tableCtx.account;
     const tableName = tableCtx.tableName!;
-    const ifMatch = options.ifMatch;
+    const partitionKey = tableCtx.partitionKey!;
+    const rowKey = tableCtx.rowKey!;
 
     // Test if all required parameter exist
     if (
@@ -359,36 +408,57 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
     }
 
-    // Test if etag is available
-    if (ifMatch === "" || ifMatch === undefined) {
-      throw StorageErrorFactory.getPreconditionFailed(context);
+    const existingEntity = await this.metadataStore.queryTableEntitiesWithPartitionAndRowKey(
+      context,
+      tableName!,
+      accountName!,
+      partitionKey,
+      rowKey
+    );
+    let etagValue = "*";
+
+    if (existingEntity !== null) {
+      const mergeEntity: IEntity = {
+        PartitionKey: options.tableEntityProperties.PartitionKey,
+        RowKey: options.tableEntityProperties.RowKey,
+        properties: options.tableEntityProperties,
+        lastModifiedTime: context.startTime!,
+        eTag: etagValue
+      };
+
+      etagValue = await this.metadataStore.mergeTableEntity(
+        context,
+        tableName!,
+        accountName!,
+        mergeEntity,
+        etagValue,
+        partitionKey,
+        rowKey
+      );
+    } else {
+      const entity: IEntity = {
+        PartitionKey: options.tableEntityProperties.PartitionKey,
+        RowKey: options.tableEntityProperties.RowKey,
+        properties: options.tableEntityProperties,
+        lastModifiedTime: context.startTime!,
+        eTag: etagValue
+      };
+
+      await this.metadataStore.insertTableEntity(
+        context,
+        tableName!,
+        accountName!,
+        entity
+      );
     }
 
-    // Entity, which is used to merge an existing entity
-    const entity: IEntity = {
-      PartitionKey: options.tableEntityProperties.PartitionKey,
-      RowKey: options.tableEntityProperties.RowKey,
-      properties: options.tableEntityProperties,
-      lastModifiedTime: context.startTime!,
-      eTag: newEtag()
-    };
-
-    await this.metadataStore.mergeTableEntity(
-      context,
-      tableName,
-      accountName!,
-      entity,
-      ifMatch
-    );
-
-    // Response definition
-    const response: Models.TableUpdateEntityResponse = {
+    const response: Models.TableMergeEntityResponse = {
       clientRequestId: options.requestId,
       requestId: tableCtx.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
-      eTag: newEtag(),
-      statusCode: 204
+      statusCode: 204,
+      eTag: etagValue
     };
 
     return response;

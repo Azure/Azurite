@@ -37,6 +37,11 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
   - Preflight Request
   - Create/List/Delete Queues
   - Put/Get/Peek/Updata/Deleta/Clear Messages
+- Table storage features align with Azure Storage API version 2019-12-12 (Refer to support matrix section below)
+  - SharedKey/Account SAS/Service SAS
+  - Get/Set Table Service Properties
+  - Create/List/Delete Tables
+  - Insert/Update/Query/Delete Table Entities
 - Features **NEW** on V3
   - Built with TypeScript and ECMA native promise and async features
   - New architecture based on TypeScript server generator. Leverage auto generated protocol layer, models, serializer, deserializer and handler interfaces from REST API swagger
@@ -97,6 +102,12 @@ Start queue service only:
 $ azurite-queue -l path/to/azurite/workspace
 ```
 
+Start table service only:
+
+```bash
+$ azurite-table -l path/to/azurite/workspace
+```
+
 ### Visual Studio Code Extension
 
 Azurite V3 can be installed from [Visual Studio Code extension market](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite).
@@ -121,6 +132,8 @@ Following extension configurations are supported:
 - `azurite.blobPort` Blob service listening port, by default 10000
 - `azurite.queueHost` Queue service listening endpoint, by default 127.0.0.1
 - `azurite.queuePort` Queue service listening port, by default 10001
+- `azurite.tableHost` Table service listening endpoint, by default 127.0.0.1
+- `azurite.tablePort` Table service listening port, by default 10002
 - `azurite.location` Workspace location path, by default existing Visual Studio Code opened folder
 - `azurite.silent` Silent mode to disable access log in Visual Studio channel, by default false
 - `azurite.debug` Output debug log into Azurite channel, by default false
@@ -211,6 +224,7 @@ You can customize the listening address per your requirements.
 ```cmd
 --blobHost 127.0.0.1
 --queueHost 127.0.0.1
+--tableHost 127.0.0.1
 ```
 
 #### Allow Accepting Requests from Remote (potentially unsafe)
@@ -218,6 +232,7 @@ You can customize the listening address per your requirements.
 ```cmd
 --blobHost 0.0.0.0
 --queueHost 0.0.0.0
+--tableHost 0.0.0.0
 ```
 
 ### Listening Port Configuration
@@ -232,6 +247,7 @@ You can customize the listening port per your requirements.
 ```cmd
 --blobPort 8888
 --queuePort 9999
+--tablePort 11111
 ```
 
 #### Let System Auto Select an Available Port
@@ -239,6 +255,7 @@ You can customize the listening port per your requirements.
 ```cmd
 --blobPort 0
 --queuePort 0
+--tablePort 0
 ```
 
 > Note: The port in use is displayed on Azurite startup.
@@ -848,6 +865,28 @@ Detailed support matrix:
   - Clear Message
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
   - SharedKey Lite
+
+Latest version supports for **2019-12-12** API version **table** service.
+Detailed support matrix:
+
+- Supported Vertical Features
+  - SharedKey Authentication
+  - Shared Access Signature Account Level
+  - Shared Access Signature Service Level
+- Supported REST APIs
+  - List Tables
+  - Set Service Properties
+  - Get Service Properties
+  - Get Stats
+  - Create Table
+  - Get Table ACL
+  - Set Table ACL
+  - Delete Table
+  - Update Entity
+  - Query Entities
+  - Merge Entity
+  - Delete Entity
+  - Insert Entity
 
 ## License
 

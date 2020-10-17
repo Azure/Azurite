@@ -9,6 +9,7 @@
 export enum Operation {
   Table_Query,
   Table_Create,
+  Table_Batch,
   Table_Delete,
   Table_QueryEntities,
   Table_QueryEntitiesWithPartitionAndRowKey,

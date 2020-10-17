@@ -1,6 +1,6 @@
 import { stat } from "fs";
 import Loki from "lokijs";
-
+import { newEtag } from "../../common/utils/utils";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
@@ -153,12 +153,27 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
   public async queryTableEntitiesWithPartitionAndRowKey(
     context: Context,
-    table: string,
+    tableName: string,
+    accountName: string,
     partitionKey: string,
     rowKey: string
-  ): Promise<{ [propertyName: string]: any }[]> {
-    // TODO
-    throw new NotImplementedError();
+  ): Promise<IEntity> {
+    const tableColl = this.db.getCollection(
+      this.getUniqueTableCollectionName(accountName, tableName)
+    );
+
+    // Throw error, if table not exists
+    if (!tableColl) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
+
+    // Get requested Doc
+    const requestedDoc = tableColl.findOne({
+      PartitionKey: partitionKey,
+      RowKey: rowKey
+    }) as IEntity;
+
+    return requestedDoc;
   }
 
   public async updateTableEntity(
@@ -188,13 +203,14 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       throw StorageErrorFactory.getEntityNotExist(context);
     } else {
       // Test if etag value is valid
-      if (etag !== "*" && currentDoc.eTag !== etag) {
-        throw StorageErrorFactory.getPreconditionFailed(context);
+      if (etag === "*" || currentDoc.eTag === etag) {
+        tableColl.remove(currentDoc);
+        tableColl.insert(entity);
+        return;
       }
     }
 
-    tableColl.remove(currentDoc);
-    tableColl.insert(entity);
+    throw StorageErrorFactory.getPreconditionFailed(context);
   }
 
   public async mergeTableEntity(
@@ -203,7 +219,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     account: string,
     entity: IEntity,
     etag: string
-  ): Promise<void> {
+  ): Promise<string> {
     const tableColl = this.db.getCollection(
       this.getUniqueTableCollectionName(account, tableName)
     );
@@ -228,7 +244,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         throw StorageErrorFactory.getPreconditionFailed(context);
       }
     }
-
     const mergedDoc = {
       ...currentDoc,
       ...entity,
@@ -237,8 +252,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         ...entity.properties
       }
     };
-
+    mergedDoc.eTag = newEtag();
     tableColl.update(mergedDoc);
+    return mergedDoc.eTag;
   }
 
   public async deleteTableEntity(
