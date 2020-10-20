@@ -19,7 +19,7 @@ import {
   NO_METADATA_ACCEPT,
   RETURN_CONTENT,
   RETURN_NO_CONTENT,
-  TABLE_API_VERSION
+  TABLE_API_VERSION,
 } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
 
@@ -27,6 +27,24 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   constructor(metadataStore: ITableMetadataStore, logger: ILogger) {
     super(metadataStore, logger);
   }
+  
+  public async batch(
+    body: NodeJS.ReadableStream,
+    multipartContentType: string,
+    contentLength: number,
+    options: Models.TableBatchOptionalParams,
+    context: Context
+  ): Promise<Models.TableBatchResponse> {
+    const tableCtx = new TableStorageContext(context);
+    // TODO: Implement batch operation logic here
+    return {
+      requestId: tableCtx.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      statusCode: 202,
+      body // Use incoming request body as Batch operation response body as demo
+    };
+   }
 
   public async create(
     tableProperties: Models.TableProperties,
