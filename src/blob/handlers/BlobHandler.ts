@@ -1,7 +1,10 @@
 import { URL } from "url";
 
 import IExtentStore from "../../common/persistence/IExtentStore";
-import { convertRawHeadersToMetadata } from "../../common/utils/utils";
+import {
+  convertRawHeadersToMetadata,
+  getMD5FromStream
+} from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -21,8 +24,7 @@ import {
 } from "../utils/constants";
 import {
   deserializePageBlobRangeHeader,
-  deserializeRangeHeader,
-  getMD5FromStream
+  deserializeRangeHeader
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";

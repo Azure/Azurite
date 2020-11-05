@@ -79,6 +79,48 @@ const tableCreateOperationSpec: msRest.OperationSpec = {
   serializer
 };
 
+const tableBatchOperationSpec: msRest.OperationSpec = {
+  httpMethod: "POST",
+  path: "$batch",
+  urlParameters: [
+    Parameters.url
+  ],
+  headerParameters: [
+    Parameters.version,
+    Parameters.requestId,
+    Parameters.dataServiceVersion,
+    Parameters.multipartContentType,
+    Parameters.contentLength
+  ],
+  requestBody: {
+    parameterPath: "body",
+    mapper: {
+      required: true,
+      serializedName: "body",
+      type: {
+        name: "Stream"
+      }
+    }
+  },
+  contentType: "application/json;odata=nometadata; charset=utf-8",
+  responses: {
+    202: {
+      bodyMapper: {
+        serializedName: "Stream",
+        type: {
+          name: "Stream"
+        }
+      },
+      headersMapper: Mappers.TableBatchHeaders
+    },
+    default: {
+      bodyMapper: Mappers.TableServiceError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
 const tableDeleteOperationSpec: msRest.OperationSpec = {
   httpMethod: "DELETE",
   path: "Tables('{table}')",
@@ -493,6 +535,7 @@ const serviceGetStatisticsOperationSpec: msRest.OperationSpec = {
 const Specifications: { [key: number]: msRest.OperationSpec } = {};
 Specifications[Operation.Table_Query] = tableQueryOperationSpec;
 Specifications[Operation.Table_Create] = tableCreateOperationSpec;
+Specifications[Operation.Table_Batch] = tableBatchOperationSpec;
 Specifications[Operation.Table_Delete] = tableDeleteOperationSpec;
 Specifications[Operation.Table_QueryEntities] = tableQueryEntitiesOperationSpec;
 Specifications[

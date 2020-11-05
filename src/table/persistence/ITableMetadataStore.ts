@@ -29,7 +29,10 @@ export interface IEntity {
 export type TableModel = ITtableAdditionalProperties;
 
 export default interface ITableMetadataStore {
-  queryTable(context: Context): Promise<Models.TableResponseProperties[]>;
+  queryTable(
+    context: Context,
+    accountName: string
+  ): Promise<Models.TableResponseProperties[]>;
   createTable(context: Context, table: TableModel): Promise<void>;
   deleteTable(
     context: Context,
@@ -45,9 +48,10 @@ export default interface ITableMetadataStore {
   queryTableEntitiesWithPartitionAndRowKey(
     context: Context,
     table: string,
+    accountName: string,
     partitionKey: string,
     rowKey: string
-  ): Promise<{ [propertyName: string]: any }[]>;
+  ): Promise<IEntity>;
   updateTableEntity(
     context: Context,
     tableName: string,
@@ -57,17 +61,20 @@ export default interface ITableMetadataStore {
   ): Promise<void>;
   mergeTableEntity(
     context: Context,
-    table: string,
+    tableName: string,
+    account: string,
+    entity: IEntity,
+    etag: string,
     partitionKey: string,
     rowKey: string
-  ): Promise<void>;
+  ): Promise<string>;
   deleteTableEntity(
     context: Context,
     tableName: string,
     accountName: string,
     partitionKey: string,
     rowKey: string,
-    eatg: string
+    etag: string
   ): Promise<void>;
   insertTableEntity(
     context: Context,

@@ -6,12 +6,16 @@ import { PRODUCTION_STYLE_URL_HOSTNAME } from "../../common/utils/constants";
 import TableStorageContext from "../context/TableStorageContext";
 import {
   DEFAULT_TABLE_CONTEXT_PATH,
-  HeaderConstants
+  HeaderConstants,
+  ValidAPIVersions
 } from "../utils/constants";
+import { checkApiVersion } from "../utils/utils";
 
-export default function createTableStorageContextMiddleware(): RequestHandler {
+export default function createTableStorageContextMiddleware(
+  skipApiVersionCheck?: boolean
+): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
-    return tableStorageContextMiddleware(req, res, next);
+    return tableStorageContextMiddleware(req, res, next, skipApiVersionCheck);
   };
 }
 
@@ -26,7 +30,8 @@ export default function createTableStorageContextMiddleware(): RequestHandler {
 export function tableStorageContextMiddleware(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
+  skipApiVersionCheck?: boolean
 ): void {
   // Set server header in every Azurite response
   res.setHeader(
@@ -35,6 +40,13 @@ export function tableStorageContextMiddleware(
   );
 
   const requestID = uuid();
+
+  if (!skipApiVersionCheck) {
+    const apiVersion = req.header(HeaderConstants.X_MS_VERSION);
+    if (apiVersion !== undefined) {
+      checkApiVersion(apiVersion, ValidAPIVersions, requestID);
+    }
+  }
 
   const tableContext = new TableStorageContext(
     res.locals,
@@ -127,6 +139,8 @@ export function tableStorageContextMiddleware(
   }
 
   tableContext.account = account;
+
+  tableContext.authenticationPath = req.path;
 
   // Emulator's URL pattern is like http://hostname[:port]/account/table
   // (or, alternatively, http[s]://account.localhost[:port]/table/)

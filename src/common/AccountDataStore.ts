@@ -1,7 +1,7 @@
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME
-} from "../blob/utils/constants";
+} from "../common/utils/constants";
 import ILogger from "../queue/generated/utils/ILogger";
 import IAccountDataStore, { IAccountProperties } from "./IAccountDataStore";
 import {

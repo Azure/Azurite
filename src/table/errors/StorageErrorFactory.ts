@@ -10,6 +10,22 @@ import StorageError from "./StorageError";
 const defaultID: string = "DefaultID";
 
 export default class StorageErrorFactory {
+  public static getInvalidHeaderValue(
+    contextID: string = "",
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    if (additionalMessages === undefined) {
+      additionalMessages = {};
+    }
+    return new StorageError(
+      400,
+      "InvalidHeaderValue",
+      "The value for one of the HTTP headers is not in the correct format.",
+      contextID,
+      additionalMessages
+    );
+  }
+
   public static getTableAlreadyExists(context: Context): StorageError {
     return new StorageError(
       409,
@@ -32,6 +48,68 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getInvalidOperation(
+    contextID: string,
+    message: string = ""
+  ): StorageError {
+    return new StorageError(400, "InvalidOperation", message, contextID);
+  }
+
+  public static getAuthorizationSourceIPMismatch(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      403,
+      "AuthorizationSourceIPMismatch",
+      "This request is not authorized to perform this operation using this source IP {SourceIP}.",
+      contextID
+    );
+  }
+
+  public static getAuthorizationProtocolMismatch(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      403,
+      "AuthorizationProtocolMismatch",
+      "This request is not authorized to perform this operation using this protocol.",
+      contextID
+    );
+  }
+
+  public static getAuthorizationPermissionMismatch(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      403,
+      "AuthorizationPermissionMismatch",
+      "This request is not authorized to perform this operation using this permission.",
+      contextID
+    );
+  }
+
+  public static getAuthorizationServiceMismatch(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      403,
+      "AuthorizationServiceMismatch",
+      "This request is not authorized to perform this operation using this service.",
+      contextID
+    );
+  }
+
+  public static getAuthorizationResourceTypeMismatch(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      403,
+      "AuthorizationResourceTypeMismatch",
+      "This request is not authorized to perform this operation using this resource type.",
+      contextID
+    );
+  }
+
   public static getAccountNameEmpty(context: Context): StorageError {
     return new StorageError(
       400,
@@ -51,6 +129,16 @@ export default class StorageErrorFactory {
       context.contextID || defaultID,
       undefined,
       context
+    );
+  }
+
+  public static getAuthorizationFailure(contextID: string): StorageError {
+    return new StorageError(
+      403,
+      "AuthorizationFailure",
+      // tslint:disable-next-line:max-line-length
+      "Server failed to authenticate the request. Make sure the value of the Authorization header is formed correctly including the signature.",
+      contextID
     );
   }
 

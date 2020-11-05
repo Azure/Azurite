@@ -91,3 +91,5 @@ directive:
      $.post = {...$.patch};
      $.post.operationId = "Table_MergeEntityWithMerge"
 ```
+
+### TODO: Move Table Batch swagger change here

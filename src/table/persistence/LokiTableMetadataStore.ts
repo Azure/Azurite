@@ -1,6 +1,6 @@
 import { stat } from "fs";
 import Loki from "lokijs";
-
+import { newEtag } from "../../common/utils/utils";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
@@ -88,10 +88,30 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   }
 
   public async queryTable(
-    context: Context
+    context: Context,
+    accountName: string
   ): Promise<Models.TableResponseProperties[]> {
-    // TODO
-    throw new NotImplementedError();
+    const coll = this.db.getCollection(this.TABLE_COLLECTION);
+    const docList = coll.find({ account: accountName });
+
+    if (!docList) {
+      throw StorageErrorFactory.getEntityNotFound(context);
+    }
+
+    let response: Models.TableResponseProperties[] = [];
+
+    if (docList.length > 0) {
+      response = docList.map(item => {
+        return {
+          odatatype: item.odatatype,
+          odataid: item.odataid,
+          odataeditLink: item.odataeditLink,
+          tableName: item.tableName
+        };
+      });
+    }
+
+    return response;
   }
 
   public async deleteTable(
@@ -232,12 +252,27 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
   public async queryTableEntitiesWithPartitionAndRowKey(
     context: Context,
-    table: string,
+    tableName: string,
+    accountName: string,
     partitionKey: string,
     rowKey: string
-  ): Promise<{ [propertyName: string]: any }[]> {
-    // TODO
-    throw new NotImplementedError();
+  ): Promise<IEntity> {
+    const tableColl = this.db.getCollection(
+      this.getUniqueTableCollectionName(accountName, tableName)
+    );
+
+    // Throw error, if table not exists
+    if (!tableColl) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
+
+    // Get requested Doc
+    const requestedDoc = tableColl.findOne({
+      PartitionKey: partitionKey,
+      RowKey: rowKey
+    }) as IEntity;
+
+    return requestedDoc;
   }
 
   public async updateTableEntity(
@@ -267,23 +302,54 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       throw StorageErrorFactory.getEntityNotExist(context);
     } else {
       // Test if etag value is valid
-      if (etag !== "*" && currentDoc.eTag !== etag) {
-        throw StorageErrorFactory.getPreconditionFailed(context);
+      if (etag === "*" || currentDoc.eTag === etag) {
+        tableColl.remove(currentDoc);
+        tableColl.insert(entity);
+        return;
       }
     }
 
-    tableColl.remove(currentDoc);
-    tableColl.insert(entity);
+    throw StorageErrorFactory.getPreconditionFailed(context);
   }
 
   public async mergeTableEntity(
     context: Context,
-    table: string,
-    partitionKey: string,
-    rowKey: string
-  ): Promise<void> {
-    // TODO
-    throw new NotImplementedError();
+    tableName: string,
+    account: string,
+    entity: IEntity,
+    etag: string
+  ): Promise<string> {
+    const tableColl = this.db.getCollection(
+      this.getUniqueTableCollectionName(account, tableName)
+    );
+
+    // Throw error, if table not exists
+    if (!tableColl) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
+
+    // Get Current Doc
+    const currentDoc = tableColl.findOne({
+      PartitionKey: entity.PartitionKey,
+      RowKey: entity.RowKey
+    }) as IEntity;
+
+    // Throw error, if doc does not exist
+    if (!currentDoc) {
+      throw StorageErrorFactory.getEntityNotExist(context);
+    } else {
+      // Test if etag value is valid
+      if (etag === "*" || currentDoc.eTag === etag) {
+        const mergedDoc = {
+          ...currentDoc,
+          ...entity
+        };
+        mergedDoc.eTag = newEtag();
+        tableColl.update(mergedDoc);
+        return mergedDoc.eTag;
+      }
+    }
+    throw StorageErrorFactory.getPreconditionFailed(context);
   }
 
   public async deleteTableEntity(

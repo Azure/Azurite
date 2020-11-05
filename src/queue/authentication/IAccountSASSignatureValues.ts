@@ -1,6 +1,9 @@
 import { IIPRange } from "@azure/storage-blob";
 
-import { computeHMACSHA256, truncatedISO8061Date } from "../utils/utils";
+import {
+  computeHMACSHA256,
+  truncatedISO8061Date
+} from "../../common/utils/utils";
 import AccountSASPermissions from "./AccountSASPermissions";
 import AccountSASResourceTypes from "./AccountSASResourceTypes";
 import AccountSASServices from "./AccountSASServices";

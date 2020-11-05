@@ -4,12 +4,16 @@ import * as Azure from "azure-storage";
 import { configLogger } from "../../../src/common/Logger";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
-import { TABLE_API_VERSION } from "../../../src/table/utils/constants";
+import {
+  HeaderConstants,
+  TABLE_API_VERSION
+} from "../../../src/table/utils/constants";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
-  overrideRequest
+  overrideRequest,
+  restoreBuildRequestOptions
 } from "../../testutils";
 
 // Set true to enable debug log
@@ -42,9 +46,9 @@ describe("table APIs test", () => {
   let tableName: string = getUniqueName("table");
 
   const requestOverride = { headers: {} };
-  overrideRequest(requestOverride, tableService);
 
   before(async () => {
+    overrideRequest(requestOverride, tableService);
     server = new TableServer(config);
     tableName = getUniqueName("table");
     await server.start();
@@ -52,6 +56,7 @@ describe("table APIs test", () => {
 
   after(async () => {
     await server.close();
+    restoreBuildRequestOptions(tableService);
   });
 
   it("createTable, prefer=return-no-content, accept=application/json;odata=minimalmetadata @loki", done => {
@@ -126,6 +131,86 @@ describe("table APIs test", () => {
     done();
   });
 
+  it("queryTable, accept=application/json;odata=fullmetadata @loki", done => {
+    /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
+      thus we workaround this by override request headers to test following 3 OData levels responses.
+    - application/json;odata=nometadata
+    - application/json;odata=minimalmetadata
+    - application/json;odata=fullmetadata
+    */
+    requestOverride.headers = {
+      accept: "application/json;odata=fullmetadata"
+    };
+
+    tableService.listTablesSegmented(null as any, (error, result, response) => {
+      if (!error) {
+        assert.equal(response.statusCode, 200);
+        const headers = response.headers!;
+        assert.equal(headers["x-ms-version"], TABLE_API_VERSION);
+        const bodies = response.body! as any;
+        assert.deepStrictEqual(
+          bodies["odata.metadata"],
+          `${protocol}://${host}:${port}/${accountName}/$metadata#Tables`
+        );
+        assert.ok(bodies.TableResponseProperties[0].TableName);
+        assert.ok(bodies.TableResponseProperties[0]["odata.type"]);
+        assert.ok(bodies.TableResponseProperties[0]["odata.id"]);
+        assert.ok(bodies.TableResponseProperties[0]["odata.editLink"]);
+      }
+      done();
+    });
+  });
+
+  it("queryTable, accept=application/json;odata=minimalmetadata @loki", done => {
+    /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
+      thus we workaround this by override request headers to test following 3 OData levels responses.
+    - application/json;odata=nometadata
+    - application/json;odata=minimalmetadata
+    - application/json;odata=fullmetadata
+    */
+    requestOverride.headers = {
+      accept: "application/json;odata=minimalmetadata"
+    };
+
+    tableService.listTablesSegmented(null as any, (error, result, response) => {
+      if (!error) {
+        assert.equal(response.statusCode, 200);
+        const headers = response.headers!;
+        assert.equal(headers["x-ms-version"], TABLE_API_VERSION);
+        const bodies = response.body! as any;
+        assert.deepStrictEqual(
+          bodies["odata.metadata"],
+          `${protocol}://${host}:${port}/${accountName}/$metadata#Tables`
+        );
+        assert.ok(bodies.TableResponseProperties[0].TableName);
+      }
+      done();
+    });
+  });
+
+  it("queryTable, accept=application/json;odata=nometadata @loki", done => {
+    /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
+      thus we workaround this by override request headers to test following 3 OData levels responses.
+    - application/json;odata=nometadata
+    - application/json;odata=minimalmetadata
+    - application/json;odata=fullmetadata
+    */
+    requestOverride.headers = {
+      accept: "application/json;odata=nometadata"
+    };
+
+    tableService.listTablesSegmented(null as any, (error, result, response) => {
+      if (!error) {
+        assert.equal(response.statusCode, 200);
+        const headers = response.headers!;
+        assert.equal(headers["x-ms-version"], TABLE_API_VERSION);
+        const bodies = response.body! as any;
+        assert.ok(bodies.TableResponseProperties[0].TableName);
+      }
+      done();
+    });
+  });
+
   it("deleteTable that exists, @loki", done => {
     /*
     https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
@@ -162,6 +247,15 @@ describe("table APIs test", () => {
       assert.equal(result.statusCode, 404); // no body expected, we expect 404
       const storageError = error as any;
       assert.equal(storageError.code, "TableNotFound");
+      done();
+    });
+  });
+
+  it("createTable with invalid version, @loki", done => {
+    requestOverride.headers = { [HeaderConstants.X_MS_VERSION]: "invalid" };
+
+    tableService.createTable("test", (error, result) => {
+      assert.equal(result.statusCode, 400);
       done();
     });
   });

@@ -47,3 +47,9 @@ export const VALID_ISSUE_PREFIXES = [
   "https://sts.chinacloudapi.cn/",
   "https://sts.windows-ppe.net"
 ];
+
+export const EMULATOR_ACCOUNT_NAME = "devstoreaccount1";
+export const EMULATOR_ACCOUNT_KEY = Buffer.from(
+  "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+  "base64"
+);

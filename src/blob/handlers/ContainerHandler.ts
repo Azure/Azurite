@@ -1,4 +1,4 @@
-import { convertRawHeadersToMetadata } from "../../common/utils/utils";
+import { convertRawHeadersToMetadata, newEtag } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -9,7 +9,7 @@ import {
   EMULATOR_ACCOUNT_SKUNAME
 } from "../utils/constants";
 import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
-import { newEtag, removeQuotationFromListBlobEtag } from "../utils/utils";
+import { removeQuotationFromListBlobEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 /**
