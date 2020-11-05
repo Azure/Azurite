@@ -20,6 +20,10 @@ export interface IEntity {
   properties: {
     [propertyName: string]: string | number;
   };
+  odataMetadata: string;
+  odataType: string;
+  odataId: string;
+  odataEditLink: string;
 }
 
 export type TableModel = ITtableAdditionalProperties;
@@ -37,8 +41,9 @@ export default interface ITableMetadataStore {
   ): Promise<void>;
   queryTableEntities(
     context: Context,
+    accountName: string,
     table: string,
-    propertyName: Array<string>
+    queryOptions: Models.QueryOptions
   ): Promise<{ [propertyName: string]: any }[]>;
   queryTableEntitiesWithPartitionAndRowKey(
     context: Context,

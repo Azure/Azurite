@@ -20,9 +20,7 @@ const serializer = new msRest.Serializer(Mappers, true);
 const tableQueryOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "Tables",
-  urlParameters: [
-    Parameters.url
-  ],
+  urlParameters: [Parameters.url],
   queryParameters: [
     Parameters.nextTableName,
     Parameters.format,
@@ -49,12 +47,8 @@ const tableQueryOperationSpec: msRest.OperationSpec = {
 const tableCreateOperationSpec: msRest.OperationSpec = {
   httpMethod: "POST",
   path: "Tables",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.format
-  ],
+  urlParameters: [Parameters.url],
+  queryParameters: [Parameters.format],
   headerParameters: [
     Parameters.version,
     Parameters.requestId,
@@ -130,14 +124,8 @@ const tableBatchOperationSpec: msRest.OperationSpec = {
 const tableDeleteOperationSpec: msRest.OperationSpec = {
   httpMethod: "DELETE",
   path: "Tables('{table}')",
-  urlParameters: [
-    Parameters.url,
-    Parameters.table
-  ],
-  headerParameters: [
-    Parameters.version,
-    Parameters.requestId
-  ],
+  urlParameters: [Parameters.url, Parameters.table],
+  headerParameters: [Parameters.version, Parameters.requestId],
   responses: {
     204: {
       headersMapper: Mappers.TableDeleteHeaders
@@ -153,10 +141,7 @@ const tableDeleteOperationSpec: msRest.OperationSpec = {
 const tableQueryEntitiesOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{table}()",
-  urlParameters: [
-    Parameters.url,
-    Parameters.table
-  ],
+  urlParameters: [Parameters.url, Parameters.table],
   queryParameters: [
     Parameters.timeout,
     Parameters.nextPartitionKey,
@@ -226,10 +211,7 @@ const tableUpdateEntityOperationSpec: msRest.OperationSpec = {
     Parameters.partitionKey,
     Parameters.rowKey
   ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.format
-  ],
+  queryParameters: [Parameters.timeout, Parameters.format],
   headerParameters: [
     Parameters.version,
     Parameters.requestId,
@@ -237,10 +219,7 @@ const tableUpdateEntityOperationSpec: msRest.OperationSpec = {
     Parameters.ifMatch0
   ],
   requestBody: {
-    parameterPath: [
-      "options",
-      "tableEntityProperties"
-    ],
+    parameterPath: ["options", "tableEntityProperties"],
     mapper: {
       serializedName: "tableEntityProperties",
       type: {
@@ -274,10 +253,7 @@ const tableMergeEntityOperationSpec: msRest.OperationSpec = {
     Parameters.partitionKey,
     Parameters.rowKey
   ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.format
-  ],
+  queryParameters: [Parameters.timeout, Parameters.format],
   headerParameters: [
     Parameters.version,
     Parameters.requestId,
@@ -285,10 +261,7 @@ const tableMergeEntityOperationSpec: msRest.OperationSpec = {
     Parameters.ifMatch0
   ],
   requestBody: {
-    parameterPath: [
-      "options",
-      "tableEntityProperties"
-    ],
+    parameterPath: ["options", "tableEntityProperties"],
     mapper: {
       serializedName: "tableEntityProperties",
       type: {
@@ -322,10 +295,7 @@ const tableDeleteEntityOperationSpec: msRest.OperationSpec = {
     Parameters.partitionKey,
     Parameters.rowKey
   ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.format
-  ],
+  queryParameters: [Parameters.timeout, Parameters.format],
   headerParameters: [
     Parameters.version,
     Parameters.requestId,
@@ -353,10 +323,7 @@ const tableMergeEntityWithMergeOperationSpec: msRest.OperationSpec = {
     Parameters.partitionKey,
     Parameters.rowKey
   ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.format
-  ],
+  queryParameters: [Parameters.timeout, Parameters.format],
   headerParameters: [
     Parameters.version,
     Parameters.requestId,
@@ -364,10 +331,7 @@ const tableMergeEntityWithMergeOperationSpec: msRest.OperationSpec = {
     Parameters.ifMatch0
   ],
   requestBody: {
-    parameterPath: [
-      "options",
-      "tableEntityProperties"
-    ],
+    parameterPath: ["options", "tableEntityProperties"],
     mapper: {
       serializedName: "tableEntityProperties",
       type: {
@@ -395,14 +359,8 @@ const tableMergeEntityWithMergeOperationSpec: msRest.OperationSpec = {
 const tableInsertEntityOperationSpec: msRest.OperationSpec = {
   httpMethod: "POST",
   path: "{table}",
-  urlParameters: [
-    Parameters.url,
-    Parameters.table
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.format
-  ],
+  urlParameters: [Parameters.url, Parameters.table],
+  queryParameters: [Parameters.timeout, Parameters.format],
   headerParameters: [
     Parameters.version,
     Parameters.requestId,
@@ -410,10 +368,7 @@ const tableInsertEntityOperationSpec: msRest.OperationSpec = {
     Parameters.responsePreference
   ],
   requestBody: {
-    parameterPath: [
-      "options",
-      "tableEntityProperties"
-    ],
+    parameterPath: ["options", "tableEntityProperties"],
     mapper: {
       serializedName: "tableEntityProperties",
       type: {
@@ -451,18 +406,9 @@ const tableInsertEntityOperationSpec: msRest.OperationSpec = {
 const tableGetAccessPolicyOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{table}",
-  urlParameters: [
-    Parameters.url,
-    Parameters.table
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.comp0
-  ],
-  headerParameters: [
-    Parameters.version,
-    Parameters.requestId
-  ],
+  urlParameters: [Parameters.url, Parameters.table],
+  queryParameters: [Parameters.timeout, Parameters.comp0],
+  headerParameters: [Parameters.version, Parameters.requestId],
   responses: {
     200: {
       bodyMapper: {
@@ -491,23 +437,11 @@ const tableGetAccessPolicyOperationSpec: msRest.OperationSpec = {
 const tableSetAccessPolicyOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{table}",
-  urlParameters: [
-    Parameters.url,
-    Parameters.table
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.comp0
-  ],
-  headerParameters: [
-    Parameters.version,
-    Parameters.requestId
-  ],
+  urlParameters: [Parameters.url, Parameters.table],
+  queryParameters: [Parameters.timeout, Parameters.comp0],
+  headerParameters: [Parameters.version, Parameters.requestId],
   requestBody: {
-    parameterPath: [
-      "options",
-      "tableAcl"
-    ],
+    parameterPath: ["options", "tableAcl"],
     mapper: {
       xmlName: "SignedIdentifiers",
       xmlElementName: "SignedIdentifier",
@@ -539,18 +473,9 @@ const tableSetAccessPolicyOperationSpec: msRest.OperationSpec = {
 // specifications for new method group start
 const serviceSetPropertiesOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.restype,
-    Parameters.comp1
-  ],
-  headerParameters: [
-    Parameters.version,
-    Parameters.requestId
-  ],
+  urlParameters: [Parameters.url],
+  queryParameters: [Parameters.timeout, Parameters.restype, Parameters.comp1],
+  headerParameters: [Parameters.version, Parameters.requestId],
   requestBody: {
     parameterPath: "tableServiceProperties",
     mapper: {
@@ -573,18 +498,9 @@ const serviceSetPropertiesOperationSpec: msRest.OperationSpec = {
 
 const serviceGetPropertiesOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.restype,
-    Parameters.comp1
-  ],
-  headerParameters: [
-    Parameters.version,
-    Parameters.requestId
-  ],
+  urlParameters: [Parameters.url],
+  queryParameters: [Parameters.timeout, Parameters.restype, Parameters.comp1],
+  headerParameters: [Parameters.version, Parameters.requestId],
   responses: {
     200: {
       bodyMapper: Mappers.TableServiceProperties,
@@ -600,18 +516,9 @@ const serviceGetPropertiesOperationSpec: msRest.OperationSpec = {
 
 const serviceGetStatisticsOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.restype,
-    Parameters.comp2
-  ],
-  headerParameters: [
-    Parameters.version,
-    Parameters.requestId
-  ],
+  urlParameters: [Parameters.url],
+  queryParameters: [Parameters.timeout, Parameters.restype, Parameters.comp2],
+  headerParameters: [Parameters.version, Parameters.requestId],
   responses: {
     200: {
       bodyMapper: Mappers.TableServiceStats,
@@ -631,15 +538,29 @@ Specifications[Operation.Table_Create] = tableCreateOperationSpec;
 Specifications[Operation.Table_Batch] = tableBatchOperationSpec;
 Specifications[Operation.Table_Delete] = tableDeleteOperationSpec;
 Specifications[Operation.Table_QueryEntities] = tableQueryEntitiesOperationSpec;
-Specifications[Operation.Table_QueryEntitiesWithPartitionAndRowKey] = tableQueryEntitiesWithPartitionAndRowKeyOperationSpec;
+Specifications[
+  Operation.Table_QueryEntitiesWithPartitionAndRowKey
+] = tableQueryEntitiesWithPartitionAndRowKeyOperationSpec;
 Specifications[Operation.Table_UpdateEntity] = tableUpdateEntityOperationSpec;
 Specifications[Operation.Table_MergeEntity] = tableMergeEntityOperationSpec;
 Specifications[Operation.Table_DeleteEntity] = tableDeleteEntityOperationSpec;
-Specifications[Operation.Table_MergeEntityWithMerge] = tableMergeEntityWithMergeOperationSpec;
+Specifications[
+  Operation.Table_MergeEntityWithMerge
+] = tableMergeEntityWithMergeOperationSpec;
 Specifications[Operation.Table_InsertEntity] = tableInsertEntityOperationSpec;
-Specifications[Operation.Table_GetAccessPolicy] = tableGetAccessPolicyOperationSpec;
-Specifications[Operation.Table_SetAccessPolicy] = tableSetAccessPolicyOperationSpec;
-Specifications[Operation.Service_SetProperties] = serviceSetPropertiesOperationSpec;
-Specifications[Operation.Service_GetProperties] = serviceGetPropertiesOperationSpec;
-Specifications[Operation.Service_GetStatistics] = serviceGetStatisticsOperationSpec;
+Specifications[
+  Operation.Table_GetAccessPolicy
+] = tableGetAccessPolicyOperationSpec;
+Specifications[
+  Operation.Table_SetAccessPolicy
+] = tableSetAccessPolicyOperationSpec;
+Specifications[
+  Operation.Service_SetProperties
+] = serviceSetPropertiesOperationSpec;
+Specifications[
+  Operation.Service_GetProperties
+] = serviceGetPropertiesOperationSpec;
+Specifications[
+  Operation.Service_GetStatistics
+] = serviceGetStatisticsOperationSpec;
 export default Specifications;

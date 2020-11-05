@@ -6,6 +6,7 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { IEntity, TableModel } from "../persistence/ITableMetadataStore";
+import { SUPPORTED_QUERY_OPERATOR } from "../utils/constants";
 import ITableMetadataStore from "./ITableMetadataStore";
 
 export default class LokiTableMetadataStore implements ITableMetadataStore {
@@ -144,11 +145,109 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
   public async queryTableEntities(
     context: Context,
-    table: string,
-    propertyName: Array<string>
+    accountName: string,
+    tableName: string,
+    queryOptions: Models.QueryOptions
   ): Promise<{ [propertyName: string]: any }[]> {
-    // TODO
-    throw new NotImplementedError();
+    const tableColl = this.db.getCollection(
+      this.getUniqueTableCollectionName(accountName, tableName)
+    );
+
+    // Split parameters for filter
+    const filters = queryOptions.filter!.split("and");
+    const filterJson = {};
+    for (let condition of filters) {
+      condition = condition.trim();
+      const length = condition.length;
+
+      // Remove wrapping parentheses
+      if (condition[0] === "(" && condition[length - 1] === ")") {
+        condition = condition.substr(1, length - 2);
+      }
+
+      const comps = condition.split(" ");
+      if (comps.length !== 3) {
+        throw StorageErrorFactory.getQueryConditionInvalid(context);
+      }
+
+      let operator = comps[1];
+      const firstParam = "properties." + comps[0];
+      let secondParam = comps[2];
+
+      if (SUPPORTED_QUERY_OPERATOR.indexOf(operator) >= 0) {
+        const rightExpressionJSON = {};
+
+        // Fix inconsistency with azure table query operator
+        //    and lokijs query operator
+        if (operator === "ge") {
+          operator = "gte";
+        }
+
+        if (operator === "le") {
+          operator = "lte";
+        }
+
+        operator = "$" + operator;
+        secondParam = this.convertQueryParameters(secondParam, context);
+
+        (rightExpressionJSON as any)[operator] = secondParam;
+        (filterJson as any)[firstParam] = rightExpressionJSON;
+      } else {
+        throw StorageErrorFactory.getQueryConditionInvalid(context);
+      }
+    }
+
+    // Query Result
+    const result = tableColl.find(filterJson);
+    if (result.length === 0) {
+      return result;
+    }
+
+    let selectedResult = result;
+
+    // Only return selected fields
+    if (queryOptions.select !== undefined) {
+      const selectedFieldsResult = [];
+      const selectedFields = queryOptions.select.split(",");
+
+      // Iterate all entities and get selected fields
+      for (const entity of result) {
+        // Check if the selected result has exceeded the top limits
+        const entitySelectedFieldResult = {};
+        (entitySelectedFieldResult as any).PartitionKey = entity.PartitionKey;
+        (entitySelectedFieldResult as any).RowKey = entity.RowKey;
+        (entitySelectedFieldResult as any).odataMetadata = entity.odataMetadata;
+        (entitySelectedFieldResult as any).odataType = entity.odataType;
+        (entitySelectedFieldResult as any).odataId = entity.odataId;
+        (entitySelectedFieldResult as any).odataEditLink = entity.odataEditLink;
+        (entitySelectedFieldResult as any).eTag = entity.eTag;
+        (entitySelectedFieldResult as any).Timestamp = entity.lastModifiedTime;
+
+        for (let field of selectedFields) {
+          field = field.trim();
+          const keys = field.split(".");
+          let val = entity.properties;
+          for (const key of keys) {
+            val = val[key];
+          }
+          (entitySelectedFieldResult as any)[field] = val;
+          (entitySelectedFieldResult as any)[
+            field + "@odata.type"
+          ] = this.getODataType(val);
+        }
+
+        // Add to result
+        selectedFieldsResult.push(entitySelectedFieldResult);
+      }
+
+      selectedResult = selectedFieldsResult;
+    }
+
+    if (queryOptions.top !== undefined) {
+      selectedResult = selectedResult.slice(0, queryOptions.top!);
+    }
+
+    return selectedResult;
   }
 
   public async queryTableEntitiesWithPartitionAndRowKey(
@@ -364,5 +463,58 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     tableName: string
   ): string {
     return `${accountName}$${tableName}`;
+  }
+
+  private convertQueryParameters(param: string, context: Context): any {
+    const length = param.length;
+    if (param[0] === "'" && param[length - 1] === "'") {
+      // Param is of type string
+      // Convert middle '' to '
+      const idx = param.indexOf("''");
+      if (idx > 0) {
+        param = param.substr(0, idx) + param.substr(idx + 1, length);
+      }
+      return param.substr(1, param.length - 2);
+    }
+
+    if (param === "true" || param === "false") {
+      // Param is of type boolean
+      return param === "true";
+    }
+
+    const floatVal = parseFloat(param);
+    const intVal = parseInt(param, 10);
+
+    if (!isNaN(floatVal)) {
+      if (intVal === floatVal) {
+        return intVal;
+      } else {
+        return floatVal;
+      }
+    } else {
+      throw StorageErrorFactory.getQueryConditionInvalid(context);
+    }
+  }
+
+  private getODataType(val: any) {
+    switch (typeof val) {
+      case "string": {
+        return "Edm.String";
+      }
+      case "number": {
+        if (Number.isInteger(val)) {
+          return "Edm.Int32";
+        } else {
+          return "Edm.Float";
+        }
+      }
+      case "boolean": {
+        return "Edm.Boolean";
+      }
+    }
+
+    if (val instanceof Date) {
+      return "Edm.DateTime";
+    }
   }
 }
