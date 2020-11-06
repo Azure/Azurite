@@ -123,9 +123,9 @@ export default class StorageErrorFactory {
 
   public static getTableNotExist(context: Context): StorageError {
     return new StorageError(
-      400,
+      404,
       "TableNotExist",
-      "The table you want to manipulate doesn't exist",
+      "The table you want to manipulate doesn't exist.",
       context.contextID || defaultID,
       undefined,
       context

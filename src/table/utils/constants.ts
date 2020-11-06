@@ -39,7 +39,7 @@ export const FULL_METADATA_ACCEPT = "application/json;odata=fullmetadata";
 export const RETURN_NO_CONTENT = "return-no-content";
 export const RETURN_CONTENT = "return-content";
 
-export const QUERY_RESULT_MAX_NUM = 0;
+export const QUERY_RESULT_MAX_NUM = 1000;
 export const ValidAPIVersions = [
   "2019-12-12",
   "2019-07-07",

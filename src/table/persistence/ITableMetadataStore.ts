@@ -44,8 +44,10 @@ export default interface ITableMetadataStore {
     context: Context,
     account: string,
     table: string,
-    queryOptions: Models.QueryOptions
-  ): Promise<{ [propertyName: string]: any }[]>;
+    queryOptions: Models.QueryOptions,
+    nextPartitionKey?: string,
+    nextRowKey?: string
+  ): Promise<[Entity[], string | undefined, string | undefined]>;
   queryTableEntitiesWithPartitionAndRowKey(
     context: Context,
     table: string,

@@ -6,7 +6,10 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { Entity, Table } from "../persistence/ITableMetadataStore";
-import { SUPPORTED_QUERY_OPERATOR } from "../utils/constants";
+import {
+  QUERY_RESULT_MAX_NUM,
+  SUPPORTED_QUERY_OPERATOR
+} from "../utils/constants";
 import { getTimestampString } from "../utils/utils";
 import ITableMetadataStore from "./ITableMetadataStore";
 
@@ -384,8 +387,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     context: Context,
     account: string,
     table: string,
-    queryOptions: Models.QueryOptions
-  ): Promise<{ [propertyName: string]: any }[]> {
+    queryOptions: Models.QueryOptions,
+    nextPartitionKey?: string,
+    nextRowKey?: string
+  ): Promise<[Entity[], string | undefined, string | undefined]> {
     const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
     const tableDocument = tablesCollection.findOne({
       account,
@@ -403,7 +408,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
 
     // Split parameters for filter
-    const filterJson = {};
+    const queryFilter = {};
     if (queryOptions.filter) {
       const filters = queryOptions.filter!.split("and");
       for (let condition of filters) {
@@ -441,64 +446,96 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           secondParam = this.convertQueryParameters(secondParam, context);
 
           (rightExpressionJSON as any)[operator] = secondParam;
-          (filterJson as any)[firstParam] = rightExpressionJSON;
+          (queryFilter as any)[firstParam] = rightExpressionJSON;
         } else {
           throw StorageErrorFactory.getQueryConditionInvalid(context);
         }
       }
     }
 
-    // Query Result
-    const result = tableEntityCollection.find(filterJson);
-    if (result.length === 0) {
-      return result;
+    const segmentFilter = {} as any;
+    if (nextPartitionKey) {
+      segmentFilter.PartitionKey = { $gte: nextPartitionKey };
+    }
+    if (nextRowKey) {
+      segmentFilter.RowKey = { $gte: nextPartitionKey };
     }
 
-    let selectedResult = result;
+    const maxResults = queryOptions.top || QUERY_RESULT_MAX_NUM;
+
+    const result = tableEntityCollection
+      .chain()
+      .find(segmentFilter)
+      .find(queryFilter)
+      .limit(maxResults + 1)
+      .sort((obj1, obj2) => {
+        if (obj1.PartitionKey > obj2.PartitionKey) {
+          return 1;
+        } else if (obj1.PartitionKey === obj2.PartitionKey) {
+          if (obj1.RowKey > obj2.RowKey) {
+            return 1;
+          } else if (obj1.RowKey === obj2.RowKey) {
+            return 0;
+          } else {
+            return -1;
+          }
+        } else {
+          return -1;
+        }
+      })
+      .data();
+
+    let nextPartitionKeyResponse;
+    let nextRowKeyResponse;
+
+    if (result.length > maxResults) {
+      const tail = result[result.length - 1];
+      nextPartitionKeyResponse = tail.PartitionKey;
+      nextRowKeyResponse = tail.RowKey;
+      result.pop();
+    }
+
+    const selectedResult = result;
 
     // Only return selected fields
-    if (queryOptions.select !== undefined) {
-      const selectedFieldsResult = [];
-      const selectedFields = queryOptions.select.split(",");
+    // if (queryOptions.select !== undefined) {
+    //   const selectedFieldsResult = [];
+    //   const selectedFields = queryOptions.select.split(",");
 
-      // Iterate all entities and get selected fields
-      for (const entity of result) {
-        // Check if the selected result has exceeded the top limits
-        const entitySelectedFieldResult = {};
-        (entitySelectedFieldResult as any).PartitionKey = entity.PartitionKey;
-        (entitySelectedFieldResult as any).RowKey = entity.RowKey;
-        (entitySelectedFieldResult as any).odataMetadata = entity.odataMetadata;
-        (entitySelectedFieldResult as any).odataType = entity.odataType;
-        (entitySelectedFieldResult as any).odataId = entity.odataId;
-        (entitySelectedFieldResult as any).odataEditLink = entity.odataEditLink;
-        (entitySelectedFieldResult as any).eTag = entity.eTag;
-        (entitySelectedFieldResult as any).Timestamp = entity.lastModifiedTime;
+    //   // Iterate all entities and get selected fields
+    //   for (const entity of result) {
+    //     // Check if the selected result has exceeded the top limits
+    //     const entitySelectedFieldResult = {};
+    //     (entitySelectedFieldResult as any).PartitionKey = entity.PartitionKey;
+    //     (entitySelectedFieldResult as any).RowKey = entity.RowKey;
+    //     (entitySelectedFieldResult as any).odataMetadata = entity.odataMetadata;
+    //     (entitySelectedFieldResult as any).odataType = entity.odataType;
+    //     (entitySelectedFieldResult as any).odataId = entity.odataId;
+    //     (entitySelectedFieldResult as any).odataEditLink = entity.odataEditLink;
+    //     (entitySelectedFieldResult as any).eTag = entity.eTag;
+    //     (entitySelectedFieldResult as any).Timestamp = entity.lastModifiedTime;
 
-        for (let field of selectedFields) {
-          field = field.trim();
-          const keys = field.split(".");
-          let val = entity.properties;
-          for (const key of keys) {
-            val = val[key];
-          }
-          (entitySelectedFieldResult as any)[field] = val;
-          (entitySelectedFieldResult as any)[
-            field + "@odata.type"
-          ] = this.getODataType(val);
-        }
+    //     for (let field of selectedFields) {
+    //       field = field.trim();
+    //       const keys = field.split(".");
+    //       let val = entity.properties;
+    //       for (const key of keys) {
+    //         val = val[key];
+    //       }
+    //       (entitySelectedFieldResult as any)[field] = val;
+    //       (entitySelectedFieldResult as any)[
+    //         field + "@odata.type"
+    //       ] = this.getODataType(val);
+    //     }
 
-        // Add to result
-        selectedFieldsResult.push(entitySelectedFieldResult);
-      }
+    //     // Add to result
+    //     selectedFieldsResult.push(entitySelectedFieldResult);
+    //   }
 
-      selectedResult = selectedFieldsResult;
-    }
+    //   selectedResult = selectedFieldsResult;
+    // }
 
-    if (queryOptions.top !== undefined) {
-      selectedResult = selectedResult.slice(0, queryOptions.top!);
-    }
-
-    return selectedResult;
+    return [selectedResult, nextPartitionKeyResponse, nextRowKeyResponse];
   }
 
   public async queryTableEntitiesWithPartitionAndRowKey(
@@ -675,25 +712,25 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
   }
 
-  private getODataType(val: any) {
-    switch (typeof val) {
-      case "string": {
-        return "Edm.String";
-      }
-      case "number": {
-        if (Number.isInteger(val)) {
-          return "Edm.Int32";
-        } else {
-          return "Edm.Float";
-        }
-      }
-      case "boolean": {
-        return "Edm.Boolean";
-      }
-    }
+  // private getODataType(val: any) {
+  //   switch (typeof val) {
+  //     case "string": {
+  //       return "Edm.String";
+  //     }
+  //     case "number": {
+  //       if (Number.isInteger(val)) {
+  //         return "Edm.Int32";
+  //       } else {
+  //         return "Edm.Float";
+  //       }
+  //     }
+  //     case "boolean": {
+  //       return "Edm.Boolean";
+  //     }
+  //   }
 
-    if (val instanceof Date) {
-      return "Edm.DateTime";
-    }
-  }
+  //   if (val instanceof Date) {
+  //     return "Edm.DateTime";
+  //   }
+  // }
 }
