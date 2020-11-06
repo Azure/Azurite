@@ -1530,7 +1530,12 @@ export type TableQueryEntitiesResponse = TableEntityQueryResponse & TableQueryEn
 /**
  * Contains response data for the queryEntitiesWithPartitionAndRowKey operation.
  */
-export type TableQueryEntitiesWithPartitionAndRowKeyResponse = TableEntityQueryResponse & TableQueryEntitiesWithPartitionAndRowKeyHeaders & {
+export type TableQueryEntitiesWithPartitionAndRowKeyResponse = TableQueryEntitiesWithPartitionAndRowKeyHeaders & {
+  /**
+   * The response body as a node.js Readable stream.
+   */
+  body?: NodeJS.ReadableStream;
+} & {
   /**
    * The response status code.
    */
