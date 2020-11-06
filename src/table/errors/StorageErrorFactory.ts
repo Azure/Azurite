@@ -146,7 +146,7 @@ export default class StorageErrorFactory {
     return new StorageError(
       409,
       "EntityDoesNotExist",
-      "The entity to update doesn't exist in the table",
+      "The entity to update doesn't exist in the table.",
       context.contextID || defaultID,
       undefined,
       context

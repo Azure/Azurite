@@ -1,17 +1,18 @@
 import { stat } from "fs";
 import Loki from "lokijs";
-import { newEtag } from "../../common/utils/utils";
+
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { Entity, Table } from "../persistence/ITableMetadataStore";
 import { SUPPORTED_QUERY_OPERATOR } from "../utils/constants";
+import { getTimestampString } from "../utils/utils";
 import ITableMetadataStore from "./ITableMetadataStore";
 
 export default class LokiTableMetadataStore implements ITableMetadataStore {
   private readonly db: Loki;
-  private readonly TABLE_COLLECTION = "$TABLE_COLLECTION$";
+  private readonly TABLES_COLLECTION = "$TABLES_COLLECTION$";
   private initialized: boolean = false;
   private closed: boolean = false;
 
@@ -22,6 +23,61 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     });
   }
 
+  public async init(): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
+      stat(this.lokiDBPath, (statError, stats) => {
+        if (!statError) {
+          this.db.loadDatabase({}, dbError => {
+            if (dbError) {
+              reject(dbError);
+            } else {
+              resolve();
+            }
+          });
+        } else {
+          // when DB file doesn't exist, ignore the error because following will re-create the file
+          resolve();
+        }
+      });
+    });
+
+    // Create tables collection if not exists
+    if (this.db.getCollection(this.TABLES_COLLECTION) === null) {
+      this.db.addCollection(this.TABLES_COLLECTION, {
+        // Optimization for indexing and searching
+        // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
+        indices: ["account", "table"]
+      }); // Optimize for find operation
+    }
+
+    await new Promise((resolve, reject) => {
+      this.db.saveDatabase(err => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+
+    this.initialized = true;
+    this.closed = false;
+  }
+
+  public async close(): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
+      this.db.close(err => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+
+    this.closed = true;
+  }
+
   public isInitialized(): boolean {
     return this.initialized;
   }
@@ -30,24 +86,25 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     return this.closed;
   }
 
-  public async createTable(context: Context, table: Table): Promise<void> {
+  public async createTable(context: Context, tableModel: Table): Promise<void> {
     // Check for table entry in the table registry collection
-    const coll = this.db.getCollection(this.TABLE_COLLECTION);
+    const coll = this.db.getCollection(this.TABLES_COLLECTION);
     const doc = coll.findOne({
-      account: table.account,
-      table: table.table
+      account: tableModel.account,
+      table: tableModel.table
     });
 
     // If the metadata exists, we will throw getTableAlreadyExists error
     if (doc) {
       throw StorageErrorFactory.getTableAlreadyExists(context);
     }
-    coll.insert(table);
+
+    coll.insert(tableModel);
 
     // now we create the collection to represent the table using a unique string
     const tableCollectionName = this.getTableCollectionName(
-      table.account,
-      table.table
+      tableModel.account,
+      tableModel.table
     );
     const extentColl = this.db.getCollection(tableCollectionName);
     if (extentColl) {
@@ -61,93 +118,276 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }); // Optimize for find operation
   }
 
-  public async insertTableEntity(
+  public async deleteTable(
     context: Context,
-    tableName: string,
-    account: string,
-    entity: Entity
+    table: string,
+    account: string
   ): Promise<void> {
-    const tableColl = this.db.getCollection(
-      this.getTableCollectionName(account, tableName)
-    );
-    if (!tableColl) {
-      throw StorageErrorFactory.getTableNotExist(context);
-    }
-
-    const doc = tableColl.findOne({
-      PartitionKey: entity.PartitionKey,
-      RowKey: entity.RowKey
+    // remove table reference from collection registry
+    const coll = this.db.getCollection(this.TABLES_COLLECTION);
+    const doc = coll.findOne({
+      account,
+      table
     });
-
     if (doc) {
-      throw StorageErrorFactory.getEntityAlreadyExist(context);
+      coll.remove(doc);
+    } else {
+      throw StorageErrorFactory.getTableNotFound(context);
     }
 
-    tableColl.insert(entity);
-    return;
+    const tableCollectionName = this.getTableCollectionName(account, table);
+    const tableEntityCollection = this.db.getCollection(tableCollectionName);
+    if (tableEntityCollection) {
+      this.db.removeCollection(tableCollectionName);
+    }
   }
 
-  public async queryTable(
-    context: Context,
-    account: string
-  ): Promise<Models.TableResponseProperties[]> {
-    const coll = this.db.getCollection(this.TABLE_COLLECTION);
-    const docList = coll.find({ account: account });
+  public async queryTable(context: Context, account: string): Promise<Table[]> {
+    const coll = this.db.getCollection(this.TABLES_COLLECTION);
+    const docList = coll.find({ account });
 
     if (!docList) {
       throw StorageErrorFactory.getEntityNotFound(context);
     }
 
-    let response: Models.TableResponseProperties[] = [];
-
-    if (docList.length > 0) {
-      response = docList.map(item => {
-        return {
-          odatatype: item.odatatype,
-          odataid: item.odataid,
-          odataeditLink: item.odataeditLink,
-          tableName: item.tableName
-        };
-      });
-    }
-
-    return response;
+    return docList;
   }
 
-  public async deleteTable(
+  public async insertTableEntity(
     context: Context,
-    name: string,
-    account: string
-  ): Promise<void> {
-    const uniqueTableName = this.getTableCollectionName(account, name);
-    const tableColl = this.db.getCollection(uniqueTableName);
-    // delete the collection / table
-    if (tableColl != null) {
-      this.db.removeCollection(uniqueTableName);
-    } else {
-      throw StorageErrorFactory.getTableNotFound(context);
-    }
-    // remove table reference from collection registry
-    const coll = this.db.getCollection(this.TABLE_COLLECTION);
-    const doc = coll.findOne({
-      account: account,
-      tableName: name
+    table: string,
+    account: string,
+    entity: Entity
+  ): Promise<Entity> {
+    const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
+    const tableDocument = tablesCollection.findOne({
+      account,
+      table
     });
-    if (doc != null) {
-      coll.remove(doc);
-    } else {
-      throw StorageErrorFactory.getTableNotFound(context);
+    if (!tableDocument) {
+      throw StorageErrorFactory.getTableNotExist(context);
     }
+
+    const tableEntityCollection = this.db.getCollection(
+      this.getTableCollectionName(account, table)
+    );
+    if (!tableEntityCollection) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
+
+    const doc = tableEntityCollection.findOne({
+      PartitionKey: entity.PartitionKey,
+      RowKey: entity.RowKey
+    });
+    if (doc) {
+      throw StorageErrorFactory.getEntityAlreadyExist(context);
+    }
+
+    entity.properties.Timestamp = getTimestampString(entity.lastModifiedTime);
+    entity.properties["Timestamp@odata.type"] = "Edm.DateTime";
+
+    tableEntityCollection.insert(entity);
+    return entity;
+  }
+
+  public async insertOrUpdateTableEntity(
+    context: Context,
+    table: string,
+    account: string,
+    entity: Entity,
+    ifMatch?: string
+  ): Promise<Entity> {
+    if (ifMatch === undefined) {
+      // Upsert
+      const existingEntity = await this.queryTableEntitiesWithPartitionAndRowKey(
+        context,
+        table,
+        account,
+        entity.PartitionKey,
+        entity.RowKey
+      );
+
+      if (existingEntity) {
+        // Update
+        return this.updateTableEntity(context, table, account, entity, ifMatch);
+      } else {
+        // Insert
+        return this.insertTableEntity(context, table, account, entity);
+      }
+    } else {
+      // Update
+      return this.updateTableEntity(context, table, account, entity, ifMatch);
+    }
+
+    // const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
+    // const tableDocument = tablesCollection.findOne({
+    //   account,
+    //   table
+    // });
+    // if (!tableDocument) {
+    //   throw StorageErrorFactory.getTableNotExist(context);
+    // }
+
+    // const tableEntityCollection = this.db.getCollection(
+    //   this.getTableCollectionName(account, table)
+    // );
+    // if (!tableEntityCollection) {
+    //   throw StorageErrorFactory.getTableNotExist(context);
+    // }
+
+    // const doc = tableEntityCollection.findOne({
+    //   PartitionKey: entity.PartitionKey,
+    //   RowKey: entity.RowKey
+    // }) as Entity;
+
+    // if (!doc) {
+    //   throw StorageErrorFactory.getEntityNotExist(context);
+    // } else {
+    //   // Test if etag value is valid
+    //   if (ifMatch === "*" || doc.eTag === ifMatch) {
+    //     tableEntityCollection.remove(doc);
+
+    //     entity.properties.Timestamp = getTimestampString(
+    //       entity.lastModifiedTime
+    //     );
+    //     entity.properties["Timestamp@odata.type"] = "Edm.DateTime";
+
+    //     tableEntityCollection.insert(entity);
+    //     return;
+    //   }
+    // }
+
+    // throw StorageErrorFactory.getPreconditionFailed(context);
+  }
+
+  public async insertOrMergeTableEntity(
+    context: Context,
+    table: string,
+    account: string,
+    entity: Entity,
+    ifMatch?: string
+  ): Promise<Entity> {
+    if (ifMatch === undefined) {
+      // Upsert
+      const existingEntity = await this.queryTableEntitiesWithPartitionAndRowKey(
+        context,
+        table,
+        account,
+        entity.PartitionKey,
+        entity.RowKey
+      );
+
+      if (existingEntity) {
+        // Merge
+        return this.mergeTableEntity(context, table, account, entity, ifMatch);
+      } else {
+        // Insert
+        return this.insertTableEntity(context, table, account, entity);
+      }
+    } else {
+      // Merge
+      return this.mergeTableEntity(context, table, account, entity, ifMatch);
+    }
+
+    // const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
+    // const tableDocument = tablesCollection.findOne({
+    //   account,
+    //   table
+    // });
+    // if (!tableDocument) {
+    //   throw StorageErrorFactory.getTableNotExist(context);
+    // }
+
+    // const tableEntityCollection = this.db.getCollection(
+    //   this.getTableCollectionName(account, table)
+    // );
+    // if (!tableEntityCollection) {
+    //   throw StorageErrorFactory.getTableNotExist(context);
+    // }
+
+    // const doc = tableEntityCollection.findOne({
+    //   PartitionKey: entity.PartitionKey,
+    //   RowKey: entity.RowKey
+    // }) as Entity;
+
+    // if (!doc) {
+    //   throw StorageErrorFactory.getEntityNotExist(context);
+    // } else {
+    //   // Test if etag value is valid
+    //   if (ifMatch === "*" || doc.eTag === ifMatch) {
+    //     const mergedDEntity: Entity = {
+    //       ...doc,
+    //       ...entity,
+    //       properties: {
+    //         // TODO: Validate incoming odata types
+    //         ...doc.properties,
+    //         ...entity.properties,
+    //         Timestamp: getTimestampString(entity.lastModifiedTime),
+    //         "Timestamp@odata.type": "Edm.DateTime"
+    //       },
+    //       lastModifiedTime: context.startTime!
+    //     };
+    //     tableEntityCollection.remove(doc);
+    //     tableEntityCollection.insert(mergedDEntity);
+    //     return mergedDEntity;
+    //   }
+    // }
+    // throw StorageErrorFactory.getPreconditionFailed(context);
+  }
+
+  public async deleteTableEntity(
+    context: Context,
+    table: string,
+    account: string,
+    partitionKey: string,
+    rowKey: string,
+    etag: string
+  ): Promise<void> {
+    const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
+    const tableDocument = tablesCollection.findOne({
+      account,
+      table
+    });
+    if (!tableDocument) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
+
+    const tableEntityCollection = this.db.getCollection(
+      this.getTableCollectionName(account, table)
+    );
+    if (!tableEntityCollection) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
+
+    if (partitionKey !== undefined && rowKey !== undefined) {
+      const doc = tableEntityCollection.findOne({
+        PartitionKey: partitionKey,
+        RowKey: rowKey
+      }) as Entity;
+
+      if (!doc) {
+        throw StorageErrorFactory.getEntityNotFound(context);
+      } else {
+        if (etag !== "*" && doc.eTag !== etag) {
+          throw StorageErrorFactory.getPreconditionFailed(context);
+        }
+      }
+
+      tableEntityCollection.remove(doc);
+      return;
+    }
+
+    throw StorageErrorFactory.getPropertiesNeedValue(context);
   }
 
   public async queryTableEntities(
     context: Context,
     account: string,
-    tableName: string,
+    table: string,
     queryOptions: Models.QueryOptions
   ): Promise<{ [propertyName: string]: any }[]> {
     const tableColl = this.db.getCollection(
-      this.getTableCollectionName(account, tableName)
+      this.getTableCollectionName(account, table)
     );
 
     // Split parameters for filter
@@ -249,13 +489,13 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
   public async queryTableEntitiesWithPartitionAndRowKey(
     context: Context,
-    tableName: string,
+    table: string,
     account: string,
     partitionKey: string,
     rowKey: string
-  ): Promise<Entity> {
+  ): Promise<Entity | undefined> {
     const tableColl = this.db.getCollection(
-      this.getTableCollectionName(account, tableName)
+      this.getTableCollectionName(account, table)
     );
 
     // Throw error, if table not exists
@@ -270,118 +510,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }) as Entity;
 
     return requestedDoc;
-  }
-
-  public async updateTableEntity(
-    context: Context,
-    tableName: string,
-    account: string,
-    entity: Entity,
-    etag: string
-  ): Promise<void> {
-    const tableColl = this.db.getCollection(
-      this.getTableCollectionName(account, tableName)
-    );
-
-    // Throw error, if table not exists
-    if (!tableColl) {
-      throw StorageErrorFactory.getTableNotExist(context);
-    }
-
-    // Get Current Doc
-    const currentDoc = tableColl.findOne({
-      PartitionKey: entity.PartitionKey,
-      RowKey: entity.RowKey
-    }) as Entity;
-
-    // Throw error, if doc does not exist
-    if (!currentDoc) {
-      throw StorageErrorFactory.getEntityNotExist(context);
-    } else {
-      // Test if etag value is valid
-      if (etag === "*" || currentDoc.eTag === etag) {
-        tableColl.remove(currentDoc);
-        tableColl.insert(entity);
-        return;
-      }
-    }
-
-    throw StorageErrorFactory.getPreconditionFailed(context);
-  }
-
-  public async mergeTableEntity(
-    context: Context,
-    tableName: string,
-    account: string,
-    entity: Entity,
-    etag: string
-  ): Promise<string> {
-    const tableColl = this.db.getCollection(
-      this.getTableCollectionName(account, tableName)
-    );
-
-    // Throw error, if table not exists
-    if (!tableColl) {
-      throw StorageErrorFactory.getTableNotExist(context);
-    }
-
-    // Get Current Doc
-    const currentDoc = tableColl.findOne({
-      PartitionKey: entity.PartitionKey,
-      RowKey: entity.RowKey
-    }) as Entity;
-
-    // Throw error, if doc does not exist
-    if (!currentDoc) {
-      throw StorageErrorFactory.getEntityNotExist(context);
-    } else {
-      // Test if etag value is valid
-      if (etag === "*" || currentDoc.eTag === etag) {
-        const mergedDoc = {
-          ...currentDoc,
-          ...entity
-        };
-        mergedDoc.eTag = newEtag();
-        tableColl.update(mergedDoc);
-        return mergedDoc.eTag;
-      }
-    }
-    throw StorageErrorFactory.getPreconditionFailed(context);
-  }
-
-  public async deleteTableEntity(
-    context: Context,
-    tableName: string,
-    account: string,
-    partitionKey: string,
-    rowKey: string,
-    etag: string
-  ): Promise<void> {
-    const tableColl = this.db.getCollection(
-      this.getTableCollectionName(account, tableName)
-    );
-    if (!tableColl) {
-      throw StorageErrorFactory.getTableNotExist(context);
-    }
-
-    if (partitionKey !== undefined && rowKey !== undefined) {
-      const doc = tableColl.findOne({
-        PartitionKey: partitionKey,
-        RowKey: rowKey
-      }) as Entity;
-
-      if (!doc) {
-        throw StorageErrorFactory.getEntityNotFound(context);
-      } else {
-        if (etag !== "*" && doc.eTag !== etag) {
-          throw StorageErrorFactory.getPreconditionFailed(context);
-        }
-      }
-      tableColl.remove(doc);
-      return;
-    }
-
-    throw StorageErrorFactory.getPropertiesNeedValue(context);
   }
 
   public async getTableAccessPolicy(
@@ -400,59 +528,103 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     throw new NotImplementedError();
   }
 
-  public async init(): Promise<void> {
-    await new Promise<void>((resolve, reject) => {
-      stat(this.lokiDBPath, (statError, stats) => {
-        if (!statError) {
-          this.db.loadDatabase({}, dbError => {
-            if (dbError) {
-              reject(dbError);
-            } else {
-              resolve();
-            }
-          });
-        } else {
-          // when DB file doesn't exist, ignore the error because following will re-create the file
-          resolve();
-        }
-      });
+  private async updateTableEntity(
+    context: Context,
+    table: string,
+    account: string,
+    entity: Entity,
+    ifMatch?: string
+  ): Promise<Entity> {
+    const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
+    const tableDocument = tablesCollection.findOne({
+      account,
+      table
     });
-
-    // Create tables collection if not exists
-    if (this.db.getCollection(this.TABLE_COLLECTION) === null) {
-      this.db.addCollection(this.TABLE_COLLECTION, {
-        // Optimization for indexing and searching
-        // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
-        indices: ["account", "table"]
-      }); // Optimize for find operation
+    if (!tableDocument) {
+      throw StorageErrorFactory.getTableNotExist(context);
     }
 
-    await new Promise((resolve, reject) => {
-      this.db.saveDatabase(err => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
-    });
+    const tableEntityCollection = this.db.getCollection(
+      this.getTableCollectionName(account, table)
+    );
+    if (!tableEntityCollection) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
 
-    this.initialized = true;
-    this.closed = false;
+    const doc = tableEntityCollection.findOne({
+      PartitionKey: entity.PartitionKey,
+      RowKey: entity.RowKey
+    }) as Entity;
+
+    if (!doc) {
+      throw StorageErrorFactory.getEntityNotExist(context);
+    }
+
+    // Test if etag value is valid
+    if (ifMatch === undefined || ifMatch === "*" || doc.eTag === ifMatch) {
+      tableEntityCollection.remove(doc);
+
+      entity.properties.Timestamp = getTimestampString(entity.lastModifiedTime);
+      entity.properties["Timestamp@odata.type"] = "Edm.DateTime";
+
+      tableEntityCollection.insert(entity);
+      return entity;
+    }
+
+    throw StorageErrorFactory.getPreconditionFailed(context);
   }
 
-  public async close(): Promise<void> {
-    await new Promise<void>((resolve, reject) => {
-      this.db.close(err => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
+  private async mergeTableEntity(
+    context: Context,
+    table: string,
+    account: string,
+    entity: Entity,
+    ifMatch?: string
+  ): Promise<Entity> {
+    const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
+    const tableDocument = tablesCollection.findOne({
+      account,
+      table
     });
+    if (!tableDocument) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
 
-    this.closed = true;
+    const tableEntityCollection = this.db.getCollection(
+      this.getTableCollectionName(account, table)
+    );
+    if (!tableEntityCollection) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
+
+    const doc = tableEntityCollection.findOne({
+      PartitionKey: entity.PartitionKey,
+      RowKey: entity.RowKey
+    }) as Entity;
+
+    if (!doc) {
+      throw StorageErrorFactory.getEntityNotExist(context);
+    }
+
+    if (ifMatch === undefined || ifMatch === "*" || doc.eTag === ifMatch) {
+      const mergedDEntity: Entity = {
+        ...doc,
+        ...entity,
+        properties: {
+          // TODO: Validate incoming odata types
+          ...doc.properties,
+          ...entity.properties,
+          Timestamp: getTimestampString(entity.lastModifiedTime),
+          "Timestamp@odata.type": "Edm.DateTime"
+        },
+        lastModifiedTime: context.startTime!
+      };
+      tableEntityCollection.remove(doc);
+      tableEntityCollection.insert(mergedDEntity);
+      return mergedDEntity;
+    } else {
+      throw StorageErrorFactory.getPreconditionFailed(context);
+    }
   }
 
   private getTableCollectionName(account: string, table: string): string {

@@ -7,6 +7,7 @@ import logger from "../common/Logger";
 import AccountSASAuthenticator from "./authentication/AccountSASAuthenticator";
 import IAuthenticator from "./authentication/IAuthenticator";
 import TableSASAuthenticator from "./authentication/TableSASAuthenticator";
+import { TableQueryResponse } from "./generated/artifacts/mappers";
 import { Operation } from "./generated/artifacts/operation";
 import Specifications from "./generated/artifacts/specifications";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
@@ -70,6 +71,9 @@ export default class TableRequestListenerFactory
         writable: false
       }
     );
+
+    // TODO: Override Query Table JSON response element value
+    TableQueryResponse.type.modelProperties!.value.xmlElementName = "value";
 
     const app = express().disable("x-powered-by");
 

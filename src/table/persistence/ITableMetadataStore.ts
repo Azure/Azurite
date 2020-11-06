@@ -22,7 +22,7 @@ interface ITable {
   table: string;
 }
 
-export type Table = ITable & IOdataAnnotations;
+export type Table = ITable & IOdataAnnotationsOptional;
 
 export interface IEntity {
   PartitionKey: string;
@@ -34,62 +34,53 @@ export interface IEntity {
   };
 }
 
-export type Entity = IEntity & IOdataAnnotations;
+export type Entity = IEntity & IOdataAnnotationsOptional;
 
 export default interface ITableMetadataStore {
-  createTable(context: Context, table: Table): Promise<void>;
-  queryTable(
-    context: Context,
-    accountName: string
-  ): Promise<Models.TableResponseProperties[]>;
-  deleteTable(
-    context: Context,
-    tableName: string,
-    accountName: string
-  ): Promise<void>;
+  createTable(context: Context, tableModel: Table): Promise<void>;
+  queryTable(context: Context, account: string): Promise<Table[]>;
+  deleteTable(context: Context, table: string, account: string): Promise<void>;
   queryTableEntities(
     context: Context,
-    accountName: string,
+    account: string,
     table: string,
     queryOptions: Models.QueryOptions
   ): Promise<{ [propertyName: string]: any }[]>;
   queryTableEntitiesWithPartitionAndRowKey(
     context: Context,
     table: string,
-    accountName: string,
+    account: string,
     partitionKey: string,
     rowKey: string
+  ): Promise<Entity | undefined>;
+  insertOrUpdateTableEntity(
+    context: Context,
+    table: string,
+    account: string,
+    entity: Entity,
+    ifMatch?: string
   ): Promise<Entity>;
-  updateTableEntity(
+  insertOrMergeTableEntity(
     context: Context,
-    tableName: string,
+    table: string,
     account: string,
     entity: Entity,
-    eatg: string
-  ): Promise<void>;
-  mergeTableEntity(
-    context: Context,
-    tableName: string,
-    account: string,
-    entity: Entity,
-    etag: string,
-    partitionKey: string,
-    rowKey: string
-  ): Promise<string>;
+    ifMatch?: string
+  ): Promise<Entity>;
   deleteTableEntity(
     context: Context,
-    tableName: string,
-    accountName: string,
+    table: string,
+    account: string,
     partitionKey: string,
     rowKey: string,
     etag: string
   ): Promise<void>;
   insertTableEntity(
     context: Context,
-    tableName: string,
+    table: string,
     account: string,
     entity: Entity
-  ): Promise<void>;
+  ): Promise<Entity>;
   getTableAccessPolicy(
     context: Context,
     table: string,

@@ -20,61 +20,42 @@ import {
   TABLE_API_VERSION
 } from "../utils/constants";
 import {
-  getTableOdataAnnotationsForRequest,
-  updateTableOptionalOdataAnnotationsForResponse
+  getEntityOdataAnnotationsForResponse,
+  getTableOdataAnnotationsForResponse,
+  getTablePropertiesOdataAnnotationsForResponse,
+  updateTableOptionalOdataAnnotationsForResponse,
+  updateEntityOdataAnnotationsForResponse
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
-export default class TableHandler extends BaseHandler implements ITableHandler {
-  public async batch(
-    body: NodeJS.ReadableStream,
-    multipartContentType: string,
-    contentLength: number,
-    options: Models.TableBatchOptionalParams,
-    context: Context
-  ): Promise<Models.TableBatchResponse> {
-    const tableContext = new TableStorageContext(context);
-    // TODO: Implement batch operation logic here
-    return {
-      requestId: tableContext.contextID,
-      version: TABLE_API_VERSION,
-      date: context.startTime,
-      statusCode: 202,
-      body // Use incoming request body as Batch operation response body as demo
-    };
-  }
+interface IPartialResponsePreferProperties {
+  statusCode: 201 | 204;
+  preferenceApplied?: string;
+}
 
+/**
+ * TODO:
+ * 1. Check Accept for every API
+ * 2. Check Prefer for every API
+ */
+
+export default class TableHandler extends BaseHandler implements ITableHandler {
   public async create(
     tableProperties: Models.TableProperties,
     options: Models.TableCreateOptionalParams,
     context: Context
   ): Promise<Models.TableCreateResponse> {
     const tableContext = new TableStorageContext(context);
-
-    const account = tableContext.account;
-    if (account === undefined) {
-      throw StorageErrorFactory.getAccountNameEmpty(context);
-    }
-
-    const accept = context.request!.getHeader(HeaderConstants.ACCEPT);
-    if (
-      accept !== NO_METADATA_ACCEPT &&
-      accept !== MINIMAL_METADATA_ACCEPT &&
-      accept !== FULL_METADATA_ACCEPT
-    ) {
-      throw StorageErrorFactory.getAtomFormatNotSupported(context);
-    }
-
-    // Table name is in request body instead of URL
-    const table = tableProperties.tableName;
+    const accept = this.getAndCheckAcceptHeader(tableContext);
+    const account = this.getAndCheckAccountName(tableContext);
+    const table = tableProperties.tableName; // Table name is in request body instead of URL
     if (table === undefined) {
-      throw StorageErrorFactory.getTableNameEmpty;
+      throw StorageErrorFactory.getTableNameEmpty(context);
     }
 
     const tableModel: Table = {
       account,
-      table,
-      ...getTableOdataAnnotationsForRequest(account, table)
+      table
     };
 
     await this.metadataStore.createTable(context, tableModel);
@@ -87,29 +68,43 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       statusCode: 201
     };
 
-    const prefer = context.request!.getHeader(HeaderConstants.PREFER);
-    if (prefer === RETURN_NO_CONTENT) {
-      response.statusCode = 204;
-      response.preferenceApplied = RETURN_NO_CONTENT;
-    }
-    if (prefer === RETURN_CONTENT) {
-      response.statusCode = 201;
-      response.preferenceApplied = RETURN_CONTENT;
-    }
-
     response.tableName = table;
-
-    const urlPrefix = this.getOdataAnnotationUrlPrefix(tableContext, account);
-
     updateTableOptionalOdataAnnotationsForResponse(
       response,
       account,
       table,
-      urlPrefix,
+      this.getOdataAnnotationUrlPrefix(tableContext, account),
       accept
     );
 
-    context.response!.setContentType(accept);
+    this.updateResponsePrefer(response, tableContext);
+    this.updateResponseAccept(tableContext, accept);
+
+    return response;
+  }
+
+  public async delete(
+    _table: string,
+    options: Models.TableDeleteMethodOptionalParams,
+    context: Context
+  ): Promise<Models.TableDeleteResponse> {
+    const tableContext = new TableStorageContext(context);
+    const account = this.getAndCheckAccountName(tableContext);
+    const table = this.getAndCheckTableName(tableContext);
+    const accept = this.getAndCheckAcceptHeader(tableContext);
+
+    await this.metadataStore.deleteTable(context, table, account!);
+
+    const response: Models.TableDeleteResponse = {
+      clientRequestId: options.requestId,
+      requestId: tableContext.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      statusCode: 204
+    };
+
+    this.updateResponseAccept(tableContext, accept);
+
     return response;
   }
 
@@ -118,22 +113,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableQueryResponse2> {
     const tableContext = new TableStorageContext(context);
-
-    const account = tableContext.account;
-    if (account === undefined) {
-      throw StorageErrorFactory.getAccountNameEmpty(context);
-    }
-
-    const accept = context.request!.getHeader("accept");
-    if (
-      accept !== NO_METADATA_ACCEPT &&
-      accept !== MINIMAL_METADATA_ACCEPT &&
-      accept !== FULL_METADATA_ACCEPT
-    ) {
-      throw StorageErrorFactory.getAtomFormatNotSupported(context);
-    }
-
-    const metadata = `${account}/$metadata#Tables`;
+    const account = this.getAndCheckAccountName(tableContext);
+    const accept = this.getAndCheckAcceptHeader(tableContext);
 
     const tableResult = await this.metadataStore.queryTable(context, account);
 
@@ -143,71 +124,275 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       version: TABLE_API_VERSION,
       date: context.startTime,
       statusCode: 200,
-      xMsContinuationNextTableName: options.nextTableName,
+      // xMsContinuationNextTableName: "", // TODO: Support continuation table query
       value: []
     };
 
-    // TODO: Get protocol in runtime
-    let protocol = "http";
-    let host =
-      DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
-    // TODO: Get host and port from Azurite Server instance
-    if (tableContext.request !== undefined) {
-      host = tableContext.request.getHeader("host") as string;
-      protocol = tableContext.request.getProtocol() as string;
+    const prefix = this.getOdataAnnotationUrlPrefix(tableContext, account);
+    const annotation = getTableOdataAnnotationsForResponse(account, "", prefix);
+
+    if (accept === MINIMAL_METADATA_ACCEPT || accept === FULL_METADATA_ACCEPT) {
+      response.odatametadata = annotation.odatametadata;
     }
 
-    if (tableContext.accept === NO_METADATA_ACCEPT) {
-      response.value = tableResult.map(item => {
-        return { tableName: item.tableName };
-      });
-    }
+    response.value = tableResult.map(item =>
+      getTablePropertiesOdataAnnotationsForResponse(
+        item.table,
+        account,
+        prefix,
+        accept
+      )
+    );
 
-    if (tableContext.accept === MINIMAL_METADATA_ACCEPT) {
-      response.odatametadata = `${protocol}://${host}/${metadata}`;
-      response.value = tableResult.map(item => {
-        return { tableName: item.tableName };
-      });
-    }
-
-    if (tableContext.accept === FULL_METADATA_ACCEPT) {
-      response.odatametadata = `${protocol}://${host}/${metadata}`;
-      response.value = tableResult.map(item => {
-        return {
-          odatatype: item.odatatype,
-          odataid: `${protocol}://${host}/${item.odataid}`,
-          odataeditLink: item.odataeditLink,
-          tableName: item.tableName
-        };
-      });
-    }
-
-    context.response!.setContentType(accept);
+    this.updateResponseAccept(tableContext, accept);
     return response;
   }
 
-  public async delete(
-    tablename: string,
-    options: Models.TableDeleteMethodOptionalParams,
+  // TODO: Filter odata types per accept settings
+  public async insertEntity(
+    _tableName: string,
+    options: Models.TableInsertEntityOptionalParams,
     context: Context
-  ): Promise<Models.TableDeleteResponse> {
+  ): Promise<Models.TableInsertEntityResponse> {
     const tableContext = new TableStorageContext(context);
-    const accountName = tableContext.account;
-    // currently the tableName is not coming through, so we take it from the table context
-    await this.metadataStore.deleteTable(
-      context,
-      tableContext.tableName!,
-      accountName!
-    );
-    const response: Models.TableDeleteResponse = {
+    const account = this.getAndCheckAccountName(tableContext);
+    const table = this.getAndCheckTableName(tableContext);
+    const accept = this.getAndCheckAcceptHeader(tableContext);
+    const prefer = this.getAndCheckPreferHeader(tableContext);
+
+    if (
+      !options.tableEntityProperties ||
+      !options.tableEntityProperties.PartitionKey ||
+      !options.tableEntityProperties.RowKey
+    ) {
+      throw StorageErrorFactory.getPropertiesNeedValue(context);
+    }
+
+    const entity: Entity = {
+      PartitionKey: options.tableEntityProperties.PartitionKey,
+      RowKey: options.tableEntityProperties.RowKey,
+      properties: options.tableEntityProperties,
+      lastModifiedTime: context.startTime!,
+      eTag: newEtag()
+    };
+
+    await this.metadataStore.insertTableEntity(context, table, account, entity);
+
+    const response: Models.TableInsertEntityResponse = {
       clientRequestId: options.requestId,
       requestId: tableContext.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
+      statusCode: 201
+    };
+
+    if (prefer === RETURN_CONTENT || prefer === undefined) {
+      const body = {} as any;
+      const annotation = getEntityOdataAnnotationsForResponse(
+        account,
+        table,
+        this.getOdataAnnotationUrlPrefix(tableContext, account),
+        options.tableEntityProperties.PartitionKey,
+        options.tableEntityProperties.RowKey,
+        accept
+      );
+
+      if (accept === MINIMAL_METADATA_ACCEPT) {
+        body["odata.metadata"] = annotation.odatametadata;
+      }
+
+      if (accept === FULL_METADATA_ACCEPT) {
+        body["odata.metadata"] = annotation.odatametadata;
+        body["odata.type"] = annotation.odatatype;
+        body["body.id"] = annotation.odataid;
+        body["odata.etag"] = entity.eTag;
+        body["odata.editLink"] = annotation.odataeditLink;
+      }
+
+      for (const key of Object.keys(entity.properties)) {
+        body[key] = entity.properties[key];
+      }
+
+      response.body = new BufferStream(Buffer.from(JSON.stringify(body)));
+    }
+
+    response.contentType = "application/json";
+    this.updateResponsePrefer(response, tableContext);
+
+    return response;
+  }
+
+  // TODO: Create data structures to hold entity properties and support serialize, merge, deserialize, filter
+  public async updateEntity(
+    _table: string,
+    _partitionKey: string,
+    _rowKey: string,
+    options: Models.TableUpdateEntityOptionalParams,
+    context: Context
+  ): Promise<Models.TableUpdateEntityResponse> {
+    const tableContext = new TableStorageContext(context);
+    const account = this.getAndCheckAccountName(tableContext);
+    const table = this.getAndCheckTableName(tableContext);
+    const partitionKey = this.getAndCheckPartitionKey(tableContext);
+    const rowKey = this.getAndCheckRowKey(tableContext);
+    const ifMatch = options.ifMatch;
+
+    if (
+      !options.tableEntityProperties ||
+      !options.tableEntityProperties.PartitionKey ||
+      !options.tableEntityProperties.RowKey
+    ) {
+      throw StorageErrorFactory.getPropertiesNeedValue(context);
+    }
+
+    if (
+      options.tableEntityProperties.PartitionKey !== partitionKey ||
+      options.tableEntityProperties.RowKey !== rowKey
+    ) {
+      // TODO: Check error code and message
+      throw StorageErrorFactory.getInvalidOperation(
+        context.contextID!,
+        "Invalid properties."
+      );
+    }
+
+    // Test if etag is available
+    // this is considered an upsert if no etag header, an empty header is an error.
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-or-replace-entity
+    if (ifMatch === "") {
+      throw StorageErrorFactory.getPreconditionFailed(context);
+    }
+
+    const eTag = newEtag();
+
+    // Entity, which is used to update an existing entity
+    const entity: Entity = {
+      PartitionKey: options.tableEntityProperties.PartitionKey,
+      RowKey: options.tableEntityProperties.RowKey,
+      properties: options.tableEntityProperties,
+      lastModifiedTime: context.startTime!,
+      eTag
+    };
+
+    await this.metadataStore.insertOrUpdateTableEntity(
+      context,
+      table,
+      account,
+      entity,
+      ifMatch
+    );
+
+    // Response definition
+    const response: Models.TableUpdateEntityResponse = {
+      clientRequestId: options.requestId,
+      requestId: tableContext.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      eTag,
       statusCode: 204
     };
 
     return response;
+  }
+
+  public async mergeEntity(
+    _table: string,
+    _partitionKey: string,
+    _rowKey: string,
+    options: Models.TableMergeEntityOptionalParams,
+    context: Context
+  ): Promise<Models.TableMergeEntityResponse> {
+    const tableContext = new TableStorageContext(context);
+    const account = this.getAndCheckAccountName(tableContext);
+    const table = this.getAndCheckTableName(tableContext);
+    const partitionKey = this.getAndCheckPartitionKey(tableContext);
+    const rowKey = this.getAndCheckRowKey(tableContext);
+
+    if (
+      !options.tableEntityProperties ||
+      !options.tableEntityProperties.PartitionKey ||
+      !options.tableEntityProperties.RowKey
+    ) {
+      throw StorageErrorFactory.getPropertiesNeedValue(context);
+    }
+
+    if (
+      options.tableEntityProperties.PartitionKey !== partitionKey ||
+      options.tableEntityProperties.RowKey !== rowKey
+    ) {
+      // TODO: Check error code and message
+      throw StorageErrorFactory.getInvalidOperation(
+        context.contextID!,
+        "Invalid properties."
+      );
+    }
+
+    const eTag = newEtag();
+
+    const entity: Entity = {
+      PartitionKey: partitionKey,
+      RowKey: rowKey,
+      properties: options.tableEntityProperties,
+      lastModifiedTime: context.startTime!,
+      eTag
+    };
+
+    await this.metadataStore.insertOrMergeTableEntity(
+      context,
+      table,
+      account,
+      entity,
+      options.ifMatch
+    );
+
+    const response: Models.TableMergeEntityResponse = {
+      clientRequestId: options.requestId,
+      requestId: tableContext.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      statusCode: 204,
+      eTag
+    };
+
+    return response;
+  }
+
+  public async deleteEntity(
+    _table: string,
+    _partitionKey: string,
+    _rowKey: string,
+    ifMatch: string,
+    options: Models.TableDeleteEntityOptionalParams,
+    context: Context
+  ): Promise<Models.TableDeleteEntityResponse> {
+    const tableContext = new TableStorageContext(context);
+    const accountName = tableContext.account;
+    const partitionKey = tableContext.partitionKey!; // Get partitionKey from context
+    const rowKey = tableContext.rowKey!; // Get rowKey from context
+
+    if (!partitionKey || !rowKey) {
+      throw StorageErrorFactory.getPropertiesNeedValue(context);
+    }
+    if (ifMatch === "" || ifMatch === undefined) {
+      throw StorageErrorFactory.getPreconditionFailed(context);
+    }
+    // currently the props are not coming through as args, so we take them from the table context
+    await this.metadataStore.deleteTableEntity(
+      context,
+      tableContext.tableName!,
+      accountName!,
+      partitionKey,
+      rowKey,
+      ifMatch
+    );
+
+    return {
+      statusCode: 204,
+      date: tableContext.startTime,
+      clientRequestId: options.requestId,
+      requestId: tableContext.contextID,
+      version: TABLE_API_VERSION
+    };
   }
 
   public async queryEntities(
@@ -264,217 +449,43 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableQueryEntitiesWithPartitionAndRowKeyOptionalParams,
     context: Context
   ): Promise<Models.TableQueryEntitiesWithPartitionAndRowKeyResponse> {
-    // e.g
-    // const tableContext = new TableStorageContext(context);
-    // const accountName = tableContext.account;
-    // const tableName = tableContext.tableName; // Get tableName from context
-    // const partitionKey = tableContext.partitionKey!; // Get partitionKey from context
-    // const rowKey = tableContext.rowKey!; // Get rowKey from context
-    // return {
-    //   statusCode: 200,
-    //   date: tableContext.startTime,
-    //   clientRequestId: "clientRequestId",
-    //   requestId: "requestId",
-    //   version: "version",
-    //   xMsContinuationNextPartitionKey: partitionKeyFromContext,
-    //   xMsContinuationNextRowKey: rowKeyFromContext,
-    //   odatametadata: "odatametadata",
-    //   value: [
-    //     {
-    //       property1: "property1" + accountName,
-    //       property2: "property2" + tableName,
-    //       property3: "property3"
-    //     },
-    //     {
-    //       property1: "property1"
-    //     }
-    //   ]
-    // };
-    // TODO
-    throw new NotImplementedError();
-  }
-
-  public async updateEntity(
-    _table: string,
-    _partitionKey: string,
-    _rowKey: string,
-    options: Models.TableUpdateEntityOptionalParams,
-    context: Context
-  ): Promise<Models.TableUpdateEntityResponse> {
     const tableContext = new TableStorageContext(context);
-    const accountName = tableContext.account;
-    const tableName = tableContext.tableName!; // Get tableName from context
-    const ifMatch = options.ifMatch;
+    const account = this.getAndCheckAccountName(tableContext);
+    const table = this.getAndCheckTableName(tableContext);
+    const partitionKey = this.getAndCheckPartitionKey(tableContext);
+    const rowKey = this.getAndCheckRowKey(tableContext);
+    const accept = this.getAndCheckAcceptHeader(tableContext);
 
-    // Test if all required parameter exist
-    if (
-      !options.tableEntityProperties ||
-      !options.tableEntityProperties.PartitionKey ||
-      !options.tableEntityProperties.RowKey
-    ) {
-      throw StorageErrorFactory.getPropertiesNeedValue(context);
-    }
-
-    // Test if etag is available
-    // this is considered an upsert if no etag header, an empty header is an error.
-    // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-or-replace-entity
-    if (ifMatch === "") {
-      throw StorageErrorFactory.getPreconditionFailed(context);
-    }
-
-    const metadata = `${accountName}/$metadata#Tables/@Element`;
-    const type = `${accountName}.Tables`;
-    const id = `Tables(${tableName})`;
-    const editLink = `Tables(${tableName})`;
-
-    const updateEtag = newEtag();
-
-    // Entity, which is used to update an existing entity
-    const entity: Entity = {
-      PartitionKey: options.tableEntityProperties.PartitionKey,
-      RowKey: options.tableEntityProperties.RowKey,
-      properties: options.tableEntityProperties,
-      lastModifiedTime: context.startTime!,
-      odatametadata: metadata,
-      odatatype: type,
-      odataid: id,
-      odataeditLink: editLink,
-      eTag: updateEtag
-    };
-
-    if (ifMatch !== undefined) {
-      // Update entity
-      await this.metadataStore.updateTableEntity(
-        context,
-        tableName,
-        accountName!,
-        entity,
-        ifMatch!
-      );
-    } else {
-      // Upsert the entity
-      const exists = await this.metadataStore.queryTableEntitiesWithPartitionAndRowKey(
-        context,
-        tableName,
-        accountName!,
-        options.tableEntityProperties.PartitionKey,
-        options.tableEntityProperties.RowKey
-      );
-
-      if (exists !== null) {
-        // entity exists so we update and force with "*" etag
-        await this.metadataStore.updateTableEntity(
-          context,
-          tableName,
-          accountName!,
-          entity,
-          "*"
-        );
-      } else {
-        await this.metadataStore.insertTableEntity(
-          context,
-          tableName,
-          accountName!,
-          entity
-        );
-      }
-    }
-    // Response definition
-    const response: Models.TableUpdateEntityResponse = {
-      clientRequestId: options.requestId,
-      requestId: tableContext.contextID,
-      version: TABLE_API_VERSION,
-      date: context.startTime,
-      eTag: updateEtag,
-      statusCode: 204
-    };
-
-    return response;
-  }
-
-  public async mergeEntity(
-    _table: string,
-    _partitionKey: string,
-    _rowKey: string,
-    options: Models.TableMergeEntityOptionalParams,
-    context: Context
-  ): Promise<Models.TableMergeEntityResponse> {
-    const tableContext = new TableStorageContext(context);
-    const accountName = tableContext.account;
-    const tableName = tableContext.tableName;
-    const partitionKey = tableContext.partitionKey!;
-    const rowKey = tableContext.rowKey!;
-
-    if (
-      !options.tableEntityProperties ||
-      !options.tableEntityProperties.PartitionKey ||
-      !options.tableEntityProperties.RowKey
-    ) {
-      throw StorageErrorFactory.getPropertiesNeedValue(context);
-    }
-
-    const existingEntity = await this.metadataStore.queryTableEntitiesWithPartitionAndRowKey(
+    const entity = await this.metadataStore.queryTableEntitiesWithPartitionAndRowKey(
       context,
-      tableName!,
-      accountName!,
+      table,
+      account,
       partitionKey,
       rowKey
     );
-    let etagValue = "*";
 
-    if (existingEntity !== null) {
-      const mergeEntity: Entity = {
-        PartitionKey: options.tableEntityProperties.PartitionKey,
-        RowKey: options.tableEntityProperties.RowKey,
-        properties: options.tableEntityProperties,
-        lastModifiedTime: context.startTime!,
-        eTag: etagValue,
-        odatametadata: "", // TODO
-        odatatype: "", // TODO,
-        odataid: "", // TODO,
-        odataeditLink: "" // TODO
-      };
-
-      etagValue = await this.metadataStore.mergeTableEntity(
-        context,
-        tableName!,
-        accountName!,
-        mergeEntity,
-        etagValue,
-        partitionKey,
-        rowKey
-      );
-    } else {
-      const entity: Entity = {
-        PartitionKey: options.tableEntityProperties.PartitionKey,
-        RowKey: options.tableEntityProperties.RowKey,
-        properties: options.tableEntityProperties,
-        lastModifiedTime: context.startTime!,
-        eTag: etagValue,
-        odatametadata: "", // TODO
-        odatatype: "", // TODO,
-        odataid: "", // TODO,
-        odataeditLink: "" // TODO
-      };
-
-      await this.metadataStore.insertTableEntity(
-        context,
-        tableName!,
-        accountName!,
-        entity
-      );
+    if (entity === undefined || entity === null) {
+      throw StorageErrorFactory.getEntityNotExist(context);
     }
 
-    const response: Models.TableMergeEntityResponse = {
-      clientRequestId: options.requestId,
-      requestId: tableContext.contextID,
-      version: TABLE_API_VERSION,
-      date: context.startTime,
-      statusCode: 204,
-      eTag: etagValue
-    };
+    const prefix = this.getOdataAnnotationUrlPrefix(tableContext, account);
+    updateEntityOdataAnnotationsForResponse(
+      entity,
+      account,
+      table,
+      prefix,
+      accept
+    );
 
-    return response;
+    return {
+      statusCode: 200,
+      date: tableContext.startTime,
+      clientRequestId: options.requestId,
+      requestId: context.contextID,
+      version: TABLE_API_VERSION,
+      odatametadata: entity.odatametadata,
+      value: [entity.properties]
+    };
   }
 
   public async mergeEntityWithMerge(
@@ -491,148 +502,6 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       options as any,
       context
     );
-  }
-
-  public async deleteEntity(
-    _table: string,
-    _partitionKey: string,
-    _rowKey: string,
-    ifMatch: string,
-    options: Models.TableDeleteEntityOptionalParams,
-    context: Context
-  ): Promise<Models.TableDeleteEntityResponse> {
-    const tableContext = new TableStorageContext(context);
-    const accountName = tableContext.account;
-    const partitionKey = tableContext.partitionKey!; // Get partitionKey from context
-    const rowKey = tableContext.rowKey!; // Get rowKey from context
-
-    if (!partitionKey || !rowKey) {
-      throw StorageErrorFactory.getPropertiesNeedValue(context);
-    }
-    if (ifMatch === "" || ifMatch === undefined) {
-      throw StorageErrorFactory.getPreconditionFailed(context);
-    }
-    // currently the props are not coming through as args, so we take them from the table context
-    await this.metadataStore.deleteTableEntity(
-      context,
-      tableContext.tableName!,
-      accountName!,
-      partitionKey,
-      rowKey,
-      ifMatch
-    );
-
-    return {
-      statusCode: 204,
-      date: tableContext.startTime,
-      clientRequestId: options.requestId,
-      requestId: tableContext.contextID,
-      version: TABLE_API_VERSION
-    };
-  }
-
-  public async insertEntity(
-    _tableName: string,
-    options: Models.TableInsertEntityOptionalParams,
-    context: Context
-  ): Promise<Models.TableInsertEntityResponse> {
-    const tableContext = new TableStorageContext(context);
-    const accountName = tableContext.account;
-    const tableName = tableContext.tableName!; // Get tableName from context
-
-    if (
-      !options.tableEntityProperties ||
-      !options.tableEntityProperties.PartitionKey ||
-      !options.tableEntityProperties.RowKey
-    ) {
-      throw StorageErrorFactory.getPropertiesNeedValue(context);
-    }
-
-    const metadata = `${accountName}/$metadata#Tables/@Element`;
-    const type = `${accountName}.${tableName}`;
-    const id =
-      `${tableName}` +
-      `(PartitionKey='${options.tableEntityProperties.PartitionKey}',` +
-      `RowKey='${options.tableEntityProperties.RowKey}')`;
-    const editLink = id;
-
-    const entity: Entity = {
-      PartitionKey: options.tableEntityProperties.PartitionKey,
-      RowKey: options.tableEntityProperties.RowKey,
-      properties: options.tableEntityProperties,
-      lastModifiedTime: context.startTime!,
-      eTag: newEtag(),
-      odatametadata: metadata, // Here we store value without protocol and host
-      odatatype: type,
-      odataid: id,
-      odataeditLink: editLink
-    };
-
-    await this.metadataStore.insertTableEntity(
-      context,
-      tableName,
-      accountName!,
-      entity
-    );
-
-    const response: Models.TableInsertEntityResponse = {
-      clientRequestId: options.requestId,
-      requestId: tableContext.contextID,
-      version: TABLE_API_VERSION,
-      date: context.startTime,
-      statusCode: 201
-    };
-
-    const accept = tableContext.accept;
-
-    // Set contentType in response according to accept
-    if (
-      accept !== NO_METADATA_ACCEPT &&
-      accept !== MINIMAL_METADATA_ACCEPT &&
-      accept !== FULL_METADATA_ACCEPT
-    ) {
-      throw StorageErrorFactory.getAtomFormatNotSupported(context);
-    }
-
-    response.contentType = "application/json";
-    const body = {} as any;
-
-    if (context.request!.getHeader("Prefer") === RETURN_NO_CONTENT) {
-      response.statusCode = 204;
-      response.preferenceApplied = RETURN_NO_CONTENT;
-    }
-
-    if (context.request!.getHeader("Prefer") === RETURN_CONTENT) {
-      response.statusCode = 201;
-      response.preferenceApplied = "return-content";
-
-      let protocol = "http";
-      let host =
-        DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
-      if (tableContext.request !== undefined) {
-        host = tableContext.request.getHeader("host") as string;
-        protocol = tableContext.request.getProtocol() as string;
-      }
-
-      if (accept === MINIMAL_METADATA_ACCEPT) {
-        body["odata.metadata"] = `${protocol}://${host}/` + metadata;
-      }
-
-      if (accept === FULL_METADATA_ACCEPT) {
-        body["odata.metadata"] = `${protocol}://${host}/` + metadata;
-        body["odata.type"] = type;
-        body["body.id"] = `${protocol}://${host}/` + id;
-        body["odata.etag"] = entity.eTag;
-        body["odata.editLink"] = editLink;
-      }
-
-      for (const key of Object.keys(entity.properties)) {
-        body[key] = entity.properties[key];
-      }
-
-      response.body = new BufferStream(Buffer.from(JSON.stringify(body)));
-    }
-    return response;
   }
 
   public async getAccessPolicy(
@@ -659,6 +528,24 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     // const tableName = tableContext.tableName; // Get tableName from context
     // TODO
     throw new NotImplementedError();
+  }
+
+  public async batch(
+    body: NodeJS.ReadableStream,
+    multipartContentType: string,
+    contentLength: number,
+    options: Models.TableBatchOptionalParams,
+    context: Context
+  ): Promise<Models.TableBatchResponse> {
+    const tableContext = new TableStorageContext(context);
+    // TODO: Implement batch operation logic here
+    return {
+      requestId: tableContext.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      statusCode: 202,
+      body // Use incoming request body as Batch operation response body as demo
+    };
   }
 
   private getResponseBodyFromQueryResultBasedOnAccept(
@@ -785,5 +672,82 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       protocol = tableContext.request.getProtocol();
     }
     return `${protocol}://${host}`;
+  }
+
+  private getAndCheckAcceptHeader(context: TableStorageContext): string {
+    const accept = context.request!.getHeader(HeaderConstants.ACCEPT);
+    if (
+      accept !== NO_METADATA_ACCEPT &&
+      accept !== MINIMAL_METADATA_ACCEPT &&
+      accept !== FULL_METADATA_ACCEPT
+    ) {
+      throw StorageErrorFactory.getAtomFormatNotSupported(context);
+    }
+    return accept;
+  }
+
+  private getAndCheckPreferHeader(
+    context: TableStorageContext
+  ): string | undefined {
+    const prefer = context.request!.getHeader(HeaderConstants.PREFER);
+    return prefer;
+  }
+
+  private getAndCheckAccountName(context: TableStorageContext): string {
+    const account = context.account;
+    if (account === undefined) {
+      throw StorageErrorFactory.getAccountNameEmpty(context);
+    }
+    return account;
+  }
+
+  private getAndCheckTableName(context: TableStorageContext): string {
+    const table = context.tableName;
+    if (table === undefined) {
+      throw StorageErrorFactory.getTableNameEmpty(context);
+    }
+    return table;
+  }
+
+  private getAndCheckPartitionKey(context: TableStorageContext): string {
+    const partitionKey = context.partitionKey;
+    if (partitionKey === undefined) {
+      throw StorageErrorFactory.getTableNameEmpty(context);
+    }
+    return partitionKey;
+  }
+
+  private getAndCheckRowKey(context: TableStorageContext): string {
+    const rowKey = context.rowKey;
+    if (rowKey === undefined) {
+      throw StorageErrorFactory.getTableNameEmpty(context);
+    }
+    return rowKey;
+  }
+
+  private updateResponseAccept(
+    context: TableStorageContext,
+    accept?: string
+  ): TableStorageContext {
+    if (accept !== undefined) {
+      context.response!.setContentType(accept);
+    }
+    return context;
+  }
+
+  private updateResponsePrefer(
+    response: IPartialResponsePreferProperties,
+    context: TableStorageContext
+  ): IPartialResponsePreferProperties {
+    const prefer = context.request!.getHeader(HeaderConstants.PREFER);
+    if (prefer === RETURN_NO_CONTENT) {
+      response.statusCode = 204;
+      response.preferenceApplied = RETURN_NO_CONTENT;
+    }
+    if (prefer === RETURN_CONTENT || prefer === undefined) {
+      response.statusCode = 201;
+      response.preferenceApplied = RETURN_CONTENT;
+    }
+    return response;
   }
 }

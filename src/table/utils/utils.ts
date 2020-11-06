@@ -1,4 +1,5 @@
 import StorageErrorFactory from "../errors/StorageErrorFactory";
+import { TableResponseProperties } from "../generated/artifacts/models";
 import {
   Entity,
   IOdataAnnotations,
@@ -15,7 +16,7 @@ export function getTableOdataAnnotationsForRequest(
   account: string,
   table: string
 ): IOdataAnnotations {
-  return getOdataAnnotations(account, table, "");
+  return getOdataAnnotations(account, "", table);
 }
 
 export function getTableOdataAnnotationsForResponse(
@@ -23,7 +24,7 @@ export function getTableOdataAnnotationsForResponse(
   table: string,
   urlPrefix: string
 ): IOdataAnnotations {
-  return getOdataAnnotations(account, table, urlPrefix);
+  return getOdataAnnotations(account, urlPrefix, table);
 }
 
 export function updateTableOdataAnnotationsForResponse(
@@ -44,6 +45,31 @@ export function updateTableOdataAnnotationsForResponse(
   ) {
     table.odatametadata = annotation.odatametadata;
   }
+
+  if (accept && accept === FULL_METADATA_ACCEPT) {
+    table.odatatype = annotation.odatatype;
+    table.odataid = annotation.odataid;
+    table.odataeditLink = annotation.odataeditLink;
+  }
+
+  return table;
+}
+
+export function getTablePropertiesOdataAnnotationsForResponse(
+  tableName: string,
+  account: string,
+  urlPrefix: string,
+  accept?: string
+): TableResponseProperties {
+  const table: TableResponseProperties = {
+    tableName
+  };
+
+  const annotation = getTableOdataAnnotationsForResponse(
+    account,
+    tableName,
+    urlPrefix
+  );
 
   if (accept && accept === FULL_METADATA_ACCEPT) {
     table.odatatype = annotation.odatatype;
@@ -89,7 +115,7 @@ export function getEntityOdataAnnotationsForRequest(
   partitionKey?: string,
   rowKey?: string
 ): IOdataAnnotations {
-  return getOdataAnnotations(account, table, "", partitionKey, rowKey);
+  return getOdataAnnotations(account, "", table, partitionKey, rowKey);
 }
 
 export function getEntityOdataAnnotationsForResponse(
@@ -97,16 +123,40 @@ export function getEntityOdataAnnotationsForResponse(
   table: string,
   urlPrefix: string,
   partitionKey?: string,
-  rowKey?: string
-): IOdataAnnotations {
-  return getOdataAnnotations(account, table, urlPrefix, partitionKey, rowKey);
+  rowKey?: string,
+  accept?: string
+): IOdataAnnotationsOptional {
+  const annotation = getOdataAnnotations(
+    account,
+    urlPrefix,
+    table,
+    partitionKey,
+    rowKey
+  );
+  const response: IOdataAnnotationsOptional = {};
+
+  if (
+    accept &&
+    (accept === MINIMAL_METADATA_ACCEPT || accept === FULL_METADATA_ACCEPT)
+  ) {
+    response.odatametadata = annotation.odatametadata;
+  }
+
+  if (accept && accept === FULL_METADATA_ACCEPT) {
+    response.odatatype = annotation.odatatype;
+    response.odataid = annotation.odataid;
+    response.odataeditLink = annotation.odataeditLink;
+  }
+
+  return response;
 }
 
 export function updateEntityOdataAnnotationsForResponse(
   entity: Entity,
   account: string,
   table: string,
-  urlPrefix: string
+  urlPrefix: string,
+  accept?: string
 ): Entity {
   const annotation = getOdataAnnotations(
     account,
@@ -115,17 +165,27 @@ export function updateEntityOdataAnnotationsForResponse(
     entity.PartitionKey,
     entity.RowKey
   );
-  entity.odatametadata = annotation.odatametadata;
-  entity.odatatype = annotation.odatatype;
-  entity.odataid = annotation.odataid;
-  entity.odataeditLink = annotation.odataeditLink;
+
+  if (
+    accept &&
+    (accept === MINIMAL_METADATA_ACCEPT || accept === FULL_METADATA_ACCEPT)
+  ) {
+    entity.odatametadata = annotation.odatametadata;
+  }
+
+  if (accept && accept === FULL_METADATA_ACCEPT) {
+    entity.odatatype = annotation.odatatype;
+    entity.odataid = annotation.odataid;
+    entity.odataeditLink = annotation.odataeditLink;
+  }
+
   return entity;
 }
 
 export function getOdataAnnotations(
   account: string,
-  table: string,
   urlPrefix: string,
+  table?: string,
   partitionKey?: string,
   rowKey?: string
 ): IOdataAnnotations {
@@ -146,7 +206,9 @@ export function getOdataAnnotations(
     };
   } else {
     return {
-      odatametadata: `${urlPrefixEndWithSlash}$metadata#Tables/@Element`,
+      odatametadata: `${urlPrefixEndWithSlash}$metadata#Tables${
+        table ? "/@Element" : ""
+      }`,
       odatatype: `${account}.Tables`,
       odataid: `${urlPrefixEndWithSlash}Tables('${table}')`,
       odataeditLink: `Tables('${table}')`
@@ -165,4 +227,8 @@ export function checkApiVersion(
       HeaderValue: inputApiVersion
     });
   }
+}
+
+export function getTimestampString(date: Date): string {
+  return date.toISOString().replace("Z", "0000Z");
 }
