@@ -25,7 +25,9 @@ export const HeaderConstants = {
   CONTENT_LENGTH: "content-length",
   DATE: "date",
   X_MS_DATE: "x-ms-date",
-  X_MS_VERSION: "x-ms-version"
+  X_MS_VERSION: "x-ms-version",
+  ACCEPT: "accept",
+  PREFER: "Prefer"
 };
 
 export const SUPPORTED_QUERY_OPERATOR = ["eq", "gt", "ge", "lt", "le", "ne"];

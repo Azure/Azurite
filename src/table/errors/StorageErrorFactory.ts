@@ -175,11 +175,11 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getContentTypeNotSupported(context: Context): StorageError {
+  public static getAtomFormatNotSupported(context: Context): StorageError {
     return new StorageError(
-      400,
-      "contentTypeNotSupported",
-      "Payload Type is not supported yet. Only support json.",
+      415,
+      "AtomFormatNotSupported",
+      "Atom format is not supported.",
       context.contextID || defaultID,
       undefined,
       context

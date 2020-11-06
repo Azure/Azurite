@@ -2,15 +2,27 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 
 // Since the host name may change, we don't store host in {@code odatametadata, odatatid}
-interface ITtableAdditionalProperties {
-  tableAcl?: Models.SignedIdentifier[];
-  account: string;
-  tableName: string;
+export interface IOdataAnnotations {
+  odatametadata: string;
+  odatatype: string;
+  odataid: string;
+  odataeditLink: string;
+}
+
+export interface IOdataAnnotationsOptional {
   odatametadata?: string;
   odatatype?: string;
   odataid?: string;
   odataeditLink?: string;
 }
+
+interface ITable {
+  tableAcl?: Models.SignedIdentifier[];
+  account: string;
+  table: string;
+}
+
+export type Table = ITable & IOdataAnnotations;
 
 export interface IEntity {
   PartitionKey: string;
@@ -20,20 +32,16 @@ export interface IEntity {
   properties: {
     [propertyName: string]: string | number;
   };
-  odataMetadata: string;
-  odataType: string;
-  odataId: string;
-  odataEditLink: string;
 }
 
-export type TableModel = ITtableAdditionalProperties;
+export type Entity = IEntity & IOdataAnnotations;
 
 export default interface ITableMetadataStore {
+  createTable(context: Context, table: Table): Promise<void>;
   queryTable(
     context: Context,
     accountName: string
   ): Promise<Models.TableResponseProperties[]>;
-  createTable(context: Context, table: TableModel): Promise<void>;
   deleteTable(
     context: Context,
     tableName: string,
@@ -51,19 +59,19 @@ export default interface ITableMetadataStore {
     accountName: string,
     partitionKey: string,
     rowKey: string
-  ): Promise<IEntity>;
+  ): Promise<Entity>;
   updateTableEntity(
     context: Context,
     tableName: string,
     account: string,
-    entity: IEntity,
+    entity: Entity,
     eatg: string
   ): Promise<void>;
   mergeTableEntity(
     context: Context,
     tableName: string,
     account: string,
-    entity: IEntity,
+    entity: Entity,
     etag: string,
     partitionKey: string,
     rowKey: string
@@ -80,7 +88,7 @@ export default interface ITableMetadataStore {
     context: Context,
     tableName: string,
     account: string,
-    entity: IEntity
+    entity: Entity
   ): Promise<void>;
   getTableAccessPolicy(
     context: Context,

@@ -6,11 +6,12 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import ITableHandler from "../generated/handlers/ITableHandler";
-import { IEntity, TableModel } from "../persistence/ITableMetadataStore";
+import { Entity, Table } from "../persistence/ITableMetadataStore";
 import {
   DEFAULT_TABLE_LISTENING_PORT,
   DEFAULT_TABLE_SERVER_HOST_NAME,
   FULL_METADATA_ACCEPT,
+  HeaderConstants,
   MINIMAL_METADATA_ACCEPT,
   NO_METADATA_ACCEPT,
   QUERY_RESULT_MAX_NUM,
@@ -18,6 +19,10 @@ import {
   RETURN_NO_CONTENT,
   TABLE_API_VERSION
 } from "../utils/constants";
+import {
+  getTableOdataAnnotationsForRequest,
+  updateTableOptionalOdataAnnotationsForResponse
+} from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 export default class TableHandler extends BaseHandler implements ITableHandler {
@@ -28,10 +33,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableBatchOptionalParams,
     context: Context
   ): Promise<Models.TableBatchResponse> {
-    const tableCtx = new TableStorageContext(context);
+    const tableContext = new TableStorageContext(context);
     // TODO: Implement batch operation logic here
     return {
-      requestId: tableCtx.contextID,
+      requestId: tableContext.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
       statusCode: 202,
@@ -44,88 +49,65 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableCreateOptionalParams,
     context: Context
   ): Promise<Models.TableCreateResponse> {
-    const tableCtx = new TableStorageContext(context);
-    const accountName = tableCtx.account;
+    const tableContext = new TableStorageContext(context);
 
-    const accept = context.request!.getHeader("accept");
+    const account = tableContext.account;
+    if (account === undefined) {
+      throw StorageErrorFactory.getAccountNameEmpty(context);
+    }
 
+    const accept = context.request!.getHeader(HeaderConstants.ACCEPT);
     if (
       accept !== NO_METADATA_ACCEPT &&
       accept !== MINIMAL_METADATA_ACCEPT &&
       accept !== FULL_METADATA_ACCEPT
     ) {
-      throw StorageErrorFactory.getContentTypeNotSupported(context);
+      throw StorageErrorFactory.getAtomFormatNotSupported(context);
     }
 
-    if (accountName === undefined) {
-      throw StorageErrorFactory.getAccountNameEmpty(context);
-    }
-
-    // Here table name is in request body, not in url
-    const tableName = tableProperties.tableName;
-    if (tableName === undefined) {
+    // Table name is in request body instead of URL
+    const table = tableProperties.tableName;
+    if (table === undefined) {
       throw StorageErrorFactory.getTableNameEmpty;
     }
 
-    const metadata = `${accountName}/$metadata#Tables/@Element`;
-    const type = `${accountName}.Tables`;
-    const id = `${accountName}/Tables(${tableName})`;
-    const editLink = `Tables(${tableName})`;
-
-    const table: TableModel = {
-      account: accountName,
-      tableName,
-      odatametadata: metadata,
-      odatatype: type,
-      odataid: id,
-      odataeditLink: editLink
+    const tableModel: Table = {
+      account,
+      table,
+      ...getTableOdataAnnotationsForRequest(account, table)
     };
 
-    await this.metadataStore.createTable(context, table);
+    await this.metadataStore.createTable(context, tableModel);
 
     const response: Models.TableCreateResponse = {
       clientRequestId: options.requestId,
-      requestId: tableCtx.contextID,
+      requestId: tableContext.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
-      statusCode: 204
+      statusCode: 201
     };
 
-    if (context.request!.getHeader("Prefer") === RETURN_NO_CONTENT) {
+    const prefer = context.request!.getHeader(HeaderConstants.PREFER);
+    if (prefer === RETURN_NO_CONTENT) {
       response.statusCode = 204;
       response.preferenceApplied = RETURN_NO_CONTENT;
     }
-
-    if (context.request!.getHeader("Prefer") === RETURN_CONTENT) {
+    if (prefer === RETURN_CONTENT) {
       response.statusCode = 201;
-      response.preferenceApplied = "return-content";
+      response.preferenceApplied = RETURN_CONTENT;
     }
 
-    let protocol = "http";
-    let host =
-      DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
-    // TODO: Get host and port from Azurite Server instance
-    if (tableCtx.request !== undefined) {
-      host = tableCtx.request.getHeader("host") as string;
-      protocol = tableCtx.request.getProtocol() as string;
-    }
+    response.tableName = table;
 
-    if (tableCtx.accept === NO_METADATA_ACCEPT) {
-      response.tableName = tableName;
-    }
+    const urlPrefix = this.getOdataAnnotationUrlPrefix(tableContext, account);
 
-    if (tableCtx.accept === MINIMAL_METADATA_ACCEPT) {
-      response.tableName = tableName;
-      response.odatametadata = `${protocol}://${host}/${metadata}`;
-    }
-
-    if (tableCtx.accept === FULL_METADATA_ACCEPT) {
-      response.tableName = tableName;
-      response.odatametadata = `${protocol}://${host}/${metadata}`;
-      response.odatatype = type;
-      response.odataid = `${protocol}://${host}/${id}`;
-      response.odataeditLink = editLink;
-    }
+    updateTableOptionalOdataAnnotationsForResponse(
+      response,
+      account,
+      table,
+      urlPrefix,
+      accept
+    );
 
     context.response!.setContentType(accept);
     return response;
@@ -135,32 +117,29 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableQueryOptionalParams,
     context: Context
   ): Promise<Models.TableQueryResponse2> {
-    const tableCtx = new TableStorageContext(context);
-    const accountName = tableCtx.account;
+    const tableContext = new TableStorageContext(context);
+
+    const account = tableContext.account;
+    if (account === undefined) {
+      throw StorageErrorFactory.getAccountNameEmpty(context);
+    }
 
     const accept = context.request!.getHeader("accept");
-
     if (
       accept !== NO_METADATA_ACCEPT &&
       accept !== MINIMAL_METADATA_ACCEPT &&
       accept !== FULL_METADATA_ACCEPT
     ) {
-      throw StorageErrorFactory.getContentTypeNotSupported(context);
+      throw StorageErrorFactory.getAtomFormatNotSupported(context);
     }
 
-    if (accountName === undefined) {
-      throw StorageErrorFactory.getAccountNameEmpty(context);
-    }
+    const metadata = `${account}/$metadata#Tables`;
 
-    const metadata = `${accountName}/$metadata#Tables`;
-    const tableResult = await this.metadataStore.queryTable(
-      context,
-      accountName
-    );
+    const tableResult = await this.metadataStore.queryTable(context, account);
 
     const response: Models.TableQueryResponse2 = {
       clientRequestId: options.requestId,
-      requestId: tableCtx.contextID,
+      requestId: tableContext.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
       statusCode: 200,
@@ -168,29 +147,30 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       value: []
     };
 
+    // TODO: Get protocol in runtime
     let protocol = "http";
     let host =
       DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
     // TODO: Get host and port from Azurite Server instance
-    if (tableCtx.request !== undefined) {
-      host = tableCtx.request.getHeader("host") as string;
-      protocol = tableCtx.request.getProtocol() as string;
+    if (tableContext.request !== undefined) {
+      host = tableContext.request.getHeader("host") as string;
+      protocol = tableContext.request.getProtocol() as string;
     }
 
-    if (tableCtx.accept === NO_METADATA_ACCEPT) {
+    if (tableContext.accept === NO_METADATA_ACCEPT) {
       response.value = tableResult.map(item => {
         return { tableName: item.tableName };
       });
     }
 
-    if (tableCtx.accept === MINIMAL_METADATA_ACCEPT) {
+    if (tableContext.accept === MINIMAL_METADATA_ACCEPT) {
       response.odatametadata = `${protocol}://${host}/${metadata}`;
       response.value = tableResult.map(item => {
         return { tableName: item.tableName };
       });
     }
 
-    if (tableCtx.accept === FULL_METADATA_ACCEPT) {
+    if (tableContext.accept === FULL_METADATA_ACCEPT) {
       response.odatametadata = `${protocol}://${host}/${metadata}`;
       response.value = tableResult.map(item => {
         return {
@@ -211,17 +191,17 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableDeleteMethodOptionalParams,
     context: Context
   ): Promise<Models.TableDeleteResponse> {
-    const tableCtx = new TableStorageContext(context);
-    const accountName = tableCtx.account;
+    const tableContext = new TableStorageContext(context);
+    const accountName = tableContext.account;
     // currently the tableName is not coming through, so we take it from the table context
     await this.metadataStore.deleteTable(
       context,
-      tableCtx.tableName!,
+      tableContext.tableName!,
       accountName!
     );
     const response: Models.TableDeleteResponse = {
       clientRequestId: options.requestId,
-      requestId: tableCtx.contextID,
+      requestId: tableContext.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
       statusCode: 204
@@ -235,9 +215,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableQueryEntitiesOptionalParams,
     context: Context
   ): Promise<Models.TableQueryEntitiesResponse> {
-    const tableCtx = new TableStorageContext(context);
-    const tableName = tableCtx.tableName;
-    const accountName = tableCtx.account;
+    const tableContext = new TableStorageContext(context);
+    const tableName = tableContext.tableName;
+    const accountName = tableContext.account;
 
     const result = await this.metadataStore.queryTableEntities(
       context,
@@ -248,16 +228,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     const response: Models.TableQueryEntitiesResponse = {
       clientRequestId: options.requestId,
-      requestId: tableCtx.contextID,
+      requestId: tableContext.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
       statusCode: 200
     };
 
     const responseBody = this.getResponseBodyFromQueryResultBasedOnAccept(
-      tableCtx.accept!,
+      tableContext.accept!,
       accountName!,
-      tableCtx,
+      tableContext,
       result
     );
 
@@ -285,14 +265,14 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableQueryEntitiesWithPartitionAndRowKeyResponse> {
     // e.g
-    // const tableCtx = new TableStorageContext(context);
-    // const accountName = tableCtx.account;
-    // const tableName = tableCtx.tableName; // Get tableName from context
-    // const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
-    // const rowKey = tableCtx.rowKey!; // Get rowKey from context
+    // const tableContext = new TableStorageContext(context);
+    // const accountName = tableContext.account;
+    // const tableName = tableContext.tableName; // Get tableName from context
+    // const partitionKey = tableContext.partitionKey!; // Get partitionKey from context
+    // const rowKey = tableContext.rowKey!; // Get rowKey from context
     // return {
     //   statusCode: 200,
-    //   date: tableCtx.startTime,
+    //   date: tableContext.startTime,
     //   clientRequestId: "clientRequestId",
     //   requestId: "requestId",
     //   version: "version",
@@ -321,9 +301,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableUpdateEntityOptionalParams,
     context: Context
   ): Promise<Models.TableUpdateEntityResponse> {
-    const tableCtx = new TableStorageContext(context);
-    const accountName = tableCtx.account;
-    const tableName = tableCtx.tableName!; // Get tableName from context
+    const tableContext = new TableStorageContext(context);
+    const accountName = tableContext.account;
+    const tableName = tableContext.tableName!; // Get tableName from context
     const ifMatch = options.ifMatch;
 
     // Test if all required parameter exist
@@ -350,15 +330,15 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const updateEtag = newEtag();
 
     // Entity, which is used to update an existing entity
-    const entity: IEntity = {
+    const entity: Entity = {
       PartitionKey: options.tableEntityProperties.PartitionKey,
       RowKey: options.tableEntityProperties.RowKey,
       properties: options.tableEntityProperties,
       lastModifiedTime: context.startTime!,
-      odataMetadata: metadata,
-      odataType: type,
-      odataId: id,
-      odataEditLink: editLink
+      odatametadata: metadata,
+      odatatype: type,
+      odataid: id,
+      odataeditLink: editLink,
       eTag: updateEtag
     };
 
@@ -402,7 +382,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     // Response definition
     const response: Models.TableUpdateEntityResponse = {
       clientRequestId: options.requestId,
-      requestId: tableCtx.contextID,
+      requestId: tableContext.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
       eTag: updateEtag,
@@ -419,11 +399,11 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableMergeEntityOptionalParams,
     context: Context
   ): Promise<Models.TableMergeEntityResponse> {
-    const tableCtx = new TableStorageContext(context);
-    const accountName = tableCtx.account;
-    const tableName = tableCtx.tableName;
-    const partitionKey = tableCtx.partitionKey!;
-    const rowKey = tableCtx.rowKey!;
+    const tableContext = new TableStorageContext(context);
+    const accountName = tableContext.account;
+    const tableName = tableContext.tableName;
+    const partitionKey = tableContext.partitionKey!;
+    const rowKey = tableContext.rowKey!;
 
     if (
       !options.tableEntityProperties ||
@@ -443,12 +423,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     let etagValue = "*";
 
     if (existingEntity !== null) {
-      const mergeEntity: IEntity = {
+      const mergeEntity: Entity = {
         PartitionKey: options.tableEntityProperties.PartitionKey,
         RowKey: options.tableEntityProperties.RowKey,
         properties: options.tableEntityProperties,
         lastModifiedTime: context.startTime!,
-        eTag: etagValue
+        eTag: etagValue,
+        odatametadata: "", // TODO
+        odatatype: "", // TODO,
+        odataid: "", // TODO,
+        odataeditLink: "" // TODO
       };
 
       etagValue = await this.metadataStore.mergeTableEntity(
@@ -461,12 +445,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         rowKey
       );
     } else {
-      const entity: IEntity = {
+      const entity: Entity = {
         PartitionKey: options.tableEntityProperties.PartitionKey,
         RowKey: options.tableEntityProperties.RowKey,
         properties: options.tableEntityProperties,
         lastModifiedTime: context.startTime!,
-        eTag: etagValue
+        eTag: etagValue,
+        odatametadata: "", // TODO
+        odatatype: "", // TODO,
+        odataid: "", // TODO,
+        odataeditLink: "" // TODO
       };
 
       await this.metadataStore.insertTableEntity(
@@ -479,7 +467,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     const response: Models.TableMergeEntityResponse = {
       clientRequestId: options.requestId,
-      requestId: tableCtx.contextID,
+      requestId: tableContext.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
       statusCode: 204,
@@ -513,10 +501,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableDeleteEntityOptionalParams,
     context: Context
   ): Promise<Models.TableDeleteEntityResponse> {
-    const tableCtx = new TableStorageContext(context);
-    const accountName = tableCtx.account;
-    const partitionKey = tableCtx.partitionKey!; // Get partitionKey from context
-    const rowKey = tableCtx.rowKey!; // Get rowKey from context
+    const tableContext = new TableStorageContext(context);
+    const accountName = tableContext.account;
+    const partitionKey = tableContext.partitionKey!; // Get partitionKey from context
+    const rowKey = tableContext.rowKey!; // Get rowKey from context
 
     if (!partitionKey || !rowKey) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
@@ -527,7 +515,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     // currently the props are not coming through as args, so we take them from the table context
     await this.metadataStore.deleteTableEntity(
       context,
-      tableCtx.tableName!,
+      tableContext.tableName!,
       accountName!,
       partitionKey,
       rowKey,
@@ -536,9 +524,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     return {
       statusCode: 204,
-      date: tableCtx.startTime,
+      date: tableContext.startTime,
       clientRequestId: options.requestId,
-      requestId: tableCtx.contextID,
+      requestId: tableContext.contextID,
       version: TABLE_API_VERSION
     };
   }
@@ -548,9 +536,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableInsertEntityOptionalParams,
     context: Context
   ): Promise<Models.TableInsertEntityResponse> {
-    const tableCtx = new TableStorageContext(context);
-    const accountName = tableCtx.account;
-    const tableName = tableCtx.tableName!; // Get tableName from context
+    const tableContext = new TableStorageContext(context);
+    const accountName = tableContext.account;
+    const tableName = tableContext.tableName!; // Get tableName from context
 
     if (
       !options.tableEntityProperties ||
@@ -568,16 +556,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       `RowKey='${options.tableEntityProperties.RowKey}')`;
     const editLink = id;
 
-    const entity: IEntity = {
+    const entity: Entity = {
       PartitionKey: options.tableEntityProperties.PartitionKey,
       RowKey: options.tableEntityProperties.RowKey,
       properties: options.tableEntityProperties,
       lastModifiedTime: context.startTime!,
       eTag: newEtag(),
-      odataMetadata: metadata, // Here we store value without protocol and host
-      odataType: type,
-      odataId: id,
-      odataEditLink: editLink
+      odatametadata: metadata, // Here we store value without protocol and host
+      odatatype: type,
+      odataid: id,
+      odataeditLink: editLink
     };
 
     await this.metadataStore.insertTableEntity(
@@ -589,13 +577,13 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     const response: Models.TableInsertEntityResponse = {
       clientRequestId: options.requestId,
-      requestId: tableCtx.contextID,
+      requestId: tableContext.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
       statusCode: 201
     };
 
-    const accept = tableCtx.accept;
+    const accept = tableContext.accept;
 
     // Set contentType in response according to accept
     if (
@@ -603,7 +591,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       accept !== MINIMAL_METADATA_ACCEPT &&
       accept !== FULL_METADATA_ACCEPT
     ) {
-      throw StorageErrorFactory.getContentTypeNotSupported(context);
+      throw StorageErrorFactory.getAtomFormatNotSupported(context);
     }
 
     response.contentType = "application/json";
@@ -621,9 +609,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       let protocol = "http";
       let host =
         DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
-      if (tableCtx.request !== undefined) {
-        host = tableCtx.request.getHeader("host") as string;
-        protocol = tableCtx.request.getProtocol() as string;
+      if (tableContext.request !== undefined) {
+        host = tableContext.request.getHeader("host") as string;
+        protocol = tableContext.request.getProtocol() as string;
       }
 
       if (accept === MINIMAL_METADATA_ACCEPT) {
@@ -653,9 +641,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableGetAccessPolicyResponse> {
     // e.g
-    // const tableCtx = new TableStorageContext(context);
-    // const accountName = tableCtx.account;
-    // const tableName = tableCtx.tableName; // Get tableName from context
+    // const tableContext = new TableStorageContext(context);
+    // const accountName = tableContext.account;
+    // const tableName = tableContext.tableName; // Get tableName from context
     // TODO
     throw new NotImplementedError();
   }
@@ -666,9 +654,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableSetAccessPolicyResponse> {
     // e.g
-    // const tableCtx = new TableStorageContext(context);
-    // const accountName = tableCtx.account;
-    // const tableName = tableCtx.tableName; // Get tableName from context
+    // const tableContext = new TableStorageContext(context);
+    // const accountName = tableContext.account;
+    // const tableName = tableContext.tableName; // Get tableName from context
     // TODO
     throw new NotImplementedError();
   }
@@ -676,16 +664,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   private getResponseBodyFromQueryResultBasedOnAccept(
     accept: string,
     accountName: string,
-    tableCtx: Context,
+    tableContext: Context,
     queryResult: { [propertyName: string]: any }[]
   ) {
     let protocol = "http";
     let host =
       DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
 
-    if (tableCtx.request !== undefined) {
-      host = tableCtx.request.getHeader("host") as string;
-      protocol = tableCtx.request.getProtocol() as string;
+    if (tableContext.request !== undefined) {
+      host = tableContext.request.getHeader("host") as string;
+      protocol = tableContext.request.getProtocol() as string;
     }
 
     const resultWithMetaData: { [propertyName: string]: any }[] = [];
@@ -783,5 +771,19 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       }
     }
     return responseBody;
+  }
+
+  private getOdataAnnotationUrlPrefix(
+    tableContext: TableStorageContext,
+    account: string
+  ): string {
+    // TODO: Get protocol, host and port from Azurite server instance
+    let protocol = "http";
+    let host = `${DEFAULT_TABLE_SERVER_HOST_NAME}:${DEFAULT_TABLE_LISTENING_PORT}/${account}`;
+    if (tableContext.request !== undefined) {
+      host = `${tableContext.request.getHeader("host")}/${account}` || host;
+      protocol = tableContext.request.getProtocol();
+    }
+    return `${protocol}://${host}`;
   }
 }
