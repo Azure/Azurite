@@ -177,12 +177,16 @@ export default class TableSharedKeyAuthenticator implements IAuthenticator {
         }
       }
 
-      queryKeys.sort();
-      for (const key of queryKeys) {
-        canonicalizedResourceString += `\n${key}:${decodeURIComponent(
-          lowercaseQueries[key]
-        )}`;
+      if (queryKeys.includes("comp")) {
+        canonicalizedResourceString += "?comp=" + lowercaseQueries.comp;
       }
+
+      // queryKeys.sort();
+      // for (const key of queryKeys) {
+      //   canonicalizedResourceString += `\n${key}:${decodeURIComponent(
+      //     lowercaseQueries[key]
+      //   )}`;
+      // }
     }
 
     return canonicalizedResourceString;

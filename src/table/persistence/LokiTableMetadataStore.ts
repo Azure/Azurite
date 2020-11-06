@@ -386,56 +386,70 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     queryOptions: Models.QueryOptions
   ): Promise<{ [propertyName: string]: any }[]> {
-    const tableColl = this.db.getCollection(
+    const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
+    const tableDocument = tablesCollection.findOne({
+      account,
+      table
+    });
+    if (!tableDocument) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
+
+    const tableEntityCollection = this.db.getCollection(
       this.getTableCollectionName(account, table)
     );
+    if (!tableEntityCollection) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
 
     // Split parameters for filter
-    const filters = queryOptions.filter!.split("and");
     const filterJson = {};
-    for (let condition of filters) {
-      condition = condition.trim();
-      const length = condition.length;
+    if (queryOptions.filter) {
+      const filters = queryOptions.filter!.split("and");
+      for (let condition of filters) {
+        condition = condition.trim();
+        const length = condition.length;
 
-      // Remove wrapping parentheses
-      if (condition[0] === "(" && condition[length - 1] === ")") {
-        condition = condition.substr(1, length - 2);
-      }
-
-      const comps = condition.split(" ");
-      if (comps.length !== 3) {
-        throw StorageErrorFactory.getQueryConditionInvalid(context);
-      }
-
-      let operator = comps[1];
-      const firstParam = "properties." + comps[0];
-      let secondParam = comps[2];
-
-      if (SUPPORTED_QUERY_OPERATOR.indexOf(operator) >= 0) {
-        const rightExpressionJSON = {};
-
-        // Fix inconsistency with azure table query operator
-        //    and lokijs query operator
-        if (operator === "ge") {
-          operator = "gte";
+        // Remove wrapping parentheses
+        if (condition[0] === "(" && condition[length - 1] === ")") {
+          condition = condition.substr(1, length - 2);
         }
 
-        if (operator === "le") {
-          operator = "lte";
+        const comps = condition.split(" ");
+        if (comps.length !== 3) {
+          throw StorageErrorFactory.getQueryConditionInvalid(context);
         }
 
-        operator = "$" + operator;
-        secondParam = this.convertQueryParameters(secondParam, context);
+        let operator = comps[1];
+        const firstParam = "properties." + comps[0];
+        let secondParam = comps[2];
 
-        (rightExpressionJSON as any)[operator] = secondParam;
-        (filterJson as any)[firstParam] = rightExpressionJSON;
-      } else {
-        throw StorageErrorFactory.getQueryConditionInvalid(context);
+        if (SUPPORTED_QUERY_OPERATOR.indexOf(operator) >= 0) {
+          const rightExpressionJSON = {};
+
+          // Fix inconsistency with azure table query operator
+          //    and lokijs query operator
+          if (operator === "ge") {
+            operator = "gte";
+          }
+
+          if (operator === "le") {
+            operator = "lte";
+          }
+
+          operator = "$" + operator;
+          secondParam = this.convertQueryParameters(secondParam, context);
+
+          (rightExpressionJSON as any)[operator] = secondParam;
+          (filterJson as any)[firstParam] = rightExpressionJSON;
+        } else {
+          throw StorageErrorFactory.getQueryConditionInvalid(context);
+        }
       }
     }
 
     // Query Result
-    const result = tableColl.find(filterJson);
+    const result = tableEntityCollection.find(filterJson);
     if (result.length === 0) {
       return result;
     }

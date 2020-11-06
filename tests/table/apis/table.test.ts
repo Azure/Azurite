@@ -17,7 +17,7 @@ import {
 } from "../../testutils";
 
 // Set true to enable debug log
-configLogger(false);
+configLogger(true);
 
 describe("table APIs test", () => {
   // TODO: Create a server factory as tests utils
@@ -131,7 +131,7 @@ describe("table APIs test", () => {
     done();
   });
 
-  it("queryTable, accept=application/json;odata=fullmetadata @loki", done => {
+  it.only("queryTable, accept=application/json;odata=fullmetadata @loki", done => {
     /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
       thus we workaround this by override request headers to test following 3 OData levels responses.
     - application/json;odata=nometadata
@@ -142,8 +142,12 @@ describe("table APIs test", () => {
       accept: "application/json;odata=fullmetadata"
     };
 
-    tableService.listTablesSegmented(null as any, (error, result, response) => {
-      if (!error) {
+    tableService.listTablesSegmented(
+      null as any,
+      { maxResults: 20 },
+      (error, result, response) => {
+        assert.deepStrictEqual(error, null);
+
         assert.equal(response.statusCode, 200);
         const headers = response.headers!;
         assert.equal(headers["x-ms-version"], TABLE_API_VERSION);
@@ -156,9 +160,10 @@ describe("table APIs test", () => {
         assert.ok(bodies.value[0]["odata.type"]);
         assert.ok(bodies.value[0]["odata.id"]);
         assert.ok(bodies.value[0]["odata.editLink"]);
+
+        done();
       }
-      done();
-    });
+    );
   });
 
   it("queryTable, accept=application/json;odata=minimalmetadata @loki", done => {
