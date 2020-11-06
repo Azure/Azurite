@@ -23,13 +23,12 @@ import {
   getEntityOdataAnnotationsForResponse,
   getTableOdataAnnotationsForResponse,
   getTablePropertiesOdataAnnotationsForResponse,
-  updateTableOptionalOdataAnnotationsForResponse,
-  updateEntityOdataAnnotationsForResponse
+  updateTableOptionalOdataAnnotationsForResponse
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 interface IPartialResponsePreferProperties {
-  statusCode: 201 | 204;
+  statusCode: 200 | 201 | 204;
   preferenceApplied?: string;
 }
 
@@ -468,24 +467,44 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getEntityNotExist(context);
     }
 
-    const prefix = this.getOdataAnnotationUrlPrefix(tableContext, account);
-    updateEntityOdataAnnotationsForResponse(
-      entity,
-      account,
-      table,
-      prefix,
-      accept
-    );
-
-    return {
+    const response: Models.TableQueryEntitiesWithPartitionAndRowKeyResponse = {
       statusCode: 200,
       date: tableContext.startTime,
       clientRequestId: options.requestId,
       requestId: context.contextID,
-      version: TABLE_API_VERSION,
-      odatametadata: entity.odatametadata,
-      value: [entity.properties]
+      version: TABLE_API_VERSION
     };
+
+    const body = {} as any;
+    const annotation = getEntityOdataAnnotationsForResponse(
+      account,
+      table,
+      this.getOdataAnnotationUrlPrefix(tableContext, account),
+      partitionKey,
+      rowKey,
+      accept
+    );
+
+    if (accept === MINIMAL_METADATA_ACCEPT) {
+      body["odata.metadata"] = annotation.odatametadata;
+    }
+
+    if (accept === FULL_METADATA_ACCEPT) {
+      body["odata.metadata"] = annotation.odatametadata;
+      body["odata.type"] = annotation.odatatype;
+      body["body.id"] = annotation.odataid;
+      body["odata.etag"] = entity.eTag;
+      body["odata.editLink"] = annotation.odataeditLink;
+    }
+
+    for (const key of Object.keys(entity.properties)) {
+      body[key] = entity.properties[key];
+    }
+
+    response.body = new BufferStream(Buffer.from(JSON.stringify(body)));
+
+    context.response!.setContentType("application/json");
+    return response;
   }
 
   public async mergeEntityWithMerge(

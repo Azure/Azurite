@@ -619,8 +619,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         },
         lastModifiedTime: context.startTime!
       };
-      tableEntityCollection.remove(doc);
-      tableEntityCollection.insert(mergedDEntity);
+      tableEntityCollection.update(mergedDEntity);
       return mergedDEntity;
     } else {
       throw StorageErrorFactory.getPreconditionFailed(context);

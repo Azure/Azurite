@@ -152,10 +152,10 @@ describe("table APIs test", () => {
           bodies["odata.metadata"],
           `${protocol}://${host}:${port}/${accountName}/$metadata#Tables`
         );
-        assert.ok(bodies.TableResponseProperties[0].TableName);
-        assert.ok(bodies.TableResponseProperties[0]["odata.type"]);
-        assert.ok(bodies.TableResponseProperties[0]["odata.id"]);
-        assert.ok(bodies.TableResponseProperties[0]["odata.editLink"]);
+        assert.ok(bodies.value[0].TableName);
+        assert.ok(bodies.value[0]["odata.type"]);
+        assert.ok(bodies.value[0]["odata.id"]);
+        assert.ok(bodies.value[0]["odata.editLink"]);
       }
       done();
     });
@@ -182,7 +182,7 @@ describe("table APIs test", () => {
           bodies["odata.metadata"],
           `${protocol}://${host}:${port}/${accountName}/$metadata#Tables`
         );
-        assert.ok(bodies.TableResponseProperties[0].TableName);
+        assert.ok(bodies.value[0].TableName);
       }
       done();
     });
@@ -205,7 +205,7 @@ describe("table APIs test", () => {
         const headers = response.headers!;
         assert.equal(headers["x-ms-version"], TABLE_API_VERSION);
         const bodies = response.body! as any;
-        assert.ok(bodies.TableResponseProperties[0].TableName);
+        assert.ok(bodies.value[0].TableName);
       }
       done();
     });
