@@ -1520,7 +1520,12 @@ export type TableDeleteResponse = TableDeleteHeaders & {
 /**
  * Contains response data for the queryEntities operation.
  */
-export type TableQueryEntitiesResponse = TableEntityQueryResponse & TableQueryEntitiesHeaders & {
+export type TableQueryEntitiesResponse = TableQueryEntitiesHeaders & {
+  /**
+   * The response body as a node.js Readable stream.
+   */
+  body?: NodeJS.ReadableStream;
+} & {
   /**
    * The response status code.
    */

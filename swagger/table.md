@@ -105,6 +105,19 @@ directive:
       };
 ```
 
+### Update Query Entities response to file
+
+```yaml
+directive:
+  - from: swagger-document
+    where: $["paths"]["/{table}()"].get.responses["200"]
+    transform: >
+      $.schema = {
+        "type": "object",
+        "format": "file"
+      };
+```
+
 ### TODO: Move Table Batch swagger change here
 
 ### TODO: Move query entity with partition key and row key change here

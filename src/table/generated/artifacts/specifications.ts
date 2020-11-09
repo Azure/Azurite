@@ -173,7 +173,12 @@ const tableQueryEntitiesOperationSpec: msRest.OperationSpec = {
   ],
   responses: {
     200: {
-      bodyMapper: Mappers.TableEntityQueryResponse,
+      bodyMapper: {
+        serializedName: "Stream",
+        type: {
+          name: "Stream"
+        }
+      },
       headersMapper: Mappers.TableQueryEntitiesHeaders
     },
     default: {
