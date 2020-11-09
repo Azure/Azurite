@@ -18,7 +18,8 @@ export interface IEdmType {
   toJsonPropertyTypePair(
     name: string,
     annotationLevel: AnnotationLevel,
-    isSystemProperty: boolean
+    isSystemProperty: boolean,
+    force?: boolean
   ): [string, string] | undefined;
   toJsonPropertyTypeString(
     name: string,

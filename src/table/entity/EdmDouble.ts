@@ -9,7 +9,11 @@ export class EdmDouble implements IEdmType {
     }
 
     if (typeof value === "string") {
-      // TODO: Support convert from string
+      // TODO: Support convert from string. parseFloat doesn't strictly checks non number chars
+      const val = Number.parseFloat(value);
+      if (!Number.isNaN(val)) {
+        return val;
+      }
     }
 
     if (typeof value !== "number") {
@@ -42,16 +46,18 @@ export class EdmDouble implements IEdmType {
   public toJsonPropertyTypePair(
     name: string,
     annotationLevel: AnnotationLevel,
-    isSystemProperty: boolean
+    isSystemProperty: boolean,
+    force: boolean = false
   ): [string, string] | undefined {
     if (isSystemProperty) {
       throw RangeError(`EdmDouble type shouldn't be a system property.`);
     }
 
     if (
-      typeof this.typedValue === "string" &&
-      (annotationLevel === AnnotationLevel.MINIMAL ||
-        annotationLevel === AnnotationLevel.FULL)
+      force ||
+      (typeof this.typedValue === "string" &&
+        (annotationLevel === AnnotationLevel.MINIMAL ||
+          annotationLevel === AnnotationLevel.FULL))
     ) {
       return [`${name}${ODATA_TYPE}`, "Edm.Double"];
     }

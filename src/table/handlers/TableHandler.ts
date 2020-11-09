@@ -460,10 +460,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       statusCode: 200
     };
 
-    // TODO: Optimize duplicated code
-    response.value = [];
+    const entities: string[] = [];
     result.forEach(element => {
-      const body = {} as any;
+      const entity = {} as any;
       const annotation = getEntityOdataAnnotationsForResponse(
         account,
         table,
@@ -473,49 +472,44 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         accept
       );
 
-      // TODO: Skip for duplicated calls
       if (
         accept === MINIMAL_METADATA_ACCEPT ||
         accept === FULL_METADATA_ACCEPT
       ) {
-        response.odatametadata = annotation.odatametadata;
-        body["odata.etag"] = element.eTag;
+        entity["odata.etag"] = element.eTag;
       }
 
       if (accept === FULL_METADATA_ACCEPT) {
-        body["odata.type"] = annotation.odatatype;
-        body["odata.id"] = annotation.odataid;
-        body["odata.editLink"] = annotation.odataeditLink;
+        entity["odata.type"] = annotation.odatatype;
+        entity["odata.id"] = annotation.odataid;
+        entity["odata.editLink"] = annotation.odataeditLink;
       }
 
-      // const nomarlizedEntity = new NormalizedEntity(element);
-
-      for (const key of Object.keys(element.properties)) {
-        body[key] = element.properties[key];
-      }
-
-      response.value!.push(body);
+      const nomarlizedEntity = new NormalizedEntity(element);
+      entities.push(nomarlizedEntity.toResponseString(accept, entity));
     });
 
-    // const queryResults = this.getResponseBodyFromQueryResultBasedOnAccept(
-    //   accept,
-    //   account,
-    //   tableContext,
-    //   result
-    // );
+    const odatametadata =
+      getEntityOdataAnnotationsForResponse(
+        account,
+        table,
+        this.getOdataAnnotationUrlPrefix(tableContext, account),
+        "",
+        "element.RowKey",
+        accept
+      ).odatametadata || "";
 
-    // // Set query result
-    // response.value = queryResults.value;
-    // if (queryResults["odata.metadata"] !== undefined) {
-    //   response.odatametadata = queryResults["odata.metadata"];
-    // }
+    const body = `{"odata.metadata":${JSON.stringify(
+      odatametadata
+    )},"value":[${entities.join(",")}]}`;
+    response.body = new BufferStream(Buffer.from(body));
 
-    // // Set x-ms-continuation-NextPartitionKey and x-ms-continuation-NextRowKey
-    // if (result.length > QUERY_RESULT_MAX_NUM) {
-    //   response.xMsContinuationNextPartitionKey =
-    //     result[QUERY_RESULT_MAX_NUM].PartitionKey;
-    //   response.xMsContinuationNextRowKey = result[QUERY_RESULT_MAX_NUM].RowKey;
-    // }
+    this.logger.debug(
+      `QueryEntities response body: ${body}`,
+      context.contextID
+    );
+
+    context.response!.setContentType("application/json");
 
     return response;
   }

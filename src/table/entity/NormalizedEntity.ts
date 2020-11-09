@@ -34,7 +34,11 @@ export class NormalizedEntity {
     this.propertiesMap.RowKey = rowKeyProperty;
 
     // Sync Timestamp from entity last modified time
-    entity.properties.Timestamp = getTimestampString(entity.lastModifiedTime);
+    entity.properties.Timestamp = getTimestampString(
+      typeof entity.lastModifiedTime === "string"
+        ? new Date(entity.lastModifiedTime)
+        : entity.lastModifiedTime
+    );
     entity.properties["Timestamp@odata.type"] = "Edm.DateTime";
 
     for (const key in entity.properties) {

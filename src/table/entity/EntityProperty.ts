@@ -96,7 +96,8 @@ export class EntityProperty {
     return this.edmType.toJsonPropertyTypePair(
       this.name,
       annotationLevel,
-      this.isSystemProperty
+      this.isSystemProperty,
+      true
     );
   }
 
@@ -128,10 +129,6 @@ export class EntityProperty {
 
   public normalize(entity: Entity): void {
     // Set back to Entity
-    if (this.isSystemProperty && this.name !== "Timestamp") {
-      return;
-    }
-
     const [key, value] = this.toJsonPropertyValuePair();
     entity.properties[key] = value;
 
