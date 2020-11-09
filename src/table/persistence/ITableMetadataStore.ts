@@ -30,7 +30,7 @@ export interface IEntity {
   eTag: string;
   lastModifiedTime: Date;
   properties: {
-    [propertyName: string]: string | number;
+    [propertyName: string]: string | number | boolean | null;
   };
 }
 

@@ -26,11 +26,28 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getInvalidInput(
+    context: Context,
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    if (additionalMessages === undefined) {
+      additionalMessages = {};
+    }
+    return new StorageError(
+      400,
+      "InvalidInput",
+      "An error occurred while processing this request.",
+      context.contextID || defaultID,
+      additionalMessages,
+      context
+    );
+  }
+
   public static getTableAlreadyExists(context: Context): StorageError {
     return new StorageError(
       409,
       "TableAlreadyExists",
-      "The specified table already exists.",
+      "The table specified already exists.",
       context.contextID || defaultID,
       undefined,
       context
@@ -124,8 +141,8 @@ export default class StorageErrorFactory {
   public static getTableNotExist(context: Context): StorageError {
     return new StorageError(
       404,
-      "TableNotExist",
-      "The table you want to manipulate doesn't exist.",
+      "TableNotFound",
+      "The table specified does not exist.",
       context.contextID || defaultID,
       undefined,
       context
@@ -157,7 +174,7 @@ export default class StorageErrorFactory {
     return new StorageError(
       409,
       "EntityAlreadyExist",
-      "The entity to insert already exists in the table",
+      "The specified entity already exists.",
       context.contextID || defaultID,
       undefined,
       context

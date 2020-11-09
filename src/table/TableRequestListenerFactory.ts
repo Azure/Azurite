@@ -22,6 +22,7 @@ import { DEFAULT_TABLE_CONTEXT_PATH } from "./utils/constants";
 
 import morgan = require("morgan");
 import TableSharedKeyAuthenticator from "./authentication/TableSharedKeyAuthenticator";
+import TableSharedKeyLiteAuthenticator from "./authentication/TableSharedKeyLiteAuthenticator";
 /**
  * Default RequestListenerFactory based on express framework.
  *
@@ -114,6 +115,7 @@ export default class TableRequestListenerFactory
       logger
     );
     const authenticators: IAuthenticator[] = [
+      new TableSharedKeyLiteAuthenticator(this.accountDataStore, logger),
       new TableSharedKeyAuthenticator(this.accountDataStore, logger),
       new AccountSASAuthenticator(this.accountDataStore, logger),
       new TableSASAuthenticator(

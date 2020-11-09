@@ -41,7 +41,14 @@ export default class StorageError extends MiddlewareError {
     context?: Context
   ) {
     let isJSON = false;
-    const accept = context ? context.request!.getHeader("accept") : undefined;
+    let accept =
+      context && context.request
+        ? context.request.getHeader("accept")
+        : undefined;
+    accept =
+      context && context.request
+        ? context.request.getQuery("$format") || accept
+        : accept;
     if (
       accept === NO_METADATA_ACCEPT ||
       accept === MINIMAL_METADATA_ACCEPT ||

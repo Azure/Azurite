@@ -1,6 +1,7 @@
 import BufferStream from "../../common/utils/BufferStream";
 import { newEtag } from "../../common/utils/utils";
 import TableStorageContext from "../context/TableStorageContext";
+import { NormalizedEntity } from "../entity/NormalizedEntity";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
@@ -16,7 +17,8 @@ import {
   NO_METADATA_ACCEPT,
   RETURN_CONTENT,
   RETURN_NO_CONTENT,
-  TABLE_API_VERSION
+  TABLE_API_VERSION,
+  XML_METADATA
 } from "../utils/constants";
 import {
   getEntityOdataAnnotationsForResponse,
@@ -44,7 +46,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableCreateResponse> {
     const tableContext = new TableStorageContext(context);
-    const accept = this.getAndCheckAcceptHeader(tableContext);
+    const accept = this.getAndCheckPayloadFormat(tableContext);
     const account = this.getAndCheckAccountName(tableContext);
     const table = tableProperties.tableName; // Table name is in request body instead of URL
     if (table === undefined) {
@@ -89,7 +91,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
-    const accept = this.getAndCheckAcceptHeader(tableContext);
+    const accept = this.getAndCheckPayloadFormat(tableContext);
 
     await this.metadataStore.deleteTable(context, table, account!);
 
@@ -112,7 +114,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   ): Promise<Models.TableQueryResponse2> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
-    const accept = this.getAndCheckAcceptHeader(tableContext);
+    const accept = this.getAndCheckPayloadFormat(tableContext);
 
     const tableResult = await this.metadataStore.queryTable(context, account);
 
@@ -155,7 +157,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
-    const accept = this.getAndCheckAcceptHeader(tableContext);
+    const accept = this.getAndCheckPayloadFormat(tableContext);
     const prefer = this.getAndCheckPreferHeader(tableContext);
 
     if (
@@ -173,6 +175,15 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       lastModifiedTime: context.startTime!,
       eTag: newEtag()
     };
+
+    let nomarlizedEntity;
+    try {
+      nomarlizedEntity = new NormalizedEntity(entity);
+      nomarlizedEntity.normalize();
+    } catch (e) {
+      this.logger.error(JSON.stringify(e));
+      throw StorageErrorFactory.getInvalidInput(context);
+    }
 
     await this.metadataStore.insertTableEntity(context, table, account, entity);
 
@@ -209,11 +220,14 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         body["odata.editLink"] = annotation.odataeditLink;
       }
 
-      for (const key of Object.keys(entity.properties)) {
-        body[key] = entity.properties[key];
-      }
+      // for (const key of Object.keys(entity.properties)) {
+      //   body[key] = entity.properties[key];
+      // }
 
-      response.body = new BufferStream(Buffer.from(JSON.stringify(body)));
+      // response.body = new BufferStream(Buffer.from(JSON.stringify(body)));
+      response.body = new BufferStream(
+        Buffer.from(nomarlizedEntity.toResponseString(accept, body))
+      );
     }
 
     response.contentType = "application/json";
@@ -273,6 +287,15 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       lastModifiedTime: context.startTime!,
       eTag
     };
+
+    let nomarlizedEntity;
+    try {
+      nomarlizedEntity = new NormalizedEntity(entity);
+      nomarlizedEntity.normalize();
+    } catch (e) {
+      this.logger.error(JSON.stringify(e));
+      throw StorageErrorFactory.getInvalidInput(context);
+    }
 
     await this.metadataStore.insertOrUpdateTableEntity(
       context,
@@ -336,6 +359,15 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       lastModifiedTime: context.startTime!,
       eTag
     };
+
+    let nomarlizedEntity;
+    try {
+      nomarlizedEntity = new NormalizedEntity(entity);
+      nomarlizedEntity.normalize();
+    } catch (e) {
+      this.logger.error(JSON.stringify(e));
+      throw StorageErrorFactory.getInvalidInput(context);
+    }
 
     await this.metadataStore.insertOrMergeTableEntity(
       context,
@@ -403,7 +435,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const table = this.getAndCheckTableName(tableContext);
     const account = this.getAndCheckAccountName(tableContext);
-    const accept = this.getAndCheckAcceptHeader(tableContext);
+    const accept = this.getAndCheckPayloadFormat(tableContext);
 
     const [
       result,
@@ -456,6 +488,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         body["odata.editLink"] = annotation.odataeditLink;
       }
 
+      // const nomarlizedEntity = new NormalizedEntity(element);
+
       for (const key of Object.keys(element.properties)) {
         body[key] = element.properties[key];
       }
@@ -498,7 +532,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const table = this.getAndCheckTableName(tableContext);
     const partitionKey = this.getAndCheckPartitionKey(tableContext);
     const rowKey = this.getAndCheckRowKey(tableContext);
-    const accept = this.getAndCheckAcceptHeader(tableContext);
+    const accept = this.getAndCheckPayloadFormat(tableContext);
 
     const entity = await this.metadataStore.queryTableEntitiesWithPartitionAndRowKey(
       context,
@@ -543,11 +577,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       body["odata.editLink"] = annotation.odataeditLink;
     }
 
-    for (const key of Object.keys(entity.properties)) {
-      body[key] = entity.properties[key];
-    }
-
-    response.body = new BufferStream(Buffer.from(JSON.stringify(body)));
+    const nomarlizedEntity = new NormalizedEntity(entity);
+    response.body = new BufferStream(
+      Buffer.from(nomarlizedEntity.toResponseString(accept, body))
+    );
 
     context.response!.setContentType("application/json");
     return response;
@@ -739,16 +772,37 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     return `${protocol}://${host}`;
   }
 
-  private getAndCheckAcceptHeader(context: TableStorageContext): string {
-    const accept = context.request!.getHeader(HeaderConstants.ACCEPT);
+  private getAndCheckPayloadFormat(
+    context: TableStorageContext,
+    formatParameter?: string
+  ): string {
+    let format = context.request!.getHeader(HeaderConstants.ACCEPT);
+
+    if (formatParameter === undefined) {
+      formatParameter = context.request!.getQuery("$format");
+    }
+
+    if (format === XML_METADATA) {
+      format = XML_METADATA;
+    }
+
+    if (typeof formatParameter === "string") {
+      format = formatParameter;
+    }
+
+    if (format === "application/json") {
+      format = MINIMAL_METADATA_ACCEPT;
+    }
+
     if (
-      accept !== NO_METADATA_ACCEPT &&
-      accept !== MINIMAL_METADATA_ACCEPT &&
-      accept !== FULL_METADATA_ACCEPT
+      format !== NO_METADATA_ACCEPT &&
+      format !== MINIMAL_METADATA_ACCEPT &&
+      format !== FULL_METADATA_ACCEPT
     ) {
       throw StorageErrorFactory.getAtomFormatNotSupported(context);
     }
-    return accept;
+
+    return format;
   }
 
   private getAndCheckPreferHeader(
