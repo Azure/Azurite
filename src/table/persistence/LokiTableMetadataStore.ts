@@ -438,7 +438,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       segmentFilter.PartitionKey = { $gte: nextPartitionKey };
     }
     if (nextRowKey) {
-      segmentFilter.RowKey = { $gte: nextPartitionKey };
+      segmentFilter.RowKey = { $gte: nextRowKey };
     }
 
     const maxResults = queryOptions.top || QUERY_RESULT_MAX_NUM;
@@ -614,7 +614,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           }
 
           const value = entity.properties[key];
-          mergedDEntity.properties.key = value;
+          mergedDEntity.properties[key] = value;
 
           if (entity.properties[`${key}${ODATA_TYPE}`] !== undefined) {
             mergedDEntity.properties[`${key}${ODATA_TYPE}`] =
@@ -651,8 +651,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     const filter = query
       // ignoring these query keywords since we compare simply on a string-level
-      .replace(/\bdatetime\b/g, "")
-      .replace(/\binary\b/g, "")
+      // .replace(/\bbinary\b/g, "")
       .replace(/\bguid\b/g, "")
       // Escape a single backtick to prevent interpreting the start of a template literal.
       .replace(/`/g, "\\`")
@@ -681,12 +680,21 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     // Operands are attributes of the object used within the where clause of LokiJS, thus we need to prepend each
     // attribute with an object identifier 'item.attribs'.
     let transformedQuery = "return ( ";
-    for (const token of filter.split(" ")) {
+    let isOp = false;
+    let previousIsOp = false;
+    const tokens = filter.split(" ");
+    let counter = -1;
+    for (let token of tokens) {
+      counter++;
       if (token === "") {
         continue;
       }
+
+      previousIsOp = isOp;
+      isOp = ["===", ">", ">=", "<", "<=", "!=="].includes(token);
+
       if (
-        !token.match(/\d+/) &&
+        !token.match(/\b\d+/) &&
         token !== "true" &&
         token !== "false" &&
         !token.includes("`") &&
@@ -707,13 +715,45 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         if (token === "PartitionKey" || token === "RowKey") {
           transformedQuery += `item.${token} `;
         } else {
-          transformedQuery += `item.properties.${token} `;
+          // Datetime compare
+          if (
+            counter + 2 <= tokens.length - 1 &&
+            tokens[counter + 2].startsWith("datetime")
+          ) {
+            transformedQuery += `new Date(item.properties.${token}).getTime() `;
+          } else {
+            transformedQuery += `item.properties.${token} `;
+          }
         }
       } else {
+        // Remove "L" from long int
+        // 2039283L ==> 2039283
+        const matchLongInt = token.match(/\b[0-9]*L\b/g);
+        if (
+          previousIsOp &&
+          matchLongInt !== null &&
+          matchLongInt.length === 1
+        ) {
+          token = token.replace(/L\b/g, "");
+        } else if (previousIsOp && token.startsWith("datetime")) {
+          token = token.replace(/\bdatetime\b/g, "");
+          token = `new Date(${token}).getTime()`;
+        } else if (
+          previousIsOp &&
+          (token.startsWith("X") || token.startsWith("binary"))
+        ) {
+          throw Error("Binary filter is not supported yet.");
+        }
+
         transformedQuery += `${token} `;
       }
     }
     transformedQuery += ")";
+
+    // tslint:disable-next-line: no-console
+    console.log(query);
+    // tslint:disable-next-line: no-console
+    console.log(transformedQuery);
 
     return new Function("item", transformedQuery) as any;
   }

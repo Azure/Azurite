@@ -239,8 +239,8 @@ export default class StorageErrorFactory {
   public static getQueryConditionInvalid(context: Context): StorageError {
     return new StorageError(
       400,
-      "queryConditionsIncorrect",
-      "The query condition specified in the request was invalid.",
+      "InvalidInput",
+      "The query condition specified in the request is invalid.",
       context.contextID || defaultID,
       undefined,
       context
