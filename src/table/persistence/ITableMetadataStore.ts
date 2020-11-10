@@ -2,15 +2,27 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 
 // Since the host name may change, we don't store host in {@code odatametadata, odatatid}
-interface ITtableAdditionalProperties {
-  tableAcl?: Models.SignedIdentifier[];
-  account: string;
-  tableName: string;
+export interface IOdataAnnotations {
+  odatametadata: string;
+  odatatype: string;
+  odataid: string;
+  odataeditLink: string;
+}
+
+export interface IOdataAnnotationsOptional {
   odatametadata?: string;
   odatatype?: string;
   odataid?: string;
   odataeditLink?: string;
 }
+
+interface ITable {
+  tableAcl?: Models.SignedIdentifier[];
+  account: string;
+  table: string;
+}
+
+export type Table = ITable & IOdataAnnotationsOptional;
 
 export interface IEntity {
   PartitionKey: string;
@@ -18,70 +30,64 @@ export interface IEntity {
   eTag: string;
   lastModifiedTime: Date;
   properties: {
-    [propertyName: string]: string | number;
+    [propertyName: string]: string | number | boolean | null;
   };
-  odataMetadata: string;
-  odataType: string;
-  odataId: string;
-  odataEditLink: string;
 }
 
-export type TableModel = ITtableAdditionalProperties;
+export type Entity = IEntity & IOdataAnnotationsOptional;
 
 export default interface ITableMetadataStore {
+  createTable(context: Context, tableModel: Table): Promise<void>;
   queryTable(
     context: Context,
-    accountName: string
-  ): Promise<Models.TableResponseProperties[]>;
-  createTable(context: Context, table: TableModel): Promise<void>;
-  deleteTable(
-    context: Context,
-    tableName: string,
-    accountName: string
-  ): Promise<void>;
+    account: string,
+    top?: number,
+    nextTable?: string
+  ): Promise<[Table[], string | undefined]>;
+  deleteTable(context: Context, table: string, account: string): Promise<void>;
   queryTableEntities(
     context: Context,
-    accountName: string,
+    account: string,
     table: string,
-    queryOptions: Models.QueryOptions
-  ): Promise<{ [propertyName: string]: any }[]>;
+    queryOptions: Models.QueryOptions,
+    nextPartitionKey?: string,
+    nextRowKey?: string
+  ): Promise<[Entity[], string | undefined, string | undefined]>;
   queryTableEntitiesWithPartitionAndRowKey(
     context: Context,
     table: string,
-    accountName: string,
+    account: string,
     partitionKey: string,
     rowKey: string
-  ): Promise<IEntity>;
-  updateTableEntity(
+  ): Promise<Entity | undefined>;
+  insertOrUpdateTableEntity(
     context: Context,
-    tableName: string,
+    table: string,
     account: string,
-    entity: IEntity,
-    eatg: string
-  ): Promise<void>;
-  mergeTableEntity(
+    entity: Entity,
+    ifMatch?: string
+  ): Promise<Entity>;
+  insertOrMergeTableEntity(
     context: Context,
-    tableName: string,
+    table: string,
     account: string,
-    entity: IEntity,
-    etag: string,
-    partitionKey: string,
-    rowKey: string
-  ): Promise<string>;
+    entity: Entity,
+    ifMatch?: string
+  ): Promise<Entity>;
   deleteTableEntity(
     context: Context,
-    tableName: string,
-    accountName: string,
+    table: string,
+    account: string,
     partitionKey: string,
     rowKey: string,
     etag: string
   ): Promise<void>;
   insertTableEntity(
     context: Context,
-    tableName: string,
+    table: string,
     account: string,
-    entity: IEntity
-  ): Promise<void>;
+    entity: Entity
+  ): Promise<Entity>;
   getTableAccessPolicy(
     context: Context,
     table: string,

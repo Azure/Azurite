@@ -26,11 +26,28 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getInvalidInput(
+    context: Context,
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    if (additionalMessages === undefined) {
+      additionalMessages = {};
+    }
+    return new StorageError(
+      400,
+      "InvalidInput",
+      "An error occurred while processing this request.",
+      context.contextID || defaultID,
+      additionalMessages,
+      context
+    );
+  }
+
   public static getTableAlreadyExists(context: Context): StorageError {
     return new StorageError(
       409,
       "TableAlreadyExists",
-      "The specified table already exists.",
+      "The table specified already exists.",
       context.contextID || defaultID,
       undefined,
       context
@@ -123,9 +140,9 @@ export default class StorageErrorFactory {
 
   public static getTableNotExist(context: Context): StorageError {
     return new StorageError(
-      400,
-      "AccountNameEmpty",
-      "The table you want to manipulate doesn't exist",
+      404,
+      "TableNotFound",
+      "The table specified does not exist.",
       context.contextID || defaultID,
       undefined,
       context
@@ -146,7 +163,7 @@ export default class StorageErrorFactory {
     return new StorageError(
       409,
       "EntityDoesNotExist",
-      "The entity to update doesn't exist in the table",
+      "The entity to update doesn't exist in the table.",
       context.contextID || defaultID,
       undefined,
       context
@@ -157,7 +174,7 @@ export default class StorageErrorFactory {
     return new StorageError(
       409,
       "EntityAlreadyExist",
-      "The entity to insert already exists in the table",
+      "The specified entity already exists.",
       context.contextID || defaultID,
       undefined,
       context
@@ -175,11 +192,11 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getContentTypeNotSupported(context: Context): StorageError {
+  public static getAtomFormatNotSupported(context: Context): StorageError {
     return new StorageError(
-      400,
-      "contentTypeNotSupported",
-      "Payload Type is not supported yet. Only support json.",
+      415,
+      "AtomFormatNotSupported",
+      "Atom format is not supported.",
       context.contextID || defaultID,
       undefined,
       context
@@ -222,8 +239,8 @@ export default class StorageErrorFactory {
   public static getQueryConditionInvalid(context: Context): StorageError {
     return new StorageError(
       400,
-      "queryConditionsIncorrect",
-      "The query condition specified in the request was invalid.",
+      "InvalidInput",
+      "The query condition specified in the request is invalid.",
       context.contextID || defaultID,
       undefined,
       context

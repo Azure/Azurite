@@ -8,7 +8,7 @@ import IRequest from "../generated/IRequest";
 import { HeaderConstants } from "../utils/constants";
 import IAuthenticator from "./IAuthenticator";
 
-export default class TableSharedKeyAuthenticator implements IAuthenticator {
+export default class TableSharedKeyLiteAuthenticator implements IAuthenticator {
   public constructor(
     private readonly dataStore: IAccountDataStore,
     private readonly logger: ILogger
@@ -22,25 +22,28 @@ export default class TableSharedKeyAuthenticator implements IAuthenticator {
     const account = tableContext.account!;
 
     this.logger.info(
-      `TableSharedKeyAuthenticator:validate() Start validation against account shared key authentication.`,
+      `TableSharedKeyLiteAuthenticator:validate() Start validation against account shared key authentication.`,
       tableContext.contextID
     );
 
     const authHeaderValue = req.getHeader(HeaderConstants.AUTHORIZATION);
-    if (authHeaderValue === undefined) {
+    if (
+      authHeaderValue === undefined ||
+      !authHeaderValue.startsWith("SharedKeyLite")
+    ) {
       this.logger.info(
         // tslint:disable-next-line:max-line-length
-        `TableSharedKeyAuthenticator:validate() Request doesn't include valid authentication header. Skip shared key authentication.`,
+        `TableSharedKeyLiteAuthenticator:validate() Request doesn't include valid authentication header. Skip SharedKeyLite authentication.`,
         tableContext.contextID
       );
-      return undefined;
+      return;
     }
 
     // TODO: Make following async
     const accountProperties = this.dataStore.getAccount(account);
     if (accountProperties === undefined) {
       this.logger.error(
-        `TableSharedKeyAuthenticator:validate() Invalid storage account ${account}.`,
+        `TableSharedKeyLiteAuthenticator:validate() Invalid storage account ${account}.`,
         tableContext.contextID
       );
       throw StorageErrorFactory.getInvalidOperation(
@@ -51,9 +54,6 @@ export default class TableSharedKeyAuthenticator implements IAuthenticator {
 
     const stringToSign: string =
       [
-        req.getMethod().toUpperCase(),
-        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
-        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
         this.getHeaderValueToSign(req, HeaderConstants.DATE) ||
           this.getHeaderValueToSign(req, HeaderConstants.X_MS_DATE)
       ].join("\n") +
@@ -65,21 +65,21 @@ export default class TableSharedKeyAuthenticator implements IAuthenticator {
       );
 
     this.logger.info(
-      `TableSharedKeyAuthenticator:validate() [STRING TO SIGN]:${JSON.stringify(
+      `TableSharedKeyLiteAuthenticator:validate() [STRING TO SIGN]:${JSON.stringify(
         stringToSign
       )}`,
       tableContext.contextID
     );
 
     const signature1 = computeHMACSHA256(stringToSign, accountProperties.key1);
-    const authValue1 = `SharedKey ${account}:${signature1}`;
+    const authValue1 = `SharedKeyLite ${account}:${signature1}`;
     this.logger.info(
-      `TableSharedKeyAuthenticator:validate() Calculated authentication header based on key1: ${authValue1}`,
+      `TableSharedKeyLiteAuthenticator:validate() Calculated authentication header based on key1: ${authValue1}`,
       tableContext.contextID
     );
     if (authHeaderValue === authValue1) {
       this.logger.info(
-        `TableSharedKeyAuthenticator:validate() Signature 1 matched.`,
+        `TableSharedKeyLiteAuthenticator:validate() Signature 1 matched.`,
         tableContext.contextID
       );
       return true;
@@ -90,14 +90,14 @@ export default class TableSharedKeyAuthenticator implements IAuthenticator {
         stringToSign,
         accountProperties.key2
       );
-      const authValue2 = `SharedKey ${account}:${signature2}`;
+      const authValue2 = `SharedKeyLite ${account}:${signature2}`;
       this.logger.info(
-        `TableSharedKeyAuthenticator:validate() Calculated authentication header based on key2: ${authValue2}`,
+        `TableSharedKeyLiteAuthenticator:validate() Calculated authentication header based on key2: ${authValue2}`,
         tableContext.contextID
       );
       if (authHeaderValue === authValue2) {
         this.logger.info(
-          `TableSharedKeyAuthenticator:validate() Signature 2 matched.`,
+          `TableSharedKeyLiteAuthenticator:validate() Signature 2 matched.`,
           tableContext.contextID
         );
         return true;
@@ -109,7 +109,7 @@ export default class TableSharedKeyAuthenticator implements IAuthenticator {
     // this.logger.info(`[KEY]: ${request.headers.get(HeaderConstants.AUTHORIZATION)}`);
 
     this.logger.info(
-      `TableSharedKeyAuthenticator:validate() Validation failed.`,
+      `TableSharedKeyLiteAuthenticator:validate() Validation failed.`,
       tableContext.contextID
     );
     return false;
