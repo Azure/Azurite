@@ -751,9 +751,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     transformedQuery += ")";
 
     // tslint:disable-next-line: no-console
-    console.log(query);
+    // console.log(query);
     // tslint:disable-next-line: no-console
-    console.log(transformedQuery);
+    // console.log(transformedQuery);
 
     return new Function("item", transformedQuery) as any;
   }
