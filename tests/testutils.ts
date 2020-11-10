@@ -32,25 +32,25 @@ export function padStart(
   targetLength: number,
   padString: string = " "
 ): string {
-  if (String.prototype.padStart) {
-    return currentString.padStart(targetLength, padString);
-  }
+  // if (String.prototype.padStart) {
+  return currentString.padStart(targetLength, padString);
+  // }
 
-  padString = padString || " ";
-  if (currentString.length > targetLength) {
-    return currentString;
-  } else {
-    targetLength = targetLength - currentString.length;
-    if (targetLength > padString.length) {
-      padString += padString.repeat(targetLength / padString.length);
-    }
-    return padString.slice(0, targetLength) + currentString;
-  }
+  // padString = padString || " ";
+  // if (currentString.length > targetLength) {
+  //   return currentString;
+  // } else {
+  //   targetLength = targetLength - currentString.length;
+  //   if (targetLength > padString.length) {
+  //     padString += padString.repeat(targetLength / padString.length);
+  //   }
+  //   return padString.slice(0, targetLength) + currentString;
+  // }
 }
 
 export async function rmRecursive(path: string): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    rimraf(path, err => {
+    rimraf(path, (err) => {
       if (err) {
         resolve();
         // TODO: Handle delete errors
@@ -95,7 +95,7 @@ export async function bodyToString(
 }
 
 export async function sleep(time: number): Promise<void> {
-  return new Promise<void>(resolve => {
+  return new Promise<void>((resolve) => {
     setTimeout(resolve, time);
   });
 }

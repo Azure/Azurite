@@ -68,7 +68,8 @@ export class NormalizedEntity {
   // Convert to HTTP response payload string
   public toResponseString(
     annotationLevel: string,
-    injections: { [property: string]: string }
+    injections: { [property: string]: string },
+    includes?: Set<string>
   ): string {
     const pairs: string[] = [];
     for (const key in injections) {
@@ -79,9 +80,11 @@ export class NormalizedEntity {
     }
 
     for (const pair of this.properties) {
-      const str = pair.toResponseString(annotationLevel);
-      if (str) {
-        pairs.push(str);
+      if (!includes || includes.has(pair.name)) {
+        const str = pair.toResponseString(annotationLevel);
+        if (str) {
+          pairs.push(str);
+        }
       }
     }
 

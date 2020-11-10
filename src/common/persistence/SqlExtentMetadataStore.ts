@@ -106,13 +106,12 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
    */
   public async updateExtent(extent: IExtentModel): Promise<void> {
     return ExtentsModel.upsert({
-      id: extent.id,
       ...extent
     })
       .then(() => {
         return;
       })
-      .catch(err => {
+      .catch((err) => {
         // console.log(`SqlExtentMetadataStore.updateExtent() upsert err:${err}`);
         throw err;
       });
@@ -181,13 +180,13 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
       limit: maxResults,
       where: query as any,
       order: [["id", "ASC"]]
-    }).then(res => {
+    }).then((res) => {
       if (res.length < maxResults!) {
-        return [res.map(val => modelConvert(val)), undefined];
+        return [res.map((val) => modelConvert(val)), undefined];
       } else {
         const tailItem = res[res.length - 1];
         const nextMarker = this.getModelValue<number>(tailItem, "id", true);
-        return [res.map(val => modelConvert(val)), nextMarker];
+        return [res.map((val) => modelConvert(val)), nextMarker];
       }
     });
   }
@@ -221,7 +220,7 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
       where: {
         id: extentId
       }
-    }).then(res => {
+    }).then((res) => {
       if (res === null || res === undefined) {
         throw Error(
           `SqlExtentMetadataStore:getExtentLocationId() Error. Extent not exists.`

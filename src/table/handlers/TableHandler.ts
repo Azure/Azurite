@@ -135,7 +135,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       response.odatametadata = annotation.odatametadata;
     }
 
-    response.value = tableResult.map(item =>
+    response.value = tableResult.map((item) =>
       getTablePropertiesOdataAnnotationsForResponse(
         item.table,
         account,
@@ -457,8 +457,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       statusCode: 200
     };
 
+    let selectSet: Set<string> | undefined;
+    const selectArray = options.queryOptions?.select
+      ?.split(",")
+      .map((item) => item.trim());
+    if (selectArray) {
+      selectSet = new Set(selectArray);
+    }
+
     const entities: string[] = [];
-    result.forEach(element => {
+    result.forEach((element) => {
       const entity = {} as any;
       const annotation = getEntityOdataAnnotationsForResponse(
         account,
@@ -483,7 +491,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       }
 
       const nomarlizedEntity = new NormalizedEntity(element);
-      entities.push(nomarlizedEntity.toResponseString(accept, entity));
+      entities.push(
+        nomarlizedEntity.toResponseString(accept, entity, selectSet)
+      );
     });
 
     const odatametadata =
@@ -568,9 +578,17 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       body["odata.editLink"] = annotation.odataeditLink;
     }
 
+    let selectSet: Set<string> | undefined;
+    const selectArray = options.queryOptions?.select
+      ?.split(",")
+      .map((item) => item.trim());
+    if (selectArray) {
+      selectSet = new Set(selectArray);
+    }
+
     const nomarlizedEntity = new NormalizedEntity(entity);
     response.body = new BufferStream(
-      Buffer.from(nomarlizedEntity.toResponseString(accept, body))
+      Buffer.from(nomarlizedEntity.toResponseString(accept, body, selectSet))
     );
 
     context.response!.setContentType("application/json");
