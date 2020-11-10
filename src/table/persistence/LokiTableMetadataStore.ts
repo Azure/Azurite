@@ -7,6 +7,7 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { Entity, Table } from "../persistence/ITableMetadataStore";
 import {
+  ODATA_TYPE,
   QUERY_RESULT_MAX_NUM
   // SUPPORTED_QUERY_OPERATOR
 } from "../utils/constants";
@@ -669,14 +670,30 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         ...doc,
         ...entity,
         properties: {
-          // TODO: Validate incoming odata types
-          ...doc.properties,
-          ...entity.properties,
-          Timestamp: getTimestampString(entity.lastModifiedTime),
-          "Timestamp@odata.type": "Edm.DateTime"
-        },
-        lastModifiedTime: context.startTime!
+          ...doc.properties
+          // ...entity.properties
+        }
       };
+
+      // Merge inner properties
+      for (const key in entity.properties) {
+        if (Object.prototype.hasOwnProperty.call(entity.properties, key)) {
+          if (key.endsWith(ODATA_TYPE)) {
+            continue;
+          }
+
+          const value = entity.properties[key];
+          mergedDEntity.properties.key = value;
+
+          if (entity.properties[`${key}${ODATA_TYPE}`] !== undefined) {
+            mergedDEntity.properties[`${key}${ODATA_TYPE}`] =
+              entity.properties[`${key}${ODATA_TYPE}`];
+          } else {
+            delete mergedDEntity.properties[`${key}${ODATA_TYPE}`];
+          }
+        }
+      }
+
       tableEntityCollection.update(mergedDEntity);
       return mergedDEntity;
     } else {
