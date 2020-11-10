@@ -38,7 +38,12 @@ export type Entity = IEntity & IOdataAnnotationsOptional;
 
 export default interface ITableMetadataStore {
   createTable(context: Context, tableModel: Table): Promise<void>;
-  queryTable(context: Context, account: string): Promise<Table[]>;
+  queryTable(
+    context: Context,
+    account: string,
+    top?: number,
+    nextTable?: string
+  ): Promise<[Table[], string | undefined]>;
   deleteTable(context: Context, table: string, account: string): Promise<void>;
   queryTableEntities(
     context: Context,

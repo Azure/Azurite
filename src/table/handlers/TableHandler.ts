@@ -116,7 +116,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const account = this.getAndCheckAccountName(tableContext);
     const accept = this.getAndCheckPayloadFormat(tableContext);
 
-    const tableResult = await this.metadataStore.queryTable(context, account);
+    const [tableResult, nextTableName] = await this.metadataStore.queryTable(
+      context,
+      account,
+      options.queryOptions?.top,
+      options.nextTableName
+    );
 
     const response: Models.TableQueryResponse2 = {
       clientRequestId: options.requestId,
@@ -124,7 +129,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       version: TABLE_API_VERSION,
       date: context.startTime,
       statusCode: 200,
-      // xMsContinuationNextTableName: "", // TODO: Support continuation table query
+      xMsContinuationNextTableName: nextTableName,
       value: []
     };
 

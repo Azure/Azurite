@@ -142,15 +142,37 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
   }
 
-  public async queryTable(context: Context, account: string): Promise<Table[]> {
+  public async queryTable(
+    context: Context,
+    account: string,
+    top: number = 1000,
+    nextTable?: string
+  ): Promise<[Table[], string | undefined]> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
-    const docList = coll.find({ account });
+
+    const filter = { account } as any;
+    if (nextTable) {
+      filter.table = { $gte: nextTable };
+    }
+
+    const docList = coll
+      .chain()
+      .find(filter)
+      .simplesort("table")
+      .limit(top + 1)
+      .data();
+
+    let nextTableName;
+    if (docList.length > top) {
+      const tail = docList.pop();
+      nextTableName = tail.table;
+    }
 
     if (!docList) {
       throw StorageErrorFactory.getEntityNotFound(context);
     }
 
-    return docList;
+    return [docList, nextTableName];
   }
 
   public async insertTableEntity(
@@ -425,7 +447,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       .chain()
       .find(segmentFilter)
       .where(queryWhere)
-      .limit(maxResults + 1)
       .sort((obj1, obj2) => {
         if (obj1.PartitionKey > obj2.PartitionKey) {
           return 1;
@@ -441,16 +462,16 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           return -1;
         }
       })
+      .limit(maxResults + 1)
       .data();
 
     let nextPartitionKeyResponse;
     let nextRowKeyResponse;
 
     if (result.length > maxResults) {
-      const tail = result[result.length - 1];
+      const tail = result.pop();
       nextPartitionKeyResponse = tail.PartitionKey;
       nextRowKeyResponse = tail.RowKey;
-      result.pop();
     }
 
     return [result, nextPartitionKeyResponse, nextRowKeyResponse];
