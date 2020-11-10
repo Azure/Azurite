@@ -7,8 +7,8 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { Entity, Table } from "../persistence/ITableMetadataStore";
 import {
-  QUERY_RESULT_MAX_NUM,
-  SUPPORTED_QUERY_OPERATOR
+  QUERY_RESULT_MAX_NUM
+  // SUPPORTED_QUERY_OPERATOR
 } from "../utils/constants";
 import { getTimestampString } from "../utils/utils";
 import ITableMetadataStore from "./ITableMetadataStore";
@@ -408,49 +408,56 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
 
     // Split parameters for filter
-    const queryFilter = {};
-    if (queryOptions.filter) {
-      const filters = queryOptions.filter!.split("and");
-      for (let condition of filters) {
-        condition = condition.trim();
-        const length = condition.length;
+    // const queryFilter = {};
+    // if (queryOptions.filter) {
+    //   const filters = queryOptions.filter!.split("and");
+    //   for (let condition of filters) {
+    //     condition = condition.trim();
+    //     const length = condition.length;
 
-        // Remove wrapping parentheses
-        if (condition[0] === "(" && condition[length - 1] === ")") {
-          condition = condition.substr(1, length - 2);
-        }
+    //     // Remove wrapping parentheses
+    //     if (condition[0] === "(" && condition[length - 1] === ")") {
+    //       condition = condition.substr(1, length - 2);
+    //     }
 
-        const comps = condition.split(" ");
-        if (comps.length !== 3) {
-          throw StorageErrorFactory.getQueryConditionInvalid(context);
-        }
+    //     const comps = condition.split(" ");
+    //     // if (comps.length !== 3) {
+    //     //   throw StorageErrorFactory.getQueryConditionInvalid(context);
+    //     // }
 
-        let operator = comps[1];
-        const firstParam = "properties." + comps[0];
-        let secondParam = comps[2];
+    //     let operator = comps[1];
+    //     const firstParam = "properties." + comps[0];
+    //     let secondParam = comps[2];
 
-        if (SUPPORTED_QUERY_OPERATOR.indexOf(operator) >= 0) {
-          const rightExpressionJSON = {};
+    //     if (SUPPORTED_QUERY_OPERATOR.indexOf(operator) >= 0) {
+    //       const rightExpressionJSON = {};
 
-          // Fix inconsistency with azure table query operator
-          //    and lokijs query operator
-          if (operator === "ge") {
-            operator = "gte";
-          }
+    //       // Fix inconsistency with azure table query operator
+    //       //    and lokijs query operator
+    //       if (operator === "ge") {
+    //         operator = "gte";
+    //       }
 
-          if (operator === "le") {
-            operator = "lte";
-          }
+    //       if (operator === "le") {
+    //         operator = "lte";
+    //       }
 
-          operator = "$" + operator;
-          secondParam = this.convertQueryParameters(secondParam, context);
+    //       operator = "$" + operator;
+    //       secondParam = this.convertQueryParameters(secondParam, context);
 
-          (rightExpressionJSON as any)[operator] = secondParam;
-          (queryFilter as any)[firstParam] = rightExpressionJSON;
-        } else {
-          throw StorageErrorFactory.getQueryConditionInvalid(context);
-        }
-      }
+    //       (rightExpressionJSON as any)[operator] = secondParam;
+    //       (queryFilter as any)[firstParam] = rightExpressionJSON;
+    //     } else {
+    //       throw StorageErrorFactory.getQueryConditionInvalid(context);
+    //     }
+    //   }
+    // }
+
+    let queryWhere;
+    try {
+      queryWhere = this.generateQueryEntityWhereFunction(queryOptions.filter);
+    } catch (e) {
+      throw StorageErrorFactory.getQueryConditionInvalid(context);
     }
 
     const segmentFilter = {} as any;
@@ -466,7 +473,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     const result = tableEntityCollection
       .chain()
       .find(segmentFilter)
-      .find(queryFilter)
+      .where(queryWhere)
       .limit(maxResults + 1)
       .sort((obj1, obj2) => {
         if (obj1.PartitionKey > obj2.PartitionKey) {
@@ -681,36 +688,36 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     return `${account}$${table}`;
   }
 
-  private convertQueryParameters(param: string, context: Context): any {
-    const length = param.length;
-    if (param[0] === "'" && param[length - 1] === "'") {
-      // Param is of type string
-      // Convert middle '' to '
-      const idx = param.indexOf("''");
-      if (idx > 0) {
-        param = param.substr(0, idx) + param.substr(idx + 1, length);
-      }
-      return param.substr(1, param.length - 2);
-    }
+  // private convertQueryParameters(param: string, context: Context): any {
+  //   const length = param.length;
+  //   if (param[0] === "'" && param[length - 1] === "'") {
+  //     // Param is of type string
+  //     // Convert middle '' to '
+  //     const idx = param.indexOf("''");
+  //     if (idx > 0) {
+  //       param = param.substr(0, idx) + param.substr(idx + 1, length);
+  //     }
+  //     return param.substr(1, param.length - 2);
+  //   }
 
-    if (param === "true" || param === "false") {
-      // Param is of type boolean
-      return param === "true";
-    }
+  //   if (param === "true" || param === "false") {
+  //     // Param is of type boolean
+  //     return param === "true";
+  //   }
 
-    const floatVal = parseFloat(param);
-    const intVal = parseInt(param, 10);
+  //   const floatVal = parseFloat(param);
+  //   const intVal = parseInt(param, 10);
 
-    if (!isNaN(floatVal)) {
-      if (intVal === floatVal) {
-        return intVal;
-      } else {
-        return floatVal;
-      }
-    } else {
-      throw StorageErrorFactory.getQueryConditionInvalid(context);
-    }
-  }
+  //   if (!isNaN(floatVal)) {
+  //     if (intVal === floatVal) {
+  //       return intVal;
+  //     } else {
+  //       return floatVal;
+  //     }
+  //   } else {
+  //     throw StorageErrorFactory.getQueryConditionInvalid(context);
+  //   }
+  // }
 
   // private getODataType(val: any) {
   //   switch (typeof val) {
@@ -733,4 +740,86 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   //     return "Edm.DateTime";
   //   }
   // }
+
+  /**
+   * Azurite V2 query entities implementation as temporary workaround before new refactored implementation of querying.
+   * TODO: Handle query types
+   *
+   * @param query Query Enties $query string.
+   */
+  private generateQueryEntityWhereFunction(
+    query: string | undefined
+  ): (entity: Entity) => boolean {
+    if (query === undefined) {
+      return () => true;
+    }
+
+    const filter = query
+      // ignoring these query keywords since we compare simply on a string-level
+      .replace(/\bdatetime\b/g, "")
+      .replace(/\binary\b/g, "")
+      .replace(/\bguid\b/g, "")
+      // Escape a single backtick to prevent interpreting the start of a template literal.
+      .replace(/`/g, "\\`")
+      // A simple quotation mark is escaped with another one (i.e. '').
+      // Since we will evaluate this string we replace simple quotation marks
+      // indictaing strings with template quotation marks
+      .replace(/''/g, "@ESCAPEDQUOTE@")
+      .replace(/'/g, "`")
+      .replace(/@ESCAPEDQUOTE@/g, `'`)
+      // Mapping 'TableName' to 'name' which is used internally as attribute name
+      .replace(/\bTableName\b/g, "name")
+      // Mapping operators
+      .replace(/\beq\b/g, "===")
+      .replace(/\bgt\b/g, ">")
+      .replace(/\bge\b/g, ">=")
+      .replace(/\blt\b/g, "<")
+      .replace(/\ble\b/g, "<=")
+      .replace(/\bne\b/g, "!==")
+      .replace(/\band\b/g, "&&")
+      .replace(/\bor\b/g, "||")
+      .replace(/\(/g, " ( ")
+      .replace(/\)/g, " ) ")
+      .replace(/\bnot\b/g, " ! ");
+
+    // If a token is neither a number, nor a boolean, nor a string enclosed with quotation marks it is an operand.
+    // Operands are attributes of the object used within the where clause of LokiJS, thus we need to prepend each
+    // attribute with an object identifier 'item.attribs'.
+    let transformedQuery = "return ( ";
+    for (const token of filter.split(" ")) {
+      if (token === "") {
+        continue;
+      }
+      if (
+        !token.match(/\d+/) &&
+        token !== "true" &&
+        token !== "false" &&
+        !token.includes("`") &&
+        ![
+          "===",
+          ">",
+          ">=",
+          "<",
+          "<=",
+          "!==",
+          "&&",
+          "||",
+          "!",
+          "(",
+          ")"
+        ].includes(token)
+      ) {
+        if (token === "PartitionKey" || token === "RowKey") {
+          transformedQuery += `item.${token} `;
+        } else {
+          transformedQuery += `item.properties.${token} `;
+        }
+      } else {
+        transformedQuery += `${token} `;
+      }
+    }
+    transformedQuery += ")";
+
+    return new Function("item", transformedQuery) as any;
+  }
 }
