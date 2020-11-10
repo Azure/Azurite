@@ -14,12 +14,12 @@ export class EdmNull implements IEdmType {
 
   public toJsonPropertyValuePair(
     name: string
-  ): [string, string | number | boolean] {
-    throw new Error("Method not implemented.");
+  ): [string, string | number | boolean] | undefined {
+    return;
   }
 
-  public toJsonPropertyValueString(name: string): string {
-    throw new Error("Method not implemented.");
+  public toJsonPropertyValueString(name: string): string | undefined {
+    return;
   }
 
   public toJsonPropertyTypePair(

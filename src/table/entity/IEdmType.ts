@@ -13,8 +13,10 @@ export enum EdmType {
 }
 
 export interface IEdmType {
-  toJsonPropertyValuePair(name: string): [string, string | number | boolean];
-  toJsonPropertyValueString(name: string): string;
+  toJsonPropertyValuePair(
+    name: string
+  ): [string, string | number | boolean] | undefined;
+  toJsonPropertyValueString(name: string): string | undefined;
   toJsonPropertyTypePair(
     name: string,
     annotationLevel: AnnotationLevel,
@@ -26,8 +28,6 @@ export interface IEdmType {
     annotationLevel: AnnotationLevel,
     isSystemProperty: boolean
   ): string | undefined;
-  // validate(value: any): void;
-  // toJSONValue(): string;
 }
 
 export function getEdmType(type: string): EdmType {

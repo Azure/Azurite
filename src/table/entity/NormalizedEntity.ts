@@ -79,7 +79,10 @@ export class NormalizedEntity {
     }
 
     for (const pair of this.properties) {
-      pairs.push(pair.toResponseString(annotationLevel));
+      const str = pair.toResponseString(annotationLevel);
+      if (str) {
+        pairs.push(str);
+      }
     }
 
     return `{${pairs.join(",")}}`;

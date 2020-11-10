@@ -181,7 +181,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       nomarlizedEntity = new NormalizedEntity(entity);
       nomarlizedEntity.normalize();
     } catch (e) {
-      this.logger.error(JSON.stringify(e));
+      this.logger.error(
+        `TableHandler:insertEntity() ${e.name} ${JSON.stringify(e.stack)}`,
+        context.contextID
+      );
       throw StorageErrorFactory.getInvalidInput(context);
     }
 
@@ -251,11 +254,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const rowKey = this.getAndCheckRowKey(tableContext);
     const ifMatch = options.ifMatch;
 
-    if (
-      !options.tableEntityProperties ||
-      !options.tableEntityProperties.PartitionKey ||
-      !options.tableEntityProperties.RowKey
-    ) {
+    if (!options.tableEntityProperties) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
     }
 
@@ -263,10 +262,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       options.tableEntityProperties.PartitionKey !== partitionKey ||
       options.tableEntityProperties.RowKey !== rowKey
     ) {
-      // TODO: Check error code and message
-      throw StorageErrorFactory.getInvalidOperation(
-        context.contextID!,
-        "Invalid properties."
+      this.logger.warn(
+        `TableHandler:updateEntity() Incoming PartitionKey:${partitionKey} RowKey:${rowKey} in URL parameters don't align with entity body PartitionKey:${options.tableEntityProperties.PartitionKey} RowKey:${options.tableEntityProperties.RowKey}.`
       );
     }
 
@@ -281,8 +278,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     // Entity, which is used to update an existing entity
     const entity: Entity = {
-      PartitionKey: options.tableEntityProperties.PartitionKey,
-      RowKey: options.tableEntityProperties.RowKey,
+      PartitionKey: partitionKey,
+      RowKey: rowKey,
       properties: options.tableEntityProperties,
       lastModifiedTime: context.startTime!,
       eTag
@@ -293,7 +290,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       nomarlizedEntity = new NormalizedEntity(entity);
       nomarlizedEntity.normalize();
     } catch (e) {
-      this.logger.error(JSON.stringify(e));
+      this.logger.error(
+        `TableHandler:updateEntity() ${e.name} ${JSON.stringify(e.stack)}`,
+        context.contextID
+      );
       throw StorageErrorFactory.getInvalidInput(context);
     }
 
@@ -331,11 +331,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const partitionKey = this.getAndCheckPartitionKey(tableContext);
     const rowKey = this.getAndCheckRowKey(tableContext);
 
-    if (
-      !options.tableEntityProperties ||
-      !options.tableEntityProperties.PartitionKey ||
-      !options.tableEntityProperties.RowKey
-    ) {
+    if (!options.tableEntityProperties) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
     }
 
@@ -343,10 +339,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       options.tableEntityProperties.PartitionKey !== partitionKey ||
       options.tableEntityProperties.RowKey !== rowKey
     ) {
-      // TODO: Check error code and message
-      throw StorageErrorFactory.getInvalidOperation(
-        context.contextID!,
-        "Invalid properties."
+      this.logger.warn(
+        `TableHandler:mergeEntity() Incoming PartitionKey:${partitionKey} RowKey:${rowKey} in URL parameters don't align with entity body PartitionKey:${options.tableEntityProperties.PartitionKey} RowKey:${options.tableEntityProperties.RowKey}.`
       );
     }
 
@@ -365,7 +359,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       nomarlizedEntity = new NormalizedEntity(entity);
       nomarlizedEntity.normalize();
     } catch (e) {
-      this.logger.error(JSON.stringify(e));
+      this.logger.error(
+        `TableHandler:mergeEntity() ${e.name} ${JSON.stringify(e.stack)}`,
+        context.contextID
+      );
       throw StorageErrorFactory.getInvalidInput(context);
     }
 

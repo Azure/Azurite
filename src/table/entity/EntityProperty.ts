@@ -35,58 +35,20 @@ export function toAnnotationLevel(level: string): AnnotationLevel {
 }
 
 export class EntityProperty {
-  // public edmType: IEdmType;
-
   public constructor(
     public name: string,
     public value: any,
     public edmType: IEdmType,
     public isSystemProperty: boolean = false
-  ) {
-    // let type: EdmType = EdmType.Null;
-    // if (typeof edmType === "string") {
-    //   type = getEdmType(edmType);
-    // } else {
-    //   type = edmType;
-    // }
-    // switch (type) {
-    //   case EdmType.Binary:
-    //     this.edmType = new EdmBinary();
-    //     break;
-    //   case EdmType.Boolean:
-    //     this.edmType = new EdmBoolean();
-    //     break;
-    //   case EdmType.DateTime:
-    //     this.edmType = new EdmDateTime();
-    //     break;
-    //   case EdmType.Double:
-    //     this.edmType = new EdmDouble();
-    //     break;
-    //   case EdmType.Guid:
-    //     this.edmType = new EdmGuid();
-    //     break;
-    //   case EdmType.Int32:
-    //     this.edmType = new EdmInt32();
-    //     break;
-    //   case EdmType.Int64:
-    //     this.edmType = new EdmInt64();
-    //     break;
-    //   case EdmType.String:
-    //     this.edmType = new EdmString();
-    //     break;
-    //   case EdmType.Null:
-    //     this.edmType = new EdmNull();
-    //     break;
-    //   default:
-    //     throw Error(`Unsupported EdmType ${type}.`);
-    // }
-  }
+  ) {}
 
-  public toJsonPropertyValuePair(): [string, string | boolean | number] {
+  public toJsonPropertyValuePair():
+    | [string, string | boolean | number]
+    | undefined {
     return this.edmType.toJsonPropertyValuePair(this.name);
   }
 
-  public toJsonPropertyValueString(): string {
+  public toJsonPropertyValueString(): string | undefined {
     return this.edmType.toJsonPropertyValueString(this.name);
   }
 
@@ -111,7 +73,9 @@ export class EntityProperty {
     );
   }
 
-  public toResponseString(annotationLevel: AnnotationLevel | string): string {
+  public toResponseString(
+    annotationLevel: AnnotationLevel | string
+  ): string | undefined {
     const level =
       typeof annotationLevel === "string"
         ? toAnnotationLevel(annotationLevel)
@@ -129,7 +93,12 @@ export class EntityProperty {
 
   public normalize(entity: Entity): void {
     // Set back to Entity
-    const [key, value] = this.toJsonPropertyValuePair();
+    const pair = this.toJsonPropertyValuePair();
+    if (!pair) {
+      return;
+    }
+
+    const [key, value] = pair;
     entity.properties[key] = value;
 
     const res = this.toJsonPropertyTypePair(AnnotationLevel.FULL);
