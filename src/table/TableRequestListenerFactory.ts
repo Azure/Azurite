@@ -58,7 +58,7 @@ export default class TableRequestListenerFactory
       Operation.Table_MergeEntity,
       Operation.Table_DeleteEntity,
       Operation.Table_InsertEntity
-    ].forEach(operation => {
+    ].forEach((operation) => {
       (Specifications[operation] as MutableSpecification).isXML = false;
     });
 

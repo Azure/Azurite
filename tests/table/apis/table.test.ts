@@ -17,7 +17,7 @@ import {
 } from "../../testutils";
 
 // Set true to enable debug log
-configLogger(true);
+configLogger(false);
 
 describe("table APIs test", () => {
   // TODO: Create a server factory as tests utils
@@ -59,7 +59,7 @@ describe("table APIs test", () => {
     restoreBuildRequestOptions(tableService);
   });
 
-  it("createTable, prefer=return-no-content, accept=application/json;odata=minimalmetadata @loki", done => {
+  it("createTable, prefer=return-no-content, accept=application/json;odata=minimalmetadata @loki", (done) => {
     /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
       thus we workaround this by override request headers to test following 3 OData levels responses.
     - application/json;odata=nometadata
@@ -83,7 +83,7 @@ describe("table APIs test", () => {
     });
   });
 
-  it("createTable, prefer=return-content, accept=application/json;odata=fullmetadata @loki", done => {
+  it("createTable, prefer=return-content, accept=application/json;odata=fullmetadata @loki", (done) => {
     /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
       thus we workaround this by override request headers to test following 3 OData levels responses.
     - application/json;odata=nometadata
@@ -121,17 +121,17 @@ describe("table APIs test", () => {
     });
   });
 
-  it("createTable, prefer=return-content, accept=application/json;odata=minimalmetadata @loki", done => {
+  it("createTable, prefer=return-content, accept=application/json;odata=minimalmetadata @loki", (done) => {
     // TODO
     done();
   });
 
-  it("createTable, prefer=return-content, accept=application/json;odata=nometadata @loki", done => {
+  it("createTable, prefer=return-content, accept=application/json;odata=nometadata @loki", (done) => {
     // TODO
     done();
   });
 
-  it.only("queryTable, accept=application/json;odata=fullmetadata @loki", done => {
+  it("queryTable, accept=application/json;odata=fullmetadata @loki", (done) => {
     /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
       thus we workaround this by override request headers to test following 3 OData levels responses.
     - application/json;odata=nometadata
@@ -166,7 +166,7 @@ describe("table APIs test", () => {
     );
   });
 
-  it("queryTable, accept=application/json;odata=minimalmetadata @loki", done => {
+  it("queryTable, accept=application/json;odata=minimalmetadata @loki", (done) => {
     /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
       thus we workaround this by override request headers to test following 3 OData levels responses.
     - application/json;odata=nometadata
@@ -193,7 +193,7 @@ describe("table APIs test", () => {
     });
   });
 
-  it("queryTable, accept=application/json;odata=nometadata @loki", done => {
+  it("queryTable, accept=application/json;odata=nometadata @loki", (done) => {
     /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
       thus we workaround this by override request headers to test following 3 OData levels responses.
     - application/json;odata=nometadata
@@ -216,7 +216,7 @@ describe("table APIs test", () => {
     });
   });
 
-  it("deleteTable that exists, @loki", done => {
+  it("deleteTable that exists, @loki", (done) => {
     /*
     https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
     */
@@ -242,7 +242,7 @@ describe("table APIs test", () => {
     });
   });
 
-  it("deleteTable that does not exist, @loki", done => {
+  it("deleteTable that does not exist, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
     requestOverride.headers = {};
 
@@ -256,7 +256,7 @@ describe("table APIs test", () => {
     });
   });
 
-  it("createTable with invalid version, @loki", done => {
+  it("createTable with invalid version, @loki", (done) => {
     requestOverride.headers = { [HeaderConstants.X_MS_VERSION]: "invalid" };
 
     tableService.createTable("test", (error, result) => {
