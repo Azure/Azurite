@@ -471,12 +471,13 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     }
 
     const entities: string[] = [];
+    const odataPrefix = this.getOdataAnnotationUrlPrefix(tableContext, account);
     result.forEach((element) => {
       const entity = {} as any;
       const annotation = getEntityOdataAnnotationsForResponse(
         account,
         table,
-        this.getOdataAnnotationUrlPrefix(tableContext, account),
+        odataPrefix,
         element.PartitionKey,
         element.RowKey,
         accept
@@ -501,13 +502,14 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       );
     });
 
+    // TODO: What about NO_METADATA_ACCEPT?
     const odatametadata =
       getEntityOdataAnnotationsForResponse(
         account,
         table,
-        this.getOdataAnnotationUrlPrefix(tableContext, account),
+        odataPrefix,
         "",
-        "element.RowKey",
+        "",
         accept
       ).odatametadata || "";
 
