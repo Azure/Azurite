@@ -695,4 +695,19 @@ export default class StorageErrorFactory {
       additionalMessages
     );
   }
+
+  public static getCannotVerifyCopySource(
+    contextID: string,
+    statusCode: number,
+    message: string,
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    return new StorageError(
+      statusCode,
+      "CannotVerifyCopySource",
+      message,
+      contextID,
+      additionalMessages
+    );
+  }
 }

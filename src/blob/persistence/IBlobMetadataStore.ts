@@ -822,6 +822,29 @@ export interface IBlobMetadataStore
   ): Promise<Models.BlobProperties>;
 
   /**
+   * Sync copy from Url.
+   *
+   * @param {Context} context
+   * @param {BlobId} source
+   * @param {BlobId} destination
+   * @param {string} copySource
+   * @param {(Models.BlobMetadata | undefined)} metadata
+   * @param {(Models.AccessTier | undefined)} tier
+   * @param {Models.BlobCopyFromURLOptionalParams} [leaseAccessConditions]
+   * @returns {Promise<Models.BlobProperties>}
+   * @memberof IBlobMetadataStore
+   */
+  copyFromURL(
+    context: Context,
+    source: BlobId,
+    destination: BlobId,
+    copySource: string,
+    metadata: Models.BlobMetadata | undefined,
+    tier: Models.AccessTier | undefined,
+    leaseAccessConditions?: Models.BlobCopyFromURLOptionalParams
+  ): Promise<Models.BlobProperties>;
+
+  /**
    * Update Tier for a blob.
    *
    * @param {Context} context

@@ -1,11 +1,7 @@
 import {
-  Aborter,
-  BlobURL,
-  BlockBlobURL,
-  ContainerURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+  StorageSharedKeyCredential,
+  BlobServiceClient,
+  newPipeline
 } from "@azure/storage-blob";
 import assert = require("assert");
 
@@ -27,21 +23,26 @@ describe("BlockBlobAPIs", () => {
   const server = factory.createServer();
 
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
-  const serviceURL = new ServiceURL(
+  const serviceClient = new BlobServiceClient(
     baseURL,
-    StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     )
   );
 
   let containerName: string = getUniqueName("container");
-  let containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+  let containerClient = serviceClient.getContainerClient(containerName);
   let blobName: string = getUniqueName("blob");
-  let blobURL = BlobURL.fromContainerURL(containerURL, blobName);
-  let blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
+  let blobClient = containerClient.getBlobClient(blobName);
+  let blockBlobClient = blobClient.getBlockBlobClient();
 
   before(async () => {
     await server.start();
@@ -54,29 +55,25 @@ describe("BlockBlobAPIs", () => {
 
   beforeEach(async () => {
     containerName = getUniqueName("container");
-    containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
-    await containerURL.create(Aborter.none);
+    containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
     blobName = getUniqueName("blob");
-    blobURL = BlobURL.fromContainerURL(containerURL, blobName);
-    blockBlobURL = BlockBlobURL.fromBlobURL(blobURL);
+    blobClient = containerClient.getBlobClient(blobName);
+    blockBlobClient = blobClient.getBlockBlobClient();
   });
 
   afterEach(async () => {
-    await containerURL.delete(Aborter.none);
+    await containerClient.delete();
   });
 
   it("upload with string body and default parameters @loki @sql", async () => {
     const body: string = getUniqueName("randomstring");
-    const result_upload = await blockBlobURL.upload(
-      Aborter.none,
-      body,
-      body.length
-    );
+    const result_upload = await blockBlobClient.upload(body, body.length);
     assert.equal(
       result_upload._response.request.headers.get("x-ms-client-request-id"),
       result_upload.clientRequestId
     );
-    const result = await blobURL.download(Aborter.none, 0);
+    const result = await blobClient.download(0);
     assert.deepStrictEqual(await bodyToString(result, body.length), body);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
@@ -85,8 +82,8 @@ describe("BlockBlobAPIs", () => {
   });
 
   it("upload empty blob @loki @sql", async () => {
-    await blockBlobURL.upload(Aborter.none, "", 0);
-    const result = await blobURL.download(Aborter.none, 0);
+    await blockBlobClient.upload("", 0);
+    const result = await blobClient.download(0);
     assert.deepStrictEqual(await bodyToString(result, 0), "");
   });
 
@@ -103,20 +100,15 @@ describe("BlockBlobAPIs", () => {
         keyb: "valb"
       }
     };
-    const result_upload = await blockBlobURL.upload(
-      Aborter.none,
-      body,
-      body.length,
-      {
-        blobHTTPHeaders: options,
-        metadata: options.metadata
-      }
-    );
+    const result_upload = await blockBlobClient.upload(body, body.length, {
+      blobHTTPHeaders: options,
+      metadata: options.metadata
+    });
     assert.equal(
       result_upload._response.request.headers.get("x-ms-client-request-id"),
       result_upload.clientRequestId
     );
-    const result = await blobURL.download(Aborter.none, 0);
+    const result = await blobClient.download(0);
     assert.deepStrictEqual(await bodyToString(result, body.length), body);
     assert.deepStrictEqual(result.cacheControl, options.blobCacheControl);
     assert.deepStrictEqual(
@@ -135,8 +127,7 @@ describe("BlockBlobAPIs", () => {
 
   it("stageBlock @loki @sql", async () => {
     const body = "HelloWorld";
-    const result_stage = await blockBlobURL.stageBlock(
-      Aborter.none,
+    const result_stage = await blockBlobClient.stageBlock(
       base64encode("1"),
       body,
       body.length
@@ -145,28 +136,21 @@ describe("BlockBlobAPIs", () => {
       result_stage._response.request.headers.get("x-ms-client-request-id"),
       result_stage.clientRequestId
     );
-    await blockBlobURL.stageBlock(
-      Aborter.none,
-      base64encode("2"),
-      body,
-      body.length
-    );
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
 
-    const listBlobResponse = await containerURL.listBlobFlatSegment(
-      Aborter.none,
-      undefined,
-      { include: ["uncommittedblobs"] }
-    );
+    const listBlobResponse = await (
+      await containerClient
+        .listBlobsFlat({ includeUncommitedBlobs: true })
+        .byPage()
+        .next()
+    ).value;
     assert.equal(listBlobResponse.segment.blobItems.length, 1);
     assert.deepStrictEqual(
       listBlobResponse.segment.blobItems[0].properties.contentLength,
       0
     );
 
-    const listResponse = await blockBlobURL.getBlockList(
-      Aborter.none,
-      "uncommitted"
-    );
+    const listResponse = await blockBlobClient.getBlockList("uncommitted");
     assert.equal(listResponse.uncommittedBlocks!.length, 2);
     assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("1"));
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
@@ -181,35 +165,23 @@ describe("BlockBlobAPIs", () => {
   it("stageBlock with double commit block should work @loki @sql", async () => {
     const body = "HelloWorld";
 
-    await blockBlobURL.stageBlock(
-      Aborter.none,
-      base64encode("1"),
-      body,
-      body.length
-    );
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
 
-    await blockBlobURL.stageBlock(
-      Aborter.none,
-      base64encode("1"),
-      body,
-      body.length
-    );
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
 
-    const listBlobResponse = await containerURL.listBlobFlatSegment(
-      Aborter.none,
-      undefined,
-      { include: ["uncommittedblobs"] }
-    );
+    const listBlobResponse = (
+      await containerClient
+        .listBlobsFlat({ includeUncommitedBlobs: true })
+        .byPage()
+        .next()
+    ).value;
     assert.equal(listBlobResponse.segment.blobItems.length, 1);
     assert.deepStrictEqual(
       listBlobResponse.segment.blobItems[0].properties.contentLength,
       0
     );
 
-    const listResponse = await blockBlobURL.getBlockList(
-      Aborter.none,
-      "uncommitted"
-    );
+    const listResponse = await blockBlobClient.getBlockList("uncommitted");
     assert.equal(listResponse.uncommittedBlocks!.length, 1);
     assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("1"));
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
@@ -221,19 +193,9 @@ describe("BlockBlobAPIs", () => {
 
   it("commitBlockList @loki @sql", async () => {
     const body = "HelloWorld";
-    await blockBlobURL.stageBlock(
-      Aborter.none,
-      base64encode("1"),
-      body,
-      body.length
-    );
-    await blockBlobURL.stageBlock(
-      Aborter.none,
-      base64encode("2"),
-      body,
-      body.length
-    );
-    const result_commit = await blockBlobURL.commitBlockList(Aborter.none, [
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
+    const result_commit = await blockBlobClient.commitBlockList([
       base64encode("1"),
       base64encode("2")
     ]);
@@ -241,10 +203,7 @@ describe("BlockBlobAPIs", () => {
       result_commit._response.request.headers.get("x-ms-client-request-id"),
       result_commit.clientRequestId
     );
-    const listResponse = await blockBlobURL.getBlockList(
-      Aborter.none,
-      "committed"
-    );
+    const listResponse = await blockBlobClient.getBlockList("committed");
     assert.equal(listResponse.committedBlocks!.length, 2);
     assert.equal(listResponse.committedBlocks![0].name, base64encode("1"));
     assert.equal(listResponse.committedBlocks![0].size, body.length);
@@ -258,19 +217,9 @@ describe("BlockBlobAPIs", () => {
 
   it("commitBlockList with previous committed blocks @loki @sql", async () => {
     const body = "HelloWorld";
-    await blockBlobURL.stageBlock(
-      Aborter.none,
-      base64encode("1"),
-      body,
-      body.length
-    );
-    await blockBlobURL.stageBlock(
-      Aborter.none,
-      base64encode("2"),
-      body,
-      body.length
-    );
-    const result_commit = await blockBlobURL.commitBlockList(Aborter.none, [
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
+    const result_commit = await blockBlobClient.commitBlockList([
       base64encode("1"),
       base64encode("2")
     ]);
@@ -279,13 +228,10 @@ describe("BlockBlobAPIs", () => {
       result_commit.clientRequestId
     );
 
-    const properties1 = await blockBlobURL.getProperties(Aborter.none);
-    assert.notDeepStrictEqual(properties1.creationTime, undefined);
+    const properties1 = await blockBlobClient.getProperties();
+    assert.notDeepStrictEqual(properties1.createdOn, undefined);
 
-    const listResponse = await blockBlobURL.getBlockList(
-      Aborter.none,
-      "committed"
-    );
+    const listResponse = await blockBlobClient.getBlockList("committed");
     assert.equal(listResponse.committedBlocks!.length, 2);
     assert.equal(listResponse.committedBlocks![0].name, base64encode("1"));
     assert.equal(listResponse.committedBlocks![0].size, body.length);
@@ -296,42 +242,34 @@ describe("BlockBlobAPIs", () => {
       listResponse.clientRequestId
     );
 
-    await blockBlobURL.commitBlockList(Aborter.none, [base64encode("2")]);
-    const listResponse2 = await blockBlobURL.getBlockList(
-      Aborter.none,
-      "committed"
-    );
+    await blockBlobClient.commitBlockList([base64encode("2")]);
+    const listResponse2 = await blockBlobClient.getBlockList("committed");
     assert.equal(listResponse2.committedBlocks!.length, 1);
     assert.equal(listResponse2.committedBlocks![0].name, base64encode("2"));
     assert.equal(listResponse2.committedBlocks![0].size, body.length);
 
-    const properties2 = await blockBlobURL.getProperties(Aborter.none);
-    assert.notDeepStrictEqual(properties2.creationTime, undefined);
-    assert.deepStrictEqual(properties1.creationTime, properties2.creationTime);
+    const properties2 = await blockBlobClient.getProperties();
+    assert.notDeepStrictEqual(properties2.createdOn, undefined);
+    assert.deepStrictEqual(properties1.createdOn, properties2.createdOn);
   });
 
   it("commitBlockList with empty list should create an empty block blob @loki @sql", async () => {
-    await blockBlobURL.commitBlockList(Aborter.none, []);
+    await blockBlobClient.commitBlockList([]);
 
-    const listResponse = await blockBlobURL.getBlockList(
-      Aborter.none,
-      "committed"
-    );
+    const listResponse = await blockBlobClient.getBlockList("committed");
     assert.equal(listResponse.committedBlocks!.length, 0);
 
-    const result = await blobURL.download(Aborter.none, 0);
+    const result = await blobClient.download(0);
     assert.deepStrictEqual(await bodyToString(result, 0), "");
   });
 
   it("commitBlockList with empty list should not work with ifNoneMatch=* for existing blob @loki @sql", async () => {
-    await blockBlobURL.commitBlockList(Aborter.none, []);
+    await blockBlobClient.commitBlockList([]);
 
     try {
-      await blockBlobURL.commitBlockList(Aborter.none, [], {
-        accessConditions: {
-          modifiedAccessConditions: {
-            ifNoneMatch: "*"
-          }
+      await blockBlobClient.commitBlockList([], {
+        conditions: {
+          ifNoneMatch: "*"
         }
       });
     } catch (error) {
@@ -343,14 +281,12 @@ describe("BlockBlobAPIs", () => {
   });
 
   it("upload should not work with ifNoneMatch=* for existing blob @loki @sql", async () => {
-    await blockBlobURL.commitBlockList(Aborter.none, []);
+    await blockBlobClient.commitBlockList([]);
 
     try {
-      await blockBlobURL.upload(Aborter.none, "hello", 5, {
-        accessConditions: {
-          modifiedAccessConditions: {
-            ifNoneMatch: "*"
-          }
+      await blockBlobClient.upload("hello", 5, {
+        conditions: {
+          ifNoneMatch: "*"
         }
       });
     } catch (error) {
@@ -363,18 +299,8 @@ describe("BlockBlobAPIs", () => {
 
   it("commitBlockList with all parameters set @loki @sql", async () => {
     const body = "HelloWorld";
-    await blockBlobURL.stageBlock(
-      Aborter.none,
-      base64encode("1"),
-      body,
-      body.length
-    );
-    await blockBlobURL.stageBlock(
-      Aborter.none,
-      base64encode("2"),
-      body,
-      body.length
-    );
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
 
     const options = {
       blobCacheControl: "blobCacheControl",
@@ -387,8 +313,7 @@ describe("BlockBlobAPIs", () => {
         keyb: "valb"
       }
     };
-    await blockBlobURL.commitBlockList(
-      Aborter.none,
+    await blockBlobClient.commitBlockList(
       [base64encode("1"), base64encode("2")],
       {
         blobHTTPHeaders: options,
@@ -396,17 +321,14 @@ describe("BlockBlobAPIs", () => {
       }
     );
 
-    const listResponse = await blockBlobURL.getBlockList(
-      Aborter.none,
-      "committed"
-    );
+    const listResponse = await blockBlobClient.getBlockList("committed");
     assert.equal(listResponse.committedBlocks!.length, 2);
     assert.equal(listResponse.committedBlocks![0].name, base64encode("1"));
     assert.equal(listResponse.committedBlocks![0].size, body.length);
     assert.equal(listResponse.committedBlocks![1].name, base64encode("2"));
     assert.equal(listResponse.committedBlocks![1].size, body.length);
 
-    const result = await blobURL.download(Aborter.none, 0);
+    const result = await blobClient.download(0);
     assert.deepStrictEqual(
       await bodyToString(result, body.repeat(2).length),
       body.repeat(2)
@@ -428,20 +350,10 @@ describe("BlockBlobAPIs", () => {
 
   it("getBlockList @loki @sql", async () => {
     const body = "HelloWorld";
-    await blockBlobURL.stageBlock(
-      Aborter.none,
-      base64encode("1"),
-      body,
-      body.length
-    );
-    await blockBlobURL.stageBlock(
-      Aborter.none,
-      base64encode("2"),
-      body,
-      body.length
-    );
-    await blockBlobURL.commitBlockList(Aborter.none, [base64encode("2")]);
-    const listResponse = await blockBlobURL.getBlockList(Aborter.none, "all");
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
+    await blockBlobClient.commitBlockList([base64encode("2")]);
+    const listResponse = await blockBlobClient.getBlockList("all");
     assert.equal(listResponse.committedBlocks!.length, 1);
     assert.equal(listResponse.uncommittedBlocks!.length, 0);
     assert.equal(listResponse.committedBlocks![0].name, base64encode("2"));
@@ -450,23 +362,13 @@ describe("BlockBlobAPIs", () => {
 
   it("getBlockList_BlockListingFilter @loki @sql", async () => {
     const body = "HelloWorld";
-    await blockBlobURL.stageBlock(
-      Aborter.none,
-      base64encode("1"),
-      body,
-      body.length
-    );
-    await blockBlobURL.stageBlock(
-      Aborter.none,
-      base64encode("2"),
-      body,
-      body.length
-    );
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
 
     // Getproperties on a block blob without commited block will return 404
     let err;
     try {
-      await blockBlobURL.getProperties(Aborter.none);
+      await blockBlobClient.getProperties();
     } catch (error) {
       err = error;
     }
@@ -474,33 +376,20 @@ describe("BlockBlobAPIs", () => {
 
     // Stage block with block Id length different than the exist uncommited blocks will fail with 400
     try {
-      await blockBlobURL.stageBlock(
-        Aborter.none,
-        base64encode("123"),
-        body,
-        body.length
-      );
+      await blockBlobClient.stageBlock(base64encode("123"), body, body.length);
     } catch (error) {
       err = error;
     }
     assert.deepStrictEqual(err.statusCode, 400);
 
-    await blockBlobURL.commitBlockList(Aborter.none, [
+    await blockBlobClient.commitBlockList([
       base64encode("1"),
       base64encode("2")
     ]);
 
-    await blockBlobURL.stageBlock(
-      Aborter.none,
-      base64encode("123"),
-      body,
-      body.length
-    );
+    await blockBlobClient.stageBlock(base64encode("123"), body, body.length);
 
-    let listResponse = await blockBlobURL.getBlockList(
-      Aborter.none,
-      "committed"
-    );
+    let listResponse = await blockBlobClient.getBlockList("committed");
     assert.equal(listResponse.committedBlocks!.length, 2);
     assert.equal(listResponse.committedBlocks![0].name, base64encode("1"));
     assert.equal(listResponse.committedBlocks![0].size, body.length);
@@ -508,13 +397,13 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.committedBlocks![1].size, body.length);
     assert.equal(listResponse.uncommittedBlocks!.length, 0);
 
-    listResponse = await blockBlobURL.getBlockList(Aborter.none, "uncommitted");
+    listResponse = await blockBlobClient.getBlockList("uncommitted");
     assert.equal(listResponse.uncommittedBlocks!.length, 1);
     assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("123"));
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
     assert.equal(listResponse.committedBlocks!.length, 0);
 
-    listResponse = await blockBlobURL.getBlockList(Aborter.none, "all");
+    listResponse = await blockBlobClient.getBlockList("all");
     assert.equal(listResponse.committedBlocks!.length, 2);
     assert.equal(listResponse.committedBlocks![0].name, base64encode("1"));
     assert.equal(listResponse.committedBlocks![0].size, body.length);
@@ -525,12 +414,37 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
   });
 
+  it("getBlockList for non-existent blob @loki @sql", async () => {
+    try {
+      await blockBlobClient.getBlockList("committed");
+    } catch (error) {
+      assert.deepEqual(404, error.statusCode);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("getBlockList for non-existent container @loki @sql", async () => {
+    const fakeContainer = getUniqueName("container");
+    const fakeContainerClient = serviceClient.getContainerClient(fakeContainer);
+    const fakeBlobClient = fakeContainerClient.getBlobClient(blobName);
+    const fakeBlockBlobClient = fakeBlobClient.getBlockBlobClient();
+
+    try {
+      await fakeBlockBlobClient.getBlockList("committed");
+    } catch (error) {
+      assert.deepEqual(404, error.statusCode);
+      return;
+    }
+    assert.fail();
+  });
+
   it("upload with Readable stream body and default parameters @loki @sql", async () => {
     const body: string = getUniqueName("randomstring");
     const bodyBuffer = Buffer.from(body);
 
-    await blockBlobURL.upload(Aborter.none, bodyBuffer, body.length);
-    const result = await blobURL.download(Aborter.none, 0);
+    await blockBlobClient.upload(bodyBuffer, body.length);
+    const result = await blobClient.download(0);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
@@ -552,8 +466,8 @@ describe("BlockBlobAPIs", () => {
 
   it("upload with Chinese string body and default parameters @loki @sql", async () => {
     const body: string = getUniqueName("randomstring你好");
-    await blockBlobURL.upload(Aborter.none, body, Buffer.byteLength(body));
-    const result = await blobURL.download(Aborter.none, 0);
+    await blockBlobClient.upload(body, Buffer.byteLength(body));
+    const result = await blobClient.download(0);
     assert.deepStrictEqual(
       await bodyToString(result, Buffer.byteLength(body)),
       body

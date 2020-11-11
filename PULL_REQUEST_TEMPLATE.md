@@ -2,7 +2,7 @@ Thanks for contribution! Please go through following checklist before sending PR
 
 ### PR Branch Destination
 
-- For Azurite V3, please send PR to `dev` branch.
+- For Azurite V3, please send PR to `master` branch.
 - For legacy Azurite V2, please send PR to `legacy-dev` branch.
 
 ### Always Add Test Cases

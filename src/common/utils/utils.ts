@@ -30,7 +30,7 @@ export function convertRawHeadersToMetadata(
   for (let i = 0; i < rawHeaders.length; i = i + 2) {
     const header = rawHeaders[i];
     if (
-      header.startsWith(metadataPrefix) &&
+      header.toLowerCase().startsWith(metadataPrefix) &&
       header.length > metadataPrefix.length
     ) {
       const key = header.substr(metadataPrefix.length);
@@ -131,9 +131,7 @@ export function getURLQueries(url: string): { [key: string]: string } {
 }
 
 export async function getMD5FromString(text: string): Promise<Uint8Array> {
-  return createHash("md5")
-    .update(text)
-    .digest();
+  return createHash("md5").update(text).digest();
 }
 
 export async function getMD5FromStream(
@@ -142,13 +140,13 @@ export async function getMD5FromStream(
   const hash = createHash("md5");
   return new Promise<Uint8Array>((resolve, reject) => {
     stream
-      .on("data", data => {
+      .on("data", (data) => {
         hash.update(data);
       })
       .on("end", () => {
         resolve(hash.digest());
       })
-      .on("error", err => {
+      .on("error", (err) => {
         reject(err);
       });
   });

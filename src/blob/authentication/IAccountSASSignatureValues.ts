@@ -1,4 +1,4 @@
-import { IIPRange } from "@azure/storage-blob";
+import { SasIPRange } from "@azure/storage-blob";
 
 import {
   computeHMACSHA256,
@@ -84,10 +84,10 @@ export interface IAccountSASSignatureValues {
   /**
    * Optional. IP range allowed.
    *
-   * @type {IIPRange | string}
+   * @type {SasIPRange | string}
    * @memberof IAccountSASSignatureValues
    */
-  ipRange?: IIPRange | string;
+  ipRange?: SasIPRange | string;
 
   /**
    * The values that indicate the services accessible with this SAS. Please refer to {@link AccountSASServices} to
