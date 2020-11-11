@@ -19,11 +19,11 @@ export class EdmInt32 implements IEdmType {
   }
 
   public toJsonPropertyValuePair(name: string): [string, number] {
-    return [name, this.value];
+    return [name, this.typedValue];
   }
 
   public toJsonPropertyValueString(name: string): string {
-    return `"${name}":${this.value}`;
+    return `"${name}":${this.typedValue}`;
   }
 
   public toJsonPropertyTypePair(

@@ -21,11 +21,11 @@ export class EdmString implements IEdmType {
   public toJsonPropertyValuePair(
     name: string
   ): [string, string | number | boolean] {
-    return [name, this.value];
+    return [name, this.typedValue];
   }
 
   public toJsonPropertyValueString(name: string): string {
-    return `"${name}":"${this.value}"`;
+    return `"${name}":${JSON.stringify(this.typedValue)}`;
   }
 
   public toJsonPropertyTypePair(

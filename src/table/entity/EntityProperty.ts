@@ -53,13 +53,14 @@ export class EntityProperty {
   }
 
   public toJsonPropertyTypePair(
-    annotationLevel: AnnotationLevel
+    annotationLevel: AnnotationLevel,
+    force: boolean = false
   ): [string, string] | undefined {
     return this.edmType.toJsonPropertyTypePair(
       this.name,
       annotationLevel,
       this.isSystemProperty,
-      true
+      force
     );
   }
 
@@ -101,7 +102,7 @@ export class EntityProperty {
     const [key, value] = pair;
     entity.properties[key] = value;
 
-    const res = this.toJsonPropertyTypePair(AnnotationLevel.FULL);
+    const res = this.toJsonPropertyTypePair(AnnotationLevel.FULL, true);
     if (res) {
       const [typeKey, typeValue] = res;
       entity.properties[typeKey] = typeValue;
