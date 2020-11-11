@@ -4,6 +4,12 @@
 
 ## Upcoming Release
 
+## 2020.11 Version 3.9.0-table-alpha.1
+
+Table:
+
+- Alpha version of Azurite V3 Table.
+
 ## 2020.10 Version 3.9.0
 
 - Bump up Azure Storage service API version to 2020-02-10.
