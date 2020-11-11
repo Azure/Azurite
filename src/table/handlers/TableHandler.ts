@@ -465,6 +465,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     let selectSet: Set<string> | undefined;
     const selectArray = options.queryOptions?.select
       ?.split(",")
+      .filter((item) => {
+        return typeof item === "string" && item.length > 0;
+      })
       .map((item) => item.trim());
     if (selectArray) {
       selectSet = new Set(selectArray);
@@ -588,6 +591,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     let selectSet: Set<string> | undefined;
     const selectArray = options.queryOptions?.select
       ?.split(",")
+      .filter((item) => {
+        return typeof item === "string" && item.length > 0;
+      })
       .map((item) => item.trim());
     if (selectArray) {
       selectSet = new Set(selectArray);
