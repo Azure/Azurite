@@ -21,7 +21,7 @@ export class EdmBoolean implements IEdmType {
   }
 
   public toJsonPropertyValueString(name: string): string {
-    return `"${name}":${this.value}`;
+    return `"${name}":${this.typedValue}`;
   }
 
   public toJsonPropertyTypePair(

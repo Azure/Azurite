@@ -1,8 +1,20 @@
 #!/usr/bin/env node
 import * as Logger from "../common/Logger";
 import { BlobServerFactory } from "./BlobServerFactory";
+import SqlBlobServer from "./SqlBlobServer";
+import BlobServer from "./BlobServer";
 
 // tslint:disable:no-console
+
+function shutdown(server: BlobServer | SqlBlobServer) {
+  const beforeCloseMessage = `Azurite Blob service is closing...`;
+  const afterCloseMessage = `Azurite Blob service successfully closed`;
+
+  console.log(beforeCloseMessage);
+  server.close().then(() => {
+    console.log(afterCloseMessage);
+  });
+}
 
 /**
  * Entry for Azurite blob service.
@@ -28,26 +40,17 @@ async function main() {
   );
 
   // Handle close event
-  const beforeCloseMessage = `Azurite Blob service is closing...`;
-  const afterCloseMessage = `Azurite Blob service successfully closed`;
   process
-    .once("message", msg => {
+    .once("message", (msg) => {
       if (msg === "shutdown") {
-        console.log(beforeCloseMessage);
-        server.close().then(() => {
-          console.log(afterCloseMessage);
-        });
+        shutdown(server);
       }
     })
-    .once("SIGINT", () => {
-      console.log(beforeCloseMessage);
-      server.close().then(() => {
-        console.log(afterCloseMessage);
-      });
-    });
+    .once("SIGINT", () => shutdown(server))
+    .once("SIGTERM", () => shutdown(server));
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(`Exit due to unhandled error: ${err.message}`);
   process.exit(1);
 });

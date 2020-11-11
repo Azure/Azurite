@@ -1,9 +1,7 @@
 import {
-  Aborter,
-  ContainerURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+  BlobServiceClient,
+  newPipeline,
+  StorageSharedKeyCredential
 } from "@azure/storage-blob";
 import * as assert from "assert";
 
@@ -27,12 +25,17 @@ describe("ServiceAPIs", () => {
   const server = factory.createServer();
 
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
-  const serviceURL = new ServiceURL(
+  const serviceClient = new BlobServiceClient(
     baseURL,
-    StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     )
   );
@@ -47,7 +50,7 @@ describe("ServiceAPIs", () => {
   });
 
   it("GetServiceProperties @loki @sql", async () => {
-    const result = await serviceURL.getProperties(Aborter.none);
+    const result = await serviceClient.getProperties();
 
     assert.ok(typeof result.requestId);
     assert.ok(result.requestId!.length > 0);
@@ -68,7 +71,7 @@ describe("ServiceAPIs", () => {
   });
 
   it("Set CORS with empty AllowedHeaders, ExposedHeaders @loki @sql", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "",
@@ -80,16 +83,16 @@ describe("ServiceAPIs", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
-    const result = await serviceURL.getProperties(Aborter.none);
+    const result = await serviceClient.getProperties();
     assert.deepStrictEqual(result.cors![0], newCORS);
   });
 
   it("SetServiceProperties @loki @sql", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
-    serviceProperties.logging = {
+    serviceProperties.blobAnalyticsLogging = {
       deleteProperty: true,
       read: true,
       retentionPolicy: {
@@ -140,16 +143,13 @@ describe("ServiceAPIs", () => {
       };
     }
 
-    const result_set = await serviceURL.setProperties(
-      Aborter.none,
-      serviceProperties
-    );
+    const result_set = await serviceClient.setProperties(serviceProperties);
     assert.equal(
       result_set._response.request.headers.get("x-ms-client-request-id"),
       result_set.clientRequestId
     );
 
-    const result = await serviceURL.getProperties(Aborter.none);
+    const result = await serviceClient.getProperties();
     assert.ok(typeof result.requestId);
     assert.ok(result.requestId!.length > 0);
     assert.ok(typeof result.version);
@@ -166,35 +166,27 @@ describe("ServiceAPIs", () => {
     const containerName1 = `${containerNamePrefix}cc`;
     const containerName2 = `${containerNamePrefix}aa`;
     const containerName3 = `${containerNamePrefix}bb`;
-    const containerURL1 = ContainerURL.fromServiceURL(
-      serviceURL,
-      containerName1
-    );
-    const containerURL2 = ContainerURL.fromServiceURL(
-      serviceURL,
-      containerName2
-    );
-    const containerURL3 = ContainerURL.fromServiceURL(
-      serviceURL,
-      containerName3
-    );
-    await containerURL1.create(Aborter.none);
-    await containerURL2.create(Aborter.none);
-    await containerURL3.create(Aborter.none);
-    const result = await serviceURL.listContainersSegment(
-      Aborter.none,
-      undefined,
-      {
-        prefix: containerNamePrefix
-      }
-    );
+    const containerClient1 = serviceClient.getContainerClient(containerName1);
+    const containerClient2 = serviceClient.getContainerClient(containerName2);
+    const containerClient3 = serviceClient.getContainerClient(containerName3);
+    await containerClient1.create();
+    await containerClient2.create();
+    await containerClient3.create();
+    const result = (
+      await serviceClient
+        .listContainers({
+          prefix: containerNamePrefix
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.equal(result.containerItems.length, 3);
     assert.ok(result.containerItems[0].name.endsWith("aa"));
     assert.ok(result.containerItems[1].name.endsWith("bb"));
     assert.ok(result.containerItems[2].name.endsWith("cc"));
-    await containerURL1.delete(Aborter.none);
-    await containerURL2.delete(Aborter.none);
-    await containerURL3.delete(Aborter.none);
+    await containerClient1.delete();
+    await containerClient2.delete();
+    await containerClient3.delete();
   });
 
   it("List containers with marker @loki @sql", async () => {
@@ -202,34 +194,26 @@ describe("ServiceAPIs", () => {
     const containerName1 = `${containerNamePrefix}cc`;
     const containerName2 = `${containerNamePrefix}aa`;
     const containerName3 = `${containerNamePrefix}bb`;
-    const containerURL1 = ContainerURL.fromServiceURL(
-      serviceURL,
-      containerName1
-    );
-    const containerURL2 = ContainerURL.fromServiceURL(
-      serviceURL,
-      containerName2
-    );
-    const containerURL3 = ContainerURL.fromServiceURL(
-      serviceURL,
-      containerName3
-    );
-    await containerURL1.create(Aborter.none);
-    await containerURL2.create(Aborter.none);
-    await containerURL3.create(Aborter.none);
-    const result = await serviceURL.listContainersSegment(
-      Aborter.none,
-      containerName2,
-      {
-        prefix: containerNamePrefix
-      }
-    );
+    const containerClient1 = serviceClient.getContainerClient(containerName1);
+    const containerClient2 = serviceClient.getContainerClient(containerName2);
+    const containerClient3 = serviceClient.getContainerClient(containerName3);
+    await containerClient1.create();
+    await containerClient2.create();
+    await containerClient3.create();
+    const result = (
+      await serviceClient
+        .listContainers({
+          prefix: containerNamePrefix
+        })
+        .byPage({ continuationToken: containerName2 })
+        .next()
+    ).value;
     assert.equal(result.containerItems.length, 2);
     assert.equal(result.containerItems[0].name, containerName3);
     assert.equal(result.containerItems[1].name, containerName1);
-    await containerURL1.delete(Aborter.none);
-    await containerURL2.delete(Aborter.none);
-    await containerURL3.delete(Aborter.none);
+    await containerClient1.delete();
+    await containerClient2.delete();
+    await containerClient3.delete();
   });
 
   it("List containers with marker and max result length less than result size @loki @sql", async () => {
@@ -237,47 +221,43 @@ describe("ServiceAPIs", () => {
     const containerName1 = `${containerNamePrefix}cc`;
     const containerName2 = `${containerNamePrefix}aa`;
     const containerName3 = `${containerNamePrefix}bb`;
-    const containerURL1 = ContainerURL.fromServiceURL(
-      serviceURL,
-      containerName1
-    );
-    const containerURL2 = ContainerURL.fromServiceURL(
-      serviceURL,
-      containerName2
-    );
-    const containerURL3 = ContainerURL.fromServiceURL(
-      serviceURL,
-      containerName3
-    );
-    await containerURL1.create(Aborter.none);
-    await containerURL2.create(Aborter.none);
-    await containerURL3.create(Aborter.none);
-    const result1 = await serviceURL.listContainersSegment(
-      Aborter.none,
-      containerName2,
-      { maxresults: 1, prefix: containerNamePrefix }
-    );
+    const containerClient1 = serviceClient.getContainerClient(containerName1);
+    const containerClient2 = serviceClient.getContainerClient(containerName2);
+    const containerClient3 = serviceClient.getContainerClient(containerName3);
+    await containerClient1.create();
+    await containerClient2.create();
+    await containerClient3.create();
+    const result1 = (
+      await serviceClient
+        .listContainers({ prefix: containerNamePrefix })
+        .byPage({ continuationToken: containerName2, maxPageSize: 1 })
+        .next()
+    ).value;
 
     assert.equal(result1.containerItems.length, 1);
     assert.equal(result1.containerItems[0].name, containerName3);
-    assert.equal(result1.nextMarker, containerName3);
+    assert.equal(result1.continuationToken, containerName3);
 
-    const result2 = await serviceURL.listContainersSegment(
-      Aborter.none,
-      result1.nextMarker,
-      { maxresults: 1, prefix: containerNamePrefix }
-    );
+    const result2 = (
+      await serviceClient
+        .listContainers({ prefix: containerNamePrefix })
+        .byPage({
+          continuationToken: result1.continuationToken,
+          maxPageSize: 1
+        })
+        .next()
+    ).value;
     assert.equal(result2.containerItems.length, 1);
     assert.ok(result2.containerItems[0].name, containerName1);
-    assert.equal(result2.nextMarker, "");
+    assert.equal(result2.continuationToken, "");
 
-    await containerURL1.delete(Aborter.none);
-    await containerURL2.delete(Aborter.none);
-    await containerURL3.delete(Aborter.none);
+    await containerClient1.delete();
+    await containerClient2.delete();
+    await containerClient3.delete();
   });
 
   it("ListContainers with default parameters @loki @sql", async () => {
-    const result = await serviceURL.listContainersSegment(Aborter.none);
+    const result = (await serviceClient.listContainers().byPage().next()).value;
     assert.ok(typeof result.requestId);
     assert.ok(result.requestId!.length > 0);
     assert.ok(typeof result.version);
@@ -302,28 +282,22 @@ describe("ServiceAPIs", () => {
     const containerNamePrefix = getUniqueName("container");
     const containerName1 = `${containerNamePrefix}x1`;
     const containerName2 = `${containerNamePrefix}x2`;
-    const containerURL1 = ContainerURL.fromServiceURL(
-      serviceURL,
-      containerName1
-    );
-    const containerURL2 = ContainerURL.fromServiceURL(
-      serviceURL,
-      containerName2
-    );
-    await containerURL1.create(Aborter.none, { metadata: { key: "val" } });
-    await containerURL2.create(Aborter.none, { metadata: { key: "val" } });
+    const containerClient1 = serviceClient.getContainerClient(containerName1);
+    const containerClient2 = serviceClient.getContainerClient(containerName2);
+    await containerClient1.create({ metadata: { key: "val" } });
+    await containerClient2.create({ metadata: { key: "val" } });
 
-    const result1 = await serviceURL.listContainersSegment(
-      Aborter.none,
-      undefined,
-      {
-        include: "metadata",
-        maxresults: 1,
-        prefix: containerNamePrefix
-      }
-    );
+    const result1 = (
+      await serviceClient
+        .listContainers({
+          includeMetadata: true,
+          prefix: containerNamePrefix
+        })
+        .byPage({ maxPageSize: 1 })
+        .next()
+    ).value;
 
-    assert.ok(result1.nextMarker);
+    assert.ok(result1.continuationToken);
     assert.equal(result1.containerItems!.length, 1);
     assert.ok(result1.containerItems![0].name.startsWith(containerNamePrefix));
     assert.ok(result1.containerItems![0].properties.etag.length > 0);
@@ -344,15 +318,18 @@ describe("ServiceAPIs", () => {
       result1.clientRequestId
     );
 
-    const result2 = await serviceURL.listContainersSegment(
-      Aborter.none,
-      result1.nextMarker,
-      {
-        include: "metadata",
-        maxresults: 1,
-        prefix: containerNamePrefix
-      }
-    );
+    const result2 = (
+      await serviceClient
+        .listContainers({
+          includeMetadata: true,
+          prefix: containerNamePrefix
+        })
+        .byPage({
+          continuationToken: result1.continuationToken,
+          maxPageSize: 1
+        })
+        .next()
+    ).value;
 
     assert.equal(result2.containerItems!.length, 1);
     assert.ok(result2.containerItems![0].name.startsWith(containerNamePrefix));
@@ -370,12 +347,12 @@ describe("ServiceAPIs", () => {
     );
     assert.deepEqual(result2.containerItems![0].metadata!.key, "val");
 
-    await containerURL1.delete(Aborter.none);
-    await containerURL2.delete(Aborter.none);
+    await containerClient1.delete();
+    await containerClient2.delete();
   });
 
   it("get Account info @loki @sql", async () => {
-    const result = await serviceURL.getAccountInfo(Aborter.none);
+    const result = await serviceClient.getAccountInfo();
     assert.equal(result.accountKind, EMULATOR_ACCOUNT_KIND);
     assert.equal(result.skuName, EMULATOR_ACCOUNT_SKUNAME);
     assert.equal(

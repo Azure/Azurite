@@ -24,7 +24,7 @@ export class EdmBinary implements IEdmType {
   }
 
   public toJsonPropertyValueString(name: string): string {
-    return `"${name}":"${this.value}"`;
+    return `"${name}":${JSON.stringify(this.typedValue)}`;
   }
 
   public toJsonPropertyTypePair(

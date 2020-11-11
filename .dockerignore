@@ -1,4 +1,6 @@
 .vscode/**
+.github/**
+.github
 node_modules/**
 swagger/**
 __blobstorage__/**
@@ -20,5 +22,3 @@ swagger
 .vscode
 .vscodeignore
 dist
-**/*.cert
-**/*.key

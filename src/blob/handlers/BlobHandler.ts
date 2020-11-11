@@ -1,3 +1,5 @@
+import { URLBuilder } from "@azure/ms-rest-js";
+import axios, { AxiosResponse } from "axios";
 import { URL } from "url";
 
 import IExtentStore from "../../common/persistence/IExtentStore";
@@ -12,6 +14,7 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IBlobHandler from "../generated/handlers/IBlobHandler";
 import ILogger from "../generated/utils/ILogger";
+import { parseXML } from "../generated/utils/xml";
 import { extractStoragePartsFromPath } from "../middlewares/blobStorageContext.middleware";
 import IBlobMetadataStore, {
   BlobModel
@@ -66,14 +69,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobRenameOptionalParams,
     context: Context
   ): Promise<Models.BlobRenameResponse> {
-    throw new NotImplementedError(context.contextId);
-  }
-
-  public copyFromURL(
-    copySource: string,
-    options: Models.BlobCopyFromURLOptionalParams,
-    context: Context
-  ): Promise<Models.BlobCopyFromURLResponse> {
     throw new NotImplementedError(context.contextId);
   }
 
@@ -634,12 +629,85 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const snapshot = url.searchParams.get("snapshot") || "";
 
     if (
-      sourceAccount !== blobCtx.account ||
       sourceAccount === undefined ||
       sourceContainer === undefined ||
       sourceBlob === undefined
     ) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId!);
+    }
+
+    if (sourceAccount !== blobCtx.account) {
+      // Currently the only cross-account copy support is from/to the same Azurite instance. In either case access
+      // is determined by performing a request to the copy source to see if the authentication is valid.
+      const currentServer = blobCtx.request!.getHeader("Host") || "";
+      if (currentServer !== url.host) {
+        this.logger.error(
+          `BlobHandler:startCopyFromURL() Source account ${url} is not on the same Azurite instance as target account ${account}`,
+          context.contextId
+        );
+
+        throw StorageErrorFactory.getCannotVerifyCopySource(
+          context.contextId!,
+          404,
+          "The specified resource does not exist"
+        );
+      }
+
+      this.logger.debug(
+        `BlobHandler:startCopyFromURL() Validating access to the source account ${sourceAccount}`,
+        context.contextId
+      );
+
+      // In order to retrieve proper error details we make a metadata request to the copy source. If we instead issue
+      // a HEAD request then the error details are not returned and reporting authentication failures to the caller
+      // becomes a black box.
+      const metadataUrl = URLBuilder.parse(copySource);
+      metadataUrl.setQueryParameter("comp", "metadata");
+      const validationResponse: AxiosResponse = await axios.get(
+        metadataUrl.toString(),
+        {
+          // Instructs axios to not throw an error for non-2xx responses
+          validateStatus: () => true
+        }
+      );
+      if (validationResponse.status === 200) {
+        this.logger.debug(
+          `BlobHandler:startCopyFromURL() Successfully validated access to source account ${sourceAccount}`,
+          context.contextId
+        );
+      } else {
+        this.logger.debug(
+          `BlobHandler:startCopyFromURL() Access denied to source account ${sourceAccount} StatusCode=${validationResponse.status}, AuthenticationErrorDetail=${validationResponse.data}`,
+          context.contextId
+        );
+
+        if (validationResponse.status === 404) {
+          throw StorageErrorFactory.getCannotVerifyCopySource(
+            context.contextId!,
+            validationResponse.status,
+            "The specified resource does not exist"
+          );
+        } else {
+          // For non-successful responses attempt to unwrap the error message from the metadata call.
+          let message: string =
+            "Could not verify the copy source within the specified time.";
+          if (
+            validationResponse.headers[HeaderConstants.CONTENT_TYPE] ===
+            "application/xml"
+          ) {
+            const authenticationError = await parseXML(validationResponse.data);
+            if (authenticationError.Message !== undefined) {
+              message = authenticationError.Message.replace(/\n+/gm, "");
+            }
+          }
+
+          throw StorageErrorFactory.getCannotVerifyCopySource(
+            context.contextId!,
+            validationResponse.status,
+            message
+          );
+        }
+      }
     }
 
     // Preserve metadata key case
@@ -717,6 +785,77 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       requestId: context.contextId,
       version: BLOB_API_VERSION,
       date: context.startTime,
+      clientRequestId: options.requestId
+    };
+
+    return response;
+  }
+
+  /**
+   * Copy from Url.
+   *
+   * @param {string} copySource
+   * @param {Models.BlobStartCopyFromURLOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.BlobStartCopyFromURLResponse>}
+   * @memberof BlobHandler
+   */
+  public async copyFromURL(
+    copySource: string,
+    options: Models.BlobCopyFromURLOptionalParams,
+    context: Context
+  ): Promise<Models.BlobCopyFromURLResponse> {
+    const blobCtx = new BlobStorageContext(context);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+
+    // TODO: Check dest Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
+    const url = new URL(copySource);
+    const [
+      sourceAccount,
+      sourceContainer,
+      sourceBlob
+    ] = extractStoragePartsFromPath(url.hostname, url.pathname);
+    const snapshot = url.searchParams.get("snapshot") || "";
+
+    if (
+      sourceAccount !== blobCtx.account ||
+      sourceAccount === undefined ||
+      sourceContainer === undefined ||
+      sourceBlob === undefined
+    ) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId!);
+    }
+
+    // Preserve metadata key case
+    const metadata = convertRawHeadersToMetadata(
+      blobCtx.request!.getRawHeaders()
+    );
+
+    const res = await this.metadataStore.copyFromURL(
+      context,
+      {
+        account: sourceAccount,
+        container: sourceContainer,
+        blob: sourceBlob,
+        snapshot
+      },
+      { account, container, blob },
+      copySource,
+      metadata,
+      options.tier,
+      options
+    );
+
+    const response: Models.BlobCopyFromURLResponse = {
+      statusCode: 202,
+      eTag: res.etag,
+      lastModified: res.lastModified,
+      requestId: context.contextId,
+      version: BLOB_API_VERSION,
+      date: context.startTime,
+      copyId: res.copyId,
       clientRequestId: options.requestId
     };
 
@@ -855,7 +994,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     } else {
       bodyGetter = async () => {
         return this.extentStore.readExtents(
-          blocks.map(block => block.persistency),
+          blocks.map((block) => block.persistency),
           rangeStart,
           rangeEnd + 1 - rangeStart,
           context.contextId
@@ -975,7 +1114,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     const bodyGetter = async () => {
       return this.extentStore.readExtents(
-        ranges.map(value => value.persistency),
+        ranges.map((value) => value.persistency),
         0,
         contentLength,
         context.contextId

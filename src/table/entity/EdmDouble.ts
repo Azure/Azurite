@@ -39,7 +39,7 @@ export class EdmDouble implements IEdmType {
         Number.isInteger(this.value) ? this.typedValue.toFixed(1) : this.value
       }`;
     } else {
-      return `"${name}":"${this.value}"`;
+      return `"${name}":${JSON.stringify(this.typedValue)}`;
     }
   }
 

@@ -1,8 +1,8 @@
 import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 import * as Models from "../generated/artifacts/models";
 
-export const VERSION = "3.8.0";
-export const BLOB_API_VERSION = "2019-12-12";
+export const VERSION = "3.9.0";
+export const BLOB_API_VERSION = "2020-02-10";
 export const DEFAULT_BLOB_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_LIST_BLOBS_MAX_RESULTS = 5000;
 export const DEFAULT_LIST_CONTAINERS_MAX_RESULTS = 5000;
@@ -20,6 +20,13 @@ export const DEFAULT_CONTEXT_PATH = "azurite_blob_context";
 export const LOGGER_CONFIGS = {};
 export const DEFAULT_GC_INTERVAL_MS = 10 * 60 * 1000;
 export const DEFAULT_WRITE_CONCURRENCY_PER_LOCATION = 50;
+export const EMULATOR_ACCOUNT_NAME = "devstoreaccount1";
+export const EMULATOR_ACCOUNT_KEY_STR =
+  "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
+export const EMULATOR_ACCOUNT_KEY = Buffer.from(
+  EMULATOR_ACCOUNT_KEY_STR,
+  "base64"
+);
 
 export const EMULATOR_ACCOUNT_SKUNAME = Models.SkuName.StandardRAGRS;
 export const EMULATOR_ACCOUNT_KIND = Models.AccountKind.StorageV2;
@@ -89,6 +96,7 @@ export const DEFAULT_BLOB_PERSISTENCE_ARRAY: StoreDestinationArray = [
 ];
 
 export const ValidAPIVersions = [
+  "2020-02-10",
   "2019-12-12",
   "2019-07-07",
   "2019-02-02",

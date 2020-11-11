@@ -1,9 +1,7 @@
 import {
-  Aborter,
-  ContainerURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+  newPipeline,
+  BlobServiceClient,
+  StorageSharedKeyCredential
 } from "@azure/storage-blob";
 import * as assert from "assert";
 
@@ -25,12 +23,17 @@ describe("Blob Cors requests test", () => {
   const server = factory.createServer();
 
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
-  const serviceURL = new ServiceURL(
+  const serviceClient = new BlobServiceClient(
     baseURL,
-    StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     )
   );
@@ -45,41 +48,46 @@ describe("Blob Cors requests test", () => {
   });
 
   it("OPTIONS request without cors rules in server should be fail @loki @sql", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
     serviceProperties.cors = [];
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     const origin = "Origin";
     const requestMethod = "GET";
 
-    const pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod)
     );
-    const serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    const serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
     let error;
     try {
-      await serviceURLforOPTIONS.getProperties(Aborter.none);
+      await serviceClientForOptions.getProperties();
     } catch (err) {
       error = err;
     }
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.body.message.includes(
+      error.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
   });
 
   it("OPTIONS request should not work without matching cors rules @loki @sql", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "header",
@@ -91,34 +99,39 @@ describe("Blob Cors requests test", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     let origin = "Origin";
     let requestMethod = "GET";
 
-    let pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    let pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod)
     );
-    let serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    let serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
     let error;
     try {
-      await serviceURLforOPTIONS.getProperties(Aborter.none);
+      await serviceClientForOptions.getProperties();
     } catch (err) {
       error = err;
     }
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.body.message.includes(
+      error.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
@@ -126,23 +139,28 @@ describe("Blob Cors requests test", () => {
     origin = "test";
     requestMethod = "GET";
 
-    pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod)
     );
-    serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
-    const res = await serviceURLforOPTIONS.getProperties(Aborter.none);
+    const res = await serviceClientForOptions.getProperties();
     assert.ok(res._response.status === 200);
   });
 
   it("OPTIONS request should not work without Origin header or matching allowedOrigins @loki @sql", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "header",
@@ -154,65 +172,75 @@ describe("Blob Cors requests test", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "Origin";
     const requestMethod = "GET";
 
-    let pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    let pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod)
     );
-    let serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    let serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
     let error;
     try {
-      await serviceURLforOPTIONS.getProperties(Aborter.none);
+      await serviceClientForOptions.getProperties();
     } catch (err) {
       error = err;
     }
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.body.message.includes(
+      error.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
 
-    pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(undefined, requestMethod)
     );
-    serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
     try {
-      await serviceURLforOPTIONS.getProperties(Aborter.none);
+      await serviceClientForOptions.getProperties();
     } catch (err) {
       error = err;
     }
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.body.message.includes(
+      error.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
   });
 
   it("OPTIONS request should not work without requestMethod header or matching allowedMethods @loki @sql", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "header",
@@ -224,63 +252,71 @@ describe("Blob Cors requests test", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "test";
     const requestMethod = "PUT";
 
-    let pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    let pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod)
     );
-    let serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    let serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
     let error;
     try {
-      await serviceURLforOPTIONS.getProperties(Aborter.none);
+      await serviceClientForOptions.getProperties();
     } catch (err) {
       error = err;
     }
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.body.message.includes(
+      error.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
 
-    pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, undefined)
     );
-    serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
     try {
-      await serviceURLforOPTIONS.getProperties(Aborter.none);
+      await serviceClientForOptions.getProperties();
     } catch (err) {
       error = err;
     }
 
     assert.ok(error.statusCode === 400);
-    assert.ok(
-      error.body.message.includes("A required CORS header is not present.")
-    );
+    assert.ok(error.message.includes("A required CORS header is not present."));
   });
 
   it("OPTIONS request should check the defined requestHeaders @loki @sql", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = [
       {
@@ -308,7 +344,7 @@ describe("Blob Cors requests test", () => {
 
     serviceProperties.cors = newCORS;
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
@@ -317,27 +353,32 @@ describe("Blob Cors requests test", () => {
     let requestMethod = "GET";
     let reqestHeaders = "head";
 
-    let pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    let pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
     );
-    let serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    let serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
     let error;
     try {
-      await serviceURLforOPTIONS.getProperties(Aborter.none);
+      await serviceClientForOptions.getProperties();
     } catch (err) {
       error = err;
     }
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.body.message.includes(
+      error.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
@@ -347,18 +388,23 @@ describe("Blob Cors requests test", () => {
     requestMethod = "GET";
     reqestHeaders = "header";
 
-    pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
     );
-    serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
-    let res = await serviceURLforOPTIONS.getProperties(Aborter.none);
+    let res = await serviceClientForOptions.getProperties();
     assert.ok(res._response.status === 200);
 
     // Match second cors.
@@ -366,18 +412,23 @@ describe("Blob Cors requests test", () => {
     requestMethod = "PUT";
     reqestHeaders = "head";
 
-    pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
     );
-    serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
-    res = await serviceURLforOPTIONS.getProperties(Aborter.none);
+    res = await serviceClientForOptions.getProperties();
     assert.ok(res._response.status === 200);
 
     // No match.
@@ -385,27 +436,32 @@ describe("Blob Cors requests test", () => {
     requestMethod = "POST";
     reqestHeaders = "hea";
 
-    pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
     );
-    serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
     error;
     try {
-      await serviceURLforOPTIONS.getProperties(Aborter.none);
+      await serviceClientForOptions.getProperties();
     } catch (err) {
       error = err;
     }
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.body.message.includes(
+      error.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
@@ -415,23 +471,28 @@ describe("Blob Cors requests test", () => {
     requestMethod = "POST";
     reqestHeaders = "headerheader";
 
-    pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
     );
-    serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
-    res = await serviceURLforOPTIONS.getProperties(Aborter.none);
+    res = await serviceClientForOptions.getProperties();
     assert.ok(res._response.status === 200);
   });
 
   it("OPTIONS request should work with matching rule containing Origion * @loki @sql", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "header",
@@ -443,48 +504,58 @@ describe("Blob Cors requests test", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "anyOrigin";
     const requestMethod = "GET";
 
-    const pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod)
     );
-    const serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    const serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
-    const res = await serviceURLforOPTIONS.getProperties(Aborter.none);
+    const res = await serviceClientForOptions.getProperties();
     assert.ok(res._response.status === 200);
   });
 
   it("Response of request to service without cors rules should not contains cors info @loki @sql", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     serviceProperties.cors = [];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "anyOrigin";
-    const pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
-    const serviceURLwithOrigin = new ServiceURL(baseURL, pipeline);
+    const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
-    const res: any = await serviceURLwithOrigin.getProperties(Aborter.none);
+    const res: any = await serviceClientWithOrigin.getProperties();
 
     assert.ok(res["access-control-allow-origin"] === undefined);
     assert.ok(res["access-control-expose-headers"] === undefined);
@@ -492,7 +563,7 @@ describe("Blob Cors requests test", () => {
   });
 
   it("Service with mismatching cors rules should response header Vary @loki @sql", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "header",
@@ -504,29 +575,34 @@ describe("Blob Cors requests test", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "anyOrigin";
-    const pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
-    const serviceURLwithOrigin = new ServiceURL(baseURL, pipeline);
+    const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
-    let res: any = await serviceURLwithOrigin.getProperties(Aborter.none);
+    let res: any = await serviceClientWithOrigin.getProperties();
     assert.ok(res.vary !== undefined);
 
-    res = await serviceURL.getProperties(Aborter.none);
+    res = await serviceClient.getProperties();
     assert.ok(res.vary === undefined);
   });
 
   it("Request Match rule exists that allows all origins (*) @loki @sql", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "header",
@@ -538,33 +614,38 @@ describe("Blob Cors requests test", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "anyOrigin";
-    const pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
-    const serviceURLwithOrigin = new ServiceURL(baseURL, pipeline);
+    const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
-    let res: any = await serviceURLwithOrigin.getProperties(Aborter.none);
+    let res: any = await serviceClientWithOrigin.getProperties();
     assert.ok(res["access-control-allow-origin"] === "*");
     assert.ok(res.vary === undefined);
     assert.ok(res["access-control-expose-headers"] !== undefined);
 
-    res = await serviceURL.getProperties(Aborter.none);
+    res = await serviceClient.getProperties();
     assert.ok(res["access-control-allow-origin"] === undefined);
     assert.ok(res.vary === undefined);
     assert.ok(res["access-control-expose-headers"] === undefined);
   });
 
   it("Request Match rule exists for exact origin @loki @sql", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "header",
@@ -576,28 +657,33 @@ describe("Blob Cors requests test", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "exactOrigin";
-    const pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
-    const serviceURLwithOrigin = new ServiceURL(baseURL, pipeline);
+    const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
-    const res: any = await serviceURLwithOrigin.getProperties(Aborter.none);
+    const res: any = await serviceClientWithOrigin.getProperties();
     assert.ok(res["access-control-allow-origin"] === origin);
     assert.ok(res.vary !== undefined);
     assert.ok(res["access-control-expose-headers"] !== undefined);
   });
 
   it("Requests with error response should apply for CORS @loki @sql", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "header",
@@ -609,27 +695,31 @@ describe("Blob Cors requests test", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "exactOrigin";
-    const pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
-    const serviceURLwithOrigin = new ServiceURL(baseURL, pipeline);
+    const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
-    const containerURLwithOrigin = ContainerURL.fromServiceURL(
-      serviceURLwithOrigin,
+    const containerClientWithOrigin = serviceClientWithOrigin.getContainerClient(
       "notexistcontainer"
     );
 
     try {
-      await containerURLwithOrigin.getProperties(Aborter.none);
+      await containerClientWithOrigin.getProperties();
     } catch (err) {
       assert.ok(
         err.response.headers._headersMap["access-control-allow-origin"]
@@ -644,7 +734,7 @@ describe("Blob Cors requests test", () => {
   });
 
   it("Request Match rule in sequence @loki @sql", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = [
       {
@@ -665,21 +755,26 @@ describe("Blob Cors requests test", () => {
 
     serviceProperties.cors = newCORS;
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "exactOrigin";
-    const pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
-    const serviceURLwithOrigin = new ServiceURL(baseURL, pipeline);
+    const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
-    const res: any = await serviceURLwithOrigin.getProperties(Aborter.none);
+    const res: any = await serviceClientWithOrigin.getProperties();
     assert.ok(res["access-control-allow-origin"] === origin);
     assert.ok(res.vary !== undefined);
     assert.ok(res["access-control-expose-headers"] !== undefined);
