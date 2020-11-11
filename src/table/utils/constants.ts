@@ -17,7 +17,7 @@ export const TABLE_API_VERSION = "2019-12-12";
 
 export const HeaderConstants = {
   SERVER: "Server",
-  VERSION: "3.8.0-tablealpha.1",
+  VERSION: "3.9.0-table-alpha.1",
   APPLICATION_JSON: "application/json",
   AUTHORIZATION: "authorization",
   CONTENT_MD5: "content-md5",

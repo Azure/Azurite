@@ -14,7 +14,6 @@ RUN npm config set unsafe-perm=true && \
 COPY src ./src
 COPY tests ./tests
 RUN npm run build && \
-  npm run test && \
   npm install -g --loglevel verbose
 
 

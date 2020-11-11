@@ -1,4 +1,6 @@
 .vscode/**
+.github/**
+.github
 node_modules/**
 swagger/**
 __blobstorage__/**

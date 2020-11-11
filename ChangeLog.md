@@ -8,7 +8,7 @@
 
 Table:
 
-- Alpha version of Azurite V3 Table.
+- First Alpha version of Azurite V3 Table.
 
 ## 2020.10 Version 3.9.0
 

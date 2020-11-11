@@ -1,4 +1,4 @@
-import { IIPRange } from "@azure/storage-blob";
+import { SasIPRange as IIPRange } from "@azure/storage-blob";
 
 import {
   computeHMACSHA256,
