@@ -1154,10 +1154,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           blobFindResult
         );
 
-        LeaseFactory.createLeaseState(
-          new BlobLeaseAdapter(blobModel),
-          context
-        ).validate(new BlobWriteLeaseValidator(leaseAccessConditions));
+        LeaseFactory.createLeaseState(new BlobLeaseAdapter(blobModel), context)
+          .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
+          .sync(new BlobLeaseSyncer(blob)); // Keep original blob lease;
 
         if (
           blobModel.properties !== undefined &&
