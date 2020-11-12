@@ -79,6 +79,7 @@ export function tableStorageContextMiddleware(
   // Candidate tableSection
   // undefined - Set Table Service Properties
   // Tables - Create Tables, Query Tables
+  // Tables() - Create Tables, Query Tables
   // Tables('mytable')	- Delete Tables, Query Entities
   // mytable - Get/Set Table ACL, Insert Entity, Query Entities
   // mytable(PartitionKey='<partition-key>',RowKey='<row-key>') -
@@ -88,8 +89,9 @@ export function tableStorageContextMiddleware(
   if (tableSection === undefined) {
     // Service level operation
     tableContext.tableName = undefined;
-  } else if (tableSection === "Tables") {
+  } else if (tableSection === "Tables" || tableSection === "Tables()") {
     // Table name in request body
+    tableSection = "Tables";
     tableContext.tableName = undefined;
   } else if (
     tableSection.startsWith("Tables('") &&
