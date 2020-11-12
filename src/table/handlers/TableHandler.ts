@@ -469,7 +469,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         return typeof item === "string" && item.length > 0;
       })
       .map((item) => item.trim());
-    if (selectArray) {
+    if (selectArray && selectArray.length > 0) {
       selectSet = new Set(selectArray);
     }
 
@@ -595,7 +595,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         return typeof item === "string" && item.length > 0;
       })
       .map((item) => item.trim());
-    if (selectArray) {
+    if (selectArray && selectArray.length > 0) {
       selectSet = new Set(selectArray);
     }
 
@@ -804,7 +804,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       formatParameter = context.request!.getQuery("$format");
     }
 
-    if (format === XML_METADATA) {
+    if (format === "") {
       format = XML_METADATA;
     }
 
@@ -815,6 +815,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     if (format === "application/json") {
       format = MINIMAL_METADATA_ACCEPT;
     }
+
+    format = format?.replace(/\s/g, "");
 
     if (
       format !== NO_METADATA_ACCEPT &&
