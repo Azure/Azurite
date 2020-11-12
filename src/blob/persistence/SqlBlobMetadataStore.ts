@@ -386,7 +386,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     context: Context,
     serviceProperties: ServicePropertiesModel
   ): Promise<ServicePropertiesModel> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       const findResult = await ServicesModel.findByPk(
         serviceProperties.accountName,
         {
@@ -594,7 +594,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: string,
     options: Models.ContainerDeleteMethodOptionalParams = {}
   ): Promise<void> {
-    await this.sequelize.transaction(async t => {
+    await this.sequelize.transaction(async (t) => {
       /* Transaction starts */
       const findResult = await ContainersModel.findOne({
         attributes: [
@@ -677,7 +677,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<void> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       /* Transaction starts */
       const findResult = await ContainersModel.findOne({
         attributes: [
@@ -765,7 +765,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: string,
     setAclModel: SetContainerAccessPolicyOptions
   ): Promise<void> {
-    await this.sequelize.transaction(async t => {
+    await this.sequelize.transaction(async (t) => {
       const findResult = await ContainersModel.findOne({
         attributes: [
           "accountName",
@@ -826,7 +826,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     container: string,
     options: Models.ContainerAcquireLeaseOptionalParams
   ): Promise<AcquireContainerLeaseResponse> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       /* Transaction starts */
       const findResult = await ContainersModel.findOne({
         where: {
@@ -880,7 +880,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseId: string,
     options: Models.ContainerReleaseLeaseOptionalParams = {}
   ): Promise<Models.ContainerProperties> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       /* Transaction starts */
       const findResult = await ContainersModel.findOne({
         where: {
@@ -932,7 +932,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseId: string,
     options: Models.ContainerRenewLeaseOptionalParams = {}
   ): Promise<RenewContainerLeaseResponse> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       /* Transaction starts */
       // TODO: Filter out unnecessary fields in select query
       const findResult = await ContainersModel.findOne({
@@ -988,7 +988,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     breakPeriod: number | undefined,
     options: Models.ContainerBreakLeaseOptionalParams = {}
   ): Promise<BreakContainerLeaseResponse> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       const findResult = await ContainersModel.findOne({
         where: {
           accountName: account,
@@ -1052,7 +1052,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     proposedLeaseId: string,
     options: Models.ContainerChangeLeaseOptionalParams = {}
   ): Promise<ChangeContainerLeaseResponse> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       const findResult = await ContainersModel.findOne({
         where: {
           accountName: account,
@@ -1112,7 +1112,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<void> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(
         context,
         blob.accountName,
@@ -1154,10 +1154,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           blobFindResult
         );
 
-        LeaseFactory.createLeaseState(
-          new BlobLeaseAdapter(blobModel),
-          context
-        ).validate(new BlobWriteLeaseValidator(leaseAccessConditions));
+        LeaseFactory.createLeaseState(new BlobLeaseAdapter(blobModel), context)
+          .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
+          .sync(new BlobLeaseSyncer(blob)); // Keep original blob lease;
 
         if (
           blobModel.properties !== undefined &&
@@ -1182,7 +1181,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<BlobModel> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
       const blobFindResult = await BlobsModel.findOne({
@@ -1233,7 +1232,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     includeSnapshots?: boolean,
     includeUncommittedBlobs?: boolean
   ): Promise<[BlobModel[], any | undefined]> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
       const whereQuery: any = {
@@ -1341,7 +1340,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     block: BlockModel,
     leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<void> {
-    await this.sequelize.transaction(async t => {
+    await this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(
         context,
         block.accountName,
@@ -1436,7 +1435,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     isCommitted?: boolean,
     leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<any> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
       const blobFindResult = await BlobsModel.findOne({
@@ -1503,7 +1502,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<void> {
-    await this.sequelize.transaction(async t => {
+    await this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(
         context,
         blob.accountName,
@@ -1633,7 +1632,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           creationTime,
           lastModified: blob.properties.lastModified || context.startTime,
           contentLength: selectedBlockList
-            .map(block => block.size)
+            .map((block) => block.size)
             .reduce((total, val) => {
               return total + val;
             }, 0),
@@ -1680,7 +1679,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<GetBlobPropertiesRes> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
       const blobFindResult = await BlobsModel.findOne({
@@ -1739,7 +1738,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     metadata?: Models.BlobMetadata,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<CreateSnapshotResponse> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
       const blobFindResult = await BlobsModel.findOne({
@@ -1808,7 +1807,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: string,
     options: Models.BlobDeleteMethodOptionalParams
   ): Promise<void> {
-    await this.sequelize.transaction(async t => {
+    await this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
       const blobFindResult = await BlobsModel.findOne({
@@ -1983,7 +1982,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blobHTTPHeaders: Models.BlobHTTPHeaders | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobProperties> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
       const blobFindResult = await BlobsModel.findOne({
@@ -2059,7 +2058,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     metadata: Models.BlobMetadata | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobProperties> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
       const blobFindResult = await BlobsModel.findOne({
@@ -2135,7 +2134,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     proposedLeaseId?: string,
     options: Models.BlobAcquireLeaseOptionalParams = {}
   ): Promise<AcquireBlobLeaseResponse> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
       const blobFindResult = await BlobsModel.findOne({
@@ -2191,7 +2190,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseId: string,
     options: Models.BlobReleaseLeaseOptionalParams = {}
   ): Promise<ReleaseBlobLeaseResponse> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
       const blobFindResult = await BlobsModel.findOne({
@@ -2247,7 +2246,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseId: string,
     options: Models.BlobRenewLeaseOptionalParams = {}
   ): Promise<RenewBlobLeaseResponse> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
       const blobFindResult = await BlobsModel.findOne({
@@ -2304,7 +2303,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     proposedLeaseId: string,
     options: Models.BlobChangeLeaseOptionalParams = {}
   ): Promise<ChangeBlobLeaseResponse> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
       const blobFindResult = await BlobsModel.findOne({
@@ -2360,7 +2359,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     breakPeriod: number | undefined,
     options: Models.BlobBreakLeaseOptionalParams = {}
   ): Promise<BreakBlobLeaseResponse> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
       const blobFindResult = await BlobsModel.findOne({
@@ -2424,7 +2423,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: string,
     snapshot?: string | undefined
   ): Promise<void> {
-    await this.sequelize.transaction(async t => {
+    await this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
       const res = await BlobsModel.findOne({
@@ -2481,7 +2480,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     tier: Models.AccessTier | undefined,
     options: Models.BlobStartCopyFromURLOptionalParams = {}
   ): Promise<Models.BlobProperties> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       const sourceBlob = await this.getBlobWithLeaseUpdated(
         source.account,
         source.container,
@@ -2656,7 +2655,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     tier: Models.AccessTier,
     leaseAccessConditions?: Models.LeaseAccessConditions
   ): Promise<200 | 202> {
-    return this.sequelize.transaction(async t => {
+    return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
       const blobFindResult = await BlobsModel.findOne({
@@ -2829,10 +2828,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       },
       limit: maxResults + 1,
       order: [["id", "ASC"]]
-    }).then(res => {
+    }).then((res) => {
       if (res.length < maxResults) {
         return [
-          res.map(obj => {
+          res.map((obj) => {
             return this.deserializeModelValue(obj, "persistency", true);
           }),
           undefined
@@ -2845,7 +2844,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           true
         );
         return [
-          res.map(obj => this.deserializeModelValue(obj, "persistency", true)),
+          res.map((obj) =>
+            this.deserializeModelValue(obj, "persistency", true)
+          ),
           nextMarker
         ];
       }
