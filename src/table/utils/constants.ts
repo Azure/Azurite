@@ -44,6 +44,7 @@ export const RETURN_CONTENT = "return-content";
 export const QUERY_RESULT_MAX_NUM = 1000;
 export const ValidAPIVersions = [
   "2019-12-12",
+  "2019-10-10",
   "2019-07-07",
   "2019-02-02",
   "2018-11-09",

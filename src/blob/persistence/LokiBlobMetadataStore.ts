@@ -970,10 +970,9 @@ export default class LokiBlobMetadataStore
     }
 
     if (blobDoc) {
-      LeaseFactory.createLeaseState(
-        new BlobLeaseAdapter(blobDoc),
-        context
-      ).validate(new BlobWriteLeaseValidator(leaseAccessConditions));
+      LeaseFactory.createLeaseState(new BlobLeaseAdapter(blobDoc), context)
+        .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
+        .sync(new BlobLeaseSyncer(blob)); // Keep original blob lease
 
       if (
         blobDoc.properties !== undefined &&
