@@ -135,6 +135,8 @@ export function tableStorageContextMiddleware(
       thridQuoteIndex + 1,
       fourthQuoteIndex
     );
+
+    tableSection = `${tableContext.tableName}(PartitionKey='PLACEHOLDER',RowKey='PLACEHOLDER')`;
   } else if (
     tableSection.includes("(") &&
     tableSection.includes(")") &&
@@ -164,6 +166,11 @@ export function tableStorageContextMiddleware(
   // Exclude account name from req.path for dispatchMiddleware
   tableContext.dispatchPattern =
     tableSection !== undefined ? `/${tableSection}` : "/";
+
+  logger.debug(
+    `tableStorageContextMiddleware: Dispatch pattern string: ${tableContext.dispatchPattern}`,
+    requestID
+  );
 
   logger.info(
     `tableStorageContextMiddleware: Account=${account} tableName=${tableContext.tableName}`,

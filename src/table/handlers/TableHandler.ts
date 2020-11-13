@@ -238,7 +238,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       );
     }
 
-    response.contentType = "application/json";
+    this.updateResponseAccept(tableContext, accept);
     this.updateResponsePrefer(response, tableContext);
 
     return response;
@@ -505,20 +505,20 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       );
     });
 
-    // TODO: What about NO_METADATA_ACCEPT?
-    const odatametadata =
-      getEntityOdataAnnotationsForResponse(
-        account,
-        table,
-        odataPrefix,
-        "",
-        "",
-        accept
-      ).odatametadata || "";
+    const odatametadata = getEntityOdataAnnotationsForResponse(
+      account,
+      table,
+      odataPrefix,
+      "",
+      "",
+      accept
+    ).odatametadata;
 
-    const body = `{"odata.metadata":${JSON.stringify(
-      odatametadata
-    )},"value":[${entities.join(",")}]}`;
+    const odatametadataPariString = odatametadata
+      ? `"odata.metadata":${JSON.stringify(odatametadata)},`
+      : "";
+
+    const body = `{${odatametadataPariString}"value":[${entities.join(",")}]}`;
     response.body = new BufferStream(Buffer.from(body));
 
     this.logger.debug(
@@ -526,7 +526,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       context.contextID
     );
 
-    context.response!.setContentType("application/json");
+    this.updateResponseAccept(tableContext, accept);
 
     return response;
   }
@@ -604,7 +604,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       Buffer.from(nomarlizedEntity.toResponseString(accept, body, selectSet))
     );
 
-    context.response!.setContentType("application/json");
+    this.updateResponseAccept(tableContext, accept);
     return response;
   }
 

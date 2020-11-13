@@ -237,8 +237,8 @@ export default class StorageErrorFactory {
   public static getEntityNotFound(context: Context): StorageError {
     return new StorageError(
       404,
-      "EntityNotFound",
-      "The specified entity does not exist.",
+      "ResourceNotFound",
+      "The specified resource does not exist.",
       context.contextID || defaultID,
       undefined,
       context
