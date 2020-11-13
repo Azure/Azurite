@@ -507,7 +507,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string
   ): Promise<Models.TableGetAccessPolicyResponse> {
     // TODO
-    throw new NotImplementedError();
+    throw new NotImplementedError(context);
   }
 
   public async setTableAccessPolicy(
@@ -515,7 +515,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string
   ): Promise<Models.TableSetAccessPolicyResponse> {
     // TODO
-    throw new NotImplementedError();
+    throw new NotImplementedError(context);
   }
 
   private async updateTableEntity(
@@ -547,7 +547,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }) as Entity;
 
     if (!doc) {
-      throw StorageErrorFactory.getEntityNotExist(context);
+      throw StorageErrorFactory.getEntityNotFound(context);
     }
 
     // Test if etag value is valid
@@ -593,7 +593,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }) as Entity;
 
     if (!doc) {
-      throw StorageErrorFactory.getEntityNotExist(context);
+      throw StorageErrorFactory.getEntityNotFound(context);
     }
 
     if (ifMatch === undefined || ifMatch === "*" || doc.eTag === ifMatch) {

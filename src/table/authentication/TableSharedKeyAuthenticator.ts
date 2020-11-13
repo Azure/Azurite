@@ -44,7 +44,7 @@ export default class TableSharedKeyAuthenticator implements IAuthenticator {
         tableContext.contextID
       );
       throw StorageErrorFactory.getInvalidOperation(
-        tableContext.contextID!,
+        tableContext,
         "Invalid storage account."
       );
     }

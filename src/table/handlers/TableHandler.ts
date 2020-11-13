@@ -17,11 +17,11 @@ import {
   NO_METADATA_ACCEPT,
   RETURN_CONTENT,
   RETURN_NO_CONTENT,
-  TABLE_API_VERSION,
-  XML_METADATA
+  TABLE_API_VERSION
 } from "../utils/constants";
 import {
   getEntityOdataAnnotationsForResponse,
+  getPayloadFormat,
   getTableOdataAnnotationsForResponse,
   getTablePropertiesOdataAnnotationsForResponse,
   updateTableOptionalOdataAnnotationsForResponse
@@ -238,7 +238,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       );
     }
 
-    response.contentType = "application/json";
+    this.updateResponseAccept(tableContext, accept);
     this.updateResponsePrefer(response, tableContext);
 
     return response;
@@ -505,20 +505,20 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       );
     });
 
-    // TODO: What about NO_METADATA_ACCEPT?
-    const odatametadata =
-      getEntityOdataAnnotationsForResponse(
-        account,
-        table,
-        odataPrefix,
-        "",
-        "",
-        accept
-      ).odatametadata || "";
+    const odatametadata = getEntityOdataAnnotationsForResponse(
+      account,
+      table,
+      odataPrefix,
+      "",
+      "",
+      accept
+    ).odatametadata;
 
-    const body = `{"odata.metadata":${JSON.stringify(
-      odatametadata
-    )},"value":[${entities.join(",")}]}`;
+    const odatametadataPariString = odatametadata
+      ? `"odata.metadata":${JSON.stringify(odatametadata)},`
+      : "";
+
+    const body = `{${odatametadataPariString}"value":[${entities.join(",")}]}`;
     response.body = new BufferStream(Buffer.from(body));
 
     this.logger.debug(
@@ -526,7 +526,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       context.contextID
     );
 
-    context.response!.setContentType("application/json");
+    this.updateResponseAccept(tableContext, accept);
 
     return response;
   }
@@ -554,7 +554,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     );
 
     if (entity === undefined || entity === null) {
-      throw StorageErrorFactory.getEntityNotExist(context);
+      throw StorageErrorFactory.getEntityNotFound(context);
     }
 
     const response: Models.TableQueryEntitiesWithPartitionAndRowKeyResponse = {
@@ -604,7 +604,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       Buffer.from(nomarlizedEntity.toResponseString(accept, body, selectSet))
     );
 
-    context.response!.setContentType("application/json");
+    this.updateResponseAccept(tableContext, accept);
     return response;
   }
 
@@ -634,7 +634,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     // const accountName = tableContext.account;
     // const tableName = tableContext.tableName; // Get tableName from context
     // TODO
-    throw new NotImplementedError();
+    throw new NotImplementedError(context);
   }
 
   public async setAccessPolicy(
@@ -647,7 +647,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     // const accountName = tableContext.account;
     // const tableName = tableContext.tableName; // Get tableName from context
     // TODO
-    throw new NotImplementedError();
+    throw new NotImplementedError(context);
   }
 
   public async batch(
@@ -668,118 +668,6 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     };
   }
 
-  // private getResponseBodyFromQueryResultBasedOnAccept(
-  //   accept: string,
-  //   accountName: string,
-  //   tableContext: Context,
-  //   queryResult: { [propertyName: string]: any }[]
-  // ) {
-  //   let protocol = "http";
-  //   let host =
-  //     DEFAULT_TABLE_SERVER_HOST_NAME + ":" + DEFAULT_TABLE_LISTENING_PORT;
-
-  //   if (tableContext.request !== undefined) {
-  //     host = tableContext.request.getHeader("host") as string;
-  //     protocol = tableContext.request.getProtocol() as string;
-  //   }
-
-  //   const resultWithMetaData: { [propertyName: string]: any }[] = [];
-  //   const responseBody: { [propertyName: string]: any } = {};
-
-  //   switch (accept) {
-  //     case MINIMAL_METADATA_ACCEPT: {
-  //       // Add odata.metadata
-  //       (responseBody as any)["odata.metadata"] =
-  //         `${protocol}://${host}/` + queryResult[0].odataMetadata;
-  //       for (const entity of queryResult) {
-  //         const filteredEntity = {};
-  //         for (const key of Object.keys(entity)) {
-  //           // Only need metadata and properties' odata type
-  //           if (
-  //             key === "odataMetadata" ||
-  //             key === "odataType" ||
-  //             key === "odataId" ||
-  //             key === "eTag" ||
-  //             key === "odataEditLink"
-  //           ) {
-  //             continue;
-  //           }
-  //           // Also add odataType to each field
-  //           (filteredEntity as any)[key] = entity[key];
-  //         }
-
-  //         resultWithMetaData.push(filteredEntity);
-  //       }
-  //       (responseBody as any).value = resultWithMetaData;
-  //       break;
-  //     }
-  //     case FULL_METADATA_ACCEPT: {
-  //       // Add odata.metadata
-  //       (responseBody as any)["odata.metadata"] = queryResult[0].odataMetadata;
-  //       for (const entity of queryResult) {
-  //         const filteredEntity = {};
-  //         for (const key of Object.keys(entity)) {
-  //           // Remove odataMetadata of each entity
-  //           if (key === "odataMetadata") {
-  //             continue;
-  //           }
-  //           (filteredEntity as any)[key] = entity[key];
-  //         }
-
-  //         // Add Timestamp@odata.type
-  //         (filteredEntity as any)["Timestamp@odata.type"] = "Edm.DateTime";
-
-  //         // Solve the name inconsistency of the response and entity
-  //         (filteredEntity as any)[
-  //           "odata.type"
-  //         ] = (filteredEntity as any).odataType;
-  //         delete (filteredEntity as any).odataType;
-
-  //         (filteredEntity as any)["odata.id"] =
-  //           `${protocol}://${host}/` + (filteredEntity as any).odataId;
-  //         delete (filteredEntity as any).odataId;
-
-  //         (filteredEntity as any)["odata.etag"] = (filteredEntity as any).eTag;
-  //         delete (filteredEntity as any).eTag;
-
-  //         (filteredEntity as any)[
-  //           "odata.editLink"
-  //         ] = (filteredEntity as any).odataEditLink;
-  //         delete (filteredEntity as any).odataEditLink;
-
-  //         // Add processed entity back
-  //         resultWithMetaData.push(filteredEntity);
-  //       }
-  //       (responseBody as any).value = resultWithMetaData;
-  //       break;
-  //     }
-  //     default: {
-  //       for (const entity of queryResult) {
-  //         const filteredEntity = {};
-  //         for (const key of Object.keys(entity)) {
-  //           // Don't need metadata and properties' odata type
-  //           if (
-  //             key === "odataMetadata" ||
-  //             key === "odataType" ||
-  //             key === "odataId" ||
-  //             key === "eTag" ||
-  //             key === "odataEditLink" ||
-  //             key.indexOf("@odata.type") > 0
-  //           ) {
-  //             continue;
-  //           }
-  //           (filteredEntity as any)[key] = entity[key];
-  //         }
-
-  //         resultWithMetaData.push(filteredEntity);
-  //       }
-  //       (responseBody as any).value = resultWithMetaData;
-  //       break;
-  //     }
-  //   }
-  //   return responseBody;
-  // }
-
   private getOdataAnnotationUrlPrefix(
     tableContext: TableStorageContext,
     account: string
@@ -794,29 +682,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     return `${protocol}://${host}`;
   }
 
-  private getAndCheckPayloadFormat(
-    context: TableStorageContext,
-    formatParameter?: string
-  ): string {
-    let format = context.request!.getHeader(HeaderConstants.ACCEPT);
-
-    if (formatParameter === undefined) {
-      formatParameter = context.request!.getQuery("$format");
-    }
-
-    if (format === "") {
-      format = XML_METADATA;
-    }
-
-    if (typeof formatParameter === "string") {
-      format = formatParameter;
-    }
-
-    if (format === "application/json") {
-      format = MINIMAL_METADATA_ACCEPT;
-    }
-
-    format = format?.replace(/\s/g, "");
+  private getAndCheckPayloadFormat(context: TableStorageContext): string {
+    const format = getPayloadFormat(context);
 
     if (
       format !== NO_METADATA_ACCEPT &&

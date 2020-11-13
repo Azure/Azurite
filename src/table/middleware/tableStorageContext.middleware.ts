@@ -41,13 +41,6 @@ export function tableStorageContextMiddleware(
 
   const requestID = uuid();
 
-  if (!skipApiVersionCheck) {
-    const apiVersion = req.header(HeaderConstants.X_MS_VERSION);
-    if (apiVersion !== undefined) {
-      checkApiVersion(apiVersion, ValidAPIVersions, requestID);
-    }
-  }
-
   const tableContext = new TableStorageContext(
     res.locals,
     DEFAULT_TABLE_CONTEXT_PATH
@@ -56,6 +49,13 @@ export function tableStorageContextMiddleware(
   tableContext.accept = req.headers.accept;
   tableContext.startTime = new Date();
   tableContext.xMsRequestID = requestID;
+
+  if (!skipApiVersionCheck) {
+    const apiVersion = req.header(HeaderConstants.X_MS_VERSION);
+    if (apiVersion !== undefined) {
+      checkApiVersion(apiVersion, ValidAPIVersions, tableContext);
+    }
+  }
 
   logger.info(
     `TableStorageContextMiddleware: RequestMethod=${req.method} RequestURL=${
@@ -135,6 +135,8 @@ export function tableStorageContextMiddleware(
       thridQuoteIndex + 1,
       fourthQuoteIndex
     );
+
+    tableSection = `${tableContext.tableName}(PartitionKey='PLACEHOLDER',RowKey='PLACEHOLDER')`;
   } else if (
     tableSection.includes("(") &&
     tableSection.includes(")") &&
@@ -164,6 +166,11 @@ export function tableStorageContextMiddleware(
   // Exclude account name from req.path for dispatchMiddleware
   tableContext.dispatchPattern =
     tableSection !== undefined ? `/${tableSection}` : "/";
+
+  logger.debug(
+    `tableStorageContextMiddleware: Dispatch pattern string: ${tableContext.dispatchPattern}`,
+    requestID
+  );
 
   logger.info(
     `tableStorageContextMiddleware: Account=${account} tableName=${tableContext.tableName}`,
