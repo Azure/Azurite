@@ -7,6 +7,7 @@ import {
 import Context from "../generated/Context";
 import MiddlewareError from "../generated/errors/MiddlewareError";
 import { jsonToXML } from "../generated/utils/xml";
+import { getPayloadFormat } from "../utils/utils";
 
 /**
  * Represents an Azure Storage Server Error.
@@ -38,24 +39,13 @@ export default class StorageError extends MiddlewareError {
     storageErrorMessage: string,
     storageRequestID: string,
     storageAdditionalErrorMessages: { [key: string]: string } = {},
-    context?: Context
+    context: Context
   ) {
-    let isJSON = false;
-    let accept =
-      context && context.request
-        ? context.request.getHeader("accept")
-        : undefined;
-    accept =
-      context && context.request
-        ? context.request.getQuery("$format") || accept
-        : accept;
-    if (
-      accept === NO_METADATA_ACCEPT ||
-      accept === MINIMAL_METADATA_ACCEPT ||
-      accept === FULL_METADATA_ACCEPT
-    ) {
-      isJSON = true;
-    }
+    const pyaload = getPayloadFormat(context);
+    const isJSON =
+      pyaload === NO_METADATA_ACCEPT ||
+      pyaload === MINIMAL_METADATA_ACCEPT ||
+      pyaload === FULL_METADATA_ACCEPT;
 
     const bodyInJSON: any = isJSON
       ? {
@@ -91,7 +81,7 @@ export default class StorageError extends MiddlewareError {
         "x-ms-version": TABLE_API_VERSION
       },
       body,
-      isJSON ? `${accept};streaming=true;charset=utf-8` : "application/xml"
+      isJSON ? `${pyaload};streaming=true;charset=utf-8` : "application/xml"
     );
 
     this.name = "StorageError";

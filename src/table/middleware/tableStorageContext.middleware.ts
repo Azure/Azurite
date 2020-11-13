@@ -41,13 +41,6 @@ export function tableStorageContextMiddleware(
 
   const requestID = uuid();
 
-  if (!skipApiVersionCheck) {
-    const apiVersion = req.header(HeaderConstants.X_MS_VERSION);
-    if (apiVersion !== undefined) {
-      checkApiVersion(apiVersion, ValidAPIVersions, requestID);
-    }
-  }
-
   const tableContext = new TableStorageContext(
     res.locals,
     DEFAULT_TABLE_CONTEXT_PATH
@@ -56,6 +49,13 @@ export function tableStorageContextMiddleware(
   tableContext.accept = req.headers.accept;
   tableContext.startTime = new Date();
   tableContext.xMsRequestID = requestID;
+
+  if (!skipApiVersionCheck) {
+    const apiVersion = req.header(HeaderConstants.X_MS_VERSION);
+    if (apiVersion !== undefined) {
+      checkApiVersion(apiVersion, ValidAPIVersions, tableContext);
+    }
+  }
 
   logger.info(
     `TableStorageContextMiddleware: RequestMethod=${req.method} RequestURL=${

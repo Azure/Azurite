@@ -1,5 +1,6 @@
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import { TableResponseProperties } from "../generated/artifacts/models";
+import Context from "../generated/Context";
 import {
   Entity,
   IOdataAnnotations,
@@ -9,7 +10,8 @@ import {
 import {
   FULL_METADATA_ACCEPT,
   HeaderConstants,
-  MINIMAL_METADATA_ACCEPT
+  MINIMAL_METADATA_ACCEPT,
+  XML_METADATA
 } from "./constants";
 
 export function getTableOdataAnnotationsForRequest(
@@ -219,10 +221,10 @@ export function getOdataAnnotations(
 export function checkApiVersion(
   inputApiVersion: string,
   validApiVersions: Array<string>,
-  requestId: string
+  context: Context
 ): void {
   if (!validApiVersions.includes(inputApiVersion)) {
-    throw StorageErrorFactory.getInvalidHeaderValue(requestId, {
+    throw StorageErrorFactory.getInvalidHeaderValue(context, {
       HeaderName: HeaderConstants.X_MS_VERSION,
       HeaderValue: inputApiVersion
     });
@@ -231,4 +233,25 @@ export function checkApiVersion(
 
 export function getTimestampString(date: Date): string {
   return date.toISOString().replace("Z", "0000Z");
+}
+
+export function getPayloadFormat(context: Context): string {
+  let format = context.request?.getHeader(HeaderConstants.ACCEPT);
+
+  const formatParameter = context.request?.getQuery("$format");
+  if (typeof formatParameter === "string") {
+    format = formatParameter;
+  }
+
+  if (format === undefined || format === "") {
+    format = XML_METADATA;
+  }
+
+  if (format === "application/json") {
+    format = MINIMAL_METADATA_ACCEPT;
+  }
+
+  format = format.replace(/\s/g, "");
+
+  return format;
 }

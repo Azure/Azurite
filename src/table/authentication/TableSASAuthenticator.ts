@@ -63,7 +63,7 @@ export default class TableSASAuthenticator implements IAuthenticator {
     const accountProperties = this.accountDataStore.getAccount(account);
     if (accountProperties === undefined) {
       throw StorageErrorFactory.getInvalidOperation(
-        context.contextID!,
+        context,
         "Invalid storage account."
       );
     }
@@ -194,7 +194,7 @@ export default class TableSASAuthenticator implements IAuthenticator {
           `TableSASAuthenticator:validate() Cannot get access policy defined for table ${tableName} with id ${values.identifier}.`,
           context.contextID
         );
-        throw StorageErrorFactory.getAuthorizationFailure(context.contextID!);
+        throw StorageErrorFactory.getAuthorizationFailure(context);
       }
 
       values.startTime = accessPolicy.start;
@@ -211,7 +211,7 @@ export default class TableSASAuthenticator implements IAuthenticator {
         `TableSASAuthenticator:validate() Validate start and expiry failed.`,
         context.contextID
       );
-      throw StorageErrorFactory.getAuthorizationFailure(context.contextID!);
+      throw StorageErrorFactory.getAuthorizationFailure(context);
     }
 
     this.logger.info(
@@ -223,9 +223,7 @@ export default class TableSASAuthenticator implements IAuthenticator {
         `TableSASAuthenticator:validate() Validate IP range failed.`,
         context.contextID
       );
-      throw StorageErrorFactory.getAuthorizationSourceIPMismatch(
-        context.contextID!
-      );
+      throw StorageErrorFactory.getAuthorizationSourceIPMismatch(context);
     }
 
     this.logger.info(
@@ -237,9 +235,7 @@ export default class TableSASAuthenticator implements IAuthenticator {
         `TableSASAuthenticator:validate() Validate protocol failed.`,
         context.contextID
       );
-      throw StorageErrorFactory.getAuthorizationProtocolMismatch(
-        context.contextID!
-      );
+      throw StorageErrorFactory.getAuthorizationProtocolMismatch(context);
     }
 
     const operation = context.operation;
@@ -270,9 +266,7 @@ export default class TableSASAuthenticator implements IAuthenticator {
     }
 
     if (!tableSASPermission.validatePermissions(values.permissions!)) {
-      throw StorageErrorFactory.getAuthorizationPermissionMismatch(
-        context.contextID!
-      );
+      throw StorageErrorFactory.getAuthorizationPermissionMismatch(context);
     }
 
     this.logger.info(
