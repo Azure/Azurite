@@ -57,7 +57,7 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       return undefined;
     }
 
-    const blobName = blobContext.blob;
+    const blobName = this.decodeIfExist(blobContext.blob);
     this.logger.debug(
       // tslint:disable-next-line:max-line-length
       `BlobSASAuthenticator:validate() Retrieved account name from context: ${account}, container: ${containerName}, blob: ${blobName}`,
