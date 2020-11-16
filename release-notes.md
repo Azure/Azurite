@@ -1,4 +1,6 @@
 # 2.0  
+## 2.7.3
+- merged PR [#590](https://github.com/Azure/Azurite/pull/590) ->  Thanks to AArnot - Use LF Line Endings for Bash and npm compatibility.  
 ## 2.7.2
 - merged PR [#134](https://github.com/Azure/Azurite/pull/284) -> Thanks to cognot - Escaped quotation marks replacement fix    
 ## 2.7.1
