@@ -1,12 +1,10 @@
 import * as assert from "assert";
 
 import {
-  Aborter,
-  MessagesURL,
-  QueueURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+  QueueServiceClient,
+  newPipeline,
+  StorageSharedKeyCredential,
+  QueueClient
 } from "@azure/storage-queue";
 
 import { configLogger } from "../../../src/common/Logger";
@@ -49,10 +47,13 @@ describe("Messages APIs test", () => {
   );
 
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
-  const serviceURL = new ServiceURL(
+  const serviceClient = new QueueServiceClient(
     baseURL,
-    StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -61,7 +62,7 @@ describe("Messages APIs test", () => {
 
   let server: Server;
   let queueName: string;
-  let queueURL: QueueURL;
+  let queueClient: QueueClient;
   const messageContent = "Hello World";
 
   before(async () => {
@@ -76,31 +77,30 @@ describe("Messages APIs test", () => {
     await rmRecursive(persistencePath);
   });
 
-  beforeEach(async function() {
+  beforeEach(async function () {
     queueName = getUniqueName("queue");
-    queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-    await queueURL.create(Aborter.none);
+    queueClient = serviceClient.getQueueClient(queueName);
+    await queueClient.create();
   });
 
   afterEach(async () => {
-    await queueURL.delete(Aborter.none);
+    await queueClient.delete();
   });
 
   it("enqueue, peek, dequeue and clear message with default parameters @loki", async () => {
-    let messagesURL = MessagesURL.fromQueueURL(queueURL);
-    let eResult = await messagesURL.enqueue(Aborter.none, messageContent);
+    const eResult = await queueClient.sendMessage(messageContent);
     assert.ok(eResult.date);
-    assert.ok(eResult.expirationTime);
-    assert.ok(eResult.insertionTime);
+    assert.ok(eResult.expiresOn);
+    assert.ok(eResult.insertedOn);
     assert.ok(eResult.messageId);
     assert.ok(eResult.popReceipt);
     assert.ok(eResult.requestId);
-    assert.ok(eResult.timeNextVisible);
+    assert.ok(eResult.nextVisibleOn);
     assert.ok(eResult.version);
 
-    await messagesURL.enqueue(Aborter.none, messageContent);
+    await queueClient.sendMessage(messageContent);
 
-    let pResult = await messagesURL.peek(Aborter.none);
+    const pResult = await queueClient.peekMessages();
     assert.ok(pResult.date);
     assert.ok(pResult.requestId);
     assert.ok(pResult.version);
@@ -114,18 +114,18 @@ describe("Messages APIs test", () => {
       eResult.messageId
     );
 
-    let dqResult = await messagesURL.dequeue(Aborter.none);
+    let dqResult = await queueClient.receiveMessages();
     assert.ok(dqResult.date);
     assert.ok(dqResult.requestId);
     assert.ok(dqResult.version);
-    assert.deepStrictEqual(dqResult.dequeuedMessageItems.length, 1);
-    assert.ok(dqResult.dequeuedMessageItems[0].popReceipt);
+    assert.deepStrictEqual(dqResult.receivedMessageItems.length, 1);
+    assert.ok(dqResult.receivedMessageItems[0].popReceipt);
     assert.deepStrictEqual(
-      dqResult.dequeuedMessageItems[0].messageText,
+      dqResult.receivedMessageItems[0].messageText,
       messageContent
     );
     assert.deepStrictEqual(
-      dqResult.dequeuedMessageItems[0].messageId,
+      dqResult.receivedMessageItems[0].messageId,
       eResult.messageId
     );
     assert.equal(
@@ -133,7 +133,7 @@ describe("Messages APIs test", () => {
       dqResult.clientRequestId
     );
 
-    let cResult = await messagesURL.clear(Aborter.none);
+    const cResult = await queueClient.clearMessages();
     assert.ok(cResult.date);
     assert.ok(cResult.requestId);
     assert.ok(cResult.version);
@@ -143,41 +143,41 @@ describe("Messages APIs test", () => {
     );
 
     // check all messages are cleared
-    let pResult2 = await messagesURL.peek(Aborter.none);
+    const pResult2 = await queueClient.peekMessages();
     assert.ok(pResult2.date);
     assert.deepStrictEqual(pResult2.peekedMessageItems.length, 0);
   });
 
   it("enqueue, peek, dequeue and clear message with all parameters @loki", async () => {
-    let messagesURL = MessagesURL.fromQueueURL(queueURL);
-
-    let eResult = await messagesURL.enqueue(Aborter.none, messageContent, {
+    const eResult = await queueClient.sendMessage(messageContent, {
       messageTimeToLive: 40,
-      visibilitytimeout: 0
+      visibilityTimeout: 0
     });
     assert.ok(eResult.date);
-    assert.ok(eResult.expirationTime);
-    assert.ok(eResult.insertionTime);
+    assert.ok(eResult.expiresOn);
+    assert.ok(eResult.insertedOn);
     assert.ok(eResult.messageId);
     assert.ok(eResult.popReceipt);
     assert.ok(eResult.requestId);
-    assert.ok(eResult.timeNextVisible);
+    assert.ok(eResult.nextVisibleOn);
     assert.ok(eResult.version);
 
-    let eResult2 = await messagesURL.enqueue(Aborter.none, messageContent, {
+    let eResult2 = await queueClient.sendMessage(messageContent, {
       messageTimeToLive: 40,
-      visibilitytimeout: 0
+      visibilityTimeout: 0
     });
-    await messagesURL.enqueue(Aborter.none, messageContent, {
+    await queueClient.sendMessage(messageContent, {
       messageTimeToLive: 10,
-      visibilitytimeout: 5
+      visibilityTimeout: 5
     });
-    await messagesURL.enqueue(Aborter.none, messageContent, {
+    await queueClient.sendMessage(messageContent, {
       messageTimeToLive: Number.MAX_SAFE_INTEGER,
-      visibilitytimeout: 19
+      visibilityTimeout: 19
     });
 
-    let pResult = await messagesURL.peek(Aborter.none, { numberOfMessages: 2 });
+    let pResult = await queueClient.peekMessages({
+      numberOfMessages: 2
+    });
     assert.ok(pResult.date);
     assert.ok(pResult.requestId);
     assert.ok(pResult.version);
@@ -192,12 +192,12 @@ describe("Messages APIs test", () => {
       eResult.messageId
     );
     assert.deepStrictEqual(
-      pResult.peekedMessageItems[0].insertionTime,
-      eResult.insertionTime
+      pResult.peekedMessageItems[0].insertedOn,
+      eResult.insertedOn
     );
     assert.deepStrictEqual(
-      pResult.peekedMessageItems[0].expirationTime,
-      eResult.expirationTime
+      pResult.peekedMessageItems[0].expiresOn,
+      eResult.expiresOn
     );
 
     assert.deepStrictEqual(
@@ -210,41 +210,41 @@ describe("Messages APIs test", () => {
       eResult2.messageId
     );
     assert.deepStrictEqual(
-      pResult.peekedMessageItems[1].insertionTime,
-      eResult2.insertionTime
+      pResult.peekedMessageItems[1].insertedOn,
+      eResult2.insertedOn
     );
     assert.deepStrictEqual(
-      pResult.peekedMessageItems[1].expirationTime,
-      eResult2.expirationTime
+      pResult.peekedMessageItems[1].expiresOn,
+      eResult2.expiresOn
     );
 
-    let dResult = await messagesURL.dequeue(Aborter.none, {
+    let dResult = await queueClient.receiveMessages({
       visibilitytimeout: 10,
       numberOfMessages: 2
     });
     assert.ok(dResult.date);
     assert.ok(dResult.requestId);
     assert.ok(dResult.version);
-    assert.deepStrictEqual(dResult.dequeuedMessageItems.length, 2);
+    assert.deepStrictEqual(dResult.receivedMessageItems.length, 2);
     assert.deepStrictEqual(
-      dResult.dequeuedMessageItems[0].messageText,
+      dResult.receivedMessageItems[0].messageText,
       messageContent
     );
-    assert.deepStrictEqual(dResult.dequeuedMessageItems[0].dequeueCount, 1);
+    assert.deepStrictEqual(dResult.receivedMessageItems[0].dequeueCount, 1);
     assert.deepStrictEqual(
-      dResult.dequeuedMessageItems[0].messageId,
+      dResult.receivedMessageItems[0].messageId,
       eResult.messageId
     );
     assert.deepStrictEqual(
-      dResult.dequeuedMessageItems[0].insertionTime,
-      eResult.insertionTime
+      dResult.receivedMessageItems[0].insertedOn,
+      eResult.insertedOn
     );
     assert.deepStrictEqual(
-      dResult.dequeuedMessageItems[0].expirationTime,
-      eResult.expirationTime
+      dResult.receivedMessageItems[0].expiresOn,
+      eResult.expiresOn
     );
-    assert.ok(dResult.dequeuedMessageItems[0].popReceipt);
-    assert.ok(dResult.dequeuedMessageItems[0].timeNextVisible);
+    assert.ok(dResult.receivedMessageItems[0].popReceipt);
+    assert.ok(dResult.receivedMessageItems[0].nextVisibleOn);
 
     assert.deepStrictEqual(
       pResult.peekedMessageItems[1].messageText,
@@ -252,28 +252,28 @@ describe("Messages APIs test", () => {
     );
 
     // check no message is visible
-    let pResult2 = await messagesURL.peek(Aborter.none);
+    let pResult2 = await queueClient.peekMessages();
     assert.ok(pResult2.date);
     assert.deepStrictEqual(pResult2.peekedMessageItems.length, 0);
   });
 
   it("enqueue, peek, dequeue empty message, and peek, dequeue with numberOfMessages > count(messages) @loki", async () => {
-    let messagesURL = MessagesURL.fromQueueURL(queueURL);
-
-    let eResult = await messagesURL.enqueue(Aborter.none, "", {
+    const eResult = await queueClient.sendMessage("", {
       messageTimeToLive: 40,
-      visibilitytimeout: 0
+      visibilityTimeout: 0
     });
     assert.ok(eResult.date);
-    assert.ok(eResult.expirationTime);
-    assert.ok(eResult.insertionTime);
+    assert.ok(eResult.expiresOn);
+    assert.ok(eResult.insertedOn);
     assert.ok(eResult.messageId);
     assert.ok(eResult.popReceipt);
     assert.ok(eResult.requestId);
-    assert.ok(eResult.timeNextVisible);
+    assert.ok(eResult.nextVisibleOn);
     assert.ok(eResult.version);
 
-    let pResult = await messagesURL.peek(Aborter.none, { numberOfMessages: 2 });
+    const pResult = await queueClient.peekMessages({
+      numberOfMessages: 2
+    });
     assert.ok(pResult.date);
     assert.ok(pResult.requestId);
     assert.ok(pResult.version);
@@ -285,60 +285,58 @@ describe("Messages APIs test", () => {
       eResult.messageId
     );
     assert.deepStrictEqual(
-      pResult.peekedMessageItems[0].insertionTime,
-      eResult.insertionTime
+      pResult.peekedMessageItems[0].insertedOn,
+      eResult.insertedOn
     );
     assert.deepStrictEqual(
-      pResult.peekedMessageItems[0].expirationTime,
-      eResult.expirationTime
+      pResult.peekedMessageItems[0].expiresOn,
+      eResult.expiresOn
     );
 
-    let dResult = await messagesURL.dequeue(Aborter.none, {
+    let dResult = await queueClient.receiveMessages({
       visibilitytimeout: 10,
       numberOfMessages: 2
     });
     assert.ok(dResult.date);
     assert.ok(dResult.requestId);
     assert.ok(dResult.version);
-    assert.deepStrictEqual(dResult.dequeuedMessageItems.length, 1);
-    assert.deepStrictEqual(dResult.dequeuedMessageItems[0].messageText, "");
-    assert.deepStrictEqual(dResult.dequeuedMessageItems[0].dequeueCount, 1);
+    assert.deepStrictEqual(dResult.receivedMessageItems.length, 1);
+    assert.deepStrictEqual(dResult.receivedMessageItems[0].messageText, "");
+    assert.deepStrictEqual(dResult.receivedMessageItems[0].dequeueCount, 1);
     assert.deepStrictEqual(
-      dResult.dequeuedMessageItems[0].messageId,
+      dResult.receivedMessageItems[0].messageId,
       eResult.messageId
     );
     assert.deepStrictEqual(
-      dResult.dequeuedMessageItems[0].insertionTime,
-      eResult.insertionTime
+      dResult.receivedMessageItems[0].insertedOn,
+      eResult.insertedOn
     );
     assert.deepStrictEqual(
-      dResult.dequeuedMessageItems[0].expirationTime,
-      eResult.expirationTime
+      dResult.receivedMessageItems[0].expiresOn,
+      eResult.expiresOn
     );
-    assert.ok(dResult.dequeuedMessageItems[0].popReceipt);
-    assert.ok(dResult.dequeuedMessageItems[0].timeNextVisible);
+    assert.ok(dResult.receivedMessageItems[0].popReceipt);
+    assert.ok(dResult.receivedMessageItems[0].nextVisibleOn);
   });
 
   it("enqueue, peek, dequeue special characters @loki", async () => {
-    let messagesURL = MessagesURL.fromQueueURL(queueURL);
-
     let specialMessage =
       "!@#$%^&*()_+`-=[]|};'\":,./?><`~漢字㒈保ᨍ揫^p[뷁)׷񬓔7񈺝l鮍򧽶ͺ簣ڞ츊䈗㝯綞߫⯹?ÎᦡC왶żsmt㖩닡򈸱𕩣ОլFZ򃀮9tC榅ٻ컦驿Ϳ[𱿛봻烌󱰷򙥱Ռ򽒏򘤰δŊϜ췮㐦9ͽƙp퐂ʩ由巩KFÓ֮򨾭⨿󊻅aBm󶴂旨Ϣ񓙠򻐪񇧱򆋸ջ֨ipn򒷐ꝷՆ򆊙斡賆𒚑m˞𻆕󛿓򐞺Ӯ򡗺򴜍<񐸩԰Bu)򁉂񖨞á<џɏ嗂�⨣1PJ㬵┡ḸI򰱂ˮaࢸ۳i灛ȯɨb𹺪򕕱뿶uٔ䎴񷯆Φ륽󬃨س_NƵ¦\u00E9";
 
-    let eResult = await messagesURL.enqueue(Aborter.none, specialMessage, {
+    let eResult = await queueClient.sendMessage(specialMessage, {
       messageTimeToLive: 40,
       visibilitytimeout: 0
     });
     assert.ok(eResult.date);
-    assert.ok(eResult.expirationTime);
-    assert.ok(eResult.insertionTime);
+    assert.ok(eResult.expiresOn);
+    assert.ok(eResult.insertedOn);
     assert.ok(eResult.messageId);
     assert.ok(eResult.popReceipt);
     assert.ok(eResult.requestId);
-    assert.ok(eResult.timeNextVisible);
+    assert.ok(eResult.nextVisibleOn);
     assert.ok(eResult.version);
 
-    let pResult = await messagesURL.peek(Aborter.none, { numberOfMessages: 2 });
+    let pResult = await queueClient.peekMessages({ numberOfMessages: 2 });
     assert.ok(pResult.date);
     assert.ok(pResult.requestId);
     assert.ok(pResult.version);
@@ -353,61 +351,60 @@ describe("Messages APIs test", () => {
       eResult.messageId
     );
     assert.deepStrictEqual(
-      pResult.peekedMessageItems[0].insertionTime,
-      eResult.insertionTime
+      pResult.peekedMessageItems[0].insertedOn,
+      eResult.insertedOn
     );
     assert.deepStrictEqual(
-      pResult.peekedMessageItems[0].expirationTime,
-      eResult.expirationTime
+      pResult.peekedMessageItems[0].expiresOn,
+      eResult.expiresOn
     );
 
-    let dResult = await messagesURL.dequeue(Aborter.none, {
+    let dResult = await queueClient.receiveMessages({
       visibilitytimeout: 10,
       numberOfMessages: 2
     });
     assert.ok(dResult.date);
     assert.ok(dResult.requestId);
     assert.ok(dResult.version);
-    assert.deepStrictEqual(dResult.dequeuedMessageItems.length, 1);
+    assert.deepStrictEqual(dResult.receivedMessageItems.length, 1);
     assert.deepStrictEqual(
-      dResult.dequeuedMessageItems[0].messageText,
+      dResult.receivedMessageItems[0].messageText,
       specialMessage
     );
-    assert.deepStrictEqual(dResult.dequeuedMessageItems[0].dequeueCount, 1);
+    assert.deepStrictEqual(dResult.receivedMessageItems[0].dequeueCount, 1);
     assert.deepStrictEqual(
-      dResult.dequeuedMessageItems[0].messageId,
+      dResult.receivedMessageItems[0].messageId,
       eResult.messageId
     );
     assert.deepStrictEqual(
-      dResult.dequeuedMessageItems[0].insertionTime,
-      eResult.insertionTime
+      dResult.receivedMessageItems[0].insertedOn,
+      eResult.insertedOn
     );
     assert.deepStrictEqual(
-      dResult.dequeuedMessageItems[0].expirationTime,
-      eResult.expirationTime
+      dResult.receivedMessageItems[0].expiresOn,
+      eResult.expiresOn
     );
-    assert.ok(dResult.dequeuedMessageItems[0].popReceipt);
-    assert.ok(dResult.dequeuedMessageItems[0].timeNextVisible);
+    assert.ok(dResult.receivedMessageItems[0].popReceipt);
+    assert.ok(dResult.receivedMessageItems[0].nextVisibleOn);
   });
 
   it("enqueue, peek, dequeue with 64KB characters size which is computed after encoding @loki", async () => {
-    let messagesURL = MessagesURL.fromQueueURL(queueURL);
     let messageContent = new Array(64 * 1024 + 1).join("a");
 
-    let eResult = await messagesURL.enqueue(Aborter.none, messageContent, {
+    const eResult = await queueClient.sendMessage(messageContent, {
       messageTimeToLive: 40,
-      visibilitytimeout: 0
+      visibilityTimeout: 0
     });
     assert.ok(eResult.date);
-    assert.ok(eResult.expirationTime);
-    assert.ok(eResult.insertionTime);
+    assert.ok(eResult.expiresOn);
+    assert.ok(eResult.insertedOn);
     assert.ok(eResult.messageId);
     assert.ok(eResult.popReceipt);
     assert.ok(eResult.requestId);
-    assert.ok(eResult.timeNextVisible);
+    assert.ok(eResult.nextVisibleOn);
     assert.ok(eResult.version);
 
-    let pResult = await messagesURL.peek(Aborter.none, { numberOfMessages: 2 });
+    let pResult = await queueClient.peekMessages({ numberOfMessages: 2 });
     assert.ok(pResult.date);
     assert.ok(pResult.requestId);
     assert.ok(pResult.version);
@@ -422,61 +419,60 @@ describe("Messages APIs test", () => {
       eResult.messageId
     );
     assert.deepStrictEqual(
-      pResult.peekedMessageItems[0].insertionTime,
-      eResult.insertionTime
+      pResult.peekedMessageItems[0].insertedOn,
+      eResult.insertedOn
     );
     assert.deepStrictEqual(
-      pResult.peekedMessageItems[0].expirationTime,
-      eResult.expirationTime
+      pResult.peekedMessageItems[0].expiresOn,
+      eResult.expiresOn
     );
 
-    let dResult = await messagesURL.dequeue(Aborter.none, {
+    let dResult = await queueClient.receiveMessages({
       visibilitytimeout: 10,
       numberOfMessages: 2
     });
     assert.ok(dResult.date);
     assert.ok(dResult.requestId);
     assert.ok(dResult.version);
-    assert.deepStrictEqual(dResult.dequeuedMessageItems.length, 1);
+    assert.deepStrictEqual(dResult.receivedMessageItems.length, 1);
     assert.deepStrictEqual(
-      dResult.dequeuedMessageItems[0].messageText,
+      dResult.receivedMessageItems[0].messageText,
       messageContent
     );
-    assert.deepStrictEqual(dResult.dequeuedMessageItems[0].dequeueCount, 1);
+    assert.deepStrictEqual(dResult.receivedMessageItems[0].dequeueCount, 1);
     assert.deepStrictEqual(
-      dResult.dequeuedMessageItems[0].messageId,
+      dResult.receivedMessageItems[0].messageId,
       eResult.messageId
     );
     assert.deepStrictEqual(
-      dResult.dequeuedMessageItems[0].insertionTime,
-      eResult.insertionTime
+      dResult.receivedMessageItems[0].insertedOn,
+      eResult.insertedOn
     );
     assert.deepStrictEqual(
-      dResult.dequeuedMessageItems[0].expirationTime,
-      eResult.expirationTime
+      dResult.receivedMessageItems[0].expiresOn,
+      eResult.expiresOn
     );
-    assert.ok(dResult.dequeuedMessageItems[0].popReceipt);
-    assert.ok(dResult.dequeuedMessageItems[0].timeNextVisible);
+    assert.ok(dResult.receivedMessageItems[0].popReceipt);
+    assert.ok(dResult.receivedMessageItems[0].nextVisibleOn);
   });
 
   it("enqueue, peek and dequeue negative @loki", async () => {
-    let messagesURL = MessagesURL.fromQueueURL(queueURL);
-    let eResult = await messagesURL.enqueue(Aborter.none, messageContent, {
+    const eResult = await queueClient.sendMessage(messageContent, {
       messageTimeToLive: 40
     });
     assert.ok(eResult.date);
-    assert.ok(eResult.expirationTime);
-    assert.ok(eResult.insertionTime);
+    assert.ok(eResult.expiresOn);
+    assert.ok(eResult.insertedOn);
     assert.ok(eResult.messageId);
     assert.ok(eResult.popReceipt);
     assert.ok(eResult.requestId);
-    assert.ok(eResult.timeNextVisible);
+    assert.ok(eResult.nextVisibleOn);
     assert.ok(eResult.version);
     let error;
     try {
-      await messagesURL.enqueue(Aborter.none, messageContent, {
+      await queueClient.sendMessage(messageContent, {
         messageTimeToLive: 30,
-        visibilitytimeout: 30
+        visibilityTimeout: 30
       });
     } catch (err) {
       error = err;
@@ -484,13 +480,13 @@ describe("Messages APIs test", () => {
     assert.ok(error);
     let errorPeek;
     try {
-      await messagesURL.peek(Aborter.none, { numberOfMessages: 100 });
+      await queueClient.peekMessages({ numberOfMessages: 100 });
     } catch (err) {
       errorPeek = err;
     }
     assert.ok(errorPeek);
 
-    let pResult = await messagesURL.peek(Aborter.none, { numberOfMessages: 2 });
+    let pResult = await queueClient.peekMessages({ numberOfMessages: 2 });
     assert.ok(pResult.date);
     assert.ok(pResult.requestId);
     assert.ok(pResult.version);
@@ -505,28 +501,27 @@ describe("Messages APIs test", () => {
       eResult.messageId
     );
     assert.deepStrictEqual(
-      pResult.peekedMessageItems[0].insertionTime,
-      eResult.insertionTime
+      pResult.peekedMessageItems[0].insertedOn,
+      eResult.insertedOn
     );
     assert.deepStrictEqual(
-      pResult.peekedMessageItems[0].expirationTime,
-      eResult.expirationTime
+      pResult.peekedMessageItems[0].expiresOn,
+      eResult.expiresOn
     );
 
     // Note visibility time could be larger then message time to live for dequeue.
-    await messagesURL.dequeue(Aborter.none, {
+    await queueClient.receiveMessages({
       visibilitytimeout: 40,
       numberOfMessages: 2
     });
   });
 
   it("enqueue negative with 65537B(64KB+1B) characters size which is computed after encoding @loki", async () => {
-    let messagesURL = MessagesURL.fromQueueURL(queueURL);
     let messageContent = new Array(64 * 1024 + 2).join("a");
 
     let error;
     try {
-      await messagesURL.enqueue(Aborter.none, messageContent, {});
+      await queueClient.sendMessage(messageContent, {});
     } catch (err) {
       error = err;
     }

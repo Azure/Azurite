@@ -11,7 +11,7 @@ const defaultID: string = "DefaultID";
 
 export default class StorageErrorFactory {
   public static getInvalidHeaderValue(
-    contextID: string = "",
+    context: Context,
     additionalMessages?: { [key: string]: string }
   ): StorageError {
     if (additionalMessages === undefined) {
@@ -21,8 +21,26 @@ export default class StorageErrorFactory {
       400,
       "InvalidHeaderValue",
       "The value for one of the HTTP headers is not in the correct format.",
-      contextID,
-      additionalMessages
+      context.contextID || defaultID,
+      additionalMessages,
+      context
+    );
+  }
+
+  public static getInvalidInput(
+    context: Context,
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    if (additionalMessages === undefined) {
+      additionalMessages = {};
+    }
+    return new StorageError(
+      400,
+      "InvalidInput",
+      "An error occurred while processing this request.",
+      context.contextID || defaultID,
+      additionalMessages,
+      context
     );
   }
 
@@ -30,7 +48,7 @@ export default class StorageErrorFactory {
     return new StorageError(
       409,
       "TableAlreadyExists",
-      "The specified table already exists.",
+      "The table specified already exists.",
       context.contextID || defaultID,
       undefined,
       context
@@ -49,64 +67,81 @@ export default class StorageErrorFactory {
   }
 
   public static getInvalidOperation(
-    contextID: string,
+    context: Context,
     message: string = ""
   ): StorageError {
-    return new StorageError(400, "InvalidOperation", message, contextID);
+    return new StorageError(
+      400,
+      "InvalidOperation",
+      message,
+      context.contextID || "",
+      undefined,
+      context
+    );
   }
 
   public static getAuthorizationSourceIPMismatch(
-    contextID: string
+    context: Context
   ): StorageError {
     return new StorageError(
       403,
       "AuthorizationSourceIPMismatch",
       "This request is not authorized to perform this operation using this source IP {SourceIP}.",
-      contextID
+      context.contextID || defaultID,
+      undefined,
+      context
     );
   }
 
   public static getAuthorizationProtocolMismatch(
-    contextID: string
+    context: Context
   ): StorageError {
     return new StorageError(
       403,
       "AuthorizationProtocolMismatch",
       "This request is not authorized to perform this operation using this protocol.",
-      contextID
+      context.contextID || defaultID,
+      undefined,
+      context
     );
   }
 
   public static getAuthorizationPermissionMismatch(
-    contextID: string
+    context: Context
   ): StorageError {
     return new StorageError(
       403,
       "AuthorizationPermissionMismatch",
       "This request is not authorized to perform this operation using this permission.",
-      contextID
+      context.contextID || defaultID,
+      undefined,
+      context
     );
   }
 
   public static getAuthorizationServiceMismatch(
-    contextID: string
+    context: Context
   ): StorageError {
     return new StorageError(
       403,
       "AuthorizationServiceMismatch",
       "This request is not authorized to perform this operation using this service.",
-      contextID
+      context.contextID || defaultID,
+      undefined,
+      context
     );
   }
 
   public static getAuthorizationResourceTypeMismatch(
-    contextID: string
+    context: Context
   ): StorageError {
     return new StorageError(
       403,
       "AuthorizationResourceTypeMismatch",
       "This request is not authorized to perform this operation using this resource type.",
-      contextID
+      context.contextID || defaultID,
+      undefined,
+      context
     );
   }
 
@@ -123,30 +158,21 @@ export default class StorageErrorFactory {
 
   public static getTableNotExist(context: Context): StorageError {
     return new StorageError(
-      400,
-      "AccountNameEmpty",
-      "The table you want to manipulate doesn't exist",
+      404,
+      "TableNotFound",
+      "The table specified does not exist.",
       context.contextID || defaultID,
       undefined,
       context
     );
   }
 
-  public static getAuthorizationFailure(contextID: string): StorageError {
+  public static getAuthorizationFailure(context: Context): StorageError {
     return new StorageError(
       403,
       "AuthorizationFailure",
       // tslint:disable-next-line:max-line-length
       "Server failed to authenticate the request. Make sure the value of the Authorization header is formed correctly including the signature.",
-      contextID
-    );
-  }
-
-  public static getEntityNotExist(context: Context): StorageError {
-    return new StorageError(
-      409,
-      "EntityDoesNotExist",
-      "The entity to update doesn't exist in the table",
       context.contextID || defaultID,
       undefined,
       context
@@ -157,7 +183,7 @@ export default class StorageErrorFactory {
     return new StorageError(
       409,
       "EntityAlreadyExist",
-      "The entity to insert already exists in the table",
+      "The specified entity already exists.",
       context.contextID || defaultID,
       undefined,
       context
@@ -175,11 +201,22 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getContentTypeNotSupported(context: Context): StorageError {
+  public static getAtomFormatNotSupported(context: Context): StorageError {
     return new StorageError(
-      400,
-      "contentTypeNotSupported",
-      "Payload Type is not supported yet. Only support json.",
+      415,
+      "AtomFormatNotSupported",
+      "Atom format is not supported.",
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
+
+  public static getPreconditionFailed(context: Context): StorageError {
+    return new StorageError(
+      412,
+      "UpdateConditionNotSatisfied",
+      "The update condition specified in the request was not satisfied.",
       context.contextID || defaultID,
       undefined,
       context
@@ -200,19 +237,19 @@ export default class StorageErrorFactory {
   public static getEntityNotFound(context: Context): StorageError {
     return new StorageError(
       404,
-      "EntityNotFound",
-      "The specified entity does not exist.",
+      "ResourceNotFound",
+      "The specified resource does not exist.",
       context.contextID || defaultID,
       undefined,
       context
     );
   }
 
-  public static getPreconditionFailed(context: Context): StorageError {
+  public static getQueryConditionInvalid(context: Context): StorageError {
     return new StorageError(
-      412,
-      "UpdateConditionNotSatisfied",
-      "The update condition specified in the request was not satisfied.",
+      400,
+      "InvalidInput",
+      "The query condition specified in the request is invalid.",
       context.contextID || defaultID,
       undefined,
       context

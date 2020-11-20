@@ -17,17 +17,45 @@ import {
   DEFAULT_QUEUE_PERSISTENCE_ARRAY,
   DEFAULT_QUEUE_PERSISTENCE_PATH
 } from "./queue/utils/constants";
+import SqlBlobServer from "./blob/SqlBlobServer";
+import BlobServer from "./blob/BlobServer";
 
 import TableConfiguration from "./table/TableConfiguration";
 import TableServer from "./table/TableServer";
 
-import {
-  DEFAULT_TABLE_LOKI_DB_PATH
-} from "./table/utils/constants";
+import { DEFAULT_TABLE_LOKI_DB_PATH } from "./table/utils/constants";
 
 // tslint:disable:no-console
 
 const accessAsync = promisify(access);
+
+function shutdown(
+  blobServer: BlobServer | SqlBlobServer,
+  queueServer: QueueServer,
+  tableServer: TableServer
+) {
+  const blobBeforeCloseMessage = `Azurite Blob service is closing...`;
+  const blobAfterCloseMessage = `Azurite Blob service successfully closed`;
+  const queueBeforeCloseMessage = `Azurite Queue service is closing...`;
+  const queueAfterCloseMessage = `Azurite Queue service successfully closed`;
+  const tableBeforeCloseMessage = `Azurite Table service is closing...`;
+  const tableAfterCloseMessage = `Azurite Table service successfully closed`;
+
+  console.log(blobBeforeCloseMessage);
+  blobServer.close().then(() => {
+    console.log(blobAfterCloseMessage);
+  });
+
+  console.log(queueBeforeCloseMessage);
+  queueServer.close().then(() => {
+    console.log(queueAfterCloseMessage);
+  });
+
+  console.log(tableBeforeCloseMessage);
+  tableServer.close().then(() => {
+    console.log(tableAfterCloseMessage);
+  });
+}
 
 /**
  * Entry for Azurite services.
@@ -129,50 +157,17 @@ async function main() {
   );
 
   // Handle close event
-  const blobBeforeCloseMessage = `Azurite Blob service is closing...`;
-  const blobAfterCloseMessage = `Azurite Blob service successfully closed`;
-  const tableBeforeCloseMessage = `Azurite Table service is closing...`;
-  const tableAfterCloseMessage = `Azurite Table service successfully closed`;
-  const queueBeforeCloseMessage = `Azurite Queue service is closing...`;
-  const queueAfterCloseMessage = `Azurite Queue service successfully closed`;
   process
-    .once("message", msg => {
+    .once("message", (msg) => {
       if (msg === "shutdown") {
-        console.log(blobBeforeCloseMessage);
-        blobServer.close().then(() => {
-          console.log(blobAfterCloseMessage);
-        });
-
-        console.log(tableBeforeCloseMessage);
-        tableServer.close().then(() => {
-          console.log(tableAfterCloseMessage);
-        });
-
-        console.log(queueBeforeCloseMessage);
-        queueServer.close().then(() => {
-          console.log(queueAfterCloseMessage);
-        });
+        shutdown(blobServer, queueServer, tableServer);
       }
     })
-    .once("SIGINT", () => {
-      console.log(blobBeforeCloseMessage);
-      blobServer.close().then(() => {
-        console.log(blobAfterCloseMessage);
-      });
-
-      console.log(tableBeforeCloseMessage);
-      tableServer.close().then(() => {
-        console.log(tableAfterCloseMessage);
-      });
-
-      console.log(queueBeforeCloseMessage);
-      queueServer.close().then(() => {
-        console.log(queueAfterCloseMessage);
-      });
-    });
+    .once("SIGINT", () => shutdown(blobServer, queueServer, tableServer))
+    .once("SIGTERM", () => shutdown(blobServer, queueServer, tableServer));
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(`Exit due to unhandled error: ${err.message}`);
   process.exit(1);
 });

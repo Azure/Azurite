@@ -7,6 +7,7 @@ import logger from "../common/Logger";
 import AccountSASAuthenticator from "./authentication/AccountSASAuthenticator";
 import IAuthenticator from "./authentication/IAuthenticator";
 import TableSASAuthenticator from "./authentication/TableSASAuthenticator";
+import { TableQueryResponse } from "./generated/artifacts/mappers";
 import { Operation } from "./generated/artifacts/operation";
 import Specifications from "./generated/artifacts/specifications";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
@@ -21,6 +22,7 @@ import { DEFAULT_TABLE_CONTEXT_PATH } from "./utils/constants";
 
 import morgan = require("morgan");
 import TableSharedKeyAuthenticator from "./authentication/TableSharedKeyAuthenticator";
+import TableSharedKeyLiteAuthenticator from "./authentication/TableSharedKeyLiteAuthenticator";
 /**
  * Default RequestListenerFactory based on express framework.
  *
@@ -56,7 +58,7 @@ export default class TableRequestListenerFactory
       Operation.Table_MergeEntity,
       Operation.Table_DeleteEntity,
       Operation.Table_InsertEntity
-    ].forEach(operation => {
+    ].forEach((operation) => {
       (Specifications[operation] as MutableSpecification).isXML = false;
     });
 
@@ -70,6 +72,9 @@ export default class TableRequestListenerFactory
         writable: false
       }
     );
+
+    // TODO: Override Query Table JSON response element value
+    TableQueryResponse.type.modelProperties!.value.xmlElementName = "value";
 
     const app = express().disable("x-powered-by");
 
@@ -110,6 +115,7 @@ export default class TableRequestListenerFactory
       logger
     );
     const authenticators: IAuthenticator[] = [
+      new TableSharedKeyLiteAuthenticator(this.accountDataStore, logger),
       new TableSharedKeyAuthenticator(this.accountDataStore, logger),
       new AccountSASAuthenticator(this.accountDataStore, logger),
       new TableSASAuthenticator(

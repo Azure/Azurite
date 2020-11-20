@@ -66,7 +66,7 @@ describe("table Entity APIs test", () => {
 
   // Simple test in here until we have the full set checked in, as we need
   // a starting point for delete and query entity APIs
-  it("Should insert new Entity, @loki", done => {
+  it("Should insert new Entity, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-entity
     const entity = {
       PartitionKey: "part1",
@@ -79,7 +79,7 @@ describe("table Entity APIs test", () => {
     });
   });
 
-  it("Should delete an Entity using etag wildcard, @loki", done => {
+  it("Should delete an Entity using etag wildcard, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
     const entity = {
       PartitionKey: "part1",
@@ -103,7 +103,7 @@ describe("table Entity APIs test", () => {
     });
   });
 
-  it("Should not delete an Entity not matching Etag, @loki", done => {
+  it("Should not delete an Entity not matching Etag, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
     const entityInsert = {
       PartitionKey: "part1",
@@ -144,7 +144,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Should delete a matching Etag, @loki", done => {
+  it("Should delete a matching Etag, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
     const entityInsert = {
       PartitionKey: "part1",
@@ -182,7 +182,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Update an Entity that exists, @loki", done => {
+  it("Update an Entity that exists, @loki", (done) => {
     const entityInsert = {
       PartitionKey: "part1",
       RowKey: "row3",
@@ -215,14 +215,14 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Update an Entity that does not exist, @loki", done => {
+  it("Update an Entity that does not exist, @loki", (done) => {
     tableService.replaceEntity(
       tableName,
       { PartitionKey: "part1", RowKey: "row4", myValue: "newValue" },
       (updateError, updateResult, updateResponse) => {
         const castUpdateStatusCode = (updateError as StorageError).statusCode;
         if (updateError) {
-          assert.equal(castUpdateStatusCode, 409);
+          assert.equal(castUpdateStatusCode, 404);
           done();
         } else {
           assert.fail("Test failed to throw the right Error" + updateError);
@@ -231,7 +231,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Should not update an Entity not matching Etag, @loki", done => {
+  it("Should not update an Entity not matching Etag, @loki", (done) => {
     const entityInsert = {
       PartitionKey: "part1",
       RowKey: "row4",
@@ -273,7 +273,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Should update, if Etag matches, @loki", done => {
+  it("Should update, if Etag matches, @loki", (done) => {
     const entityInsert = {
       PartitionKey: "part1",
       RowKey: "row5",
@@ -319,7 +319,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Insert or Replace (upsert) on an Entity that does not exist, @loki", done => {
+  it("Insert or Replace (upsert) on an Entity that does not exist, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
@@ -344,7 +344,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Insert or Replace (upsert) on an Entity that exists, @loki", done => {
+  it("Insert or Replace (upsert) on an Entity that exists, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
@@ -369,7 +369,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Insert or Merge on an Entity that exists, @loki", done => {
+  it("Insert or Merge on an Entity that exists, @loki", (done) => {
     const entityInsert = {
       PartitionKey: "part1",
       RowKey: "merge1",
@@ -412,7 +412,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Insert or Merge on an Entity that does not exist, @loki", done => {
+  it("Insert or Merge on an Entity that does not exist, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"

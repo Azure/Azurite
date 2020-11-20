@@ -10,12 +10,15 @@ describe("Utils", () => {
       "x-ms-meta-name2",
       "234",
       "x-ms-meta-name1",
+      "Value",
+      "X-Ms-Meta-Name3",
       "Value"
     ]);
     assert.deepStrictEqual(metadata, {
       Name1: "Value",
       name2: "234",
-      name1: "Value"
+      name1: "Value",
+      Name3: "Value"
     });
   });
 

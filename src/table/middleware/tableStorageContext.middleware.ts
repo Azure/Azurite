@@ -41,13 +41,6 @@ export function tableStorageContextMiddleware(
 
   const requestID = uuid();
 
-  if (!skipApiVersionCheck) {
-    const apiVersion = req.header(HeaderConstants.X_MS_VERSION);
-    if (apiVersion !== undefined) {
-      checkApiVersion(apiVersion, ValidAPIVersions, requestID);
-    }
-  }
-
   const tableContext = new TableStorageContext(
     res.locals,
     DEFAULT_TABLE_CONTEXT_PATH
@@ -56,6 +49,13 @@ export function tableStorageContextMiddleware(
   tableContext.accept = req.headers.accept;
   tableContext.startTime = new Date();
   tableContext.xMsRequestID = requestID;
+
+  if (!skipApiVersionCheck) {
+    const apiVersion = req.header(HeaderConstants.X_MS_VERSION);
+    if (apiVersion !== undefined) {
+      checkApiVersion(apiVersion, ValidAPIVersions, tableContext);
+    }
+  }
 
   logger.info(
     `TableStorageContextMiddleware: RequestMethod=${req.method} RequestURL=${
@@ -68,16 +68,20 @@ export function tableStorageContextMiddleware(
     requestID
   );
 
-  const [account, tableSection] = extractStoragePartsFromPath(
+  // tslint:disable-next-line: prefer-const
+  let [account, tableSection] = extractStoragePartsFromPath(
     req.hostname,
     req.path
   );
 
+  const isGet = req.method.toUpperCase() === "GET";
+
   // Candidate tableSection
   // undefined - Set Table Service Properties
   // Tables - Create Tables, Query Tables
-  // Tables('mytable')	- Delete Tables
-  // mytable - Get/Set Table ACL, Insert Entity
+  // Tables() - Create Tables, Query Tables
+  // Tables('mytable')	- Delete Tables, Query Entities
+  // mytable - Get/Set Table ACL, Insert Entity, Query Entities
   // mytable(PartitionKey='<partition-key>',RowKey='<row-key>') -
   //        Query Entities, Update Entity, Merge Entity, Delete Entity
   // mytable() - Query Entities
@@ -85,8 +89,9 @@ export function tableStorageContextMiddleware(
   if (tableSection === undefined) {
     // Service level operation
     tableContext.tableName = undefined;
-  } else if (tableSection === "Tables") {
+  } else if (tableSection === "Tables" || tableSection === "Tables()") {
     // Table name in request body
+    tableSection = "Tables";
     tableContext.tableName = undefined;
   } else if (
     tableSection.startsWith("Tables('") &&
@@ -94,9 +99,19 @@ export function tableStorageContextMiddleware(
   ) {
     // Tables('mytable')
     tableContext.tableName = tableSection.substring(8, tableSection.length - 2);
+
+    // Workaround for query entity
+    if (isGet) {
+      tableSection = `${tableContext.tableName}()`;
+    }
   } else if (!tableSection.includes("(") && !tableSection.includes(")")) {
     // mytable
     tableContext.tableName = tableSection;
+
+    // Workaround for query entity
+    if (isGet) {
+      tableSection = `${tableContext.tableName}()`;
+    }
   } else if (
     tableSection.includes("(") &&
     tableSection.includes(")") &&
@@ -120,6 +135,15 @@ export function tableStorageContextMiddleware(
       thridQuoteIndex + 1,
       fourthQuoteIndex
     );
+
+    tableSection = `${tableContext.tableName}(PartitionKey='PLACEHOLDER',RowKey='PLACEHOLDER')`;
+  } else if (
+    tableSection.includes("(") &&
+    tableSection.includes(")") &&
+    tableSection.indexOf(")") - tableSection.indexOf("(") === 1
+  ) {
+    // mytable()
+    tableContext.tableName = tableSection.substr(0, tableSection.indexOf("("));
   } else {
     logger.error(
       `tableStorageContextMiddleware: Cannot extract table name from URL path=${req.path}`,
@@ -143,8 +167,13 @@ export function tableStorageContextMiddleware(
   tableContext.dispatchPattern =
     tableSection !== undefined ? `/${tableSection}` : "/";
 
+  logger.debug(
+    `tableStorageContextMiddleware: Dispatch pattern string: ${tableContext.dispatchPattern}`,
+    requestID
+  );
+
   logger.info(
-    `tableStorageContextMiddleware: Account=${account} tableName=${tableSection}}`,
+    `tableStorageContextMiddleware: Account=${account} tableName=${tableContext.tableName}`,
     requestID
   );
   next();

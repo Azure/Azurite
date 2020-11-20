@@ -17,7 +17,7 @@ export const TABLE_API_VERSION = "2019-12-12";
 
 export const HeaderConstants = {
   SERVER: "Server",
-  VERSION: "3.8.0",
+  VERSION: "3.9.0-table-alpha.1",
   APPLICATION_JSON: "application/json",
   AUTHORIZATION: "authorization",
   CONTENT_MD5: "content-md5",
@@ -25,18 +25,26 @@ export const HeaderConstants = {
   CONTENT_LENGTH: "content-length",
   DATE: "date",
   X_MS_DATE: "x-ms-date",
-  X_MS_VERSION: "x-ms-version"
+  X_MS_VERSION: "x-ms-version",
+  ACCEPT: "accept",
+  PREFER: "Prefer"
 };
+
+export const SUPPORTED_QUERY_OPERATOR = ["eq", "gt", "ge", "lt", "le", "ne"];
 
 export const NO_METADATA_ACCEPT = "application/json;odata=nometadata";
 export const MINIMAL_METADATA_ACCEPT = "application/json;odata=minimalmetadata";
 export const FULL_METADATA_ACCEPT = "application/json;odata=fullmetadata";
+export const XML_METADATA = "application/atom+xml";
+export const ODATA_TYPE = "@odata.type";
 
 export const RETURN_NO_CONTENT = "return-no-content";
 export const RETURN_CONTENT = "return-content";
 
+export const QUERY_RESULT_MAX_NUM = 1000;
 export const ValidAPIVersions = [
   "2019-12-12",
+  "2019-10-10",
   "2019-07-07",
   "2019-02-02",
   "2018-11-09",

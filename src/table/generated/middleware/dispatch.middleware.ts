@@ -90,8 +90,22 @@ function isRequestAgainstOperation(
     return [false, metConditionsNum];
   }
 
+  const xHttpMethod = req.getHeader("X-HTTP-Method");
+  let method = req.getMethod();
+  if (xHttpMethod && xHttpMethod.length > 0) {
+    const value = xHttpMethod.trim();
+    if (
+      value === "GET" ||
+      value === "MERGE" ||
+      value === "PATCH" ||
+      value === "DELETE"
+    ) {
+      method = value;
+    }
+  }
+
   // Validate HTTP method
-  if (req.getMethod() !== spec.httpMethod) {
+  if (method !== spec.httpMethod) {
     return [false, metConditionsNum++];
   }
 
@@ -123,7 +137,7 @@ function isRequestAgainstOperation(
 
       if (
         queryParameter.mapper.type.name === "Enum" &&
-        queryParameter.mapper.type.allowedValues.findIndex(val => {
+        queryParameter.mapper.type.allowedValues.findIndex((val) => {
           return val === queryValue;
         }) < 0
       ) {
@@ -153,7 +167,7 @@ function isRequestAgainstOperation(
 
       if (
         headerParameter.mapper.type.name === "Enum" &&
-        headerParameter.mapper.type.allowedValues.findIndex(val => {
+        headerParameter.mapper.type.allowedValues.findIndex((val) => {
           return val === headerValue;
         }) < 0
       ) {

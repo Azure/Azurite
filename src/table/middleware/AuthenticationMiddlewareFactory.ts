@@ -19,13 +19,11 @@ export default class AuthenticationMiddlewareFactory {
         DEFAULT_TABLE_CONTEXT_PATH
       );
       this.authenticate(req, res, authenticators)
-        .then(pass => {
+        .then((pass) => {
           if (pass) {
             next();
           } else {
-            next(
-              StorageErrorFactory.getAuthorizationFailure(context.contextID!)
-            );
+            next(StorageErrorFactory.getAuthorizationFailure(context));
           }
         })
         .catch(next);

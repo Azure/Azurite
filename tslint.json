@@ -11,5 +11,11 @@
     "array-type": false
   },
   "rulesDirectory": [],
-  "linterOptions": {}
+  "linterOptions": {
+    "exclude": [
+      "src/blob/generated/**/*",
+      "src/table/generated/**/*",
+      "src/queue/generated/**/*"
+    ]
+  }
 }

@@ -121,7 +121,7 @@ export default class LokiBlobMetadataStore
     await new Promise<void>((resolve, reject) => {
       stat(this.lokiDBPath, (statError, stats) => {
         if (!statError) {
-          this.db.loadDatabase({}, dbError => {
+          this.db.loadDatabase({}, (dbError) => {
             if (dbError) {
               reject(dbError);
             } else {
@@ -169,7 +169,7 @@ export default class LokiBlobMetadataStore
     }
 
     await new Promise((resolve, reject) => {
-      this.db.saveDatabase(err => {
+      this.db.saveDatabase((err) => {
         if (err) {
           reject(err);
         } else {
@@ -190,7 +190,7 @@ export default class LokiBlobMetadataStore
    */
   public async close(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
-      this.db.close(err => {
+      this.db.close((err) => {
         if (err) {
           reject(err);
         } else {
@@ -331,13 +331,13 @@ export default class LokiBlobMetadataStore
       .chain()
       .find(query)
       .find(query2)
-      .limit(maxResults + 1)
       .simplesort("name")
+      .limit(maxResults + 1)
       .data();
 
     if (docs.length <= maxResults) {
       return [
-        docs.map(doc => {
+        docs.map((doc) => {
           return LeaseFactory.createLeaseState(
             new ContainerLeaseAdapter(doc),
             context
@@ -350,7 +350,7 @@ export default class LokiBlobMetadataStore
       const nextMarker = docs[docs.length - 2].name;
       docs.pop();
       return [
-        docs.map(doc => {
+        docs.map((doc) => {
           return LeaseFactory.createLeaseState(
             new ContainerLeaseAdapter(doc),
             context
@@ -845,13 +845,13 @@ export default class LokiBlobMetadataStore
     const docs = await coll
       .chain()
       .find(query)
-      .where(obj => {
+      .where((obj) => {
         return obj.name > marker!;
       })
-      .where(obj => {
+      .where((obj) => {
         return includeSnapshots ? true : obj.snapshot.length === 0;
       })
-      .where(obj => {
+      .where((obj) => {
         return includeUncommittedBlobs ? true : obj.isCommitted;
       })
       .simplesort("name")
@@ -867,7 +867,7 @@ export default class LokiBlobMetadataStore
 
     if (docs.length <= maxResults) {
       return [
-        docs.map(doc => {
+        docs.map((doc) => {
           return LeaseFactory.createLeaseState(
             new BlobLeaseAdapter(doc),
             context
@@ -879,7 +879,7 @@ export default class LokiBlobMetadataStore
       const nextMarker = docs[docs.length - 2].name;
       docs.pop();
       return [
-        docs.map(doc => {
+        docs.map((doc) => {
           return LeaseFactory.createLeaseState(
             new BlobLeaseAdapter(doc),
             context
@@ -900,13 +900,13 @@ export default class LokiBlobMetadataStore
 
     const docs = await coll
       .chain()
-      .where(obj => {
+      .where((obj) => {
         return obj.name > marker!;
       })
-      .where(obj => {
+      .where((obj) => {
         return includeSnapshots ? true : obj.snapshot.length === 0;
       })
-      .where(obj => {
+      .where((obj) => {
         return includeUncommittedBlobs ? true : obj.isCommitted;
       })
       .simplesort("name")
@@ -970,10 +970,9 @@ export default class LokiBlobMetadataStore
     }
 
     if (blobDoc) {
-      LeaseFactory.createLeaseState(
-        new BlobLeaseAdapter(blobDoc),
-        context
-      ).validate(new BlobWriteLeaseValidator(leaseAccessConditions));
+      LeaseFactory.createLeaseState(new BlobLeaseAdapter(blobDoc), context)
+        .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
+        .sync(new BlobLeaseSyncer(blob)); // Keep original blob lease
 
       if (
         blobDoc.properties !== undefined &&
@@ -1936,6 +1935,182 @@ export default class LokiBlobMetadataStore
   }
 
   /**
+   * Copy from Url.
+   *
+   * @param {Context} context
+   * @param {BlobId} source
+   * @param {BlobId} destination
+   * @param {string} copySource
+   * @param {(Models.BlobMetadata | undefined)} metadata
+   * @param {(Models.AccessTier | undefined)} tier
+   * @param {Models.BlobCopyFromURLOptionalParams} [leaseAccessConditions]
+   * @returns {Promise<Models.BlobProperties>}
+   * @memberof LokiBlobMetadataStore
+   */
+  public async copyFromURL(
+    context: Context,
+    source: BlobId,
+    destination: BlobId,
+    copySource: string,
+    metadata: Models.BlobMetadata | undefined,
+    tier: Models.AccessTier | undefined,
+    options: Models.BlobCopyFromURLOptionalParams = {}
+  ): Promise<Models.BlobProperties> {
+    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    const sourceBlob = await this.getBlobWithLeaseUpdated(
+      source.account,
+      source.container,
+      source.blob,
+      source.snapshot,
+      context,
+      true,
+      true
+    );
+
+    options.sourceModifiedAccessConditions =
+      options.sourceModifiedAccessConditions || {};
+    validateReadConditions(
+      context,
+      {
+        ifModifiedSince:
+          options.sourceModifiedAccessConditions.sourceIfModifiedSince,
+        ifUnmodifiedSince:
+          options.sourceModifiedAccessConditions.sourceIfUnmodifiedSince,
+        ifMatch: options.sourceModifiedAccessConditions.sourceIfMatches,
+        ifNoneMatch: options.sourceModifiedAccessConditions.sourceIfNoneMatch
+      },
+      sourceBlob
+    );
+
+    const destBlob = await this.getBlobWithLeaseUpdated(
+      destination.account,
+      destination.container,
+      destination.blob,
+      undefined,
+      context,
+      false
+    );
+
+    validateWriteConditions(
+      context,
+      options.modifiedAccessConditions,
+      destBlob
+    );
+
+    if (destBlob) {
+      const lease = new BlobLeaseAdapter(destBlob);
+      new BlobWriteLeaseSyncer(destBlob).sync(lease);
+      new BlobWriteLeaseValidator(options.leaseAccessConditions).validate(
+        lease,
+        context
+      );
+    }
+
+    // If source is uncommitted or deleted
+    if (
+      sourceBlob === undefined ||
+      sourceBlob.deleted ||
+      !sourceBlob.isCommitted
+    ) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId!);
+    }
+
+    if (sourceBlob.properties.accessTier === Models.AccessTier.Archive) {
+      throw StorageErrorFactory.getBlobArchived(context.contextId!);
+    }
+
+    await this.checkContainerExist(
+      context,
+      destination.account,
+      destination.container
+    );
+
+    // Deep clone a copied blob
+    const copiedBlob: BlobModel = {
+      name: destination.blob,
+      deleted: false,
+      snapshot: "",
+      properties: {
+        ...sourceBlob.properties,
+        creationTime: context.startTime!,
+        lastModified: context.startTime!,
+        etag: newEtag(),
+        leaseStatus:
+          destBlob !== undefined
+            ? destBlob.properties.leaseStatus
+            : Models.LeaseStatusType.Unlocked,
+        leaseState:
+          destBlob !== undefined
+            ? destBlob.properties.leaseState
+            : Models.LeaseStateType.Available,
+        leaseDuration:
+          destBlob !== undefined
+            ? destBlob.properties.leaseDuration
+            : undefined,
+        copyId: uuid(),
+        copySource,
+        copyProgress: sourceBlob.properties.contentLength
+          ? `${sourceBlob.properties.contentLength}/${sourceBlob.properties.contentLength}`
+          : undefined,
+        copyCompletionTime: context.startTime,
+        copyStatusDescription: undefined,
+        incrementalCopy: false,
+        destinationSnapshot: undefined,
+        deletedTime: undefined,
+        remainingRetentionDays: undefined,
+        archiveStatus: undefined,
+        accessTierChangeTime: undefined
+      },
+      metadata:
+        metadata === undefined || Object.keys(metadata).length === 0
+          ? { ...sourceBlob.metadata }
+          : metadata,
+      accountName: destination.account,
+      containerName: destination.container,
+      pageRangesInOrder: sourceBlob.pageRangesInOrder,
+      isCommitted: sourceBlob.isCommitted,
+      leaseDurationSeconds:
+        destBlob !== undefined ? destBlob.leaseDurationSeconds : undefined,
+      leaseId: destBlob !== undefined ? destBlob.leaseId : undefined,
+      leaseExpireTime:
+        destBlob !== undefined ? destBlob.leaseExpireTime : undefined,
+      leaseBreakTime:
+        destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
+      committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
+      persistency: sourceBlob.persistency
+    };
+
+    if (
+      copiedBlob.properties.blobType === Models.BlobType.BlockBlob &&
+      tier !== undefined
+    ) {
+      copiedBlob.properties.accessTier = this.parseTier(tier);
+      if (copiedBlob.properties.accessTier === undefined) {
+        throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+          HeaderName: "x-ms-access-tier",
+          HeaderValue: `${tier}`
+        });
+      }
+    }
+
+    if (
+      copiedBlob.properties.blobType === Models.BlobType.PageBlob &&
+      tier !== undefined
+    ) {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+        HeaderName: "x-ms-access-tier",
+        HeaderValue: `${tier}`
+      });
+    }
+
+    if (destBlob) {
+      coll.remove(destBlob);
+    }
+    coll.insert(copiedBlob);
+    return copiedBlob.properties;
+  }
+
+  /**
    * Update Tier for a blob.
    *
    * @param {Context} context
@@ -2310,7 +2485,7 @@ export default class LokiBlobMetadataStore
       doc.properties.contentLanguage = blob.properties.contentLanguage;
       doc.properties.contentDisposition = blob.properties.contentDisposition;
       doc.properties.contentLength = selectedBlockList
-        .map(block => block.size)
+        .map((block) => block.size)
         .reduce((total, val) => {
           return total + val;
         }, 0);
@@ -2324,7 +2499,7 @@ export default class LokiBlobMetadataStore
     } else {
       blob.committedBlocksInOrder = selectedBlockList;
       blob.properties.contentLength = selectedBlockList
-        .map(block => block.size)
+        .map((block) => block.size)
         .reduce((total, val) => {
           return total + val;
         }, 0);
@@ -2782,7 +2957,7 @@ export default class LokiBlobMetadataStore
     const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
     const blockDocs = coll
       .chain()
-      .where(obj => {
+      .where((obj) => {
         return obj.$loki > parseInt(marker, 10);
       })
       .simplesort("$loki")
@@ -2790,11 +2965,11 @@ export default class LokiBlobMetadataStore
       .data();
 
     if (blockDocs.length <= maxResults) {
-      return [blockDocs.map(block => block.persistency), undefined];
+      return [blockDocs.map((block) => block.persistency), undefined];
     } else {
       blockDocs.pop();
       const nextMarker = `${blockDocs[maxResults - 1].$loki}`;
-      return [blockDocs.map(block => block.persistency), nextMarker];
+      return [blockDocs.map((block) => block.persistency), nextMarker];
     }
   }
 

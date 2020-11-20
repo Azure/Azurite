@@ -1,9 +1,7 @@
 import {
-  Aborter,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL,
-  QueueURL
+  StorageSharedKeyCredential,
+  newPipeline,
+  QueueServiceClient
 } from "@azure/storage-queue";
 import * as assert from "assert";
 
@@ -49,10 +47,13 @@ describe("Queue Cors requests test", () => {
   );
 
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
-  const serviceURL = new ServiceURL(
+  const serviceClient = new QueueServiceClient(
     baseURL,
-    StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -73,15 +74,18 @@ describe("Queue Cors requests test", () => {
   });
 
   it("OPTIONS request without cors rules in server should be fail @loki", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
     serviceProperties.cors = [];
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     const origin = "Origin";
     const requestMethod = "GET";
 
-    const pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -89,25 +93,25 @@ describe("Queue Cors requests test", () => {
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod)
     );
-    const serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    const serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
     let error;
     try {
-      await serviceURLforOPTIONS.getProperties(Aborter.none);
+      await serviceClientForOPTIONS.getProperties();
     } catch (err) {
       error = err;
     }
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.body.message.includes(
+      error.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
   });
 
   it("OPTIONS request should not work without matching cors rules @loki", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "header",
@@ -119,15 +123,18 @@ describe("Queue Cors requests test", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     let origin = "Origin";
     let requestMethod = "GET";
 
-    let pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    let pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -135,18 +142,18 @@ describe("Queue Cors requests test", () => {
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod)
     );
-    let serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    let serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
     let error;
     try {
-      await serviceURLforOPTIONS.getProperties(Aborter.none);
+      await serviceClientForOPTIONS.getProperties();
     } catch (err) {
       error = err;
     }
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.body.message.includes(
+      error.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
@@ -154,8 +161,11 @@ describe("Queue Cors requests test", () => {
     origin = "test";
     requestMethod = "GET";
 
-    pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -163,14 +173,14 @@ describe("Queue Cors requests test", () => {
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod)
     );
-    serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
-    const res = await serviceURLforOPTIONS.getProperties(Aborter.none);
+    const res = await serviceClientForOPTIONS.getProperties();
     assert.ok(res._response.status === 200);
   });
 
   it("OPTIONS request should not work without Origin header or matching allowedOrigins @loki", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "header",
@@ -182,15 +192,18 @@ describe("Queue Cors requests test", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "Origin";
     const requestMethod = "GET";
 
-    let pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    let pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -198,24 +211,27 @@ describe("Queue Cors requests test", () => {
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod)
     );
-    let serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    let serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
     let error;
     try {
-      await serviceURLforOPTIONS.getProperties(Aborter.none);
+      await serviceClientForOPTIONS.getProperties();
     } catch (err) {
       error = err;
     }
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.body.message.includes(
+      error.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
 
-    pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -223,24 +239,24 @@ describe("Queue Cors requests test", () => {
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(undefined, requestMethod)
     );
-    serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
     try {
-      await serviceURLforOPTIONS.getProperties(Aborter.none);
+      await serviceClientForOPTIONS.getProperties();
     } catch (err) {
       error = err;
     }
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.body.message.includes(
+      error.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
   });
 
   it("OPTIONS request should not work without requestMethod header or matching allowedMethods @loki", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "header",
@@ -252,15 +268,18 @@ describe("Queue Cors requests test", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "test";
     const requestMethod = "PUT";
 
-    let pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    let pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -268,24 +287,27 @@ describe("Queue Cors requests test", () => {
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod)
     );
-    let serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    let serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
     let error;
     try {
-      await serviceURLforOPTIONS.getProperties(Aborter.none);
+      await serviceClientForOPTIONS.getProperties();
     } catch (err) {
       error = err;
     }
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.body.message.includes(
+      error.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
 
-    pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -293,22 +315,20 @@ describe("Queue Cors requests test", () => {
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, undefined)
     );
-    serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
     try {
-      await serviceURLforOPTIONS.getProperties(Aborter.none);
+      await serviceClientForOPTIONS.getProperties();
     } catch (err) {
       error = err;
     }
 
     assert.ok(error.statusCode === 400);
-    assert.ok(
-      error.body.message.includes("A required CORS header is not present.")
-    );
+    assert.ok(error.message.includes("A required CORS header is not present."));
   });
 
   it("OPTIONS request should check the defined requestHeaders @loki", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = [
       {
@@ -336,7 +356,7 @@ describe("Queue Cors requests test", () => {
 
     serviceProperties.cors = newCORS;
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
@@ -345,8 +365,11 @@ describe("Queue Cors requests test", () => {
     let requestMethod = "GET";
     let reqestHeaders = "head";
 
-    let pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    let pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -354,18 +377,18 @@ describe("Queue Cors requests test", () => {
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
     );
-    let serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    let serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
     let error;
     try {
-      await serviceURLforOPTIONS.getProperties(Aborter.none);
+      await serviceClientForOPTIONS.getProperties();
     } catch (err) {
       error = err;
     }
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.body.message.includes(
+      error.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
@@ -375,8 +398,11 @@ describe("Queue Cors requests test", () => {
     requestMethod = "GET";
     reqestHeaders = "header";
 
-    pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -384,9 +410,9 @@ describe("Queue Cors requests test", () => {
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
     );
-    serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
-    let res = await serviceURLforOPTIONS.getProperties(Aborter.none);
+    let res = await serviceClientForOPTIONS.getProperties();
     assert.ok(res._response.status === 200);
 
     // Match second cors.
@@ -394,8 +420,11 @@ describe("Queue Cors requests test", () => {
     requestMethod = "PUT";
     reqestHeaders = "head";
 
-    pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -403,9 +432,9 @@ describe("Queue Cors requests test", () => {
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
     );
-    serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
-    res = await serviceURLforOPTIONS.getProperties(Aborter.none);
+    res = await serviceClientForOPTIONS.getProperties();
     assert.ok(res._response.status === 200);
 
     // No match.
@@ -413,8 +442,11 @@ describe("Queue Cors requests test", () => {
     requestMethod = "POST";
     reqestHeaders = "hea";
 
-    pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -422,18 +454,18 @@ describe("Queue Cors requests test", () => {
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
     );
-    serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
     error;
     try {
-      await serviceURLforOPTIONS.getProperties(Aborter.none);
+      await serviceClientForOPTIONS.getProperties();
     } catch (err) {
       error = err;
     }
 
     assert.ok(error.statusCode === 403);
     assert.ok(
-      error.body.message.includes(
+      error.message.includes(
         "CORS not enabled or no matching rule found for this request."
       )
     );
@@ -443,8 +475,11 @@ describe("Queue Cors requests test", () => {
     requestMethod = "POST";
     reqestHeaders = "headerheader";
 
-    pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -452,14 +487,14 @@ describe("Queue Cors requests test", () => {
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
     );
-    serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
-    res = await serviceURLforOPTIONS.getProperties(Aborter.none);
+    res = await serviceClientForOPTIONS.getProperties();
     assert.ok(res._response.status === 200);
   });
 
   it("OPTIONS request should work with matching rule containing Origion * @loki", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "header",
@@ -471,15 +506,18 @@ describe("Queue Cors requests test", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "anyOrigin";
     const requestMethod = "GET";
 
-    const pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -487,32 +525,35 @@ describe("Queue Cors requests test", () => {
     pipeline.factories.unshift(
       new OPTIONSRequestPolicyFactory(origin, requestMethod)
     );
-    const serviceURLforOPTIONS = new ServiceURL(baseURL, pipeline);
+    const serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
-    const res = await serviceURLforOPTIONS.getProperties(Aborter.none);
+    const res = await serviceClientForOPTIONS.getProperties();
     assert.ok(res._response.status === 200);
   });
 
   it("Response of request to service without cors rules should not contains cors info @loki", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     serviceProperties.cors = [];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "anyOrigin";
-    const pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
-    const serviceURLwithOrigin = new ServiceURL(baseURL, pipeline);
+    const serviceClientWithOrigin = new QueueServiceClient(baseURL, pipeline);
 
-    const res: any = await serviceURLwithOrigin.getProperties(Aborter.none);
+    const res: any = await serviceClientWithOrigin.getProperties();
 
     assert.ok(res["access-control-allow-origin"] === undefined);
     assert.ok(res["access-control-expose-headers"] === undefined);
@@ -520,7 +561,7 @@ describe("Queue Cors requests test", () => {
   });
 
   it("Service with mismatching cors rules should response header Vary @loki", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "header",
@@ -532,29 +573,32 @@ describe("Queue Cors requests test", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "anyOrigin";
-    const pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
-    const serviceURLwithOrigin = new ServiceURL(baseURL, pipeline);
+    const serviceClientWithOrigin = new QueueServiceClient(baseURL, pipeline);
 
-    let res: any = await serviceURLwithOrigin.getProperties(Aborter.none);
+    let res: any = await serviceClientWithOrigin.getProperties();
     assert.ok(res.vary !== undefined);
 
-    res = await serviceURL.getProperties(Aborter.none);
+    res = await serviceClient.getProperties();
     assert.ok(res.vary === undefined);
   });
 
   it("Request Match rule exists that allows all origins (*) @loki", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "header",
@@ -566,33 +610,36 @@ describe("Queue Cors requests test", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "anyOrigin";
-    const pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
-    const serviceURLwithOrigin = new ServiceURL(baseURL, pipeline);
+    const serviceClientWithOrigin = new QueueServiceClient(baseURL, pipeline);
 
-    let res: any = await serviceURLwithOrigin.getProperties(Aborter.none);
+    let res: any = await serviceClientWithOrigin.getProperties();
     assert.ok(res["access-control-allow-origin"] === "*");
     assert.ok(res.vary === undefined);
     assert.ok(res["access-control-expose-headers"] !== undefined);
 
-    res = await serviceURL.getProperties(Aborter.none);
+    res = await serviceClient.getProperties();
     assert.ok(res["access-control-allow-origin"] === undefined);
     assert.ok(res.vary === undefined);
     assert.ok(res["access-control-expose-headers"] === undefined);
   });
 
   it("Request Match rule exists for exact origin @loki", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "header",
@@ -604,28 +651,31 @@ describe("Queue Cors requests test", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "exactOrigin";
-    const pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
-    const serviceURLwithOrigin = new ServiceURL(baseURL, pipeline);
+    const serviceClientWithOrigin = new QueueServiceClient(baseURL, pipeline);
 
-    const res: any = await serviceURLwithOrigin.getProperties(Aborter.none);
+    const res: any = await serviceClientWithOrigin.getProperties();
     assert.ok(res["access-control-allow-origin"] === origin);
     assert.ok(res.vary !== undefined);
     assert.ok(res["access-control-expose-headers"] !== undefined);
   });
 
   it("Requests with error response should apply for CORS @loki", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
       allowedHeaders: "header",
@@ -637,27 +687,29 @@ describe("Queue Cors requests test", () => {
 
     serviceProperties.cors = [newCORS];
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "exactOrigin";
-    const pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
-    const serviceURLwithOrigin = new ServiceURL(baseURL, pipeline);
+    const serviceClientWithOrigin = new QueueServiceClient(baseURL, pipeline);
 
-    const queueURLwithOrigin = QueueURL.fromServiceURL(
-      serviceURLwithOrigin,
+    const queueClientWithOrigin = serviceClientWithOrigin.getQueueClient(
       "notexistcontainer"
     );
 
     try {
-      await queueURLwithOrigin.getProperties(Aborter.none);
+      await queueClientWithOrigin.getProperties();
     } catch (err) {
       assert.ok(
         err.response.headers._headersMap["access-control-allow-origin"]
@@ -672,7 +724,7 @@ describe("Queue Cors requests test", () => {
   });
 
   it("Request Match rule in sequence @loki", async () => {
-    const serviceProperties = await serviceURL.getProperties(Aborter.none);
+    const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = [
       {
@@ -693,21 +745,24 @@ describe("Queue Cors requests test", () => {
 
     serviceProperties.cors = newCORS;
 
-    await serviceURL.setProperties(Aborter.none, serviceProperties);
+    await serviceClient.setProperties(serviceProperties);
 
     await sleep(100);
 
     const origin = "exactOrigin";
-    const pipeline = StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
     );
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
-    const serviceURLwithOrigin = new ServiceURL(baseURL, pipeline);
+    const serviceClientWithOrigin = new QueueServiceClient(baseURL, pipeline);
 
-    const res: any = await serviceURLwithOrigin.getProperties(Aborter.none);
+    const res: any = await serviceClientWithOrigin.getProperties();
     assert.ok(res["access-control-allow-origin"] === origin);
     assert.ok(res.vary !== undefined);
     assert.ok(res["access-control-expose-headers"] !== undefined);

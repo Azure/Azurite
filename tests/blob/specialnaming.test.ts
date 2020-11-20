@@ -1,12 +1,10 @@
 import dns = require("dns");
 
 import {
-  Aborter,
-  BlockBlobURL,
-  ContainerURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+  BlobServiceClient,
+  newPipeline,
+  StorageSharedKeyCredential,
+  BlockBlobClient
 } from "@azure/storage-blob";
 import assert = require("assert");
 
@@ -29,153 +27,158 @@ describe("SpecialNaming", () => {
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
   const productionStyleHostName = "devstoreaccount1.localhost"; // Use hosts file to make this resolve
 
-  const serviceURL = new ServiceURL(
+  const serviceClient = new BlobServiceClient(
     baseURL,
-    StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     )
   );
 
   const containerName: string = getUniqueName("1container-with-dash");
-  const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+  const containerClient = serviceClient.getContainerClient(containerName);
 
   before(async () => {
     await server.start();
-    await containerURL.create(Aborter.none);
+    await containerClient.create();
   });
 
   after(async () => {
-    await containerURL.delete(Aborter.none);
+    await containerClient.delete();
     await server.close();
     await server.clean();
   });
 
   it("Should work with special container and blob names with spaces @loki @sql", async () => {
     const blobName: string = getUniqueName("blob empty");
-    const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobName
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
   it("Should work with special container and blob names with unicode @loki @sql", async () => {
     const blobName: string = getUniqueName("unicod\u00e9");
-    const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobName
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
     assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
 
   it("Should work with special container and blob names with spaces in URL string @loki @sql", async () => {
     const blobName: string = getUniqueName("blob empty");
-    const blockBlobURL = new BlockBlobURL(
-      appendToURLPath(containerURL.url, blobName),
-      containerURL.pipeline
+    const blockBlobClient = new BlockBlobClient(
+      appendToURLPath(containerClient.url, blobName),
+      (containerClient as any).pipeline
     );
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobName
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
   it("Should work with special container and blob names with / @loki @sql", async () => {
     const blobName: string = getUniqueName("////blob/empty /another");
-    const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobName
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
   it("Should work with special container and blob names with / in URL string @loki @sql", async () => {
     const blobName: string = getUniqueName("////blob/empty /another");
-    const blockBlobURL = new BlockBlobURL(
-      appendToURLPath(containerURL.url, blobName),
-      containerURL.pipeline
+    const blockBlobClient = new BlockBlobClient(
+      appendToURLPath(containerClient.url, blobName),
+      (containerClient as any).pipeline
     );
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobName
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
   it("Should work with special container and blob names uppercase @loki @sql", async () => {
     const blobName: string = getUniqueName("////Upper/blob/empty /another");
-    const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobName
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
   it("Should work with special container and blob names uppercase in URL string @loki @sql", async () => {
     const blobName: string = getUniqueName("////Upper/blob/empty /another");
-    const blockBlobURL = new BlockBlobURL(
-      appendToURLPath(containerURL.url, blobName),
-      containerURL.pipeline
+    const blockBlobClient = new BlockBlobClient(
+      appendToURLPath(containerClient.url, blobName),
+      (containerClient as any).pipeline
     );
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobName
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -183,18 +186,18 @@ describe("SpecialNaming", () => {
     const blobName: string = getUniqueName(
       "////Upper/blob/empty /another 汉字"
     );
-    const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobName
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -202,21 +205,21 @@ describe("SpecialNaming", () => {
     const blobName: string = getUniqueName(
       "////Upper/blob/empty /another 汉字"
     );
-    const blockBlobURL = new BlockBlobURL(
-      appendToURLPath(containerURL.url, blobName),
-      containerURL.pipeline
+    const blockBlobClient = new BlockBlobClient(
+      appendToURLPath(containerClient.url, blobName),
+      (containerClient as any).pipeline
     );
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobName
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -224,19 +227,22 @@ describe("SpecialNaming", () => {
     const blobName: string = getUniqueName(
       "汉字. special ~!@#$%^&*()_+`1234567890-={}|[]\\:\";'<>?,/'"
     );
-    const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "b", // A char doesn't exist in blob name
-      undefined,
-      {
-        // NOTICE: Azure Storage Server will replace "\" with "/" in the blob names
-        prefix: blobName.replace(/\\/g, "/")
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy(
+          "b", // A char doesn't exist in blob name
+          {
+            // NOTICE: Azure Storage Server will replace "\" with "/" in the blob names
+            prefix: blobName.replace(/\\/g, "/")
+          }
+        )
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
@@ -244,241 +250,235 @@ describe("SpecialNaming", () => {
     const blobName: string = getUniqueName(
       "汉字. special ~!@#$%^&*()_+`1234567890-={}|[]\\:\";'<>?,/'"
     );
-    const blockBlobURL = new BlockBlobURL(
+    const blockBlobClient = new BlockBlobClient(
       // There are 2 special cases for a URL string:
       // Escape "%" when creating XXXURL object with URL strings
       // Escape "?" otherwise string after "?" will be treated as URL parameters
       appendToURLPath(
-        containerURL.url,
+        containerClient.url,
         blobName.replace(/%/g, "%25").replace(/\?/g, "%3F")
       ),
-      containerURL.pipeline
+      (containerClient as any).pipeline
     );
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "b", // "b" doesn't exist in blob name
-      undefined,
-      {
-        // NOTICE: Azure Storage Server will replace "\" with "/" in the blob names
-        prefix: blobName.replace(/\\/g, "/")
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy(
+          "b", // "b" doesn't exist in blob name
+          {
+            // NOTICE: Azure Storage Server will replace "\" with "/" in the blob names
+            prefix: blobName.replace(/\\/g, "/")
+          }
+        )
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
   it("Should work with special blob name Russian URI encoded @loki @sql", async () => {
     const blobName: string = getUniqueName("ру́сский язы́к");
     const blobNameEncoded: string = encodeURIComponent(blobName);
-    const blockBlobURL = BlockBlobURL.fromContainerURL(
-      containerURL,
-      blobNameEncoded
-    );
+    const blockBlobClient = containerClient.getBlockBlobClient(blobNameEncoded);
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobNameEncoded
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobNameEncoded
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
   it("Should work with special blob name Russian @loki @sql", async () => {
     const blobName: string = getUniqueName("ру́сский язы́к");
-    const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobName
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
   it("Should work with special blob name Russian in URL string @loki @sql", async () => {
     const blobName: string = getUniqueName("ру́сский язы́к");
-    const blockBlobURL = new BlockBlobURL(
-      appendToURLPath(containerURL.url, blobName),
-      containerURL.pipeline
+    const blockBlobClient = new BlockBlobClient(
+      appendToURLPath(containerClient.url, blobName),
+      (containerClient as any).pipeline
     );
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobName
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
   it("Should work with special blob name Arabic URI encoded @loki @sql", async () => {
     const blobName: string = getUniqueName("عربي/عربى");
     const blobNameEncoded: string = encodeURIComponent(blobName);
-    const blockBlobURL = BlockBlobURL.fromContainerURL(
-      containerURL,
-      blobNameEncoded
-    );
+    const blockBlobClient = containerClient.getBlockBlobClient(blobNameEncoded);
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobNameEncoded
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobNameEncoded
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
   it("Should work with special blob name Arabic @loki @sql", async () => {
     const blobName: string = getUniqueName("عربي/عربى");
-    const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobName
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
   it("Should work with special blob name Arabic in URL string @loki @sql", async () => {
     const blobName: string = getUniqueName("عربي/عربى");
-    const blockBlobURL = new BlockBlobURL(
-      appendToURLPath(containerURL.url, blobName),
-      containerURL.pipeline
+    const blockBlobClient = new BlockBlobClient(
+      appendToURLPath(containerClient.url, blobName),
+      (containerClient as any).pipeline
     );
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobName
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
   it("Should work with special blob name Japanese URI encoded @loki @sql", async () => {
     const blobName: string = getUniqueName("にっぽんご/にほんご");
     const blobNameEncoded: string = encodeURIComponent(blobName);
-    const blockBlobURL = BlockBlobURL.fromContainerURL(
-      containerURL,
-      blobNameEncoded
-    );
+    const blockBlobClient = containerClient.getBlockBlobClient(blobNameEncoded);
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobNameEncoded
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobNameEncoded
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
   it("Should work with special blob name Japanese @loki @sql", async () => {
     const blobName: string = getUniqueName("にっぽんご/にほんご");
-    const blockBlobURL = BlockBlobURL.fromContainerURL(containerURL, blobName);
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobName
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
   it("Should work with special blob name Japanese in URL string @loki @sql", async () => {
     const blobName: string = getUniqueName("にっぽんご/にほんご");
-    const blockBlobURL = new BlockBlobURL(
-      appendToURLPath(containerURL.url, blobName),
-      containerURL.pipeline
+    const blockBlobClient = new BlockBlobClient(
+      appendToURLPath(containerClient.url, blobName),
+      (containerClient as any).pipeline
     );
 
-    await blockBlobURL.upload(Aborter.none, "A", 1);
-    await blockBlobURL.getProperties(Aborter.none);
-    const response = await containerURL.listBlobHierarchySegment(
-      Aborter.none,
-      "$",
-      undefined,
-      {
-        prefix: blobName
-      }
-    );
+    await blockBlobClient.upload("A", 1);
+    await blockBlobClient.getProperties();
+    const response = (
+      await containerClient
+        .listBlobsByHierarchy("$", {
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
   });
 
   it(`Should work with production style URL when ${productionStyleHostName} is resolvable`, async () => {
     await dns.promises.lookup(productionStyleHostName).then(
-      async lookupAddress => {
+      async (lookupAddress) => {
         const baseURLProductionStyle = `http://${productionStyleHostName}:${server.config.port}`;
-        const serviceURLProductionStyle = new ServiceURL(
+        const serviceClientProductionStyle = new BlobServiceClient(
           baseURLProductionStyle,
-          StorageURL.newPipeline(
-            new SharedKeyCredential(
+          newPipeline(
+            new StorageSharedKeyCredential(
               EMULATOR_ACCOUNT_NAME,
               EMULATOR_ACCOUNT_KEY
             ),
             {
-              retryOptions: { maxTries: 1 }
+              retryOptions: { maxTries: 1 },
+              // Make sure socket is closed once the operation is done.
+              keepAliveOptions: { enable: false }
             }
           )
         );
-        const containerURLProductionStyle = ContainerURL.fromServiceURL(
-          serviceURLProductionStyle,
+        const containerClientProductionStyle = serviceClientProductionStyle.getContainerClient(
           containerName
         );
 
         const blobName: string = getUniqueName("myblob");
-        const blockBlobURL = BlockBlobURL.fromContainerURL(
-          containerURLProductionStyle,
+        const blockBlobClient = containerClientProductionStyle.getBlockBlobClient(
           blobName
         );
 
-        await blockBlobURL.upload(Aborter.none, "ABC", 3);
-        const response = await containerURLProductionStyle.listBlobHierarchySegment(
-          Aborter.none,
-          "$",
-          undefined,
-          {
-            prefix: blobName
-          }
-        );
+        await blockBlobClient.upload("ABC", 3);
+        const response = (
+          await containerClientProductionStyle
+            .listBlobsByHierarchy("$", {
+              prefix: blobName
+            })
+            .byPage()
+            .next()
+        ).value;
         assert.notDeepEqual(response.segment.blobItems.length, 0);
       },
       () => {

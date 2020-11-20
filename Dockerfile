@@ -1,20 +1,41 @@
+#
+# Builder
+#
+FROM node:lts-alpine AS builder
+
+WORKDIR /opt/azurite
+
+# Install dependencies first
+COPY *.json LICENSE NOTICE.txt ./
+RUN npm config set unsafe-perm=true && \
+  npm ci
+
+# Copy the source code and build the app
+COPY src ./src
+COPY tests ./tests
+RUN npm run build && \
+  npm install -g --loglevel verbose
+
+
+#
+# Production image
+#
 FROM node:lts-alpine
+
+ENV NODE_ENV=production
 
 WORKDIR /opt/azurite
 
 # Default Workspace Volume
 VOLUME [ "/data" ]
 
-COPY src ./src
-COPY tests ./tests
-COPY *.json ./
-COPY LICENSE .
-COPY NOTICE.txt .
+COPY package*.json LICENSE NOTICE.txt ./
 
-RUN npm config set unsafe-perm=true
-RUN npm ci
-RUN npm run build
-RUN ls -l
+RUN npm config set unsafe-perm=true && \
+  npm ci
+
+COPY --from=builder /opt/azurite/dist/ dist/
+
 RUN npm install -g --loglevel verbose
 
 # Blob Storage Port

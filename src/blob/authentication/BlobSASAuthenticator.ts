@@ -316,7 +316,8 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       operation === Operation.BlockBlob_Upload ||
       operation === Operation.PageBlob_Create ||
       operation === Operation.AppendBlob_Create ||
-      operation === Operation.Blob_StartCopyFromURL
+      operation === Operation.Blob_StartCopyFromURL ||
+      operation === Operation.Blob_CopyFromURL
     ) {
       this.logger.info(
         `BlobSASAuthenticator:validate() For ${Operation[operation]}, if blob exists, the permission must be Write.`,
