@@ -2,11 +2,11 @@
 <package >
   <metadata>
     <id>Azurite</id>
-    <version>0.0.0</version>
+    <version>2.7.3</version>
     <authors>olarafat</authors>
     <owners>olarafat</owners>
-    <licenseUrl>https://github.com/arafato/azurite/blob/master/LICENSE</licenseUrl>
-    <projectUrl>https://github.com/arafato/azurite</projectUrl>
+    <licenseUrl>https://github.com/Azure/azurite/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/Azure/azurite</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>A lightweight server clone of Azure Blob Storage that simulates most of the commands supported by it with minimal dependencies.</description>
     <releaseNotes>Initial Azurite Nuget Package</releaseNotes>
