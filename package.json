@@ -54,7 +54,7 @@
     "@types/rimraf": "^2.0.2",
     "@types/uri-templates": "^0.1.29",
     "@types/uuid": "^3.4.4",
-    "@types/validator": "^10.11.3",
+    "@types/validator": "^13.1.1",
     "@types/vscode": "^1.39.0",
     "@types/xml2js": "^0.4.3",
     "autorest": "^2.0.4283",
