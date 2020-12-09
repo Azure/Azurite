@@ -3,6 +3,12 @@
 > Note. This file includes changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
 ## Upcoming Release
+- Bump up Azure Storage service API version to 2020-04-08.
+- Add missing Azure Storage service API version 2019-10-10.
+
+Blob:
+
+- Fix an issue to keep Blob Lease properties when overwrite an existing blob.
 
 ## 2020.10 Version 3.9.0
 
