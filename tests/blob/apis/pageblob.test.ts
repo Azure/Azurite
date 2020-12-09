@@ -1495,6 +1495,65 @@ describe("PageBlobAPIs", () => {
     });
   });
 
+  it("clearPages will fail when start range longer than blob length @loki", async () => {
+    const length = 512 * 2;
+    await pageBlobClient.create(length);
+
+    const result = await blobClient.download(0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
+    await pageBlobClient.uploadPages("a".repeat(512), 512 * 1, 512);
+
+    await pageBlobClient.getPageRanges(512 * 2 - 1, 512);
+    try {
+      await pageBlobClient.clearPages(512 * 2, 512);
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 416);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("GetPageRanges will fail when start range longer than blob length @loki", async () => {
+    const length = 512 * 2;
+    await pageBlobClient.create(length);
+
+    const result = await blobClient.download(0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
+    await pageBlobClient.uploadPages("a".repeat(512), 512 * 1, 512);
+
+    await pageBlobClient.getPageRanges(512 * 2 - 1, 512);
+    try {
+      await pageBlobClient.getPageRanges(512 * 2, 512);
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 416);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("UploadPages will fail when start range longer than blob length @loki", async () => {
+    const length = 512 * 2;
+    await pageBlobClient.create(length);
+
+    const result = await blobClient.download(0);
+    assert.equal(await bodyToString(result, length), "\u0000".repeat(length));
+
+    await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
+    await pageBlobClient.uploadPages("a".repeat(512), 512 * 1, 512);
+
+    try {
+      await pageBlobClient.uploadPages("b".repeat(512), 512 * 2, 512);
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 416);
+      return;
+    }
+    assert.fail();
+  });
+
   it("clearPages to totally override a non-sequential range @loki", async () => {
     const length = 512 * 5;
     await pageBlobClient.create(length);

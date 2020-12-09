@@ -217,6 +217,11 @@ export default class PageBlobHandler extends BaseHandler
       throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextId!);
     }
 
+    // Start Range is bigger than blob length
+    if (start >= blob.properties.contentLength!) {
+      throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextId!);
+    }
+
     const persistency = await this.extentStore.appendExtent(
       body,
       context.contextId
@@ -301,6 +306,11 @@ export default class PageBlobHandler extends BaseHandler
     const start = ranges[0];
     const end = ranges[1];
 
+    // Start Range is bigger than blob length
+    if (start >= blob.properties.contentLength!) {
+      throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextId!);
+    }
+
     const res = await this.metadataStore.clearRange(
       context,
       blob,
@@ -357,6 +367,11 @@ export default class PageBlobHandler extends BaseHandler
     );
     if (!ranges) {
       ranges = [0, blob.properties.contentLength! - 1];
+    }
+
+    // Start Range is bigger than blob length
+    if (ranges[0] >= blob.properties.contentLength!) {
+      throw StorageErrorFactory.getInvalidPageRange(blobCtx.contextId!);
     }
 
     blob.pageRangesInOrder = blob.pageRangesInOrder || [];

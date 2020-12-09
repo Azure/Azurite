@@ -924,6 +924,7 @@ export interface IBlobMetadataStore
    * @param {string} account
    * @param {string} container
    * @param {string} blob
+   * @param {string} [snapshot]
    * @param {(boolean | undefined)} isCommitted
    * @param {Context} context
    * @returns {Promise<{
@@ -938,6 +939,7 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
+    snapshot: string | undefined,
     isCommitted: boolean | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<{

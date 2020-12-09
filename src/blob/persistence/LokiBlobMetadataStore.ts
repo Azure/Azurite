@@ -121,7 +121,7 @@ export default class LokiBlobMetadataStore
     await new Promise<void>((resolve, reject) => {
       stat(this.lokiDBPath, (statError, stats) => {
         if (!statError) {
-          this.db.loadDatabase({}, (dbError) => {
+          this.db.loadDatabase({}, dbError => {
             if (dbError) {
               reject(dbError);
             } else {
@@ -169,7 +169,7 @@ export default class LokiBlobMetadataStore
     }
 
     await new Promise((resolve, reject) => {
-      this.db.saveDatabase((err) => {
+      this.db.saveDatabase(err => {
         if (err) {
           reject(err);
         } else {
@@ -190,7 +190,7 @@ export default class LokiBlobMetadataStore
    */
   public async close(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
-      this.db.close((err) => {
+      this.db.close(err => {
         if (err) {
           reject(err);
         } else {
@@ -337,7 +337,7 @@ export default class LokiBlobMetadataStore
 
     if (docs.length <= maxResults) {
       return [
-        docs.map((doc) => {
+        docs.map(doc => {
           return LeaseFactory.createLeaseState(
             new ContainerLeaseAdapter(doc),
             context
@@ -350,7 +350,7 @@ export default class LokiBlobMetadataStore
       const nextMarker = docs[docs.length - 2].name;
       docs.pop();
       return [
-        docs.map((doc) => {
+        docs.map(doc => {
           return LeaseFactory.createLeaseState(
             new ContainerLeaseAdapter(doc),
             context
@@ -845,13 +845,13 @@ export default class LokiBlobMetadataStore
     const docs = await coll
       .chain()
       .find(query)
-      .where((obj) => {
+      .where(obj => {
         return obj.name > marker!;
       })
-      .where((obj) => {
+      .where(obj => {
         return includeSnapshots ? true : obj.snapshot.length === 0;
       })
-      .where((obj) => {
+      .where(obj => {
         return includeUncommittedBlobs ? true : obj.isCommitted;
       })
       .simplesort("name")
@@ -867,7 +867,7 @@ export default class LokiBlobMetadataStore
 
     if (docs.length <= maxResults) {
       return [
-        docs.map((doc) => {
+        docs.map(doc => {
           return LeaseFactory.createLeaseState(
             new BlobLeaseAdapter(doc),
             context
@@ -879,7 +879,7 @@ export default class LokiBlobMetadataStore
       const nextMarker = docs[docs.length - 2].name;
       docs.pop();
       return [
-        docs.map((doc) => {
+        docs.map(doc => {
           return LeaseFactory.createLeaseState(
             new BlobLeaseAdapter(doc),
             context
@@ -900,13 +900,13 @@ export default class LokiBlobMetadataStore
 
     const docs = await coll
       .chain()
-      .where((obj) => {
+      .where(obj => {
         return obj.name > marker!;
       })
-      .where((obj) => {
+      .where(obj => {
         return includeSnapshots ? true : obj.snapshot.length === 0;
       })
-      .where((obj) => {
+      .where(obj => {
         return includeUncommittedBlobs ? true : obj.isCommitted;
       })
       .simplesort("name")
@@ -2485,7 +2485,7 @@ export default class LokiBlobMetadataStore
       doc.properties.contentLanguage = blob.properties.contentLanguage;
       doc.properties.contentDisposition = blob.properties.contentDisposition;
       doc.properties.contentLength = selectedBlockList
-        .map((block) => block.size)
+        .map(block => block.size)
         .reduce((total, val) => {
           return total + val;
         }, 0);
@@ -2499,7 +2499,7 @@ export default class LokiBlobMetadataStore
     } else {
       blob.committedBlocksInOrder = selectedBlockList;
       blob.properties.contentLength = selectedBlockList
-        .map((block) => block.size)
+        .map(block => block.size)
         .reduce((total, val) => {
           return total + val;
         }, 0);
@@ -2519,6 +2519,7 @@ export default class LokiBlobMetadataStore
    * @param {string} account
    * @param {string} container
    * @param {string} blob
+   * @param {(string | undefined)} snapshot
    * @param {(boolean | undefined)} isCommitted
    * @param {Context} context
    * @returns {Promise<{
@@ -2533,6 +2534,7 @@ export default class LokiBlobMetadataStore
     account: string,
     container: string,
     blob: string,
+    snapshot: string | undefined,
     isCommitted: boolean | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<{
@@ -2544,7 +2546,7 @@ export default class LokiBlobMetadataStore
       account,
       container,
       blob,
-      undefined,
+      snapshot,
       context
     );
 
@@ -2957,7 +2959,7 @@ export default class LokiBlobMetadataStore
     const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
     const blockDocs = coll
       .chain()
-      .where((obj) => {
+      .where(obj => {
         return obj.$loki > parseInt(marker, 10);
       })
       .simplesort("$loki")
@@ -2965,11 +2967,11 @@ export default class LokiBlobMetadataStore
       .data();
 
     if (blockDocs.length <= maxResults) {
-      return [blockDocs.map((block) => block.persistency), undefined];
+      return [blockDocs.map(block => block.persistency), undefined];
     } else {
       blockDocs.pop();
       const nextMarker = `${blockDocs[maxResults - 1].$loki}`;
-      return [blockDocs.map((block) => block.persistency), nextMarker];
+      return [blockDocs.map(block => block.persistency), nextMarker];
     }
   }
 
