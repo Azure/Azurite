@@ -8,7 +8,9 @@
 
 Blob:
 
-- Fix an issue to keep Blob Lease properties when overwrite an existing blob.
+- Fix an issue that Blob Lease properties are lost when overwrite an existing blob.
+- Fix an issue that snapshot time is omitted in get block list.
+- Fix an issue that no error throw when clear pages, get page ranges and upload pages with invalid page range.
 
 ## 2020.10 Version 3.9.0
 

@@ -354,6 +354,7 @@ export default class BlockBlobHandler extends BaseHandler
       accountName,
       containerName,
       blobName,
+      options.snapshot,
       undefined,
       options.leaseAccessConditions
     );
