@@ -8,8 +8,9 @@ type FaultInjectionType =
   | "serverInternalError"
   | "timeout"
   | "closeConnection"
-  | "partialResponseThenTimeout"
-  | "partialResponseThenCloseConnection";
+  | "partialResponseThenTimeout" // only support partial body for stream body
+  | "partialResponseThenCloseConnection"; // only support partial body for stream body
+
 type FaultInjectionPosition =
   | "beforeHandler"
   | "beforeSerializer"
@@ -71,7 +72,7 @@ export default class PreflightMiddlewareFactory {
               `[Fault Injection] ${injectTypeStr} error injected at ${position}`
             );
             context.handlerResponses.body = new PartialReadableStream(body);
-            next();
+            return next();
           } else {
             const errMsg = `[Fault Injection] Response body not available to inject ${injectTypeStr}`;
             this.logger.info(errMsg);
