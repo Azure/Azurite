@@ -74,9 +74,9 @@ export default class PreflightMiddlewareFactory {
             context.handlerResponses.body = new PartialReadableStream(body);
             return next();
           } else {
-            const errMsg = `[Fault Injection] Response body not available to inject ${injectTypeStr}`;
-            this.logger.info(errMsg);
-            return next(new Error(errMsg));
+            const errMsg2 = `[Fault Injection] Response body not available to inject ${injectTypeStr}`;
+            this.logger.info(errMsg2);
+            return next(new Error(errMsg2));
           }
         } else if (
           position === "afterSerializer" &&
@@ -88,9 +88,9 @@ export default class PreflightMiddlewareFactory {
         break;
       }
       default:
-        const errMsg = `Unsupported fault injection type: ${injectTypeStr}.`;
-        this.logger.info(errMsg);
-        return next(new Error(errMsg));
+        const errMsg3 = `Unsupported fault injection type: ${injectTypeStr}.`;
+        this.logger.info(errMsg3);
+        return next(new Error(errMsg3));
     }
   }
 }
