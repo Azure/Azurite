@@ -333,7 +333,8 @@ export async function serialize(
     await new Promise((resolve, reject) => {
       (handlerResponse.body as NodeJS.ReadableStream)
         .on("error", reject)
-        .pipe(res.getBodyStream())
+        .on("close", resolve)
+        .pipe(res.getBodyStream(), { end: false })
         .on("error", reject)
         .on("close", resolve);
     });
