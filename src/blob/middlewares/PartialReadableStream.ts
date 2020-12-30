@@ -53,7 +53,9 @@ export class PartialReadableStream extends Readable {
           this.push(null);
         } else {
           const len = Math.min(this.dataLeft.length - 1, this.threshold);
-          this.push(Buffer.from(this.dataLeft, 0, len));
+          this.push(
+            Buffer.from(this.dataLeft.buffer, this.dataLeft.byteOffset, len)
+          );
           this.push(null);
         }
         this.threshold = 0;

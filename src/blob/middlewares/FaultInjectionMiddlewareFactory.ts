@@ -5,11 +5,11 @@ import { DEFAULT_CONTEXT_PATH } from "../utils/constants";
 import { PartialReadableStream } from "./PartialReadableStream";
 
 type FaultInjectionType =
-  | "serverInternalError"
-  | "timeout"
-  | "closeConnection"
-  | "partialResponseThenTimeout" // only support partial body for stream body
-  | "partialResponseThenCloseConnection"; // only support partial body for stream body
+  | "ServerInternalError"
+  | "NoResponseThenWaitIndefinitely"
+  | "NoResponseThenCloseConnection"
+  | "PartialResponseThenWaitIndefinitely" // only support partial body for stream body
+  | "PartialResponseThenCloseConnection"; // only support partial body for stream body
 
 type FaultInjectionPosition =
   | "beforeHandler"
@@ -32,26 +32,34 @@ export default class PreflightMiddlewareFactory {
     position: FaultInjectionPosition
   ): void {
     const injectTypeStr = req.get("fault-inject") as FaultInjectionType;
+    if (injectTypeStr === undefined || injectTypeStr.length === 0) {
+      return next();
+    }
+
     switch (injectTypeStr) {
-      case "serverInternalError": {
+      case "ServerInternalError": {
         if (position === "beforeHandler") {
-          const errMsg = `[Fault Injection] Server internal error injected.`;
+          const errMsg = `[Fault Injection] ${injectTypeStr} error injected at ${position}`;
           this.logger.info(errMsg);
           return next(new Error(errMsg));
         }
         break;
       }
-      case "timeout": {
+      case "NoResponseThenWaitIndefinitely": {
         if (position === "beforeHandler") {
-          this.logger.info("[Fault Injection] Timeout error injected");
+          this.logger.info(
+            `[Fault Injection] ${injectTypeStr} error injected at ${position}`
+          );
           // Do nothing, leaving the socket open but never sending a response.
           return;
         }
         break;
       }
-      case "closeConnection": {
+      case "NoResponseThenCloseConnection": {
         if (position === "beforeHandler") {
-          this.logger.info("[Fault Injection] Close connection injected");
+          this.logger.info(
+            `[Fault Injection] ${injectTypeStr} error injected at ${position}`
+          );
           const socket = req.socket;
           // TCP FIN
           socket.end();
@@ -59,8 +67,8 @@ export default class PreflightMiddlewareFactory {
         }
         break;
       }
-      case "partialResponseThenCloseConnection":
-      case "partialResponseThenTimeout": {
+      case "PartialResponseThenCloseConnection":
+      case "PartialResponseThenWaitIndefinitely": {
         if (position === "beforeSerializer") {
           const context = new BlobStorageContext(
             res.locals,
@@ -78,12 +86,19 @@ export default class PreflightMiddlewareFactory {
             this.logger.info(errMsg2);
             return next(new Error(errMsg2));
           }
-        } else if (
-          position === "afterSerializer" &&
-          injectTypeStr === "partialResponseThenTimeout"
-        ) {
-          // Do nothing, leaving the socket open but never sending a response.
-          return;
+        } else if (position === "afterSerializer") {
+          this.logger.info(
+            `[Fault Injection] ${injectTypeStr} error injected at ${position}`
+          );
+          if (injectTypeStr === "PartialResponseThenWaitIndefinitely") {
+            // Do nothing, leaving the socket open but never sending a response.
+            return;
+          } else if (injectTypeStr === "PartialResponseThenCloseConnection") {
+            const socket = req.socket;
+            // TCP FIN
+            socket.end();
+            return;
+          }
         }
         break;
       }
@@ -92,5 +107,7 @@ export default class PreflightMiddlewareFactory {
         this.logger.info(errMsg3);
         return next(new Error(errMsg3));
     }
+
+    return next();
   }
 }
