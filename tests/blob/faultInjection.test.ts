@@ -1,26 +1,29 @@
+import * as assert from "assert";
 import {
   BlobServiceClient,
   BlockBlobClient,
   ContainerClient,
   newPipeline,
   Pipeline,
-  StorageSharedKeyCredential
+  StorageSharedKeyCredential,
+  WebResource
 } from "@azure/storage-blob";
 
 import { configLogger } from "../../src/common/Logger";
 import BlobTestServerFactory from "../BlobTestServerFactory";
 import {
+  bodyToString,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName
 } from "../testutils";
+
 import { requestInjectorPolicy } from "../utils/RequestInjectorPolicy";
 
 // Set true to enable debug log
 configLogger(true);
 
-// tslint:disable:no-empty
-describe.only("Fault Injection", () => {
+describe("Fault Injection", () => {
   const factory = new BlobTestServerFactory();
   const server = factory.createServer();
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
@@ -28,6 +31,10 @@ describe.only("Fault Injection", () => {
     retryOptions: { maxTries: 1 },
     // Make sure socket is closed once the operation is done.
     keepAliveOptions: { enable: false }
+    // proxyOptions: {
+    //   host: "localhost",
+    //   port: 8888
+    // }
   };
   const serviceClient = new BlobServiceClient(
     baseURL,
@@ -51,6 +58,7 @@ describe.only("Fault Injection", () => {
     await containerClient.create();
     const blobName = getUniqueName("blob");
     blockBlobClient = containerClient.getBlockBlobClient(blobName);
+    await blockBlobClient.upload(body, body.length);
   });
 
   afterEach(async function() {
@@ -66,25 +74,125 @@ describe.only("Fault Injection", () => {
     await server.clean();
   });
 
-  it(`serverInternalError`, async () => {
-    const factories = (containerClient as any).pipeline.factories.slice(); // clone factories array
-    const headerInjector = requestInjectorPolicy({
-      "fault-inject": "serverInternalError"
+  it("ServerInternalError @loki @sql", async () => {
+    const faultInjectFactory = requestInjectorPolicy({
+      "fault-inject": "ServerInternalError"
     });
-    factories.unshift(headerInjector);
+
+    const factories = (blockBlobClient as any).pipeline.factories.slice(); // clone factories array
+    factories.unshift(faultInjectFactory);
     const injectedPipeline = new Pipeline(factories);
     blockBlobClient = new BlockBlobClient(
       blockBlobClient.url,
       injectedPipeline
     );
+
     try {
+      const body: string = "randomstring";
       await blockBlobClient.upload(body, body.length);
     } catch (err) {
-      console.log(err);
+      assert.deepStrictEqual(err.statusCode, 500);
     }
   });
 
-  it(`another test`, async () => {
+  it("NoResponseThenWaitIndefinitely @loki @sql", async () => {
+    const faultInjectFactory = requestInjectorPolicy(
+      {
+        "fault-inject": "NoResponseThenWaitIndefinitely"
+      },
+      (req: WebResource) => {
+        req.timeout = 60 * 1000;
+      }
+    );
+
+    const factories = (blockBlobClient as any).pipeline.factories.slice(); // clone factories array
+    factories.unshift(faultInjectFactory);
+    const injectedPipeline = new Pipeline(factories);
+    blockBlobClient = new BlockBlobClient(
+      blockBlobClient.url,
+      injectedPipeline
+    );
+
+    try {
+      const body: string = "randomstring";
+      await blockBlobClient.upload(body, body.length);
+    } catch (err) {
+      assert.deepStrictEqual(err.name, "AbortError");
+    }
+  });
+
+  it("NoResponseThenCloseConnection @loki @sql", async () => {
+    const faultInjectFactory = requestInjectorPolicy({
+      "fault-inject": "NoResponseThenCloseConnection"
+    });
+
+    const factories = (blockBlobClient as any).pipeline.factories.slice(); // clone factories array
+    factories.unshift(faultInjectFactory);
+    const injectedPipeline = new Pipeline(factories);
+    blockBlobClient = new BlockBlobClient(
+      blockBlobClient.url,
+      injectedPipeline
+    );
+
+    try {
+      const body: string = "randomstring";
+      await blockBlobClient.upload(body, body.length);
+    } catch (err) {
+      console.log(err);
+      assert.deepStrictEqual(err.code, "ECONNRESET");
+    }
+  });
+
+  it("PartialResponseThenWaitIndefinitely @loki @sql", async () => {
+    const body: string = "randomstring";
     await blockBlobClient.upload(body, body.length);
+
+    const faultInjectFactory = requestInjectorPolicy(
+      {
+        "fault-inject": "PartialResponseThenWaitIndefinitely"
+      },
+      (req: WebResource) => {
+        req.timeout = 60 * 1000;
+      }
+    );
+
+    const factories = (blockBlobClient as any).pipeline.factories.slice(); // clone factories array
+    factories.unshift(faultInjectFactory);
+    const injectedPipeline = new Pipeline(factories);
+    blockBlobClient = new BlockBlobClient(
+      blockBlobClient.url,
+      injectedPipeline
+    );
+
+    try {
+      const res = await blockBlobClient.download();
+      const resStr = await bodyToString(res); // without proxy
+      assert.deepStrictEqual(resStr, body.slice(0, body.length - 1));
+    } catch (err) {
+      // with fiddler as proxy
+      console.log(err);
+      assert.deepStrictEqual(err.name, "AbortError");
+    }
+  });
+
+  it("PartialResponseThenCloseConnection @loki @sql", async () => {
+    const body: string = "randomstring";
+    await blockBlobClient.upload(body, body.length);
+
+    const faultInjectFactory = requestInjectorPolicy({
+      "fault-inject": "PartialResponseThenCloseConnection"
+    });
+
+    const factories = (blockBlobClient as any).pipeline.factories.slice(); // clone factories array
+    factories.unshift(faultInjectFactory);
+    const injectedPipeline = new Pipeline(factories);
+    blockBlobClient = new BlockBlobClient(
+      blockBlobClient.url,
+      injectedPipeline
+    );
+
+    const res = await blockBlobClient.download();
+    const resStr = await bodyToString(res);
+    assert.deepStrictEqual(resStr, body.slice(0, body.length - 1));
   });
 });
