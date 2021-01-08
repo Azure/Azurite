@@ -582,6 +582,7 @@ export default class ContainerHandler extends BaseHandler
           return {
             ...item,
             deleted: item.deleted !== true ? undefined : true,
+            snapshot: item.snapshot || undefined,
             properties: {
               ...item.properties,
               etag: removeQuotationFromListBlobEtag(item.properties.etag),
@@ -704,6 +705,7 @@ export default class ContainerHandler extends BaseHandler
         blobItems: blobItems.map(item => {
           return {
             ...item,
+            snapshot: item.snapshot || undefined,
             properties: {
               ...item.properties,
               etag: removeQuotationFromListBlobEtag(item.properties.etag),

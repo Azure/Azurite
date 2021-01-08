@@ -2,6 +2,12 @@
 
 > Note. This file includes changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
+## Upcoming Release
+
+Blob:
+
+- Fix an issue that result of blobs enumeration cannot be parsed by Azure SDK for Go.
+
 ## 2020.12 Version 3.10.0
 
 - Bump up Azure Storage service API version to 2020-04-08.

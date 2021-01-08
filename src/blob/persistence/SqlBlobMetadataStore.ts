@@ -1775,9 +1775,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         context
       ).validate(new BlobReadLeaseValidator(leaseAccessConditions));
 
-      snapshotBlob.snapshot = convertDateTimeStringMsTo7Digital(
+      const snapshotTime = convertDateTimeStringMsTo7Digital(
         context.startTime!.toISOString()
       );
+
+      snapshotBlob.snapshot = snapshotTime;
       snapshotBlob.metadata = metadata || snapshotBlob.metadata;
 
       new BlobLeaseSyncer(snapshotBlob).sync({
@@ -1796,7 +1798,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
       return {
         properties: snapshotBlob.properties,
-        snapshot: snapshotBlob.snapshot
+        snapshot: snapshotTime
       };
     });
   }

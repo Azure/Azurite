@@ -195,7 +195,7 @@ export interface BlobMetadata {
 export interface BlobItem {
   name: string;
   deleted?: boolean;
-  snapshot: string;
+  snapshot?: string;
   properties: BlobProperties;
   metadata?: BlobMetadata;
 }
