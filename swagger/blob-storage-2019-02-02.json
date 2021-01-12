@@ -7974,7 +7974,7 @@
       },
       "description": "An Azure Storage blob",
       "type": "object",
-      "required": ["Name", "Snapshot", "Properties"],
+      "required": ["Name", "Properties"],
       "properties": {
         "Name": {
           "type": "string"
