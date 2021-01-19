@@ -1599,7 +1599,8 @@ const blobSetTierOperationSpec: msRest.OperationSpec = {
     Parameters.tier1,
     Parameters.rehydratePriority,
     Parameters.version,
-    Parameters.requestId
+    Parameters.requestId,
+    Parameters.leaseId0
   ],
   responses: {
     200: {
