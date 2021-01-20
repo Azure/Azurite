@@ -2121,6 +2121,10 @@ export interface BlobSetTierOptionalParams {
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * Additional parameters for the operation
+   */
+  leaseAccessConditions?: LeaseAccessConditions;
 }
 
 /**

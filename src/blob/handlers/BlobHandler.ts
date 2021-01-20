@@ -884,7 +884,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       tier,
-      undefined
+      options.leaseAccessConditions
     );
 
     const response: Models.BlobSetTierResponse = {

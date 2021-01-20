@@ -7,6 +7,7 @@
 Blob:
 
 - Fix an issue that result of blobs enumeration cannot be parsed by Azure SDK for Go.
+- Fix an issue that set tier to leased blob not work properly.
 
 ## 2020.12 Version 3.10.0
 

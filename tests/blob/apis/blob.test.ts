@@ -414,12 +414,14 @@ describe("BlobAPIs", () => {
     await blobSnapshotURL.getProperties();
     await blobSnapshotURL.delete();
     await blobClient.delete();
-    const result2 = (await containerClient
-      .listBlobsFlat({
-        includeSnapshots: true
-      })
-      .byPage()
-      .next()).value;
+    const result2 = (
+      await containerClient
+        .listBlobsFlat({
+          includeSnapshots: true
+        })
+        .byPage()
+        .next()
+    ).value;
     // Verify that the snapshot is deleted
     assert.equal(result2.segment.blobItems!.length, 0);
     assert.equal(
@@ -431,10 +433,12 @@ describe("BlobAPIs", () => {
   it("should also list snapshots @loki @sql", async () => {
     const result = await blobClient.createSnapshot();
     assert.ok(result.snapshot);
-    const result2 = (await containerClient
-      .listBlobsFlat({ includeSnapshots: true })
-      .byPage()
-      .next()).value;
+    const result2 = (
+      await containerClient
+        .listBlobsFlat({ includeSnapshots: true })
+        .byPage()
+        .next()
+    ).value;
     assert.strictEqual(result2.segment.blobItems!.length, 2);
   });
 
@@ -665,12 +669,14 @@ describe("BlobAPIs", () => {
     assert.equal(properties.accessTier!.toLowerCase(), "hot");
     assert.equal(true, properties.accessTierInferred);
 
-    let listResult = (await containerClient
-      .listBlobsFlat({
-        prefix: blobName
-      })
-      .byPage()
-      .next()).value;
+    let listResult = (
+      await containerClient
+        .listBlobsFlat({
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.equal(
       true,
       (await listResult).segment.blobItems[0].properties.accessTierInferred
@@ -688,12 +694,14 @@ describe("BlobAPIs", () => {
     assert.equal(false, properties.accessTierInferred);
 
     // After setTier, Blob should have accessTierInferred as undefined in list
-    listResult = (await containerClient
-      .listBlobsFlat({
-        prefix: blobName
-      })
-      .byPage()
-      .next()).value;
+    listResult = (
+      await containerClient
+        .listBlobsFlat({
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.equal(
       undefined,
       (await listResult).segment.blobItems[0].properties.accessTierInferred
@@ -701,6 +709,42 @@ describe("BlobAPIs", () => {
   });
 
   it("setTier set archive to hot @loki @sql", async () => {
+    await blockBlobClient.setAccessTier("Archive");
+    let properties = await blockBlobClient.getProperties();
+    assert.equal(properties.accessTier!.toLowerCase(), "archive");
+
+    await blockBlobClient.setAccessTier("Hot");
+    properties = await blockBlobClient.getProperties();
+    if (properties.archiveStatus) {
+      assert.equal(
+        properties.archiveStatus.toLowerCase(),
+        "rehydrate-pending-to-hot"
+      );
+    }
+  });
+
+  it("setTier on leased blob @loki @sql", async () => {
+    const leaseResult = await blobLeaseClient.acquireLease(-1);
+    const leaseId = leaseResult.leaseId;
+    assert.ok(leaseId);
+
+    await blockBlobClient.setAccessTier("Hot", {
+      conditions: { leaseId: leaseId }
+    });
+
+    const result = await blobClient.getProperties();
+    assert.equal(result.leaseDuration, "infinite");
+    assert.equal(result.leaseState, "leased");
+    assert.equal(result.leaseStatus, "locked");
+    if (result.archiveStatus) {
+      assert.equal(
+        result.archiveStatus.toLowerCase(),
+        "rehydrate-pending-to-hot"
+      );
+    }
+
+    await blobLeaseClient.releaseLease();
+
     await blockBlobClient.setAccessTier("Archive");
     let properties = await blockBlobClient.getProperties();
     assert.equal(properties.accessTier!.toLowerCase(), "archive");
