@@ -74,18 +74,25 @@ export default class PreflightMiddlewareFactory {
             res.locals,
             DEFAULT_CONTEXT_PATH
           );
-          const body = context.handlerResponses.body;
-          if (body) {
-            this.logger.info(
-              `[Fault Injection] ${injectTypeStr} error injected at ${position}`
-            );
-            context.handlerResponses.body = new PartialReadableStream(body);
-            return next();
-          } else {
-            const errMsg2 = `[Fault Injection] Response body not available to inject ${injectTypeStr}`;
-            this.logger.info(errMsg2);
-            return next(new Error(errMsg2));
-          }
+          // set the serializer body inject callback
+          context.serializerResBodyInjectCallback = (
+            body: string | NodeJS.ReadableStream
+          ) => {
+            if (typeof body === "string") {
+              if (body.length !== 0) {
+                return body.slice(0, -1);
+              } else {
+                this.logger.info(
+                  `[Fault Injection] Empty body, can't inject ${injectTypeStr}`
+                );
+                return body;
+              }
+            } else {
+              return new PartialReadableStream(body);
+            }
+          };
+
+          return next();
         } else if (position === "afterSerializer") {
           this.logger.info(
             `[Fault Injection] ${injectTypeStr} error injected at ${position}`

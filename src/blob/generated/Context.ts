@@ -140,4 +140,16 @@ export default class Context {
   public get startTime(): Date | undefined {
     return this.context.startTime;
   }
+
+  public set serializerResBodyInjectCallback(
+    cb: (body: string | NodeJS.ReadableStream) => string | NodeJS.ReadableStream
+  ) {
+    this.context.serializerResBodyInjectCallback = cb;
+  }
+
+  public get serializerResBodyInjectCallback(): (
+    body: string | NodeJS.ReadableStream
+  ) => string | NodeJS.ReadableStream {
+    return this.context.serializerResBodyInjectCallback;
+  }
 }

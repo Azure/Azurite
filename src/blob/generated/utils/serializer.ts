@@ -312,17 +312,20 @@ export async function serialize(
     });
     res.setContentType(`application/xml`);
 
-    // TODO: Should send response in a serializer?
-    res.getBodyStream().write(xmlBody);
+    // body injector for string
+    let bodyInjected = xmlBody;
+    if (context.serializerResBodyInjectCallback !== undefined) {
+      bodyInjected = context.serializerResBodyInjectCallback(xmlBody) as string;
+    }
+    res.getBodyStream().write(bodyInjected);
     logger.debug(
-      `Serializer: Raw response body string is ${xmlBody}`,
+      `Serializer: Raw response body string is ${bodyInjected}`,
       context.contextId
     );
     logger.info(`Serializer: Start returning stream body.`, context.contextId);
   }
 
   // Serialize stream body
-  // TODO: Move to end middleware for end tracking
   if (
     handlerResponse.body &&
     responseSpec.bodyMapper &&
@@ -330,10 +333,17 @@ export async function serialize(
   ) {
     logger.info(`Serializer: Start returning stream body.`, context.contextId);
 
+    // body injector for stream
+    if (context.serializerResBodyInjectCallback !== undefined) {
+      handlerResponse.body = context.serializerResBodyInjectCallback(
+        handlerResponse.body
+      );
+    }
     await new Promise((resolve, reject) => {
       (handlerResponse.body as NodeJS.ReadableStream)
         .on("error", reject)
         .on("close", resolve)
+        .on("end", resolve)
         .pipe(res.getBodyStream(), { end: false })
         .on("error", reject)
         .on("close", resolve);

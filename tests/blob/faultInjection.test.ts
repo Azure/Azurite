@@ -138,7 +138,6 @@ describe("Fault Injection", () => {
       const body: string = "randomstring";
       await blockBlobClient.upload(body, body.length);
     } catch (err) {
-      console.log(err);
       assert.deepStrictEqual(err.code, "ECONNRESET");
     }
   });
@@ -169,7 +168,7 @@ describe("Fault Injection", () => {
       const resStr = await bodyToString(res); // without proxy
       assert.deepStrictEqual(resStr, body.slice(0, body.length - 1));
     } catch (err) {
-      // with fiddler as proxy
+      // when using fiddler as proxy
       console.log(err);
       assert.deepStrictEqual(err.name, "AbortError");
     }
@@ -194,5 +193,55 @@ describe("Fault Injection", () => {
     const res = await blockBlobClient.download();
     const resStr = await bodyToString(res);
     assert.deepStrictEqual(resStr, body.slice(0, body.length - 1));
+  });
+
+  it("PartialResponseThenCloseConnection for xml body @loki @sql", async () => {
+    const body: string = "randomstring";
+    await blockBlobClient.upload(body, body.length);
+
+    const faultInjectFactory = requestInjectorPolicy({
+      "fault-inject": "PartialResponseThenCloseConnection"
+    });
+
+    const factories = (blockBlobClient as any).pipeline.factories.slice(); // clone factories array
+    factories.unshift(faultInjectFactory);
+    const injectedPipeline = new Pipeline(factories);
+    const contaianerClientInjected = new ContainerClient(
+      containerClient.url,
+      injectedPipeline
+    );
+
+    const listIter = contaianerClientInjected.listBlobsFlat();
+    let exceptionCaught = false;
+    try {
+      await listIter.next();
+    } catch (err) {
+      exceptionCaught = true;
+      assert.ok(err.message.includes("Error: Unclosed root tag"));
+    }
+    assert.ok(exceptionCaught);
+  });
+
+  it("PartialResponseThenCloseConnection for empty result @loki @sql", async () => {
+    const body: string = "r";
+    await blockBlobClient.upload(body, body.length);
+
+    const faultInjectFactory = requestInjectorPolicy({
+      "fault-inject": "PartialResponseThenCloseConnection"
+    });
+
+    const factories = (blockBlobClient as any).pipeline.factories.slice(); // clone factories array
+    factories.unshift(faultInjectFactory);
+    const injectedPipeline = new Pipeline(factories);
+    blockBlobClient = new BlockBlobClient(
+      blockBlobClient.url,
+      injectedPipeline
+    );
+
+    try {
+      await blockBlobClient.download();
+    } catch (err) {
+      assert.deepStrictEqual(err.code, "ECONNRESET");
+    }
   });
 });
