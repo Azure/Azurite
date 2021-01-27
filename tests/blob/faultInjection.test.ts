@@ -101,7 +101,7 @@ describe("Fault Injection", () => {
         "fault-inject": "NoResponseThenWaitIndefinitely"
       },
       (req: WebResource) => {
-        req.timeout = 60 * 1000;
+        req.timeout = 10 * 1000;
       }
     );
 
@@ -151,7 +151,7 @@ describe("Fault Injection", () => {
         "fault-inject": "PartialResponseThenWaitIndefinitely"
       },
       (req: WebResource) => {
-        req.timeout = 60 * 1000;
+        req.timeout = 10 * 1000;
       }
     );
 
@@ -169,7 +169,6 @@ describe("Fault Injection", () => {
       assert.deepStrictEqual(resStr, body.slice(0, body.length - 1));
     } catch (err) {
       // when using fiddler as proxy
-      console.log(err);
       assert.deepStrictEqual(err.name, "AbortError");
     }
   });

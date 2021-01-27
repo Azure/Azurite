@@ -22,4 +22,5 @@ export default interface IRequest {
   getRawHeaders(): string[];
   getQuery(key: string): string | undefined;
   getProtocol(): string;
+  getSocket(): any;
 }
