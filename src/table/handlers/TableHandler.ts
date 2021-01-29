@@ -1,5 +1,6 @@
 import BufferStream from "../../common/utils/BufferStream";
 import { newTableEntityEtag } from "../../common/utils/utils";
+import TableBatchManager from "../batch/TableBatchManager";
 import TableStorageContext from "../context/TableStorageContext";
 import { NormalizedEntity } from "../entity/NormalizedEntity";
 import NotImplementedError from "../errors/NotImplementedError";
@@ -27,6 +28,7 @@ import {
   updateTableOptionalOdataAnnotationsForResponse
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
+import { Stream } from "stream";
 
 interface IPartialResponsePreferProperties {
   statusCode: 200 | 201 | 204;
@@ -658,7 +660,20 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableBatchResponse> {
     const tableContext = new TableStorageContext(context);
-    // TODO: Implement batch operation logic here
+    const tableCtx = new TableStorageContext(context);
+
+    const tableBatchManager = new TableBatchManager(tableCtx, this);
+
+    const response = await tableBatchManager.processBatchRequestAndSerializeResponse(
+      await this.streamToString(body)
+    );
+
+    // use this to debug response:
+    // console.log(response);
+
+    // need to convert response to NodeJS.ReadableStream
+    body = Stream.Readable.from(response);
+
     return {
       requestId: tableContext.contextID,
       version: TABLE_API_VERSION,
@@ -666,6 +681,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       statusCode: 202,
       body // Use incoming request body as Batch operation response body as demo
     };
+  }
+
+  // used by batch
+  private async streamToString(stream: NodeJS.ReadableStream): Promise<string> {
+    const chunks: any[] = [];
+    return new Promise((resolve, reject) => {
+      stream.on("data", (chunk) => chunks.push(chunk));
+      stream.on("error", reject);
+      stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    });
   }
 
   private getOdataAnnotationUrlPrefix(
