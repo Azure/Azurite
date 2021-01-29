@@ -16,6 +16,26 @@ import {
 // Set true to enable debug log
 configLogger(false);
 
+// Create Entity for tests
+function createBasicEntityForTest(): TestEntity {
+  return new TestEntity("part1", getUniqueName("row"), "value1");
+}
+
+class TestEntity {
+  public PartitionKey: Azure.TableUtilities.entityGenerator.EntityProperty<
+    string
+  >;
+  public RowKey: Azure.TableUtilities.entityGenerator.EntityProperty<string>;
+  public myValue: Azure.TableUtilities.entityGenerator.EntityProperty<string>;
+  constructor(part: string, row: string, value: string) {
+    this.PartitionKey = eg.String(part);
+    this.RowKey = eg.String(row);
+    this.myValue = eg.String(value);
+  }
+}
+
+const eg = Azure.TableUtilities.entityGenerator;
+
 describe("table Entity APIs test", () => {
   // TODO: Create a server factory as tests utils
   const protocol = "http";
@@ -432,6 +452,45 @@ describe("table Entity APIs test", () => {
           assert.equal(updateResponse.statusCode, 204); // No content
           // TODO When QueryEntity is done - validate Entity Properties
           done();
+        }
+      }
+    );
+  });
+
+  it("Simple batch test: Inserts multiple entities as a batch, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const batchEntity1 = createBasicEntityForTest();
+    const batchEntity2 = createBasicEntityForTest();
+    const batchEntity3 = createBasicEntityForTest();
+
+    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+    entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
+    entityBatch.addOperation("INSERT", batchEntity2, { echoContent: true });
+    entityBatch.addOperation("INSERT", batchEntity3, { echoContent: true });
+
+    tableService.executeBatch(
+      tableName,
+      entityBatch,
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 202); // No content
+          // Now that QueryEntity is done - validate Entity Properties as follows:
+          tableService.retrieveEntity<TestEntity>(
+            tableName,
+            batchEntity1.PartitionKey._,
+            batchEntity1.RowKey._,
+            (error, result) => {
+              const entity: TestEntity = result;
+              assert.equal(entity.myValue._, batchEntity1.myValue._);
+              done();
+            }
+          );
         }
       }
     );
