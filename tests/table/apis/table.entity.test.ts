@@ -2,18 +2,30 @@ import * as assert from "assert";
 import * as Azure from "azure-storage";
 
 import { configLogger } from "../../../src/common/Logger";
+import StorageError from "../../../src/table/errors/StorageError";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
-  overrideRequest
+  overrideRequest,
+  restoreBuildRequestOptions
 } from "../../testutils";
-import StorageError from "../../../src/blob/errors/StorageError";
 
 // Set true to enable debug log
 configLogger(false);
+
+// Create Entity for tests
+function createBasicEntityForTest() {
+  return {
+    PartitionKey: eg.String("part1"),
+    RowKey: eg.String(getUniqueName("row")),
+    myValue: eg.String("value1")
+  };
+}
+
+const eg = Azure.TableUtilities.entityGenerator;
 
 describe("table Entity APIs test", () => {
   // TODO: Create a server factory as tests utils
@@ -42,9 +54,9 @@ describe("table Entity APIs test", () => {
   let tableName: string = getUniqueName("table");
 
   const requestOverride = { headers: {} };
-  overrideRequest(requestOverride, tableService);
 
   before(async () => {
+    overrideRequest(requestOverride, tableService);
     server = new TableServer(config);
     tableName = getUniqueName("table");
     await server.start();
@@ -60,11 +72,12 @@ describe("table Entity APIs test", () => {
 
   after(async () => {
     await server.close();
+    restoreBuildRequestOptions(tableService);
   });
 
   // Simple test in here until we have the full set checked in, as we need
   // a starting point for delete and query entity APIs
-  it("Should insert new Entity, @loki", done => {
+  it("Should insert new Entity, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-entity
     const entity = {
       PartitionKey: "part1",
@@ -77,7 +90,7 @@ describe("table Entity APIs test", () => {
     });
   });
 
-  it("Should delete an Entity using etag wildcard, @loki", done => {
+  it("Should delete an Entity using etag wildcard, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
     const entity = {
       PartitionKey: "part1",
@@ -101,7 +114,7 @@ describe("table Entity APIs test", () => {
     });
   });
 
-  it("Should not delete an Entity not matching Etag, @loki", done => {
+  it("Should not delete an Entity not matching Etag, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
     const entityInsert = {
       PartitionKey: "part1",
@@ -142,7 +155,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Should delete a matching Etag, @loki", done => {
+  it("Should delete a matching Etag, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
     const entityInsert = {
       PartitionKey: "part1",
@@ -180,7 +193,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Update an Entity that exists, @loki", done => {
+  it("Update an Entity that exists, @loki", (done) => {
     const entityInsert = {
       PartitionKey: "part1",
       RowKey: "row3",
@@ -213,7 +226,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Update an Entity that does not exist, @loki", done => {
+  it("Update an Entity that does not exist, @loki", (done) => {
     tableService.replaceEntity(
       tableName,
       { PartitionKey: "part1", RowKey: "row4", myValue: "newValue" },
@@ -229,7 +242,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Should not update an Entity not matching Etag, @loki", done => {
+  it("Should not update an Entity not matching Etag, @loki", (done) => {
     const entityInsert = {
       PartitionKey: "part1",
       RowKey: "row4",
@@ -271,7 +284,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Should update, if Etag matches, @loki", done => {
+  it("Should update, if Etag matches, @loki", (done) => {
     const entityInsert = {
       PartitionKey: "part1",
       RowKey: "row5",
@@ -316,4 +329,344 @@ describe("table Entity APIs test", () => {
       }
     );
   });
+
+  it("Insert or Replace (upsert) on an Entity that does not exist, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertOrReplaceEntity(
+      tableName,
+      {
+        PartitionKey: "part1",
+        RowKey: "row6",
+        myValue: "firstValue"
+      },
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 204); // No content
+          // TODO When QueryEntity is done - validate Entity Properties
+          done();
+        }
+      }
+    );
+  });
+
+  it("Insert or Replace (upsert) on an Entity that exists, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertOrReplaceEntity(
+      tableName,
+      {
+        PartitionKey: "part1",
+        RowKey: "row6",
+        myValue: "newValue"
+      },
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 204); // No content
+          // TODO When QueryEntity is done - validate Entity Properties
+          done();
+        }
+      }
+    );
+  });
+
+  it("Insert or Merge on an Entity that exists, @loki", (done) => {
+    const entityInsert = {
+      PartitionKey: "part1",
+      RowKey: "merge1",
+      myValue: "oldValue"
+    };
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertEntity(
+      tableName,
+      entityInsert,
+      (error, result, insertresponse) => {
+        const entityUpdate = {
+          PartitionKey: "part1",
+          RowKey: "merge1",
+          mergeValue: "newValue"
+        };
+        if (!error) {
+          requestOverride.headers = {};
+          tableService.insertOrMergeEntity(
+            tableName,
+            entityUpdate,
+            (updateError, updateResult, updateResponse) => {
+              if (!updateError) {
+                assert.equal(updateResponse.statusCode, 204); // Precondition succeeded
+                // TODO When QueryEntity is done - validate Entity Properties
+                done();
+              } else {
+                assert.ifError(updateError);
+                done();
+              }
+            }
+          );
+        } else {
+          assert.ifError(error);
+          done();
+        }
+      }
+    );
+  });
+
+  it("Insert or Merge on an Entity that does not exist, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertOrMergeEntity(
+      tableName,
+      {
+        PartitionKey: "part1",
+        RowKey: "row8",
+        myValue: "firstValue"
+      },
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 204); // No content
+          // TODO When QueryEntity is done - validate Entity Properties
+          done();
+        }
+      }
+    );
+  });
+
+  it("Simple batch test: Inserts multiple entities as a batch, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const batchEntity1 = createBasicEntityForTest();
+    const batchEntity2 = createBasicEntityForTest();
+    const batchEntity3 = createBasicEntityForTest();
+
+    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+    entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
+    entityBatch.addOperation("INSERT", batchEntity2, { echoContent: true });
+    entityBatch.addOperation("INSERT", batchEntity3, { echoContent: true });
+
+    tableService.executeBatch(
+      tableName,
+      entityBatch,
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 202); // No content
+          // TODO When QueryEntity is done - validate Entity Properties
+          tableService.retrieveEntity(
+            tableName,
+            batchEntity1.PartitionKey._,
+            batchEntity1.RowKey._,
+            (error, result) => {
+              if (error) {
+                assert.ifError(error);
+              } else if (result) {
+                assert.equal(result, null);
+              }
+              done();
+            }
+          );
+        }
+      }
+    );
+  });
+
+  it("Simple batch test: Query non existing entity via a batch, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const batchEntity1 = createBasicEntityForTest();
+
+    // retrieve is the only operation in the batch
+    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+    entityBatch.retrieveEntity(
+      batchEntity1.PartitionKey._,
+      batchEntity1.RowKey._,
+      { echoContent: true }
+    );
+
+    tableService.executeBatch(
+      tableName,
+      entityBatch,
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 202); // No content
+          // TODO When QueryEntity is done - validate Entity Properties
+          tableService.retrieveEntity(
+            tableName,
+            batchEntity1.PartitionKey._,
+            batchEntity1.RowKey._,
+            (error, result) => {
+              if (error) {
+                assert.ifError(error);
+              } else if (result) {
+                assert.equal(result, null);
+              }
+              done();
+            }
+          );
+        }
+      }
+    );
+  });
+
+  it("Simple batch test: insert and Merge entity via a batch, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const batchEntity1 = createBasicEntityForTest();
+
+    // retrieve is the only operation in the batch
+    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+    entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
+    batchEntity1.myValue._ = "value2";
+    entityBatch.mergeEntity(batchEntity1);
+
+    tableService.executeBatch(
+      tableName,
+      entityBatch,
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 202); // No content
+          // TODO When QueryEntity is done - validate Entity Properties
+          tableService.retrieveEntity(
+            tableName,
+            batchEntity1.PartitionKey._,
+            batchEntity1.RowKey._,
+            (error, result) => {
+              if (error) {
+                assert.ifError(error);
+              } else if (result) {
+                assert.equal(result, null);
+              }
+              done();
+            }
+          );
+        }
+      }
+    );
+  });
+
+  it("Insert Or Replace multiple entities as a batch when the entities don't exist, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const batchEntity1 = createBasicEntityForTest();
+    const batchEntity2 = createBasicEntityForTest();
+    const batchEntity3 = createBasicEntityForTest();
+
+    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+    entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity1);
+    entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity2);
+    entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity3);
+
+    tableService.executeBatch(
+      tableName,
+      entityBatch,
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 204);
+          tableService.retrieveEntity(
+            tableName,
+            batchEntity1.PartitionKey._,
+            batchEntity1.RowKey._,
+            (error, result) => {
+              if (error) {
+                assert.ifError(error);
+              } else if (result) {
+                assert.notEqual(result, null);
+              }
+              done();
+            }
+          );
+        }
+      }
+    );
+  });
+
+  it("Insert Or Replace multiple entities as a batch when the entities exist, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const batchEntity1 = createBasicEntityForTest();
+    const batchEntity2 = createBasicEntityForTest();
+    const batchEntity3 = createBasicEntityForTest();
+
+    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+    entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
+    entityBatch.addOperation("INSERT", batchEntity2, { echoContent: true });
+    entityBatch.addOperation("INSERT", batchEntity3, { echoContent: true });
+
+    tableService.executeBatch(
+      tableName,
+      entityBatch,
+      (insertError, insertResult, insertResponse) => {
+        if (insertError) {
+          assert.ifError(insertError);
+          done();
+        } else {
+          assert.equal(insertResponse.statusCode, 202);
+          batchEntity1.myValue = eg.String('newvalue');
+          batchEntity2.myValue = eg.String('newvalue');
+          batchEntity3.myValue = eg.String('newvalue');
+          entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity1);
+          entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity2);
+          entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity3);
+          tableService.executeBatch(tableName, entityBatch, (updateError, updateResult, updateResponse) => {
+            if (updateError) {
+              assert.ifError(updateError);
+              done();
+            } else {
+              assert.equal(updateResponse.statusCode, 204);
+              tableService.retrieveEntity(
+                tableName,
+                batchEntity1.PartitionKey._,
+                batchEntity1.RowKey._,
+                (error, result) => {
+                  if (error) {
+                    assert.ifError(error);
+                  } else if (result) {
+                    assert.notEqual(result, null);
+                  }
+                  done();
+                }
+              );
+            }
+          })
+        }
+      }
+    );
+  })
 });
