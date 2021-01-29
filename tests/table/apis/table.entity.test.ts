@@ -467,17 +467,20 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  // Start of Batch Tests:
-  it("Simple Insert Or Replace of a SINGLE entity as a BATCH, @loki", (done) => {
+  it("Simple batch test: Inserts multiple entities as a batch, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
 
-    const batchEntity1 = createBasicEntityForTest();
-
     const entityBatch: Azure.TableBatch = new Azure.TableBatch();
-    entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity1); // resulting in PUT
+    const batchEntity1 = createBasicEntityForTest();
+    const batchEntity2 = createBasicEntityForTest();
+    const batchEntity3 = createBasicEntityForTest();
+
+    entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
+    entityBatch.addOperation("INSERT", batchEntity2, { echoContent: true });
+    entityBatch.addOperation("INSERT", batchEntity3, { echoContent: true });
 
     tableService.executeBatch(
       tableName,
@@ -485,10 +488,10 @@ describe("table Entity APIs test", () => {
       (updateError, updateResult, updateResponse) => {
         if (updateError) {
           assert.ifError(updateError);
-          done();
         } else {
-          assert.equal(updateResponse.statusCode, 202);
-          tableService.retrieveEntity<TestEntity>(
+          assert.equal(updateResponse.statusCode, 202); // No content
+          // TODO When QueryEntity is done - validate Entity Properties
+          tableService.retrieveEntity(
             tableName,
             batchEntity1.PartitionKey._,
             batchEntity1.RowKey._,
@@ -496,8 +499,7 @@ describe("table Entity APIs test", () => {
               if (error) {
                 assert.ifError(error);
               } else if (result) {
-                const entity: TestEntity = result;
-                assert.equal(entity.myValue._, batchEntity1.myValue._);
+                assert.equal(result, null);
               }
               done();
             }
@@ -507,7 +509,132 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Simple batch test: Inserts multiple entities as a batch, @loki", (done) => {
+  it("Simple batch test: Query non existing entity via a batch, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const batchEntity1 = createBasicEntityForTest();
+
+    // retrieve is the only operation in the batch
+    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+    entityBatch.retrieveEntity(
+      batchEntity1.PartitionKey._,
+      batchEntity1.RowKey._,
+      { echoContent: true }
+    );
+
+    tableService.executeBatch(
+      tableName,
+      entityBatch,
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 202); // No content
+          // TODO When QueryEntity is done - validate Entity Properties
+          tableService.retrieveEntity(
+            tableName,
+            batchEntity1.PartitionKey._,
+            batchEntity1.RowKey._,
+            (error, result) => {
+              if (error) {
+                assert.ifError(error);
+              } else if (result) {
+                assert.equal(result, null);
+              }
+              done();
+            }
+          );
+        }
+      }
+    );
+  });
+
+  it("Simple batch test: insert and Merge entity via a batch, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const batchEntity1 = createBasicEntityForTest();
+
+    // retrieve is the only operation in the batch
+    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+    entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
+    batchEntity1.myValue._ = "value2";
+    entityBatch.mergeEntity(batchEntity1);
+
+    tableService.executeBatch(
+      tableName,
+      entityBatch,
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 202); // No content
+          // TODO When QueryEntity is done - validate Entity Properties
+          tableService.retrieveEntity(
+            tableName,
+            batchEntity1.PartitionKey._,
+            batchEntity1.RowKey._,
+            (error, result) => {
+              if (error) {
+                assert.ifError(error);
+              } else if (result) {
+                assert.equal(result, null);
+              }
+              done();
+            }
+          );
+        }
+      }
+    );
+  });
+
+  it("Insert Or Replace multiple entities as a batch when the entities don't exist, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const batchEntity1 = createBasicEntityForTest();
+    const batchEntity2 = createBasicEntityForTest();
+    const batchEntity3 = createBasicEntityForTest();
+
+    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+    entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity1);
+    entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity2);
+    entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity3);
+
+    tableService.executeBatch(
+      tableName,
+      entityBatch,
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 204);
+          tableService.retrieveEntity(
+            tableName,
+            batchEntity1.PartitionKey._,
+            batchEntity1.RowKey._,
+            (error, result) => {
+              if (error) {
+                assert.ifError(error);
+              } else if (result) {
+                assert.notEqual(result, null);
+              }
+              done();
+            }
+          );
+        }
+      }
+    );
+  });
+
+  it("Insert Or Replace multiple entities as a batch when the entities exist, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
@@ -524,196 +651,45 @@ describe("table Entity APIs test", () => {
     tableService.executeBatch(
       tableName,
       entityBatch,
-      (updateError, updateResult, updateResponse) => {
-        if (updateError) {
-          assert.ifError(updateError);
+      (insertError, insertResult, insertResponse) => {
+        if (insertError) {
+          assert.ifError(insertError);
           done();
         } else {
-          assert.equal(updateResponse.statusCode, 202); // No content
-          // Now that QueryEntity is done - validate Entity Properties as follows:
-          tableService.retrieveEntity<TestEntity>(
+          assert.equal(insertResponse.statusCode, 202);
+          batchEntity1.myValue = eg.String("newvalue");
+          batchEntity2.myValue = eg.String("newvalue");
+          batchEntity3.myValue = eg.String("newvalue");
+          entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity1);
+          entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity2);
+          entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity3);
+          tableService.executeBatch(
             tableName,
-            batchEntity1.PartitionKey._,
-            batchEntity1.RowKey._,
-            (error, result) => {
-              const entity: TestEntity = result;
-              assert.equal(entity.myValue._, batchEntity1.myValue._);
-              done();
-            }
-          );
-        }
-      }
-    );
-  });
-
-  it("Simple batch test: Delete multiple entities as a batch, @loki", (done) => {
-    requestOverride.headers = {
-      Prefer: "return-content",
-      accept: "application/json;odata=fullmetadata"
-    };
-    // First insert multiple entities to delete
-    const batchEntity1 = createBasicEntityForTest();
-    const batchEntity2 = createBasicEntityForTest();
-    const batchEntity3 = createBasicEntityForTest();
-
-    assert.notDeepEqual(
-      batchEntity1.RowKey,
-      batchEntity2.RowKey,
-      "failed to create unique test entities 1 & 2"
-    );
-    assert.notDeepEqual(
-      batchEntity1.RowKey,
-      batchEntity3.RowKey,
-      "failed to create unique test entities 2 & 3"
-    );
-
-    const insertEntityBatch: Azure.TableBatch = new Azure.TableBatch();
-    insertEntityBatch.addOperation("INSERT", batchEntity1, {
-      echoContent: true
-    });
-    insertEntityBatch.addOperation("INSERT", batchEntity2, {
-      echoContent: true
-    });
-    insertEntityBatch.addOperation("INSERT", batchEntity3, {
-      echoContent: true
-    });
-
-    const deleteEntityBatch: Azure.TableBatch = new Azure.TableBatch();
-    deleteEntityBatch.deleteEntity(batchEntity1);
-    deleteEntityBatch.deleteEntity(batchEntity2);
-    deleteEntityBatch.deleteEntity(batchEntity3);
-
-    tableService.executeBatch(
-      tableName,
-      insertEntityBatch,
-      (updateError, updateResult, updateResponse) => {
-        if (updateError) {
-          assert.ifError(updateError);
-          done();
-        } else {
-          assert.equal(updateResponse.statusCode, 202); // No content
-          // Now that QueryEntity is done - validate Entity Properties as follows:
-          tableService.retrieveEntity<TestEntity>(
-            tableName,
-            batchEntity1.PartitionKey._,
-            batchEntity1.RowKey._,
-            (error, result) => {
-              if (error) {
-                assert.notEqual(error, null);
+            entityBatch,
+            (updateError, updateResult, updateResponse) => {
+              if (updateError) {
+                assert.ifError(updateError);
                 done();
-              }
-              const entity: TestEntity = result;
-              assert.equal(entity.myValue._, batchEntity1.myValue._);
-
-              // now that we have confirmed that our test entities are created, we can try to delete them
-              tableService.executeBatch(
-                tableName,
-                deleteEntityBatch,
-                (
-                  deleteUpdateError,
-                  deleteUpdateResult,
-                  deleteUpdateResponse
-                ) => {
-                  if (deleteUpdateError) {
-                    assert.ifError(deleteUpdateError);
+              } else {
+                assert.equal(updateResponse.statusCode, 204);
+                tableService.retrieveEntity(
+                  tableName,
+                  batchEntity1.PartitionKey._,
+                  batchEntity1.RowKey._,
+                  (error, result) => {
+                    if (error) {
+                      assert.ifError(error);
+                    } else if (result) {
+                      assert.notEqual(result, null);
+                    }
                     done();
-                  } else {
-                    assert.equal(deleteUpdateResponse.statusCode, 202); // No content
-                    // Now that QueryEntity is done - validate Entity Properties as follows:
-                    tableService.retrieveEntity<TestEntity>(
-                      tableName,
-                      batchEntity1.PartitionKey._,
-                      batchEntity1.RowKey._,
-                      (finalRetrieveError, finalRetrieveResult) => {
-                        const retrieveError: StorageError = finalRetrieveError as StorageError;
-                        assert.equal(
-                          retrieveError.statusCode,
-                          404,
-                          "status code was not equal to 404!"
-                        );
-                        done();
-                      }
-                    );
                   }
-                }
-              );
+                );
+              }
             }
           );
         }
       }
     );
-  });
-
-  it.only("Query / Retrieve single entity via a batch, requestion Options undefined / default @loki", (done) => {
-    requestOverride.headers = {
-      Prefer: "return-content",
-      accept: "application/json;odata=fullmetadata"
-    };
-    const batchEntity1 = createBasicEntityForTest();
-
-    tableService.insertEntity(tableName, batchEntity1, (error, result) => {
-      const entityBatch: Azure.TableBatch = new Azure.TableBatch();
-      entityBatch.retrieveEntity(
-        batchEntity1.PartitionKey._,
-        batchEntity1.RowKey._
-      );
-
-      tableService.executeBatch(
-        tableName,
-        entityBatch,
-        (updateError, updateResult, updateResponse) => {
-          if (updateError) {
-            assert.ifError(updateError);
-            done();
-          } else {
-            assert.equal(updateResponse.statusCode, 202);
-            const batchRetrieveEntityResult = updateResponse.body
-              ? updateResponse.body
-              : "";
-            assert.notEqual(batchRetrieveEntityResult.indexOf("value1"), -1);
-            done();
-          }
-        }
-      );
-    });
-  });
-
-  it("Single Delete entity via a batch, @loki", (done) => {
-    requestOverride.headers = {
-      Prefer: "return-content",
-      accept: "application/json;odata=fullmetadata"
-    };
-    const batchEntity1 = createBasicEntityForTest();
-
-    tableService.insertEntity<TestEntity>(tableName, batchEntity1, () => {
-      const entityBatch: Azure.TableBatch = new Azure.TableBatch();
-      entityBatch.deleteEntity(batchEntity1);
-
-      tableService.executeBatch(
-        tableName,
-        entityBatch,
-        (updateError, updateResult, updateResponse) => {
-          if (updateError) {
-            assert.ifError(updateError);
-            done();
-          } else {
-            assert.equal(updateResponse.statusCode, 202);
-            tableService.retrieveEntity<TestEntity>(
-              tableName,
-              batchEntity1.PartitionKey._,
-              batchEntity1.RowKey._,
-              (error: any, result) => {
-                assert.equal(
-                  error.statusCode,
-                  404,
-                  "status code was not equal to 404!"
-                );
-                done();
-              }
-            );
-          }
-        }
-      );
-    });
   });
 });
