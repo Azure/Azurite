@@ -5,7 +5,7 @@ import { TableBatchSerialization } from "../../../src/table/batch/TableBatchSeri
 import SerializationMocks from "./mock.serialization";
 
 describe("batch serialization and deserialization unit tests, these are not the API integration tests:", () => {
-  it("deserializes, mock table batch request containing 3 requests correctly", (done) => {
+  it("deserializes, mock table batch request containing 3 insert requests correctly", (done) => {
     const requestString = SerializationMocks.Sample3InsertsUsingSDK;
     const serializer = new TableBatchSerialization();
     const batchOperationArray = serializer.deserializeBatchRequest(
@@ -167,6 +167,60 @@ describe("batch serialization and deserialization unit tests, these are not the 
     assert.equal(
       batchOperationArray[1].jsonRequestBody,
       '{"PartitionKey":"part1","RowKey":"row160837770307508823","myValue":"valueMerge"}',
+      "wrong jsonBody parsed"
+    );
+    done();
+  });
+
+  it.only("deserializes, mock table batch request containing 3 deletes correctly", (done) => {
+    const requestString = SerializationMocks.Sample3DeletesUsingSDK;
+    const serializer = new TableBatchSerialization();
+    const batchOperationArray = serializer.deserializeBatchRequest(
+      requestString
+    );
+
+    // First Batch Operation is an insert.
+    assert.equal(batchOperationArray[0].batchType, BatchType.table);
+    assert.equal(
+      batchOperationArray[0].httpMethod,
+      "DELETE",
+      "wrong HTTP Method parsed"
+    );
+    assert.equal(
+      batchOperationArray[0].path,
+      "table161216830457901592",
+      "wrong path parsed"
+    );
+    assert.equal(
+      batchOperationArray[0].uri,
+      "http://127.0.0.1:11002/devstoreaccount1/table161216830457901592(PartitionKey=%27part1%27,RowKey=%27row161216830462208585%27)",
+      "wrong url parsed"
+    );
+    assert.equal(
+      batchOperationArray[0].jsonRequestBody,
+      "",
+      "wrong jsonBody parsed"
+    );
+    // Second Batch Operation is a Delete
+    assert.equal(batchOperationArray[1].batchType, BatchType.table);
+    assert.equal(
+      batchOperationArray[1].httpMethod,
+      "DELETE",
+      "wrong HTTP Method parsed"
+    );
+    assert.equal(
+      batchOperationArray[1].path,
+      "table161216830457901592",
+      "wrong path parsed"
+    );
+    assert.equal(
+      batchOperationArray[1].uri,
+      "http://127.0.0.1:11002/devstoreaccount1/table161216830457901592(PartitionKey=%27part1%27,RowKey=%27row161216830462204546%27)",
+      "wrong url parsed"
+    );
+    assert.equal(
+      batchOperationArray[1].jsonRequestBody,
+      "",
       "wrong jsonBody parsed"
     );
     done();

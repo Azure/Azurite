@@ -403,8 +403,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   ): Promise<Models.TableDeleteEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const accountName = tableContext.account;
-    const partitionKey = tableContext.partitionKey!; // Get partitionKey from context
-    const rowKey = tableContext.rowKey!; // Get rowKey from context
+    const partitionKey = _partitionKey
+      ? _partitionKey
+      : tableContext.partitionKey!; // Get partitionKey from context
+    const rowKey = _rowKey ? _rowKey : tableContext.rowKey!; // Get rowKey from context
 
     if (!partitionKey || !rowKey) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);

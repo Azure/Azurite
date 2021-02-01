@@ -52,9 +52,8 @@ export class TableBatchSerialization extends BatchSerialization {
     // of the request by deserializing it into a BatchOperation Type
     const batchOperations: TableBatchOperation[] = subRequests.map(
       (subRequest) => {
-        const requestType = subRequest.match(
-          "(GET|POST|PUT|MERGE|INSERT|DELETE)"
-        );
+        let requestType: RegExpMatchArray | null = [];
+        requestType = subRequest.match("(GET|POST|PUT|MERGE|INSERT|DELETE)");
         if (requestType === null || requestType.length < 2) {
           throw new Error(
             `Couldn't extract verb from sub-Request:\n ${subRequest}`
@@ -83,6 +82,8 @@ export class TableBatchSerialization extends BatchSerialization {
         // to just have an empty body and then error out when determining routing of request in Handler
         if (
           subRequests.length > 1 &&
+          null !== requestType &&
+          requestType[0] !== "DELETE" &&
           (jsonOperationBody === null || jsonOperationBody.length < 1)
         ) {
           throw new Error(
@@ -111,7 +112,9 @@ export class TableBatchSerialization extends BatchSerialization {
         headers = subRequest.substring(subStringStart, subStringEnd);
 
         const operation = new TableBatchOperation(BatchType.table, headers);
-        operation.httpMethod = requestType[0] as HttpMethod;
+        if (null !== requestType) {
+          operation.httpMethod = requestType[0] as HttpMethod;
+        }
         operation.path = path[1];
         operation.uri = fullRequestURI[0];
         operation.jsonRequestBody = jsonBody;
@@ -148,6 +151,33 @@ export class TableBatchSerialization extends BatchSerialization {
     serializedResponses += "Location: " + request.getUrl() + "\n";
     serializedResponses += "DataServiceId: " + request.getUrl() + "\n";
     serializedResponses += "ETag: " + response.eTag + "\n";
+    return serializedResponses;
+  }
+
+  // creates the serialized entitygrouptransaction / batch response body
+  // which we return to the users batch request
+  public serializeTableDeleteEntityBatchResponse(
+    request: BatchRequest,
+    response: Models.TableDeleteEntityResponse,
+    contentID: number
+  ): string {
+    // ToDo: keeping my life easy to start and defaulting to "return no content"
+    let serializedResponses: string = "";
+    // create the initial boundary
+    serializedResponses += "Content-Type: application/http\n";
+    serializedResponses += "Content-Transfer-Encoding: binary \n";
+    serializedResponses += "\n";
+    serializedResponses +=
+      "HTTP/1.1 " + response.statusCode.toString() + " STATUS MESSAGE\n";
+    // ToDo: Not sure how to serialize the status message yet
+    // ToDo_: Correct the handling of content-ID
+    serializedResponses += "Content-ID: " + contentID.toString() + "\n";
+    // ToDo: not sure about other headers like cache control etc right now
+    // will need to look at this later
+    serializedResponses +=
+      "DataServiceVersion: " + request.getHeader("DataServiceVersion") + "\n";
+    serializedResponses += "Location: " + request.getUrl() + "\n";
+    serializedResponses += "DataServiceId: " + request.getUrl() + "\n";
     return serializedResponses;
   }
 
