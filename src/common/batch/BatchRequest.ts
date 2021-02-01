@@ -29,11 +29,14 @@ export default class BatchRequest implements IRequest {
     // ToDo: here we also assume https, which is also not true...
     // we need to parse this from the request
     // return `https://${this.accountName}.${this.batchOperation.batchType}.core.windows.net/$batch`;
+    // in delete, it seems that we actuall expect the full uri
     if (this.batchOperation.uri != null && this.batchOperation.path != null) {
-      return this.batchOperation.uri.substring(
-        0,
-        this.batchOperation.uri.length - this.batchOperation.path.length
-      );
+      return this.batchOperation.uri;
+      // this substring is not needed.
+      // .substring(
+      //   0,
+      //   this.batchOperation.uri.length - this.batchOperation.path.length
+      // );
     } else {
       throw exception("uri or path null when calling getUrl on BatchRequest");
     }

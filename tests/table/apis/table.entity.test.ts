@@ -42,13 +42,16 @@ describe("table Entity APIs test", () => {
   const host = "127.0.0.1";
   const port = 11002;
   const metadataDbPath = "__tableTestsStorage__";
-
+  const enableDebugLog: boolean = true;
+  const debugLogPath: string = "g:/debug.log";
   const config = new TableConfiguration(
     host,
     port,
     metadataDbPath,
+    enableDebugLog,
     false,
-    false
+    undefined,
+    debugLogPath
   );
 
   let server: TableServer;
@@ -59,6 +62,8 @@ describe("table Entity APIs test", () => {
     `AccountKey=${sharedKey};TableEndpoint=${protocol}://${host}:${port}/${accountName};`;
 
   const tableService = Azure.createTableService(connectionString);
+  // ToDo: added due to problem with batch responses not finishing properly - Need to investigate batch response
+  tableService.enableGlobalHttpAgent = true;
 
   let tableName: string = getUniqueName("table");
 
@@ -489,6 +494,104 @@ describe("table Entity APIs test", () => {
               const entity: TestEntity = result;
               assert.equal(entity.myValue._, batchEntity1.myValue._);
               done();
+            }
+          );
+        }
+      }
+    );
+  });
+
+  it("Simple batch test: Delete multiple entities as a batch, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    // First insert multiple entities to delete
+    const batchEntity1 = createBasicEntityForTest();
+    const batchEntity2 = createBasicEntityForTest();
+    const batchEntity3 = createBasicEntityForTest();
+
+    assert.notDeepEqual(
+      batchEntity1.RowKey,
+      batchEntity2.RowKey,
+      "failed to create unique test entities 1 & 2"
+    );
+    assert.notDeepEqual(
+      batchEntity1.RowKey,
+      batchEntity3.RowKey,
+      "failed to create unique test entities 2 & 3"
+    );
+
+    const insertEntityBatch: Azure.TableBatch = new Azure.TableBatch();
+    insertEntityBatch.addOperation("INSERT", batchEntity1, {
+      echoContent: true
+    });
+    insertEntityBatch.addOperation("INSERT", batchEntity2, {
+      echoContent: true
+    });
+    insertEntityBatch.addOperation("INSERT", batchEntity3, {
+      echoContent: true
+    });
+
+    const deleteEntityBatch: Azure.TableBatch = new Azure.TableBatch();
+    deleteEntityBatch.deleteEntity(batchEntity1);
+    deleteEntityBatch.deleteEntity(batchEntity2);
+    deleteEntityBatch.deleteEntity(batchEntity3);
+
+    tableService.executeBatch(
+      tableName,
+      insertEntityBatch,
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 202); // No content
+          // Now that QueryEntity is done - validate Entity Properties as follows:
+          tableService.retrieveEntity<TestEntity>(
+            tableName,
+            batchEntity1.PartitionKey._,
+            batchEntity1.RowKey._,
+            (error, result) => {
+              if (error) {
+                assert.notEqual(error, null);
+                done();
+              }
+              const entity: TestEntity = result;
+              assert.equal(entity.myValue._, batchEntity1.myValue._);
+
+              // now that we have confirmed that our test entities are created, we can try to delete them
+              tableService.executeBatch(
+                tableName,
+                deleteEntityBatch,
+                (
+                  deleteUpdateError,
+                  deleteUpdateResult,
+                  deleteUpdateResponse
+                ) => {
+                  if (deleteUpdateError) {
+                    assert.ifError(deleteUpdateError);
+                    done();
+                  } else {
+                    assert.equal(deleteUpdateResponse.statusCode, 202); // No content
+                    // Now that QueryEntity is done - validate Entity Properties as follows:
+                    tableService.retrieveEntity<TestEntity>(
+                      tableName,
+                      batchEntity1.PartitionKey._,
+                      batchEntity1.RowKey._,
+                      (finalRetrieveError, finalRetrieveResult) => {
+                        const retrieveError: StorageError = finalRetrieveError as StorageError;
+                        assert.equal(
+                          retrieveError.statusCode,
+                          404,
+                          "status code was not equal to 404!"
+                        );
+                        done();
+                      }
+                    );
+                  }
+                }
+              );
             }
           );
         }

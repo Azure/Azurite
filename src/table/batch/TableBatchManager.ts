@@ -1,10 +1,11 @@
 import BatchRequest from "../../common/batch/BatchRequest";
-import BatchTableInsertEntityOptionalParams from "../batch/batch.models";
+import BatchTableInsertEntityOptionalParams from "./BatchTableInsertEntityOptionalParams";
 import TableStorageContext from "../context/TableStorageContext";
 import Context from "../generated/Context";
 import TableHandler from "../handlers/TableHandler";
 import { TableBatchSerialization } from "./TableBatchSerialization";
 import TableBatchOperation from "./TableBatchOperation";
+import BatchTableDeleteEntityOptionalParams from "./BatchTableDeleteEntityOptionalParams";
 
 // Currently there is a single distinct and concrete implementation of batch /
 // entity group operations for the table api.
@@ -116,25 +117,18 @@ export default class TableBatchManager {
     batchContextClone.tableName = request.getPath();
     batchContextClone.path = request.getPath();
     let response: any;
+    let __return: any;
     // we only use 5 HTTP Verbs to determine the table operation type
     switch (request.getMethod()) {
       case "POST":
         // INSERT: we are inserting an entity
         // POST	https://myaccount.table.core.windows.net/mytable
-        const params: BatchTableInsertEntityOptionalParams = new BatchTableInsertEntityOptionalParams(
-          request
-        );
-
-        response = await this.parentHandler.insertEntity(
-          request.getPath(),
-          params,
-          batchContextClone
-        );
-        return this.serialization.serializeTableInsertEntityBatchResponse(
+        ({ __return, response } = await this.handleBatchInsert(
           request,
           response,
+          batchContextClone,
           contentID
-        );
+        ));
         break;
       case "PUT":
         // UPDATE: we are updating an entity
@@ -146,7 +140,12 @@ export default class TableBatchManager {
       case "DELETE":
         // DELETE: we are deleting an entity
         // DELETE	https://myaccount.table.core.windows.net/mytable(PartitionKey='myPartitionKey', RowKey='myRowKey')
-        throw new Error("Method not implemented.");
+        ({ __return, response } = await this.handleBatchDelete(
+          request,
+          response,
+          batchContextClone,
+          contentID
+        ));
         break;
       case "GET":
         // QUERY : we are querying / retrieving an entity
@@ -176,5 +175,75 @@ export default class TableBatchManager {
         // MERGE	https://myaccount.table.core.windows.net/mytable(PartitionKey='myPartitionKey', RowKey='myRowKey')
         throw new Error("Method not implemented.");
     }
+    return __return;
+  }
+
+  private async handleBatchInsert(
+    request: BatchRequest,
+    response: any,
+    batchContextClone: any,
+    contentID: number
+  ) {
+    const params: BatchTableInsertEntityOptionalParams = new BatchTableInsertEntityOptionalParams(
+      request
+    );
+
+    response = await this.parentHandler.insertEntity(
+      request.getPath(),
+      params,
+      batchContextClone
+    );
+    return {
+      __return: this.serialization.serializeTableInsertEntityBatchResponse(
+        request,
+        response,
+        contentID
+      ),
+      response
+    };
+  }
+
+  private async handleBatchDelete(
+    request: BatchRequest,
+    response: any,
+    batchContextClone: any,
+    contentID: number
+  ) {
+    const params: BatchTableDeleteEntityOptionalParams = new BatchTableDeleteEntityOptionalParams(
+      request
+    );
+    let partitionKey: string;
+    let rowKey: string;
+    const body = request.getBody();
+    if (body !== "") {
+      const jsonBody = JSON.parse(body ? body : "{}");
+      partitionKey = jsonBody.PartitionKey;
+      rowKey = jsonBody.RowKey;
+    } else {
+      const url = request.getUrl();
+      const partKeyMatch = url.match(/PartitionKey=%27(\w+)%27,/i);
+      partitionKey = partKeyMatch ? partKeyMatch[1] : "";
+      const rowKeyMatch = url.match(/RowKey=%27(\w+)%27/i);
+      rowKey = rowKeyMatch ? rowKeyMatch[1] : "";
+    }
+
+    // Note: If we don't match row and partition key, then we will throw a storage exception
+    // later, which is OK for me
+    response = await this.parentHandler.deleteEntity(
+      request.getPath(),
+      partitionKey,
+      rowKey,
+      "*", // ToDo: Correctly parse the if-match / Etag header
+      params,
+      batchContextClone
+    );
+    return {
+      __return: this.serialization.serializeTableDeleteEntityBatchResponse(
+        request,
+        response,
+        contentID
+      ),
+      response
+    };
   }
 }
