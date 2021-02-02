@@ -29,7 +29,7 @@ export default class AppendBlobHandler extends BaseHandler
     const date = blobCtx.startTime!;
     const etag = newEtag();
 
-    if (contentLength !== 0) {
+    if (contentLength !== 0 && !this.loose) {
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextId!,
         "Content-Length must be 0 for Create Append Blob request."
