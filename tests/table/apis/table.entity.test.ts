@@ -597,6 +597,7 @@ describe("table Entity APIs test", () => {
                   }
                 }
               );
+              done();
             }
           );
         }
