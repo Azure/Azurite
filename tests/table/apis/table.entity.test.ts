@@ -691,24 +691,20 @@ describe("table Entity APIs test", () => {
     };
     const batchEntity1 = createBasicEntityForTest();
 
-    // retrieve is the only operation in the batch
-    const insertEntityBatch: Azure.TableBatch = new Azure.TableBatch();
-    insertEntityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
-
-    const updateEntityBatch: Azure.TableBatch = new Azure.TableBatch();
+    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+    entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
     batchEntity1.myValue._ = "value2";
-    updateEntityBatch.replaceEntity(batchEntity1);
+    entityBatch.replaceEntity(batchEntity1);
 
     tableService.executeBatch(
       tableName,
-      insertEntityBatch,
-      (insertUpdateError, insertUpdateResult, insertUpdateResponse) => {
-        if (insertUpdateError) {
-          assert.ifError(insertUpdateError);
+      entityBatch,
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
           done();
         } else {
-          assert.equal(insertUpdateResponse.statusCode, 202); // No content
-          // TODO When QueryEntity is done - validate Entity Properties
+          assert.equal(updateResponse.statusCode, 202);
           tableService.retrieveEntity<TestEntity>(
             tableName,
             batchEntity1.PartitionKey._,
@@ -736,7 +732,6 @@ describe("table Entity APIs test", () => {
     };
     const batchEntity1 = createBasicEntityForTest();
 
-    // retrieve is the only operation in the batch
     const entityBatch: Azure.TableBatch = new Azure.TableBatch();
     entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
     batchEntity1.myValue._ = "value2";
@@ -750,8 +745,7 @@ describe("table Entity APIs test", () => {
           assert.ifError(updateError);
           done();
         } else {
-          assert.equal(updateResponse.statusCode, 202); // No content
-          // TODO When QueryEntity is done - validate Entity Properties
+          assert.equal(updateResponse.statusCode, 202);
           tableService.retrieveEntity<TestEntity>(
             tableName,
             batchEntity1.PartitionKey._,
@@ -778,7 +772,6 @@ describe("table Entity APIs test", () => {
     };
     const batchEntity1 = createBasicEntityForTest();
 
-    // retrieve is the only operation in the batch
     const entityBatch: Azure.TableBatch = new Azure.TableBatch();
     entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
     entityBatch.deleteEntity(batchEntity1);
@@ -791,8 +784,7 @@ describe("table Entity APIs test", () => {
           assert.ifError(updateError);
           done();
         } else {
-          assert.equal(updateResponse.statusCode, 202); // No content
-          // TODO When QueryEntity is done - validate Entity Properties
+          assert.equal(updateResponse.statusCode, 202);
           tableService.retrieveEntity<TestEntity>(
             tableName,
             batchEntity1.PartitionKey._,
