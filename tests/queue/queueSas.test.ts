@@ -1,21 +1,18 @@
 import * as assert from "assert";
 
 import {
-  Aborter,
   AccountSASPermissions,
   AccountSASResourceTypes,
   AccountSASServices,
   AnonymousCredential,
   generateAccountSASQueryParameters,
   generateQueueSASQueryParameters,
-  MessageIdURL,
-  MessagesURL,
   QueueSASPermissions,
-  QueueURL,
   SASProtocol,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+  StorageSharedKeyCredential,
+  QueueServiceClient,
+  newPipeline,
+  QueueClient
 } from "@azure/storage-queue";
 
 import { configLogger } from "../../src/common/Logger";
@@ -59,10 +56,13 @@ describe("Queue SAS test", () => {
   );
 
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
-  const serviceURL = new ServiceURL(
+  const serviceClient = new QueueServiceClient(
     baseURL,
-    StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
         retryOptions: { maxTries: 1 }
       }
@@ -91,30 +91,30 @@ describe("Queue SAS test", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const sas = generateAccountSASQueryParameters(
       {
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: AccountSASPermissions.parse("rwdlacup").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
+        permissions: AccountSASPermissions.parse("rwdlacup"),
+        protocol: SASProtocol.HttpsAndHttp,
         resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
         services: AccountSASServices.parse("btqf").toString(),
-        startTime: now,
+        startsOn: now,
         version: "2019-02-02"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
-    const sasURL = `${serviceURL.url}?${sas}`;
-    const serviceURLWithSAS = new ServiceURL(
+    const sasURL = `${serviceClient.url}?${sas}`;
+    const serviceClientWithSAS = new QueueServiceClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
 
-    await serviceURLWithSAS.getProperties(Aborter.none);
+    await serviceClientWithSAS.getProperties();
   });
 
   it("generateAccountSASQueryParameters should not work with invalid permission @loki", async () => {
@@ -122,28 +122,28 @@ describe("Queue SAS test", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const sas = generateAccountSASQueryParameters(
       {
-        expiryTime: tmr,
-        permissions: AccountSASPermissions.parse("wdlcup").toString(),
+        expiresOn: tmr,
+        permissions: AccountSASPermissions.parse("wdlcup"),
         resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
         services: AccountSASServices.parse("btqf").toString()
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
-    const sasURL = `${serviceURL.url}?${sas}`;
-    const serviceURLWithSAS = new ServiceURL(
+    const sasURL = `${serviceClient.url}?${sas}`;
+    const serviceClientWithSAS = new QueueServiceClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
 
     let error;
     try {
-      await serviceURLWithSAS.getProperties(Aborter.none);
+      await serviceClientWithSAS.getProperties();
     } catch (err) {
       error = err;
     }
@@ -157,28 +157,28 @@ describe("Queue SAS test", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const sas = generateAccountSASQueryParameters(
       {
-        expiryTime: tmr,
-        permissions: AccountSASPermissions.parse("rwdlacup").toString(),
+        expiresOn: tmr,
+        permissions: AccountSASPermissions.parse("rwdlacup"),
         resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
         services: AccountSASServices.parse("btf").toString()
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
-    const sasURL = `${serviceURL.url}?${sas}`;
-    const serviceURLWithSAS = new ServiceURL(
+    const sasURL = `${serviceClient.url}?${sas}`;
+    const serviceClientWithSAS = new QueueServiceClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
 
     let error;
     try {
-      await serviceURLWithSAS.getProperties(Aborter.none);
+      await serviceClientWithSAS.getProperties();
     } catch (err) {
       error = err;
     }
@@ -191,31 +191,31 @@ describe("Queue SAS test", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const sas = generateAccountSASQueryParameters(
       {
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: AccountSASPermissions.parse("rwdlacup").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
+        permissions: AccountSASPermissions.parse("rwdlacup"),
+        protocol: SASProtocol.HttpsAndHttp,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
         version: "2019-02-02"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
-    const sasURL = `${serviceURL.url}?${sas}`;
-    const serviceURLWithSAS = new ServiceURL(
+    const sasURL = `${serviceClient.url}?${sas}`;
+    const serviceClientWithSAS = new QueueServiceClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
 
     let error;
     try {
-      await serviceURLWithSAS.getProperties(Aborter.none);
+      await serviceClientWithSAS.getProperties();
     } catch (err) {
       error = err;
     }
@@ -228,58 +228,58 @@ describe("Queue SAS test", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const sas1 = generateAccountSASQueryParameters(
       {
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: AccountSASPermissions.parse("rdlacup").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
+        permissions: AccountSASPermissions.parse("rdlacup"),
+        protocol: SASProtocol.HttpsAndHttp,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
         version: "2019-02-02"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
     const sas2 = generateAccountSASQueryParameters(
       {
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: AccountSASPermissions.parse("rwdlaup").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
+        permissions: AccountSASPermissions.parse("rwdlaup"),
+        protocol: SASProtocol.HttpsAndHttp,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
         version: "2019-02-02"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
-    const sasURL1 = `${serviceURL.url}?${sas1}`;
-    const sasURL2 = `${serviceURL.url}?${sas2}`;
+    const sasURL1 = `${serviceClient.url}?${sas1}`;
+    const sasURL2 = `${serviceClient.url}?${sas2}`;
 
-    const serviceURLWithSAS1 = new ServiceURL(
+    const serviceClientWithSAS1 = new QueueServiceClient(
       sasURL1,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
-    const serviceURLWithSAS2 = new ServiceURL(
+    const serviceClientWithSAS2 = new QueueServiceClient(
       sasURL2,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
 
     const queueName1 = getUniqueName("queue1");
     const queueName2 = getUniqueName("queue2");
 
-    const queueURL1 = QueueURL.fromServiceURL(serviceURLWithSAS1, queueName1);
-    await queueURL1.create(Aborter.none);
+    const queueClient1 = serviceClientWithSAS1.getQueueClient(queueName1);
+    await queueClient1.create();
 
-    const queueURL2 = QueueURL.fromServiceURL(serviceURLWithSAS2, queueName2);
-    await queueURL2.create(Aborter.none);
+    const queueClient2 = serviceClientWithSAS2.getQueueClient(queueName2);
+    await queueClient2.create();
 
-    await queueURL1.delete(Aborter.none);
-    await queueURL2.delete(Aborter.none);
+    await queueClient1.delete();
+    await queueClient2.delete();
   });
 
   it("Create queue shouldn't work without write (w) and create (c) permission in account SAS @loki", async () => {
@@ -287,34 +287,34 @@ describe("Queue SAS test", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const sas = generateAccountSASQueryParameters(
       {
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: AccountSASPermissions.parse("rdlaup").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
+        permissions: AccountSASPermissions.parse("rdlaup"),
+        protocol: SASProtocol.HttpsAndHttp,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
         version: "2019-02-02"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
-    const sasURL = `${serviceURL.url}?${sas}`;
-    const serviceURLWithSAS = new ServiceURL(
+    const sasURL = `${serviceClient.url}?${sas}`;
+    const serviceClientWithSAS = new QueueServiceClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
 
     const queueName = getUniqueName("queue");
-    const queueURL = QueueURL.fromServiceURL(serviceURLWithSAS, queueName);
+    const queueClient = serviceClientWithSAS.getQueueClient(queueName);
     // this copy should throw 403 error
     let error;
     try {
-      await queueURL.create(Aborter.none);
+      await queueClient.create();
     } catch (err) {
       error = err;
     }
@@ -330,35 +330,35 @@ describe("Queue SAS test", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const sas = generateAccountSASQueryParameters(
       {
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: AccountSASPermissions.parse("rwdlcaup").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
+        permissions: AccountSASPermissions.parse("rwdlcaup"),
+        protocol: SASProtocol.HttpsAndHttp,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
         version: "2019-02-02"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
-    const sasURL = `${serviceURL.url}?${sas}`;
-    const serviceURLWithSAS = new ServiceURL(
+    const sasURL = `${serviceClient.url}?${sas}`;
+    const serviceClientWithSAS = new QueueServiceClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
     const queueName = getUniqueName("queue");
-    const queueURL = QueueURL.fromServiceURL(serviceURLWithSAS, queueName);
-    await queueURL.create(Aborter.none);
+    const queueClient = serviceClientWithSAS.getQueueClient(queueName);
+    await queueClient.create();
 
-    const properties = await queueURL.getProperties(Aborter.none);
-    await queueURL.setMetadata(Aborter.none, properties.metadata);
+    const properties = await queueClient.getProperties();
+    await queueClient.setMetadata(properties.metadata);
 
-    await queueURL.delete(Aborter.none);
+    await queueClient.delete();
   });
 
   it("Get/Set ACL with AccountSAS is not allowed @loki", async () => {
@@ -369,40 +369,37 @@ describe("Queue SAS test", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const queueName = getUniqueName("queue");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-    await queueURL.create(Aborter.none);
+    const queueClient = serviceClient.getQueueClient(queueName);
+    await queueClient.create();
 
     const sas = generateAccountSASQueryParameters(
       {
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: AccountSASPermissions.parse("rwdlcaup").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
+        permissions: AccountSASPermissions.parse("rwdlcaup"),
+        protocol: SASProtocol.HttpsAndHttp,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
         version: "2019-02-02"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
-    const sasURL = `${serviceURL.url}?${sas}`;
-    const serviceURLWithSAS = new ServiceURL(
+    const sasURL = `${serviceClient.url}?${sas}`;
+    const serviceClientWithSAS = new QueueServiceClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
 
-    const queueURLwithSAS = QueueURL.fromServiceURL(
-      serviceURLWithSAS,
-      queueName
-    );
+    const queueClientWithSAS = serviceClientWithSAS.getQueueClient(queueName);
 
     let errorGet;
     try {
-      await queueURLwithSAS.getAccessPolicy(Aborter.none);
+      await queueClientWithSAS.getAccessPolicy();
     } catch (err) {
       errorGet = err;
     }
@@ -411,14 +408,14 @@ describe("Queue SAS test", () => {
 
     let errorSet;
     try {
-      await queueURLwithSAS.setAccessPolicy(Aborter.none);
+      await queueClientWithSAS.setAccessPolicy();
     } catch (err) {
       errorSet = err;
     }
     assert.ok(errorSet);
     assert.deepEqual(errorSet.statusCode, 403);
 
-    await queueURL.delete(Aborter.none);
+    await queueClient.delete();
   });
 
   it("generateAccountSASQueryParameters should work for messages @loki", async () => {
@@ -429,49 +426,45 @@ describe("Queue SAS test", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const queueName = getUniqueName("queue");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-    await queueURL.create(Aborter.none);
+    const queueClient = serviceClient.getQueueClient(queueName);
+    await queueClient.create();
 
     const sas = generateAccountSASQueryParameters(
       {
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: AccountSASPermissions.parse("rwdlcaup").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
+        permissions: AccountSASPermissions.parse("rwdlcaup"),
+        protocol: SASProtocol.HttpsAndHttp,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
         version: "2019-02-02"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
-    const sasURL = `${serviceURL.url}?${sas}`;
-    const serviceURLWithSAS = new ServiceURL(
+    const sasURL = `${serviceClient.url}?${sas}`;
+    const serviceClientWithSAS = new QueueServiceClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
 
-    const queueURLwithSAS = QueueURL.fromServiceURL(
-      serviceURLWithSAS,
-      queueName
-    );
-    const messagesURLwithSAS = MessagesURL.fromQueueURL(queueURLwithSAS);
+    const queueClientWithSAS = serviceClientWithSAS.getQueueClient(queueName);
     const messageContent = "test text";
 
-    await messagesURLwithSAS.enqueue(Aborter.none, messageContent);
-    await messagesURLwithSAS.enqueue(Aborter.none, messageContent);
-    await messagesURLwithSAS.peek(Aborter.none);
-    await messagesURLwithSAS.dequeue(Aborter.none);
-    await messagesURLwithSAS.clear(Aborter.none);
+    await queueClientWithSAS.sendMessage(messageContent);
+    await queueClientWithSAS.sendMessage(messageContent);
+    await queueClientWithSAS.peekMessages();
+    await queueClientWithSAS.receiveMessages();
+    await queueClientWithSAS.clearMessages();
 
-    let pResult2 = await messagesURLwithSAS.peek(Aborter.none);
+    let pResult2 = await queueClientWithSAS.peekMessages();
     assert.deepStrictEqual(pResult2.peekedMessageItems.length, 0);
 
-    await queueURL.delete(Aborter.none);
+    await queueClient.delete();
   });
 
   it("generateAccountSASQueryParameters should work for messages @loki", async () => {
@@ -482,49 +475,45 @@ describe("Queue SAS test", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const queueName = getUniqueName("queue");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-    await queueURL.create(Aborter.none);
+    const queueClient = serviceClient.getQueueClient(queueName);
+    await queueClient.create();
 
     const sas = generateAccountSASQueryParameters(
       {
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: AccountSASPermissions.parse("rwdlcaup").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
+        permissions: AccountSASPermissions.parse("rwdlcaup"),
+        protocol: SASProtocol.HttpsAndHttp,
         resourceTypes: AccountSASResourceTypes.parse("co").toString(),
         services: AccountSASServices.parse("btqf").toString(),
         version: "2019-02-02"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
 
-    const sasURL = `${serviceURL.url}?${sas}`;
-    const serviceURLWithSAS = new ServiceURL(
+    const sasURL = `${serviceClient.url}?${sas}`;
+    const serviceClientWithSAS = new QueueServiceClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
 
-    const queueURLwithSAS = QueueURL.fromServiceURL(
-      serviceURLWithSAS,
-      queueName
-    );
-    const messagesURLwithSAS = MessagesURL.fromQueueURL(queueURLwithSAS);
+    const queueClientWithSAS = serviceClientWithSAS.getQueueClient(queueName);
     const messageContent = "test text";
 
-    await messagesURLwithSAS.enqueue(Aborter.none, messageContent);
-    await messagesURLwithSAS.enqueue(Aborter.none, messageContent);
-    await messagesURLwithSAS.peek(Aborter.none);
-    await messagesURLwithSAS.dequeue(Aborter.none);
-    await messagesURLwithSAS.clear(Aborter.none);
+    await queueClientWithSAS.sendMessage(messageContent);
+    await queueClientWithSAS.sendMessage(messageContent);
+    await queueClientWithSAS.peekMessages();
+    await queueClientWithSAS.receiveMessages();
+    await queueClientWithSAS.clearMessages();
 
-    let pResult2 = await messagesURLwithSAS.peek(Aborter.none);
+    let pResult2 = await queueClientWithSAS.peekMessages();
     assert.deepStrictEqual(pResult2.peekedMessageItems.length, 0);
 
-    await queueURL.delete(Aborter.none);
+    await queueClient.delete();
   });
 
   it("generateQueueSASQueryParameters should work for queue @loki", async () => {
@@ -535,34 +524,34 @@ describe("Queue SAS test", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const queueName = getUniqueName("queue");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-    await queueURL.create(Aborter.none);
+    const queueClient = serviceClient.getQueueClient(queueName);
+    await queueClient.create();
 
     const queueSAS = generateQueueSASQueryParameters(
       {
         queueName,
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: QueueSASPermissions.parse("raup").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
-        startTime: now,
+        permissions: QueueSASPermissions.parse("raup"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
         version: "2019-02-02"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     );
 
-    const sasURL = `${queueURL.url}?${queueSAS}`;
-    const queueURLwithSAS = new QueueURL(
+    const sasURL = `${queueClient.url}?${queueSAS}`;
+    const queueClientWithSAS = new QueueClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
 
-    await queueURLwithSAS.getProperties(Aborter.none);
-    await queueURL.delete(Aborter.none);
+    await queueClientWithSAS.getProperties();
+    await queueClient.delete();
   });
 
   it("generateQueueSASQueryParameters should work for messages @loki", async () => {
@@ -573,58 +562,53 @@ describe("Queue SAS test", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const queueName = getUniqueName("queue");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-    await queueURL.create(Aborter.none);
+    const queueClient = serviceClient.getQueueClient(queueName);
+    await queueClient.create();
 
     const queueSAS = generateQueueSASQueryParameters(
       {
         queueName: queueName,
-        expiryTime: tmr,
+        expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
-        permissions: QueueSASPermissions.parse("raup").toString(),
-        protocol: SASProtocol.HTTPSandHTTP,
-        startTime: now,
+        permissions: QueueSASPermissions.parse("raup"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
         version: "2016-05-31"
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     );
 
     const messageContent = "Hello World!";
 
-    const messagesURL = MessagesURL.fromQueueURL(queueURL);
-    const sasURLForMessages = `${messagesURL.url}?${queueSAS}`;
-    const messagesURLWithSAS = new MessagesURL(
+    const sasURLForMessages = `${queueClient.url}?${queueSAS}`;
+    const queueClientWithSAS = new QueueClient(
       sasURLForMessages,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
-    const enqueueResult = await messagesURLWithSAS.enqueue(
-      Aborter.none,
-      messageContent
-    );
+    const enqueueResult = await queueClientWithSAS.sendMessage(messageContent);
 
-    let pResult = await messagesURL.peek(Aborter.none);
+    let pResult = await queueClientWithSAS.peekMessages();
     assert.deepStrictEqual(pResult.peekedMessageItems.length, 1);
 
-    const messageIdURL = MessageIdURL.fromMessagesURL(
-      messagesURL,
-      enqueueResult.messageId
-    );
-    const sasURLForMessageId = `${messageIdURL.url}?${queueSAS}`;
-    const messageIdURLWithSAS = new MessageIdURL(
+    const sasURLForMessageId = `${queueClientWithSAS.url}?${queueSAS}`;
+    const queueIdClientWithSAS = new QueueClient(
       sasURLForMessageId,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
 
-    await messageIdURLWithSAS.delete(Aborter.none, enqueueResult.popReceipt);
+    await queueIdClientWithSAS.deleteMessage(
+      enqueueResult.messageId,
+      enqueueResult.popReceipt
+    );
 
-    pResult = await messagesURL.peek(Aborter.none);
+    pResult = await queueClient.peekMessages();
     assert.deepStrictEqual(pResult.peekedMessageItems.length, 0);
 
-    await queueURL.delete(Aborter.none);
+    await queueClient.delete();
   });
 
   it("generateQueueSASQueryParameters should work for queue with access policy @loki", async () => {
@@ -635,20 +619,20 @@ describe("Queue SAS test", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = serviceURL.pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
 
     const queueName = getUniqueName("queue");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
-    await queueURL.create(Aborter.none);
+    const queueClient = serviceClient.getQueueClient(queueName);
+    await queueClient.create();
 
     const id = "unique-id";
-    await queueURL.setAccessPolicy(Aborter.none, [
+    await queueClient.setAccessPolicy([
       {
         accessPolicy: {
-          expiry: tmr,
-          permission: QueueSASPermissions.parse("raup").toString(),
-          start: now
+          expiresOn: tmr,
+          permissions: QueueSASPermissions.parse("raup").toString(),
+          startsOn: now
         },
         id
       }
@@ -659,52 +643,42 @@ describe("Queue SAS test", () => {
         queueName,
         identifier: id
       },
-      sharedKeyCredential as SharedKeyCredential
+      storageSharedKeyCredential as StorageSharedKeyCredential
     );
 
-    const messagesURL = MessagesURL.fromQueueURL(queueURL);
-
-    const sasURL = `${messagesURL.url}?${queueSAS}`;
-    const messagesURLwithSAS = new MessagesURL(
+    const sasURL = `${queueClient.url}?${queueSAS}`;
+    const queueClientWithSAS = new QueueClient(
       sasURL,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
 
     const messageContent = "hello";
 
-    const eResult = await messagesURLwithSAS.enqueue(
-      Aborter.none,
-      messageContent
-    );
+    const eResult = await queueClientWithSAS.sendMessage(messageContent);
     assert.ok(eResult.messageId);
-    const pResult = await messagesURLwithSAS.peek(Aborter.none);
+    const pResult = await queueClientWithSAS.peekMessages();
     assert.deepStrictEqual(
       pResult.peekedMessageItems[0].messageText,
       messageContent
     );
-    const dResult = await messagesURLwithSAS.dequeue(Aborter.none, {
+    const dResult = await queueClientWithSAS.receiveMessages({
       visibilitytimeout: 1
     });
     assert.deepStrictEqual(
-      dResult.dequeuedMessageItems[0].messageText,
+      dResult.receivedMessageItems[0].messageText,
       messageContent
     );
 
     await sleep(2 * 1000);
 
-    const messageIdURL = MessageIdURL.fromMessagesURL(
-      messagesURL,
-      dResult.dequeuedMessageItems[0].messageId
-    );
-
-    const sasURLForMessage = `${messageIdURL.url}?${queueSAS}`;
-    const messageIdURLwithSAS = new MessageIdURL(
+    const sasURLForMessage = `${queueClientWithSAS.url}?${queueSAS}`;
+    const queueIdClientWithSAS = new QueueClient(
       sasURLForMessage,
-      StorageURL.newPipeline(new AnonymousCredential())
+      newPipeline(new AnonymousCredential())
     );
-    const deleteResult = await messageIdURLwithSAS.delete(
-      Aborter.none,
-      dResult.dequeuedMessageItems[0].popReceipt
+    const deleteResult = await queueIdClientWithSAS.deleteMessage(
+      dResult.receivedMessageItems[0].messageId,
+      dResult.receivedMessageItems[0].popReceipt
     );
     assert.ok(deleteResult.requestId);
   });

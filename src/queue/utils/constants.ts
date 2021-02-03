@@ -1,7 +1,7 @@
 import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 
-export const VERSION = "3.8.0";
-export const QUEUE_API_VERSION = "2019-12-12";
+export const VERSION = "3.9.0";
+export const QUEUE_API_VERSION = "2020-02-10";
 export const DEFAULT_QUEUE_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_QUEUE_LISTENING_PORT = 10001;
 export const IS_PRODUCTION = process.env.NODE_ENV === "production";
@@ -16,11 +16,6 @@ export const DEFAULT_ENABLE_ACCESS_LOG = true;
 export const DEFAULT_QUEUE_CONTEXT_PATH = "azurite_queue_context";
 export const LOGGER_CONFIGS = {};
 export const DEFAULT_GC_INTERVAL_MS = 60 * 1000;
-export const EMULATOR_ACCOUNT_NAME = "devstoreaccount1";
-export const EMULATOR_ACCOUNT_KEY = Buffer.from(
-  "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
-  "base64"
-);
 export const NEVER_EXPIRE_DATE = new Date("9999-12-31T23:59:59.999Z");
 export const QUEUE_SERVICE_PERMISSION = "raup";
 export const LIST_QUEUE_MAXRESSULTS_MIN = 1;
@@ -95,7 +90,9 @@ export const DEFAULT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
 ];
 
 export const ValidAPIVersions = [
+  "2020-02-10",
   "2019-12-12",
+  "2019-10-10",
   "2019-07-07",
   "2019-02-02",
   "2018-11-09",

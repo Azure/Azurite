@@ -1,11 +1,11 @@
 import IAccountDataStore from "../../common/IAccountDataStore";
 import ILogger from "../../common/ILogger";
+import { computeHMACSHA256, getURLQueries } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import Context from "../generated/Context";
 import IRequest from "../generated/IRequest";
 import { HeaderConstants } from "../utils/constants";
-import { computeHMACSHA256, getURLQueries } from "../utils/utils";
 import IAuthenticator from "./IAuthenticator";
 
 export default class BlobSharedKeyAuthenticator implements IAuthenticator {

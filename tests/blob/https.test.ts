@@ -1,9 +1,7 @@
 import {
-  Aborter,
-  ContainerURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+  BlobServiceClient,
+  newPipeline,
+  StorageSharedKeyCredential
 } from "@azure/storage-blob";
 
 import { configLogger } from "../../src/common/Logger";
@@ -32,20 +30,25 @@ describe("Blob HTTPS", () => {
   });
 
   it(`Should work with correct shared key using HTTPS endpoint @loki @sql`, async () => {
-    const serviceURL = new ServiceURL(
+    const serviceClient = new BlobServiceClient(
       baseURL,
-      StorageURL.newPipeline(
-        new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+      newPipeline(
+        new StorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        ),
         {
-          retryOptions: { maxTries: 1 }
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
         }
       )
     );
 
     const containerName: string = getUniqueName("1container-with-dash");
-    const containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+    const containerClient = serviceClient.getContainerClient(containerName);
 
-    await containerURL.create(Aborter.none);
-    await containerURL.delete(Aborter.none);
+    await containerClient.create();
+    await containerClient.delete();
   });
 });

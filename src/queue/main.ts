@@ -18,6 +18,16 @@ import {
 
 const accessAsync = promisify(access);
 
+function shutdown(server: QueueServer) {
+  const beforeCloseMessage = `Azurite Queue service is closing...`;
+  const afterCloseMessage = `Azurite Queue service successfully closed`;
+
+  console.log(beforeCloseMessage);
+  server.close().then(() => {
+    console.log(afterCloseMessage);
+  });
+}
+
 /**
  * Entry for Azurite queue service.
  */
@@ -76,26 +86,17 @@ async function main() {
   );
 
   // Handle close event
-  const beforeCloseMessage = `Azurite Queue service is closing...`;
-  const afterCloseMessage = `Azurite Queue service successfully closed`;
   process
-    .once("message", msg => {
+    .once("message", (msg: string) => {
       if (msg === "shutdown") {
-        console.log(beforeCloseMessage);
-        server.close().then(() => {
-          console.log(afterCloseMessage);
-        });
+        shutdown(server);
       }
     })
-    .once("SIGINT", () => {
-      console.log(beforeCloseMessage);
-      server.close().then(() => {
-        console.log(afterCloseMessage);
-      });
-    });
+    .once("SIGINT", () => shutdown(server))
+    .once("SIGTERM", () => shutdown(server));
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(`Exit due to unhandled error: ${err.message}`);
   process.exit(1);
 });

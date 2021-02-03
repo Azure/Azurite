@@ -91,3 +91,33 @@ directive:
      $.post = {...$.patch};
      $.post.operationId = "Table_MergeEntityWithMerge"
 ```
+
+### Update Query Entity With PartitionKey and RowKey response to file
+
+```yaml
+directive:
+  - from: swagger-document
+    where: $["paths"]["/{table}(PartitionKey='{partitionKey}',RowKey='{rowKey}')"].get.responses["200"]
+    transform: >
+      $.schema = {
+        "type": "object",
+        "format": "file"
+      };
+```
+
+### Update Query Entities response to file
+
+```yaml
+directive:
+  - from: swagger-document
+    where: $["paths"]["/{table}()"].get.responses["200"]
+    transform: >
+      $.schema = {
+        "type": "object",
+        "format": "file"
+      };
+```
+
+### TODO: Move Table Batch swagger change here
+
+### TODO: Move query entity with partition key and row key change here

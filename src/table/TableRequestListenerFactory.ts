@@ -1,10 +1,13 @@
+import { OperationSpec } from "@azure/ms-rest-js/es/lib/operationSpec";
 import express from "express";
 import { RequestListener } from "http";
-
-import { OperationSpec } from "@azure/ms-rest-js/es/lib/operationSpec";
-
+import IAccountDataStore from "../common/IAccountDataStore";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
+import AccountSASAuthenticator from "./authentication/AccountSASAuthenticator";
+import IAuthenticator from "./authentication/IAuthenticator";
+import TableSASAuthenticator from "./authentication/TableSASAuthenticator";
+import { TableQueryResponse } from "./generated/artifacts/mappers";
 import { Operation } from "./generated/artifacts/operation";
 import Specifications from "./generated/artifacts/specifications";
 import ExpressMiddlewareFactory from "./generated/ExpressMiddlewareFactory";
@@ -12,11 +15,14 @@ import IHandlers from "./generated/handlers/IHandlers";
 import MiddlewareFactory from "./generated/MiddlewareFactory";
 import ServiceHandler from "./handlers/ServiceHandler";
 import TableHandler from "./handlers/TableHandler";
+import AuthenticationMiddlewareFactory from "./middleware/AuthenticationMiddlewareFactory";
 import createTableStorageContextMiddleware from "./middleware/tableStorageContext.middleware";
 import ITableMetadataStore from "./persistence/ITableMetadataStore";
 import { DEFAULT_TABLE_CONTEXT_PATH } from "./utils/constants";
 
 import morgan = require("morgan");
+import TableSharedKeyAuthenticator from "./authentication/TableSharedKeyAuthenticator";
+import TableSharedKeyLiteAuthenticator from "./authentication/TableSharedKeyLiteAuthenticator";
 /**
  * Default RequestListenerFactory based on express framework.
  *
@@ -31,8 +37,10 @@ export default class TableRequestListenerFactory
   implements IRequestListenerFactory {
   public constructor(
     private readonly metadataStore: ITableMetadataStore,
+    private readonly accountDataStore: IAccountDataStore,
     private readonly enableAccessLog: boolean,
-    private readonly accessLogWriteStream?: NodeJS.WritableStream // private readonly skipApiVersionCheck?: boolean,
+    private readonly accessLogWriteStream?: NodeJS.WritableStream,
+    private readonly skipApiVersionCheck?: boolean
   ) {}
 
   public createRequestListener(): RequestListener {
@@ -50,7 +58,7 @@ export default class TableRequestListenerFactory
       Operation.Table_MergeEntity,
       Operation.Table_DeleteEntity,
       Operation.Table_InsertEntity
-    ].forEach(operation => {
+    ].forEach((operation) => {
       (Specifications[operation] as MutableSpecification).isXML = false;
     });
 
@@ -64,6 +72,9 @@ export default class TableRequestListenerFactory
         writable: false
       }
     );
+
+    // TODO: Override Query Table JSON response element value
+    TableQueryResponse.type.modelProperties!.value.xmlElementName = "value";
 
     const app = express().disable("x-powered-by");
 
@@ -94,10 +105,30 @@ export default class TableRequestListenerFactory
     }
 
     // Manually created middleware to deserialize feature related context which swagger doesn't know
-    app.use(createTableStorageContextMiddleware());
+    app.use(createTableStorageContextMiddleware(this.skipApiVersionCheck));
 
     // Dispatch incoming HTTP request to specific operation
     app.use(middlewareFactory.createDispatchMiddleware());
+
+    // AuthN middleware, like shared key auth or SAS auth
+    const authenticationMiddlewareFactory = new AuthenticationMiddlewareFactory(
+      logger
+    );
+    const authenticators: IAuthenticator[] = [
+      new TableSharedKeyLiteAuthenticator(this.accountDataStore, logger),
+      new TableSharedKeyAuthenticator(this.accountDataStore, logger),
+      new AccountSASAuthenticator(this.accountDataStore, logger),
+      new TableSASAuthenticator(
+        this.accountDataStore,
+        this.metadataStore,
+        logger
+      )
+    ];
+    app.use(
+      authenticationMiddlewareFactory.createAuthenticationMiddleware(
+        authenticators
+      )
+    );
 
     // Generated, will do basic validation defined in swagger
     app.use(middlewareFactory.createDeserializerMiddleware());

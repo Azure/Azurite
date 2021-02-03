@@ -1,18 +1,13 @@
 import {
-  Aborter,
-  AppendBlobURL,
-  BlobURL,
-  ContainerURL,
-  PageBlobURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+  StorageSharedKeyCredential,
+  BlobServiceClient,
+  newPipeline
 } from "@azure/storage-blob";
 import assert = require("assert");
 
 import { BlobType } from "../../../src/blob/generated/artifacts/models";
-import { getMD5FromString } from "../../../src/blob/utils/utils";
 import { configLogger } from "../../../src/common/Logger";
+import { getMD5FromString } from "../../../src/common/utils/utils";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
 import {
   bodyToString,
@@ -30,21 +25,26 @@ describe("AppendBlobAPIs", () => {
   const server = factory.createServer();
 
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
-  const serviceURL = new ServiceURL(
+  const serviceClient = new BlobServiceClient(
     baseURL,
-    StorageURL.newPipeline(
-      new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
       {
-        retryOptions: { maxTries: 1 }
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
       }
     )
   );
 
   let containerName: string = getUniqueName("container");
-  let containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
+  let containerClient = serviceClient.getContainerClient(containerName);
   let blobName: string = getUniqueName("blob");
-  let blobURL = BlobURL.fromContainerURL(containerURL, blobName);
-  let appendBlobURL = AppendBlobURL.fromBlobURL(blobURL);
+  let blobClient = containerClient.getBlobClient(blobName);
+  let appendBlobClient = blobClient.getAppendBlobClient();
 
   before(async () => {
     await server.start();
@@ -57,20 +57,20 @@ describe("AppendBlobAPIs", () => {
 
   beforeEach(async () => {
     containerName = getUniqueName("container");
-    containerURL = ContainerURL.fromServiceURL(serviceURL, containerName);
-    await containerURL.create(Aborter.none);
+    containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
     blobName = getUniqueName("blob");
-    blobURL = BlobURL.fromContainerURL(containerURL, blobName);
-    appendBlobURL = AppendBlobURL.fromBlobURL(blobURL);
+    blobClient = containerClient.getBlobClient(blobName);
+    appendBlobClient = blobClient.getAppendBlobClient();
   });
 
   afterEach(async () => {
-    await containerURL.delete(Aborter.none);
+    await containerClient.delete();
   });
 
   it("Create append blob should work @loki", async () => {
-    await appendBlobURL.create(Aborter.none);
-    const properties = await appendBlobURL.getProperties(Aborter.none);
+    await appendBlobClient.create();
+    const properties = await appendBlobClient.getProperties();
     assert.deepStrictEqual(properties.blobType, "AppendBlob");
     assert.deepStrictEqual(properties.leaseState, "available");
     assert.deepStrictEqual(properties.leaseStatus, "unlocked");
@@ -86,8 +86,8 @@ describe("AppendBlobAPIs", () => {
   });
 
   it("Create append blob override existing pageblob @loki", async () => {
-    const pageBlobUrl = PageBlobURL.fromBlobURL(blobURL);
-    await pageBlobUrl.create(Aborter.none, 512);
+    const pageBlobClient = blobClient.getPageBlobClient();
+    await pageBlobClient.create(512);
 
     const md5 = new Uint8Array([1, 2, 3, 4, 5]);
     const headers = {
@@ -104,11 +104,11 @@ describe("AppendBlobAPIs", () => {
       key2: "val2"
     };
 
-    await appendBlobURL.create(Aborter.none, {
+    await appendBlobClient.create({
       blobHTTPHeaders: headers,
       metadata
     });
-    const properties = await appendBlobURL.getProperties(Aborter.none);
+    const properties = await appendBlobClient.getProperties();
     assert.deepStrictEqual(properties.blobType, "AppendBlob");
     assert.deepStrictEqual(properties.leaseState, "available");
     assert.deepStrictEqual(properties.leaseStatus, "unlocked");
@@ -134,20 +134,20 @@ describe("AppendBlobAPIs", () => {
   });
 
   it("Delete append blob should work @loki", async () => {
-    await appendBlobURL.create(Aborter.none);
-    await appendBlobURL.delete(Aborter.none);
+    await appendBlobClient.create();
+    await appendBlobClient.delete();
   });
 
   it("Create append blob snapshot should work @loki", async () => {
-    await appendBlobURL.create(Aborter.none);
-    const response = await appendBlobURL.createSnapshot(Aborter.none);
-    const appendBlobSnapshotURL = appendBlobURL.withSnapshot(
+    await appendBlobClient.create();
+    const response = await appendBlobClient.createSnapshot();
+    const appendBlobSnapshotClient = appendBlobClient.withSnapshot(
       response.snapshot!
     );
 
-    await appendBlobURL.appendBlock(Aborter.none, "hello", 5);
+    await appendBlobClient.appendBlock("hello", 5);
 
-    let properties = await appendBlobURL.getProperties(Aborter.none);
+    let properties = await appendBlobClient.getProperties();
     assert.deepStrictEqual(properties.blobType, "AppendBlob");
     assert.deepStrictEqual(properties.leaseState, "available");
     assert.deepStrictEqual(properties.leaseStatus, "unlocked");
@@ -161,7 +161,7 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(properties.blobSequenceNumber, undefined);
     assert.deepStrictEqual(properties.blobCommittedBlockCount, 1);
 
-    properties = await appendBlobSnapshotURL.getProperties(Aborter.none);
+    properties = await appendBlobSnapshotClient.getProperties();
     assert.deepStrictEqual(properties.blobType, "AppendBlob");
     assert.deepStrictEqual(properties.leaseState, "available");
     assert.deepStrictEqual(properties.leaseStatus, "unlocked");
@@ -177,60 +177,91 @@ describe("AppendBlobAPIs", () => {
   });
 
   it("Copy append blob snapshot should work @loki", async () => {
-    await appendBlobURL.create(Aborter.none);
-    await appendBlobURL.appendBlock(Aborter.none, "hello", 5);
+    await appendBlobClient.create();
+    await appendBlobClient.appendBlock("hello", 5);
 
-    const response = await appendBlobURL.createSnapshot(Aborter.none);
-    const appendBlobSnapshotURL = appendBlobURL.withSnapshot(
+    const response = await appendBlobClient.createSnapshot();
+    const appendBlobSnapshotClient = appendBlobClient.withSnapshot(
       response.snapshot!
     );
 
-    await appendBlobURL.appendBlock(Aborter.none, "world", 5);
+    await appendBlobClient.appendBlock("world", 5);
 
-    const destAppendBlobURL = AppendBlobURL.fromContainerURL(
-      containerURL,
+    const destAppendBlobClient = containerClient.getAppendBlobClient(
       "copiedAppendBlob"
     );
-    await destAppendBlobURL.startCopyFromURL(
-      Aborter.none,
-      appendBlobSnapshotURL.url
-    );
+    await destAppendBlobClient.beginCopyFromURL(appendBlobSnapshotClient.url);
 
-    let properties = await appendBlobURL.getProperties(Aborter.none);
+    let properties = await appendBlobClient.getProperties();
     assert.deepStrictEqual(properties.contentLength, 10);
     assert.deepStrictEqual(properties.blobCommittedBlockCount, 2);
 
-    properties = await appendBlobSnapshotURL.getProperties(Aborter.none);
+    properties = await appendBlobSnapshotClient.getProperties();
     assert.deepStrictEqual(properties.contentLength, 5);
     assert.deepStrictEqual(properties.blobCommittedBlockCount, 1);
 
-    await appendBlobURL.delete(Aborter.none, { deleteSnapshots: "include" });
+    await appendBlobClient.delete({ deleteSnapshots: "include" });
 
-    properties = await destAppendBlobURL.getProperties(Aborter.none);
+    properties = await destAppendBlobClient.getProperties();
     assert.deepStrictEqual(properties.contentLength, 5);
     assert.deepStrictEqual(properties.blobCommittedBlockCount, 1);
     assert.ok(properties.copyId);
-    assert.ok(properties.copyCompletionTime);
+    assert.ok(properties.copyCompletedOn);
     assert.deepStrictEqual(properties.copyProgress, "5/5");
-    assert.deepStrictEqual(properties.copySource, appendBlobSnapshotURL.url);
+    assert.deepStrictEqual(properties.copySource, appendBlobSnapshotClient.url);
     assert.deepStrictEqual(properties.copyStatus, "success");
   });
 
+  it("Synchronized copy append blob snapshot should work @loki", async () => {
+    await appendBlobClient.create();
+    await appendBlobClient.appendBlock("hello", 5);
+
+    const response = await appendBlobClient.createSnapshot();
+    const appendBlobSnapshotClient = appendBlobClient.withSnapshot(
+      response.snapshot!
+    );
+
+    await appendBlobClient.appendBlock("world", 5);
+
+    const destAppendBlobClient = containerClient.getAppendBlobClient(
+      "copiedAppendBlob"
+    );
+    await destAppendBlobClient.syncCopyFromURL(appendBlobSnapshotClient.url);
+
+    let properties = await appendBlobClient.getProperties();
+    assert.deepStrictEqual(properties.contentLength, 10);
+    assert.deepStrictEqual(properties.blobCommittedBlockCount, 2);
+
+    properties = await appendBlobSnapshotClient.getProperties();
+    assert.deepStrictEqual(properties.contentLength, 5);
+    assert.deepStrictEqual(properties.blobCommittedBlockCount, 1);
+
+    await appendBlobClient.delete({ deleteSnapshots: "include" });
+
+    properties = await destAppendBlobClient.getProperties();
+    assert.deepStrictEqual(properties.contentLength, 5);
+    assert.deepStrictEqual(properties.blobCommittedBlockCount, 1);
+    assert.ok(properties.copyId);
+    assert.ok(properties.copyCompletedOn);
+    assert.deepStrictEqual(properties.copyProgress, "5/5");
+    assert.deepStrictEqual(properties.copySource, appendBlobSnapshotClient.url);
+  });
+
   it("Set append blob metadata should work @loki", async () => {
-    await appendBlobURL.create(Aborter.none);
+    await appendBlobClient.create();
 
     const metadata = {
       key1: "value1",
       key2: "val2"
     };
-    await appendBlobURL.setMetadata(Aborter.none, metadata);
+    await appendBlobClient.setMetadata(metadata);
 
-    const properties = await appendBlobURL.getProperties(Aborter.none);
+    const properties = await appendBlobClient.getProperties();
     assert.deepStrictEqual(properties.metadata, metadata);
   });
 
   it("Set append blob HTTP headers should work @loki", async () => {
-    await appendBlobURL.create(Aborter.none);
+    await appendBlobClient.create();
 
     const md5 = new Uint8Array([1, 2, 3, 4, 5]);
     const headers = {
@@ -241,9 +272,9 @@ describe("AppendBlobAPIs", () => {
       blobContentLanguage: "blobContentLanguage_",
       blobContentDisposition: "blobContentDisposition_"
     };
-    await appendBlobURL.setHTTPHeaders(Aborter.none, headers);
+    await appendBlobClient.setHTTPHeaders(headers);
 
-    const properties = await appendBlobURL.getProperties(Aborter.none);
+    const properties = await appendBlobClient.getProperties();
     assert.deepStrictEqual(properties.cacheControl, headers.blobCacheControl);
     assert.deepStrictEqual(properties.contentType, headers.blobContentType);
     assert.deepEqual(properties.contentMD5, headers.blobContentMD5);
@@ -261,10 +292,10 @@ describe("AppendBlobAPIs", () => {
     );
   });
 
-  it("Set tier should not work for append blob @loki", async function() {
-    await appendBlobURL.create(Aborter.none);
+  it("Set tier should not work for append blob @loki", async function () {
+    await appendBlobClient.create();
     try {
-      await blobURL.setTier(Aborter.none, "hot");
+      await blobClient.setAccessTier("hot");
     } catch (err) {
       return;
     }
@@ -272,15 +303,11 @@ describe("AppendBlobAPIs", () => {
   });
 
   it("Append block should work @loki", async () => {
-    await appendBlobURL.create(Aborter.none);
-    let appendBlockResponse = await appendBlobURL.appendBlock(
-      Aborter.none,
-      "abcdef",
-      6
-    );
+    await appendBlobClient.create();
+    let appendBlockResponse = await appendBlobClient.appendBlock("abcdef", 6);
     assert.deepStrictEqual(appendBlockResponse.blobAppendOffset, "0");
 
-    const properties1 = await appendBlobURL.getProperties(Aborter.none);
+    const properties1 = await appendBlobClient.getProperties();
     assert.deepStrictEqual(properties1.blobType, "AppendBlob");
     assert.deepStrictEqual(properties1.leaseState, "available");
     assert.deepStrictEqual(properties1.leaseStatus, "unlocked");
@@ -293,22 +320,18 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(properties1.cacheControl, undefined);
     assert.deepStrictEqual(properties1.blobSequenceNumber, undefined);
     assert.deepStrictEqual(properties1.blobCommittedBlockCount, 1);
-    assert.deepStrictEqual(properties1.eTag, appendBlockResponse.eTag);
+    assert.deepStrictEqual(properties1.etag, appendBlockResponse.etag);
 
     await sleep(1000); // Sleep 1 second to make sure last modified time changed
-    appendBlockResponse = await appendBlobURL.appendBlock(
-      Aborter.none,
-      "123456",
-      6
-    );
+    appendBlockResponse = await appendBlobClient.appendBlock("123456", 6);
     assert.deepStrictEqual(appendBlockResponse.blobAppendOffset, "6");
-    assert.notDeepStrictEqual(appendBlockResponse.eTag, properties1.eTag);
-    appendBlockResponse = await appendBlobURL.appendBlock(Aborter.none, "T", 1);
+    assert.notDeepStrictEqual(appendBlockResponse.etag, properties1.etag);
+    appendBlockResponse = await appendBlobClient.appendBlock("T", 1);
     assert.deepStrictEqual(appendBlockResponse.blobAppendOffset, "12");
-    appendBlockResponse = await appendBlobURL.appendBlock(Aborter.none, "@", 2);
+    appendBlockResponse = await appendBlobClient.appendBlock("@", 2);
     assert.deepStrictEqual(appendBlockResponse.blobAppendOffset, "13");
 
-    const properties2 = await appendBlobURL.getProperties(Aborter.none);
+    const properties2 = await appendBlobClient.getProperties();
     assert.deepStrictEqual(properties2.blobType, "AppendBlob");
     assert.deepStrictEqual(properties2.leaseState, "available");
     assert.deepStrictEqual(properties2.leaseStatus, "unlocked");
@@ -321,28 +344,28 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(properties2.cacheControl, undefined);
     assert.deepStrictEqual(properties2.blobSequenceNumber, undefined);
     assert.deepStrictEqual(properties2.blobCommittedBlockCount, 4);
-    assert.deepStrictEqual(properties1.creationTime, properties2.creationTime);
+    assert.deepStrictEqual(properties1.createdOn, properties2.createdOn);
     assert.notDeepStrictEqual(
       properties1.lastModified,
       properties2.lastModified
     );
-    assert.notDeepStrictEqual(properties1.eTag, properties2.eTag);
+    assert.notDeepStrictEqual(properties1.etag, properties2.etag);
 
-    const response = await appendBlobURL.download(Aborter.none, 0);
-    const string = await bodyToString(response);
+    const response = await appendBlobClient.download(0);
+    const string = await bodyToString(response, response.contentLength);
 
     assert.deepStrictEqual(string, "abcdef123456T@");
   });
 
   it("Download append blob should work @loki", async () => {
-    await appendBlobURL.create(Aborter.none);
-    await appendBlobURL.appendBlock(Aborter.none, "abcdef", 6);
-    await appendBlobURL.appendBlock(Aborter.none, "123456", 6);
-    await appendBlobURL.appendBlock(Aborter.none, "T", 1);
-    await appendBlobURL.appendBlock(Aborter.none, "@", 2);
+    await appendBlobClient.create();
+    await appendBlobClient.appendBlock("abcdef", 6);
+    await appendBlobClient.appendBlock("123456", 6);
+    await appendBlobClient.appendBlock("T", 1);
+    await appendBlobClient.appendBlock("@", 2);
 
-    const response = await appendBlobURL.download(Aborter.none, 5, 8);
-    const string = await bodyToString(response);
+    const response = await appendBlobClient.download(5, 8);
+    const string = await bodyToString(response, response.contentLength);
     assert.deepStrictEqual(string, "f123456T");
     assert.deepStrictEqual(response.blobCommittedBlockCount, 4);
     assert.deepStrictEqual(response.blobType, BlobType.AppendBlob);
@@ -352,48 +375,47 @@ describe("AppendBlobAPIs", () => {
   });
 
   it("Download append blob should work for snapshot @loki", async () => {
-    await appendBlobURL.create(Aborter.none);
-    await appendBlobURL.appendBlock(Aborter.none, "abcdef", 6);
+    await appendBlobClient.create();
+    await appendBlobClient.appendBlock("abcdef", 6);
 
-    const snapshotResponse = await appendBlobURL.createSnapshot(Aborter.none);
-    const snapshotAppendBlobURL = appendBlobURL.withSnapshot(
+    const snapshotResponse = await appendBlobClient.createSnapshot();
+    const snapshotAppendBlobURL = appendBlobClient.withSnapshot(
       snapshotResponse.snapshot!
     );
 
-    await appendBlobURL.appendBlock(Aborter.none, "123456", 6);
-    await appendBlobURL.appendBlock(Aborter.none, "T", 1);
-    await appendBlobURL.appendBlock(Aborter.none, "@", 2);
+    await appendBlobClient.appendBlock("123456", 6);
+    await appendBlobClient.appendBlock("T", 1);
+    await appendBlobClient.appendBlock("@", 2);
 
-    const response = await snapshotAppendBlobURL.download(Aborter.none, 3);
+    const response = await snapshotAppendBlobURL.download(3);
     const string = await bodyToString(response);
     assert.deepStrictEqual(string, "def");
     assert.deepEqual(response.contentMD5, await getMD5FromString("def"));
   });
 
   it("Download append blob should work for copied blob @loki", async () => {
-    await appendBlobURL.create(Aborter.none);
-    await appendBlobURL.appendBlock(Aborter.none, "abcdef", 6);
+    await appendBlobClient.create();
+    await appendBlobClient.appendBlock("abcdef", 6);
 
-    const copiedAppendBlobURL = AppendBlobURL.fromContainerURL(
-      containerURL,
+    const copiedAppendBlobClient = containerClient.getAppendBlobClient(
       "copiedAppendBlob"
     );
-    await copiedAppendBlobURL.startCopyFromURL(Aborter.none, appendBlobURL.url);
+    await copiedAppendBlobClient.beginCopyFromURL(appendBlobClient.url);
 
-    await appendBlobURL.delete(Aborter.none);
+    await appendBlobClient.delete();
 
-    const response = await copiedAppendBlobURL.download(Aborter.none, 3);
+    const response = await copiedAppendBlobClient.download(3);
     const string = await bodyToString(response);
     assert.deepStrictEqual(string, "def");
     assert.deepEqual(response.contentMD5, await getMD5FromString("def"));
   });
 
   it("Append block with invalid blob type should not work @loki", async () => {
-    const pageBlobUrl = PageBlobURL.fromBlobURL(appendBlobURL);
-    await pageBlobUrl.create(Aborter.none, 512);
+    const pageBlobClient = appendBlobClient.getPageBlobClient();
+    await pageBlobClient.create(512);
 
     try {
-      await appendBlobURL.appendBlock(Aborter.none, "a", 1);
+      await appendBlobClient.appendBlock("a", 1);
     } catch (err) {
       assert.deepStrictEqual(err.message.includes("InvalidBlobType"), true);
       return;
@@ -402,10 +424,10 @@ describe("AppendBlobAPIs", () => {
   });
 
   it("Append block with content length 0 should not work @loki", async () => {
-    await appendBlobURL.create(Aborter.none);
+    await appendBlobClient.create();
 
     try {
-      await appendBlobURL.appendBlock(Aborter.none, "", 0);
+      await appendBlobClient.appendBlock("", 0);
     } catch (err) {
       assert.deepStrictEqual(err.message.includes("InvalidHeaderValue"), true);
       return;
@@ -414,22 +436,18 @@ describe("AppendBlobAPIs", () => {
   });
 
   it("Append block append position access condition should work @loki", async () => {
-    await appendBlobURL.create(Aborter.none);
-    await appendBlobURL.appendBlock(Aborter.none, "a", 1, {
-      accessConditions: {
-        appendPositionAccessConditions: {
-          maxSize: 1,
-          appendPosition: 0
-        }
+    await appendBlobClient.create();
+    await appendBlobClient.appendBlock("a", 1, {
+      conditions: {
+        maxSize: 1,
+        appendPosition: 0
       }
     });
 
     try {
-      await appendBlobURL.appendBlock(Aborter.none, "a", 1, {
-        accessConditions: {
-          appendPositionAccessConditions: {
-            maxSize: 1
-          }
+      await appendBlobClient.appendBlock("a", 1, {
+        conditions: {
+          maxSize: 1
         }
       });
     } catch (err) {
@@ -439,20 +457,16 @@ describe("AppendBlobAPIs", () => {
       );
       assert.deepStrictEqual(err.statusCode, 412);
 
-      await appendBlobURL.appendBlock(Aborter.none, "a", 1, {
-        accessConditions: {
-          appendPositionAccessConditions: {
-            appendPosition: 1
-          }
+      await appendBlobClient.appendBlock("a", 1, {
+        conditions: {
+          appendPosition: 1
         }
       });
 
       try {
-        await appendBlobURL.appendBlock(Aborter.none, "a", 1, {
-          accessConditions: {
-            appendPositionAccessConditions: {
-              appendPosition: 0
-            }
+        await appendBlobClient.appendBlock("a", 1, {
+          conditions: {
+            appendPosition: 0
           }
         });
       } catch (err) {
@@ -469,13 +483,13 @@ describe("AppendBlobAPIs", () => {
   });
 
   it("Append block md5 validation should work @loki", async () => {
-    await appendBlobURL.create(Aborter.none);
-    await appendBlobURL.appendBlock(Aborter.none, "aEf", 1, {
+    await appendBlobClient.create();
+    await appendBlobClient.appendBlock("aEf", 1, {
       transactionalContentMD5: await getMD5FromString("aEf")
     });
 
     try {
-      await appendBlobURL.appendBlock(Aborter.none, "aEf", 1, {
+      await appendBlobClient.appendBlock("aEf", 1, {
         transactionalContentMD5: await getMD5FromString("invalid")
       });
     } catch (err) {
@@ -487,45 +501,35 @@ describe("AppendBlobAPIs", () => {
   });
 
   it("Append block access condition should work @loki", async () => {
-    let response = await appendBlobURL.create(Aborter.none);
-    response = await appendBlobURL.appendBlock(Aborter.none, "a", 1, {
-      accessConditions: {
-        modifiedAccessConditions: {
-          ifMatch: response.eTag
-        }
+    let response = await appendBlobClient.create();
+    response = await appendBlobClient.appendBlock("a", 1, {
+      conditions: {
+        ifMatch: response.etag
       }
     });
 
-    response = await appendBlobURL.appendBlock(Aborter.none, "a", 1, {
-      accessConditions: {
-        modifiedAccessConditions: {
-          ifNoneMatch: "xxxx"
-        }
+    response = await appendBlobClient.appendBlock("a", 1, {
+      conditions: {
+        ifNoneMatch: "xxxx"
       }
     });
 
-    response = await appendBlobURL.appendBlock(Aborter.none, "a", 1, {
-      accessConditions: {
-        modifiedAccessConditions: {
-          ifModifiedSince: new Date("2000/01/01")
-        }
+    response = await appendBlobClient.appendBlock("a", 1, {
+      conditions: {
+        ifModifiedSince: new Date("2000/01/01")
       }
     });
 
-    response = await appendBlobURL.appendBlock(Aborter.none, "a", 1, {
-      accessConditions: {
-        modifiedAccessConditions: {
-          ifUnmodifiedSince: response.lastModified
-        }
+    response = await appendBlobClient.appendBlock("a", 1, {
+      conditions: {
+        ifUnmodifiedSince: response.lastModified
       }
     });
 
     try {
-      await appendBlobURL.appendBlock(Aborter.none, "a", 1, {
-        accessConditions: {
-          modifiedAccessConditions: {
-            ifMatch: response.eTag + "2"
-          }
+      await appendBlobClient.appendBlock("a", 1, {
+        conditions: {
+          ifMatch: response.etag + "2"
         }
       });
     } catch (err) {
@@ -537,26 +541,25 @@ describe("AppendBlobAPIs", () => {
   });
 
   it("Append block lease condition should work @loki", async () => {
-    await appendBlobURL.create(Aborter.none);
+    await appendBlobClient.create();
 
     const leaseId = "abcdefg";
-    await appendBlobURL.acquireLease(Aborter.none, leaseId, 20);
+    const blobLeaseClient = await appendBlobClient.getBlobLeaseClient(leaseId);
+    await blobLeaseClient.acquireLease(20);
 
-    const properties = await appendBlobURL.getProperties(Aborter.none);
+    const properties = await appendBlobClient.getProperties();
     assert.deepStrictEqual(properties.leaseDuration, "fixed");
     assert.deepStrictEqual(properties.leaseState, "leased");
     assert.deepStrictEqual(properties.leaseStatus, "locked");
 
-    await appendBlobURL.appendBlock(Aborter.none, "a", 1, {
-      accessConditions: {
-        leaseAccessConditions: {
-          leaseId
-        }
+    await appendBlobClient.appendBlock("a", 1, {
+      conditions: {
+        leaseId
       }
     });
 
     try {
-      await appendBlobURL.appendBlock(Aborter.none, "c", 1);
+      await appendBlobClient.appendBlock("c", 1);
     } catch (err) {
       assert.deepStrictEqual(err.message.includes("LeaseIdMissing"), true);
       assert.deepStrictEqual(err.statusCode, 412);

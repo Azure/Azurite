@@ -1,9 +1,7 @@
 import {
-  Aborter,
-  QueueURL,
-  ServiceURL,
-  SharedKeyCredential,
-  StorageURL
+  QueueServiceClient,
+  newPipeline,
+  StorageSharedKeyCredential
 } from "@azure/storage-queue";
 
 import { configLogger } from "../../src/common/Logger";
@@ -69,10 +67,13 @@ describe("Queue HTTPS", () => {
   const baseURL = `https://${host}:${port}/devstoreaccount1`;
 
   it(`Should work with correct shared key when using HTTPS endpoint @loki`, async () => {
-    const serviceURL = new ServiceURL(
+    const serviceClient = new QueueServiceClient(
       baseURL,
-      StorageURL.newPipeline(
-        new SharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY),
+      newPipeline(
+        new StorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        ),
         {
           retryOptions: { maxTries: 1 }
         }
@@ -80,9 +81,9 @@ describe("Queue HTTPS", () => {
     );
 
     const queueName: string = getUniqueName("queue-with-dash");
-    const queueURL = QueueURL.fromServiceURL(serviceURL, queueName);
+    const queueClient = serviceClient.getQueueClient(queueName);
 
-    await queueURL.create(Aborter.none);
-    await queueURL.delete(Aborter.none);
+    await queueClient.create();
+    await queueClient.delete();
   });
 });

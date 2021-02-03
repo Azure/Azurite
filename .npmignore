@@ -1,5 +1,9 @@
 node_modules/
+src/
+typings/
 coverage
+.prettierrc.json
+README.mcr.md
 azurite-testdrive/
 .nyc_output
 debug.log
@@ -8,6 +12,7 @@ azure-pipelines.yml
 ISSUE_TEMPLATE.md
 PULL_REQUEST_TEMPLATE.md
 .vscode/
+.github/
 tslint.json
 tsconfig.json
 *.vsix

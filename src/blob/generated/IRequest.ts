@@ -7,6 +7,7 @@ export type HttpMethod =
   | "CONNECT"
   | "OPTIONS"
   | "TRACE"
+  | "MERGE"
   | "PATCH";
 
 export default interface IRequest {
