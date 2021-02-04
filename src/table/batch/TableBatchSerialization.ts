@@ -133,15 +133,19 @@ export class TableBatchSerialization extends BatchSerialization {
     contentID: number
   ): string {
     // ToDo: keeping my life easy to start and defaulting to "return no content"
+    // we need to validate headers and requirements for handling them correctly
     let serializedResponses: string = "";
     // create the initial boundary
     serializedResponses += "Content-Type: application/http\n";
     serializedResponses += "Content-Transfer-Encoding: binary \n";
     serializedResponses += "\n";
+    // ToDo: Not sure how to serialize the status message yet
     serializedResponses +=
       "HTTP/1.1 " + response.statusCode.toString() + " STATUS MESSAGE\n";
-    // ToDo: Not sure how to serialize the status message yet
-    serializedResponses += "Content-ID: " + contentID.toString() + "\n";
+    // ToDo: Correct the handling of Content-ID
+    if (contentID !== 0) {
+      serializedResponses += "Content-ID: " + contentID.toString() + "\n";
+    }
     // ToDo: not sure about other headers like cache control etc right now
     // will need to look at this later
     serializedResponses +=
@@ -174,8 +178,10 @@ export class TableBatchSerialization extends BatchSerialization {
     serializedResponses += "Content-ID: " + contentID.toString() + "\n";
     // ToDo: not sure about other headers like cache control etc right now
     // will need to look at this later
-    serializedResponses +=
-      "DataServiceVersion: " + request.getHeader("DataServiceVersion") + "\n";
+    if (request.getHeader("DataServiceVersion")) {
+      serializedResponses +=
+        "DataServiceVersion: " + request.getHeader("DataServiceVersion") + "\n";
+    }
     serializedResponses += "Location: " + request.getUrl() + "\n";
     serializedResponses += "DataServiceId: " + request.getUrl() + "\n";
     return serializedResponses;
