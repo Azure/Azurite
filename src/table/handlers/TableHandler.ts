@@ -1,5 +1,5 @@
 import BufferStream from "../../common/utils/BufferStream";
-import { newEtag } from "../../common/utils/utils";
+import { newTableEntityEtag } from "../../common/utils/utils";
 import TableStorageContext from "../context/TableStorageContext";
 import { NormalizedEntity } from "../entity/NormalizedEntity";
 import NotImplementedError from "../errors/NotImplementedError";
@@ -178,7 +178,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       RowKey: options.tableEntityProperties.RowKey,
       properties: options.tableEntityProperties,
       lastModifiedTime: context.startTime!,
-      eTag: newEtag()
+      eTag: newTableEntityEtag()
     };
 
     let nomarlizedEntity;
@@ -279,7 +279,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getPreconditionFailed(context);
     }
 
-    const eTag = newEtag();
+    const eTag = newTableEntityEtag();
 
     // Entity, which is used to update an existing entity
     const entity: Entity = {
@@ -349,7 +349,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       );
     }
 
-    const eTag = newEtag();
+    const eTag = newTableEntityEtag();
 
     const entity: Entity = {
       PartitionKey: partitionKey,

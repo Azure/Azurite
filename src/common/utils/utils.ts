@@ -60,6 +60,11 @@ export function newEtag(): string {
   );
 }
 
+export function newTableEntityEtag(): string {
+  // Etag as returned by Table Storage should match W/"datetime'<ISO8601datetime>'"
+  return "W/\"datetime'" + new Date().toISOString() + "'\"";
+}
+
 /**
  * Generates a hash signature for an HTTP request or for a SAS.
  *

@@ -75,6 +75,11 @@ describe("table Entity APIs test", () => {
     };
     tableService.insertEntity(tableName, entity, (error, result, response) => {
       assert.equal(response.statusCode, 201);
+      assert.ok(
+        response.headers?.etag.match(
+          "W/\"datetime'\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.\\d{3}Z'\""
+        )
+      );
       done();
     });
   });
