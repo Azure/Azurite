@@ -1,6 +1,6 @@
 // Contains Mocks for Serialization Tests
 
-export default class SerializationMocks {
+export default class SerializationRequestMocks {
   public static TableBatchRequestMimeBodyString: string =
     '\
 --batch_a1e9d677-b28b-435e-a89e-87e6a768a431\n\

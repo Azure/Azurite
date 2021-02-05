@@ -247,6 +247,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   }
 
   // TODO: Create data structures to hold entity properties and support serialize, merge, deserialize, filter
+  // Note: Batch is using the partition key and row key args, handler receives these values from middleware via
+  // context
   public async updateEntity(
     _table: string,
     _partitionKey: string,
@@ -257,8 +259,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
-    const partitionKey = this.getAndCheckPartitionKey(tableContext);
-    const rowKey = this.getAndCheckRowKey(tableContext);
+    const partitionKey = _partitionKey
+      ? _partitionKey
+      : this.getAndCheckPartitionKey(tableContext);
+    const rowKey = _rowKey ? _rowKey : this.getAndCheckRowKey(tableContext);
     const ifMatch = options.ifMatch;
 
     if (!options.tableEntityProperties) {
@@ -335,8 +339,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
-    const partitionKey = this.getAndCheckPartitionKey(tableContext);
-    const rowKey = this.getAndCheckRowKey(tableContext);
+    const partitionKey = _partitionKey
+      ? _partitionKey
+      : this.getAndCheckPartitionKey(tableContext);
+    const rowKey = _rowKey ? _rowKey : this.getAndCheckRowKey(tableContext);
 
     if (!options.tableEntityProperties) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
