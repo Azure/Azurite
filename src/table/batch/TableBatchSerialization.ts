@@ -241,6 +241,11 @@ export class TableBatchSerialization extends BatchSerialization {
     return serializedResponses;
   }
 
+  // ToDo: match to Service response
+  /*
+  "--batchresponse_5f4cfbb9-f5fa-45f1-9c9b-04e2436cbf9a\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 200 OK\r\nDataServiceVersion: 3.0;\r\nContent-Type: application/json;odata=minimalmetadata;streaming=true;charset=utf-8\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-cache\r\nETag: W/\"datetime'2021-02-05T17%3A15%3A16.7935715Z'\"\r\n\r\n{\"odata.metadata\":\"https://asynccopiertesttarget.table.core.windows.net/$metadata#TestingAzurite/@Element\",\"odata.etag\":\"W/\\\"datetime'2021-02-05T17%3A15%3A16.7935715Z'\\\"\",\"PartitionKey\":\"part1\",\"RowKey\":\"row161254531681303585\",\"Timestamp\":\"2021-02-05T17:15:16.7935715Z\",\"myValue\":\"value1\"}\r\n--batchresponse_5f4cfbb9-f5fa-45f1-9c9b-04e2436cbf9a--\r\n"
+  */
+
   public serializeTableQueryEntityWithPartitionAndRowKeyBatchResponse(
     request: BatchRequest,
     response: Models.TableQueryEntitiesWithPartitionAndRowKeyResponse,
@@ -249,8 +254,8 @@ export class TableBatchSerialization extends BatchSerialization {
     // ToDo: keeping my life easy to start and defaulting to "return no content"
     let serializedResponses: string = "";
     // create the initial boundary
-    serializedResponses += "Content-Type: application/http\n";
-    serializedResponses += "Content-Transfer-Encoding: binary \n";
+    serializedResponses += "Content-Type: application/http\r\n";
+    serializedResponses += "Content-Transfer-Encoding: binary\r\n";
     serializedResponses += "\n";
     serializedResponses +=
       "HTTP/1.1 " + response.statusCode.toString() + " STATUS MESSAGE\n";
