@@ -1,3 +1,4 @@
+import BatchRequest from "../../common/batch/BatchRequest";
 import {
   DataServiceVersion3,
   QueryOptions,

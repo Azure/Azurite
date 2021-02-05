@@ -439,4 +439,82 @@ export default class TableBatchManager {
       response
     };
   }
+
+  private async handleBatchUpdate(
+    request: BatchRequest,
+    response: any,
+    batchContextClone: any,
+    contentID: number
+  ): Promise<{
+    __return: string;
+    response: any;
+  }> {
+    const params: BatchTableUpdateEntityOptionalParams = new BatchTableUpdateEntityOptionalParams(
+      request
+    );
+    let partitionKey: string;
+    let rowKey: string;
+    ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
+
+    response = await this.parentHandler.updateEntity(
+      request.getPath(),
+      partitionKey,
+      rowKey,
+      params,
+      batchContextClone
+    );
+    return {
+      __return: this.serialization.serializeTableDeleteEntityBatchResponse(
+        request,
+        response,
+        contentID
+      ),
+      response
+    };
+  }
+
+  private async handleBatchQuery(
+    request: BatchRequest,
+    response: any,
+    batchContextClone: any,
+    contentID: number
+  ): Promise<{
+    __return: string;
+    response: any;
+  }> {
+    throw NotImplementedError;
+  }
+
+  private async handleBatchMerge(
+    request: BatchRequest,
+    response: any,
+    batchContextClone: any,
+    contentID: number
+  ): Promise<{
+    __return: string;
+    response: any;
+  }> {
+    const params: BatchTableMergeEntityOptionalParams = new BatchTableMergeEntityOptionalParams(
+      request
+    );
+    let partitionKey: string;
+    let rowKey: string;
+    ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
+
+    response = await this.parentHandler.mergeEntity(
+      request.getPath(),
+      partitionKey,
+      rowKey,
+      params,
+      batchContextClone
+    );
+    return {
+      __return: this.serialization.serializeTableDeleteEntityBatchResponse(
+        request,
+        response,
+        contentID
+      ),
+      response
+    };
+  }
 }
