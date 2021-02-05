@@ -604,4 +604,38 @@ describe("table Entity APIs test", () => {
       }
     );
   });
+
+  it.only("Query / Retrieve single entity via a batch, requestion Options undefined / default @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const batchEntity1 = createBasicEntityForTest();
+
+    tableService.insertEntity(tableName, batchEntity1, (error, result) => {
+      const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+      entityBatch.retrieveEntity(
+        batchEntity1.PartitionKey._,
+        batchEntity1.RowKey._
+      );
+
+      tableService.executeBatch(
+        tableName,
+        entityBatch,
+        (updateError, updateResult, updateResponse) => {
+          if (updateError) {
+            assert.ifError(updateError);
+            done();
+          } else {
+            assert.equal(updateResponse.statusCode, 202);
+            const batchRetrieveEntityResult = updateResponse.body
+              ? updateResponse.body
+              : "";
+            assert.notEqual(batchRetrieveEntityResult.indexOf("value1"), -1);
+            done();
+          }
+        }
+      );
+    });
+  });
 });

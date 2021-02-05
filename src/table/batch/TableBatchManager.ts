@@ -6,9 +6,16 @@ import TableHandler from "../handlers/TableHandler";
 import { TableBatchSerialization } from "./TableBatchSerialization";
 import TableBatchOperation from "./TableBatchOperation";
 import BatchTableDeleteEntityOptionalParams from "./BatchTableDeleteEntityOptionalParams";
-import NotImplementedError from "../../blob/errors/NotImplementedError";
 import BatchTableUpdateEntityOptionalParams from "./BatchTableUpdateEntityOptionalParams";
 import BatchTableMergeEntityOptionalParams from "./BatchTableMergeEntityOptionalParams";
+import NotImplementedError from "../../table/errors/NotImplementedError";
+import BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams from "./BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams";
+
+export enum BatchQueryType {
+  query = 0,
+  queryentities = 2,
+  querywithpartitionandrowkey = 4
+}
 
 // Currently there is a single distinct and concrete implementation of batch /
 // entity group operations for the table api.
@@ -322,7 +329,50 @@ export default class TableBatchManager {
     __return: string;
     response: any;
   }> {
-    throw NotImplementedError;
+    let queryType: BatchQueryType = BatchQueryType.query;
+
+    let partitionKey: string;
+    let rowKey: string;
+    ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
+
+    // We have 3 possible functions in the handler for query:
+    // queryEntitiesWithPartitionAndRowKey
+    // query
+    // queryEntities
+
+    if (null !== partitionKey && null != rowKey) {
+      queryType = BatchQueryType.querywithpartitionandrowkey;
+    }
+
+    switch (queryType as BatchQueryType) {
+      case BatchQueryType.query:
+        throw NotImplementedError;
+        break;
+      case BatchQueryType.queryentities:
+        throw NotImplementedError;
+        break;
+      case BatchQueryType.querywithpartitionandrowkey:
+        const params: BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams = new BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams(
+          request
+        );
+        response = await this.parentHandler.queryEntitiesWithPartitionAndRowKey(
+          request.getPath(),
+          partitionKey,
+          rowKey,
+          params,
+          batchContextClone
+        );
+        return {
+          __return: this.serialization.serializeTableDeleteEntityBatchResponse(
+            request,
+            response,
+            contentID
+          ),
+          response
+        };
+      default:
+        throw NotImplementedError;
+    }
   }
 
   private async handleBatchMerge(
