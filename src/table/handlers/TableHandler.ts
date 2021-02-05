@@ -550,9 +550,11 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   ): Promise<Models.TableQueryEntitiesWithPartitionAndRowKeyResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
-    const table = this.getAndCheckTableName(tableContext);
-    const partitionKey = this.getAndCheckPartitionKey(tableContext);
-    const rowKey = this.getAndCheckRowKey(tableContext);
+    const table = _table ? _table : this.getAndCheckTableName(tableContext);
+    const partitionKey = _partitionKey
+      ? _partitionKey
+      : this.getAndCheckPartitionKey(tableContext);
+    const rowKey = _rowKey ? _rowKey : this.getAndCheckRowKey(tableContext);
     const accept = this.getAndCheckPayloadFormat(tableContext);
 
     const entity = await this.metadataStore.queryTableEntitiesWithPartitionAndRowKey(
