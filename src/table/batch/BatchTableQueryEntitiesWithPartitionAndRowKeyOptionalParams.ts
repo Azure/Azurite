@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+import BatchRequest from "../../common/batch/BatchRequest";
+>>>>>>> 7e81db1 (Started implementing query handler in batch)
 import {
   DataServiceVersion4,
   QueryOptions,
@@ -34,4 +38,20 @@ export default class BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams
    * Additional parameters for the operation
    */
   public queryOptions?: QueryOptions;
+<<<<<<< HEAD
+=======
+  public constructor(batchRequest: BatchRequest) {
+    // timeout is optional query parameter
+    if (batchRequest.getHeader("x-ms-client-request-id") !== undefined) {
+      this.requestId = batchRequest.getHeader("x-ms-client-request-id");
+    }
+    if (batchRequest.getHeader("DataServiceVersion") === "3.0") {
+      this.dataServiceVersion = DataServiceVersion4.ThreeFullStopZero;
+    }
+    const body = batchRequest.getBody();
+    if (body !== null && body !== undefined && body !== "") {
+      this.tableEntityProperties = JSON.parse(body);
+    }
+  }
+>>>>>>> 7e81db1 (Started implementing query handler in batch)
 }
