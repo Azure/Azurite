@@ -311,7 +311,7 @@ export default class TableBatchManager {
       batchContextClone
     );
     return {
-      __return: this.serialization.serializeTableDeleteEntityBatchResponse(
+      __return: this.serialization.serializeTableUpdateEntityBatchResponse(
         request,
         response,
         contentID
@@ -363,7 +363,7 @@ export default class TableBatchManager {
           batchContextClone
         );
         return {
-          __return: this.serialization.serializeTableDeleteEntityBatchResponse(
+          __return: this.serialization.serializeTableQueryEntityWithPartitionAndRowKeyBatchResponse(
             request,
             response,
             contentID
@@ -399,7 +399,7 @@ export default class TableBatchManager {
       batchContextClone
     );
     return {
-      __return: this.serialization.serializeTableDeleteEntityBatchResponse(
+      __return: this.serialization.serializeTablMergeEntityBatchResponse(
         request,
         response,
         contentID

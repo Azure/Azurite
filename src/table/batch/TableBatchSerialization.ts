@@ -187,6 +187,87 @@ export class TableBatchSerialization extends BatchSerialization {
     return serializedResponses;
   }
 
+  public serializeTableUpdateEntityBatchResponse(
+    request: BatchRequest,
+    response: Models.TableUpdateEntityResponse,
+    contentID: number
+  ): string {
+    // ToDo: keeping my life easy to start and defaulting to "return no content"
+    let serializedResponses: string = "";
+    // create the initial boundary
+    serializedResponses += "Content-Type: application/http\n";
+    serializedResponses += "Content-Transfer-Encoding: binary \n";
+    serializedResponses += "\n";
+    serializedResponses +=
+      "HTTP/1.1 " + response.statusCode.toString() + " STATUS MESSAGE\n";
+    // ToDo: Not sure how to serialize the status message yet
+    // ToDo_: Correct the handling of content-ID
+    serializedResponses += "Content-ID: " + contentID.toString() + "\n";
+    // ToDo: not sure about other headers like cache control etc right now
+    // will need to look at this later
+    if (request.getHeader("DataServiceVersion")) {
+      serializedResponses +=
+        "DataServiceVersion: " + request.getHeader("DataServiceVersion") + "\n";
+    }
+    serializedResponses += "Location: " + request.getUrl() + "\n";
+    serializedResponses += "DataServiceId: " + request.getUrl() + "\n";
+    return serializedResponses;
+  }
+
+  public serializeTablMergeEntityBatchResponse(
+    request: BatchRequest,
+    response: Models.TableMergeEntityResponse,
+    contentID: number
+  ): string {
+    // ToDo: keeping my life easy to start and defaulting to "return no content"
+    let serializedResponses: string = "";
+    // create the initial boundary
+    serializedResponses += "Content-Type: application/http\n";
+    serializedResponses += "Content-Transfer-Encoding: binary \n";
+    serializedResponses += "\n";
+    serializedResponses +=
+      "HTTP/1.1 " + response.statusCode.toString() + " STATUS MESSAGE\n";
+    // ToDo: Not sure how to serialize the status message yet
+    // ToDo_: Correct the handling of content-ID
+    serializedResponses += "Content-ID: " + contentID.toString() + "\n";
+    // ToDo: not sure about other headers like cache control etc right now
+    // will need to look at this later
+    if (request.getHeader("DataServiceVersion")) {
+      serializedResponses +=
+        "DataServiceVersion: " + request.getHeader("DataServiceVersion") + "\n";
+    }
+    serializedResponses += "Location: " + request.getUrl() + "\n";
+    serializedResponses += "DataServiceId: " + request.getUrl() + "\n";
+    return serializedResponses;
+  }
+
+  public serializeTableQueryEntityWithPartitionAndRowKeyBatchResponse(
+    request: BatchRequest,
+    response: Models.TableQueryEntitiesWithPartitionAndRowKeyResponse,
+    contentID: number
+  ): string {
+    // ToDo: keeping my life easy to start and defaulting to "return no content"
+    let serializedResponses: string = "";
+    // create the initial boundary
+    serializedResponses += "Content-Type: application/http\n";
+    serializedResponses += "Content-Transfer-Encoding: binary \n";
+    serializedResponses += "\n";
+    serializedResponses +=
+      "HTTP/1.1 " + response.statusCode.toString() + " STATUS MESSAGE\n";
+    // ToDo: Not sure how to serialize the status message yet
+    // ToDo_: Correct the handling of content-ID
+    serializedResponses += "Content-ID: " + contentID.toString() + "\n";
+    // ToDo: not sure about other headers like cache control etc right now
+    // will need to look at this later
+    if (request.getHeader("DataServiceVersion")) {
+      serializedResponses +=
+        "DataServiceVersion: " + request.getHeader("DataServiceVersion") + "\n";
+    }
+    serializedResponses += "Location: " + request.getUrl() + "\n";
+    serializedResponses += "DataServiceId: " + request.getUrl() + "\n";
+    return serializedResponses;
+  }
+
   private extractRequestHeaderString(
     batchRequestsString: string,
     regExPattern: string
