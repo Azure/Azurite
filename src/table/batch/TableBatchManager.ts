@@ -6,6 +6,9 @@ import TableHandler from "../handlers/TableHandler";
 import { TableBatchSerialization } from "./TableBatchSerialization";
 import TableBatchOperation from "./TableBatchOperation";
 import BatchTableDeleteEntityOptionalParams from "./BatchTableDeleteEntityOptionalParams";
+import NotImplementedError from "../../blob/errors/NotImplementedError";
+import BatchTableUpdateEntityOptionalParams from "./BatchTableUpdateEntityOptionalParams";
+import BatchTableMergeEntityOptionalParams from "./BatchTableMergeEntityOptionalParams";
 
 // Currently there is a single distinct and concrete implementation of batch /
 // entity group operations for the table api.
@@ -135,7 +138,12 @@ export default class TableBatchManager {
         // PUT http://127.0.0.1:10002/devstoreaccount1/mytable(PartitionKey='myPartitionKey', RowKey='myRowKey')
         // INSERT OR REPLACE:
         // PUT	https://myaccount.table.core.windows.net/mytable(PartitionKey='myPartitionKey', RowKey='myRowKey')
-        throw new Error("Method not implemented.");
+        ({ __return, response } = await this.handleBatchUpdate(
+          request,
+          response,
+          batchContextClone,
+          contentID
+        ));
         break;
       case "DELETE":
         // DELETE: we are deleting an entity
@@ -151,7 +159,12 @@ export default class TableBatchManager {
         // QUERY : we are querying / retrieving an entity
         // GET	https://myaccount.table.core.windows.net/mytable(PartitionKey='<partition-key>',RowKey='<row-key>')?$select=<comma-separated-property-names>
         // GET https://myaccount.table.core.windows.net/mytable()?$filter=<query-expression>&$select=<comma-separated-property-names>
-        throw new Error("Method not implemented.");
+        ({ __return, response } = await this.handleBatchQuery(
+          request,
+          response,
+          batchContextClone,
+          contentID
+        ));
         break;
       case "CONNECT":
         throw new Error("Connect Method unsupported in batch.");
@@ -173,9 +186,34 @@ export default class TableBatchManager {
         // MERGE	https://myaccount.table.core.windows.net/mytable(PartitionKey='myPartitionKey', RowKey='myRowKey')
         // INSERT OR MERGE
         // MERGE	https://myaccount.table.core.windows.net/mytable(PartitionKey='myPartitionKey', RowKey='myRowKey')
-        throw new Error("Method not implemented.");
+        ({ __return, response } = await this.handleBatchMerge(
+          request,
+          response,
+          batchContextClone,
+          contentID
+        ));
     }
     return __return;
+  }
+
+  private extractRowAndPartitionKeys(
+    request: BatchRequest
+  ): { partitionKey: string; rowKey: string } {
+    let partitionKey: string;
+    let rowKey: string;
+    const body = request.getBody();
+    if (body !== "") {
+      const jsonBody = JSON.parse(body ? body : "{}");
+      partitionKey = jsonBody.PartitionKey;
+      rowKey = jsonBody.RowKey;
+    } else {
+      const url = request.getUrl();
+      const partKeyMatch = url.match(/PartitionKey=%27(\w+)%27,/i);
+      partitionKey = partKeyMatch ? partKeyMatch[1] : "";
+      const rowKeyMatch = url.match(/RowKey=%27(\w+)%27/i);
+      rowKey = rowKeyMatch ? rowKeyMatch[1] : "";
+    }
+    return { partitionKey, rowKey };
   }
 
   private async handleBatchInsert(
@@ -183,7 +221,10 @@ export default class TableBatchManager {
     response: any,
     batchContextClone: any,
     contentID: number
-  ) {
+  ): Promise<{
+    __return: string;
+    response: any;
+  }> {
     const params: BatchTableInsertEntityOptionalParams = new BatchTableInsertEntityOptionalParams(
       request
     );
@@ -208,24 +249,16 @@ export default class TableBatchManager {
     response: any,
     batchContextClone: any,
     contentID: number
-  ) {
+  ): Promise<{
+    __return: string;
+    response: any;
+  }> {
     const params: BatchTableDeleteEntityOptionalParams = new BatchTableDeleteEntityOptionalParams(
       request
     );
     let partitionKey: string;
     let rowKey: string;
-    const body = request.getBody();
-    if (body !== "") {
-      const jsonBody = JSON.parse(body ? body : "{}");
-      partitionKey = jsonBody.PartitionKey;
-      rowKey = jsonBody.RowKey;
-    } else {
-      const url = request.getUrl();
-      const partKeyMatch = url.match(/PartitionKey=%27(\w+)%27,/i);
-      partitionKey = partKeyMatch ? partKeyMatch[1] : "";
-      const rowKeyMatch = url.match(/RowKey=%27(\w+)%27/i);
-      rowKey = rowKeyMatch ? rowKeyMatch[1] : "";
-    }
+    ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
 
     // Note: If we don't match row and partition key, then we will throw a storage exception
     // later, which is OK for me
@@ -234,6 +267,84 @@ export default class TableBatchManager {
       partitionKey,
       rowKey,
       "*", // ToDo: Correctly parse the if-match / Etag header
+      params,
+      batchContextClone
+    );
+    return {
+      __return: this.serialization.serializeTableDeleteEntityBatchResponse(
+        request,
+        response,
+        contentID
+      ),
+      response
+    };
+  }
+
+  private async handleBatchUpdate(
+    request: BatchRequest,
+    response: any,
+    batchContextClone: any,
+    contentID: number
+  ): Promise<{
+    __return: string;
+    response: any;
+  }> {
+    const params: BatchTableUpdateEntityOptionalParams = new BatchTableUpdateEntityOptionalParams(
+      request
+    );
+    let partitionKey: string;
+    let rowKey: string;
+    ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
+
+    response = await this.parentHandler.updateEntity(
+      request.getPath(),
+      partitionKey,
+      rowKey,
+      params,
+      batchContextClone
+    );
+    return {
+      __return: this.serialization.serializeTableDeleteEntityBatchResponse(
+        request,
+        response,
+        contentID
+      ),
+      response
+    };
+  }
+
+  private async handleBatchQuery(
+    request: BatchRequest,
+    response: any,
+    batchContextClone: any,
+    contentID: number
+  ): Promise<{
+    __return: string;
+    response: any;
+  }> {
+    throw NotImplementedError;
+  }
+
+  private async handleBatchMerge(
+    request: BatchRequest,
+    response: any,
+    batchContextClone: any,
+    contentID: number
+  ): Promise<{
+    __return: string;
+    response: any;
+  }> {
+    const params: BatchTableMergeEntityOptionalParams = new BatchTableMergeEntityOptionalParams(
+      request
+    );
+    let partitionKey: string;
+    let rowKey: string;
+    ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
+
+    response = await this.parentHandler.mergeEntity(
+      request.getPath(),
+      partitionKey,
+      rowKey,
       params,
       batchContextClone
     );

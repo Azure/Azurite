@@ -642,7 +642,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Insert Or Merge multiple entities as a batch, @loki", (done) => {
+  it.only("Insert Or Merge multiple entities as a batch, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"

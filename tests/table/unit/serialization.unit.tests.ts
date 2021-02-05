@@ -2,11 +2,11 @@
 import * as assert from "assert";
 import { BatchType } from "../../../src/common/batch/BatchOperation";
 import { TableBatchSerialization } from "../../../src/table/batch/TableBatchSerialization";
-import SerializationMocks from "./mock.serialization";
+import SerializationRequestMocks from "./mock.request.serialization";
 
 describe("batch serialization and deserialization unit tests, these are not the API integration tests:", () => {
   it("deserializes, mock table batch request containing 3 insert requests correctly", (done) => {
-    const requestString = SerializationMocks.Sample3InsertsUsingSDK;
+    const requestString = SerializationRequestMocks.Sample3InsertsUsingSDK;
     const serializer = new TableBatchSerialization();
     const batchOperationArray = serializer.deserializeBatchRequest(
       requestString
@@ -86,7 +86,7 @@ describe("batch serialization and deserialization unit tests, these are not the 
   });
 
   it("deserializes, mock table batch request containing a query correctly", (done) => {
-    const requestString = SerializationMocks.Sample1QueryUsingSDK;
+    const requestString = SerializationRequestMocks.Sample1QueryUsingSDK;
     const serializer = new TableBatchSerialization();
     const batchOperationArray = serializer.deserializeBatchRequest(
       requestString
@@ -119,7 +119,8 @@ describe("batch serialization and deserialization unit tests, these are not the 
   });
 
   it("deserializes, mock table batch request containing insert and merge correctly", (done) => {
-    const requestString = SerializationMocks.SampleInsertThenMergeUsingSDK;
+    const requestString =
+      SerializationRequestMocks.SampleInsertThenMergeUsingSDK;
     const serializer = new TableBatchSerialization();
     const batchOperationArray = serializer.deserializeBatchRequest(
       requestString
@@ -173,7 +174,7 @@ describe("batch serialization and deserialization unit tests, these are not the 
   });
 
   it.only("deserializes, mock table batch request containing 3 deletes correctly", (done) => {
-    const requestString = SerializationMocks.Sample3DeletesUsingSDK;
+    const requestString = SerializationRequestMocks.Sample3DeletesUsingSDK;
     const serializer = new TableBatchSerialization();
     const batchOperationArray = serializer.deserializeBatchRequest(
       requestString
