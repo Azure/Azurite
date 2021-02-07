@@ -7,13 +7,12 @@ WORKDIR /opt/azurite
 
 # Install dependencies first
 COPY *.json LICENSE NOTICE.txt ./
-RUN npm config set unsafe-perm=true && \
-  npm ci
 
 # Copy the source code and build the app
 COPY src ./src
 COPY tests ./tests
-RUN npm run build && \
+RUN npm config set unsafe-perm=true && \
+  npm ci && \
   npm install -g --loglevel verbose
 
 
@@ -31,12 +30,10 @@ VOLUME [ "/data" ]
 
 COPY package*.json LICENSE NOTICE.txt ./
 
-RUN npm config set unsafe-perm=true && \
-  npm ci
-
 COPY --from=builder /opt/azurite/dist/ dist/
 
-RUN npm install -g --loglevel verbose
+RUN npm config set unsafe-perm=true && \
+  npm install -g --loglevel verbose
 
 # Blob Storage Port
 EXPOSE 10000
