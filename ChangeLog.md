@@ -4,6 +4,8 @@
 
 ## Upcoming Release
 
+## 2021.2 Version 3.11.0
+
 - Bump up Azure Storage service API version to 2020-06-12.
 
 Blob:
