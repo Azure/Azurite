@@ -31,9 +31,10 @@ export default class PageBlobHandler extends BaseHandler
     metadataStore: IBlobMetadataStore,
     extentStore: IExtentStore,
     logger: ILogger,
+    loose: boolean,
     private readonly rangesManager: IPageBlobRangesManager
   ) {
-    super(metadataStore, extentStore, logger);
+    super(metadataStore, extentStore, logger, loose);
   }
 
   public async uploadPagesFromURL(

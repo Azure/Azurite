@@ -8,6 +8,7 @@ Blob:
 
 - Fix an issue that result of blobs enumeration cannot be parsed by Azure SDK for Go.
 - Fix an issue that set tier to leased blob not work properly.
+- Skip Content-Length check for Append Block if the `--loose` flag is set.
 
 ## 2020.12 Version 3.10.0
 

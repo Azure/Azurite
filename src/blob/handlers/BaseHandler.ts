@@ -14,6 +14,7 @@ export default class BaseHandler {
   constructor(
     protected readonly metadataStore: IBlobMetadataStore,
     protected readonly extentStore: IExtentStore,
-    protected readonly logger: ILogger
+    protected readonly logger: ILogger,
+    protected readonly loose: boolean
   ) {}
 }
