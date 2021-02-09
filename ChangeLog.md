@@ -4,6 +4,8 @@
 
 ## Upcoming Release
 
+- Bump up Azure Storage service API version to 2020-06-12.
+
 Blob:
 
 - Fix an issue that result of blobs enumeration cannot be parsed by Azure SDK for Go.
