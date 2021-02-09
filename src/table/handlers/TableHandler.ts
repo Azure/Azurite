@@ -178,7 +178,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       RowKey: options.tableEntityProperties.RowKey,
       properties: options.tableEntityProperties,
       lastModifiedTime: context.startTime!,
-      eTag: newTableEntityEtag()
+      eTag: newTableEntityEtag(context.startTime!)
     };
 
     let nomarlizedEntity;
@@ -279,7 +279,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getPreconditionFailed(context);
     }
 
-    const eTag = newTableEntityEtag();
+    const eTag = newTableEntityEtag(context.startTime!);
 
     // Entity, which is used to update an existing entity
     const entity: Entity = {
@@ -349,7 +349,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       );
     }
 
-    const eTag = newTableEntityEtag();
+    const eTag = newTableEntityEtag(context.startTime!);
 
     const entity: Entity = {
       PartitionKey: partitionKey,
