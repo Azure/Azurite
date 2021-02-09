@@ -43,9 +43,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     metadataStore: IBlobMetadataStore,
     extentStore: IExtentStore,
     logger: ILogger,
+    loose: boolean,
     private readonly rangesManager: IPageBlobRangesManager
   ) {
-    super(metadataStore, extentStore, logger);
+    super(metadataStore, extentStore, logger, loose);
   }
 
   public setAccessControl(

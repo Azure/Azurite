@@ -68,38 +68,46 @@ export default class BlobRequestListenerFactory
 
     // Create handlers into handler middleware factory
     const pageBlobRangesManager = new PageBlobRangesManager();
+
+    const loose = this.loose || false;
     const handlers: IHandlers = {
       appendBlobHandler: new AppendBlobHandler(
         this.metadataStore,
         this.extentStore,
-        logger
+        logger,
+        loose
       ),
       blobHandler: new BlobHandler(
         this.metadataStore,
         this.extentStore,
         logger,
+        loose,
         pageBlobRangesManager
       ),
       blockBlobHandler: new BlockBlobHandler(
         this.metadataStore,
         this.extentStore,
-        logger
+        logger,
+        loose
       ),
       containerHandler: new ContainerHandler(
         this.metadataStore,
         this.extentStore,
-        logger
+        logger,
+        loose
       ),
       pageBlobHandler: new PageBlobHandler(
         this.metadataStore,
         this.extentStore,
         logger,
+        loose,
         pageBlobRangesManager
       ),
       serviceHandler: new ServiceHandler(
         this.metadataStore,
         this.extentStore,
-        logger
+        logger,
+        loose
       ),
       directoryHandler: {} as any
     };
