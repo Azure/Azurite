@@ -1,8 +1,13 @@
-import { exception } from "console";
 import { Stream } from "stream";
 import IRequest, { HttpMethod } from "../../table/generated/IRequest";
 import BatchOperation from "./BatchOperation";
 import BatchRequestHeaders from "./BatchRequestHeaders";
+import * as Models from "../../table/generated/artifacts/models";
+import BatchTableUpdateEntityOptionalParams from "../../table/batch/BatchTableUpdateEntityOptionalParams";
+import BatchTableDeleteEntityOptionalParams from "../../table/batch/BatchTableDeleteEntityOptionalParams";
+import BatchTableMergeEntityOptionalParams from "../../table/batch/BatchTableMergeEntityOptionalParams";
+import BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams from "../../table/batch/BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams";
+import BatchTableInsertEntityOptionalParams from "../../table/batch/BatchTableInsertEntityOptionalParams";
 
 // ToDo: Requires validation against all operation types
 // currently several funcitons of the interface are not implemented
@@ -14,13 +19,85 @@ export default class BatchRequest implements IRequest {
   public constructor(batchOperation: BatchOperation) {
     this.batchOperation = batchOperation;
     this.headers = new BatchRequestHeaders(batchOperation.rawHeaders);
+    // set default params, due to our processing logic
+    this.params = new BatchTableUpdateEntityOptionalParams();
+  }
+
+  public params:
+    | BatchTableDeleteEntityOptionalParams
+    | BatchTableUpdateEntityOptionalParams
+    | BatchTableMergeEntityOptionalParams
+    | BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams
+    | BatchTableInsertEntityOptionalParams;
+
+  // ingests the optional params for a batch request, and sets these
+  // based on the type of operation and headers present on an
+  // individual request
+  public ingestOptionalParams(
+    params:
+      | BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams
+      | BatchTableDeleteEntityOptionalParams
+      | BatchTableUpdateEntityOptionalParams
+      | BatchTableMergeEntityOptionalParams
+      | BatchTableInsertEntityOptionalParams
+  ) {
+    this.params = params;
+    // need to compare headers to option params and set accordingly
+    if (this.getHeader("x-ms-client-request-id") !== undefined) {
+      this.params.requestId = this.getHeader("x-ms-client-request-id");
+    }
+
+    // Theoretically, this Enum is redundant, and used across all table
+    // optional param models, thinking that we only need to use the 1,
+    // the code generator is however differentiating across all of them
+    // as distinct
+    if (this.getHeader("maxdataserviceversion")?.includes("3.0")) {
+      this.params.dataServiceVersion =
+        Models.DataServiceVersion4.ThreeFullStopZero;
+    }
+    // TableDeleteEntityOptionalParams is the only interface without a body
+    // I instantiate the batch class to enable this check and the other
+    // interface acrobatics needed for batch processing
+    const body = this.getBody();
+    if (
+      body != null &&
+      body !== "" &&
+      !(this.params instanceof BatchTableDeleteEntityOptionalParams)
+    ) {
+      this.params.tableEntityProperties = JSON.parse(body);
+    }
+
+    // set request timeout
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/setting-timeouts-for-table-service-operations
+
+    // set responsePreference
+
+    // set queryOptions
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/payload-format-for-table-service-operations
+    const options: Models.QueryOptions = new Object() as Models.QueryOptions;
+    // format
+    // set payload options
+    if (this.getHeader("accept")?.includes("minimalmeta")) {
+      options.format =
+        Models.OdataMetadataFormat.Applicationjsonodataminimalmetadata;
+    } else if (this.getHeader("accept")?.includes("fullmeta")) {
+      options.format =
+        Models.OdataMetadataFormat.Applicationjsonodatafullmetadata;
+    } else {
+      options.format =
+        Models.OdataMetadataFormat.Applicationjsonodatanometadata;
+    }
+    // top
+    // select
+    // filter
+    this.params.queryOptions = options;
   }
 
   public getMethod(): HttpMethod {
     if (this.batchOperation.httpMethod != null) {
       return this.batchOperation.httpMethod;
     } else {
-      throw exception("httpMethod invalid on batch operation");
+      throw new Error("httpMethod invalid on batch operation");
     }
   }
 
@@ -38,7 +115,7 @@ export default class BatchRequest implements IRequest {
       //   this.batchOperation.uri.length - this.batchOperation.path.length
       // );
     } else {
-      throw exception("uri or path null when calling getUrl on BatchRequest");
+      throw new Error("uri or path null when calling getUrl on BatchRequest");
     }
   }
 
@@ -50,7 +127,7 @@ export default class BatchRequest implements IRequest {
     if (this.batchOperation.path != null) {
       return this.batchOperation.path;
     } else {
-      throw exception("path null  when calling getPath on BatchRequest");
+      throw new Error("path null  when calling getPath on BatchRequest");
     }
   }
 
@@ -58,7 +135,7 @@ export default class BatchRequest implements IRequest {
     if (this.batchOperation.jsonRequestBody != null) {
       return Stream.Readable.from(this.batchOperation.jsonRequestBody);
     } else {
-      throw exception("body null  when calling getBodyStream on BatchRequest");
+      throw new Error("body null  when calling getBodyStream on BatchRequest");
     }
   }
 
@@ -70,7 +147,7 @@ export default class BatchRequest implements IRequest {
     if (this.batchOperation.jsonRequestBody != null) {
       return this.batchOperation.jsonRequestBody;
     } else {
-      throw exception("body null  when calling getBody on BatchRequest");
+      throw new Error("body null  when calling getBody on BatchRequest");
     }
   }
 
@@ -94,7 +171,7 @@ export default class BatchRequest implements IRequest {
     if (this.batchOperation.protocol != null) {
       return this.batchOperation.protocol;
     } else {
-      throw exception(
+      throw new Error(
         "protocol null  when calling getProtocol on BatchRequest"
       );
     }

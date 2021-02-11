@@ -10,6 +10,7 @@ import BatchTableUpdateEntityOptionalParams from "./BatchTableUpdateEntityOption
 import BatchTableMergeEntityOptionalParams from "./BatchTableMergeEntityOptionalParams";
 import NotImplementedError from "../../table/errors/NotImplementedError";
 import BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams from "./BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams";
+import { TableQueryEntitiesWithPartitionAndRowKeyOptionalParams } from "../generated/artifacts/models";
 
 export enum BatchQueryType {
   query = 0,
@@ -232,13 +233,10 @@ export default class TableBatchManager {
     __return: string;
     response: any;
   }> {
-    const params: BatchTableInsertEntityOptionalParams = new BatchTableInsertEntityOptionalParams(
-      request
-    );
-
+    request.ingestOptionalParams(new BatchTableInsertEntityOptionalParams());
     response = await this.parentHandler.insertEntity(
       request.getPath(),
-      params,
+      request.params as BatchTableInsertEntityOptionalParams,
       batchContextClone
     );
     return {
@@ -260,9 +258,7 @@ export default class TableBatchManager {
     __return: string;
     response: any;
   }> {
-    const params: BatchTableDeleteEntityOptionalParams = new BatchTableDeleteEntityOptionalParams(
-      request
-    );
+    request.ingestOptionalParams(new BatchTableDeleteEntityOptionalParams());
     let partitionKey: string;
     let rowKey: string;
     ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
@@ -274,7 +270,7 @@ export default class TableBatchManager {
       partitionKey,
       rowKey,
       "*", // ToDo: Correctly parse the if-match / Etag header
-      params,
+      request.params as BatchTableDeleteEntityOptionalParams,
       batchContextClone
     );
     return {
@@ -296,9 +292,7 @@ export default class TableBatchManager {
     __return: string;
     response: any;
   }> {
-    const params: BatchTableUpdateEntityOptionalParams = new BatchTableUpdateEntityOptionalParams(
-      request
-    );
+    request.ingestOptionalParams(new BatchTableUpdateEntityOptionalParams());
     let partitionKey: string;
     let rowKey: string;
     ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
@@ -307,7 +301,7 @@ export default class TableBatchManager {
       request.getPath(),
       partitionKey,
       rowKey,
-      params,
+      request.params as BatchTableUpdateEntityOptionalParams,
       batchContextClone
     );
     return {
@@ -352,21 +346,23 @@ export default class TableBatchManager {
         throw NotImplementedError;
         break;
       case BatchQueryType.querywithpartitionandrowkey:
-        const params: BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams = new BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams(
-          request
+        // ToDO: this is hideous... but we need the params on the request object, as they percolate through and are needed for the final serialization
+        // currently, because of the way we deconstruct / deserialize, we only have the right model at a very late stage in processing
+        request.ingestOptionalParams(
+          new BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams()
         );
+
         response = await this.parentHandler.queryEntitiesWithPartitionAndRowKey(
           request.getPath(),
           partitionKey,
           rowKey,
-          params,
+          request.params as TableQueryEntitiesWithPartitionAndRowKeyOptionalParams,
           batchContextClone
         );
         return {
-          __return: this.serialization.serializeTableQueryEntityWithPartitionAndRowKeyBatchResponse(
+          __return: await this.serialization.serializeTableQueryEntityWithPartitionAndRowKeyBatchResponse(
             request,
-            response,
-            contentID
+            response
           ),
           response
         };
@@ -384,9 +380,7 @@ export default class TableBatchManager {
     __return: string;
     response: any;
   }> {
-    const params: BatchTableMergeEntityOptionalParams = new BatchTableMergeEntityOptionalParams(
-      request
-    );
+    request.ingestOptionalParams(new BatchTableMergeEntityOptionalParams());
     let partitionKey: string;
     let rowKey: string;
     ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
@@ -395,7 +389,7 @@ export default class TableBatchManager {
       request.getPath(),
       partitionKey,
       rowKey,
-      params,
+      request.params as BatchTableMergeEntityOptionalParams,
       batchContextClone
     );
     return {

@@ -29,6 +29,7 @@ import {
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import { Stream } from "stream";
+import TableBatchUtils from "../batch/TableBatchUtils";
 
 interface IPartialResponsePreferProperties {
   statusCode: 200 | 201 | 204;
@@ -675,7 +676,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableBatchManager = new TableBatchManager(tableCtx, this);
 
     const response = await tableBatchManager.processBatchRequestAndSerializeResponse(
-      await this.streamToString(body)
+      await TableBatchUtils.StreamToString(body)
     );
 
     // use this to debug response:
@@ -691,16 +692,6 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       statusCode: 202,
       body // Use incoming request body as Batch operation response body as demo
     };
-  }
-
-  // used by batch
-  private async streamToString(stream: NodeJS.ReadableStream): Promise<string> {
-    const chunks: any[] = [];
-    return new Promise((resolve, reject) => {
-      stream.on("data", (chunk) => chunks.push(chunk));
-      stream.on("error", reject);
-      stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
-    });
   }
 
   private getOdataAnnotationUrlPrefix(
