@@ -1,7 +1,10 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 import BatchRequest from "../../common/batch/BatchRequest";
 >>>>>>> 7e81db1 (Started implementing query handler in batch)
+=======
+>>>>>>> c0ea81c (updated serialization and added unit test for serializer, still need to unit test all serialization cases)
 import {
   DataServiceVersion4,
   QueryOptions,
@@ -39,6 +42,7 @@ export default class BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams
    */
   public queryOptions?: QueryOptions;
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
   public constructor(batchRequest: BatchRequest) {
     // timeout is optional query parameter
@@ -54,4 +58,6 @@ export default class BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams
     }
   }
 >>>>>>> 7e81db1 (Started implementing query handler in batch)
+=======
+>>>>>>> c0ea81c (updated serialization and added unit test for serializer, still need to unit test all serialization cases)
 }
