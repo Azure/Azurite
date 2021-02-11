@@ -9,6 +9,7 @@ import { HttpMethod } from "../../table/generated/IRequest";
 import { BatchSerialization } from "../../common/batch/BatchSerialization";
 import TableBatchOperation from "../batch/TableBatchOperation";
 import * as Models from "../generated/artifacts/models";
+import TableBatchUtils from "./TableBatchUtils";
 
 // The semantics for entity group transactions are defined by the OData Protocol Specification.
 // https://www.odata.org/
@@ -136,25 +137,29 @@ export class TableBatchSerialization extends BatchSerialization {
     // we need to validate headers and requirements for handling them correctly
     let serializedResponses: string = "";
     // create the initial boundary
-    serializedResponses += "Content-Type: application/http\n";
-    serializedResponses += "Content-Transfer-Encoding: binary \n";
+    serializedResponses += "Content-Type: application/http\r\n";
+    serializedResponses += "Content-Transfer-Encoding: binary \r\n";
     serializedResponses += "\n";
     // ToDo: Not sure how to serialize the status message yet
     serializedResponses +=
-      "HTTP/1.1 " + response.statusCode.toString() + " STATUS MESSAGE\n";
+      "HTTP/1.1 " +
+      response.statusCode.toString() +
+      " " +
+      this.GetStatusMessageString(response.statusCode) +
+      "\r\n";
     // ToDo: Correct the handling of Content-ID
     if (contentID !== 0) {
-      serializedResponses += "Content-ID: " + contentID.toString() + "\n";
+      serializedResponses += "Content-ID: " + contentID.toString() + "\r\n";
     }
     // ToDo: not sure about other headers like cache control etc right now
     // will need to look at this later
     serializedResponses +=
-      "Preference-Applied: " + response.preferenceApplied + "\n";
+      "Preference-Applied: " + response.preferenceApplied + "\r\n";
     serializedResponses +=
-      "DataServiceVersion: " + request.getHeader("DataServiceVersion") + "\n";
-    serializedResponses += "Location: " + request.getUrl() + "\n";
-    serializedResponses += "DataServiceId: " + request.getUrl() + "\n";
-    serializedResponses += "ETag: " + response.eTag + "\n";
+      "DataServiceVersion: " + request.getHeader("DataServiceVersion") + "\r\n";
+    serializedResponses += "Location: " + request.getUrl() + "\r\n";
+    serializedResponses += "DataServiceId: " + request.getUrl() + "\r\n";
+    serializedResponses += "ETag: " + response.eTag + "\r\n";
     return serializedResponses;
   }
 
@@ -168,22 +173,28 @@ export class TableBatchSerialization extends BatchSerialization {
     // ToDo: keeping my life easy to start and defaulting to "return no content"
     let serializedResponses: string = "";
     // create the initial boundary
-    serializedResponses += "Content-Type: application/http\n";
-    serializedResponses += "Content-Transfer-Encoding: binary \n";
+    serializedResponses += "Content-Type: application/http\r\n";
+    serializedResponses += "Content-Transfer-Encoding: binary \r\n";
     serializedResponses += "\n";
     serializedResponses +=
-      "HTTP/1.1 " + response.statusCode.toString() + " STATUS MESSAGE\n";
+      "HTTP/1.1 " +
+      response.statusCode.toString() +
+      " " +
+      this.GetStatusMessageString(response.statusCode) +
+      "\r\n";
     // ToDo: Not sure how to serialize the status message yet
     // ToDo_: Correct the handling of content-ID
-    serializedResponses += "Content-ID: " + contentID.toString() + "\n";
+    serializedResponses += "Content-ID: " + contentID.toString() + "\r\n";
     // ToDo: not sure about other headers like cache control etc right now
     // will need to look at this later
     if (request.getHeader("DataServiceVersion")) {
       serializedResponses +=
-        "DataServiceVersion: " + request.getHeader("DataServiceVersion") + "\n";
+        "DataServiceVersion: " +
+        request.getHeader("DataServiceVersion") +
+        "\r\n";
     }
-    serializedResponses += "Location: " + request.getUrl() + "\n";
-    serializedResponses += "DataServiceId: " + request.getUrl() + "\n";
+    serializedResponses += "Location: " + request.getUrl() + "\r\n";
+    serializedResponses += "DataServiceId: " + request.getUrl() + "\r\n";
     return serializedResponses;
   }
 
@@ -195,22 +206,28 @@ export class TableBatchSerialization extends BatchSerialization {
     // ToDo: keeping my life easy to start and defaulting to "return no content"
     let serializedResponses: string = "";
     // create the initial boundary
-    serializedResponses += "Content-Type: application/http\n";
-    serializedResponses += "Content-Transfer-Encoding: binary \n";
-    serializedResponses += "\n";
+    serializedResponses += "Content-Type: application/http\r\n";
+    serializedResponses += "Content-Transfer-Encoding: binary \r\n";
+    serializedResponses += "\r\n";
     serializedResponses +=
-      "HTTP/1.1 " + response.statusCode.toString() + " STATUS MESSAGE\n";
+      "HTTP/1.1 " +
+      response.statusCode.toString() +
+      " " +
+      this.GetStatusMessageString(response.statusCode) +
+      "\r\n";
     // ToDo: Not sure how to serialize the status message yet
     // ToDo_: Correct the handling of content-ID
-    serializedResponses += "Content-ID: " + contentID.toString() + "\n";
+    serializedResponses += "Content-ID: " + contentID.toString() + "\r\n";
     // ToDo: not sure about other headers like cache control etc right now
     // will need to look at this later
     if (request.getHeader("DataServiceVersion")) {
       serializedResponses +=
-        "DataServiceVersion: " + request.getHeader("DataServiceVersion") + "\n";
+        "DataServiceVersion: " +
+        request.getHeader("DataServiceVersion") +
+        "\r\n";
     }
-    serializedResponses += "Location: " + request.getUrl() + "\n";
-    serializedResponses += "DataServiceId: " + request.getUrl() + "\n";
+    serializedResponses += "Location: " + request.getUrl() + "\r\n";
+    serializedResponses += "DataServiceId: " + request.getUrl() + "\r\n";
     return serializedResponses;
   }
 
@@ -222,55 +239,106 @@ export class TableBatchSerialization extends BatchSerialization {
     // ToDo: keeping my life easy to start and defaulting to "return no content"
     let serializedResponses: string = "";
     // create the initial boundary
-    serializedResponses += "Content-Type: application/http\n";
-    serializedResponses += "Content-Transfer-Encoding: binary \n";
-    serializedResponses += "\n";
+    serializedResponses += "Content-Type: application/http\r\n";
+    serializedResponses += "Content-Transfer-Encoding: binary \r\n";
+    serializedResponses += "\r\n";
     serializedResponses +=
-      "HTTP/1.1 " + response.statusCode.toString() + " STATUS MESSAGE\n";
+      "HTTP/1.1 " +
+      response.statusCode.toString() +
+      " " +
+      this.GetStatusMessageString(response.statusCode) +
+      "\r\n";
     // ToDo: Not sure how to serialize the status message yet
     // ToDo_: Correct the handling of content-ID
-    serializedResponses += "Content-ID: " + contentID.toString() + "\n";
+    serializedResponses += "Content-ID: " + contentID.toString() + "\r\n";
     // ToDo: not sure about other headers like cache control etc right now
     // will need to look at this later
     if (request.getHeader("DataServiceVersion")) {
       serializedResponses +=
-        "DataServiceVersion: " + request.getHeader("DataServiceVersion") + "\n";
+        "DataServiceVersion: " +
+        request.getHeader("DataServiceVersion") +
+        "\r\n";
     }
-    serializedResponses += "Location: " + request.getUrl() + "\n";
-    serializedResponses += "DataServiceId: " + request.getUrl() + "\n";
+    serializedResponses += "Location: " + request.getUrl() + "\r\n";
+    serializedResponses += "DataServiceId: " + request.getUrl() + "\r\n";
     return serializedResponses;
   }
 
-  // ToDo: match to Service response
-  /*
-  "--batchresponse_5f4cfbb9-f5fa-45f1-9c9b-04e2436cbf9a\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 200 OK\r\nDataServiceVersion: 3.0;\r\nContent-Type: application/json;odata=minimalmetadata;streaming=true;charset=utf-8\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-cache\r\nETag: W/\"datetime'2021-02-05T17%3A15%3A16.7935715Z'\"\r\n\r\n{\"odata.metadata\":\"https://asynccopiertesttarget.table.core.windows.net/$metadata#TestingAzurite/@Element\",\"odata.etag\":\"W/\\\"datetime'2021-02-05T17%3A15%3A16.7935715Z'\\\"\",\"PartitionKey\":\"part1\",\"RowKey\":\"row161254531681303585\",\"Timestamp\":\"2021-02-05T17:15:16.7935715Z\",\"myValue\":\"value1\"}\r\n--batchresponse_5f4cfbb9-f5fa-45f1-9c9b-04e2436cbf9a--\r\n"
-  */
-
-  public serializeTableQueryEntityWithPartitionAndRowKeyBatchResponse(
+  public async serializeTableQueryEntityWithPartitionAndRowKeyBatchResponse(
     request: BatchRequest,
-    response: Models.TableQueryEntitiesWithPartitionAndRowKeyResponse,
-    contentID: number
-  ): string {
-    // ToDo: keeping my life easy to start and defaulting to "return no content"
+    response: Models.TableQueryEntitiesWithPartitionAndRowKeyResponse
+  ): Promise<string> {
     let serializedResponses: string = "";
     // create the initial boundary
     serializedResponses += "Content-Type: application/http\r\n";
     serializedResponses += "Content-Transfer-Encoding: binary\r\n";
-    serializedResponses += "\n";
+    serializedResponses += "\r\n";
     serializedResponses +=
-      "HTTP/1.1 " + response.statusCode.toString() + " STATUS MESSAGE\n";
-    // ToDo: Not sure how to serialize the status message yet
-    // ToDo_: Correct the handling of content-ID
-    serializedResponses += "Content-ID: " + contentID.toString() + "\n";
-    // ToDo: not sure about other headers like cache control etc right now
-    // will need to look at this later
-    if (request.getHeader("DataServiceVersion")) {
+      "HTTP/1.1 " +
+      response.statusCode.toString() +
+      " " +
+      this.GetStatusMessageString(response.statusCode) +
+      "\r\n";
+
+    // ToDo_: Correct the handling of content-ID throughout batch
+    // if (contentID !== undefined && contentID !== 0) {
+    //   serializedResponses += "Content-ID: " + contentID.toString() + "\r\n";
+    // }
+
+    if (undefined !== request.params && request.params.dataServiceVersion) {
       serializedResponses +=
-        "DataServiceVersion: " + request.getHeader("DataServiceVersion") + "\n";
+        "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";
     }
-    serializedResponses += "Location: " + request.getUrl() + "\n";
-    serializedResponses += "DataServiceId: " + request.getUrl() + "\n";
+    // next comes Content-Type: application/json;odata=minimalmetadata;streaming=true;charset=utf-8
+    // On Batch operation???
+    serializedResponses += "Content-Type: ";
+    serializedResponses += request.params.queryOptions?.format;
+    serializedResponses += ";streaming=true;charset=utf-8\r\n"; // getting this from service, so adding as well
+
+    // Azure Table service defaults to this in the response
+    // X-Content-Type-Options: nosniff\r\n
+    serializedResponses += "X-Content-Type-Options: nosniff\r\n";
+    // also service defaults to
+    // Cache-Control: no-cache\r\n
+    serializedResponses += "Cache-Control: no-cache\r\n";
+
+    // ETag: W/"datetime\'2021-02-05T17%3A15%3A16.7935715Z\'"\r\n\r\n
+    if (response.eTag) {
+      serializedResponses += "ETag: " + response.eTag + "\r\n";
+      // "ETag: " + response.eTag.replace("\\", "") + "\r\n";
+    }
+    serializedResponses += "\r\n";
+    // now we need to return the JSON body
+    // ToDo: I don't like the stream to string to stream conversion here...
+    // just not sure there is any way around it
+    if (response.body != null) {
+      try {
+        serializedResponses += await TableBatchUtils.StreamToString(
+          response.body
+        );
+      } catch {
+        // do nothing
+        throw new Error("failed to deserialize body");
+      }
+    }
+    serializedResponses += "\r\n";
     return serializedResponses;
+  }
+
+  // ToDo: Need to check where we have implemented this elsewhere and see if we can reuse
+  private GetStatusMessageString(statusCode: number): string {
+    switch (statusCode) {
+      case 200:
+        return "OK";
+      case 201:
+        return "CREATED";
+      case 204:
+        return "NO CONTENT";
+      case 404:
+        return "NOT FOUND";
+      default:
+        return "STATUS_CODE_NOT_IMPLEMENTED";
+    }
   }
 
   private extractRequestHeaderString(

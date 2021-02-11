@@ -1,4 +1,3 @@
-import BatchRequest from "../../common/batch/BatchRequest";
 import {
   DataServiceVersion6,
   QueryOptions,
@@ -35,17 +34,4 @@ export default class BatchTableMergeEntityOptionalParams
    * Additional parameters for the operation
    */
   public queryOptions?: QueryOptions;
-  public constructor(batchRequest: BatchRequest) {
-    // timeout is optional query parameter
-    if (batchRequest.getHeader("x-ms-client-request-id") !== undefined) {
-      this.requestId = batchRequest.getHeader("x-ms-client-request-id");
-    }
-    if (batchRequest.getHeader("DataServiceVersion") === "3.0") {
-      this.dataServiceVersion = DataServiceVersion6.ThreeFullStopZero;
-    }
-    const body = batchRequest.getBody();
-    if (body != null) {
-      this.tableEntityProperties = JSON.parse(body);
-    }
-  }
 }

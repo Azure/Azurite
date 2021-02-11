@@ -1173,9 +1173,9 @@ export interface ServiceGetStatisticsHeaders {
  * @enum {string}
  */
 export enum GeoReplicationStatusType {
-  Live = 'live',
-  Bootstrap = 'bootstrap',
-  Unavailable = 'unavailable',
+  Live = "live",
+  Bootstrap = "bootstrap",
+  Unavailable = "unavailable"
 }
 
 /**
@@ -1186,9 +1186,9 @@ export enum GeoReplicationStatusType {
  * @enum {string}
  */
 export enum OdataMetadataFormat {
-  Applicationjsonodatanometadata = 'application/json;odata=nometadata',
-  Applicationjsonodataminimalmetadata = 'application/json;odata=minimalmetadata',
-  Applicationjsonodatafullmetadata = 'application/json;odata=fullmetadata',
+  Applicationjsonodatanometadata = "application/json;odata=nometadata",
+  Applicationjsonodataminimalmetadata = "application/json;odata=minimalmetadata",
+  Applicationjsonodatafullmetadata = "application/json;odata=fullmetadata"
 }
 
 /**
@@ -1198,8 +1198,8 @@ export enum OdataMetadataFormat {
  * @enum {string}
  */
 export enum ResponseFormat {
-  ReturnNoContent = 'return-no-content',
-  ReturnContent = 'return-content',
+  ReturnNoContent = "return-no-content",
+  ReturnContent = "return-content"
 }
 
 /**
@@ -1209,7 +1209,7 @@ export enum ResponseFormat {
  * @enum {string}
  */
 export enum Version {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
@@ -1219,7 +1219,7 @@ export enum Version {
  * @enum {string}
  */
 export enum DataServiceVersion {
-  ThreeFullStopZero = '3.0',
+  ThreeFullStopZero = "3.0"
 }
 
 /**
@@ -1229,7 +1229,7 @@ export enum DataServiceVersion {
  * @enum {string}
  */
 export enum DataServiceVersion1 {
-  ThreeFullStopZero = '3.0',
+  ThreeFullStopZero = "3.0"
 }
 
 /**
@@ -1239,17 +1239,20 @@ export enum DataServiceVersion1 {
  * @enum {string}
  */
 export enum DataServiceVersion2 {
-  ThreeFullStopZero = '3.0',
+  ThreeFullStopZero = "3.0"
 }
 
 /**
  * Defines values for DataServiceVersion3.
  * Possible values include: '3.0'
+ * Changing all table batch related logic to point to this version
+ * becuase the other versions seem redundant and are complicating the code
+ * unnecessarily
  * @readonly
  * @enum {string}
  */
 export enum DataServiceVersion3 {
-  ThreeFullStopZero = '3.0',
+  ThreeFullStopZero = "3.0"
 }
 
 /**
@@ -1259,7 +1262,7 @@ export enum DataServiceVersion3 {
  * @enum {string}
  */
 export enum DataServiceVersion4 {
-  ThreeFullStopZero = '3.0',
+  ThreeFullStopZero = "3.0"
 }
 
 /**
@@ -1269,7 +1272,7 @@ export enum DataServiceVersion4 {
  * @enum {string}
  */
 export enum DataServiceVersion5 {
-  ThreeFullStopZero = '3.0',
+  ThreeFullStopZero = "3.0"
 }
 
 /**
@@ -1279,7 +1282,7 @@ export enum DataServiceVersion5 {
  * @enum {string}
  */
 export enum DataServiceVersion6 {
-  ThreeFullStopZero = '3.0',
+  ThreeFullStopZero = "3.0"
 }
 
 /**
@@ -1289,7 +1292,7 @@ export enum DataServiceVersion6 {
  * @enum {string}
  */
 export enum DataServiceVersion7 {
-  ThreeFullStopZero = '3.0',
+  ThreeFullStopZero = "3.0"
 }
 
 /**
@@ -1299,7 +1302,7 @@ export enum DataServiceVersion7 {
  * @enum {string}
  */
 export enum DataServiceVersion8 {
-  ThreeFullStopZero = '3.0',
+  ThreeFullStopZero = "3.0"
 }
 
 /**
@@ -1309,7 +1312,7 @@ export enum DataServiceVersion8 {
  * @enum {string}
  */
 export enum DataServiceVersion9 {
-  ThreeFullStopZero = '3.0',
+  ThreeFullStopZero = "3.0"
 }
 
 /**
@@ -1319,7 +1322,7 @@ export enum DataServiceVersion9 {
  * @enum {string}
  */
 export enum Version1 {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
@@ -1329,7 +1332,7 @@ export enum Version1 {
  * @enum {string}
  */
 export enum Version2 {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
@@ -1339,7 +1342,7 @@ export enum Version2 {
  * @enum {string}
  */
 export enum Version3 {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
@@ -1349,7 +1352,7 @@ export enum Version3 {
  * @enum {string}
  */
 export enum Version4 {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
@@ -1359,7 +1362,7 @@ export enum Version4 {
  * @enum {string}
  */
 export enum Version5 {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
@@ -1369,7 +1372,7 @@ export enum Version5 {
  * @enum {string}
  */
 export enum Version6 {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
@@ -1379,7 +1382,7 @@ export enum Version6 {
  * @enum {string}
  */
 export enum Version7 {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
@@ -1389,7 +1392,7 @@ export enum Version7 {
  * @enum {string}
  */
 export enum Version8 {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
@@ -1399,7 +1402,7 @@ export enum Version8 {
  * @enum {string}
  */
 export enum Version9 {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
@@ -1409,7 +1412,7 @@ export enum Version9 {
  * @enum {string}
  */
 export enum Version10 {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
@@ -1419,7 +1422,7 @@ export enum Version10 {
  * @enum {string}
  */
 export enum Version11 {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
@@ -1429,7 +1432,7 @@ export enum Version11 {
  * @enum {string}
  */
 export enum Version12 {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
@@ -1439,7 +1442,7 @@ export enum Version12 {
  * @enum {string}
  */
 export enum Version13 {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
@@ -1449,7 +1452,7 @@ export enum Version13 {
  * @enum {string}
  */
 export enum Version14 {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
@@ -1459,7 +1462,7 @@ export enum Version14 {
  * @enum {string}
  */
 export enum Version15 {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
@@ -1469,28 +1472,30 @@ export enum Version15 {
  * @enum {string}
  */
 export enum Version16 {
-  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = '2019-02-02',
+  TwoZeroOneNineHyphenMinusZeroTwoHyphenMinusZeroTwo = "2019-02-02"
 }
 
 /**
  * Contains response data for the query operation.
  */
-export type TableQueryResponse2 = TableQueryResponse & TableQueryHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
+export type TableQueryResponse2 = TableQueryResponse &
+  TableQueryHeaders & {
+    /**
+     * The response status code.
+     */
+    statusCode: 200;
+  };
 
 /**
  * Contains response data for the create operation.
  */
-export type TableCreateResponse = TableResponse & TableCreateHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 201 | 204;
-};
+export type TableCreateResponse = TableResponse &
+  TableCreateHeaders & {
+    /**
+     * The response status code.
+     */
+    statusCode: 201 | 204;
+  };
 
 /**
  * Contains response data for the batch operation.
@@ -1605,12 +1610,13 @@ export type TableInsertEntityResponse = TableInsertEntityHeaders & {
 /**
  * Contains response data for the getAccessPolicy operation.
  */
-export type TableGetAccessPolicyResponse = Array<SignedIdentifier> & TableGetAccessPolicyHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
+export type TableGetAccessPolicyResponse = Array<SignedIdentifier> &
+  TableGetAccessPolicyHeaders & {
+    /**
+     * The response status code.
+     */
+    statusCode: 200;
+  };
 
 /**
  * Contains response data for the setAccessPolicy operation.
@@ -1635,19 +1641,21 @@ export type ServiceSetPropertiesResponse = ServiceSetPropertiesHeaders & {
 /**
  * Contains response data for the getProperties operation.
  */
-export type ServiceGetPropertiesResponse = TableServiceProperties & ServiceGetPropertiesHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
+export type ServiceGetPropertiesResponse = TableServiceProperties &
+  ServiceGetPropertiesHeaders & {
+    /**
+     * The response status code.
+     */
+    statusCode: 200;
+  };
 
 /**
  * Contains response data for the getStatistics operation.
  */
-export type ServiceGetStatisticsResponse = TableServiceStats & ServiceGetStatisticsHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
+export type ServiceGetStatisticsResponse = TableServiceStats &
+  ServiceGetStatisticsHeaders & {
+    /**
+     * The response status code.
+     */
+    statusCode: 200;
+  };

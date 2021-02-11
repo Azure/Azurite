@@ -1,6 +1,6 @@
 // Contains Mocks for Serialization Tests
 
-export default class SerializationRequestMocks {
+export default class SerializationRequestMockStrings {
   public static TableBatchRequestMimeBodyString: string =
     '\
 --batch_a1e9d677-b28b-435e-a89e-87e6a768a431\n\
@@ -62,4 +62,9 @@ DataServiceVersion: 3.0;\n\
     '\
 --batch_2d60b21ff9edaf2bc1bc4f60664c0283\ncontent-type: multipart/mixed;charset="utf-8";boundary=changeset_2d60b21ff9edaf2bc1bc4f60664c0283\n\n--changeset_2d60b21ff9edaf2bc1bc4f60664c0283\ncontent-type: application/http\ncontent-transfer-encoding: binary\n\nDELETE http://127.0.0.1:11002/devstoreaccount1/table161216830457901592(PartitionKey=%27part1%27,RowKey=%27row161216830462208585%27) HTTP/1.1\nif-match: *\naccept: application/json;odata=minimalmetadata\nmaxdataserviceversion: 3.0;NetFx\n\n\n--changeset_2d60b21ff9edaf2bc1bc4f60664c0283\ncontent-type: application/http\ncontent-transfer-encoding: binary\n\nDELETE http://127.0.0.1:11002/devstoreaccount1/table161216830457901592(PartitionKey=%27part1%27,RowKey=%27row161216830462204546%27) HTTP/1.1\nif-match: *\naccept: application/json;odata=minimalmetadata\nmaxdataserviceversion: 3.0;NetFx\ncontent-id: 1\n\n\n--changeset_2d60b21ff9edaf2bc1bc4f60664c0283\ncontent-type: application/http\ncontent-transfer-encoding: binary\n\nDELETE http://127.0.0.1:11002/devstoreaccount1/table161216830457901592(PartitionKey=%27part1%27,RowKey=%27row161216830462201168%27) HTTP/1.1\nif-match: *\naccept: application/json;odata=minimalmetadata\nmaxdataserviceversion: 3.0;NetFx\ncontent-id: 2\n\n\n--changeset_2d60b21ff9edaf2bc1bc4f60664c0283--\n--batch_2d60b21ff9edaf2bc1bc4f60664c0283--\
 ';
+
+  public static BatchQueryWithPartitionKeyAndRowKeyRequest: string =
+    "\
+--batch_d54a6553104c5b65f259aa178d324ebf\ncontent-type: application/http\ncontent-transfer-encoding: binary\n\nGET http://127.0.0.1:11002/devstoreaccount1/table161289070041408231(PartitionKey=%27part1%27,RowKey=%27row161289070046904593%27) HTTP/1.1\naccept: application/json;odata=minimalmetadata\nmaxdataserviceversion: 3.0;NetFx\n\n--batch_d54a6553104c5b65f259aa178d324ebf--\
+";
 }
