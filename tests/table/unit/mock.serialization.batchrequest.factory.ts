@@ -8,7 +8,7 @@ export default class SerializationObjectForBatchRequestFactory {
   public static GetBatchRequestForQueryWithPartitionandRowKeyResponseMock(): BatchRequest {
     const mockRequest = new BatchRequest(
       SerializationBatchOperationFactory.GetBatchOperationMockForQueryEntityWithPartitionKeyAndRowKey(
-        SerializationResponseMockStrings.BatchQueryWithPartitionKeyAndRowKeyRequestHeaders
+        SerializationResponseMockStrings.EmptyHeaderMock
       )
     );
     return mockRequest;
@@ -17,7 +17,16 @@ export default class SerializationObjectForBatchRequestFactory {
   public static GetBatchRequestForSingleInsertResponseMock(): BatchRequest {
     const mockRequest = new BatchRequest(
       SerializationBatchOperationFactory.GetBatchOperationMockForInsertSingleEntity(
-        SerializationResponseMockStrings.BatchQueryWithPartitionKeyAndRowKeyRequestHeaders
+        SerializationResponseMockStrings.EmptyHeaderMock
+      )
+    );
+    return mockRequest;
+  }
+
+  public static GetBatchRequestForSingleDeletetResponseMock(): BatchRequest {
+    const mockRequest = new BatchRequest(
+      SerializationBatchOperationFactory.GetBatchOperationMockForDeleteSingleEntity(
+        SerializationResponseMockStrings.EmptyHeaderMock
       )
     );
     return mockRequest;
@@ -33,6 +42,14 @@ export default class SerializationObjectForBatchRequestFactory {
     responseObject.eTag = 'W/"datetime\'2021-02-12T08%3A28%3A27.47468Z\'"';
     responseObject.statusCode = 204; // no content
     return responseObject as Models.TableInsertEntityResponse;
+  }
+
+  public static GetBatchOperationMockForSingleDelete() {
+    const responseObject = new Object() as Models.TableDeleteEntityResponse;
+    // Etag in response should be W/\"datetime'2021-02-12T08%3A28%3A27.47468Z'\"
+    // prettier-ignore
+    responseObject.statusCode = 204; // no content
+    return responseObject as Models.TableDeleteEntityResponse;
   }
 
   public static GetBatchTableQueryEntitiesWithPartitionAndRowKeyResponseMock() {

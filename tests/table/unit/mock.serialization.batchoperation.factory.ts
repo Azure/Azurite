@@ -48,4 +48,28 @@ export default class SerializationBatchOperationFactory {
       "http://127.0.0.1:11002/devstoreaccount1/table161311975539604802(PartitionKey=%27part1%27,RowKey=%27row161311975544100305%27)";
     return operation;
   }
+
+  public static GetBatchOperationMockForDeleteSingleEntity(
+    headers: string
+  ): TableBatchOperation {
+    const operation = new TableBatchOperation(BatchType.table, headers);
+    operation.httpMethod = "DELETE";
+    operation.jsonRequestBody = "";
+    operation.parameters = "";
+    operation.path = "table161314571276801774";
+    operation.protocol = "";
+    operation.jsonRequestBody = "";
+    // ToDo: Check behaviour without empty headers
+    operation.rawHeaders = [
+      "HTTP/1.1",
+      "if-match: *",
+      "accept: application/json;odata=minimalmetadata",
+      "maxdataserviceversion: 3.0;NetFx",
+      "",
+      ""
+    ];
+    operation.uri =
+      "http://127.0.0.1:11002/devstoreaccount1/table161314571276801774(PartitionKey=%27part1%27,RowKey=%27row161314571280802822%27)";
+    return operation;
+  }
 }

@@ -171,15 +171,14 @@ export class TableBatchSerialization extends BatchSerialization {
   // which we return to the users batch request
   public serializeTableDeleteEntityBatchResponse(
     request: BatchRequest,
-    response: Models.TableDeleteEntityResponse,
-    contentID: number
+    response: Models.TableDeleteEntityResponse
   ): string {
     // ToDo: keeping my life easy to start and defaulting to "return no content"
     let serializedResponses: string = "";
     // create the initial boundary
     serializedResponses += "Content-Type: application/http\r\n";
     serializedResponses += "Content-Transfer-Encoding: binary\r\n";
-    serializedResponses += "\n";
+    serializedResponses += "\r\n";
     serializedResponses +=
       "HTTP/1.1 " +
       response.statusCode.toString() +
@@ -188,17 +187,15 @@ export class TableBatchSerialization extends BatchSerialization {
       "\r\n";
     // ToDo: Not sure how to serialize the status message yet
     // ToDo_: Correct the handling of content-ID
-    serializedResponses += "Content-ID: " + contentID.toString() + "\r\n";
-    // ToDo: not sure about other headers like cache control etc right now
-    // will need to look at this later
-    if (request.getHeader("DataServiceVersion")) {
+
+    // Azure Table service defaults to this in the response
+    // X-Content-Type-Options: nosniff\r\n
+    serializedResponses = this.AddNoSniffNoCache(serializedResponses);
+    if (undefined !== request.params && request.params.dataServiceVersion) {
       serializedResponses +=
-        "DataServiceVersion: " +
-        request.getHeader("DataServiceVersion") +
-        "\r\n";
+        "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";
     }
-    serializedResponses += "Location: " + request.getUrl() + "\r\n";
-    serializedResponses += "DataServiceId: " + request.getUrl() + "\r\n";
+
     return serializedResponses;
   }
 
@@ -224,11 +221,9 @@ export class TableBatchSerialization extends BatchSerialization {
     serializedResponses += "Content-ID: " + contentID.toString() + "\r\n";
     // ToDo: not sure about other headers like cache control etc right now
     // will need to look at this later
-    if (request.getHeader("DataServiceVersion")) {
+    if (undefined !== request.params && request.params.dataServiceVersion) {
       serializedResponses +=
-        "DataServiceVersion: " +
-        request.getHeader("DataServiceVersion") +
-        "\r\n";
+        "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";
     }
     serializedResponses += "Location: " + request.getUrl() + "\r\n";
     serializedResponses += "DataServiceId: " + request.getUrl() + "\r\n";
