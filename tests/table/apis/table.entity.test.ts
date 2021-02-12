@@ -467,6 +467,46 @@ describe("table Entity APIs test", () => {
     );
   });
 
+  // Start of Batch Tests:
+  it.only("Simple Insert Or Replace of a SINGLE entity as a BATCH, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+
+    const batchEntity1 = createBasicEntityForTest();
+
+    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+    entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity1); // resulting in PUT
+
+    tableService.executeBatch(
+      tableName,
+      entityBatch,
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 202);
+          tableService.retrieveEntity<TestEntity>(
+            tableName,
+            batchEntity1.PartitionKey._,
+            batchEntity1.RowKey._,
+            (error, result) => {
+              if (error) {
+                assert.ifError(error);
+              } else if (result) {
+                const entity: TestEntity = result;
+                assert.equal(entity.myValue._, batchEntity1.myValue._);
+              }
+              done();
+            }
+          );
+        }
+      }
+    );
+  });
+
   it("Simple batch test: Inserts multiple entities as a batch, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
