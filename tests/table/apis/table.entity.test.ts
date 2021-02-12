@@ -463,7 +463,7 @@ describe("table Entity APIs test", () => {
   });
 
   // Start of Batch Tests:
-  it.only("Simple Insert Or Replace of a SINGLE entity as a BATCH, @loki", (done) => {
+  it("Simple Insert Or Replace of a SINGLE entity as a BATCH, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
@@ -872,6 +872,45 @@ describe("table Entity APIs test", () => {
               : "";
             assert.notEqual(batchRetrieveEntityResult.indexOf("value1"), -1);
             done();
+          }
+        }
+      );
+    });
+  });
+
+  it.only("Single Delete entity via a batch, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const batchEntity1 = createBasicEntityForTest();
+
+    tableService.insertEntity<TestEntity>(tableName, batchEntity1, () => {
+      const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+      entityBatch.deleteEntity(batchEntity1);
+
+      tableService.executeBatch(
+        tableName,
+        entityBatch,
+        (updateError, updateResult, updateResponse) => {
+          if (updateError) {
+            assert.ifError(updateError);
+            done();
+          } else {
+            assert.equal(updateResponse.statusCode, 202);
+            tableService.retrieveEntity<TestEntity>(
+              tableName,
+              batchEntity1.PartitionKey._,
+              batchEntity1.RowKey._,
+              (error: any, result) => {
+                assert.equal(
+                  error.statusCode,
+                  404,
+                  "status code was not equal to 404!"
+                );
+                done();
+              }
+            );
           }
         }
       );

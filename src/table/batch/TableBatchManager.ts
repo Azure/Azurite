@@ -242,8 +242,7 @@ export default class TableBatchManager {
     return {
       __return: this.serialization.serializeTableInsertEntityBatchResponse(
         request,
-        response,
-        contentID
+        response
       ),
       response
     };

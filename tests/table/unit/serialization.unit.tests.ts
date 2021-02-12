@@ -1,5 +1,12 @@
 // Unit Tests for serialization
+// ToDo: I know these are not all strictly Unit tests
+// while we finalize the reverse engineering of the table API,
+// there is a lot of refactoring.
+// meaning that we are not 100% sure of the correct object schemas.
+// once this is all complete, we can further refactor and clean up
+// objects and tests.
 import * as assert from "assert";
+import BatchTableDeleteEntityOptionalParams from "../../../src/table/batch/BatchTableDeleteEntityOptionalParams";
 import BatchTableInsertEntityOptionalParams from "../../../src/table/batch/BatchTableInsertEntityOptionalParams";
 import BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams from "../../../src/table/batch/BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams";
 import { TableBatchSerialization } from "../../../src/table/batch/TableBatchSerialization";
@@ -33,11 +40,11 @@ describe("batch serialization unit tests, these are not the API integration test
       expectedResponseString,
       "failed to serialize objects to correct serialized string representation"
     );
+    // no closing "done()" callback in async test
   });
 
-  it("serializes, mock table batch response to single insert", async () => {
+  it("serializes, mock table batch response to single insert", (done) => {
     // use the expected response string to compare the request to
-    // ToDo: Do we need partial or full? Currently Using full
     const expectedResponseString =
       SerializationResponseMocks.PartialBatchSingleInsertOrReplaceResponseString;
     const serializer = new TableBatchSerialization();
@@ -52,6 +59,33 @@ describe("batch serialization unit tests, these are not the API integration test
     const serializedBatchOperationResponse = serializer.serializeTableInsertEntityBatchResponse(
       request,
       SerializationObjectForBatchRequestFactory.GetBatchOperationMockForSingleInsert()
+    );
+
+    assert.equal(
+      serializedBatchOperationResponse,
+      expectedResponseString,
+      "failed to serialize objects to correct serialized string representation"
+    );
+    done();
+  });
+
+  it("serializes, mock table batch response to single delete", async () => {
+    // use the expected response string to compare the request to
+    // ToDo: Do we need partial or full? Currently Using full
+    const expectedResponseString =
+      SerializationResponseMocks.PartialBatchSingleDeleteResponseString;
+    const serializer = new TableBatchSerialization();
+    // first we need to ingest the serialized request string, which fills some props on the serializer
+    serializer.deserializeBatchRequest(
+      SerializationRequestMockStrings.BatchSingleDeleteRequestString
+    );
+
+    const request = SerializationObjectForBatchRequestFactory.GetBatchRequestForSingleDeletetResponseMock();
+    request.ingestOptionalParams(new BatchTableDeleteEntityOptionalParams());
+
+    const serializedBatchOperationResponse = serializer.serializeTableDeleteEntityBatchResponse(
+      request,
+      SerializationObjectForBatchRequestFactory.GetBatchOperationMockForSingleDelete()
     );
 
     assert.equal(
