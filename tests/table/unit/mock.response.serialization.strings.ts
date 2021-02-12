@@ -1,22 +1,38 @@
+// These are the strings we get from within VS Code when we debug a request to the service
+// Full request includes batch boundaries
+// Partial is only the inner batch response from the serializer
+// we need to use prettier ignore to avoid it messing with the formatting of the Etag and other escaped values
 export default class SerializationResponseMockStrings {
-  // This is a reponse from Azure Storage Service to
-  // Test : Insert and Delete entity via a batch
-  public static BatchInsertAndDeleteReponse: string =
-    '\
---batchresponse_05033918-f7c0-4393-b7f4-a882162f289c\r\nContent-Type: multipart/mixed; boundary=changesetresponse_6b09c826-409b-41bc-be97-800c3778987d\r\n\r\n--changesetresponse_6b09c826-409b-41bc-be97-800c3778987d\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 201 Created\r\nDataServiceVersion: 3.0;\r\nContent-Type: application/json;odata=minimalmetadata;streaming=true;charset=utf-8\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-cache\r\nPreference-Applied: return-content\r\nLocation: https://azuritetesttarget.table.core.windows.net/TestingAzurite(PartitionKey=\'part1\',RowKey=\'row161245440360308682\')\r\nETag: W/"datetime\'2021-02-04T16%3A00%3A03.9434585Z\'"\r\n\r\n{"odata.metadata":"https://azuritetesttarget.table.core.windows.net/$metadata#TestingAzurite/@Element","odata.etag":"W/\\"datetime\'2021-02-04T16%3A00%3A03.9434585Z\'\\"","PartitionKey":"part1","RowKey":"row161245440360308682","Timestamp":"2021-02-04T16:00:03.9434585Z","myValue":"value1"}\r\n--changesetresponse_6b09c826-409b-41bc-be97-800c3778987d\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 201 Created\r\nDataServiceVersion: 3.0;\r\nContent-Type: application/json;odata=minimalmetadata;streaming=true;charset=utf-8\r\nContent-ID: 1\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-cache\r\nPreference-Applied: return-content\r\nLocation: https://asynccopiertesttarget.table.core.windows.net/TestingAzurite(PartitionKey=\'part1\',RowKey=\'row161245440360301182\')\r\nETag: W/"datetime\'2021-02-04T16%3A00%3A03.9444585Z\'"\r\n\r\n{"odata.metadata":"https://asynccopiertesttarget.table.core.windows.net/$metadata#TestingAzurite/@Element","odata.etag":"W/\\"datetime\'2021-02-04T16%3A00%3A03.9444585Z\'\\"","PartitionKey":"part1","RowKey":"row161245440360301182","Timestamp":"2021-02-04T16:00:03.9444585Z","myValue":"value1"}\r\n--changesetresponse_6b09c826-409b-41bc-be97-800c3778987d\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 201 Created\r\nDataServiceVersion: 3.0;\r\nContent-Type: application/json;odata=minimalmetadata;streaming=true;charset=utf-8\r\nContent-ID: 2\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-cache\r\nPreference-Applied: return-content\r\nLocation: https://asynccopiertesttarget.table.core.windows.net/TestingAzurite(PartitionKey=\'part1\',RowKey=\'row161245440360301102\')\r\nETag: W/"datetime\'2021-02-04T16%3A00%3A03.9444585Z\'"\r\n\r\n{"odata.metadata":"https://asynccopiertesttarget.table.core.windows.net/$metadata#TestingAzurite/@Element","odata.etag":"W/\\"datetime\'2021-02-04T16%3A00%3A03.9444585Z\'\\"","PartitionKey":"part1","RowKey":"row161245440360301102","Timestamp":"2021-02-04T16:00:03.9444585Z","myValue":"value1"}\r\n--changesetresponse_6b09c826-409b-41bc-be97-800c3778987d--\r\n--batchresponse_05033918-f7c0-4393-b7f4-a882162f289c--\r\n\
-';
-
+  // ####################
   // Mocks for Query with Partition Key and Row Key
-  public static BatchQueryWithPartitionKeyAndRowKeyRequestHeaders: string = "";
-
-  public static BatchQueryWithPartitionKeyAndRowKeyResponse: string =
-    '\
-Content-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 200 OK\r\nDataServiceVersion: 3.0;\r\nContent-Type: application/json;odata=minimalmetadata;streaming=true;charset=utf-8\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-cache\r\nETag: W/"datetime\'2021-02-05T17%3A15%3A16.7935715Z\'"\r\n\r\n{"odata.metadata":"https://azuritetesttarget.table.core.windows.net/$metadata#TestingAzurite/@Element","odata.etag":"W/"datetime\'2021-02-05T17%3A15%3A16.7935715Z\'"","PartitionKey":"part1","RowKey":"row161254531681303585","Timestamp":"2021-02-05T17:15:16.7935715Z","myValue":"value1"}\r\n\
-';
-
-  // includes batch boundaries
+  // ####################
   public static FullBatchQueryWithPartitionKeyAndRowKeyResponse: string =
     '\
 --batchresponse_5f4cfbb9-f5fa-45f1-9c9b-04e2436cbf9a\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 200 OK\r\nDataServiceVersion: 3.0;\r\nContent-Type: application/json;odata=minimalmetadata;streaming=true;charset=utf-8\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-cache\r\nETag: W/"datetime\'2021-02-05T17%3A15%3A16.7935715Z\'"\r\n\r\n{"odata.metadata":"https://azuritetesttarget.table.core.windows.net/$metadata#TestingAzurite/@Element","odata.etag":"W/"datetime\'2021-02-05T17%3A15%3A16.7935715Z\'"","PartitionKey":"part1","RowKey":"row161254531681303585","Timestamp":"2021-02-05T17:15:16.7935715Z","myValue":"value1"}\r\n--batchresponse_5f4cfbb9-f5fa-45f1-9c9b-04e2436cbf9a--\r\n\
 ';
+
+  public static BatchQueryWithPartitionKeyAndRowKeyRequestHeaders: string = "";
+
+  public static PartialBatchQueryWithPartitionKeyAndRowKeyResponse: string =
+    '\
+Content-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 200 OK\r\nDataServiceVersion: 3.0;\r\nContent-Type: application/json;odata=minimalmetadata;streaming=true;charset=utf-8\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-cache\r\nETag: W/"datetime\'2021-02-05T17%3A15%3A16.7935715Z\'"\r\n\r\n{"odata.metadata":"https://azuritetesttarget.table.core.windows.net/$metadata#TestingAzurite/@Element","odata.etag":"W/"datetime\'2021-02-05T17%3A15%3A16.7935715Z\'"","PartitionKey":"part1","RowKey":"row161254531681303585","Timestamp":"2021-02-05T17:15:16.7935715Z","myValue":"value1"}\r\n\
+';
+
+  // ####################
+  // Mocks for Single Batch Insert or Replace
+  // ####################
+  public static FullBatchSingleInsertOrReplaceResponseString: string =
+    // "--batchresponse_247e73cd-0e49-4854-8aad-3badc34b3381\r\nContent-Type: multipart/mixed; boundary=changesetresponse_8ddf8e68-ca51-45bd-8c65-95fe1cc94164\r\n\r\n--changesetresponse_8ddf8e68-ca51-45bd-8c65-95fe1cc94164\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 204 No Content\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-cache\r\nDataServiceVersion: 1.0;\r\nETag: W/\"datetime'2021-02-12T08%3A28%3A27.47468Z'\"\r\n\r\n\r\n--changesetresponse_8ddf8e68-ca51-45bd-8c65-95fe1cc94164--\r\n--batchresponse_247e73cd-0e49-4854-8aad-3badc34b3381--\r\n"
+    // prettier-ignore
+    "--batchresponse_247e73cd-0e49-4854-8aad-3badc34b3381\r\nContent-Type: multipart/mixed; boundary=changesetresponse_8ddf8e68-ca51-45bd-8c65-95fe1cc94164\r\n\r\n--changesetresponse_8ddf8e68-ca51-45bd-8c65-95fe1cc94164\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 204 No Content\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-cache\r\nDataServiceVersion: 1.0;\r\nETag: W/\"datetime'2021-02-12T08%3A28%3A27.47468Z'\"\r\n\r\n\r\n--changesetresponse_8ddf8e68-ca51-45bd-8c65-95fe1cc94164--\r\n--batchresponse_247e73cd-0e49-4854-8aad-3badc34b3381--\r\n";
+
+  // manually changed to +DataServiceVersion: 3.0;
+  // Azure responds with +DataServiceVersion: 1.0 right now
+  public static PartialBatchSingleInsertOrReplaceResponseString: string =
+    // prettier-ignore
+    "Content-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 204 No Content\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-cache\r\nDataServiceVersion: 3.0;\r\nETag: W/\"datetime'2021-02-12T08%3A28%3A27.47468Z'\"\r\n";
+
+  // ####################
+  // Mocks for Multiple Batch Insert or Replace
+  // ####################
 }

@@ -62,9 +62,18 @@ DataServiceVersion: 3.0;\n\
     '\
 --batch_2d60b21ff9edaf2bc1bc4f60664c0283\ncontent-type: multipart/mixed;charset="utf-8";boundary=changeset_2d60b21ff9edaf2bc1bc4f60664c0283\n\n--changeset_2d60b21ff9edaf2bc1bc4f60664c0283\ncontent-type: application/http\ncontent-transfer-encoding: binary\n\nDELETE http://127.0.0.1:11002/devstoreaccount1/table161216830457901592(PartitionKey=%27part1%27,RowKey=%27row161216830462208585%27) HTTP/1.1\nif-match: *\naccept: application/json;odata=minimalmetadata\nmaxdataserviceversion: 3.0;NetFx\n\n\n--changeset_2d60b21ff9edaf2bc1bc4f60664c0283\ncontent-type: application/http\ncontent-transfer-encoding: binary\n\nDELETE http://127.0.0.1:11002/devstoreaccount1/table161216830457901592(PartitionKey=%27part1%27,RowKey=%27row161216830462204546%27) HTTP/1.1\nif-match: *\naccept: application/json;odata=minimalmetadata\nmaxdataserviceversion: 3.0;NetFx\ncontent-id: 1\n\n\n--changeset_2d60b21ff9edaf2bc1bc4f60664c0283\ncontent-type: application/http\ncontent-transfer-encoding: binary\n\nDELETE http://127.0.0.1:11002/devstoreaccount1/table161216830457901592(PartitionKey=%27part1%27,RowKey=%27row161216830462201168%27) HTTP/1.1\nif-match: *\naccept: application/json;odata=minimalmetadata\nmaxdataserviceversion: 3.0;NetFx\ncontent-id: 2\n\n\n--changeset_2d60b21ff9edaf2bc1bc4f60664c0283--\n--batch_2d60b21ff9edaf2bc1bc4f60664c0283--\
 ';
-
+  // ####################
+  // Mocks for Query with Partition and Row Key (Retrieve single entity)
+  // ####################
+  // prettier-ignore
   public static BatchQueryWithPartitionKeyAndRowKeyRequest: string =
-    "\
---batch_d54a6553104c5b65f259aa178d324ebf\ncontent-type: application/http\ncontent-transfer-encoding: binary\n\nGET http://127.0.0.1:11002/devstoreaccount1/table161289070041408231(PartitionKey=%27part1%27,RowKey=%27row161289070046904593%27) HTTP/1.1\naccept: application/json;odata=minimalmetadata\nmaxdataserviceversion: 3.0;NetFx\n\n--batch_d54a6553104c5b65f259aa178d324ebf--\
-";
+  "--batch_d54a6553104c5b65f259aa178d324ebf\ncontent-type: application/http\ncontent-transfer-encoding: binary\n\nGET http://127.0.0.1:11002/devstoreaccount1/table161289070041408231(PartitionKey=%27part1%27,RowKey=%27row161289070046904593%27) HTTP/1.1\naccept: application/json;odata=minimalmetadata\nmaxdataserviceversion: 3.0;NetFx\n\n--batch_d54a6553104c5b65f259aa178d324ebf--";
+
+  // ####################
+  // Mocks for Single Batch Insert or Replace
+  // ####################
+  public static BatchSingleInsertOrReplaceRequestString: string =
+    // "--batch_d691a4531b1f15df5b381893a422ead1\ncontent-type: multipart/mixed;charset=\"utf-8\";boundary=changeset_d691a4531b1f15df5b381893a422ead1\n\n--changeset_d691a4531b1f15df5b381893a422ead1\ncontent-type: application/http\ncontent-transfer-encoding: binary\n\nPUT http://127.0.0.1:11002/devstoreaccount1/table161311975539604802(PartitionKey=%27part1%27,RowKey=%27row161311975544100305%27) HTTP/1.1\ncontent-length: 76\ncontent-type: application/json;type=entry\naccept: application/json;odata=minimalmetadata\nmaxdataserviceversion: 3.0;NetFx\n\n{\"PartitionKey\":\"part1\",\"RowKey\":\"row161311975544100305\",\"myValue\":\"value1\"}\n--changeset_d691a4531b1f15df5b381893a422ead1--\n--batch_d691a4531b1f15df5b381893a422ead1--"
+    // prettier-ignore
+    "--batch_d691a4531b1f15df5b381893a422ead1\ncontent-type: multipart/mixed;charset=\"utf-8\";boundary=changeset_d691a4531b1f15df5b381893a422ead1\n\n--changeset_d691a4531b1f15df5b381893a422ead1\ncontent-type: application/http\ncontent-transfer-encoding: binary\n\nPUT http://127.0.0.1:11002/devstoreaccount1/table161311975539604802(PartitionKey=%27part1%27,RowKey=%27row161311975544100305%27) HTTP/1.1\ncontent-length: 76\ncontent-type: application/json;type=entry\naccept: application/json;odata=minimalmetadata\nmaxdataserviceversion: 3.0;NetFx\n\n{\"PartitionKey\":\"part1\",\"RowKey\":\"row161311975544100305\",\"myValue\":\"value1\"}\n--changeset_d691a4531b1f15df5b381893a422ead1--\n--batch_d691a4531b1f15df5b381893a422ead1--";
 }
