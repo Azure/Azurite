@@ -222,6 +222,7 @@
     "watch": "tsc -watch -p ./",
     "blob": "node -r ts-node/register src/blob/main.ts",
     "queue": "node -r ts-node/register src/queue/main.ts",
+    "table": "node -r ts-node/register src/table/main.ts",
     "azurite": "node -r ts-node/register src/azurite.ts",
     "lint": "tslint -p tsconfig.json -c tslint.json src/**/*.ts",
     "test": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --compilers ts-node/register --no-timeouts --grep @loki --recursive tests/**/*.test.ts tests/**/**/*.test.ts",
