@@ -28,8 +28,8 @@ import {
   updateTableOptionalOdataAnnotationsForResponse
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
-import { Stream } from "stream";
 import TableBatchUtils from "../batch/TableBatchUtils";
+import toReadableStream from "to-readable-stream";
 
 interface IPartialResponsePreferProperties {
   statusCode: 200 | 201 | 204;
@@ -683,7 +683,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     // console.log(response);
 
     // need to convert response to NodeJS.ReadableStream
-    body = Stream.Readable.from(response);
+    body = toReadableStream(response);
 
     return {
       requestId: tableContext.contextID,
