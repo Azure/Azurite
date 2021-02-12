@@ -176,7 +176,6 @@ export class TableBatchSerialization extends BatchSerialization {
     // Azure Table service defaults to this in the response
     // X-Content-Type-Options: nosniff\r\n
     serializedResponses = this.AddNoSniffNoCache(serializedResponses);
-
     if (undefined !== request.params && request.params.dataServiceVersion) {
       serializedResponses +=
         "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";

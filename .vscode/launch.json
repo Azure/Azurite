@@ -144,9 +144,7 @@
         "--timeout",
         "999999",
         "--colors",
-        "${workspaceFolder}/${relativeFile}",
-        "--trace-warnings",
-        "--unhandled-rejections=strict"
+        "${workspaceFolder}/${relativeFile}"
       ],
       "env": {
         "AZURITE_ACCOUNTS": "",
