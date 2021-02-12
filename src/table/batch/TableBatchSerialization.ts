@@ -130,16 +130,15 @@ export class TableBatchSerialization extends BatchSerialization {
   // which we return to the users batch request
   public serializeTableInsertEntityBatchResponse(
     request: BatchRequest,
-    response: Models.TableInsertEntityResponse,
-    contentID: number
+    response: Models.TableInsertEntityResponse
   ): string {
     // ToDo: keeping my life easy to start and defaulting to "return no content"
     // we need to validate headers and requirements for handling them correctly
     let serializedResponses: string = "";
     // create the initial boundary
     serializedResponses += "Content-Type: application/http\r\n";
-    serializedResponses += "Content-Transfer-Encoding: binary \r\n";
-    serializedResponses += "\n";
+    serializedResponses += "Content-Transfer-Encoding: binary\r\n";
+    serializedResponses += "\r\n";
     // ToDo: Not sure how to serialize the status message yet
     serializedResponses +=
       "HTTP/1.1 " +
@@ -148,17 +147,22 @@ export class TableBatchSerialization extends BatchSerialization {
       this.GetStatusMessageString(response.statusCode) +
       "\r\n";
     // ToDo: Correct the handling of Content-ID
-    if (contentID !== 0) {
-      serializedResponses += "Content-ID: " + contentID.toString() + "\r\n";
+    if (request.contentID !== undefined) {
+      serializedResponses +=
+        "Content-ID: " + request.contentID.toString() + "\r\n";
     }
+
+    // Azure Table service defaults to this in the response
+    // X-Content-Type-Options: nosniff\r\n
+    serializedResponses = this.AddNoSniffNoCache(serializedResponses);
+
     // ToDo: not sure about other headers like cache control etc right now
     // will need to look at this later
-    serializedResponses +=
-      "Preference-Applied: " + response.preferenceApplied + "\r\n";
-    serializedResponses +=
-      "DataServiceVersion: " + request.getHeader("DataServiceVersion") + "\r\n";
-    serializedResponses += "Location: " + request.getUrl() + "\r\n";
-    serializedResponses += "DataServiceId: " + request.getUrl() + "\r\n";
+    if (undefined !== request.params && request.params.dataServiceVersion) {
+      serializedResponses +=
+        "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";
+    }
+
     serializedResponses += "ETag: " + response.eTag + "\r\n";
     return serializedResponses;
   }
@@ -174,7 +178,7 @@ export class TableBatchSerialization extends BatchSerialization {
     let serializedResponses: string = "";
     // create the initial boundary
     serializedResponses += "Content-Type: application/http\r\n";
-    serializedResponses += "Content-Transfer-Encoding: binary \r\n";
+    serializedResponses += "Content-Transfer-Encoding: binary\r\n";
     serializedResponses += "\n";
     serializedResponses +=
       "HTTP/1.1 " +
@@ -207,7 +211,7 @@ export class TableBatchSerialization extends BatchSerialization {
     let serializedResponses: string = "";
     // create the initial boundary
     serializedResponses += "Content-Type: application/http\r\n";
-    serializedResponses += "Content-Transfer-Encoding: binary \r\n";
+    serializedResponses += "Content-Transfer-Encoding: binary\r\n";
     serializedResponses += "\r\n";
     serializedResponses +=
       "HTTP/1.1 " +
@@ -240,7 +244,7 @@ export class TableBatchSerialization extends BatchSerialization {
     let serializedResponses: string = "";
     // create the initial boundary
     serializedResponses += "Content-Type: application/http\r\n";
-    serializedResponses += "Content-Transfer-Encoding: binary \r\n";
+    serializedResponses += "Content-Transfer-Encoding: binary\r\n";
     serializedResponses += "\r\n";
     serializedResponses +=
       "HTTP/1.1 " +
@@ -297,10 +301,7 @@ export class TableBatchSerialization extends BatchSerialization {
 
     // Azure Table service defaults to this in the response
     // X-Content-Type-Options: nosniff\r\n
-    serializedResponses += "X-Content-Type-Options: nosniff\r\n";
-    // also service defaults to
-    // Cache-Control: no-cache\r\n
-    serializedResponses += "Cache-Control: no-cache\r\n";
+    serializedResponses = this.AddNoSniffNoCache(serializedResponses);
 
     // ETag: W/"datetime\'2021-02-05T17%3A15%3A16.7935715Z\'"\r\n\r\n
     if (response.eTag) {
@@ -325,17 +326,25 @@ export class TableBatchSerialization extends BatchSerialization {
     return serializedResponses;
   }
 
+  private AddNoSniffNoCache(serializedResponses: string) {
+    serializedResponses += "X-Content-Type-Options: nosniff\r\n";
+    // also service defaults to
+    // Cache-Control: no-cache\r\n
+    serializedResponses += "Cache-Control: no-cache\r\n";
+    return serializedResponses;
+  }
+
   // ToDo: Need to check where we have implemented this elsewhere and see if we can reuse
   private GetStatusMessageString(statusCode: number): string {
     switch (statusCode) {
       case 200:
         return "OK";
       case 201:
-        return "CREATED";
+        return "Created";
       case 204:
-        return "NO CONTENT";
+        return "No Content";
       case 404:
-        return "NOT FOUND";
+        return "Not Found";
       default:
         return "STATUS_CODE_NOT_IMPLEMENTED";
     }

@@ -5,13 +5,34 @@ import * as Models from "../../../src/table/generated/artifacts/models";
 import toReadableStream from "to-readable-stream";
 
 export default class SerializationObjectForBatchRequestFactory {
-  public static GetBatchRequestForResponseMock(): BatchRequest {
+  public static GetBatchRequestForQueryWithPartitionandRowKeyResponseMock(): BatchRequest {
     const mockRequest = new BatchRequest(
       SerializationBatchOperationFactory.GetBatchOperationMockForQueryEntityWithPartitionKeyAndRowKey(
         SerializationResponseMockStrings.BatchQueryWithPartitionKeyAndRowKeyRequestHeaders
       )
     );
     return mockRequest;
+  }
+
+  public static GetBatchRequestForSingleInsertResponseMock(): BatchRequest {
+    const mockRequest = new BatchRequest(
+      SerializationBatchOperationFactory.GetBatchOperationMockForInsertSingleEntity(
+        SerializationResponseMockStrings.BatchQueryWithPartitionKeyAndRowKeyRequestHeaders
+      )
+    );
+    return mockRequest;
+  }
+
+  // see GetBatchTableQueryEntitiesWithPartitionAndRowKeyResponseMock
+  // for a more complete set of response props we can set
+  // this mock does not need it
+  public static GetBatchOperationMockForSingleInsert() {
+    const responseObject = new Object() as Models.TableInsertEntityResponse;
+    // Etag in response should be W/\"datetime'2021-02-12T08%3A28%3A27.47468Z'\"
+    // prettier-ignore
+    responseObject.eTag = 'W/"datetime\'2021-02-12T08%3A28%3A27.47468Z\'"';
+    responseObject.statusCode = 204; // no content
+    return responseObject as Models.TableInsertEntityResponse;
   }
 
   public static GetBatchTableQueryEntitiesWithPartitionAndRowKeyResponseMock() {
@@ -38,10 +59,9 @@ export default class SerializationObjectForBatchRequestFactory {
     // This header contains the continuation token value for row key.
     responseObject.xMsContinuationNextRowKey = "";
     responseObject.errorCode = "";
-    // this is node10 only, which is causing issues for our pipelines
-
+    // using module to-readable-stream
     responseObject.body = toReadableStream(
-      '{"odata.metadata":"https://asynccopiertesttarget.table.core.windows.net/$metadata#TestingAzurite/@Element",\
+      '{"odata.metadata":"https://azuritetesttarget.table.core.windows.net/$metadata#TestingAzurite/@Element",\
 "odata.etag":"W/"datetime\'2021-02-05T17%3A15%3A16.7935715Z\'"","PartitionKey":"part1","RowKey":"row161254531681303585",\
 "Timestamp":"2021-02-05T17:15:16.7935715Z","myValue":"value1"}'
     );
