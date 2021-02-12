@@ -136,16 +136,9 @@ export class TableBatchSerialization extends BatchSerialization {
     // we need to validate headers and requirements for handling them correctly
     let serializedResponses: string = "";
     // create the initial boundary
-    serializedResponses += "Content-Type: application/http\r\n";
-    serializedResponses += "Content-Transfer-Encoding: binary\r\n";
-    serializedResponses += "\r\n";
-    // ToDo: Not sure how to serialize the status message yet
-    serializedResponses +=
-      "HTTP/1.1 " +
-      response.statusCode.toString() +
-      " " +
-      this.GetStatusMessageString(response.statusCode) +
-      "\r\n";
+    serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
+
+    serializedResponses = this.SetHttpStatusCode(serializedResponses, response);
     // ToDo: Correct the handling of Content-ID
     if (request.contentID !== undefined) {
       serializedResponses +=
@@ -176,21 +169,13 @@ export class TableBatchSerialization extends BatchSerialization {
     // ToDo: keeping my life easy to start and defaulting to "return no content"
     let serializedResponses: string = "";
     // create the initial boundary
-    serializedResponses += "Content-Type: application/http\r\n";
-    serializedResponses += "Content-Transfer-Encoding: binary\r\n";
-    serializedResponses += "\r\n";
-    serializedResponses +=
-      "HTTP/1.1 " +
-      response.statusCode.toString() +
-      " " +
-      this.GetStatusMessageString(response.statusCode) +
-      "\r\n";
-    // ToDo: Not sure how to serialize the status message yet
-    // ToDo_: Correct the handling of content-ID
+    serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
+    serializedResponses = this.SetHttpStatusCode(serializedResponses, response);
 
     // Azure Table service defaults to this in the response
     // X-Content-Type-Options: nosniff\r\n
     serializedResponses = this.AddNoSniffNoCache(serializedResponses);
+
     if (undefined !== request.params && request.params.dataServiceVersion) {
       serializedResponses +=
         "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";
@@ -201,24 +186,18 @@ export class TableBatchSerialization extends BatchSerialization {
 
   public serializeTableUpdateEntityBatchResponse(
     request: BatchRequest,
-    response: Models.TableUpdateEntityResponse,
-    contentID: number
+    response: Models.TableUpdateEntityResponse
   ): string {
     // ToDo: keeping my life easy to start and defaulting to "return no content"
     let serializedResponses: string = "";
     // create the initial boundary
-    serializedResponses += "Content-Type: application/http\r\n";
-    serializedResponses += "Content-Transfer-Encoding: binary\r\n";
-    serializedResponses += "\r\n";
-    serializedResponses +=
-      "HTTP/1.1 " +
-      response.statusCode.toString() +
-      " " +
-      this.GetStatusMessageString(response.statusCode) +
-      "\r\n";
-    // ToDo: Not sure how to serialize the status message yet
+    serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
+    serializedResponses = this.SetHttpStatusCode(serializedResponses, response);
     // ToDo_: Correct the handling of content-ID
-    serializedResponses += "Content-ID: " + contentID.toString() + "\r\n";
+    if (request.contentID) {
+      serializedResponses +=
+        "Content-ID: " + request.contentID.toString() + "\r\n";
+    }
     // ToDo: not sure about other headers like cache control etc right now
     // will need to look at this later
     if (undefined !== request.params && request.params.dataServiceVersion) {
@@ -232,24 +211,18 @@ export class TableBatchSerialization extends BatchSerialization {
 
   public serializeTablMergeEntityBatchResponse(
     request: BatchRequest,
-    response: Models.TableMergeEntityResponse,
-    contentID: number
+    response: Models.TableMergeEntityResponse
   ): string {
     // ToDo: keeping my life easy to start and defaulting to "return no content"
     let serializedResponses: string = "";
     // create the initial boundary
-    serializedResponses += "Content-Type: application/http\r\n";
-    serializedResponses += "Content-Transfer-Encoding: binary\r\n";
-    serializedResponses += "\r\n";
-    serializedResponses +=
-      "HTTP/1.1 " +
-      response.statusCode.toString() +
-      " " +
-      this.GetStatusMessageString(response.statusCode) +
-      "\r\n";
-    // ToDo: Not sure how to serialize the status message yet
+    serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
+    serializedResponses = this.SetHttpStatusCode(serializedResponses, response);
     // ToDo_: Correct the handling of content-ID
-    serializedResponses += "Content-ID: " + contentID.toString() + "\r\n";
+    if (request.contentID) {
+      serializedResponses +=
+        "Content-ID: " + request.contentID.toString() + "\r\n";
+    }
     // ToDo: not sure about other headers like cache control etc right now
     // will need to look at this later
     if (request.getHeader("DataServiceVersion")) {
@@ -269,27 +242,14 @@ export class TableBatchSerialization extends BatchSerialization {
   ): Promise<string> {
     let serializedResponses: string = "";
     // create the initial boundary
-    serializedResponses += "Content-Type: application/http\r\n";
-    serializedResponses += "Content-Transfer-Encoding: binary\r\n";
-    serializedResponses += "\r\n";
-    serializedResponses +=
-      "HTTP/1.1 " +
-      response.statusCode.toString() +
-      " " +
-      this.GetStatusMessageString(response.statusCode) +
-      "\r\n";
-
-    // ToDo_: Correct the handling of content-ID throughout batch
-    // if (contentID !== undefined && contentID !== 0) {
-    //   serializedResponses += "Content-ID: " + contentID.toString() + "\r\n";
-    // }
+    serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
+    serializedResponses = this.SetHttpStatusCode(serializedResponses, response);
 
     if (undefined !== request.params && request.params.dataServiceVersion) {
       serializedResponses +=
         "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";
     }
-    // next comes Content-Type: application/json;odata=minimalmetadata;streaming=true;charset=utf-8
-    // On Batch operation???
+
     serializedResponses += "Content-Type: ";
     serializedResponses += request.params.queryOptions?.format;
     serializedResponses += ";streaming=true;charset=utf-8\r\n"; // getting this from service, so adding as well
@@ -304,6 +264,7 @@ export class TableBatchSerialization extends BatchSerialization {
       // "ETag: " + response.eTag.replace("\\", "") + "\r\n";
     }
     serializedResponses += "\r\n";
+
     // now we need to return the JSON body
     // ToDo: I don't like the stream to string to stream conversion here...
     // just not sure there is any way around it
@@ -317,6 +278,13 @@ export class TableBatchSerialization extends BatchSerialization {
         throw new Error("failed to deserialize body");
       }
     }
+    serializedResponses += "\r\n";
+    return serializedResponses;
+  }
+
+  private SetContentTypeAndEncoding(serializedResponses: string) {
+    serializedResponses += "Content-Type: application/http\r\n";
+    serializedResponses += "Content-Transfer-Encoding: binary\r\n";
     serializedResponses += "\r\n";
     return serializedResponses;
   }
@@ -354,5 +322,15 @@ export class TableBatchSerialization extends BatchSerialization {
       throw StorageError;
     }
     return headerStringMatches[2];
+  }
+
+  private SetHttpStatusCode(serializedResponses: string, response: any) {
+    serializedResponses +=
+      "HTTP/1.1 " +
+      response.statusCode.toString() +
+      " " +
+      this.GetStatusMessageString(response.statusCode) +
+      "\r\n";
+    return serializedResponses;
   }
 }
