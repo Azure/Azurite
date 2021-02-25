@@ -8,9 +8,12 @@ import TableBatchOperation from "./TableBatchOperation";
 import BatchTableDeleteEntityOptionalParams from "./BatchTableDeleteEntityOptionalParams";
 import BatchTableUpdateEntityOptionalParams from "./BatchTableUpdateEntityOptionalParams";
 import BatchTableMergeEntityOptionalParams from "./BatchTableMergeEntityOptionalParams";
-import NotImplementedError from "../../table/errors/NotImplementedError";
 import BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams from "./BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams";
-import { TableQueryEntitiesWithPartitionAndRowKeyOptionalParams } from "../generated/artifacts/models";
+import {
+  TableQueryEntitiesOptionalParams,
+  TableQueryEntitiesWithPartitionAndRowKeyOptionalParams
+} from "../generated/artifacts/models";
+import BatchTableQueryEntitiesOptionalParams from "./BatchTableQueryEntitiesOptionalParams";
 
 export enum BatchQueryType {
   query = 0,
@@ -275,8 +278,7 @@ export default class TableBatchManager {
     return {
       __return: this.serialization.serializeTableDeleteEntityBatchResponse(
         request,
-        response,
-        contentID
+        response
       ),
       response
     };
@@ -306,8 +308,7 @@ export default class TableBatchManager {
     return {
       __return: this.serialization.serializeTableUpdateEntityBatchResponse(
         request,
-        response,
-        contentID
+        response
       ),
       response
     };
@@ -322,8 +323,6 @@ export default class TableBatchManager {
     __return: string;
     response: any;
   }> {
-    let queryType: BatchQueryType = BatchQueryType.query;
-
     let partitionKey: string;
     let rowKey: string;
     ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
@@ -334,39 +333,43 @@ export default class TableBatchManager {
     // queryEntities
 
     if (null !== partitionKey && null != rowKey) {
-      queryType = BatchQueryType.querywithpartitionandrowkey;
-    }
+      // ToDO: this is hideous... but we need the params on the request object,
+      // as they percolate through and are needed for the final serialization
+      // currently, because of the way we deconstruct / deserialize, we only
+      // have the right model at a very late stage in processing
+      request.ingestOptionalParams(
+        new BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams()
+      );
 
-    switch (queryType as BatchQueryType) {
-      case BatchQueryType.query:
-        throw NotImplementedError;
-        break;
-      case BatchQueryType.queryentities:
-        throw NotImplementedError;
-        break;
-      case BatchQueryType.querywithpartitionandrowkey:
-        // ToDO: this is hideous... but we need the params on the request object, as they percolate through and are needed for the final serialization
-        // currently, because of the way we deconstruct / deserialize, we only have the right model at a very late stage in processing
-        request.ingestOptionalParams(
-          new BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams()
-        );
-
-        response = await this.parentHandler.queryEntitiesWithPartitionAndRowKey(
-          request.getPath(),
-          partitionKey,
-          rowKey,
-          request.params as TableQueryEntitiesWithPartitionAndRowKeyOptionalParams,
-          batchContextClone
-        );
-        return {
-          __return: await this.serialization.serializeTableQueryEntityWithPartitionAndRowKeyBatchResponse(
-            request,
-            response
-          ),
+      response = await this.parentHandler.queryEntitiesWithPartitionAndRowKey(
+        request.getPath(),
+        partitionKey,
+        rowKey,
+        request.params as TableQueryEntitiesWithPartitionAndRowKeyOptionalParams,
+        batchContextClone
+      );
+      return {
+        __return: await this.serialization.serializeTableQueryEntityWithPartitionAndRowKeyBatchResponse(
+          request,
           response
-        };
-      default:
-        throw NotImplementedError;
+        ),
+        response
+      };
+    } else {
+      // Not even sure that we support this... query entities
+      request.ingestOptionalParams(new BatchTableQueryEntitiesOptionalParams());
+      response = await this.parentHandler.queryEntities(
+        request.getPath(),
+        request.params as TableQueryEntitiesOptionalParams,
+        batchContextClone
+      );
+      return {
+        __return: await this.serialization.serializeTableQueryEntityBatchResponse(
+          request,
+          response
+        ),
+        response
+      };
     }
   }
 
@@ -394,8 +397,7 @@ export default class TableBatchManager {
     return {
       __return: this.serialization.serializeTablMergeEntityBatchResponse(
         request,
-        response,
-        contentID
+        response
       ),
       response
     };

@@ -679,7 +679,7 @@ describe("table Entity APIs test", () => {
     });
   });
 
-  it.only("Single Delete entity via a batch, @loki", (done) => {
+  it("Single Delete entity via a batch, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"

@@ -282,6 +282,47 @@ export class TableBatchSerialization extends BatchSerialization {
     return serializedResponses;
   }
 
+  public async serializeTableQueryEntityBatchResponse(
+    request: BatchRequest,
+    response: Models.TableQueryEntitiesResponse
+  ): Promise<string> {
+    let serializedResponses: string = "";
+    // create the initial boundary
+    serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
+    serializedResponses = this.SetHttpStatusCode(serializedResponses, response);
+
+    if (undefined !== request.params && request.params.dataServiceVersion) {
+      serializedResponses +=
+        "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";
+    }
+
+    serializedResponses += "Content-Type: ";
+    serializedResponses += request.params.queryOptions?.format;
+    serializedResponses += ";streaming=true;charset=utf-8\r\n"; // getting this from service, so adding as well
+
+    // Azure Table service defaults to this in the response
+    // X-Content-Type-Options: nosniff\r\n
+    serializedResponses = this.AddNoSniffNoCache(serializedResponses);
+
+    serializedResponses += "\r\n";
+
+    // now we need to return the JSON body
+    // ToDo: I don't like the stream to string to stream conversion here...
+    // just not sure there is any way around it
+    if (response.body != null) {
+      try {
+        serializedResponses += await TableBatchUtils.StreamToString(
+          response.body
+        );
+      } catch {
+        // do nothing
+        throw new Error("failed to deserialize body");
+      }
+    }
+    serializedResponses += "\r\n";
+    return serializedResponses;
+  }
+
   private SetContentTypeAndEncoding(serializedResponses: string) {
     serializedResponses += "Content-Type: application/http\r\n";
     serializedResponses += "Content-Transfer-Encoding: binary\r\n";
