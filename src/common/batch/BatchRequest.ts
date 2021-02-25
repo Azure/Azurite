@@ -8,6 +8,7 @@ import BatchTableDeleteEntityOptionalParams from "../../table/batch/BatchTableDe
 import BatchTableMergeEntityOptionalParams from "../../table/batch/BatchTableMergeEntityOptionalParams";
 import BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams from "../../table/batch/BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams";
 import BatchTableInsertEntityOptionalParams from "../../table/batch/BatchTableInsertEntityOptionalParams";
+import BatchTableQueryEntitiesOptionalParams from "../../table/batch/BatchTableQueryEntitiesOptionalParams";
 
 // ToDo: Requires validation against all operation types
 // currently several funcitons of the interface are not implemented
@@ -23,11 +24,14 @@ export default class BatchRequest implements IRequest {
     this.params = new BatchTableUpdateEntityOptionalParams();
   }
 
+  // ToDo: This should really be using an interface.
+  // refactor once the basic logic is working
   public params:
     | BatchTableDeleteEntityOptionalParams
     | BatchTableUpdateEntityOptionalParams
     | BatchTableMergeEntityOptionalParams
     | BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams
+    | BatchTableQueryEntitiesOptionalParams
     | BatchTableInsertEntityOptionalParams;
 
   // ingests the optional params for a batch request, and sets these
@@ -36,6 +40,7 @@ export default class BatchRequest implements IRequest {
   public ingestOptionalParams(
     params:
       | BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams
+      | BatchTableQueryEntitiesOptionalParams
       | BatchTableDeleteEntityOptionalParams
       | BatchTableUpdateEntityOptionalParams
       | BatchTableMergeEntityOptionalParams
