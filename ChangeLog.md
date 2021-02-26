@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Fixed Etag returned by Table Storage to follow Azure format.
+
 ## 2020.11 Version 3.9.0-table-alpha.1
 
 Table:
