@@ -29,6 +29,24 @@ export default class AppendBlobHandler extends BaseHandler
     const date = blobCtx.startTime!;
     const etag = newEtag();
 
+    // Hack: Forward requests with query containing `comp=appendblock` to the
+    // `appendBlock` method when in loose mode.
+    // This is required to support the AppendBlock API call via the legacy
+    // github.com/Azure/azure-sdk-for-go/storage client library.
+    // Details here: https://github.com/Azure/Azurite/issues/702
+    if (
+      context.request!.getQuery("comp") === "appendblock" &&
+      contentLength !== 0 &&
+      this.loose
+    ) {
+      return this.appendBlock(
+        context.request!.getBodyStream(),
+        contentLength,
+        options,
+        context
+      );
+    }
+
     if (contentLength !== 0 && !this.loose) {
       throw StorageErrorFactory.getInvalidOperation(
         blobCtx.contextId!,
