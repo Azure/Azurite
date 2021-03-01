@@ -1,13 +1,25 @@
 import { exception } from "console";
 import { StorageError } from "../../blob/generated/artifacts/mappers";
 
+// ToDo: Make these util functions static or aggregate this logic into one of the other
+// batch classes
+/**
+ * Base Batch serialization class.
+ * Contains shared logic for batch serialization.
+ *
+ * @export
+ * @param {string} batchBoundary
+ * @param {string} changesetBoundary
+ */
 export class BatchSerialization {
   public batchBoundary: string = "";
   public changesetBoundary: string = "";
+  public lineEnding: string = "";
 
   public extractBatchBoundary(batchRequestsString: string): void {
     const batchBoundaryMatch = batchRequestsString.match(
-      "(--batch_.+)+(?=\\n)+"
+      // prettier-ignore
+      /--batch_(\w+-?)+/
     );
     if (null != batchBoundaryMatch) {
       this.batchBoundary = batchBoundaryMatch[0];
@@ -16,10 +28,12 @@ export class BatchSerialization {
     }
   }
 
-  // ToDo: improve RegEx
+  // ToDo: improve RegEx, as not sure if spec allows for use of other
+  // change set boundary styles (such as boundary=blahblahblah)
+  // have tried to make as generic as possible
   public extractChangeSetBoundary(batchRequestsString: string): void {
     let subChangeSetPrefixMatches = batchRequestsString.match(
-      "(boundary=)+(changeset_.+)+(?=\\n)+"
+      /(boundary=)+(\w+_?(\w+-?)+)/
     );
 
     if (subChangeSetPrefixMatches != null) {
@@ -34,6 +48,18 @@ export class BatchSerialization {
       } else {
         throw StorageError;
       }
+    }
+  }
+
+  public extractLineEndings(batchRequestsString: string): void {
+    const lineEndingMatch = batchRequestsString.match(
+      // prettier-ignore
+      /\r?\n+/
+    );
+    if (lineEndingMatch != null) {
+      this.lineEnding = lineEndingMatch[0];
+    } else {
+      throw StorageError;
     }
   }
 }

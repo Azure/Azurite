@@ -169,7 +169,19 @@ export default class BatchRequest implements IRequest {
   }
 
   public getQuery(key: string): string | undefined {
-    throw new Error("Method not implemented.");
+    switch (key) {
+      case "$format":
+        return this.params.queryOptions?.format;
+      case "$top":
+        return this.params.queryOptions?.top?.toLocaleString();
+      case "$select":
+        return this.params.queryOptions?.select;
+      case "$filter":
+        return this.params.queryOptions?.filter;
+      default:
+        break;
+    }
+    throw new Error("unknown query options type.");
   }
 
   public getProtocol(): string {

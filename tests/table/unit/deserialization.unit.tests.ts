@@ -1,6 +1,7 @@
 // Unit Tests for serialization
 import * as assert from "assert";
 import { BatchType } from "../../../src/common/batch/BatchOperation";
+import { BatchSerialization } from "../../../src/common/batch/BatchSerialization";
 import { TableBatchSerialization } from "../../../src/table/batch/TableBatchSerialization";
 import SerializationRequestMockStrings from "./mock.request.serialization.strings";
 
@@ -174,7 +175,7 @@ describe("batch deserialization unit tests, these are not the API integration te
     done();
   });
 
-  it.only("deserializes, mock table batch request containing 3 deletes correctly", (done) => {
+  it("deserializes, mock table batch request containing 3 deletes correctly", (done) => {
     const requestString =
       SerializationRequestMockStrings.Sample3DeletesUsingSDK;
     const serializer = new TableBatchSerialization();
@@ -229,6 +230,150 @@ describe("batch deserialization unit tests, these are not the API integration te
     done();
   });
 
-  // ToDo: we need to test the serialization and function of
-  // the BatchRequest type as well
+  it.only("deserializes, mock durable function request correctly", (done) => {
+    const requestString =
+      SerializationRequestMockStrings.BatchDurableE1HelloRequestString;
+    const serializer = new TableBatchSerialization();
+    const batchOperationArray = serializer.deserializeBatchRequest(
+      requestString
+    );
+
+    // There are 5 operations in the batch
+    assert.equal(batchOperationArray.length, 5);
+    // First Batch Operation is an insert.
+    assert.equal(batchOperationArray[0].batchType, BatchType.table);
+
+    done();
+  });
+
+  // boundary tests
+  it("finds the \\r\\n line ending boundary in a durable functions call", (done) => {
+    const serializationBase = new BatchSerialization();
+    // extract batchBoundary
+    serializationBase.extractLineEndings(
+      SerializationRequestMockStrings.BatchDurableE1HelloRequestString
+    );
+    assert.equal(serializationBase.lineEnding, "\r\n");
+    done();
+  });
+
+  it("finds the \\n line ending boundary in an SDK call", (done) => {
+    const serializationBase = new BatchSerialization();
+    // extract batchBoundary
+    serializationBase.extractLineEndings(
+      SerializationRequestMockStrings.Sample3InsertsUsingSDK
+    );
+    assert.equal(serializationBase.lineEnding, "\n");
+    done();
+  });
+
+  it("finds the batch boundary in a durable functions call", (done) => {
+    const serializationBase = new BatchSerialization();
+    // extract batchBoundary
+    serializationBase.extractBatchBoundary(
+      SerializationRequestMockStrings.BatchDurableE1HelloRequestString
+    );
+    assert.equal(
+      serializationBase.batchBoundary,
+      "--batch_35c74636-e91e-4c4f-9ab1-906881bf7d9d"
+    );
+    done();
+  });
+
+  it("finds the changeset boundary in a durable functions call", (done) => {
+    const serializationBase = new BatchSerialization();
+    serializationBase.extractChangeSetBoundary(
+      SerializationRequestMockStrings.BatchDurableE1HelloRequestString
+    );
+    assert.equal(
+      serializationBase.changesetBoundary,
+      "changeset_0ac4036e-9ea9-4dfc-90c3-66a95213b6b0"
+    );
+    done();
+  });
+
+  it("finds the batch boundary in a single retrieve entity call", (done) => {
+    const serializationBase = new BatchSerialization();
+    // extract batchBoundary
+    serializationBase.extractBatchBoundary(
+      SerializationRequestMockStrings.BatchQueryWithPartitionKeyAndRowKeyRequest
+    );
+    assert.equal(
+      serializationBase.batchBoundary,
+      "--batch_d54a6553104c5b65f259aa178d324ebf"
+    );
+    done();
+  });
+
+  it("finds the changeset boundary in a single retrieve entity call", (done) => {
+    const serializationBase = new BatchSerialization();
+    serializationBase.extractChangeSetBoundary(
+      SerializationRequestMockStrings.BatchQueryWithPartitionKeyAndRowKeyRequest
+    );
+    assert.equal(
+      serializationBase.changesetBoundary,
+      "--batch_d54a6553104c5b65f259aa178d324ebf"
+    );
+    done();
+  });
+
+  it("finds the changeset boundary in a non guid form", (done) => {
+    const serializationBase = new BatchSerialization();
+    serializationBase.extractChangeSetBoundary(
+      SerializationRequestMockStrings.BatchNonGuidBoundaryShortString
+    );
+    assert.equal(serializationBase.changesetBoundary, "blahblah");
+    done();
+  });
+
+  // Partition Key Extraction
+  /*
+  {
+  batchOperation: {
+    batchType: "table",
+    rawHeaders: [
+      "HTTP/1.1\r",
+      "Accept: application/json;odata=minimalmetadata\r",
+      "Content-Type: application/json\r",
+      "DataServiceVersion: 3.0;\r",
+      "\r",
+      "",
+    ],
+    httpMethod: "PUT",
+    path: "SampleHubVSHistory",
+    uri: "http://127.0.0.1:10002/devstoreaccount1/SampleHubVSHistory(PartitionKey='1c3a11bb972c429fbf1b62d71d188003',RowKey='0000000000000000')",
+    jsonRequestBody: "{\"EventId\":-1,\"IsPlayed\":false,\"_Timestamp\":\"2021-02-26T08:49:07.6232844Z\",\"_Timestamp@odata.type\":\"Edm.DateTime\",\"EventType\":\"OrchestratorStarted\",\"ExecutionId\":\"09a10e2fff2947fd9c4db05a8660e355\"}",
+  },
+  headers: {
+    headerItems: {
+      "HTTP/1.1\r": "",
+      Accept: "",
+      "Content-Type": "",
+      DataServiceVersion: "",
+    },
+    headerCount: 4,
+    rawHeaders: [
+      "HTTP/1.1\r",
+      "Accept: application/json;odata=minimalmetadata\r",
+      "Content-Type: application/json\r",
+      "DataServiceVersion: 3.0;\r",
+      "\r",
+      "",
+    ],
+  },
+  params: {
+    tableEntityProperties: {
+      EventId: -1,
+      IsPlayed: false,
+      _Timestamp: "2021-02-26T08:49:07.6232844Z",
+      "_Timestamp@odata.type": "Edm.DateTime",
+      EventType: "OrchestratorStarted",
+      ExecutionId: "09a10e2fff2947fd9c4db05a8660e355",
+    },
+    queryOptions: {
+      format: "application/json;odata=nometadata",
+    },
+  },
+}
+  */
 });
