@@ -25,7 +25,7 @@ export class TableBatchSerialization extends BatchSerialization {
   ): TableBatchOperation[] {
     this.extractBatchBoundary(batchRequestsString);
     this.extractChangeSetBoundary(batchRequestsString);
-
+    this.extractLineEndings(batchRequestsString);
     // we can't rely on case of strings we use in delimiters
     // ToDo: might be easier and more efficient to use i option on the regex here...
     const contentTypeHeaderString = this.extractRequestHeaderString(
@@ -37,7 +37,8 @@ export class TableBatchSerialization extends BatchSerialization {
       "(\\n)+(([c,C])+(ontent-)+([t,T])+(ransfer-)+([e,E])+(ncoding))+(?=:)+"
     );
 
-    const HTTP_LINE_ENDING = "\n";
+    // the line endings might be \r\n or \n
+    const HTTP_LINE_ENDING = this.lineEnding;
     const subRequestPrefix = `--${this.changesetBoundary}${HTTP_LINE_ENDING}${contentTypeHeaderString}: application/http${HTTP_LINE_ENDING}${contentTransferEncodingString}: binary`;
     const splitBody = batchRequestsString.split(subRequestPrefix);
 
