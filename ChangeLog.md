@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Allow empty RowKey in an entity.
+
 ## 2020.11 Version 3.9.0-table-alpha.1
 
 Table:
