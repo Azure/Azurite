@@ -402,9 +402,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const accountName = tableContext.account;
     const partitionKey = tableContext.partitionKey!; // Get partitionKey from context
     const rowKey = tableContext.rowKey!; // Get rowKey from context
-    console.log("asdasdasdad");
+
     if (!partitionKey || !rowKey) {
-      debugger;
       throw StorageErrorFactory.getPropertiesNeedValue(context);
     }
     if (ifMatch === "" || ifMatch === undefined) {
