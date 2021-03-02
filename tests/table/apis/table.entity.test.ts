@@ -104,6 +104,24 @@ describe("table Entity APIs test", () => {
     });
   });
 
+  it("Should not insert new Entity with missing RowKey, @loki", (done) => {
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-entity
+    const entity = {
+      PartitionKey: "part1",
+      myValue: "value1"
+    };
+    tableService.insertEntity(
+      tableName,
+      entity,
+      (insertError, result, response) => {
+        if (insertError) {
+          assert.equal(response.statusCode, 200);
+          done();
+        }
+      }
+    );
+  });
+
   it("Should delete an Entity using etag wildcard, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
     const entity = {
