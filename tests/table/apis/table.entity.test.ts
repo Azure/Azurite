@@ -637,7 +637,6 @@ describe("table Entity APIs test", () => {
                   }
                 }
               );
-              done();
             }
           );
         }
@@ -645,7 +644,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Query / Retrieve single entity via a batch, requestion Options undefined / default @loki", (done) => {
+  it.only("Query / Retrieve single entity via a batch, requestion Options undefined / default @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"

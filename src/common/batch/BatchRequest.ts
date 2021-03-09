@@ -185,12 +185,19 @@ export default class BatchRequest implements IRequest {
   }
 
   public getProtocol(): string {
-    if (this.batchOperation.protocol != null) {
+    if (
+      this.batchOperation.protocol !== null &&
+      this.batchOperation.protocol !== undefined
+    ) {
       return this.batchOperation.protocol;
     } else {
-      throw new Error(
-        "protocol null  when calling getProtocol on BatchRequest"
-      );
+      // try extract protocol
+      const protocolMatch = this.getUrl().match(/https?/);
+      if (protocolMatch !== null && protocolMatch!.length > 0) {
+        this.batchOperation.protocol = protocolMatch[0];
+        return this.batchOperation.protocol;
+      }
+      throw new Error("protocol null when calling getProtocol on BatchRequest");
     }
   }
 }

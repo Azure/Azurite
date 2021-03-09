@@ -230,7 +230,7 @@ describe("batch deserialization unit tests, these are not the API integration te
     done();
   });
 
-  it.only("deserializes, mock durable function request correctly", (done) => {
+  it("deserializes, mock durable function request correctly", (done) => {
     const requestString =
       SerializationRequestMockStrings.BatchDurableE1HelloRequestString;
     const serializer = new TableBatchSerialization();
