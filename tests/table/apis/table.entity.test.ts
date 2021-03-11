@@ -512,12 +512,11 @@ describe("table Entity APIs test", () => {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
-
-    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
     const batchEntity1 = createBasicEntityForTest();
     const batchEntity2 = createBasicEntityForTest();
     const batchEntity3 = createBasicEntityForTest();
 
+    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
     entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
     entityBatch.addOperation("INSERT", batchEntity2, { echoContent: true });
     entityBatch.addOperation("INSERT", batchEntity3, { echoContent: true });
@@ -528,6 +527,7 @@ describe("table Entity APIs test", () => {
       (updateError, updateResult, updateResponse) => {
         if (updateError) {
           assert.ifError(updateError);
+          done();
         } else {
           assert.equal(updateResponse.statusCode, 202); // No content
           // Now that QueryEntity is done - validate Entity Properties as follows:
