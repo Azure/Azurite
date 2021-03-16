@@ -149,15 +149,48 @@ export class TableBatchSerialization extends BatchSerialization {
     // Azure Table service defaults to this in the response
     // X-Content-Type-Options: nosniff\r\n
     serializedResponses = this.AddNoSniffNoCache(serializedResponses);
-
-    // ToDo: not sure about other headers like cache control etc right now
-    // will need to look at this later
-    if (undefined !== request.params && request.params.dataServiceVersion) {
+    // Need to add
+    // Preference-Applied: return-no-content
+    if (request.getHeader("Preference-Applied")) {
       serializedResponses +=
-        "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";
+        "Preference-Applied: " +
+        request.getHeader("Preference-Applied") +
+        "\r\n";
     }
+    // DataServiceVersion: 3.0;
+    if (request.getHeader("DataServiceVersion")) {
+      serializedResponses +=
+        "DataServiceVersion: " +
+        request.getHeader("DataServiceVersion") +
+        "\r\n";
+    }
+    // These 2 headers should point to the result of the successful insert
+    // ToDo: Refactor for DRY!
+    // https://docs.microsoft.com/de-de/dotnet/api/microsoft.azure.batch.addtaskresult.location?view=azure-dotnet#Microsoft_Azure_Batch_AddTaskResult_Location
+    // Location: http://127.0.0.1:10002/devstoreaccount1/SampleHubVSHistory(PartitionKey='7219c1f2e2674f249bf9589d31ab3c6e',RowKey='sentinel')
+    serializedResponses += "Location: " + request.getUrl().replace(")", "");
+    serializedResponses += "PartitionKey='";
+    serializedResponses += request.params.tableEntityProperties!.PartitionKey;
+    serializedResponses += "',";
+    serializedResponses += "RowKey='";
+    serializedResponses += request.params.tableEntityProperties!.RowKey;
+    serializedResponses += "')\r\n";
 
-    serializedResponses += "ETag: " + response.eTag + "\r\n";
+    // https://docs.microsoft.com/de-de/dotnet/api/microsoft.azure.batch.protocol.models.taskgetheaders.dataserviceid?view=azure-dotnet
+    // DataServiceId: http://127.0.0.1:10002/devstoreaccount1/SampleHubVSHistory(PartitionKey='7219c1f2e2674f249bf9589d31ab3c6e',RowKey='sentinel')
+    serializedResponses +=
+      "DataServiceId: " + request.getUrl().replace(")", "");
+    serializedResponses += "PartitionKey='";
+    serializedResponses += request.params.tableEntityProperties!.PartitionKey;
+    serializedResponses += "',";
+    serializedResponses += "RowKey='";
+    serializedResponses += request.params.tableEntityProperties!.RowKey;
+    serializedResponses += "')\r\n";
+
+    if (null !== response.eTag && undefined !== response.eTag) {
+      // prettier-ignore
+      serializedResponses += "ETag: " + response.eTag;
+    }
     return serializedResponses;
   }
 
@@ -185,6 +218,17 @@ export class TableBatchSerialization extends BatchSerialization {
     return serializedResponses;
   }
 
+  // Serializes the Update Entitz Batch Response
+  // Sample fromm Service
+  // --changesetresponse_c1f6ce4f-453e-4ac1-a075-f8ccf9342b7f
+  // Content-Type: application/http
+  // Content-Transfer-Encoding: binary
+
+  // HTTP/1.1 204 No Content
+  // X-Content-Type-Options: nosniff
+  // Cache-Control: no-cache
+  // DataServiceVersion: 1.0;
+  // ETag: W/"datetime'2021-03-01T21%3A34%3A03.097Z'"
   public serializeTableUpdateEntityBatchResponse(
     request: BatchRequest,
     response: Models.TableUpdateEntityResponse
@@ -199,14 +243,23 @@ export class TableBatchSerialization extends BatchSerialization {
       serializedResponses +=
         "Content-ID: " + request.contentID.toString() + "\r\n";
     }
-    // ToDo: not sure about other headers like cache control etc right now
-    // will need to look at this later
-    if (undefined !== request.params && request.params.dataServiceVersion) {
+
+    serializedResponses = this.AddNoSniffNoCache(serializedResponses);
+    // Need to add
+    // Preference-Applied: return-no-content
+    if (request.getHeader("Preference-Applied")) {
       serializedResponses +=
-        "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";
+        "Preference-Applied: " +
+        request.getHeader("Preference-Applied") +
+        "\r\n";
     }
-    serializedResponses += "Location: " + request.getUrl() + "\r\n";
-    serializedResponses += "DataServiceId: " + request.getUrl() + "\r\n";
+    // Service response is defaulting to 1.0 at the moment...
+    serializedResponses += "DataServiceVersion: 1.0\r\n";
+
+    if (null !== response.eTag && undefined !== response.eTag) {
+      // prettier-ignore
+      serializedResponses += "ETag: " + response.eTag;
+    }
     return serializedResponses;
   }
 
@@ -219,6 +272,7 @@ export class TableBatchSerialization extends BatchSerialization {
     // create the initial boundary
     serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
     serializedResponses = this.SetHttpStatusCode(serializedResponses, response);
+    serializedResponses = this.AddNoSniffNoCache(serializedResponses);
     // ToDo_: Correct the handling of content-ID
     if (request.contentID) {
       serializedResponses +=
@@ -226,14 +280,14 @@ export class TableBatchSerialization extends BatchSerialization {
     }
     // ToDo: not sure about other headers like cache control etc right now
     // will need to look at this later
-    if (request.getHeader("DataServiceVersion")) {
-      serializedResponses +=
-        "DataServiceVersion: " +
-        request.getHeader("DataServiceVersion") +
-        "\r\n";
+
+    // Service defaults to v1.0
+    serializedResponses += "dataServiceVersion: 1.0\r\n";
+
+    if (null !== response.eTag && undefined !== response.eTag) {
+      // prettier-ignore
+      serializedResponses += "ETag: " + response.eTag;
     }
-    serializedResponses += "Location: " + request.getUrl() + "\r\n";
-    serializedResponses += "DataServiceId: " + request.getUrl() + "\r\n";
     return serializedResponses;
   }
 
@@ -325,7 +379,7 @@ export class TableBatchSerialization extends BatchSerialization {
   }
 
   private SetContentTypeAndEncoding(serializedResponses: string) {
-    serializedResponses += "Content-Type: application/http\r\n";
+    serializedResponses += "\r\nContent-Type: application/http\r\n";
     serializedResponses += "Content-Transfer-Encoding: binary\r\n";
     serializedResponses += "\r\n";
     return serializedResponses;

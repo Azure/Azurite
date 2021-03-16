@@ -171,7 +171,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     if (
       !options.tableEntityProperties ||
       !options.tableEntityProperties.PartitionKey ||
-      !options.tableEntityProperties.RowKey
+      // rowKey may be empty string
+      options.tableEntityProperties.RowKey === null
     ) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
     }
@@ -670,9 +671,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableBatchOptionalParams,
     context: Context
   ): Promise<Models.TableBatchResponse> {
-    const tableContext = new TableStorageContext(context);
     const tableCtx = new TableStorageContext(context);
-
+    const contentTypeResponse = tableCtx.request
+      ?.getHeader("content-type")
+      ?.replace("batch", "batchresponse");
     const tableBatchManager = new TableBatchManager(tableCtx, this);
 
     const response = await tableBatchManager.processBatchRequestAndSerializeResponse(
@@ -686,7 +688,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     body = toReadableStream(response);
 
     return {
-      requestId: tableContext.contextID,
+      contentType: contentTypeResponse,
+      requestId: tableCtx.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
       statusCode: 202,

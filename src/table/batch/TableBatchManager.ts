@@ -94,25 +94,40 @@ export default class TableBatchManager {
     );
 
     // --batchresponse_e69b1c6c-62ff-471e-ab88-9a4aeef0a880
-    responseString += batchBoundary + "\n";
+    responseString += batchBoundary + "\r\n";
     // (currently static header) ToDo: Validate if we need to correct headers via tests
     // Content-Type: multipart/mixed; boundary=changesetresponse_a6253244-7e21-42a8-a149-479ee9e94a25
     responseString +=
-      "Content-Type: multipart/mixed; boundary=" + changesetBoundary + "\n";
+      "Content-Type: multipart/mixed; boundary=" + changesetBoundary + "\r\n";
 
-    changesetBoundary = "\n--" + changesetBoundary;
+    changesetBoundary = "\r\n--" + changesetBoundary;
     this.requests.forEach((request) => {
       // need to add the boundaries
-      // --changesetresponse_a6253244-7e21-42a8-a149-479ee9e94a25
+      // this should look like (\r\n on line endings assumed)
+      // --changesetresponse_c1f6ce4f-453e-4ac1-a075-f8ccf9342b7f
+      // Content-Type: application/http
+      // Content-Transfer-Encoding: binary
+      // \r\n (extra here)
+      // HTTP/1.1 204 No Content
+      // X-Content-Type-Options: nosniff
+      // Cache-Control: no-cache
+      // DataServiceVersion: 1.0;
+      // ETag: W/"datetime'2021-03-01T21%3A34%3A03.093Z'"
+      // \r\n (extra here)
+      // \r\n (extra here)
+      // --changesetresponse_c1f6ce4f-453e-4ac1-a075-f8ccf9342b7f <-- next response
+
       responseString += changesetBoundary;
 
       responseString += request.response;
+
+      responseString += "\r\n\r\n";
     });
 
     // --changesetresponse_a6253244-7e21-42a8-a149-479ee9e94a25--
-    responseString += changesetBoundary + "--\n";
+    responseString += changesetBoundary + "--\r\n";
     // --batchresponse_e69b1c6c-62ff-471e-ab88-9a4aeef0a880--
-    responseString += "\n" + batchBoundary + "--\n";
+    responseString += batchBoundary + "--\r\n";
 
     return responseString;
   }
@@ -146,6 +161,8 @@ export default class TableBatchManager {
               contentID
             ));
           } catch (putException) {
+            // durable functions currently causing a duplicate entry 409 here...
+            // think issue is rooted earlier by an error in the table handler
             throw putException;
           }
           break;
