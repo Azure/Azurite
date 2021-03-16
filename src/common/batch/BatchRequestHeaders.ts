@@ -57,7 +57,7 @@ export default class BatchRequestHeaders {
 
   // ToDo: Should this maybe be case insensitive?
   public header(key: string): string {
-    return this.headerItems[key];
+    return this.headerItems[key.toLocaleLowerCase()];
   }
 
   public headerKeys(): string[] {
@@ -87,14 +87,11 @@ export default class BatchRequestHeaders {
   private createDictFromRawHeaders(): void {
     this.rawHeaders.forEach((rawheader) => {
       if (rawheader != null) {
-        const headerKeyMatch = rawheader.match(/^(\S+):/);
-        const headerValueMatch = rawheader.match(/(\S+)$/);
-        if (headerKeyMatch == null && rawheader.length > 2) {
+        const headerMatch = rawheader.match(/(\S+)(:\s?)(\S+)/);
+        if (headerMatch == null && rawheader.length > 2) {
           this.add(rawheader, "");
-        } else if (headerValueMatch != null && headerKeyMatch != null) {
-          this.add(headerKeyMatch[1], headerValueMatch[0]);
-        } else if (headerKeyMatch != null) {
-          this.add(headerKeyMatch[1], "");
+        } else if (headerMatch != null) {
+          this.add(headerMatch[1].toLocaleLowerCase(), headerMatch[3]);
         }
       }
     });

@@ -162,7 +162,7 @@ export class TableBatchSerialization extends BatchSerialization {
       serializedResponses +=
         "DataServiceVersion: " +
         request.getHeader("DataServiceVersion") +
-        "\r\n";
+        ";\r\n";
     }
     // These 2 headers should point to the result of the successful insert
     // ToDo: Refactor for DRY!
@@ -189,7 +189,7 @@ export class TableBatchSerialization extends BatchSerialization {
 
     if (null !== response.eTag && undefined !== response.eTag) {
       // prettier-ignore
-      serializedResponses += "ETag: " + response.eTag;
+      serializedResponses += "ETag: " + response.eTag.replace(":","%3A");
     }
     return serializedResponses;
   }
@@ -254,11 +254,11 @@ export class TableBatchSerialization extends BatchSerialization {
         "\r\n";
     }
     // Service response is defaulting to 1.0 at the moment...
-    serializedResponses += "DataServiceVersion: 1.0\r\n";
+    serializedResponses += "DataServiceVersion: 1.0;\r\n";
 
     if (null !== response.eTag && undefined !== response.eTag) {
       // prettier-ignore
-      serializedResponses += "ETag: " + response.eTag;
+      serializedResponses += "ETag: " + response.eTag.replace(":","%3A");
     }
     return serializedResponses;
   }
@@ -282,11 +282,11 @@ export class TableBatchSerialization extends BatchSerialization {
     // will need to look at this later
 
     // Service defaults to v1.0
-    serializedResponses += "dataServiceVersion: 1.0\r\n";
+    serializedResponses += "dataServiceVersion: 1.0;\r\n";
 
     if (null !== response.eTag && undefined !== response.eTag) {
       // prettier-ignore
-      serializedResponses += "ETag: " + response.eTag;
+      serializedResponses += "ETag: " + response.eTag.replace(":","%3A");
     }
     return serializedResponses;
   }
@@ -313,10 +313,8 @@ export class TableBatchSerialization extends BatchSerialization {
     // X-Content-Type-Options: nosniff\r\n
     serializedResponses = this.AddNoSniffNoCache(serializedResponses);
 
-    // ETag: W/"datetime\'2021-02-05T17%3A15%3A16.7935715Z\'"\r\n\r\n
     if (response.eTag) {
-      serializedResponses += "ETag: " + response.eTag + "\r\n";
-      // "ETag: " + response.eTag.replace("\\", "") + "\r\n";
+      serializedResponses += "ETag: " + response.eTag.replace(":", "%3A");
     }
     serializedResponses += "\r\n";
 

@@ -1,6 +1,7 @@
 // Unit Tests for serialization
 import * as assert from "assert";
 import { BatchType } from "../../../src/common/batch/BatchOperation";
+import BatchRequestHeaders from "../../../src/common/batch/BatchRequestHeaders";
 import { BatchSerialization } from "../../../src/common/batch/BatchSerialization";
 import { TableBatchSerialization } from "../../../src/table/batch/TableBatchSerialization";
 import SerializationRequestMockStrings from "./mock.request.serialization.strings";
@@ -326,54 +327,19 @@ describe("batch deserialization unit tests, these are not the API integration te
     done();
   });
 
-  // Partition Key Extraction
-  /*
-  {
-  batchOperation: {
-    batchType: "table",
-    rawHeaders: [
+  it("deserializes the headers correctly for a batch request", (done) => {
+    const sampleHeaders = [
       "HTTP/1.1\r",
       "Accept: application/json;odata=minimalmetadata\r",
       "Content-Type: application/json\r",
+      "Prefer: return-no-content\r",
       "DataServiceVersion: 3.0;\r",
       "\r",
-      "",
-    ],
-    httpMethod: "PUT",
-    path: "SampleHubVSHistory",
-    uri: "http://127.0.0.1:10002/devstoreaccount1/SampleHubVSHistory(PartitionKey='1c3a11bb972c429fbf1b62d71d188003',RowKey='0000000000000000')",
-    jsonRequestBody: "{\"EventId\":-1,\"IsPlayed\":false,\"_Timestamp\":\"2021-02-26T08:49:07.6232844Z\",\"_Timestamp@odata.type\":\"Edm.DateTime\",\"EventType\":\"OrchestratorStarted\",\"ExecutionId\":\"09a10e2fff2947fd9c4db05a8660e355\"}",
-  },
-  headers: {
-    headerItems: {
-      "HTTP/1.1\r": "",
-      Accept: "",
-      "Content-Type": "",
-      DataServiceVersion: "",
-    },
-    headerCount: 4,
-    rawHeaders: [
-      "HTTP/1.1\r",
-      "Accept: application/json;odata=minimalmetadata\r",
-      "Content-Type: application/json\r",
-      "DataServiceVersion: 3.0;\r",
-      "\r",
-      "",
-    ],
-  },
-  params: {
-    tableEntityProperties: {
-      EventId: -1,
-      IsPlayed: false,
-      _Timestamp: "2021-02-26T08:49:07.6232844Z",
-      "_Timestamp@odata.type": "Edm.DateTime",
-      EventType: "OrchestratorStarted",
-      ExecutionId: "09a10e2fff2947fd9c4db05a8660e355",
-    },
-    queryOptions: {
-      format: "application/json;odata=nometadata",
-    },
-  },
-}
-  */
+      ""
+    ];
+    // const headers1 = new BatchRequestHeaders(sampleHeaders1);
+    const headers = new BatchRequestHeaders(sampleHeaders);
+    assert.equal(headers.header("prefer"), "return-no-content");
+    done();
+  });
 });

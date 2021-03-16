@@ -689,6 +689,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     return {
       contentType: contentTypeResponse,
+      transferEncoding: "", // trying to force transfer encoding to non chunked
       requestId: tableCtx.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
