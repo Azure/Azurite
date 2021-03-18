@@ -1,6 +1,6 @@
 import BufferStream from "../../common/utils/BufferStream";
 import { newTableEntityEtag } from "../../common/utils/utils";
-import TableBatchManager from "../batch/TableBatchManager";
+import TableBatchOrchestrator from "../batch/TableBatchOrchestrator";
 import TableStorageContext from "../context/TableStorageContext";
 import { NormalizedEntity } from "../entity/NormalizedEntity";
 import NotImplementedError from "../errors/NotImplementedError";
@@ -664,6 +664,17 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     throw new NotImplementedError(context);
   }
 
+  /**
+   * Processes an entity group transaction request / batch request
+   *
+   * @param {NodeJS.ReadableStream} body
+   * @param {string} multipartContentType
+   * @param {number} contentLength
+   * @param {Models.TableBatchOptionalParams} options
+   * @param {Context} context
+   * @return {*}  {Promise<Models.TableBatchResponse>}
+   * @memberof TableHandler
+   */
   public async batch(
     body: NodeJS.ReadableStream,
     multipartContentType: string,
@@ -675,14 +686,11 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const contentTypeResponse = tableCtx.request
       ?.getHeader("content-type")
       ?.replace("batch", "batchresponse");
-    const tableBatchManager = new TableBatchManager(tableCtx, this);
+    const tableBatchManager = new TableBatchOrchestrator(tableCtx, this);
 
     const response = await tableBatchManager.processBatchRequestAndSerializeResponse(
       await TableBatchUtils.StreamToString(body)
     );
-
-    // use this to debug response:
-    // console.log(response);
 
     // need to convert response to NodeJS.ReadableStream
     body = toReadableStream(response);
@@ -693,7 +701,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       version: TABLE_API_VERSION,
       date: context.startTime,
       statusCode: 202,
-      body // Use incoming request body as Batch operation response body as demo
+      body
     };
   }
 

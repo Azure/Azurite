@@ -15,16 +15,23 @@ import {
 } from "../generated/artifacts/models";
 import BatchTableQueryEntitiesOptionalParams from "./BatchTableQueryEntitiesOptionalParams";
 
-export enum BatchQueryType {
-  query = 0,
-  queryentities = 2,
-  querywithpartitionandrowkey = 4
-}
+// ToDo: remove completely
+// export enum BatchQueryType {
+//   query = 0,
+//   queryentities = 2,
+//   querywithpartitionandrowkey = 4
+// }
 
-// Currently there is a single distinct and concrete implementation of batch /
-// entity group operations for the table api.
-// it might be possible to share code between this and the blob batch api, but this
-// has not yet been validated.
+/**
+ * Currently there is a single distinct and concrete implementation of batch /
+ * entity group operations for the table api.
+ * ToDo: it might be possible to share code between this and the blob batch api, but this
+ * has not yet been validated.
+ * Will need refactoring when we address batch transactions for blob.
+ *
+ * @export
+ * @class TableBatchManager
+ */
 export default class TableBatchManager {
   private batchOperations: TableBatchOperation[] = [];
   private requests: BatchRequest[] = [];
@@ -37,23 +44,34 @@ export default class TableBatchManager {
     this.parentHandler = handler;
   }
 
-  // Takes batchRequest body, deserializes requests, submits to handlers, then returns serialized response
+  /**
+   * This is the central route / sequence of the batch orchestration.
+   * Takes batchRequest body, deserializes requests, submits to handlers, then returns serialized response
+   *
+   * @param {string} batchRequestBody
+   * @return {*}  {Promise<string>}
+   * @memberof TableBatchManager
+   */
   public async processBatchRequestAndSerializeResponse(
     batchRequestBody: string
   ): Promise<string> {
-    this.deserializeBatchRequests(batchRequestBody);
+    this.batchOperations = this.serialization.deserializeBatchRequest(
+      batchRequestBody
+    );
 
     await this.submitRequestsToHandlers();
 
     return this.serializeResponses();
   }
 
-  private deserializeBatchRequests(batchRequestBody: string): void {
-    this.batchOperations = this.serialization.deserializeBatchRequest(
-      batchRequestBody
-    );
-  }
-
+  /**
+   * Submits requests to the appropriate handlers
+   * ToDo: Correct logic and handling of requests with Content ID
+   *
+   * @private
+   * @return {*}  {Promise<void>}
+   * @memberof TableBatchManager
+   */
   private async submitRequestsToHandlers(): Promise<void> {
     this.batchOperations.forEach((operation) => {
       const request: BatchRequest = new BatchRequest(operation);
@@ -77,12 +95,20 @@ export default class TableBatchManager {
     }
   }
 
-  // see Link below for details of response format
-  // tslint:disable-next-line: max-line-length
-  // https://docs.microsoft.com/en-us/rest/api/storageservices/performing-entity-group-transactions#json-versions-2013-08-15-and-later-2
+  /**
+   * Serializes responses from the table handler
+   * see Link below for details of response format
+   * tslint:disable-next-line: max-line-length
+   * https://docs.microsoft.com/en-us/rest/api/storageservices/performing-entity-group-transactions#json-versions-2013-08-15-and-later-2
+   *
+   * @private
+   * @return {*}  {string}
+   * @memberof TableBatchManager
+   */
   private serializeResponses(): string {
     let responseString: string = "";
     // based on research, a stringbuilder is only worth doing with 1000s of string ops
+    // this can be optimized later if we get reports of slow batch operations
     const batchBoundary = this.serialization.batchBoundary.replace(
       "batch",
       "batchresponse"
@@ -93,47 +119,32 @@ export default class TableBatchManager {
       "changesetresponse"
     );
 
-    // --batchresponse_e69b1c6c-62ff-471e-ab88-9a4aeef0a880
     responseString += batchBoundary + "\r\n";
     // (currently static header) ToDo: Validate if we need to correct headers via tests
-    // Content-Type: multipart/mixed; boundary=changesetresponse_a6253244-7e21-42a8-a149-479ee9e94a25
     responseString +=
       "Content-Type: multipart/mixed; boundary=" + changesetBoundary + "\r\n";
-
     changesetBoundary = "\r\n--" + changesetBoundary;
     this.requests.forEach((request) => {
-      // need to add the boundaries
-      // this should look like (\r\n on line endings assumed)
-      // --changesetresponse_c1f6ce4f-453e-4ac1-a075-f8ccf9342b7f
-      // Content-Type: application/http
-      // Content-Transfer-Encoding: binary
-      // \r\n (extra here)
-      // HTTP/1.1 204 No Content
-      // X-Content-Type-Options: nosniff
-      // Cache-Control: no-cache
-      // DataServiceVersion: 1.0;
-      // ETag: W/"datetime'2021-03-01T21%3A34%3A03.093Z'"
-      // \r\n (extra here)
-      // \r\n (extra here)
-      // --changesetresponse_c1f6ce4f-453e-4ac1-a075-f8ccf9342b7f <-- next response
-
       responseString += changesetBoundary;
-
       responseString += request.response;
-
       responseString += "\r\n\r\n";
     });
-
-    // --changesetresponse_a6253244-7e21-42a8-a149-479ee9e94a25--
     responseString += changesetBoundary + "--\r\n";
-    // --batchresponse_e69b1c6c-62ff-471e-ab88-9a4aeef0a880--
     responseString += batchBoundary + "--\r\n";
-
     return responseString;
   }
 
-  // Routes and dispatches single operations against the table handler and stores
-  // the serialized result
+  /**
+   * Routes and dispatches single operations against the table handler and stores
+   * the serialized result.
+   *
+   * @private
+   * @param {BatchRequest} request
+   * @param {Context} context
+   * @param {number} contentID
+   * @return {*}  {Promise<any>}
+   * @memberof TableBatchManager
+   */
   private async routeAndDispatchBatchRequest(
     request: BatchRequest,
     context: Context,
@@ -141,7 +152,6 @@ export default class TableBatchManager {
   ): Promise<any> {
     // the context that we have will not work with the calls and needs updating for
     // batch operations, need a suitable deep clone, as each request needs to be treated seaprately
-    // this might be too shallow with inheritance
     const batchContextClone = Object.create(context);
     batchContextClone.tableName = request.getPath();
     batchContextClone.path = request.getPath();
@@ -153,18 +163,12 @@ export default class TableBatchManager {
         case "POST":
           // INSERT: we are inserting an entity
           // POST	https://myaccount.table.core.windows.net/mytable
-          try {
-            ({ __return, response } = await this.handleBatchInsert(
-              request,
-              response,
-              batchContextClone,
-              contentID
-            ));
-          } catch (putException) {
-            // durable functions currently causing a duplicate entry 409 here...
-            // think issue is rooted earlier by an error in the table handler
-            throw putException;
-          }
+          ({ __return, response } = await this.handleBatchInsert(
+            request,
+            response,
+            batchContextClone,
+            contentID
+          ));
           break;
         case "PUT":
           // UPDATE: we are updating an entity
@@ -233,6 +237,14 @@ export default class TableBatchManager {
     return __return;
   }
 
+  /**
+   * Helper function to extract values needed for handler calls
+   *
+   * @private
+   * @param {BatchRequest} request
+   * @return {*}  {{ partitionKey: string; rowKey: string }}
+   * @memberof TableBatchManager
+   */
   private extractRowAndPartitionKeys(
     request: BatchRequest
   ): { partitionKey: string; rowKey: string } {
@@ -270,6 +282,20 @@ export default class TableBatchManager {
     return { partitionKey, rowKey };
   }
 
+  /**
+   * Handles an insert operation inside a batch
+   *
+   * @private
+   * @param {BatchRequest} request
+   * @param {*} response
+   * @param {*} batchContextClone
+   * @param {number} contentID
+   * @return {*}  {Promise<{
+   *     __return: string;
+   *     response: any;
+   *   }>}
+   * @memberof TableBatchManager
+   */
   private async handleBatchInsert(
     request: BatchRequest,
     response: any,
@@ -296,6 +322,20 @@ export default class TableBatchManager {
     };
   }
 
+  /**
+   * Handles a delete Operation inside a batch request
+   *
+   * @private
+   * @param {BatchRequest} request
+   * @param {*} response
+   * @param {*} batchContextClone
+   * @param {number} contentID
+   * @return {*}  {Promise<{
+   *     __return: string;
+   *     response: any;
+   *   }>}
+   * @memberof TableBatchManager
+   */
   private async handleBatchDelete(
     request: BatchRequest,
     response: any,
@@ -310,18 +350,18 @@ export default class TableBatchManager {
     updatedContext.request = request;
     let partitionKey: string;
     let rowKey: string;
-    ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
+    let ifmatch: string = request.getHeader("if-match") || "*";
 
-    // Note: If we don't match row and partition key, then we will throw a storage exception
-    // later, which is OK for me
+    ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
     response = await this.parentHandler.deleteEntity(
       request.getPath(),
       partitionKey,
       rowKey,
-      "*", // ToDo: Correctly parse the if-match / Etag header
+      ifmatch,
       request.params as BatchTableDeleteEntityOptionalParams,
       updatedContext
     );
+
     return {
       __return: this.serialization.serializeTableDeleteEntityBatchResponse(
         request,
@@ -331,6 +371,20 @@ export default class TableBatchManager {
     };
   }
 
+  /**
+   * Handles an update Operation inside a batch request
+   *
+   * @private
+   * @param {BatchRequest} request
+   * @param {*} response
+   * @param {*} batchContextClone
+   * @param {number} contentID
+   * @return {*}  {Promise<{
+   *     __return: string;
+   *     response: any;
+   *   }>}
+   * @memberof TableBatchManager
+   */
   private async handleBatchUpdate(
     request: BatchRequest,
     response: any,
@@ -354,6 +408,7 @@ export default class TableBatchManager {
       request.params as BatchTableUpdateEntityOptionalParams,
       updatedContext
     );
+
     return {
       __return: this.serialization.serializeTableUpdateEntityBatchResponse(
         request,
@@ -363,6 +418,20 @@ export default class TableBatchManager {
     };
   }
 
+  /**
+   * Handles a query operation inside a batch request
+   *
+   * @private
+   * @param {BatchRequest} request
+   * @param {*} response
+   * @param {*} batchContextClone
+   * @param {number} contentID
+   * @return {*}  {Promise<{
+   *     __return: string;
+   *     response: any;
+   *   }>}
+   * @memberof TableBatchManager
+   */
   private async handleBatchQuery(
     request: BatchRequest,
     response: any,
@@ -377,13 +446,9 @@ export default class TableBatchManager {
     ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
 
     const updatedContext = batchContextClone as TableStorageContext;
-    // We have 3 possible functions in the handler for query:
-    // queryEntitiesWithPartitionAndRowKey
-    // query
-    // queryEntities
 
     if (null !== partitionKey && null != rowKey) {
-      // ToDO: this is hideous... but we need the params on the request object,
+      // ToDo: this is hideous... but we need the params on the request object,
       // as they percolate through and are needed for the final serialization
       // currently, because of the way we deconstruct / deserialize, we only
       // have the right model at a very late stage in processing
@@ -407,7 +472,6 @@ export default class TableBatchManager {
         response
       };
     } else {
-      // Not even sure that we support this... query entities
       request.ingestOptionalParams(new BatchTableQueryEntitiesOptionalParams());
       updatedContext.request = request;
       response = await this.parentHandler.queryEntities(
@@ -425,6 +489,20 @@ export default class TableBatchManager {
     }
   }
 
+  /**
+   * Handles a merge operation inside a batch request
+   *
+   * @private
+   * @param {BatchRequest} request
+   * @param {*} response
+   * @param {*} batchContextClone
+   * @param {number} contentID
+   * @return {*}  {Promise<{
+   *     __return: string;
+   *     response: any;
+   *   }>}
+   * @memberof TableBatchManager
+   */
   private async handleBatchMerge(
     request: BatchRequest,
     response: any,
@@ -448,6 +526,7 @@ export default class TableBatchManager {
       request.params as BatchTableMergeEntityOptionalParams,
       updatedContext
     );
+
     return {
       __return: this.serialization.serializeTablMergeEntityBatchResponse(
         request,
