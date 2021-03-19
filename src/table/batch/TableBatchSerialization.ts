@@ -11,15 +11,28 @@ import TableBatchOperation from "../batch/TableBatchOperation";
 import * as Models from "../generated/artifacts/models";
 import TableBatchUtils from "./TableBatchUtils";
 
-// The semantics for entity group transactions are defined by the OData Protocol Specification.
-// https://www.odata.org/
-// http://docs.oasis-open.org/odata/odata-json-format/v4.01/odata-json-format-v4.01.html#_Toc38457781
-// for now we are first getting the concrete implementation correct for table batch
-// we then need to figure out how to do this for blob, and what can be shared
-// I went down a long rathole trying to get this to work using the existing dispatch and serialization
-// classes before giving up and doing my own implementation
-// Tests are vital here!
+/**
+ * The semantics for entity group transactions are defined by the OData Protocol Specification.
+ * https://www.odata.org/
+ * http://docs.oasis-open.org/odata/odata-json-format/v4.01/odata-json-format-v4.01.html#_Toc38457781
+ *
+ * for now we are first getting the concrete implementation correct for table batch
+ * we then need to figure out how to do this for blob, and what can be shared.
+ * We set several headers in the responses to the same values that we see returned
+ * from the Azure Storage Service.
+ *
+ * @export
+ * @class TableBatchSerialization
+ * @extends {BatchSerialization}
+ */
 export class TableBatchSerialization extends BatchSerialization {
+  /**
+   * Deserializes a batch request
+   *
+   * @param {string} batchRequestsString
+   * @return {*}  {TableBatchOperation[]}
+   * @memberof TableBatchSerialization
+   */
   public deserializeBatchRequest(
     batchRequestsString: string
   ): TableBatchOperation[] {
@@ -127,65 +140,47 @@ export class TableBatchSerialization extends BatchSerialization {
     return batchOperations;
   }
 
-  // creates the serialized entitygrouptransaction / batch response body
-  // which we return to the users batch request
+  /**
+   * Serializes an Insert entity response
+   *
+   * @param {BatchRequest} request
+   * @param {Models.TableInsertEntityResponse} response
+   * @return {*}  {string}
+   * @memberof TableBatchSerialization
+   */
   public serializeTableInsertEntityBatchResponse(
     request: BatchRequest,
     response: Models.TableInsertEntityResponse
   ): string {
-    // ToDo: keeping my life easy to start and defaulting to "return no content"
-    // we need to validate headers and requirements for handling them correctly
     let serializedResponses: string = "";
-    // create the initial boundary
     serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
-
-    serializedResponses = this.SetHttpStatusCode(serializedResponses, response);
+    serializedResponses = this.serializeHttpStatusCode(
+      serializedResponses,
+      response
+    );
     // ToDo: Correct the handling of Content-ID
     if (request.contentID !== undefined) {
       serializedResponses +=
         "Content-ID: " + request.contentID.toString() + "\r\n";
     }
 
-    // Azure Table service defaults to this in the response
-    // X-Content-Type-Options: nosniff\r\n
     serializedResponses = this.AddNoSniffNoCache(serializedResponses);
-    // Need to add
-    // Preference-Applied: return-no-content
-    if (request.getHeader("Preference-Applied")) {
-      serializedResponses +=
-        "Preference-Applied: " +
-        request.getHeader("Preference-Applied") +
-        "\r\n";
-    }
-    // DataServiceVersion: 3.0;
-    if (request.getHeader("DataServiceVersion")) {
-      serializedResponses +=
-        "DataServiceVersion: " +
-        request.getHeader("DataServiceVersion") +
-        ";\r\n";
-    }
-    // These 2 headers should point to the result of the successful insert
-    // ToDo: Refactor for DRY!
-    // https://docs.microsoft.com/de-de/dotnet/api/microsoft.azure.batch.addtaskresult.location?view=azure-dotnet#Microsoft_Azure_Batch_AddTaskResult_Location
-    // Location: http://127.0.0.1:10002/devstoreaccount1/SampleHubVSHistory(PartitionKey='7219c1f2e2674f249bf9589d31ab3c6e',RowKey='sentinel')
-    serializedResponses += "Location: " + request.getUrl().replace(")", "");
-    serializedResponses += "PartitionKey='";
-    serializedResponses += request.params.tableEntityProperties!.PartitionKey;
-    serializedResponses += "',";
-    serializedResponses += "RowKey='";
-    serializedResponses += request.params.tableEntityProperties!.RowKey;
-    serializedResponses += "')\r\n";
 
-    // https://docs.microsoft.com/de-de/dotnet/api/microsoft.azure.batch.protocol.models.taskgetheaders.dataserviceid?view=azure-dotnet
-    // DataServiceId: http://127.0.0.1:10002/devstoreaccount1/SampleHubVSHistory(PartitionKey='7219c1f2e2674f249bf9589d31ab3c6e',RowKey='sentinel')
+    serializedResponses = this.serializePreferenceApplied(
+      request,
+      serializedResponses
+    );
+
+    serializedResponses = this.serializeDataServiceVersion(
+      request,
+      serializedResponses
+    );
+
     serializedResponses +=
-      "DataServiceId: " + request.getUrl().replace(")", "");
-    serializedResponses += "PartitionKey='";
-    serializedResponses += request.params.tableEntityProperties!.PartitionKey;
-    serializedResponses += "',";
-    serializedResponses += "RowKey='";
-    serializedResponses += request.params.tableEntityProperties!.RowKey;
-    serializedResponses += "')\r\n";
+      "Location: " + this.SerializeEntityPath(serializedResponses, request);
+    serializedResponses +=
+      "DataServiceId: " +
+      this.SerializeEntityPath(serializedResponses, request);
 
     if (null !== response.eTag && undefined !== response.eTag) {
       // prettier-ignore
@@ -194,8 +189,15 @@ export class TableBatchSerialization extends BatchSerialization {
     return serializedResponses;
   }
 
-  // creates the serialized entitygrouptransaction / batch response body
-  // which we return to the users batch request
+  /**
+   * creates the serialized entitygrouptransaction / batch response body
+   * which we return to the users batch request
+   *
+   * @param {BatchRequest} request
+   * @param {Models.TableDeleteEntityResponse} response
+   * @return {*}  {string}
+   * @memberof TableBatchSerialization
+   */
   public serializeTableDeleteEntityBatchResponse(
     request: BatchRequest,
     response: Models.TableDeleteEntityResponse
@@ -204,40 +206,39 @@ export class TableBatchSerialization extends BatchSerialization {
     let serializedResponses: string = "";
     // create the initial boundary
     serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
-    serializedResponses = this.SetHttpStatusCode(serializedResponses, response);
+    serializedResponses = this.serializeHttpStatusCode(
+      serializedResponses,
+      response
+    );
 
-    // Azure Table service defaults to this in the response
-    // X-Content-Type-Options: nosniff\r\n
     serializedResponses = this.AddNoSniffNoCache(serializedResponses);
-
-    if (undefined !== request.params && request.params.dataServiceVersion) {
-      serializedResponses +=
-        "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";
-    }
+    serializedResponses = this.serializeDataServiceVersion(
+      request,
+      serializedResponses
+    );
 
     return serializedResponses;
   }
 
-  // Serializes the Update Entitz Batch Response
-  // Sample fromm Service
-  // --changesetresponse_c1f6ce4f-453e-4ac1-a075-f8ccf9342b7f
-  // Content-Type: application/http
-  // Content-Transfer-Encoding: binary
-
-  // HTTP/1.1 204 No Content
-  // X-Content-Type-Options: nosniff
-  // Cache-Control: no-cache
-  // DataServiceVersion: 1.0;
-  // ETag: W/"datetime'2021-03-01T21%3A34%3A03.097Z'"
+  /**
+   * Serializes the Update Entity Batch Response
+   *
+   * @param {BatchRequest} request
+   * @param {Models.TableUpdateEntityResponse} response
+   * @return {*}  {string}
+   * @memberof TableBatchSerialization
+   */
   public serializeTableUpdateEntityBatchResponse(
     request: BatchRequest,
     response: Models.TableUpdateEntityResponse
   ): string {
-    // ToDo: keeping my life easy to start and defaulting to "return no content"
     let serializedResponses: string = "";
     // create the initial boundary
     serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
-    serializedResponses = this.SetHttpStatusCode(serializedResponses, response);
+    serializedResponses = this.serializeHttpStatusCode(
+      serializedResponses,
+      response
+    );
     // ToDo_: Correct the handling of content-ID
     if (request.contentID) {
       serializedResponses +=
@@ -245,33 +246,54 @@ export class TableBatchSerialization extends BatchSerialization {
     }
 
     serializedResponses = this.AddNoSniffNoCache(serializedResponses);
-    // Need to add
-    // Preference-Applied: return-no-content
+
+    serializedResponses = this.serializePreferenceApplied(
+      request,
+      serializedResponses
+    );
+
+    serializedResponses = this.serializeDataServiceVersion(
+      request,
+      serializedResponses
+    );
+
+    if (null !== response.eTag && undefined !== response.eTag) {
+      serializedResponses += "ETag: " + response.eTag.replace(":", "%3A");
+    }
+    return serializedResponses;
+  }
+
+  private serializePreferenceApplied(
+    request: BatchRequest,
+    serializedResponses: string
+  ) {
     if (request.getHeader("Preference-Applied")) {
       serializedResponses +=
         "Preference-Applied: " +
         request.getHeader("Preference-Applied") +
         "\r\n";
     }
-    // Service response is defaulting to 1.0 at the moment...
-    serializedResponses += "DataServiceVersion: 1.0;\r\n";
-
-    if (null !== response.eTag && undefined !== response.eTag) {
-      // prettier-ignore
-      serializedResponses += "ETag: " + response.eTag.replace(":","%3A");
-    }
     return serializedResponses;
   }
 
+  /**
+   * Serializes the Merge Entity Response
+   *
+   * @param {BatchRequest} request
+   * @param {Models.TableMergeEntityResponse} response
+   * @return {*}  {string}
+   * @memberof TableBatchSerialization
+   */
   public serializeTablMergeEntityBatchResponse(
     request: BatchRequest,
     response: Models.TableMergeEntityResponse
   ): string {
-    // ToDo: keeping my life easy to start and defaulting to "return no content"
     let serializedResponses: string = "";
-    // create the initial boundary
     serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
-    serializedResponses = this.SetHttpStatusCode(serializedResponses, response);
+    serializedResponses = this.serializeHttpStatusCode(
+      serializedResponses,
+      response
+    );
     serializedResponses = this.AddNoSniffNoCache(serializedResponses);
     // ToDo_: Correct the handling of content-ID
     if (request.contentID) {
@@ -279,18 +301,26 @@ export class TableBatchSerialization extends BatchSerialization {
         "Content-ID: " + request.contentID.toString() + "\r\n";
     }
     // ToDo: not sure about other headers like cache control etc right now
-    // will need to look at this later
-
     // Service defaults to v1.0
-    serializedResponses += "dataServiceVersion: 1.0;\r\n";
+    serializedResponses = this.serializeDataServiceVersion(
+      request,
+      serializedResponses
+    );
 
     if (null !== response.eTag && undefined !== response.eTag) {
-      // prettier-ignore
-      serializedResponses += "ETag: " + response.eTag.replace(":","%3A");
+      serializedResponses += "ETag: " + response.eTag.replace(":", "%3A");
     }
     return serializedResponses;
   }
 
+  /**
+   * Serializes the Query Entity Response when using Partition and Row Key
+   *
+   * @param {BatchRequest} request
+   * @param {Models.TableQueryEntitiesWithPartitionAndRowKeyResponse} response
+   * @return {*}  {Promise<string>}
+   * @memberof TableBatchSerialization
+   */
   public async serializeTableQueryEntityWithPartitionAndRowKeyBatchResponse(
     request: BatchRequest,
     response: Models.TableQueryEntitiesWithPartitionAndRowKeyResponse
@@ -298,19 +328,20 @@ export class TableBatchSerialization extends BatchSerialization {
     let serializedResponses: string = "";
     // create the initial boundary
     serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
-    serializedResponses = this.SetHttpStatusCode(serializedResponses, response);
+    serializedResponses = this.serializeHttpStatusCode(
+      serializedResponses,
+      response
+    );
 
-    if (undefined !== request.params && request.params.dataServiceVersion) {
-      serializedResponses +=
-        "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";
-    }
+    serializedResponses = this.serializeDataServiceVersion(
+      request,
+      serializedResponses
+    );
 
     serializedResponses += "Content-Type: ";
     serializedResponses += request.params.queryOptions?.format;
-    serializedResponses += ";streaming=true;charset=utf-8\r\n"; // getting this from service, so adding as well
+    serializedResponses += ";streaming=true;charset=utf-8\r\n"; // getting this from service, so adding here as well
 
-    // Azure Table service defaults to this in the response
-    // X-Content-Type-Options: nosniff\r\n
     serializedResponses = this.AddNoSniffNoCache(serializedResponses);
 
     if (response.eTag) {
@@ -335,6 +366,14 @@ export class TableBatchSerialization extends BatchSerialization {
     return serializedResponses;
   }
 
+  /**
+   * Serializes query entity response
+   *
+   * @param {BatchRequest} request
+   * @param {Models.TableQueryEntitiesResponse} response
+   * @return {*}  {Promise<string>}
+   * @memberof TableBatchSerialization
+   */
   public async serializeTableQueryEntityBatchResponse(
     request: BatchRequest,
     response: Models.TableQueryEntitiesResponse
@@ -342,12 +381,15 @@ export class TableBatchSerialization extends BatchSerialization {
     let serializedResponses: string = "";
     // create the initial boundary
     serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
-    serializedResponses = this.SetHttpStatusCode(serializedResponses, response);
+    serializedResponses = this.serializeHttpStatusCode(
+      serializedResponses,
+      response
+    );
 
-    if (undefined !== request.params && request.params.dataServiceVersion) {
-      serializedResponses +=
-        "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";
-    }
+    serializedResponses = this.serializeDataServiceVersion(
+      request,
+      serializedResponses
+    );
 
     serializedResponses += "Content-Type: ";
     serializedResponses += request.params.queryOptions?.format;
@@ -376,6 +418,14 @@ export class TableBatchSerialization extends BatchSerialization {
     return serializedResponses;
   }
 
+  /**
+   * Serializes content type and encoding
+   *
+   * @private
+   * @param {string} serializedResponses
+   * @return {*}
+   * @memberof TableBatchSerialization
+   */
   private SetContentTypeAndEncoding(serializedResponses: string) {
     serializedResponses += "\r\nContent-Type: application/http\r\n";
     serializedResponses += "Content-Transfer-Encoding: binary\r\n";
@@ -383,15 +433,30 @@ export class TableBatchSerialization extends BatchSerialization {
     return serializedResponses;
   }
 
+  /**
+   * Serializes Content Type Options and Cache Control
+   * THese seem to be service defaults
+   *
+   * @private
+   * @param {string} serializedResponses
+   * @return {*}
+   * @memberof TableBatchSerialization
+   */
   private AddNoSniffNoCache(serializedResponses: string) {
     serializedResponses += "X-Content-Type-Options: nosniff\r\n";
-    // also service defaults to
-    // Cache-Control: no-cache\r\n
     serializedResponses += "Cache-Control: no-cache\r\n";
     return serializedResponses;
   }
 
-  // ToDo: Need to check where we have implemented this elsewhere and see if we can reuse
+  /**
+   * Serializes the HTTP response
+   * ToDo: Need to check where we have implemented this elsewhere and see if we can reuse
+   *
+   * @private
+   * @param {number} statusCode
+   * @return {*}  {string}
+   * @memberof TableBatchSerialization
+   */
   private GetStatusMessageString(statusCode: number): string {
     switch (statusCode) {
       case 200:
@@ -407,6 +472,15 @@ export class TableBatchSerialization extends BatchSerialization {
     }
   }
 
+  /**
+   * extract a header request string
+   *
+   * @private
+   * @param {string} batchRequestsString
+   * @param {string} regExPattern
+   * @return {*}
+   * @memberof TableBatchSerialization
+   */
   private extractRequestHeaderString(
     batchRequestsString: string,
     regExPattern: string
@@ -418,13 +492,76 @@ export class TableBatchSerialization extends BatchSerialization {
     return headerStringMatches[2];
   }
 
-  private SetHttpStatusCode(serializedResponses: string, response: any) {
+  /**
+   * Serialize HTTP Status Code
+   *
+   * @private
+   * @param {string} serializedResponses
+   * @param {*} response
+   * @return {*}
+   * @memberof TableBatchSerialization
+   */
+  private serializeHttpStatusCode(serializedResponses: string, response: any) {
     serializedResponses +=
       "HTTP/1.1 " +
       response.statusCode.toString() +
       " " +
       this.GetStatusMessageString(response.statusCode) +
       "\r\n";
+    return serializedResponses;
+  }
+
+  /**
+   * Serializes the Location and DataServiceId for the response
+   * These 2 headers should point to the result of the successful insert
+   * https://docs.microsoft.com/de-de/dotnet/api/microsoft.azure.batch.addtaskresult.location?view=azure-dotnet#Microsoft_Azure_Batch_AddTaskResult_Location
+   * https://docs.microsoft.com/de-de/dotnet/api/microsoft.azure.batch.protocol.models.taskgetheaders.dataserviceid?view=azure-dotnet
+   * i.e. Location: http://127.0.0.1:10002/devstoreaccount1/SampleHubVSHistory(PartitionKey='7219c1f2e2674f249bf9589d31ab3c6e',RowKey='sentinel')
+   *
+   * @private
+   * @param {string} serializedResponses
+   * @param {BatchRequest} request
+   * @return {string}
+   * @memberof TableBatchSerialization
+   */
+  private SerializeEntityPath(
+    serializedResponses: string,
+    request: BatchRequest
+  ): string {
+    let parenthesesPosition: number = request.getUrl().indexOf("(");
+    parenthesesPosition--;
+    if (parenthesesPosition < 0) {
+      parenthesesPosition = request.getUrl().length;
+    }
+    const trimmedUrl: string = request
+      .getUrl()
+      .substring(0, parenthesesPosition);
+    let entityPath = trimmedUrl + "(PartitionKey=%27";
+    entityPath += request.params.tableEntityProperties!.PartitionKey;
+    entityPath += "%27,";
+    entityPath += "RowKey=%27";
+    entityPath += request.params.tableEntityProperties!.RowKey;
+    entityPath += "%27)\r\n";
+    return entityPath;
+  }
+
+  /**
+   * serializes data service version
+   *
+   * @private
+   * @param {BatchRequest} request
+   * @param {string} serializedResponses
+   * @return {*}
+   * @memberof TableBatchSerialization
+   */
+  private serializeDataServiceVersion(
+    request: BatchRequest,
+    serializedResponses: string
+  ) {
+    if (undefined !== request.params && request.params.dataServiceVersion) {
+      serializedResponses +=
+        "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";
+    }
     return serializedResponses;
   }
 }

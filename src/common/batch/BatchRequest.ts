@@ -5,13 +5,16 @@ import BatchRequestHeaders from "./BatchRequestHeaders";
 import * as Models from "../../table/generated/artifacts/models";
 import BatchTableUpdateEntityOptionalParams from "../../table/batch/BatchTableUpdateEntityOptionalParams";
 import BatchTableDeleteEntityOptionalParams from "../../table/batch/BatchTableDeleteEntityOptionalParams";
-import BatchTableMergeEntityOptionalParams from "../../table/batch/BatchTableMergeEntityOptionalParams";
-import BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams from "../../table/batch/BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams";
-import BatchTableInsertEntityOptionalParams from "../../table/batch/BatchTableInsertEntityOptionalParams";
-import BatchTableQueryEntitiesOptionalParams from "../../table/batch/BatchTableQueryEntitiesOptionalParams";
+import IOptionalParams from "../../table/batch/IOptionalParams";
 
-// ToDo: Requires validation against all operation types
-// currently several funcitons of the interface are not implemented
+/*
+ * Represents a request in the context of batch operations.
+ * ToDo: Requires validation against all operation types
+ * Currently several funcitons of the interface are not implemented
+ * @export
+ * @class BatchRequest
+ * @implements {IRequest}
+ */
 export default class BatchRequest implements IRequest {
   public response?: any;
   private headers: BatchRequestHeaders;
@@ -26,26 +29,18 @@ export default class BatchRequest implements IRequest {
 
   // ToDo: This should really be using an interface.
   // refactor once the basic logic is working
-  public params:
-    | BatchTableDeleteEntityOptionalParams
-    | BatchTableUpdateEntityOptionalParams
-    | BatchTableMergeEntityOptionalParams
-    | BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams
-    | BatchTableQueryEntitiesOptionalParams
-    | BatchTableInsertEntityOptionalParams;
+  // | BatchTableDeleteEntityOptionalParams
+  // | BatchTableUpdateEntityOptionalParams
+  // | BatchTableMergeEntityOptionalParams
+  // | BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams
+  // | BatchTableQueryEntitiesOptionalParams
+  // | BatchTableInsertEntityOptionalParams;
+  public params: IOptionalParams;
 
   // ingests the optional params for a batch request, and sets these
   // based on the type of operation and headers present on an
   // individual request
-  public ingestOptionalParams(
-    params:
-      | BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams
-      | BatchTableQueryEntitiesOptionalParams
-      | BatchTableDeleteEntityOptionalParams
-      | BatchTableUpdateEntityOptionalParams
-      | BatchTableMergeEntityOptionalParams
-      | BatchTableInsertEntityOptionalParams
-  ) {
+  public ingestOptionalParams(params: IOptionalParams) {
     this.params = params;
     // need to compare headers to option params and set accordingly
     if (this.getHeader("x-ms-client-request-id") !== undefined) {

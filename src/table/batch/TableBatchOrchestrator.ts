@@ -15,13 +15,6 @@ import {
 } from "../generated/artifacts/models";
 import BatchTableQueryEntitiesOptionalParams from "./BatchTableQueryEntitiesOptionalParams";
 
-// ToDo: remove completely
-// export enum BatchQueryType {
-//   query = 0,
-//   queryentities = 2,
-//   querywithpartitionandrowkey = 4
-// }
-
 /**
  * Currently there is a single distinct and concrete implementation of batch /
  * entity group operations for the table api.
@@ -32,7 +25,7 @@ import BatchTableQueryEntitiesOptionalParams from "./BatchTableQueryEntitiesOpti
  * @export
  * @class TableBatchManager
  */
-export default class TableBatchManager {
+export default class TableBatchOrchestrator {
   private batchOperations: TableBatchOperation[] = [];
   private requests: BatchRequest[] = [];
   private serialization = new TableBatchSerialization();

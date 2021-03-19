@@ -1,24 +1,12 @@
-/*  sample list of headers:
-    x-ms-version: 2013-08-15
-    Accept-Charset: UTF-8
-    DataServiceVersion: 3.0;
-    MaxDataServiceVersion: 3.0;NetFx
-    Content-Type: multipart/mixed; boundary=batch_a1e9d677-b28b-435e-a89e-87e6a768a431
-    x-ms-date: Mon, 14 Oct 2013 18:25:49 GMT
-    Authorization: SharedKey myaccount:50daR38MtfezvbMdKrGJVN+8sjDSn+AaA=
-    Host: 127.0.0.1:10002
-    Content-Length: 1323
-    Connection: Keep-Alive
-    Content-Type: application/http
-    Content-Transfer-Encoding: binary
-    Accept: application/json;odata=minimalmetadata
-    Prefer: return-no-content
-    DataServiceVersion: 3.0;
-*/
-// using default type of string for the headers
-// maybe there is a better way of doing this here which we can
-// implement another time
-// this is a basic collection type impl.
+/**
+ * Provides access to headers for batch requests.
+ * As requests in an entity group transaction have different headers per
+ * transaction, and these need to be handled separately to the
+ * outer request envelope.
+ *
+ * @export
+ * @class BatchRequestHeaders
+ */
 export default class BatchRequestHeaders {
   public constructor(headers: string[]) {
     this.rawHeaders = headers;
@@ -28,26 +16,57 @@ export default class BatchRequestHeaders {
   private headerItems: { [index: string]: string } = {};
   private headerCount: number = 0;
 
-  // ToDo: might not be safe but this is an emulator and
-  // not a production service
+  /**
+   * Returns the raw headers as a string array
+   *
+   * @return {*}
+   * @memberof BatchRequestHeaders
+   */
   public getRawHeaders() {
     return this.rawHeaders;
   }
 
+  /**
+   * Checks for existence of a header
+   *
+   * @param {string} key
+   * @return {*}  {boolean}
+   * @memberof BatchRequestHeaders
+   */
   public containsHeader(key: string): boolean {
     return this.headerItems.hasOwnProperty(key);
   }
 
+  /**
+   * The count of headers
+   *
+   * @return {*}  {number}
+   * @memberof BatchRequestHeaders
+   */
   public count(): number {
     return this.headerCount;
   }
 
+  /**
+   * Add a header to the header items
+   *
+   * @param {string} key
+   * @param {string} value
+   * @memberof BatchRequestHeaders
+   */
   public add(key: string, value: string) {
     if (!this.headerItems.hasOwnProperty(key)) this.headerCount++;
 
     this.headerItems[key] = value;
   }
 
+  /**
+   * Remove a header from the header items
+   *
+   * @param {string} key
+   * @return {*}  {string}
+   * @memberof BatchRequestHeaders
+   */
   public remove(key: string): string {
     const val = this.headerItems[key];
     delete this.headerItems[key];
@@ -55,11 +74,23 @@ export default class BatchRequestHeaders {
     return val;
   }
 
-  // ToDo: Should this maybe be case insensitive?
+  /**
+   * Returns the header value based on a lower case lookup of the key
+   *
+   * @param {string} key
+   * @return {*}  {string}
+   * @memberof BatchRequestHeaders
+   */
   public header(key: string): string {
     return this.headerItems[key.toLocaleLowerCase()];
   }
 
+  /**
+   * The header keys as a string array
+   *
+   * @return {*}  {string[]}
+   * @memberof BatchRequestHeaders
+   */
   public headerKeys(): string[] {
     const headers: string[] = [];
 
@@ -72,6 +103,12 @@ export default class BatchRequestHeaders {
     return headers;
   }
 
+  /**
+   * Header values as a string array
+   *
+   * @return {*}  {string[]}
+   * @memberof BatchRequestHeaders
+   */
   public headerValues(): string[] {
     const values: string[] = [];
 
@@ -84,6 +121,12 @@ export default class BatchRequestHeaders {
     return values;
   }
 
+  /**
+   * Creates the dictionary to allow key value lookups on the headers
+   *
+   * @private
+   * @memberof BatchRequestHeaders
+   */
   private createDictFromRawHeaders(): void {
     this.rawHeaders.forEach((rawheader) => {
       if (rawheader != null) {

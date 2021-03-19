@@ -5,7 +5,12 @@ export enum BatchType {
   table = "table"
 }
 
-// Holder for batch operations
+/**
+ * A container for batch operations
+ *
+ * @export
+ * @class BatchOperation
+ */
 export default class BatchOperation {
   public rawHeaders: string[];
   public protocol?: string;

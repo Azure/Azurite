@@ -45,7 +45,7 @@ export default class SerializationBatchOperationFactory {
       ""
     ];
     operation.uri =
-      "http://127.0.0.1:11002/devstoreaccount1/table161311975539604802(PartitionKey=%27part1%27,RowKey=%27row161311975544100305%27)";
+      "http://127.0.0.1:11002/devstoreaccount1/table161311975539604802";
     return operation;
   }
 

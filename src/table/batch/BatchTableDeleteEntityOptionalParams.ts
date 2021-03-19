@@ -4,16 +4,17 @@ import {
   ResponseFormat,
   TableDeleteEntityOptionalParams
 } from "../generated/artifacts/models";
+import IOptionalParams from "./IOptionalParams";
 
 /**
- *
+ * Batch Table Delete Entity Optional Params
  *
  * @export
  * @class BatchTableDeleteEntityOptionalParams
  * @implements {TableDeleteEntityOptionalParams}
  */
 export default class BatchTableDeleteEntityOptionalParams
-  implements TableDeleteEntityOptionalParams {
+  implements TableDeleteEntityOptionalParams, IOptionalParams {
   /**
    * The timeout parameter is expressed in seconds.
    *

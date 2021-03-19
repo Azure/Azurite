@@ -4,9 +4,18 @@ import {
   ResponseFormat,
   TableMergeEntityOptionalParams
 } from "../generated/artifacts/models";
+import IOptionalParams from "./IOptionalParams";
 
+/**
+ * Batch Table Merge Entity Optional Params
+ *
+ * @export
+ * @class BatchTableMergeEntityOptionalParams
+ * @implements {TableMergeEntityOptionalParams}
+ * @implements {IOptionalParams}
+ */
 export default class BatchTableMergeEntityOptionalParams
-  implements TableMergeEntityOptionalParams {
+  implements TableMergeEntityOptionalParams, IOptionalParams {
   /**
    * The timeout parameter is expressed in seconds.
    */

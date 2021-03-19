@@ -4,9 +4,18 @@ import {
   ResponseFormat,
   TableQueryEntitiesOptionalParams
 } from "../generated/artifacts/models";
+import IOptionalParams from "./IOptionalParams";
 
+/**
+ * Batch Table Query Entities Optional Params
+ *
+ * @export
+ * @class BatchTableQueryEntitiesOptionalParams
+ * @implements {TableQueryEntitiesOptionalParams}
+ * @implements {IOptionalParams}
+ */
 export default class BatchTableQueryEntitiesOptionalParams
-  implements TableQueryEntitiesOptionalParams {
+  implements TableQueryEntitiesOptionalParams, IOptionalParams {
   /**
    * The timeout parameter is expressed in seconds.
    */

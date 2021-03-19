@@ -4,9 +4,18 @@ import {
   ResponseFormat,
   TableInsertEntityOptionalParams
 } from "../generated/artifacts/models";
+import IOptionalParams from "./IOptionalParams";
 
+/**
+ * Batch Table Insert Entity Optional Params
+ *
+ * @export
+ * @class BatchTableInsertEntityOptionalParams
+ * @implements {TableInsertEntityOptionalParams}
+ * @implements {IOptionalParams}
+ */
 export default class BatchTableInsertEntityOptionalParams
-  implements TableInsertEntityOptionalParams {
+  implements TableInsertEntityOptionalParams, IOptionalParams {
   /**
    * The timeout parameter is expressed in seconds.
    */

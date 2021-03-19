@@ -4,9 +4,18 @@ import {
   ResponseFormat,
   TableUpdateEntityOptionalParams
 } from "../generated/artifacts/models";
+import IOptionalParams from "./IOptionalParams";
 
+/**
+ * Batch Table Update Entity Optional Params
+ *
+ * @export
+ * @class BatchTableUpdateEntityOptionalParams
+ * @implements {TableUpdateEntityOptionalParams}
+ * @implements {IOptionalParams}
+ */
 export default class BatchTableUpdateEntityOptionalParams
-  implements TableUpdateEntityOptionalParams {
+  implements TableUpdateEntityOptionalParams, IOptionalParams {
   /**
    * The timeout parameter is expressed in seconds.
    */

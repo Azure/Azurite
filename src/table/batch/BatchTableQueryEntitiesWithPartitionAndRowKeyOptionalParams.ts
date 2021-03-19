@@ -4,9 +4,20 @@ import {
   ResponseFormat,
   TableQueryEntitiesWithPartitionAndRowKeyOptionalParams
 } from "../generated/artifacts/models";
+import IOptionalParams from "./IOptionalParams";
 
+/**
+ * Batch Table Query Entities With Partition And RowKey Optional Params
+ *
+ * @export
+ * @class BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams
+ * @implements {TableQueryEntitiesWithPartitionAndRowKeyOptionalParams}
+ * @implements {IOptionalParams}
+ */
 export default class BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams
-  implements TableQueryEntitiesWithPartitionAndRowKeyOptionalParams {
+  implements
+    TableQueryEntitiesWithPartitionAndRowKeyOptionalParams,
+    IOptionalParams {
   /**
    * The timeout parameter is expressed in seconds.
    */

@@ -1,11 +1,11 @@
 import { exception } from "console";
 import { StorageError } from "../../blob/generated/artifacts/mappers";
 
-// ToDo: Make these util functions static or aggregate this logic into one of the other
-// batch classes
 /**
  * Base Batch serialization class.
  * Contains shared logic for batch serialization.
+ * ToDo: Make these util functions static or aggregate this logic into one of the other
+ * batch classes
  *
  * @export
  * @param {string} batchBoundary
