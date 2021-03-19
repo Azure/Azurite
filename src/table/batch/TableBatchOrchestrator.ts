@@ -18,12 +18,14 @@ import BatchTableQueryEntitiesOptionalParams from "./BatchTableQueryEntitiesOpti
 /**
  * Currently there is a single distinct and concrete implementation of batch /
  * entity group operations for the table api.
+ * The orchestrator manages the deserialization, submission and serialization of
+ * entity group transactions.
  * ToDo: it might be possible to share code between this and the blob batch api, but this
  * has not yet been validated.
  * Will need refactoring when we address batch transactions for blob.
  *
  * @export
- * @class TableBatchManager
+ * @class TableBatchOrchestrator
  */
 export default class TableBatchOrchestrator {
   private batchOperations: TableBatchOperation[] = [];

@@ -1,4 +1,12 @@
 export default class TableBatchUtils {
+  /**
+   * Helper to convert a ReadableStream to string.
+   *
+   * @static
+   * @param {(NodeJS.ReadableStream | undefined)} stream
+   * @return {*}  {Promise<string>}
+   * @memberof TableBatchUtils
+   */
   public static async StreamToString(
     stream: NodeJS.ReadableStream | undefined
   ): Promise<string> {

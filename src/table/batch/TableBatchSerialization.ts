@@ -263,6 +263,15 @@ export class TableBatchSerialization extends BatchSerialization {
     return serializedResponses;
   }
 
+  /**
+   * Serializes the preference applied header
+   *
+   * @private
+   * @param {BatchRequest} request
+   * @param {string} serializedResponses
+   * @return {*}
+   * @memberof TableBatchSerialization
+   */
   private serializePreferenceApplied(
     request: BatchRequest,
     serializedResponses: string
@@ -379,7 +388,6 @@ export class TableBatchSerialization extends BatchSerialization {
     response: Models.TableQueryEntitiesResponse
   ): Promise<string> {
     let serializedResponses: string = "";
-    // create the initial boundary
     serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
     serializedResponses = this.serializeHttpStatusCode(
       serializedResponses,
@@ -410,7 +418,7 @@ export class TableBatchSerialization extends BatchSerialization {
           response.body
         );
       } catch {
-        // do nothing
+        // Throw a more helpful error
         throw new Error("failed to deserialize body");
       }
     }
