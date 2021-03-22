@@ -16,7 +16,12 @@ import {
 // Set true to enable debug log
 configLogger(false);
 
-// Create Entity for tests
+/**
+ * Creates an entity for tests, with a randomized row key,
+ * to avoid conflicts on inserts.
+ *
+ * @return {*}  {TestEntity}
+ */
 function createBasicEntityForTest(): TestEntity {
   return new TestEntity("part1", getUniqueName("row"), "value1");
 }
@@ -379,32 +384,28 @@ describe("table Entity APIs test", () => {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
-    tableService.insertOrReplaceEntity(
-      tableName,
-      {
-        PartitionKey: "part1",
-        RowKey: "row6",
-        myValue: "newValue"
-      },
-      (updateError, updateResult, updateResponse) => {
-        if (updateError) {
-          assert.ifError(updateError);
-          done();
-        } else {
-          assert.equal(updateResponse.statusCode, 204); // No content
-          // TODO When QueryEntity is done - validate Entity Properties
-          done();
+    const upsertEntity = createBasicEntityForTest();
+    tableService.insertEntity(tableName, upsertEntity, () => {
+      upsertEntity.myValue._ = "updated";
+      tableService.insertOrReplaceEntity(
+        tableName,
+        upsertEntity,
+        (updateError, updateResult, updateResponse) => {
+          if (updateError) {
+            assert.ifError(updateError);
+            done();
+          } else {
+            assert.equal(updateResponse.statusCode, 204); // No content
+            // TODO When QueryEntity is done - validate Entity Properties
+            done();
+          }
         }
-      }
-    );
+      );
+    });
   });
 
   it("Insert or Merge on an Entity that exists, @loki", (done) => {
-    const entityInsert = {
-      PartitionKey: "part1",
-      RowKey: "merge1",
-      myValue: "oldValue"
-    };
+    const entityInsert = createBasicEntityForTest();
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
@@ -413,16 +414,12 @@ describe("table Entity APIs test", () => {
       tableName,
       entityInsert,
       (error, result, insertresponse) => {
-        const entityUpdate = {
-          PartitionKey: "part1",
-          RowKey: "merge1",
-          mergeValue: "newValue"
-        };
+        entityInsert.myValue._ = "new value";
         if (!error) {
           requestOverride.headers = {};
           tableService.insertOrMergeEntity(
             tableName,
-            entityUpdate,
+            entityInsert,
             (updateError, updateResult, updateResponse) => {
               if (!updateError) {
                 assert.equal(updateResponse.statusCode, 204); // Precondition succeeded

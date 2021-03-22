@@ -551,7 +551,16 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
 
     // Test if etag value is valid
-    if (ifMatch === undefined || ifMatch === "*" || doc.eTag === ifMatch) {
+    const encodedEtag = doc.eTag.replace(":", "%3A").replace(":", "%3A");
+    let encodedIfMatch: string | undefined;
+    if (ifMatch !== undefined) {
+      encodedIfMatch = ifMatch!.replace(":", "%3A").replace(":", "%3A");
+    }
+    if (
+      encodedIfMatch === undefined ||
+      encodedIfMatch === "*" ||
+      (encodedIfMatch !== undefined && encodedEtag === encodedIfMatch)
+    ) {
       tableEntityCollection.remove(doc);
 
       entity.properties.Timestamp = getTimestampString(entity.lastModifiedTime);
@@ -596,7 +605,18 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       throw StorageErrorFactory.getEntityNotFound(context);
     }
 
-    if (ifMatch === undefined || ifMatch === "*" || doc.eTag === ifMatch) {
+    // if match is URL encoded from the clients, match URL encoding
+    // this does not always seem to be consisten...
+    const encodedEtag = doc.eTag.replace(":", "%3A").replace(":", "%3A");
+    let encodedIfMatch: string | undefined;
+    if (ifMatch !== undefined) {
+      encodedIfMatch = ifMatch!.replace(":", "%3A").replace(":", "%3A");
+    }
+    if (
+      encodedIfMatch === undefined ||
+      encodedIfMatch === "*" ||
+      (encodedIfMatch !== undefined && encodedEtag === encodedIfMatch)
+    ) {
       const mergedDEntity: Entity = {
         ...doc,
         ...entity,
