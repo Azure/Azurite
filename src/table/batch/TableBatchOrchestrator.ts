@@ -345,7 +345,7 @@ export default class TableBatchOrchestrator {
     updatedContext.request = request;
     let partitionKey: string;
     let rowKey: string;
-    let ifmatch: string = request.getHeader("if-match") || "*";
+    const ifmatch: string = request.getHeader("if-match") || "*";
 
     ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
     response = await this.parentHandler.deleteEntity(
