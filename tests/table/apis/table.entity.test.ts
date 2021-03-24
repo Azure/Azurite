@@ -84,6 +84,68 @@ describe("table Entity APIs test", () => {
     });
   });
 
+  // Simple test in here until we have the full set checked in, as we need
+  // a starting point for delete and query entity APIs
+  it("Should insert new Entity with empty RowKey, @loki", (done) => {
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-entity
+    const entity = {
+      PartitionKey: "part1",
+      RowKey: "",
+      myValue: "value1"
+    };
+    tableService.insertEntity(tableName, entity, (error, result, response) => {
+      assert.equal(response.statusCode, 201);
+      assert.ok(
+        response.headers?.etag.match(
+          "W/\"datetime'\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.\\d{7}Z'\""
+        )
+      );
+      done();
+    });
+  });
+
+  it("Should retrieve entity with empty RowKey, @loki", (done) => {
+    const entityInsert = {
+      PartitionKey: "part2",
+      RowKey: "",
+      myValue: "value1"
+    };
+    tableService.insertEntity(
+      tableName,
+      entityInsert,
+      (insertError, insertResult, insertResponse) => {
+        if (!insertError) {
+          var query = new Azure.TableQuery()
+            .where("PartitionKey == ?", "part2")
+            .and("myValue == ?", "value1");
+
+          tableService.queryEntities(
+            tableName,
+            query,
+            <any>null,
+            <any>null,
+            (queryError, queryResult, queryResponse) => {
+              if (!queryError) {
+                if (queryResult.entries && queryResult.entries.length > 0) {
+                  assert.equal(queryResponse.statusCode, 200);
+                  done();
+                } else {
+                  assert.fail("Test failed to retrieve the entity.");
+                }
+              } else {
+                assert.ifError(queryError);
+                done();
+              }
+            }
+          );
+        } else {
+          assert.ifError(insertError);
+          done();
+        }
+      }
+    );
+  });
+
   it("Should delete an Entity using etag wildcard, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
     const entity = {
