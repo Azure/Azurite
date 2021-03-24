@@ -1,5 +1,6 @@
 import BufferStream from "../../common/utils/BufferStream";
 import { newTableEntityEtag } from "../../common/utils/utils";
+import TableBatchOrchestrator from "../batch/TableBatchOrchestrator";
 import TableStorageContext from "../context/TableStorageContext";
 import { NormalizedEntity } from "../entity/NormalizedEntity";
 import NotImplementedError from "../errors/NotImplementedError";
@@ -27,6 +28,8 @@ import {
   updateTableOptionalOdataAnnotationsForResponse
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
+import TableBatchUtils from "../batch/TableBatchUtils";
+import toReadableStream from "to-readable-stream";
 
 interface IPartialResponsePreferProperties {
   statusCode: 200 | 201 | 204;
@@ -168,8 +171,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     if (
       !options.tableEntityProperties ||
       !options.tableEntityProperties.PartitionKey ||
-      (!options.tableEntityProperties.RowKey &&
-        options.tableEntityProperties.RowKey !== "")
+      // rowKey may be empty string
+      options.tableEntityProperties.RowKey === null
     ) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
     }
@@ -246,18 +249,20 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   }
 
   // TODO: Create data structures to hold entity properties and support serialize, merge, deserialize, filter
+  // Note: Batch is using the partition key and row key args, handler receives these values from middleware via
+  // context
   public async updateEntity(
     _table: string,
-    _partitionKey: string,
-    _rowKey: string,
+    partitionKey: string,
+    rowKey: string,
     options: Models.TableUpdateEntityOptionalParams,
     context: Context
   ): Promise<Models.TableUpdateEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
-    const partitionKey = this.getAndCheckPartitionKey(tableContext);
-    const rowKey = this.getAndCheckRowKey(tableContext);
+    partitionKey = partitionKey || this.getAndCheckPartitionKey(tableContext);
+    rowKey = rowKey || this.getAndCheckRowKey(tableContext);
     const ifMatch = options.ifMatch;
 
     if (!options.tableEntityProperties) {
@@ -326,16 +331,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
   public async mergeEntity(
     _table: string,
-    _partitionKey: string,
-    _rowKey: string,
+    partitionKey: string,
+    rowKey: string,
     options: Models.TableMergeEntityOptionalParams,
     context: Context
   ): Promise<Models.TableMergeEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
-    const partitionKey = this.getAndCheckPartitionKey(tableContext);
-    const rowKey = this.getAndCheckRowKey(tableContext);
+    partitionKey = partitionKey || this.getAndCheckPartitionKey(tableContext);
+    rowKey = rowKey || this.getAndCheckRowKey(tableContext);
 
     if (!options.tableEntityProperties) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
@@ -394,16 +399,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
   public async deleteEntity(
     _table: string,
-    _partitionKey: string,
-    _rowKey: string,
+    partitionKey: string,
+    rowKey: string,
     ifMatch: string,
     options: Models.TableDeleteEntityOptionalParams,
     context: Context
   ): Promise<Models.TableDeleteEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const accountName = tableContext.account;
-    const partitionKey = tableContext.partitionKey!; // Get partitionKey from context
-    const rowKey = tableContext.rowKey!; // Get rowKey from context
+    partitionKey = partitionKey || tableContext.partitionKey!; // Get partitionKey from context
+    rowKey = rowKey || tableContext.rowKey!; // Get rowKey from context
 
     if (!partitionKey || !rowKey) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
@@ -534,16 +539,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
   public async queryEntitiesWithPartitionAndRowKey(
     _table: string,
-    _partitionKey: string,
-    _rowKey: string,
+    partitionKey: string,
+    rowKey: string,
     options: Models.TableQueryEntitiesWithPartitionAndRowKeyOptionalParams,
     context: Context
   ): Promise<Models.TableQueryEntitiesWithPartitionAndRowKeyResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
-    const table = this.getAndCheckTableName(tableContext);
-    const partitionKey = this.getAndCheckPartitionKey(tableContext);
-    const rowKey = this.getAndCheckRowKey(tableContext);
+    const table = _table ? _table : this.getAndCheckTableName(tableContext);
+    partitionKey = partitionKey || this.getAndCheckPartitionKey(tableContext);
+    rowKey = rowKey || this.getAndCheckRowKey(tableContext);
     const accept = this.getAndCheckPayloadFormat(tableContext);
 
     const entity = await this.metadataStore.queryTableEntitiesWithPartitionAndRowKey(
@@ -651,6 +656,17 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     throw new NotImplementedError(context);
   }
 
+  /**
+   * Processes an entity group transaction request / batch request
+   *
+   * @param {NodeJS.ReadableStream} body
+   * @param {string} multipartContentType
+   * @param {number} contentLength
+   * @param {Models.TableBatchOptionalParams} options
+   * @param {Context} context
+   * @return {*}  {Promise<Models.TableBatchResponse>}
+   * @memberof TableHandler
+   */
   public async batch(
     body: NodeJS.ReadableStream,
     multipartContentType: string,
@@ -658,14 +674,26 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableBatchOptionalParams,
     context: Context
   ): Promise<Models.TableBatchResponse> {
-    const tableContext = new TableStorageContext(context);
-    // TODO: Implement batch operation logic here
+    const tableCtx = new TableStorageContext(context);
+    const contentTypeResponse = tableCtx.request
+      ?.getHeader("content-type")
+      ?.replace("batch", "batchresponse");
+    const tableBatchManager = new TableBatchOrchestrator(tableCtx, this);
+
+    const response = await tableBatchManager.processBatchRequestAndSerializeResponse(
+      await TableBatchUtils.StreamToString(body)
+    );
+
+    // need to convert response to NodeJS.ReadableStream
+    body = toReadableStream(response);
+
     return {
-      requestId: tableContext.contextID,
+      contentType: contentTypeResponse,
+      requestId: tableCtx.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
       statusCode: 202,
-      body // Use incoming request body as Batch operation response body as demo
+      body
     };
   }
 
