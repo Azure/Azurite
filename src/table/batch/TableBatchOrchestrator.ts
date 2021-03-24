@@ -414,7 +414,8 @@ export default class TableBatchOrchestrator {
   }
 
   /**
-   * Handles a query operation inside a batch request
+   * Handles a query operation inside a batch request,
+   * should only ever be one operation if there is a query
    *
    * @private
    * @param {BatchRequest} request
@@ -447,6 +448,8 @@ export default class TableBatchOrchestrator {
       // as they percolate through and are needed for the final serialization
       // currently, because of the way we deconstruct / deserialize, we only
       // have the right model at a very late stage in processing
+      // this might resolve when we simplify Query logic
+      // based on only accepting Query iwth partition and row key
       request.ingestOptionalParams(
         new BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams()
       );
