@@ -331,18 +331,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
   public async mergeEntity(
     _table: string,
-    _partitionKey: string,
-    _rowKey: string,
+    partitionKey: string,
+    rowKey: string,
     options: Models.TableMergeEntityOptionalParams,
     context: Context
   ): Promise<Models.TableMergeEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
-    const partitionKey = _partitionKey
-      ? _partitionKey
-      : this.getAndCheckPartitionKey(tableContext);
-    const rowKey = _rowKey ? _rowKey : this.getAndCheckRowKey(tableContext);
+    partitionKey = partitionKey || this.getAndCheckPartitionKey(tableContext);
+    rowKey = rowKey || this.getAndCheckRowKey(tableContext);
 
     if (!options.tableEntityProperties) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
@@ -401,18 +399,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
   public async deleteEntity(
     _table: string,
-    _partitionKey: string,
-    _rowKey: string,
+    partitionKey: string,
+    rowKey: string,
     ifMatch: string,
     options: Models.TableDeleteEntityOptionalParams,
     context: Context
   ): Promise<Models.TableDeleteEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const accountName = tableContext.account;
-    const partitionKey = _partitionKey
-      ? _partitionKey
-      : tableContext.partitionKey!; // Get partitionKey from context
-    const rowKey = _rowKey ? _rowKey : tableContext.rowKey!; // Get rowKey from context
+    partitionKey = partitionKey || tableContext.partitionKey!; // Get partitionKey from context
+    rowKey = rowKey || tableContext.rowKey!; // Get rowKey from context
 
     if (!partitionKey || !rowKey) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
@@ -543,18 +539,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
   public async queryEntitiesWithPartitionAndRowKey(
     _table: string,
-    _partitionKey: string,
-    _rowKey: string,
+    partitionKey: string,
+    rowKey: string,
     options: Models.TableQueryEntitiesWithPartitionAndRowKeyOptionalParams,
     context: Context
   ): Promise<Models.TableQueryEntitiesWithPartitionAndRowKeyResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = _table ? _table : this.getAndCheckTableName(tableContext);
-    const partitionKey = _partitionKey
-      ? _partitionKey
-      : this.getAndCheckPartitionKey(tableContext);
-    const rowKey = _rowKey ? _rowKey : this.getAndCheckRowKey(tableContext);
+    partitionKey = partitionKey || this.getAndCheckPartitionKey(tableContext);
+    rowKey = rowKey || this.getAndCheckRowKey(tableContext);
     const accept = this.getAndCheckPayloadFormat(tableContext);
 
     const entity = await this.metadataStore.queryTableEntitiesWithPartitionAndRowKey(
