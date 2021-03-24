@@ -253,18 +253,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   // context
   public async updateEntity(
     _table: string,
-    _partitionKey: string,
-    _rowKey: string,
+    partitionKey: string,
+    rowKey: string,
     options: Models.TableUpdateEntityOptionalParams,
     context: Context
   ): Promise<Models.TableUpdateEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
-    const partitionKey = _partitionKey
-      ? _partitionKey
-      : this.getAndCheckPartitionKey(tableContext);
-    const rowKey = _rowKey ? _rowKey : this.getAndCheckRowKey(tableContext);
+    partitionKey = partitionKey || this.getAndCheckPartitionKey(tableContext);
+    rowKey = rowKey || this.getAndCheckRowKey(tableContext);
     const ifMatch = options.ifMatch;
 
     if (!options.tableEntityProperties) {
