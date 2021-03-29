@@ -496,7 +496,6 @@ export const BlobItem: msRest.CompositeMapper = {
       },
       snapshot: {
         xmlName: "Snapshot",
-        required: true,
         serializedName: "Snapshot",
         type: {
           name: "String"

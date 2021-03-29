@@ -723,6 +723,42 @@ describe("BlobAPIs", () => {
     }
   });
 
+  it("setTier on leased blob @loki @sql", async () => {
+    const leaseResult = await blobLeaseClient.acquireLease(-1);
+    const leaseId = leaseResult.leaseId;
+    assert.ok(leaseId);
+
+    await blockBlobClient.setAccessTier("Hot", {
+      conditions: { leaseId: leaseId }
+    });
+
+    const result = await blobClient.getProperties();
+    assert.equal(result.leaseDuration, "infinite");
+    assert.equal(result.leaseState, "leased");
+    assert.equal(result.leaseStatus, "locked");
+    if (result.archiveStatus) {
+      assert.equal(
+        result.archiveStatus.toLowerCase(),
+        "rehydrate-pending-to-hot"
+      );
+    }
+
+    await blobLeaseClient.releaseLease();
+
+    await blockBlobClient.setAccessTier("Archive");
+    let properties = await blockBlobClient.getProperties();
+    assert.equal(properties.accessTier!.toLowerCase(), "archive");
+
+    await blockBlobClient.setAccessTier("Hot");
+    properties = await blockBlobClient.getProperties();
+    if (properties.archiveStatus) {
+      assert.equal(
+        properties.archiveStatus.toLowerCase(),
+        "rehydrate-pending-to-hot"
+      );
+    }
+  });
+
   it("setHTTPHeaders with default parameters @loki @sql", async () => {
     await blobClient.setHTTPHeaders({});
     const result = await blobClient.getProperties();

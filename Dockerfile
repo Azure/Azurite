@@ -7,12 +7,13 @@ WORKDIR /opt/azurite
 
 # Install dependencies first
 COPY *.json LICENSE NOTICE.txt ./
+RUN npm config set unsafe-perm=true && \
+  npm ci
 
 # Copy the source code and build the app
 COPY src ./src
 COPY tests ./tests
-RUN npm config set unsafe-perm=true && \
-  npm ci && \
+RUN npm run build && \
   npm install -g --loglevel verbose
 
 

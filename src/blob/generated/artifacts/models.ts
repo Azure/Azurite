@@ -195,7 +195,7 @@ export interface BlobMetadata {
 export interface BlobItem {
   name: string;
   deleted?: boolean;
-  snapshot: string;
+  snapshot?: string;
   properties: BlobProperties;
   metadata?: BlobMetadata;
 }
@@ -2121,6 +2121,10 @@ export interface BlobSetTierOptionalParams {
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * Additional parameters for the operation
+   */
+  leaseAccessConditions?: LeaseAccessConditions;
 }
 
 /**

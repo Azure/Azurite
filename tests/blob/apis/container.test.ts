@@ -475,6 +475,7 @@ describe("ContainerAPIs", () => {
         getResult.etag,
         '"' + result.segment.blobItems![i].properties.etag + '"'
       );
+      assert.deepStrictEqual(result.segment.blobItems![i].snapshot, undefined);
       i++;
     }
 
