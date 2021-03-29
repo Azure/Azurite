@@ -1,3 +1,4 @@
+import { StorageServiceClient } from "azure-storage";
 import { randomBytes } from "crypto";
 import { createWriteStream, readFileSync } from "fs";
 import { sign } from "jsonwebtoken";
@@ -31,25 +32,25 @@ export function padStart(
   targetLength: number,
   padString: string = " "
 ): string {
-  if (String.prototype.padStart) {
-    return currentString.padStart(targetLength, padString);
-  }
+  // if (String.prototype.padStart) {
+  return currentString.padStart(targetLength, padString);
+  // }
 
-  padString = padString || " ";
-  if (currentString.length > targetLength) {
-    return currentString;
-  } else {
-    targetLength = targetLength - currentString.length;
-    if (targetLength > padString.length) {
-      padString += padString.repeat(targetLength / padString.length);
-    }
-    return padString.slice(0, targetLength) + currentString;
-  }
+  // padString = padString || " ";
+  // if (currentString.length > targetLength) {
+  //   return currentString;
+  // } else {
+  //   targetLength = targetLength - currentString.length;
+  //   if (targetLength > padString.length) {
+  //     padString += padString.repeat(targetLength / padString.length);
+  //   }
+  //   return padString.slice(0, targetLength) + currentString;
+  // }
 }
 
 export async function rmRecursive(path: string): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    rimraf(path, err => {
+    rimraf(path, (err) => {
       if (err) {
         resolve();
         // TODO: Handle delete errors
@@ -94,7 +95,7 @@ export async function bodyToString(
 }
 
 export async function sleep(time: number): Promise<void> {
-  return new Promise<void>(resolve => {
+  return new Promise<void>((resolve) => {
     setTimeout(resolve, time);
   });
 }
@@ -197,4 +198,52 @@ export function generateJWTToken(
     { algorithm: "RS256" }
   );
   return token;
+}
+
+export function restoreBuildRequestOptions(service: any) {
+  if ((service as any).__proto__.__proto__.__original_buildRequestOptions) {
+    // tslint:disable-next-line: max-line-length
+    (service as any).__proto__.__proto__._buildRequestOptions = (service as any).__proto__.__proto__.__original_buildRequestOptions;
+  }
+}
+export function overrideRequest(
+  override: {
+    headers: { [key: string]: string };
+  } = { headers: {} },
+  service: StorageServiceClient
+) {
+  const hasOriginal = !!(service as any).__proto__.__proto__
+    .__original_buildRequestOptions;
+
+  const original = hasOriginal
+    ? (service as any).__proto__.__proto__.__original_buildRequestOptions
+    : (service as any).__proto__.__proto__._buildRequestOptions;
+
+  if (!hasOriginal) {
+    (service as any).__proto__.__proto__.__original_buildRequestOptions = original;
+  }
+
+  const _buildRequestOptions = original.bind(service);
+  (service as any).__proto__.__proto__._buildRequestOptions = (
+    webResource: any,
+    body: any,
+    options: any,
+    callback: any
+  ) => {
+    _buildRequestOptions(
+      webResource,
+      body,
+      options,
+      (err: any, finalRequestOptions: any) => {
+        for (const key in override.headers) {
+          if (Object.prototype.hasOwnProperty.call(override.headers, key)) {
+            const element = override.headers[key];
+            finalRequestOptions.headers[key] = element;
+          }
+        }
+
+        callback(err, finalRequestOptions);
+      }
+    );
+  };
 }

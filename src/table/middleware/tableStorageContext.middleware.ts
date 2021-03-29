@@ -1,0 +1,214 @@
+import { NextFunction, Request, RequestHandler, Response } from "express";
+import uuid from "uuid/v4";
+
+import logger from "../../common/Logger";
+import { PRODUCTION_STYLE_URL_HOSTNAME } from "../../common/utils/constants";
+import TableStorageContext from "../context/TableStorageContext";
+import {
+  DEFAULT_TABLE_CONTEXT_PATH,
+  HeaderConstants,
+  ValidAPIVersions
+} from "../utils/constants";
+import { checkApiVersion } from "../utils/utils";
+
+export default function createTableStorageContextMiddleware(
+  skipApiVersionCheck?: boolean
+): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction) => {
+    return tableStorageContextMiddleware(req, res, next, skipApiVersionCheck);
+  };
+}
+
+/**
+ * A middleware extract related table service context.
+ *
+ * @export
+ * @param {Request} req An express compatible Request object
+ * @param {Response} res An express compatible Response object
+ * @param {NextFunction} next An express middleware next callback
+ */
+export function tableStorageContextMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  skipApiVersionCheck?: boolean
+): void {
+  // Set server header in every Azurite response
+  res.setHeader(
+    HeaderConstants.SERVER,
+    `Azurite-Table/${HeaderConstants.VERSION}`
+  );
+
+  const requestID = uuid();
+
+  const tableContext = new TableStorageContext(
+    res.locals,
+    DEFAULT_TABLE_CONTEXT_PATH
+  );
+
+  tableContext.accept = req.headers.accept;
+  tableContext.startTime = new Date();
+  tableContext.xMsRequestID = requestID;
+
+  if (!skipApiVersionCheck) {
+    const apiVersion = req.header(HeaderConstants.X_MS_VERSION);
+    if (apiVersion !== undefined) {
+      checkApiVersion(apiVersion, ValidAPIVersions, tableContext);
+    }
+  }
+
+  logger.info(
+    `TableStorageContextMiddleware: RequestMethod=${req.method} RequestURL=${
+      req.protocol
+    }://${req.hostname}${req.url} RequestHeaders:${JSON.stringify(
+      req.headers
+    )} ClientIP=${req.ip} Protocol=${req.protocol} HTTPVersion=${
+      req.httpVersion
+    }`,
+    requestID
+  );
+
+  // tslint:disable-next-line: prefer-const
+  let [account, tableSection] = extractStoragePartsFromPath(
+    req.hostname,
+    req.path
+  );
+
+  const isGet = req.method.toUpperCase() === "GET";
+
+  // Candidate tableSection
+  // undefined - Set Table Service Properties
+  // Tables - Create Tables, Query Tables
+  // Tables() - Create Tables, Query Tables
+  // Tables('mytable')	- Delete Tables, Query Entities
+  // mytable - Get/Set Table ACL, Insert Entity, Query Entities
+  // mytable(PartitionKey='<partition-key>',RowKey='<row-key>') -
+  //        Query Entities, Update Entity, Merge Entity, Delete Entity
+  // mytable() - Query Entities
+  // TODO: Not allowed create Table with Tables as name
+  if (tableSection === undefined) {
+    // Service level operation
+    tableContext.tableName = undefined;
+  } else if (tableSection === "Tables" || tableSection === "Tables()") {
+    // Table name in request body
+    tableSection = "Tables";
+    tableContext.tableName = undefined;
+  } else if (
+    tableSection.startsWith("Tables('") &&
+    tableSection.endsWith("')")
+  ) {
+    // Tables('mytable')
+    tableContext.tableName = tableSection.substring(8, tableSection.length - 2);
+
+    // Workaround for query entity
+    if (isGet) {
+      tableSection = `${tableContext.tableName}()`;
+    }
+  } else if (!tableSection.includes("(") && !tableSection.includes(")")) {
+    // mytable
+    tableContext.tableName = tableSection;
+
+    // Workaround for query entity
+    if (isGet) {
+      tableSection = `${tableContext.tableName}()`;
+    }
+  } else if (
+    tableSection.includes("(") &&
+    tableSection.includes(")") &&
+    tableSection.includes("PartitionKey='") &&
+    tableSection.includes("RowKey='")
+  ) {
+    // mytable(PartitionKey='<partition-key>',RowKey='<row-key>')
+    tableContext.tableName = tableSection.substring(
+      0,
+      tableSection.indexOf("(")
+    );
+    const firstQuoteIndex = tableSection.indexOf("'");
+    const secondQuoteIndex = tableSection.indexOf("'", firstQuoteIndex + 1);
+    const thridQuoteIndex = tableSection.indexOf("'", secondQuoteIndex + 1);
+    const fourthQuoteIndex = tableSection.indexOf("'", thridQuoteIndex + 1);
+    tableContext.partitionKey = tableSection.substring(
+      firstQuoteIndex + 1,
+      secondQuoteIndex
+    );
+    tableContext.rowKey = tableSection.substring(
+      thridQuoteIndex + 1,
+      fourthQuoteIndex
+    );
+
+    tableSection = `${tableContext.tableName}(PartitionKey='PLACEHOLDER',RowKey='PLACEHOLDER')`;
+  } else if (
+    tableSection.includes("(") &&
+    tableSection.includes(")") &&
+    tableSection.indexOf(")") - tableSection.indexOf("(") === 1
+  ) {
+    // mytable()
+    tableContext.tableName = tableSection.substr(0, tableSection.indexOf("("));
+  } else {
+    logger.error(
+      `tableStorageContextMiddleware: Cannot extract table name from URL path=${req.path}`,
+      requestID
+    );
+    return next(
+      new Error(
+        `tableStorageContextMiddleware: Cannot extract table name from URL path=${req.path}`
+      )
+    );
+  }
+
+  tableContext.account = account;
+
+  tableContext.authenticationPath = req.path;
+
+  // Emulator's URL pattern is like http://hostname[:port]/account/table
+  // (or, alternatively, http[s]://account.localhost[:port]/table/)
+  // Create a router to exclude account name from req.path, as url path in swagger doesn't include account
+  // Exclude account name from req.path for dispatchMiddleware
+  tableContext.dispatchPattern =
+    tableSection !== undefined ? `/${tableSection}` : "/";
+
+  logger.debug(
+    `tableStorageContextMiddleware: Dispatch pattern string: ${tableContext.dispatchPattern}`,
+    requestID
+  );
+
+  logger.info(
+    `tableStorageContextMiddleware: Account=${account} tableName=${tableContext.tableName}`,
+    requestID
+  );
+  next();
+}
+
+/**
+ * Extract storage account, table, and messages from URL path.
+ *
+ * @param {string} path
+ * @returns {([string | undefined, string | undefined, string | undefined, boolean | undefined])}
+ */
+export function extractStoragePartsFromPath(
+  hostname: string,
+  path: string
+): [string | undefined, string | undefined] {
+  let account;
+  let table;
+
+  const decodedPath = decodeURIComponent(path);
+  const normalizedPath = decodedPath.startsWith("/")
+    ? decodedPath.substr(1)
+    : decodedPath; // Remove starting "/"
+
+  const parts = normalizedPath.split("/");
+
+  let urlPartIndex = 0;
+  if (hostname.endsWith(PRODUCTION_STYLE_URL_HOSTNAME)) {
+    account = hostname.substring(
+      0,
+      hostname.length - PRODUCTION_STYLE_URL_HOSTNAME.length
+    );
+  } else {
+    account = parts[urlPartIndex++];
+  }
+  table = parts[urlPartIndex++];
+
+  return [account, table];
+}

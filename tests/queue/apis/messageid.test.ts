@@ -79,7 +79,7 @@ describe("MessageId APIs test", () => {
     await rmRecursive(persistencePath);
   });
 
-  beforeEach(async function() {
+  beforeEach(async function () {
     queueName = getUniqueName("queue");
     queueClient = serviceClient.getQueueClient(queueName);
     await queueClient.create();

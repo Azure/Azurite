@@ -10,3 +10,5 @@ debug.log
 __*
 *.env
 temp
+**/.DS_Store.DS_Store
+*.pem

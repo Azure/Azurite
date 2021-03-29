@@ -66,7 +66,7 @@ describe("BlockBlobHighlevel", () => {
     blockBlobClient = blobClient.getBlockBlobClient();
   });
 
-  afterEach(async function() {
+  afterEach(async function () {
     await containerClient.delete();
   });
 
@@ -332,7 +332,7 @@ describe("BlockBlobHighlevel", () => {
         // }
       },
       maxRetryRequests: 1,
-      onProgress: ev => {
+      onProgress: (ev) => {
         if (ev.loadedBytes >= tempFileSmallLength) {
           retirableReadableStreamOptions.doInjectErrorOnce = true;
         }

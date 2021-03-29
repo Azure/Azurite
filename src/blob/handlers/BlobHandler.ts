@@ -3,7 +3,10 @@ import axios, { AxiosResponse } from "axios";
 import { URL } from "url";
 
 import IExtentStore from "../../common/persistence/IExtentStore";
-import { convertRawHeadersToMetadata } from "../../common/utils/utils";
+import {
+  convertRawHeadersToMetadata,
+  getMD5FromStream
+} from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -24,8 +27,7 @@ import {
 } from "../utils/constants";
 import {
   deserializePageBlobRangeHeader,
-  deserializeRangeHeader,
-  getMD5FromStream
+  deserializeRangeHeader
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -993,7 +995,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     } else {
       bodyGetter = async () => {
         return this.extentStore.readExtents(
-          blocks.map(block => block.persistency),
+          blocks.map((block) => block.persistency),
           rangeStart,
           rangeEnd + 1 - rangeStart,
           context.contextId
@@ -1113,7 +1115,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     const bodyGetter = async () => {
       return this.extentStore.readExtents(
-        ranges.map(value => value.persistency),
+        ranges.map((value) => value.persistency),
         0,
         contentLength,
         context.contextId

@@ -31,16 +31,16 @@ VOLUME [ "/data" ]
 
 COPY package*.json LICENSE NOTICE.txt ./
 
-RUN npm config set unsafe-perm=true && \
-  npm ci
-
 COPY --from=builder /opt/azurite/dist/ dist/
 
-RUN npm install -g --loglevel verbose
+RUN npm config set unsafe-perm=true && \
+  npm install -g --loglevel verbose
 
 # Blob Storage Port
 EXPOSE 10000
 # Queue Storage Port
 EXPOSE 10001
+# Table Storage Port
+EXPOSE 10002
 
-CMD ["azurite", "-l", "/data", "--blobHost", "0.0.0.0","--queueHost", "0.0.0.0"]
+CMD ["azurite", "-l", "/data", "--blobHost", "0.0.0.0","--queueHost", "0.0.0.0", "--tableHost", "0.0.0.0"]

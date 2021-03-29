@@ -1,5 +1,5 @@
 import IExtentStore from "../../common/persistence/IExtentStore";
-import { convertRawHeadersToMetadata } from "../../common/utils/utils";
+import { convertRawHeadersToMetadata, newEtag } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -13,7 +13,7 @@ import IBlobMetadataStore, {
   BlobModel
 } from "../persistence/IBlobMetadataStore";
 import { BLOB_API_VERSION } from "../utils/constants";
-import { deserializePageBlobRangeHeader, newEtag } from "../utils/utils";
+import { deserializePageBlobRangeHeader } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
 

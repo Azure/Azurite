@@ -4,10 +4,17 @@ import {
   DEFAULT_BLOB_LISTENING_PORT,
   DEFAULT_BLOB_SERVER_HOST_NAME
 } from "../blob/utils/constants";
+
 import {
   DEFAULT_QUEUE_LISTENING_PORT,
   DEFAULT_QUEUE_SERVER_HOST_NAME
 } from "../queue/utils/constants";
+
+import {
+  DEFAULT_TABLE_LISTENING_PORT,
+  DEFAULT_TABLE_SERVER_HOST_NAME
+} from "../table/utils/constants";
+
 import IEnvironment from "./IEnvironment";
 
 args
@@ -30,6 +37,16 @@ args
     ["", "queuePort"],
     "Optional. Customize listening port for queue",
     DEFAULT_QUEUE_LISTENING_PORT
+  )
+  .option(
+    ["", "tableHost"],
+    "Optional. Customize listening address for table",
+    DEFAULT_TABLE_SERVER_HOST_NAME
+  )
+  .option(
+    ["", "tablePort"],
+    "Optional. Customize listening port for table",
+    DEFAULT_TABLE_LISTENING_PORT
   )
   .option(
     ["l", "location"],
@@ -73,6 +90,14 @@ export default class Environment implements IEnvironment {
 
   public queuePort(): number | undefined {
     return this.flags.queuePort;
+  }
+
+  public tableHost(): string | undefined {
+    return this.flags.tableHost;
+  }
+
+  public tablePort(): number | undefined {
+    return this.flags.tablePort;
   }
 
   public async location(): Promise<string> {

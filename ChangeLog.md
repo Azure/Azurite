@@ -4,6 +4,11 @@
 
 ## Upcoming Release
 
+## 2021.03 Version 3.11.0-table-alpha.1
+
+- First Alpha version of Azurite V3 Table.
+- Allow empty RowKey in an entity.
+
 ## 2021.2 Version 3.11.0
 
 - Bump up Azure Storage service API version to 2020-06-12.
