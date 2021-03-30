@@ -12,7 +12,8 @@ COPY *.json LICENSE NOTICE.txt ./
 COPY src ./src
 COPY tests ./tests
 RUN npm config set unsafe-perm=true && \
-  npm ci && \
+  npm ci
+RUN npm run build && \
   npm install -g --loglevel verbose
 
 

@@ -22,6 +22,6 @@ enum-types: true
 
 2. Updated blocklisttype for list blob blocks from required to optional.
 
-3. Make "Deleted" from required to optional for BlobItem model.
+3. Make "Deleted" and "Snapshot" from required to optional for BlobItem model.
 
 4. Make `ApiVersionParameter` parameter from required to optional.

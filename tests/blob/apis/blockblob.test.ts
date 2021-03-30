@@ -439,6 +439,33 @@ describe("BlockBlobAPIs", () => {
     assert.fail();
   });
 
+  it("getBlockList from snapshot @loki @sql", async () => {
+    const body = "HelloWorld";
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
+    await blockBlobClient.commitBlockList([base64encode("1")]);
+
+    // Create blob snapshot
+    const result = await blobClient.createSnapshot();
+    assert.ok(result.snapshot);
+    const blobSnapshotURL = blockBlobClient.withSnapshot(result.snapshot!);
+    await blobSnapshotURL.getProperties();
+
+    // Update base blob
+    await blockBlobClient.stageBlock(base64encode("3"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("4"), body, body.length);
+    await blockBlobClient.commitBlockList([
+      base64encode("3"),
+      base64encode("4")
+    ]);
+
+    const listResponse = await blobSnapshotURL.getBlockList("all");
+    assert.equal(listResponse.committedBlocks!.length, 1);
+    assert.equal(listResponse.uncommittedBlocks!.length, 0);
+    assert.equal(listResponse.committedBlocks![0].name, base64encode("1"));
+    assert.equal(listResponse.committedBlocks![0].size, body.length);
+  });
+
   it("upload with Readable stream body and default parameters @loki @sql", async () => {
     const body: string = getUniqueName("randomstring");
     const bodyBuffer = Buffer.from(body);

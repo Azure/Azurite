@@ -1028,12 +1028,14 @@ export default class LokiBlobMetadataStore
       context
     );
 
+    const snapshotTime = convertDateTimeStringMsTo7Digital(
+      context.startTime!.toISOString()
+    );
+
     const snapshotBlob: BlobModel = {
       name: doc.name,
       deleted: false,
-      snapshot: convertDateTimeStringMsTo7Digital(
-        context.startTime!.toISOString()
-      ),
+      snapshot: snapshotTime,
       properties: { ...doc.properties },
       metadata: metadata ? { ...metadata } : { ...doc.metadata },
       accountName: doc.accountName,
@@ -1065,7 +1067,7 @@ export default class LokiBlobMetadataStore
 
     return {
       properties: snapshotBlob.properties,
-      snapshot: snapshotBlob.snapshot
+      snapshot: snapshotTime
     };
   }
 
@@ -2519,6 +2521,7 @@ export default class LokiBlobMetadataStore
    * @param {string} account
    * @param {string} container
    * @param {string} blob
+   * @param {(string | undefined)} snapshot
    * @param {(boolean | undefined)} isCommitted
    * @param {Context} context
    * @returns {Promise<{
@@ -2533,6 +2536,7 @@ export default class LokiBlobMetadataStore
     account: string,
     container: string,
     blob: string,
+    snapshot: string | undefined,
     isCommitted: boolean | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<{
@@ -2544,7 +2548,7 @@ export default class LokiBlobMetadataStore
       account,
       container,
       blob,
-      undefined,
+      snapshot,
       context
     );
 

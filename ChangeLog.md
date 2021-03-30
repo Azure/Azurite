@@ -8,9 +8,28 @@ Table:
 
 - Allow empty RowKey in an entity.
 
-## 2020.11 Version 3.9.0-table-alpha.1
+## 2021.2 Version 3.11.0
 
-Table:
+- Bump up Azure Storage service API version to 2020-06-12.
+
+Blob:
+
+- Fix an issue that result of blobs enumeration cannot be parsed by Azure SDK for Go.
+- Fix an issue that set tier to leased blob not work properly.
+- Skip Content-Length check for Append Block if the `--loose` flag is set.
+
+## 2020.12 Version 3.10.0
+
+- Bump up Azure Storage service API version to 2020-04-08.
+- Add missing Azure Storage service API version 2019-10-10.
+
+Blob:
+
+- Fix an issue that Blob Lease properties are lost when overwrite an existing blob.
+- Fix an issue that snapshot time is omitted in get block list.
+- Fix an issue that no error throw when clear pages, get page ranges and upload pages with invalid page range.
+
+## 2020.11 Version 3.11.0-table-alpha.1
 
 - First Alpha version of Azurite V3 Table.
 
