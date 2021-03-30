@@ -4,9 +4,8 @@
 
 ## Upcoming Release
 
-## 2021.03 Version 3.11.0-table-alpha.1
+Table:
 
-- First Alpha version of Azurite V3 Table.
 - Allow empty RowKey in an entity.
 
 ## 2021.2 Version 3.11.0
@@ -29,6 +28,10 @@ Blob:
 - Fix an issue that Blob Lease properties are lost when overwrite an existing blob.
 - Fix an issue that snapshot time is omitted in get block list.
 - Fix an issue that no error throw when clear pages, get page ranges and upload pages with invalid page range.
+
+## 2020.11 Version 3.11.0-table-alpha.1
+
+- First Alpha version of Azurite V3 Table.
 
 ## 2020.10 Version 3.9.0
 
