@@ -48,14 +48,12 @@ export default function errorMiddleware(
     );
 
     logger.error(
-      `ErrorMiddleware: ErrorName=${err.name} ErrorMessage=${
-        err.message
-      }  ErrorHTTPStatusCode=${err.statusCode} ErrorHTTPStatusMessage=${
-        err.statusMessage
+      `ErrorMiddleware: ErrorName=${err.name} ErrorMessage=${JSON.stringify(err.message)
+      }  ErrorHTTPStatusCode=${err.statusCode} ErrorHTTPStatusMessage=${JSON.stringify(err.statusMessage)
       } ErrorHTTPHeaders=${JSON.stringify(
         err.headers
       )} ErrorHTTPBody=${JSON.stringify(err.body)} ErrorStack=${JSON.stringify(
-        err.stack
+        JSON.stringify(err.stack)
       )}`,
       context.contextID
     );
@@ -110,8 +108,7 @@ export default function errorMiddleware(
       context.contextID
     );
     logger.error(
-      `ErrorMiddleware: ErrorName=${err.name} ErrorMessage=${
-        err.message
+      `ErrorMiddleware: ErrorName=${err.name} ErrorMessage=${err.message
       } ErrorStack=${JSON.stringify(err.stack)}`,
       context.contextID
     );

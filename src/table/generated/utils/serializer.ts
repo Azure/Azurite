@@ -11,8 +11,8 @@ export declare type ParameterPath =
   | string
   | string[]
   | {
-      [propertyName: string]: ParameterPath;
-    };
+    [propertyName: string]: ParameterPath;
+  };
 
 export async function deserialize(
   context: Context,
@@ -69,7 +69,7 @@ export async function deserialize(
     const headerCollectionPrefix:
       | string
       | undefined = (headerParameter.mapper as msRest.DictionaryMapper)
-      .headerCollectionPrefix;
+        .headerCollectionPrefix;
     if (headerCollectionPrefix) {
       const dictionary: any = {};
       const headers = req.getHeaders();
@@ -369,9 +369,12 @@ export async function serialize(
   ) {
     logger.info(`Serializer: Start returning stream body.`, context.contextID);
 
-    await new Promise((resolve, reject) => {
+
+
+    await new Promise<void>((resolve, reject) => {
       (handlerResponse.body as NodeJS.ReadableStream)
         .on("error", reject)
+        .on("end", resolve)
         .pipe(res.getBodyStream())
         .on("error", reject)
         .on("close", resolve);
