@@ -237,9 +237,14 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       // }
 
       // response.body = new BufferStream(Buffer.from(JSON.stringify(body)));
-      response.body = new BufferStream(
-        Buffer.from(nomarlizedEntity.toResponseString(accept, body))
+      const rawResponse = nomarlizedEntity.toResponseString(accept, body);
+      this.logger.debug(
+        `TableHandler:insertEntity() Raw response string is ${JSON.stringify(
+          rawResponse
+        )}`,
+        context.contextID
       );
+      response.body = new BufferStream(Buffer.from(rawResponse));
     }
 
     this.updateResponseAccept(tableContext, accept);
@@ -528,7 +533,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     response.body = new BufferStream(Buffer.from(body));
 
     this.logger.debug(
-      `QueryEntities response body: ${body}`,
+      `TableHandler:queryEntities() Raw response string is ${JSON.stringify(
+        body
+      )}`,
       context.contextID
     );
 
@@ -606,8 +613,18 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     }
 
     const nomarlizedEntity = new NormalizedEntity(entity);
-    response.body = new BufferStream(
-      Buffer.from(nomarlizedEntity.toResponseString(accept, body, selectSet))
+    const rawResponse = nomarlizedEntity.toResponseString(
+      accept,
+      body,
+      selectSet
+    );
+    response.body = new BufferStream(Buffer.from(rawResponse));
+
+    this.logger.debug(
+      `TableHandler:queryEntities() Raw response string is ${JSON.stringify(
+        rawResponse
+      )}`,
+      context.contextID
     );
 
     this.updateResponseAccept(tableContext, accept);
@@ -680,8 +697,21 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       ?.replace("batch", "batchresponse");
     const tableBatchManager = new TableBatchOrchestrator(tableCtx, this);
 
+    const requestBody = await TableBatchUtils.StreamToString(body);
+    this.logger.debug(
+      `TableHandler:batch() Raw request string is ${JSON.stringify(
+        requestBody
+      )}`,
+      context.contextID
+    );
+
     const response = await tableBatchManager.processBatchRequestAndSerializeResponse(
-      await TableBatchUtils.StreamToString(body)
+      requestBody
+    );
+
+    this.logger.debug(
+      `TableHandler:batch() Raw response string is ${JSON.stringify(response)}`,
+      context.contextID
     );
 
     // need to convert response to NodeJS.ReadableStream
