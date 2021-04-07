@@ -7,6 +7,7 @@
 Table:
 
 - Allow empty RowKey in an entity.
+- Fix etag format to be aligned with Azure server.
 
 ## 2021.2 Version 3.11.0
 
