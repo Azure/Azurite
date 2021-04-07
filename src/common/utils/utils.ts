@@ -62,7 +62,11 @@ export function newEtag(): string {
 
 export function newTableEntityEtag(startTime: Date): string {
   // Etag as returned by Table Storage should match W/"datetime'<ISO8601datetime>'"
-  return "W/\"datetime'" + truncatedISO8061Date(startTime, true) + "'\"";
+  return (
+    "W/\"datetime'" +
+    encodeURIComponent(truncatedISO8061Date(startTime, true)) +
+    "'\""
+  );
 }
 
 /**
