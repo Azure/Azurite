@@ -234,6 +234,17 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static ResourceNotFound(context: Context): StorageError {
+    return new StorageError(
+      404,
+      "ResourceNotFound",
+      "The specified resource does not exist.",
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
+
   public static getEntityNotFound(context: Context): StorageError {
     return new StorageError(
       404,

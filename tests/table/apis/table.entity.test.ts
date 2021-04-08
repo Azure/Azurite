@@ -114,6 +114,42 @@ describe("table Entity APIs test", () => {
     });
   });
 
+  // Insert entity property with type "Edm.DateTime", server will convert to UTC time
+  it("Insert new Entity property with type Edm.DateTime will convert to UTC, @loki", (done) => {
+    const timeValue = "2012-01-02T23:00:00";
+    const entity = {
+      PartitionKey: "part1",
+      RowKey: "utctest",
+      myValue: timeValue,
+      "myValue@odata.type": "Edm.DateTime"
+    };
+
+    tableService.insertEntity(
+      tableName,
+      entity,
+      (insertError, insertResult, insertResponse) => {
+        if (!insertError) {
+          tableService.retrieveEntity<TestEntity>(
+            tableName,
+            "part1",
+            "utctest",
+            (error, result) => {
+              const entity: TestEntity = result;
+              assert.strictEqual(
+                entity.myValue._.toString(),
+                new Date(timeValue + "Z").toString()
+              );
+              done();
+            }
+          );
+        } else {
+          assert.ifError(insertError);
+          done();
+        }
+      }
+    );
+  });
+
   // Simple test in here until we have the full set checked in, as we need
   // a starting point for delete and query entity APIs
   it("Should insert new Entity with empty RowKey, @loki", (done) => {

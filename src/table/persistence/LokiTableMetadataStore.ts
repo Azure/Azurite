@@ -132,7 +132,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     if (doc) {
       coll.remove(doc);
     } else {
-      throw StorageErrorFactory.getTableNotFound(context);
+      throw StorageErrorFactory.ResourceNotFound(context);
     }
 
     const tableCollectionName = this.getTableCollectionName(account, table);
