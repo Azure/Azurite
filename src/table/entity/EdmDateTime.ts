@@ -16,7 +16,15 @@ export class EdmDateTime implements IEdmType {
   public typedValue: string;
 
   public constructor(public value: any) {
-    this.typedValue = EdmDateTime.validate(value);
+    // Azure Server will take time string like "2012-01-02T23:00:00" as UTC time, so Azurite need be aligned by adding suffix "Z"
+    const utcTimeString = value + "Z";
+    const utcTime: Date = new Date(value + "Z");
+    if (!isNaN(utcTime.getDay())) {
+      // When add suffix "Z" is still a validate date string, use the string with suffix "Z"; else use original string
+      this.typedValue = utcTimeString;
+    } else {
+      this.typedValue = EdmDateTime.validate(value);
+    }
   }
 
   public toJsonPropertyValuePair(name: string): [string, string] {

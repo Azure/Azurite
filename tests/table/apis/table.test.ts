@@ -251,7 +251,7 @@ describe("table APIs test", () => {
     tableService.deleteTable(tableToDelete, (error, result) => {
       assert.equal(result.statusCode, 404); // no body expected, we expect 404
       const storageError = error as any;
-      assert.equal(storageError.code, "TableNotFound");
+      assert.equal(storageError.code, "ResourceNotFound");
       done();
     });
   });
