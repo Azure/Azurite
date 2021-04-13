@@ -543,12 +543,12 @@ export class TableBatchSerialization extends BatchSerialization {
     const trimmedUrl: string = request
       .getUrl()
       .substring(0, parenthesesPosition);
-    let entityPath = trimmedUrl + "(PartitionKey=%27";
+    let entityPath = trimmedUrl + "(PartitionKey='";
     entityPath += request.params.tableEntityProperties!.PartitionKey;
-    entityPath += "%27,";
-    entityPath += "RowKey=%27";
+    entityPath += "',";
+    entityPath += "RowKey='";
     entityPath += request.params.tableEntityProperties!.RowKey;
-    entityPath += "%27)\r\n";
+    entityPath += "')\r\n";
     return entityPath;
   }
 
