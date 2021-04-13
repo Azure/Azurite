@@ -183,8 +183,7 @@ export class TableBatchSerialization extends BatchSerialization {
       this.SerializeEntityPath(serializedResponses, request);
 
     if (null !== response.eTag && undefined !== response.eTag) {
-      // prettier-ignore
-      serializedResponses += "ETag: " + response.eTag.replace(":","%3A");
+      serializedResponses += "ETag: " + response.eTag;
     }
     return serializedResponses;
   }
@@ -258,7 +257,7 @@ export class TableBatchSerialization extends BatchSerialization {
     );
 
     if (null !== response.eTag && undefined !== response.eTag) {
-      serializedResponses += "ETag: " + response.eTag.replace(":", "%3A");
+      serializedResponses += "ETag: " + response.eTag;
     }
     return serializedResponses;
   }
@@ -317,7 +316,7 @@ export class TableBatchSerialization extends BatchSerialization {
     );
 
     if (null !== response.eTag && undefined !== response.eTag) {
-      serializedResponses += "ETag: " + response.eTag.replace(":", "%3A");
+      serializedResponses += "ETag: " + response.eTag;
     }
     return serializedResponses;
   }
@@ -354,7 +353,7 @@ export class TableBatchSerialization extends BatchSerialization {
     serializedResponses = this.AddNoSniffNoCache(serializedResponses);
 
     if (response.eTag) {
-      serializedResponses += "ETag: " + response.eTag.replace(":", "%3A");
+      serializedResponses += "ETag: " + response.eTag;
     }
     serializedResponses += "\r\n";
 

@@ -261,6 +261,10 @@ export default class TableBatchOrchestrator {
         partitionKey = jsonBody.PartitionKey;
         rowKey = jsonBody.RowKey;
       }
+    } else {
+      // keys can have more complex values which are URI encoded
+      partitionKey = decodeURIComponent(partitionKey);
+      rowKey = decodeURIComponent(rowKey);
     }
     return { partitionKey, rowKey };
   }

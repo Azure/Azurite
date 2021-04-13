@@ -1017,7 +1017,11 @@ describe("table Entity APIs test", () => {
     });
   });
 
-  it.only("Operates on batch items with complex row keys, @loki", (done) => {
+  // this covers the following issues
+  // https://github.com/Azure/Azurite/issues/750
+  // https://github.com/Azure/Azurite/issues/733
+  // https://github.com/Azure/Azurite/issues/745
+  it("Operates on batch items with complex row keys, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
@@ -1034,19 +1038,110 @@ describe("table Entity APIs test", () => {
     tableService.insertEntity<TestEntity>(tableName, insertEntity1, () => {
       tableService.insertEntity<TestEntity>(tableName, insertEntity2, () => {
         const entityBatch: Azure.TableBatch = new Azure.TableBatch();
-        entityBatch.insertEntity(insertEntity3, {});
+        entityBatch.insertEntity(insertEntity3, { echoContent: true });
         entityBatch.insertEntity(insertEntity4, {});
         entityBatch.deleteEntity(insertEntity1);
         entityBatch.deleteEntity(insertEntity2);
         tableService.executeBatch(
           tableName,
           entityBatch,
-          (updateError, updateResult, updateResponse) => {
-            if (updateError) {
-              assert.ifError(updateError);
+          (batchError, batchResult, batchResponse) => {
+            if (batchError) {
+              assert.ifError(batchError);
               done();
             } else {
-              assert.equal(updateResponse.statusCode, 202);
+              assert.equal(batchResponse.statusCode, 202);
+              tableService.retrieveEntity<TestEntity>(
+                tableName,
+                insertEntity3.PartitionKey._,
+                insertEntity3.RowKey._,
+                (error: any, result, response) => {
+                  assert.strictEqual(
+                    response.statusCode,
+                    200,
+                    "We did not find the 3rd entity!"
+                  );
+                  tableService.retrieveEntity<TestEntity>(
+                    tableName,
+                    insertEntity4.PartitionKey._,
+                    insertEntity4.RowKey._,
+                    (error2: any, result2, response2) => {
+                      assert.strictEqual(
+                        response2.statusCode,
+                        200,
+                        "We did not find the 4th entity!"
+                      );
+                      tableService.retrieveEntity<TestEntity>(
+                        tableName,
+                        insertEntity1.PartitionKey._,
+                        insertEntity1.RowKey._,
+                        (error3: any, result3, response3) => {
+                          assert.strictEqual(
+                            response3.statusCode,
+                            404,
+                            "We did not delete the 1st entity!"
+                          );
+                          tableService.retrieveEntity<TestEntity>(
+                            tableName,
+                            insertEntity2.PartitionKey._,
+                            insertEntity2.RowKey._,
+                            (error4: any, result4, response4) => {
+                              assert.strictEqual(
+                                response4.statusCode,
+                                404,
+                                "We did not delete the 2nd entity!"
+                              );
+                              done();
+                            }
+                          );
+                        }
+                      );
+                    }
+                  );
+                }
+              );
+            }
+          }
+        );
+      });
+    });
+  });
+
+  // this covers https://github.com/Azure/Azurite/issues/741
+  it("Operates on batch items with complex partition keys, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const insertEntity1 = createBasicEntityForTest();
+    insertEntity1.PartitionKey._ =
+      "@DurableTask.AzureStorage.Tests.AzureStorageScenarioTests+Orchestrations+AutoStartOrchestration+Responder";
+    const insertEntity2 = createBasicEntityForTest();
+    insertEntity2.PartitionKey._ =
+      "@DurableTask.AzureStorage.Tests.AzureStorageScenarioTests+Orchestrations+AutoStartOrchestration+Responder";
+    const insertEntity3 = createBasicEntityForTest();
+    insertEntity3.PartitionKey._ =
+      "@DurableTask.AzureStorage.Tests.AzureStorageScenarioTests+Orchestrations+AutoStartOrchestration+Responder";
+    const insertEntity4 = createBasicEntityForTest();
+    insertEntity4.PartitionKey._ =
+      "@DurableTask.AzureStorage.Tests.AzureStorageScenarioTests+Orchestrations+AutoStartOrchestration+Responder";
+
+    tableService.insertEntity<TestEntity>(tableName, insertEntity1, () => {
+      tableService.insertEntity<TestEntity>(tableName, insertEntity2, () => {
+        const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+        entityBatch.insertEntity(insertEntity3, { echoContent: true });
+        entityBatch.insertEntity(insertEntity4, {});
+        entityBatch.deleteEntity(insertEntity1);
+        entityBatch.deleteEntity(insertEntity2);
+        tableService.executeBatch(
+          tableName,
+          entityBatch,
+          (batchError, batchResult, batchResponse) => {
+            if (batchError) {
+              assert.ifError(batchError);
+              done();
+            } else {
+              assert.equal(batchResponse.statusCode, 202);
               tableService.retrieveEntity<TestEntity>(
                 tableName,
                 insertEntity3.PartitionKey._,
