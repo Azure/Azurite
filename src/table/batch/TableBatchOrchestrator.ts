@@ -246,26 +246,14 @@ export default class TableBatchOrchestrator {
     let partitionKey: string;
     let rowKey: string;
 
-    const url = request.getUrl();
-    const partKeyMatch = url.match(/(PartitionKey=)(%27)?'?(\w+)/gi);
+    const url = decodeURI(request.getUrl());
+    // URL should always be URL encoded
+    const partKeyMatch = url.match(/(?<=PartitionKey=')(.+)(?=',)/gi);
     partitionKey = partKeyMatch ? partKeyMatch[0] : "";
-    const rowKeyMatch = url.match(/(RowKey=)(%27)?'?(\w+)/gi);
+    const rowKeyMatch = url.match(/(?<=RowKey=')(.+)(?='\))/gi);
     rowKey = rowKeyMatch ? rowKeyMatch[0] : "";
 
-    if (partitionKey !== "" || rowKey !== "") {
-      // we need to filter out the delimeter (if URL encoded)
-      const urlencodedMatch = partitionKey.match(/%/);
-      let matchStringLength = 14;
-      if (urlencodedMatch) {
-        matchStringLength += 2;
-      }
-      partitionKey = partitionKey.substring(matchStringLength);
-      matchStringLength = 8;
-      if (urlencodedMatch) {
-        matchStringLength += 2;
-      }
-      rowKey = rowKey.substring(matchStringLength);
-    } else {
+    if (partitionKey === "" || rowKey === "") {
       // row key not in URL, must be in body
       const body = request.getBody();
       if (body !== "") {
@@ -273,6 +261,10 @@ export default class TableBatchOrchestrator {
         partitionKey = jsonBody.PartitionKey;
         rowKey = jsonBody.RowKey;
       }
+    } else {
+      // keys can have more complex values which are URI encoded
+      partitionKey = decodeURIComponent(partitionKey);
+      rowKey = decodeURIComponent(rowKey);
     }
     return { partitionKey, rowKey };
   }

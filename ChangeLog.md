@@ -10,6 +10,8 @@ Table:
 - Fix etag format to be aligned with Azure server.
 - Fix delete none exist table error code and error message, to be aligned with Azure server.
 - Convert entity properties with type "Edm.DateTime" to UTC time, to be aligned with Azure server.
+- Support Batch API
+- Allow complex RowKey and PartitionKey in batch API
 
 ## 2021.2 Version 3.11.0
 
