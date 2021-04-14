@@ -246,11 +246,11 @@ export default class TableBatchOrchestrator {
     let partitionKey: string;
     let rowKey: string;
 
-    const url = request.getUrl();
+    const url = decodeURI(request.getUrl());
     // URL should always be URL encoded
-    const partKeyMatch = url.match(/(?<=PartitionKey=%27)(.+)(?=%27,)/gi);
+    const partKeyMatch = url.match(/(?<=PartitionKey=')(.+)(?=',)/gi);
     partitionKey = partKeyMatch ? partKeyMatch[0] : "";
-    const rowKeyMatch = url.match(/(?<=RowKey=%27)(.+)(?=%27\))/gi);
+    const rowKeyMatch = url.match(/(?<=RowKey=')(.+)(?='\))/gi);
     rowKey = rowKeyMatch ? rowKeyMatch[0] : "";
 
     if (partitionKey === "" || rowKey === "") {

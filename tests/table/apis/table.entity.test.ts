@@ -1198,7 +1198,7 @@ describe("table Entity APIs test", () => {
     });
   });
 
-  it.only("Ensure Valid Etag format from Batch, @loki", (done) => {
+  it("Ensure Valid Etag format from Batch, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
