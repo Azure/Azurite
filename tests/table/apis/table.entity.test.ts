@@ -1197,4 +1197,56 @@ describe("table Entity APIs test", () => {
       });
     });
   });
+
+  it.only("Ensure Valid Etag format from Batch, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const batchEntity1 = createBasicEntityForTest();
+
+    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+    entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
+    batchEntity1.myValue._ = "value2";
+    entityBatch.mergeEntity(batchEntity1);
+
+    tableService.executeBatch(
+      tableName,
+      entityBatch,
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.equal(updateResponse.statusCode, 202);
+          tableService.retrieveEntity<TestEntity>(
+            tableName,
+            batchEntity1.PartitionKey._,
+            batchEntity1.RowKey._,
+            (error, result, response) => {
+              if (error) {
+                assert.ifError(error);
+              } else if (result) {
+                const entity: TestEntity = result;
+                assert.equal(entity.myValue._, batchEntity1.myValue._);
+
+                if (response !== null) {
+                  const body: any = response?.body;
+                  assert.notStrictEqual(body, null, "response empty");
+                  if (body != null) {
+                    assert.strictEqual(
+                      body["odata.etag"].match(/(%3A)/).length,
+                      2,
+                      "did not find the expected number of escaped sequences"
+                    );
+                  }
+                }
+              }
+              done();
+            }
+          );
+        }
+      }
+    );
+  });
 });
