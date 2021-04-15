@@ -247,7 +247,6 @@ export default class TableBatchOrchestrator {
     let rowKey: string;
 
     const url = decodeURI(request.getUrl());
-    // URL should always be URL encoded
     const partKeyMatch = url.match(/(?<=PartitionKey=')(.+)(?=',)/gi);
     partitionKey = partKeyMatch ? partKeyMatch[0] : "";
     const rowKeyMatch = url.match(/(?<=RowKey=')(.+)(?='\))/gi);
