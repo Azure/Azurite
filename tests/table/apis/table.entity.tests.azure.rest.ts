@@ -18,6 +18,7 @@ import {
 // Set true to enable debug log
 configLogger(false);
 
+// need to create the shared key
 function axiosRequestConfig(accountName: string, sharedKey: string) {
   return {
     headers: {
