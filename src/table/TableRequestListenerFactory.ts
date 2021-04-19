@@ -75,7 +75,6 @@ export default class TableRequestListenerFactory
 
     // TODO: Override Query Table JSON response element value
     TableQueryResponse.type.modelProperties!.value.xmlElementName = "value";
-    const useAuth = false;
     const app = express().disable("x-powered-by");
 
     // MiddlewareFactory is a factory to create auto-generated middleware
@@ -124,13 +123,12 @@ export default class TableRequestListenerFactory
         logger
       )
     ];
-    if (useAuth) {
-      app.use(
-        authenticationMiddlewareFactory.createAuthenticationMiddleware(
-          authenticators
-        )
-      );
-    }
+
+    app.use(
+      authenticationMiddlewareFactory.createAuthenticationMiddleware(
+        authenticators
+      )
+    );
 
     // Generated, will do basic validation defined in swagger
     app.use(middlewareFactory.createDeserializerMiddleware());

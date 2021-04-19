@@ -7,8 +7,10 @@
 import * as assert from "assert";
 import axios from "axios";
 import { configLogger } from "../../../src/common/Logger";
+import { computeHMACSHA256 } from "../../../src/common/utils/utils";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
+import { HeaderConstants } from "../../../src/table/utils/constants";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
@@ -18,15 +20,136 @@ import {
 // Set true to enable debug log
 configLogger(false);
 
+const accountName = EMULATOR_ACCOUNT_NAME;
+const sharedKey = EMULATOR_ACCOUNT_KEY;
+const key1 = Buffer.from(sharedKey, "base64");
 // need to create the shared key
-function axiosRequestConfig(accountName: string, sharedKey: string) {
+// using SharedKeyLite as it is quick and easy
+function axiosRequestConfig(stringToSign: string) {
+  const signature1 = computeHMACSHA256(stringToSign, key1);
+  const authValue = `SharedKeyLite ${accountName}:${signature1}`;
   return {
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json;odata=nometadata",
-      Authorization: `SharedKey ${accountName}:${sharedKey}`
+      Authorization: authValue
     }
   };
+}
+
+function signContent(url: string, headers: any) {
+  const stringToSign: string =
+    [
+      getHeaderValueToSign(HeaderConstants.DATE, headers) ||
+        getHeaderValueToSign(HeaderConstants.X_MS_DATE, headers)
+    ].join("\n") +
+    "\n" +
+    getCanonicalizedResourceString(
+      url,
+      accountName,
+      "/devstoreaccount1/Tables"
+    );
+
+  return stringToSign;
+}
+
+/**
+ * Retrieve header value according to shared key sign rules.
+ * @see https://docs.microsoft.com/en-us/rest/api/storageservices/authenticate-with-shared-key
+ *
+ * @private
+ * @param {WebResource} request
+ * @param {string} headerName
+ * @returns {string}
+ * @memberof SharedKeyCredentialPolicy
+ */
+function getHeaderValueToSign(headerName: string, headers: any): string {
+  const value = headers[headerName];
+
+  if (!value) {
+    return "";
+  }
+
+  // When using version 2015-02-21 or later, if Content-Length is zero, then
+  // set the Content-Length part of the StringToSign to an empty string.
+  // https://docs.microsoft.com/en-us/rest/api/storageservices/authenticate-with-shared-key
+  if (headerName === HeaderConstants.CONTENT_LENGTH && value === "0") {
+    return "";
+  }
+
+  return value;
+}
+
+/**
+ * Retrieves canonicalized resource string.
+ *
+ * @private
+ * @param {IRequest} request
+ * @returns {string}
+ */
+function getCanonicalizedResourceString(
+  url: string,
+  account: string,
+  authenticationPath?: string
+): string {
+  let path = getPath(url) || "/";
+
+  // For secondary account, we use account name (without "-secondary") for the path
+  if (authenticationPath !== undefined) {
+    path = authenticationPath;
+  }
+
+  let canonicalizedResourceString: string = "";
+  canonicalizedResourceString += `/${account}${path}`;
+
+  const queries = getURLQueries(url);
+  const lowercaseQueries: { [key: string]: string } = {};
+  if (queries) {
+    const queryKeys: string[] = [];
+    for (const key in queries) {
+      if (queries.hasOwnProperty(key)) {
+        const lowercaseKey = key.toLowerCase();
+        lowercaseQueries[lowercaseKey] = queries[key];
+        queryKeys.push(lowercaseKey);
+      }
+    }
+
+    if (queryKeys.includes("comp")) {
+      canonicalizedResourceString += "?comp=" + lowercaseQueries.comp;
+    }
+
+    // queryKeys.sort();
+    // for (const key of queryKeys) {
+    //   canonicalizedResourceString += `\n${key}:${decodeURIComponent(
+    //     lowercaseQueries[key]
+    //   )}`;
+    // }
+  }
+
+  return canonicalizedResourceString;
+}
+
+/**
+ * Retrieves path from URL.
+ *
+ * @private
+ * @param {string} url
+ * @returns {string}
+ */
+function getPath(url: string): string {
+  return url;
+}
+
+/**
+ * Retrieves queries from URL.
+ *
+ * @private
+ * @param {string} url
+ * @returns {string}
+ */
+function getURLQueries(url: string): { [key: string]: string } {
+  const lowercaseQueries: { [key: string]: string } = {};
+  return lowercaseQueries;
 }
 
 describe("table Entity APIs test", () => {
@@ -50,8 +173,7 @@ describe("table Entity APIs test", () => {
   );
 
   let server: TableServer;
-  const accountName = EMULATOR_ACCOUNT_NAME;
-  const sharedKey = EMULATOR_ACCOUNT_KEY;
+
   // const tableName: string = getUniqueName("datatables");
   let reproFlowsTableName: string = "flows";
 
@@ -78,7 +200,7 @@ describe("table Entity APIs test", () => {
       {
         TableName: reproFlowsTableName
       },
-      axiosRequestConfig(accountName, sharedKey)
+      axiosRequestConfig(sharedKey)
     );
     // table created for test run OK
     assert.strictEqual(createTableResult.status, 201);
