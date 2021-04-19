@@ -35,6 +35,9 @@ Long term, new tests should be written using the data-tables package.
 
 ### HTTP Rest testing
 
+https://www.npmjs.com/package/axios  
+https://github.com/axios/axios
+
 At the time of writing, this is using the axios package:
 
 ```json
