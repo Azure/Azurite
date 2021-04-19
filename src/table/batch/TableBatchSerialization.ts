@@ -120,7 +120,8 @@ export class TableBatchSerialization extends BatchSerialization {
           subStringEnd = subRequest.indexOf(jsonOperationBody[0]);
           jsonBody = jsonOperationBody[0];
         } else {
-          subStringEnd = subRequest.length - this.changesetBoundary.length - 2;
+          // remove 1 \r\n
+          subStringEnd = subRequest.length - 4;
           jsonBody = "";
         }
 
