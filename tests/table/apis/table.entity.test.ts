@@ -115,7 +115,7 @@ describe("table Entity APIs test", () => {
   });
 
   // Insert entity property with type "Edm.DateTime", server will convert to UTC time
-  it.only("Insert new Entity property with type Edm.DateTime will convert to UTC, @loki", (done) => {
+  it("Insert new Entity property with type Edm.DateTime will convert to UTC, @loki", (done) => {
     const timeValue = "2012-01-02T23:00:00";
     const entity = {
       PartitionKey: "part1",
