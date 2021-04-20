@@ -12,6 +12,7 @@ Table:
 - Convert entity properties with type "Edm.DateTime" to UTC time, to be aligned with Azure server.
 - Support Batch API
 - Allow complex RowKey and PartitionKey in batch API
+- Adds support for replaying requests logged in debug logging
 
 ## 2021.2 Version 3.11.0
 
