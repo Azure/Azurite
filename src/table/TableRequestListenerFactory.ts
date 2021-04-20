@@ -75,7 +75,6 @@ export default class TableRequestListenerFactory
 
     // TODO: Override Query Table JSON response element value
     TableQueryResponse.type.modelProperties!.value.xmlElementName = "value";
-
     const app = express().disable("x-powered-by");
 
     // MiddlewareFactory is a factory to create auto-generated middleware
@@ -124,6 +123,7 @@ export default class TableRequestListenerFactory
         logger
       )
     ];
+
     app.use(
       authenticationMiddlewareFactory.createAuthenticationMiddleware(
         authenticators
