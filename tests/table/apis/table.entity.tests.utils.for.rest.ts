@@ -13,7 +13,7 @@ const key1 = Buffer.from(TableEntityTestConfig.sharedKey, "base64");
  *
  * @export
  * @param {string} url
- *  * @param {string} path
+ * @param {string} path
  * @param {*} headers
  * @return {*}  axios request options
  */

@@ -104,7 +104,7 @@ describe("table Entity APIs test", () => {
   });
 
   // https://github.com/Azure/Azurite/issues/754
-  it.only("Batch API should correctly process LogicApp style update request sequence", async () => {
+  it("Batch API should correctly process LogicApp style update request sequence", async () => {
     await tableClient.create();
     const logicAppReproEntity = new LogicAppReproEntity();
     const insertedEntityHeaders = await tableClient.createEntity<
