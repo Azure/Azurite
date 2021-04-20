@@ -1,21 +1,33 @@
-import { computeHMACSHA256 } from "../../../src/common/utils/utils";
+import {
+  computeHMACSHA256,
+  getURLQueries
+} from "../../../src/common/utils/utils";
 import { HeaderConstants } from "../../../src/table/utils/constants";
-import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME } from "../../testutils";
+import TableEntityTestConfig from "./table.entity.test.config";
 
-export const accountName = EMULATOR_ACCOUNT_NAME;
-export const sharedKey = EMULATOR_ACCOUNT_KEY;
-const key1 = Buffer.from(sharedKey, "base64");
-// need to create the shared key
-// using SharedKeyLite as it is quick and easy
-export function axiosRequestConfig(stringToSign: string) {
+const key1 = Buffer.from(TableEntityTestConfig.sharedKey, "base64");
+
+/**
+ * Creates the Axios request options using shared key lite
+ * Authorization header for Azurite table request
+ *
+ * @export
+ * @param {string} url
+ *  * @param {string} path
+ * @param {*} headers
+ * @return {*}  axios request options
+ */
+export function axiosRequestConfig(
+  url: string,
+  path: string,
+  headersIn: any
+): any {
+  const stringToSign = createStringToSignForSharedKeyLite(url, path, headersIn);
   const signature1 = computeHMACSHA256(stringToSign, key1);
-  const authValue = `SharedKeyLite ${accountName}:${signature1}`;
+  const authValue = `SharedKeyLite ${TableEntityTestConfig.accountName}:${signature1}`;
+  const headers = Object.assign(headersIn, { Authorization: authValue });
   return {
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json;odata=nometadata",
-      Authorization: authValue
-    }
+    headers
   };
 }
 
@@ -25,11 +37,13 @@ export function axiosRequestConfig(stringToSign: string) {
  *
  * @private
  * @param {string} url
+ * @param {string} path
  * @param {any} headers
  * @returns {string}
  */
-export function createSignatureForSharedKeyLite(
+export function createStringToSignForSharedKeyLite(
   url: string,
+  path: string,
   headers: any
 ): string {
   const stringToSign: string =
@@ -40,12 +54,13 @@ export function createSignatureForSharedKeyLite(
     "\n" +
     getCanonicalizedResourceString(
       url,
-      accountName,
-      "/devstoreaccount1/Tables"
+      TableEntityTestConfig.accountName,
+      `/${TableEntityTestConfig.accountName}/${path.replace(/'/g, "%27")}`
     );
 
   return stringToSign;
 }
+
 /**
  * Retrieve header value according to shared key sign rules.
  * @see https://docs.microsoft.com/en-us/rest/api/storageservices/authenticate-with-shared-key
@@ -129,15 +144,4 @@ export function getCanonicalizedResourceString(
  */
 function getPath(url: string): string {
   return url;
-}
-/**
- * Retrieves queries from URL.
- *
- * @private
- * @param {string} url
- * @returns {string}
- */
-function getURLQueries(url: string): { [key: string]: string } {
-  const lowercaseQueries: { [key: string]: string } = {};
-  return lowercaseQueries;
 }
