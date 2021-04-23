@@ -621,6 +621,14 @@ export class TableBatchSerialization extends BatchSerialization {
     return errorReponse;
   }
 
+  /**
+   * Serializes top level errors not generated from individual request processing
+   *
+   * @param {string} odataErrorString
+   * @param {(string | undefined)} requestId
+   * @return {*}  {string}
+   * @memberof TableBatchSerialization
+   */
   public serializeGeneralRequestError(
     odataErrorString: string,
     requestId: string | undefined
