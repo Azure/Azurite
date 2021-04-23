@@ -10,6 +10,7 @@ import TableBatchOperation from "../batch/TableBatchOperation";
 import * as Models from "../generated/artifacts/models";
 import TableBatchUtils from "./TableBatchUtils";
 import StorageError from "../../Table/errors/StorageError";
+import { truncatedISO8061Date } from "../../common/utils/utils";
 
 /**
  * The semantics for entity group transactions are defined by the OData Protocol Specification.
@@ -165,7 +166,7 @@ export class TableBatchSerialization extends BatchSerialization {
         "Content-ID: " + request.contentID.toString() + "\r\n";
     }
 
-    serializedResponses = this.AddNoSniffNoCache(serializedResponses);
+    serializedResponses = this.SerializeNoSniffNoCache(serializedResponses);
 
     serializedResponses = this.serializePreferenceApplied(
       request,
@@ -211,7 +212,7 @@ export class TableBatchSerialization extends BatchSerialization {
       response.statusCode
     );
 
-    serializedResponses = this.AddNoSniffNoCache(serializedResponses);
+    serializedResponses = this.SerializeNoSniffNoCache(serializedResponses);
     serializedResponses = this.serializeDataServiceVersion(
       serializedResponses,
       request
@@ -245,7 +246,7 @@ export class TableBatchSerialization extends BatchSerialization {
         "Content-ID: " + request.contentID.toString() + "\r\n";
     }
 
-    serializedResponses = this.AddNoSniffNoCache(serializedResponses);
+    serializedResponses = this.SerializeNoSniffNoCache(serializedResponses);
 
     serializedResponses = this.serializePreferenceApplied(
       request,
@@ -303,7 +304,7 @@ export class TableBatchSerialization extends BatchSerialization {
       serializedResponses,
       response.statusCode
     );
-    serializedResponses = this.AddNoSniffNoCache(serializedResponses);
+    serializedResponses = this.SerializeNoSniffNoCache(serializedResponses);
     // ToDo_: Correct the handling of content-ID
     if (request.contentID) {
       serializedResponses +=
@@ -351,7 +352,7 @@ export class TableBatchSerialization extends BatchSerialization {
     serializedResponses += request.params.queryOptions?.format;
     serializedResponses += ";streaming=true;charset=utf-8\r\n"; // getting this from service, so adding here as well
 
-    serializedResponses = this.AddNoSniffNoCache(serializedResponses);
+    serializedResponses = this.SerializeNoSniffNoCache(serializedResponses);
 
     if (response.eTag) {
       serializedResponses += "ETag: " + response.eTag;
@@ -405,7 +406,7 @@ export class TableBatchSerialization extends BatchSerialization {
 
     // Azure Table service defaults to this in the response
     // X-Content-Type-Options: nosniff\r\n
-    serializedResponses = this.AddNoSniffNoCache(serializedResponses);
+    serializedResponses = this.SerializeNoSniffNoCache(serializedResponses);
 
     serializedResponses += "\r\n";
 
@@ -450,12 +451,18 @@ export class TableBatchSerialization extends BatchSerialization {
    * @return {*}
    * @memberof TableBatchSerialization
    */
-  private AddNoSniffNoCache(serializedResponses: string) {
-    serializedResponses += "X-Content-Type-Options: nosniff\r\n";
+  private SerializeNoSniffNoCache(serializedResponses: string) {
+    serializedResponses = this.SerializeXContentTypeOptions(
+      serializedResponses
+    );
     serializedResponses += "Cache-Control: no-cache\r\n";
     return serializedResponses;
   }
 
+  private SerializeXContentTypeOptions(serializedResponses: string) {
+    serializedResponses += "X-Content-Type-Options: nosniff\r\n";
+    return serializedResponses;
+  }
   /**
    * Serializes the HTTP response
    * ToDo: Need to check where we have implemented this elsewhere and see if we can reuse
@@ -567,18 +574,25 @@ export class TableBatchSerialization extends BatchSerialization {
    */
   private serializeDataServiceVersion(
     serializedResponses: string,
-    request: BatchRequest
+    request: BatchRequest | undefined
   ) {
-    if (undefined !== request.params && request.params.dataServiceVersion) {
+    if (
+      undefined !== request &&
+      undefined !== request.params &&
+      request.params.dataServiceVersion
+    ) {
       serializedResponses +=
         "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";
+    } else {
+      // default to 3.0
+      serializedResponses += "DataServiceVersion: 3.0;\r\n";
     }
     return serializedResponses;
   }
 
   /**
    * Serializes an error generated during batch processing
-   *
+   * https://docs.microsoft.com/en-us/rest/api/storageservices/performing-entity-group-transactions#sample-error-response
    * @private
    * @param {*} err
    * @return {*}  {string}
@@ -596,16 +610,42 @@ export class TableBatchSerialization extends BatchSerialization {
     let errorReponse = "";
     const odataError = err as StorageError;
     errorReponse += changesetBoundary + "\r\n";
-    // add headers
-    errorReponse += this.serializeHttpStatusCode(
-      errorReponse,
-      odataError.statusCode
-    );
+    // Errors in batch processing generate Bad Request error
+    errorReponse += this.serializeHttpStatusCode(errorReponse, 400);
     errorReponse += "Content-ID: " + contentID + "\r\n";
     errorReponse += this.serializeDataServiceVersion(errorReponse, request);
+    // ToDo: Serialize Content type etc
     errorReponse += "Content-Type" + "\r\n";
     errorReponse += "\r\n";
     errorReponse += odataError.body + "\r\n";
+    return errorReponse;
+  }
+
+  public serializeGeneralRequestError(
+    odataErrorString: string,
+    requestId: string | undefined
+  ): string {
+    const changesetBoundary = this.changesetBoundary.replace(
+      "changeset",
+      "changesetresponse"
+    );
+    let errorReponse = "";
+
+    errorReponse += changesetBoundary + "\r\n";
+    // Errors in batch processing generate Bad Request error
+    errorReponse += this.serializeHttpStatusCode(errorReponse, 400);
+    errorReponse += this.SerializeXContentTypeOptions(errorReponse);
+    errorReponse += this.serializeDataServiceVersion(errorReponse, undefined);
+    // ToDo: Serialize Content type etc
+    errorReponse += "Content-Type" + "\r\n";
+    errorReponse += "\r\n";
+    let requestIdResponseString = "";
+    if (requestId !== undefined) {
+      requestIdResponseString = `RequestId:${requestId}\\n`;
+    }
+    // 2021-04-23T12:40:31.4944778
+    const date = truncatedISO8061Date(new Date(), true);
+    errorReponse += `{\"odata.error\":{\"code\":\"InvalidInput\",\"message\":{\"lang\":\"en-US\",\"value\":\"${odataErrorString}\\n${requestIdResponseString}Time:${date}\"}}}\r\n`;
     return errorReponse;
   }
 }

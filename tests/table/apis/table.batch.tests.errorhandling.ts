@@ -4,7 +4,11 @@ import * as assert from "assert";
 import { TableClient, TablesSharedKeyCredential } from "@azure/data-tables";
 import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
-import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME } from "../../testutils";
+import {
+  EMULATOR_ACCOUNT_KEY,
+  EMULATOR_ACCOUNT_NAME,
+  getUniqueName
+} from "../../testutils";
 import {
   AzureDataTablesTestEntity,
   createBasicEntityForTest
@@ -63,11 +67,37 @@ describe("table Entity APIs test", () => {
     batch.createEntities(testEntities);
 
     try {
-      const result = await batch.submitBatch();
-      assert.ok(result.subResponses[0].rowKey);
+      await batch.submitBatch();
     } catch (err) {
-      assert.ifError(err);
+      assert.strictEqual(err.statusCode, 400);
+      assert.strictEqual(err.code, "TableNotFound");
     }
-    await badTableClient.delete();
+  });
+
+  it("Batch API should reject request with more than 100 transactions, @loki", async () => {
+    const partitionKey = createUniquePartitionKey();
+    const tableName: string = getUniqueName("datatables");
+    const testEntities: AzureDataTablesTestEntity[] = [];
+    const TOO_MANY_REQUESTS = 101;
+    while (testEntities.length < TOO_MANY_REQUESTS) {
+      testEntities.push(createBasicEntityForTest(partitionKey));
+    }
+
+    const tooManyRequestsClient = new TableClient(
+      `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
+      tableName,
+      new TablesSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
+    );
+
+    await tooManyRequestsClient.create();
+    const batch = tooManyRequestsClient.createBatch(partitionKey);
+    batch.createEntities(testEntities);
+
+    try {
+      await batch.submitBatch();
+    } catch (err) {
+      assert.strictEqual(err.statusCode, 400);
+      assert.strictEqual(err.code, "InvalidInput");
+    }
   });
 });

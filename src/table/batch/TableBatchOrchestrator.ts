@@ -55,7 +55,15 @@ export default class TableBatchOrchestrator {
     this.batchOperations = this.serialization.deserializeBatchRequest(
       batchRequestBody
     );
-    await this.submitRequestsToHandlers();
+    if (this.batchOperations.length > 100) {
+      this.wasError = true;
+      this.errorResponse = this.serialization.serializeGeneralRequestError(
+        "0:The batch request operation exceeds the maximum 100 changes per change set.",
+        this.context.xMsRequestID
+      );
+    } else {
+      await this.submitRequestsToHandlers();
+    }
     return this.serializeResponses();
   }
 
@@ -89,7 +97,7 @@ export default class TableBatchOrchestrator {
             contentID,
             singleReq
           );
-          // need to reset changes until now
+          // ToDo: need to reset changes until now
           // then break out of loop and serilaize error
           break;
         }
