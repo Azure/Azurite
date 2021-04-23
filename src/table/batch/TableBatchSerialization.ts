@@ -1,4 +1,3 @@
-import { StorageError } from "../../blob/generated/artifacts/mappers";
 // import BatchOperation from "../../common/BatchOperation";
 // import { BatchOperationType } from "../../common/BatchOperation";
 import { BatchType } from "../../common/batch/BatchOperation";
@@ -10,6 +9,7 @@ import { BatchSerialization } from "../../common/batch/BatchSerialization";
 import TableBatchOperation from "../batch/TableBatchOperation";
 import * as Models from "../generated/artifacts/models";
 import TableBatchUtils from "./TableBatchUtils";
+import StorageError from "../../Table/errors/StorageError";
 
 /**
  * The semantics for entity group transactions are defined by the OData Protocol Specification.
@@ -157,7 +157,7 @@ export class TableBatchSerialization extends BatchSerialization {
     serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
     serializedResponses = this.serializeHttpStatusCode(
       serializedResponses,
-      response
+      response.statusCode
     );
     // ToDo: Correct the handling of Content-ID
     if (request.contentID !== undefined) {
@@ -173,8 +173,8 @@ export class TableBatchSerialization extends BatchSerialization {
     );
 
     serializedResponses = this.serializeDataServiceVersion(
-      request,
-      serializedResponses
+      serializedResponses,
+      request
     );
 
     serializedResponses +=
@@ -208,13 +208,13 @@ export class TableBatchSerialization extends BatchSerialization {
     serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
     serializedResponses = this.serializeHttpStatusCode(
       serializedResponses,
-      response
+      response.statusCode
     );
 
     serializedResponses = this.AddNoSniffNoCache(serializedResponses);
     serializedResponses = this.serializeDataServiceVersion(
-      request,
-      serializedResponses
+      serializedResponses,
+      request
     );
 
     return serializedResponses;
@@ -237,7 +237,7 @@ export class TableBatchSerialization extends BatchSerialization {
     serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
     serializedResponses = this.serializeHttpStatusCode(
       serializedResponses,
-      response
+      response.statusCode
     );
     // ToDo_: Correct the handling of content-ID
     if (request.contentID) {
@@ -253,8 +253,8 @@ export class TableBatchSerialization extends BatchSerialization {
     );
 
     serializedResponses = this.serializeDataServiceVersion(
-      request,
-      serializedResponses
+      serializedResponses,
+      request
     );
 
     if (null !== response.eTag && undefined !== response.eTag) {
@@ -301,7 +301,7 @@ export class TableBatchSerialization extends BatchSerialization {
     serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
     serializedResponses = this.serializeHttpStatusCode(
       serializedResponses,
-      response
+      response.statusCode
     );
     serializedResponses = this.AddNoSniffNoCache(serializedResponses);
     // ToDo_: Correct the handling of content-ID
@@ -312,8 +312,8 @@ export class TableBatchSerialization extends BatchSerialization {
     // ToDo: not sure about other headers like cache control etc right now
     // Service defaults to v1.0
     serializedResponses = this.serializeDataServiceVersion(
-      request,
-      serializedResponses
+      serializedResponses,
+      request
     );
 
     if (null !== response.eTag && undefined !== response.eTag) {
@@ -339,12 +339,12 @@ export class TableBatchSerialization extends BatchSerialization {
     serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
     serializedResponses = this.serializeHttpStatusCode(
       serializedResponses,
-      response
+      response.statusCode
     );
 
     serializedResponses = this.serializeDataServiceVersion(
-      request,
-      serializedResponses
+      serializedResponses,
+      request
     );
 
     serializedResponses += "Content-Type: ";
@@ -391,12 +391,12 @@ export class TableBatchSerialization extends BatchSerialization {
     serializedResponses = this.SetContentTypeAndEncoding(serializedResponses);
     serializedResponses = this.serializeHttpStatusCode(
       serializedResponses,
-      response
+      response.statusCode
     );
 
     serializedResponses = this.serializeDataServiceVersion(
-      request,
-      serializedResponses
+      serializedResponses,
+      request
     );
 
     serializedResponses += "Content-Type: ";
@@ -509,12 +509,15 @@ export class TableBatchSerialization extends BatchSerialization {
    * @return {*}
    * @memberof TableBatchSerialization
    */
-  private serializeHttpStatusCode(serializedResponses: string, response: any) {
+  private serializeHttpStatusCode(
+    serializedResponses: string,
+    statusCode: number
+  ) {
     serializedResponses +=
       "HTTP/1.1 " +
-      response.statusCode.toString() +
+      statusCode.toString() +
       " " +
-      this.GetStatusMessageString(response.statusCode) +
+      this.GetStatusMessageString(statusCode) +
       "\r\n";
     return serializedResponses;
   }
@@ -563,13 +566,46 @@ export class TableBatchSerialization extends BatchSerialization {
    * @memberof TableBatchSerialization
    */
   private serializeDataServiceVersion(
-    request: BatchRequest,
-    serializedResponses: string
+    serializedResponses: string,
+    request: BatchRequest
   ) {
     if (undefined !== request.params && request.params.dataServiceVersion) {
       serializedResponses +=
         "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";
     }
     return serializedResponses;
+  }
+
+  /**
+   * Serializes an error generated during batch processing
+   *
+   * @private
+   * @param {*} err
+   * @return {*}  {string}
+   * @memberof TableBatchSerialization
+   */
+  public serializeError(
+    err: any,
+    contentID: number,
+    request: BatchRequest
+  ): string {
+    const changesetBoundary = this.changesetBoundary.replace(
+      "changeset",
+      "changesetresponse"
+    );
+    let errorReponse = "";
+    const odataError = err as StorageError;
+    errorReponse += changesetBoundary + "\r\n";
+    // add headers
+    errorReponse += this.serializeHttpStatusCode(
+      errorReponse,
+      odataError.statusCode
+    );
+    errorReponse += "Content-ID: " + contentID + "\r\n";
+    errorReponse += this.serializeDataServiceVersion(errorReponse, request);
+    errorReponse += "Content-Type" + "\r\n";
+    errorReponse += "\r\n";
+    errorReponse += odataError.body + "\r\n";
+    return errorReponse;
   }
 }
