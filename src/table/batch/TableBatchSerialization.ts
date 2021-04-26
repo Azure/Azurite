@@ -9,7 +9,7 @@ import { BatchSerialization } from "../../common/batch/BatchSerialization";
 import TableBatchOperation from "../batch/TableBatchOperation";
 import * as Models from "../generated/artifacts/models";
 import TableBatchUtils from "./TableBatchUtils";
-import StorageError from "../../Table/errors/StorageError";
+import StorageError from "../errors/StorageError";
 import { truncatedISO8061Date } from "../../common/utils/utils";
 
 /**
@@ -614,8 +614,9 @@ export class TableBatchSerialization extends BatchSerialization {
     errorReponse += this.serializeHttpStatusCode(errorReponse, 400);
     errorReponse += "Content-ID: " + contentID + "\r\n";
     errorReponse += this.serializeDataServiceVersion(errorReponse, request);
-    // ToDo: Serialize Content type etc
-    errorReponse += "Content-Type" + "\r\n";
+    // ToDo: Check if we need to observe other odata formats for errors
+    errorReponse +=
+      "Content-Type: application/json;odata=minimalmetadata;charset=utf-8\r\n";
     errorReponse += "\r\n";
     errorReponse += odataError.body + "\r\n";
     return errorReponse;
@@ -645,7 +646,8 @@ export class TableBatchSerialization extends BatchSerialization {
     errorReponse += this.SerializeXContentTypeOptions(errorReponse);
     errorReponse += this.serializeDataServiceVersion(errorReponse, undefined);
     // ToDo: Serialize Content type etc
-    errorReponse += "Content-Type" + "\r\n";
+    errorReponse +=
+      "Content-Type: application/json;odata=minimalmetadata;charset=utf-8\r\n";
     errorReponse += "\r\n";
     let requestIdResponseString = "";
     if (requestId !== undefined) {
