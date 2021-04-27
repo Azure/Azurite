@@ -3,70 +3,29 @@ import * as Azure from "azure-storage";
 
 import { configLogger } from "../../../src/common/Logger";
 import StorageError from "../../../src/table/errors/StorageError";
-import TableConfiguration from "../../../src/table/TableConfiguration";
+
 import TableServer from "../../../src/table/TableServer";
 import {
-  EMULATOR_ACCOUNT_KEY,
-  EMULATOR_ACCOUNT_NAME,
   getUniqueName,
   overrideRequest,
   restoreBuildRequestOptions
 } from "../../testutils";
+import {
+  createBasicEntityForTest,
+  createConnectionStringForTest,
+  createTableServerForTest
+} from "./table.entity.test.utils";
+import { TestEntity } from "./TestEntity";
 
 // Set true to enable debug log
 configLogger(false);
 
-/**
- * Creates an entity for tests, with a randomized row key,
- * to avoid conflicts on inserts.
- *
- * @return {*}  {TestEntity}
- */
-function createBasicEntityForTest(): TestEntity {
-  return new TestEntity("part1", getUniqueName("row"), "value1");
-}
-
-class TestEntity {
-  public PartitionKey: Azure.TableUtilities.entityGenerator.EntityProperty<
-    string
-  >;
-  public RowKey: Azure.TableUtilities.entityGenerator.EntityProperty<string>;
-  public myValue: Azure.TableUtilities.entityGenerator.EntityProperty<string>;
-  constructor(part: string, row: string, value: string) {
-    this.PartitionKey = eg.String(part);
-    this.RowKey = eg.String(row);
-    this.myValue = eg.String(value);
-  }
-}
-
-const eg = Azure.TableUtilities.entityGenerator;
-
 describe("table Entity APIs test", () => {
-  // TODO: Create a server factory as tests utils
-  const protocol = "http";
-  const host = "127.0.0.1";
-  const port = 11002;
-  const metadataDbPath = "__tableTestsStorage__";
-  const enableDebugLog: boolean = true;
-  const debugLogPath: string = "g:/debug.log";
-  const config = new TableConfiguration(
-    host,
-    port,
-    metadataDbPath,
-    enableDebugLog,
-    false,
-    undefined,
-    debugLogPath
-  );
-
   let server: TableServer;
-  const accountName = EMULATOR_ACCOUNT_NAME;
-  const sharedKey = EMULATOR_ACCOUNT_KEY;
-  const connectionString =
-    `DefaultEndpointsProtocol=${protocol};AccountName=${accountName};` +
-    `AccountKey=${sharedKey};TableEndpoint=${protocol}://${host}:${port}/${accountName};`;
 
-  const tableService = Azure.createTableService(connectionString);
+  const tableService = Azure.createTableService(
+    createConnectionStringForTest()
+  );
   // ToDo: added due to problem with batch responses not finishing properly - Need to investigate batch response
   tableService.enableGlobalHttpAgent = true;
 
@@ -76,7 +35,7 @@ describe("table Entity APIs test", () => {
 
   before(async () => {
     overrideRequest(requestOverride, tableService);
-    server = new TableServer(config);
+    server = createTableServerForTest();
     tableName = getUniqueName("table");
     await server.start();
     requestOverride.headers = {
@@ -134,9 +93,9 @@ describe("table Entity APIs test", () => {
             "part1",
             "utctest",
             (error, result) => {
-              const entity: TestEntity = result;
+              const insertedEntity: TestEntity = result;
               assert.strictEqual(
-                entity.myValue._.toString(),
+                insertedEntity.myValue._.toString(),
                 new Date(timeValue + "Z").toString()
               );
               done();
@@ -181,15 +140,15 @@ describe("table Entity APIs test", () => {
       entityInsert,
       (insertError, insertResult, insertResponse) => {
         if (!insertError) {
-          var query = new Azure.TableQuery()
+          const query = new Azure.TableQuery()
             .where("PartitionKey == ?", "part2")
             .and("myValue == ?", "value1");
 
           tableService.queryEntities(
             tableName,
             query,
-            <any>null,
-            <any>null,
+            null as any,
+            null as any,
             (queryError, queryResult, queryResponse) => {
               if (!queryError) {
                 if (queryResult.entries && queryResult.entries.length > 0) {

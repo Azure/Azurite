@@ -33,6 +33,8 @@ export default class TableBatchOrchestrator {
   private serialization = new TableBatchSerialization();
   private context: TableStorageContext;
   private parentHandler: TableHandler;
+  private wasError: boolean = false;
+  private errorResponse: string = "";
 
   public constructor(context: TableStorageContext, handler: TableHandler) {
     this.context = context;
@@ -53,9 +55,15 @@ export default class TableBatchOrchestrator {
     this.batchOperations = this.serialization.deserializeBatchRequest(
       batchRequestBody
     );
-
-    await this.submitRequestsToHandlers();
-
+    if (this.batchOperations.length > 100) {
+      this.wasError = true;
+      this.errorResponse = this.serialization.serializeGeneralRequestError(
+        "0:The batch request operation exceeds the maximum 100 changes per change set.",
+        this.context.xMsRequestID
+      );
+    } else {
+      await this.submitRequestsToHandlers();
+    }
     return this.serializeResponses();
   }
 
@@ -73,7 +81,7 @@ export default class TableBatchOrchestrator {
       this.requests.push(request);
     });
 
-    let contentID = 1; // contentID starts at 1 for batch
+    let contentID = 1; // ToDO: validate contentID starts at 1 for batch
     if (this.requests.length > 0) {
       for (const singleReq of this.requests) {
         try {
@@ -83,7 +91,15 @@ export default class TableBatchOrchestrator {
             contentID
           );
         } catch (err) {
-          throw err;
+          this.wasError = true;
+          this.errorResponse = this.serialization.serializeError(
+            err,
+            contentID,
+            singleReq
+          );
+          // ToDo: need to reset changes until now
+          // then break out of loop and serilaize error
+          break;
         }
         contentID++;
       }
@@ -119,11 +135,20 @@ export default class TableBatchOrchestrator {
     responseString +=
       "Content-Type: multipart/mixed; boundary=" + changesetBoundary + "\r\n";
     changesetBoundary = "\r\n--" + changesetBoundary;
-    this.requests.forEach((request) => {
+    if (this.wasError === false) {
+      this.requests.forEach((request) => {
+        responseString += changesetBoundary;
+        responseString += request.response;
+        responseString += "\r\n\r\n";
+      });
+    } else {
+      // serialize the error
       responseString += changesetBoundary;
-      responseString += request.response;
-      responseString += "\r\n\r\n";
-    });
+      // then headers
+      // content type etc
+      // then HTTP/1.1 404 etc
+      responseString += this.errorResponse;
+    }
     responseString += changesetBoundary + "--\r\n";
     responseString += batchBoundary + "--\r\n";
     return responseString;
