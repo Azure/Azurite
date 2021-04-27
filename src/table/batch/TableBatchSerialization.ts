@@ -482,6 +482,8 @@ export class TableBatchSerialization extends BatchSerialization {
         return "No Content";
       case 404:
         return "Not Found";
+      case 400:
+        return "Bad Request";
       default:
         return "STATUS_CODE_NOT_IMPLEMENTED";
     }
@@ -611,9 +613,9 @@ export class TableBatchSerialization extends BatchSerialization {
     const odataError = err as StorageError;
     errorReponse += changesetBoundary + "\r\n";
     // Errors in batch processing generate Bad Request error
-    errorReponse += this.serializeHttpStatusCode(errorReponse, 400);
+    errorReponse = this.serializeHttpStatusCode(errorReponse, 400);
     errorReponse += "Content-ID: " + contentID + "\r\n";
-    errorReponse += this.serializeDataServiceVersion(errorReponse, request);
+    errorReponse = this.serializeDataServiceVersion(errorReponse, request);
     // ToDo: Check if we need to observe other odata formats for errors
     errorReponse +=
       "Content-Type: application/json;odata=minimalmetadata;charset=utf-8\r\n";
@@ -642,9 +644,9 @@ export class TableBatchSerialization extends BatchSerialization {
 
     errorReponse += changesetBoundary + "\r\n";
     // Errors in batch processing generate Bad Request error
-    errorReponse += this.serializeHttpStatusCode(errorReponse, 400);
-    errorReponse += this.SerializeXContentTypeOptions(errorReponse);
-    errorReponse += this.serializeDataServiceVersion(errorReponse, undefined);
+    errorReponse = this.serializeHttpStatusCode(errorReponse, 400);
+    errorReponse = this.SerializeXContentTypeOptions(errorReponse);
+    errorReponse = this.serializeDataServiceVersion(errorReponse, undefined);
     // ToDo: Serialize Content type etc
     errorReponse +=
       "Content-Type: application/json;odata=minimalmetadata;charset=utf-8\r\n";
