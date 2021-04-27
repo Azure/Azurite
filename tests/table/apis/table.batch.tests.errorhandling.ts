@@ -25,13 +25,6 @@ configLogger(false);
 
 describe("table Entity APIs test", () => {
   let server: TableServer;
-  // const tableName: string = getUniqueName("datatables");
-
-  // const tableClient = new TableClient(
-  //   `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
-  //   tableName,
-  //   new TablesSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
-  // );
 
   const requestOverride = { headers: {} };
 
