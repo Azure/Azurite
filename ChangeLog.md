@@ -4,6 +4,8 @@
 
 ## Upcoming Release
 
+- Resolve `AppendBlock` requests coming from github.com/Azure/azure-sdk-for-go/storage to the `appendBlock` method if the `--loose` flag is set.
+
 ## 2021.2 Version 3.11.0
 
 - Bump up Azure Storage service API version to 2020-06-12.
