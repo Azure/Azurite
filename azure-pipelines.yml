@@ -353,6 +353,7 @@ jobs:
           azurite -v
           azurite-blob -v
           azurite-queue -v
+          azurite-table -v
         workingDirectory: "./"
         displayName: "Validate npm global installation from GitHub code base"
 
@@ -401,6 +402,7 @@ jobs:
           azurite -v
           azurite-blob -v
           azurite-queue -v
+          azurite-table -v
         workingDirectory: "./"
         displayName: "Validate npm global installation from GitHub code base"
 
@@ -449,6 +451,7 @@ jobs:
           azurite -v
           azurite-blob -v
           azurite-queue -v
+          azurite-table -v
         workingDirectory: "./"
         displayName: "Validate npm global installation from GitHub code base"
 
