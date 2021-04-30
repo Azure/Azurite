@@ -1,4 +1,7 @@
-import { computeHMACSHA256, truncatedISO8061Date } from "../utils/utils";
+import {
+  computeHMACSHA256,
+  truncatedISO8061Date
+} from "../../common/utils/utils";
 import { SASProtocol } from "./IAccountSASSignatureValues";
 import { IIPRange, ipRangeToString } from "./IIPRange";
 

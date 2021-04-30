@@ -172,12 +172,14 @@ describe("ServiceAPIs", () => {
     await containerClient1.create();
     await containerClient2.create();
     await containerClient3.create();
-    const result = (await serviceClient
-      .listContainers({
-        prefix: containerNamePrefix
-      })
-      .byPage()
-      .next()).value;
+    const result = (
+      await serviceClient
+        .listContainers({
+          prefix: containerNamePrefix
+        })
+        .byPage()
+        .next()
+    ).value;
     assert.equal(result.containerItems.length, 3);
     assert.ok(result.containerItems[0].name.endsWith("aa"));
     assert.ok(result.containerItems[1].name.endsWith("bb"));
@@ -198,12 +200,14 @@ describe("ServiceAPIs", () => {
     await containerClient1.create();
     await containerClient2.create();
     await containerClient3.create();
-    const result = (await serviceClient
-      .listContainers({
-        prefix: containerNamePrefix
-      })
-      .byPage({ continuationToken: containerName2 })
-      .next()).value;
+    const result = (
+      await serviceClient
+        .listContainers({
+          prefix: containerNamePrefix
+        })
+        .byPage({ continuationToken: containerName2 })
+        .next()
+    ).value;
     assert.equal(result.containerItems.length, 2);
     assert.equal(result.containerItems[0].name, containerName3);
     assert.equal(result.containerItems[1].name, containerName1);
@@ -223,22 +227,26 @@ describe("ServiceAPIs", () => {
     await containerClient1.create();
     await containerClient2.create();
     await containerClient3.create();
-    const result1 = (await serviceClient
-      .listContainers({ prefix: containerNamePrefix })
-      .byPage({ continuationToken: containerName2, maxPageSize: 1 })
-      .next()).value;
+    const result1 = (
+      await serviceClient
+        .listContainers({ prefix: containerNamePrefix })
+        .byPage({ continuationToken: containerName2, maxPageSize: 1 })
+        .next()
+    ).value;
 
     assert.equal(result1.containerItems.length, 1);
     assert.equal(result1.containerItems[0].name, containerName3);
     assert.equal(result1.continuationToken, containerName3);
 
-    const result2 = (await serviceClient
-      .listContainers({ prefix: containerNamePrefix })
-      .byPage({
-        continuationToken: result1.continuationToken,
-        maxPageSize: 1
-      })
-      .next()).value;
+    const result2 = (
+      await serviceClient
+        .listContainers({ prefix: containerNamePrefix })
+        .byPage({
+          continuationToken: result1.continuationToken,
+          maxPageSize: 1
+        })
+        .next()
+    ).value;
     assert.equal(result2.containerItems.length, 1);
     assert.ok(result2.containerItems[0].name, containerName1);
     assert.equal(result2.continuationToken, "");
@@ -249,10 +257,7 @@ describe("ServiceAPIs", () => {
   });
 
   it("ListContainers with default parameters @loki @sql", async () => {
-    const result = (await serviceClient
-      .listContainers()
-      .byPage()
-      .next()).value;
+    const result = (await serviceClient.listContainers().byPage().next()).value;
     assert.ok(typeof result.requestId);
     assert.ok(result.requestId!.length > 0);
     assert.ok(typeof result.version);
@@ -282,13 +287,15 @@ describe("ServiceAPIs", () => {
     await containerClient1.create({ metadata: { key: "val" } });
     await containerClient2.create({ metadata: { key: "val" } });
 
-    const result1 = (await serviceClient
-      .listContainers({
-        includeMetadata: true,
-        prefix: containerNamePrefix
-      })
-      .byPage({ maxPageSize: 1 })
-      .next()).value;
+    const result1 = (
+      await serviceClient
+        .listContainers({
+          includeMetadata: true,
+          prefix: containerNamePrefix
+        })
+        .byPage({ maxPageSize: 1 })
+        .next()
+    ).value;
 
     assert.ok(result1.continuationToken);
     assert.equal(result1.containerItems!.length, 1);
@@ -311,16 +318,18 @@ describe("ServiceAPIs", () => {
       result1.clientRequestId
     );
 
-    const result2 = (await serviceClient
-      .listContainers({
-        includeMetadata: true,
-        prefix: containerNamePrefix
-      })
-      .byPage({
-        continuationToken: result1.continuationToken,
-        maxPageSize: 1
-      })
-      .next()).value;
+    const result2 = (
+      await serviceClient
+        .listContainers({
+          includeMetadata: true,
+          prefix: containerNamePrefix
+        })
+        .byPage({
+          continuationToken: result1.continuationToken,
+          maxPageSize: 1
+        })
+        .next()
+    ).value;
 
     assert.equal(result2.containerItems!.length, 1);
     assert.ok(result2.containerItems![0].name.startsWith(containerNamePrefix));

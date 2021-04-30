@@ -14,6 +14,7 @@
       "env": {
         "AZURITE_ACCOUNTS": ""
       },
+      "skipFiles": ["node_modules/*/**", "<node_internals>/*/**"],
       "outputCapture": "std"
     },
     {
@@ -104,6 +105,18 @@
       "args": ["${workspaceFolder}/src/blob/main.ts", "-d", "debug.log"],
       "env": {
         "AZURITE_DB": "mysql://root:my-secret-pw@127.0.0.1:3306/azurite_blob",
+        "AZURITE_ACCOUNTS": ""
+      },
+      "outputCapture": "std"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Azurite Table Service - Loki",
+      "cwd": "${workspaceFolder}",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "args": ["${workspaceFolder}/src/table/main.ts", "-d", "debug.log"],
+      "env": {
         "AZURITE_ACCOUNTS": ""
       },
       "outputCapture": "std"

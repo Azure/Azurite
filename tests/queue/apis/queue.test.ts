@@ -76,7 +76,7 @@ describe("Queue APIs test", () => {
     await rmRecursive(persistencePath);
   });
 
-  beforeEach(async function() {
+  beforeEach(async function () {
     queueName = getUniqueName("queue");
     queueClient = serviceClient.getQueueClient(queueName);
     await queueClient.create();
@@ -131,7 +131,7 @@ describe("Queue APIs test", () => {
     assert.ok(error.response.bodyAsText.includes("QueueNotFound"));
   });
 
-  it("create with default parameters", done => {
+  it("create with default parameters", (done) => {
     // create() with default parameters has been tested in beforeEach
     done();
   });
@@ -161,7 +161,7 @@ describe("Queue APIs test", () => {
     );
   });
 
-  it("delete @loki", done => {
+  it("delete @loki", (done) => {
     // delete() with default parameters has been tested in afterEach
     done();
   });

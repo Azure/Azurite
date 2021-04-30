@@ -177,12 +177,7 @@ describe("QueueServiceAPIs", () => {
   });
 
   it("listQueuesSegment with default parameters @loki", async () => {
-    const result = (
-      await serviceClient
-        .listQueues()
-        .byPage()
-        .next()
-    ).value;
+    const result = (await serviceClient.listQueues().byPage().next()).value;
     assert.ok(typeof result.requestId);
     assert.ok(result.requestId!.length > 0);
     assert.ok(typeof result.version);

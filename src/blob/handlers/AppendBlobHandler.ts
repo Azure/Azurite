@@ -1,4 +1,5 @@
 import { convertRawHeadersToMetadata } from "../../common/utils/utils";
+import { getMD5FromStream, newEtag } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -12,7 +13,6 @@ import {
   MAX_APPEND_BLOB_BLOCK_COUNT,
   MAX_APPEND_BLOB_BLOCK_SIZE
 } from "../utils/constants";
-import { getMD5FromStream, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 export default class AppendBlobHandler extends BaseHandler

@@ -1,4 +1,6 @@
+import { createHash, createHmac } from "crypto";
 import rimraf = require("rimraf");
+import { parse } from "url";
 import { promisify } from "util";
 
 // LokiFsStructuredAdapter
@@ -43,4 +45,118 @@ export function convertRawHeadersToMetadata(
   }
 
   return isEmpty ? undefined : res;
+}
+
+export function newEtag(): string {
+  // Etag should match ^"0x[A-F0-9]{15,}"$
+  // Date().getTime().toString(16) only has 11 digital
+  // so multiply a number between 70000-100000, can get a 16 based 15+ digital number
+  return (
+    '"0x' +
+    (new Date().getTime() * Math.round(Math.random() * 30000 + 70000))
+      .toString(16)
+      .toUpperCase() +
+    '"'
+  );
+}
+
+export function newTableEntityEtag(startTime: Date): string {
+  // Etag as returned by Table Storage should match W/"datetime'<ISO8601datetime>'"
+  return (
+    "W/\"datetime'" +
+    encodeURIComponent(truncatedISO8061Date(startTime, true)) +
+    "'\""
+  );
+}
+
+/**
+ * Generates a hash signature for an HTTP request or for a SAS.
+ *
+ * @param {string} stringToSign
+ * @param {key} key
+ * @returns {string}
+ */
+export function computeHMACSHA256(stringToSign: string, key: Buffer): string {
+  return createHmac("sha256", key)
+    .update(stringToSign, "utf8")
+    .digest("base64");
+}
+
+/**
+ * Rounds a date off to seconds.
+ *
+ * @export
+ * @param {Date} date
+ * @param {boolean} [withMilliseconds=true] If true, YYYY-MM-DDThh:mm:ss.fffffffZ will be returned;
+ *                                          If false, YYYY-MM-DDThh:mm:ssZ will be returned.
+ * @returns {string} Date string in ISO8061 format, with or without 7 milliseconds component
+ */
+export function truncatedISO8061Date(
+  date: Date,
+  withMilliseconds: boolean = true
+): string {
+  // Date.toISOString() will return like "2018-10-29T06:34:36.139Z"
+  const dateString = date.toISOString();
+
+  return withMilliseconds
+    ? dateString.substring(0, dateString.length - 1) + "0000" + "Z"
+    : dateString.substring(0, dateString.length - 5) + "Z";
+}
+
+/**
+ * Get URL query key value pairs from an URL string.
+ *
+ * @export
+ * @param {string} url
+ * @returns {{[key: string]: string}}
+ */
+export function getURLQueries(url: string): { [key: string]: string } {
+  let queryString = parse(url).query;
+  if (!queryString) {
+    return {};
+  }
+
+  queryString = queryString.trim();
+  queryString = queryString.startsWith("?")
+    ? queryString.substr(1)
+    : queryString;
+
+  let querySubStrings: string[] = queryString.split("&");
+  querySubStrings = querySubStrings.filter((value: string) => {
+    const indexOfEqual = value.indexOf("=");
+    const lastIndexOfEqual = value.lastIndexOf("=");
+    return indexOfEqual > 0 && indexOfEqual === lastIndexOfEqual;
+  });
+
+  const queries: { [key: string]: string } = {};
+  for (const querySubString of querySubStrings) {
+    const splitResults = querySubString.split("=");
+    const key: string = splitResults[0];
+    const value: string = splitResults[1];
+    queries[key] = value;
+  }
+
+  return queries;
+}
+
+export async function getMD5FromString(text: string): Promise<Uint8Array> {
+  return createHash("md5").update(text).digest();
+}
+
+export async function getMD5FromStream(
+  stream: NodeJS.ReadableStream
+): Promise<Uint8Array> {
+  const hash = createHash("md5");
+  return new Promise<Uint8Array>((resolve, reject) => {
+    stream
+      .on("data", (data) => {
+        hash.update(data);
+      })
+      .on("end", () => {
+        resolve(hash.digest());
+      })
+      .on("error", (err) => {
+        reject(err);
+      });
+  });
 }

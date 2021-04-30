@@ -4,6 +4,19 @@
 
 ## Upcoming Release
 
+## 2021.4 Version 3.12.0
+
+Table:
+
+- Preview of Table Service in npm package and docker image. (Visual Studio Code extension doesn't support Table Service in this release)
+- Allow empty RowKey in an entity.
+- Fix etag format to be aligned with Azure server.
+- Fix delet none exist table error code and error message, to be aligned with Azure server.
+- Convert entity properties with type "Edm.DateTime" to UTC time, to be aligned with Azure server.
+- Support Batch API.
+- Allow complex RowKey and PartitionKey in batch API.
+- Add support for replaying requests logged in debug logging.
+
 ## 2021.2 Version 3.11.0
 
 - Bump up Azure Storage service API version to 2020-06-12.
@@ -24,6 +37,10 @@ Blob:
 - Fix an issue that Blob Lease properties are lost when overwrite an existing blob.
 - Fix an issue that snapshot time is omitted in get block list.
 - Fix an issue that no error throw when clear pages, get page ranges and upload pages with invalid page range.
+
+## 2020.11 Version 3.11.0-table-alpha.1
+
+- First Alpha version of Azurite V3 Table.
 
 ## 2020.10 Version 3.9.0
 

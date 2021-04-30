@@ -1,4 +1,9 @@
 import { convertRawHeadersToMetadata } from "../../common/utils/utils";
+import {
+  getMD5FromStream,
+  getMD5FromString,
+  newEtag
+} from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -8,7 +13,6 @@ import IBlockBlobHandler from "../generated/handlers/IBlockBlobHandler";
 import { parseXML } from "../generated/utils/xml";
 import { BlobModel, BlockModel } from "../persistence/IBlobMetadataStore";
 import { BLOB_API_VERSION } from "../utils/constants";
-import { getMD5FromStream, getMD5FromString, newEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 /**

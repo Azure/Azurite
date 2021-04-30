@@ -6,6 +6,7 @@
 
 trigger:
   - master
+  - table
   - dev
 
 jobs:
@@ -220,6 +221,93 @@ jobs:
         displayName: "npm run test:queue"
         env: {}
 
+  - job: tabletestlinux
+    displayName: Table Test Linux
+    pool:
+      vmImage: "ubuntu-16.04"
+    strategy:
+      matrix:
+        node_8_x:
+          node_version: 8.x
+        node_10_x:
+          node_version: 10.x
+        node_12_x:
+          node_version: 12.x
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(node_version)"
+        displayName: "Install Node.js"
+
+      - script: |
+          npm ci
+        workingDirectory: "./"
+        displayName: "npm ci"
+
+      - script: |
+          npm run test:table
+        workingDirectory: "./"
+        displayName: "npm run test:table"
+        env: {}
+
+  - job: tabletestwin
+    displayName: Table Test Windows
+    pool:
+      vmImage: "vs2017-win2016"
+    strategy:
+      matrix:
+        node_8_x:
+          node_version: 8.x
+        node_10_x:
+          node_version: 10.x
+        node_12_x:
+          node_version: 12.x
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(node_version)"
+        displayName: "Install Node.js"
+
+      - script: |
+          npm ci
+        workingDirectory: "./"
+        displayName: "npm ci"
+
+      - script: |
+          npm run test:table
+        workingDirectory: "./"
+        displayName: "npm run test:table"
+        env: {}
+
+  - job: tabletestmac
+    displayName: Table Test Mac
+    pool:
+      vmImage: "macOS-10.14"
+    strategy:
+      matrix:
+        node_8_x:
+          node_version: 8.x
+        node_10_x:
+          node_version: 10.x
+        node_12_x:
+          node_version: 12.x
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(node_version)"
+        displayName: "Install Node.js"
+
+      - script: |
+          npm ci
+        workingDirectory: "./"
+        displayName: "npm ci"
+
+      - script: |
+          npm run test:table
+        workingDirectory: "./"
+        displayName: "npm run test:table"
+        env: {}
+
   - job: azuritenodejslinux
     displayName: Azurite Linux
     pool:
@@ -265,6 +353,7 @@ jobs:
           azurite -v
           azurite-blob -v
           azurite-queue -v
+          azurite-table -v
         workingDirectory: "./"
         displayName: "Validate npm global installation from GitHub code base"
 
@@ -313,6 +402,7 @@ jobs:
           azurite -v
           azurite-blob -v
           azurite-queue -v
+          azurite-table -v
         workingDirectory: "./"
         displayName: "Validate npm global installation from GitHub code base"
 
@@ -361,6 +451,7 @@ jobs:
           azurite -v
           azurite-blob -v
           azurite-queue -v
+          azurite-table -v
         workingDirectory: "./"
         displayName: "Validate npm global installation from GitHub code base"
 
@@ -383,6 +474,7 @@ jobs:
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite -v
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-blob -v
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-queue -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-table -v
         workingDirectory: "./"
         displayName: "Validate docker image"
 

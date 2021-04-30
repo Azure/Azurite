@@ -1,11 +1,11 @@
 import IAccountDataStore from "../../common/IAccountDataStore";
 import ILogger from "../../common/ILogger";
+import { computeHMACSHA256, getURLQueries } from "../../common/utils/utils";
 import QueueStorageContext from "../context/QueueStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import Context from "../generated/Context";
 import IRequest from "../generated/IRequest";
 import { HeaderConstants } from "../utils/constants";
-import { computeHMACSHA256, getURLQueries } from "../utils/utils";
 import IAuthenticator from "./IAuthenticator";
 
 export default class QueueSharedKeyAuthenticator implements IAuthenticator {
@@ -180,11 +180,9 @@ export default class QueueSharedKeyAuthenticator implements IAuthenticator {
         .startsWith(HeaderConstants.PREFIX_FOR_STORAGE);
     });
 
-    headersArray.sort(
-      (a, b): number => {
-        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-      }
-    );
+    headersArray.sort((a, b): number => {
+      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+    });
 
     let canonicalizedHeadersStringToSign: string = "";
     headersArray.forEach(header => {

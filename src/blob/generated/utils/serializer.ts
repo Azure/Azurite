@@ -136,7 +136,10 @@ export async function deserialize(
 
     const body = await readRequestIntoText(req);
     logger.debug(
-      `deserialize(): Raw request body string is ${body}`,
+      `deserialize(): Raw request body string is (removed all empty characters) ${body.replace(
+        /\s/g,
+        ""
+      )}`,
       context.contextId
     );
 
@@ -316,6 +319,42 @@ export async function serialize(
     res.getBodyStream().write(xmlBody);
     logger.debug(
       `Serializer: Raw response body string is ${xmlBody}`,
+      context.contextId
+    );
+    logger.info(`Serializer: Start returning stream body.`, context.contextId);
+  }
+
+  // Serialize JSON bodies
+  if (
+    !spec.isXML &&
+    responseSpec.bodyMapper &&
+    responseSpec.bodyMapper.type.name !== "Stream"
+  ) {
+    let body = spec.serializer.serialize(
+      responseSpec.bodyMapper!,
+      handlerResponse
+    );
+
+    // When root element is sequence type, should wrap with because serialize() doesn't do that
+    if (responseSpec.bodyMapper!.type.name === "Sequence") {
+      const sequenceElementName = responseSpec.bodyMapper!.xmlElementName;
+      if (sequenceElementName !== undefined) {
+        const newBody = {} as any;
+        newBody[sequenceElementName] = body;
+        body = newBody;
+      }
+    }
+
+    if (!res.getHeader("content-type")) {
+      res.setContentType("application/json");
+    }
+
+    const jsonBody = JSON.stringify(body);
+
+    // TODO: Should send response in a serializer?
+    res.getBodyStream().write(jsonBody);
+    logger.debug(
+      `Serializer: Raw response body string is ${jsonBody}`,
       context.contextId
     );
     logger.info(`Serializer: Start returning stream body.`, context.contextId);
