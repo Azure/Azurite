@@ -3,7 +3,7 @@
   "displayName": "Azurite",
   "description": "An open source Azure Storage API compatible server",
   "icon": "icon.png",
-  "version": "3.11.0-table-alpha.1",
+  "version": "3.12.0",
   "publisher": "Azurite",
   "categories": [
     "Other"
@@ -22,7 +22,6 @@
   "dependencies": {
     "@azure/ms-rest-js": "^1.5.0",
     "args": "^5.0.1",
-    "azure-storage": "^2.10.3",
     "etag": "^1.8.1",
     "express": "^4.16.4",
     "jsonwebtoken": "^8.5.1",
@@ -61,6 +60,7 @@
     "@types/validator": "^10.11.3",
     "@types/vscode": "^1.39.0",
     "@types/xml2js": "^0.4.3",
+    "azure-storage": "^2.10.3",
     "autorest": "^2.0.4413",
     "axios": "^0.21.1",
     "cross-env": "^6.0.3",

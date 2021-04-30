@@ -15,7 +15,6 @@
         "AZURITE_ACCOUNTS": ""
       },
       "skipFiles": ["node_modules/*/**", "<node_internals>/*/**"],
-
       "outputCapture": "std"
     },
     {

@@ -7,7 +7,8 @@ import TableStorageContext from "../context/TableStorageContext";
 import {
   DEFAULT_TABLE_CONTEXT_PATH,
   HeaderConstants,
-  ValidAPIVersions
+  ValidAPIVersions,
+  VERSION
 } from "../utils/constants";
 import { checkApiVersion } from "../utils/utils";
 
@@ -34,10 +35,7 @@ export function tableStorageContextMiddleware(
   skipApiVersionCheck?: boolean
 ): void {
   // Set server header in every Azurite response
-  res.setHeader(
-    HeaderConstants.SERVER,
-    `Azurite-Table/${HeaderConstants.VERSION}`
-  );
+  res.setHeader(HeaderConstants.SERVER, `Azurite-Table/${VERSION}`);
 
   const requestID = uuid();
 

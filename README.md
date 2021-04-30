@@ -8,10 +8,10 @@
 > Master branch has been updated with latest Azurite V3.
 > V3 currently only supports Blob and Queue service, please use V2 for Table service for the time being.
 
-| Version                                                            | Azure Storage API Version | Service Support       | Description                                       | Reference Links                                                                                                                                                                                                         |
-| ------------------------------------------------------------------ | ------------------------- | --------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.11.0                                                             | 2020-06-12                | Blob<br>Queue         | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
-| [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
+| Version                                                            | Azure Storage API Version | Service Support                | Description                                       | Reference Links                                                                                                                                                                                                         |
+| ------------------------------------------------------------------ | ------------------------- | ------------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.12.0                                                             | 2020-06-12                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table          | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
 ## Introduction
 
@@ -37,9 +37,8 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
   - Preflight Request
   - Create/List/Delete Queues
   - Put/Get/Peek/Updata/Deleta/Clear Messages
-- Table storage features align with Azure Storage API version 2019-12-12 (Refer to support matrix section below)
+- Table storage features align with Azure Storage API version 2020-06-12 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS
-  - Get/Set Table Service Properties
   - Create/List/Delete Tables
   - Insert/Update/Query/Delete Table Entities
 - Features **NEW** on V3
@@ -665,6 +664,7 @@ Following files or folders may be created when initializing Azurite in selected 
 - `azurite_db_queue.json` Metadata file used by Azurite queue service. (No when starting Azurite against external database)
 - `azurite_db_queue_extent.json` Extent metadata file used by Azurite queue service. (No when starting Azurite against external database)
 - `queuestorage` Persisted bindary data by Azurite queue service.
+- `azurite_db_table.json` Metadata file used by Azurite table service.
 
 > Note. Delete above files and folders and restart Azurite to clean up Azurite. It will remove all data stored in Azurite!!
 
@@ -791,7 +791,7 @@ All the generated code is kept in `generated` folder, including the generated mi
 
 ## Support Matrix
 
-Latest release targets **2020-06-12** API version **blob** service.  
+Latest release targets **2020-06-12** API version **blob** service.
 
 Detailed support matrix:
 
@@ -876,27 +876,34 @@ Detailed support matrix:
   - SharedKey Lite
   - Delegation SAS
 
-Latest version supports for **2019-12-12** API version **table** service.
+Latest version supports for **2020-06-12** API version **table** service (preview).
 Detailed support matrix:
 
 - Supported Vertical Features
+  - SharedKeyLite Authentication
   - SharedKey Authentication
   - Shared Access Signature Account Level
   - Shared Access Signature Service Level
 - Supported REST APIs
   - List Tables
-  - Set Service Properties
-  - Get Service Properties
-  - Get Stats
   - Create Table
-  - Get Table ACL
-  - Set Table ACL
   - Delete Table
   - Update Entity
   - Query Entities
   - Merge Entity
   - Delete Entity
   - Insert Entity
+  - Batch
+- Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
+  - Set Service Properties
+  - Get Service Properties
+  - Get Table ACL
+  - Set Table ACL
+  - Get Stats
+  - CORS
+  - Batch Transaction
+  - Query with complex conditions
+  - OAuth
 
 ## License
 

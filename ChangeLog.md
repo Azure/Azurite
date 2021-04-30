@@ -4,15 +4,18 @@
 
 ## Upcoming Release
 
+## 2021.4 Version 3.12.0
+
 Table:
 
+- Preview of Table Service in npm package and docker image. (Visual Studio Code extension doesn't support Table Service in this release)
 - Allow empty RowKey in an entity.
 - Fix etag format to be aligned with Azure server.
-- Fix delete none exist table error code and error message, to be aligned with Azure server.
+- Fix delet none exist table error code and error message, to be aligned with Azure server.
 - Convert entity properties with type "Edm.DateTime" to UTC time, to be aligned with Azure server.
-- Support Batch API
-- Allow complex RowKey and PartitionKey in batch API
-- Adds support for replaying requests logged in debug logging
+- Support Batch API.
+- Allow complex RowKey and PartitionKey in batch API.
+- Add support for replaying requests logged in debug logging.
 
 ## 2021.2 Version 3.11.0
 
