@@ -27,3 +27,6 @@ __queueTestsPersistence__
 __*
 *.env
 temp
+.github
+.prettierrc.json
+README.mcr.md
