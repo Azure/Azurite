@@ -175,7 +175,7 @@ describe("table Entity APIs test", () => {
     await tableClient.delete();
   });
 
-  it.only("should find a long int, @loki", async () => {
+  it("should find a long int, @loki", async () => {
     const partitionKey = createUniquePartitionKey();
     const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
       partitionKey
