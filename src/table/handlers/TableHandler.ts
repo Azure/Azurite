@@ -434,7 +434,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     if (ifMatch === "" || ifMatch === undefined) {
       throw StorageErrorFactory.getPreconditionFailed(context);
     }
-    if (checkEtagIsInvalidFormat(ifMatch)) {
+    if (ifMatch !== "*" && checkEtagIsInvalidFormat(ifMatch)) {
       throw StorageErrorFactory.getInvalidOperation(context);
     }
     // currently the props are not coming through as args, so we take them from the table context
