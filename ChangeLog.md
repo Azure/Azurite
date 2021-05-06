@@ -4,6 +4,16 @@
 
 ## Upcoming Release
 
+General:
+
+- updated typescript to 4.2.4
+
+Table:
+
+- added check for invalid etag format
+- added tests for invalid etag format
+- corrected code to support typescript 4.2.4 update
+
 ## 2021.4 Version 3.12.0
 
 Table:
