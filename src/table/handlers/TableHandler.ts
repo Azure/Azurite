@@ -1,5 +1,8 @@
 import BufferStream from "../../common/utils/BufferStream";
-import { newTableEntityEtag } from "../../common/utils/utils";
+import {
+  checkEtagIsInvalidFormat,
+  newTableEntityEtag
+} from "../../common/utils/utils";
 import TableBatchOrchestrator from "../batch/TableBatchOrchestrator";
 import TableStorageContext from "../context/TableStorageContext";
 import { NormalizedEntity } from "../entity/NormalizedEntity";
@@ -289,6 +292,11 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     if (ifMatch === "") {
       throw StorageErrorFactory.getPreconditionFailed(context);
     }
+    if (options?.ifMatch && options.ifMatch !== "*") {
+      if (checkEtagIsInvalidFormat(options.ifMatch)) {
+        throw StorageErrorFactory.getInvalidOperation(context);
+      }
+    }
 
     const eTag = newTableEntityEtag(context.startTime!);
 
@@ -349,6 +357,11 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     if (!options.tableEntityProperties) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
+    }
+    if (options?.ifMatch && options.ifMatch !== "*" && options.ifMatch !== "") {
+      if (checkEtagIsInvalidFormat(options.ifMatch)) {
+        throw StorageErrorFactory.getInvalidOperation(context);
+      }
     }
 
     if (
@@ -420,6 +433,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     }
     if (ifMatch === "" || ifMatch === undefined) {
       throw StorageErrorFactory.getPreconditionFailed(context);
+    }
+    if (checkEtagIsInvalidFormat(ifMatch)) {
+      throw StorageErrorFactory.getInvalidOperation(context);
     }
     // currently the props are not coming through as args, so we take them from the table context
     await this.metadataStore.deleteTableEntity(

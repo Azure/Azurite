@@ -160,3 +160,18 @@ export async function getMD5FromStream(
       });
   });
 }
+
+/**
+ * Checks if an eTag is valid
+ *
+ * @export
+ * @param {string} etag
+ * @return {*}  {boolean}
+ */
+export function checkEtagIsInvalidFormat(etag: string): boolean {
+  // Etag should match ^W\/"datetime'\d{4}-\d{2}-\d{2}T\d{2}%3A\d{2}%3A\d{2}.\d{7}Z'"$
+  const match = etag.match(
+    /^W\/"datetime'\d{4}-\d{2}-\d{2}T\d{2}%3A\d{2}%3A\d{2}.\d{7}Z'"$/
+  );
+  return match === null;
+}

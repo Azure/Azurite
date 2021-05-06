@@ -40,10 +40,10 @@ export default abstract class VSCServerManagerBase
     return this.server;
   }
 
-  public abstract async createImpl(): Promise<void>;
-  public abstract async startImpl(): Promise<void>;
-  public abstract async closeImpl(): Promise<void>;
-  public abstract async cleanImpl(): Promise<void>;
+  public abstract createImpl(): Promise<void>;
+  public abstract startImpl(): Promise<void>;
+  public abstract closeImpl(): Promise<void>;
+  public abstract cleanImpl(): Promise<void>;
 
   public async start(): Promise<void> {
     this.startSession++;
