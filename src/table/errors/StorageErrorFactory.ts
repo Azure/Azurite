@@ -182,7 +182,7 @@ export default class StorageErrorFactory {
   public static getEntityAlreadyExist(context: Context): StorageError {
     return new StorageError(
       409,
-      "EntityAlreadyExist",
+      "EntityAlreadyExists",
       "The specified entity already exists.",
       context.contextID || defaultID,
       undefined,
