@@ -200,4 +200,47 @@ describe("table Entity APIs test", () => {
 
     await tableClient.delete();
   });
+
+  it("should find an int as a number, @loki", async () => {
+    const partitionKey = createUniquePartitionKey();
+    const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
+      partitionKey
+    );
+
+    await tableClient.create({ requestOptions: { timeout: 60000 } });
+    const result = await tableClient.createEntity(testEntity);
+    assert.ok(result.etag);
+
+    const queryResult = await tableClient
+      .listEntities<AzureDataTablesTestEntity>({
+        queryOptions: {
+          filter: `PartitionKey eq '${partitionKey}' and int32Field eq 54321`
+        }
+      })
+      .next();
+    assert.notStrictEqual(queryResult.value, undefined);
+    await tableClient.delete();
+  });
+
+  it("should find a long int, @loki", async () => {
+    const partitionKey = createUniquePartitionKey();
+    const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
+      partitionKey
+    );
+
+    await tableClient.create({ requestOptions: { timeout: 60000 } });
+    const result = await tableClient.createEntity(testEntity);
+    assert.ok(result.etag);
+
+    const queryResult = await tableClient
+      .listEntities<AzureDataTablesTestEntity>({
+        queryOptions: {
+          filter: `PartitionKey eq '${partitionKey}' and int64Field eq 12345L`
+        }
+      })
+      .next();
+    assert.notStrictEqual(queryResult.value, undefined);
+
+    await tableClient.delete();
+  });
 });
