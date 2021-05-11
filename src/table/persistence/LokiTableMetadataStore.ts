@@ -755,6 +755,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           matchLongInt.length === 1
         ) {
           token = token.replace(/L\b/g, "");
+          // however, as long int is stored as string, we need to add inverted commas
+          token = "'" + token + "'";
         } else if (previousIsOp && token.startsWith("datetime")) {
           token = token.replace(/\bdatetime\b/g, "");
           token = `new Date(${token}).getTime()`;
