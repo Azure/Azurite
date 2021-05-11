@@ -69,9 +69,9 @@ describe("table Entity APIs test", () => {
   it("Batch API should correctly process LogicApp style update request sequence", async () => {
     await tableClient.create();
     const logicAppReproEntity = new LogicAppReproEntity();
-    const insertedEntityHeaders = await tableClient.createEntity<
-      LogicAppReproEntity
-    >(logicAppReproEntity);
+    const insertedEntityHeaders = await tableClient.createEntity<LogicAppReproEntity>(
+      logicAppReproEntity
+    );
     assert.notStrictEqual(insertedEntityHeaders.etag, undefined);
     logicAppReproEntity.sequenceNumber = 1;
     logicAppReproEntity.testString = "1";
@@ -150,6 +150,53 @@ describe("table Entity APIs test", () => {
       204,
       "error with updatedEntity delete"
     );
+
+    await tableClient.delete();
+  });
+
+  it("Should return bad request error for incorrectly formatted etags, @loki", async () => {
+    const partitionKey = createUniquePartitionKey();
+    const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
+      partitionKey
+    );
+
+    await tableClient.create();
+
+    const result = await tableClient.createEntity(testEntity);
+
+    const updateEntity = await tableClient.updateEntity(testEntity, "Merge", {
+      etag: result.etag
+    });
+
+    assert.notStrictEqual(
+      updateEntity.etag,
+      undefined,
+      "failed to update entity"
+    );
+
+    await tableClient
+      .updateEntity(testEntity, "Merge", {
+        etag: "blah"
+      })
+      .catch((updateError) => {
+        assert.strictEqual(
+          updateError.response.status,
+          400,
+          "did not get the expected bad request"
+        );
+      });
+
+    await tableClient
+      .deleteEntity(testEntity.partitionKey, testEntity.rowKey, {
+        etag: "blah"
+      })
+      .catch((updateError) => {
+        assert.strictEqual(
+          updateError.response.status,
+          400,
+          "did not get the expected bad request"
+        );
+      });
 
     await tableClient.delete();
   });

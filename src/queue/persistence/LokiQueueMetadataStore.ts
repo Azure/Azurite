@@ -69,7 +69,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
     await new Promise<void>((resolve, reject) => {
       stat(this.lokiDBPath, (statError, stats) => {
         if (!statError) {
-          this.db.loadDatabase({}, dbError => {
+          this.db.loadDatabase({}, (dbError) => {
             if (dbError) {
               reject(dbError);
             } else {
@@ -109,8 +109,8 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
       });
     }
 
-    await new Promise((resolve, reject) => {
-      this.db.saveDatabase(err => {
+    await new Promise<void>((resolve, reject) => {
+      this.db.saveDatabase((err) => {
         if (err) {
           reject(err);
         } else {
@@ -131,7 +131,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
    */
   public async close(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
-      this.db.close(err => {
+      this.db.close((err) => {
         if (err) {
           reject(err);
         } else {
@@ -517,7 +517,10 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
     const docs = coll
       .chain()
       .find(query)
-      .compoundsort([["timeNextVisible", false], ["$loki", false]])
+      .compoundsort([
+        ["timeNextVisible", false],
+        ["$loki", false]
+      ])
       .limit(numOfMessages)
       .data();
 
@@ -570,7 +573,10 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
     const docs = coll
       .chain()
       .find(query)
-      .compoundsort([["timeNextVisible", false], ["$loki", false]])
+      .compoundsort([
+        ["timeNextVisible", false],
+        ["$loki", false]
+      ])
       .limit(numOfMessages)
       .data();
 
@@ -717,11 +723,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
       maxResults = 5000;
     }
 
-    const docs = coll
-      .chain()
-      .find(query)
-      .limit(maxResults)
-      .data();
+    const docs = coll.chain().find(query).limit(maxResults).data();
 
     if (docs.length < maxResults) {
       return [docs, undefined];

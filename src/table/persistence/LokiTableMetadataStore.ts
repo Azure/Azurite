@@ -50,7 +50,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       }); // Optimize for find operation
     }
 
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       this.db.saveDatabase((err) => {
         if (err) {
           reject(err);

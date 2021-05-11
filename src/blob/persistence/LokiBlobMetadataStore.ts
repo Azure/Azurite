@@ -168,7 +168,7 @@ export default class LokiBlobMetadataStore
       });
     }
 
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       this.db.saveDatabase((err) => {
         if (err) {
           reject(err);

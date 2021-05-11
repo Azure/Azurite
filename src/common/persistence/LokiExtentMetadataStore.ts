@@ -44,7 +44,7 @@ export default class LokiExtentMetadata implements IExtentMetadataStore {
     await new Promise<void>((resolve, reject) => {
       stat(this.lokiDBPath, (statError, stats) => {
         if (!statError) {
-          this.db.loadDatabase({}, dbError => {
+          this.db.loadDatabase({}, (dbError) => {
             if (dbError) {
               reject(dbError);
             } else {
@@ -65,8 +65,8 @@ export default class LokiExtentMetadata implements IExtentMetadataStore {
       });
     }
 
-    await new Promise((resolve, reject) => {
-      this.db.saveDatabase(err => {
+    await new Promise<void>((resolve, reject) => {
+      this.db.saveDatabase((err) => {
         if (err) {
           reject(err);
         } else {
@@ -87,7 +87,7 @@ export default class LokiExtentMetadata implements IExtentMetadataStore {
    */
   public async close(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
-      this.db.close(err => {
+      this.db.close((err) => {
         if (err) {
           reject(err);
         } else {
@@ -173,11 +173,7 @@ export default class LokiExtentMetadata implements IExtentMetadataStore {
     query.$loki = { $gt: marker };
 
     const coll = this.db.getCollection(this.EXTENTS_COLLECTION);
-    const docs = coll
-      .chain()
-      .find(query)
-      .limit(maxResults)
-      .data();
+    const docs = coll.chain().find(query).limit(maxResults).data();
 
     if (docs.length < maxResults) {
       return [docs, undefined];

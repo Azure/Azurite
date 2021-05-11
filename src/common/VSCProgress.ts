@@ -4,7 +4,8 @@ import { ProgressLocation, window } from "vscode";
 import IVSCServerManagerEventsHandler from "./IVSCServerManagerEventsHandler";
 import VSCServerManagerBase from "./VSCServerManagerBase";
 
-export default class VSCProgress extends EventEmitter
+export default class VSCProgress
+  extends EventEmitter
   implements IVSCServerManagerEventsHandler {
   private readonly START_SUCCESS = "startSuccess_";
   private readonly START_FAIL = "startFail_";
@@ -19,12 +20,12 @@ export default class VSCProgress extends EventEmitter
         location: ProgressLocation.Notification,
         title: `Starting ${serverManager.name}`
       },
-      progress => {
+      (progress) => {
         progress.report({
           increment: 5,
           message: `${serverManager.name} is starting...`
         });
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
           const resolveCallback = () => {
             this.removeListener(this.START_SUCCESS + session, resolveCallback);
             this.removeListener(this.START_FAIL + session, rejectCallback);
@@ -65,12 +66,12 @@ export default class VSCProgress extends EventEmitter
         location: ProgressLocation.Notification,
         title: `Cleaning ${serverManager.name}`
       },
-      progress => {
+      (progress) => {
         progress.report({
           increment: 5,
           message: `${serverManager.name} is cleaning`
         });
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
           const resolveCallback = () => {
             this.removeListener(this.CLEAN_SUCCESS + session, resolveCallback);
             this.removeListener(this.CLEAN_FAIL + session, rejectCallback);
@@ -111,12 +112,12 @@ export default class VSCProgress extends EventEmitter
         location: ProgressLocation.Notification,
         title: `Closing ${serverManager.name}`
       },
-      progress => {
+      (progress) => {
         progress.report({
           increment: 5,
           message: `${serverManager.name} is closing`
         });
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
           const resolveCallback = () => {
             this.removeListener(this.CLOSE_SUCCESS + session, resolveCallback);
             this.removeListener(this.CLOSE_FAIL + session, rejectCallback);
