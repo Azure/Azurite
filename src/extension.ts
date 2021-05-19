@@ -5,12 +5,14 @@ import VSCNotification from "./common/VSCNotification";
 import VSCProgress from "./common/VSCProgress";
 import VSCServerManagerBlob from "./common/VSCServerManagerBlob";
 import VSCServerManagerQueue from "./common/VSCServerManagerQueue";
+import VSCServerManagerTable from "./common/VSCServerManagerTable";
 import VSCStatusBarItem from "./common/VSCStatusBarItem";
 
 export function activate(context: ExtensionContext) {
   // Initialize server managers
   const blobServerManager = new VSCServerManagerBlob();
   const queueServerManager = new VSCServerManagerQueue();
+  const tableServerManager = new VSCServerManagerTable();
 
   // Hook up status bar handlers
   const vscBlobStatusBar = new VSCStatusBarItem(
@@ -21,18 +23,25 @@ export function activate(context: ExtensionContext) {
     queueServerManager,
     window.createStatusBarItem(StatusBarAlignment.Right, 1001)
   );
+  const vscTableStatusBar = new VSCStatusBarItem(
+    tableServerManager,
+    window.createStatusBarItem(StatusBarAlignment.Right, 1002)
+  );
 
   blobServerManager.addEventListener(vscBlobStatusBar);
   queueServerManager.addEventListener(vscQueueStatusBar);
+  tableServerManager.addEventListener(vscTableStatusBar);
 
   // Hook up notification handlers
   const notification = new VSCNotification();
   blobServerManager.addEventListener(notification);
   queueServerManager.addEventListener(notification);
+  tableServerManager.addEventListener(notification);
 
   // Hook up progress handlers
   blobServerManager.addEventListener(new VSCProgress());
   queueServerManager.addEventListener(new VSCProgress());
+  tableServerManager.addEventListener(new VSCProgress());
 
   // Hook up access log handlers
   blobServerManager.addEventListener(
@@ -41,19 +50,25 @@ export function activate(context: ExtensionContext) {
   queueServerManager.addEventListener(
     new VSCAccessLog(queueServerManager.accessChannelStream)
   );
+  tableServerManager.addEventListener(
+    new VSCAccessLog(tableServerManager.accessChannelStream)
+  );
 
   context.subscriptions.push(
     commands.registerCommand("azurite.start", () => {
       blobServerManager.start();
       queueServerManager.start();
+      tableServerManager.start();
     }),
     commands.registerCommand("azurite.close", () => {
       blobServerManager.close();
       queueServerManager.close();
+      tableServerManager.close();
     }),
     commands.registerCommand("azurite.clean", () => {
       blobServerManager.clean();
       queueServerManager.clean();
+      tableServerManager.clean();
     }),
 
     commands.registerCommand(blobServerManager.getStartCommand(), () => {
@@ -76,8 +91,19 @@ export function activate(context: ExtensionContext) {
       queueServerManager.clean();
     }),
 
+    commands.registerCommand(tableServerManager.getStartCommand(), () => {
+      tableServerManager.start();
+    }),
+    commands.registerCommand(tableServerManager.getCloseCommand(), () => {
+      tableServerManager.close();
+    }),
+    commands.registerCommand(tableServerManager.getCleanCommand(), () => {
+      tableServerManager.clean();
+    }),
+
     vscBlobStatusBar.statusBarItem,
-    vscQueueStatusBar.statusBarItem
+    vscQueueStatusBar.statusBarItem,
+    vscTableStatusBar.statusBarItem
   );
 }
 
