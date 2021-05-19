@@ -52,8 +52,8 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
     const stringToSign: string =
       [
         req.getMethod().toUpperCase(),
-        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LANGUAGE),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_ENCODING),
+        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LANGUAGE),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LENGTH),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
