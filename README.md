@@ -124,7 +124,10 @@ Extension supports following Visual Studio Code commands:
 - `Azurite: Start Queue Service` Start queue service
 - `Azurite: Close Queue Service` Close queue service
 - `Azurite: Clean Queue Service` Clean queue service
-
+- `Azurite: Start Table Service` Start table service
+- `Azurite: Close Table Service` Close table service
+- `Azurite: Clean Table Service` Clean table service
+ 
 Following extension configurations are supported:
 
 - `azurite.blobHost` Blob service listening endpoint, by default 127.0.0.1
