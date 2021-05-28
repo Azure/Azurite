@@ -25,6 +25,14 @@ export default class VSCEnvironment implements IEnvironment {
     return this.workspaceConfiguration.get<number>("queuePort");
   }
 
+  public tableHost(): string | undefined {
+    return this.workspaceConfiguration.get<string>("tableHost");
+  }
+
+  public tablePort(): number | undefined {
+    return this.workspaceConfiguration.get<number>("tablePort");
+  }
+
   public async location(): Promise<string> {
     let location = this.workspaceConfiguration.get<string>("location");
 
