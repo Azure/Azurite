@@ -6,6 +6,7 @@
 
 General:
 
+- Bump up Azure Storage service API version to 2020-08-04.
 - updated typescript to 4.2.4
 
 Blob:
