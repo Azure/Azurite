@@ -255,3 +255,13 @@ export function getPayloadFormat(context: Context): string {
 
   return format;
 }
+
+export function validateTableName(context: Context, tableName: string) {
+  if (tableName !== "" && (tableName!.length < 3 || tableName!.length > 63)) {
+    throw StorageErrorFactory.getOutOfRangeName(context);
+  }
+  const reg = new RegExp("^[A-Za-z][A-Za-z0-9]{2,62}$");
+  if (!reg.test(tableName!) && !tableName.startsWith("$Metric")) {
+    throw StorageErrorFactory.getInvalidResourceName(context);
+  }
+}

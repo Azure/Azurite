@@ -28,7 +28,8 @@ import {
   getPayloadFormat,
   getTableOdataAnnotationsForResponse,
   getTablePropertiesOdataAnnotationsForResponse,
-  updateTableOptionalOdataAnnotationsForResponse
+  updateTableOptionalOdataAnnotationsForResponse,
+  validateTableName
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import TableBatchUtils from "../batch/TableBatchUtils";
@@ -57,6 +58,11 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const table = tableProperties.tableName; // Table name is in request body instead of URL
     if (table === undefined) {
       throw StorageErrorFactory.getTableNameEmpty(context);
+    }
+
+    // validate table name
+    if (table !== undefined) {
+      validateTableName(context, table);
     }
 
     const tableModel: Table = {

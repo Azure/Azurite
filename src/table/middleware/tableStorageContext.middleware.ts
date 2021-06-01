@@ -10,7 +10,7 @@ import {
   ValidAPIVersions,
   VERSION
 } from "../utils/constants";
-import { checkApiVersion } from "../utils/utils";
+import { checkApiVersion, validateTableName } from "../utils/utils";
 
 export default function createTableStorageContextMiddleware(
   skipApiVersionCheck?: boolean
@@ -169,6 +169,11 @@ export function tableStorageContextMiddleware(
     `tableStorageContextMiddleware: Dispatch pattern string: ${tableContext.dispatchPattern}`,
     requestID
   );
+
+  // validate Table name
+  if (tableContext.tableName !== undefined) {
+    validateTableName(tableContext, tableContext.tableName);
+  }
 
   logger.info(
     `tableStorageContextMiddleware: Account=${account} tableName=${tableContext.tableName}`,
