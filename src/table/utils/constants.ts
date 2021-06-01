@@ -14,7 +14,7 @@ export enum TABLE_STATUSCODE {
 
 export const DEFAULT_TABLE_CONTEXT_PATH = "azurite_table_context";
 export const TABLE_API_VERSION = "2020-08-04";
-export const VERSION = "3.12.0";
+export const VERSION = "3.13.0";
 
 export const HeaderConstants = {
   SERVER: "Server",
