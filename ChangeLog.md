@@ -9,18 +9,21 @@
 General:
 
 - Bump up Azure Storage service API version to 2020-08-04.
-- updated typescript to 4.2.4
+- Updated typescript to 4.2.4.
 
 Blob:
 
-- added check for invalid container name
+- Added check for invalid container name.
 
 Table:
 
-- added check for invalid etag format
-- added tests for invalid etag format
-- corrected code to support typescript 4.2.4 update
-- added check for invalid table name
+- Added check for invalid etag format.
+- Added tests for invalid etag format.
+- Corrected code to support typescript 4.2.4 update.
+- Supported Table Service in Visual Studio Code extension.
+- Fix an issue that query for Long Int fail in Metadata layer.
+- Fix an issue of axios dependency.
+- Added check for invalid table name.
 
 ## 2021.4 Version 3.12.0
 
