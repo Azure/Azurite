@@ -130,3 +130,19 @@ export function removeQuotationFromListBlobEtag(inputEtag: string): string {
   }
   return inputEtag;
 }
+
+export function validateContainerName(
+  requestID: string,
+  containerName: string
+) {
+  if (
+    containerName !== "" &&
+    (containerName!.length < 3 || containerName!.length > 63)
+  ) {
+    throw StorageErrorFactory.getOutOfRangeName(requestID);
+  }
+  const reg = new RegExp("^[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]$");
+  if (!reg.test(containerName!)) {
+    throw StorageErrorFactory.getInvalidResourceName(requestID);
+  }
+}

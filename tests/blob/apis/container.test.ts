@@ -4,6 +4,7 @@ import {
   StorageSharedKeyCredential
 } from "@azure/storage-blob";
 import assert = require("assert");
+import StorageErrorFactory from "../../../src/blob/errors/StorageErrorFactory";
 
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
@@ -123,7 +124,7 @@ describe("ContainerAPIs", () => {
 
   it("getProperties should return 404 for non existed container @loki @sql", async () => {
     const nonExistedContainerURL = serviceClient.getContainerClient(
-      "404container_"
+      "404container-a"
     );
     let expectedError = false;
     try {
@@ -153,6 +154,65 @@ describe("ContainerAPIs", () => {
     const result = await cURL.getProperties();
     assert.deepEqual(result.blobPublicAccess, access);
     assert.deepEqual(result.metadata, metadata);
+  });
+
+  it("create with invalid container name @loki @sql", async () => {
+    // invalid name since format not right
+    let invalidName = ["abc-", "abc--d", "Acontainer", "-abc", "dev_public"];
+    let expectedError = StorageErrorFactory.getInvalidResourceName("");
+
+    for (const item in invalidName) {
+      try {
+        let cURL = serviceClient.getContainerClient(invalidName[item]);
+        const result = await cURL.create();
+        assert.deepStrictEqual(
+          result._response.status,
+          expectedError.statusCode
+        );
+      } catch (error) {
+        assert.strictEqual(error.statusCode, expectedError.statusCode);
+        assert.strictEqual(
+          error.response.parsedBody.Code,
+          expectedError.storageErrorCode
+        );
+        assert.strictEqual(
+          error.response.parsedBody.message.includes(
+            expectedError.storageErrorMessage
+          ),
+          true
+        );
+      }
+    }
+
+    // invalid name since length not right
+    invalidName = [
+      "a",
+      "ab",
+      "abcd123456789012345678901234567890123456789012345678901234567890"
+    ];
+    expectedError = StorageErrorFactory.getOutOfRangeName("");
+    for (const item in invalidName) {
+      try {
+        let cURL = serviceClient.getContainerClient(invalidName[item]);
+        const result = await cURL.create();
+        assert.deepStrictEqual(
+          result._response.status,
+          expectedError.statusCode
+        );
+      } catch (error) {
+        assert.strictEqual(error.statusCode, expectedError.statusCode);
+        assert.strictEqual(
+          error.response.parsedBody.Code,
+          expectedError.storageErrorCode
+        );
+        assert.strictEqual(
+          error.response.parsedBody.message.includes(
+            expectedError.storageErrorMessage
+          ),
+          true
+        );
+      }
+    }
   });
 
   it("delete @loki @sql", (done) => {

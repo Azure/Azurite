@@ -8,11 +8,16 @@ General:
 
 - updated typescript to 4.2.4
 
+Blob:
+
+- added check for invalid container name
+
 Table:
 
 - added check for invalid etag format
 - added tests for invalid etag format
 - corrected code to support typescript 4.2.4 update
+- added check for invalid table name
 
 ## 2021.4 Version 3.12.0
 
