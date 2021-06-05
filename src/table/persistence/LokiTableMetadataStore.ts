@@ -656,20 +656,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     return `${account}$${table}`;
   }
 
-  /**
-   * Azurite V2 query entities implementation as temporary workaround before new refactored implementation of querying.
-   * TODO: Handle query types
-   *
-   * @param query Query Enties $query string.
-   */
-  private generateQueryEntityWhereFunction(
-    query: string | undefined
-  ): (entity: Entity) => boolean {
-    if (query === undefined) {
-      return () => true;
-    }
-
-    const filter = query
+  private static tokenizeQuery(originalQuery: string): string[] {
+    const filter = originalQuery
       // ignoring these query keywords since we compare simply on a string-level
       // .replace(/\bbinary\b/g, "")
       .replace(/\bguid\b/g, "")
@@ -696,13 +684,21 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       .replace(/\)/g, " ) ")
       .replace(/\bnot\b/g, " ! ");
 
+    return filter.split(" ");
+  }
+
+  /**
+   * Azurite V2 query entities implementation as temporary workaround before new refactored implementation of querying.
+   * TODO: Handle query types
+   */
+  public static transformQuery(query: string): string {
     // If a token is neither a number, nor a boolean, nor a string enclosed with quotation marks it is an operand.
     // Operands are attributes of the object used within the where clause of LokiJS, thus we need to prepend each
     // attribute with an object identifier 'item.attribs'.
     let transformedQuery = "return ( ";
     let isOp = false;
     let previousIsOp = false;
-    const tokens = filter.split(" ");
+    const tokens = LokiTableMetadataStore.tokenizeQuery(query);
     let counter = -1;
     for (let token of tokens) {
       counter++;
@@ -771,6 +767,21 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       }
     }
     transformedQuery += ")";
+
+    return transformedQuery;
+  }
+
+  /**
+   * @param query Query Enties $query string.
+   */
+  private generateQueryEntityWhereFunction(
+    query: string | undefined
+  ): (entity: Entity) => boolean {
+    if (query === undefined) {
+      return () => true;
+    }
+
+    const transformedQuery = LokiTableMetadataStore.transformQuery(query);
 
     // tslint:disable-next-line: no-console
     // console.log(query);

@@ -1,0 +1,147 @@
+import * as assert from "assert";
+import LokiTableMetadataStore from "../../../src/table/persistence/LokiTableMetadataStore";
+
+const queries = [
+  {
+    input: "PartitionKey eq 'azurite'",
+    expected: "return ( item.PartitionKey === `azurite` )"
+  },
+  {
+    input: "RowKey eq 'azurite'",
+    expected: "return ( item.RowKey === `azurite` )"
+  },
+  {
+    input: "PartitionKey gt 'azurite'",
+    expected: "return ( item.PartitionKey > `azurite` )"
+  },
+  {
+    input: "PartitionKey ge 'azurite'",
+    expected: "return ( item.PartitionKey >= `azurite` )"
+  },
+  {
+    input: "PartitionKey lt 'azurite'",
+    expected: "return ( item.PartitionKey < `azurite` )"
+  },
+  {
+    input: "PartitionKey le 'azurite'",
+    expected: "return ( item.PartitionKey <= `azurite` )"
+  },
+  {
+    input: "PartitionKey ne 'azurite'",
+    expected: "return ( item.PartitionKey !== `azurite` )"
+  },
+  {
+    input: "not (PartitionKey eq 'azurite')",
+    expected: "return ( ! ( item.PartitionKey === `azurite` ) )"
+  },
+  {
+    input: "MyField gt datetime'2021-06-05T16:20:00'",
+    expected:
+      "return ( new Date(item.properties.MyField).getTime() > new Date(`2021-06-05T16:20:00`).getTime() )"
+  },
+  {
+    input: "MyField gt 1337",
+    expected: "return ( item.properties.MyField > 1337 )"
+  },
+  {
+    input: "MyField gt 1337L",
+    expected: "return ( item.properties.MyField > '1337' )"
+  },
+  {
+    input: "PartitionKey eq 'azurite' and RowKey eq 'tables'",
+    expected:
+      "return ( item.PartitionKey === `azurite` && item.RowKey === `tables` )"
+  },
+  {
+    input: "PartitionKey eq 'azurite' or RowKey eq 'tables'",
+    expected:
+      "return ( item.PartitionKey === `azurite` || item.RowKey === `tables` )"
+  },
+  {
+    input: "MyField eq guid'00000000-0000-0000-0000-000000000000'",
+    expected:
+      "return ( item.properties.MyField === `00000000-0000-0000-0000-000000000000` )"
+  },
+  {
+    input: "PartitionKey eq 'Iam''good''atTypeScript'",
+    expected: "return ( item.PartitionKey === `Iam'good'atTypeScript` )"
+  },
+  {
+    input: "PartitionKey eq 'Isn''tThisANastyPK'",
+    expected: "return ( item.PartitionKey === `Isn'tThisANastyPK` )"
+  },
+  {
+    input: "1 eq 1",
+    expected: "return ( 1 === 1 )"
+  },
+  {
+    input: "PartitionKey eq 'a'",
+    expected: "return ( item.PartitionKey === `a` )"
+  },
+  {
+    input: "PartitionKey eq ' '",
+    expected: "return ( item.PartitionKey === ` ` )"
+  },
+  {
+    input: "PartitionKey eq 'Foo Bar'",
+    expected: "return ( item.PartitionKey === `Foo Bar` )"
+  },
+  {
+    input: "PartitionKey eq 'A''Foo Bar''Z'",
+    expected: "return ( item.PartitionKey === `A'Foo Bar'Z` )"
+  },
+  {
+    input: "PartitionKey eq '''Foo Bar'",
+    expected: "return ( item.PartitionKey === `'Foo Bar` )"
+  },
+  {
+    input: "PartitionKey eq 'Foo '' Bar'",
+    expected: "return ( item.PartitionKey === `Foo ' Bar` )"
+  },
+  {
+    input: "PartitionKey eq 'Foo Bar'''",
+    expected: "return ( item.PartitionKey === `Foo Bar'` )"
+  },
+  {
+    input: "PartitionKey eq ' Foo Bar '",
+    expected: "return ( item.PartitionKey === ` Foo Bar ` )"
+  },
+  {
+    input: "PartitionKey eq ''",
+    expected: "return ( item.PartitionKey === `` )"
+  },
+  {
+    input: "PartitionKey eq '''Foo Bar'''",
+    expected: "return ( item.PartitionKey === `'Foo Bar'` )"
+  },
+  {
+    input: "PartitionKey eq ''''",
+    expected: "return ( item.PartitionKey === `'` )"
+  },
+  {
+    input: "PartitionKey eq ''''''",
+    expected: "return ( item.PartitionKey === `''` )"
+  },
+  {
+    input: "PartitionKey eq ''''''''",
+    expected: "return ( item.PartitionKey === `'''` )"
+  },
+  {
+    input: "PartitionKey eq ''''''''''",
+    expected: "return ( item.PartitionKey === `''''` )"
+  },
+  {
+    input: "PartitionKey eq 'I am ''good'' at TypeScript'",
+    expected: "return ( item.PartitionKey === `I am 'good' at TypeScript` )"
+  }
+];
+
+describe("unit tests for converting a table OData query to a JavaScript query for LokiJS", () => {
+  queries.forEach(({ input, expected }) => {
+    it(`should transform '${input}' into '${expected}'`, function (done) {
+      const actual = LokiTableMetadataStore.transformQuery(input);
+      assert.strictEqual(actual, expected);
+      done();
+    });
+  });
+});
