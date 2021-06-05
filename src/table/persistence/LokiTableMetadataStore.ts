@@ -657,34 +657,97 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   }
 
   private static tokenizeQuery(originalQuery: string): string[] {
-    const filter = originalQuery
-      // ignoring these query keywords since we compare simply on a string-level
-      // .replace(/\bbinary\b/g, "")
-      .replace(/\bguid\b/g, "")
-      // Escape a single backtick to prevent interpreting the start of a template literal.
-      .replace(/`/g, "\\`")
-      // A simple quotation mark is escaped with another one (i.e. '').
-      // Since we will evaluate this string we replace simple quotation marks
-      // indictaing strings with template quotation marks
-      .replace(/''/g, "@ESCAPEDQUOTE@")
-      .replace(/'/g, "`")
-      .replace(/@ESCAPEDQUOTE@/g, `'`)
-      // Mapping 'TableName' to 'name' which is used internally as attribute name
-      .replace(/\bTableName\b/g, "name")
-      // Mapping operators
-      .replace(/\beq\b/g, "===")
-      .replace(/\bgt\b/g, ">")
-      .replace(/\bge\b/g, ">=")
-      .replace(/\blt\b/g, "<")
-      .replace(/\ble\b/g, "<=")
-      .replace(/\bne\b/g, "!==")
-      .replace(/\band\b/g, "&&")
-      .replace(/\bor\b/g, "||")
-      .replace(/\(/g, " ( ")
-      .replace(/\)/g, " ) ")
-      .replace(/\bnot\b/g, " ! ");
+    // Escape a single backtick to prevent interpreting the start of a template literal.
+    const query = originalQuery.replace(/`/g, "\\`");
 
-    return filter.split(" ");
+    let tokenStart = 0;
+    const tokens: string[] = [];
+    let inString = false;
+    let i: number;
+
+    function appendToken() {
+      if (i - tokenStart > 0) {
+        let token: string;
+        if (inString) {
+          // Extract the token and unescape quotes
+          token = query.substring(tokenStart, i).replace(/''/g, "'");
+
+          // Extract the leading type prefix, if any.
+          const stringStart = token.indexOf("'");
+          const typePrefix = token.substring(0, stringStart);
+          const backtickString =
+            "`" + token.substring(typePrefix.length + 1) + "`";
+
+          // Remove the GUID type prefix since we compare these as strings
+          if (typePrefix === "guid") {
+            token = backtickString;
+          } else {
+            token = typePrefix + backtickString;
+          }
+        } else {
+          token = convertToken(query.substring(tokenStart, i));
+        }
+
+        if (token) {
+          tokens.push(token);
+        }
+      }
+      tokenStart = i + 1;
+    }
+
+    function convertToken(token: string): string {
+      switch (token) {
+        case "TableName":
+          return "name";
+        case "eq":
+          return "===";
+        case "gt":
+          return ">";
+        case "ge":
+          return ">=";
+        case "lt":
+          return "<";
+        case "le":
+          return "<=";
+        case "ne":
+          return "!==";
+        case "and":
+          return "&&";
+        case "or":
+          return "||";
+        case "not":
+          return "!";
+        default:
+          return token;
+      }
+    }
+
+    for (i = 0; i < query.length; i++) {
+      if (inString) {
+        // Look for a double quote, inside of a string.
+        if (i < query.length - 1 && query[i] === "'" && query[i + 1] === "'") {
+          i++;
+          continue;
+        } else if (query[i] === "'") {
+          appendToken();
+          inString = false;
+        }
+      } else if (query[i] === "(" || query[i] === ")") {
+        i--;
+        appendToken();
+        i++;
+        tokens.push(query[i]);
+        tokenStart++;
+      } else if (/\s/.test(query[i])) {
+        appendToken();
+      } else if (query[i] === "'") {
+        inString = true;
+      }
+    }
+
+    appendToken();
+
+    return tokens;
   }
 
   /**
