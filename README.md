@@ -6,7 +6,7 @@
 > Note:
 > Azurite V2 has been moved to [legacy-master](https://github.com/Azure/azurite/tree/legacy-master) branch.
 > Master branch has been updated with latest Azurite V3.
-> V3 currently only supports Blob and Queue service, please use V2 for Table service for the time being.
+> V3 supports Blob Queue, and Table service (Table is in preview).
 
 | Version                                                            | Azure Storage API Version | Service Support                | Description                                       | Reference Links                                                                                                                                                                                                         |
 | ------------------------------------------------------------------ | ------------------------- | ------------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
