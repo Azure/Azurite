@@ -137,6 +137,19 @@ describe("ContainerAPIs", () => {
     assert.ok(expectedError);
   });
 
+  it("getProperties should return 404 for non existed system container @loki @sql", async () => {
+    const nonExistedContainerURL = serviceClient.getContainerClient("$logs");
+    let expectedError = false;
+    try {
+      await nonExistedContainerURL.getProperties();
+    } catch (err) {
+      if (err.response.status === 404) {
+        expectedError = true;
+      }
+    }
+    assert.ok(expectedError);
+  });
+
   it("create with default parameters @loki @sql", (done) => {
     // create() with default parameters has been tested in beforeEach
     done();
