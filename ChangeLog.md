@@ -4,9 +4,11 @@
 
 ## Upcoming Release
 
+## 2021.6 Version 3.13.1
+
 Blob:
 
-- Fixed get service properties or account properties failure from blob endpoint when Uri has suffix '/' after account name.
+- Fixed list containers, get service properties or account properties API failure, when request Uri has a suffix '/' after account name.
 - Fixed get system container failure.
 
 ## 2021.6 Version 3.13.0
