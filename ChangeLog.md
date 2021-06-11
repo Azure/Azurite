@@ -8,6 +8,13 @@ Table :
 
 - added test for URI path parser and updated regex to allow for non standard dev store account names.
 
+## 2021.6 Version 3.13.1
+
+Blob:
+
+- Fixed list containers, get service properties or account properties API failure, when request Uri has a suffix '/' after account name.
+- Fixed get system container failure.
+
 ## 2021.6 Version 3.13.0
 
 General:
