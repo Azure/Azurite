@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table :
+
+- added test for URI path parser and updated regex to allow for non standard dev store account names.
+
 ## 2021.6 Version 3.13.0
 
 General:
