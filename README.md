@@ -240,10 +240,11 @@ You can customize the listening address per your requirements.
 
 ### Listening Port Configuration
 
-Optional. By default, Azurite V3 will listen to 10000 as blob service port, and 10001 as queue service port.
+Optional. By default, Azurite V3 will listen to 10000 as blob service port, and 10001 as queue service port, and 10002 as the table service port.
 You can customize the listening port per your requirements.
 
 > Warning: After using a customized port, you need to update connection string or configurations correspondingly in your Storage Tools or SDKs.
+> If starting Azurite you see error ```Error: listen EACCES 0.0.0.0:10000``` the TCP port is most likely already occupied by another process.
 
 #### Customize Blob/Queue Service Listening Port
 
