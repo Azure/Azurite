@@ -220,6 +220,9 @@ describe("table Entity APIs test", () => {
       (insertError, insertResult, insertResponse) => {
         if (!insertError) {
           requestOverride.headers = {};
+          entityDelete[".metadata"].etag = insertResult[
+            ".metadata"
+          ].etag.replace("20", "21"); // test will be valid for 100 years... if it causes problems then, I shall be very proud
           tableService.deleteEntity(
             tableName,
             entityDelete,
@@ -334,7 +337,7 @@ describe("table Entity APIs test", () => {
       RowKey: "row4",
       myValue: "oldValueUpdate",
       ".metadata": {
-        etag: "0x2252C97588D4000"
+        etag: ""
       }
     };
     requestOverride.headers = {
@@ -347,6 +350,9 @@ describe("table Entity APIs test", () => {
       (insertError, insertResult, insertResponse) => {
         if (!insertError) {
           requestOverride.headers = {};
+          entityUpdate[".metadata"].etag = insertResult[
+            ".metadata"
+          ].etag.replace("20", "21"); // test will be valid for 100 years... if it causes problems then, I shall be very proud
           tableService.replaceEntity(
             tableName,
             entityUpdate,

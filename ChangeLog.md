@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Corrected serialization of errors during Entity Group Transactions.
+
 ## 2021.6 Version 3.13.1
 
 Blob:
