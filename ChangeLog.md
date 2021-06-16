@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Added support for PATCH Verb in Table Batch Operations / Entity Group Transactions
+
 ## 2021.6 Version 3.13.1
 
 Blob:
