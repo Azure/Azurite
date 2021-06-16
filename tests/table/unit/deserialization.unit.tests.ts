@@ -342,4 +342,52 @@ describe("batch deserialization unit tests, these are not the API integration te
     assert.equal(headers.header("prefer"), "return-no-content");
     done();
   });
+
+  it("correctly parses paths from URIs", (done) => {
+    // Account must be alphanumeric, and between 3 and 24 chars long
+    // Table name must be alphanumeric, cannot begin with a number,
+    // and must be between 3 and 63 characters long
+    const uris = [
+      {
+        uri:
+          "http://127.0.0.1:10002/queuesdev/funcpcappdevHistory(PartitionKey='2d2c8fe4-d3a6-438f-aa83-382d93ee9569:ca',RowKey='0000000000000000')",
+        path: "/queuesdev/funcpcappdevHistory"
+      },
+      {
+        uri:
+          "http://127.0.0.1:10002/devaccountstore1/myTable(PartitionKey='1',RowKey='1ab')",
+        path: "/devaccountstore1/myTable"
+      },
+      {
+        uri:
+          "http://127.0.0.1:9999/my1accountstore99/my1Table(PartitionKey='2',RowKey='2')",
+        path: "/my1accountstore99/my1Table"
+      },
+      {
+        uri:
+          "http://127.0.0.1:9999/my1/my1Table9999999999999999999999999999999999999999999999999qw9999(PartitionKey='2',RowKey='2')",
+        path:
+          "/my1/my1Table9999999999999999999999999999999999999999999999999qw9999"
+      }
+    ];
+
+    const serializationBase = new BatchSerialization();
+    uris.forEach((value) => {
+      const extractedPath = serializationBase.extractPath(value.uri);
+      if (extractedPath !== null) {
+        assert.strictEqual(
+          extractedPath[0],
+          value.path,
+          "Uri path did not parse correctly!"
+        );
+      } else {
+        assert.notStrictEqual(
+          null,
+          extractedPath,
+          "Unable to extract path, regex did not match!"
+        );
+      }
+    });
+    done();
+  });
 });

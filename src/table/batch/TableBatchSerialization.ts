@@ -86,8 +86,7 @@ export class TableBatchSerialization extends BatchSerialization {
         }
 
         // extract the request path
-        const pathString = fullRequestURI[1];
-        const path = pathString.match(/\S+devstoreaccount1\/(\w+)/);
+        const path = this.extractPath(fullRequestURI[1]);
         if (path === null || path.length < 2) {
           throw new Error(
             `Couldn't extract path from URL in sub-Request:\n ${subRequest}`
