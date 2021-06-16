@@ -69,7 +69,9 @@ export class TableBatchSerialization extends BatchSerialization {
     const batchOperations: TableBatchOperation[] = subRequests.map(
       (subRequest) => {
         let requestType: RegExpMatchArray | null = [];
-        requestType = subRequest.match("(GET|POST|PUT|MERGE|INSERT|DELETE)");
+        requestType = subRequest.match(
+          "(GET|PATCH|POST|PUT|MERGE|INSERT|DELETE)"
+        );
         if (requestType === null || requestType.length < 2) {
           throw new Error(
             `Couldn't extract verb from sub-Request:\n ${subRequest}`
@@ -604,13 +606,8 @@ export class TableBatchSerialization extends BatchSerialization {
     contentID: number,
     request: BatchRequest
   ): string {
-    const changesetBoundary = this.changesetBoundary.replace(
-      "changeset",
-      "changesetresponse"
-    );
     let errorReponse = "";
     const odataError = err as StorageError;
-    errorReponse += changesetBoundary + "\r\n";
     // Errors in batch processing generate Bad Request error
     errorReponse = this.serializeHttpStatusCode(errorReponse, 400);
     errorReponse += "Content-ID: " + contentID + "\r\n";

@@ -4,9 +4,12 @@
 
 ## Upcoming Release
 
-Table :
+Table:
 
-- added test for URI path parser and updated regex to allow for non standard dev store account names.
+- Added test for URI path parser and updated regex to allow for non standard dev store account names.
+- Corrected serialization of errors during Entity Group Transactions.
+- Correct entity tests using invalid eTag formats.
+- Added support for PATCH Verb in Table Batch Operations / Entity Group Transactions.
 
 ## 2021.6 Version 3.13.1
 
