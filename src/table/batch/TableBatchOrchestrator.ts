@@ -132,7 +132,6 @@ export default class TableBatchOrchestrator {
 
     responseString += batchBoundary + "\r\n";
     // (currently static header) ToDo: Validate if we need to correct headers via tests
-    // We are doubling our change set boundary during errors here ??,--- --changesetresponse_b21a302d-b620-43ac-a8ba-c0f6e0445bcdchangesetresponse_b21a302d-b620-43ac-a8ba-c0f6e0445bcd\r\n
     responseString +=
       "Content-Type: multipart/mixed; boundary=" + changesetBoundary + "\r\n";
     changesetBoundary = "\r\n--" + changesetBoundary;
