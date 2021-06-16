@@ -143,9 +143,11 @@ export default class TableBatchOrchestrator {
       });
     } else {
       // serialize the error
-      responseString += changesetBoundary;
+      responseString += changesetBoundary + "\r\n";
       // then headers
-      // content type etc
+      responseString += "Content-Type: application/http\r\n";
+      responseString += "Content-Transfer-Encoding: binary\r\n";
+      responseString += "\r\n";
       // then HTTP/1.1 404 etc
       responseString += this.errorResponse;
     }
