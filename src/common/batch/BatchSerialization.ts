@@ -62,4 +62,13 @@ export class BatchSerialization {
       throw StorageError;
     }
   }
+
+  /**
+   * Extracts the path from a URI
+   * @param uriString
+   * @returns just the path
+   */
+  public extractPath(uriString: string) {
+    return uriString.match(/\/\w+\/(\w+)/);
+  }
 }

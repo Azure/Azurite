@@ -170,8 +170,9 @@ export function tableStorageContextMiddleware(
     requestID
   );
 
-  // validate Table name
-  if (tableContext.tableName !== undefined) {
+  // validate table name, when table name has value (not undefined or empty string)
+  // skip check for system table
+  if (tableContext.tableName && !tableContext.tableName.startsWith("$")) {
     validateTableName(tableContext, tableContext.tableName);
   }
 

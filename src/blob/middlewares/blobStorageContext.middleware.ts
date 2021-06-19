@@ -104,8 +104,9 @@ export function blobStorageContextMiddleware(
     return next(handlerError);
   }
 
-  // validate conatainer name
-  if (container !== undefined) {
+  // validate conatainer name, when container name has value (not undefined or empty string)
+  // skip validate system container
+  if (container && !container.startsWith("$")) {
     validateContainerName(requestID, container);
   }
 

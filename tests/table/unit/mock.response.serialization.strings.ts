@@ -30,7 +30,7 @@ export default class SerializationResponseMockStrings {
   // Azure responds with +DataServiceVersion: 1.0 right now
   public static PartialBatchSingleInsertOrReplaceResponseString: string =
     // prettier-ignore
-    "Content-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 204 No Content\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-cache\r\nDataServiceVersion: 3.0;\r\nETag: W/\"datetime'2021-02-12T08%3A28%3A27.47468Z'\"\r\nLocation: http://127.0.0.1:11002/devstoreaccount1/table161311975539604802(PartitionKey=%27part1%27,RowKey=%27row161311975544100305%27)\r\nDataServiceId: http://127.0.0.1:11002/devstoreaccount1/table161311975539604802(PartitionKey=%27part1%27,RowKey=%27row161311975544100305%27)\r\n";
+    "Content-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 204 No Content\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-cache\r\nDataServiceVersion: 3.0;\r\nETag: W/\"datetime'2021-02-12T08%3A28%3A27.47468Z'\"\r\nLocation: http://127.0.0.1:11002/devstoreaccount1/table161311975539604802(PartitionKey='part1',RowKey='row161311975544100305')\r\nDataServiceId: http://127.0.0.1:11002/devstoreaccount1/table161311975539604802(PartitionKey='part1',RowKey='row161311975544100305')\r\n";
 
   // ####################
   // Mocks for Single Batch Delete
