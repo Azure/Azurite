@@ -1214,4 +1214,42 @@ describe("table Entity APIs test", () => {
       }
     );
   });
+
+  it("Can create entities with empty string for row and partition key, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+
+    const emptyKeysEntity = createBasicEntityForTest();
+    emptyKeysEntity.PartitionKey._ = "";
+    emptyKeysEntity.RowKey._ = "";
+
+    tableService.insertEntity<TestEntity>(
+      tableName,
+      emptyKeysEntity,
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.strictEqual(updateResponse.statusCode, 201);
+          tableService.retrieveEntity<TestEntity>(
+            tableName,
+            "",
+            "",
+            (error, result, response) => {
+              if (error) {
+                assert.ifError(error);
+              } else if (result) {
+                const entity: TestEntity = result;
+                assert.equal(entity.myValue._, emptyKeysEntity.myValue._);
+              }
+              done();
+            }
+          );
+        }
+      }
+    );
+  });
 });

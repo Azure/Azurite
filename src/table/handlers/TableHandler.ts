@@ -179,8 +179,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     if (
       !options.tableEntityProperties ||
-      !options.tableEntityProperties.PartitionKey ||
-      // rowKey may be empty string
+      // rowKey and partitionKey may be empty string
+      options.tableEntityProperties.PartitionKey === null ||
       options.tableEntityProperties.RowKey === null
     ) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
