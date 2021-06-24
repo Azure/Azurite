@@ -11,6 +11,10 @@ Table:
 - Correct entity tests using invalid eTag formats.
 - Added support for PATCH Verb in Table Batch Operations / Entity Group Transactions.
 
+Blob:
+
+- Fixed SAS-token validation for requests with Content-Encoding/Content-Language headers.
+
 ## 2021.6 Version 3.13.1
 
 Blob:
