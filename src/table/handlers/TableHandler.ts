@@ -177,6 +177,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const accept = this.getAndCheckPayloadFormat(tableContext);
     const prefer = this.getAndCheckPreferHeader(tableContext);
 
+    // curently unable to use checking functions as the partitionKey
+    // and rowKey are not coming through the context.
+    // const partitionKey = this.getAndCheckPartitionKey(tableContext);
+    // const rowKey = this.getAndCheckRowKey(tableContext);
     if (
       !options.tableEntityProperties ||
       // rowKey and partitionKey may be empty string
