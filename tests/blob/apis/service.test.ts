@@ -360,4 +360,40 @@ describe("ServiceAPIs", () => {
       result.clientRequestId
     );
   });
+
+  it("Get Account/Service Properties with Uri has suffix '/' after account name @loki @sql", async () => {
+    const baseURL1 = `http://${server.config.host}:${server.config.port}/devstoreaccount1/`;
+    const serviceClient1 = new BlobServiceClient(
+      baseURL1,
+      newPipeline(
+        new StorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        ),
+        {
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
+        }
+      )
+    );
+
+    let result = await serviceClient1.getAccountInfo();
+    assert.equal(result.accountKind, EMULATOR_ACCOUNT_KIND);
+    assert.equal(result.skuName, EMULATOR_ACCOUNT_SKUNAME);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+
+    result = await serviceClient1.getProperties();
+    assert.ok(typeof result.requestId);
+    assert.ok(result.requestId!.length > 0);
+    assert.ok(typeof result.version);
+    assert.ok(result.version!.length > 0);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+  });
 });

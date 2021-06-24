@@ -4,15 +4,40 @@
 
 ## Upcoming Release
 
+Table:
+
+- Added test for URI path parser and updated regex to allow for non standard dev store account names.
+- Corrected serialization of errors during Entity Group Transactions.
+- Correct entity tests using invalid eTag formats.
+- Added support for PATCH Verb in Table Batch Operations / Entity Group Transactions.
+
+## 2021.6 Version 3.13.1
+
+Blob:
+
+- Fixed list containers, get service properties or account properties API failure, when request Uri has a suffix '/' after account name.
+- Fixed get system container failure.
+
+## 2021.6 Version 3.13.0
+
 General:
 
-- updated typescript to 4.2.4
+- Bump up Azure Storage service API version to 2020-08-04.
+- Updated typescript to 4.2.4.
+
+Blob:
+
+- Added check for invalid container name.
 
 Table:
 
-- added check for invalid etag format
-- added tests for invalid etag format
-- corrected code to support typescript 4.2.4 update
+- Added check for invalid etag format.
+- Added tests for invalid etag format.
+- Corrected code to support typescript 4.2.4 update.
+- Supported Table Service in Visual Studio Code extension.
+- Fix an issue that query for Long Int fail in Metadata layer.
+- Fix an issue of axios dependency.
+- Added check for invalid table name.
 
 ## 2021.4 Version 3.12.0
 

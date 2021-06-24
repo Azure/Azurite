@@ -266,4 +266,26 @@ export default class StorageErrorFactory {
       context
     );
   }
+
+  public static getInvalidResourceName(context: Context): StorageError {
+    return new StorageError(
+      400,
+      "",
+      `The specifed resource name contains invalid characters.`,
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
+
+  public static getOutOfRangeName(context: Context): StorageError {
+    return new StorageError(
+      400,
+      "",
+      `The specified resource name length is not within the permissible limits.`,
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
 }

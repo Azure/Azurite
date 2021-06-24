@@ -12,7 +12,7 @@ import {
   ValidAPIVersions,
   VERSION
 } from "../utils/constants";
-import { checkApiVersion } from "../utils/utils";
+import { checkApiVersion, validateContainerName } from "../utils/utils";
 
 export default function createStorageBlobContextMiddleware(
   skipApiVersionCheck?: boolean
@@ -102,6 +102,12 @@ export function blobStorageContextMiddleware(
     );
 
     return next(handlerError);
+  }
+
+  // validate conatainer name, when container name has value (not undefined or empty string)
+  // skip validate system container
+  if (container && !container.startsWith("$")) {
+    validateContainerName(requestID, container);
   }
 
   logger.info(

@@ -3,7 +3,7 @@
   "displayName": "Azurite",
   "description": "An open source Azure Storage API compatible server",
   "icon": "icon.png",
-  "version": "3.12.0",
+  "version": "3.13.1",
   "publisher": "Azurite",
   "categories": [
     "Other"
@@ -30,7 +30,7 @@
     "morgan": "^1.9.1",
     "multistream": "^2.1.1",
     "mysql2": "^2.1.0",
-    "rimraf": "^2.6.3",
+    "rimraf": "^3.0.2",
     "sequelize": "^6.3.0",
     "tedious": "^9.2.1",
     "to-readable-stream": "^2.1.0",
@@ -55,7 +55,7 @@
     "@types/morgan": "^1.7.35",
     "@types/multistream": "^2.1.1",
     "@types/node": "^14.14.24",
-    "@types/rimraf": "^2.0.2",
+    "@types/rimraf": "^3.0.0",
     "@types/uri-templates": "^0.1.29",
     "@types/uuid": "^3.4.4",
     "@types/validator": "^10.11.3",
@@ -86,7 +86,10 @@
     "onCommand:azurite.clean_blob",
     "onCommand:azurite.start_queue",
     "onCommand:azurite.close_queue",
-    "onCommand:azurite.clean_queue"
+    "onCommand:azurite.clean_queue",
+    "onCommand:azurite.start_table",
+    "onCommand:azurite.close_table",
+    "onCommand:azurite.clean_table"
   ],
   "contributes": {
     "commands": [
@@ -133,6 +136,21 @@
       {
         "command": "azurite.clean_queue",
         "title": "Clean Queue Service",
+        "category": "Azurite"
+      },
+      {
+        "command": "azurite.start_table",
+        "title": "Start Table Service",
+        "category": "Azurite"
+      },
+      {
+        "command": "azurite.close_table",
+        "title": "Close Table Service",
+        "category": "Azurite"
+      },
+      {
+        "command": "azurite.clean_table",
+        "title": "Clean Table Service",
         "category": "Azurite"
       }
     ],
@@ -198,6 +216,16 @@
             "type": "number",
             "default": 10001,
             "description": "Queue service listening port, by default 10001"
+          },
+          "azurite.tableHost": {
+            "type": "string",
+            "default": "127.0.0.1",
+            "description": "Table service listening endpoint, by default 127.0.0.1"
+          },
+          "azurite.tablePort": {
+            "type": "number",
+            "default": 10002,
+            "description": "Table service listening port, by default 10002"
           },
           "azurite.skipApiVersionCheck": {
             "type": "boolean",
