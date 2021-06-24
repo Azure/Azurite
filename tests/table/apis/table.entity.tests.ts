@@ -1214,4 +1214,32 @@ describe("table Entity APIs test", () => {
       }
     );
   });
+
+  it("Should have a valid OData Metadata value when inserting an entity, @loki", (done) => {
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-entity
+    const entityInsert = createBasicEntityForTest();
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    tableService.insertEntity(
+      tableName,
+      entityInsert,
+      (error, result, insertresponse) => {
+        if (
+          !error &&
+          insertresponse !== undefined &&
+          insertresponse.body !== undefined
+        ) {
+          const body = insertresponse.body as object;
+          const meta: string = body["odata.metadata" as keyof object];
+          assert.strictEqual(meta.endsWith("/@Element"), true);
+          done();
+        } else {
+          assert.ifError(error);
+          done();
+        }
+      }
+    );
+  });
 });

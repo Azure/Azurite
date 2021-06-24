@@ -10,6 +10,7 @@ Table:
 - Corrected serialization of errors during Entity Group Transactions.
 - Correct entity tests using invalid eTag formats.
 - Added support for PATCH Verb in Table Batch Operations / Entity Group Transactions.
+- Adds /@Element to the odata.metadata response.
 
 ## 2021.6 Version 3.13.1
 

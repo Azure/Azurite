@@ -201,7 +201,7 @@ export function getOdataAnnotations(
     }
 
     return {
-      odatametadata: `${urlPrefixEndWithSlash}$metadata#${table}`,
+      odatametadata: `${urlPrefixEndWithSlash}$metadata#${table}/@Element`,
       odatatype: `${account}.${table}`,
       odataid: `${urlPrefixEndWithSlash}${table}(PartitionKey='${partitionKey}',RowKey='${rowKey}')`,
       odataeditLink: `${table}(PartitionKey='${partitionKey}',RowKey='${rowKey}')`
