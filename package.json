@@ -51,7 +51,7 @@
     "@types/express": "^4.16.0",
     "@types/jsonwebtoken": "^8.3.9",
     "@types/lokijs": "^1.5.2",
-    "@types/mocha": "^5.2.6",
+    "@types/mocha": "^8.2.2",
     "@types/morgan": "^1.7.35",
     "@types/multistream": "^2.1.1",
     "@types/node": "^14.14.24",
