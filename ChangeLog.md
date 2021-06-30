@@ -15,6 +15,7 @@ Table:
 Blob:
 
 - Fixed SAS-token validation for requests with Content-Encoding/Content-Language headers.
+- Return `x-ms-copy-status` header from syncCopyFromURL.
 
 ## 2021.6 Version 3.13.1
 

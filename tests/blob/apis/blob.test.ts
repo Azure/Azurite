@@ -1045,11 +1045,11 @@ describe("BlobAPIs", () => {
     const result_copy = await destBlobClient.syncCopyFromURL(
       sourceBlobClient.url
     );
-
     assert.equal(
-      result_copy!._response.request.headers.get("x-ms-client-request-id"),
-      result_copy!._response.request.requestId
+      result_copy._response.request.headers.get("x-ms-client-request-id"),
+      result_copy._response.request.requestId
     );
+    assert.equal(result_copy.copyStatus, "success");
 
     const result = await destBlobClient.getProperties();
     assert.ok(result.date);
@@ -1163,9 +1163,10 @@ describe("BlobAPIs", () => {
       sourceBlobClient.url
     );
     assert.equal(
-      result_copy!._response.request.headers.get("x-ms-client-request-id"),
-      result_copy!._response.request.requestId
+      result_copy._response.request.headers.get("x-ms-client-request-id"),
+      result_copy._response.request.requestId
     );
+    assert.equal(result_copy.copyStatus, "success");
 
     const result = await destBlobClient.getProperties();
     assert.ok(result.date);

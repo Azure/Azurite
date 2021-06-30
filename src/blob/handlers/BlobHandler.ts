@@ -849,6 +849,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       options
     );
 
+    let copyStatus: Models.SyncCopyStatusType | undefined;
+    if (res.copyStatus !== undefined) {
+      if (res.copyStatus === Models.CopyStatusType.Success) {
+        copyStatus = Models.SyncCopyStatusType.Success;
+      } else {
+        throw StorageErrorFactory.getUnexpectedSyncCopyStatus(
+          context.contextId!,
+          res.copyStatus
+        );
+      }
+    }
+
     const response: Models.BlobCopyFromURLResponse = {
       statusCode: 202,
       eTag: res.etag,
@@ -857,6 +869,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       version: BLOB_API_VERSION,
       date: context.startTime,
       copyId: res.copyId,
+      copyStatus,
       clientRequestId: options.requestId
     };
 
