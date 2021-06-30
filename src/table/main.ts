@@ -80,6 +80,6 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error(`Exit die to unhandled error: ${err.message}`);
+  console.error(`Exiting due to an unhandled error: ${err.message}`);
   process.exit(1);
 });
