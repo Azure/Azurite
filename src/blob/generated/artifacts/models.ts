@@ -2672,6 +2672,10 @@ export interface BlockBlobStageBlockOptionalParams {
    * Additional parameters for the operation
    */
   cpkInfo?: CpkInfo;
+  /**
+   * Additional parameters for the operation
+   */
+  blobHTTPHeaders?: BlobHTTPHeaders;
 }
 
 /**

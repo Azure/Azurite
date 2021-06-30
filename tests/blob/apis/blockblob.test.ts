@@ -4,6 +4,7 @@ import {
   newPipeline
 } from "@azure/storage-blob";
 import assert = require("assert");
+import crypto = require("crypto");
 
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
@@ -189,6 +190,53 @@ describe("BlockBlobAPIs", () => {
       listResponse._response.request.headers.get("x-ms-client-request-id"),
       listResponse.clientRequestId
     );
+  });
+
+  it("stageBlock with wrong body should throw md5 mismatch @loki @sql", async () => {
+    const body = "HelloWorld";
+    const md5 = new Uint8Array(Buffer.from("anotherBody"));
+    const options = { transactionalContentMD5: md5 };
+
+    try {
+      await blockBlobClient.stageBlock(
+        base64encode("1"),
+        body,
+        body.length,
+        options
+      );
+    } catch (e) {
+      assert.equal(e.name, "RestError");
+      assert.equal(e.statusCode, 400);
+      assert.equal(
+        e.details.message.indexOf("Provided contentMD5 doesn't match."),
+        0
+      );
+      return;
+    }
+    assert.fail("Did not throw an exception.");
+  });
+
+  it("stageBlock with md5 hash check @loki @sql", async () => {
+    const body = "HelloWorld";
+    const md5 = crypto
+      .createHash("md5")
+      .update(body, "utf8")
+      .digest();
+    const options = {
+      transactionalContentMD5: new Uint8Array(Buffer.from(md5))
+    };
+
+    await blockBlobClient.stageBlock(
+      base64encode("1"),
+      body,
+      body.length,
+      options
+    );
+
+    const listResponse = await blockBlobClient.getBlockList("uncommitted");
+    assert.equal(listResponse.uncommittedBlocks!.length, 1);
+    assert.equal(listResponse.uncommittedBlocks![0].name, base64encode("1"));
+    assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
   });
 
   it("commitBlockList @loki @sql", async () => {
