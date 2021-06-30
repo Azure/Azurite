@@ -43,6 +43,7 @@ Table:
 - Fix an issue that query for Long Int fail in Metadata layer.
 - Fix an issue of axios dependency.
 - Added check for invalid table name.
+- Improved handling of empty strings and strings with multiple spaces for query filters.
 
 ## 2021.4 Version 3.12.0
 
