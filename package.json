@@ -65,7 +65,7 @@
     "azure-storage": "^2.10.3",
     "cross-env": "^6.0.3",
     "cross-var": "^1.1.0",
-    "husky": "^4.3.5",
+    "husky": "^6.0.0",
     "lint-staged": "^8.2.1",
     "mocha": "^5.2.0",
     "prettier": "^2.2.1",
