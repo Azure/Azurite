@@ -244,7 +244,7 @@ Optional. By default, Azurite V3 will listen to 10000 as blob service port, and 
 You can customize the listening port per your requirements.
 
 > Warning: After using a customized port, you need to update connection string or configurations correspondingly in your Storage Tools or SDKs.
-> If starting Azurite you see error ```Error: listen EACCES 0.0.0.0:10000``` the TCP port is most likely already occupied by another process.
+> If starting Azurite you see error `Error: listen EACCES 0.0.0.0:10000` the TCP port is most likely already occupied by another process.
 
 #### Customize Blob/Queue Service Listening Port
 
@@ -437,7 +437,12 @@ Then you start Azurite with that cert and key.
 azurite --cert 127.0.0.1.pem --key 127.0.0.1-key.pem
 ```
 
-NOTE: If you are using the Azure SDKs, then you will also need to pass the `--oauth basic` option.
+If you start Azurite with docker, you need to map the folder contains the cert and key files to docker.
+In following example, the local folder c:/azurite contains the cert and key files, and map it to /workspace on docker.
+
+```bash
+docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 -v c:/azurite:/workspace  mcr.microsoft.com/azure-storage/azurite azurite --blobHost 0.0.0.0  --queueHost 0.0.0.0 --tableHost 0.0.0.0 --cert /workspace/127.0.0.1.pem --key /workspace/127.0.0.1-key.pem
+```
 
 ##### OpenSSL
 
@@ -582,7 +587,7 @@ DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02
 
 ### Azure SDKs
 
-To use Azurite with the [Azure SDKs](https://aka.ms/azsdk), you must use OAuth and HTTPS options:
+To use Azurite with the [Azure SDKs](https://aka.ms/azsdk), you can use OAuth with HTTPS options:
 
 `azurite --oauth basic --cert certname.pem --key certname-key.pem`
 
