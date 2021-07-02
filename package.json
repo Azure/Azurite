@@ -61,7 +61,7 @@
     "@types/validator": "^13.1.4",
     "@types/vscode": "^1.39.0",
     "@types/xml2js": "^0.4.3",
-    "autorest": "^2.0.4413",
+    "autorest": "^3.2.3",
     "azure-storage": "^2.10.3",
     "cross-env": "^6.0.3",
     "cross-var": "^1.1.0",
