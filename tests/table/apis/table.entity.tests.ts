@@ -78,7 +78,7 @@ describe("table Entity APIs test", () => {
       tableName,
       entity,
       (error, result, response) => {
-        assert.equal(response.statusCode, 201);
+        assert.strictEqual(response.statusCode, 201);
         assert.ok(
           response.headers?.etag.match(
             "W/\"datetime'\\d{4}-\\d{2}-\\d{2}T\\d{2}%3A\\d{2}%3A\\d{2}.\\d{7}Z'\""
@@ -129,20 +129,21 @@ describe("table Entity APIs test", () => {
   // a starting point for delete and query entity APIs
   it("Should insert new Entity with empty RowKey, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-entity
-    const entity = {
-      PartitionKey: "part1",
-      RowKey: "",
-      myValue: "value1"
-    };
-    tableService.insertEntity(tableName, entity, (error, result, response) => {
-      assert.equal(response.statusCode, 201);
-      assert.ok(
-        response.headers?.etag.match(
-          "W/\"datetime'\\d{4}-\\d{2}-\\d{2}T\\d{2}%3A\\d{2}%3A\\d{2}.\\d{7}Z'\""
-        )
-      );
-      done();
-    });
+    const entity = createBasicEntityForTest();
+    entity.RowKey._ = "";
+    tableService.insertEntity<TestEntity>(
+      tableName,
+      entity,
+      (error, result, response) => {
+        assert.strictEqual(response.statusCode, 201);
+        assert.ok(
+          response.headers?.etag.match(
+            "W/\"datetime'\\d{4}-\\d{2}-\\d{2}T\\d{2}%3A\\d{2}%3A\\d{2}.\\d{7}Z'\""
+          )
+        );
+        done();
+      }
+    );
   });
 
   it("Should retrieve entity with empty RowKey, @loki", (done) => {
@@ -534,21 +535,29 @@ describe("table Entity APIs test", () => {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
+    const entityToInsertOrMerge = createBasicEntityForTest();
     tableService.insertOrMergeEntity(
       tableName,
-      {
-        PartitionKey: "part1",
-        RowKey: "row8",
-        myValue: "firstValue"
-      },
+      entityToInsertOrMerge,
       (updateError, updateResult, updateResponse) => {
         if (updateError) {
           assert.ifError(updateError);
           done();
         } else {
-          assert.equal(updateResponse.statusCode, 204); // No content
-          // TODO When QueryEntity is done - validate Entity Properties
-          done();
+          assert.strictEqual(updateResponse.statusCode, 200); // Service responds with 200
+          tableService.retrieveEntity<TestEntity>(
+            tableName,
+            entityToInsertOrMerge.PartitionKey._,
+            entityToInsertOrMerge.RowKey._,
+            (error, result) => {
+              assert.strictEqual(
+                result.myValue._,
+                entityToInsertOrMerge.myValue._,
+                "Inserted value did not match"
+              );
+              done();
+            }
+          );
         }
       }
     );
@@ -823,36 +832,44 @@ describe("table Entity APIs test", () => {
     };
     const batchEntity1 = createBasicEntityForTest();
 
-    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
-    entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
-    batchEntity1.myValue._ = "value2";
-    entityBatch.replaceEntity(batchEntity1);
-
-    tableService.executeBatch(
+    tableService.insertEntity(
       tableName,
-      entityBatch,
-      (updateError, updateResult, updateResponse) => {
-        if (updateError) {
-          assert.ifError(updateError);
-          done();
-        } else {
-          assert.equal(updateResponse.statusCode, 202);
-          tableService.retrieveEntity<TestEntity>(
-            tableName,
-            batchEntity1.PartitionKey._,
-            batchEntity1.RowKey._,
-            (error, result) => {
-              if (error) {
-                assert.ifError(error);
-                done();
-              } else if (result) {
-                const entity: TestEntity = result;
-                assert.equal(entity.myValue._, batchEntity1.myValue._);
-              }
+      batchEntity1,
+      (initialInsertError, initialInsertResult) => {
+        assert.ifError(initialInsertError);
+        const batchEntity2 = createBasicEntityForTest();
+        const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+        entityBatch.addOperation("INSERT", batchEntity2, { echoContent: true });
+        batchEntity1.myValue._ = "value2";
+        entityBatch.replaceEntity(batchEntity1);
+
+        tableService.executeBatch(
+          tableName,
+          entityBatch,
+          (updateError, updateResult, updateResponse) => {
+            if (updateError) {
+              assert.ifError(updateError);
               done();
+            } else {
+              assert.equal(updateResponse.statusCode, 202);
+              tableService.retrieveEntity<TestEntity>(
+                tableName,
+                batchEntity1.PartitionKey._,
+                batchEntity1.RowKey._,
+                (error, result) => {
+                  if (error) {
+                    assert.ifError(error);
+                    done();
+                  } else if (result) {
+                    const entity: TestEntity = result;
+                    assert.equal(entity.myValue._, batchEntity1.myValue._);
+                  }
+                  done();
+                }
+              );
             }
-          );
-        }
+          }
+        );
       }
     );
   });
@@ -863,36 +880,43 @@ describe("table Entity APIs test", () => {
       accept: "application/json;odata=fullmetadata"
     };
     const batchEntity1 = createBasicEntityForTest();
-
-    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
-    entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
-    batchEntity1.myValue._ = "value2";
-    entityBatch.mergeEntity(batchEntity1);
-
-    tableService.executeBatch(
+    tableService.insertEntity(
       tableName,
-      entityBatch,
-      (updateError, updateResult, updateResponse) => {
-        if (updateError) {
-          assert.ifError(updateError);
-          done();
-        } else {
-          assert.equal(updateResponse.statusCode, 202);
-          tableService.retrieveEntity<TestEntity>(
-            tableName,
-            batchEntity1.PartitionKey._,
-            batchEntity1.RowKey._,
-            (error, result) => {
-              if (error) {
-                assert.ifError(error);
-              } else if (result) {
-                const entity: TestEntity = result;
-                assert.equal(entity.myValue._, batchEntity1.myValue._);
-              }
+      batchEntity1,
+      (initialInsertError, initialInsertResult) => {
+        assert.ifError(initialInsertError);
+        const batchEntity2 = createBasicEntityForTest();
+        const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+        entityBatch.addOperation("INSERT", batchEntity2, { echoContent: true });
+        batchEntity1.myValue._ = "value2";
+        entityBatch.mergeEntity(batchEntity1);
+
+        tableService.executeBatch(
+          tableName,
+          entityBatch,
+          (updateError, updateResult, updateResponse) => {
+            if (updateError) {
+              assert.ifError(updateError);
               done();
+            } else {
+              assert.strictEqual(updateResponse.statusCode, 202);
+              tableService.retrieveEntity<TestEntity>(
+                tableName,
+                batchEntity1.PartitionKey._,
+                batchEntity1.RowKey._,
+                (error, result) => {
+                  if (error) {
+                    assert.ifError(error);
+                  } else if (result) {
+                    const entity: TestEntity = result;
+                    assert.equal(entity.myValue._, batchEntity1.myValue._);
+                  }
+                  done();
+                }
+              );
             }
-          );
-        }
+          }
+        );
       }
     );
   });
@@ -903,37 +927,45 @@ describe("table Entity APIs test", () => {
       accept: "application/json;odata=fullmetadata"
     };
     const batchEntity1 = createBasicEntityForTest();
-
-    // Should fail
-    // The batch request contains multiple changes with same row key. An entity can appear only once in a batch request.
-    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
-    entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
-    entityBatch.deleteEntity(batchEntity1);
-
-    tableService.executeBatch(
+    tableService.insertEntity(
       tableName,
-      entityBatch,
-      (updateError, updateResult, updateResponse) => {
-        if (updateError) {
-          assert.ifError(updateError);
-          done();
-        } else {
-          assert.equal(updateResponse.statusCode, 202);
-          tableService.retrieveEntity<TestEntity>(
-            tableName,
-            batchEntity1.PartitionKey._,
-            batchEntity1.RowKey._,
-            (error, result) => {
-              const retrieveError: StorageError = error as StorageError;
-              assert.equal(
-                retrieveError.statusCode,
-                404,
-                "status code was not equal to 404!"
-              );
+      batchEntity1,
+      (initialInsertError, initialInsertResult) => {
+        assert.ifError(initialInsertError);
+
+        const batchEntity2 = createBasicEntityForTest();
+        // Should fail
+        // The batch request contains multiple changes with same row key. An entity can appear only once in a batch request.
+        const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+        entityBatch.addOperation("INSERT", batchEntity2, { echoContent: true });
+        entityBatch.deleteEntity(batchEntity1);
+
+        tableService.executeBatch(
+          tableName,
+          entityBatch,
+          (updateError, updateResult, updateResponse) => {
+            if (updateError) {
+              assert.ifError(updateError);
               done();
+            } else {
+              assert.equal(updateResponse.statusCode, 202);
+              tableService.retrieveEntity<TestEntity>(
+                tableName,
+                batchEntity1.PartitionKey._,
+                batchEntity1.RowKey._,
+                (error, result) => {
+                  const retrieveError: StorageError = error as StorageError;
+                  assert.equal(
+                    retrieveError.statusCode,
+                    404,
+                    "status code was not equal to 404!"
+                  );
+                  done();
+                }
+              );
             }
-          );
-        }
+          }
+        );
       }
     );
   });
@@ -1199,49 +1231,52 @@ describe("table Entity APIs test", () => {
     };
     const batchEntity1 = createBasicEntityForTest();
 
-    const entityBatch: Azure.TableBatch = new Azure.TableBatch();
-    entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
-    batchEntity1.myValue._ = "value2";
-    entityBatch.mergeEntity(batchEntity1);
+    tableService.insertEntity<TestEntity>(tableName, batchEntity1, () => {
+      const batchEntity2 = createBasicEntityForTest();
+      const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+      entityBatch.addOperation("INSERT", batchEntity2, { echoContent: true });
+      batchEntity1.myValue._ = "value2";
+      entityBatch.mergeEntity(batchEntity1);
 
-    tableService.executeBatch(
-      tableName,
-      entityBatch,
-      (updateError, updateResult, updateResponse) => {
-        if (updateError) {
-          assert.ifError(updateError);
-          done();
-        } else {
-          assert.equal(updateResponse.statusCode, 202);
-          tableService.retrieveEntity<TestEntity>(
-            tableName,
-            batchEntity1.PartitionKey._,
-            batchEntity1.RowKey._,
-            (error, result, response) => {
-              if (error) {
-                assert.ifError(error);
-              } else if (result) {
-                const entity: TestEntity = result;
-                assert.equal(entity.myValue._, batchEntity1.myValue._);
+      tableService.executeBatch(
+        tableName,
+        entityBatch,
+        (updateError, updateResult, updateResponse) => {
+          if (updateError) {
+            assert.ifError(updateError);
+            done();
+          } else {
+            assert.equal(updateResponse.statusCode, 202);
+            tableService.retrieveEntity<TestEntity>(
+              tableName,
+              batchEntity1.PartitionKey._,
+              batchEntity1.RowKey._,
+              (error, result, response) => {
+                if (error) {
+                  assert.ifError(error);
+                } else if (result) {
+                  const entity: TestEntity = result;
+                  assert.equal(entity.myValue._, batchEntity1.myValue._);
 
-                if (response !== null) {
-                  const body: any = response?.body;
-                  assert.notStrictEqual(body, null, "response empty");
-                  if (body != null) {
-                    assert.strictEqual(
-                      body["odata.etag"].match(/(%3A)/).length,
-                      2,
-                      "did not find the expected number of escaped sequences"
-                    );
+                  if (response !== null) {
+                    const body: any = response?.body;
+                    assert.notStrictEqual(body, null, "response empty");
+                    if (body != null) {
+                      assert.strictEqual(
+                        body["odata.etag"].match(/(%3A)/).length,
+                        2,
+                        "did not find the expected number of escaped sequences"
+                      );
+                    }
                   }
                 }
+                done();
               }
-              done();
-            }
-          );
+            );
+          }
         }
-      }
-    );
+      );
+    });
   });
 
   it("Should have a valid OData Metadata value when inserting an entity, @loki", (done) => {
@@ -1270,5 +1305,31 @@ describe("table Entity APIs test", () => {
         }
       }
     );
+  });
+
+  // ToDo: Move to Table level tests
+  it("Should have a valid OData Metadata value when inserting a table, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const newTableName: string = getUniqueName("table");
+    tableService.createTable(newTableName, (error, result, response) => {
+      if (
+        !error &&
+        result !== undefined &&
+        response !== undefined &&
+        response.body !== undefined
+      ) {
+        const body = response.body as object;
+        const meta: string = body["odata.metadata" as keyof object];
+        // service response for this operation ends with /@Element
+        assert.strictEqual(meta.endsWith("/@Element"), true);
+        done();
+      } else {
+        assert.ifError(error);
+        done();
+      }
+    });
   });
 });
