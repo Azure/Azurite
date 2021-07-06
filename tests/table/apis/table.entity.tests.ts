@@ -23,7 +23,7 @@ configLogger(false);
 // of a local Azurite instance, otherwise we need an
 // ENV VAR called AZURE_STORAGE
 // containing Azure Storage Connection String.
-const testLocalAzuriteInstance = false;
+const testLocalAzuriteInstance = true;
 
 describe("table Entity APIs test", () => {
   let server: TableServer;
