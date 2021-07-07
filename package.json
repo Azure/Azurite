@@ -36,7 +36,7 @@
     "to-readable-stream": "^2.1.0",
     "tslib": "^1.9.3",
     "uri-templates": "^0.2.0",
-    "uuid": "^3.3.2",
+    "uuid": "^8.3.2",
     "winston": "^3.1.0",
     "xml2js": "^0.4.19"
   },
