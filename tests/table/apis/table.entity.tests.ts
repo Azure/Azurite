@@ -21,7 +21,7 @@ import { TestEntity } from "./TestEntity";
 configLogger(false);
 // For convenience, we have a switch to control the use
 // of a local Azurite instance, otherwise we need an
-// ENV VAR called AZURE_STORAGE
+// ENV VAR called AZURE_TABLE_STORAGE
 // containing Azure Storage Connection String.
 const testLocalAzuriteInstance = true;
 
@@ -169,7 +169,7 @@ describe("table Entity APIs test", () => {
             (queryError, queryResult, queryResponse) => {
               if (!queryError) {
                 if (queryResult.entries && queryResult.entries.length > 0) {
-                  assert.equal(queryResponse.statusCode, 200);
+                  assert.strictEqual(queryResponse.statusCode, 200);
                   done();
                 } else {
                   assert.fail("Test failed to retrieve the entity.");
@@ -237,7 +237,7 @@ describe("table Entity APIs test", () => {
             tableName,
             insertResult,
             (deleteError, deleteResponse) => {
-              assert.equal(deleteResponse.statusCode, 412); // Precondition failed
+              assert.strictEqual(deleteResponse.statusCode, 412); // Precondition failed
               done();
             }
           );
@@ -267,7 +267,7 @@ describe("table Entity APIs test", () => {
             result, // SDK defined entity type...
             (deleteError, deleteResponse) => {
               if (!deleteError) {
-                assert.equal(deleteResponse.statusCode, 204); // Precondition succeeded
+                assert.strictEqual(deleteResponse.statusCode, 204); // Precondition succeeded
                 done();
               } else {
                 assert.ifError(deleteError);
@@ -414,11 +414,8 @@ describe("table Entity APIs test", () => {
     );
   });
 
+  // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-or-replace-entity
   it("Insert or Replace (upsert) on an Entity that does not exist, @loki", (done) => {
-    requestOverride.headers = {
-      Prefer: "return-content",
-      accept: "application/json;odata=fullmetadata"
-    };
     const entityToInsert = createBasicEntityForTest();
     tableService.insertOrReplaceEntity(
       tableName,
@@ -448,11 +445,8 @@ describe("table Entity APIs test", () => {
     );
   });
 
+  // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-or-replace-entity
   it("Insert or Replace (upsert) on an Entity that exists, @loki", (done) => {
-    requestOverride.headers = {
-      Prefer: "return-content",
-      accept: "application/json;odata=fullmetadata"
-    };
     const upsertEntity = createBasicEntityForTest();
     tableService.insertEntity(tableName, upsertEntity, () => {
       upsertEntity.myValue._ = "updated";
@@ -484,12 +478,9 @@ describe("table Entity APIs test", () => {
     });
   });
 
+  // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-or-merge-entity
   it("Insert or Merge on an Entity that exists, @loki", (done) => {
     const entityInsert = createBasicEntityForTest();
-    requestOverride.headers = {
-      Prefer: "return-content",
-      accept: "application/json;odata=fullmetadata"
-    };
     tableService.insertEntity(
       tableName,
       entityInsert,
@@ -502,7 +493,7 @@ describe("table Entity APIs test", () => {
             entityInsert,
             (updateError, updateResult, updateResponse) => {
               if (!updateError) {
-                assert.equal(updateResponse.statusCode, 204); // Precondition succeeded
+                assert.strictEqual(updateResponse.statusCode, 204); // Precondition succeeded
                 tableService.retrieveEntity<TestEntity>(
                   tableName,
                   entityInsert.PartitionKey._,
@@ -583,7 +574,7 @@ describe("table Entity APIs test", () => {
           assert.ifError(updateError);
           done();
         } else {
-          assert.equal(updateResponse.statusCode, 202);
+          assert.strictEqual(updateResponse.statusCode, 202);
           tableService.retrieveEntity<TestEntity>(
             tableName,
             batchEntity1.PartitionKey._,
@@ -593,7 +584,7 @@ describe("table Entity APIs test", () => {
                 assert.ifError(error);
               } else if (result) {
                 const entity: TestEntity = result;
-                assert.equal(entity.myValue._, batchEntity1.myValue._);
+                assert.strictEqual(entity.myValue._, batchEntity1.myValue._);
               }
               done();
             }
@@ -625,7 +616,7 @@ describe("table Entity APIs test", () => {
           assert.ifError(updateError);
           done();
         } else {
-          assert.equal(updateResponse.statusCode, 202); // No content
+          assert.strictEqual(updateResponse.statusCode, 202); // No content
           // Now that QueryEntity is done - validate Entity Properties as follows:
           tableService.retrieveEntity<TestEntity>(
             tableName,
@@ -633,7 +624,7 @@ describe("table Entity APIs test", () => {
             batchEntity1.RowKey._,
             (error, result) => {
               const entity: TestEntity = result;
-              assert.equal(entity.myValue._, batchEntity1.myValue._);
+              assert.strictEqual(entity.myValue._, batchEntity1.myValue._);
               done();
             }
           );
@@ -687,7 +678,7 @@ describe("table Entity APIs test", () => {
           assert.ifError(updateError);
           done();
         } else {
-          assert.equal(updateResponse.statusCode, 202); // No content
+          assert.strictEqual(updateResponse.statusCode, 202); // No content
           // Now that QueryEntity is done - validate Entity Properties as follows:
           tableService.retrieveEntity<TestEntity>(
             tableName,
@@ -699,7 +690,7 @@ describe("table Entity APIs test", () => {
                 done();
               }
               const entity: TestEntity = result;
-              assert.equal(entity.myValue._, batchEntity1.myValue._);
+              assert.strictEqual(entity.myValue._, batchEntity1.myValue._);
 
               // now that we have confirmed that our test entities are created, we can try to delete them
               tableService.executeBatch(
@@ -714,7 +705,7 @@ describe("table Entity APIs test", () => {
                     assert.ifError(deleteUpdateError);
                     done();
                   } else {
-                    assert.equal(deleteUpdateResponse.statusCode, 202); // No content
+                    assert.strictEqual(deleteUpdateResponse.statusCode, 202); // No content
                     // Now that QueryEntity is done - validate Entity Properties as follows:
                     tableService.retrieveEntity<TestEntity>(
                       tableName,
@@ -722,7 +713,7 @@ describe("table Entity APIs test", () => {
                       batchEntity1.RowKey._,
                       (finalRetrieveError, finalRetrieveResult) => {
                         const retrieveError: StorageError = finalRetrieveError as StorageError;
-                        assert.equal(
+                        assert.strictEqual(
                           retrieveError.statusCode,
                           404,
                           "status code was not equal to 404!"
@@ -763,7 +754,7 @@ describe("table Entity APIs test", () => {
           assert.ifError(updateError);
           done();
         } else {
-          assert.equal(updateResponse.statusCode, 202);
+          assert.strictEqual(updateResponse.statusCode, 202);
           tableService.retrieveEntity<TestEntity>(
             tableName,
             batchEntity1.PartitionKey._,
@@ -773,7 +764,7 @@ describe("table Entity APIs test", () => {
                 assert.ifError(error);
               } else if (result) {
                 const entity: TestEntity = result;
-                assert.equal(entity.myValue._, batchEntity1.myValue._);
+                assert.strictEqual(entity.myValue._, batchEntity1.myValue._);
               }
               done();
             }
@@ -805,7 +796,7 @@ describe("table Entity APIs test", () => {
           assert.ifError(updateError);
           done();
         } else {
-          assert.equal(updateResponse.statusCode, 202);
+          assert.strictEqual(updateResponse.statusCode, 202);
           tableService.retrieveEntity<TestEntity>(
             tableName,
             batchEntity1.PartitionKey._,
@@ -815,7 +806,7 @@ describe("table Entity APIs test", () => {
                 assert.ifError(error);
               } else if (result) {
                 const entity: TestEntity = result;
-                assert.equal(entity.myValue._, batchEntity1.myValue._);
+                assert.strictEqual(entity.myValue._, batchEntity1.myValue._);
               }
               done();
             }
@@ -851,7 +842,7 @@ describe("table Entity APIs test", () => {
               assert.ifError(updateError);
               done();
             } else {
-              assert.equal(updateResponse.statusCode, 202);
+              assert.strictEqual(updateResponse.statusCode, 202);
               tableService.retrieveEntity<TestEntity>(
                 tableName,
                 batchEntity1.PartitionKey._,
@@ -862,7 +853,10 @@ describe("table Entity APIs test", () => {
                     done();
                   } else if (result) {
                     const entity: TestEntity = result;
-                    assert.equal(entity.myValue._, batchEntity1.myValue._);
+                    assert.strictEqual(
+                      entity.myValue._,
+                      batchEntity1.myValue._
+                    );
                   }
                   done();
                 }
@@ -909,7 +903,10 @@ describe("table Entity APIs test", () => {
                     assert.ifError(error);
                   } else if (result) {
                     const entity: TestEntity = result;
-                    assert.equal(entity.myValue._, batchEntity1.myValue._);
+                    assert.strictEqual(
+                      entity.myValue._,
+                      batchEntity1.myValue._
+                    );
                   }
                   done();
                 }
@@ -948,14 +945,14 @@ describe("table Entity APIs test", () => {
               assert.ifError(updateError);
               done();
             } else {
-              assert.equal(updateResponse.statusCode, 202);
+              assert.strictEqual(updateResponse.statusCode, 202);
               tableService.retrieveEntity<TestEntity>(
                 tableName,
                 batchEntity1.PartitionKey._,
                 batchEntity1.RowKey._,
                 (error, result) => {
                   const retrieveError: StorageError = error as StorageError;
-                  assert.equal(
+                  assert.strictEqual(
                     retrieveError.statusCode,
                     404,
                     "status code was not equal to 404!"
@@ -992,7 +989,7 @@ describe("table Entity APIs test", () => {
             assert.ifError(updateError);
             done();
           } else {
-            assert.equal(updateResponse.statusCode, 202);
+            assert.strictEqual(updateResponse.statusCode, 202);
             const batchRetrieveEntityResult = updateResponse.body
               ? updateResponse.body
               : "";
@@ -1023,13 +1020,13 @@ describe("table Entity APIs test", () => {
             assert.ifError(updateError);
             done();
           } else {
-            assert.equal(updateResponse.statusCode, 202);
+            assert.strictEqual(updateResponse.statusCode, 202);
             tableService.retrieveEntity<TestEntity>(
               tableName,
               batchEntity1.PartitionKey._,
               batchEntity1.RowKey._,
               (error: any, result) => {
-                assert.equal(
+                assert.strictEqual(
                   error.statusCode,
                   404,
                   "status code was not equal to 404!"
@@ -1076,7 +1073,7 @@ describe("table Entity APIs test", () => {
               assert.ifError(batchError);
               done();
             } else {
-              assert.equal(batchResponse.statusCode, 202);
+              assert.strictEqual(batchResponse.statusCode, 202);
               tableService.retrieveEntity<TestEntity>(
                 tableName,
                 insertEntity3.PartitionKey._,
@@ -1167,7 +1164,7 @@ describe("table Entity APIs test", () => {
               assert.ifError(batchError);
               done();
             } else {
-              assert.equal(batchResponse.statusCode, 202);
+              assert.strictEqual(batchResponse.statusCode, 202);
               tableService.retrieveEntity<TestEntity>(
                 tableName,
                 insertEntity3.PartitionKey._,
@@ -1246,7 +1243,7 @@ describe("table Entity APIs test", () => {
             assert.ifError(updateError);
             done();
           } else {
-            assert.equal(updateResponse.statusCode, 202);
+            assert.strictEqual(updateResponse.statusCode, 202);
             tableService.retrieveEntity<TestEntity>(
               tableName,
               batchEntity1.PartitionKey._,
@@ -1256,7 +1253,7 @@ describe("table Entity APIs test", () => {
                   assert.ifError(error);
                 } else if (result) {
                   const entity: TestEntity = result;
-                  assert.equal(entity.myValue._, batchEntity1.myValue._);
+                  assert.strictEqual(entity.myValue._, batchEntity1.myValue._);
 
                   if (response !== null) {
                     const body: any = response?.body;
@@ -1332,4 +1329,9 @@ describe("table Entity APIs test", () => {
       }
     });
   });
+
+  // add test case for #794 table level query
+  // {"options":{"queryOptions":{"format":"application/json;odata=minimalmetadata","filter":"(TableName ge 'aaa1') and (TableName le 'aaa2')"}
+
+  // see #7
 });

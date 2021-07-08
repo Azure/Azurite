@@ -16,7 +16,7 @@ const debugLogPath: string = "g:/debug.log";
 const connectionString =
   `DefaultEndpointsProtocol=${PROTOCOL};AccountName=${EMULATOR_ACCOUNT_NAME};` +
   `AccountKey=${EMULATOR_ACCOUNT_KEY};TableEndpoint=${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME};`;
-const AZURE_STORAGE_ENV_VAR: string = "AZURE_TABLE_STORAGE";
+const AZURE_TABLE_STORAGE: string = "AZURE_TABLE_STORAGE";
 
 const config = new TableConfiguration(
   HOST,
@@ -76,7 +76,7 @@ export function createConnectionStringForTest(dev: boolean): string {
   if (dev) {
     return connectionString;
   } else {
-    return process.env[AZURE_STORAGE_ENV_VAR]!;
+    return process.env[AZURE_TABLE_STORAGE]!;
   }
 }
 
