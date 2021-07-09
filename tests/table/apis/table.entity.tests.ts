@@ -21,8 +21,9 @@ import { TestEntity } from "./TestEntity";
 configLogger(false);
 // For convenience, we have a switch to control the use
 // of a local Azurite instance, otherwise we need an
-// ENV VAR called AZURE_TABLE_STORAGE
-// containing Azure Storage Connection String.
+// ENV VAR called AZURE_TABLE_STORAGE added to mocha
+// script or launch.json containing
+// Azure Storage Connection String (using SAS or Key).
 const testLocalAzuriteInstance = true;
 
 describe("table Entity APIs test", () => {
@@ -78,11 +79,18 @@ describe("table Entity APIs test", () => {
       tableName,
       entity,
       (error, result, response) => {
+        assert.ifError(error);
         assert.strictEqual(response.statusCode, 201);
-        assert.ok(
-          response.headers?.etag.match(
+        if (result !== undefined) {
+          const matches = result[".metadata"].etag.match(
             "W/\"datetime'\\d{4}-\\d{2}-\\d{2}T\\d{2}%3A\\d{2}%3A\\d{2}.\\d{7}Z'\""
-          )
+          );
+          assert.notStrictEqual(matches, undefined, "Unable to validate etag");
+        }
+        assert.notStrictEqual(
+          result,
+          undefined,
+          "did not get expected result object"
         );
         done();
       }
@@ -135,11 +143,18 @@ describe("table Entity APIs test", () => {
       tableName,
       entity,
       (error, result, response) => {
+        assert.ifError(error);
         assert.strictEqual(response.statusCode, 201);
-        assert.ok(
-          response.headers?.etag.match(
+        if (result !== undefined) {
+          const matches = result[".metadata"].etag.match(
             "W/\"datetime'\\d{4}-\\d{2}-\\d{2}T\\d{2}%3A\\d{2}%3A\\d{2}.\\d{7}Z'\""
-          )
+          );
+          assert.notStrictEqual(matches, undefined, "Unable to validate etag");
+        }
+        assert.notStrictEqual(
+          result,
+          undefined,
+          "did not get expected result object"
         );
         done();
       }
@@ -147,29 +162,26 @@ describe("table Entity APIs test", () => {
   });
 
   it("Should retrieve entity with empty RowKey, @loki", (done) => {
-    const entityInsert = {
-      PartitionKey: "part2",
-      RowKey: "",
-      myValue: "value1"
-    };
-    tableService.insertEntity(
+    const entityInsert = createBasicEntityForTest();
+    entityInsert.RowKey._ = "";
+    entityInsert.myValue._ = getUniqueName("uniqueValue");
+    tableService.insertOrReplaceEntity(
       tableName,
       entityInsert,
       (insertError, insertResult, insertResponse) => {
         if (!insertError) {
-          const query = new Azure.TableQuery()
-            .where("PartitionKey == ?", "part2")
-            .and("myValue == ?", "value1");
-
-          tableService.queryEntities(
+          tableService.retrieveEntity<TestEntity>(
             tableName,
-            query,
-            null as any,
-            null as any,
+            entityInsert.PartitionKey._,
+            "",
             (queryError, queryResult, queryResponse) => {
               if (!queryError) {
-                if (queryResult.entries && queryResult.entries.length > 0) {
+                if (queryResult && queryResponse) {
                   assert.strictEqual(queryResponse.statusCode, 200);
+                  assert.strictEqual(
+                    queryResult.myValue._,
+                    entityInsert.myValue._
+                  );
                   done();
                 } else {
                   assert.fail("Test failed to retrieve the entity.");
@@ -426,7 +438,7 @@ describe("table Entity APIs test", () => {
           done();
         } else {
           // x-ms-version:'2018-03-28'
-          assert.strictEqual(updateResponse.statusCode, 200); // with these settings, the service responds with 200
+          assert.strictEqual(updateResponse.statusCode, 204);
           tableService.retrieveEntity<TestEntity>(
             tableName,
             entityToInsert.PartitionKey._,
@@ -458,7 +470,7 @@ describe("table Entity APIs test", () => {
             assert.ifError(updateError);
             done();
           } else {
-            assert.strictEqual(updateResponse.statusCode, 200); // get 200 back from service!
+            assert.strictEqual(updateResponse.statusCode, 204);
             tableService.retrieveEntity<TestEntity>(
               tableName,
               upsertEntity.PartitionKey._,
@@ -522,10 +534,6 @@ describe("table Entity APIs test", () => {
   });
 
   it("Insert or Merge on an Entity that does not exist, @loki", (done) => {
-    requestOverride.headers = {
-      Prefer: "return-content",
-      accept: "application/json;odata=fullmetadata"
-    };
     const entityToInsertOrMerge = createBasicEntityForTest();
     tableService.insertOrMergeEntity(
       tableName,
@@ -535,7 +543,7 @@ describe("table Entity APIs test", () => {
           assert.ifError(updateError);
           done();
         } else {
-          assert.strictEqual(updateResponse.statusCode, 200); // Service responds with 200
+          assert.strictEqual(updateResponse.statusCode, 204);
           tableService.retrieveEntity<TestEntity>(
             tableName,
             entityToInsertOrMerge.PartitionKey._,
