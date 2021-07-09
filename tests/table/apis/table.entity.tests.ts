@@ -66,8 +66,9 @@ describe("table Entity APIs test", () => {
   });
 
   after(async () => {
-    await server.close();
     restoreBuildRequestOptions(tableService);
+    tableService.removeAllListeners();
+    await server.close();
   });
 
   // Simple test in here until we have the full set checked in, as we need
@@ -1310,28 +1311,6 @@ describe("table Entity APIs test", () => {
         }
       }
     );
-  });
-
-  // ToDo: Move to Table level tests
-  it("Should have a valid OData Metadata value when inserting a table, @loki", (done) => {
-    const newTableName: string = getUniqueName("table");
-    tableService.createTable(newTableName, (error, result, response) => {
-      if (
-        !error &&
-        result !== undefined &&
-        response !== undefined &&
-        response.body !== undefined
-      ) {
-        const body = response.body as object;
-        const meta: string = body["odata.metadata" as keyof object];
-        // service response for this operation ends with /@Element
-        assert.strictEqual(meta.endsWith("/@Element"), true);
-        done();
-      } else {
-        assert.ifError(error);
-        done();
-      }
-    });
   });
 
   it("Can create entities with empty string for row and partition key, @loki", (done) => {
