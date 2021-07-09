@@ -23,13 +23,19 @@ import {
 
 // Set true to enable debug log
 configLogger(false);
+// For convenience, we have a switch to control the use
+// of a local Azurite instance, otherwise we need an
+// ENV VAR called AZURE_TABLE_STORAGE added to mocha
+// script or launch.json containing
+// Azure Storage Connection String (using SAS or Key).
+const testLocalAzuriteInstance = true;
 
 describe("table APIs test", () => {
   let server: TableServer;
-
   const tableService = Azure.createTableService(
-    createConnectionStringForTest()
+    createConnectionStringForTest(testLocalAzuriteInstance)
   );
+  tableService.enableGlobalHttpAgent = true;
 
   let tableName: string = getUniqueName("table");
 
@@ -43,8 +49,9 @@ describe("table APIs test", () => {
   });
 
   after(async () => {
-    await server.close();
     restoreBuildRequestOptions(tableService);
+    tableService.removeAllListeners();
+    await server.close();
   });
 
   it("createTable, prefer=return-no-content, accept=application/json;odata=minimalmetadata @loki", (done) => {
@@ -61,10 +68,10 @@ describe("table APIs test", () => {
 
     tableService.createTable(tableName, (error, result, response) => {
       if (!error) {
-        assert.equal(result.TableName, tableName);
-        assert.equal(result.statusCode, 204);
+        assert.strictEqual(result.TableName, tableName);
+        assert.strictEqual(result.statusCode, 204);
         const headers = response.headers!;
-        assert.equal(headers["x-ms-version"], TABLE_API_VERSION);
+        assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
         assert.deepStrictEqual(response.body, "");
       }
       done();
@@ -85,10 +92,10 @@ describe("table APIs test", () => {
 
     tableService.createTable(tableName, (error, result, response) => {
       if (!error) {
-        assert.equal(result.TableName, tableName);
-        assert.equal(result.statusCode, 201);
+        assert.strictEqual(result.TableName, tableName);
+        assert.strictEqual(result.statusCode, 201);
         const headers = response.headers!;
-        assert.equal(headers["x-ms-version"], TABLE_API_VERSION);
+        assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
         const bodies = response.body! as any;
         assert.deepStrictEqual(bodies.TableName, tableName);
         assert.deepStrictEqual(
@@ -139,9 +146,9 @@ describe("table APIs test", () => {
       (error, result, response) => {
         assert.deepStrictEqual(error, null);
 
-        assert.equal(response.statusCode, 200);
+        assert.strictEqual(response.statusCode, 200);
         const headers = response.headers!;
-        assert.equal(headers["x-ms-version"], TABLE_API_VERSION);
+        assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
         const bodies = response.body! as any;
         assert.deepStrictEqual(
           bodies["odata.metadata"],
@@ -170,9 +177,9 @@ describe("table APIs test", () => {
 
     tableService.listTablesSegmented(null as any, (error, result, response) => {
       if (!error) {
-        assert.equal(response.statusCode, 200);
+        assert.strictEqual(response.statusCode, 200);
         const headers = response.headers!;
-        assert.equal(headers["x-ms-version"], TABLE_API_VERSION);
+        assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
         const bodies = response.body! as any;
         assert.deepStrictEqual(
           bodies["odata.metadata"],
@@ -197,9 +204,9 @@ describe("table APIs test", () => {
 
     tableService.listTablesSegmented(null as any, (error, result, response) => {
       if (!error) {
-        assert.equal(response.statusCode, 200);
+        assert.strictEqual(response.statusCode, 200);
         const headers = response.headers!;
-        assert.equal(headers["x-ms-version"], TABLE_API_VERSION);
+        assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
         const bodies = response.body! as any;
         assert.ok(bodies.value[0].TableName);
       }
@@ -220,7 +227,7 @@ describe("table APIs test", () => {
         tableService.deleteTable(tableToDelete, (deleteError, deleteResult) => {
           if (!deleteError) {
             // no body expected, we expect 204 no content on successful deletion
-            assert.equal(deleteResult.statusCode, 204);
+            assert.strictEqual(deleteResult.statusCode, 204);
           } else {
             assert.ifError(deleteError);
           }
@@ -240,9 +247,9 @@ describe("table APIs test", () => {
     const tableToDelete = tableName + "causeerror";
 
     tableService.deleteTable(tableToDelete, (error, result) => {
-      assert.equal(result.statusCode, 404); // no body expected, we expect 404
+      assert.strictEqual(result.statusCode, 404); // no body expected, we expect 404
       const storageError = error as any;
-      assert.equal(storageError.code, "ResourceNotFound");
+      assert.strictEqual(storageError.code, "ResourceNotFound");
       done();
     });
   });
@@ -251,8 +258,33 @@ describe("table APIs test", () => {
     requestOverride.headers = { [HeaderConstants.X_MS_VERSION]: "invalid" };
 
     tableService.createTable("test", (error, result) => {
-      assert.equal(result.statusCode, 400);
+      assert.strictEqual(result.statusCode, 400);
       done();
+    });
+  });
+
+  it("Should have a valid OData Metadata value when inserting a table, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const newTableName: string = getUniqueName("table");
+    tableService.createTable(newTableName, (error, result, response) => {
+      if (
+        !error &&
+        result !== undefined &&
+        response !== undefined &&
+        response.body !== undefined
+      ) {
+        const body = response.body as object;
+        const meta: string = body["odata.metadata" as keyof object];
+        // service response for this operation ends with /@Element
+        assert.strictEqual(meta.endsWith("/@Element"), true);
+        done();
+      } else {
+        assert.ifError(error);
+        done();
+      }
     });
   });
 });

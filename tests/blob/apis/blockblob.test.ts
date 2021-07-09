@@ -218,10 +218,7 @@ describe("BlockBlobAPIs", () => {
 
   it("stageBlock with md5 hash check @loki @sql", async () => {
     const body = "HelloWorld";
-    const md5 = crypto
-      .createHash("md5")
-      .update(body, "utf8")
-      .digest();
+    const md5 = crypto.createHash("md5").update(body, "utf8").digest();
     const options = {
       transactionalContentMD5: new Uint8Array(Buffer.from(md5))
     };

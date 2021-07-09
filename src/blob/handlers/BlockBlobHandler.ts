@@ -23,7 +23,8 @@ import BaseHandler from "./BaseHandler";
  * @extends {BaseHandler}
  * @implements {IBlockBlobHandler}
  */
-export default class BlockBlobHandler extends BaseHandler
+export default class BlockBlobHandler
+  extends BaseHandler
   implements IBlockBlobHandler {
   public async upload(
     body: NodeJS.ReadableStream,

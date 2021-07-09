@@ -184,6 +184,10 @@ export function updateEntityOdataAnnotationsForResponse(
   return entity;
 }
 
+// table service APIs are in layers
+// we need to ensure that table, entity, and service
+// API layers are not affected when we change this odata response.
+// check that change does not impact query entities & query tables
 export function getOdataAnnotations(
   account: string,
   urlPrefix: string,
@@ -201,7 +205,7 @@ export function getOdataAnnotations(
     }
 
     return {
-      odatametadata: `${urlPrefixEndWithSlash}$metadata#${table}`,
+      odatametadata: `${urlPrefixEndWithSlash}$metadata#${table}/@Element`,
       odatatype: `${account}.${table}`,
       odataid: `${urlPrefixEndWithSlash}${table}(PartitionKey='${partitionKey}',RowKey='${rowKey}')`,
       odataeditLink: `${table}(PartitionKey='${partitionKey}',RowKey='${rowKey}')`
