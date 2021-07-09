@@ -23,12 +23,18 @@ import {
 
 // Set true to enable debug log
 configLogger(false);
+// For convenience, we have a switch to control the use
+// of a local Azurite instance, otherwise we need an
+// ENV VAR called AZURE_TABLE_STORAGE added to mocha
+// script or launch.json containing
+// Azure Storage Connection String (using SAS or Key).
+const testLocalAzuriteInstance = true;
 
 describe("table APIs test", () => {
   let server: TableServer;
 
   const tableService = Azure.createTableService(
-    createConnectionStringForTest()
+    createConnectionStringForTest(testLocalAzuriteInstance)
   );
 
   let tableName: string = getUniqueName("table");
