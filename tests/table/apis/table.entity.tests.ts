@@ -1370,6 +1370,4 @@ describe("table Entity APIs test", () => {
       }
     );
   });
-  // add test case for #794 table level query
-  // {"options":{"queryOptions":{"format":"application/json;odata=minimalmetadata","filter":"(TableName ge 'aaa1') and (TableName le 'aaa2')"}
 });
