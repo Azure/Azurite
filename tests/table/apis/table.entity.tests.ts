@@ -1314,10 +1314,6 @@ describe("table Entity APIs test", () => {
 
   // ToDo: Move to Table level tests
   it("Should have a valid OData Metadata value when inserting a table, @loki", (done) => {
-    requestOverride.headers = {
-      Prefer: "return-content",
-      accept: "application/json;odata=fullmetadata"
-    };
     const newTableName: string = getUniqueName("table");
     tableService.createTable(newTableName, (error, result, response) => {
       if (
@@ -1338,8 +1334,42 @@ describe("table Entity APIs test", () => {
     });
   });
 
+  it("Can create entities with empty string for row and partition key, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const emptyKeysEntity = createBasicEntityForTest();
+    emptyKeysEntity.PartitionKey._ = "";
+    emptyKeysEntity.RowKey._ = "";
+
+    tableService.insertEntity<TestEntity>(
+      tableName,
+      emptyKeysEntity,
+      (updateError, updateResult, updateResponse) => {
+        if (updateError) {
+          assert.ifError(updateError);
+          done();
+        } else {
+          assert.strictEqual(updateResponse.statusCode, 201);
+          tableService.retrieveEntity<TestEntity>(
+            tableName,
+            "",
+            "",
+            (error, result, response) => {
+              if (error) {
+                assert.ifError(error);
+              } else if (result) {
+                const entity: TestEntity = result;
+                assert.strictEqual(entity.myValue._, emptyKeysEntity.myValue._);
+              }
+              done();
+            }
+          );
+        }
+      }
+    );
+  });
   // add test case for #794 table level query
   // {"options":{"queryOptions":{"format":"application/json;odata=minimalmetadata","filter":"(TableName ge 'aaa1') and (TableName le 'aaa2')"}
-
-  // see #7
 });

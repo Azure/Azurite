@@ -23,7 +23,8 @@ import BaseHandler from "./BaseHandler";
  * @extends {BaseHandler}
  * @implements {IBlockBlobHandler}
  */
-export default class BlockBlobHandler extends BaseHandler
+export default class BlockBlobHandler
+  extends BaseHandler
   implements IBlockBlobHandler {
   public async upload(
     body: NodeJS.ReadableStream,
@@ -169,6 +170,12 @@ export default class BlockBlobHandler extends BaseHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
+    options.blobHTTPHeaders = options.blobHTTPHeaders || {};
+    const contentMD5 = context.request!.getHeader("content-md5")
+      ? options.blobHTTPHeaders.blobContentMD5 ||
+        context.request!.getHeader("content-md5")
+      : undefined;
+
     this.validateBlockId(blockId, blobCtx);
 
     await this.metadataStore.checkContainerExist(
@@ -187,6 +194,33 @@ export default class BlockBlobHandler extends BaseHandler
         blobCtx.contextId!,
         `The size of the request body ${persistency.count} mismatches the content-length ${contentLength}.`
       );
+    }
+
+    // Calculate MD5 for validation
+    const stream = await this.extentStore.readExtent(
+      persistency,
+      context.contextId
+    );
+    const calculatedContentMD5 = await getMD5FromStream(stream);
+    if (contentMD5 !== undefined) {
+      if (typeof contentMD5 === "string") {
+        const calculatedContentMD5String = Buffer.from(
+          calculatedContentMD5
+        ).toString("base64");
+        if (contentMD5 !== calculatedContentMD5String) {
+          throw StorageErrorFactory.getInvalidOperation(
+            context.contextId!,
+            "Provided contentMD5 doesn't match."
+          );
+        }
+      } else {
+        if (!Buffer.from(contentMD5).equals(calculatedContentMD5)) {
+          throw StorageErrorFactory.getInvalidOperation(
+            context.contextId!,
+            "Provided contentMD5 doesn't match."
+          );
+        }
+      }
     }
 
     const block: BlockModel = {

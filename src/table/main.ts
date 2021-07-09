@@ -63,7 +63,7 @@ async function main() {
 
   // Handle close event
   process
-    .once("message", msg => {
+    .once("message", (msg) => {
       if (msg === "shutdown") {
         console.log(beforeCloseMessage);
         server.close().then(() => {
@@ -79,7 +79,7 @@ async function main() {
     });
 }
 
-main().catch(err => {
-  console.error(`Exit die to unhandled error: ${err.message}`);
+main().catch((err) => {
+  console.error(`Exiting due to an unhandled error: ${err.message}`);
   process.exit(1);
 });

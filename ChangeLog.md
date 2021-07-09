@@ -10,7 +10,16 @@ Table:
 - Corrected serialization of errors during Entity Group Transactions.
 - Correct entity tests using invalid eTag formats.
 - Added support for PATCH Verb in Table Batch Operations / Entity Group Transactions.
+<<<<<<< HEAD
 - Adds /@Element to the odata.metadata response.
+=======
+- Allowed use of empty string for partitionKey and rowKey on InsertEntity.
+
+Blob:
+
+- Fixed SAS-token validation for requests with Content-Encoding/Content-Language headers.
+- Return `x-ms-copy-status` header from syncCopyFromURL.
+>>>>>>> 52076e47a211b36614190b6ddab9c17d8e938fa8
 
 ## 2021.6 Version 3.13.1
 
@@ -39,6 +48,7 @@ Table:
 - Fix an issue that query for Long Int fail in Metadata layer.
 - Fix an issue of axios dependency.
 - Added check for invalid table name.
+- Improved handling of empty strings and strings with multiple spaces for query filters.
 
 ## 2021.4 Version 3.12.0
 
@@ -62,6 +72,7 @@ Blob:
 - Fix an issue that result of blobs enumeration cannot be parsed by Azure SDK for Go.
 - Fix an issue that set tier to leased blob not work properly.
 - Skip Content-Length check for Append Block if the `--loose` flag is set.
+- BlockBlob_StageBlock now checks for Content-MD5 integrity, and will fail if this check does not pass.
 
 ## 2020.12 Version 3.10.0
 

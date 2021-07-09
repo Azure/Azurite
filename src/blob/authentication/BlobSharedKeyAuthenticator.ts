@@ -52,8 +52,8 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
     const stringToSign: string =
       [
         req.getMethod().toUpperCase(),
-        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LANGUAGE),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_ENCODING),
+        this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LANGUAGE),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LENGTH),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
@@ -182,7 +182,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       }
     }
 
-    const headersArray = headers.filter(value => {
+    const headersArray = headers.filter((value) => {
       return value.name
         .toLowerCase()
         .startsWith(HeaderConstants.PREFIX_FOR_STORAGE);
@@ -193,7 +193,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
     });
 
     let canonicalizedHeadersStringToSign: string = "";
-    headersArray.forEach(header => {
+    headersArray.forEach((header) => {
       canonicalizedHeadersStringToSign += `${header.name
         .toLowerCase()
         .trimRight()}:${header.value.trimLeft()}\n`;
