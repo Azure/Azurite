@@ -10,16 +10,14 @@ Table:
 - Corrected serialization of errors during Entity Group Transactions.
 - Correct entity tests using invalid eTag formats.
 - Added support for PATCH Verb in Table Batch Operations / Entity Group Transactions.
-<<<<<<< HEAD
-- Adds /@Element to the odata.metadata response.
-=======
+- Added /@Element to the odata.metadata response.
 - Allowed use of empty string for partitionKey and rowKey on InsertEntity.
 
 Blob:
 
 - Fixed SAS-token validation for requests with Content-Encoding/Content-Language headers.
 - Return `x-ms-copy-status` header from syncCopyFromURL.
->>>>>>> 52076e47a211b36614190b6ddab9c17d8e938fa8
+- Fixed continuation token not work correctly when blob names are only number
 
 ## 2021.6 Version 3.13.1
 

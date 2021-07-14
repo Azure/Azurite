@@ -747,6 +747,90 @@ describe("ContainerAPIs", () => {
     }
   });
 
+  it("list blobs whose name are all number, continuationToken works @loki @sql", async () => {
+    const blobClients = [];
+
+    for (let i = 0; i < 20; i++) {
+      const blobClient = containerClient.getBlobClient(i.toString());
+      const blockBlobClient = blobClient.getBlockBlobClient();
+      await blockBlobClient.upload("", 0);
+      blobClients.push(blobClient);
+    }
+
+    let blobNames: Array<string> = [
+      "0",
+      "1",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9"
+    ];
+
+    const inputmarker = undefined;
+    let result = (
+      await containerClient
+        .listBlobsFlat()
+        .byPage({ continuationToken: inputmarker, maxPageSize: 10 })
+        .next()
+    ).value;
+    assert.ok(result.serviceEndpoint.length > 0);
+    assert.ok(containerClient.url.indexOf(result.containerName));
+    assert.equal(result.continuationToken, blobNames[9]);
+    assert.equal(result.segment.blobItems.length, 10);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+
+    const gotNames: Array<string> = [];
+
+    for (const item of result.segment.blobItems) {
+      gotNames.push(item.name);
+    }
+
+    result = (
+      await containerClient
+        .listBlobsFlat()
+        .byPage({
+          continuationToken: result.continuationToken,
+          maxPageSize: 10
+        })
+        .next()
+    ).value;
+    assert.ok(result.serviceEndpoint.length > 0);
+    assert.ok(containerClient.url.indexOf(result.containerName));
+    assert.equal(result.continuationToken, "");
+    assert.equal(result.segment.blobItems.length, 10);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+
+    for (const item of result.segment.blobItems) {
+      gotNames.push(item.name);
+    }
+
+    assert.deepStrictEqual(gotNames, blobNames);
+
+    for (const blob of blobClients) {
+      await blob.delete();
+    }
+  });
+
   it("getAccessPolicy @loki @sql", async () => {
     const result = await containerClient.getAccessPolicy();
     assert.ok(result.etag!.length > 0);
