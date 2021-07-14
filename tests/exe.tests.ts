@@ -1,0 +1,300 @@
+import * as assert from "assert";
+import * as Azure from "azure-storage";
+
+import { configLogger } from "../src/common/Logger";
+// import TableServer from "../src/table/TableServer";
+import {
+  HeaderConstants,
+  TABLE_API_VERSION
+} from "../src/table/utils/constants";
+import {
+  EMULATOR_ACCOUNT_NAME,
+  getUniqueName,
+  overrideRequest,
+  restoreBuildRequestOptions,
+  sleep,
+} from "./testutils";
+import {
+  HOST,
+  PROTOCOL,
+  PORT,
+  createConnectionStringForTest
+} from "./table/apis/table.entity.test.utils";
+
+// import { execFile } from "child_process";
+
+const util = require("util")
+const execFile = util.promisify(require('child_process').execFile);
+
+// Set true to enable debug log
+configLogger(false);
+// For convenience, we have a switch to control the use
+// of a local Azurite instance, otherwise we need an
+// ENV VAR called AZURE_TABLE_STORAGE added to mocha
+// script or launch.json containing
+// Azure Storage Connection String (using SAS or Key).
+const testLocalAzuriteInstance = true;
+
+describe("table APIs test", () => {
+  
+  const tableService = Azure.createTableService(
+    createConnectionStringForTest(testLocalAzuriteInstance)
+  );
+  tableService.enableGlobalHttpAgent = true;
+
+  let tableName: string = getUniqueName("table");
+
+  const requestOverride = { headers: {} };
+
+  before(async () => {
+    overrideRequest(requestOverride, tableService);
+    tableName = getUniqueName("table");
+
+    const { stdout } = execFile("C:\\Users\\v-runyaofan\\Desktop\\Azurite\\azurite.exe", ["--tablePort 11002"], {cwd: "C:\\Users\\v-runyaofan\\Desktop\\Azurite", shell: true, env: {}});
+
+    await sleep(5 * 1000);
+
+    console.log('stdout:', stdout);
+  });
+
+  after(async () => {
+    restoreBuildRequestOptions(tableService);
+    tableService.removeAllListeners();
+    // await child.kill('SIGINT');
+  });
+
+  it("createTable, prefer=return-no-content, accept=application/json;odata=minimalmetadata @loki", (done) => {
+    /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
+      thus we workaround this by override request headers to test following 3 OData levels responses.
+    - application/json;odata=nometadata
+    - application/json;odata=minimalmetadata
+    - application/json;odata=fullmetadata
+    */
+    requestOverride.headers = {
+      Prefer: "return-no-content",
+      accept: "application/json;odata=minimalmetadata"
+    };
+
+    tableService.createTable(tableName, (error, result, response) => {
+      if (!error) {
+        assert.strictEqual(result.TableName, tableName);
+        assert.strictEqual(result.statusCode, 204);
+        const headers = response.headers!;
+        assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
+        assert.deepStrictEqual(response.body, "");
+      }
+      done();
+    });
+  });
+
+  it("createTable, prefer=return-content, accept=application/json;odata=fullmetadata @loki", (done) => {
+    /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
+      thus we workaround this by override request headers to test following 3 OData levels responses.
+    - application/json;odata=nometadata
+    - application/json;odata=minimalmetadata
+    - application/json;odata=fullmetadata
+    */
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+
+    tableService.createTable(tableName, (error, result, response) => {
+      if (!error) {
+        assert.strictEqual(result.TableName, tableName);
+        assert.strictEqual(result.statusCode, 201);
+        const headers = response.headers!;
+        assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
+        const bodies = response.body! as any;
+        assert.deepStrictEqual(bodies.TableName, tableName);
+        assert.deepStrictEqual(
+          bodies["odata.type"],
+          `${EMULATOR_ACCOUNT_NAME}.Tables`
+        );
+        assert.deepStrictEqual(
+          bodies["odata.metadata"],
+          `${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}/$metadata#Tables/@Element`
+        );
+        assert.deepStrictEqual(
+          bodies["odata.id"],
+          `${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}/Tables(${tableName})`
+        );
+        assert.deepStrictEqual(
+          bodies["odata.editLink"],
+          `Tables(${tableName})`
+        );
+      }
+      done();
+    });
+  });
+
+  it("createTable, prefer=return-content, accept=application/json;odata=minimalmetadata @loki", (done) => {
+    // TODO
+    done();
+  });
+
+  it("createTable, prefer=return-content, accept=application/json;odata=nometadata @loki", (done) => {
+    // TODO
+    done();
+  });
+
+  it("queryTable, accept=application/json;odata=fullmetadata @loki", (done) => {
+    /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
+      thus we workaround this by override request headers to test following 3 OData levels responses.
+    - application/json;odata=nometadata
+    - application/json;odata=minimalmetadata
+    - application/json;odata=fullmetadata
+    */
+    requestOverride.headers = {
+      accept: "application/json;odata=fullmetadata"
+    };
+
+    tableService.listTablesSegmented(
+      null as any,
+      { maxResults: 20 },
+      (error, result, response) => {
+        assert.deepStrictEqual(error, null);
+
+        assert.strictEqual(response.statusCode, 200);
+        const headers = response.headers!;
+        assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
+        const bodies = response.body! as any;
+        assert.deepStrictEqual(
+          bodies["odata.metadata"],
+          `${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}/$metadata#Tables`
+        );
+        assert.ok(bodies.value[0].TableName);
+        assert.ok(bodies.value[0]["odata.type"]);
+        assert.ok(bodies.value[0]["odata.id"]);
+        assert.ok(bodies.value[0]["odata.editLink"]);
+
+        done();
+      }
+    );
+  });
+
+  it("queryTable, accept=application/json;odata=minimalmetadata @loki", (done) => {
+    /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
+      thus we workaround this by override request headers to test following 3 OData levels responses.
+    - application/json;odata=nometadata
+    - application/json;odata=minimalmetadata
+    - application/json;odata=fullmetadata
+    */
+    requestOverride.headers = {
+      accept: "application/json;odata=minimalmetadata"
+    };
+
+    tableService.listTablesSegmented(null as any, (error, result, response) => {
+      if (!error) {
+        assert.strictEqual(response.statusCode, 200);
+        const headers = response.headers!;
+        assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
+        const bodies = response.body! as any;
+        assert.deepStrictEqual(
+          bodies["odata.metadata"],
+          `${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}/$metadata#Tables`
+        );
+        assert.ok(bodies.value[0].TableName);
+      }
+      done();
+    });
+  });
+
+  it("queryTable, accept=application/json;odata=nometadata @loki", (done) => {
+    /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
+      thus we workaround this by override request headers to test following 3 OData levels responses.
+    - application/json;odata=nometadata
+    - application/json;odata=minimalmetadata
+    - application/json;odata=fullmetadata
+    */
+    requestOverride.headers = {
+      accept: "application/json;odata=nometadata"
+    };
+
+    tableService.listTablesSegmented(null as any, (error, result, response) => {
+      if (!error) {
+        assert.strictEqual(response.statusCode, 200);
+        const headers = response.headers!;
+        assert.strictEqual(headers["x-ms-version"], TABLE_API_VERSION);
+        const bodies = response.body! as any;
+        assert.ok(bodies.value[0].TableName);
+      }
+      done();
+    });
+  });
+
+  it("deleteTable that exists, @loki", (done) => {
+    /*
+    https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
+    */
+    requestOverride.headers = {};
+
+    const tableToDelete = tableName + "del";
+
+    tableService.createTable(tableToDelete, (error, result, response) => {
+      if (!error) {
+        tableService.deleteTable(tableToDelete, (deleteError, deleteResult) => {
+          if (!deleteError) {
+            // no body expected, we expect 204 no content on successful deletion
+            assert.strictEqual(deleteResult.statusCode, 204);
+          } else {
+            assert.ifError(deleteError);
+          }
+          done();
+        });
+      } else {
+        assert.fail("Test failed to create the table");
+        done();
+      }
+    });
+  });
+
+  it("deleteTable that does not exist, @loki", (done) => {
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-table
+    requestOverride.headers = {};
+
+    const tableToDelete = tableName + "causeerror";
+
+    tableService.deleteTable(tableToDelete, (error, result) => {
+      assert.strictEqual(result.statusCode, 404); // no body expected, we expect 404
+      const storageError = error as any;
+      assert.strictEqual(storageError.code, "ResourceNotFound");
+      done();
+    });
+  });
+
+  it("createTable with invalid version, @loki", (done) => {
+    requestOverride.headers = { [HeaderConstants.X_MS_VERSION]: "invalid" };
+
+    tableService.createTable("test", (error, result) => {
+      assert.strictEqual(result.statusCode, 400);
+      done();
+    });
+  });
+
+  it("Should have a valid OData Metadata value when inserting a table, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const newTableName: string = getUniqueName("table");
+    tableService.createTable(newTableName, (error, result, response) => {
+      if (
+        !error &&
+        result !== undefined &&
+        response !== undefined &&
+        response.body !== undefined
+      ) {
+        const body = response.body as object;
+        const meta: string = body["odata.metadata" as keyof object];
+        // service response for this operation ends with /@Element
+        assert.strictEqual(meta.endsWith("/@Element"), true);
+        done();
+      } else {
+        assert.ifError(error);
+        done();
+      }
+    });
+  });
+});
+
