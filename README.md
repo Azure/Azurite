@@ -682,16 +682,13 @@ Because Azurite runs as a local instance for persistent data storage, there are 
 
 ### Storage Accounts
 
-> Please reach to us or open issues if you need multi storage account support.
+You could enable multiple accounts by setting up environment variable `AZURITE_ACCOUNTS`. See the [section](#customized-storage-accounts--keys-1) above.
 
-Azurite V3 supports a default account as General Storage Account V2 and provides features.
-
-- Account name: `devstoreaccount1`
-- Account key: `Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==`
+Optionally, you could modify your hosts file, to access accounts with production-style URL. See section below.
 
 ### Endpoint & Connection URL
 
-The service endpoints for Azurite are different from those of an Azure storage account. The difference is because the local computer does not perform domain name resolution, requiring Azurite endpoints to be local addresses.
+The service endpoints for Azurite are different from those of an Azure storage account. The difference is because Azuite runs on local computer, and normally, no DNS resolves address to local.
 
 When you address a resource in an Azure storage account, use the following scheme. The account name is part of the URI host name, and the resource being addressed is part of the URI path:
 
@@ -705,7 +702,7 @@ For example, the following URI is a valid address for a blob in an Azure storage
 https://myaccount.blob.core.windows.net/mycontainer/myblob.txt
 ```
 
-However, because the local computer does not perform domain name resolution, the account name is part of the URI path instead of the host name. Use the following URI format for a resource in Azurite:
+However, because Azuite runs on local computer, the account name is part of the URI path instead of the host name. Use the following URI format for a resource in Azurite:
 
 ```
 http://<local-machine-address>:<port>/<account-name>/<resource-path>
@@ -722,6 +719,34 @@ The service endpoints for Azurite blob service:
 ```
 http://127.0.0.1:10000/<account-name>/<resource-path>
 ```
+
+Optionally, you could modify your hosts file, to access an account with production-style URL.
+
+First, add line(s) to your hosts file, like:
+
+```
+127.0.0.1 account1.blob.localhost
+127.0.0.1 account1.queue.localhost
+127.0.0.1 account1.table.localhost
+```
+
+Secondly, set environment variables to enable customized storage accounts & keys:
+
+```
+set AZURITE_ACCOUNTS="account1:key1:key2"
+```
+
+You could add more accounts. See the [section](#customized-storage-accounts--keys-1) above.
+
+Finally, start Azurite and use a customized connection string to access your account.
+
+In the connection string below, it is assumed default ports are used.
+
+```
+DefaultEndpointsProtocol=http;AccountName=account1;AccountKey=key1;BlobEndpoint=http://account1.blob.localhost:10000;QueueEndpoint=http://account1.queue.localhost:10001;TableEndpoint=http://account1.table.localhost:10002;
+```
+
+> Note. Do not access default account in this way with Azure Storage Explorer. There is a bug that Storage Explorer is always adding account name in URL path, causing failures.
 
 ### Scalability & Performance
 
