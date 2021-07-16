@@ -39,7 +39,6 @@
     "uri-templates": "^0.2.0",
     "uuid": "^3.3.2",
     "winston": "^3.1.0",
-    "wtfnode": "^0.9.1",
     "xml2js": "^0.4.19"
   },
   "devDependencies": {
