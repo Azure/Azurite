@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import LokiTableMetadataStore from "../../../src/table/persistence/LokiTableMetadataStore";
 
-const queries = [
+const entityQueries = [
   {
     input: "PartitionKey eq 'azurite'",
     expected: "return ( item.PartitionKey === `azurite` )"
@@ -136,10 +136,55 @@ const queries = [
   }
 ];
 
-describe("unit tests for converting a table OData query to a JavaScript query for LokiJS", () => {
-  queries.forEach(({ input, expected }) => {
+describe("unit tests for converting an entity OData query to a JavaScript query for LokiJS", () => {
+  entityQueries.forEach(({ input, expected }) => {
     it(`should transform '${input}' into '${expected}'`, function (done) {
-      const actual = LokiTableMetadataStore.transformQuery(input);
+      const actual = LokiTableMetadataStore.transformEntityQuery(input);
+      assert.strictEqual(actual, expected);
+      done();
+    });
+  });
+});
+
+const tableQueries = [
+  {
+    input: "TableName eq 'azurite'",
+    expected: "return ( item.table === `azurite` )"
+  },
+  {
+    input: "TableName gt 'azurite'",
+    expected: "return ( item.table > `azurite` )"
+  },
+  {
+    input: "TableName ge 'azurite'",
+    expected: "return ( item.table >= `azurite` )"
+  },
+  {
+    input: "TableName lt 'azurite'",
+    expected: "return ( item.table < `azurite` )"
+  },
+  {
+    input: "TableName le 'azurite'",
+    expected: "return ( item.table <= `azurite` )"
+  },
+  {
+    input: "TableName ne 'azurite'",
+    expected: "return ( item.table !== `azurite` )"
+  },
+  {
+    input: "not (TableName eq 'azurite')",
+    expected: "return ( ! ( item.table === `azurite` ) )"
+  },
+  {
+    input: "1 eq 1",
+    expected: "return ( 1 === 1 )"
+  },
+];
+
+describe("unit tests for converting an table OData query to a JavaScript query for LokiJS", () => {
+  tableQueries.forEach(({ input, expected }) => {
+    it(`should transform '${input}' into '${expected}'`, function (done) {
+      const actual = LokiTableMetadataStore.transformTableQuery(input);
       assert.strictEqual(actual, expected);
       done();
     });
