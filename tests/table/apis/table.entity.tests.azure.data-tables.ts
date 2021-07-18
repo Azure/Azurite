@@ -249,7 +249,7 @@ describe("table Entity APIs test", () => {
     await tableClient.delete();
   });
 
-  it.only("should provide a complete query result when using query entities by page, @loki", async () => {
+  it("should provide a complete query result when using query entities by page, @loki", async () => {
     const partitionKeyForQueryTest = createUniquePartitionKey();
     const totalItems = 20;
     await tableClient.create();
