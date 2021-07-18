@@ -2,7 +2,12 @@
 
 import * as assert from "assert";
 import LogicAppReproEntity from "./table.entity.test.logicapp.entity";
-import { TableClient, TablesSharedKeyCredential } from "@azure/data-tables";
+import {
+  odata,
+  TableEntity,
+  TableClient,
+  TablesSharedKeyCredential
+} from "@azure/data-tables";
 import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
 import {
@@ -242,5 +247,48 @@ describe("table Entity APIs test", () => {
     assert.notStrictEqual(queryResult.value, undefined);
 
     await tableClient.delete();
+  });
+
+  it.only("should provide a complete query result when using query entities by page, @loki", async () => {
+    const partitionKeyForQueryTest = createUniquePartitionKey();
+    const totalItems = 20;
+    await tableClient.create();
+
+    for (let i = 0; i < totalItems; i++) {
+      const result = await tableClient.createEntity({
+        partitionKey: partitionKeyForQueryTest,
+        rowKey: `${i}`,
+        foo: "testEntity"
+      });
+      assert.notStrictEqual(result.etag, undefined);
+    }
+
+    const maxPageSize = 5;
+    const entities = tableClient.listEntities<TableEntity<String>>({
+      queryOptions: {
+        filter: odata`PartitionKey eq ${partitionKeyForQueryTest}`
+      }
+    });
+    let all: TableEntity<String>[] = [];
+    for await (const entity of entities.byPage({
+      maxPageSize
+    })) {
+      all = [...all, ...entity];
+    }
+    assert.strictEqual(all.length, totalItems);
+    all.sort((obj1, obj2) => {
+      if (parseInt(obj1.rowKey, 10) > parseInt(obj2.rowKey, 10)) {
+        return 1;
+      } else if (obj1.rowKey === obj2.rowKey) {
+        return 0;
+      } else {
+        return -1;
+      }
+    });
+    let rowKeyChecker = 0;
+    while (rowKeyChecker < totalItems) {
+      assert.strictEqual(all[rowKeyChecker].rowKey, rowKeyChecker.toString());
+      rowKeyChecker++;
+    }
   });
 });
