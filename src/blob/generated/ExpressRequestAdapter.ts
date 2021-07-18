@@ -54,4 +54,8 @@ export default class ExpressRequestAdapter implements IRequest {
   public getProtocol(): string {
     return this.req.protocol;
   }
+
+  public getSocket() {
+    return this.req.socket;
+  }
 }
