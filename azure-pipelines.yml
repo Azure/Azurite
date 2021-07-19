@@ -495,8 +495,9 @@ jobs:
       vmImage: "vs2017-win2016"
     strategy:
       matrix:
-        node_8_x:
-          node_version: 8.x
+        # one of the node modules use a try/catch syntax not supported by node 8
+        # node_8_x:
+        #   node_version: 8.x
         node_10_x:
           node_version: 10.x
         node_12_x:
@@ -511,6 +512,11 @@ jobs:
           npm ci
         workingDirectory: "./"
         displayName: "npm ci"
+
+      - script: |
+          npm i pkg
+        workingDirectory: "./"
+        displayName: "npm i pkg"
 
       - script: |
           npm run build:exe
