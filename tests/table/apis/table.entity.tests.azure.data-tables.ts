@@ -264,12 +264,12 @@ describe("table Entity APIs test", () => {
     }
 
     const maxPageSize = 5;
-    const entities = tableClient.listEntities<TableEntity<String>>({
+    const entities = tableClient.listEntities<TableEntity<{ foo: string }>>({
       queryOptions: {
         filter: odata`PartitionKey eq ${partitionKeyForQueryTest}`
       }
     });
-    let all: TableEntity<String>[] = [];
+    let all: TableEntity<{ foo: string }>[] = [];
     for await (const entity of entities.byPage({
       maxPageSize
     })) {
