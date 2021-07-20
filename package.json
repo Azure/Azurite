@@ -30,6 +30,7 @@
     "morgan": "^1.9.1",
     "multistream": "^2.1.1",
     "mysql2": "^2.1.0",
+    "rcedit": "^3.0.1",
     "rimraf": "^3.0.2",
     "sequelize": "^6.3.0",
     "tedious": "^11.0.9",
