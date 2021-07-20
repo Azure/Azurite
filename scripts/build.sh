@@ -1,8 +1,3 @@
-pwd
-ls
-cd ..
-pwd
-ls
+cd _RunyaoFan_Azurite/
 npm ci
-pwd
 tsc
