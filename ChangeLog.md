@@ -12,6 +12,7 @@ Table:
 - Added support for PATCH Verb in Table Batch Operations / Entity Group Transactions.
 - Added /@Element to the odata.metadata response.
 - Allowed use of empty string for partitionKey and rowKey on InsertEntity.
+- Added getServiceProperties response
 
 Blob:
 
