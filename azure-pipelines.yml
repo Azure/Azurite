@@ -514,6 +514,11 @@ jobs:
         displayName: "npm ci"
 
       - script: |
+          npm i pkg
+        workingDirectory: "./"
+        displayName: "npm i pkg"
+
+      - script: |
           npm run build:exe
         workingDirectory: "./"
         displayName: "npm run build:exe"
