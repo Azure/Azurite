@@ -29,14 +29,19 @@ async function build() {
   // rename the cache file to skip hash check by pkg-fetch since hash check reverts our change of properties
   let newName = cacheExe.replace("fetched", "built");
 
-  function asyncRename(oldName, changedName) {
-    return new Promise(resolve => {
-      fs.rename(oldName, changedName, response => resolve(response));
-    });
-  }
+  // function asyncRename(oldName, changedName) {
+  //   return new Promise(resolve => {
+  //     fs.rename(oldName, changedName, response => resolve(response));
+  //   });
+  // }
 
-  await asyncRename(cacheExe, newName);
+  // await asyncRename(cacheExe, newName);
   
+  fs.rename(cacheExe, newName, (err) => {
+    if (err) {
+      console.log(err);
+    }
+  });
 
   const pkg = await import('pkg');
   const outputExe = path.resolve('.\\azurite.exe');
