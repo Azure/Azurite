@@ -13,3 +13,4 @@ temp
 **/.DS_Store.DS_Store
 *.pem
 azurite.exe
+.pkg-cache
