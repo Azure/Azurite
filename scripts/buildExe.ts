@@ -1,11 +1,12 @@
 var rcedit = require('rcedit');
 var glob = require('glob');
 var path = require('path');
-var pjson = require('../package.json');
+var pjson = require('..\\package.json');
 var fs = require('fs');
 
 
-process.env.PKG_CACHE_PATH = path.resolve('../.pkg-cache');
+process.env.PKG_CACHE_PATH = path.resolve('.\\.pkg-cache');
+
 build();
 
 async function build() {
@@ -22,7 +23,7 @@ async function build() {
     "file-version": pjson.version,
     // TO DO:
     // Icon for some reason does not change to our specified icon
-    "icon": path.resolve('../icon.ico')
+    "icon": path.resolve('.\\icon.ico')
   });
   
   // rename the cache file to skip hash check by pkg-fetch since hash check reverts our change of properties
@@ -38,8 +39,8 @@ async function build() {
   
 
   const pkg = await import('pkg');
-  const outputExe = path.resolve('..\\azurite.exe');
-  await pkg.exec([path.resolve('..\\.'), ...['--target', pkgTarget], ...['--output', outputExe]]);
+  const outputExe = path.resolve('.\\azurite.exe');
+  await pkg.exec([path.resolve('.'), ...['--target', pkgTarget], ...['--output', outputExe], ...['-C', 'Brotli']]);
 }
 
 async function downloadCache(pkgTarget) {
