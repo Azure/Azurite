@@ -255,6 +255,7 @@
     "build:autorest:queue": "autorest ./swagger/queue.md --typescript  --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorest:table": "autorest ./swagger/table.md --typescript  --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:exe": "pkg -C Brotli -t node14-win .",
+    "build:exe:setversion": "node ./scripts/changeExeProperty.ts",
     "watch": "tsc -watch -p ./",
     "blob": "node -r ts-node/register src/blob/main.ts",
     "queue": "node -r ts-node/register src/queue/main.ts",
