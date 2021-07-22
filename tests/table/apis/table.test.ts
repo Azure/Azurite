@@ -220,7 +220,7 @@ describe("table APIs test", () => {
     */
     requestOverride.headers = {};
 
-    const tableToDelete = tableName + "del";
+    const tableToDelete = getUniqueName("table") + "del";
 
     tableService.createTable(tableToDelete, (error, result, response) => {
       if (!error) {
