@@ -148,8 +148,7 @@
       "env": {
         "AZURITE_ACCOUNTS": "",
         "AZURE_TABLE_STORAGE": "",
-        "NODE_TLS_REJECT_UNAUTHORIZED": "0",
-        "NODE_OPTIONS": "--inspect-publish-uid=stderr,http"
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
       },
       "internalConsoleOptions": "openOnSessionStart",
       "outputCapture": "std"

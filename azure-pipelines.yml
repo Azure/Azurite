@@ -498,8 +498,9 @@ jobs:
         # one of the node modules use a try/catch syntax not supported by node 8
         # node_8_x:
         #   node_version: 8.x
-        node_10_x:
-          node_version: 10.x
+        # our .exe build program is currently incompatible with node 10
+        # node_10_x:
+        #   node_version: 10.x
         node_12_x:
           node_version: 12.x
     steps:
