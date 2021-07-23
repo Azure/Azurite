@@ -38,7 +38,7 @@ async function build() {
   await asyncRename(cacheExe, newName);
 
   const pkg = await import('pkg');
-  const outputExe = path.resolve('.\\azurite.exe');
+  const outputExe = path.resolve('.\\release\\azurite.exe');
   await pkg.exec([path.resolve('.'), ...['--target', pkgTarget], ...['--output', outputExe], ...['-C', 'Brotli']]);
 }
 

@@ -74,7 +74,7 @@ describe("exe test", () => {
   before(async () => {
     overrideRequest(requestOverride, tableService);
     tableName = getUniqueName("table");
-    const child = execFile(".\\azurite.exe", ["--blobPort 11000", "--queuePort 11001", "--tablePort 11002"], {cwd: process.cwd(), shell: true, env: {}});
+    const child = execFile(".\\release\\azurite.exe", ["--blobPort 11000", "--queuePort 11001", "--tablePort 11002"], {cwd: process.cwd(), shell: true, env: {}});
 
     childPid = child.pid;
 
