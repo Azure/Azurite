@@ -8,7 +8,9 @@ import Context from "../generated/Context";
 import { Entity, Table } from "../persistence/ITableMetadataStore";
 import { ODATA_TYPE, QUERY_RESULT_MAX_NUM } from "../utils/constants";
 import { getTimestampString } from "../utils/utils";
-import ITableMetadataStore from "./ITableMetadataStore";
+import ITableMetadataStore, {
+  TableACL
+} from "./ITableMetadataStore";
 
 export default class LokiTableMetadataStore implements ITableMetadataStore {
   private readonly db: Loki;
@@ -140,6 +142,47 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     if (tableEntityCollection) {
       this.db.removeCollection(tableCollectionName);
     }
+  }
+
+  /**
+   * Update the ACL of an existing table item in persistency layer.
+   *
+   * @param {string} account
+   * @param {string} table
+   * @param {TableACL} [tableACL]
+   * @param {Context} context
+   * @returns {Promise<void>}
+   * @memberof LokiTableMetadataStore
+   */
+  public async setTableACL(
+    account: string,
+    table: string,
+    context: Context,
+    tableACL?: TableACL
+    
+  ): Promise<void> {
+    const coll = this.db.getCollection(this.TABLES_COLLECTION);
+    const doc = coll.findOne({ account, table });
+
+    if (!doc) {
+      throw StorageErrorFactory.getTableNotFound(context);
+    }
+
+    doc.tableAcl = tableACL;
+    coll.update(doc);
+  }
+
+  public async getTable(
+    account: string,
+    table: string,
+    context: Context
+  ): Promise<Table> {
+    const coll = this.db.getCollection(this.TABLES_COLLECTION);
+    const doc = coll.findOne({ account, table });
+    if (!doc) {
+      throw StorageErrorFactory.getTableNotFound(context);
+    }
+    return doc;
   }
 
   public async queryTable(

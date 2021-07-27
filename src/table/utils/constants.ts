@@ -69,3 +69,5 @@ export const ValidAPIVersions = [
   "2009-07-17",
   "2009-04-14"
 ];
+
+export const TABLE_SERVICE_PERMISSION = "raud";

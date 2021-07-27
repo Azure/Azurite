@@ -288,4 +288,17 @@ export default class StorageErrorFactory {
       context
     );
   }
+
+  public static getInvalidXmlDocument(context: Context): StorageError {
+    return new StorageError(
+      400,
+      "InvalidXmlDocument",
+      `XML specified is not syntactically valid.`,
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
 }
+
+  

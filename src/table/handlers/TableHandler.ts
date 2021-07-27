@@ -6,7 +6,7 @@ import {
 import TableBatchOrchestrator from "../batch/TableBatchOrchestrator";
 import TableStorageContext from "../context/TableStorageContext";
 import { NormalizedEntity } from "../entity/NormalizedEntity";
-import NotImplementedError from "../errors/NotImplementedError";
+// import NotImplementedError from "../errors/NotImplementedError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -21,7 +21,8 @@ import {
   NO_METADATA_ACCEPT,
   RETURN_CONTENT,
   RETURN_NO_CONTENT,
-  TABLE_API_VERSION
+  TABLE_API_VERSION,
+  TABLE_SERVICE_PERMISSION
 } from "../utils/constants";
 import {
   getEntityOdataAnnotationsForResponse,
@@ -673,17 +674,44 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     );
   }
 
+   /**
+   * Get table access policies.
+   * @param {string} table
+   * @param {Models.TableGetAccessPolicyOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.TableGetAccessPolicyResponse>}
+   * @memberof TableHandler
+   */
   public async getAccessPolicy(
     table: string,
     options: Models.TableGetAccessPolicyOptionalParams,
     context: Context
   ): Promise<Models.TableGetAccessPolicyResponse> {
-    // e.g
-    // const tableContext = new TableStorageContext(context);
-    // const accountName = tableContext.account;
-    // const tableName = tableContext.tableName; // Get tableName from context
-    // TODO
-    throw new NotImplementedError(context);
+    const tableContext = new TableStorageContext(context);
+    const accountName = this.getAndCheckAccountName(tableContext);
+    const tableName = this.getAndCheckTableName(tableContext);
+
+    const foundTable = await this.metadataStore.getTable(
+      accountName,
+      tableName,
+      context
+    );
+
+    const response: any = [];
+    const responseArray = response as Models.SignedIdentifier[];
+    const responseObject = response as Models.TableGetAccessPolicyHeaders & {
+      statusCode: 200;
+    };
+    if (foundTable.tableAcl !== undefined) {
+      responseArray.push(...foundTable.tableAcl);
+    }
+    responseObject.date = context.startTime;
+    responseObject.requestId = context.contextID;
+    responseObject.version = TABLE_API_VERSION;
+    responseObject.statusCode = 200;
+    responseObject.clientRequestId = options.requestId;
+
+    return response;
   }
 
   public async setAccessPolicy(
@@ -691,12 +719,43 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableSetAccessPolicyOptionalParams,
     context: Context
   ): Promise<Models.TableSetAccessPolicyResponse> {
-    // e.g
-    // const tableContext = new TableStorageContext(context);
-    // const accountName = tableContext.account;
-    // const tableName = tableContext.tableName; // Get tableName from context
-    // TODO
-    throw new NotImplementedError(context);
+    const tableContext = new TableStorageContext(context);
+    const accountName = this.getAndCheckAccountName(tableContext);
+    const tableName = this.getAndCheckTableName(tableContext);
+
+    // The policy number should be within 5, the permission should follow the Queue permission.
+    // See as https://docs.microsoft.com/en-us/rest/api/storageservices/create-service-sas.
+    if (options.tableAcl !== undefined) {
+      if (options.tableAcl.length > 5) {
+        throw StorageErrorFactory.getInvalidXmlDocument(context);
+      }
+
+      for (const acl of options.tableAcl) {
+        const permission = acl.accessPolicy.permission;
+        for (const item of permission) {
+          if (!TABLE_SERVICE_PERMISSION.includes(item)) {
+            throw StorageErrorFactory.getInvalidXmlDocument(context);
+          }
+        }
+      }
+    }
+
+    await this.metadataStore.setTableACL(
+      accountName,
+      tableName,
+      context,
+      options.tableAcl
+    );
+
+    const response: Models.TableSetAccessPolicyResponse = {
+      date: context.startTime,
+      requestId: context.contextID,
+      version: TABLE_API_VERSION,
+      statusCode: 204,
+      clientRequestId: options.requestId
+    };
+
+    return response;
   }
 
   /**
