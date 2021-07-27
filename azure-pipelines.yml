@@ -5,6 +5,7 @@
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema?view=vsts&tabs=schema
 
 trigger:
+  - main
   - master
   - table
   - dev
