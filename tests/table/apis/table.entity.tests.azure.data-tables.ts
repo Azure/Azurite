@@ -248,6 +248,28 @@ describe("table Entity APIs test", () => {
 
     await tableClient.delete();
   });
+  
+  it("should find an entity using a partition key with multiple spaces, @loki", async () => {
+    const partitionKey = createUniquePartitionKey() + " with spaces";
+    const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
+      partitionKey
+    );
+
+    await tableClient.create({ requestOptions: { timeout: 60000 } });
+    const result = await tableClient.createEntity(testEntity);
+    assert.ok(result.etag);
+
+    const queryResult = await tableClient
+      .listEntities<AzureDataTablesTestEntity>({
+        queryOptions: {
+          filter: `PartitionKey eq '${partitionKey}'`
+        }
+      })
+      .next();
+    assert.notStrictEqual(queryResult.value, undefined);
+
+    await tableClient.delete();
+  });
 
   it("should provide a complete query result when using query entities by page, @loki", async () => {
     const partitionKeyForQueryTest = createUniquePartitionKey();
