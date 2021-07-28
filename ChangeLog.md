@@ -6,12 +6,7 @@
 
 Table:
 
-- Added test for URI path parser and updated regex to allow for non standard dev store account names.
-- Corrected serialization of errors during Entity Group Transactions.
-- Correct entity tests using invalid eTag formats.
-- Added support for PATCH Verb in Table Batch Operations / Entity Group Transactions.
-- Added /@Element to the odata.metadata response.
-- Allowed use of empty string for partitionKey and rowKey on InsertEntity.
+- Correctly returning the results of paginated queries.
 - Added filter support for Query Tables operation.
 
 Blob:
@@ -19,6 +14,15 @@ Blob:
 - Fixed SAS-token validation for requests with Content-Encoding/Content-Language headers.
 - Return `x-ms-copy-status` header from syncCopyFromURL.
 - Fixed continuation token not work correctly when blob names are only number
+
+Table:
+
+- Added test for URI path parser and updated regex to allow for non standard dev store account names.
+- Corrected serialization of errors during Entity Group Transactions.
+- Corrected entity tests using invalid eTag formats.
+- Added support for PATCH Verb in Table Batch Operations / Entity Group Transactions.
+- Added /@Element to the odata.metadata response.
+- Allowed use of empty string for partitionKey and rowKey on InsertEntity.
 
 ## 2021.6 Version 3.13.1
 

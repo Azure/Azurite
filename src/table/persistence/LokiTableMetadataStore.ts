@@ -443,20 +443,27 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       throw StorageErrorFactory.getQueryConditionInvalid(context);
     }
 
-    const segmentFilter = {} as any;
-    if (nextPartitionKey) {
-      segmentFilter.PartitionKey = { $gte: nextPartitionKey };
-    }
-    if (nextRowKey) {
-      segmentFilter.RowKey = { $gte: nextRowKey };
-    }
-
     const maxResults = queryOptions.top || QUERY_RESULT_MAX_NUM;
 
+    // .find using a segment filter is not filtering in the same way that the sorting function sorts
+    // I think offset will cause more problems than it solves, as we will have to step and sort all
+    // results here, so I am adding 2 additional predicates here to cover the cases with
+    // multiple partitions and rows to paginate
     const result = tableEntityCollection
       .chain()
-      .find(segmentFilter)
       .where(queryWhere)
+      .where((data: any) => {
+        if (nextRowKey !== undefined) {
+          return data.RowKey >= nextRowKey;
+        }
+        return true;
+      })
+      .where((data: any) => {
+        if (nextPartitionKey !== undefined) {
+          return data.PartitionKey >= nextPartitionKey;
+        }
+        return true;
+      })
       .sort((obj1, obj2) => {
         if (obj1.PartitionKey > obj2.PartitionKey) {
           return 1;
