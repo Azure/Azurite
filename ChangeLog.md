@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Correctly returning the results of paginated queries
+
 ## 2021.7 Version 3.14.0
 
 General:
