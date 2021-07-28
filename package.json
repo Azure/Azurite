@@ -3,7 +3,7 @@
   "displayName": "Azurite",
   "description": "An open source Azure Storage API compatible server",
   "icon": "icon.png",
-  "version": "3.13.1",
+  "version": "3.14.0",
   "publisher": "Azurite",
   "categories": [
     "Other"
@@ -51,7 +51,7 @@
     "@types/express": "^4.16.0",
     "@types/jsonwebtoken": "^8.3.9",
     "@types/lokijs": "^1.5.2",
-    "@types/mocha": "^8.2.2",
+    "@types/mocha": "^9.0.0",
     "@types/morgan": "^1.7.35",
     "@types/multistream": "^2.1.1",
     "@types/node": "^14.14.24",
