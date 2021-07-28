@@ -41,7 +41,7 @@ export default interface ITableMetadataStore {
   queryTable(
     context: Context,
     account: string,
-    top?: number,
+    queryOptions: Models.QueryOptions,
     nextTable?: string
   ): Promise<[Table[], string | undefined]>;
   deleteTable(context: Context, table: string, account: string): Promise<void>;
