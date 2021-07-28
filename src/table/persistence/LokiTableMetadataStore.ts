@@ -750,6 +750,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           inString = false;
         }
       } else if (query[i] === "(" || query[i] === ")") {
+        if (i !== 0 && query[i - 1].match(/\d/) !== null) {
+          // this is needed if query does not contain whitespace between number token and paren
+          appendToken();
+        }
         i--;
         appendToken();
         i++;
@@ -792,11 +796,15 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
    */
   public static transformTableQuery(query: string): string {
     const systemProperties: Map<string, string> = new Map<string, string>([
-      ["name", "table"],
-    ])
+      ["name", "table"]
+    ]);
     const allowCustomProperties = false;
 
-    return LokiTableMetadataStore.transformQuery(query, systemProperties, allowCustomProperties);
+    return LokiTableMetadataStore.transformQuery(
+      query,
+      systemProperties,
+      allowCustomProperties
+    );
   }
 
   /**
@@ -826,14 +834,22 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   public static transformEntityQuery(query: string): string {
     const systemProperties: Map<string, string> = new Map<string, string>([
       ["PartitionKey", "PartitionKey"],
-      ["RowKey", "RowKey"],
-    ])
+      ["RowKey", "RowKey"]
+    ]);
     const allowCustomProperties = true;
 
-    return LokiTableMetadataStore.transformQuery(query, systemProperties, allowCustomProperties);
+    return LokiTableMetadataStore.transformQuery(
+      query,
+      systemProperties,
+      allowCustomProperties
+    );
   }
 
-  private static transformQuery(query: string, systemProperties: Map<string, string>, allowCustomProperties: boolean): string {
+  private static transformQuery(
+    query: string,
+    systemProperties: Map<string, string>,
+    allowCustomProperties: boolean
+  ): string {
     // If a token is neither a number, nor a boolean, nor a string enclosed with quotation marks it is an operand.
     // Operands are attributes of the object used within the where clause of LokiJS, thus we need to prepend each
     // attribute with an object identifier 'item.attribs'.
@@ -883,7 +899,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
             transformedQuery += `item.properties.${token} `;
           }
         } else {
-          throw Error("Custom properties are not supported on this query type.");
+          throw Error(
+            "Custom properties are not supported on this query type."
+          );
         }
       } else {
         // Remove "L" from long int
