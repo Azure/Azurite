@@ -6,14 +6,8 @@
 
 Table:
 
-- Correctly returning the results of paginated queries
-
-## 2021.7 Version 3.14.0
-
-General:
-
-- Bump up service API version to 2020-10-02
-- Added an example for run Azurite with https in docker in Readme
+- Correctly returning the results of paginated queries.
+- Added filter support for Query Tables operation.
 
 Blob:
 
