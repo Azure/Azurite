@@ -507,7 +507,7 @@ const serviceSetPropertiesOperationSpec: msRest.OperationSpec = {
 const serviceGetPropertiesOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   urlParameters: [Parameters.url],
-  queryParameters: [Parameters.restype, Parameters.comp1], // removed Parameters.timeout,
+  queryParameters: [Parameters.restype, Parameters.comp1, Parameters.timeout],
   headerParameters: [Parameters.version, Parameters.requestId],
   responses: {
     200: {

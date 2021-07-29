@@ -84,7 +84,7 @@ export function tableStorageContextMiddleware(
   //        Query Entities, Update Entity, Merge Entity, Delete Entity
   // mytable() - Query Entities
   // TODO: Not allowed create Table with Tables as name
-  if (tableSection === undefined) {
+  if (tableSection === undefined || tableSection === "") {
     // Service level operation
     tableContext.tableName = undefined;
   } else if (tableSection === "Tables" || tableSection === "Tables()") {

@@ -122,13 +122,7 @@ function isRequestAgainstOperation(
       path
     )
   ) {
-    if (
-      spec.queryParameters === undefined ||
-      (spec.queryParameters[0].parameterPath !== "restype" &&
-        spec.queryParameters[0].mapper.defaultValue !== "service")
-    ) {
-      return [false, metConditionsNum++];
-    }
+    return [false, metConditionsNum++];
   }
 
   // Validate required queryParameters
