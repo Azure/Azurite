@@ -18,7 +18,7 @@ async function build() {
     "version-string": {
       "CompanyName": "Microsoft", 
       "ProductName": "Azurite", 
-      "FileDescription": "A lightweight server clone of Azure Storage that simulates most of the commands supported by it with minimal dependencies", 
+      "FileDescription": "Azurite", 
       "ProductVersion": pjson.version,
       "OriginalFilename": "",
       "InternalName": "node",
