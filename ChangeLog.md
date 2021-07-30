@@ -4,11 +4,24 @@
 
 ## Upcoming Release
 
+## 2021.7 Version 3.14.1
+
+General:
+
+- Added support for generating standalone azurite.exe.
+
 Table:
 
 - Correctly returning the results of paginated queries.
 - Added filter support for Query Tables operation.
 - Corrected tokenization of queries in table storage.
+
+## 2021.7 Version 3.14.0
+
+General:
+
+- Bump up service API version to 2020-10-02
+- Added an example for run Azurite with https in docker in Readme
 
 Blob:
 
