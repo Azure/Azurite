@@ -145,7 +145,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   public async queryTable(
     context: Context,
     account: string,
-    top: number = 1000,
+    queryOptions: Models.QueryOptions,
     nextTable?: string
   ): Promise<[Table[], string | undefined]> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
@@ -155,9 +155,19 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       filter.table = { $gte: nextTable };
     }
 
+    let queryWhere;
+    try {
+      queryWhere = this.generateQueryTableWhereFunction(queryOptions.filter);
+    } catch (e) {
+      throw StorageErrorFactory.getQueryConditionInvalid(context);
+    }
+
+    const top = queryOptions.top || 1000;
+
     const docList = coll
       .chain()
       .find(filter)
+      .where(queryWhere)
       .simplesort("table")
       .limit(top + 1)
       .data();
@@ -433,20 +443,27 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       throw StorageErrorFactory.getQueryConditionInvalid(context);
     }
 
-    const segmentFilter = {} as any;
-    if (nextPartitionKey) {
-      segmentFilter.PartitionKey = { $gte: nextPartitionKey };
-    }
-    if (nextRowKey) {
-      segmentFilter.RowKey = { $gte: nextRowKey };
-    }
-
     const maxResults = queryOptions.top || QUERY_RESULT_MAX_NUM;
 
+    // .find using a segment filter is not filtering in the same way that the sorting function sorts
+    // I think offset will cause more problems than it solves, as we will have to step and sort all
+    // results here, so I am adding 2 additional predicates here to cover the cases with
+    // multiple partitions and rows to paginate
     const result = tableEntityCollection
       .chain()
-      .find(segmentFilter)
       .where(queryWhere)
+      .where((data: any) => {
+        if (nextRowKey !== undefined) {
+          return data.RowKey >= nextRowKey;
+        }
+        return true;
+      })
+      .where((data: any) => {
+        if (nextPartitionKey !== undefined) {
+          return data.PartitionKey >= nextPartitionKey;
+        }
+        return true;
+      })
       .sort((obj1, obj2) => {
         if (obj1.PartitionKey > obj2.PartitionKey) {
           return 1;
@@ -733,6 +750,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           inString = false;
         }
       } else if (query[i] === "(" || query[i] === ")") {
+        if (i !== 0 && query[i - 1].match(/\d/) !== null) {
+          // this is needed if query does not contain whitespace between number token and paren
+          appendToken();
+        }
         i--;
         appendToken();
         i++;
@@ -751,10 +772,84 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   }
 
   /**
+   * @param query Query Tables $query string.
+   */
+  private generateQueryTableWhereFunction(
+    query: string | undefined
+  ): (entity: Table) => boolean {
+    if (query === undefined) {
+      return () => true;
+    }
+
+    const transformedQuery = LokiTableMetadataStore.transformTableQuery(query);
+
+    // tslint:disable-next-line: no-console
+    // console.log(query);
+    // tslint:disable-next-line: no-console
+    // console.log(transformedQuery);
+
+    return new Function("item", transformedQuery) as any;
+  }
+
+  /**
+   * Azurite V2 query tables implementation.
+   */
+  public static transformTableQuery(query: string): string {
+    const systemProperties: Map<string, string> = new Map<string, string>([
+      ["name", "table"]
+    ]);
+    const allowCustomProperties = false;
+
+    return LokiTableMetadataStore.transformQuery(
+      query,
+      systemProperties,
+      allowCustomProperties
+    );
+  }
+
+  /**
+   * @param query Query Enties $query string.
+   */
+  private generateQueryEntityWhereFunction(
+    query: string | undefined
+  ): (entity: Entity) => boolean {
+    if (query === undefined) {
+      return () => true;
+    }
+
+    const transformedQuery = LokiTableMetadataStore.transformEntityQuery(query);
+
+    // tslint:disable-next-line: no-console
+    // console.log(query);
+    // tslint:disable-next-line: no-console
+    // console.log(transformedQuery);
+
+    return new Function("item", transformedQuery) as any;
+  }
+
+  /**
    * Azurite V2 query entities implementation as temporary workaround before new refactored implementation of querying.
    * TODO: Handle query types
    */
-  public static transformQuery(query: string): string {
+  public static transformEntityQuery(query: string): string {
+    const systemProperties: Map<string, string> = new Map<string, string>([
+      ["PartitionKey", "PartitionKey"],
+      ["RowKey", "RowKey"]
+    ]);
+    const allowCustomProperties = true;
+
+    return LokiTableMetadataStore.transformQuery(
+      query,
+      systemProperties,
+      allowCustomProperties
+    );
+  }
+
+  private static transformQuery(
+    query: string,
+    systemProperties: Map<string, string>,
+    allowCustomProperties: boolean
+  ): string {
     // If a token is neither a number, nor a boolean, nor a string enclosed with quotation marks it is an operand.
     // Operands are attributes of the object used within the where clause of LokiJS, thus we need to prepend each
     // attribute with an object identifier 'item.attribs'.
@@ -791,9 +886,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           ")"
         ].includes(token)
       ) {
-        if (token === "PartitionKey" || token === "RowKey") {
-          transformedQuery += `item.${token} `;
-        } else {
+        if (systemProperties.has(token)) {
+          transformedQuery += `item.${systemProperties.get(token)} `;
+        } else if (allowCustomProperties) {
           // Datetime compare
           if (
             counter + 2 <= tokens.length - 1 &&
@@ -803,6 +898,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           } else {
             transformedQuery += `item.properties.${token} `;
           }
+        } else {
+          throw Error(
+            "Custom properties are not supported on this query type."
+          );
         }
       } else {
         // Remove "L" from long int
@@ -832,25 +931,5 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     transformedQuery += ")";
 
     return transformedQuery;
-  }
-
-  /**
-   * @param query Query Enties $query string.
-   */
-  private generateQueryEntityWhereFunction(
-    query: string | undefined
-  ): (entity: Entity) => boolean {
-    if (query === undefined) {
-      return () => true;
-    }
-
-    const transformedQuery = LokiTableMetadataStore.transformQuery(query);
-
-    // tslint:disable-next-line: no-console
-    // console.log(query);
-    // tslint:disable-next-line: no-console
-    // console.log(transformedQuery);
-
-    return new Function("item", transformedQuery) as any;
   }
 }
