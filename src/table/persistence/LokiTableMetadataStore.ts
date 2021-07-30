@@ -943,26 +943,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   }
 
   /**
-   * @param query Query Enties $query string.
-   */
-  private generateQueryEntityWhereFunction(
-    query: string | undefined
-  ): (entity: Entity) => boolean {
-    if (query === undefined) {
-      return () => true;
-    }
-
-    const transformedQuery = LokiTableMetadataStore.transformQuery(query);
-
-    // tslint:disable-next-line: no-console
-    // console.log(query);
-    // tslint:disable-next-line: no-console
-    // console.log(transformedQuery);
-
-    return new Function("item", transformedQuery) as any;
-  }
-
-  /**
    * Get service properties for specific storage account.
    *
    * @param {string} account
