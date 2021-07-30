@@ -3,6 +3,8 @@ const glob = require('glob');
 const path = require('path');
 const pjson = require('../package.json');
 const fs = require('fs');
+// the process.env definition is placed here because the code breaks when it is 
+// placed after requiring pkg and pkg-fetch
 process.env.PKG_CACHE_PATH = path.resolve('.\\.pkg-cache');
 const pkg = require('pkg');
 const pkgFetch = require('pkg-fetch');
