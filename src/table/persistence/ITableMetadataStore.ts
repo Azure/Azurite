@@ -1,5 +1,12 @@
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
+/** MODELS FOR SERVICE */
+interface IServiceAdditionalProperties {
+  accountName: string;
+}
+
+export type ServicePropertiesModel = Models.TableServiceProperties &
+  IServiceAdditionalProperties;
 
 // Since the host name may change, we don't store host in {@code odatametadata, odatatid}
 export interface IOdataAnnotations {
@@ -100,4 +107,15 @@ export default interface ITableMetadataStore {
   ): Promise<Models.TableSetAccessPolicyResponse>;
   init(): void;
   close(): void;
+  /**
+   * Get service properties for specific storage account.
+   *
+   * @param {string} account
+   * @returns {Promise<ServicePropertiesModel | undefined>}
+   * @memberof IBlobMetadataStore
+   */
+  getServiceProperties(
+    context: Context,
+    account: string
+  ): Promise<ServicePropertiesModel | undefined>;
 }

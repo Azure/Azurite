@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Added getServiceProperties response
+
 ## 2021.7 Version 3.14.1
 
 General:

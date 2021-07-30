@@ -10,9 +10,18 @@ import { ODATA_TYPE, QUERY_RESULT_MAX_NUM } from "../utils/constants";
 import { getTimestampString } from "../utils/utils";
 import ITableMetadataStore from "./ITableMetadataStore";
 
+/** MODELS FOR SERVICE */
+interface IServiceAdditionalProperties {
+  accountName: string;
+}
+
+export type ServicePropertiesModel = Models.TableServiceProperties &
+  IServiceAdditionalProperties;
+
 export default class LokiTableMetadataStore implements ITableMetadataStore {
   private readonly db: Loki;
   private readonly TABLES_COLLECTION = "$TABLES_COLLECTION$";
+  private readonly SERVICES_COLLECTION = "$SERVICES_COLLECTION$";
   private initialized: boolean = false;
   private closed: boolean = false;
 
@@ -931,5 +940,24 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     transformedQuery += ")";
 
     return transformedQuery;
+  }
+
+  /**
+   * Get service properties for specific storage account.
+   *
+   * @param {string} account
+   * @returns {Promise<ServicePropertiesModel | undefined>}
+   * @memberof LokiBlobMetadataStore
+   */
+  public async getServiceProperties(
+    context: Context,
+    account: string
+  ): Promise<ServicePropertiesModel | undefined> {
+    const coll = this.db.getCollection(this.SERVICES_COLLECTION);
+    if (coll) {
+      const doc = coll.by("accountName", account);
+      return doc ? doc : undefined;
+    }
+    return undefined;
   }
 }
