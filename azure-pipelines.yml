@@ -489,3 +489,40 @@ jobs:
           scanType: "Register"
           verbosity: "Verbose"
           alertWarningLevel: "High"
+
+  - job: exetest
+    displayName: .exe Test Windows
+    pool:
+      vmImage: "vs2017-win2016"
+    strategy:
+      matrix:
+        # one of the node modules use a try/catch syntax not supported by node 8
+        # node_8_x:
+        #   node_version: 8.x
+        # our .exe build program is currently incompatible with node 10
+        # node_10_x:
+        #   node_version: 10.x
+        node_12_x:
+          node_version: 12.x
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(node_version)"
+        displayName: "Install Node.js"
+
+      - script: |
+          npm ci
+        workingDirectory: "./"
+        displayName: "npm ci"
+
+      - script: |
+          npm run build:exe
+        workingDirectory: "./"
+        displayName: "npm run build:exe"
+        env: {}
+
+      - script: |
+          npm run test:exe
+        workingDirectory: "./"
+        displayName: "npm run test:exe"
+        env: {}

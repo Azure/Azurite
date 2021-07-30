@@ -6,19 +6,41 @@
 
 Table:
 
-- Added test for URI path parser and updated regex to allow for non standard dev store account names.
-- Corrected serialization of errors during Entity Group Transactions.
-- Correct entity tests using invalid eTag formats.
-- Added support for PATCH Verb in Table Batch Operations / Entity Group Transactions.
-- Added /@Element to the odata.metadata response.
-- Allowed use of empty string for partitionKey and rowKey on InsertEntity.
 - Added getServiceProperties response
+
+## 2021.7 Version 3.14.1
+
+General:
+
+- Added support for generating standalone azurite.exe.
+
+Table:
+
+- Correctly returning the results of paginated queries.
+- Added filter support for Query Tables operation.
+- Corrected tokenization of queries in table storage.
+
+## 2021.7 Version 3.14.0
+
+General:
+
+- Bump up service API version to 2020-10-02
+- Added an example for run Azurite with https in docker in Readme
 
 Blob:
 
 - Fixed SAS-token validation for requests with Content-Encoding/Content-Language headers.
 - Return `x-ms-copy-status` header from syncCopyFromURL.
 - Fixed continuation token not work correctly when blob names are only number
+
+Table:
+
+- Added test for URI path parser and updated regex to allow for non standard dev store account names.
+- Corrected serialization of errors during Entity Group Transactions.
+- Corrected entity tests using invalid eTag formats.
+- Added support for PATCH Verb in Table Batch Operations / Entity Group Transactions.
+- Added /@Element to the odata.metadata response.
+- Allowed use of empty string for partitionKey and rowKey on InsertEntity.
 
 ## 2021.6 Version 3.13.1
 
