@@ -156,6 +156,30 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "EXE Mocha TS File - Loki",
+      "cwd": "${workspaceFolder}",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "args": [
+        "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+        "-u",
+        "tdd",
+        "--timeout",
+        "999999",
+        "--colors",
+        "${workspaceFolder}/tests/exe.test.ts", 
+        "--exit"
+      ],
+      "env": {
+        "AZURITE_ACCOUNTS": "",
+        "AZURE_TABLE_STORAGE": "",
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
+      },
+      "internalConsoleOptions": "openOnSessionStart",
+      "outputCapture": "std"
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "Current Mocha TS File - SQL",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
