@@ -55,6 +55,7 @@ describe("table Entity APIs test", () => {
   });
 
   it("Batch API should return row keys in format understood by @azure/data-tables, @loki", async () => {
+    await tableClient.create();
     const partitionKey = createUniquePartitionKey();
     const testEntities: AzureDataTablesTestEntity[] = [
       createBasicEntityForTest(partitionKey),
@@ -62,7 +63,6 @@ describe("table Entity APIs test", () => {
       createBasicEntityForTest(partitionKey)
     ];
 
-    await tableClient.create();
     const batch = tableClient.createBatch(partitionKey);
     await batch.createEntities(testEntities);
     const result = await batch.submitBatch();
@@ -160,12 +160,11 @@ describe("table Entity APIs test", () => {
   });
 
   it("Should return bad request error for incorrectly formatted etags, @loki", async () => {
+    await tableClient.create();
     const partitionKey = createUniquePartitionKey();
     const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
       partitionKey
     );
-
-    await tableClient.create();
 
     const result = await tableClient.createEntity(testEntity);
 
@@ -248,7 +247,7 @@ describe("table Entity APIs test", () => {
 
     await tableClient.delete();
   });
-  
+
   it("should find an entity using a partition key with multiple spaces, @loki", async () => {
     const partitionKey = createUniquePartitionKey() + " with spaces";
     const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
@@ -312,5 +311,76 @@ describe("table Entity APIs test", () => {
       assert.strictEqual(all[rowKeyChecker].rowKey, rowKeyChecker.toString());
       rowKeyChecker++;
     }
+    await tableClient.delete();
+  });
+
+  it("should return the correct number of results querying with a timestamp or different SDK whitespacing behaviours, @loki", async () => {
+    const partitionKeyForQueryTest = createUniquePartitionKey();
+    const totalItems = 10;
+    await tableClient.create();
+    const timestamp = new Date();
+    timestamp.setDate(timestamp.getDate() + 1);
+    const newTimeStamp = timestamp.toISOString();
+    for (let i = 0; i < totalItems; i++) {
+      const result = await tableClient.createEntity({
+        partitionKey: partitionKeyForQueryTest,
+        rowKey: `${i}`,
+        number: i
+      });
+      assert.notStrictEqual(result.etag, undefined);
+    }
+    const maxPageSize = 5;
+    let testsCompleted = 0;
+    // take note of the different whitespacing and query formatting:
+    const queriesAndExpectedResult = [
+      {
+        queryOptions: {
+          filter: odata`PartitionKey eq ${partitionKeyForQueryTest} && number gt 11`
+        },
+        expectedResult: 0
+      },
+      {
+        queryOptions: {
+          filter: odata`PartitionKey eq ${partitionKeyForQueryTest} && number lt 11`
+        },
+        expectedResult: 10
+      },
+      {
+        queryOptions: {
+          filter: odata`PartitionKey eq ${partitionKeyForQueryTest} && number gt 11 && Timestamp lt datetime'${newTimeStamp}'`
+        },
+        expectedResult: 0
+      },
+      {
+        queryOptions: {
+          filter: odata`PartitionKey eq ${partitionKeyForQueryTest} && number lt 11 && Timestamp lt datetime'${newTimeStamp}'`
+        },
+        expectedResult: 10
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) && (number lt 12) && (Timestamp lt datetime'${newTimeStamp}')`
+        },
+        expectedResult: 10
+      }
+    ];
+
+    for (const queryTest of queriesAndExpectedResult) {
+      const entities = tableClient.listEntities<
+        TableEntity<{ number: number }>
+      >({
+        queryOptions: queryTest.queryOptions
+      });
+      let all: TableEntity<{ number: number }>[] = [];
+      for await (const entity of entities.byPage({
+        maxPageSize
+      })) {
+        all = [...all, ...entity];
+      }
+      assert.strictEqual(all.length, queryTest.expectedResult);
+      testsCompleted++;
+    }
+    assert.strictEqual(testsCompleted, 5);
+    await tableClient.delete();
   });
 });

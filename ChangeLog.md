@@ -8,6 +8,7 @@ Table:
 
 - Correctly returning the results of paginated queries.
 - Added filter support for Query Tables operation.
+- Corrected tokenization of queries in table storage.
 
 Blob:
 
