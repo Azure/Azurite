@@ -1,11 +1,11 @@
-var rcedit = require('rcedit');
-var glob = require('glob');
-var path = require('path');
-var pjson = require('..\\package.json');
-var fs = require('fs');
-
-
+const rcedit = require('rcedit');
+const glob = require('glob');
+const path = require('path');
+const pjson = require('../package.json');
+const fs = require('fs');
 process.env.PKG_CACHE_PATH = path.resolve('.\\.pkg-cache');
+const pkg = require('pkg');
+const pkgFetch = require('pkg-fetch');
 
 build();
 
@@ -27,7 +27,7 @@ async function build() {
   });
   
   // rename the cache file to skip hash check by pkg-fetch since hash check reverts our change of properties
-  let newName = cacheExe.replace("fetched", "built");
+  const newName = cacheExe.replace("fetched", "built");
 
   function asyncRename(oldName, changedName) {
     return new Promise(resolve => {
@@ -36,15 +36,14 @@ async function build() {
   }
 
   await asyncRename(cacheExe, newName);
-
-  const pkg = await import('pkg');
+  
   const outputExe = path.resolve('.\\release\\azurite.exe');
   await pkg.exec([path.resolve('.'), ...['--target', pkgTarget], ...['--output', outputExe], ...['-C', 'Brotli']]);
 }
 
 async function downloadCache(pkgTarget) {
   const [nodeRange, platform, arch] = pkgTarget.split('-');
-  const pkgFetch = await import('pkg-fetch');
+  
   await pkgFetch.need({ nodeRange, platform, arch });
   const cacheExe = glob.sync(process.env.PKG_CACHE_PATH + "\\**\\fetched*");
   if (cacheExe.length < 1) {

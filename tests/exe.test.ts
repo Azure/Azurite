@@ -1,53 +1,35 @@
 // run "EXE Mocha TS File - Loki" in VS Code to run this test
-import * as assert from "assert";
-import * as Azure from "azure-storage";
-
-import { configLogger } from "../src/common/Logger";
-
-import {
-  HeaderConstants,
-  TABLE_API_VERSION
-} from "../src/table/utils/constants";
-import {
-  bodyToString,
-  EMULATOR_ACCOUNT_NAME,
-  EMULATOR_ACCOUNT_KEY,
-  getUniqueName,
-  overrideRequest,
-  restoreBuildRequestOptions
-} from "./testutils";
-import {
-  HOST,
-  PROTOCOL,
-  PORT,
-  createConnectionStringForTest
-} from "./table/apis/table.entity.test.utils";
-
-import {
-  StorageSharedKeyCredential as blobStorageSharedKeyCredential,
-  newPipeline as blobNewPipeline,
-  BlobServiceClient
-} from "@azure/storage-blob";
-
-import BlobTestServerFactory from "./BlobTestServerFactory";
-
-import {
-  newPipeline as queueNewPipeline,
-  QueueServiceClient,
-  QueueClient,
-  StorageSharedKeyCredential as queueStorageSharedKeyCredential
-} from "@azure/storage-queue";
-
-import { execFile } from "child_process";
-
+import * as assert from 'assert';
+import * as Azure from 'azure-storage';
+import { execFile } from 'child_process';
 import find from 'find-process';
+
+import {
+    BlobServiceClient, newPipeline as blobNewPipeline,
+    StorageSharedKeyCredential as blobStorageSharedKeyCredential
+} from '@azure/storage-blob';
+import {
+    newPipeline as queueNewPipeline, QueueClient, QueueServiceClient,
+    StorageSharedKeyCredential as queueStorageSharedKeyCredential
+} from '@azure/storage-queue';
+
+import { configLogger } from '../src/common/Logger';
+import { HeaderConstants, TABLE_API_VERSION } from '../src/table/utils/constants';
+import BlobTestServerFactory from './BlobTestServerFactory';
+import {
+    createConnectionStringForTest, HOST, PORT, PROTOCOL
+} from './table/apis/table.entity.test.utils';
+import {
+    bodyToString, EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName, overrideRequest,
+    restoreBuildRequestOptions
+} from './testutils';
 
 // server address used for testing. Note that Azurite.exe has 
 // server address of http://127.0.0.1:10000 and so on by default 
 // and we need to configure them when starting azurite.exe
-let blobAddress = "http://127.0.0.1:11000";
-let queueAddress = "http://127.0.0.1:11001";
-let tableAddress = "http://127.0.0.1:11002";
+const blobAddress = "http://127.0.0.1:11000";
+const queueAddress = "http://127.0.0.1:11001";
+const tableAddress = "http://127.0.0.1:11002";
 
 // Set true to enable debug log
 configLogger(false);
@@ -78,9 +60,9 @@ describe("exe test", () => {
 
     childPid = child.pid;
 
-    let fullSuccessMessage = "Azurite Blob service is starting at " + blobAddress + "\nAzurite Blob service is successfully listening at " + blobAddress + 
-                             "\nAzurite Queue service is starting at " + queueAddress + "\nAzurite Queue service is successfully listening at " + queueAddress + 
-                             "\nAzurite Table service is starting at " + tableAddress + "\nAzurite Table service is successfully listening at " + tableAddress + "\n";
+    const fullSuccessMessage = "Azurite Blob service is starting at " + blobAddress + "\nAzurite Blob service is successfully listening at " + blobAddress + 
+                               "\nAzurite Queue service is starting at " + queueAddress + "\nAzurite Queue service is successfully listening at " + queueAddress + 
+                               "\nAzurite Table service is starting at " + tableAddress + "\nAzurite Table service is successfully listening at " + tableAddress + "\n";
     let messageReceived : string = "";
 
     function stdoutOn() {
@@ -98,7 +80,6 @@ describe("exe test", () => {
     await stdoutOn();
   });
 
-
   after(async () => {
     // TO DO
     // Currently, the mocha test does not quit unless "--exit" is added to the mocha command
@@ -113,7 +94,6 @@ describe("exe test", () => {
     
     process.kill(childPid);
   });
-
 
   describe("table test", () => {
     it("createTable, prefer=return-no-content, accept=application/json;odata=minimalmetadata @loki", (done) => {
@@ -139,8 +119,6 @@ describe("exe test", () => {
         done();
       });
     });
-  
-    
   
     it("queryTable, accept=application/json;odata=minimalmetadata @loki", (done) => {
       /* Azure Storage Table SDK doesn't support customize Accept header and Prefer header,
@@ -168,7 +146,6 @@ describe("exe test", () => {
         done();
       });
     });
-  
     
     it("deleteTable that exists, @loki", (done) => {
       /*
@@ -293,7 +270,6 @@ describe("exe test", () => {
     // TODO: Create a server factory as tests utils
     const host = "127.0.0.1";
     const port = 11001;
-
 
     const baseURL = `http://${host}:${port}/devstoreaccount1`;
     const serviceClient = new QueueServiceClient(
