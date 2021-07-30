@@ -18,9 +18,9 @@ async function build() {
       "ProductName": "Azurite", 
       "FileDescription": "A lightweight server clone of Azure Storage that simulates most of the commands supported by it with minimal dependencies", 
       "ProductVersion": pjson.version,
-      "OriginalFilename": "node.exe",
+      "OriginalFilename": "",
       "InternalName": "node",
-      "LegalCopyright": "MIT license."
+      "LegalCopyright": "© 2021 Microsoft. All rights reserved."
     },
     // file-version is kept as the node version used by the .exe for debugging purposes
     "icon": path.resolve('.\\icon.ico')
