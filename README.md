@@ -1,7 +1,7 @@
 # Azurite V3
 
 [![npm version](https://badge.fury.io/js/azurite.svg)](https://badge.fury.io/js/azurite)
-[![Build Status](https://dev.azure.com/azure/Azurite/_apis/build/status/Azure.Azurite?branchName=master)](https://dev.azure.com/azure/Azurite/_build/latest?definitionId=20&branchName=master)
+[![Build Status](https://dev.azure.com/azure/Azurite/_apis/build/status/Azure.Azurite?branchName=main)](https://dev.azure.com/azure/Azurite/_build/latest?definitionId=105&branchName=main)
 
 > Note:
 > The latest Azurite V3 code, which supports Blob, Queue, and Table (preview) is in the master branch.
