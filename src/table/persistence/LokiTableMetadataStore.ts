@@ -960,4 +960,50 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
     return undefined;
   }
+
+  /**
+   * Update table service properties.
+   * THis will create service properties if they do not exist in the persistence layer.
+   *
+   * TODO: Account's service property should be created when storage account is created or metadata
+   * storage initialization. This method should only be responsible for updating existing record.
+   * In this way, we can reduce one I/O call to get account properties.
+   *
+   * @param {ServicePropertiesModel} serviceProperties
+   * @returns {Promise<ServicePropertiesModel>} undefined properties will be ignored during properties setup
+   * @memberof LokiBlobMetadataStore
+   */
+   public async setServiceProperties(
+    context: Context,
+    serviceProperties: ServicePropertiesModel
+  ): Promise<ServicePropertiesModel> {
+    const coll = this.db.getCollection(this.SERVICES_COLLECTION);
+    const doc = coll.by("accountName", serviceProperties.accountName);
+
+    if (doc) {
+      doc.cors =
+        serviceProperties.cors === undefined
+          ? doc.cors
+          : serviceProperties.cors;
+
+      doc.hourMetrics =
+        serviceProperties.hourMetrics === undefined
+          ? doc.hourMetrics
+          : serviceProperties.hourMetrics;
+
+      doc.logging =
+        serviceProperties.logging === undefined
+          ? doc.logging
+          : serviceProperties.logging;
+
+      doc.minuteMetrics =
+        serviceProperties.minuteMetrics === undefined
+          ? doc.minuteMetrics
+          : serviceProperties.minuteMetrics;
+
+      return coll.update(doc);
+    } else {
+      return coll.insert(serviceProperties);
+    }
+  }
 }

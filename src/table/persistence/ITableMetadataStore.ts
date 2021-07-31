@@ -118,4 +118,20 @@ export default interface ITableMetadataStore {
     context: Context,
     account: string
   ): Promise<ServicePropertiesModel | undefined>;
+   /**
+   * Update table service properties.
+   * Creates table service properties if these do not exist in the persistency layer.
+   *
+   * TODO: Account's service property should be created when storage account is created or metadata
+   * storage initialization. This method should only be responsible for updating existing record.
+   * In this way, we can reduce one I/O call to get account properties.
+   *
+   * @param {ServicePropertiesModel} serviceProperties
+   * @returns {Promise<ServicePropertiesModel>} undefined properties will be ignored during properties setup
+   * @memberof IBlobMetadataStore
+   */
+    setServiceProperties(
+      context: Context,
+      serviceProperties: ServicePropertiesModel
+    ): Promise<ServicePropertiesModel>;
 }

@@ -8,6 +8,7 @@ import {
   createConnectionStringForTest,
   createTableServerForTest
 } from "./table.entity.test.utils";
+import { getServicePropertiesForTest } from "./table.service.test.properties";
 
 // Set true to enable debug log
 configLogger(false);
@@ -39,7 +40,7 @@ describe("table APIs test", () => {
     await server.close();
   });
 
-  it("GetServiceProperties @loki @sql", async () => {
+  it("GetServiceProperties @loki", async () => {
     const getServicePropsPromise = () => {
       return new Promise<Azure.common.models.ServicePropertiesResult.ServiceProperties>(
         (resolve, reject) => {
@@ -71,6 +72,31 @@ describe("table APIs test", () => {
         } else {
           assert.notStrictEqual(result.HourMetrics, undefined);
         }
+      })
+      .catch((err) => {
+        assert.ifError(err);
+      });
+  });
+
+  it("SetServiceProperties @loki", async () => {
+    const setServicePropsPromise = (properties : Azure.common.models.ServicePropertiesResult.ServiceProperties) => {
+      return new Promise<Azure.ServiceResponse>(
+        (resolve, reject) => {
+          tableService.setServiceProperties(properties, (error, response) => {
+            if (error) return reject(error);
+            assert.ok(response.isSuccessful);
+            resolve(response);
+          });
+        }
+      );
+    };
+
+    const props : Azure.common.models.ServicePropertiesResult.ServiceProperties = getServicePropertiesForTest();
+
+    await setServicePropsPromise(props)
+      .then((response) => {
+        // now validate props
+        
       })
       .catch((err) => {
         assert.ifError(err);
