@@ -1,40 +1,27 @@
-import BufferStream from "../../common/utils/BufferStream";
+import toReadableStream from 'to-readable-stream';
+
+import BufferStream from '../../common/utils/BufferStream';
+import { checkEtagIsInvalidFormat, newTableEntityEtag } from '../../common/utils/utils';
+import TableBatchOrchestrator from '../batch/TableBatchOrchestrator';
+import TableBatchUtils from '../batch/TableBatchUtils';
+import TableStorageContext from '../context/TableStorageContext';
+import { NormalizedEntity } from '../entity/NormalizedEntity';
+import StorageErrorFactory from '../errors/StorageErrorFactory';
+import * as Models from '../generated/artifacts/models';
+import Context from '../generated/Context';
+import ITableHandler from '../generated/handlers/ITableHandler';
+import { Entity, Table } from '../persistence/ITableMetadataStore';
 import {
-  checkEtagIsInvalidFormat,
-  newTableEntityEtag
-} from "../../common/utils/utils";
-import TableBatchOrchestrator from "../batch/TableBatchOrchestrator";
-import TableStorageContext from "../context/TableStorageContext";
-import { NormalizedEntity } from "../entity/NormalizedEntity";
-// import NotImplementedError from "../errors/NotImplementedError";
-import StorageErrorFactory from "../errors/StorageErrorFactory";
-import * as Models from "../generated/artifacts/models";
-import Context from "../generated/Context";
-import ITableHandler from "../generated/handlers/ITableHandler";
-import { Entity, Table } from "../persistence/ITableMetadataStore";
+    DEFAULT_TABLE_LISTENING_PORT, DEFAULT_TABLE_SERVER_HOST_NAME, FULL_METADATA_ACCEPT,
+    HeaderConstants, MINIMAL_METADATA_ACCEPT, NO_METADATA_ACCEPT, RETURN_CONTENT, RETURN_NO_CONTENT,
+    TABLE_API_VERSION, TABLE_SERVICE_PERMISSION
+} from '../utils/constants';
 import {
-  DEFAULT_TABLE_LISTENING_PORT,
-  DEFAULT_TABLE_SERVER_HOST_NAME,
-  FULL_METADATA_ACCEPT,
-  HeaderConstants,
-  MINIMAL_METADATA_ACCEPT,
-  NO_METADATA_ACCEPT,
-  RETURN_CONTENT,
-  RETURN_NO_CONTENT,
-  TABLE_API_VERSION,
-  TABLE_SERVICE_PERMISSION
-} from "../utils/constants";
-import {
-  getEntityOdataAnnotationsForResponse,
-  getPayloadFormat,
-  getTableOdataAnnotationsForResponse,
-  getTablePropertiesOdataAnnotationsForResponse,
-  updateTableOptionalOdataAnnotationsForResponse,
-  validateTableName
-} from "../utils/utils";
-import BaseHandler from "./BaseHandler";
-import TableBatchUtils from "../batch/TableBatchUtils";
-import toReadableStream from "to-readable-stream";
+    getEntityOdataAnnotationsForResponse, getPayloadFormat, getTableOdataAnnotationsForResponse,
+    getTablePropertiesOdataAnnotationsForResponse, updateTableOptionalOdataAnnotationsForResponse,
+    validateTableName
+} from '../utils/utils';
+import BaseHandler from './BaseHandler';
 
 interface IPartialResponsePreferProperties {
   statusCode: 200 | 201 | 204;
@@ -713,6 +700,15 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     return response;
   }
+  
+  /**
+   * Set table access policies.
+   * @param {string} table
+   * @param {Models.TableSetAccessPolicyOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.TableSetAccessPolicyResponse>}
+   * @memberof TableHandler
+   */
 
   public async setAccessPolicy(
     table: string,
@@ -723,7 +719,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const accountName = this.getAndCheckAccountName(tableContext);
     const tableName = this.getAndCheckTableName(tableContext);
 
-    // The policy number should be within 5, the permission should follow the Queue permission.
+    // The policy number should be within 5, the permission should follow the Table permission.
     // See as https://docs.microsoft.com/en-us/rest/api/storageservices/create-service-sas.
     if (options.tableAcl !== undefined) {
       if (options.tableAcl.length > 5) {
