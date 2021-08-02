@@ -59,6 +59,14 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       }); // Optimize for find operation
     }
 
+    // Create service properties collection if not exists
+    let servicePropertiesColl = this.db.getCollection(this.SERVICES_COLLECTION);
+    if (servicePropertiesColl === null) {
+      servicePropertiesColl = this.db.addCollection(this.SERVICES_COLLECTION, {
+        unique: ["accountName"]
+      });
+    }
+
     await new Promise<void>((resolve, reject) => {
       this.db.saveDatabase((err) => {
         if (err) {
@@ -973,7 +981,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
    * @returns {Promise<ServicePropertiesModel>} undefined properties will be ignored during properties setup
    * @memberof LokiBlobMetadataStore
    */
-   public async setServiceProperties(
+  public async setServiceProperties(
     context: Context,
     serviceProperties: ServicePropertiesModel
   ): Promise<ServicePropertiesModel> {

@@ -7,6 +7,7 @@
 Table:
 
 - Added getServiceProperties response
+- Added setServiceProperties response
 
 ## 2021.7 Version 3.14.1
 

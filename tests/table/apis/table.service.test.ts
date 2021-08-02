@@ -79,24 +79,72 @@ describe("table APIs test", () => {
   });
 
   it("SetServiceProperties @loki", async () => {
-    const setServicePropsPromise = (properties : Azure.common.models.ServicePropertiesResult.ServiceProperties) => {
-      return new Promise<Azure.ServiceResponse>(
-        (resolve, reject) => {
-          tableService.setServiceProperties(properties, (error, response) => {
-            if (error) return reject(error);
-            assert.ok(response.isSuccessful);
-            resolve(response);
-          });
-        }
-      );
+    const setServicePropsPromise = (
+      properties: Azure.common.models.ServicePropertiesResult.ServiceProperties
+    ) => {
+      return new Promise<Azure.ServiceResponse>((resolve, reject) => {
+        tableService.setServiceProperties(properties, (error, response) => {
+          if (error) return reject(error);
+          assert.ok(response.isSuccessful);
+          resolve(response);
+        });
+      });
     };
 
-    const props : Azure.common.models.ServicePropertiesResult.ServiceProperties = getServicePropertiesForTest();
+    const props: Azure.common.models.ServicePropertiesResult.ServiceProperties = getServicePropertiesForTest();
 
     await setServicePropsPromise(props)
-      .then((response) => {
+      .then(async (setResponse) => {
         // now validate props
-        
+        assert.strictEqual(setResponse.statusCode, 202);
+        const getServicePropsPromise = () => {
+          return new Promise<Azure.common.models.ServicePropertiesResult.ServiceProperties>(
+            (resolve, reject) => {
+              tableService.getServiceProperties(
+                (error, result, getResponse) => {
+                  if (error) return reject(error);
+                  assert.ok(getResponse.isSuccessful);
+                  resolve(result);
+                }
+              );
+            }
+          );
+        };
+
+        await getServicePropsPromise()
+          .then((result) => {
+            if (result && result.Cors && result.Cors.CorsRule !== undefined) {
+              assert.strictEqual(result.Cors.CorsRule.length, 3);
+              assert.strictEqual(
+                result.Cors.CorsRule[0].AllowedHeaders.length,
+                3
+              );
+              assert.strictEqual(
+                result.Cors.CorsRule[0].AllowedMethods.length,
+                6
+              );
+              assert.strictEqual(
+                result.Cors.CorsRule[0].AllowedOrigins.length,
+                2
+              );
+              assert.strictEqual(
+                result.Cors.CorsRule[0].ExposedHeaders.length,
+                1
+              );
+              assert.strictEqual(result.Cors.CorsRule[0].MaxAgeInSeconds, 100);
+            } else {
+              assert.notStrictEqual(result, undefined);
+            }
+            if (result.HourMetrics) {
+              // current default configuration is not running with metrics setting enabled
+              assert.strictEqual(result.HourMetrics.Enabled, false);
+            } else {
+              assert.notStrictEqual(result.HourMetrics, undefined);
+            }
+          })
+          .catch((err) => {
+            assert.ifError(err);
+          });
       })
       .catch((err) => {
         assert.ifError(err);
