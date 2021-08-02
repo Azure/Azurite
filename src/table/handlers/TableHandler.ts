@@ -661,7 +661,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     );
   }
 
-   /**
+  /**
    * Get table access policies.
    * @param {string} table
    * @param {Models.TableGetAccessPolicyOptionalParams} options
@@ -700,7 +700,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     return response;
   }
-  
+
   /**
    * Set table access policies.
    * @param {string} table

@@ -159,7 +159,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     context: Context,
     tableACL?: TableACL
-    
+
   ): Promise<void> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
     const doc = coll.findOne({ account, table });
