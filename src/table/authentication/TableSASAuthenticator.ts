@@ -185,6 +185,7 @@ export default class TableSASAuthenticator implements IAuthenticator {
       const accessPolicy:
         | AccessPolicy
         | undefined = await this.getTableAccessPolicyByIdentifier(
+        account,
         tableName,
         values.identifier,
         context
@@ -377,25 +378,29 @@ export default class TableSASAuthenticator implements IAuthenticator {
   }
 
   private async getTableAccessPolicyByIdentifier(
+    account: string,
     table: string,
     id: string,
     context: Context
   ): Promise<AccessPolicy | undefined> {
     try {
-      const containerModel = await this.tableMetadataStore.getTableAccessPolicy(
-        context,
-        table,
-        {}
-      );
-      if (containerModel === undefined) {
+      const tableModel = await this.tableMetadataStore.getTable(account, table, context);
+
+      if (tableModel === undefined) {
         return undefined;
       }
 
-      for (const acl of containerModel) {
+      if (tableModel.tableAcl === undefined) {
+        return undefined;
+      }
+
+      for (const acl of tableModel.tableAcl) {
         if (acl.id === id) {
           return acl.accessPolicy;
         }
       }
+
+      return undefined;
     } catch (err) {
       return undefined;
     }

@@ -234,6 +234,69 @@ describe("Shared Access Signature (SAS) authentication", () => {
     );
   });
 
+  it("Operation using SAS should fail if ACL generating the SAS no longer allow the operation, @loki", (done) => {
+    const tableAcl = {
+      "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=": {
+        Permissions: "raud",
+        Expiry: new Date("2021-12-31T11:22:33.4567890Z"),
+        Start: new Date("2017-12-31T11:22:33.4567890Z")
+      }
+    };
+
+    tableService.setTableAcl(tableName, tableAcl, (error, result, response) => {
+      if (error) {
+        assert.ifError(error);
+      }
+
+      const sas = tableService.generateSharedAccessSignature(tableName, { Id: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=",
+        AccessPolicy: { Permissions: "raud", Expiry: new Date("2021-12-31T11:22:33.4567890Z"),
+        Start: new Date("2017-12-31T11:22:33.4567890Z") }
+      });
+
+      const sasService = Azure.createTableServiceWithSas(baseURL, sas);
+
+      const entity = {
+        PartitionKey: "part1",
+        RowKey: "row1",
+        myValue: "value1"
+      };
+
+      // tslint:disable-next-line: no-shadowed-variable
+      sasService.insertEntity(tableName, entity, (error) => {
+        if (error) {
+          assert.ifError(error);
+        }
+        // change ACL with the same id such that update ("u") is now disabled
+        const newTableAcl = {
+          "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=": {
+            Permissions: "r",
+            Expiry: new Date("2021-12-31T11:22:33.4567890Z"),
+            Start: new Date("2017-12-31T11:22:33.4567890Z")
+          }
+        };
+        // tslint:disable-next-line: no-shadowed-variable
+        tableService.setTableAcl(tableName, newTableAcl, (error) => {
+          if (error) {
+            assert.ifError(error);
+          }
+
+          const entity2 = {
+            PartitionKey: "part2",
+            RowKey: "row2",
+            myValue: "value2"
+          };
+
+          // tslint:disable-next-line: no-shadowed-variable
+          sasService.insertEntity(tableName, entity2, (error) => {
+            const errorCode = (error as StorageError).statusCode;
+            assert.strictEqual(errorCode, 403);
+            done();
+          });
+        });
+      });
+    });
+  });
+
   it("Update an Entity that does not exist, @loki", (done) => {
     const sasService = getSasService({
       Permissions: TableSASPermission.Update,

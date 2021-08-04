@@ -290,27 +290,28 @@ describe("table APIs test", () => {
 
   it("SetAccessPolicy should work @loki", (done) => {
 
-    const tableAcl = { 
-      "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=": { 
-        Permissions: "raud", 
+    const tableAcl = {
+      "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=": {
+        Permissions: "raud",
         Expiry: new Date("2018-12-31T11:22:33.4567890Z"),
         Start: new Date("2017-12-31T11:22:33.4567890Z")
-      }, 
+      },
       "policy2": {
         Permissions: "a",
         Expiry: new Date("2030-11-31T11:22:33.4567890Z"),
         Start: new Date("2017-12-31T11:22:33.4567890Z")
       }
     };
-    
+
     tableService.createTable(tableName + "setACL", (error) => {
       if (error) {
         assert.ifError(error);
       }
 
       // a random id used to test whether response returns the client id sent in request
-      let setClientRequestId = "b86e2b01-a7b5-4df2-b190-205a0c24bd36";
+      const setClientRequestId = "b86e2b01-a7b5-4df2-b190-205a0c24bd36";
 
+      // tslint:disable-next-line: no-shadowed-variable
       tableService.setTableAcl(tableName + "setACL", tableAcl, {clientRequestId: setClientRequestId}, (error, result, response) => {
         if (error) {
           assert.ifError(error);
@@ -321,7 +322,8 @@ describe("table APIs test", () => {
             setClientRequestId
           );
         }
-        
+
+        // tslint:disable-next-line: no-shadowed-variable
         tableService.getTableAcl(tableName + "setACL", {clientRequestId: setClientRequestId}, (error, result, response) => {
           if (error) {
             assert.ifError(error);
@@ -344,24 +346,25 @@ describe("table APIs test", () => {
 
   it("setAccessPolicy negative @loki", (done) => {
 
-    const tableAcl = { 
-      "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=": { 
-        Permissions: "rwdl", 
+    const tableAcl = {
+      "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=": {
+        Permissions: "rwdl",
         Expiry: new Date("2018-12-31T11:22:33.4567890Z"),
         Start: new Date("2017-12-31T11:22:33.4567890Z")
-      }, 
+      },
       "policy2": {
         Permissions: "a",
         Expiry: new Date("2030-11-31T11:22:33.4567890Z"),
         Start: new Date("2017-12-31T11:22:33.4567890Z")
       }
     };
-    
+
     tableService.createTable(tableName + "setACLNeg", (error) => {
       if (error) {
         assert.ifError(error);
       }
 
+      // tslint:disable-next-line: no-shadowed-variable
       tableService.setTableAcl(tableName + "setACLNeg", tableAcl, (error) => {
         assert.ok(error);
         done();
