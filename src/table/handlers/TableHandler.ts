@@ -119,7 +119,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const [tableResult, nextTableName] = await this.metadataStore.queryTable(
       context,
       account,
-      options.queryOptions?.top,
+      options.queryOptions || {},
       options.nextTableName
     );
 

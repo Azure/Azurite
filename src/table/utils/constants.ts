@@ -13,8 +13,8 @@ export enum TABLE_STATUSCODE {
 }
 
 export const DEFAULT_TABLE_CONTEXT_PATH = "azurite_table_context";
-export const TABLE_API_VERSION = "2020-08-04";
-export const VERSION = "3.13.1";
+export const TABLE_API_VERSION = "2020-10-02";
+export const VERSION = "3.14.1";
 
 export const HeaderConstants = {
   SERVER: "Server",
@@ -43,6 +43,7 @@ export const RETURN_CONTENT = "return-content";
 
 export const QUERY_RESULT_MAX_NUM = 1000;
 export const ValidAPIVersions = [
+  "2020-10-02",
   "2020-08-04",
   "2020-06-12",
   "2020-04-08",

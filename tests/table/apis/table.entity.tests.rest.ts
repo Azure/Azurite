@@ -38,17 +38,20 @@ describe("table Entity APIs test", () => {
 
   let server: TableServer;
 
-  let reproFlowsTableName: string = "flows";
+  let reproFlowsTableName: string = getUniqueName("flows");
 
   before(async () => {
     server = new TableServer(config);
     await server.start();
-    // in order to run tests without cleaning up, I am replacing the table name with a unique name each time
-    reproFlowsTableName = getUniqueName("flows");
   });
 
   after(async () => {
     await server.close();
+  });
+
+  beforeEach(() => {
+    // in order to run tests without cleaning up, I am replacing the table name with a unique name each time
+    reproFlowsTableName = getUniqueName("flows");
   });
 
   // https://github.com/Azure/Azurite/issues/754

@@ -2,7 +2,12 @@
 
 import * as assert from "assert";
 import LogicAppReproEntity from "./table.entity.test.logicapp.entity";
-import { TableClient, TablesSharedKeyCredential } from "@azure/data-tables";
+import {
+  odata,
+  TableEntity,
+  TableClient,
+  TablesSharedKeyCredential
+} from "@azure/data-tables";
 import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
 import {
@@ -50,6 +55,7 @@ describe("table Entity APIs test", () => {
   });
 
   it("Batch API should return row keys in format understood by @azure/data-tables, @loki", async () => {
+    await tableClient.create();
     const partitionKey = createUniquePartitionKey();
     const testEntities: AzureDataTablesTestEntity[] = [
       createBasicEntityForTest(partitionKey),
@@ -57,7 +63,6 @@ describe("table Entity APIs test", () => {
       createBasicEntityForTest(partitionKey)
     ];
 
-    await tableClient.create();
     const batch = tableClient.createBatch(partitionKey);
     await batch.createEntities(testEntities);
     const result = await batch.submitBatch();
@@ -155,12 +160,11 @@ describe("table Entity APIs test", () => {
   });
 
   it("Should return bad request error for incorrectly formatted etags, @loki", async () => {
+    await tableClient.create();
     const partitionKey = createUniquePartitionKey();
     const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
       partitionKey
     );
-
-    await tableClient.create();
 
     const result = await tableClient.createEntity(testEntity);
 
@@ -241,6 +245,142 @@ describe("table Entity APIs test", () => {
       .next();
     assert.notStrictEqual(queryResult.value, undefined);
 
+    await tableClient.delete();
+  });
+
+  it("should find an entity using a partition key with multiple spaces, @loki", async () => {
+    const partitionKey = createUniquePartitionKey() + " with spaces";
+    const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
+      partitionKey
+    );
+
+    await tableClient.create({ requestOptions: { timeout: 60000 } });
+    const result = await tableClient.createEntity(testEntity);
+    assert.ok(result.etag);
+
+    const queryResult = await tableClient
+      .listEntities<AzureDataTablesTestEntity>({
+        queryOptions: {
+          filter: `PartitionKey eq '${partitionKey}'`
+        }
+      })
+      .next();
+    assert.notStrictEqual(queryResult.value, undefined);
+
+    await tableClient.delete();
+  });
+
+  it("should provide a complete query result when using query entities by page, @loki", async () => {
+    const partitionKeyForQueryTest = createUniquePartitionKey();
+    const totalItems = 20;
+    await tableClient.create();
+
+    for (let i = 0; i < totalItems; i++) {
+      const result = await tableClient.createEntity({
+        partitionKey: partitionKeyForQueryTest,
+        rowKey: `${i}`,
+        foo: "testEntity"
+      });
+      assert.notStrictEqual(result.etag, undefined);
+    }
+
+    const maxPageSize = 5;
+    const entities = tableClient.listEntities<TableEntity<{ foo: string }>>({
+      queryOptions: {
+        filter: odata`PartitionKey eq ${partitionKeyForQueryTest}`
+      }
+    });
+    let all: TableEntity<{ foo: string }>[] = [];
+    for await (const entity of entities.byPage({
+      maxPageSize
+    })) {
+      all = [...all, ...entity];
+    }
+    assert.strictEqual(all.length, totalItems);
+    all.sort((obj1, obj2) => {
+      if (parseInt(obj1.rowKey, 10) > parseInt(obj2.rowKey, 10)) {
+        return 1;
+      } else if (obj1.rowKey === obj2.rowKey) {
+        return 0;
+      } else {
+        return -1;
+      }
+    });
+    let rowKeyChecker = 0;
+    while (rowKeyChecker < totalItems) {
+      assert.strictEqual(all[rowKeyChecker].rowKey, rowKeyChecker.toString());
+      rowKeyChecker++;
+    }
+    await tableClient.delete();
+  });
+
+  it("should return the correct number of results querying with a timestamp or different SDK whitespacing behaviours, @loki", async () => {
+    const partitionKeyForQueryTest = createUniquePartitionKey();
+    const totalItems = 10;
+    await tableClient.create();
+    const timestamp = new Date();
+    timestamp.setDate(timestamp.getDate() + 1);
+    const newTimeStamp = timestamp.toISOString();
+    for (let i = 0; i < totalItems; i++) {
+      const result = await tableClient.createEntity({
+        partitionKey: partitionKeyForQueryTest,
+        rowKey: `${i}`,
+        number: i
+      });
+      assert.notStrictEqual(result.etag, undefined);
+    }
+    const maxPageSize = 5;
+    let testsCompleted = 0;
+    // take note of the different whitespacing and query formatting:
+    const queriesAndExpectedResult = [
+      {
+        queryOptions: {
+          filter: odata`PartitionKey eq ${partitionKeyForQueryTest} && number gt 11`
+        },
+        expectedResult: 0
+      },
+      {
+        queryOptions: {
+          filter: odata`PartitionKey eq ${partitionKeyForQueryTest} && number lt 11`
+        },
+        expectedResult: 10
+      },
+      {
+        queryOptions: {
+          filter: odata`PartitionKey eq ${partitionKeyForQueryTest} && number gt 11 && Timestamp lt datetime'${newTimeStamp}'`
+        },
+        expectedResult: 0
+      },
+      {
+        queryOptions: {
+          filter: odata`PartitionKey eq ${partitionKeyForQueryTest} && number lt 11 && Timestamp lt datetime'${newTimeStamp}'`
+        },
+        expectedResult: 10
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) && (number lt 12) && (Timestamp lt datetime'${newTimeStamp}')`
+        },
+        expectedResult: 10
+      }
+    ];
+
+    for (const queryTest of queriesAndExpectedResult) {
+      const entities = tableClient.listEntities<
+        TableEntity<{ number: number }>
+      >({
+        queryOptions: queryTest.queryOptions
+      });
+      let all: TableEntity<{ number: number }>[] = [];
+      for await (const entity of entities.byPage({
+        maxPageSize
+      })) {
+        all = [...all, ...entity];
+      }
+      assert.strictEqual(all.length, queryTest.expectedResult);
+      testsCompleted++;
+    }
+    assert.strictEqual(testsCompleted, 5);
     await tableClient.delete();
   });
 });
