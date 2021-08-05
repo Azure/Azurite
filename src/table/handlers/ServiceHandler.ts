@@ -98,7 +98,17 @@ export default class ServiceHandler
     options: Models.ServiceGetStatisticsOptionalParams,
     context: Context
   ): Promise<Models.ServiceGetStatisticsResponse> {
-    // TODO Refer to Blob/Queue ServiceHandler implementation
-    throw new NotImplementedError(context);
+    const response: Models.ServiceGetStatisticsResponse = {
+      statusCode: 200,
+      requestId: context.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      geoReplication: {
+        status: Models.GeoReplicationStatusType.Live,
+        lastSyncTime: context.startTime!
+      },
+      clientRequestId: options.requestId
+    };
+    return response;
   }
 }

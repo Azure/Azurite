@@ -101,7 +101,11 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       context.contextID
     );
 
-    if (accountProperties.key2 !== undefined) {
+    if (!sig1Pass) {
+      if (accountProperties.key2 === undefined) {
+        return false;
+      }
+
       this.logger.info(
         `AccountSASAuthenticator:validate() Account key2 is not empty, validate signature based account key2.`,
         context.contextID
@@ -130,15 +134,11 @@ export default class AccountSASAuthenticator implements IAuthenticator {
         context.contextID
       );
 
-      if (!sig2Pass && !sig1Pass) {
+      if (!sig2Pass) {
         this.logger.info(
           `AccountSASAuthenticator:validate() Validate signature based account key1 and key2 failed.`,
           context.contextID
         );
-        return false;
-      }
-    } else {
-      if (!sig1Pass) {
         return false;
       }
     }
