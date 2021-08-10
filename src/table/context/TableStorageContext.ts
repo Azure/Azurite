@@ -56,4 +56,12 @@ export default class TableStorageContext extends Context {
   public set accept(accept: string | undefined) {
     this.context.accept = accept;
   }
+
+  public set isSecondary(isSecondary: boolean | undefined) {
+    this.context.isSecondary = isSecondary;
+  }
+
+  public get isSecondary(): boolean | undefined {
+    return this.context.isSecondary;
+  }
 }

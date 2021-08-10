@@ -8,7 +8,8 @@ import {
   DEFAULT_TABLE_CONTEXT_PATH,
   HeaderConstants,
   ValidAPIVersions,
-  VERSION
+  VERSION,
+  SECONDARY_SUFFIX
 } from "../utils/constants";
 import { checkApiVersion, validateTableName } from "../utils/utils";
 
@@ -67,10 +68,12 @@ export function tableStorageContextMiddleware(
   );
 
   // tslint:disable-next-line: prefer-const
-  let [account, tableSection] = extractStoragePartsFromPath(
+  let [account, tableSection, isSecondary] = extractStoragePartsFromPath(
     req.hostname,
     req.path
   );
+
+  tableContext.isSecondary = isSecondary;
 
   const isGet = req.method.toUpperCase() === "GET";
 
@@ -158,6 +161,13 @@ export function tableStorageContextMiddleware(
 
   tableContext.authenticationPath = req.path;
 
+  if (isSecondary) {
+    const pos = tableContext.authenticationPath.search(SECONDARY_SUFFIX);
+    tableContext.authenticationPath =
+      tableContext.authenticationPath.substr(0, pos) +
+      tableContext.authenticationPath.substr(pos + SECONDARY_SUFFIX.length);
+  }
+
   // Emulator's URL pattern is like http://hostname[:port]/account/table
   // (or, alternatively, http[s]://account.localhost[:port]/table/)
   // Create a router to exclude account name from req.path, as url path in swagger doesn't include account
@@ -192,9 +202,10 @@ export function tableStorageContextMiddleware(
 export function extractStoragePartsFromPath(
   hostname: string,
   path: string
-): [string | undefined, string | undefined] {
+): [string | undefined, string | undefined, boolean | undefined] {
   let account;
   let table;
+  let isSecondary = false;
 
   const decodedPath = decodeURIComponent(path);
   const normalizedPath = decodedPath.startsWith("/")
@@ -214,5 +225,10 @@ export function extractStoragePartsFromPath(
   }
   table = parts[urlPartIndex++];
 
-  return [account, table];
+  if (account.endsWith(SECONDARY_SUFFIX)) {
+    account = account.substr(0, account.length - SECONDARY_SUFFIX.length);
+    isSecondary = true;
+  }
+
+  return [account, table, isSecondary];
 }

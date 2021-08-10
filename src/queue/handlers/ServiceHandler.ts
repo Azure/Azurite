@@ -164,6 +164,13 @@ export default class ServiceHandler extends BaseHandler
     options: Models.ServiceGetStatisticsOptionalParams,
     context: Context
   ): Promise<Models.ServiceGetStatisticsResponse> {
+
+    if (!context.context.isSecondary) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextID
+      );
+    }
+
     const response: Models.ServiceGetStatisticsResponse = {
       statusCode: 200,
       requestId: context.contextID,

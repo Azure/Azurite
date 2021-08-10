@@ -69,7 +69,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       this.getCanonicalizedResourceString(
         req,
         account,
-        blobContext.authenticationPath
+        context.context.isSecondary ? blobContext.authenticationPath + "-secondary" : blobContext.authenticationPath
       );
 
     this.logger.info(

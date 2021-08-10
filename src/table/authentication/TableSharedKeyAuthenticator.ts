@@ -61,7 +61,7 @@ export default class TableSharedKeyAuthenticator implements IAuthenticator {
       this.getCanonicalizedResourceString(
         req,
         account,
-        tableContext.authenticationPath
+        context.context.isSecondary ? tableContext.authenticationPath?.substring(0, tableContext.authenticationPath?.length - 1) + "-secondary/" : tableContext.authenticationPath
       );
 
     this.logger.info(

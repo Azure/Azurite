@@ -1,4 +1,5 @@
 import BlobStorageContext from "../context/BlobStorageContext";
+import StorageErrorFactory from "../errors/StorageErrorFactory";
 import NotImplementedError from "../errors/NotImplementedError";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -190,6 +191,13 @@ export default class ServiceHandler extends BaseHandler
     options: Models.ServiceGetStatisticsOptionalParams,
     context: Context
   ): Promise<Models.ServiceGetStatisticsResponse> {
+
+    if (!context.context.isSecondary) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context.contextId
+      );
+    }
+
     const response: Models.ServiceGetStatisticsResponse = {
       statusCode: 200,
       requestId: context.contextId,

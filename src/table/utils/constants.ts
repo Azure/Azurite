@@ -72,3 +72,5 @@ export const ValidAPIVersions = [
 ];
 
 export const TABLE_SERVICE_PERMISSION = "raud";
+
+export const SECONDARY_SUFFIX = "-secondary";

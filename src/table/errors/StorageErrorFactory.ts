@@ -299,4 +299,22 @@ export default class StorageErrorFactory {
       context
     );
   }
+
+  public static getInvalidQueryParameterValue(
+    context: Context,
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    if (additionalMessages === undefined) {
+      additionalMessages = {};
+    }
+    return new StorageError(
+      400,
+      "InvalidQueryParameterValue",
+      `Value for one of the query parameters specified in the request URI is invalid.`,
+      context.contextID || defaultID,
+      additionalMessages,
+      context
+    );
+  }
+
 }

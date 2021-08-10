@@ -251,4 +251,78 @@ describe("QueueServiceAPIs", () => {
       dResult.clientRequestId
     );
   });
+
+  it("Get Queue service stats negative @loki", async () => {
+    await serviceClient.getStatistics()
+      .catch((err) => {
+        assert.strictEqual(err.statusCode, 400);
+        assert.strictEqual(err.details.Code, "InvalidQueryParameterValue");
+        assert.ok(err);
+      });;
+  });
+});
+
+describe("QueueServiceAPIs - secondary location endpoint", () => {
+  // TODO: Create a server factory as tests utils
+  const host = "127.0.0.1";
+  const port = 11001;
+  const metadataDbPath = "__queueTestsStorage__";
+  const extentDbPath = "__extentTestsStorage__";
+  const persistencePath = "__queueTestsPersistence__";
+
+  const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
+    {
+      locationId: "queueTest",
+      locationPath: persistencePath,
+      maxConcurrency: 10
+    }
+  ];
+
+  const config = new QueueConfiguration(
+    host,
+    port,
+    metadataDbPath,
+    extentDbPath,
+    DEFUALT_QUEUE_PERSISTENCE_ARRAY,
+    false
+  );
+
+  const baseURL = `http://${host}:${port}/devstoreaccount1-secondary`;
+  const serviceClient = new QueueServiceClient(
+    baseURL,
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
+      {
+        retryOptions: { maxTries: 1 }
+      }
+    )
+  );
+
+  let server: Server;
+
+  before(async () => {
+    server = new Server(config);
+    await server.start();
+  });
+
+  after(async () => {
+    await server.close();
+    await rmRecursive(metadataDbPath);
+    await rmRecursive(extentDbPath);
+    await rmRecursive(persistencePath);
+  });
+
+  it("Get Queue service stats @loki", async () => {
+
+    await serviceClient.getStatistics()
+      .then((result) => {
+        assert.strictEqual(result.geoReplication?.status, "live");
+      })
+      .catch((err) => {
+        assert.ifError(err);
+      });
+  });
 });

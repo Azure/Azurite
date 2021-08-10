@@ -1,4 +1,5 @@
 import TableStorageContext from "../context/TableStorageContext";
+import StorageErrorFactory from "../errors/StorageErrorFactory";
 import NotImplementedError from "../errors/NotImplementedError";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -98,6 +99,13 @@ export default class ServiceHandler
     options: Models.ServiceGetStatisticsOptionalParams,
     context: Context
   ): Promise<Models.ServiceGetStatisticsResponse> {
+
+    if (!context.context.isSecondary) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context
+      );
+    }
+
     const response: Models.ServiceGetStatisticsResponse = {
       statusCode: 200,
       requestId: context.contextID,
