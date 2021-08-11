@@ -288,4 +288,33 @@ export default class StorageErrorFactory {
       context
     );
   }
+
+  public static getInvalidXmlDocument(context: Context): StorageError {
+    return new StorageError(
+      400,
+      "InvalidXmlDocument",
+      `XML specified is not syntactically valid.`,
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
+
+  public static getInvalidQueryParameterValue(
+    context: Context,
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    if (additionalMessages === undefined) {
+      additionalMessages = {};
+    }
+    return new StorageError(
+      400,
+      "InvalidQueryParameterValue",
+      `Value for one of the query parameters specified in the request URI is invalid.`,
+      context.contextID || defaultID,
+      additionalMessages,
+      context
+    );
+  }
+
 }

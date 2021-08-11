@@ -31,6 +31,8 @@ interface ITable {
 
 export type Table = ITable & IOdataAnnotationsOptional;
 
+export type TableACL = Models.SignedIdentifier[];
+
 export interface IEntity {
   PartitionKey: string;
   RowKey: string;
@@ -52,6 +54,17 @@ export default interface ITableMetadataStore {
     nextTable?: string
   ): Promise<[Table[], string | undefined]>;
   deleteTable(context: Context, table: string, account: string): Promise<void>;
+  setTableACL(
+    account: string,
+    table: string,
+    context: Context,
+    queueACL?: TableACL
+  ): Promise<void>;
+  getTable(
+    account: string,
+    table: string,
+    context: Context
+  ): Promise<Table>;
   queryTableEntities(
     context: Context,
     account: string,

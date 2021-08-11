@@ -396,4 +396,54 @@ describe("ServiceAPIs", () => {
       result.clientRequestId
     );
   });
+
+  it("Get Blob service stats negative @loki", async () => {
+    await serviceClient.getStatistics()
+      .catch((err) => {
+        assert.strictEqual(err.statusCode, 400);
+        assert.strictEqual(err.details.Code, "InvalidQueryParameterValue");
+        assert.ok(err);
+      });;
+  });
+});
+
+describe("ServiceAPIs - secondary location endpoint", () => {
+  const factory = new BlobTestServerFactory();
+  const server = factory.createServer();
+
+  const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1-secondary`;
+  const serviceClient = new BlobServiceClient(
+    baseURL,
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    )
+  );
+
+  before(async () => {
+    await server.start();
+  });
+
+  after(async () => {
+    await server.close();
+    await server.clean();
+  });
+
+  it("Get Blob service stats @loki", async () => {
+
+    await serviceClient.getStatistics()
+      .then((result) => {
+        assert.strictEqual(result.geoReplication?.status, "live");
+      })
+      .catch((err) => {
+        assert.ifError(err);
+      });
+  });
 });

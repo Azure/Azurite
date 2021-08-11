@@ -61,7 +61,7 @@ export default class QueueSharedKeyAuthenticator implements IAuthenticator {
         authType,
         req,
         account,
-        queueContext.authenticationPath
+        context.context.isSecondary ? queueContext.authenticationPath + "-secondary" : queueContext.authenticationPath
       );
 
     this.logger.info(

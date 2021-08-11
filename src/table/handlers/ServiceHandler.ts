@@ -1,4 +1,5 @@
 import TableStorageContext from "../context/TableStorageContext";
+import StorageErrorFactory from "../errors/StorageErrorFactory";
 import NotImplementedError from "../errors/NotImplementedError";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -130,7 +131,24 @@ export default class ServiceHandler
     options: Models.ServiceGetStatisticsOptionalParams,
     context: Context
   ): Promise<Models.ServiceGetStatisticsResponse> {
-    // TODO Refer to Blob/Queue ServiceHandler implementation
-    throw new NotImplementedError(context);
+
+    if (!context.context.isSecondary) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(
+        context
+      );
+    }
+
+    const response: Models.ServiceGetStatisticsResponse = {
+      statusCode: 200,
+      requestId: context.contextID,
+      version: TABLE_API_VERSION,
+      date: context.startTime,
+      geoReplication: {
+        status: Models.GeoReplicationStatusType.Live,
+        lastSyncTime: context.startTime!
+      },
+      clientRequestId: options.requestId
+    };
+    return response;
   }
 }

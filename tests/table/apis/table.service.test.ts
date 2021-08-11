@@ -6,6 +6,7 @@ import TableServer from "../../../src/table/TableServer";
 import { overrideRequest, restoreBuildRequestOptions } from "../../testutils";
 import {
   createConnectionStringForTest,
+  createSecondaryConnectionStringForTest,
   createTableServerForTest
 } from "./table.entity.test.utils";
 import { getServicePropertiesForTest } from "./table.service.test.properties";
@@ -78,6 +79,27 @@ describe("table APIs test", () => {
       });
   });
 
+  it("GetServiceStats negative @loki", async () => {
+    const getServiceStatsPromise = () => {
+      return new Promise<Azure.common.models.ServiceStats>(
+        (resolve, reject) => {
+          tableService.getServiceStats((error, result, response) => {
+            if (error) return reject(error);
+            assert.ok(response.isSuccessful);
+            resolve(result);
+          });
+        }
+      );
+    };
+
+    await getServiceStatsPromise()
+      .catch((err) => {
+        assert.strictEqual(err.statusCode, 400);
+        assert.strictEqual(err.code, "InvalidQueryParameterValue");
+        assert.ok(err);
+      });
+  });
+
   it("SetServiceProperties @loki", async () => {
     const setServicePropsPromise = (
       properties: Azure.common.models.ServicePropertiesResult.ServiceProperties
@@ -145,6 +167,50 @@ describe("table APIs test", () => {
           .catch((err) => {
             assert.ifError(err);
           });
+      })
+      .catch((err) => {
+        assert.ifError(err);
+      });
+  });
+});
+
+describe("table APIs test - secondary location endpoint", () => {
+  let server: TableServer;
+  const tableService = Azure.createTableService(
+    createSecondaryConnectionStringForTest(testLocalAzuriteInstance)
+  );
+  tableService.enableGlobalHttpAgent = true;
+
+  const requestOverride = { headers: {} };
+
+  before(async () => {
+    overrideRequest(requestOverride, tableService);
+    server = createTableServerForTest();
+    await server.start();
+  });
+
+  after(async () => {
+    restoreBuildRequestOptions(tableService);
+    tableService.removeAllListeners();
+    await server.close();
+  });
+
+  it("GetServiceStats @loki", async () => {
+    const getServiceStatsPromise = () => {
+      return new Promise<Azure.common.models.ServiceStats>(
+        (resolve, reject) => {
+          tableService.getServiceStats((error, result, response) => {
+            if (error) return reject(error);
+            assert.ok(response.isSuccessful);
+            resolve(result);
+          });
+        }
+      );
+    };
+
+    await getServiceStatsPromise()
+      .then((result) => {
+        assert.strictEqual(result.GeoReplication?.Status, "live");
       })
       .catch((err) => {
         assert.ifError(err);
