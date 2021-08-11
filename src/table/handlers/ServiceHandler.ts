@@ -1,6 +1,5 @@
 import TableStorageContext from "../context/TableStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
-import NotImplementedError from "../errors/NotImplementedError";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IServiceHandler from "../generated/handlers/IServiceHandler";
