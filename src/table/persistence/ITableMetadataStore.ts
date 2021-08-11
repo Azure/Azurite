@@ -107,15 +107,12 @@ export default interface ITableMetadataStore {
   ): Promise<Models.TableSetAccessPolicyResponse>;
   init(): void;
   close(): void;
-  /**
-   * Get service properties for specific storage account.
-   *
-   * @param {string} account
-   * @returns {Promise<ServicePropertiesModel | undefined>}
-   * @memberof IBlobMetadataStore
-   */
   getServiceProperties(
     context: Context,
     account: string
   ): Promise<ServicePropertiesModel | undefined>;
+  setServiceProperties(
+    context: Context,
+    serviceProperties: ServicePropertiesModel
+  ): Promise<ServicePropertiesModel>;
 }
