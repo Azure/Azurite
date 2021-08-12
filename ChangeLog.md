@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Support rscc, rscd, rsce, rscl, rsct query parameters in SAS tokens.
+
 Table:
 
 - Added getServiceProperties response
