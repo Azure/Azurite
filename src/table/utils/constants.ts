@@ -74,3 +74,24 @@ export const ValidAPIVersions = [
 export const TABLE_SERVICE_PERMISSION = "raud";
 
 export const SECONDARY_SUFFIX = "-secondary";
+
+// Validate audience, accept following audience patterns
+// https://storage.azure.com
+// https://storage.azure.com/
+// e406a681-f3d4-42a8-90b6-c2b029497af1
+// https://*.table.core.windows.net
+// https://*.table.core.windows.net/
+// https://*.table.core.chinacloudapi.cn
+// https://*.table.core.chinacloudapi.cn/
+// https://*.table.core.usgovcloudapi.net
+// https://*.table.core.usgovcloudapi.net/
+// https://*.table.core.cloudapi.de
+// https://*.table.core.cloudapi.de/
+export const VALID_TABLE_AUDIENCES = [
+  /^https:\/\/storage\.azure\.com[\/]?$/,
+  /^e406a681-f3d4-42a8-90b6-c2b029497af1$/,
+  /^https:\/\/(.*)\.table\.core\.windows\.net[\/]?$/,
+  /^https:\/\/(.*)\.table\.core\.chinacloudapi\.cn[\/]?$/,
+  /^https:\/\/(.*)\.table\.core\.usgovcloudapi\.net[\/]?$/,
+  /^https:\/\/(.*)\.table\.core\.cloudapi\.de[\/]?$/
+];
