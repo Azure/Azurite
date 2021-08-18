@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Fixed Blob_Download API by adding header `x-ms-creation-time` in responds
+
 Table:
 
 - Added getServiceProperties response
