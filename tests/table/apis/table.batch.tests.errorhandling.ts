@@ -1,7 +1,8 @@
 // Tests in this file are using @azure/data-tables
 
 import * as assert from "assert";
-import { TableClient, TablesSharedKeyCredential } from "@azure/data-tables";
+import { TableClient, TableTransaction } from "@azure/data-tables";
+import { AzureNamedKeyCredential } from "@azure/core-auth";
 import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
 import {
@@ -49,18 +50,22 @@ describe("table Entity APIs test", () => {
       createBasicEntityForTest(partitionKey)
     ];
 
+    const sharedKeyCredential = new AzureNamedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY);
+
     const badTableClient = new TableClient(
       `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
       "noExistingTable",
-      new TablesSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
+      sharedKeyCredential
     );
 
     // await badTableClient.create(); // deliberately do not create table
-    const batch = badTableClient.createBatch(partitionKey);
-    batch.createEntities(testEntities);
+    const transaction = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction.createEntity(testEntity);
+    }
 
     try {
-      await batch.submitBatch();
+      await badTableClient.submitTransaction(transaction.actions);
     } catch (err) {
       assert.strictEqual(err.statusCode, 400);
       assert.strictEqual(err.code, "TableNotFound");
@@ -76,18 +81,23 @@ describe("table Entity APIs test", () => {
       testEntities.push(createBasicEntityForTest(partitionKey));
     }
 
+    const sharedKeyCredential = new AzureNamedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY);
+
     const tooManyRequestsClient = new TableClient(
       `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
       tableName,
-      new TablesSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
+      sharedKeyCredential
     );
 
-    await tooManyRequestsClient.create();
-    const batch = tooManyRequestsClient.createBatch(partitionKey);
-    batch.createEntities(testEntities);
+    await tooManyRequestsClient.createTable();
+
+    const transaction = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction.createEntity(testEntity);
+    }
 
     try {
-      await batch.submitBatch();
+      await tooManyRequestsClient.submitTransaction(transaction.actions);
     } catch (err) {
       assert.strictEqual(err.statusCode, 400);
       assert.strictEqual(err.code, "InvalidInput");
