@@ -1692,6 +1692,7 @@ describe("PageBlobAPIs", () => {
       await bodyToString(result, 1024),
       "\u0000".repeat(1024)
     );
+    assert.equal(true, result._response.headers.contains("x-ms-creation-time"));
 
     await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
     await pageBlobClient.uploadPages("b".repeat(512), 512, 512);
