@@ -6,7 +6,9 @@ import {
   odata,
   TableEntity,
   TableClient,
-  TablesSharedKeyCredential
+  AzureNamedKeyCredential,
+  TableTransaction,
+  TransactionAction
 } from "@azure/data-tables";
 import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
@@ -36,7 +38,7 @@ describe("table Entity APIs test", () => {
   const tableClient = new TableClient(
     `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
     tableName,
-    new TablesSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
+    new AzureNamedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
   );
 
   const requestOverride = { headers: {} };
@@ -55,24 +57,27 @@ describe("table Entity APIs test", () => {
   });
 
   it("Batch API should return row keys in format understood by @azure/data-tables, @loki", async () => {
-    await tableClient.create();
+    await tableClient.createTable();
     const partitionKey = createUniquePartitionKey();
-    const testEntities: AzureDataTablesTestEntity[] = [
+    const testEntities: any[] = [
       createBasicEntityForTest(partitionKey),
       createBasicEntityForTest(partitionKey),
       createBasicEntityForTest(partitionKey)
     ];
 
-    const batch = tableClient.createBatch(partitionKey);
-    await batch.createEntities(testEntities);
-    const result = await batch.submitBatch();
+    const batch: TransactionAction[] = [];
+    for (const entity of testEntities) {
+      batch.push(["create", entity]);
+    }
+
+    const result = await tableClient.submitTransaction(batch);
     assert.ok(result.subResponses[0].rowKey);
-    await tableClient.delete();
+    await tableClient.deleteTable();
   });
 
   // https://github.com/Azure/Azurite/issues/754
   it("Batch API should correctly process LogicApp style update request sequence", async () => {
-    await tableClient.create();
+    await tableClient.createTable();
     const logicAppReproEntity = new LogicAppReproEntity();
     const insertedEntityHeaders = await tableClient.createEntity<LogicAppReproEntity>(
       logicAppReproEntity
@@ -107,12 +112,12 @@ describe("table Entity APIs test", () => {
     updatedEntity.sequenceNumber = 2;
 
     // Batch using replace mode
-    const batch1 = tableClient.createBatch(batchEntity1.partitionKey);
+    const batch1 = new TableTransaction();
     batch1.createEntity(batchEntity1);
     batch1.createEntity(batchEntity2);
     batch1.updateEntity(updatedEntity, "Replace");
 
-    const result = await batch1.submitBatch();
+    const result = await tableClient.submitTransaction(batch1.actions);
     // batch operations succeeded
     assert.strictEqual(
       result.subResponses[0].status,
@@ -132,14 +137,11 @@ describe("table Entity APIs test", () => {
     // we have a new etag from the updated entity
     assert.notStrictEqual(result.subResponses[2].etag, updatedEntity.etag);
 
-    const batch2 = tableClient.createBatch(batchEntity1.partitionKey);
+    const batch2 = new TableTransaction();
     batch2.deleteEntity(batchEntity1.partitionKey, batchEntity1.rowKey);
     batch2.deleteEntity(batchEntity2.partitionKey, batchEntity2.rowKey);
-    batch2.deleteEntity(updatedEntity.partitionKey, updatedEntity.rowKey, {
-      etag: result.subResponses[2].etag
-    });
 
-    const result2 = await batch2.submitBatch();
+    const result2 = await tableClient.submitTransaction(batch2.actions);
     assert.strictEqual(
       result2.subResponses[0].status,
       204,
@@ -156,11 +158,11 @@ describe("table Entity APIs test", () => {
       "error with updatedEntity delete"
     );
 
-    await tableClient.delete();
+    await tableClient.deleteTable();
   });
 
   it("Should return bad request error for incorrectly formatted etags, @loki", async () => {
-    await tableClient.create();
+    await tableClient.createTable();
     const partitionKey = createUniquePartitionKey();
     const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
       partitionKey
@@ -202,7 +204,7 @@ describe("table Entity APIs test", () => {
         );
       });
 
-    await tableClient.delete();
+    await tableClient.deleteTable();
   });
 
   it("should find an int as a number, @loki", async () => {
@@ -211,7 +213,7 @@ describe("table Entity APIs test", () => {
       partitionKey
     );
 
-    await tableClient.create({ requestOptions: { timeout: 60000 } });
+    await tableClient.createTable({ requestOptions: { timeout: 60000 } });
     const result = await tableClient.createEntity(testEntity);
     assert.ok(result.etag);
 
@@ -223,7 +225,7 @@ describe("table Entity APIs test", () => {
       })
       .next();
     assert.notStrictEqual(queryResult.value, undefined);
-    await tableClient.delete();
+    await tableClient.deleteTable();
   });
 
   it("should find a long int, @loki", async () => {
@@ -232,7 +234,7 @@ describe("table Entity APIs test", () => {
       partitionKey
     );
 
-    await tableClient.create({ requestOptions: { timeout: 60000 } });
+    await tableClient.createTable({ requestOptions: { timeout: 60000 } });
     const result = await tableClient.createEntity(testEntity);
     assert.ok(result.etag);
 
@@ -245,7 +247,7 @@ describe("table Entity APIs test", () => {
       .next();
     assert.notStrictEqual(queryResult.value, undefined);
 
-    await tableClient.delete();
+    await tableClient.deleteTable();
   });
 
   it("should find an entity using a partition key with multiple spaces, @loki", async () => {
@@ -254,7 +256,7 @@ describe("table Entity APIs test", () => {
       partitionKey
     );
 
-    await tableClient.create({ requestOptions: { timeout: 60000 } });
+    await tableClient.createTable({ requestOptions: { timeout: 60000 } });
     const result = await tableClient.createEntity(testEntity);
     assert.ok(result.etag);
 
@@ -267,13 +269,13 @@ describe("table Entity APIs test", () => {
       .next();
     assert.notStrictEqual(queryResult.value, undefined);
 
-    await tableClient.delete();
+    await tableClient.deleteTable();
   });
 
   it("should provide a complete query result when using query entities by page, @loki", async () => {
     const partitionKeyForQueryTest = createUniquePartitionKey();
     const totalItems = 20;
-    await tableClient.create();
+    await tableClient.createTable();
 
     for (let i = 0; i < totalItems; i++) {
       const result = await tableClient.createEntity({
@@ -311,13 +313,13 @@ describe("table Entity APIs test", () => {
       assert.strictEqual(all[rowKeyChecker].rowKey, rowKeyChecker.toString());
       rowKeyChecker++;
     }
-    await tableClient.delete();
+    await tableClient.deleteTable();
   });
 
   it("should return the correct number of results querying with a timestamp or different SDK whitespacing behaviours, @loki", async () => {
     const partitionKeyForQueryTest = createUniquePartitionKey();
     const totalItems = 10;
-    await tableClient.create();
+    await tableClient.createTable();
     const timestamp = new Date();
     timestamp.setDate(timestamp.getDate() + 1);
     const newTimeStamp = timestamp.toISOString();
@@ -381,6 +383,6 @@ describe("table Entity APIs test", () => {
       testsCompleted++;
     }
     assert.strictEqual(testsCompleted, 5);
-    await tableClient.delete();
+    await tableClient.deleteTable();
   });
 });

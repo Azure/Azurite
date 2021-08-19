@@ -44,7 +44,7 @@ export default class TableRequestListenerFactory
     private readonly accessLogWriteStream?: NodeJS.WritableStream,
     private readonly skipApiVersionCheck?: boolean,
     private readonly oauth?: OAuthLevel
-  ) { }
+  ) {}
 
   public createRequestListener(): RequestListener {
     // TODO: Workarounds for generated specification isXML issue. Ideally should fix in generator.
