@@ -148,6 +148,10 @@
       "env": {
         "AZURITE_ACCOUNTS": "",
         "AZURE_TABLE_STORAGE": "",
+        "DATATABLES_ACCOUNT_NAME": "<name of your storage account>",
+        "DATATABLES_ACCOUNT_KEY" : "<account key for your storage account>",
+        "AZURE_DATATABLES_STORAGE_STRING": "https://<your account name>.table.core.windows.net",
+        "AZURE_DATATABLES_SAS": "?<sas query string>",
         "NODE_TLS_REJECT_UNAUTHORIZED": "0"
       },
       "internalConsoleOptions": "openOnSessionStart",

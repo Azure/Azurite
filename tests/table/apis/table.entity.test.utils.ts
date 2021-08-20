@@ -6,6 +6,7 @@ import {
 import { TestEntity } from "./TestEntity";
 import TableServer from "../../../src/table/TableServer";
 import TableConfiguration from "../../../src/table/TableConfiguration";
+import { TableClient, TablesSharedKeyCredential } from "@azure/data-tables";
 
 export const PROTOCOL = "http";
 export const HOST = "127.0.0.1";
@@ -20,6 +21,8 @@ const secondaryConnectionString =
   `DefaultEndpointsProtocol=${PROTOCOL};AccountName=${EMULATOR_ACCOUNT_NAME};` +
   `AccountKey=${EMULATOR_ACCOUNT_KEY};TableEndpoint=${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}-secondary;`;
 const AZURE_TABLE_STORAGE: string = "AZURE_TABLE_STORAGE";
+const AZURE_DATATABLES_STORAGE_STRING = "AZURE_DATATABLES_STORAGE_STRING";
+const AZURE_DATATABLES_SAS = "AZURE_DATATABLES_SAS";
 
 const config = new TableConfiguration(
   HOST,
@@ -105,4 +108,31 @@ export function createSecondaryConnectionStringForTest(dev: boolean): string {
  */
 export function createUniquePartitionKey(): string {
   return getUniqueName("datatablestests");
+}
+
+/**
+ * creates an Azure Data Tables client for local or service tests
+ *
+ * @export
+ * @param {boolean} local
+ * @param {string} tableName
+ * @return {*}  {TableClient}
+ */
+export function createAzureDataTablesClient(
+  local: boolean,
+  tableName: string
+): TableClient {
+  if (local) {
+    return new TableClient(
+      `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
+      tableName,
+      new TablesSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
+    );
+  } else {
+    return new TableClient(
+      process.env[AZURE_DATATABLES_STORAGE_STRING]! +
+        process.env[AZURE_DATATABLES_SAS]!,
+      tableName
+    );
+  }
 }
