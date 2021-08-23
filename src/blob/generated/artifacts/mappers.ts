@@ -3368,6 +3368,12 @@ export const BlobDownloadHeaders: msRest.CompositeMapper = {
         },
         headerCollectionPrefix: "x-ms-meta-"
       },
+      creationTime: {
+        serializedName: "x-ms-creation-time",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
       contentLength: {
         serializedName: "content-length",
         type: {

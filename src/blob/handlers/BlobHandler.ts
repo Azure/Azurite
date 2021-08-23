@@ -1065,6 +1065,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentMD5,
       isServerEncrypted: true,
       clientRequestId: options.requestId,
+      creationTime:blob.properties.creationTime,
       blobCommittedBlockCount:
         blob.properties.blobType === Models.BlobType.AppendBlob
           ? (blob.committedBlocksInOrder || []).length
@@ -1188,6 +1189,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentMD5,
       blobContentMD5: blob.properties.contentMD5,
       isServerEncrypted: true,
+      creationTime:blob.properties.creationTime,
       clientRequestId: options.requestId
     };
 

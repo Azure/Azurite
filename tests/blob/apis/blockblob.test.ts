@@ -306,6 +306,7 @@ describe("BlockBlobAPIs", () => {
 
     const result = await blobClient.download(0);
     assert.deepStrictEqual(await bodyToString(result, 0), "");
+    assert.equal(true, result._response.headers.contains("x-ms-creation-time"));
   });
 
   it("commitBlockList with empty list should not work with ifNoneMatch=* for existing blob @loki @sql", async () => {
