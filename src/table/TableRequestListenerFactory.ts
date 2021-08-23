@@ -19,6 +19,7 @@ import AuthenticationMiddlewareFactory from "./middleware/AuthenticationMiddlewa
 import createTableStorageContextMiddleware from "./middleware/tableStorageContext.middleware";
 import ITableMetadataStore from "./persistence/ITableMetadataStore";
 import { DEFAULT_TABLE_CONTEXT_PATH } from "./utils/constants";
+import PreflightMiddlewareFactory from "./middleware/PreflightMiddlewareFactory";
 
 import morgan = require("morgan");
 import TableSharedKeyAuthenticator from "./authentication/TableSharedKeyAuthenticator";
@@ -136,8 +137,34 @@ export default class TableRequestListenerFactory
     // Generated, inject handlers to create a handler middleware
     app.use(middlewareFactory.createHandlerMiddleware(handlers));
 
+    // CORS request handling, preflight request and the corresponding actual request
+    const preflightMiddlewareFactory = new PreflightMiddlewareFactory(logger);
+    // CORS actual request handling.
+    // tslint:disable-next-line:max-line-length
+    // See as https://docs.microsoft.com/en-us/rest/api/storageservices/cross-origin-resource-sharing--cors--support-for-the-azure-storage-services
+    app.use(
+      preflightMiddlewareFactory.createCorsRequestMiddleware(
+        this.metadataStore,
+        true
+      )
+    );
+    app.use(
+      preflightMiddlewareFactory.createCorsRequestMiddleware(
+        this.metadataStore,
+        false
+      )
+    );
+
     // Generated, will serialize response models into HTTP response
     app.use(middlewareFactory.createSerializerMiddleware());
+
+    // CORS preflight request handling, processing OPTIONS requests.
+    // TODO: Should support OPTIONS in swagger and autorest, then this handling can be moved to ServiceHandler.
+    app.use(
+      preflightMiddlewareFactory.createOptionsHandlerMiddleware(
+        this.metadataStore
+      )
+    );
 
     // Generated, will return MiddlewareError and Errors thrown in previous middleware/handlers to HTTP response
     app.use(middlewareFactory.createErrorMiddleware());

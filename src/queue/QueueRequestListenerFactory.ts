@@ -130,7 +130,6 @@ export default class QueueRequestListenerFactory
     // CORS request handling, preflight request and the corresponding actual request
     const preflightMiddlewareFactory = new PreflightMiddlewareFactory(logger);
     // CORS actual request handling.
-    // TODO: Should provide this handling for blob service.
     // tslint:disable-next-line:max-line-length
     // See as https://docs.microsoft.com/en-us/rest/api/storageservices/cross-origin-resource-sharing--cors--support-for-the-azure-storage-services
     app.use(

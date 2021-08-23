@@ -317,4 +317,31 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getInvalidCorsHeaderValue(
+    context: Context,
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    return new StorageError(
+      400,
+      "InvalidHeaderValue",
+      "A required CORS header is not present.",
+      context.contextID || defaultID,
+      additionalMessages,
+      context
+    );
+  }
+
+  public static corsPreflightFailure(
+    context: Context,
+    additionalMessages?: { [key: string]: string }
+  ): StorageError {
+    return new StorageError(
+      403,
+      "CorsPreflightFailure",
+      "CORS not enabled or no matching rule found for this request.",
+      context.contextID || defaultID,
+      additionalMessages,
+      context
+    );
+  }
 }

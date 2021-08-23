@@ -1,3 +1,5 @@
+import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
+
 export const DEFAULT_TABLE_EXTENT_LOKI_DB_PATH =
   "__azurite_db_table_extent__.json";
 export const DEFAULT_TABLE_LOKI_DB_PATH = "__azurite_db_table__.json";
@@ -6,6 +8,7 @@ export const DEFAULT_TABLE_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 
 export const DEFAULT_TABLE_LISTENING_PORT = 10002;
 export const DEFAULT_ENABLE_ACCESS_LOG = true;
 export const DEFAULT_ENABLE_DEBUG_LOG = true;
+export const DEFAULT_TABLE_PERSISTENCE_PATH = "__tablestorage__";
 
 export enum TABLE_STATUSCODE {
   CREATED = 201,
@@ -27,7 +30,21 @@ export const HeaderConstants = {
   X_MS_DATE: "x-ms-date",
   X_MS_VERSION: "x-ms-version",
   ACCEPT: "accept",
-  PREFER: "Prefer"
+  PREFER: "Prefer",
+  ORIGIN: "origin",
+  VARY: "Vary",
+  ACCESS_CONTROL_EXPOSE_HEADERS: "Access-Control-Expose-Headers",
+  ACCESS_CONTROL_ALLOW_ORIGIN: "Access-Control-Allow-Origin",
+  ACCESS_CONTROL_ALLOW_CREDENTIALS: "Access-Control-Allow-Credentials",
+  ACCESS_CONTROL_ALLOW_METHODS: "Access-Control-Allow-Methods",
+  ACCESS_CONTROL_ALLOW_HEADERS: "Access-Control-Allow-Headers",
+  ACCESS_CONTROL_MAX_AGE: "Access-Control-Max-Age",
+  ACCESS_CONTROL_REQUEST_METHOD: "access-control-request-method",
+  ACCESS_CONTROL_REQUEST_HEADERS: "access-control-request-headers"
+};
+
+export const MethodConstants = {
+  OPTIONS: "OPTIONS"
 };
 
 export const SUPPORTED_QUERY_OPERATOR = ["eq", "gt", "ge", "lt", "le", "ne"];
@@ -40,6 +57,14 @@ export const ODATA_TYPE = "@odata.type";
 
 export const RETURN_NO_CONTENT = "return-no-content";
 export const RETURN_CONTENT = "return-content";
+
+export const DEFAULT_TABLE_PERSISTENCE_ARRAY: StoreDestinationArray = [
+  {
+    locationId: "Default",
+    locationPath: DEFAULT_TABLE_PERSISTENCE_PATH,
+    maxConcurrency: 1
+  }
+];
 
 export const QUERY_RESULT_MAX_NUM = 1000;
 export const ValidAPIVersions = [
