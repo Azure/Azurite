@@ -39,7 +39,11 @@ async function main() {
     undefined,
     await env.debug(),
     env.loose(),
-    env.skipApiVersionCheck()
+    env.skipApiVersionCheck(),
+    env.cert(),
+    env.key(),
+    env.pwd(),
+    env.oauth()
   );
 
   // We use logger singleton as global debugger logger to track detailed outputs cross layers
