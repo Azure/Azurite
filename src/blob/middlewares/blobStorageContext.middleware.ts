@@ -2,7 +2,7 @@ import { NextFunction, Request, RequestHandler, Response } from "express";
 import uuid from "uuid/v4";
 
 import logger from "../../common/Logger";
-import { PRODUCTION_STYLE_URL_HOSTNAME } from "../../common/utils/constants";
+import { IP_REGEX } from "../../common/utils/constants";
 import BlobStorageContext from "../context/BlobStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import {
@@ -145,10 +145,14 @@ export function extractStoragePartsFromPath(
   const parts = normalizedPath.split("/");
 
   let urlPartIndex = 0;
-  if (hostname.endsWith(PRODUCTION_STYLE_URL_HOSTNAME)) {
+  const isIPAddress = IP_REGEX.test(hostname);
+  const firstDotIndex = hostname.indexOf(".");
+  // If hostname is not an IP address and has a dot inside,
+  // we assume user wants to access emulator with a production-like URL.
+  if (!isIPAddress && firstDotIndex > 0) {
     account = hostname.substring(
       0,
-      hostname.length - PRODUCTION_STYLE_URL_HOSTNAME.length
+      firstDotIndex
     );
   } else {
     account = parts[urlPartIndex++];
