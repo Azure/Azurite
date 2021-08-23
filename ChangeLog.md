@@ -4,6 +4,13 @@
 
 ## Upcoming Release
 
+General:
+
+Blob:
+
+- Support rscc, rscd, rsce, rscl, rsct query parameters in SAS tokens.
+- Fixed Blob_Download API by adding header `x-ms-creation-time` in responds.
+
 Table:
 
 - Added getServiceProperties response

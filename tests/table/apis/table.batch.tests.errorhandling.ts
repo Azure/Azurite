@@ -1,7 +1,8 @@
 // Tests in this file are using @azure/data-tables
 
 import * as assert from "assert";
-import { TableClient, AzureNamedKeyCredential, TransactionAction } from "@azure/data-tables";
+import { TableClient, TableTransaction } from "@azure/data-tables";
+import { AzureNamedKeyCredential } from "@azure/core-auth";
 import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
 import {
@@ -10,6 +11,7 @@ import {
   getUniqueName
 } from "../../testutils";
 import {
+  AzureDataTablesTestEntity,
   createBasicEntityForTest
 } from "./AzureDataTablesTestEntity";
 import {
@@ -42,26 +44,31 @@ describe("table Entity APIs test", () => {
 
   it("Batch API should serialize errors according to group transaction spec, @loki", async () => {
     const partitionKey = createUniquePartitionKey();
-    const testEntities: any[] = [
+    const testEntities: AzureDataTablesTestEntity[] = [
       createBasicEntityForTest(partitionKey),
       createBasicEntityForTest(partitionKey),
       createBasicEntityForTest(partitionKey)
     ];
 
+    const sharedKeyCredential = new AzureNamedKeyCredential(
+      EMULATOR_ACCOUNT_NAME,
+      EMULATOR_ACCOUNT_KEY
+    );
+
     const badTableClient = new TableClient(
       `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
       "noExistingTable",
-      new AzureNamedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
+      sharedKeyCredential
     );
 
     // await badTableClient.create(); // deliberately do not create table
-    const batch: TransactionAction[] = [];
-    for (const entity of testEntities) {
-      batch.push(["create", entity]);
+    const transaction = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction.createEntity(testEntity);
     }
 
     try {
-      await badTableClient.submitTransaction(batch);
+      await badTableClient.submitTransaction(transaction.actions);
     } catch (err) {
       assert.strictEqual(err.statusCode, 400);
       assert.strictEqual(err.code, "TableNotFound");
@@ -71,26 +78,32 @@ describe("table Entity APIs test", () => {
   it("Batch API should reject request with more than 100 transactions, @loki", async () => {
     const partitionKey = createUniquePartitionKey();
     const tableName: string = getUniqueName("datatables");
-    const testEntities: any[] = [];
+    const testEntities: AzureDataTablesTestEntity[] = [];
     const TOO_MANY_REQUESTS = 101;
     while (testEntities.length < TOO_MANY_REQUESTS) {
       testEntities.push(createBasicEntityForTest(partitionKey));
     }
 
+    const sharedKeyCredential = new AzureNamedKeyCredential(
+      EMULATOR_ACCOUNT_NAME,
+      EMULATOR_ACCOUNT_KEY
+    );
+
     const tooManyRequestsClient = new TableClient(
       `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
       tableName,
-      new AzureNamedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
+      sharedKeyCredential
     );
 
     await tooManyRequestsClient.createTable();
-    const batch: TransactionAction[] = [];
-    for (const entity of testEntities) {
-      batch.push(["create", entity]);
+
+    const transaction = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction.createEntity(testEntity);
     }
 
     try {
-      await tooManyRequestsClient.submitTransaction(batch);
+      await tooManyRequestsClient.submitTransaction(transaction.actions);
     } catch (err) {
       assert.strictEqual(err.statusCode, 400);
       assert.strictEqual(err.code, "InvalidInput");

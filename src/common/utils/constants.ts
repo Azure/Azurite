@@ -7,6 +7,11 @@ export const DEFAULT_MAX_EXTENT_SIZE = 64 * 1024 * 1024; // 64 MB
 export const DEFAULT_READ_CONCURRENCY = 100;
 export const DEFAULT_EXTENT_GC_PROTECT_TIME_IN_MS = 10 * 60 * 1000; // 10mins
 export const DEFAULT_SQL_CHARSET = "utf8mb4";
+// IP regex.
+// This is to distinguish IP style hostname from others
+// When host matches it, we assume user is accessing emulator by IP address.
+// Otherwise, try to extract string before first dot, as account name.
+export const IP_REGEX = new RegExp("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$");
 // Use utf8mb4_bin instead of utf8mb4_general_ci to honor case sensitive
 // https://dev.mysql.com/doc/refman/8.0/en/case-sensitivity.html
 export const DEFAULT_SQL_COLLATE = "utf8mb4_bin";
@@ -24,12 +29,6 @@ export const DEFAULT_SQL_OPTIONS = {
     timezone: "+00:00"
   }
 };
-
-// In some scenarios, users want to test with production-style URLs like
-// http[s]://devstoreaccount1.localhost[:port]/container/path/blob.dat
-// (as opposed to default emulator style http[s]://hostname[:port]/devstoreaccount1/container/path/blob.dat
-// When URL's hostname ends with .localhost, we assume user wants to use production-style URL format.
-export const PRODUCTION_STYLE_URL_HOSTNAME = ".localhost";
 
 export const BEARER_TOKEN_PREFIX = "Bearer";
 export const HTTPS = "https";

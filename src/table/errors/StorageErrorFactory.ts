@@ -317,31 +317,30 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getInvalidAuthenticationInfo(
-    context: Context
+  public static getInvalidCorsHeaderValue(
+    context: Context,
+    additionalMessages?: { [key: string]: string }
   ): StorageError {
     return new StorageError(
       400,
-      "InvalidAuthenticationInfo",
-      "Authentication information is not given in the correct format. Check the value of Authorization header.",
+      "InvalidHeaderValue",
+      "A required CORS header is not present.",
       context.contextID || defaultID,
-      undefined,
+      additionalMessages,
       context
     );
   }
 
-  public static getAuthenticationFailed(
+  public static corsPreflightFailure(
     context: Context,
-    authenticationErrorDetail: string
+    additionalMessages?: { [key: string]: string }
   ): StorageError {
     return new StorageError(
       403,
-      "AuthenticationFailed",
-      "Server failed to authenticate the request. Make sure the value of the Authorization header is formed correctly including the signature.",
+      "CorsPreflightFailure",
+      "CORS not enabled or no matching rule found for this request.",
       context.contextID || defaultID,
-      {
-        AuthenticationErrorDetail: authenticationErrorDetail
-      },
+      additionalMessages,
       context
     );
   }

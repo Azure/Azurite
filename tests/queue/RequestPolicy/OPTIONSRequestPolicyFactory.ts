@@ -27,6 +27,7 @@ export default class OPTIONSRequestPolicyFactory {
 }
 
 // Create a policy by extending from Azure.BaseRequestPolicy
+// tslint:disable-next-line: max-classes-per-file
 class OPTIONSRequestPolicy extends BaseRequestPolicy {
   private origin: string | undefined;
   private requstMethod: string | undefined;

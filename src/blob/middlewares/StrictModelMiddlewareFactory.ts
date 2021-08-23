@@ -40,13 +40,7 @@ export const UnsupportedParametersBlocker: StrictModelRequestValidator = async (
   context: Context,
   logger: ILogger
 ): Promise<void> => {
-  const UnsupportedParameterKeys = [
-    // https://docs.microsoft.com/en-us/rest/api/storageservices/create-service-sas#specifying-query-parameters-to-override-response-headers-blob-and-file-services-only
-    "rscc",
-    "rscc",
-    "rsce",
-    "rsce",
-    "rsct"
+  const UnsupportedParameterKeys: string[] = [
   ];
 
   for (const parameterKey of UnsupportedParameterKeys) {
