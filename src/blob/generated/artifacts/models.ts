@@ -3887,6 +3887,10 @@ export interface BlobDownloadHeaders {
   lastModified?: Date;
   metadata?: { [propertyName: string]: string };
   /**
+   * Returns the date and time the blob was created.
+   */
+  creationTime?: Date;
+  /**
    * The number of bytes present in the response body.
    */
   contentLength?: number;

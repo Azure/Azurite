@@ -2890,6 +2890,12 @@
                 "x-ms-client-name": "Metadata",
                 "x-ms-header-collection-prefix": "x-ms-meta-"
               },
+              "x-ms-creation-time": {
+                "x-ms-client-name": "CreationTime",
+                "type": "string",
+                "format": "date-time-rfc1123",
+                "description": "Returns the date and time the blob was created."
+              },
               "Content-Length": {
                 "type": "integer",
                 "format": "int64",

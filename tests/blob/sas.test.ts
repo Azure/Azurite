@@ -12,7 +12,8 @@ import {
   newPipeline,
   StorageSharedKeyCredential,
   ContainerClient,
-  PageBlobClient
+  PageBlobClient,
+  AppendBlobClient
 } from "@azure/storage-blob";
 import * as assert from "assert";
 
@@ -618,7 +619,73 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await containerClient.delete();
   });
 
-  it("generateBlobSASQueryParameters should work for blob @loki @sql", async () => {
+  it("generateBlobSASQueryParameters should work for page blob with original headers @loki @sql", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const blobName = getUniqueName("blob");
+    const blobClient = containerClient.getPageBlobClient(blobName);
+    await blobClient.create(1024, {
+      blobHTTPHeaders: {
+        blobCacheControl: "cache-control-original",
+        blobContentType: "content-type-original",
+        blobContentDisposition: "content-disposition-original",
+        blobContentEncoding: "content-encoding-original",
+        blobContentLanguage: "content-language-original"
+      }
+    });
+
+    const blobSAS = generateBlobSASQueryParameters(
+      {
+        blobName,
+        containerName,
+        expiresOn: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: BlobSASPermissions.parse("racwd"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
+        version: "2016-05-31"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    );
+
+    const sasURL = `${blobClient.url}?${blobSAS}`;
+    const blobClientWithSAS = new PageBlobClient(
+      sasURL,
+      newPipeline(new AnonymousCredential())
+    );
+
+    await blobClientWithSAS.getProperties();
+
+    const properties = await blobClientWithSAS.getProperties();
+    assert.equal(properties.cacheControl, "cache-control-original");
+    assert.equal(properties.contentDisposition, "content-disposition-original");
+    assert.equal(properties.contentEncoding, "content-encoding-original");
+    assert.equal(properties.contentLanguage, "content-language-original");
+    assert.equal(properties.contentType, "content-type-original");
+
+    const downloadResponse = await blobClientWithSAS.download();
+    assert.equal(downloadResponse.cacheControl, "cache-control-original");
+    assert.equal(downloadResponse.contentDisposition, "content-disposition-original");
+    assert.equal(downloadResponse.contentEncoding, "content-encoding-original");
+    assert.equal(downloadResponse.contentLanguage, "content-language-original");
+    assert.equal(downloadResponse.contentType, "content-type-original");
+
+    await containerClient.delete();
+  });
+
+  it("generateBlobSASQueryParameters should work for page blob and override headers @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -644,12 +711,12 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const blobSAS = generateBlobSASQueryParameters(
       {
         blobName,
-        // cacheControl: "cache-control-override",
+        cacheControl: "cache-control-override",
         containerName,
-        // contentDisposition: "content-disposition-override",
-        // contentEncoding: "content-encoding-override",
-        // contentLanguage: "content-language-override",
-        // contentType: "content-type-override",
+        contentDisposition: "content-disposition-override",
+        contentEncoding: "content-encoding-override",
+        contentLanguage: "content-language-override",
+        contentType: "content-type-override",
         expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
         permissions: BlobSASPermissions.parse("racwd"),
@@ -668,13 +735,152 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     await blobClientWithSAS.getProperties();
 
-    // TODO:
-    // const properties = await blobClientWithSAS.getProperties();
-    // assert.equal(properties.cacheControl, "cache-control-override");
-    // assert.equal(properties.contentDisposition, "content-disposition-override");
-    // assert.equal(properties.contentEncoding, "content-encoding-override");
-    // assert.equal(properties.contentLanguage, "content-language-override");
-    // assert.equal(properties.contentType, "content-type-override");
+    const properties = await blobClientWithSAS.getProperties();
+    assert.equal(properties.cacheControl, "cache-control-override");
+    assert.equal(properties.contentDisposition, "content-disposition-override");
+    assert.equal(properties.contentEncoding, "content-encoding-override");
+    assert.equal(properties.contentLanguage, "content-language-override");
+    assert.equal(properties.contentType, "content-type-override");
+
+    const downloadResponse = await blobClientWithSAS.download();
+    assert.equal(downloadResponse.cacheControl, "cache-control-override");
+    assert.equal(downloadResponse.contentDisposition, "content-disposition-override");
+    assert.equal(downloadResponse.contentEncoding, "content-encoding-override");
+    assert.equal(downloadResponse.contentLanguage, "content-language-override");
+    assert.equal(downloadResponse.contentType, "content-type-override");
+
+    await containerClient.delete();
+  });
+
+  it("generateBlobSASQueryParameters should work for append blob with original headers @loki @sql", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const blobName = getUniqueName("blob");
+    const blobClient = containerClient.getAppendBlobClient(blobName);
+    await blobClient.create({
+      blobHTTPHeaders: {
+        blobCacheControl: "cache-control-original",
+        blobContentType: "content-type-original",
+        blobContentDisposition: "content-disposition-original",
+        blobContentEncoding: "content-encoding-original",
+        blobContentLanguage: "content-language-original"
+      }
+    });
+
+    const blobSAS = generateBlobSASQueryParameters(
+      {
+        blobName,
+        containerName,
+        expiresOn: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: BlobSASPermissions.parse("racwd"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
+        version: "2016-05-31"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    );
+
+    const sasURL = `${blobClient.url}?${blobSAS}`;
+    const blobClientWithSAS = new AppendBlobClient(
+      sasURL,
+      newPipeline(new AnonymousCredential())
+    );
+
+    await blobClientWithSAS.getProperties();
+
+    const properties = await blobClientWithSAS.getProperties();
+    assert.equal(properties.cacheControl, "cache-control-original");
+    assert.equal(properties.contentDisposition, "content-disposition-original");
+    assert.equal(properties.contentEncoding, "content-encoding-original");
+    assert.equal(properties.contentLanguage, "content-language-original");
+    assert.equal(properties.contentType, "content-type-original");
+
+    const downloadResponse = await blobClientWithSAS.download();
+    assert.equal(downloadResponse.cacheControl, "cache-control-original");
+    assert.equal(downloadResponse.contentDisposition, "content-disposition-original");
+    assert.equal(downloadResponse.contentEncoding, "content-encoding-original");
+    assert.equal(downloadResponse.contentLanguage, "content-language-original");
+    assert.equal(downloadResponse.contentType, "content-type-original");
+
+    await containerClient.delete();
+  });
+
+  it("generateBlobSASQueryParameters should work for append blob and override headers @loki @sql", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const blobName = getUniqueName("blob");
+    const blobClient = containerClient.getAppendBlobClient(blobName);
+    await blobClient.create({
+      blobHTTPHeaders: {
+        blobContentType: "content-type-original"
+      }
+    });
+
+    const blobSAS = generateBlobSASQueryParameters(
+      {
+        blobName,
+        cacheControl: "cache-control-override",
+        containerName,
+        contentDisposition: "content-disposition-override",
+        contentEncoding: "content-encoding-override",
+        contentLanguage: "content-language-override",
+        contentType: "content-type-override",
+        expiresOn: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: BlobSASPermissions.parse("racwd"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
+        version: "2016-05-31"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    );
+
+    const sasURL = `${blobClient.url}?${blobSAS}`;
+    const blobClientWithSAS = new AppendBlobClient(
+      sasURL,
+      newPipeline(new AnonymousCredential())
+    );
+
+    await blobClientWithSAS.getProperties();
+
+    const properties = await blobClientWithSAS.getProperties();
+    assert.equal(properties.cacheControl, "cache-control-override");
+    assert.equal(properties.contentDisposition, "content-disposition-override");
+    assert.equal(properties.contentEncoding, "content-encoding-override");
+    assert.equal(properties.contentLanguage, "content-language-override");
+    assert.equal(properties.contentType, "content-type-override");
+
+    const downloadResponse = await blobClientWithSAS.download();
+    assert.equal(downloadResponse.cacheControl, "cache-control-override");
+    assert.equal(downloadResponse.contentDisposition, "content-disposition-override");
+    assert.equal(downloadResponse.contentEncoding, "content-encoding-override");
+    assert.equal(downloadResponse.contentLanguage, "content-language-override");
+    assert.equal(downloadResponse.contentType, "content-type-override");
 
     await containerClient.delete();
   });
@@ -709,12 +915,12 @@ describe("Shared Access Signature (SAS) authentication", () => {
       {
         // NOTICE: Azure Storage Server will replace "\" with "/" in the blob names
         blobName: blobName.replace(/\\/g, "/"),
-        // cacheControl: "cache-control-override",
+        cacheControl: "cache-control-override",
         containerName,
-        // contentDisposition: "content-disposition-override",
-        // contentEncoding: "content-encoding-override",
-        // contentLanguage: "content-language-override",
-        // contentType: "content-type-override",
+        contentDisposition: "content-disposition-override",
+        contentEncoding: "content-encoding-override",
+        contentLanguage: "content-language-override",
+        contentType: "content-type-override",
         expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
         permissions: BlobSASPermissions.parse("racwd"),
@@ -733,13 +939,19 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     await blobClientWithSAS.getProperties();
 
-    // TODO:
-    // const properties = await blobClientWithSAS.getProperties();
-    // assert.equal(properties.cacheControl, "cache-control-override");
-    // assert.equal(properties.contentDisposition, "content-disposition-override");
-    // assert.equal(properties.contentEncoding, "content-encoding-override");
-    // assert.equal(properties.contentLanguage, "content-language-override");
-    // assert.equal(properties.contentType, "content-type-override");
+    const properties = await blobClientWithSAS.getProperties();
+    assert.equal(properties.cacheControl, "cache-control-override");
+    assert.equal(properties.contentDisposition, "content-disposition-override");
+    assert.equal(properties.contentEncoding, "content-encoding-override");
+    assert.equal(properties.contentLanguage, "content-language-override");
+    assert.equal(properties.contentType, "content-type-override");
+
+    const downloadResponse = await blobClientWithSAS.download();
+    assert.equal(downloadResponse.cacheControl, "cache-control-override");
+    assert.equal(downloadResponse.contentDisposition, "content-disposition-override");
+    assert.equal(downloadResponse.contentEncoding, "content-encoding-override");
+    assert.equal(downloadResponse.contentLanguage, "content-language-override");
+    assert.equal(downloadResponse.contentType, "content-type-override");
 
     await containerClient.delete();
   });
@@ -1116,12 +1328,12 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const blobSAS = generateBlobSASQueryParameters(
       {
         blobName,
-        // cacheControl: "cache-control-override",
+        cacheControl: "cache-control-override",
         containerName,
-        // contentDisposition: "content-disposition-override",
-        // contentEncoding: "content-encoding-override",
-        // contentLanguage: "content-language-override",
-        // contentType: "content-type-override",
+        contentDisposition: "content-disposition-override",
+        contentEncoding: "content-encoding-override",
+        contentLanguage: "content-language-override",
+        contentType: "content-type-override",
         expiresOn: tmr,
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
         permissions: BlobSASPermissions.parse("racwd"),
@@ -1142,11 +1354,18 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const properties = await blobClientWithSAS.getProperties();
     assert.ok(properties);
-    // assert.equal(properties.cacheControl, "cache-control-override");
-    // assert.equal(properties.contentDisposition, "content-disposition-override");
-    // assert.equal(properties.contentEncoding, "content-encoding-override");
-    // assert.equal(properties.contentLanguage, "content-language-override");
-    // assert.equal(properties.contentType, "content-type-override");
+    assert.equal(properties.cacheControl, "cache-control-override");
+    assert.equal(properties.contentDisposition, "content-disposition-override");
+    assert.equal(properties.contentEncoding, "content-encoding-override");
+    assert.equal(properties.contentLanguage, "content-language-override");
+    assert.equal(properties.contentType, "content-type-override");
+
+    const downloadResponse = await blobClientWithSAS.download();
+    assert.equal(downloadResponse.cacheControl, "cache-control-override");
+    assert.equal(downloadResponse.contentDisposition, "content-disposition-override");
+    assert.equal(downloadResponse.contentEncoding, "content-encoding-override");
+    assert.equal(downloadResponse.contentLanguage, "content-language-override");
+    assert.equal(downloadResponse.contentType, "content-type-override");
 
     await containerClient.delete();
   });
