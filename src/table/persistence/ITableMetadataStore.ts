@@ -71,28 +71,32 @@ export default interface ITableMetadataStore {
     table: string,
     queryOptions: Models.QueryOptions,
     nextPartitionKey?: string,
-    nextRowKey?: string
+    nextRowKey?: string,
+    batchID?: string
   ): Promise<[Entity[], string | undefined, string | undefined]>;
   queryTableEntitiesWithPartitionAndRowKey(
     context: Context,
     table: string,
     account: string,
     partitionKey: string,
-    rowKey: string
+    rowKey: string,
+    batchID?: string
   ): Promise<Entity | undefined>;
   insertOrUpdateTableEntity(
     context: Context,
     table: string,
     account: string,
     entity: Entity,
-    ifMatch?: string
+    ifMatch?: string,
+    batchID?: string
   ): Promise<Entity>;
   insertOrMergeTableEntity(
     context: Context,
     table: string,
     account: string,
     entity: Entity,
-    ifMatch?: string
+    ifMatch?: string,
+    batchID?: string
   ): Promise<Entity>;
   deleteTableEntity(
     context: Context,
@@ -100,13 +104,15 @@ export default interface ITableMetadataStore {
     account: string,
     partitionKey: string,
     rowKey: string,
-    etag: string
+    etag: string,
+    batchID?: string
   ): Promise<void>;
   insertTableEntity(
     context: Context,
     table: string,
     account: string,
-    entity: Entity
+    entity: Entity,
+    batchID?: string
   ): Promise<Entity>;
   getTableAccessPolicy(
     context: Context,
@@ -128,4 +134,6 @@ export default interface ITableMetadataStore {
     context: Context,
     serviceProperties: ServicePropertiesModel
   ): Promise<ServicePropertiesModel>;
+  beginBatchTransaction(account: string, table:string, partitionKey: string, batchID: string, context: Context): Promise<void>;
+  endBatchTransaction(account: string, table:string, batchID: string, context: Context): Promise<void>;
 }

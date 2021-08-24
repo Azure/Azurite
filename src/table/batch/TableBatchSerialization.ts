@@ -485,6 +485,8 @@ export class TableBatchSerialization extends BatchSerialization {
         return "Not Found";
       case 400:
         return "Bad Request";
+      case 409:
+        return "Conflict";
       default:
         return "STATUS_CODE_NOT_IMPLEMENTED";
     }
@@ -609,7 +611,7 @@ export class TableBatchSerialization extends BatchSerialization {
     let errorReponse = "";
     const odataError = err as StorageError;
     // Errors in batch processing generate Bad Request error
-    errorReponse = this.serializeHttpStatusCode(errorReponse, 400);
+    errorReponse = this.serializeHttpStatusCode(errorReponse, err.statusCode);
     errorReponse += "Content-ID: " + contentID + "\r\n";
     errorReponse = this.serializeDataServiceVersion(errorReponse, request);
     // ToDo: Check if we need to observe other odata formats for errors
