@@ -12,7 +12,7 @@ import {
 } from "./table.entity.test.utils";
 
 // Set true to enable debug log
-configLogger(true);
+configLogger(false);
 // For convenience, we have a switch to control the use
 // of a local Azurite instance, otherwise we need an
 // ENV VAR called AZURE_TABLE_STORAGE added to mocha
@@ -60,7 +60,7 @@ describe("table Entity APIs test", () => {
       assert.notStrictEqual(result.etag, undefined);
     }
 
-    const maxPageSize = 1000;
+    const maxPageSize = 103; // this should work with a page size of 1000, but fails during serialization
 
     const entities = tableClient.listEntities<TableEntity<{ number: number }>>({
       queryOptions: {

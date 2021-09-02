@@ -8,9 +8,7 @@ import Context from "../generated/Context";
 import { Entity, Table } from "../persistence/ITableMetadataStore";
 import { ODATA_TYPE, QUERY_RESULT_MAX_NUM } from "../utils/constants";
 import { getTimestampString } from "../utils/utils";
-import ITableMetadataStore, {
-  TableACL
-} from "./ITableMetadataStore";
+import ITableMetadataStore, { TableACL } from "./ITableMetadataStore";
 
 /** MODELS FOR SERVICE */
 interface IServiceAdditionalProperties {
@@ -176,7 +174,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     context: Context,
     tableACL?: TableACL
-
   ): Promise<void> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
     const doc = coll.findOne({ account, table });
@@ -291,13 +288,14 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   ): Promise<Entity> {
     if (ifMatch === undefined) {
       // Upsert
-      const existingEntity = await this.queryTableEntitiesWithPartitionAndRowKey(
-        context,
-        table,
-        account,
-        entity.PartitionKey,
-        entity.RowKey
-      );
+      const existingEntity =
+        await this.queryTableEntitiesWithPartitionAndRowKey(
+          context,
+          table,
+          account,
+          entity.PartitionKey,
+          entity.RowKey
+        );
 
       if (existingEntity) {
         // Update
@@ -361,13 +359,14 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   ): Promise<Entity> {
     if (ifMatch === undefined) {
       // Upsert
-      const existingEntity = await this.queryTableEntitiesWithPartitionAndRowKey(
-        context,
-        table,
-        account,
-        entity.PartitionKey,
-        entity.RowKey
-      );
+      const existingEntity =
+        await this.queryTableEntitiesWithPartitionAndRowKey(
+          context,
+          table,
+          account,
+          entity.PartitionKey,
+          entity.RowKey
+        );
 
       if (existingEntity) {
         // Merge
@@ -513,14 +512,14 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       .chain()
       .where(queryWhere)
       .where((data: any) => {
-        if (nextRowKey !== undefined) {
-          return data.RowKey >= nextRowKey;
+        if (nextPartitionKey !== undefined) {
+          return data.PartitionKey >= nextPartitionKey;
         }
         return true;
       })
       .where((data: any) => {
-        if (nextPartitionKey !== undefined) {
-          return data.PartitionKey >= nextPartitionKey;
+        if (nextRowKey !== undefined) {
+          return data.RowKey >= nextRowKey;
         }
         return true;
       })
