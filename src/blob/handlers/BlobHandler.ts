@@ -167,7 +167,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
               : undefined,
           isServerEncrypted: true,
           clientRequestId: options.requestId,
-          ...res.properties
+          ...res.properties,
+          cacheControl: context.request!.getQuery("rscc") ?? res.properties.cacheControl,
+          contentDisposition: context.request!.getQuery("rscd") ?? res.properties.contentDisposition,
+          contentEncoding: context.request!.getQuery("rsce") ?? res.properties.contentEncoding,
+          contentLanguage: context.request!.getQuery("rscl") ?? res.properties.contentLanguage,
+          contentType: context.request!.getQuery("rsct") ?? res.properties.contentType,
         };
 
     return response;
@@ -1048,6 +1053,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime!,
       version: BLOB_API_VERSION,
       ...blob.properties,
+      cacheControl: context.request!.getQuery("rscc") ?? blob.properties.cacheControl,
+      contentDisposition: context.request!.getQuery("rscd") ?? blob.properties.contentDisposition,
+      contentEncoding: context.request!.getQuery("rsce") ?? blob.properties.contentEncoding,
+      contentLanguage: context.request!.getQuery("rscl") ?? blob.properties.contentLanguage,
+      contentType: context.request!.getQuery("rsct") ?? blob.properties.contentType,
       blobContentMD5: blob.properties.contentMD5,
       acceptRanges: "bytes",
       contentLength,
@@ -1059,7 +1069,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blobCommittedBlockCount:
         blob.properties.blobType === Models.BlobType.AppendBlob
           ? (blob.committedBlocksInOrder || []).length
-          : undefined
+          : undefined,
     };
 
     return response;
@@ -1169,6 +1179,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime!,
       version: BLOB_API_VERSION,
       ...blob.properties,
+      cacheControl: context.request!.getQuery("rscc") ?? blob.properties.cacheControl,
+      contentDisposition: context.request!.getQuery("rscd") ?? blob.properties.contentDisposition,
+      contentEncoding: context.request!.getQuery("rsce") ?? blob.properties.contentEncoding,
+      contentLanguage: context.request!.getQuery("rscl") ?? blob.properties.contentLanguage,
+      contentType: context.request!.getQuery("rsct") ?? blob.properties.contentType,
       contentLength,
       contentRange,
       contentMD5,

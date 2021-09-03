@@ -28,7 +28,7 @@ At the time of writing, actively maintained.
 Provides more support for Batch / entity group transactions than the legacy SDK.
 
 ```json
-"@azure/data-tables": "^12.0.0-beta.2",
+"@azure/data-tables": "^12.1.1",
 ```
 
 Long term, new tests should be written using the data-tables package.
