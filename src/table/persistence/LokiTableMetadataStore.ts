@@ -513,13 +513,19 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       .where(queryWhere)
       .where((data: any) => {
         if (nextPartitionKey !== undefined) {
-          return data.PartitionKey >= nextPartitionKey;
+          if (data.PartitionKey > nextPartitionKey) {
+            return true;
+          }
         }
-        return true;
-      })
-      .where((data: any) => {
         if (nextRowKey !== undefined) {
-          return data.RowKey >= nextRowKey;
+          if (
+            data.RowKey >= nextRowKey &&
+            (data.PartitionKey === nextPartitionKey ||
+              data.PartitionKey === undefined)
+          ) {
+            return true;
+          }
+          return false;
         }
         return true;
       })

@@ -44,9 +44,11 @@ describe("table Entity APIs test", () => {
     await server.close();
   });
 
-  it("should return 2001 entities from a paged query at 1000 entities per page, @loki", async () => {
-    const partitionKeyForQueryTest1 = createUniquePartitionKey();
-    const totalItems = 2001;
+  // from issue #1003
+  it("should return 101 entities from a paged query at 50 entities per page and single partition, @loki", async () => {
+    const partitionKeyForQueryTest1 = createUniquePartitionKey("1_");
+    const partitionKeyForQueryTest2 = createUniquePartitionKey("2_");
+    const totalItems = 101;
     await tableClient.create();
 
     // first partition
@@ -60,34 +62,80 @@ describe("table Entity APIs test", () => {
       assert.notStrictEqual(result.etag, undefined);
     }
 
-    const maxPageSize = 103; // this should work with a page size of 1000, but fails during serialization
+    // second partition
+    // creates entities individually
+    for (let i = 0; i < totalItems; i++) {
+      const result = await tableClient.createEntity({
+        partitionKey: partitionKeyForQueryTest2,
+        rowKey: `${i}`,
+        number: i
+      });
+      assert.notStrictEqual(result.etag, undefined);
+    }
+
+    const maxPageSize = 250; // this should work with a page size of 1000, but fails during response serialization on my machine
 
     const entities = tableClient.listEntities<TableEntity<{ number: number }>>({
       queryOptions: {
         filter: odata`PartitionKey eq ${partitionKeyForQueryTest1}`
       }
     });
-    // let allPartition1: TableEntity<{ number: number }>[] = [];
-    // this following test passes :
-    // await entities.byPage({
-    //   maxPageSize
-    // });
-    // for (let i = 0; i < 1001; i++) {
-    //   const entity = await entities.next();
-    //   assert.ok(entity);
-    //   assert.strictEqual(entity.done, false);
-    // }
-    // const page1001 = await entities.next();
-    // assert.strictEqual(page1001.done, true);
 
-    // this test never finishes...
     let all: TableEntity<{ number: number }>[] = [];
     for await (const entity of entities.byPage({
       maxPageSize
     })) {
       all = [...all, ...entity];
     }
-    assert.strictEqual(all.length, 2001);
+    assert.strictEqual(all.length, totalItems);
+
+    await tableClient.delete();
+  });
+
+  // from issue #1003
+  it("should return 4 entities from a paged query at 1 entities per page across 2 partitions, @loki", async () => {
+    const partitionKeyForQueryTest1 = createUniquePartitionKey("1_");
+    const partitionKeyForQueryTest2 = createUniquePartitionKey("2_");
+    const totalItems = 2;
+    await tableClient.create();
+
+    // first partition
+    // creates entities individually
+    for (let i = 0; i < totalItems; i++) {
+      const result = await tableClient.createEntity({
+        partitionKey: partitionKeyForQueryTest1,
+        rowKey: `${i}`,
+        number: i
+      });
+      assert.notStrictEqual(result.etag, undefined);
+    }
+
+    for (let i = 0; i < totalItems; i++) {
+      const result = await tableClient.createEntity({
+        partitionKey: partitionKeyForQueryTest2,
+        rowKey: `${i}`,
+        number: i
+      });
+      assert.notStrictEqual(result.etag, undefined);
+    }
+
+    const maxPageSize = 1; // this should work with a page size of 1000, but fails during serialization
+
+    const entities = tableClient.listEntities<TableEntity<{ number: number }>>({
+      queryOptions: {
+        // nothing should return all
+      }
+    });
+
+    // this test never finishes if page Size is larger than ~300 on my machine...
+    let all: TableEntity<{ number: number }>[] = [];
+    for await (const entity of entities.byPage({
+      maxPageSize
+    })) {
+      all = [...all, ...entity];
+    }
+    // total items is 4 as we return items from both partitions
+    assert.strictEqual(all.length, 4);
 
     await tableClient.delete();
   });

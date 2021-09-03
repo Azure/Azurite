@@ -106,8 +106,11 @@ export function createSecondaryConnectionStringForTest(dev: boolean): string {
  * @export
  * @return {*}  {string}
  */
-export function createUniquePartitionKey(): string {
-  return getUniqueName("datatablestests");
+export function createUniquePartitionKey(name: string | undefined): string {
+  if (name === undefined) {
+    return getUniqueName("datatablestests");
+  }
+  return getUniqueName(name);
 }
 
 /**
