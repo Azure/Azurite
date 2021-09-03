@@ -6,7 +6,7 @@ import {
 import { TestEntity } from "./TestEntity";
 import TableServer from "../../../src/table/TableServer";
 import TableConfiguration from "../../../src/table/TableConfiguration";
-import { TableClient, TablesSharedKeyCredential } from "@azure/data-tables";
+import { AzureNamedKeyCredential, TableClient } from "@azure/data-tables";
 
 export const PROTOCOL = "http";
 export const HOST = "127.0.0.1";
@@ -126,10 +126,15 @@ export function createAzureDataTablesClient(
   tableName: string
 ): TableClient {
   if (local) {
+    const sharedKeyCredential = new AzureNamedKeyCredential(
+      EMULATOR_ACCOUNT_NAME,
+      EMULATOR_ACCOUNT_KEY
+    );
+
     return new TableClient(
       `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
       tableName,
-      new TablesSharedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY)
+      sharedKeyCredential
     );
   } else {
     return new TableClient(

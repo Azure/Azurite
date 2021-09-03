@@ -49,7 +49,7 @@ describe("table Entity APIs test", () => {
     const partitionKeyForQueryTest1 = createUniquePartitionKey("1_");
     const partitionKeyForQueryTest2 = createUniquePartitionKey("2_");
     const totalItems = 101;
-    await tableClient.create();
+    await tableClient.createTable();
 
     // first partition
     // creates entities individually
@@ -89,7 +89,7 @@ describe("table Entity APIs test", () => {
     }
     assert.strictEqual(all.length, totalItems);
 
-    await tableClient.delete();
+    await tableClient.deleteTable();
   });
 
   // from issue #1003
@@ -97,7 +97,7 @@ describe("table Entity APIs test", () => {
     const partitionKeyForQueryTest1 = createUniquePartitionKey("1_");
     const partitionKeyForQueryTest2 = createUniquePartitionKey("2_");
     const totalItems = 2;
-    await tableClient.create();
+    await tableClient.createTable();
 
     // first partition
     // creates entities individually
@@ -137,6 +137,6 @@ describe("table Entity APIs test", () => {
     // total items is 4 as we return items from both partitions
     assert.strictEqual(all.length, 4);
 
-    await tableClient.delete();
+    await tableClient.deleteTable();
   });
 });
