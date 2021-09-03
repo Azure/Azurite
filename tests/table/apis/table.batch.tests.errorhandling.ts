@@ -43,14 +43,17 @@ describe("table Entity APIs test", () => {
   });
 
   it("Batch API should serialize errors according to group transaction spec, @loki", async () => {
-    const partitionKey = createUniquePartitionKey();
+    const partitionKey = createUniquePartitionKey("");
     const testEntities: AzureDataTablesTestEntity[] = [
       createBasicEntityForTest(partitionKey),
       createBasicEntityForTest(partitionKey),
       createBasicEntityForTest(partitionKey)
     ];
 
-    const sharedKeyCredential = new AzureNamedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY);
+    const sharedKeyCredential = new AzureNamedKeyCredential(
+      EMULATOR_ACCOUNT_NAME,
+      EMULATOR_ACCOUNT_KEY
+    );
 
     const badTableClient = new TableClient(
       `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
@@ -73,7 +76,7 @@ describe("table Entity APIs test", () => {
   });
 
   it("Batch API should reject request with more than 100 transactions, @loki", async () => {
-    const partitionKey = createUniquePartitionKey();
+    const partitionKey = createUniquePartitionKey("");
     const tableName: string = getUniqueName("datatables");
     const testEntities: AzureDataTablesTestEntity[] = [];
     const TOO_MANY_REQUESTS = 101;
@@ -81,7 +84,10 @@ describe("table Entity APIs test", () => {
       testEntities.push(createBasicEntityForTest(partitionKey));
     }
 
-    const sharedKeyCredential = new AzureNamedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY);
+    const sharedKeyCredential = new AzureNamedKeyCredential(
+      EMULATOR_ACCOUNT_NAME,
+      EMULATOR_ACCOUNT_KEY
+    );
 
     const tooManyRequestsClient = new TableClient(
       `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
