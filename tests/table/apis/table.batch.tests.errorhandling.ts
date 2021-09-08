@@ -43,7 +43,7 @@ describe("table Entity APIs test", () => {
   });
 
   it("Batch API should serialize errors according to group transaction spec, @loki", async () => {
-    const partitionKey = createUniquePartitionKey();
+    const partitionKey = createUniquePartitionKey("");
     const testEntities: AzureDataTablesTestEntity[] = [
       createBasicEntityForTest(partitionKey),
       createBasicEntityForTest(partitionKey),
@@ -76,7 +76,7 @@ describe("table Entity APIs test", () => {
   });
 
   it("Batch API should reject request with more than 100 transactions, @loki", async () => {
-    const partitionKey = createUniquePartitionKey();
+    const partitionKey = createUniquePartitionKey("");
     const tableName: string = getUniqueName("datatables");
     const testEntities: AzureDataTablesTestEntity[] = [];
     const TOO_MANY_REQUESTS = 101;

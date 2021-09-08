@@ -15,6 +15,7 @@ Table:
 
 - Added getServiceProperties response
 - Added setServiceProperties response
+- Fixes paged queries across partitions
 
 ## 2021.7 Version 3.14.1
 
