@@ -34,7 +34,10 @@ describe("table Entity APIs test", () => {
   let server: TableServer;
   const tableName: string = getUniqueName("datatables");
 
-  const sharedKeyCredential = new AzureNamedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY);
+  const sharedKeyCredential = new AzureNamedKeyCredential(
+    EMULATOR_ACCOUNT_NAME,
+    EMULATOR_ACCOUNT_KEY
+  );
 
   const tableClient = new TableClient(
     `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
@@ -59,7 +62,7 @@ describe("table Entity APIs test", () => {
 
   it("Batch API should return row keys in format understood by @azure/data-tables, @loki", async () => {
     await tableClient.createTable();
-    const partitionKey = createUniquePartitionKey();
+    const partitionKey = createUniquePartitionKey("");
     const testEntities: AzureDataTablesTestEntity[] = [
       createBasicEntityForTest(partitionKey),
       createBasicEntityForTest(partitionKey),
@@ -80,9 +83,8 @@ describe("table Entity APIs test", () => {
   it("Batch API should correctly process LogicApp style update request sequence", async () => {
     await tableClient.createTable();
     const logicAppReproEntity = new LogicAppReproEntity();
-    const insertedEntityHeaders = await tableClient.createEntity<LogicAppReproEntity>(
-      logicAppReproEntity
-    );
+    const insertedEntityHeaders =
+      await tableClient.createEntity<LogicAppReproEntity>(logicAppReproEntity);
     assert.notStrictEqual(insertedEntityHeaders.etag, undefined);
     logicAppReproEntity.sequenceNumber = 1;
     logicAppReproEntity.testString = "1";
@@ -167,10 +169,9 @@ describe("table Entity APIs test", () => {
 
   it("Should return bad request error for incorrectly formatted etags, @loki", async () => {
     await tableClient.createTable();
-    const partitionKey = createUniquePartitionKey();
-    const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
-      partitionKey
-    );
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: AzureDataTablesTestEntity =
+      createBasicEntityForTest(partitionKey);
 
     const result = await tableClient.createEntity(testEntity);
 
@@ -212,10 +213,9 @@ describe("table Entity APIs test", () => {
   });
 
   it("should find an int as a number, @loki", async () => {
-    const partitionKey = createUniquePartitionKey();
-    const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
-      partitionKey
-    );
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: AzureDataTablesTestEntity =
+      createBasicEntityForTest(partitionKey);
 
     await tableClient.createTable({ requestOptions: { timeout: 60000 } });
     const result = await tableClient.createEntity(testEntity);
@@ -233,10 +233,9 @@ describe("table Entity APIs test", () => {
   });
 
   it("should find a long int, @loki", async () => {
-    const partitionKey = createUniquePartitionKey();
-    const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
-      partitionKey
-    );
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: AzureDataTablesTestEntity =
+      createBasicEntityForTest(partitionKey);
 
     await tableClient.createTable({ requestOptions: { timeout: 60000 } });
     const result = await tableClient.createEntity(testEntity);
@@ -255,10 +254,9 @@ describe("table Entity APIs test", () => {
   });
 
   it("should find an entity using a partition key with multiple spaces, @loki", async () => {
-    const partitionKey = createUniquePartitionKey() + " with spaces";
-    const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
-      partitionKey
-    );
+    const partitionKey = createUniquePartitionKey("") + " with spaces";
+    const testEntity: AzureDataTablesTestEntity =
+      createBasicEntityForTest(partitionKey);
 
     await tableClient.createTable({ requestOptions: { timeout: 60000 } });
     const result = await tableClient.createEntity(testEntity);
@@ -277,7 +275,7 @@ describe("table Entity APIs test", () => {
   });
 
   it("should provide a complete query result when using query entities by page, @loki", async () => {
-    const partitionKeyForQueryTest = createUniquePartitionKey();
+    const partitionKeyForQueryTest = createUniquePartitionKey("");
     const totalItems = 20;
     await tableClient.createTable();
 
@@ -321,7 +319,7 @@ describe("table Entity APIs test", () => {
   });
 
   it("should return the correct number of results querying with a timestamp or different SDK whitespacing behaviours, @loki", async () => {
-    const partitionKeyForQueryTest = createUniquePartitionKey();
+    const partitionKeyForQueryTest = createUniquePartitionKey("");
     const totalItems = 10;
     await tableClient.createTable();
     const timestamp = new Date();

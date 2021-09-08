@@ -1,27 +1,40 @@
-import toReadableStream from 'to-readable-stream';
+import toReadableStream from "to-readable-stream";
 
-import BufferStream from '../../common/utils/BufferStream';
-import { checkEtagIsInvalidFormat, newTableEntityEtag } from '../../common/utils/utils';
-import TableBatchOrchestrator from '../batch/TableBatchOrchestrator';
-import TableBatchUtils from '../batch/TableBatchUtils';
-import TableStorageContext from '../context/TableStorageContext';
-import { NormalizedEntity } from '../entity/NormalizedEntity';
-import StorageErrorFactory from '../errors/StorageErrorFactory';
-import * as Models from '../generated/artifacts/models';
-import Context from '../generated/Context';
-import ITableHandler from '../generated/handlers/ITableHandler';
-import { Entity, Table } from '../persistence/ITableMetadataStore';
+import BufferStream from "../../common/utils/BufferStream";
 import {
-    DEFAULT_TABLE_LISTENING_PORT, DEFAULT_TABLE_SERVER_HOST_NAME, FULL_METADATA_ACCEPT,
-    HeaderConstants, MINIMAL_METADATA_ACCEPT, NO_METADATA_ACCEPT, RETURN_CONTENT, RETURN_NO_CONTENT,
-    TABLE_API_VERSION, TABLE_SERVICE_PERMISSION
-} from '../utils/constants';
+  checkEtagIsInvalidFormat,
+  newTableEntityEtag
+} from "../../common/utils/utils";
+import TableBatchOrchestrator from "../batch/TableBatchOrchestrator";
+import TableBatchUtils from "../batch/TableBatchUtils";
+import TableStorageContext from "../context/TableStorageContext";
+import { NormalizedEntity } from "../entity/NormalizedEntity";
+import StorageErrorFactory from "../errors/StorageErrorFactory";
+import * as Models from "../generated/artifacts/models";
+import Context from "../generated/Context";
+import ITableHandler from "../generated/handlers/ITableHandler";
+import { Entity, Table } from "../persistence/ITableMetadataStore";
 import {
-    getEntityOdataAnnotationsForResponse, getPayloadFormat, getTableOdataAnnotationsForResponse,
-    getTablePropertiesOdataAnnotationsForResponse, updateTableOptionalOdataAnnotationsForResponse,
-    validateTableName
-} from '../utils/utils';
-import BaseHandler from './BaseHandler';
+  DEFAULT_TABLE_LISTENING_PORT,
+  DEFAULT_TABLE_SERVER_HOST_NAME,
+  FULL_METADATA_ACCEPT,
+  HeaderConstants,
+  MINIMAL_METADATA_ACCEPT,
+  NO_METADATA_ACCEPT,
+  RETURN_CONTENT,
+  RETURN_NO_CONTENT,
+  TABLE_API_VERSION,
+  TABLE_SERVICE_PERMISSION
+} from "../utils/constants";
+import {
+  getEntityOdataAnnotationsForResponse,
+  getPayloadFormat,
+  getTableOdataAnnotationsForResponse,
+  getTablePropertiesOdataAnnotationsForResponse,
+  updateTableOptionalOdataAnnotationsForResponse,
+  validateTableName
+} from "../utils/utils";
+import BaseHandler from "./BaseHandler";
 
 interface IPartialResponsePreferProperties {
   statusCode: 200 | 201 | 204;
@@ -464,18 +477,15 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const account = this.getAndCheckAccountName(tableContext);
     const accept = this.getAndCheckPayloadFormat(tableContext);
 
-    const [
-      result,
-      nextPartitionKey,
-      nextRowKey
-    ] = await this.metadataStore.queryTableEntities(
-      context,
-      account,
-      table,
-      options.queryOptions || {},
-      options.nextPartitionKey,
-      options.nextRowKey
-    );
+    const [result, nextPartitionKey, nextRowKey] =
+      await this.metadataStore.queryTableEntities(
+        context,
+        account,
+        table,
+        options.queryOptions || {},
+        options.nextPartitionKey,
+        options.nextRowKey
+      );
 
     const response: Models.TableQueryEntitiesResponse = {
       clientRequestId: options.requestId,
@@ -572,13 +582,14 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     rowKey = rowKey || this.getAndCheckRowKey(tableContext);
     const accept = this.getAndCheckPayloadFormat(tableContext);
 
-    const entity = await this.metadataStore.queryTableEntitiesWithPartitionAndRowKey(
-      context,
-      table,
-      account,
-      partitionKey,
-      rowKey
-    );
+    const entity =
+      await this.metadataStore.queryTableEntitiesWithPartitionAndRowKey(
+        context,
+        table,
+        account,
+        partitionKey,
+        rowKey
+      );
 
     if (entity === undefined || entity === null) {
       throw StorageErrorFactory.getEntityNotFound(context);
@@ -786,9 +797,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       context.contextID
     );
 
-    const response = await tableBatchManager.processBatchRequestAndSerializeResponse(
-      requestBody
-    );
+    const response =
+      await tableBatchManager.processBatchRequestAndSerializeResponse(
+        requestBody
+      );
 
     this.logger.debug(
       `TableHandler:batch() Raw response string is ${JSON.stringify(response)}`,
