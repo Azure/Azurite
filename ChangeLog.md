@@ -4,18 +4,18 @@
 
 ## Upcoming Release
 
-General:
+## 2021.9 Version 3.14.2
 
 Blob:
 
-- Support rscc, rscd, rsce, rscl, rsct query parameters in SAS tokens.
+- Supported rscc, rscd, rsce, rscl, rsct query parameters in SAS tokens.
 - Fixed Blob_Download API by adding header `x-ms-creation-time` in responds.
 
 Table:
 
-- Added getServiceProperties response
-- Added setServiceProperties response
-- Fixes paged queries across partitions
+- Added getServiceProperties response.
+- Added setServiceProperties response.
+- Fixed paged queries across partitions.
 
 ## 2021.7 Version 3.14.1
 
