@@ -2,6 +2,11 @@
 
 > Note. This file includes breaking changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
+## 2021.9 Version 3.14.2
+
+- [Breaking] Remove the support of DNS name with mutiple blocks but without accout name, like "http://foo.bar.com:10000/devstoreaccount1/container".
+  - When use DNS name with mutiple blocks, storage account name must be in the first block, like "http://devstoreaccount1.blob.localhost:10000/container"
+
 ## 2019.12 Version 3.4.0
 
 - [Breaking] By default Azurite will block requests with unsupported headers or parameters which may impact data integrity.
