@@ -344,4 +344,31 @@ export default class StorageErrorFactory {
       context
     );
   }
+
+  public static getInvalidAuthenticationInfo(context: Context): StorageError {
+    return new StorageError(
+      400,
+      "InvalidAuthenticationInfo",
+      "Authentication information is not given in the correct format. Check the value of Authorization header.",
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
+
+  public static getAuthenticationFailed(
+    context: Context,
+    authenticationErrorDetail: string
+  ): StorageError {
+    return new StorageError(
+      403,
+      "AuthenticationFailed",
+      "Server failed to authenticate the request. Make sure the value of the Authorization header is formed correctly including the signature.",
+      context.contextID || defaultID,
+      {
+        AuthenticationErrorDetail: authenticationErrorDetail
+      },
+      context
+    );
+  }
 }

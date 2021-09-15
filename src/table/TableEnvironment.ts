@@ -37,7 +37,11 @@ args
   .option(
     ["d", "debug"],
     "Optional. Enable debug log by providing a valid local file path as log destination"
-  );
+  )
+  .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic"')
+  .option(["", "cert"], "Optional. Path to certificate file")
+  .option(["", "key"], "Optional. Path to certificate key .pem file")
+  .option(["", "pwd"], "Optional. Password for .pfx file");
 
 (args as any).config.name = "azurite-table";
 
@@ -97,5 +101,21 @@ export default class TableEnvironment implements ITableEnvironment {
     }
 
     // By default disable debug log
+  }
+
+  public oauth(): string | undefined {
+    return this.flags.oauth;
+  }
+
+  public cert(): string | undefined {
+    return this.flags.cert;
+  }
+
+  public key(): string | undefined {
+    return this.flags.key;
+  }
+
+  public pwd(): string | undefined {
+    return this.flags.pwd;
   }
 }

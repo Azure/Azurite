@@ -60,7 +60,8 @@ export default class TableServer extends ServerBase {
       accountDataStore,
       configuration.enableAccessLog, // Access log includes every handled HTTP request
       configuration.accessLogWriteStream,
-      configuration.skipApiVersionCheck
+      configuration.skipApiVersionCheck,
+      configuration.getOAuthLevel()
     );
 
     const host = configuration.host;

@@ -7,6 +7,7 @@ import logger from "../common/Logger";
 import AccountSASAuthenticator from "./authentication/AccountSASAuthenticator";
 import IAuthenticator from "./authentication/IAuthenticator";
 import TableSASAuthenticator from "./authentication/TableSASAuthenticator";
+import TableTokenAuthenticator from "./authentication/TableTokenAuthenticator";
 import { TableQueryResponse } from "./generated/artifacts/mappers";
 import { Operation } from "./generated/artifacts/operation";
 import Specifications from "./generated/artifacts/specifications";
@@ -22,6 +23,7 @@ import { DEFAULT_TABLE_CONTEXT_PATH } from "./utils/constants";
 import PreflightMiddlewareFactory from "./middleware/PreflightMiddlewareFactory";
 
 import morgan = require("morgan");
+import { OAuthLevel } from "../common/models";
 import TableSharedKeyAuthenticator from "./authentication/TableSharedKeyAuthenticator";
 import TableSharedKeyLiteAuthenticator from "./authentication/TableSharedKeyLiteAuthenticator";
 /**
@@ -41,7 +43,8 @@ export default class TableRequestListenerFactory
     private readonly accountDataStore: IAccountDataStore,
     private readonly enableAccessLog: boolean,
     private readonly accessLogWriteStream?: NodeJS.WritableStream,
-    private readonly skipApiVersionCheck?: boolean
+    private readonly skipApiVersionCheck?: boolean,
+    private readonly oauth?: OAuthLevel
   ) {}
 
   public createRequestListener(): RequestListener {
@@ -124,6 +127,11 @@ export default class TableRequestListenerFactory
         logger
       )
     ];
+    if (this.oauth !== undefined) {
+      authenticators.push(
+        new TableTokenAuthenticator(this.accountDataStore, this.oauth, logger)
+      );
+    }
 
     app.use(
       authenticationMiddlewareFactory.createAuthenticationMiddleware(
