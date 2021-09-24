@@ -186,7 +186,7 @@ Following extension configurations are supported:
 - `azurite.queuePort` Queue service listening port, by default 10001
 - `azurite.tableHost` Table service listening endpoint, by default 127.0.0.1
 - `azurite.tablePort` Table service listening port, by default 10002
-- `azurite.location` Workspace location folder path (can be relative or absolute). By default, in the VS Code extension, the currently opened folder is used. If launched from the command line, the current process working directory is the default. Relative paths are resolved relative to the default folder.
+- `azurite.location` Workspace location folder path (can be relative or absolute). By default, in the VS Code extension, an '.azurite' directory in the currently opened folder is used. If launched from the command line, the current process working directory is the default. Relative paths are resolved relative to the default folder.
 - `azurite.silent` Silent mode to disable access log in Visual Studio channel, by default false
 - `azurite.debug` Output debug log into Azurite channel, by default false
 - `azurite.loose` Enable loose mode which ignores unsupported headers and parameters, by default false
@@ -322,7 +322,7 @@ You can customize the listening port per your requirements.
 
 Optional. Azurite V3 needs to persist metadata and binary data to local disk during execution.
 
-You can provide a customized path as the workspace location, or by default, Current process working directory will be used.
+You can provide an absolute or relative path as the workspace location, or by default, an '.azurite' folder in current process working directory will be used.
 
 ```cmd
 -l c:\azurite

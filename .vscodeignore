@@ -4,6 +4,7 @@
 PULL_REQUEST_TEMPLATE.md
 ISSUE_TEMPLATE.md
 azure-pipelines.yml
+.azurite/
 .vscodeignore
 .lintstagedrc
 .gitignore
