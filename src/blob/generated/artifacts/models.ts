@@ -794,7 +794,7 @@ export interface ServiceListContainersSegmentOptionalParams {
   maxresults?: number;
   /**
    * Include this parameter to specify that the container's metadata be returned as part of the
-   * response body. Possible values include: 'metadata'
+   * response body. Possible values include: '', 'metadata', 'deleted'
    */
   include?: ListContainersIncludeType;
   /**
@@ -6200,26 +6200,36 @@ export enum EncryptionAlgorithmType {
 
 /**
  * Defines values for ListBlobsIncludeItem.
- * Possible values include: 'copy', 'deleted', 'metadata', 'snapshots', 'uncommittedblobs'
+ * Possible values include: '', 'copy', 'deleted', 'metadata', 'snapshots', 'uncommittedblobs',
+ * 'tags', 'versions', 'deletedwithversions', 'immutabilitypolicy', 'legalhold', 'permissions'
  * @readonly
  * @enum {string}
  */
 export enum ListBlobsIncludeItem {
+  EmptyString = '',
   Copy = 'copy',
   Deleted = 'deleted',
   Metadata = 'metadata',
   Snapshots = 'snapshots',
   Uncommittedblobs = 'uncommittedblobs',
+  Tags = 'tags',
+  Versions = 'versions',
+  Deletedwithversions = 'deletedwithversions',
+  Immutabilitypolicy = 'immutabilitypolicy',
+  Legalhold = 'legalhold',
+  Permissions = 'permissions',
 }
 
 /**
  * Defines values for ListContainersIncludeType.
- * Possible values include: 'metadata'
+ * Possible values include: '', 'metadata', 'deleted'
  * @readonly
  * @enum {string}
  */
 export enum ListContainersIncludeType {
+  EmptyString = '',
   Metadata = 'metadata',
+  Deleted = 'deleted',
 }
 
 /**

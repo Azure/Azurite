@@ -27,3 +27,5 @@ enum-types: true
 4. Make `ApiVersionParameter` parameter from required to optional.
 
 5. Add `x-ms-creation-time` to Blob_Download API responds
+
+6. Add "","deleted" to "ListContainersInclude" enum, add "","tags","versions","deletedwithversions","legalhold","permissions" to "ListBlobsInclude" enum.

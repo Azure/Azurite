@@ -9423,11 +9423,18 @@
       "items": {
         "type": "string",
         "enum": [
+          "",
           "copy",
           "deleted",
           "metadata",
           "snapshots",
-          "uncommittedblobs"
+          "uncommittedblobs",
+          "tags",
+          "versions",
+          "deletedwithversions",
+          "immutabilitypolicy",
+          "legalhold",
+          "permissions"
         ],
         "x-ms-enum": {
           "name": "ListBlobsIncludeItem",
@@ -9442,7 +9449,7 @@
       "in": "query",
       "required": false,
       "type": "string",
-      "enum": ["metadata"],
+      "enum": ["","metadata","deleted"],
       "x-ms-enum": {
         "name": "ListContainersIncludeType",
         "modelAsString": false

@@ -536,14 +536,18 @@ export default class ContainerHandler extends BaseHandler
     let includeSnapshots: boolean = false;
     let includeUncommittedBlobs: boolean = false;
     if (options.include !== undefined) {
-      if (options.include.includes(Models.ListBlobsIncludeItem.Snapshots)) {
-        includeSnapshots = true;
-      }
-      if (
-        options.include.includes(Models.ListBlobsIncludeItem.Uncommittedblobs)
-      ) {
-        includeUncommittedBlobs = true;
-      }
+      options.include.forEach(element =>
+        {
+          if(Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase())
+          {
+            includeSnapshots = true;
+          }
+          if(Models.ListBlobsIncludeItem.Uncommittedblobs.toLowerCase() === element.toLowerCase())
+          {
+            includeUncommittedBlobs = true;
+          }
+        }
+      )
     }
     if (
       options.maxresults === undefined ||
@@ -631,14 +635,18 @@ export default class ContainerHandler extends BaseHandler
     let includeSnapshots: boolean = false;
     let includeUncommittedBlobs: boolean = false;
     if (options.include !== undefined) {
-      if (options.include.includes(Models.ListBlobsIncludeItem.Snapshots)) {
-        includeSnapshots = true;
-      }
-      if (
-        options.include.includes(Models.ListBlobsIncludeItem.Uncommittedblobs)
-      ) {
-        includeUncommittedBlobs = true;
-      }
+      options.include.forEach(element =>
+        {
+          if(Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase())
+          {
+            includeSnapshots = true;
+          }
+          if(Models.ListBlobsIncludeItem.Uncommittedblobs.toLowerCase() === element.toLowerCase())
+          {
+            includeUncommittedBlobs = true;
+          }
+        }
+      )
     }
     if (
       options.maxresults === undefined ||

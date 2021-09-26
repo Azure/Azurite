@@ -809,7 +809,9 @@ export const include0: msRest.OperationQueryParameter = {
     type: {
       name: "Enum",
       allowedValues: [
-        "metadata"
+        "",
+        "metadata",
+        "deleted"
       ]
     }
   }
@@ -827,11 +829,18 @@ export const include1: msRest.OperationQueryParameter = {
         type: {
           name: "Enum",
           allowedValues: [
+            "",
             "copy",
             "deleted",
             "metadata",
             "snapshots",
-            "uncommittedblobs"
+            "uncommittedblobs",
+            "tags",
+            "versions",
+            "deletedwithversions",
+            "immutabilitypolicy",
+            "legalhold",
+            "permissions"
           ]
         }
       }
