@@ -12,6 +12,57 @@
 | 3.14.2                                                             | 2020-10-02                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
 | [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table          | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
+- [Azurite V3](#azurite-v3)
+  - [Introduction](#introduction)
+  - [Features & Key Changes in Azurite V3](#features--key-changes-in-azurite-v3)
+  - [Getting Started](#getting-started)
+    - [GitHub](#github)
+    - [NPM](#npm)
+    - [Visual Studio Code Extension](#visual-studio-code-extension)
+    - [DockerHub](#dockerhub)
+    - [NuGet](#nuget)
+    - [Visual Studio](#visual-studio)
+  - [Supported Command Line Options](#supported-command-line-options)
+    - [Listening Host Configuration](#listening-host-configuration)
+    - [Listening Port Configuration](#listening-port-configuration)
+    - [Workspace Path Configuration](#workspace-path-configuration)
+    - [Access Log Configuration](#access-log-configuration)
+    - [Debug Log Configuration](#debug-log-configuration)
+    - [Loose Mode Configuration](#loose-mode-configuration)
+    - [Certificate Configuration (HTTPS)](#certificate-configuration-https)
+    - [OAuth Configuration](#oauth-configuration)
+    - [Skip API Version Check](#skip-api-version-check)
+    - [Command Line Options Differences between Azurite V2](#command-line-options-differences-between-azurite-v2)
+  - [Supported Environment Variable Options](#supported-environment-variable-options)
+    - [Customized Storage Accounts & Keys](#customized-storage-accounts--keys)
+    - [Customized Metadata Storage by External Database (Preview)](#customized-metadata-storage-by-external-database-preview)
+  - [HTTPS Setup](#https-setup)
+    - [PEM](#pem)
+    - [PFX](#pfx)
+  - [Usage with Azure Storage SDKs or Tools](#usage-with-azure-storage-sdks-or-tools)
+    - [Default Storage Account](#default-storage-account)
+    - [Customized Storage Accounts & Keys](#customized-storage-accounts--keys-1)
+    - [Connection Strings](#connection-strings)
+    - [Azure SDKs](#azure-sdks)
+    - [Storage Explorer](#storage-explorer)
+  - [Workspace Structure](#workspace-structure)
+  - [Differences between Azurite and Azure Storage](#differences-between-azurite-and-azure-storage)
+    - [Storage Accounts](#storage-accounts)
+    - [Endpoint & Connection URL](#endpoint--connection-url)
+    - [Scalability & Performance](#scalability--performance)
+    - [Error Handling](#error-handling)
+    - [API Version Compatible Strategy](#api-version-compatible-strategy)
+    - [RA-GRS](#ra-grs)
+  - [Differences between Azurite V3 and Azurite V2](#differences-between-azurite-v3-and-azurite-v2)
+    - [Architecture](#architecture)
+    - [Server Code Generator](#server-code-generator)
+    - [TypeScript](#typescript)
+    - [Features Scope](#features-scope)
+  - [TypeScript Server Code Generator](#typescript-server-code-generator)
+  - [Support Matrix](#support-matrix)
+  - [License](#license)
+  - [We Welcome Contributions!](#we-welcome-contributions)
+
 ## Introduction
 
 Azurite is an open source Azure Storage API compatible server (emulator). Based on Node.js, Azurite provides cross platform experiences for customers wanting to try Azure Storage easily in a local environment. Azurite simulates most of the commands supported by Azure Storage with minimal dependencies.
@@ -488,9 +539,9 @@ Azurite --cert cert.pem --key key.pem
 
 NOTE: If you are using the Azure SDKs, then you will also need to pass the `--oauth basic` option.
 
-#### PFX
+### PFX
 
-##### Generate PFX Certificate
+#### Generate PFX Certificate
 
 You first need to generate a PFX file to use with Azurite.
 
@@ -502,7 +553,7 @@ dotnet dev-certs https --trust -ep cert.pfx -p <password>
 
 > Storage Explorer does not currently work with certificates produced by `dotnet dev-certs`. While you can use them for Azurite and Azure SDKs, you won't be able to access the Azurite endpoints with Storage Explorer if you are using the certs created with dotnet dev-certs. We are tracking this issue on GitHub here: https://github.com/microsoft/AzureStorageExplorer/issues/2859
 
-##### Start Azurite with HTTPS and PFX
+#### Start Azurite with HTTPS and PFX
 
 Then you start Azurite with that cert and key.
 
@@ -512,7 +563,7 @@ azurite --cert cert.pem --key key.pem
 
 NOTE: If you are using the Azure SDKs, then you will also need to pass the `--oauth basic` option.
 
-##### Start Azurite
+#### Start Azurite
 
 ## Usage with Azure Storage SDKs or Tools
 
@@ -702,7 +753,9 @@ For example, the following URI is a valid address for a blob in an Azure storage
 https://myaccount.blob.core.windows.net/mycontainer/myblob.txt
 ```
 
-However, because Azuite runs on local computer, the account name is part of the URI path instead of the host name. Use the following URI format for a resource in Azurite:
+#### IP-style URL
+
+However, because Azuite runs on local computer, it use IP-style URI by default, and the account name is part of the URI path instead of the host name. Use the following URI format for a resource in Azurite:
 
 ```
 http://<local-machine-address>:<port>/<account-name>/<resource-path>
@@ -719,6 +772,8 @@ The service endpoints for Azurite blob service:
 ```
 http://127.0.0.1:10000/<account-name>/<resource-path>
 ```
+
+#### Production-style URL
 
 Optionally, you could modify your hosts file, to access an account with production-style URL.
 
@@ -747,6 +802,8 @@ DefaultEndpointsProtocol=http;AccountName=account1;AccountKey=key1;BlobEndpoint=
 ```
 
 > Note. Do not access default account in this way with Azure Storage Explorer. There is a bug that Storage Explorer is always adding account name in URL path, causing failures.
+
+> Note. When use Production-style URL to access Azurite, the host name in FQDN must be the account name, like "http://devstoreaccount1.blob.localhost:10000/container". When use Production-style URL, Azurite doesn't support account name in URI path, like "http://foo.bar.com:10000/devstoreaccount1/container" is not supported.
 
 ### Scalability & Performance
 
