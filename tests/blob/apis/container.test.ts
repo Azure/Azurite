@@ -1,5 +1,10 @@
 import {
+  AccountSASPermissions,
+  AccountSASResourceTypes,
+  AccountSASServices,
+  AnonymousCredential,
   BlobServiceClient,
+  generateAccountSASQueryParameters,
   newPipeline,
   StorageSharedKeyCredential
 } from "@azure/storage-blob";
@@ -15,6 +20,7 @@ import {
   getUniqueName,
   sleep
 } from "../../testutils";
+import QueryRequestPolicyFactory from "../RequestPolicy/QueryRequestPolicyFactory";
 
 // Set to true enable debug log
 configLogger(false);
@@ -899,5 +905,198 @@ describe("ContainerAPIs", () => {
     const result = await containerClient.getAccessPolicy();
     assert.deepEqual(result.signedIdentifiers, containerAcl);
     assert.deepEqual(result.blobPublicAccess, access);
+  });
+    
+  it("list container should success with include as empty string or deleted @loki @sql", async () => {
+    // create account sas
+    const storageSharedKeyCredential = new StorageSharedKeyCredential(
+      EMULATOR_ACCOUNT_NAME,
+      EMULATOR_ACCOUNT_KEY
+    );
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+    const sas = generateAccountSASQueryParameters(
+      {
+        expiresOn: tmr,
+        permissions: AccountSASPermissions.parse("rl"),
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("b").toString(),
+        version: "2020-04-08"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    ).toString();
+
+    // list with include as empty string
+    // create service client 
+    let pipeline = newPipeline(
+      new AnonymousCredential(),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(
+      new QueryRequestPolicyFactory("include=metadata","include=")
+    );
+    let serviceClientForOptions = new BlobServiceClient(`${baseURL}?${sas}`, pipeline);
+    
+    // list containers
+    let result = (
+      await serviceClientForOptions
+        .listContainers({
+          includeMetadata: true
+        })
+        .byPage()
+        .next()
+    ).value;
+
+    assert.ok(result);       
+
+    // list with include as deleted
+    // create service client 
+    pipeline = newPipeline(
+      new AnonymousCredential(),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(
+      new QueryRequestPolicyFactory("include=metadata","include=deleted")
+    );
+    serviceClientForOptions = new BlobServiceClient(`${baseURL}?${sas}`, pipeline);
+    
+    // list containers
+    result = (
+      await serviceClientForOptions
+        .listContainers({
+          includeMetadata: true,
+        })
+        .byPage()
+        .next()
+    ).value;
+
+    assert.ok(result);   
+  });
+
+  it("list container should success with different include string @loki @sql", async () => {
+    // prepare blobs
+    const blobClients = [];
+    for (let i = 0; i < 3; i++) {
+      const blobClient = containerClient.getBlobClient(
+        getUniqueName(`blockblob${i}/${i}`)
+      );
+      const blockBlobClient = blobClient.getBlockBlobClient();
+      await blockBlobClient.upload("", 0);
+      blobClients.push(blobClient);
+    }
+    blobClients[0].createSnapshot();
+
+    // create account sas
+    const storageSharedKeyCredential = new StorageSharedKeyCredential(
+      EMULATOR_ACCOUNT_NAME,
+      EMULATOR_ACCOUNT_KEY
+    );
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+    const sas = generateAccountSASQueryParameters(
+      {
+        expiresOn: tmr,
+        permissions: AccountSASPermissions.parse("rl"),
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("b").toString(),
+        version: "2020-04-08"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    ).toString();
+
+    // list with empty include
+    // create container client for 
+    let pipeline = newPipeline(
+      new AnonymousCredential(),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(
+      new QueryRequestPolicyFactory("include=metadata","include=")
+    );
+    let serviceClientForOptions = new BlobServiceClient(`${baseURL}?${sas}`, pipeline);
+
+    let ContainerClientForOptions = serviceClientForOptions.getContainerClient(containerName);
+
+    // list blob with empty include
+    let result = (
+      await ContainerClientForOptions
+        .listBlobsFlat({
+          includeMetadata: true
+        })
+        .byPage()
+        .next()
+    ).value;
+    assert.ok(result);  
+    assert.equal(result.segment.blobItems.length, 3);      
+
+    // list with  include as upcase Snapshot
+    // create container client for 
+    pipeline = newPipeline(
+      new AnonymousCredential(),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(
+      new QueryRequestPolicyFactory("include=metadata","include=Snapshots")
+    );
+    serviceClientForOptions = new BlobServiceClient(`${baseURL}?${sas}`, pipeline);
+
+    ContainerClientForOptions = serviceClientForOptions.getContainerClient(containerName);
+
+    // list blob with include as upcase Snapshot
+    result = (
+      await ContainerClientForOptions
+        .listBlobsFlat({
+          includeMetadata: true
+        })
+        .byPage()
+        .next()
+    ).value;
+    assert.ok(result);  
+    assert.equal(result.segment.blobItems.length, 4);      
+
+    // list with  mutiple include
+    // create container client for 
+    pipeline = newPipeline(
+      new AnonymousCredential(),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(
+      new QueryRequestPolicyFactory("include=metadata","include=snapshots,metadata,uncommittedblobs,copy,deleted,tags,versions,deletedwithversions,immutabilitypolicy,legalhold,permissions")
+    );
+    serviceClientForOptions = new BlobServiceClient(`${baseURL}?${sas}`, pipeline);
+
+    ContainerClientForOptions = serviceClientForOptions.getContainerClient(containerName);
+
+    // list blob with  mutiple include
+    result = (
+      await ContainerClientForOptions
+        .listBlobsFlat({
+          includeMetadata: true
+        })
+        .byPage()
+        .next()
+    ).value;
+    assert.ok(result);  
+    assert.equal(result.segment.blobItems.length, 4); 
   });
 });
