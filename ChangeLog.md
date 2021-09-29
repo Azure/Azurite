@@ -11,6 +11,10 @@ Blob:
 - Added more allowed value to list blob request "include" query parameter:'tags', 'versions', 'deletedwithversions', 'immutabilitypolicy', 'legalhold', 'permissions'
 - Added more allowed value to list container request "include" query parameter: 'deleted'
 
+Queue:
+
+- Fixed issue that expired message still can be get, peek, update, delete.
+
 ## 2021.9 Version 3.14.2
 
 Blob:
