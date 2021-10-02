@@ -10,6 +10,7 @@ Blob:
 - Supported list container/blob with "include" query parameter as empty string
 - Added more allowed value to list blob request "include" query parameter:'tags', 'versions', 'deletedwithversions', 'immutabilitypolicy', 'legalhold', 'permissions'
 - Added more allowed value to list container request "include" query parameter: 'deleted'
+- Raise 416 when start range is bigger than blob length
 
 ## 2021.9 Version 3.14.2
 

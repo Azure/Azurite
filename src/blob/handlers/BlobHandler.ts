@@ -980,6 +980,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const rangeStart = rangesParts[0];
     let rangeEnd = rangesParts[1];
 
+    // Start Range is bigger than blob length
+    if (rangeStart > blob.properties.contentLength!) {
+      throw StorageErrorFactory.getInvalidPageRange(context.contextId!);
+    }
+
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
       rangeEnd = blob.properties.contentLength! - 1;
@@ -1098,6 +1103,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     );
     const rangeStart = rangesParts[0];
     let rangeEnd = rangesParts[1];
+
+    // Start Range is bigger than blob length
+    if (rangeStart > blob.properties.contentLength!) {
+      throw StorageErrorFactory.getInvalidPageRange(context.contextId!);
+    }
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
