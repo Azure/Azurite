@@ -52,9 +52,8 @@ export default class TableBatchOrchestrator {
   public async processBatchRequestAndSerializeResponse(
     batchRequestBody: string
   ): Promise<string> {
-    this.batchOperations = this.serialization.deserializeBatchRequest(
-      batchRequestBody
-    );
+    this.batchOperations =
+      this.serialization.deserializeBatchRequest(batchRequestBody);
     if (this.batchOperations.length > 100) {
       this.wasError = true;
       this.errorResponse = this.serialization.serializeGeneralRequestError(
@@ -134,6 +133,7 @@ export default class TableBatchOrchestrator {
     // (currently static header) ToDo: Validate if we need to correct headers via tests
     responseString +=
       "Content-Type: multipart/mixed; boundary=" + changesetBoundary + "\r\n";
+    const changesetBoundaryClose: string = "--" + changesetBoundary + "--\r\n";
     changesetBoundary = "\r\n--" + changesetBoundary;
     if (this.wasError === false) {
       this.requests.forEach((request) => {
@@ -151,7 +151,7 @@ export default class TableBatchOrchestrator {
       // then HTTP/1.1 404 etc
       responseString += this.errorResponse;
     }
-    responseString += changesetBoundary + "--\r\n";
+    responseString += changesetBoundaryClose;
     responseString += batchBoundary + "--\r\n";
     return responseString;
   }
@@ -273,9 +273,10 @@ export default class TableBatchOrchestrator {
    * @return {*}  {{ partitionKey: string; rowKey: string }}
    * @memberof TableBatchManager
    */
-  private extractRowAndPartitionKeys(
-    request: BatchRequest
-  ): { partitionKey: string; rowKey: string } {
+  private extractRowAndPartitionKeys(request: BatchRequest): {
+    partitionKey: string;
+    rowKey: string;
+  } {
     let partitionKey: string;
     let rowKey: string;
 
@@ -487,10 +488,11 @@ export default class TableBatchOrchestrator {
         updatedContext
       );
       return {
-        __return: await this.serialization.serializeTableQueryEntityWithPartitionAndRowKeyBatchResponse(
-          request,
-          response
-        ),
+        __return:
+          await this.serialization.serializeTableQueryEntityWithPartitionAndRowKeyBatchResponse(
+            request,
+            response
+          ),
         response
       };
     } else {
@@ -502,10 +504,11 @@ export default class TableBatchOrchestrator {
         updatedContext
       );
       return {
-        __return: await this.serialization.serializeTableQueryEntityBatchResponse(
-          request,
-          response
-        ),
+        __return:
+          await this.serialization.serializeTableQueryEntityBatchResponse(
+            request,
+            response
+          ),
         response
       };
     }
