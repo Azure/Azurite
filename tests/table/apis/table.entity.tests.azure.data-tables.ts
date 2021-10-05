@@ -26,7 +26,6 @@ import {
   HOST,
   PORT
 } from "./table.entity.test.utils";
-
 // Set true to enable debug log
 configLogger(false);
 
@@ -385,6 +384,69 @@ describe("table Entity APIs test", () => {
       testsCompleted++;
     }
     assert.strictEqual(testsCompleted, 5);
+    await tableClient.deleteTable();
+  });
+
+  it("should return the correct number of results querying with a boolean field regardless of whitespacing behaviours, @loki", async () => {
+    const partitionKeyForQueryTest = createUniquePartitionKey("");
+    const totalItems = 10;
+    await tableClient.createTable();
+    const timestamp = new Date();
+    timestamp.setDate(timestamp.getDate() + 1);
+    for (let i = 0; i < totalItems; i++) {
+      const myBool: boolean = i % 2 !== 0 ? true : false;
+      const result = await tableClient.createEntity({
+        partitionKey: partitionKeyForQueryTest,
+        rowKey: `${i}`,
+        number: i,
+        myBool
+      });
+      assert.notStrictEqual(result.etag, undefined);
+    }
+    const maxPageSize = 10;
+    let testsCompleted = 0;
+    // take note of the different whitespacing and query formatting:
+    const queriesAndExpectedResult = [
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myBool eq true )`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myBool eq true)`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myBool eq false)`
+        },
+        expectedResult: 5
+      }
+    ];
+
+    for (const queryTest of queriesAndExpectedResult) {
+      const entities = tableClient.listEntities<
+        TableEntity<{ number: number }>
+      >({
+        queryOptions: queryTest.queryOptions
+      });
+      let all: TableEntity<{ number: number }>[] = [];
+      for await (const entity of entities.byPage({
+        maxPageSize
+      })) {
+        all = [...all, ...entity];
+      }
+      assert.strictEqual(
+        all.length,
+        queryTest.expectedResult,
+        `Failed with query ${queryTest.queryOptions.filter}`
+      );
+      testsCompleted++;
+    }
+    assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
     await tableClient.deleteTable();
   });
 });

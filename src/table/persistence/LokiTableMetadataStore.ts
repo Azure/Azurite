@@ -815,8 +815,13 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           inString = false;
         }
       } else if (query[i] === "(" || query[i] === ")") {
-        if (i !== 0 && query[i - 1].match(/\d/) !== null) {
-          // this is needed if query does not contain whitespace between number token and paren
+        if (
+          i !== 0 &&
+          (query[i - 1].match(/\d/) !== null ||
+            query.slice(i - 5, i) === " true" ||
+            query.slice(i - 6, i) === " false")
+        ) {
+          // this is needed if query does not contain whitespace between number token / boolean and paren
           appendToken();
         }
         i--;
