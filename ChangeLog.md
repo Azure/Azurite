@@ -11,6 +11,10 @@ Blob:
 - Added more allowed value to list blob request "include" query parameter:'tags', 'versions', 'deletedwithversions', 'immutabilitypolicy', 'legalhold', 'permissions'
 - Added more allowed value to list container request "include" query parameter: 'deleted'
 
+Table:
+
+- removed extra CRLF from batch transaction response which caused issues for Microsoft.Azure.Cosmos.Table NuGet package.
+
 ## 2021.9 Version 3.14.2
 
 Blob:
