@@ -16,6 +16,10 @@ Queue:
 
 - Fixed issue that expired message still can be get, peek, update, delete.
 
+Table:
+
+- removed extra CRLF from batch transaction response which caused issues for Microsoft.Azure.Cosmos.Table NuGet package.
+
 ## 2021.9 Version 3.14.2
 
 Blob:
