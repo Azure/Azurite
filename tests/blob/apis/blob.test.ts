@@ -214,6 +214,16 @@ describe("BlobAPIs", () => {
     );
   });
 
+  it("download out of range @loki @sql", async () => {
+    try {
+      await blobClient.download(content.length + 1, content.length + 10);
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 416);
+      return;
+    }
+    assert.fail();
+  });
+
   it("get properties response should not set content-type @loki @sql", async () => {
     const blobURL404 = containerClient.getBlobClient("UN_EXIST_BLOB_");
     try {
