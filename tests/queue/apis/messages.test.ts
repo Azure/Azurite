@@ -15,7 +15,8 @@ import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName,
-  rmRecursive
+  rmRecursive,
+  sleep
 } from "../../testutils";
 
 // Set true to enable debug log
@@ -531,5 +532,100 @@ describe("Messages APIs test", () => {
         "The request body is too large and exceeds the maximum permissible limit."
       )
     );
+  });
+
+  it("peek,dequeue,update,delete expired message @loki", async () => {
+    const ttl = 2;
+    let eResult = await queueClient.sendMessage(messageContent, {
+      messageTimeToLive: ttl,
+      visibilitytimeout: 1
+    });
+    assert.ok(eResult.date);
+    assert.ok(eResult.expiresOn);
+    assert.ok(eResult.insertedOn);
+    assert.ok(eResult.messageId);
+    assert.ok(eResult.popReceipt);
+    assert.ok(eResult.requestId);
+    assert.ok(eResult.nextVisibleOn);
+    assert.ok(eResult.version);
+
+    // peek, get, update before message expire
+    let pResult = await queueClient.peekMessages({
+      numberOfMessages: 2
+    });
+    assert.ok(pResult.date);
+    assert.ok(pResult.requestId);
+    assert.ok(pResult.version);
+    assert.deepStrictEqual(pResult.peekedMessageItems.length, 1);
+
+    let dResult = await queueClient.receiveMessages({
+      visibilitytimeout: 1,
+      numberOfMessages: 1
+    });
+    assert.ok(dResult.date);
+    assert.ok(dResult.requestId);
+    assert.ok(dResult.version);
+    assert.deepStrictEqual(dResult.receivedMessageItems.length, 1);
+
+    let newMessage = "";
+    const uResult = await queueClient.updateMessage(
+      dResult.receivedMessageItems[0].messageId,
+      dResult.receivedMessageItems[0].popReceipt,
+      newMessage,
+      1
+    );
+    assert.ok(uResult.version);
+    assert.ok(uResult.nextVisibleOn);
+    assert.ok(uResult.date);
+    assert.ok(uResult.requestId);
+    assert.ok(uResult.popReceipt);
+
+    // wait for message expire    
+    await sleep(ttl * 1000);
+
+    // peek, get, update, delete message after message expire    
+    pResult = await queueClient.peekMessages({
+      numberOfMessages: 2
+    });
+    assert.ok(pResult.date);
+    assert.ok(pResult.requestId);
+    assert.ok(pResult.version);
+    assert.deepStrictEqual(pResult.peekedMessageItems.length, 0);
+
+
+    let dResult2 = await queueClient.receiveMessages({
+      visibilitytimeout: 10,
+      numberOfMessages: 2
+    });
+    assert.ok(dResult2.date);
+    assert.ok(dResult2.requestId);
+    assert.ok(dResult2.version);
+    assert.deepStrictEqual(dResult2.receivedMessageItems.length, 0);
+
+    let errorUpdate;
+    try {
+      await queueClient.updateMessage(
+        dResult.receivedMessageItems[0].messageId,
+        dResult.receivedMessageItems[0].popReceipt,
+        newMessage,
+        1
+      );
+    } catch (err) {
+      errorUpdate = err;
+    }
+    assert.ok(errorUpdate);
+
+    let errorDelete;
+    try {
+      await queueClient.deleteMessage(
+        dResult.receivedMessageItems[0].messageId,
+        dResult.receivedMessageItems[0].popReceipt
+      );
+    } catch (err) {
+      errorDelete = err;
+    }
+    assert.ok(errorDelete);
+    
+    
   });
 });

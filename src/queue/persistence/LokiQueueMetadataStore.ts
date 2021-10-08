@@ -502,6 +502,8 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
   ): Promise<MessageModel[]> {
     this.checkQueueExist(account, queue, context);
 
+    this.clearExpiredMessages(account, queue, context);
+
     const coll = this.db.getCollection(this.MESSAGES_COLLECTION);
     const queryTime = queryDate ? queryDate.getTime() : new Date().getTime();
     const query = {
@@ -557,6 +559,8 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
     context?: Context
   ): Promise<MessageModel[]> {
     this.checkQueueExist(account, queue, context);
+
+    this.clearExpiredMessages(account, queue, context);
 
     const coll = this.db.getCollection(this.MESSAGES_COLLECTION);
     const queryTime = queryDate ? queryDate.getTime() : new Date().getTime();
@@ -617,6 +621,8 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
   ): Promise<void> {
     this.checkQueueExist(account, queue, context);
 
+    this.clearExpiredMessages(account, queue, context);
+
     const coll = this.db.getCollection(this.MESSAGES_COLLECTION);
     const doc = coll.findOne({
       accountName: account,
@@ -652,6 +658,8 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
     context?: Context
   ): Promise<void> {
     this.checkQueueExist(message.accountName, message.queueName, context);
+
+    this.clearExpiredMessages(message.accountName, message.queueName, context);
 
     const coll = this.db.getCollection(this.MESSAGES_COLLECTION);
     const doc = coll.findOne({
@@ -813,5 +821,37 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
    */
   private escapeRegex(regex: string): string {
     return regex.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+  }
+
+  /**
+   * Clean the expired messages.
+   *
+   * @param {string} account
+   * @param {string} queue
+   * @param {Context} [context]
+   * @returns {Promise<void>}
+   * @memberof LokiQueueMetadataStore
+   */
+  private async clearExpiredMessages(
+    account: string,
+    queue: string,
+    context?: Context
+  ): Promise<void> {
+    this.checkQueueExist(account, queue, context);
+
+    const coll = this.db.getCollection(this.MESSAGES_COLLECTION);
+    const queryTime = new Date().getTime();
+    const query = {
+      accountName: account,
+      queueName: queue,
+      expirationTime: { $lte: queryTime }
+    };
+
+    const docs = coll
+      .chain()
+      .find(query)
+      .data();
+
+    coll.remove(docs);
   }
 }
