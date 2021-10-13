@@ -14,6 +14,7 @@ Blob:
 Table:
 
 - Fixed issue with incorrect results returned when using boolean values in query.
+- Fixed issue with incorrect results returned with whitespacing and parens with int64 values in query.
 
 ## 2021.9 Version 3.14.2
 
