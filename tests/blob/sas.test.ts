@@ -738,14 +738,14 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const properties = await blobClientWithSAS.getProperties();
     assert.equal(properties.cacheControl, "cache-control-original");
-    assert.equal(properties.contentDisposition, "content-disposition-original");
+    assert.equal(properties.contentDisposition, `attachment; filename=\"${escapedblobName}\"; filename*=UTF-8''${escapedblobName}`);
     assert.equal(properties.contentEncoding, "content-encoding-original");
     assert.equal(properties.contentLanguage, "content-language-original");
     assert.equal(properties.contentType, "content-type-original");
 
     const downloadResponse = await blobClientWithSAS.download();
     assert.equal(downloadResponse.cacheControl, "cache-control-original");
-    assert.equal(downloadResponse.contentDisposition, "content-disposition-original");
+    assert.equal(downloadResponse.contentDisposition, `attachment; filename=\"${escapedblobName}\"; filename*=UTF-8''${escapedblobName}`);
     assert.equal(downloadResponse.contentEncoding, "content-encoding-original");
     assert.equal(downloadResponse.contentLanguage, "content-language-original");
     assert.equal(downloadResponse.contentType, "content-type-original");
