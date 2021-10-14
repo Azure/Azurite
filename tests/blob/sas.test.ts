@@ -685,7 +685,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await containerClient.delete();
   });
 
-  it("generateBlobSASQueryParameters should work for page blob and rscd arguments for filenames with spaces and special characters", async () => {
+  it("generateBlobSASQueryParameters should work for page blob and rscd arguments for filenames with spaces and special characters @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -701,12 +701,14 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await containerClient.create();
 
     const blobName = "this is a test file Ж 大 仮.jpg";  //filename contains spaces and special characters
+    const escapedblobName = encodeURIComponent(blobName); 
     const blobClient = containerClient.getPageBlobClient(blobName);
     await blobClient.create(1024, {
       blobHTTPHeaders: {
         blobCacheControl: "cache-control-original",
         blobContentType: "content-type-original",
-        blobContentDisposition: "content-disposition-original",
+        //https://tools.ietf.org/html/rfc5987
+        blobContentDisposition: `attachment; filename=\"${escapedblobName}\"; filename*=UTF-8''${escapedblobName}`,
         blobContentEncoding: "content-encoding-original",
         blobContentLanguage: "content-language-original"
       }
