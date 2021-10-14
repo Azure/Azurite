@@ -685,7 +685,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await containerClient.delete();
   });
 
-  it("generateBlobSASQueryParameters should work for page blob and rscd arguments", async () => {
+  it("generateBlobSASQueryParameters should work for page blob and rscd arguments for filenames with spaces and special characters", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -700,7 +700,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const containerClient = serviceClient.getContainerClient(containerName);
     await containerClient.create();
 
-    const blobName = "this is a test file.jpg";  //filename contains spaces , potentially add other 'special' chars
+    const blobName = "this is a test file Ж 大 仮.jpg";  //filename contains spaces and special characters
     const blobClient = containerClient.getPageBlobClient(blobName);
     await blobClient.create(1024, {
       blobHTTPHeaders: {

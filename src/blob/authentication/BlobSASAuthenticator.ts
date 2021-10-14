@@ -361,11 +361,11 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     const permissions = this.decodeIfExist(req.getQuery("sp"));
     const ipRange = this.decodeIfExist(req.getQuery("sip"));
     const identifier = this.decodeIfExist(req.getQuery("si"));
-    const cacheControl = this.decodeIfExist(req.getQuery("rscc"));
+    const cacheControl = req.getQuery("rscc");
     const contentDisposition = req.getQuery("rscd");
-    const contentEncoding = this.decodeIfExist(req.getQuery("rsce"));
-    const contentLanguage = this.decodeIfExist(req.getQuery("rscl"));
-    const contentType = this.decodeIfExist(req.getQuery("rsct"));
+    const contentEncoding = req.getQuery("rsce");
+    const contentLanguage = req.getQuery("rscl");
+    const contentType = req.getQuery("rsct");
     const signedResource = this.decodeIfExist(req.getQuery("sr"));
     const snapshot = this.decodeIfExist(req.getQuery("snapshot"));
 
