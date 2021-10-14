@@ -685,6 +685,72 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await containerClient.delete();
   });
 
+  it("generateBlobSASQueryParameters should work for page blob and rscd arguments", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const blobName = "this is a test file.jpg";  //filename contains spaces , potentially add other 'special' chars
+    const blobClient = containerClient.getPageBlobClient(blobName);
+    await blobClient.create(1024, {
+      blobHTTPHeaders: {
+        blobCacheControl: "cache-control-original",
+        blobContentType: "content-type-original",
+        blobContentDisposition: "content-disposition-original",
+        blobContentEncoding: "content-encoding-original",
+        blobContentLanguage: "content-language-original"
+      }
+    });
+
+    const blobSAS = generateBlobSASQueryParameters(
+      {
+        blobName,
+        containerName,
+        expiresOn: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: BlobSASPermissions.parse("racwd"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
+        version: "2016-05-31"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    );
+
+    const sasURL = `${blobClient.url}?${blobSAS}`;
+    const blobClientWithSAS = new PageBlobClient(
+      sasURL,
+      newPipeline(new AnonymousCredential())
+    );
+
+    await blobClientWithSAS.getProperties();
+
+    const properties = await blobClientWithSAS.getProperties();
+    assert.equal(properties.cacheControl, "cache-control-original");
+    assert.equal(properties.contentDisposition, "content-disposition-original");
+    assert.equal(properties.contentEncoding, "content-encoding-original");
+    assert.equal(properties.contentLanguage, "content-language-original");
+    assert.equal(properties.contentType, "content-type-original");
+
+    const downloadResponse = await blobClientWithSAS.download();
+    assert.equal(downloadResponse.cacheControl, "cache-control-original");
+    assert.equal(downloadResponse.contentDisposition, "content-disposition-original");
+    assert.equal(downloadResponse.contentEncoding, "content-encoding-original");
+    assert.equal(downloadResponse.contentLanguage, "content-language-original");
+    assert.equal(downloadResponse.contentType, "content-type-original");
+
+    await containerClient.delete();
+  });
+
   it("generateBlobSASQueryParameters should work for page blob and override headers @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
