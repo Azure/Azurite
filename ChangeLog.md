@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Restore ability to connect to host.docker.internal.
+
 Blob:
 
 - Fixed list blob API "include" query parameter not work when not lower case, by make it case insensitive.
