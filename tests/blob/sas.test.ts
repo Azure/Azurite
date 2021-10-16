@@ -701,19 +701,18 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await containerClient.create();
 
     const blobName = "this is a test file Ж 大 仮.jpg";  //filename contains spaces and special characters
-    const escapedblobName = encodeURIComponent(blobName); 
     const blobClient = containerClient.getPageBlobClient(blobName);
     await blobClient.create(1024, {
       blobHTTPHeaders: {
         blobCacheControl: "cache-control-original",
         blobContentType: "content-type-original",
-        //https://tools.ietf.org/html/rfc5987
-        blobContentDisposition: `attachment; filename=\"${escapedblobName}\"; filename*=UTF-8''${escapedblobName}`,
+        blobContentDisposition: "content-type-disposition",
         blobContentEncoding: "content-encoding-original",
         blobContentLanguage: "content-language-original"
       }
     });
 
+    const escapedblobName = encodeURIComponent(blobName); 
     const blobSAS = generateBlobSASQueryParameters(
       {
         blobName,
@@ -722,6 +721,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
         ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
         permissions: BlobSASPermissions.parse("racwd"),
         protocol: SASProtocol.HttpsAndHttp,
+        //https://tools.ietf.org/html/rfc5987
+        contentDisposition: `attachment; filename=\"${escapedblobName}\"; filename*=UTF-8''${escapedblobName}`,
         startsOn: now,
         version: "2016-05-31"
       },
