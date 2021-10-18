@@ -3,6 +3,7 @@ import uuid from "uuid/v4";
 
 import logger from "../../common/Logger";
 import { IP_REGEX } from "../../common/utils/constants";
+import { NO_ACCOUNT_HOST_NAMES } from "../../common/utils/constants";
 import QueueStorageContext from "../context/QueueStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import {
@@ -185,10 +186,11 @@ export function extractStoragePartsFromPath(
 
   let urlPartIndex = 0;
   const isIPAddress = IP_REGEX.test(hostname);
+  const isNoAccountHostName = NO_ACCOUNT_HOST_NAMES.has(hostname.toLowerCase());
   const firstDotIndex = hostname.indexOf(".");
-  // If hostname is not an IP address and has a dot inside,
+  // If hostname is not an IP address or a known host name, and has a dot inside,
   // we assume user wants to access emulator with a production-like URL.
-  if (!isIPAddress && firstDotIndex > 0) {
+  if (!isIPAddress && !isNoAccountHostName && firstDotIndex > 0) {
     account = hostname.substring(
       0,
       firstDotIndex

@@ -26,6 +26,8 @@ describe("SpecialNaming", () => {
 
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
   const productionStyleHostName = "devstoreaccount1.localhost"; // Use hosts file to make this resolve
+  const noAccountHostName = "host.docker.internal";
+  const noAccountHostNameConnectionString = `DefaultEndpointsProtocol=http;AccountName=${EMULATOR_ACCOUNT_NAME};AccountKey=${EMULATOR_ACCOUNT_KEY};BlobEndpoint=http://${noAccountHostName}:${server.config.port}/${EMULATOR_ACCOUNT_NAME};`;
 
   const serviceClient = new BlobServiceClient(
     baseURL,
@@ -490,6 +492,50 @@ describe("SpecialNaming", () => {
         // So skip the test case.
         assert.ok(
           `Skipping test case - it needs ${productionStyleHostName} to be resolvable`
+        );
+      }
+    );
+  });
+
+  it(`Should work with no account host name URL when ${noAccountHostName} is resolvable`, async () => {
+    await dns.promises.lookup(noAccountHostName).then(
+      async (lookupAddress) => {
+        const serviceClientNoHostName = BlobServiceClient.fromConnectionString(
+          noAccountHostNameConnectionString,
+          {
+            retryOptions: { maxTries: 1 },
+            // Make sure socket is closed once the operation is done.
+            keepAliveOptions: { enable: false }
+          }
+        );
+        const containerClientProductionStyle = serviceClientNoHostName.getContainerClient(
+          containerName
+        );
+
+        const blobName: string = getUniqueName("myblob");
+        const blockBlobClient = containerClientProductionStyle.getBlockBlobClient(
+          blobName
+        );
+
+        await blockBlobClient.upload("ABC", 3);
+        const response = (
+          await containerClientProductionStyle
+            .listBlobsByHierarchy("$", {
+              prefix: blobName
+            })
+            .byPage()
+            .next()
+        ).value;
+        assert.notDeepEqual(response.segment.blobItems.length, 0);
+      },
+      () => {
+        // Cannot perform this test. We need host.docker.internal to resolve to 127.0.0.1.
+        // On Windows, we can't spoof DNS record for specific process.
+        // So we have options of running our own DNS server (overkill),
+        // or editing hosts files (machine global operation; and requires running as admin).
+        // So skip the test case.
+        assert.ok(
+          `Skipping test case - it needs ${noAccountHostName} to be resolvable`
         );
       }
     );
