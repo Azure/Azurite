@@ -95,7 +95,8 @@ export default class SqlBlobServer extends ServerBase {
       configuration.accessLogWriteStream,
       configuration.loose,
       configuration.skipApiVersionCheck,
-      configuration.getOAuthLevel()
+      configuration.getOAuthLevel(),
+      configuration.disableProductStyleUrl
     );
 
     super(host, port, httpServer, requestListenerFactory, configuration);

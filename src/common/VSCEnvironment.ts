@@ -104,4 +104,10 @@ export default class VSCEnvironment implements IEnvironment {
   public oauth(): string | undefined {
     return this.workspaceConfiguration.get<string>("oauth");
   }
+
+  public disableProductStyleUrl(): boolean {
+    return (
+      this.workspaceConfiguration.get<boolean>("disableProductStyleUrl") || false
+    );
+  }
 }

@@ -16,10 +16,11 @@ import {
 import { checkApiVersion, validateContainerName } from "../utils/utils";
 
 export default function createStorageBlobContextMiddleware(
-  skipApiVersionCheck?: boolean
+  skipApiVersionCheck?: boolean,
+  disableProductStyleUrl?: boolean
 ): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
-    return blobStorageContextMiddleware(req, res, next, skipApiVersionCheck);
+    return blobStorageContextMiddleware(req, res, next, skipApiVersionCheck, disableProductStyleUrl);
   };
 }
 
@@ -35,7 +36,8 @@ export function blobStorageContextMiddleware(
   req: Request,
   res: Response,
   next: NextFunction,
-  skipApiVersionCheck?: boolean
+  skipApiVersionCheck?: boolean,
+  disableProductStyleUrl?: boolean,
 ): void {
   // Set server header in every Azurite response
   res.setHeader(HeaderConstants.SERVER, `Azurite-Blob/${VERSION}`);
@@ -66,7 +68,8 @@ export function blobStorageContextMiddleware(
 
   const [account, container, blob, isSecondary] = extractStoragePartsFromPath(
     req.hostname,
-    req.path
+    req.path,
+    disableProductStyleUrl
   );
 
   blobContext.account = account;
@@ -126,7 +129,8 @@ export function blobStorageContextMiddleware(
  */
 export function extractStoragePartsFromPath(
   hostname: string,
-  path: string
+  path: string,
+  disableProductStyleUrl?: boolean,
 ): [
   string | undefined,
   string | undefined,
@@ -151,7 +155,7 @@ export function extractStoragePartsFromPath(
   const firstDotIndex = hostname.indexOf(".");
   // If hostname is not an IP address or a known host name, and has a dot inside,
   // we assume user wants to access emulator with a production-like URL.
-  if (!isIPAddress && !isNoAccountHostName && firstDotIndex > 0) {
+  if (!disableProductStyleUrl &&!isIPAddress && !isNoAccountHostName && firstDotIndex > 0) {
     account = hostname.substring(
       0,
       firstDotIndex

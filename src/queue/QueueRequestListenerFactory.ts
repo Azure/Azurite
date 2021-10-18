@@ -45,7 +45,8 @@ export default class QueueRequestListenerFactory
     private readonly enableAccessLog: boolean,
     private readonly accessLogWriteStream?: NodeJS.WritableStream,
     private readonly skipApiVersionCheck?: boolean,
-    private readonly oauth?: OAuthLevel
+    private readonly oauth?: OAuthLevel,
+    private readonly disableProductStyleUrl?: boolean
   ) {}
 
   public createRequestListener(): RequestListener {
@@ -92,7 +93,7 @@ export default class QueueRequestListenerFactory
     }
 
     // Manually created middleware to deserialize feature related context which swagger doesn't know
-    app.use(createQueueStorageContextMiddleware(this.skipApiVersionCheck));
+    app.use(createQueueStorageContextMiddleware(this.skipApiVersionCheck, this.disableProductStyleUrl));
 
     // Dispatch incoming HTTP request to specific operation
     app.use(middlewareFactory.createDispatchMiddleware());

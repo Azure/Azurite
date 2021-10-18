@@ -44,7 +44,8 @@ export default class TableRequestListenerFactory
     private readonly enableAccessLog: boolean,
     private readonly accessLogWriteStream?: NodeJS.WritableStream,
     private readonly skipApiVersionCheck?: boolean,
-    private readonly oauth?: OAuthLevel
+    private readonly oauth?: OAuthLevel,
+    private readonly disableProductStyleUrl?: boolean
   ) {}
 
   public createRequestListener(): RequestListener {
@@ -108,7 +109,7 @@ export default class TableRequestListenerFactory
     }
 
     // Manually created middleware to deserialize feature related context which swagger doesn't know
-    app.use(createTableStorageContextMiddleware(this.skipApiVersionCheck));
+    app.use(createTableStorageContextMiddleware(this.skipApiVersionCheck, this.disableProductStyleUrl));
 
     // Dispatch incoming HTTP request to specific operation
     app.use(middlewareFactory.createDispatchMiddleware());

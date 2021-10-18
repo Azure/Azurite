@@ -15,10 +15,11 @@ import {
 import { checkApiVersion, validateTableName } from "../utils/utils";
 
 export default function createTableStorageContextMiddleware(
-  skipApiVersionCheck?: boolean
+  skipApiVersionCheck?: boolean,
+  disableProductStyleUrl?: boolean
 ): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
-    return tableStorageContextMiddleware(req, res, next, skipApiVersionCheck);
+    return tableStorageContextMiddleware(req, res, next, skipApiVersionCheck, disableProductStyleUrl);
   };
 }
 
@@ -34,7 +35,8 @@ export function tableStorageContextMiddleware(
   req: Request,
   res: Response,
   next: NextFunction,
-  skipApiVersionCheck?: boolean
+  skipApiVersionCheck?: boolean,
+  disableProductStyleUrl?: boolean
 ): void {
   // Set server header in every Azurite response
   res.setHeader(HeaderConstants.SERVER, `Azurite-Table/${VERSION}`);
@@ -71,7 +73,8 @@ export function tableStorageContextMiddleware(
   // tslint:disable-next-line: prefer-const
   let [account, tableSection, isSecondary] = extractStoragePartsFromPath(
     req.hostname,
-    req.path
+    req.path,
+    disableProductStyleUrl
   );
 
   tableContext.isSecondary = isSecondary;
@@ -202,7 +205,8 @@ export function tableStorageContextMiddleware(
  */
 export function extractStoragePartsFromPath(
   hostname: string,
-  path: string
+  path: string,
+  disableProductStyleUrl?: boolean
 ): [string | undefined, string | undefined, boolean | undefined] {
   let account;
   let table;
@@ -221,7 +225,7 @@ export function extractStoragePartsFromPath(
   const firstDotIndex = hostname.indexOf(".");
   // If hostname is not an IP address or a known host name, and has a dot inside,
   // we assume user wants to access emulator with a production-like URL.
-  if (!isIPAddress && !isNoAccountHostName && firstDotIndex > 0) {
+  if (! disableProductStyleUrl && !isIPAddress && !isNoAccountHostName && firstDotIndex > 0) {
     account = hostname.substring(
       0,
       firstDotIndex

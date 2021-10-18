@@ -100,7 +100,8 @@ export default class BlobServer extends ServerBase implements ICleaner {
       configuration.accessLogWriteStream,
       configuration.loose,
       configuration.skipApiVersionCheck,
-      configuration.getOAuthLevel()
+      configuration.getOAuthLevel(),
+      configuration.disableProductStyleUrl
     );
 
     super(host, port, httpServer, requestListenerFactory, configuration);

@@ -35,6 +35,10 @@ args
     "Optional. Skip the request API version check, request with all Api versions will be allowed"
   )
   .option(
+    ["", "disableProductStyleUrl"],
+    "Optional. Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri."
+  )
+  .option(
     ["d", "debug"],
     "Optional. Enable debug log by providing a valid local file path as log destination"
   )
@@ -85,6 +89,14 @@ export default class TableEnvironment implements ITableEnvironment {
       return true;
     }
     // default is false which will check API veresion
+    return false;
+  }
+
+  public disableProductStyleUrl(): boolean {
+    if (this.flags.disableProductStyleUrl !== undefined) {
+      return true;
+    }
+    // default is false which will try to get account name from request Uri hostname
     return false;
   }
 

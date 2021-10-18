@@ -54,7 +54,8 @@ export default class BlobRequestListenerFactory
     private readonly accessLogWriteStream?: NodeJS.WritableStream,
     private readonly loose?: boolean,
     private readonly skipApiVersionCheck?: boolean,
-    private readonly oauth?: OAuthLevel
+    private readonly oauth?: OAuthLevel,
+    private readonly disableProductStyleUrl?: boolean
   ) {}
 
   public createRequestListener(): RequestListener {
@@ -132,7 +133,7 @@ export default class BlobRequestListenerFactory
     }
 
     // Manually created middleware to deserialize feature related context which swagger doesn"t know
-    app.use(createStorageBlobContextMiddleware(this.skipApiVersionCheck));
+    app.use(createStorageBlobContextMiddleware(this.skipApiVersionCheck, this.disableProductStyleUrl));
 
     // Dispatch incoming HTTP request to specific operation
     app.use(middlewareFactory.createDispatchMiddleware());

@@ -28,6 +28,10 @@ args
     "Optional. Enable loose mode which ignores unsupported headers and parameters"
   )
   .option(
+    ["", "disableProductStyleUrl"],
+    "Optional. DDisable getting account name from the host of request Uri, always get account name from the first path segment of request Uri."
+  )
+  .option(
     ["", "skipApiVersionCheck"],
     "Optional. Skip the request API version check, request with all Api versions will be allowed"
   )
@@ -94,6 +98,14 @@ export default class QueueEnvironment implements IQueueEnvironment {
 
   public oauth(): string | undefined {
     return this.flags.oauth;
+  }
+
+  public disableProductStyleUrl(): boolean {
+    if (this.flags.disableProductStyleUrl !== undefined) {
+      return true;
+    }
+    // default is false which will try to get account name from request Uri hostname
+    return false;
   }
 
   public async debug(): Promise<string | undefined> {

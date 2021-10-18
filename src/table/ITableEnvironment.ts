@@ -16,6 +16,8 @@ export default interface ITableEnvironment {
   loose(): boolean;
   /** Optional. Skip the request API version check request with all Api versions will be allowed */
   skipApiVersionCheck(): boolean;
+  /** Optional. Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri. */
+  disableProductStyleUrl(): boolean;
   /** Optional. Enable debug log by providing a valid local file, path as log destination path as log destination */
   debug(): Promise<string | boolean | undefined>;
 }

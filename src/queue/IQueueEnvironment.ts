@@ -5,6 +5,7 @@ export default interface IQueueEnvironment {
   silent(): boolean;
   loose(): boolean;
   skipApiVersionCheck(): boolean;
+  disableProductStyleUrl(): boolean;
   cert(): string | undefined;
   key(): string | undefined;
   pwd(): string | undefined;
