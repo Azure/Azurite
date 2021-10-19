@@ -4,9 +4,12 @@
 
 ## Upcoming Release
 
+## 2021.10 Version 3.15.0
+
 General:
 
-- Restore ability to connect to host.docker.internal.
+- Bump up service API version to 2020-12-06
+- Restored ability to connect to host.docker.internal.
 
 Blob:
 
@@ -14,8 +17,8 @@ Blob:
 - Supported list container/blob with "include" query parameter as empty string
 - Added more allowed value to list blob request "include" query parameter:'tags', 'versions', 'deletedwithversions', 'immutabilitypolicy', 'legalhold', 'permissions'
 - Added more allowed value to list container request "include" query parameter: 'deleted'
-- Raise 416 when start range is bigger than blob length
-- Do not decode the rscd, rsce, rscl and rsct url parameters
+- Raised 416 when start range is bigger than blob length
+- Fixed issue that duplicated decode rscd, rsce, rscl and rsct of SAS token in input request Uri.
 
 Queue:
 
@@ -23,7 +26,8 @@ Queue:
 
 Table:
 
-- removed extra CRLF from batch transaction response which caused issues for Microsoft.Azure.Cosmos.Table NuGet package.
+- Supported basic level of OAuth autentication on Table service.
+- Removed extra CRLF from batch transaction response which caused issues for Microsoft.Azure.Cosmos.Table NuGet package.
 
 ## 2021.9 Version 3.14.2
 
