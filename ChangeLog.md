@@ -7,7 +7,7 @@
 General:
 
 - Restore ability to connect to host.docker.internal.
-- Added new parameter `--disableProductStyleUrl`, to force parse storage account from request Uri path, instead of from request Uri host.
+- Added new parameter `--disableProductStyleUrl`, to force parsing storage account from request Uri path, instead of from request Uri host.
 
 Blob:
 

@@ -195,7 +195,7 @@ Following extension configurations are supported:
 - `azurite.pwd` PFX cert password. Required when `azurite.cert` points to a PFX file.
 - `azurite.oauth` OAuth oauthentication level. Candidate level values: `basic`.
 - `azurite.skipApiVersionCheck` Skip the request API version check, by default false.
-- `azurite.disableProductStyleUrl` Force parse storage account name from request Uri path, instead of from request Uri host.
+- `azurite.disableProductStyleUrl` Force parsing storage account name from request Uri path, instead of from request Uri host.
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
@@ -253,7 +253,7 @@ Above command will try to start Azurite image with configurations:
 
 `--skipApiVersionCheck` skip the request API version check.
 
-`--disableProductStyleUrl` force parse storage account name from request Uri path, instead of from request Uri host.
+`--disableProductStyleUrl` force parsing storage account name from request Uri path, instead of from request Uri host.
 
 > If you use customized azurite paramters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 
@@ -403,7 +403,7 @@ Optional. By default Azurite will check the request API version is valid API ver
 
 ### Disable Product Style Url
 
-Optional. When use fqdn instead of IP in request Uri host, by default Azurite will parse storage account name from request Uri host. Force parse storage account name from request Uri path by:
+Optional. When using FQDN instead of IP in request Uri host, by default Azurite will parse storage account name from request Uri host. Force parsing storage account name from request Uri path by:
 
 ```cmd
 --disableProductStyleUrl
