@@ -10,4 +10,5 @@ export default interface IBlobEnvironment {
   pwd(): string | undefined;
   debug(): Promise<string | boolean | undefined>;
   oauth(): string | undefined;
+  disableProductStyleUrl(): boolean;
 }

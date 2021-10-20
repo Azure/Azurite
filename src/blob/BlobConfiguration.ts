@@ -38,7 +38,8 @@ export default class BlobConfiguration extends ConfigurationBase {
     cert: string = "",
     key: string = "",
     pwd: string = "",
-    oauth?: string
+    oauth?: string,
+    disableProductStyleUrl: boolean = false
   ) {
     super(
       host,
@@ -52,7 +53,8 @@ export default class BlobConfiguration extends ConfigurationBase {
       cert,
       key,
       pwd,
-      oauth
+      oauth,
+      disableProductStyleUrl
     );
   }
 }

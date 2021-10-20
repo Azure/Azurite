@@ -41,7 +41,7 @@ docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 -v c:/azurite:/data mcr.
 **Customize Azurite V3 supported parameters for docker image**
 
 ```bash
-docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0 --loose --skipApiVersionCheck
+docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0 --loose --skipApiVersionCheck --disableProductStyleUrl
 ```
 
 Above command will try to start Azurite image with configurations:
@@ -65,6 +65,8 @@ Above command will try to start Azurite image with configurations:
 `--loose` enables loose mode which ignore unsupported headers and parameters.
 
 `--skipApiVersionCheck` skip the request API version check.
+
+`--disableProductStyleUrl` force parsing storage account name from request Uri path, instead of from request Uri host.
 
 > If you use customized azurite paramters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 

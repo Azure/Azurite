@@ -57,7 +57,8 @@ export class BlobServerFactory {
           env.cert(),
           env.key(),
           env.pwd(),
-          env.oauth()
+          env.oauth(),
+          env.disableProductStyleUrl()
         );
 
         return new SqlBlobServer(config);
@@ -77,7 +78,8 @@ export class BlobServerFactory {
           env.cert(),
           env.key(),
           env.pwd(),
-          env.oauth()
+          env.oauth(),
+          env.disableProductStyleUrl()
         );
         return new BlobServer(config);
       }

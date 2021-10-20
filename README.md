@@ -195,6 +195,7 @@ Following extension configurations are supported:
 - `azurite.pwd` PFX cert password. Required when `azurite.cert` points to a PFX file.
 - `azurite.oauth` OAuth oauthentication level. Candidate level values: `basic`.
 - `azurite.skipApiVersionCheck` Skip the request API version check, by default false.
+- `azurite.disableProductStyleUrl` Force parsing storage account name from request Uri path, instead of from request Uri host.
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
@@ -227,7 +228,7 @@ docker run -p 10000:10000 -p 10001:10001 -v c:/azurite:/data mcr.microsoft.com/a
 #### Customize all Azurite V3 supported parameters for docker image
 
 ```bash
-docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0 --loose --skipApiVersionCheck
+docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0 --loose --skipApiVersionCheck --disableProductStyleUrl
 ```
 
 Above command will try to start Azurite image with configurations:
@@ -251,6 +252,8 @@ Above command will try to start Azurite image with configurations:
 `--loose` enables loose mode which ignore unsupported headers and parameters.
 
 `--skipApiVersionCheck` skip the request API version check.
+
+`--disableProductStyleUrl` force parsing storage account name from request Uri path, instead of from request Uri host.
 
 > If you use customized azurite paramters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 
@@ -396,6 +399,14 @@ Optional. By default Azurite will check the request API version is valid API ver
 
 ```cmd
 --skipApiVersionCheck
+```
+
+### Disable Product Style Url
+
+Optional. When using FQDN instead of IP in request Uri host, by default Azurite will parse storage account name from request Uri host. Force parsing storage account name from request Uri path by:
+
+```cmd
+--disableProductStyleUrl
 ```
 
 ### Command Line Options Differences between Azurite V2
@@ -803,7 +814,9 @@ DefaultEndpointsProtocol=http;AccountName=account1;AccountKey=key1;BlobEndpoint=
 
 > Note. Do not access default account in this way with Azure Storage Explorer. There is a bug that Storage Explorer is always adding account name in URL path, causing failures.
 
-> Note. When use Production-style URL to access Azurite, the host name in FQDN must be the account name, like "http://devstoreaccount1.blob.localhost:10000/container". When use Production-style URL, Azurite doesn't support account name in URI path, like "http://foo.bar.com:10000/devstoreaccount1/container" is not supported.
+> Note. When use Production-style URL to access Azurite, by default the account name should be the host name in FQDN, like "http://devstoreaccount1.blob.localhost:10000/container". To use Production-style URL with account name in URL path, like "http://foo.bar.com:10000/devstoreaccount1/container", please start Azurite with `--disableProductStyleUrl`.
+
+> Note. If use "host.docker.internal" as request Uri host, like "http://host.docker.internal:10000/devstoreaccount1/container", Azurite will always get account name from request Uri path, not matter Azurite start with `--disableProductStyleUrl` or not.
 
 ### Scalability & Performance
 

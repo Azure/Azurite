@@ -47,7 +47,11 @@ if (!(args as any).config.name) {
       ["d", "debug"],
       "Optional. Enable debug log by providing a valid local file path as log destination"
     )
-    .option(["", "pwd"], "Optional. Password for .pfx file");
+    .option(["", "pwd"], "Optional. Password for .pfx file")
+    .option(
+      ["", "disableProductStyleUrl"],
+      "Optional. Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri."
+    );
 
   (args as any).config.name = "azurite-blob";
 }
@@ -106,6 +110,14 @@ export default class BlobEnvironment implements IBlobEnvironment {
 
   public oauth(): string | undefined {
     return this.flags.oauth;
+  }
+
+  public disableProductStyleUrl(): boolean {
+    if (this.flags.disableProductStyleUrl !== undefined) {
+      return true;
+    }
+    // default is false which will try to get account name from request Uri hostname
+    return false;
   }
 
   public async debug(): Promise<string | undefined> {

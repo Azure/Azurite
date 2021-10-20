@@ -98,7 +98,8 @@ async function main() {
     env.cert(),
     env.key(),
     env.pwd(),
-    env.oauth()
+    env.oauth(),
+    env.disableProductStyleUrl()
   );
 
   const tableConfig = new TableConfiguration(
@@ -114,7 +115,8 @@ async function main() {
     env.cert(),
     env.key(),
     env.pwd(),
-    env.oauth()
+    env.oauth(),
+    env.disableProductStyleUrl()
   );
 
   // We use logger singleton as global debugger logger to track detailed outputs cross layers

@@ -236,6 +236,11 @@
             "type": "boolean",
             "default": false,
             "description": "Skip the request API version check, request with all Api versions will be allowed."
+          },
+          "azurite.disableProductStyleUrl": {
+            "type": "boolean",
+            "default": false,
+            "description": "Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri."
           }
         }
       }
