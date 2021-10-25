@@ -2,6 +2,8 @@
 
 > Note. This file includes changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
+## Upcoming Release
+
 ## 2021.10 Version 3.14.3
 
 General:
@@ -12,10 +14,10 @@ General:
 Blob:
 
 - Fixed list blob API "include" query parameter not work when not lower case, by make it case insensitive.
-- Supported list container/blob with "include" query parameter as empty string
-- Added more allowed value to list blob request "include" query parameter:'tags', 'versions', 'deletedwithversions', 'immutabilitypolicy', 'legalhold', 'permissions'
-- Added more allowed value to list container request "include" query parameter: 'deleted'
-- Raised 416 when start range is bigger than blob length
+- Supported list container/blob with "include" query parameter as empty string.
+- Added more allowed value to list blob request "include" query parameter:'tags', 'versions', 'deletedwithversions', 'immutabilitypolicy', 'legalhold', 'permissions'.
+- Added more allowed value to list container request "include" query parameter: 'deleted'.
+- Raised 416 when start range is bigger than blob length.
 - Fixed issue that duplicated decode rscd, rsce, rscl and rsct of SAS token in input request Uri.
 
 Queue:
