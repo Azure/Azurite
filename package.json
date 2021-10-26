@@ -22,7 +22,7 @@
   "dependencies": {
     "@azure/ms-rest-js": "^1.5.0",
     "args": "^5.0.1",
-    "axios": "^0.22.0",
+    "axios": "^0.24.0",
     "etag": "^1.8.1",
     "express": "^4.16.4",
     "jsonwebtoken": "^8.5.1",
