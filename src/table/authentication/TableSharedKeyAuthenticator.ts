@@ -12,7 +12,7 @@ export default class TableSharedKeyAuthenticator implements IAuthenticator {
   public constructor(
     private readonly dataStore: IAccountDataStore,
     private readonly logger: ILogger
-  ) {}
+  ) { }
 
   public async validate(
     req: IRequest,
@@ -55,13 +55,13 @@ export default class TableSharedKeyAuthenticator implements IAuthenticator {
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
         this.getHeaderValueToSign(req, HeaderConstants.DATE) ||
-          this.getHeaderValueToSign(req, HeaderConstants.X_MS_DATE)
+        this.getHeaderValueToSign(req, HeaderConstants.X_MS_DATE)
       ].join("\n") +
       "\n" +
       this.getCanonicalizedResourceString(
         req,
         account,
-        context.context.isSecondary ? tableContext.authenticationPath?.substring(0, tableContext.authenticationPath?.length - 1) + "-secondary/" : tableContext.authenticationPath
+        tableContext.authenticationPath
       );
 
     this.logger.info(

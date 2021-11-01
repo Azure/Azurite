@@ -173,8 +173,8 @@ describe("table APIs test", () => {
       });
   });
 });
-
-describe("table APIs test - secondary location endpoint", () => {
+// TODO: Re-enable this test case after support for automatic secondary URI is added to @azure/storage
+describe.skip("table APIs test - secondary location endpoint", () => {
   let server: TableServer;
   const tableService = Azure.createTableService(
     createSecondaryConnectionStringForTest(testLocalAzuriteInstance)

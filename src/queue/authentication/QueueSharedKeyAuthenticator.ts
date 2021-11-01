@@ -12,7 +12,7 @@ export default class QueueSharedKeyAuthenticator implements IAuthenticator {
   public constructor(
     private readonly dataStore: IAccountDataStore,
     private readonly logger: ILogger
-  ) {}
+  ) { }
 
   public async validate(
     req: IRequest,
@@ -61,7 +61,7 @@ export default class QueueSharedKeyAuthenticator implements IAuthenticator {
         authType,
         req,
         account,
-        context.context.isSecondary ? queueContext.authenticationPath + "-secondary" : queueContext.authenticationPath
+        queueContext.authenticationPath
       );
 
     this.logger.info(
