@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Fixed start copy blob fail with `x-ms-access-tier` header and from Archive blob in same account.
+
 ## 2021.10 Version 3.14.3
 
 General:

@@ -895,6 +895,41 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(result.metadata, metadata2);
   });
 
+  it("Copy blob should work with source archive blob and accesstier header @loki, @sql", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    await sourceBlobClient.upload("hello", 5);
+    await sourceBlobClient.setAccessTier("Archive");
+
+    // Copy from Archive blob without accesstier will fail 
+    let hasError = false;   
+    try {
+      await destBlobClient.beginCopyFromURL(sourceBlobClient.url);
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 409);
+      hasError = true;
+    }
+    if (!hasError)
+    {
+      assert.fail();
+    }
+
+    // Copy from Archive blob with accesstier will success
+    await destBlobClient.beginCopyFromURL(sourceBlobClient.url, {
+      tier: "Hot"
+    });
+
+    const result = await destBlobClient.getProperties();
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "BlockBlob");
+    assert.ok(result.lastModified);
+    assert.deepStrictEqual(result.accessTier, "Hot");
+  });
+
   it("Copy blob should not override destination Lease status @loki", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");

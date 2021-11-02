@@ -2543,7 +2543,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         throw StorageErrorFactory.getBlobNotFound(context.contextId!);
       }
 
-      if (sourceBlob.properties.accessTier === Models.AccessTier.Archive) {
+      if (sourceBlob.properties.accessTier === Models.AccessTier.Archive
+        && (tier === undefined || source.account !== destination.account)) {
         throw StorageErrorFactory.getBlobArchived(context.contextId!);
       }
 

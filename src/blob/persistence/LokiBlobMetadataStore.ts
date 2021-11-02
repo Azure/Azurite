@@ -1844,7 +1844,8 @@ export default class LokiBlobMetadataStore
       throw StorageErrorFactory.getBlobNotFound(context.contextId!);
     }
 
-    if (sourceBlob.properties.accessTier === Models.AccessTier.Archive) {
+    if (sourceBlob.properties.accessTier === Models.AccessTier.Archive
+      && (tier === undefined || source.account !== destination.account)) {
       throw StorageErrorFactory.getBlobArchived(context.contextId!);
     }
 
