@@ -33,6 +33,11 @@ Table:
 - Supported basic level of OAuth autentication on Table service.
 - Removed extra CRLF from batch transaction response which caused issues for Microsoft.Azure.Cosmos.Table NuGet package.
 
+Table:
+
+- Fixed issue with incorrect results returned when using boolean values in query.
+- Fixed issue with incorrect results returned with whitespacing and parens with int64 values in query.
+
 ## 2021.9 Version 3.14.2
 
 Blob:

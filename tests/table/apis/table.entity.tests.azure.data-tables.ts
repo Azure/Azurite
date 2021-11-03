@@ -26,7 +26,6 @@ import {
   HOST,
   PORT
 } from "./table.entity.test.utils";
-
 // Set true to enable debug log
 configLogger(false);
 
@@ -385,6 +384,133 @@ describe("table Entity APIs test", () => {
       testsCompleted++;
     }
     assert.strictEqual(testsCompleted, 5);
+    await tableClient.deleteTable();
+  });
+
+  it("should return the correct number of results querying with a boolean field regardless of whitespacing behaviours, @loki", async () => {
+    const partitionKeyForQueryTest = createUniquePartitionKey("bool");
+    const totalItems = 10;
+    await tableClient.createTable();
+    const timestamp = new Date();
+    timestamp.setDate(timestamp.getDate() + 1);
+    for (let i = 0; i < totalItems; i++) {
+      const myBool: boolean = i % 2 !== 0 ? true : false;
+      const result = await tableClient.createEntity({
+        partitionKey: partitionKeyForQueryTest,
+        rowKey: `${i}`,
+        number: i,
+        myBool
+      });
+      assert.notStrictEqual(result.etag, undefined);
+    }
+    const maxPageSize = 10;
+    let testsCompleted = 0;
+    // take note of the different whitespacing and query formatting:
+    const queriesAndExpectedResult = [
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myBool eq true )`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myBool eq true)`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myBool eq false)`
+        },
+        expectedResult: 5
+      }
+    ];
+
+    for (const queryTest of queriesAndExpectedResult) {
+      const entities = tableClient.listEntities<
+        TableEntity<{ number: number }>
+      >({
+        queryOptions: queryTest.queryOptions
+      });
+      let all: TableEntity<{ number: number }>[] = [];
+      for await (const entity of entities.byPage({
+        maxPageSize
+      })) {
+        all = [...all, ...entity];
+      }
+      assert.strictEqual(
+        all.length,
+        queryTest.expectedResult,
+        `Failed with query ${queryTest.queryOptions.filter}`
+      );
+      testsCompleted++;
+    }
+    assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
+    await tableClient.deleteTable();
+  });
+
+  it("should return the correct number of results querying with an int64 field regardless of whitespacing behaviours, @loki", async () => {
+    const partitionKeyForQueryTest = createUniquePartitionKey("int64");
+    const totalItems = 10;
+    await tableClient.createTable();
+    const timestamp = new Date();
+    timestamp.setDate(timestamp.getDate() + 1);
+    for (let i = 0; i < totalItems; i++) {
+      const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
+        partitionKeyForQueryTest
+      );
+      testEntity.int64Field = `${i}`;
+      const result = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(result.etag, undefined);
+    }
+    const maxPageSize = 10;
+    let testsCompleted = 0;
+    // take note of the different whitespacing and query formatting:
+    const queriesAndExpectedResult = [
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (int64Field eq 1L )`
+        },
+        expectedResult: 1
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (int64Field eq 2L)`
+        },
+        expectedResult: 2
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (int64Field eq 6L)`
+        },
+        expectedResult: 6
+      }
+    ];
+
+    for (const queryTest of queriesAndExpectedResult) {
+      const entities = tableClient.listEntities<AzureDataTablesTestEntity>({
+        queryOptions: queryTest.queryOptions
+      });
+      let all: AzureDataTablesTestEntity[] = [];
+      for await (const entity of entities.byPage({
+        maxPageSize
+      })) {
+        all = [...all, ...entity];
+      }
+      assert.strictEqual(
+        all.length,
+        1,
+        `Failed on number of results with query ${queryTest.queryOptions.filter}`
+      );
+      assert.strictEqual(
+        all[0].int64Field,
+        queryTest.expectedResult.toString(),
+        `Failed to validate value with query ${queryTest.queryOptions.filter}`
+      );
+      testsCompleted++;
+    }
+    assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
     await tableClient.deleteTable();
   });
 });
