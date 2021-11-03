@@ -1,7 +1,7 @@
 #
 # Builder
 #
-FROM node:lts-alpine AS builder
+FROM node:lts-alpine3.10 AS builder
 
 WORKDIR /opt/azurite
 
