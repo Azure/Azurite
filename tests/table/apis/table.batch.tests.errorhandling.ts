@@ -70,7 +70,7 @@ describe("table Entity APIs test", () => {
     try {
       await badTableClient.submitTransaction(transaction.actions);
     } catch (err) {
-      assert.strictEqual(err.statusCode, 400);
+      assert.strictEqual(err.statusCode, 404);
       assert.strictEqual(err.code, "TableNotFound");
     }
   });

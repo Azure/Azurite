@@ -246,7 +246,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     context: Context,
     table: string,
     account: string,
-    entity: Entity
+    entity: Entity,
+    batchID?: string
   ): Promise<Entity> {
     const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
     const tableDocument = tablesCollection.findOne({
@@ -258,7 +259,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
 
     const tableEntityCollection = this.db.getCollection(
-      this.getTableCollectionName(account, table)
+      this.getTableCollectionName(account, table, batchID)
     );
     if (!tableEntityCollection) {
       throw StorageErrorFactory.getTableNotExist(context);
@@ -284,7 +285,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     account: string,
     entity: Entity,
-    ifMatch?: string
+    ifMatch?: string,
+    batchID?: string
   ): Promise<Entity> {
     if (ifMatch === undefined) {
       // Upsert
@@ -294,19 +296,34 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           table,
           account,
           entity.PartitionKey,
-          entity.RowKey
+          entity.RowKey,
+          batchID
         );
 
       if (existingEntity) {
         // Update
-        return this.updateTableEntity(context, table, account, entity, ifMatch);
+        return this.updateTableEntity(
+          context,
+          table,
+          account,
+          entity,
+          ifMatch,
+          batchID
+        );
       } else {
         // Insert
-        return this.insertTableEntity(context, table, account, entity);
+        return this.insertTableEntity(context, table, account, entity, batchID);
       }
     } else {
       // Update
-      return this.updateTableEntity(context, table, account, entity, ifMatch);
+      return this.updateTableEntity(
+        context,
+        table,
+        account,
+        entity,
+        ifMatch,
+        batchID
+      );
     }
 
     // const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
@@ -355,7 +372,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     account: string,
     entity: Entity,
-    ifMatch?: string
+    ifMatch?: string,
+    batchID?: string
   ): Promise<Entity> {
     if (ifMatch === undefined) {
       // Upsert
@@ -370,14 +388,28 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
       if (existingEntity) {
         // Merge
-        return this.mergeTableEntity(context, table, account, entity, ifMatch);
+        return this.mergeTableEntity(
+          context,
+          table,
+          account,
+          entity,
+          ifMatch,
+          batchID
+        );
       } else {
         // Insert
-        return this.insertTableEntity(context, table, account, entity);
+        return this.insertTableEntity(context, table, account, entity, batchID);
       }
     } else {
       // Merge
-      return this.mergeTableEntity(context, table, account, entity, ifMatch);
+      return this.mergeTableEntity(
+        context,
+        table,
+        account,
+        entity,
+        ifMatch,
+        batchID
+      );
     }
 
     // const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
@@ -432,7 +464,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     account: string,
     partitionKey: string,
     rowKey: string,
-    etag: string
+    etag: string,
+    batchID?: string
   ): Promise<void> {
     const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
     const tableDocument = tablesCollection.findOne({
@@ -444,7 +477,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
 
     const tableEntityCollection = this.db.getCollection(
-      this.getTableCollectionName(account, table)
+      this.getTableCollectionName(account, table, batchID)
     );
     if (!tableEntityCollection) {
       throw StorageErrorFactory.getTableNotExist(context);
@@ -477,7 +510,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     queryOptions: Models.QueryOptions,
     nextPartitionKey?: string,
-    nextRowKey?: string
+    nextRowKey?: string,
+    batchID?: string
   ): Promise<[Entity[], string | undefined, string | undefined]> {
     const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
     const tableDocument = tablesCollection.findOne({
@@ -489,7 +523,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
 
     const tableEntityCollection = this.db.getCollection(
-      this.getTableCollectionName(account, table)
+      this.getTableCollectionName(account, table, batchID)
     );
     if (!tableEntityCollection) {
       throw StorageErrorFactory.getTableNotExist(context);
@@ -564,10 +598,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     account: string,
     partitionKey: string,
-    rowKey: string
+    rowKey: string,
+    batchID?: string
   ): Promise<Entity | undefined> {
     const tableColl = this.db.getCollection(
-      this.getTableCollectionName(account, table)
+      this.getTableCollectionName(account, table, batchID)
     );
 
     // Throw error, if table not exists
@@ -605,7 +640,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     account: string,
     entity: Entity,
-    ifMatch?: string
+    ifMatch?: string,
+    batchID?: string
   ): Promise<Entity> {
     const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
     const tableDocument = tablesCollection.findOne({
@@ -617,7 +653,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
 
     const tableEntityCollection = this.db.getCollection(
-      this.getTableCollectionName(account, table)
+      this.getTableCollectionName(account, table, batchID)
     );
     if (!tableEntityCollection) {
       throw StorageErrorFactory.getTableNotExist(context);
@@ -660,7 +696,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     account: string,
     entity: Entity,
-    ifMatch?: string
+    ifMatch?: string,
+    batchID?: string
   ): Promise<Entity> {
     const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
     const tableDocument = tablesCollection.findOne({
@@ -672,7 +709,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
 
     const tableEntityCollection = this.db.getCollection(
-      this.getTableCollectionName(account, table)
+      this.getTableCollectionName(account, table, batchID)
     );
     if (!tableEntityCollection) {
       throw StorageErrorFactory.getTableNotExist(context);
@@ -734,8 +771,16 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
   }
 
-  private getTableCollectionName(account: string, table: string): string {
-    return `${account}$${table}`;
+  private getTableCollectionName(
+    account: string,
+    table: string,
+    batchID?: string
+  ): string {
+    if (batchID) {
+      return `${account}$${table}${batchID}`;
+    } else {
+      return `${account}$${table}`;
+    }
   }
 
   private static tokenizeQuery(originalQuery: string): string[] {
@@ -1066,6 +1111,85 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       return coll.update(doc);
     } else {
       return coll.insert(serviceProperties);
+    }
+  }
+
+  public async beginBatchTransaction(
+    account: string,
+    table: string,
+    partitionKey: string,
+    batchID: string,
+    context: Context
+  ): Promise<void> {
+    const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
+    const tableDocument = tablesCollection.findOne({
+      account,
+      table
+    });
+    if (!tableDocument) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
+
+    const originalCollection = this.db.getCollection(
+      this.getTableCollectionName(account, table)
+    );
+    if (!originalCollection) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
+
+    const copyCollectionName = this.getTableCollectionName(
+      account,
+      table,
+      batchID
+    );
+
+    const extentColl = this.db.getCollection(copyCollectionName);
+    if (extentColl) {
+      this.db.removeCollection(copyCollectionName);
+    }
+
+    this.db.addCollection(copyCollectionName, {
+      // Optimization for indexing and searching
+      // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
+      indices: ["PartitionKey", "RowKey"]
+    }); // Optimize for find operation
+
+    const copiedCollection = this.db.getCollection(copyCollectionName);
+    if (!copiedCollection) {
+      throw StorageErrorFactory.getTableNotExist(context);
+    }
+
+    const entitiesInPartition = originalCollection.find({
+      PartitionKey: partitionKey
+    });
+
+    for (const entity of entitiesInPartition) {
+      const copiedEntity: Entity = {
+        PartitionKey: entity.PartitionKey,
+        RowKey: entity.RowKey,
+        properties: entity.properties,
+        lastModifiedTime: entity.lastModifiedTime,
+        eTag: entity.eTag
+      };
+
+      copiedCollection.insert(copiedEntity);
+    }
+  }
+
+  public async endBatchTransaction(
+    account: string,
+    table: string,
+    batchID: string,
+    context: Context
+  ): Promise<void> {
+    const tableCollectionName = this.getTableCollectionName(
+      account,
+      table,
+      batchID
+    );
+    const tableEntityCollection = this.db.getCollection(tableCollectionName);
+    if (tableEntityCollection) {
+      this.db.removeCollection(tableCollectionName);
     }
   }
 }

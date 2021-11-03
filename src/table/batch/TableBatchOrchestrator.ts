@@ -14,6 +14,8 @@ import {
   TableQueryEntitiesWithPartitionAndRowKeyOptionalParams
 } from "../generated/artifacts/models";
 import BatchTableQueryEntitiesOptionalParams from "./BatchTableQueryEntitiesOptionalParams";
+import ITableMetadataStore from "../persistence/ITableMetadataStore";
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Currently there is a single distinct and concrete implementation of batch /
@@ -50,7 +52,8 @@ export default class TableBatchOrchestrator {
    * @memberof TableBatchManager
    */
   public async processBatchRequestAndSerializeResponse(
-    batchRequestBody: string
+    batchRequestBody: string,
+    metadataStore : ITableMetadataStore
   ): Promise<string> {
     this.batchOperations =
       this.serialization.deserializeBatchRequest(batchRequestBody);
@@ -61,7 +64,7 @@ export default class TableBatchOrchestrator {
         this.context.xMsRequestID
       );
     } else {
-      await this.submitRequestsToHandlers();
+      await this.submitRequestsToHandlers(metadataStore, this.context);
     }
     return this.serializeResponses();
   }
@@ -74,7 +77,7 @@ export default class TableBatchOrchestrator {
    * @return {*}  {Promise<void>}
    * @memberof TableBatchManager
    */
-  private async submitRequestsToHandlers(): Promise<void> {
+  private async submitRequestsToHandlers(metadataStore: ITableMetadataStore, context: TableStorageContext): Promise<void> {
     this.batchOperations.forEach((operation) => {
       const request: BatchRequest = new BatchRequest(operation);
       this.requests.push(request);
@@ -82,25 +85,90 @@ export default class TableBatchOrchestrator {
 
     let contentID = 1; // ToDO: validate contentID starts at 1 for batch
     if (this.requests.length > 0) {
+      // TO DO: the way used to get accountName, tableName, and partition key
+      // may not work if incoming request is not compliant with the right format
+      const reqUrl = this.requests[0].getUrl();
+      const accountName = reqUrl.split("/")[3];
+      const tableName = this.requests[0].getPath();
+      const batchID = uuidv4();
+
+      // get partition key from the request body or uri to copy that specific partition of database
+      let requestPartitionKey: string | undefined;
+
+      let firstJsonString = this.requests[0].getBody();
+
+      if (firstJsonString) {
+        const partitionKeyPosition = firstJsonString.indexOf("PartitionKey\":\"");
+
+        if ( partitionKeyPosition && partitionKeyPosition !== -1) {
+          firstJsonString = firstJsonString?.substr(partitionKeyPosition + 15);
+          requestPartitionKey = firstJsonString?.substr(0, firstJsonString.indexOf('\"'));
+        }
+      } else {
+        // in delete operations, partition key needs to be taken from uri and single quote may either be ' or %27
+        if (reqUrl.includes("%27")) {
+          requestPartitionKey = reqUrl.split("%27")[1];
+        } else {
+          requestPartitionKey = reqUrl.split("\'")[1];
+        }
+      }
+
+      if (!requestPartitionKey) {
+        this.wasError = true;
+        this.errorResponse = this.serialization.serializeGeneralRequestError(
+          "Partition key not found in request",
+          this.context.xMsRequestID
+        );
+      } else {
+        await metadataStore.beginBatchTransaction(accountName, tableName, requestPartitionKey, batchID, context);
+      }
+
+      let batchTrialSuccess = true;
       for (const singleReq of this.requests) {
         try {
           singleReq.response = await this.routeAndDispatchBatchRequest(
             singleReq,
             this.context,
-            contentID
+            contentID,
+            batchID
           );
         } catch (err) {
+          await metadataStore.endBatchTransaction(accountName, tableName, batchID, context);
           this.wasError = true;
           this.errorResponse = this.serialization.serializeError(
             err,
             contentID,
             singleReq
           );
-          // ToDo: need to reset changes until now
-          // then break out of loop and serilaize error
+          batchTrialSuccess = false;
           break;
         }
         contentID++;
+      }
+
+      if (batchTrialSuccess) {
+        await metadataStore.endBatchTransaction(accountName, tableName, batchID, context);
+
+        contentID = 1;
+
+        for (const singleReq of this.requests) {
+          try {
+            singleReq.response = await this.routeAndDispatchBatchRequest(
+              singleReq,
+              this.context,
+              contentID
+            );
+          } catch (err) {
+            this.wasError = true;
+            this.errorResponse = this.serialization.serializeError(
+              err,
+              contentID,
+              singleReq
+            );
+            break;
+          }
+          contentID++;
+        }
       }
     }
   }
@@ -170,7 +238,8 @@ export default class TableBatchOrchestrator {
   private async routeAndDispatchBatchRequest(
     request: BatchRequest,
     context: Context,
-    contentID: number
+    contentID: number,
+    batchID?: string
   ): Promise<any> {
     // the context that we have will not work with the calls and needs updating for
     // batch operations, need a suitable deep clone, as each request needs to be treated seaprately
@@ -189,7 +258,8 @@ export default class TableBatchOrchestrator {
             request,
             response,
             batchContextClone,
-            contentID
+            contentID,
+            batchID
           ));
           break;
         case "PUT":
@@ -201,7 +271,8 @@ export default class TableBatchOrchestrator {
             request,
             response,
             batchContextClone,
-            contentID
+            contentID,
+            batchID
           ));
           break;
         case "DELETE":
@@ -211,7 +282,8 @@ export default class TableBatchOrchestrator {
             request,
             response,
             batchContextClone,
-            contentID
+            contentID,
+            batchID
           ));
           break;
         case "GET":
@@ -222,7 +294,8 @@ export default class TableBatchOrchestrator {
             request,
             response,
             batchContextClone,
-            contentID
+            contentID,
+            batchID
           ));
           break;
         case "CONNECT":
@@ -243,7 +316,8 @@ export default class TableBatchOrchestrator {
             request,
             response,
             batchContextClone,
-            contentID
+            contentID,
+            batchID
           ));
           break;
         default:
@@ -255,7 +329,8 @@ export default class TableBatchOrchestrator {
             request,
             response,
             batchContextClone,
-            contentID
+            contentID,
+            batchID
           ));
       }
     } catch (batchException) {
@@ -320,7 +395,8 @@ export default class TableBatchOrchestrator {
     request: BatchRequest,
     response: any,
     batchContextClone: any,
-    contentID: number
+    contentID: number,
+    batchID?: string
   ): Promise<{
     __return: string;
     response: any;
@@ -331,7 +407,8 @@ export default class TableBatchOrchestrator {
     response = await this.parentHandler.insertEntity(
       request.getPath(),
       request.params as BatchTableInsertEntityOptionalParams,
-      updatedContext
+      updatedContext,
+      batchID
     );
     return {
       __return: this.serialization.serializeTableInsertEntityBatchResponse(
@@ -360,7 +437,8 @@ export default class TableBatchOrchestrator {
     request: BatchRequest,
     response: any,
     batchContextClone: any,
-    contentID: number
+    contentID: number,
+    batchID?: string
   ): Promise<{
     __return: string;
     response: any;
@@ -379,7 +457,8 @@ export default class TableBatchOrchestrator {
       rowKey,
       ifmatch,
       request.params as BatchTableDeleteEntityOptionalParams,
-      updatedContext
+      updatedContext,
+      batchID
     );
 
     return {
@@ -409,7 +488,8 @@ export default class TableBatchOrchestrator {
     request: BatchRequest,
     response: any,
     batchContextClone: any,
-    contentID: number
+    contentID: number,
+    batchID?: string
   ): Promise<{
     __return: string;
     response: any;
@@ -426,7 +506,8 @@ export default class TableBatchOrchestrator {
       partitionKey,
       rowKey,
       request.params as BatchTableUpdateEntityOptionalParams,
-      updatedContext
+      updatedContext,
+      batchID
     );
 
     return {
@@ -457,7 +538,8 @@ export default class TableBatchOrchestrator {
     request: BatchRequest,
     response: any,
     batchContextClone: any,
-    contentID: number
+    contentID: number,
+    batchID?: string
   ): Promise<{
     __return: string;
     response: any;
@@ -485,7 +567,8 @@ export default class TableBatchOrchestrator {
         partitionKey,
         rowKey,
         request.params as TableQueryEntitiesWithPartitionAndRowKeyOptionalParams,
-        updatedContext
+        updatedContext,
+        batchID
       );
       return {
         __return:
@@ -501,7 +584,8 @@ export default class TableBatchOrchestrator {
       response = await this.parentHandler.queryEntities(
         request.getPath(),
         request.params as TableQueryEntitiesOptionalParams,
-        updatedContext
+        updatedContext,
+        batchID
       );
       return {
         __return:
@@ -532,7 +616,8 @@ export default class TableBatchOrchestrator {
     request: BatchRequest,
     response: any,
     batchContextClone: any,
-    contentID: number
+    contentID: number,
+    batchID?: string
   ): Promise<{
     __return: string;
     response: any;
@@ -549,7 +634,8 @@ export default class TableBatchOrchestrator {
       partitionKey,
       rowKey,
       request.params as BatchTableMergeEntityOptionalParams,
-      updatedContext
+      updatedContext,
+      batchID
     );
 
     return {

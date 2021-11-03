@@ -170,7 +170,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   public async insertEntity(
     _tableName: string,
     options: Models.TableInsertEntityOptionalParams,
-    context: Context
+    context: Context,
+    batchID?: string
   ): Promise<Models.TableInsertEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
@@ -211,7 +212,13 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getInvalidInput(context);
     }
 
-    await this.metadataStore.insertTableEntity(context, table, account, entity);
+    await this.metadataStore.insertTableEntity(
+      context,
+      table,
+      account,
+      entity,
+      batchID
+    );
 
     const response: Models.TableInsertEntityResponse = {
       clientRequestId: options.requestId,
@@ -275,7 +282,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     partitionKey: string,
     rowKey: string,
     options: Models.TableUpdateEntityOptionalParams,
-    context: Context
+    context: Context,
+    batchID?: string
   ): Promise<Models.TableUpdateEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
@@ -337,7 +345,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       table,
       account,
       entity,
-      ifMatch
+      ifMatch,
+      batchID
     );
 
     // Response definition
@@ -358,7 +367,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     partitionKey: string,
     rowKey: string,
     options: Models.TableMergeEntityOptionalParams,
-    context: Context
+    context: Context,
+    batchID?: string
   ): Promise<Models.TableMergeEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
@@ -411,7 +421,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       table,
       account,
       entity,
-      options.ifMatch
+      options.ifMatch,
+      batchID
     );
 
     const response: Models.TableMergeEntityResponse = {
@@ -432,10 +443,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     rowKey: string,
     ifMatch: string,
     options: Models.TableDeleteEntityOptionalParams,
-    context: Context
+    context: Context,
+    batchID?: string
   ): Promise<Models.TableDeleteEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const accountName = tableContext.account;
+
     partitionKey = partitionKey || tableContext.partitionKey!; // Get partitionKey from context
     rowKey = rowKey || tableContext.rowKey!; // Get rowKey from context
 
@@ -455,7 +468,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       accountName!,
       partitionKey,
       rowKey,
-      ifMatch
+      ifMatch,
+      batchID
     );
 
     return {
@@ -470,7 +484,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   public async queryEntities(
     _table: string,
     options: Models.TableQueryEntitiesOptionalParams,
-    context: Context
+    context: Context,
+    batchID?: string
   ): Promise<Models.TableQueryEntitiesResponse> {
     const tableContext = new TableStorageContext(context);
     const table = this.getAndCheckTableName(tableContext);
@@ -484,7 +499,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         table,
         options.queryOptions || {},
         options.nextPartitionKey,
-        options.nextRowKey
+        options.nextRowKey,
+        batchID
       );
 
     const response: Models.TableQueryEntitiesResponse = {
@@ -573,7 +589,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     partitionKey: string,
     rowKey: string,
     options: Models.TableQueryEntitiesWithPartitionAndRowKeyOptionalParams,
-    context: Context
+    context: Context,
+    batchID?: string
   ): Promise<Models.TableQueryEntitiesWithPartitionAndRowKeyResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
@@ -588,7 +605,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         table,
         account,
         partitionKey,
-        rowKey
+        rowKey,
+        batchID
       );
 
     if (entity === undefined || entity === null) {
@@ -799,7 +817,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     const response =
       await tableBatchManager.processBatchRequestAndSerializeResponse(
-        requestBody
+        requestBody,
+        this.metadataStore
       );
 
     this.logger.debug(
