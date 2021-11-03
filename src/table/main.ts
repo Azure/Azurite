@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-import { access, ensureDir } from "fs-extra";
+import { access } from "fs";
 import { dirname, join } from "path";
+import { promisify } from "util";
 
 import * as Logger from "../common/Logger";
 import TableConfiguration from "./TableConfiguration";
@@ -18,15 +19,14 @@ async function main() {
   const env = new TableEnvironment();
 
   // Check access for process location
+  const accessAsync = promisify(access);
   const location = await env.location();
-  await ensureDir(location);
-  await access(location);
+  await accessAsync(location);
 
   // Check access for debug file path
   const debugFilePath = await env.debug();
   if (debugFilePath !== undefined) {
-    await ensureDir(dirname(debugFilePath));
-    await access(dirname(debugFilePath));
+    await accessAsync(dirname(debugFilePath));
   }
 
   // Store table configuation

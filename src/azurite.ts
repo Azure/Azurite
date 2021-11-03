@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-import { access, ensureDir } from "fs-extra";
+import { access } from "fs";
 import { dirname, join } from "path";
+import { promisify } from "util";
 
 // Load Environment before BlobServerFactory to make sure args works properly
 import Environment from "./common/Environment";
@@ -25,6 +26,8 @@ import TableServer from "./table/TableServer";
 import { DEFAULT_TABLE_LOKI_DB_PATH } from "./table/utils/constants";
 
 // tslint:disable:no-console
+
+const accessAsync = promisify(access);
 
 function shutdown(
   blobServer: BlobServer | SqlBlobServer,
@@ -62,13 +65,11 @@ async function main() {
   const env = new Environment();
 
   const location = await env.location();
-  await ensureDir(location);
-  await access(location);
+  await accessAsync(location);
 
   const debugFilePath = await env.debug();
   if (debugFilePath !== undefined) {
-    await ensureDir(dirname(debugFilePath!));
-    await access(dirname(debugFilePath!));
+    await accessAsync(dirname(debugFilePath!));
   }
 
   const blobServerFactory = new BlobServerFactory();

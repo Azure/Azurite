@@ -1,12 +1,15 @@
 import args from "args";
-import { access, ensureDir } from "fs-extra";
+import { access } from "fs";
 import { dirname } from "path";
+import { promisify } from "util";
 
 import IBlobEnvironment from "./IBlobEnvironment";
 import {
   DEFAULT_BLOB_LISTENING_PORT,
   DEFAULT_BLOB_SERVER_HOST_NAME
 } from "./utils/constants";
+
+const accessAsync = promisify(access);
 
 if (!(args as any).config.name) {
   args
@@ -66,8 +69,7 @@ export default class BlobEnvironment implements IBlobEnvironment {
 
   public async location(): Promise<string> {
     const location = this.flags.location || process.cwd();
-    await ensureDir(location);
-    await access(location);
+    await accessAsync(location);
     return location;
   }
 
@@ -122,8 +124,7 @@ export default class BlobEnvironment implements IBlobEnvironment {
     if (typeof this.flags.debug === "string") {
       // Enable debug log to file
       const debugFilePath = this.flags.debug;
-      await ensureDir(dirname(debugFilePath));
-      await access(dirname(debugFilePath));
+      await accessAsync(dirname(debugFilePath));
       return debugFilePath;
     }
 
