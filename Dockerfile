@@ -1,7 +1,7 @@
 #
 # Builder
 #
-FROM node:lts-alpine AS builder
+FROM node:lts-alpine3.10 AS builder
 
 WORKDIR /opt/azurite
 
@@ -20,7 +20,7 @@ RUN npm run build && \
 #
 # Production image
 #
-FROM node:lts-alpine
+FROM node:lts-alpine3.10
 
 ENV NODE_ENV=production
 
