@@ -513,4 +513,78 @@ describe("table Entity APIs test", () => {
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
     await tableClient.deleteTable();
   });
+
+  it("should return the correct number of results querying with a double field regardless of whitespacing behaviours, @loki", async () => {
+    const partitionKeyForQueryTest = createUniquePartitionKey("double");
+    const totalItems = 10;
+    await tableClient.createTable();
+    const timestamp = new Date();
+    timestamp.setDate(timestamp.getDate() + 1);
+    for (let i = 0; i < totalItems; i++) {
+      const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
+        partitionKeyForQueryTest
+      );
+      const result = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(result.etag, undefined);
+    }
+    const maxPageSize = 10;
+    let testsCompleted = 0;
+    // take note of the different whitespacing and query formatting:
+    const queriesAndExpectedResult = [
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (doubleField eq 54.321 )`
+        },
+        expectedResult: 10
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (doubleField eq 54.321)`
+        },
+        expectedResult: 10
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (doubleField eq 54.321)`
+        },
+        expectedResult: 10
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (doubleField gt 53.321)`
+        },
+        expectedResult: 10
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (doubleField lt 57.321)`
+        },
+        expectedResult: 10
+      }
+    ];
+    for (const queryTest of queriesAndExpectedResult) {
+      const entities = tableClient.listEntities<AzureDataTablesTestEntity>({
+        queryOptions: queryTest.queryOptions
+      });
+      let all: AzureDataTablesTestEntity[] = [];
+      for await (const entity of entities.byPage({
+        maxPageSize
+      })) {
+        all = [...all, ...entity];
+      }
+      assert.strictEqual(
+        all.length,
+        queryTest.expectedResult,
+        `Failed on number of results with query ${queryTest.queryOptions.filter}`
+      );
+      assert.strictEqual(
+        all[0].doubleField,
+        54.321,
+        `Failed on value of double returned by query ${queryTest.queryOptions.filter}`
+      );
+      testsCompleted++;
+    }
+    assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
+    await tableClient.deleteTable();
+  });
 });
