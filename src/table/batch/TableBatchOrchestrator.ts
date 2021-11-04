@@ -15,7 +15,7 @@ import {
 } from "../generated/artifacts/models";
 import BatchTableQueryEntitiesOptionalParams from "./BatchTableQueryEntitiesOptionalParams";
 import ITableMetadataStore from "../persistence/ITableMetadataStore";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Currently there is a single distinct and concrete implementation of batch /
@@ -53,7 +53,7 @@ export default class TableBatchOrchestrator {
    */
   public async processBatchRequestAndSerializeResponse(
     batchRequestBody: string,
-    metadataStore : ITableMetadataStore
+    metadataStore: ITableMetadataStore
   ): Promise<string> {
     this.batchOperations =
       this.serialization.deserializeBatchRequest(batchRequestBody);
@@ -77,7 +77,10 @@ export default class TableBatchOrchestrator {
    * @return {*}  {Promise<void>}
    * @memberof TableBatchManager
    */
-  private async submitRequestsToHandlers(metadataStore: ITableMetadataStore, context: TableStorageContext): Promise<void> {
+  private async submitRequestsToHandlers(
+    metadataStore: ITableMetadataStore,
+    context: TableStorageContext
+  ): Promise<void> {
     this.batchOperations.forEach((operation) => {
       const request: BatchRequest = new BatchRequest(operation);
       this.requests.push(request);
@@ -98,18 +101,21 @@ export default class TableBatchOrchestrator {
       let firstJsonString = this.requests[0].getBody();
 
       if (firstJsonString) {
-        const partitionKeyPosition = firstJsonString.indexOf("PartitionKey\":\"");
+        const partitionKeyPosition = firstJsonString.indexOf('PartitionKey":"');
 
-        if ( partitionKeyPosition && partitionKeyPosition !== -1) {
+        if (partitionKeyPosition && partitionKeyPosition !== -1) {
           firstJsonString = firstJsonString?.substr(partitionKeyPosition + 15);
-          requestPartitionKey = firstJsonString?.substr(0, firstJsonString.indexOf('\"'));
+          requestPartitionKey = firstJsonString?.substr(
+            0,
+            firstJsonString.indexOf('"')
+          );
         }
       } else {
         // in delete operations, partition key needs to be taken from uri and single quote may either be ' or %27
         if (reqUrl.includes("%27")) {
           requestPartitionKey = reqUrl.split("%27")[1];
         } else {
-          requestPartitionKey = reqUrl.split("\'")[1];
+          requestPartitionKey = reqUrl.split("'")[1];
         }
       }
 
@@ -120,9 +126,14 @@ export default class TableBatchOrchestrator {
           this.context.xMsRequestID
         );
       } else {
-        await metadataStore.beginBatchTransaction(accountName, tableName, requestPartitionKey, batchID, context);
+        await metadataStore.beginBatchTransaction(
+          accountName,
+          tableName,
+          requestPartitionKey,
+          batchID,
+          context
+        );
       }
-
       let batchTrialSuccess = true;
       for (const singleReq of this.requests) {
         try {
@@ -132,8 +143,14 @@ export default class TableBatchOrchestrator {
             contentID,
             batchID
           );
-        } catch (err) {
-          await metadataStore.endBatchTransaction(accountName, tableName, batchID, context);
+        } catch (err: any) {
+          await metadataStore.endBatchTransaction(
+            accountName,
+            tableName,
+            batchID,
+            context,
+            false
+          );
           this.wasError = true;
           this.errorResponse = this.serialization.serializeError(
             err,
@@ -146,30 +163,13 @@ export default class TableBatchOrchestrator {
         contentID++;
       }
 
-      if (batchTrialSuccess) {
-        await metadataStore.endBatchTransaction(accountName, tableName, batchID, context);
-
-        contentID = 1;
-
-        for (const singleReq of this.requests) {
-          try {
-            singleReq.response = await this.routeAndDispatchBatchRequest(
-              singleReq,
-              this.context,
-              contentID
-            );
-          } catch (err) {
-            this.wasError = true;
-            this.errorResponse = this.serialization.serializeError(
-              err,
-              contentID,
-              singleReq
-            );
-            break;
-          }
-          contentID++;
-        }
-      }
+      await metadataStore.endBatchTransaction(
+        accountName,
+        tableName,
+        batchID,
+        context,
+        batchTrialSuccess
+      );
     }
   }
 

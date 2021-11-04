@@ -204,7 +204,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     try {
       nomarlizedEntity = new NormalizedEntity(entity);
       nomarlizedEntity.normalize();
-    } catch (e) {
+    } catch (e: any) {
       this.logger.error(
         `TableHandler:insertEntity() ${e.name} ${JSON.stringify(e.stack)}`,
         context.contextID
@@ -332,7 +332,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     try {
       nomarlizedEntity = new NormalizedEntity(entity);
       nomarlizedEntity.normalize();
-    } catch (e) {
+    } catch (e: any) {
       this.logger.error(
         `TableHandler:updateEntity() ${e.name} ${JSON.stringify(e.stack)}`,
         context.contextID
@@ -408,7 +408,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     try {
       nomarlizedEntity = new NormalizedEntity(entity);
       nomarlizedEntity.normalize();
-    } catch (e) {
+    } catch (e: any) {
       this.logger.error(
         `TableHandler:mergeEntity() ${e.name} ${JSON.stringify(e.stack)}`,
         context.contextID

@@ -60,11 +60,7 @@ export default interface ITableMetadataStore {
     context: Context,
     queueACL?: TableACL
   ): Promise<void>;
-  getTable(
-    account: string,
-    table: string,
-    context: Context
-  ): Promise<Table>;
+  getTable(account: string, table: string, context: Context): Promise<Table>;
   queryTableEntities(
     context: Context,
     account: string,
@@ -134,6 +130,18 @@ export default interface ITableMetadataStore {
     context: Context,
     serviceProperties: ServicePropertiesModel
   ): Promise<ServicePropertiesModel>;
-  beginBatchTransaction(account: string, table:string, partitionKey: string, batchID: string, context: Context): Promise<void>;
-  endBatchTransaction(account: string, table:string, batchID: string, context: Context): Promise<void>;
+  beginBatchTransaction(
+    account: string,
+    table: string,
+    partitionKey: string,
+    batchID: string,
+    context: Context
+  ): Promise<void>;
+  endBatchTransaction(
+    account: string,
+    table: string,
+    batchID: string,
+    context: Context,
+    succeeded: boolean
+  ): Promise<void>;
 }

@@ -24,6 +24,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   private readonly SERVICES_COLLECTION = "$SERVICES_COLLECTION$";
   private initialized: boolean = false;
   private closed: boolean = false;
+  // this holds the rows that we will reapply to the database in the case
+  // that we need to rollback the transaction
+  private transactionRollbackTheseEntities: Entity[] = []; // can maybe use Entity instead of any
+  private transactionDeleteTheseEntities: Entity[] = []; // can maybe use Entity instead of any
+  private needToRollback: boolean = false;
 
   public constructor(public readonly lokiDBPath: string) {
     this.db = new Loki(lokiDBPath, {
@@ -259,7 +264,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
 
     const tableEntityCollection = this.db.getCollection(
-      this.getTableCollectionName(account, table, batchID)
+      this.getTableCollectionName(account, table)
     );
     if (!tableEntityCollection) {
       throw StorageErrorFactory.getTableNotExist(context);
@@ -276,6 +281,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     entity.properties.Timestamp = getTimestampString(entity.lastModifiedTime);
     entity.properties["Timestamp@odata.type"] = "Edm.DateTime";
 
+    this.transactionDeleteTheseEntities.push(entity);
     tableEntityCollection.insert(entity);
     return entity;
   }
@@ -497,6 +503,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         }
       }
 
+      this.transactionRollbackTheseEntities.push(doc);
       tableEntityCollection.remove(doc);
       return;
     }
@@ -709,7 +716,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
 
     const tableEntityCollection = this.db.getCollection(
-      this.getTableCollectionName(account, table, batchID)
+      this.getTableCollectionName(account, table)
     );
     if (!tableEntityCollection) {
       throw StorageErrorFactory.getTableNotExist(context);
@@ -722,6 +729,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     if (!doc) {
       throw StorageErrorFactory.getEntityNotFound(context);
+    }
+    if (batchID) {
+      this.transactionRollbackTheseEntities.push(doc);
     }
 
     // if match is URL encoded from the clients, match URL encoding
@@ -1121,58 +1131,15 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     batchID: string,
     context: Context
   ): Promise<void> {
-    const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
-    const tableDocument = tablesCollection.findOne({
-      account,
-      table
-    });
-    if (!tableDocument) {
-      throw StorageErrorFactory.getTableNotExist(context);
-    }
+    // instead of copying all entities / rows in the collection,
+    // we shall just backup those rows that we change
 
-    const originalCollection = this.db.getCollection(
-      this.getTableCollectionName(account, table)
-    );
-    if (!originalCollection) {
-      throw StorageErrorFactory.getTableNotExist(context);
-    }
-
-    const copyCollectionName = this.getTableCollectionName(
-      account,
-      table,
-      batchID
-    );
-
-    const extentColl = this.db.getCollection(copyCollectionName);
-    if (extentColl) {
-      this.db.removeCollection(copyCollectionName);
-    }
-
-    this.db.addCollection(copyCollectionName, {
-      // Optimization for indexing and searching
-      // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
-      indices: ["PartitionKey", "RowKey"]
-    }); // Optimize for find operation
-
-    const copiedCollection = this.db.getCollection(copyCollectionName);
-    if (!copiedCollection) {
-      throw StorageErrorFactory.getTableNotExist(context);
-    }
-
-    const entitiesInPartition = originalCollection.find({
-      PartitionKey: partitionKey
-    });
-
-    for (const entity of entitiesInPartition) {
-      const copiedEntity: Entity = {
-        PartitionKey: entity.PartitionKey,
-        RowKey: entity.RowKey,
-        properties: entity.properties,
-        lastModifiedTime: entity.lastModifiedTime,
-        eTag: entity.eTag
-      };
-
-      copiedCollection.insert(copiedEntity);
+    if (
+      this.needToRollback ||
+      this.transactionRollbackTheseEntities.length > 0 ||
+      this.transactionDeleteTheseEntities.length > 0
+    ) {
+      throw new Error("Transaction Overlapp!");
     }
   }
 
@@ -1180,16 +1147,35 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     account: string,
     table: string,
     batchID: string,
-    context: Context
+    context: Context,
+    succeeded: boolean
   ): Promise<void> {
-    const tableCollectionName = this.getTableCollectionName(
-      account,
-      table,
-      batchID
-    );
-    const tableEntityCollection = this.db.getCollection(tableCollectionName);
-    if (tableEntityCollection) {
-      this.db.removeCollection(tableCollectionName);
+    // rollback all changes in the case of failed batch transaction
+    if (false === succeeded) {
+      const tableBatchCollection = this.db.getCollection(
+        this.getTableCollectionName(account, table)
+      );
+      if (tableBatchCollection) {
+        // for entities deleted or modified
+        for (const entity of this.transactionRollbackTheseEntities) {
+          const copiedEntity: Entity = {
+            PartitionKey: entity.PartitionKey,
+            RowKey: entity.RowKey,
+            properties: entity.properties,
+            lastModifiedTime: entity.lastModifiedTime,
+            eTag: entity.eTag
+          };
+          tableBatchCollection.update(copiedEntity);
+        }
+
+        // for entities added to the collection
+        for (const deleteRow of this.transactionDeleteTheseEntities) {
+          tableBatchCollection.remove(deleteRow);
+        }
+      }
     }
+    // reset entity rollback trackers
+    this.transactionRollbackTheseEntities = [];
+    this.transactionDeleteTheseEntities = [];
   }
 }
