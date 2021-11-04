@@ -145,13 +145,6 @@ export default class TableBatchOrchestrator {
           );
         } catch (err: any) {
           batchSuccess = false;
-          // await metadataStore.endBatchTransaction(
-          //   accountName,
-          //   tableName,
-          //   batchID,
-          //   context,
-          //   false
-          // );
           this.wasError = true;
           this.errorResponse = this.serialization.serializeError(
             err,
