@@ -28,7 +28,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   // that we need to rollback the transaction
   private transactionRollbackTheseEntities: Entity[] = []; // can maybe use Entity instead of any
   private transactionDeleteTheseEntities: Entity[] = []; // can maybe use Entity instead of any
-  private needToRollback: boolean = false;
 
   public constructor(public readonly lokiDBPath: string) {
     this.db = new Loki(lokiDBPath, {
@@ -483,7 +482,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
 
     const tableEntityCollection = this.db.getCollection(
-      this.getTableCollectionName(account, table, batchID)
+      this.getTableCollectionName(account, table)
     );
     if (!tableEntityCollection) {
       throw StorageErrorFactory.getTableNotExist(context);
@@ -502,8 +501,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           throw StorageErrorFactory.getPreconditionFailed(context);
         }
       }
-
-      this.transactionRollbackTheseEntities.push(doc);
+      if (batchID) {
+        this.transactionRollbackTheseEntities.push(doc);
+      }
       tableEntityCollection.remove(doc);
       return;
     }
@@ -1135,7 +1135,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     // we shall just backup those rows that we change
 
     if (
-      this.needToRollback ||
       this.transactionRollbackTheseEntities.length > 0 ||
       this.transactionDeleteTheseEntities.length > 0
     ) {
@@ -1165,7 +1164,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
             lastModifiedTime: entity.lastModifiedTime,
             eTag: entity.eTag
           };
-          tableBatchCollection.update(copiedEntity);
+          // lokijs applies this insert as an upsert
+          tableBatchCollection.insert(copiedEntity);
         }
 
         // for entities added to the collection

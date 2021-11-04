@@ -169,4 +169,248 @@ describe("table Entity APIs test", () => {
     }
     await tableClientrollback.deleteTable();
   });
+
+  it("Batch API should rollback delete Entity transactions, @loki", async () => {
+    const partitionKey = createUniquePartitionKey("");
+    const tableNameDeleteError: string = getUniqueName("datatables");
+    const testEntities: AzureDataTablesTestEntity[] = [
+      createBasicEntityForTest(partitionKey),
+      createBasicEntityForTest(partitionKey),
+      createBasicEntityForTest(partitionKey)
+    ];
+
+    const tableClientrollback = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      tableNameDeleteError
+    );
+
+    await tableClientrollback.createTable();
+
+    const transaction = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction.createEntity(testEntity);
+    }
+
+    try {
+      const result = await tableClientrollback.submitTransaction(
+        transaction.actions
+      );
+      assert.ok(result.subResponses[0].rowKey);
+    } catch (err: any) {
+      assert.ifError(err); // should not have an error here
+    }
+
+    const transactionDelete = new TableTransaction();
+
+    transactionDelete.deleteEntity(
+      testEntities[0].partitionKey,
+      testEntities[0].rowKey
+    );
+    transactionDelete.deleteEntity(
+      testEntities[1].partitionKey,
+      testEntities[1].rowKey
+    );
+    transactionDelete.createEntity(testEntities[2]);
+
+    try {
+      const resultDelete = await tableClientrollback.submitTransaction(
+        transactionDelete.actions
+      );
+      assert.strictEqual(resultDelete.status, 202);
+    } catch (err: any) {
+      const restErr = err as RestError;
+      assert.strictEqual(
+        restErr.statusCode,
+        409,
+        "Did not get expected entity already exists error."
+      );
+    }
+
+    try {
+      const shouldExist =
+        await tableClientrollback.getEntity<AzureDataTablesTestEntity>(
+          testEntities[0].partitionKey,
+          testEntities[0].rowKey
+        );
+      assert.notStrictEqual(shouldExist, null, "We have an entity.");
+    } catch (err: any) {
+      const restErr2 = err as RestError;
+      assert.strictEqual(
+        restErr2.statusCode,
+        404,
+        "We expected an entity not found error."
+      );
+    }
+    await tableClientrollback.deleteTable();
+  });
+
+  it("Batch API should rollback update Entity transactions, @loki", async () => {
+    const partitionKey = createUniquePartitionKey("");
+    const tableNameDeleteError: string = getUniqueName("datatables");
+    const testEntities: AzureDataTablesTestEntity[] = [
+      createBasicEntityForTest(partitionKey),
+      createBasicEntityForTest(partitionKey),
+      createBasicEntityForTest(partitionKey)
+    ];
+
+    const tableClientrollback = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      tableNameDeleteError
+    );
+
+    await tableClientrollback.createTable();
+
+    const transaction = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction.createEntity(testEntity);
+    }
+
+    try {
+      const result = await tableClientrollback.submitTransaction(
+        transaction.actions
+      );
+      assert.ok(result.subResponses[0].rowKey);
+    } catch (err: any) {
+      assert.ifError(err); // should not have an error here
+    }
+
+    const transactionUpdateThenError = new TableTransaction();
+
+    testEntities[0].myValue = "a new value";
+    testEntities[1].myValue = "a new value";
+
+    transactionUpdateThenError.updateEntity(testEntities[0]);
+    transactionUpdateThenError.updateEntity(testEntities[1]);
+    transactionUpdateThenError.createEntity(testEntities[2]);
+
+    try {
+      const resultDelete = await tableClientrollback.submitTransaction(
+        transactionUpdateThenError.actions
+      );
+      assert.strictEqual(resultDelete.status, 202);
+    } catch (err: any) {
+      const restErr = err as RestError;
+      assert.strictEqual(
+        restErr.statusCode,
+        409,
+        "Did not get expected entity already exists error."
+      );
+    }
+
+    try {
+      const shouldExist =
+        await tableClientrollback.getEntity<AzureDataTablesTestEntity>(
+          testEntities[0].partitionKey,
+          testEntities[0].rowKey
+        );
+      assert.notStrictEqual(shouldExist, null, "We have an entity.");
+      assert.notStrictEqual(
+        shouldExist.myValue,
+        "a new value",
+        "Update entity action was not rolled back!"
+      );
+    } catch (err: any) {
+      const restErr2 = err as RestError;
+      assert.strictEqual(
+        restErr2.statusCode,
+        404,
+        "We expected an entity not found error."
+      );
+    }
+    await tableClientrollback.deleteTable();
+  });
+
+  it("Batch API should rollback upsert Entity transactions, @loki", async () => {
+    const partitionKey = createUniquePartitionKey("");
+    const tableNameDeleteError: string = getUniqueName("datatables");
+    const testEntities: AzureDataTablesTestEntity[] = [
+      createBasicEntityForTest(partitionKey),
+      createBasicEntityForTest(partitionKey),
+      createBasicEntityForTest(partitionKey)
+    ];
+
+    const tableClientrollback = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      tableNameDeleteError
+    );
+
+    await tableClientrollback.createTable();
+
+    const transaction = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction.createEntity(testEntity);
+    }
+
+    try {
+      const result = await tableClientrollback.submitTransaction(
+        transaction.actions
+      );
+      assert.ok(result.subResponses[0].rowKey);
+    } catch (err: any) {
+      assert.ifError(err); // should not have an error here
+    }
+
+    const transactionUpdateThenError = new TableTransaction();
+
+    testEntities[0].myValue = "a new value";
+    testEntities[1].myValue = "a new value";
+    const newUpsertEntity = createBasicEntityForTest(partitionKey);
+    newUpsertEntity.myValue = "ephemeral";
+    transactionUpdateThenError.upsertEntity(testEntities[0]);
+    transactionUpdateThenError.upsertEntity(testEntities[1]);
+    transactionUpdateThenError.upsertEntity(newUpsertEntity);
+    transactionUpdateThenError.createEntity(testEntities[2]);
+
+    try {
+      const resultDelete = await tableClientrollback.submitTransaction(
+        transactionUpdateThenError.actions
+      );
+      assert.strictEqual(resultDelete.status, 202);
+    } catch (err: any) {
+      const restErr = err as RestError;
+      assert.strictEqual(
+        restErr.statusCode,
+        409,
+        "Did not get expected entity already exists error."
+      );
+    }
+
+    try {
+      const shouldExist =
+        await tableClientrollback.getEntity<AzureDataTablesTestEntity>(
+          testEntities[0].partitionKey,
+          testEntities[0].rowKey
+        );
+      assert.notStrictEqual(shouldExist, null, "We have an entity.");
+      assert.notStrictEqual(
+        shouldExist.myValue,
+        "a new value",
+        "Update entity action was not rolled back!"
+      );
+    } catch (err: any) {
+      const restErr2 = err as RestError;
+      assert.strictEqual(
+        restErr2.statusCode,
+        404,
+        "We expected an entity not found error."
+      );
+    }
+
+    try {
+      const shouldNotExist =
+        await tableClientrollback.getEntity<AzureDataTablesTestEntity>(
+          newUpsertEntity.partitionKey,
+          newUpsertEntity.rowKey
+        );
+      assert.strictEqual(shouldNotExist, null, "We should not have an entity.");
+    } catch (err: any) {
+      const restErr2 = err as RestError;
+      assert.strictEqual(
+        restErr2.statusCode,
+        404,
+        "We expected an entity not found error."
+      );
+    }
+    await tableClientrollback.deleteTable();
+  });
 });

@@ -134,7 +134,7 @@ export default class TableBatchOrchestrator {
           context
         );
       }
-      let batchTrialSuccess = true;
+      let batchSuccess = true;
       for (const singleReq of this.requests) {
         try {
           singleReq.response = await this.routeAndDispatchBatchRequest(
@@ -144,20 +144,20 @@ export default class TableBatchOrchestrator {
             batchID
           );
         } catch (err: any) {
-          await metadataStore.endBatchTransaction(
-            accountName,
-            tableName,
-            batchID,
-            context,
-            false
-          );
+          batchSuccess = false;
+          // await metadataStore.endBatchTransaction(
+          //   accountName,
+          //   tableName,
+          //   batchID,
+          //   context,
+          //   false
+          // );
           this.wasError = true;
           this.errorResponse = this.serialization.serializeError(
             err,
             contentID,
             singleReq
           );
-          batchTrialSuccess = false;
           break;
         }
         contentID++;
@@ -168,7 +168,7 @@ export default class TableBatchOrchestrator {
         tableName,
         batchID,
         context,
-        batchTrialSuccess
+        batchSuccess
       );
     }
   }
