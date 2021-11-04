@@ -549,7 +549,7 @@ export default class TableBatchOrchestrator {
       // currently, because of the way we deconstruct / deserialize, we only
       // have the right model at a very late stage in processing
       // this might resolve when we simplify Query logic
-      // based on only accepting Query iwth partition and row key
+      // based on only accepting Query with partition and row key
       request.ingestOptionalParams(
         new BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams()
       );

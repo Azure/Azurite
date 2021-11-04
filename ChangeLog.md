@@ -8,6 +8,10 @@ Blob:
 
 - Fixed start copy blob fail with `x-ms-access-tier` header and from Archive blob in same account.
 
+Table:
+
+- Added support for batch transaction rollback on error in batch.
+
 ## 2021.10 Version 3.14.3
 
 General:
