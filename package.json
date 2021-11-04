@@ -202,7 +202,7 @@
           },
           "azurite.location": {
             "type": "string",
-            "description": "Workspace location folder path, by default Visual Studio Code current opened folder"
+            "description": "Workspace location folder path (can be relative or absolute). By default, in the VS Code extension, the currently opened folder is used. If launched from the command line, the current process working directory is the default. Relative paths are resolved relative to the default folder."
           },
           "azurite.blobHost": {
             "type": "string",
