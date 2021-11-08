@@ -588,7 +588,7 @@ describe("table Entity APIs test", () => {
     // await tableClient.deleteTable();
   });
 
-  it.only("should return the correct number of results querying with a double field containing a single digit number regardless of whitespacing behaviours, @loki", async () => {
+  it("should return the correct number of results querying with a double field containing a single digit number regardless of whitespacing behaviours, @loki", async () => {
     const partitionKeyForQueryTest = createUniquePartitionKey("double");
     const totalItems = 10;
     await tableClient.createTable();
@@ -661,6 +661,6 @@ describe("table Entity APIs test", () => {
       testsCompleted++;
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
-    // await tableClient.deleteTable();
+    await tableClient.deleteTable();
   });
 });
