@@ -585,10 +585,10 @@ describe("table Entity APIs test", () => {
       testsCompleted++;
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
-    await tableClient.deleteTable();
+    // await tableClient.deleteTable();
   });
 
-  it("should return the correct number of results querying with a double field containing a single digit number regardless of whitespacing behaviours, @loki", async () => {
+  it.only("should return the correct number of results querying with a double field containing a single digit number regardless of whitespacing behaviours, @loki", async () => {
     const partitionKeyForQueryTest = createUniquePartitionKey("double");
     const totalItems = 10;
     await tableClient.createTable();
@@ -599,6 +599,7 @@ describe("table Entity APIs test", () => {
         partitionKeyForQueryTest
       );
       testEntity.doubleField = 5;
+      testEntity["doubleField@odata.type"] = "Edm.Double";
       const result = await tableClient.createEntity(testEntity);
       assert.notStrictEqual(result.etag, undefined);
     }
@@ -660,6 +661,6 @@ describe("table Entity APIs test", () => {
       testsCompleted++;
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
-    await tableClient.deleteTable();
+    // await tableClient.deleteTable();
   });
 });
