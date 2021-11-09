@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Fixed access to secondary location with IP style Uri from JS/.net SDK failure.
+
 Blob:
 
 - Fixed start copy blob fail with `x-ms-access-tier` header and from Archive blob in same account.

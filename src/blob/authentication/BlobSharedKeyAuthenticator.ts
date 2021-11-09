@@ -69,7 +69,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       this.getCanonicalizedResourceString(
         req,
         account,
-        context.context.isSecondary ? blobContext.authenticationPath + "-secondary" : blobContext.authenticationPath
+        blobContext.authenticationPath
       );
 
     this.logger.info(
@@ -109,6 +109,75 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
           blobContext.contextId
         );
         return true;
+      }
+    }
+
+    if (context.context.isSecondary && blobContext.authenticationPath?.indexOf(account) === 1)
+    {
+        // JS/.net Track2 SDK will generate stringToSign from IP style Uri with "-secondary" in authenticationPath, so will also compare signature with this kind stringToSign
+        const stringToSign_secondary: string =
+        [
+          req.getMethod().toUpperCase(),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_ENCODING),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LANGUAGE),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_LENGTH),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
+          this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
+          this.getHeaderValueToSign(req, HeaderConstants.DATE),
+          this.getHeaderValueToSign(req, HeaderConstants.IF_MODIFIED_SINCE),
+          this.getHeaderValueToSign(req, HeaderConstants.IF_MATCH),
+          this.getHeaderValueToSign(req, HeaderConstants.IF_NONE_MATCH),
+          this.getHeaderValueToSign(req, HeaderConstants.IF_UNMODIFIED_SINCE),
+          this.getHeaderValueToSign(req, HeaderConstants.RANGE)
+        ].join("\n") +
+        "\n" +
+        this.getCanonicalizedHeadersString(req) +
+        this.getCanonicalizedResourceString(
+          req,
+          account,
+          // The authenticationPath looks like "/devstoreaccount1/container", add "-secondary" after account name to "/devstoreaccount1-secondary/container"
+          blobContext.authenticationPath?.replace(account, account + "-secondary")
+        );
+
+      this.logger.info(
+        `BlobSharedKeyAuthenticator:validate() [STRING TO SIGN_secondary]:${JSON.stringify(
+          stringToSign_secondary
+        )}`,
+        blobContext.contextId
+      );
+
+      const signature1_secondary= computeHMACSHA256(stringToSign_secondary, accountProperties.key1);
+      const authValue1_secondary = `SharedKey ${account}:${signature1_secondary}`;
+      this.logger.info(
+        `BlobSharedKeyAuthenticator:validate() Calculated authentication header based on key1 and stringToSign with "-secondary": ${authValue1_secondary}`,
+        blobContext.contextId
+      );
+
+      if (authHeaderValue === authValue1_secondary) {
+        this.logger.info(
+          `BlobSharedKeyAuthenticator:validate() Signature 1_secondary matched.`,
+          blobContext.contextId
+        );
+        return true;
+      }
+
+      if (accountProperties.key2) {
+        const signature2_secondary = computeHMACSHA256(
+          stringToSign_secondary,
+          accountProperties.key2
+        );
+        const authValue2_secondary = `SharedKey ${account}:${signature2_secondary}`;
+        this.logger.info(
+          `BlobSharedKeyAuthenticator:validate() Calculated authentication header based on key2: ${authValue2_secondary}`,
+          blobContext.contextId
+        );
+        if (authHeaderValue === authValue2_secondary) {
+          this.logger.info(
+            `BlobSharedKeyAuthenticator:validate() Signature 2_secondary matched.`,
+            blobContext.contextId
+          );
+          return true;
+        }
       }
     }
 
