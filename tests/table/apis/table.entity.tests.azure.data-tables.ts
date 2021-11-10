@@ -2,47 +2,30 @@
 
 import * as assert from "assert";
 import LogicAppReproEntity from "./table.entity.test.logicapp.entity";
-import {
-  odata,
-  TableEntity,
-  TableClient,
-  TableTransaction
-} from "@azure/data-tables";
-import { AzureNamedKeyCredential } from "@azure/core-auth";
+import { odata, TableEntity, TableTransaction } from "@azure/data-tables";
 import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
-import {
-  EMULATOR_ACCOUNT_KEY,
-  EMULATOR_ACCOUNT_NAME,
-  getUniqueName
-} from "../../testutils";
+import { getUniqueName } from "../../testutils";
 import {
   AzureDataTablesTestEntity,
   createBasicEntityForTest
 } from "./AzureDataTablesTestEntity";
 import {
+  createAzureDataTablesClient,
   createTableServerForTestHttps,
-  createUniquePartitionKey,
-  HOST,
-  PORT
+  createUniquePartitionKey
 } from "./table.entity.test.utils";
 // Set true to enable debug log
 configLogger(false);
+// For convenience, we have a switch to control the use
+// of a local Azurite instance, otherwise we need an
+// ENV VAR called AZURE_TABLE_STORAGE added to mocha
+// script or launch.json containing
+// Azure Storage Connection String (using SAS or Key).
+const testLocalAzuriteInstance = true;
 
 describe("table Entity APIs test", () => {
   let server: TableServer;
-  const tableName: string = getUniqueName("datatables");
-
-  const sharedKeyCredential = new AzureNamedKeyCredential(
-    EMULATOR_ACCOUNT_NAME,
-    EMULATOR_ACCOUNT_KEY
-  );
-
-  const tableClient = new TableClient(
-    `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
-    tableName,
-    sharedKeyCredential
-  );
 
   const requestOverride = { headers: {} };
 
@@ -60,6 +43,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("Batch API should return row keys in format understood by @azure/data-tables, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("datatables")
+    );
     await tableClient.createTable();
     const partitionKey = createUniquePartitionKey("");
     const testEntities: AzureDataTablesTestEntity[] = [
@@ -80,6 +67,10 @@ describe("table Entity APIs test", () => {
 
   // https://github.com/Azure/Azurite/issues/754
   it("Batch API should correctly process LogicApp style update request sequence", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("logicapp")
+    );
     await tableClient.createTable();
     const logicAppReproEntity = new LogicAppReproEntity();
     const insertedEntityHeaders =
@@ -167,6 +158,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("Should return bad request error for incorrectly formatted etags, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("etags")
+    );
     await tableClient.createTable();
     const partitionKey = createUniquePartitionKey("");
     const testEntity: AzureDataTablesTestEntity =
@@ -212,6 +207,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should find an int as a number, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("int")
+    );
     const partitionKey = createUniquePartitionKey("");
     const testEntity: AzureDataTablesTestEntity =
       createBasicEntityForTest(partitionKey);
@@ -232,6 +231,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should find a long int, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longint")
+    );
     const partitionKey = createUniquePartitionKey("");
     const testEntity: AzureDataTablesTestEntity =
       createBasicEntityForTest(partitionKey);
@@ -253,6 +256,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should find an entity using a partition key with multiple spaces, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("query1s")
+    );
     const partitionKey = createUniquePartitionKey("") + " with spaces";
     const testEntity: AzureDataTablesTestEntity =
       createBasicEntityForTest(partitionKey);
@@ -274,6 +281,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should provide a complete query result when using query entities by page, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("querybypage")
+    );
     const partitionKeyForQueryTest = createUniquePartitionKey("");
     const totalItems = 20;
     await tableClient.createTable();
@@ -318,6 +329,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should return the correct number of results querying with a timestamp or different SDK whitespacing behaviours, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("sdkspace")
+    );
     const partitionKeyForQueryTest = createUniquePartitionKey("");
     const totalItems = 10;
     await tableClient.createTable();
@@ -388,6 +403,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should return the correct number of results querying with a boolean field regardless of whitespacing behaviours, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("bool")
+    );
     const partitionKeyForQueryTest = createUniquePartitionKey("bool");
     const totalItems = 10;
     await tableClient.createTable();
@@ -451,6 +470,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should return the correct number of results querying with an int64 field regardless of whitespacing behaviours, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("int64")
+    );
     const partitionKeyForQueryTest = createUniquePartitionKey("int64");
     const totalItems = 10;
     await tableClient.createTable();

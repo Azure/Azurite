@@ -280,7 +280,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     entity.properties.Timestamp = getTimestampString(entity.lastModifiedTime);
     entity.properties["Timestamp@odata.type"] = "Edm.DateTime";
 
-    this.transactionDeleteTheseEntities.push(entity);
+    if (batchID) {
+      this.transactionDeleteTheseEntities.push(entity);
+    }
     tableEntityCollection.insert(entity);
     return entity;
   }
@@ -530,7 +532,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
 
     const tableEntityCollection = this.db.getCollection(
-      this.getTableCollectionName(account, table, batchID)
+      this.getTableCollectionName(account, table)
     );
     if (!tableEntityCollection) {
       throw StorageErrorFactory.getTableNotExist(context);
@@ -609,7 +611,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     batchID?: string
   ): Promise<Entity | undefined> {
     const tableColl = this.db.getCollection(
-      this.getTableCollectionName(account, table, batchID)
+      this.getTableCollectionName(account, table)
     );
 
     // Throw error, if table not exists
@@ -660,7 +662,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
 
     const tableEntityCollection = this.db.getCollection(
-      this.getTableCollectionName(account, table, batchID)
+      this.getTableCollectionName(account, table)
     );
     if (!tableEntityCollection) {
       throw StorageErrorFactory.getTableNotExist(context);
@@ -781,16 +783,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
   }
 
-  private getTableCollectionName(
-    account: string,
-    table: string,
-    batchID?: string
-  ): string {
-    if (batchID) {
-      return `${account}$${table}${batchID}`;
-    } else {
-      return `${account}$${table}`;
-    }
+  private getTableCollectionName(account: string, table: string): string {
+    return `${account}$${table}`;
   }
 
   private static tokenizeQuery(originalQuery: string): string[] {
@@ -1124,16 +1118,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
   }
 
-  public async beginBatchTransaction(
-    account: string,
-    table: string,
-    partitionKey: string,
-    batchID: string,
-    context: Context
-  ): Promise<void> {
+  public async beginBatchTransaction(batchID: string): Promise<void> {
     // instead of copying all entities / rows in the collection,
     // we shall just backup those rows that we change
-
+    // Keeping the batchID in the interface to allow logging scenarios to extend
     if (
       this.transactionRollbackTheseEntities.length > 0 ||
       this.transactionDeleteTheseEntities.length > 0

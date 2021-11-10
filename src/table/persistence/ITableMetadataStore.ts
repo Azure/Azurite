@@ -130,13 +130,7 @@ export default interface ITableMetadataStore {
     context: Context,
     serviceProperties: ServicePropertiesModel
   ): Promise<ServicePropertiesModel>;
-  beginBatchTransaction(
-    account: string,
-    table: string,
-    partitionKey: string,
-    batchID: string,
-    context: Context
-  ): Promise<void>;
+  beginBatchTransaction(batchID: string): Promise<void>;
   endBatchTransaction(
     account: string,
     table: string,

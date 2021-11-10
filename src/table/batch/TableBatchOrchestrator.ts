@@ -126,13 +126,7 @@ export default class TableBatchOrchestrator {
           this.context.xMsRequestID
         );
       } else {
-        await metadataStore.beginBatchTransaction(
-          accountName,
-          tableName,
-          requestPartitionKey,
-          batchID,
-          context
-        );
+        await metadataStore.beginBatchTransaction(batchID);
       }
       let batchSuccess = true;
       for (const singleReq of this.requests) {
