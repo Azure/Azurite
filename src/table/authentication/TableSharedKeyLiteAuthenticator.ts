@@ -104,6 +104,63 @@ export default class TableSharedKeyLiteAuthenticator implements IAuthenticator {
       }
     }
 
+    if (context.context.isSecondary && tableContext.authenticationPath?.indexOf(account) === 1)
+    {
+      // JS/.net Track2 SDK will generate stringToSign from IP style Uri with "-secondary" in authenticationPath, so will also compare signature with this kind stringToSignconst stringToSign: string =
+      const stringToSign_secondary: string =
+      [
+        this.getHeaderValueToSign(req, HeaderConstants.DATE) ||
+          this.getHeaderValueToSign(req, HeaderConstants.X_MS_DATE)
+      ].join("\n") +
+      "\n" +
+      this.getCanonicalizedResourceString(
+        req,
+        account,
+        // The authenticationPath looks like "/devstoreaccount1/table", add "-secondary" after account name to "/devstoreaccount1-secondary/table"
+        tableContext.authenticationPath?.replace(account, account + "-secondary")
+      );
+
+      this.logger.info(
+        `TableSharedKeyLiteAuthenticator:validate() [STRING TO SIGN_secondary]:${JSON.stringify(
+          stringToSign_secondary
+        )}`,
+        tableContext.contextID
+      );
+
+      const signature1_secondary = computeHMACSHA256(stringToSign_secondary, accountProperties.key1);
+      const authValue1_secondary = `SharedKeyLite ${account}:${signature1_secondary}`;
+      this.logger.info(
+        `TableSharedKeyLiteAuthenticator:validate() Calculated authentication header based on key1: ${authValue1_secondary}`,
+        tableContext.contextID
+      );
+      if (authHeaderValue === authValue1_secondary) {
+        this.logger.info(
+          `TableSharedKeyLiteAuthenticator:validate() Signature 1_secondary matched.`,
+          tableContext.contextID
+        );
+        return true;
+      }
+
+      if (accountProperties.key2) {
+        const signature2_secondary = computeHMACSHA256(
+          stringToSign_secondary,
+          accountProperties.key2
+        );
+        const authValue2_secondary = `SharedKeyLite ${account}:${signature2_secondary}`;
+        this.logger.info(
+          `TableSharedKeyLiteAuthenticator:validate() Calculated authentication header based on key2: ${authValue2_secondary}`,
+          tableContext.contextID
+        );
+        if (authHeaderValue === authValue2_secondary) {
+          this.logger.info(
+            `TableSharedKeyLiteAuthenticator:validate() Signature 2_secondary matched.`,
+            tableContext.contextID
+          );
+          return true;
+        }
+      }
+    }
+
     // this.logger.info(`[URL]:${req.getUrl()}`);
     // this.logger.info(`[HEADERS]:${req.getHeaders().toString()}`);
     // this.logger.info(`[KEY]: ${request.headers.get(HeaderConstants.AUTHORIZATION)}`);

@@ -61,7 +61,7 @@ export default class QueueSharedKeyAuthenticator implements IAuthenticator {
         authType,
         req,
         account,
-        context.context.isSecondary ? queueContext.authenticationPath + "-secondary" : queueContext.authenticationPath
+        queueContext.authenticationPath
       );
 
     this.logger.info(
@@ -101,6 +101,60 @@ export default class QueueSharedKeyAuthenticator implements IAuthenticator {
           queueContext.contextID
         );
         return true;
+      }
+    }
+
+    if (context.context.isSecondary && queueContext.authenticationPath?.indexOf(account) === 1)
+    {
+      // JS/.net Track2 SDK will generate stringToSign from IP style Uri with "-secondary" in authenticationPath, so will also compare signature with this kind stringToSign
+      const stringToSign_secondary: string =
+      headersToSign +
+      this.getCanonicalizedResourceString(
+        authType,
+        req,
+        account,
+        // The authenticationPath looks like "/devstoreaccount1/queue", add "-secondary" after account name to "/devstoreaccount1-secondary/queue"
+        queueContext.authenticationPath?.replace(account, account + "-secondary")
+      );
+
+      this.logger.info(
+        `QueueSharedKeyAuthenticator:validate() [STRING TO SIGN_secondary]:${JSON.stringify(
+          stringToSign_secondary
+        )}`,
+        queueContext.contextID
+      );
+
+      const signature1_secondary = computeHMACSHA256(stringToSign_secondary, accountProperties.key1);
+      const authValue1_secondary = `${account}:${signature1_secondary}`;
+      this.logger.info(
+        `QueueSharedKeyAuthenticator:validate() Calculated authentication header based on key1: ${authValue1_secondary}`,
+        queueContext.contextID
+      );
+      if (authValue === authValue1_secondary) {
+        this.logger.info(
+          `QueueSharedKeyAuthenticator:validate() Signature 1_secondary matched.`,
+          queueContext.contextID
+        );
+        return true;
+      }
+
+      if (accountProperties.key2) {
+        const signature2_secondary = computeHMACSHA256(
+          stringToSign_secondary,
+          accountProperties.key2
+        );
+        const authValue2_secondary = `${account}:${signature2_secondary}`;
+        this.logger.info(
+          `QueueSharedKeyAuthenticator:validate() Calculated authentication header based on key2: ${authValue2_secondary}`,
+          queueContext.contextID
+        );
+        if (authValue === authValue2_secondary) {
+          this.logger.info(
+            `QueueSharedKeyAuthenticator:validate() Signature 2_secondary matched.`,
+            queueContext.contextID
+          );
+          return true;
+        }
       }
     }
 
