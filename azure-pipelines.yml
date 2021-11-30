@@ -5,7 +5,10 @@
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema?view=vsts&tabs=schema
 
 trigger:
-  - buildNugetPackage
+  - main
+  - master
+  - table
+  - dev
 
 jobs:
   - job: blobtestlinux
@@ -14,6 +17,8 @@ jobs:
       vmImage: "ubuntu-latest"
     strategy:
       matrix:
+        node_8_x:
+          node_version: 8.x
         node_10_x:
           node_version: 10.x
         node_12_x:
@@ -502,4 +507,41 @@ jobs:
           npm run test:exe
         workingDirectory: "./"
         displayName: "npm run test:exe"
+        env: {}
+
+  - job: linuxTest
+    displayName: binary Test Linux
+    pool:
+      vmImage: "ubuntu-latest"
+    strategy:
+      matrix:
+        # one of the node modules use a try/catch syntax not supported by node 8
+        # node_8_x:
+        #   node_version: 8.x
+        # our .exe build program is currently incompatible with node 10
+        # node_10_x:
+        #   node_version: 10.x
+        node_12_x:
+          node_version: 12.x
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(node_version)"
+        displayName: "Install Node.js"
+
+      - script: |
+          npm ci
+        workingDirectory: "./"
+        displayName: "npm ci"
+
+      - script: |
+          npm run build:linux
+        workingDirectory: "./"
+        displayName: "npm run build:linux"
+        env: {}
+
+      - script: |
+          npm run test:linux
+        workingDirectory: "./"
+        displayName: "npm run test:linux"
         env: {}
