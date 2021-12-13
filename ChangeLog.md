@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Ensure the storage location exists, and allow relative paths in the VSCode extension settings that are resolved based on the workspace folder.
+
 ## 2021.10 Version 3.15.0
 
 General:
