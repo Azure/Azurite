@@ -439,7 +439,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     partitionKey = partitionKey || tableContext.partitionKey!; // Get partitionKey from context
     rowKey = rowKey || tableContext.rowKey!; // Get rowKey from context
 
-    if (partitionKey === undefined || !rowKey) {
+    if (partitionKey === undefined || rowKey === undefined) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
     }
     if (ifMatch === "" || ifMatch === undefined) {

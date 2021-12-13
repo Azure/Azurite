@@ -211,4 +211,67 @@ describe("table Entity APIs test", () => {
 
     await tableClient.deleteTable();
   });
+
+  it("should allow the deletion of entities using empty string as the row key, @loki", async () => {
+    const partitionKeyForEmptyRowKey = createUniquePartitionKey("empty1");
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      tableName
+    );
+    await tableClient.createTable();
+    const entityWithEmptyRowKey = createBasicEntityForTest(
+      partitionKeyForEmptyRowKey
+    );
+
+    entityWithEmptyRowKey.rowKey = "";
+
+    const result = await tableClient.createEntity<AzureDataTablesTestEntity>(
+      entityWithEmptyRowKey
+    );
+    assert.notStrictEqual(result.etag, undefined);
+
+    const entityWithEmptyRowKeyRes =
+      await tableClient.getEntity<AzureDataTablesTestEntity>(
+        partitionKeyForEmptyRowKey,
+        ""
+      );
+
+    assert.strictEqual(
+      entityWithEmptyRowKeyRes.partitionKey,
+      partitionKeyForEmptyRowKey,
+      "failed to find the correct entity with empty string partition key"
+    );
+    assert.strictEqual(
+      entityWithEmptyRowKeyRes.rowKey,
+      "",
+      "failed to find the correct entity with matching row key"
+    );
+
+    tableClient
+      .deleteEntity(partitionKeyForEmptyRowKey, entityWithEmptyRowKeyRes.rowKey)
+      .catch((reason) => {
+        assert.ifError(reason);
+      });
+
+    // deliberately being more explicit in the resolution of the promise and errors
+    let res: AzureDataTablesTestEntity | undefined = undefined;
+    try {
+      res = (await tableClient.getEntity(
+        partitionKeyForEmptyRowKey,
+        ""
+      )) as GetTableEntityResponse<
+        TableEntityResult<AzureDataTablesTestEntity>
+      >;
+    } catch (deleteError: any) {
+      assert.strictEqual(deleteError.statusCode, 404);
+    } finally {
+      assert.strictEqual(
+        res,
+        undefined,
+        "We were not expecting to find the entity!"
+      );
+    }
+
+    await tableClient.deleteTable();
+  });
 });
