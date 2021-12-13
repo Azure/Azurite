@@ -4,7 +4,7 @@
 [![Build Status](https://dev.azure.com/azure/Azurite/_apis/build/status/Azure.Azurite?branchName=main)](https://dev.azure.com/azure/Azurite/_build/latest?definitionId=105&branchName=main)
 
 > Note:
-> The latest Azurite V3 code, which supports Blob, Queue, and Table (preview) is in the master branch.
+> The latest Azurite V3 code, which supports Blob, Queue, and Table (preview) is in the main branch.
 > The legacy Azurite V2 code is in the [legacy-master](https://github.com/Azure/azurite/tree/legacy-master) branch.
 
 | Version                                                            | Azure Storage API Version | Service Support                | Description                                       | Reference Links                                                                                                                                                                                                         |
@@ -1024,7 +1024,7 @@ We are currently working on Azurite V3 to implement the remaining Azure Storage 
 We finished the basic structure and majority of features in Blob Storage, as can be seen in the support matrix.
 The detailed work items are also tracked in GitHub repository projects and issues.
 
-Any contribution and suggestions for Azurite V3 is welcome, please goto [CONTRIBUTION.md](https://github.com/Azure/Azurite/blob/master/CONTRIBUTION.md) for detailed contribution guidelines. Alternatively, you can open GitHub issues voting for any missing features in Azurite V3.
+Any contribution and suggestions for Azurite V3 is welcome, please goto [CONTRIBUTION.md](https://github.com/Azure/Azurite/blob/main/CONTRIBUTION.md) for detailed contribution guidelines. Alternatively, you can open GitHub issues voting for any missing features in Azurite V3.
 
 Most contributions require you to agree to a
 Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
