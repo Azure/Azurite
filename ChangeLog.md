@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Queue:
+
+- Fixed issue that queue list result is not in alphabetical order.
+
 ## 2021.10 Version 3.15.0
 
 General:
