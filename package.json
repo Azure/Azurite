@@ -25,6 +25,7 @@
     "axios": "^0.24.0",
     "etag": "^1.8.1",
     "express": "^4.16.4",
+    "fs-extra": "^8.1.0",
     "jsonwebtoken": "^8.5.1",
     "lokijs": "^1.5.6",
     "morgan": "^1.9.1",
@@ -51,6 +52,7 @@
     "@types/bluebird": "^3.5.27",
     "@types/etag": "^1.8.0",
     "@types/express": "^4.16.0",
+    "@types/fs-extra": "^8.1.2",
     "@types/jsonwebtoken": "^8.3.9",
     "@types/lokijs": "^1.5.2",
     "@types/mocha": "^9.0.0",
@@ -200,7 +202,7 @@
           },
           "azurite.location": {
             "type": "string",
-            "description": "Workspace location folder path, by default Visual Studio Code current opened folder"
+            "description": "Workspace location folder path (can be relative or absolute). By default, in the VS Code extension, the currently opened folder is used. If launched from the command line, the current process working directory is the default. Relative paths are resolved relative to the default folder."
           },
           "azurite.blobHost": {
             "type": "string",
