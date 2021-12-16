@@ -20,6 +20,10 @@ Blob:
 
 - Fixed start copy blob fail with `x-ms-access-tier` header and from Archive blob in same account.
 
+Table:
+
+- Fixes issues with deleting entities using empty string for RowKey.
+
 ## 2021.10 Version 3.14.3
 
 General:
