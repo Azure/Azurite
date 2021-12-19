@@ -169,7 +169,8 @@ export async function getMD5FromStream(
  * @return {*}  {boolean}
  */
 export function checkEtagIsInvalidFormat(etag: string): boolean {
-  // Weak etag is required. Source: https://stackoverflow.com/a/11572348
+  // Weak etag is required. This is parity with Azure and legacy emulator.
+  // Source for regex: https://stackoverflow.com/a/11572348
   const match = etag.match(
     /^[wW]\/"([^"]|\\")*"$/
   );
