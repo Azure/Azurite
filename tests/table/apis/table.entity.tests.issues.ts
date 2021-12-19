@@ -47,6 +47,77 @@ describe("table Entity APIs test", () => {
     await server.close();
   });
 
+  // from issue #1229
+  [
+    "W/\"wrong\"",
+    "W/\"datetime'2015-01-01T23%3A14%3A33.4980000Z'\"",
+    "w/\"wrong\"",
+    "w/\"datetime'2015-01-01T23%3A14%3A33.4980000Z'\"",
+  ].forEach(etag => {
+    it(`should allow any valid weak etag <${etag}>, @loki`, async () => {
+      const partitionKey = createUniquePartitionKey();
+      const tableClient = createAzureDataTablesClient(
+        testLocalAzuriteInstance,
+        tableName
+      );
+      await tableClient.createTable();
+
+      const entity = {
+        partitionKey: partitionKey,
+        rowKey: "rk",
+      }
+      const response = await tableClient.createEntity(entity);
+
+      try {
+        await tableClient.updateEntity(entity, 'Replace', { etag })
+        assert.fail();
+      } catch (error: any) {
+        assert.strictEqual(error.statusCode, 412);
+      }
+
+      const existing = await tableClient.getEntity(entity.partitionKey, entity.rowKey)
+      assert.strictEqual(response.etag, existing.etag)
+
+      await tableClient.deleteTable();
+    });
+  });
+
+  // from issue #1229
+  [
+    "\"wrong\"",
+    "\"datetime'2015-01-01T23%3A14%3A33.4980000Z'\"",
+    "wrong",
+    "datetime'2015-01-01T23%3A14%3A33.4980000Z'",
+    "\"",
+  ].forEach(etag => {
+    it(`should reject invalid or strong etag <${etag}>, @loki`, async () => {
+      const partitionKey = createUniquePartitionKey();
+      const tableClient = createAzureDataTablesClient(
+        testLocalAzuriteInstance,
+        tableName
+      );
+      await tableClient.createTable();
+
+      const entity = {
+        partitionKey: partitionKey,
+        rowKey: "rk",
+      }
+      const response = await tableClient.createEntity(entity);
+
+      try {
+        await tableClient.updateEntity(entity, 'Replace', { etag })
+        assert.fail();
+      } catch (error: any) {
+        assert.strictEqual(error.statusCode, 400);
+      }
+
+      const existing = await tableClient.getEntity(entity.partitionKey, entity.rowKey)
+      assert.strictEqual(response.etag, existing.etag)
+
+      await tableClient.deleteTable();
+    });
+  });
+
   // from issue #1003
   it("should return 101 entities from a paged query at 50 entities per page and single partition, @loki", async () => {
     const partitionKeyForQueryTest1 = createUniquePartitionKey("1_");

@@ -169,9 +169,9 @@ export async function getMD5FromStream(
  * @return {*}  {boolean}
  */
 export function checkEtagIsInvalidFormat(etag: string): boolean {
-  // Etag should match ^W\/"datetime'\d{4}-\d{2}-\d{2}T\d{2}%3A\d{2}%3A\d{2}.\d{7}Z'"$
+  // Weak etag is required. Source: https://stackoverflow.com/a/11572348
   const match = etag.match(
-    /^W\/"datetime'\d{4}-\d{2}-\d{2}T\d{2}%3A\d{2}%3A\d{2}.\d{7}Z'"$/
+    /^[wW]\/"([^"]|\\")*"$/
   );
   return match === null;
 }
