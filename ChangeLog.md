@@ -23,6 +23,7 @@ General:
 Blob:
 
 - Fixed start copy blob fail with `x-ms-access-tier` header and from Archive blob in same account.
+- Fixed issue that startCopyFromURL and copyFromURL API not respect `--disableProductStyleUrl` parameter in parse source Uri.
 
 Table:
 

@@ -140,4 +140,12 @@ export default class Context {
   public get startTime(): Date | undefined {
     return this.context.startTime;
   }
+
+  public get disableProductStyleUrl(): boolean | undefined {
+    return this.context.disableProductStyleUrl;
+  }
+  
+  public set disableProductStyleUrl(disableProductStyleUrl: boolean| undefined) {
+    this.context.disableProductStyleUrl = disableProductStyleUrl;
+  }
 }
