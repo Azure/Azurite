@@ -27,7 +27,7 @@ import { RestError } from "@azure/core-http";
 configLogger(false);
 // For convenience, we have a switch to control the use
 // of a local Azurite instance, otherwise we need an
-// ENV VAR called AZURE_TABLE_STORAGE added to mocha
+// ENV VAR added to mocha
 // script or launch.json containing
 // Azure Storage Connection String (using SAS or Key).
 const testLocalAzuriteInstance = true;
@@ -411,6 +411,50 @@ describe("table Entity APIs test", () => {
         "We expected an entity not found error."
       );
     }
+    await tableClientrollback.deleteTable();
+  });
+
+  it.only("Batch API should return valid batch failure index for Azure.Data.Tables, @loki", async () => {
+    const partitionKey = createUniquePartitionKey("");
+    const tableNameDeleteError: string = getUniqueName("datatables");
+    const testEntities: AzureDataTablesTestEntity[] = [
+      createBasicEntityForTest(partitionKey),
+      createBasicEntityForTest(partitionKey),
+      createBasicEntityForTest(partitionKey)
+    ];
+
+    const tableClientrollback = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      tableNameDeleteError
+    );
+
+    await tableClientrollback.createTable();
+
+    const transaction = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction.createEntity(testEntity);
+    }
+    transaction.deleteEntity(partitionKey, getUniqueName("ThisShouldNotExist"));
+    let errorCaught = false;
+    try {
+      const result = await tableClientrollback.submitTransaction(
+        transaction.actions
+      );
+      assert.ok(result.subResponses[0].rowKey);
+    } catch (err: any) {
+      errorCaught = true;
+      assert.strictEqual(
+        err.message[0],
+        "3",
+        "We did not get the expected entity ID in the error response"
+      );
+    }
+    assert.strictEqual(
+      errorCaught,
+      true,
+      "Did not catch the expected error, test should not pass!"
+    );
+
     await tableClientrollback.deleteTable();
   });
 });
