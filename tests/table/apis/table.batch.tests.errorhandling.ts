@@ -457,4 +457,93 @@ describe("table Entity APIs test", () => {
 
     await tableClientrollback.deleteTable();
   });
+
+  it("Batch API Etag should be rolled back after transaction failure on update, @loki", async () => {
+    const partitionKey = createUniquePartitionKey("");
+    const tableNameDeleteError: string = getUniqueName("datatables");
+    const singleTestEntity = createBasicEntityForTest(partitionKey);
+
+    const tableClientrollback = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      tableNameDeleteError
+    );
+
+    await tableClientrollback.createTable();
+
+    const singleEntityResult = await tableClientrollback.createEntity(
+      singleTestEntity
+    );
+
+    const testEntities: AzureDataTablesTestEntity[] = [
+      createBasicEntityForTest(partitionKey),
+      createBasicEntityForTest(partitionKey),
+      createBasicEntityForTest(partitionKey)
+    ];
+
+    const transaction = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction.createEntity(testEntity);
+    }
+
+    try {
+      const result = await tableClientrollback.submitTransaction(
+        transaction.actions
+      );
+      assert.ok(result.subResponses[0].rowKey);
+    } catch (err: any) {
+      assert.ifError(err); // should not have an error here
+    }
+
+    const transactionUpdateThenError = new TableTransaction();
+
+    testEntities[0] = singleTestEntity;
+
+    testEntities[0].myValue = "a new value";
+    testEntities[1].myValue = "a new value";
+
+    transactionUpdateThenError.updateEntity(testEntities[0]);
+    transactionUpdateThenError.updateEntity(testEntities[1]);
+    transactionUpdateThenError.createEntity(testEntities[2]);
+
+    try {
+      const resultDelete = await tableClientrollback.submitTransaction(
+        transactionUpdateThenError.actions
+      );
+      assert.strictEqual(resultDelete.status, 202);
+    } catch (err: any) {
+      const restErr = err as RestError;
+      assert.strictEqual(
+        restErr.statusCode,
+        409,
+        "Did not get expected entity already exists error."
+      );
+    }
+
+    try {
+      const shouldExist =
+        await tableClientrollback.getEntity<AzureDataTablesTestEntity>(
+          testEntities[0].partitionKey,
+          testEntities[0].rowKey
+        );
+      assert.notStrictEqual(shouldExist, null, "We have an entity.");
+      assert.notStrictEqual(
+        shouldExist.myValue,
+        "a new value",
+        "Update entity action was not rolled back!"
+      );
+      assert.strictEqual(
+        shouldExist.etag,
+        singleEntityResult.etag,
+        "Update entity did not roll back eTag!"
+      );
+    } catch (err: any) {
+      const restErr2 = err as RestError;
+      assert.strictEqual(
+        restErr2.statusCode,
+        404,
+        `We expected an entity not found error, but got \"${restErr2.message}\"`
+      );
+    }
+    await tableClientrollback.deleteTable();
+  });
 });
