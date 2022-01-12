@@ -676,6 +676,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     if (!doc) {
       throw StorageErrorFactory.getEntityNotFound(context);
     }
+    if (batchID) {
+      this.transactionRollbackTheseEntities.push(doc);
+    }
 
     // Test if etag value is valid
     const encodedEtag = doc.eTag.replace(":", "%3A").replace(":", "%3A");

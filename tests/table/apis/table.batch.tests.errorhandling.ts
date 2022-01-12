@@ -414,7 +414,7 @@ describe("table Entity APIs test", () => {
     await tableClientrollback.deleteTable();
   });
 
-  it.only("Batch API should return valid batch failure index for Azure.Data.Tables, @loki", async () => {
+  it("Batch API should return valid batch failure index for Azure.Data.Tables, @loki", async () => {
     const partitionKey = createUniquePartitionKey("");
     const tableNameDeleteError: string = getUniqueName("datatables");
     const testEntities: AzureDataTablesTestEntity[] = [
