@@ -4,7 +4,7 @@
 [![Build Status](https://dev.azure.com/azure/Azurite/_apis/build/status/Azure.Azurite?branchName=main)](https://dev.azure.com/azure/Azurite/_build/latest?definitionId=105&branchName=main)
 
 > Note:
-> The latest Azurite V3 code, which supports Blob, Queue, and Table (preview) is in the master branch.
+> The latest Azurite V3 code, which supports Blob, Queue, and Table (preview) is in the main branch.
 > The legacy Azurite V2 code is in the [legacy-master](https://github.com/Azure/azurite/tree/legacy-master) branch.
 
 | Version                                                            | Azure Storage API Version | Service Support                | Description                                       | Reference Links                                                                                                                                                                                                         |
@@ -186,7 +186,7 @@ Following extension configurations are supported:
 - `azurite.queuePort` Queue service listening port, by default 10001
 - `azurite.tableHost` Table service listening endpoint, by default 127.0.0.1
 - `azurite.tablePort` Table service listening port, by default 10002
-- `azurite.location` Workspace location path, by default existing Visual Studio Code opened folder
+- `azurite.location` Workspace location folder path (can be relative or absolute). By default, in the VS Code extension, the currently opened folder is used. If launched from the command line, the current process working directory is the default. Relative paths are resolved relative to the default folder.
 - `azurite.silent` Silent mode to disable access log in Visual Studio channel, by default false
 - `azurite.debug` Output debug log into Azurite channel, by default false
 - `azurite.loose` Enable loose mode which ignores unsupported headers and parameters, by default false
@@ -1024,7 +1024,7 @@ We are currently working on Azurite V3 to implement the remaining Azure Storage 
 We finished the basic structure and majority of features in Blob Storage, as can be seen in the support matrix.
 The detailed work items are also tracked in GitHub repository projects and issues.
 
-Any contribution and suggestions for Azurite V3 is welcome, please goto [CONTRIBUTION.md](https://github.com/Azure/Azurite/blob/master/CONTRIBUTION.md) for detailed contribution guidelines. Alternatively, you can open GitHub issues voting for any missing features in Azurite V3.
+Any contribution and suggestions for Azurite V3 is welcome, please goto [CONTRIBUTION.md](https://github.com/Azure/Azurite/blob/main/CONTRIBUTION.md) for detailed contribution guidelines. Alternatively, you can open GitHub issues voting for any missing features in Azurite V3.
 
 Most contributions require you to agree to a
 Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
