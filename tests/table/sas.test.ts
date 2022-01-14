@@ -235,10 +235,13 @@ describe("Shared Access Signature (SAS) authentication", () => {
   });
 
   it("Operation using SAS should fail if ACL generating the SAS no longer allow the operation, @loki", (done) => {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
     const tableAcl = {
       "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=": {
         Permissions: "raud",
-        Expiry: new Date("2021-12-31T11:22:33.4567890Z"),
+        Expiry: tmr,
         Start: new Date("2017-12-31T11:22:33.4567890Z")
       }
     };
@@ -249,7 +252,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
       }
 
       const sas = tableService.generateSharedAccessSignature(tableName, { Id: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=",
-        AccessPolicy: { Permissions: "raud", Expiry: new Date("2021-12-31T11:22:33.4567890Z"),
+        AccessPolicy: { Permissions: "raud", Expiry: tmr,
         Start: new Date("2017-12-31T11:22:33.4567890Z") }
       });
 
@@ -261,6 +264,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
         myValue: "value1"
       };
 
+
       // tslint:disable-next-line: no-shadowed-variable
       sasService.insertEntity(tableName, entity, (error) => {
         if (error) {
@@ -270,7 +274,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
         const newTableAcl = {
           "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=": {
             Permissions: "r",
-            Expiry: new Date("2021-12-31T11:22:33.4567890Z"),
+            Expiry: tmr,
             Start: new Date("2017-12-31T11:22:33.4567890Z")
           }
         };

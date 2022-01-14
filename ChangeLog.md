@@ -24,6 +24,7 @@ Table:
 
 - Fixes issues with deleting entities using empty string for RowKey.
 - Fixes HTTP 500 causes by continuation token containing non-ASCII. Values are now encoded with base64.
+- Fixed a table sas test case failure.
 
 ## 2021.10 Version 3.14.3
 
