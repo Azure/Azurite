@@ -60,15 +60,6 @@ export function newEtag(): string {
   );
 }
 
-export function newTableEntityEtag(startTime: Date): string {
-  // Etag as returned by Table Storage should match W/"datetime'<ISO8601datetime>'"
-  return (
-    "W/\"datetime'" +
-    encodeURIComponent(truncatedISO8061Date(startTime, true)) +
-    "'\""
-  );
-}
-
 /**
  * Generates a hash signature for an HTTP request or for a SAS.
  *
@@ -159,20 +150,4 @@ export async function getMD5FromStream(
         reject(err);
       });
   });
-}
-
-/**
- * Checks if an eTag is valid
- *
- * @export
- * @param {string} etag
- * @return {*}  {boolean}
- */
-export function checkEtagIsInvalidFormat(etag: string): boolean {
-  // Weak etag is required. This is parity with Azure and legacy emulator.
-  // Source for regex: https://stackoverflow.com/a/11572348
-  const match = etag.match(
-    /^[wW]\/"([^"]|\\")*"$/
-  );
-  return match === null;
 }
