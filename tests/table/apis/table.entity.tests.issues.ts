@@ -170,6 +170,33 @@ describe("table Entity APIs test", () => {
     await tableClient.deleteTable();
   });
 
+  // from issue #1214
+  it("should allow continuation tokens with non-ASCII characters, @loki", async () => {
+    const partitionKey1 = createUniquePartitionKey("𤭢PK1");
+    const partitionKey2 = createUniquePartitionKey("𤭢PK2");
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      tableName
+    );
+    await tableClient.createTable();
+    await tableClient.createEntity({ partitionKey: partitionKey1, rowKey: "𐐷RK1" });
+    await tableClient.createEntity({ partitionKey: partitionKey2, rowKey: "𐐷RK2" });
+
+    const entities = tableClient.listEntities<TableEntity>();
+    let all: TableEntity[] = [];
+    for await (const entity of entities.byPage({ maxPageSize: 1 })) {
+      all = [...all, ...entity];
+    }
+
+    assert.strictEqual(all.length, 2);
+    assert.strictEqual(partitionKey1, all[0].partitionKey);
+    assert.strictEqual("𐐷RK1", all[0].rowKey);
+    assert.strictEqual(partitionKey2, all[1].partitionKey);
+    assert.strictEqual("𐐷RK2", all[1].rowKey);
+
+    await tableClient.deleteTable();
+  });
+
   // from issue #1003
   it("should return 4 entities from a paged query at 1 entities per page across 2 partitions, @loki", async () => {
     const partitionKeyForQueryTest1 = createUniquePartitionKey("1_");
