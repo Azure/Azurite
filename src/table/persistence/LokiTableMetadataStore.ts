@@ -298,7 +298,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     ifMatch?: string,
     batchID?: string
   ): Promise<Entity> {
-    if (ifMatch === undefined) {
+    if (ifMatch === undefined || ifMatch === "*") {
       // Upsert
       const existingEntity =
         await this.queryTableEntitiesWithPartitionAndRowKey(
@@ -385,7 +385,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     ifMatch?: string,
     batchID?: string
   ): Promise<Entity> {
-    if (ifMatch === undefined) {
+    if (ifMatch === undefined || ifMatch === "*") {
       // Upsert
       const existingEntity =
         await this.queryTableEntitiesWithPartitionAndRowKey(
