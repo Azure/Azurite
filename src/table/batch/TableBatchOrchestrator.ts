@@ -486,13 +486,17 @@ export default class TableBatchOrchestrator {
     updatedContext.request = request;
     let partitionKey: string;
     let rowKey: string;
+    const ifmatch: string = request.getHeader("if-match") || "*";
     ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
 
     response = await this.parentHandler.updateEntity(
       request.getPath(),
       partitionKey,
       rowKey,
-      request.params as BatchTableUpdateEntityOptionalParams,
+      {
+        ifMatch: ifmatch,
+        ...request.params
+      } as BatchTableUpdateEntityOptionalParams,
       updatedContext,
       batchID
     );
@@ -614,13 +618,17 @@ export default class TableBatchOrchestrator {
     updatedContext.request = request;
     let partitionKey: string;
     let rowKey: string;
+    const ifmatch: string = request.getHeader("if-match") || "*";
     ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
 
     response = await this.parentHandler.mergeEntity(
       request.getPath(),
       partitionKey,
       rowKey,
-      request.params as BatchTableMergeEntityOptionalParams,
+      {
+        ifMatch: ifmatch,
+        ...request.params
+      } as BatchTableMergeEntityOptionalParams,
       updatedContext,
       batchID
     );
