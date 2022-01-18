@@ -24,8 +24,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   private readonly SERVICES_COLLECTION = "$SERVICES_COLLECTION$";
   private initialized: boolean = false;
   private closed: boolean = false;
-  // this holds the rows that we will reapply to the database in the case
-  // that we need to rollback the transaction
+  // The Rollback Entities arrays hold the rows that we will reapply to the database in the case
+  // that we need to rollback a transaction.
+  // We make the assumption that there will not be any IO during the processing of a transaction
+  // and assume that the execution will remain in the same thread associated with the transaction.
+  // See: https://nodejs.org/en/docs/guides/event-loop-timers-and-nexttick/
   private transactionRollbackTheseEntities: Entity[] = []; // can maybe use Entity instead of any
   private transactionDeleteTheseEntities: Entity[] = []; // can maybe use Entity instead of any
 
