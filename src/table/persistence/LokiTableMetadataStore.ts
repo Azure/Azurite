@@ -1159,6 +1159,14 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
             eTag: entity.eTag
           };
           // lokijs applies this insert as an upsert
+          const doc = tableBatchCollection.findOne({
+            PartitionKey: entity.PartitionKey,
+            RowKey: entity.RowKey
+          });
+          // we can't rely on upsert behavior if documents already exist
+          if (doc) {
+            tableBatchCollection.remove(doc);
+          }
           tableBatchCollection.insert(copiedEntity);
         }
 
