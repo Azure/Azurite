@@ -329,19 +329,19 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Fails to update an Entity that does not exist, @loki", (done) => {
+  it("Upserts when an Entity does not exist, @loki", (done) => {
     const entityToUpdate = createBasicEntityForTest();
+    // this is submitting an update with if-match == *
     tableService.replaceEntity(
       tableName,
       entityToUpdate,
       (updateError, updateResult, updateResponse) => {
-        const castUpdateStatusCode = (updateError as StorageError).statusCode;
         if (updateError) {
-          assert.strictEqual(castUpdateStatusCode, 404);
-          done();
+          assert.fail("Test threw an error : " + updateError);
         } else {
-          assert.fail("Test failed to throw the right Error" + updateError);
+          assert.strictEqual(updateResponse.statusCode, 204);
         }
+        done();
       }
     );
   });
@@ -721,7 +721,8 @@ describe("table Entity APIs test", () => {
                       batchEntity1.PartitionKey._,
                       batchEntity1.RowKey._,
                       (finalRetrieveError, finalRetrieveResult) => {
-                        const retrieveError: StorageError = finalRetrieveError as StorageError;
+                        const retrieveError: StorageError =
+                          finalRetrieveError as StorageError;
                         assert.strictEqual(
                           retrieveError.statusCode,
                           404,
