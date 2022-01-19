@@ -329,7 +329,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it("Upserts when an Entity does not exist, @loki", (done) => {
+  it("Upserts when an Entity does not exist using replaceEntity(), @loki", (done) => {
     const entityToUpdate = createBasicEntityForTest();
     // this is submitting an update with if-match == *
     tableService.replaceEntity(
