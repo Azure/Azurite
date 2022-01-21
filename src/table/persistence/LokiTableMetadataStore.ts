@@ -552,8 +552,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     // Decode the nextPartitionKey and nextRowKey. This is necessary since non-ASCII characters can
     // be in partition and row keys but should not be in headers.
-    const decodedNextPartitionKey = this.decodeContinuationHeader(nextPartitionKey)
-    const decodedNextRowKey = this.decodeContinuationHeader(nextRowKey)
+    const decodedNextPartitionKey =
+      this.decodeContinuationHeader(nextPartitionKey);
+    const decodedNextRowKey = this.decodeContinuationHeader(nextRowKey);
 
     // .find using a segment filter is not filtering in the same way that the sorting function sorts
     // I think offset will cause more problems than it solves, as we will have to step and sort all
@@ -603,7 +604,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     if (result.length > maxResults) {
       const tail = result.pop();
-      nextPartitionKeyResponse = this.encodeContinuationHeader(tail.PartitionKey);
+      nextPartitionKeyResponse = this.encodeContinuationHeader(
+        tail.PartitionKey
+      );
       nextRowKeyResponse = this.encodeContinuationHeader(tail.RowKey);
     }
 
@@ -612,13 +615,13 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
   private decodeContinuationHeader(input?: string) {
     if (input !== undefined) {
-      return Buffer.from(input, 'base64').toString('utf8')
+      return Buffer.from(input, "base64").toString("utf8");
     }
   }
 
   private encodeContinuationHeader(input?: string) {
     if (input !== undefined) {
-      return Buffer.from(input, 'utf8').toString('base64')
+      return Buffer.from(input, "utf8").toString("base64");
     }
   }
 
@@ -1161,7 +1164,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     succeeded: boolean
   ): Promise<void> {
     // rollback all changes in the case of failed batch transaction
-    if (false === succeeded) {
+    if (!succeeded) {
       const tableBatchCollection = this.db.getCollection(
         this.getTableCollectionName(account, table)
       );
