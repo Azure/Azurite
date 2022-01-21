@@ -54,4 +54,12 @@ export default class BlobStorageContext extends Context
   public set xMsRequestID(xMsRequestID: string | undefined) {
     this.contextId = xMsRequestID;
   }
+
+  public get disableProductStyleUrl(): boolean | undefined {
+    return this.context.disableProductStyleUrl;
+  }
+
+  public set disableProductStyleUrl(disableProductStyleUrl: boolean| undefined) {
+    this.context.disableProductStyleUrl = disableProductStyleUrl;
+  }
 }
