@@ -538,6 +538,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should return the correct number of results querying with a double field regardless of whitespacing behaviours, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("datatables")
+    );
     const partitionKeyForQueryTest = createUniquePartitionKey("double");
     const totalItems = 10;
     await tableClient.createTable();
@@ -612,6 +616,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should return the correct number of results querying with a double field containing a single digit number regardless of whitespacing behaviours, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("datatables")
+    );
     const partitionKeyForQueryTest = createUniquePartitionKey("double");
     const totalItems = 10;
     await tableClient.createTable();

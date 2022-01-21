@@ -108,8 +108,14 @@ describe("table Entity APIs test", () => {
       tableName
     );
     await tableClient.createTable();
-    await tableClient.createEntity({ partitionKey: partitionKey1, rowKey: "𐐷RK1" });
-    await tableClient.createEntity({ partitionKey: partitionKey2, rowKey: "𐐷RK2" });
+    await tableClient.createEntity({
+      partitionKey: partitionKey1,
+      rowKey: "𐐷RK1"
+    });
+    await tableClient.createEntity({
+      partitionKey: partitionKey2,
+      rowKey: "𐐷RK2"
+    });
 
     const entities = tableClient.listEntities<TableEntity>();
     let all: TableEntity[] = [];
@@ -218,7 +224,7 @@ describe("table Entity APIs test", () => {
       });
 
     // deliberately being more explicit in the resolution of the promise and errors
-    let res: AzureDataTablesTestEntity | undefined = undefined;
+    let res: AzureDataTablesTestEntity | undefined;
     try {
       res = (await tableClient.getEntity(
         "",
@@ -281,7 +287,7 @@ describe("table Entity APIs test", () => {
       });
 
     // deliberately being more explicit in the resolution of the promise and errors
-    let res: AzureDataTablesTestEntity | undefined = undefined;
+    let res: AzureDataTablesTestEntity | undefined;
     try {
       res = (await tableClient.getEntity(
         partitionKeyForEmptyRowKey,
