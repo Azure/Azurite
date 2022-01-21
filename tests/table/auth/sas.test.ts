@@ -5,29 +5,31 @@ import { configLogger } from "../../../src/common/Logger";
 import { TableSASPermission } from "../../../src/table/authentication/TableSASPermissions";
 import StorageError from "../../../src/table/errors/StorageError";
 import TableServer from "../../../src/table/TableServer";
-import TableTestServerFactory from "../utils/TableTestServerFactory";
+import { getUniqueName } from "../../testutils";
 import {
-  EMULATOR_ACCOUNT_KEY,
-  EMULATOR_ACCOUNT_NAME,
-  getUniqueName
-} from "../../testutils";
+  createConnectionStringForTest,
+  createTableServerForTestOAuth,
+  getBaseUrlForTest
+} from "../utils/table.entity.test.utils";
 
 // Set true to enable debug log
 configLogger(false);
+// For convenience, we have a switch to control the use
+// of a local Azurite instance, otherwise we need an
+// ENV VAR called AZURE_TABLE_STORAGE added to mocha
+// script or launch.json containing
+// Azure Storage Connection String (using SAS or Key).
+const testLocalAzuriteInstance = true;
 
 describe("Shared Access Signature (SAS) authentication", () => {
-  const protocol = "http";
-  const tableFactory = new TableTestServerFactory();
+  let server: TableServer;
 
-  const server: TableServer = tableFactory.createServer();
-
-  const baseURL = `${protocol}://${server.host}:${server.port}/${EMULATOR_ACCOUNT_NAME}`;
-  const connectionString =
-    `DefaultEndpointsProtocol=${protocol};AccountName=${EMULATOR_ACCOUNT_NAME};` +
-    `AccountKey=${EMULATOR_ACCOUNT_KEY};TableEndpoint=${baseURL};`;
+  const requestOverride = { headers: {} };
 
   // used to generate SAS
-  const tableService = Azure.createTableService(connectionString);
+  const tableService = Azure.createTableService(
+    createConnectionStringForTest(testLocalAzuriteInstance)
+  );
 
   const tableName: string = getUniqueName("table");
 
@@ -44,11 +46,17 @@ describe("Shared Access Signature (SAS) authentication", () => {
       AccessPolicy: policy
     });
 
-    return Azure.createTableServiceWithSas(baseURL, sas);
+    return Azure.createTableServiceWithSas(getBaseUrlForTest(), sas);
   }
 
   before(async () => {
+    server = createTableServerForTestOAuth();
     await server.start();
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+
     tableService.createTable(tableName, (error, result, response) => {
       // created table for tests
     });
@@ -70,7 +78,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
       }
     });
 
-    const sasService = Azure.createTableServiceWithSas(baseURL, sas);
+    const sasService = Azure.createTableServiceWithSas(
+      getBaseUrlForTest(),
+      sas
+    );
 
     const entity = {
       PartitionKey: "part1",
@@ -95,7 +106,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
       AccessPolicy: { Permissions: TableSASPermission.Add, Expiry: expiry }
     });
 
-    const sasService = Azure.createTableServiceWithSas(baseURL, sas);
+    const sasService = Azure.createTableServiceWithSas(
+      getBaseUrlForTest(),
+      sas
+    );
 
     const entity = {
       PartitionKey: "part1",
@@ -264,7 +278,10 @@ describe("Shared Access Signature (SAS) authentication", () => {
         }
       });
 
-      const sasService = Azure.createTableServiceWithSas(baseURL, sas);
+      const sasService = Azure.createTableServiceWithSas(
+        getBaseUrlForTest(),
+        sas
+      );
 
       const entity = {
         PartitionKey: "part1",
