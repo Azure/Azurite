@@ -12,7 +12,7 @@ import { getUniqueName } from "../../testutils";
 import {
   getToAzurite,
   postToAzurite
-} from "./table.entity.tests.rest.submitter";
+} from "../utils/table.entity.tests.rest.submitter";
 
 // Set true to enable debug log
 configLogger(false);

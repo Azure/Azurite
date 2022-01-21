@@ -5,7 +5,7 @@ import { configLogger } from "../../src/common/Logger";
 import { TableSASPermission } from "../../src/table/authentication/TableSASPermissions";
 import StorageError from "../../src/table/errors/StorageError";
 import TableServer from "../../src/table/TableServer";
-import TableTestServerFactory from "../TableTestServerFactory";
+import TableTestServerFactory from "./utils/TableTestServerFactory";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
@@ -55,11 +55,11 @@ describe("Shared Access Signature (SAS) authentication", () => {
   });
 
   after(async () => {
+    tableService.removeAllListeners();
     await server.close();
-    await server.clean();
   });
 
-  it("insertEntity with Query permission should not work @loki", (done) => {
+  it("1. insertEntity with Query permission should not work @loki", (done) => {
     const expiry = new Date();
     expiry.setMinutes(expiry.getMinutes() + 5); // Skip clock skew with server
 
@@ -78,12 +78,16 @@ describe("Shared Access Signature (SAS) authentication", () => {
       myValue: "value1"
     };
     sasService.insertEntity(tableName, entity, (error, result, response) => {
-      assert.equal(response.statusCode, 403);
+      assert.strictEqual(
+        response.statusCode,
+        403,
+        "did not get expected HTTP status 403"
+      );
       done();
     });
   });
 
-  it("insertEntity with Add permission should work @loki", (done) => {
+  it("2. insertEntity with Add permission should work @loki", (done) => {
     const expiry = new Date();
     expiry.setMinutes(expiry.getMinutes() + 5); // Skip clock skew with server
 
@@ -104,7 +108,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     });
   });
 
-  it("insertEntity Add permission should work @loki", (done) => {
+  it("3. insertEntity Add permission should work @loki", (done) => {
     const sasService = getSasService({
       Permissions: TableSASPermission.Add,
       ...sasPeriod(-1, 5)
@@ -122,7 +126,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     });
   });
 
-  it("insertEntity expired Add permission should not work @loki", (done) => {
+  it("4. insertEntity expired Add permission should not work @loki", (done) => {
     const sasService = getSasService({
       Permissions: TableSASPermission.Add,
       ...sasPeriod(-10, -5)
@@ -140,7 +144,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     });
   });
 
-  it("deleteEntity with Delete permission should work @loki", (done) => {
+  it("5. deleteEntity with Delete permission should work @loki", (done) => {
     const sasService = getSasService({
       Permissions: TableSASPermission.Delete,
       ...sasPeriod(0, 5)
@@ -158,7 +162,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     });
   });
 
-  it("deleteEntity with Add permission should not work @loki", (done) => {
+  it("6. deleteEntity with Add permission should not work @loki", (done) => {
     const sasService = getSasService({
       Permissions: TableSASPermission.Add,
       ...sasPeriod(0, 5)
@@ -176,7 +180,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     });
   });
 
-  it("Update an Entity that exists, @loki", (done) => {
+  it("7. Update an Entity that exists, @loki", (done) => {
     const sasService = getSasService({
       Permissions: TableSASPermission.Add + TableSASPermission.Update,
       ...sasPeriod(0, 5)
@@ -213,7 +217,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     );
   });
 
-  it("Update an Entity without update permission, @loki", (done) => {
+  it("8. Update an Entity without update permission, @loki", (done) => {
     const sasService = getSasService({
       Permissions: TableSASPermission.Add,
       ...sasPeriod(0, 5)
@@ -225,16 +229,16 @@ describe("Shared Access Signature (SAS) authentication", () => {
       (updateError, updateResult, updateResponse) => {
         const castUpdateStatusCode = (updateError as StorageError).statusCode;
         if (updateError) {
-          assert.equal(castUpdateStatusCode, 403);
-          done();
+          assert.strictEqual(castUpdateStatusCode, 403);
         } else {
           assert.fail("Test failed to throw the right Error" + updateError);
         }
+        done();
       }
     );
   });
 
-  it("Operation using SAS should fail if ACL generating the SAS no longer allow the operation, @loki", (done) => {
+  it("9. Operation using SAS should fail if ACL generating the SAS no longer allow the operation, @loki", (done) => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -304,7 +308,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     });
   });
 
-  it("Updates an Entity that does not exist, @loki", (done) => {
+  it("10. Updates an Entity that does not exist, @loki", (done) => {
     const sasService = getSasService({
       Permissions: TableSASPermission.Update,
       ...sasPeriod(0, 5)

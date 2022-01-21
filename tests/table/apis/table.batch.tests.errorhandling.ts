@@ -13,14 +13,14 @@ import {
 import {
   AzureDataTablesTestEntity,
   createBasicEntityForTest
-} from "./AzureDataTablesTestEntity";
+} from "../models/AzureDataTablesTestEntity";
 import {
   createAzureDataTablesClient,
   createTableServerForTestHttps,
   createUniquePartitionKey,
   HOST,
   PORT
-} from "./table.entity.test.utils";
+} from "../utils/table.entity.test.utils";
 import { RestError } from "@azure/core-http";
 
 // Set true to enable debug log

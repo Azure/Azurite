@@ -13,11 +13,11 @@ import {
   createAzureDataTablesClient,
   createTableServerForTestHttps,
   createUniquePartitionKey
-} from "./table.entity.test.utils";
+} from "../utils/table.entity.test.utils";
 import {
   AzureDataTablesTestEntity,
   createBasicEntityForTest
-} from "./AzureDataTablesTestEntity";
+} from "../models/AzureDataTablesTestEntity";
 
 // Set true to enable debug log
 configLogger(false);

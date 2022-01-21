@@ -87,36 +87,14 @@ export default class TableBatchOrchestrator {
 
     let contentID = 1;
     if (this.requests.length > 0) {
-      // TO DO: the way used to get accountName, tableName, and partition key
-      // may not work if incoming request is not compliant with the right format
-      const reqUrl = this.requests[0].getUrl();
       const accountName = (this.context.account ??= "");
       const tableName = this.requests[0].getPath();
       const batchId = uuidv4();
 
       // get partition key from the request body or uri to copy that specific partition of database
-      let requestPartitionKey: string | undefined;
-
-      let firstJsonString = this.requests[0].getBody();
-
-      if (firstJsonString) {
-        const partitionKeyPosition = firstJsonString.indexOf('PartitionKey":"');
-
-        if (partitionKeyPosition && partitionKeyPosition !== -1) {
-          firstJsonString = firstJsonString?.substr(partitionKeyPosition + 15);
-          requestPartitionKey = firstJsonString?.substr(
-            0,
-            firstJsonString.indexOf('"')
-          );
-        }
-      } else {
-        // in delete operations, partition key needs to be taken from uri and single quote may either be ' or %27
-        if (reqUrl.includes("%27")) {
-          requestPartitionKey = reqUrl.split("%27")[1];
-        } else {
-          requestPartitionKey = reqUrl.split("'")[1];
-        }
-      }
+      const requestPartitionKey = this.extractRequestPartitionKey(
+        this.requests[0]
+      );
 
       if (!requestPartitionKey) {
         this.wasError = true;
@@ -125,8 +103,10 @@ export default class TableBatchOrchestrator {
           this.context.xMsRequestID
         );
       } else {
+        // initialize transaction rollback capability
         await metadataStore.beginBatchTransaction(batchId);
       }
+
       let batchSuccess = true;
       for (const singleReq of this.requests) {
         try {
@@ -327,43 +307,6 @@ export default class TableBatchOrchestrator {
   }
 
   /**
-   * Helper function to extract values needed for handler calls
-   *
-   * @private
-   * @param {BatchRequest} request
-   * @return {*}  {{ partitionKey: string; rowKey: string }}
-   * @memberof TableBatchManager
-   */
-  private extractRowAndPartitionKeys(request: BatchRequest): {
-    partitionKey: string;
-    rowKey: string;
-  } {
-    let partitionKey: string;
-    let rowKey: string;
-
-    const url = decodeURI(request.getUrl());
-    const partKeyMatch = url.match(/(?<=PartitionKey=')(.+)(?=',)/gi);
-    partitionKey = partKeyMatch ? partKeyMatch[0] : "";
-    const rowKeyMatch = url.match(/(?<=RowKey=')(.+)(?='\))/gi);
-    rowKey = rowKeyMatch ? rowKeyMatch[0] : "";
-
-    if (partitionKey === "" || rowKey === "") {
-      // row key not in URL, must be in body
-      const body = request.getBody();
-      if (body !== "") {
-        const jsonBody = JSON.parse(body ? body : "{}");
-        partitionKey = jsonBody.PartitionKey;
-        rowKey = jsonBody.RowKey;
-      }
-    } else {
-      // keys can have more complex values which are URI encoded
-      partitionKey = decodeURIComponent(partitionKey);
-      rowKey = decodeURIComponent(rowKey);
-    }
-    return { partitionKey, rowKey };
-  }
-
-  /**
    * Handles an insert operation inside a batch
    *
    * @private
@@ -437,7 +380,8 @@ export default class TableBatchOrchestrator {
     let rowKey: string;
     const ifmatch: string = request.getHeader("if-match") || "*";
 
-    ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
+    partitionKey = this.extractRequestPartitionKey(request);
+    rowKey = this.extractRequestRowKey(request);
     response = await this.parentHandler.deleteEntity(
       request.getPath(),
       partitionKey,
@@ -484,10 +428,9 @@ export default class TableBatchOrchestrator {
     const updatedContext = batchContextClone as TableStorageContext;
     updatedContext.request = request;
     updatedContext.batchId = batchId;
-    let partitionKey: string;
-    let rowKey: string;
+    const partitionKey = this.extractRequestPartitionKey(request);
+    const rowKey = this.extractRequestRowKey(request);
     const ifmatch: string = request.getHeader("if-match") || "*";
-    ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
 
     response = await this.parentHandler.updateEntity(
       request.getPath(),
@@ -534,9 +477,8 @@ export default class TableBatchOrchestrator {
     __return: string;
     response: any;
   }> {
-    let partitionKey: string;
-    let rowKey: string;
-    ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
+    const partitionKey = this.extractRequestPartitionKey(request);
+    const rowKey = this.extractRequestRowKey(request);
 
     const updatedContext = batchContextClone as TableStorageContext;
     updatedContext.batchId = batchId;
@@ -616,10 +558,9 @@ export default class TableBatchOrchestrator {
     updatedContext.request = request;
     updatedContext.batchId = batchId;
 
-    let partitionKey: string;
-    let rowKey: string;
+    const partitionKey = this.extractRequestPartitionKey(request);
+    const rowKey = this.extractRequestRowKey(request);
     const ifmatch: string = request.getHeader("if-match") || "*";
-    ({ partitionKey, rowKey } = this.extractRowAndPartitionKeys(request));
 
     response = await this.parentHandler.mergeEntity(
       request.getPath(),
@@ -639,5 +580,64 @@ export default class TableBatchOrchestrator {
       ),
       response
     };
+  }
+
+  /**
+   * extracts the Partition key from a request
+   *
+   * @private
+   * @param {BatchRequest} request
+   * @return {*}  {string}
+   * @memberof TableBatchOrchestrator
+   */
+  private extractRequestPartitionKey(request: BatchRequest): string {
+    let partitionKey: string;
+
+    const url = decodeURI(request.getUrl());
+    const partKeyMatch = url.match(/(?<=PartitionKey=')(.+)(?=',)/gi);
+    partitionKey = partKeyMatch ? partKeyMatch[0] : "";
+
+    if (partitionKey === "") {
+      // row key not in URL, must be in body
+      const body = request.getBody();
+      if (body !== "") {
+        const jsonBody = JSON.parse(body ? body : "{}");
+        partitionKey = jsonBody.PartitionKey;
+      }
+    } else {
+      // keys can have more complex values which are URI encoded
+      partitionKey = decodeURIComponent(partitionKey);
+    }
+    return partitionKey;
+  }
+
+  /**
+   * Helper function to extract values needed for handler calls
+   *
+   * @private
+   * @param {BatchRequest} request
+   * @return { string }
+   * @memberof TableBatchManager
+   */
+  private extractRequestRowKey(request: BatchRequest): string {
+    let rowKey: string;
+
+    const url = decodeURI(request.getUrl());
+
+    const rowKeyMatch = url.match(/(?<=RowKey=')(.+)(?='\))/gi);
+    rowKey = rowKeyMatch ? rowKeyMatch[0] : "";
+
+    if (rowKey === "") {
+      // row key not in URL, must be in body
+      const body = request.getBody();
+      if (body !== "") {
+        const jsonBody = JSON.parse(body ? body : "{}");
+        rowKey = jsonBody.RowKey;
+      }
+    } else {
+      // keys can have more complex values which are URI encoded
+      rowKey = decodeURIComponent(rowKey);
+    }
+    return rowKey;
   }
 }

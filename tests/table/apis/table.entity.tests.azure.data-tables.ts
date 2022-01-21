@@ -1,7 +1,7 @@
 // Tests in this file are using @azure/data-tables
 
 import * as assert from "assert";
-import LogicAppReproEntity from "./table.entity.test.logicapp.entity";
+import LogicAppReproEntity from "../models/table.entity.test.logicapp.entity";
 import { odata, TableEntity, TableTransaction } from "@azure/data-tables";
 import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
@@ -9,12 +9,12 @@ import { getUniqueName } from "../../testutils";
 import {
   AzureDataTablesTestEntity,
   createBasicEntityForTest
-} from "./AzureDataTablesTestEntity";
+} from "../models/AzureDataTablesTestEntity";
 import {
   createAzureDataTablesClient,
   createTableServerForTestHttps,
   createUniquePartitionKey
-} from "./table.entity.test.utils";
+} from "../utils/table.entity.test.utils";
 // Set true to enable debug log
 configLogger(false);
 // For convenience, we have a switch to control the use

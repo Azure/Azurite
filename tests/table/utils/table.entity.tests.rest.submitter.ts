@@ -2,7 +2,7 @@
 // body and headers from debug logs for resubmission and repro
 import axios, { AxiosResponse } from "axios";
 import { axiosRequestConfig } from "./table.entity.tests.utils.for.rest";
-import TableEntityTestConfig from "./table.entity.test.config";
+import TableEntityTestConfig from "../models/table.entity.test.config";
 import {
   AccountSasPermissions,
   AzureNamedKeyCredential,

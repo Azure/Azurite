@@ -14,8 +14,8 @@ import {
   createBasicEntityForTest,
   createConnectionStringForTest,
   createTableServerForTest
-} from "./table.entity.test.utils";
-import { TestEntity } from "./TestEntity";
+} from "../utils/table.entity.test.utils";
+import { TestEntity } from "../models/TestEntity";
 
 // Set true to enable debug log
 configLogger(false);

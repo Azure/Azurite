@@ -1,5 +1,5 @@
-import TableConfiguration from "../src/table/TableConfiguration";
-import TableServer from "../src/table/TableServer";
+import TableConfiguration from "../../../src/table/TableConfiguration";
+import TableServer from "../../../src/table/TableServer";
 
 export default class TableTestServerFactory {
   public createServer(

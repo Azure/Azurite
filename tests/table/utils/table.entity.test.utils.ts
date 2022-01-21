@@ -3,7 +3,7 @@ import {
   EMULATOR_ACCOUNT_NAME,
   getUniqueName
 } from "../../testutils";
-import { TestEntity } from "./TestEntity";
+import { TestEntity } from "../models/TestEntity";
 import TableServer from "../../../src/table/TableServer";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import { AzureNamedKeyCredential, TableClient } from "@azure/data-tables";
