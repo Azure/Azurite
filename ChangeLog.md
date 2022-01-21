@@ -4,9 +4,32 @@
 
 ## Upcoming Release
 
+General:
+
+- Ensure the storage location exists, and allow relative paths in the VSCode extension settings that are resolved based on the workspace folder.
+
+Queue:
+
+- Fixed issue that queue list result is not in alphabetical order.
+
+## 2021.10 Version 3.15.0
+
+General:
+
+- Bump up service API version to 2021-02-12
+- Fixed access to secondary location with IP style Uri from JS/.net SDK failure.
+- Fixed an issue in Visual Studio Code extension, by changing the Location with relative path, from base on Visual Studio Code installation path, to base on the current opened workspace folder.
+
 Blob:
 
 - Fixed start copy blob fail with `x-ms-access-tier` header and from Archive blob in same account.
+- Fixed issue that startCopyFromURL and copyFromURL API not respect `--disableProductStyleUrl` parameter in parse source Uri.
+
+Table:
+
+- Fixes issues with deleting entities using empty string for RowKey.
+- Fixes HTTP 500 causes by continuation token containing non-ASCII. Values are now encoded with base64.
+- Fixed a table sas test case failure.
 
 Table:
 

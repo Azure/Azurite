@@ -30,6 +30,12 @@ Just run blob service:
 docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite azurite-blob --blobHost 0.0.0.0
 ```
 
+Run the image as a service (`-d` = deamon) named `azurite` and restart unless specifically stopped (this is useful when re-starting your development machine for example)
+
+```bash
+docker run --name azurite -d --restart unless-stopped -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite
+```
+
 **Run Azurite V3 docker image with customized persisted data location**
 
 ```bash

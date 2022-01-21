@@ -1,10 +1,8 @@
-import { access } from "fs";
-import { promisify } from "util";
+import { access, ensureDir } from "fs-extra";
+import { isAbsolute, resolve } from "path";
 import { window, workspace, WorkspaceFolder } from "vscode";
 
 import IEnvironment from "./IEnvironment";
-
-const accessAsync = promisify(access);
 
 export default class VSCEnvironment implements IEnvironment {
   private workspaceConfiguration = workspace.getConfiguration("azurite");
@@ -36,8 +34,8 @@ export default class VSCEnvironment implements IEnvironment {
   public async location(): Promise<string> {
     let location = this.workspaceConfiguration.get<string>("location");
 
-    // When location configuration is not provided, use current opened folder
-    if (location === undefined || location === "") {
+    // When location configuration is not provided (or is relative), use current opened folder
+    if (location === undefined || location === "" || !isAbsolute(location)) {
       if (
         workspace.workspaceFolders === undefined ||
         workspace.workspaceFolders.length === 0
@@ -64,10 +62,11 @@ export default class VSCEnvironment implements IEnvironment {
       } else {
         folder = workspace.workspaceFolders[0];
       }
-      location = folder.uri.fsPath;
+      location = resolve(folder.uri.fsPath, location ?? '');
     }
 
-    await accessAsync(location);
+    await ensureDir(location);
+    await access(location);
     return location;
   }
 

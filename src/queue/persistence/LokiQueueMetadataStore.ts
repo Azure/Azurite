@@ -226,6 +226,11 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
     const docs = coll
       .chain()
       .find(query)
+      .sort((obj1, obj2) => {
+        if (obj1.name === obj2.name) return 0;
+        if (obj1.name > obj2.name) return 1;
+        return -1;
+      })
       .limit(maxResults + 1)
       .data();
 

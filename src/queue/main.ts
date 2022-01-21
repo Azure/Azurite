@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-import { access } from "fs";
+import { access, ensureDir } from "fs-extra";
 import { dirname, join } from "path";
-import { promisify } from "util";
 
 import * as Logger from "../common/Logger";
 import QueueConfiguration from "./QueueConfiguration";
@@ -15,8 +14,6 @@ import {
 } from "./utils/constants";
 
 // tslint:disable:no-console
-
-const accessAsync = promisify(access);
 
 function shutdown(server: QueueServer) {
   const beforeCloseMessage = `Azurite Queue service is closing...`;
@@ -36,11 +33,13 @@ async function main() {
   const env = new QueueEnvironment();
 
   const location = await env.location();
-  await accessAsync(location);
+  await ensureDir(location);
+  await access(location);
 
   const debugFilePath = await env.debug();
   if (debugFilePath !== undefined) {
-    await accessAsync(dirname(debugFilePath!));
+    await ensureDir(dirname(debugFilePath!));
+    await access(dirname(debugFilePath!));
   }
 
   // Initialize server configuration

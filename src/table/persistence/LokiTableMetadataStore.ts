@@ -550,6 +550,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     const maxResults = queryOptions.top || QUERY_RESULT_MAX_NUM;
 
+    // Decode the nextPartitionKey and nextRowKey. This is necessary since non-ASCII characters can
+    // be in partition and row keys but should not be in headers.
+    const decodedNextPartitionKey = this.decodeContinuationHeader(nextPartitionKey)
+    const decodedNextRowKey = this.decodeContinuationHeader(nextRowKey)
+
     // .find using a segment filter is not filtering in the same way that the sorting function sorts
     // I think offset will cause more problems than it solves, as we will have to step and sort all
     // results here, so I am adding 2 additional predicates here to cover the cases with
@@ -558,15 +563,15 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       .chain()
       .where(queryWhere)
       .where((data: any) => {
-        if (nextPartitionKey !== undefined) {
-          if (data.PartitionKey > nextPartitionKey) {
+        if (decodedNextPartitionKey !== undefined) {
+          if (data.PartitionKey > decodedNextPartitionKey) {
             return true;
           }
         }
-        if (nextRowKey !== undefined) {
+        if (decodedNextRowKey !== undefined) {
           if (
-            data.RowKey >= nextRowKey &&
-            (data.PartitionKey === nextPartitionKey ||
+            data.RowKey >= decodedNextRowKey &&
+            (data.PartitionKey === decodedNextPartitionKey ||
               data.PartitionKey === undefined)
           ) {
             return true;
@@ -598,11 +603,23 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     if (result.length > maxResults) {
       const tail = result.pop();
-      nextPartitionKeyResponse = tail.PartitionKey;
-      nextRowKeyResponse = tail.RowKey;
+      nextPartitionKeyResponse = this.encodeContinuationHeader(tail.PartitionKey);
+      nextRowKeyResponse = this.encodeContinuationHeader(tail.RowKey);
     }
 
     return [result, nextPartitionKeyResponse, nextRowKeyResponse];
+  }
+
+  private decodeContinuationHeader(input?: string) {
+    if (input !== undefined) {
+      return Buffer.from(input, 'base64').toString('utf8')
+    }
+  }
+
+  private encodeContinuationHeader(input?: string) {
+    if (input !== undefined) {
+      return Buffer.from(input, 'utf8').toString('base64')
+    }
   }
 
   public async queryTableEntitiesWithPartitionAndRowKey(
