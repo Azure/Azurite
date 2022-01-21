@@ -2,10 +2,10 @@ import { TableClient } from "@azure/data-tables";
 
 import * as assert from "assert";
 
-import { configLogger } from "../../src/common/Logger";
-import TableTestServerFactory from "./utils/TableTestServerFactory";
-import { generateJWTToken, getUniqueName } from "../testutils";
-import { SimpleTokenCredential } from "../simpleTokenCredential";
+import { configLogger } from "../../../src/common/Logger";
+import TableTestServerFactory from "../utils/TableTestServerFactory";
+import { generateJWTToken, getUniqueName } from "../../testutils";
+import { SimpleTokenCredential } from "../../simpleTokenCredential";
 
 // Set true to enable debug log
 configLogger(false);

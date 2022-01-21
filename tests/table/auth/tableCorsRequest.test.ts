@@ -1,20 +1,20 @@
 import * as assert from "assert";
 import { TableServiceClient } from "@azure/data-tables";
 import { AzureNamedKeyCredential } from "@azure/core-auth";
-import { configLogger } from "../../src/common/Logger";
-import TableServer from "../../src/table/TableServer";
+import { configLogger } from "../../../src/common/Logger";
+import TableServer from "../../../src/table/TableServer";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   sleep
-} from "../testutils";
+} from "../../testutils";
 import {
   createTableServerForTestHttps,
   HOST,
   PORT
-} from "./utils/table.entity.test.utils";
-import OPTIONSRequestPolicy from "./RequestPolicy/OPTIONSRequestPolicy";
-import OriginPolicy from "./RequestPolicy/OriginPolicy";
+} from "../utils/table.entity.test.utils";
+import OPTIONSRequestPolicy from "../RequestPolicy/OPTIONSRequestPolicy";
+import OriginPolicy from "../RequestPolicy/OriginPolicy";
 
 // Set true to enable debug log
 configLogger(false);
@@ -373,7 +373,6 @@ describe("table Entity APIs test", () => {
 
     serviceClientForOPTIONS.pipeline.addPolicy(customPolicy);
 
-    error;
     try {
       await serviceClientForOPTIONS.getProperties();
     } catch (err: any) {

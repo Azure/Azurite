@@ -1,16 +1,16 @@
 import * as assert from "assert";
 
 import * as Azure from "azure-storage";
-import { configLogger } from "../../src/common/Logger";
-import { TableSASPermission } from "../../src/table/authentication/TableSASPermissions";
-import StorageError from "../../src/table/errors/StorageError";
-import TableServer from "../../src/table/TableServer";
-import TableTestServerFactory from "./utils/TableTestServerFactory";
+import { configLogger } from "../../../src/common/Logger";
+import { TableSASPermission } from "../../../src/table/authentication/TableSASPermissions";
+import StorageError from "../../../src/table/errors/StorageError";
+import TableServer from "../../../src/table/TableServer";
+import TableTestServerFactory from "../utils/TableTestServerFactory";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   getUniqueName
-} from "../testutils";
+} from "../../testutils";
 
 // Set true to enable debug log
 configLogger(false);
