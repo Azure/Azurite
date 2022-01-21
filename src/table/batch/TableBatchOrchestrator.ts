@@ -64,7 +64,7 @@ export default class TableBatchOrchestrator {
         this.context.xMsRequestID
       );
     } else {
-      await this.submitRequestsToHandlers(metadataStore, this.context);
+      await this.submitRequestsToHandlers(metadataStore);
     }
     return this.serializeResponses();
   }
@@ -78,8 +78,7 @@ export default class TableBatchOrchestrator {
    * @memberof TableBatchManager
    */
   private async submitRequestsToHandlers(
-    metadataStore: ITableMetadataStore,
-    context: TableStorageContext
+    metadataStore: ITableMetadataStore
   ): Promise<void> {
     this.batchOperations.forEach((operation) => {
       const request: BatchRequest = new BatchRequest(operation);
@@ -91,7 +90,7 @@ export default class TableBatchOrchestrator {
       // TO DO: the way used to get accountName, tableName, and partition key
       // may not work if incoming request is not compliant with the right format
       const reqUrl = this.requests[0].getUrl();
-      const accountName = reqUrl.split("/")[3];
+      const accountName = (this.context.account ??= "");
       const tableName = this.requests[0].getPath();
       const batchId = uuidv4();
 
@@ -154,7 +153,7 @@ export default class TableBatchOrchestrator {
         accountName,
         tableName,
         batchId,
-        context,
+        this.context,
         batchSuccess
       );
     }

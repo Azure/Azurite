@@ -26,11 +26,11 @@ The following list of features and behavior will serve as a checklist for testin
 - the batch request returns status code 202 (Accepted), even if one of the operations in the change set fails.
 - If the batch request itself fails, it fails before any operation in the change set is executed. (done for max operations, other cases will be addressed as they come up)
 - all operations in the change set either succeed or fail.
+- All entities in a batch must have the same PartitionKey value.
 
 ### ToDo / Validate with test cases:
 
 - Check if we need to observe other odata formats for errors
-- All entities in a batch must have the same PartitionKey value.
 - An entity can appear only once in a batch, and only one operation may be performed against it.
   - Requires that we check both partition key and row key (as an entity key is made up of both)
 - its total payload may be no more than 4 MiB in size.
