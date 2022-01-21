@@ -251,9 +251,13 @@ describe("Shared Access Signature (SAS) authentication", () => {
         assert.ifError(error);
       }
 
-      const sas = tableService.generateSharedAccessSignature(tableName, { Id: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=",
-        AccessPolicy: { Permissions: "raud", Expiry: tmr,
-        Start: new Date("2017-12-31T11:22:33.4567890Z") }
+      const sas = tableService.generateSharedAccessSignature(tableName, {
+        Id: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=",
+        AccessPolicy: {
+          Permissions: "raud",
+          Expiry: tmr,
+          Start: new Date("2017-12-31T11:22:33.4567890Z")
+        }
       });
 
       const sasService = Azure.createTableServiceWithSas(baseURL, sas);
@@ -263,7 +267,6 @@ describe("Shared Access Signature (SAS) authentication", () => {
         RowKey: "row1",
         myValue: "value1"
       };
-
 
       // tslint:disable-next-line: no-shadowed-variable
       sasService.insertEntity(tableName, entity, (error) => {
@@ -301,23 +304,31 @@ describe("Shared Access Signature (SAS) authentication", () => {
     });
   });
 
-  it("Update an Entity that does not exist, @loki", (done) => {
+  it("Updates an Entity that does not exist, @loki", (done) => {
     const sasService = getSasService({
       Permissions: TableSASPermission.Update,
       ...sasPeriod(0, 5)
     });
 
+    // this upserts, so we expect success
     sasService.replaceEntity(
       tableName,
       { PartitionKey: "part1", RowKey: "row4", myValue: "newValue" },
       (updateError, updateResult, updateResponse) => {
-        const castUpdateStatusCode = (updateError as StorageError).statusCode;
         if (updateError) {
-          assert.equal(castUpdateStatusCode, 404);
-          done();
+          const castUpdateStatusCode = (updateError as StorageError).statusCode;
+          assert.fail(
+            "Test failed and had HTTP error : " + castUpdateStatusCode
+          );
         } else {
-          assert.fail("Test failed to throw the right Error" + updateError);
+          assert.strictEqual(
+            updateResponse.statusCode,
+            204,
+            "We did not get the expected status code : " +
+              updateResponse.statusCode
+          );
         }
+        done();
       }
     );
   });

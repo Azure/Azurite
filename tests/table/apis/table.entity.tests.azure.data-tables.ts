@@ -110,7 +110,6 @@ describe("table Entity APIs test", () => {
     transaction.createEntity(batchEntity1);
     transaction.createEntity(batchEntity2);
     transaction.updateEntity(updatedEntity, "Replace");
-
     const result = await tableClient.submitTransaction(transaction.actions);
 
     // batch operations succeeded
