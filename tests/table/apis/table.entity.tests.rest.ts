@@ -79,9 +79,7 @@ describe("table Entity APIs test", () => {
       "x-ms-client-request-id": "127b472c-6db3-4de7-bdb7-4947314e77c0",
       accept: "application/json;odata=nometadata",
       "content-type":
-        "multipart/mixed; boundary=batch_4689afd3-e4e1-4966-9aeb-2bdb8d16cba7",
-      host: "127.0.0.1:10002",
-      "content-length": "6803"
+        "multipart/mixed; boundary=batch_4689afd3-e4e1-4966-9aeb-2bdb8d16cba7"
     };
     const request1Result = await postToAzurite(
       "$batch",
@@ -97,8 +95,7 @@ describe("table Entity APIs test", () => {
         "user-agent": "ResourceStack/6.0.0.1260",
         "x-ms-version": "2018-03-28",
         "x-ms-client-request-id": "7bbeb6b2-a1c7-4fed-8a3c-80f6b3e7db8c",
-        accept: "application/json;odata=minimalmetadata",
-        host: "127.0.0.1:10002"
+        accept: "application/json;odata=minimalmetadata"
       }
     );
     assert.strictEqual(request2Result.status, 200);
@@ -109,8 +106,7 @@ describe("table Entity APIs test", () => {
         "user-agent": "ResourceStack/6.0.0.1260",
         "x-ms-version": "2018-03-28",
         "x-ms-client-request-id": "41eb727e-1f85-4f53-b4e1-2df2628b2903",
-        accept: "application/json;odata=minimalmetadata",
-        host: "127.0.0.1:10002"
+        accept: "application/json;odata=minimalmetadata"
       }
     );
     assert.strictEqual(request3Result.status, 200);
@@ -127,9 +123,7 @@ describe("table Entity APIs test", () => {
         "x-ms-client-request-id": "f2503371-15c7-4314-9803-81ea69f1ca72",
         accept: "application/json;odata=nometadata",
         "content-type":
-          "multipart/mixed; boundary=batch_3e8c6583-146e-4326-835f-5f7321fc6711",
-        host: "127.0.0.1:10002",
-        "content-length": "6865"
+          "multipart/mixed; boundary=batch_3e8c6583-146e-4326-835f-5f7321fc6711"
       }
     );
     // we submitted the batch OK
@@ -141,8 +135,7 @@ describe("table Entity APIs test", () => {
         "user-agent": "ResourceStack/6.0.0.1260",
         "x-ms-version": "2018-03-28",
         "x-ms-client-request-id": "ceceedd3-4d7c-450f-a738-b83b21788d42",
-        accept: "application/json;odata=minimalmetadata",
-        host: "127.0.0.1:10002"
+        accept: "application/json;odata=minimalmetadata"
       }
     );
     assert.strictEqual(request5Result.status, 200);
@@ -153,8 +146,7 @@ describe("table Entity APIs test", () => {
         "user-agent": "ResourceStack/6.0.0.1260",
         "x-ms-version": "2018-03-28",
         "x-ms-client-request-id": "ceceedd3-4d7c-450f-a738-b83b21788d42",
-        accept: "application/json;odata=minimalmetadata",
-        host: "127.0.0.1:10002"
+        accept: "application/json;odata=minimalmetadata"
       }
     );
     assert.strictEqual(request6Result.status, 200);
@@ -170,8 +162,7 @@ describe("table Entity APIs test", () => {
         "user-agent": "ResourceStack/6.0.0.1260",
         "x-ms-version": "2018-03-28",
         "x-ms-client-request-id": "00000000-4d7c-450f-a738-b83b21788d42",
-        accept: "application/json;odata=minimalmetadata",
-        host: "127.0.0.1:10002"
+        accept: "application/json;odata=minimalmetadata"
       }
     );
     assert.strictEqual(requestTestFlowResult.status, 200);
@@ -186,8 +177,7 @@ describe("table Entity APIs test", () => {
         "user-agent": "ResourceStack/6.0.0.1260",
         "x-ms-version": "2018-03-28",
         "x-ms-client-request-id": "00000001-4d7c-450f-a738-b83b21788d42",
-        accept: "application/json;odata=minimalmetadata",
-        host: "127.0.0.1:10002"
+        accept: "application/json;odata=minimalmetadata"
       }
     );
     assert.strictEqual(request6Result.status, 200);
@@ -214,9 +204,7 @@ describe("table Entity APIs test", () => {
         "x-ms-client-request-id": "41aef06f-9443-497e-b192-216ae988549b",
         "content-type":
           "multipart/mixed; boundary=batch_558d985f-491c-496d-b4a2-311c3e1e075d",
-        accept: "application/json;odata=nometadata",
-        host: "127.0.0.1:10002",
-        "content-length": "1120"
+        accept: "application/json;odata=nometadata"
       }
     );
     // we submitted the batch OK
@@ -230,8 +218,7 @@ describe("table Entity APIs test", () => {
         "user-agent": "ResourceStack/6.0.0.1260",
         "x-ms-version": "2018-03-28",
         "x-ms-client-request-id": "00000002-4d7c-450f-a738-b83b21788d42",
-        accept: "application/json;odata=minimalmetadata",
-        host: "127.0.0.1:10002"
+        accept: "application/json;odata=minimalmetadata"
       }
     ).catch((getErr) => {
       assert.strictEqual(getErr.response.status, 404);
@@ -272,8 +259,11 @@ describe("table Entity APIs test", () => {
     );
 
     assert.strictEqual(patchRequestResult.status, 202);
-    const weMerged = patchRequestResult.data.match("HTTP/1.1 204 No Content")
-      .length;
+    // we expect this to fail, as our batch request specifies the etag
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/merge-entity
+    const weMerged = patchRequestResult.data.match(
+      "HTTP/1.1 404 Not Found"
+    ).length;
     assert.strictEqual(weMerged, 1);
   });
 });

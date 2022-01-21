@@ -254,7 +254,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     account: string,
     entity: Entity,
-    batchID?: string
+    batchId?: string
   ): Promise<Entity> {
     const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
     const tableDocument = tablesCollection.findOne({
@@ -283,7 +283,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     entity.properties.Timestamp = getTimestampString(entity.lastModifiedTime);
     entity.properties["Timestamp@odata.type"] = "Edm.DateTime";
 
-    if (batchID) {
+    if (batchId !== "" && batchId !== undefined) {
       this.transactionDeleteTheseEntities.push(entity);
     }
     tableEntityCollection.insert(entity);
@@ -296,7 +296,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     account: string,
     entity: Entity,
     ifMatch?: string,
-    batchID?: string
+    batchId?: string
   ): Promise<Entity> {
     if (ifMatch === undefined || ifMatch === "*") {
       // Upsert
@@ -307,7 +307,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           account,
           entity.PartitionKey,
           entity.RowKey,
-          batchID
+          batchId
         );
 
       if (existingEntity) {
@@ -318,11 +318,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           account,
           entity,
           ifMatch,
-          batchID
+          batchId
         );
       } else {
         // Insert
-        return this.insertTableEntity(context, table, account, entity, batchID);
+        return this.insertTableEntity(context, table, account, entity, batchId);
       }
     } else {
       // Update
@@ -332,7 +332,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         account,
         entity,
         ifMatch,
-        batchID
+        batchId
       );
     }
 
@@ -383,7 +383,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     account: string,
     entity: Entity,
     ifMatch?: string,
-    batchID?: string
+    batchId?: string
   ): Promise<Entity> {
     if (ifMatch === undefined || ifMatch === "*") {
       // Upsert
@@ -404,11 +404,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           account,
           entity,
           ifMatch,
-          batchID
+          batchId
         );
       } else {
         // Insert
-        return this.insertTableEntity(context, table, account, entity, batchID);
+        return this.insertTableEntity(context, table, account, entity, batchId);
       }
     } else {
       // Merge
@@ -418,7 +418,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         account,
         entity,
         ifMatch,
-        batchID
+        batchId
       );
     }
 
@@ -475,7 +475,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     partitionKey: string,
     rowKey: string,
     etag: string,
-    batchID?: string
+    batchId: string
   ): Promise<void> {
     const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
     const tableDocument = tablesCollection.findOne({
@@ -506,7 +506,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           throw StorageErrorFactory.getPreconditionFailed(context);
         }
       }
-      if (batchID) {
+      if (batchId !== "") {
         this.transactionRollbackTheseEntities.push(doc);
       }
       tableEntityCollection.remove(doc);
@@ -523,7 +523,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     queryOptions: Models.QueryOptions,
     nextPartitionKey?: string,
     nextRowKey?: string,
-    batchID?: string
+    batchId?: string
   ): Promise<[Entity[], string | undefined, string | undefined]> {
     const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
     const tableDocument = tablesCollection.findOne({
@@ -611,7 +611,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     account: string,
     partitionKey: string,
     rowKey: string,
-    batchID?: string
+    batchId?: string
   ): Promise<Entity | undefined> {
     const tableColl = this.db.getCollection(
       this.getTableCollectionName(account, table)
@@ -653,7 +653,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     account: string,
     entity: Entity,
     ifMatch?: string,
-    batchID?: string
+    batchId?: string
   ): Promise<Entity> {
     const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
     const tableDocument = tablesCollection.findOne({
@@ -679,7 +679,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     if (!doc) {
       throw StorageErrorFactory.getEntityNotFound(context);
     }
-    if (batchID) {
+    if (batchId !== "") {
       this.transactionRollbackTheseEntities.push(doc);
     }
 
@@ -712,7 +712,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     account: string,
     entity: Entity,
     ifMatch?: string,
-    batchID?: string
+    batchId?: string
   ): Promise<Entity> {
     const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
     const tableDocument = tablesCollection.findOne({
@@ -738,7 +738,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     if (!doc) {
       throw StorageErrorFactory.getEntityNotFound(context);
     }
-    if (batchID) {
+    if (batchId !== "") {
       this.transactionRollbackTheseEntities.push(doc);
     }
 
@@ -1124,10 +1124,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
   }
 
-  public async beginBatchTransaction(batchID: string): Promise<void> {
+  public async beginBatchTransaction(batchId: string): Promise<void> {
     // instead of copying all entities / rows in the collection,
     // we shall just backup those rows that we change
-    // Keeping the batchID in the interface to allow logging scenarios to extend
+    // Keeping the batchId in the interface to allow logging scenarios to extend
     if (
       this.transactionRollbackTheseEntities.length > 0 ||
       this.transactionDeleteTheseEntities.length > 0
@@ -1139,7 +1139,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   public async endBatchTransaction(
     account: string,
     table: string,
-    batchID: string,
+    batchId: string,
     context: Context,
     succeeded: boolean
   ): Promise<void> {

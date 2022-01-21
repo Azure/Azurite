@@ -170,8 +170,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   public async insertEntity(
     _tableName: string,
     options: Models.TableInsertEntityOptionalParams,
-    context: Context,
-    batchID?: string
+    context: Context
   ): Promise<Models.TableInsertEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
@@ -217,7 +216,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       table,
       account,
       entity,
-      batchID
+      context.batchId
     );
 
     const response: Models.TableInsertEntityResponse = {
@@ -282,8 +281,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     partitionKey: string,
     rowKey: string,
     options: Models.TableUpdateEntityOptionalParams,
-    context: Context,
-    batchID?: string
+    context: Context
   ): Promise<Models.TableUpdateEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
@@ -346,7 +344,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       account,
       entity,
       ifMatch,
-      batchID
+      context.batchId
     );
 
     // Response definition
@@ -367,8 +365,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     partitionKey: string,
     rowKey: string,
     options: Models.TableMergeEntityOptionalParams,
-    context: Context,
-    batchID?: string
+    context: Context
   ): Promise<Models.TableMergeEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
@@ -422,7 +419,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       account,
       entity,
       options.ifMatch,
-      batchID
+      context.batchId
     );
 
     const response: Models.TableMergeEntityResponse = {
@@ -443,8 +440,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     rowKey: string,
     ifMatch: string,
     options: Models.TableDeleteEntityOptionalParams,
-    context: Context,
-    batchID?: string
+    context: Context
   ): Promise<Models.TableDeleteEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const accountName = tableContext.account;
@@ -469,7 +465,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       partitionKey,
       rowKey,
       ifMatch,
-      batchID
+      context.batchId
     );
 
     return {
@@ -484,8 +480,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   public async queryEntities(
     _table: string,
     options: Models.TableQueryEntitiesOptionalParams,
-    context: Context,
-    batchID?: string
+    context: Context
   ): Promise<Models.TableQueryEntitiesResponse> {
     const tableContext = new TableStorageContext(context);
     const table = this.getAndCheckTableName(tableContext);
@@ -500,7 +495,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         options.queryOptions || {},
         options.nextPartitionKey,
         options.nextRowKey,
-        batchID
+        context.batchId
       );
 
     const response: Models.TableQueryEntitiesResponse = {
@@ -589,8 +584,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     partitionKey: string,
     rowKey: string,
     options: Models.TableQueryEntitiesWithPartitionAndRowKeyOptionalParams,
-    context: Context,
-    batchID?: string
+    context: Context
   ): Promise<Models.TableQueryEntitiesWithPartitionAndRowKeyResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
@@ -606,7 +600,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         account,
         partitionKey,
         rowKey,
-        batchID
+        context.batchId
       );
 
     if (entity === undefined || entity === null) {

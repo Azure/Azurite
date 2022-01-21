@@ -16,7 +16,7 @@ export interface IHandlerParameters {
 export default class Context {
   public readonly context: any;
   public readonly path: string;
-
+  private batchID: string = "";
   /**
    * Creates an instance of Context.
    * Context holds generated server context information.
@@ -64,9 +64,7 @@ export default class Context {
 
       if (typeof context[this.path] !== "object") {
         throw new TypeError(
-          `Initialize Context error because holder.${
-            this.path
-          } is not an object.`
+          `Initialize Context error because holder.${this.path} is not an object.`
         );
       }
 
@@ -140,5 +138,14 @@ export default class Context {
 
   public get startTime(): Date | undefined {
     return this.context.startTime;
+  }
+
+  // used for entity group transactions / batch processing
+  public set batchId(id: string) {
+    this.batchID = id;
+  }
+
+  public get batchId(): string {
+    return this.batchID;
   }
 }
