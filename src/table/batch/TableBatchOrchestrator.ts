@@ -9,13 +9,10 @@ import BatchTableDeleteEntityOptionalParams from "./BatchTableDeleteEntityOption
 import BatchTableUpdateEntityOptionalParams from "./BatchTableUpdateEntityOptionalParams";
 import BatchTableMergeEntityOptionalParams from "./BatchTableMergeEntityOptionalParams";
 import BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams from "./BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams";
-import {
-  TableQueryEntitiesOptionalParams,
-  TableQueryEntitiesWithPartitionAndRowKeyOptionalParams
-} from "../generated/artifacts/models";
-import BatchTableQueryEntitiesOptionalParams from "./BatchTableQueryEntitiesOptionalParams";
+import { TableQueryEntitiesWithPartitionAndRowKeyOptionalParams } from "../generated/artifacts/models";
 import ITableMetadataStore from "../persistence/ITableMetadataStore";
 import { v4 as uuidv4 } from "uuid";
+import StorageErrorFactory from "../errors/StorageErrorFactory";
 
 /**
  * Currently there is a single distinct and concrete implementation of batch /
@@ -255,7 +252,6 @@ export default class TableBatchOrchestrator {
         case "GET":
           // QUERY : we are querying / retrieving an entity
           // GET	https://myaccount.table.core.windows.net/mytable(PartitionKey='<partition-key>',RowKey='<row-key>')?$select=<comma-separated-property-names>
-          // GET https://myaccount.table.core.windows.net/mytable()?$filter=<query-expression>&$select=<comma-separated-property-names>
           ({ __return, response } = await this.handleBatchQuery(
             request,
             response,
@@ -477,6 +473,7 @@ export default class TableBatchOrchestrator {
     __return: string;
     response: any;
   }> {
+    // need to validate that query is the only request in the batch!
     const partitionKey = this.extractRequestPartitionKey(request);
     const rowKey = this.extractRequestRowKey(request);
 
@@ -511,21 +508,7 @@ export default class TableBatchOrchestrator {
         response
       };
     } else {
-      request.ingestOptionalParams(new BatchTableQueryEntitiesOptionalParams());
-      updatedContext.request = request;
-      response = await this.parentHandler.queryEntities(
-        request.getPath(),
-        request.params as TableQueryEntitiesOptionalParams,
-        updatedContext
-      );
-      return {
-        __return:
-          await this.serialization.serializeTableQueryEntityBatchResponse(
-            request,
-            response
-          ),
-        response
-      };
+      throw StorageErrorFactory.getNotImplementedError(batchContextClone);
     }
   }
 

@@ -67,8 +67,7 @@ export default interface ITableMetadataStore {
     table: string,
     queryOptions: Models.QueryOptions,
     nextPartitionKey?: string,
-    nextRowKey?: string,
-    batchID?: string
+    nextRowKey?: string
   ): Promise<[Entity[], string | undefined, string | undefined]>;
   queryTableEntitiesWithPartitionAndRowKey(
     context: Context,

@@ -494,8 +494,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         table,
         options.queryOptions || {},
         options.nextPartitionKey,
-        options.nextRowKey,
-        context.batchId
+        options.nextRowKey
       );
 
     const response: Models.TableQueryEntitiesResponse = {

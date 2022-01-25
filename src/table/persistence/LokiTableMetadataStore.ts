@@ -522,8 +522,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     queryOptions: Models.QueryOptions,
     nextPartitionKey?: string,
-    nextRowKey?: string,
-    batchId?: string
+    nextRowKey?: string
   ): Promise<[Entity[], string | undefined, string | undefined]> {
     const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
     const tableDocument = tablesCollection.findOne({
