@@ -480,7 +480,12 @@ export default class TableBatchOrchestrator {
     const updatedContext = batchContextClone as TableStorageContext;
     updatedContext.batchId = batchId;
 
-    if (null !== partitionKey && null != rowKey) {
+    if (
+      null !== partitionKey &&
+      null !== rowKey &&
+      partitionKey !== "" &&
+      rowKey !== ""
+    ) {
       // ToDo: this is hideous... but we need the params on the request object,
       // as they percolate through and are needed for the final serialization
       // currently, because of the way we deconstruct / deserialize, we only
