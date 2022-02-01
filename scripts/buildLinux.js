@@ -26,8 +26,8 @@ async function build() {
 
   await asyncRename(cacheLinux, newName);
 
-  const outputExe = path.resolve('./release/azuritelinux');
-  await pkg.exec([path.resolve('.'), ...['--target', pkgTarget], ...['--output', outputExe], ...['-C', 'Brotli']]);
+  const outputBinary = path.resolve('./release/azuritelinux');
+  await pkg.exec([path.resolve('.'), ...['--target', pkgTarget], ...['--output', outputBinary], ...['-C', 'Brotli']]);
 }
 
 async function downloadCache(pkgTarget) {

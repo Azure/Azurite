@@ -24,9 +24,9 @@ import {
   restoreBuildRequestOptions
 } from './testutils';
 
-// server address used for testing. Note that Azurite.exe has 
+// server address used for testing. Note that Azuritelinux has 
 // server address of http://127.0.0.1:10000 and so on by default 
-// and we need to configure them when starting azurite.exe
+// and we need to configure them when starting azuritelinux
 const blobAddress = "http://127.0.0.1:11000";
 const queueAddress = "http://127.0.0.1:11001";
 const tableAddress = "http://127.0.0.1:11002";
