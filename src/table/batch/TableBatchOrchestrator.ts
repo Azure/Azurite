@@ -327,7 +327,7 @@ export default class TableBatchOrchestrator {
     response: any;
   }> {
     request.ingestOptionalParams(new BatchTableInsertEntityOptionalParams());
-    const updatedContext = batchContextClone as TableStorageContext;
+    const updatedContext = new TableStorageContext(batchContextClone);
     updatedContext.request = request;
     updatedContext.batchId = batchId;
     response = await this.parentHandler.insertEntity(

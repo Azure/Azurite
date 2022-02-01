@@ -16,7 +16,7 @@ export interface IHandlerParameters {
 export default class Context {
   public readonly context: any;
   public readonly path: string;
-  private batchID: string = "";
+
   /**
    * Creates an instance of Context.
    * Context holds generated server context information.
@@ -138,14 +138,5 @@ export default class Context {
 
   public get startTime(): Date | undefined {
     return this.context.startTime;
-  }
-
-  // used for entity group transactions / batch processing
-  public set batchId(id: string) {
-    this.batchID = id;
-  }
-
-  public get batchId(): string {
-    return this.batchID;
   }
 }

@@ -172,7 +172,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableInsertEntityOptionalParams,
     context: Context
   ): Promise<Models.TableInsertEntityResponse> {
-    const tableContext = new TableStorageContext(context);
+    const tableContext = new TableStorageContext(context); // this.createTableContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
     const accept = this.getAndCheckPayloadFormat(tableContext);
@@ -216,7 +216,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       table,
       account,
       entity,
-      context.batchId
+      tableContext.batchId
     );
 
     const response: Models.TableInsertEntityResponse = {
@@ -344,7 +344,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       account,
       entity,
       ifMatch,
-      context.batchId
+      tableContext.batchId
     );
 
     // Response definition
@@ -419,7 +419,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       account,
       entity,
       options.ifMatch,
-      context.batchId
+      tableContext.batchId
     );
 
     const response: Models.TableMergeEntityResponse = {
@@ -465,7 +465,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       partitionKey,
       rowKey,
       ifMatch,
-      context.batchId
+      tableContext.batchId
     );
 
     return {
@@ -599,7 +599,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         account,
         partitionKey,
         rowKey,
-        context.batchId
+        tableContext.batchId
       );
 
     if (entity === undefined || entity === null) {
