@@ -378,4 +378,24 @@ describe("table APIs test", () => {
       });
     });
   });
+
+  it("should respond to get table properties @loki", (done) => {
+    tableName = getUniqueName("getProperties");
+    tableService.createTable(tableName, (error) => {
+      if (error) {
+        assert.ifError(error);
+      }
+      tableService.getServiceProperties((getPropsError, getPropsResult) => {
+        if (getPropsError) {
+          assert.ifError(getPropsError);
+        }
+        assert.strictEqual(
+          getPropsResult.Logging?.Version,
+          "1.0",
+          `value "${getPropsResult.Logging?.Version}" is not the expected MetaData for Logging Version`
+        );
+        done();
+      });
+    });
+  });
 });
