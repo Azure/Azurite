@@ -26,7 +26,7 @@ configLogger(false);
 // Azure Storage Connection String (using SAS or Key).
 const testLocalAzuriteInstance = true;
 
-describe("table Entity APIs test", () => {
+describe("table Entity APIs test - using Azure-Storage", () => {
   let server: TableServer;
   const tableService = Azure.createTableService(
     createConnectionStringForTest(testLocalAzuriteInstance)

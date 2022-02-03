@@ -3,11 +3,21 @@ import { IEdmType } from "./IEdmType";
 
 export class EdmInt32 implements IEdmType {
   public static validate(value: any): number {
+    if (typeof value === "string") {
+      // we need to check for non-digits other than - in the int string
+      // as parseInt will just return the first number it finds
+      if (value.toLocaleString().match(/^[+-]?\d+$/)?.length !== 1) {
+        throw TypeError(`Not a valid integer.`);
+      }
+      const intval = parseInt(value);
+      if (intval === NaN) {
+        throw TypeError(`Not a valid EdmInt32 string.`);
+      }
+      return intval;
+    }
     if (typeof value !== "number") {
       throw TypeError(`Not a valid EdmInt32 string.`);
     }
-
-    // TODO: Check not an integer
 
     return value;
   }

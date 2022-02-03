@@ -15,6 +15,7 @@ import {
   createTableServerForTestHttps,
   createUniquePartitionKey
 } from "../utils/table.entity.test.utils";
+import { TestBooleanPropEntity } from "../models/TestBooleanPropEntity";
 // Set true to enable debug log
 configLogger(false);
 // For convenience, we have a switch to control the use
@@ -24,7 +25,7 @@ configLogger(false);
 // Azure Storage Connection String (using SAS or Key).
 const testLocalAzuriteInstance = true;
 
-describe("table Entity APIs test", () => {
+describe("table Entity APIs test - using Azure/data-tables", () => {
   let server: TableServer;
 
   const requestOverride = { headers: {} };
@@ -692,5 +693,140 @@ describe("table Entity APIs test", () => {
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
     await tableClient.deleteTable();
+  });
+
+  it("Should respect Boolean property as edm string, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("issue1259")
+    );
+    await tableClient.createTable();
+
+    try {
+      // Testing based on repro given in issue #1259
+      const entity1259a = new TestBooleanPropEntity();
+      const result1259a = await tableClient.createEntity<TestBooleanPropEntity>(
+        entity1259a
+      );
+
+      assert.notStrictEqual(
+        result1259a.etag,
+        undefined,
+        "Did not create entity correctly, etag weas null"
+      );
+
+      const check1259a = await tableClient.getEntity<TestBooleanPropEntity>(
+        entity1259a.partitionKey,
+        entity1259a.rowKey
+      );
+
+      assert.strictEqual(
+        check1259a.prop,
+        false,
+        "Prop was not correctly set to false"
+      );
+
+      const entity1259b = new TestBooleanPropEntity();
+      entity1259b.rowKey = "000b";
+      entity1259b.prop.value = "true";
+      const result1259b = await tableClient.createEntity<TestBooleanPropEntity>(
+        entity1259b
+      );
+
+      assert.notStrictEqual(
+        result1259b.etag,
+        undefined,
+        "Did not create entity correctly, etag was null"
+      );
+
+      const check1259b = await tableClient.getEntity<TestBooleanPropEntity>(
+        entity1259b.partitionKey,
+        entity1259b.rowKey
+      );
+
+      assert.strictEqual(
+        check1259b.prop,
+        true,
+        "Prop was not correctly set to true"
+      );
+    } catch (err1259b) {
+      assert.ifError(err1259b);
+    }
+  });
+
+  it("Should respect Int32 property as edm string, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("issue1259")
+    );
+    await tableClient.createTable();
+
+    try {
+      // Testing based on repro given in issue #1259
+      const entity1259a = new TestBooleanPropEntity();
+      const result1259a = await tableClient.createEntity<TestBooleanPropEntity>(
+        entity1259a
+      );
+
+      assert.notStrictEqual(
+        result1259a.etag,
+        undefined,
+        "Did not create entity correctly, etag weas null"
+      );
+
+      const check1259a = await tableClient.getEntity<TestBooleanPropEntity>(
+        entity1259a.partitionKey,
+        entity1259a.rowKey
+      );
+
+      assert.strictEqual(
+        check1259a.int32Prop,
+        32,
+        "Int32 Prop was not correctly set to 32"
+      );
+
+      const entity1259b = new TestBooleanPropEntity();
+      entity1259b.rowKey = "000b";
+      entity1259b.int32Prop.value = "-31";
+      const result1259b = await tableClient.createEntity<TestBooleanPropEntity>(
+        entity1259b
+      );
+
+      assert.notStrictEqual(
+        result1259b.etag,
+        undefined,
+        "Did not create entity correctly, etag was null"
+      );
+
+      const check1259b = await tableClient.getEntity<TestBooleanPropEntity>(
+        entity1259b.partitionKey,
+        entity1259b.rowKey
+      );
+
+      assert.strictEqual(
+        check1259b.int32Prop,
+        -31,
+        "Prop was not correctly set to -31"
+      );
+    } catch (err1259b) {
+      assert.ifError(err1259b);
+    }
+
+    try {
+      const entity1259c = new TestBooleanPropEntity();
+      entity1259c.rowKey = "000c";
+      entity1259c.int32Prop.value = "-3.1";
+      const result1259c = await tableClient.createEntity<TestBooleanPropEntity>(
+        entity1259c
+      );
+
+      assert.fail(`We should have thrown on ${result1259c}`);
+    } catch (err1259c: any) {
+      assert.strictEqual(
+        err1259c.response.status,
+        400,
+        "Expecting invalid input!"
+      );
+    }
   });
 });
