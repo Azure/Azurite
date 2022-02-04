@@ -9,7 +9,7 @@ export class EdmInt32 implements IEdmType {
       if (value.toLocaleString().match(/^[+-]?\d+$/)?.length !== 1) {
         throw TypeError(`Not a valid integer.`);
       }
-      const intval = parseInt(value);
+      const intval = parseInt(value, 10);
       if (isNaN(intval)) {
         throw TypeError(`Not a valid EdmInt32 string.`);
       }
