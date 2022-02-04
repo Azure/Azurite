@@ -10,7 +10,7 @@ export class EdmInt32 implements IEdmType {
         throw TypeError(`Not a valid integer.`);
       }
       const intval = parseInt(value);
-      if (intval === NaN) {
+      if (isNaN(intval)) {
         throw TypeError(`Not a valid EdmInt32 string.`);
       }
       return intval;
