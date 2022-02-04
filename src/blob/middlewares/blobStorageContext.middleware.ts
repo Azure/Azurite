@@ -52,6 +52,7 @@ export function blobStorageContextMiddleware(
 
   const blobContext = new BlobStorageContext(res.locals, DEFAULT_CONTEXT_PATH);
   blobContext.startTime = new Date();
+  blobContext.disableProductStyleUrl = disableProductStyleUrl;
 
   blobContext.xMsRequestID = requestID;
 
