@@ -891,7 +891,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       } else if (query[i] === "(" || query[i] === ")") {
         if (
           (i !== 0 &&
-            (query[i - 1].match(/\d/) !== null ||
+            (query[i - 1].match(/\S/) !== null ||
               (i >= 5 && query.slice(i - 5, i) === " true") ||
               (i >= 6 && query.slice(i - 6, i) === " false"))) ||
           query.substring(tokenStart, i).match(/\b[0-9]+L\b/g) != null

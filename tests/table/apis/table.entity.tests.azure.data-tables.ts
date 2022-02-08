@@ -380,6 +380,18 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) && (number lt 12) && (Timestamp lt datetime'${newTimeStamp}')`
         },
         expectedResult: 10
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})&& (number lt 12) &&(Timestamp lt datetime'${newTimeStamp}')`
+        },
+        expectedResult: 10
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})&&(number lt 12)and(Timestamp lt datetime'${newTimeStamp}')`
+        },
+        expectedResult: 10
       }
     ];
 
@@ -398,7 +410,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       assert.strictEqual(all.length, queryTest.expectedResult);
       testsCompleted++;
     }
-    assert.strictEqual(testsCompleted, 5);
+    assert.strictEqual(testsCompleted, 7);
     await tableClient.deleteTable();
   });
 
@@ -428,13 +440,31 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     const queriesAndExpectedResult = [
       {
         queryOptions: {
-          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myBool eq true )`
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and(myBool eq true )`
         },
         expectedResult: 5
       },
       {
         queryOptions: {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myBool eq true)`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myBool eq false)`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and (myBool eq false)`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and(myBool eq false)`
         },
         expectedResult: 5
       },
@@ -665,6 +695,12 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       {
         queryOptions: {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (doubleField lt 6)`
+        },
+        expectedResult: 10
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and(doubleField lt 6)`
         },
         expectedResult: 10
       }
