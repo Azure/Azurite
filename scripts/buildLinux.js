@@ -1,3 +1,7 @@
+// This is an experimental feature, currently support to linux is limited to Ubuntu / debian based systems
+// What to do if you find a bug ?
+// Check if you don't observe this behavior on Windows builds. If you are sure that it's only on Linux
+// raise a bug on linux binaries.
 const glob = require('glob');
 const path = require('path');
 const fs = require('fs');
