@@ -12,6 +12,17 @@ Queue:
 
 - Fixed issue that queue list result is not in alphabetical order.
 
+Table:
+
+- Added support for batch transaction rollback on error in batch.
+- Fixes issues with Whitespacing in Table Queries
+- Fixes issue with Edm Type Validation
+- Fixes issue when trying to add entity with Boolean or Int32
+- Failed table transaction correctly returns 409 Status code
+- Refactors tests for Table APIs
+- Adds several tests for Table APIs
+- Fixes issues for upsert and merge with etag matching
+
 ## 2021.10 Version 3.15.0
 
 General:
@@ -30,10 +41,6 @@ Table:
 - Fixes issues with deleting entities using empty string for RowKey.
 - Fixes HTTP 500 causes by continuation token containing non-ASCII. Values are now encoded with base64.
 - Fixed a table sas test case failure.
-
-Table:
-
-- Added support for batch transaction rollback on error in batch.
 
 ## 2021.10 Version 3.14.3
 
