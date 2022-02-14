@@ -7,6 +7,7 @@
 General:
 
 - Ensure the storage location exists, and allow relative paths in the VSCode extension settings that are resolved based on the workspace folder.
+- Update Azure CI to use latest image of windows due to deprecation of `vs2017-win2016` image
 
 Queue:
 
