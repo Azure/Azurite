@@ -865,4 +865,23 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       );
     }
   });
+
+  it("should delete an entity with empty row and partition keys, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("empty")
+    );
+    const partitionKey = "";
+    const testEntity: AzureDataTablesTestEntity =
+      createBasicEntityForTest(partitionKey);
+    testEntity.rowKey = "";
+
+    await tableClient.createTable({ requestOptions: { timeout: 60000 } });
+    const result = await tableClient.createEntity(testEntity);
+    assert.ok(result.etag);
+
+    const deleteResult = await tableClient.deleteEntity("", "");
+
+    assert.notStrictEqual(deleteResult.version, undefined);
+  });
 });
