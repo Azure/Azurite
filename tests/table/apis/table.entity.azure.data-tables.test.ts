@@ -1,48 +1,32 @@
 // Tests in this file are using @azure/data-tables
 
 import * as assert from "assert";
-import LogicAppReproEntity from "./table.entity.test.logicapp.entity";
-import {
-  odata,
-  TableEntity,
-  TableClient,
-  TableTransaction
-} from "@azure/data-tables";
-import { AzureNamedKeyCredential } from "@azure/core-auth";
+import LogicAppReproEntity from "../models/table.entity.test.logicapp.entity";
+import { odata, TableEntity, TableTransaction } from "@azure/data-tables";
 import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
-import {
-  EMULATOR_ACCOUNT_KEY,
-  EMULATOR_ACCOUNT_NAME,
-  getUniqueName
-} from "../../testutils";
+import { getUniqueName } from "../../testutils";
 import {
   AzureDataTablesTestEntity,
   createBasicEntityForTest
-} from "./AzureDataTablesTestEntity";
+} from "../models/AzureDataTablesTestEntity";
 import {
+  createAzureDataTablesClient,
   createTableServerForTestHttps,
-  createUniquePartitionKey,
-  HOST,
-  PORT
-} from "./table.entity.test.utils";
+  createUniquePartitionKey
+} from "../utils/table.entity.test.utils";
+import { TestBooleanPropEntity } from "../models/TestBooleanPropEntity";
 // Set true to enable debug log
 configLogger(false);
+// For convenience, we have a switch to control the use
+// of a local Azurite instance, otherwise we need an
+// ENV VAR called AZURE_TABLE_STORAGE added to mocha
+// script or launch.json containing
+// Azure Storage Connection String (using SAS or Key).
+const testLocalAzuriteInstance = true;
 
-describe("table Entity APIs test", () => {
+describe("table Entity APIs test - using Azure/data-tables", () => {
   let server: TableServer;
-  const tableName: string = getUniqueName("datatables");
-
-  const sharedKeyCredential = new AzureNamedKeyCredential(
-    EMULATOR_ACCOUNT_NAME,
-    EMULATOR_ACCOUNT_KEY
-  );
-
-  const tableClient = new TableClient(
-    `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
-    tableName,
-    sharedKeyCredential
-  );
 
   const requestOverride = { headers: {} };
 
@@ -60,6 +44,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("Batch API should return row keys in format understood by @azure/data-tables, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("datatables")
+    );
     await tableClient.createTable();
     const partitionKey = createUniquePartitionKey("");
     const testEntities: AzureDataTablesTestEntity[] = [
@@ -80,6 +68,10 @@ describe("table Entity APIs test", () => {
 
   // https://github.com/Azure/Azurite/issues/754
   it("Batch API should correctly process LogicApp style update request sequence", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("logicapp")
+    );
     await tableClient.createTable();
     const logicAppReproEntity = new LogicAppReproEntity();
     const insertedEntityHeaders =
@@ -119,7 +111,6 @@ describe("table Entity APIs test", () => {
     transaction.createEntity(batchEntity1);
     transaction.createEntity(batchEntity2);
     transaction.updateEntity(updatedEntity, "Replace");
-
     const result = await tableClient.submitTransaction(transaction.actions);
 
     // batch operations succeeded
@@ -167,6 +158,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("Should return bad request error for incorrectly formatted etags, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("etags")
+    );
     await tableClient.createTable();
     const partitionKey = createUniquePartitionKey("");
     const testEntity: AzureDataTablesTestEntity =
@@ -212,6 +207,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should find an int as a number, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("int")
+    );
     const partitionKey = createUniquePartitionKey("");
     const testEntity: AzureDataTablesTestEntity =
       createBasicEntityForTest(partitionKey);
@@ -232,6 +231,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should find a long int, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longint")
+    );
     const partitionKey = createUniquePartitionKey("");
     const testEntity: AzureDataTablesTestEntity =
       createBasicEntityForTest(partitionKey);
@@ -253,6 +256,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should find an entity using a partition key with multiple spaces, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("query1s")
+    );
     const partitionKey = createUniquePartitionKey("") + " with spaces";
     const testEntity: AzureDataTablesTestEntity =
       createBasicEntityForTest(partitionKey);
@@ -274,6 +281,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should provide a complete query result when using query entities by page, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("querybypage")
+    );
     const partitionKeyForQueryTest = createUniquePartitionKey("");
     const totalItems = 20;
     await tableClient.createTable();
@@ -318,6 +329,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should return the correct number of results querying with a timestamp or different SDK whitespacing behaviours, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("sdkspace")
+    );
     const partitionKeyForQueryTest = createUniquePartitionKey("");
     const totalItems = 10;
     await tableClient.createTable();
@@ -365,6 +380,18 @@ describe("table Entity APIs test", () => {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) && (number lt 12) && (Timestamp lt datetime'${newTimeStamp}')`
         },
         expectedResult: 10
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})&& (number lt 12) &&(Timestamp lt datetime'${newTimeStamp}')`
+        },
+        expectedResult: 10
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})&&(number lt 12)and(Timestamp lt datetime'${newTimeStamp}')`
+        },
+        expectedResult: 10
       }
     ];
 
@@ -383,11 +410,15 @@ describe("table Entity APIs test", () => {
       assert.strictEqual(all.length, queryTest.expectedResult);
       testsCompleted++;
     }
-    assert.strictEqual(testsCompleted, 5);
+    assert.strictEqual(testsCompleted, 7);
     await tableClient.deleteTable();
   });
 
   it("should return the correct number of results querying with a boolean field regardless of whitespacing behaviours, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("bool")
+    );
     const partitionKeyForQueryTest = createUniquePartitionKey("bool");
     const totalItems = 10;
     await tableClient.createTable();
@@ -409,13 +440,31 @@ describe("table Entity APIs test", () => {
     const queriesAndExpectedResult = [
       {
         queryOptions: {
-          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myBool eq true )`
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and(myBool eq true )`
         },
         expectedResult: 5
       },
       {
         queryOptions: {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myBool eq true)`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myBool eq false)`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and (myBool eq false)`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and(myBool eq false)`
         },
         expectedResult: 5
       },
@@ -451,6 +500,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should return the correct number of results querying with an int64 field regardless of whitespacing behaviours, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("int64")
+    );
     const partitionKeyForQueryTest = createUniquePartitionKey("int64");
     const totalItems = 10;
     await tableClient.createTable();
@@ -515,6 +568,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should return the correct number of results querying with a double field regardless of whitespacing behaviours, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("datatables")
+    );
     const partitionKeyForQueryTest = createUniquePartitionKey("double");
     const totalItems = 10;
     await tableClient.createTable();
@@ -589,6 +646,10 @@ describe("table Entity APIs test", () => {
   });
 
   it("should return the correct number of results querying with a double field containing a single digit number regardless of whitespacing behaviours, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("datatables")
+    );
     const partitionKeyForQueryTest = createUniquePartitionKey("double");
     const totalItems = 10;
     await tableClient.createTable();
@@ -636,6 +697,12 @@ describe("table Entity APIs test", () => {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (doubleField lt 6)`
         },
         expectedResult: 10
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and(doubleField lt 6)`
+        },
+        expectedResult: 10
       }
     ];
     for (const queryTest of queriesAndExpectedResult) {
@@ -662,5 +729,159 @@ describe("table Entity APIs test", () => {
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
     await tableClient.deleteTable();
+  });
+
+  it("Should respect Boolean property as edm string, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("issue1259")
+    );
+    await tableClient.createTable();
+
+    try {
+      // Testing based on repro given in issue #1259
+      const entity1259a = new TestBooleanPropEntity();
+      const result1259a = await tableClient.createEntity<TestBooleanPropEntity>(
+        entity1259a
+      );
+
+      assert.notStrictEqual(
+        result1259a.etag,
+        undefined,
+        "Did not create entity correctly, etag weas null"
+      );
+
+      const check1259a = await tableClient.getEntity<TestBooleanPropEntity>(
+        entity1259a.partitionKey,
+        entity1259a.rowKey
+      );
+
+      assert.strictEqual(
+        check1259a.prop,
+        false,
+        "Prop was not correctly set to false"
+      );
+
+      const entity1259b = new TestBooleanPropEntity();
+      entity1259b.rowKey = "000b";
+      entity1259b.prop.value = "true";
+      const result1259b = await tableClient.createEntity<TestBooleanPropEntity>(
+        entity1259b
+      );
+
+      assert.notStrictEqual(
+        result1259b.etag,
+        undefined,
+        "Did not create entity correctly, etag was null"
+      );
+
+      const check1259b = await tableClient.getEntity<TestBooleanPropEntity>(
+        entity1259b.partitionKey,
+        entity1259b.rowKey
+      );
+
+      assert.strictEqual(
+        check1259b.prop,
+        true,
+        "Prop was not correctly set to true"
+      );
+    } catch (err1259b) {
+      assert.ifError(err1259b);
+    }
+  });
+
+  it("Should respect Int32 property as edm string, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("issue1259")
+    );
+    await tableClient.createTable();
+
+    try {
+      // Testing based on repro given in issue #1259
+      const entity1259a = new TestBooleanPropEntity();
+      const result1259a = await tableClient.createEntity<TestBooleanPropEntity>(
+        entity1259a
+      );
+
+      assert.notStrictEqual(
+        result1259a.etag,
+        undefined,
+        "Did not create entity correctly, etag weas null"
+      );
+
+      const check1259a = await tableClient.getEntity<TestBooleanPropEntity>(
+        entity1259a.partitionKey,
+        entity1259a.rowKey
+      );
+
+      assert.strictEqual(
+        check1259a.int32Prop,
+        32,
+        "Int32 Prop was not correctly set to 32"
+      );
+
+      const entity1259b = new TestBooleanPropEntity();
+      entity1259b.rowKey = "000b";
+      entity1259b.int32Prop.value = "-31";
+      const result1259b = await tableClient.createEntity<TestBooleanPropEntity>(
+        entity1259b
+      );
+
+      assert.notStrictEqual(
+        result1259b.etag,
+        undefined,
+        "Did not create entity correctly, etag was null"
+      );
+
+      const check1259b = await tableClient.getEntity<TestBooleanPropEntity>(
+        entity1259b.partitionKey,
+        entity1259b.rowKey
+      );
+
+      assert.strictEqual(
+        check1259b.int32Prop,
+        -31,
+        "Prop was not correctly set to -31"
+      );
+    } catch (err1259b) {
+      assert.ifError(err1259b);
+    }
+
+    try {
+      const entity1259c = new TestBooleanPropEntity();
+      entity1259c.rowKey = "000c";
+      entity1259c.int32Prop.value = "-3.1";
+      const result1259c = await tableClient.createEntity<TestBooleanPropEntity>(
+        entity1259c
+      );
+
+      assert.fail(`We should have thrown on ${result1259c}`);
+    } catch (err1259c: any) {
+      assert.strictEqual(
+        err1259c.response.status,
+        400,
+        "Expecting invalid input!"
+      );
+    }
+  });
+
+  it("should delete an entity with empty row and partition keys, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("empty")
+    );
+    const partitionKey = "";
+    const testEntity: AzureDataTablesTestEntity =
+      createBasicEntityForTest(partitionKey);
+    testEntity.rowKey = "";
+
+    await tableClient.createTable({ requestOptions: { timeout: 60000 } });
+    const result = await tableClient.createEntity(testEntity);
+    assert.ok(result.etag);
+
+    const deleteResult = await tableClient.deleteEntity("", "");
+
+    assert.notStrictEqual(deleteResult.version, undefined);
   });
 });

@@ -2,10 +2,10 @@ import { TableClient } from "@azure/data-tables";
 
 import * as assert from "assert";
 
-import { configLogger } from "../../src/common/Logger";
-import TableTestServerFactory from "../TableTestServerFactory";
-import { generateJWTToken, getUniqueName } from "../testutils";
-import { SimpleTokenCredential } from "../simpleTokenCredential";
+import { configLogger } from "../../../src/common/Logger";
+import TableTestServerFactory from "../utils/TableTestServerFactory";
+import { generateJWTToken, getUniqueName } from "../../testutils";
+import { SimpleTokenCredential } from "../../simpleTokenCredential";
 
 // Set true to enable debug log
 configLogger(false);
@@ -62,7 +62,7 @@ describe("Table OAuth Basic", () => {
     try {
       await tableClient.createTable();
       await tableClient.deleteTable();
-    } catch (err) {
+    } catch (err: any) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
         true
@@ -135,7 +135,7 @@ describe("Table OAuth Basic", () => {
     try {
       await tableClient.createTable();
       await tableClient.deleteTable();
-    } catch (err) {
+    } catch (err: any) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
         true
@@ -202,7 +202,7 @@ describe("Table OAuth Basic", () => {
     try {
       await tableClient.createTable();
       await tableClient.deleteTable();
-    } catch (err) {
+    } catch (err: any) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
         true
@@ -236,7 +236,7 @@ describe("Table OAuth Basic", () => {
     try {
       await tableClient.createTable();
       await tableClient.deleteTable();
-    } catch (err) {
+    } catch (err: any) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
         true
@@ -270,7 +270,7 @@ describe("Table OAuth Basic", () => {
     try {
       await tableClient.createTable();
       await tableClient.deleteTable();
-    } catch (err) {
+    } catch (err: any) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
         true
@@ -304,7 +304,7 @@ describe("Table OAuth Basic", () => {
 
     try {
       await tableClient.getAccessPolicy();
-    } catch (err) {
+    } catch (err: any) {
       assert.deepStrictEqual(
         err.message.includes("AuthorizationFailure"),
         true
@@ -344,8 +344,13 @@ describe("Table OAuth Basic", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     try {
-      await tableClient.setAccessPolicy([{ id: "test", accessPolicy: { start: now, expiry: tmr, permission: "r" } }]);
-    } catch (err) {
+      await tableClient.setAccessPolicy([
+        {
+          id: "test",
+          accessPolicy: { start: now, expiry: tmr, permission: "r" }
+        }
+      ]);
+    } catch (err: any) {
       assert.deepStrictEqual(
         err.message.includes("AuthorizationFailure"),
         true
@@ -357,7 +362,7 @@ describe("Table OAuth Basic", () => {
     assert.fail();
   });
 
-  // skip this test case for it will throw an error when use azure table sdk to connect Azurite table by http 
+  // skip this test case for it will throw an error when use azure table sdk to connect Azurite table by http
   it.skip(`Should not work with HTTP @loki @sql`, async () => {
     await server.close();
     await server.clean();
@@ -389,7 +394,7 @@ describe("Table OAuth Basic", () => {
     try {
       await tableClient.createTable();
       await tableClient.deleteTable();
-    } catch (err) {
+    } catch (err: any) {
       assert.deepStrictEqual(
         err.message.includes("AuthenticationFailed"),
         true

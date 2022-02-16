@@ -3,7 +3,7 @@ import {
   EMULATOR_ACCOUNT_NAME,
   getUniqueName
 } from "../../testutils";
-import { TestEntity } from "./TestEntity";
+import { TestEntity } from "../models/TestEntity";
 import TableServer from "../../../src/table/TableServer";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import { AzureNamedKeyCredential, TableClient } from "@azure/data-tables";
@@ -23,6 +23,7 @@ const secondaryConnectionString =
 const AZURE_TABLE_STORAGE: string = "AZURE_TABLE_STORAGE";
 const AZURE_DATATABLES_STORAGE_STRING = "AZURE_DATATABLES_STORAGE_STRING";
 const AZURE_DATATABLES_SAS = "AZURE_DATATABLES_SAS";
+const AZURITE_TABLE_BASE_URL = "AZURITE_TABLE_BASE_URL";
 
 const config = new TableConfiguration(
   HOST,
@@ -72,6 +73,25 @@ export function createTableServerForTestHttps(): TableServer {
   return new TableServer(httpsConfig);
 }
 
+export function createTableServerForTestOAuth(oauth?: string): TableServer {
+  const oAuthConfig = new TableConfiguration(
+    HOST,
+    PORT,
+    metadataDbPath,
+    enableDebugLog,
+    false,
+    undefined,
+    debugLogPath,
+    false,
+    true,
+    undefined,
+    undefined,
+    undefined,
+    oauth
+  );
+  return new TableServer(oAuthConfig);
+}
+
 /**
  * Provides the connection string to connect to the Azurite table server
  * or connects to a real Azure Table Service in the cloud
@@ -83,6 +103,22 @@ export function createConnectionStringForTest(dev: boolean): string {
     return connectionString;
   } else {
     return process.env[AZURE_TABLE_STORAGE]!;
+  }
+}
+
+/**
+ * provides the base URL of Azurite or the service to create SaS
+ * connections.
+ *
+ * @export
+ * @param {boolean} dev
+ * @return {*}  {string}
+ */
+export function getBaseUrlForTest(dev: boolean = true): string {
+  if (dev) {
+    return `${PROTOCOL}://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`;
+  } else {
+    return (process.env[AZURITE_TABLE_BASE_URL] ??= "");
   }
 }
 

@@ -3,10 +3,15 @@ import { IEdmType } from "./IEdmType";
 
 export class EdmBoolean implements IEdmType {
   public static validate(value: any): boolean {
-    if (typeof value !== "boolean") {
+    if (typeof value === "string") {
+      // assuming that we do not need to use value.toLocaleLowerCase()
+      if (value !== "true" && value !== "false") {
+        throw TypeError(`Not a valid EdmBoolean string.`);
+      }
+      return value === "true";
+    } else if (typeof value !== "boolean") {
       throw TypeError(`Not a valid EdmBoolean string.`);
     }
-
     return value;
   }
 

@@ -453,9 +453,8 @@ export class TableBatchSerialization extends BatchSerialization {
    * @memberof TableBatchSerialization
    */
   private SerializeNoSniffNoCache(serializedResponses: string) {
-    serializedResponses = this.SerializeXContentTypeOptions(
-      serializedResponses
-    );
+    serializedResponses =
+      this.SerializeXContentTypeOptions(serializedResponses);
     serializedResponses += "Cache-Control: no-cache\r\n";
     return serializedResponses;
   }
@@ -485,6 +484,8 @@ export class TableBatchSerialization extends BatchSerialization {
         return "Not Found";
       case 400:
         return "Bad Request";
+      case 409:
+        return "Conflict";
       default:
         return "STATUS_CODE_NOT_IMPLEMENTED";
     }
@@ -609,14 +610,20 @@ export class TableBatchSerialization extends BatchSerialization {
     let errorReponse = "";
     const odataError = err as StorageError;
     // Errors in batch processing generate Bad Request error
-    errorReponse = this.serializeHttpStatusCode(errorReponse, 400);
+    errorReponse = this.serializeHttpStatusCode(errorReponse, err.statusCode);
     errorReponse += "Content-ID: " + contentID + "\r\n";
     errorReponse = this.serializeDataServiceVersion(errorReponse, request);
     // ToDo: Check if we need to observe other odata formats for errors
     errorReponse +=
       "Content-Type: application/json;odata=minimalmetadata;charset=utf-8\r\n";
     errorReponse += "\r\n";
-    errorReponse += odataError.body + "\r\n";
+    // the odata error needs to include the index of the operation that fails
+    // see sample from:
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/performing-entity-group-transactions#sample-error-response
+    // In this case, we need to use a 0 based index for the failing operation
+    errorReponse +=
+      odataError.body?.replace('"value":"', `\"value\":\"${contentID - 1}:`) +
+      "\r\n";
     return errorReponse;
   }
 

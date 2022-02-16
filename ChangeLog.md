@@ -15,6 +15,14 @@ Queue:
 
 Table:
 
+- Added support for batch transaction rollback on error in batch.
+- Fixes issues with Whitespacing in Table Queries
+- Fixes issue with Edm Type Validation
+- Fixes issue when trying to add entity with Boolean or Int32
+- Failed table transaction correctly returns 409 Status code
+- Refactors tests for Table APIs
+- Adds several tests for Table APIs
+- Fixes issues for upsert and merge with etag matching
 - Allow any valid weak etag even though we know it will fail with a 412
 
 ## 2021.10 Version 3.15.0
