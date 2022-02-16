@@ -1,10 +1,7 @@
 import toReadableStream from "to-readable-stream";
 
 import BufferStream from "../../common/utils/BufferStream";
-import {
-  checkEtagIsInvalidFormat,
-  newTableEntityEtag
-} from "../utils/utils";
+import { checkEtagIsInvalidFormat, newTableEntityEtag } from "../utils/utils";
 import TableBatchOrchestrator from "../batch/TableBatchOrchestrator";
 import TableBatchUtils from "../batch/TableBatchUtils";
 import TableStorageContext from "../context/TableStorageContext";
@@ -172,7 +169,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableInsertEntityOptionalParams,
     context: Context
   ): Promise<Models.TableInsertEntityResponse> {
-    const tableContext = new TableStorageContext(context); // this.createTableContext(context);
+    const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
     const accept = this.getAndCheckPayloadFormat(tableContext);
