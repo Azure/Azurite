@@ -4,7 +4,7 @@ import BufferStream from "../../common/utils/BufferStream";
 import {
   checkEtagIsInvalidFormat,
   newTableEntityEtag
-} from "../../common/utils/utils";
+} from "../utils/utils";
 import TableBatchOrchestrator from "../batch/TableBatchOrchestrator";
 import TableBatchUtils from "../batch/TableBatchUtils";
 import TableStorageContext from "../context/TableStorageContext";

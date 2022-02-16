@@ -13,6 +13,10 @@ Queue:
 
 - Fixed issue that queue list result is not in alphabetical order.
 
+Table:
+
+- Allow any valid weak etag even though we know it will fail with a 412
+
 ## 2021.10 Version 3.15.0
 
 General:
