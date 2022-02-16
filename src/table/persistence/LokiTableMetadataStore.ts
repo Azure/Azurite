@@ -762,7 +762,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
 
     // if match is URL encoded from the clients, match URL encoding
-    // this does not always seem to be consisten...
+    // this does not always seem to be consistent...
     const encodedEtag = doc.eTag.replace(":", "%3A").replace(":", "%3A");
     let encodedIfMatch: string | undefined;
     if (ifMatch !== undefined) {

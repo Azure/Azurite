@@ -142,7 +142,7 @@ export function createSecondaryConnectionStringForTest(dev: boolean): string {
  * @export
  * @return {*}  {string}
  */
-export function createUniquePartitionKey(name: string | undefined): string {
+export function createUniquePartitionKey(name?: string | undefined): string {
   if (name === undefined) {
     return getUniqueName("datatablestests");
   }
@@ -175,7 +175,7 @@ export function createAzureDataTablesClient(
   } else {
     return new TableClient(
       process.env[AZURE_DATATABLES_STORAGE_STRING]! +
-        process.env[AZURE_DATATABLES_SAS]!,
+      process.env[AZURE_DATATABLES_SAS]!,
       tableName
     );
   }

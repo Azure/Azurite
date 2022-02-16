@@ -7,6 +7,7 @@
 General:
 
 - Ensure the storage location exists, and allow relative paths in the VSCode extension settings that are resolved based on the workspace folder.
+- Update Azure CI to use latest image of windows due to deprecation of `vs2017-win2016` image
 
 Queue:
 
@@ -22,6 +23,7 @@ Table:
 - Refactors tests for Table APIs
 - Adds several tests for Table APIs
 - Fixes issues for upsert and merge with etag matching
+- Allow any valid weak etag even though we know it will fail with a 412
 
 ## 2021.10 Version 3.15.0
 
