@@ -24,6 +24,13 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   private readonly SERVICES_COLLECTION = "$SERVICES_COLLECTION$";
   private initialized: boolean = false;
   private closed: boolean = false;
+  // The Rollback Entities arrays hold the rows that we will reapply to the database in the case
+  // that we need to rollback a transaction.
+  // We make the assumption that there will not be any IO during the processing of a transaction
+  // and assume that the execution will remain in the same thread associated with the transaction.
+  // See: https://nodejs.org/en/docs/guides/event-loop-timers-and-nexttick/
+  private transactionRollbackTheseEntities: Entity[] = []; // can maybe use Entity instead of any
+  private transactionDeleteTheseEntities: Entity[] = []; // can maybe use Entity instead of any
 
   public constructor(public readonly lokiDBPath: string) {
     this.db = new Loki(lokiDBPath, {
@@ -246,7 +253,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     context: Context,
     table: string,
     account: string,
-    entity: Entity
+    entity: Entity,
+    batchId?: string
   ): Promise<Entity> {
     const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
     const tableDocument = tablesCollection.findOne({
@@ -275,6 +283,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     entity.properties.Timestamp = getTimestampString(entity.lastModifiedTime);
     entity.properties["Timestamp@odata.type"] = "Edm.DateTime";
 
+    if (batchId !== "" && batchId !== undefined) {
+      this.transactionDeleteTheseEntities.push(entity);
+    }
     tableEntityCollection.insert(entity);
     return entity;
   }
@@ -284,9 +295,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     account: string,
     entity: Entity,
-    ifMatch?: string
+    ifMatch?: string,
+    batchId?: string
   ): Promise<Entity> {
-    if (ifMatch === undefined) {
+    if (ifMatch === undefined || ifMatch === "*") {
       // Upsert
       const existingEntity =
         await this.queryTableEntitiesWithPartitionAndRowKey(
@@ -294,19 +306,34 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           table,
           account,
           entity.PartitionKey,
-          entity.RowKey
+          entity.RowKey,
+          batchId
         );
 
       if (existingEntity) {
         // Update
-        return this.updateTableEntity(context, table, account, entity, ifMatch);
+        return this.updateTableEntity(
+          context,
+          table,
+          account,
+          entity,
+          ifMatch,
+          batchId
+        );
       } else {
         // Insert
-        return this.insertTableEntity(context, table, account, entity);
+        return this.insertTableEntity(context, table, account, entity, batchId);
       }
     } else {
       // Update
-      return this.updateTableEntity(context, table, account, entity, ifMatch);
+      return this.updateTableEntity(
+        context,
+        table,
+        account,
+        entity,
+        ifMatch,
+        batchId
+      );
     }
 
     // const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
@@ -355,9 +382,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     account: string,
     entity: Entity,
-    ifMatch?: string
+    ifMatch?: string,
+    batchId?: string
   ): Promise<Entity> {
-    if (ifMatch === undefined) {
+    if (ifMatch === undefined || ifMatch === "*") {
       // Upsert
       const existingEntity =
         await this.queryTableEntitiesWithPartitionAndRowKey(
@@ -370,14 +398,28 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
       if (existingEntity) {
         // Merge
-        return this.mergeTableEntity(context, table, account, entity, ifMatch);
+        return this.mergeTableEntity(
+          context,
+          table,
+          account,
+          entity,
+          ifMatch,
+          batchId
+        );
       } else {
         // Insert
-        return this.insertTableEntity(context, table, account, entity);
+        return this.insertTableEntity(context, table, account, entity, batchId);
       }
     } else {
       // Merge
-      return this.mergeTableEntity(context, table, account, entity, ifMatch);
+      return this.mergeTableEntity(
+        context,
+        table,
+        account,
+        entity,
+        ifMatch,
+        batchId
+      );
     }
 
     // const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
@@ -432,7 +474,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     account: string,
     partitionKey: string,
     rowKey: string,
-    etag: string
+    etag: string,
+    batchId: string
   ): Promise<void> {
     const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
     const tableDocument = tablesCollection.findOne({
@@ -463,7 +506,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           throw StorageErrorFactory.getPreconditionFailed(context);
         }
       }
-
+      if (batchId !== "") {
+        this.transactionRollbackTheseEntities.push(doc);
+      }
       tableEntityCollection.remove(doc);
       return;
     }
@@ -506,8 +551,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     // Decode the nextPartitionKey and nextRowKey. This is necessary since non-ASCII characters can
     // be in partition and row keys but should not be in headers.
-    const decodedNextPartitionKey = this.decodeContinuationHeader(nextPartitionKey)
-    const decodedNextRowKey = this.decodeContinuationHeader(nextRowKey)
+    const decodedNextPartitionKey =
+      this.decodeContinuationHeader(nextPartitionKey);
+    const decodedNextRowKey = this.decodeContinuationHeader(nextRowKey);
 
     // .find using a segment filter is not filtering in the same way that the sorting function sorts
     // I think offset will cause more problems than it solves, as we will have to step and sort all
@@ -557,7 +603,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     if (result.length > maxResults) {
       const tail = result.pop();
-      nextPartitionKeyResponse = this.encodeContinuationHeader(tail.PartitionKey);
+      nextPartitionKeyResponse = this.encodeContinuationHeader(
+        tail.PartitionKey
+      );
       nextRowKeyResponse = this.encodeContinuationHeader(tail.RowKey);
     }
 
@@ -566,13 +614,13 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
   private decodeContinuationHeader(input?: string) {
     if (input !== undefined) {
-      return Buffer.from(input, 'base64').toString('utf8')
+      return Buffer.from(input, "base64").toString("utf8");
     }
   }
 
   private encodeContinuationHeader(input?: string) {
     if (input !== undefined) {
-      return Buffer.from(input, 'utf8').toString('base64')
+      return Buffer.from(input, "utf8").toString("base64");
     }
   }
 
@@ -581,7 +629,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     account: string,
     partitionKey: string,
-    rowKey: string
+    rowKey: string,
+    batchId?: string
   ): Promise<Entity | undefined> {
     const tableColl = this.db.getCollection(
       this.getTableCollectionName(account, table)
@@ -622,7 +671,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     account: string,
     entity: Entity,
-    ifMatch?: string
+    ifMatch?: string,
+    batchId?: string
   ): Promise<Entity> {
     const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
     const tableDocument = tablesCollection.findOne({
@@ -647,6 +697,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     if (!doc) {
       throw StorageErrorFactory.getEntityNotFound(context);
+    }
+    if (batchId !== "") {
+      this.transactionRollbackTheseEntities.push(doc);
     }
 
     // Test if etag value is valid
@@ -677,7 +730,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     account: string,
     entity: Entity,
-    ifMatch?: string
+    ifMatch?: string,
+    batchId?: string
   ): Promise<Entity> {
     const tablesCollection = this.db.getCollection(this.TABLES_COLLECTION);
     const tableDocument = tablesCollection.findOne({
@@ -703,9 +757,12 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     if (!doc) {
       throw StorageErrorFactory.getEntityNotFound(context);
     }
+    if (batchId !== "") {
+      this.transactionRollbackTheseEntities.push(doc);
+    }
 
     // if match is URL encoded from the clients, match URL encoding
-    // this does not always seem to be consisten...
+    // this does not always seem to be consistent...
     const encodedEtag = doc.eTag.replace(":", "%3A").replace(":", "%3A");
     let encodedIfMatch: string | undefined;
     if (ifMatch !== undefined) {
@@ -834,7 +891,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       } else if (query[i] === "(" || query[i] === ")") {
         if (
           (i !== 0 &&
-            (query[i - 1].match(/\d/) !== null ||
+            (query[i - 1].match(/\S/) !== null ||
               (i >= 5 && query.slice(i - 5, i) === " true") ||
               (i >= 6 && query.slice(i - 6, i) === " false"))) ||
           query.substring(tokenStart, i).match(/\b[0-9]+L\b/g) != null
@@ -1084,5 +1141,62 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     } else {
       return coll.insert(serviceProperties);
     }
+  }
+
+  public async beginBatchTransaction(batchId: string): Promise<void> {
+    // instead of copying all entities / rows in the collection,
+    // we shall just backup those rows that we change
+    // Keeping the batchId in the interface to allow logging scenarios to extend
+    if (
+      this.transactionRollbackTheseEntities.length > 0 ||
+      this.transactionDeleteTheseEntities.length > 0
+    ) {
+      throw new Error("Transaction Overlapp!");
+    }
+  }
+
+  public async endBatchTransaction(
+    account: string,
+    table: string,
+    batchId: string,
+    context: Context,
+    succeeded: boolean
+  ): Promise<void> {
+    // rollback all changes in the case of failed batch transaction
+    if (!succeeded) {
+      const tableBatchCollection = this.db.getCollection(
+        this.getTableCollectionName(account, table)
+      );
+      if (tableBatchCollection) {
+        // for entities deleted or modified
+        for (const entity of this.transactionRollbackTheseEntities) {
+          const copiedEntity: Entity = {
+            PartitionKey: entity.PartitionKey,
+            RowKey: entity.RowKey,
+            properties: entity.properties,
+            lastModifiedTime: entity.lastModifiedTime,
+            eTag: entity.eTag
+          };
+          // lokijs applies this insert as an upsert
+          const doc = tableBatchCollection.findOne({
+            PartitionKey: entity.PartitionKey,
+            RowKey: entity.RowKey
+          });
+          // we can't rely on upsert behavior if documents already exist
+          if (doc) {
+            tableBatchCollection.remove(doc);
+          }
+          tableBatchCollection.insert(copiedEntity);
+        }
+
+        // for entities added to the collection
+        for (const deleteRow of this.transactionDeleteTheseEntities) {
+          tableBatchCollection.remove(deleteRow);
+        }
+      }
+    }
+    // reset entity rollback trackers
+    this.transactionRollbackTheseEntities = [];
+    this.transactionDeleteTheseEntities = [];
   }
 }

@@ -64,9 +64,7 @@ export default class Context {
 
       if (typeof context[this.path] !== "object") {
         throw new TypeError(
-          `Initialize Context error because holder.${
-            this.path
-          } is not an object.`
+          `Initialize Context error because holder.${this.path} is not an object.`
         );
       }
 

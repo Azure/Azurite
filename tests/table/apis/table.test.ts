@@ -19,7 +19,7 @@ import {
   PORT,
   createConnectionStringForTest,
   createTableServerForTest
-} from "./table.entity.test.utils";
+} from "../utils/table.entity.test.utils";
 
 // Set true to enable debug log
 configLogger(false);
@@ -289,14 +289,13 @@ describe("table APIs test", () => {
   });
 
   it("SetAccessPolicy should work @loki", (done) => {
-
     const tableAcl = {
       "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=": {
         Permissions: "raud",
         Expiry: new Date("2018-12-31T11:22:33.4567890Z"),
         Start: new Date("2017-12-31T11:22:33.4567890Z")
       },
-      "policy2": {
+      policy2: {
         Permissions: "a",
         Expiry: new Date("2030-11-31T11:22:33.4567890Z"),
         Start: new Date("2017-12-31T11:22:33.4567890Z")
@@ -312,23 +311,14 @@ describe("table APIs test", () => {
       const setClientRequestId = "b86e2b01-a7b5-4df2-b190-205a0c24bd36";
 
       // tslint:disable-next-line: no-shadowed-variable
-      tableService.setTableAcl(tableName + "setACL", tableAcl, {clientRequestId: setClientRequestId}, (error, result, response) => {
-        if (error) {
-          assert.ifError(error);
-        }
-        if (response.headers) {
-          assert.strictEqual(
-            response.headers["x-ms-client-request-id"],
-            setClientRequestId
-          );
-        }
-
-        // tslint:disable-next-line: no-shadowed-variable
-        tableService.getTableAcl(tableName + "setACL", {clientRequestId: setClientRequestId}, (error, result, response) => {
+      tableService.setTableAcl(
+        tableName + "setACL",
+        tableAcl,
+        { clientRequestId: setClientRequestId },
+        (error, result, response) => {
           if (error) {
             assert.ifError(error);
           }
-
           if (response.headers) {
             assert.strictEqual(
               response.headers["x-ms-client-request-id"],
@@ -336,23 +326,40 @@ describe("table APIs test", () => {
             );
           }
 
-          assert.deepStrictEqual(result.signedIdentifiers, tableAcl);
+          // tslint:disable-next-line: no-shadowed-variable
+          tableService.getTableAcl(
+            tableName + "setACL",
+            { clientRequestId: setClientRequestId },
+            (error, result, response) => {
+              if (error) {
+                assert.ifError(error);
+              }
 
-          done();
-        });
-      });
+              if (response.headers) {
+                assert.strictEqual(
+                  response.headers["x-ms-client-request-id"],
+                  setClientRequestId
+                );
+              }
+
+              assert.deepStrictEqual(result.signedIdentifiers, tableAcl);
+
+              done();
+            }
+          );
+        }
+      );
     });
   });
 
   it("setAccessPolicy negative @loki", (done) => {
-
     const tableAcl = {
       "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=": {
         Permissions: "rwdl",
         Expiry: new Date("2018-12-31T11:22:33.4567890Z"),
         Start: new Date("2017-12-31T11:22:33.4567890Z")
       },
-      "policy2": {
+      policy2: {
         Permissions: "a",
         Expiry: new Date("2030-11-31T11:22:33.4567890Z"),
         Start: new Date("2017-12-31T11:22:33.4567890Z")
@@ -367,6 +374,26 @@ describe("table APIs test", () => {
       // tslint:disable-next-line: no-shadowed-variable
       tableService.setTableAcl(tableName + "setACLNeg", tableAcl, (error) => {
         assert.ok(error);
+        done();
+      });
+    });
+  });
+
+  it("should respond to get table properties @loki", (done) => {
+    tableName = getUniqueName("getProperties");
+    tableService.createTable(tableName, (error) => {
+      if (error) {
+        assert.ifError(error);
+      }
+      tableService.getServiceProperties((getPropsError, getPropsResult) => {
+        if (getPropsError) {
+          assert.ifError(getPropsError);
+        }
+        assert.strictEqual(
+          getPropsResult.Logging?.Version,
+          "1.0",
+          `value "${getPropsResult.Logging?.Version}" is not the expected MetaData for Logging Version`
+        );
         done();
       });
     });
