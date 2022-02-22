@@ -14,7 +14,7 @@ import {
 } from "./IQueueSASSignatureValues";
 import { OPERATION_QUEUE_SAS_PERMISSIONS } from "./OperationQueueSASPermission";
 
-export default class BlobSASAuthenticator implements IAuthenticator {
+export default class QueueSASAuthenticator implements IAuthenticator {
   public constructor(
     private readonly accountDataStore: IAccountDataStore,
     private readonly queueMetadataStore: IQueueMetadataStore,

@@ -12,6 +12,7 @@ General:
 Queue:
 
 - Fixed issue that queue list result is not in alphabetical order.
+- Fixed class name of QueueSASAuthenticator mistakenly named BlobSASAuthenticator.
 
 Table:
 
