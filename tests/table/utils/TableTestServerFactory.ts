@@ -1,5 +1,5 @@
-import TableConfiguration from "../src/table/TableConfiguration";
-import TableServer from "../src/table/TableServer";
+import TableConfiguration from "../../../src/table/TableConfiguration";
+import TableServer from "../../../src/table/TableServer";
 
 export default class TableTestServerFactory {
   public createServer(
@@ -19,8 +19,8 @@ export default class TableTestServerFactory {
       host,
       port,
       lokiMetadataDBPath,
-      true,
-      undefined,
+      false,
+      false,
       undefined,
       "debug-test-table.log",
       loose,

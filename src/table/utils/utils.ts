@@ -1,3 +1,4 @@
+import { truncatedISO8061Date } from "../../common/utils/utils";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import { TableResponseProperties } from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -268,4 +269,29 @@ export function validateTableName(context: Context, tableName: string) {
   if (!reg.test(tableName!) && !tableName.startsWith("$Metric")) {
     throw StorageErrorFactory.getInvalidResourceName(context);
   }
+}
+
+export function newTableEntityEtag(startTime: Date): string {
+  // Etag as returned by Table Storage should match W/"datetime'<ISO8601datetime>'"
+  return (
+    "W/\"datetime'" +
+    encodeURIComponent(truncatedISO8061Date(startTime, true)) +
+    "'\""
+  );
+}
+
+/**
+ * Checks if an eTag is valid
+ *
+ * @export
+ * @param {string} etag
+ * @return {*}  {boolean}
+ */
+export function checkEtagIsInvalidFormat(etag: string): boolean {
+  // Weak etag is required. This is parity with Azure and legacy emulator.
+  // Source for regex: https://stackoverflow.com/a/11572348
+  const match = etag.match(
+    /^[wW]\/"([^"]|\\")*"$/
+  );
+  return match === null;
 }

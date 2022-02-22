@@ -13,11 +13,11 @@ import {
   createAzureDataTablesClient,
   createTableServerForTestHttps,
   createUniquePartitionKey
-} from "./table.entity.test.utils";
+} from "../utils/table.entity.test.utils";
 import {
   AzureDataTablesTestEntity,
   createBasicEntityForTest
-} from "./AzureDataTablesTestEntity";
+} from "../models/AzureDataTablesTestEntity";
 
 // Set true to enable debug log
 configLogger(false);
@@ -45,6 +45,77 @@ describe("table Entity APIs test", () => {
 
   after(async () => {
     await server.close();
+  });
+
+  // from issue #1229
+  [
+    "W/\"wrong\"",
+    "W/\"datetime'2015-01-01T23%3A14%3A33.4980000Z'\"",
+    "w/\"wrong\"",
+    "w/\"datetime'2015-01-01T23%3A14%3A33.4980000Z'\"",
+  ].forEach(etag => {
+    it(`should allow any valid weak etag <${etag}>, @loki`, async () => {
+      const partitionKey = createUniquePartitionKey();
+      const tableClient = createAzureDataTablesClient(
+        testLocalAzuriteInstance,
+        tableName
+      );
+      await tableClient.createTable();
+
+      const entity = {
+        partitionKey: partitionKey,
+        rowKey: "rk",
+      }
+      const response = await tableClient.createEntity(entity);
+
+      try {
+        await tableClient.updateEntity(entity, 'Replace', { etag })
+        assert.fail();
+      } catch (error: any) {
+        assert.strictEqual(error.statusCode, 412);
+      }
+
+      const existing = await tableClient.getEntity(entity.partitionKey, entity.rowKey)
+      assert.strictEqual(response.etag, existing.etag)
+
+      await tableClient.deleteTable();
+    });
+  });
+
+  // from issue #1229
+  [
+    "\"wrong\"",
+    "\"datetime'2015-01-01T23%3A14%3A33.4980000Z'\"",
+    "wrong",
+    "datetime'2015-01-01T23%3A14%3A33.4980000Z'",
+    "\"",
+  ].forEach(etag => {
+    it(`should reject invalid or strong etag <${etag}>, @loki`, async () => {
+      const partitionKey = createUniquePartitionKey();
+      const tableClient = createAzureDataTablesClient(
+        testLocalAzuriteInstance,
+        tableName
+      );
+      await tableClient.createTable();
+
+      const entity = {
+        partitionKey: partitionKey,
+        rowKey: "rk",
+      }
+      const response = await tableClient.createEntity(entity);
+
+      try {
+        await tableClient.updateEntity(entity, 'Replace', { etag })
+        assert.fail();
+      } catch (error: any) {
+        assert.strictEqual(error.statusCode, 400);
+      }
+
+      const existing = await tableClient.getEntity(entity.partitionKey, entity.rowKey)
+      assert.strictEqual(response.etag, existing.etag)
+
+      await tableClient.deleteTable();
+    });
   });
 
   // from issue #1003
@@ -108,8 +179,14 @@ describe("table Entity APIs test", () => {
       tableName
     );
     await tableClient.createTable();
-    await tableClient.createEntity({ partitionKey: partitionKey1, rowKey: "𐐷RK1" });
-    await tableClient.createEntity({ partitionKey: partitionKey2, rowKey: "𐐷RK2" });
+    await tableClient.createEntity({
+      partitionKey: partitionKey1,
+      rowKey: "𐐷RK1"
+    });
+    await tableClient.createEntity({
+      partitionKey: partitionKey2,
+      rowKey: "𐐷RK2"
+    });
 
     const entities = tableClient.listEntities<TableEntity>();
     let all: TableEntity[] = [];
@@ -218,7 +295,7 @@ describe("table Entity APIs test", () => {
       });
 
     // deliberately being more explicit in the resolution of the promise and errors
-    let res: AzureDataTablesTestEntity | undefined = undefined;
+    let res: AzureDataTablesTestEntity | undefined;
     try {
       res = (await tableClient.getEntity(
         "",
@@ -281,7 +358,7 @@ describe("table Entity APIs test", () => {
       });
 
     // deliberately being more explicit in the resolution of the promise and errors
-    let res: AzureDataTablesTestEntity | undefined = undefined;
+    let res: AzureDataTablesTestEntity | undefined;
     try {
       res = (await tableClient.getEntity(
         partitionKeyForEmptyRowKey,

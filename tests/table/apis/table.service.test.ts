@@ -8,8 +8,8 @@ import {
   createConnectionStringForTest,
   createSecondaryConnectionStringForTest,
   createTableServerForTest
-} from "./table.entity.test.utils";
-import { getServicePropertiesForTest } from "./table.service.test.properties";
+} from "../utils/table.entity.test.utils";
+import { getServicePropertiesForTest } from "../utils/table.service.test.properties";
 
 // Set true to enable debug log
 configLogger(false);
@@ -92,12 +92,11 @@ describe("table APIs test", () => {
       );
     };
 
-    await getServiceStatsPromise()
-      .catch((err) => {
-        assert.strictEqual(err.statusCode, 400);
-        assert.strictEqual(err.code, "InvalidQueryParameterValue");
-        assert.ok(err);
-      });
+    await getServiceStatsPromise().catch((err) => {
+      assert.strictEqual(err.statusCode, 400);
+      assert.strictEqual(err.code, "InvalidQueryParameterValue");
+      assert.ok(err);
+    });
   });
 
   it("SetServiceProperties @loki", async () => {
@@ -113,7 +112,8 @@ describe("table APIs test", () => {
       });
     };
 
-    const props: Azure.common.models.ServicePropertiesResult.ServiceProperties = getServicePropertiesForTest();
+    const props: Azure.common.models.ServicePropertiesResult.ServiceProperties =
+      getServicePropertiesForTest();
 
     await setServicePropsPromise(props)
       .then(async (setResponse) => {

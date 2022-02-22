@@ -10,6 +10,7 @@ General:
 
 - Bump up service API version to 2021-04-10
 - Ensure the storage location exists, and allow relative paths in the VSCode extension settings that are resolved based on the workspace folder.
+- Update Azure CI to use latest image of windows due to deprecation of `vs2017-win2016` image
 
 Blob:
 
@@ -21,9 +22,19 @@ Queue:
 
 Table:
 
+
 - Fixed issues with deleting entities using empty string for RowKey.
 - Fixed HTTP 500 causes by continuation token containing non-ASCII. Values are now encoded with base64.
 - Fixed a table sas test case failure.
+- Added support for batch transaction rollback on error in batch.
+- Fixes issues with Whitespacing in Table Queries
+- Fixes issue with Edm Type Validation
+- Fixes issue when trying to add entity with Boolean or Int32
+- Failed table transaction correctly returns 409 Status code
+- Refactors tests for Table APIs
+- Adds several tests for Table APIs
+- Fixes issues for upsert and merge with etag matching
+- Allow any valid weak etag even though we know it will fail with a 412
 
 ## 2021.12 Version 3.15.0
 

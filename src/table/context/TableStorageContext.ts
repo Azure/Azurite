@@ -1,6 +1,25 @@
 import Context from "../generated/Context";
+import IRequest from "../generated/IRequest";
+import IResponse from "../generated/IResponse";
 
 export default class TableStorageContext extends Context {
+  private _batchId: string = "";
+
+  constructor(
+    holderOrContext: object | Context,
+    path: string = "context",
+    req?: IRequest,
+    res?: IResponse
+  ) {
+    super(holderOrContext, path, req, res);
+    if (
+      (holderOrContext as TableStorageContext).batchId !== undefined &&
+      (holderOrContext as TableStorageContext).batchId !== ""
+    ) {
+      this._batchId = (holderOrContext as TableStorageContext).batchId;
+    }
+  }
+
   public get account(): string | undefined {
     return this.context.account;
   }
@@ -63,5 +82,13 @@ export default class TableStorageContext extends Context {
 
   public get isSecondary(): boolean | undefined {
     return this.context.isSecondary;
+  }
+  // used for entity group transactions / batch processing
+  public set batchId(id: string) {
+    this._batchId = id;
+  }
+
+  public get batchId(): string {
+    return this._batchId;
   }
 }
