@@ -9,6 +9,7 @@ import { configLogger } from "../../../src/common/Logger";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
 import { getUniqueName } from "../../testutils";
+import { createUniquePartitionKey } from "../utils/table.entity.test.utils";
 import {
   getToAzurite,
   postToAzurite
@@ -348,5 +349,79 @@ describe("table Entity APIs test", () => {
       1,
       "We did not get the expected NotImplemented error."
     );
+  });
+
+  it.only("Upsert with wrong etag should fail in batch request, @loki", async () => {
+    const body = JSON.stringify({
+      TableName: reproFlowsTableName
+    });
+    const createTableHeaders = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=nometadata"
+    };
+    const createTableResult = await postToAzurite(
+      "Tables",
+      body,
+      createTableHeaders
+    );
+    assert.strictEqual(createTableResult.status, 201);
+
+    const createEntityHeaders = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=fullmetadata"
+    };
+    const partitionKey = createUniquePartitionKey();
+    const rowKey = "RK";
+    // first create entity to overwrite
+    const createEntityResult = await postToAzurite(
+      reproFlowsTableName,
+      `{"PartitionKey":"${partitionKey}","RowKey":"${rowKey}","Value":"01"}`,
+      createEntityHeaders
+    );
+
+    assert.strictEqual(
+      createEntityResult.status,
+      201,
+      "We failed to create the entity to be later upserted using Rest"
+    );
+
+    const headers = createEntityResult.headers;
+    assert.notStrictEqual(
+      headers.etag,
+      undefined,
+      "We did not get an Etag that we need for our test!"
+    );
+
+    const upsertBatchRequest = `--batch_adc25243-680a-46d2-bf48-0c112b5e8079\r\nContent-Type: multipart/mixed; boundary=changeset_b616f3c3-99ac-4bf7-8053-94b423345207\r\n\r\n--changeset_b616f3c3-99ac-4bf7-8053-94b423345207\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nPUT http://127.0.0.1:10002/devstoreaccount1/${reproFlowsTableName}(PartitionKey=\'${partitionKey}\',RowKey=\'${rowKey}\')?$format=application%2Fjson%3Bodata%3Dminimalmetadata HTTP/1.1\r\nHost: 127.0.0.1\r\nx-ms-version: 2019-02-02\r\nDataServiceVersion: 3.0\r\nIf-Match: W/"datetime\'2022-02-23T07%3A21%3A33.9580000Z\'"\r\nAccept: application/json\r\nContent-Type: application/json\r\n\r\n{"PartitionKey":"${partitionKey}","RowKey":"${rowKey}"}\r\n--changeset_b616f3c3-99ac-4bf7-8053-94b423345207--\r\n\r\n--batch_adc25243-680a-46d2-bf48-0c112b5e8079--\r\n`;
+    const upsertBatchHeaders = {
+      version: "2019-02-02",
+      options: {
+        requestId: "38c433f9-5af4-4890-8082-d1380605ed8e",
+        dataServiceVersion: "3.0"
+      },
+      multipartContentType:
+        "multipart/mixed; boundary=batch_adc25243-680a-46d2-bf48-0c112b5e8079"
+    };
+
+    try {
+      const upsertBatchResult = await postToAzurite(
+        "$batch",
+        upsertBatchRequest,
+        upsertBatchHeaders
+      );
+
+      assert.strictEqual(upsertBatchResult.status, 202, "Batch Upsert Failed.");
+      assert.strictEqual(
+        upsertBatchResult.data.match(/\s412\sPrecondition\sFailed/).length,
+        1,
+        "Did not get the expected error in batch response."
+      );
+    } catch (upsertError: any) {
+      assert.strictEqual(
+        upsertError.response.status,
+        202,
+        "Batch request failed."
+      );
+    }
   });
 });
