@@ -351,7 +351,7 @@ describe("table Entity APIs test", () => {
     );
   });
 
-  it.only("Upsert with wrong etag should fail in batch request, @loki", async () => {
+  it("Upsert with wrong etag should fail in batch request, @loki", async () => {
     const body = JSON.stringify({
       TableName: reproFlowsTableName
     });
