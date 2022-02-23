@@ -4,10 +4,17 @@
 
 ## Upcoming Release
 
+## 2022.02 Version 3.16.0
+
 General:
 
+- Bump up service API version to 2021-04-10
 - Ensure the storage location exists, and allow relative paths in the VSCode extension settings that are resolved based on the workspace folder.
 - Update Azure CI to use latest image of windows due to deprecation of `vs2017-win2016` image
+
+Blob:
+
+- Fixed issue that startCopyFromURL and copyFromURL API not respect `--disableProductStyleUrl` parameter in parse source Uri.
 
 Queue:
 
@@ -15,6 +22,10 @@ Queue:
 
 Table:
 
+
+- Fixed issues with deleting entities using empty string for RowKey.
+- Fixed HTTP 500 causes by continuation token containing non-ASCII. Values are now encoded with base64.
+- Fixed a table sas test case failure.
 - Added support for batch transaction rollback on error in batch.
 - Fixes issues with Whitespacing in Table Queries
 - Fixes issue with Edm Type Validation
@@ -25,7 +36,7 @@ Table:
 - Fixes issues for upsert and merge with etag matching
 - Allow any valid weak etag even though we know it will fail with a 412
 
-## 2021.10 Version 3.15.0
+## 2021.12 Version 3.15.0
 
 General:
 
@@ -36,13 +47,6 @@ General:
 Blob:
 
 - Fixed start copy blob fail with `x-ms-access-tier` header and from Archive blob in same account.
-- Fixed issue that startCopyFromURL and copyFromURL API not respect `--disableProductStyleUrl` parameter in parse source Uri.
-
-Table:
-
-- Fixes issues with deleting entities using empty string for RowKey.
-- Fixes HTTP 500 causes by continuation token containing non-ASCII. Values are now encoded with base64.
-- Fixed a table sas test case failure.
 
 ## 2021.10 Version 3.14.3
 

@@ -486,6 +486,8 @@ export class TableBatchSerialization extends BatchSerialization {
         return "Bad Request";
       case 409:
         return "Conflict";
+      case 412:
+        return "Precondition Failed";
       default:
         return "STATUS_CODE_NOT_IMPLEMENTED";
     }
