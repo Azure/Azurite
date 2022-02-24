@@ -18,6 +18,17 @@ interface IServiceAdditionalProperties {
 export type ServicePropertiesModel = Models.TableServiceProperties &
   IServiceAdditionalProperties;
 
+// used by the query filter checking logic
+type tokenTuple = [string, tokenType];
+enum tokenType {
+  unknown,
+  identifier,
+  comparisson,
+  logicalOp,
+  value,
+  parens
+}
+
 export default class LokiTableMetadataStore implements ITableMetadataStore {
   private readonly db: Loki;
   private readonly TABLES_COLLECTION = "$TABLES_COLLECTION$";
@@ -964,11 +975,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     const transformedQuery = LokiTableMetadataStore.transformEntityQuery(query);
 
-    // tslint:disable-next-line: no-console
-    // console.log(query);
-    // tslint:disable-next-line: no-console
-    // console.log(transformedQuery);
-
     return new Function("item", transformedQuery) as any;
   }
 
@@ -1002,21 +1008,39 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     let isOp = false;
     let previousIsOp = false;
     const tokens = LokiTableMetadataStore.tokenizeQuery(query);
+
+    const tokenTuples: tokenTuple[] = [];
+    for (const token of tokens) {
+      tokenTuples.push([token, tokenType.unknown]);
+    }
     let counter = -1;
-    for (let token of tokens) {
+    for (const token of tokenTuples) {
       counter++;
-      if (token === "") {
+      if (token[0] === "") {
         continue;
       }
-
+      if (token[0].match(/\b\d+/)) {
+        token[1] = tokenType.value;
+      }
       previousIsOp = isOp;
-      isOp = ["===", ">", ">=", "<", "<=", "!=="].includes(token);
-
+      isOp = ["===", ">", ">=", "<", "<=", "!=="].includes(token[0]);
+      if (isOp) {
+        token[1] = tokenType.logicalOp;
+      }
+      if ([")", "("].includes(token[0])) {
+        token[1] = tokenType.parens;
+      }
+      if (["&&", "||"].includes(token[0])) {
+        token[1] = tokenType.comparisson;
+      }
+      if (["`", "'", '"'].includes(token[0].charAt(0))) {
+        token[1] = tokenType.value;
+      }
       if (
-        !token.match(/\b\d+/) &&
-        token !== "true" &&
-        token !== "false" &&
-        !token.includes("`") &&
+        !token[0].match(/\b\d+/) &&
+        token[0] !== "true" &&
+        token[0] !== "false" &&
+        !token[0].includes("`") &&
         ![
           "===",
           ">",
@@ -1029,19 +1053,22 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           "!",
           "(",
           ")"
-        ].includes(token)
+        ].includes(token[0])
       ) {
-        if (systemProperties.has(token)) {
-          transformedQuery += `item.${systemProperties.get(token)} `;
+        if (systemProperties.has(token[0])) {
+          transformedQuery += `item.${systemProperties.get(token[0])} `;
+          token[1] = tokenType.identifier;
         } else if (allowCustomProperties) {
           // Datetime compare
           if (
             counter + 2 <= tokens.length - 1 &&
             tokens[counter + 2].startsWith("datetime")
           ) {
-            transformedQuery += `new Date(item.properties.${token}).getTime() `;
+            transformedQuery += `new Date(item.properties.${token[0]}).getTime() `;
+            token[1] = tokenType.identifier;
           } else {
-            transformedQuery += `item.properties.${token} `;
+            transformedQuery += `item.properties.${token[0]} `;
+            token[1] = tokenType.identifier;
           }
         } else {
           throw Error(
@@ -1051,29 +1078,35 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       } else {
         // Remove "L" from long int
         // 2039283L ==> 2039283
-        const matchLongInt = token.match(/\b[0-9]*L\b/g);
+        const matchLongInt = token[0].match(/\b[0-9]*L\b/g);
         if (
           previousIsOp &&
           matchLongInt !== null &&
           matchLongInt.length === 1
         ) {
-          token = token.replace(/L\b/g, "");
+          const newtoken = token[0].slice(0, token[0].length - 1);
           // however, as long int is stored as string, we need to add inverted commas
-          token = "'" + token + "'";
-        } else if (previousIsOp && token.startsWith("datetime")) {
-          token = token.replace(/\bdatetime\b/g, "");
-          token = `new Date(${token}).getTime()`;
+          token[0] = "'" + newtoken + "'";
+          token[1] = tokenType.value;
+        } else if (previousIsOp && token[0].startsWith("datetime")) {
+          token[0] = token[0].replace(/\bdatetime\b/g, "");
+          token[0] = `new Date(${token[0]}).getTime()`;
+          token[1] = tokenType.value;
         } else if (
           previousIsOp &&
-          (token.startsWith("X") || token.startsWith("binary"))
+          (token[0].startsWith("X") || token[0].startsWith("binary"))
         ) {
           throw Error("Binary filter is not supported yet.");
         }
 
-        transformedQuery += `${token} `;
+        transformedQuery += `${token[0]} `;
       }
     }
     transformedQuery += ")";
+
+    // we need to validate that the filter has some valide predicate logic
+    // simply we check if we have sequence identifier > op > value through the tokens
+    validatePredicateSequence(tokenTuples);
 
     return transformedQuery;
   }
@@ -1198,5 +1231,51 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     // reset entity rollback trackers
     this.transactionRollbackTheseEntities = [];
     this.transactionDeleteTheseEntities = [];
+  }
+}
+
+/**
+ * Checks that a filter expression conforms to a minimum predicate
+ * style logic.
+ * It is easier to follow the predicate test logic like this than to
+ * manage a state machine during the creation of the query function
+ *
+ * @param {string[]} tokens
+ */
+function validatePredicateSequence(tokens: tokenTuple[]) {
+  if (tokens.length < 3) {
+    throw Error("Invalid filter string detected!");
+  }
+  let foundPredicate: boolean = false;
+  let state: tokenType = tokenType.unknown;
+  let lastState: tokenType = tokens[0][1];
+  // base case for duplicated token types
+  for (let i = 1; i < tokens.length; i++) {
+    state = tokens[i][1];
+    if (state === tokenType.logicalOp) {
+      foundPredicate = true;
+    }
+    if (
+      state !== tokenType.unknown &&
+      state !== tokenType.parens &&
+      state === lastState
+    ) {
+      throw Error("Invalid filter string detected!");
+    }
+    if (lastState === tokenType.comparisson && state === tokenType.value) {
+      throw Error("Invalid token after comparisson operator");
+    }
+    if (
+      lastState === tokenType.value &&
+      state !== tokenType.unknown &&
+      state !== tokenType.parens &&
+      state !== tokenType.comparisson
+    ) {
+      throw Error("Invalid token after value");
+    }
+    lastState = state;
+  }
+  if (foundPredicate === false) {
+    throw Error("No predicate clause found");
   }
 }
