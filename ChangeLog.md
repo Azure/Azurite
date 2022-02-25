@@ -22,7 +22,6 @@ Queue:
 
 Table:
 
-
 - Fixed issues with deleting entities using empty string for RowKey.
 - Fixed HTTP 500 causes by continuation token containing non-ASCII. Values are now encoded with base64.
 - Fixed a table sas test case failure.
@@ -35,6 +34,7 @@ Table:
 - Adds several tests for Table APIs
 - Fixes issues for upsert and merge with etag matching
 - Allow any valid weak etag even though we know it will fail with a 412
+- Table tests no longer support node js version 8
 
 ## 2021.12 Version 3.15.0
 

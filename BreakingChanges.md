@@ -2,6 +2,11 @@
 
 > Note. This file includes breaking changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
+# 2022.2 Version 3.16.0
+
+- [Breaking] Remove support in table API Azure Pipeline for old node js versions. This means that all table tests will run based on following versions of node js: 12, 14, 16
+- [Breaking] All up test matrix in Azure Pipeline has removed nodejs 8, and is using versions: 12, 14, 16
+
 ## 2021.9 Version 3.14.2
 
 - [Breaking] Remove the support of DNS name with mutiple blocks but without accout name, like "http://foo.bar.com:10000/devstoreaccount1/container".
