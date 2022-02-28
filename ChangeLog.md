@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Fix empty partition key and row key handling in batch write operations
+
 ## 2022.02 Version 3.16.0
 
 General:
