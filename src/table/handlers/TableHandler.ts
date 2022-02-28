@@ -196,10 +196,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       eTag: newTableEntityEtag(context.startTime!)
     };
 
-    let nomarlizedEntity;
+    let normalizedEntity;
     try {
-      nomarlizedEntity = new NormalizedEntity(entity);
-      nomarlizedEntity.normalize();
+      normalizedEntity = new NormalizedEntity(entity);
+      normalizedEntity.normalize();
     } catch (e: any) {
       this.logger.error(
         `TableHandler:insertEntity() ${e.name} ${JSON.stringify(e.stack)}`,
@@ -254,7 +254,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       // }
 
       // response.body = new BufferStream(Buffer.from(JSON.stringify(body)));
-      const rawResponse = nomarlizedEntity.toResponseString(accept, body);
+      const rawResponse = normalizedEntity.toResponseString(accept, body);
       this.logger.debug(
         `TableHandler:insertEntity() Raw response string is ${JSON.stringify(
           rawResponse
@@ -275,7 +275,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   // context
   public async updateEntity(
     _table: string,
-    partitionKey: string,
+    partitionKey: string | undefined,
     rowKey: string,
     options: Models.TableUpdateEntityOptionalParams,
     context: Context
@@ -283,8 +283,14 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
-    partitionKey = partitionKey || this.getAndCheckPartitionKey(tableContext);
-    rowKey = rowKey || this.getAndCheckRowKey(tableContext);
+
+    partitionKey = partitionKey !== undefined ? partitionKey : tableContext.partitionKey!; // Get partitionKey from context
+    rowKey = rowKey !== undefined ? rowKey : tableContext.rowKey!; // Get rowKey from context
+
+    if (partitionKey === undefined || rowKey === undefined) {
+      throw StorageErrorFactory.getPropertiesNeedValue(context);
+    }
+
     const ifMatch = options.ifMatch;
 
     if (!options.tableEntityProperties) {
@@ -323,10 +329,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       eTag
     };
 
-    let nomarlizedEntity;
+    let normalizedEntity;
     try {
-      nomarlizedEntity = new NormalizedEntity(entity);
-      nomarlizedEntity.normalize();
+      normalizedEntity = new NormalizedEntity(entity);
+      normalizedEntity.normalize();
     } catch (e: any) {
       this.logger.error(
         `TableHandler:updateEntity() ${e.name} ${JSON.stringify(e.stack)}`,
@@ -359,7 +365,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
   public async mergeEntity(
     _table: string,
-    partitionKey: string,
+    partitionKey: string | undefined,
     rowKey: string,
     options: Models.TableMergeEntityOptionalParams,
     context: Context
@@ -367,8 +373,13 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
-    partitionKey = partitionKey || this.getAndCheckPartitionKey(tableContext);
-    rowKey = rowKey || this.getAndCheckRowKey(tableContext);
+
+    partitionKey = partitionKey !== undefined ? partitionKey : tableContext.partitionKey!; // Get partitionKey from context
+    rowKey = rowKey !== undefined ? rowKey : tableContext.rowKey!; // Get rowKey from context
+
+    if (partitionKey === undefined || rowKey === undefined) {
+      throw StorageErrorFactory.getPropertiesNeedValue(context);
+    }
 
     if (!options.tableEntityProperties) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
@@ -398,10 +409,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       eTag
     };
 
-    let nomarlizedEntity;
+    let normalizedEntity;
     try {
-      nomarlizedEntity = new NormalizedEntity(entity);
-      nomarlizedEntity.normalize();
+      normalizedEntity = new NormalizedEntity(entity);
+      normalizedEntity.normalize();
     } catch (e: any) {
       this.logger.error(
         `TableHandler:mergeEntity() ${e.name} ${JSON.stringify(e.stack)}`,
@@ -433,7 +444,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
   public async deleteEntity(
     _table: string,
-    partitionKey: string,
+    partitionKey: string | undefined,
     rowKey: string,
     ifMatch: string,
     options: Models.TableDeleteEntityOptionalParams,
@@ -442,8 +453,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const accountName = tableContext.account;
 
-    partitionKey = partitionKey || tableContext.partitionKey!; // Get partitionKey from context
-    rowKey = rowKey || tableContext.rowKey!; // Get rowKey from context
+    partitionKey = partitionKey !== undefined ? partitionKey : tableContext.partitionKey!; // Get partitionKey from context
+    rowKey = rowKey !== undefined ? rowKey : tableContext.rowKey!; // Get rowKey from context
 
     if (partitionKey === undefined || rowKey === undefined) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
@@ -541,9 +552,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         entity["odata.editLink"] = annotation.odataeditLink;
       }
 
-      const nomarlizedEntity = new NormalizedEntity(element);
+      const normalizedEntity = new NormalizedEntity(element);
       entities.push(
-        nomarlizedEntity.toResponseString(accept, entity, selectSet)
+        normalizedEntity.toResponseString(accept, entity, selectSet)
       );
     });
 
@@ -577,16 +588,22 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
   public async queryEntitiesWithPartitionAndRowKey(
     _table: string,
-    partitionKey: string,
-    rowKey: string,
+    partitionKey: string | undefined,
+    rowKey: string | undefined,
     options: Models.TableQueryEntitiesWithPartitionAndRowKeyOptionalParams,
     context: Context
   ): Promise<Models.TableQueryEntitiesWithPartitionAndRowKeyResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = _table ? _table : this.getAndCheckTableName(tableContext);
-    partitionKey = partitionKey || this.getAndCheckPartitionKey(tableContext);
-    rowKey = rowKey || this.getAndCheckRowKey(tableContext);
+
+    partitionKey = partitionKey !== undefined ? partitionKey : tableContext.partitionKey!; // Get partitionKey from context
+    rowKey = rowKey !== undefined ? rowKey : tableContext.rowKey!; // Get rowKey from context
+
+    if (partitionKey === undefined || rowKey === undefined) {
+      throw StorageErrorFactory.getPropertiesNeedValue(context);
+    }
+
     const accept = this.getAndCheckPayloadFormat(tableContext);
 
     const entity =
@@ -645,8 +662,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       selectSet = new Set(selectArray);
     }
 
-    const nomarlizedEntity = new NormalizedEntity(entity);
-    const rawResponse = nomarlizedEntity.toResponseString(
+    const normalizedEntity = new NormalizedEntity(entity);
+    const rawResponse = normalizedEntity.toResponseString(
       accept,
       body,
       selectSet
@@ -878,22 +895,6 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getTableNameEmpty(context);
     }
     return table;
-  }
-
-  private getAndCheckPartitionKey(context: TableStorageContext): string {
-    const partitionKey = context.partitionKey;
-    if (partitionKey === undefined) {
-      throw StorageErrorFactory.getTableNameEmpty(context);
-    }
-    return partitionKey;
-  }
-
-  private getAndCheckRowKey(context: TableStorageContext): string {
-    const rowKey = context.rowKey;
-    if (rowKey === undefined) {
-      throw StorageErrorFactory.getTableNameEmpty(context);
-    }
-    return rowKey;
   }
 
   private updateResponseAccept(

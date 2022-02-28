@@ -603,6 +603,132 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
+  [
+    { pk: "", rk: "rk", label: "empty partition key" },
+    { pk: "pk", rk: "", label: "empty row key" },
+  ].forEach(({ pk, rk, label }) => {
+
+    it(`Insert of entity with ${label} in a BATCH, @loki`, (done) => {
+      requestOverride.headers = {
+        Prefer: "return-content",
+        accept: "application/json;odata=fullmetadata"
+      };
+
+      const batchEntity1 = new TestEntity(!pk ? pk : getUniqueName(pk), !rk ? rk : getUniqueName(rk), "value1");
+
+      const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+      entityBatch.addOperation("INSERT", batchEntity1);
+
+      tableService.executeBatch(
+        tableName,
+        entityBatch,
+        (updateError, updateResult, updateResponse) => {
+          if (updateError) {
+            assert.ifError(updateError);
+            done();
+          } else {
+            assert.strictEqual(updateResponse.statusCode, 202);
+            tableService.retrieveEntity<TestEntity>(
+              tableName,
+              batchEntity1.PartitionKey._,
+              batchEntity1.RowKey._,
+              (error, result) => {
+                if (error) {
+                  assert.ifError(error);
+                } else if (result) {
+                  const entity: TestEntity = result;
+                  assert.strictEqual(entity.myValue._, batchEntity1.myValue._);
+                }
+                done();
+              }
+            );
+          }
+        }
+      );
+    });
+
+    it(`Delete of entity with ${label} in a BATCH, @loki`, (done) => {
+      requestOverride.headers = {
+        Prefer: "return-content",
+        accept: "application/json;odata=fullmetadata"
+      };
+
+      const batchEntity1 = new TestEntity(!pk ? pk : getUniqueName(pk), !rk ? rk : getUniqueName(rk), "value1");
+
+      tableService.insertEntity(
+        tableName,
+        batchEntity1,
+        (initialInsertError, initialInsertResult) => {
+          assert.ifError(initialInsertError);
+
+          const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+          entityBatch.addOperation("DELETE", batchEntity1);
+
+          tableService.executeBatch(
+            tableName,
+            entityBatch,
+            (updateError, updateResult, updateResponse) => {
+              if (updateError) {
+                assert.ifError(updateError);
+                done();
+              } else {
+                assert.strictEqual(updateResponse.statusCode, 202);
+                tableService.retrieveEntity<TestEntity>(
+                  tableName,
+                  batchEntity1.PartitionKey._,
+                  batchEntity1.RowKey._,
+                  (error, result, response) => {
+                    assert.strictEqual(response.statusCode, 404);
+                    done();
+                  }
+                );
+              }
+            }
+          );
+        })
+    });
+
+    it(`Upsert of entity with ${label} in a BATCH, @loki`, (done) => {
+      requestOverride.headers = {
+        Prefer: "return-content",
+        accept: "application/json;odata=fullmetadata"
+      };
+
+      const batchEntity1 = new TestEntity(!pk ? pk : getUniqueName(pk), !rk ? rk : getUniqueName(rk), "value1");
+
+      const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+      entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity1);
+
+      tableService.executeBatch(
+        tableName,
+        entityBatch,
+        (updateError, updateResult, updateResponse) => {
+          if (updateError) {
+            assert.ifError(updateError);
+            done();
+          } else {
+            assert.strictEqual(updateResponse.statusCode, 202);
+            tableService.retrieveEntity<TestEntity>(
+              tableName,
+              batchEntity1.PartitionKey._,
+              batchEntity1.RowKey._,
+              (error, result) => {
+                if (error) {
+                  assert.ifError(error);
+                } else if (result) {
+                  const entity: TestEntity = result;
+                  assert.strictEqual(entity.myValue._, batchEntity1.myValue._);
+                }
+                done();
+              }
+            );
+          }
+        }
+      );
+    });
+
+  })
+
   it("Simple batch test: Inserts multiple entities as a batch, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
