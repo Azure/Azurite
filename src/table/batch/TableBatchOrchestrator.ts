@@ -93,7 +93,7 @@ export default class TableBatchOrchestrator {
         this.requests[0]
       );
 
-      if (!requestPartitionKey) {
+      if (requestPartitionKey === undefined) {
         this.wasError = true;
         this.errorResponse = this.serialization.serializeGeneralRequestError(
           "Partition key not found in request",
@@ -372,12 +372,10 @@ export default class TableBatchOrchestrator {
     const updatedContext = batchContextClone as TableStorageContext;
     updatedContext.request = request;
     updatedContext.batchId = batchId;
-    let partitionKey: string;
-    let rowKey: string;
     const ifmatch: string = request.getHeader("if-match") || "*";
 
-    partitionKey = this.extractRequestPartitionKey(request);
-    rowKey = this.extractRequestRowKey(request);
+    const partitionKey = this.extractRequestPartitionKey(request);
+    const rowKey = this.extractRequestRowKey(request);
     response = await this.parentHandler.deleteEntity(
       request.getPath(),
       partitionKey,
@@ -578,14 +576,13 @@ export default class TableBatchOrchestrator {
    * @return {*}  {string}
    * @memberof TableBatchOrchestrator
    */
-  private extractRequestPartitionKey(request: BatchRequest): string {
-    let partitionKey: string;
+  private extractRequestPartitionKey(request: BatchRequest): string | undefined {
+    let partitionKey: string | undefined = undefined;
 
     const url = decodeURI(request.getUrl());
     const partKeyMatch = url.match(/(?<=PartitionKey=')(.+)(?=',)/gi);
-    partitionKey = partKeyMatch ? partKeyMatch[0] : "";
 
-    if (partitionKey === "") {
+    if (partKeyMatch === null) {
       // row key not in URL, must be in body
       const body = request.getBody();
       if (body !== "") {
@@ -594,7 +591,7 @@ export default class TableBatchOrchestrator {
       }
     } else {
       // keys can have more complex values which are URI encoded
-      partitionKey = decodeURIComponent(partitionKey);
+      partitionKey = decodeURIComponent(partKeyMatch[0]);
     }
     return partitionKey;
   }
