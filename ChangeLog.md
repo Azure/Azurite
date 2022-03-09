@@ -34,7 +34,6 @@ Table:
 - Adds several tests for Table APIs
 - Fixes issues for upsert and merge with etag matching
 - Allow any valid weak etag even though we know it will fail with a 412
-- Table tests no longer support node js version 8
 
 ## 2021.12 Version 3.15.0
 
