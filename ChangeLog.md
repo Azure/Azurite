@@ -22,7 +22,6 @@ Queue:
 
 Table:
 
-
 - Fixed issues with deleting entities using empty string for RowKey.
 - Fixed HTTP 500 causes by continuation token containing non-ASCII. Values are now encoded with base64.
 - Fixed a table sas test case failure.
