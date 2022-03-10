@@ -12,7 +12,7 @@ trigger:
 
 jobs:
   - job: blobtestlinux
-    displayName: Blob Test Linux
+    displayName: Blob Test Linux Ubuntu 20.04 LTS
     pool:
       vmImage: "ubuntu-latest"
     strategy:
@@ -34,6 +34,35 @@ jobs:
         workingDirectory: "./"
         displayName: "npm ci"
 
+      - script: |
+          npm run test:blob
+        workingDirectory: "./"
+        displayName: "npm run test:blob"
+        env: {}
+        
+  - job: blobtestlinux
+    displayName: Blob Test Linux Ubuntu 18.04
+    pool:
+      vmImage: "ubuntu-latest"
+    strategy:
+      matrix:
+        node_8_x:
+          node_version: 8.x
+        node_10_x:
+          node_version: 10.x
+        node_12_x:
+          node_version: 12.x
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(node_version)"
+        displayName: "Install Node.js"
+  
+      - script: |
+          npm ci
+        workingDirectory: "./"
+        displayName: "npm ci"
+  
       - script: |
           npm run test:blob
         workingDirectory: "./"
