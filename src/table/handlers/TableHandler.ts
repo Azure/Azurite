@@ -270,13 +270,42 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     return response;
   }
 
+  private static getAndCheck(
+    key: string | undefined,
+    getFromContext: () => string,
+    contextForThrow: Context,
+  ): string {
+    if (key !== undefined) {
+      return key;
+    }
+
+    const fromContext = getFromContext()
+    if (fromContext === undefined) {
+      throw StorageErrorFactory.getPropertiesNeedValue(contextForThrow);
+    }
+
+    return fromContext;
+  }
+
+  private static getAndCheckKeys(
+    partitionKey: string | undefined,
+    rowKey: string | undefined,
+    tableContext: TableStorageContext,
+    contextForThrow: Context,
+  ) {
+    partitionKey = TableHandler.getAndCheck(partitionKey, () => tableContext.partitionKey!, contextForThrow);
+    rowKey = TableHandler.getAndCheck(rowKey, () => tableContext.rowKey!, contextForThrow);
+
+    return [partitionKey, rowKey]
+  }
+
   // TODO: Create data structures to hold entity properties and support serialize, merge, deserialize, filter
   // Note: Batch is using the partition key and row key args, handler receives these values from middleware via
   // context
   public async updateEntity(
     _table: string,
     partitionKey: string | undefined,
-    rowKey: string,
+    rowKey: string | undefined,
     options: Models.TableUpdateEntityOptionalParams,
     context: Context
   ): Promise<Models.TableUpdateEntityResponse> {
@@ -284,12 +313,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
 
-    partitionKey = partitionKey !== undefined ? partitionKey : tableContext.partitionKey!; // Get partitionKey from context
-    rowKey = rowKey !== undefined ? rowKey : tableContext.rowKey!; // Get rowKey from context
-
-    if (partitionKey === undefined || rowKey === undefined) {
-      throw StorageErrorFactory.getPropertiesNeedValue(context);
-    }
+    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(partitionKey, rowKey, tableContext, context);
 
     const ifMatch = options.ifMatch;
 
@@ -366,7 +390,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   public async mergeEntity(
     _table: string,
     partitionKey: string | undefined,
-    rowKey: string,
+    rowKey: string | undefined,
     options: Models.TableMergeEntityOptionalParams,
     context: Context
   ): Promise<Models.TableMergeEntityResponse> {
@@ -374,12 +398,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
 
-    partitionKey = partitionKey !== undefined ? partitionKey : tableContext.partitionKey!; // Get partitionKey from context
-    rowKey = rowKey !== undefined ? rowKey : tableContext.rowKey!; // Get rowKey from context
-
-    if (partitionKey === undefined || rowKey === undefined) {
-      throw StorageErrorFactory.getPropertiesNeedValue(context);
-    }
+    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(partitionKey, rowKey, tableContext, context);
 
     if (!options.tableEntityProperties) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
@@ -445,7 +464,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   public async deleteEntity(
     _table: string,
     partitionKey: string | undefined,
-    rowKey: string,
+    rowKey: string | undefined,
     ifMatch: string,
     options: Models.TableDeleteEntityOptionalParams,
     context: Context
@@ -453,12 +472,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const accountName = tableContext.account;
 
-    partitionKey = partitionKey !== undefined ? partitionKey : tableContext.partitionKey!; // Get partitionKey from context
-    rowKey = rowKey !== undefined ? rowKey : tableContext.rowKey!; // Get rowKey from context
+    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(partitionKey, rowKey, tableContext, context);
 
-    if (partitionKey === undefined || rowKey === undefined) {
-      throw StorageErrorFactory.getPropertiesNeedValue(context);
-    }
     if (ifMatch === "" || ifMatch === undefined) {
       throw StorageErrorFactory.getPreconditionFailed(context);
     }
@@ -597,12 +612,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const account = this.getAndCheckAccountName(tableContext);
     const table = _table ? _table : this.getAndCheckTableName(tableContext);
 
-    partitionKey = partitionKey !== undefined ? partitionKey : tableContext.partitionKey!; // Get partitionKey from context
-    rowKey = rowKey !== undefined ? rowKey : tableContext.rowKey!; // Get rowKey from context
-
-    if (partitionKey === undefined || rowKey === undefined) {
-      throw StorageErrorFactory.getPropertiesNeedValue(context);
-    }
+    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(partitionKey, rowKey, tableContext, context);
 
     const accept = this.getAndCheckPayloadFormat(tableContext);
 
