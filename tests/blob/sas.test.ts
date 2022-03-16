@@ -83,6 +83,63 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await server.clean();
   });
 
+  it("generateAccountSASQueryParameters should generate correct hashes", async () => {
+    
+    const startDate = new Date(2022, 3, 16, 14, 31, 48, 0);
+    const endDate = new Date(2022, 3, 17, 14, 31, 48, 0);
+
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
+    
+    const sas = generateAccountSASQueryParameters(
+      {
+        expiresOn: endDate,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: AccountSASPermissions.parse("rwdlacup"),
+        protocol: SASProtocol.HttpsAndHttp,
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("btqf").toString(),
+        startsOn: startDate,
+        version: "2016-05-31"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    ).toString();
+    
+    assert.equal(sas, "sv=2016-05-31&ss=btqf&srt=sco&spr=https%2Chttp&st=2022-04-16T13%3A31%3A48Z&se=2022-04-17T13%3A31%3A48Z&sip=0.0.0.0-255.255.255.255&sp=rwdlacup&sig=3tOzYrzhkaX48zalU5WlyEJg%2B7Tj4RzY4jBo9mCi8AM%3D");
+
+    const sas2 = generateAccountSASQueryParameters(
+      {
+        expiresOn: endDate,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: AccountSASPermissions.parse("rwdlacup"),
+        protocol: SASProtocol.HttpsAndHttp,
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("btqf").toString(),
+        startsOn: startDate,
+        version: "2018-11-09"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    ).toString();
+    
+    assert.equal(sas2, "sv=2018-11-09&ss=btqf&srt=sco&spr=https%2Chttp&st=2022-04-16T13%3A31%3A48Z&se=2022-04-17T13%3A31%3A48Z&sip=0.0.0.0-255.255.255.255&sp=rwdlacup&sig=o23T5PzZn4Daklb%2F8Ef25%2FUprkIIeq4zI4QxT57iim8%3D");
+
+    const sas3 = generateAccountSASQueryParameters(
+      {
+        expiresOn: endDate,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: AccountSASPermissions.parse("rwdlacup"),
+        protocol: SASProtocol.HttpsAndHttp,
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("btqf").toString(),
+        startsOn: startDate,
+        version: "2020-12-06"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    ).toString();
+
+    assert.equal(sas3, "sv=2020-12-06&ss=btqf&srt=sco&spr=https%2Chttp&st=2022-04-16T13%3A31%3A48Z&se=2022-04-17T13%3A31%3A48Z&sip=0.0.0.0-255.255.255.255&sp=rwdlacup&sig=zbYgTg6EQCUeDmU4CbXEE6nMA7jA4E7d%2FXBVd7rifng%3D");
+  });
+
   it("generateAccountSASQueryParameters should work @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
