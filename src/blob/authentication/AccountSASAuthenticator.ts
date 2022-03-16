@@ -285,6 +285,7 @@ export default class AccountSASAuthenticator implements IAuthenticator {
     const ipRange = this.decodeIfExist(req.getQuery("sip"));
     const permissions = this.decodeIfExist(req.getQuery("sp"));
     const signature = this.decodeIfExist(req.getQuery("sig"));
+    const encryptionScope = this.decodeIfExist(req.getQuery("ses"));
 
     if (
       version === undefined ||
@@ -292,7 +293,8 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       permissions === undefined ||
       services === undefined ||
       resourceTypes === undefined ||
-      signature === undefined
+      signature === undefined ||
+      encryptionScope === undefined
     ) {
       return undefined;
     }
@@ -305,7 +307,8 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       permissions,
       ipRange,
       services,
-      resourceTypes
+      resourceTypes,
+      encryptionScope
     };
 
     return accountSASValues;
