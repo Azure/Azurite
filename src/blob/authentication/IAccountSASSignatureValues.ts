@@ -106,6 +106,15 @@ export interface IAccountSASSignatureValues {
    * @memberof IAccountSASSignatureValues
    */
   resourceTypes: AccountSASResourceTypes | string;
+
+  /**
+   * Indicates the encryption scope to use to encrypt the request contents.
+   * This field is supported with version 2020-12-06 or later.
+   *
+   * @type {string}
+   * @memberof IAccountSASSignatureValues
+   */
+   encryptionScope: string;
 }
 
 /**
@@ -148,6 +157,7 @@ export function generateAccountSASSignature(
       ? ""
       : accountSASSignatureValues.protocol;
   const version = accountSASSignatureValues.version;
+  const encryptionScope = accountSASSignatureValues.encryptionScope;
 
   const stringToSign = [
     accountName,
@@ -159,6 +169,7 @@ export function generateAccountSASSignature(
     parsedIPRange,
     parsedProtocol,
     version,
+    encryptionScope,
     "" // Account SAS requires an additional newline character
   ].join("\n");
 
