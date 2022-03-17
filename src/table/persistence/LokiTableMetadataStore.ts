@@ -19,14 +19,14 @@ export type ServicePropertiesModel = Models.TableServiceProperties &
   IServiceAdditionalProperties;
 
 // used by the query filter checking logic
-type tokenTuple = [string, tokenType];
-enum tokenType {
-  unknown,
-  identifier,
-  comparisson,
-  logicalOp,
-  value,
-  parens
+type TokenTuple = [string, TokenType];
+enum TokenType {
+  Unknown,
+  Identifier,
+  Comparisson,
+  LogicalOp,
+  Value,
+  Parens
 }
 
 export default class LokiTableMetadataStore implements ITableMetadataStore {
@@ -1009,9 +1009,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     let previousIsOp = false;
     const tokens = LokiTableMetadataStore.tokenizeQuery(query);
 
-    const tokenTuples: tokenTuple[] = [];
+    const tokenTuples: TokenTuple[] = [];
     for (const token of tokens) {
-      tokenTuples.push([token, tokenType.unknown]);
+      tokenTuples.push([token, TokenType.Unknown]);
     }
     let counter = -1;
     for (const token of tokenTuples) {
@@ -1020,21 +1020,21 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         continue;
       }
       if (token[0].match(/\b\d+/)) {
-        token[1] = tokenType.value;
+        token[1] = TokenType.Value;
       }
       previousIsOp = isOp;
       isOp = ["===", ">", ">=", "<", "<=", "!=="].includes(token[0]);
       if (isOp) {
-        token[1] = tokenType.logicalOp;
+        token[1] = TokenType.LogicalOp;
       }
       if ([")", "("].includes(token[0])) {
-        token[1] = tokenType.parens;
+        token[1] = TokenType.Parens;
       }
       if (["&&", "||"].includes(token[0])) {
-        token[1] = tokenType.comparisson;
+        token[1] = TokenType.Comparisson;
       }
       if (["`", "'", '"'].includes(token[0].charAt(0))) {
-        token[1] = tokenType.value;
+        token[1] = TokenType.Value;
       }
       if (
         !token[0].match(/\b\d+/) &&
@@ -1057,7 +1057,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       ) {
         if (systemProperties.has(token[0])) {
           transformedQuery += `item.${systemProperties.get(token[0])} `;
-          token[1] = tokenType.identifier;
+          token[1] = TokenType.Identifier;
         } else if (allowCustomProperties) {
           // Datetime compare
           if (
@@ -1065,10 +1065,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
             tokens[counter + 2].startsWith("datetime")
           ) {
             transformedQuery += `new Date(item.properties.${token[0]}).getTime() `;
-            token[1] = tokenType.identifier;
+            token[1] = TokenType.Identifier;
           } else {
             transformedQuery += `item.properties.${token[0]} `;
-            token[1] = tokenType.identifier;
+            token[1] = TokenType.Identifier;
           }
         } else {
           throw Error(
@@ -1087,11 +1087,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           const newtoken = token[0].slice(0, token[0].length - 1);
           // however, as long int is stored as string, we need to add inverted commas
           token[0] = "'" + newtoken + "'";
-          token[1] = tokenType.value;
+          token[1] = TokenType.Value;
         } else if (previousIsOp && token[0].startsWith("datetime")) {
           token[0] = token[0].replace(/\bdatetime\b/g, "");
           token[0] = `new Date(${token[0]}).getTime()`;
-          token[1] = tokenType.value;
+          token[1] = TokenType.Value;
         } else if (
           previousIsOp &&
           (token[0].startsWith("X") || token[0].startsWith("binary"))
@@ -1238,38 +1238,40 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
  * Checks that a filter expression conforms to a minimum predicate
  * style logic.
  * It is easier to follow the predicate test logic like this than to
- * manage a state machine during the creation of the query function
+ * manage a state machine during the creation of the query function.
+ * Should we continue to have to support more complex query validation
+ * we shall implement a query validation state machine.
  *
  * @param {string[]} tokens
  */
-function validatePredicateSequence(tokens: tokenTuple[]) {
+function validatePredicateSequence(tokens: TokenTuple[]) {
   if (tokens.length < 3) {
     throw Error("Invalid filter string detected!");
   }
   let foundPredicate: boolean = false;
-  let state: tokenType = tokenType.unknown;
-  let lastState: tokenType = tokens[0][1];
+  let state: TokenType = TokenType.Unknown;
+  let lastState: TokenType = tokens[0][1];
   // base case for duplicated token types
   for (let i = 1; i < tokens.length; i++) {
     state = tokens[i][1];
-    if (state === tokenType.logicalOp) {
+    if (state === TokenType.LogicalOp) {
       foundPredicate = true;
     }
     if (
-      state !== tokenType.unknown &&
-      state !== tokenType.parens &&
+      state !== TokenType.Unknown &&
+      state !== TokenType.Parens &&
       state === lastState
     ) {
       throw Error("Invalid filter string detected!");
     }
-    if (lastState === tokenType.comparisson && state === tokenType.value) {
+    if (lastState === TokenType.Comparisson && state === TokenType.Value) {
       throw Error("Invalid token after comparisson operator");
     }
     if (
-      lastState === tokenType.value &&
-      state !== tokenType.unknown &&
-      state !== tokenType.parens &&
-      state !== tokenType.comparisson
+      lastState === TokenType.Value &&
+      state !== TokenType.Unknown &&
+      state !== TokenType.Parens &&
+      state !== TokenType.Comparisson
     ) {
       throw Error("Invalid token after value");
     }
