@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Fix empty partition key and row key handling in batch write operations
+
 ## 2022.02 Version 3.16.0
 
 General:
@@ -21,7 +25,6 @@ Queue:
 - Fixed issue that queue list result is not in alphabetical order.
 
 Table:
-
 
 - Fixed issues with deleting entities using empty string for RowKey.
 - Fixed HTTP 500 causes by continuation token containing non-ASCII. Values are now encoded with base64.
