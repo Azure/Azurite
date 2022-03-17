@@ -11,7 +11,7 @@ trigger:
   - dev
 
 jobs:
-  - job: blobtestlinux
+  - job: blobtestubuntu20_04
     displayName: Blob Test Linux Ubuntu 20.04 LTS
     pool:
       vmImage: "ubuntu-latest"
@@ -40,7 +40,7 @@ jobs:
         displayName: "npm run test:blob"
         env: {}
         
-  - job: blobtestlinux
+  - job: blobtestubuntu18_04
     displayName: Blob Test Linux Ubuntu 18.04
     pool:
       vmImage: "ubuntu-latest"
