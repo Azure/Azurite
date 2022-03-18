@@ -11,76 +11,75 @@ describe("batch deserialization unit tests, these are not the API integration te
     const requestString =
       SerializationRequestMockStrings.Sample3InsertsUsingSDK;
     const serializer = new TableBatchSerialization();
-    const batchOperationArray = serializer.deserializeBatchRequest(
-      requestString
-    );
+    const batchOperationArray =
+      serializer.deserializeBatchRequest(requestString);
 
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray.length,
       3,
       "failed to deserialize correct number of operations"
     );
-    assert.equal(batchOperationArray[0].batchType, BatchType.table);
-    assert.equal(
+    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
+    assert.strictEqual(
       batchOperationArray[0].httpMethod,
       "POST",
       "wrong HTTP Method parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[0].path,
       "table160837408807101776",
       "wrong path parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[0].uri,
       "http://127.0.0.1:11002/devstoreaccount1/table160837408807101776",
       "wrong url parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[0].jsonRequestBody,
       '{"PartitionKey":"part1","RowKey":"row160837408812000231","myValue":"value1"}',
       "wrong jsonBody parsed"
     );
     // Second Batch Operation
-    assert.equal(batchOperationArray[1].batchType, BatchType.table);
-    assert.equal(
+    assert.strictEqual(batchOperationArray[1].batchType, BatchType.table);
+    assert.strictEqual(
       batchOperationArray[1].httpMethod,
       "POST",
       "wrong HTTP Method parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[1].path,
       "table160837408807101776",
       "wrong path parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[1].uri,
       "http://127.0.0.1:11002/devstoreaccount1/table160837408807101776",
       "wrong url parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[1].jsonRequestBody,
       '{"PartitionKey":"part1","RowKey":"row160837408812008370","myValue":"value1"}',
       "wrong jsonBody parsed"
     );
     // Third Batch Operation
-    assert.equal(batchOperationArray[2].batchType, BatchType.table);
-    assert.equal(
+    assert.strictEqual(batchOperationArray[2].batchType, BatchType.table);
+    assert.strictEqual(
       batchOperationArray[2].httpMethod,
       "POST",
       "wrong HTTP Method parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[2].path,
       "table160837408807101776",
       "wrong path parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[2].uri,
       "http://127.0.0.1:11002/devstoreaccount1/table160837408807101776",
       "wrong url parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[2].jsonRequestBody,
       '{"PartitionKey":"part1","RowKey":"row160837408812003154","myValue":"value1"}',
       "wrong jsonBody parsed"
@@ -91,29 +90,28 @@ describe("batch deserialization unit tests, these are not the API integration te
   it("deserializes, mock table batch request containing a query correctly", (done) => {
     const requestString = SerializationRequestMockStrings.Sample1QueryUsingSDK;
     const serializer = new TableBatchSerialization();
-    const batchOperationArray = serializer.deserializeBatchRequest(
-      requestString
-    );
+    const batchOperationArray =
+      serializer.deserializeBatchRequest(requestString);
 
     // this first test is currently a stupid test, as I control the type within the code
     // we want to test that we have deserialized the operation.
-    assert.equal(batchOperationArray[0].batchType, BatchType.table);
-    assert.equal(
+    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
+    assert.strictEqual(
       batchOperationArray[0].httpMethod,
       "GET",
       "wrong HTTP Method parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[0].path,
       "table160837567141205013",
       "wrong path parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[0].uri,
       "http://127.0.0.1:11002/devstoreaccount1/table160837567141205013(PartitionKey=%27part1%27,RowKey=%27row160837567145205850%27)",
       "wrong url parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[0].jsonRequestBody,
       "",
       "wrong jsonBody parsed"
@@ -125,50 +123,49 @@ describe("batch deserialization unit tests, these are not the API integration te
     const requestString =
       SerializationRequestMockStrings.SampleInsertThenMergeUsingSDK;
     const serializer = new TableBatchSerialization();
-    const batchOperationArray = serializer.deserializeBatchRequest(
-      requestString
-    );
+    const batchOperationArray =
+      serializer.deserializeBatchRequest(requestString);
 
     // First Batch Operation is an insert.
-    assert.equal(batchOperationArray[0].batchType, BatchType.table);
-    assert.equal(
+    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
+    assert.strictEqual(
       batchOperationArray[0].httpMethod,
       "POST",
       "wrong HTTP Method parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[0].path,
       "table160837770303307822",
       "wrong path parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[0].uri,
       "http://127.0.0.1:11002/devstoreaccount1/table160837770303307822",
       "wrong url parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[0].jsonRequestBody,
       '{"PartitionKey":"part1","RowKey":"row160837770307508823","myValue":"value2"}',
       "wrong jsonBody parsed"
     );
     // Second Batch Operation is a merge
-    assert.equal(batchOperationArray[1].batchType, BatchType.table);
-    assert.equal(
+    assert.strictEqual(batchOperationArray[1].batchType, BatchType.table);
+    assert.strictEqual(
       batchOperationArray[1].httpMethod,
       "MERGE",
       "wrong HTTP Method parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[1].path,
       "table160837770303307822",
       "wrong path parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[1].uri,
       "http://127.0.0.1:11002/devstoreaccount1/table160837770303307822(PartitionKey=%27part1%27,RowKey=%27row160837770307508823%27)",
       "wrong url parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[1].jsonRequestBody,
       '{"PartitionKey":"part1","RowKey":"row160837770307508823","myValue":"valueMerge"}',
       "wrong jsonBody parsed"
@@ -180,50 +177,49 @@ describe("batch deserialization unit tests, these are not the API integration te
     const requestString =
       SerializationRequestMockStrings.Sample3DeletesUsingSDK;
     const serializer = new TableBatchSerialization();
-    const batchOperationArray = serializer.deserializeBatchRequest(
-      requestString
-    );
+    const batchOperationArray =
+      serializer.deserializeBatchRequest(requestString);
 
     // First Batch Operation is an insert.
-    assert.equal(batchOperationArray[0].batchType, BatchType.table);
-    assert.equal(
+    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
+    assert.strictEqual(
       batchOperationArray[0].httpMethod,
       "DELETE",
       "wrong HTTP Method parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[0].path,
       "table161216830457901592",
       "wrong path parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[0].uri,
       "http://127.0.0.1:11002/devstoreaccount1/table161216830457901592(PartitionKey=%27part1%27,RowKey=%27row161216830462208585%27)",
       "wrong url parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[0].jsonRequestBody,
       "",
       "wrong jsonBody parsed"
     );
     // Second Batch Operation is a Delete
-    assert.equal(batchOperationArray[1].batchType, BatchType.table);
-    assert.equal(
+    assert.strictEqual(batchOperationArray[1].batchType, BatchType.table);
+    assert.strictEqual(
       batchOperationArray[1].httpMethod,
       "DELETE",
       "wrong HTTP Method parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[1].path,
       "table161216830457901592",
       "wrong path parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[1].uri,
       "http://127.0.0.1:11002/devstoreaccount1/table161216830457901592(PartitionKey=%27part1%27,RowKey=%27row161216830462204546%27)",
       "wrong url parsed"
     );
-    assert.equal(
+    assert.strictEqual(
       batchOperationArray[1].jsonRequestBody,
       "",
       "wrong jsonBody parsed"
@@ -235,14 +231,13 @@ describe("batch deserialization unit tests, these are not the API integration te
     const requestString =
       SerializationRequestMockStrings.BatchDurableE1HelloRequestString;
     const serializer = new TableBatchSerialization();
-    const batchOperationArray = serializer.deserializeBatchRequest(
-      requestString
-    );
+    const batchOperationArray =
+      serializer.deserializeBatchRequest(requestString);
 
     // There are 5 operations in the batch
-    assert.equal(batchOperationArray.length, 5);
+    assert.strictEqual(batchOperationArray.length, 5);
     // First Batch Operation is an insert.
-    assert.equal(batchOperationArray[0].batchType, BatchType.table);
+    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
 
     done();
   });
@@ -254,7 +249,7 @@ describe("batch deserialization unit tests, these are not the API integration te
     serializationBase.extractLineEndings(
       SerializationRequestMockStrings.BatchDurableE1HelloRequestString
     );
-    assert.equal(serializationBase.lineEnding, "\r\n");
+    assert.strictEqual(serializationBase.lineEnding, "\r\n");
     done();
   });
 
@@ -264,7 +259,7 @@ describe("batch deserialization unit tests, these are not the API integration te
     serializationBase.extractLineEndings(
       SerializationRequestMockStrings.Sample3InsertsUsingSDK
     );
-    assert.equal(serializationBase.lineEnding, "\n");
+    assert.strictEqual(serializationBase.lineEnding, "\n");
     done();
   });
 
@@ -274,7 +269,7 @@ describe("batch deserialization unit tests, these are not the API integration te
     serializationBase.extractBatchBoundary(
       SerializationRequestMockStrings.BatchDurableE1HelloRequestString
     );
-    assert.equal(
+    assert.strictEqual(
       serializationBase.batchBoundary,
       "--batch_35c74636-e91e-4c4f-9ab1-906881bf7d9d"
     );
@@ -286,7 +281,7 @@ describe("batch deserialization unit tests, these are not the API integration te
     serializationBase.extractChangeSetBoundary(
       SerializationRequestMockStrings.BatchDurableE1HelloRequestString
     );
-    assert.equal(
+    assert.strictEqual(
       serializationBase.changesetBoundary,
       "changeset_0ac4036e-9ea9-4dfc-90c3-66a95213b6b0"
     );
@@ -299,7 +294,7 @@ describe("batch deserialization unit tests, these are not the API integration te
     serializationBase.extractBatchBoundary(
       SerializationRequestMockStrings.BatchQueryWithPartitionKeyAndRowKeyRequest
     );
-    assert.equal(
+    assert.strictEqual(
       serializationBase.batchBoundary,
       "--batch_d54a6553104c5b65f259aa178d324ebf"
     );
@@ -311,7 +306,7 @@ describe("batch deserialization unit tests, these are not the API integration te
     serializationBase.extractChangeSetBoundary(
       SerializationRequestMockStrings.BatchQueryWithPartitionKeyAndRowKeyRequest
     );
-    assert.equal(
+    assert.strictEqual(
       serializationBase.changesetBoundary,
       "--batch_d54a6553104c5b65f259aa178d324ebf"
     );
@@ -323,7 +318,7 @@ describe("batch deserialization unit tests, these are not the API integration te
     serializationBase.extractChangeSetBoundary(
       SerializationRequestMockStrings.BatchNonGuidBoundaryShortString
     );
-    assert.equal(serializationBase.changesetBoundary, "blahblah");
+    assert.strictEqual(serializationBase.changesetBoundary, "blahblah");
     done();
   });
 
@@ -339,7 +334,7 @@ describe("batch deserialization unit tests, these are not the API integration te
     ];
     // const headers1 = new BatchRequestHeaders(sampleHeaders1);
     const headers = new BatchRequestHeaders(sampleHeaders);
-    assert.equal(headers.header("prefer"), "return-no-content");
+    assert.strictEqual(headers.header("prefer"), "return-no-content");
     done();
   });
 
@@ -349,25 +344,20 @@ describe("batch deserialization unit tests, these are not the API integration te
     // and must be between 3 and 63 characters long
     const uris = [
       {
-        uri:
-          "http://127.0.0.1:10002/queuesdev/funcpcappdevHistory(PartitionKey='2d2c8fe4-d3a6-438f-aa83-382d93ee9569:ca',RowKey='0000000000000000')",
+        uri: "http://127.0.0.1:10002/queuesdev/funcpcappdevHistory(PartitionKey='2d2c8fe4-d3a6-438f-aa83-382d93ee9569:ca',RowKey='0000000000000000')",
         path: "/queuesdev/funcpcappdevHistory"
       },
       {
-        uri:
-          "http://127.0.0.1:10002/devaccountstore1/myTable(PartitionKey='1',RowKey='1ab')",
+        uri: "http://127.0.0.1:10002/devaccountstore1/myTable(PartitionKey='1',RowKey='1ab')",
         path: "/devaccountstore1/myTable"
       },
       {
-        uri:
-          "http://127.0.0.1:9999/my1accountstore99/my1Table(PartitionKey='2',RowKey='2')",
+        uri: "http://127.0.0.1:9999/my1accountstore99/my1Table(PartitionKey='2',RowKey='2')",
         path: "/my1accountstore99/my1Table"
       },
       {
-        uri:
-          "http://127.0.0.1:9999/my1/my1Table9999999999999999999999999999999999999999999999999qw9999(PartitionKey='2',RowKey='2')",
-        path:
-          "/my1/my1Table9999999999999999999999999999999999999999999999999qw9999"
+        uri: "http://127.0.0.1:9999/my1/my1Table9999999999999999999999999999999999999999999999999qw9999(PartitionKey='2',RowKey='2')",
+        path: "/my1/my1Table9999999999999999999999999999999999999999999999999qw9999"
       }
     ];
 
@@ -388,6 +378,132 @@ describe("batch deserialization unit tests, these are not the API integration te
         );
       }
     });
+    done();
+  });
+
+  it("deserializes, mock table batch request from Go SDK containing 2 inserts correctly", (done) => {
+    const requestString =
+      SerializationRequestMockStrings.BatchGoSDKInsertRequestString1;
+    const serializer = new TableBatchSerialization();
+    const batchOperationArray =
+      serializer.deserializeBatchRequest(requestString);
+
+    assert.strictEqual(
+      batchOperationArray.length,
+      2,
+      "We did not deserialize all operations!"
+    );
+    // First Batch Operation is an insert.
+    // {\"PartitionKey\":\"uuid\",\"RowKey\":\"rkey1\",\"price\":5,\"product\":\"product1\"}
+    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
+    assert.strictEqual(
+      batchOperationArray[0].httpMethod,
+      "POST",
+      "wrong HTTP Method parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[0].path,
+      "testTable",
+      "wrong path parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[0].uri?.toString() ===
+        "http://127.0.0.1:10002/devstoreaccount1/testTable",
+      true,
+      "wrong url parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[0].jsonRequestBody,
+      '{"PartitionKey":"uuid","RowKey":"rkey1","price":5,"product":"product1"}',
+      "wrong jsonBody parsed"
+    );
+    // Second Batch Operation is an insert
+    // {\"PartitionKey\":\"uuid\",\"RowKey\":\"rkey2\",\"price\":10,\"product\":\"product2\"
+    assert.strictEqual(batchOperationArray[1].batchType, BatchType.table);
+    assert.strictEqual(
+      batchOperationArray[1].httpMethod,
+      "POST",
+      "wrong HTTP Method parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[1].path,
+      "testTable",
+      "wrong path parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[1].uri?.toString() ===
+        "http://127.0.0.1:10002/devstoreaccount1/testTable",
+      true,
+      "wrong url parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[1].jsonRequestBody,
+      '{"PartitionKey":"uuid","RowKey":"rkey2","price":10,"product":"product2"}',
+      "wrong jsonBody parsed"
+    );
+    done();
+  });
+
+  it("deserializes, mock table batch request from Go SDK containing more complex URL correctly", (done) => {
+    const requestString =
+      SerializationRequestMockStrings.BatchGoSDKInsertRequestString2;
+    const serializer = new TableBatchSerialization();
+    const batchOperationArray =
+      serializer.deserializeBatchRequest(requestString);
+
+    assert.strictEqual(
+      batchOperationArray.length,
+      2,
+      "We did not deserialize all operations!"
+    );
+    // First Batch Operation is an insert.
+    // {\"PartitionKey\":\"uuid\",\"RowKey\":\"rkey1\",\"price\":5,\"product\":\"product1\"}
+    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
+    assert.strictEqual(
+      batchOperationArray[0].httpMethod,
+      "POST",
+      "wrong HTTP Method parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[0].path,
+      "TestTable",
+      "wrong path parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[0].uri?.toString() ===
+        "http://127.0.0.1:10002/devstoreaccount1/TestTable?%24format=application%2Fjson%3Bodata%3Dminimalmetadata",
+      true,
+      "wrong url parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[0].jsonRequestBody,
+      '{"PartitionKey":"5cad691a-3fb3-4016-8061-9a18fd8dea4a","RowKey":"rkey1","product":"product1"}',
+      "wrong jsonBody parsed"
+    );
+    // Second Batch Operation is an insert
+    // {\"PartitionKey\":\"uuid\",\"RowKey\":\"rkey2\",\"price\":10,\"product\":\"product2\"
+    assert.strictEqual(batchOperationArray[1].batchType, BatchType.table);
+    assert.strictEqual(
+      batchOperationArray[1].httpMethod,
+      "POST",
+      "wrong HTTP Method parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[1].path,
+      "TestTable",
+      "wrong path parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[1].uri?.toString() ===
+        "http://127.0.0.1:10002/devstoreaccount1/TestTable?%24format=application%2Fjson%3Bodata%3Dminimalmetadata",
+      true,
+      "wrong url parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[1].jsonRequestBody,
+      '{"PartitionKey":"5cad691a-3fb3-4016-8061-9a18fd8dea4a","RowKey":"rkey2","product":"product2"}',
+      "wrong jsonBody parsed"
+    );
     done();
   });
 });

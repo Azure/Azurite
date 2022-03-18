@@ -37,23 +37,14 @@ export class TableBatchSerialization extends BatchSerialization {
   public deserializeBatchRequest(
     batchRequestsString: string
   ): TableBatchOperation[] {
+    batchRequestsString = decodeURI(batchRequestsString);
     this.extractBatchBoundary(batchRequestsString);
     this.extractChangeSetBoundary(batchRequestsString);
     this.extractLineEndings(batchRequestsString);
-    // we can't rely on case of strings we use in delimiters
-    // ToDo: might be easier and more efficient to use i option on the regex here...
-    const contentTypeHeaderString = this.extractRequestHeaderString(
-      batchRequestsString,
-      "(\\n)+(([c,C])+(ontent-)+([t,T])+(ype)+)+(?=:)+"
-    );
-    const contentTransferEncodingString = this.extractRequestHeaderString(
-      batchRequestsString,
-      "(\\n)+(([c,C])+(ontent-)+([t,T])+(ransfer-)+([e,E])+(ncoding))+(?=:)+"
-    );
 
     // the line endings might be \r\n or \n
     const HTTP_LINE_ENDING = this.lineEnding;
-    const subRequestPrefix = `--${this.changesetBoundary}${HTTP_LINE_ENDING}${contentTypeHeaderString}: application/http${HTTP_LINE_ENDING}${contentTransferEncodingString}: binary`;
+    const subRequestPrefix = `--${this.changesetBoundary}${HTTP_LINE_ENDING}`;
     const splitBody = batchRequestsString.split(subRequestPrefix);
 
     // dropping first element as boundary if we have a batch with multiple requests
@@ -95,8 +86,6 @@ export class TableBatchSerialization extends BatchSerialization {
 
         const jsonOperationBody = subRequest.match(/{+.+}+/);
 
-        // ToDo: not sure if this logic is valid, it might be better
-        // to just have an empty body and then error out when determining routing of request in Handler
         if (
           subRequests.length > 1 &&
           null !== requestType &&
@@ -491,26 +480,6 @@ export class TableBatchSerialization extends BatchSerialization {
       default:
         return "STATUS_CODE_NOT_IMPLEMENTED";
     }
-  }
-
-  /**
-   * extract a header request string
-   *
-   * @private
-   * @param {string} batchRequestsString
-   * @param {string} regExPattern
-   * @return {*}
-   * @memberof TableBatchSerialization
-   */
-  private extractRequestHeaderString(
-    batchRequestsString: string,
-    regExPattern: string
-  ) {
-    const headerStringMatches = batchRequestsString.match(regExPattern);
-    if (headerStringMatches == null) {
-      throw StorageError;
-    }
-    return headerStringMatches[2];
   }
 
   /**
