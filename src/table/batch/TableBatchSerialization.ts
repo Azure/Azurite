@@ -521,14 +521,22 @@ export class TableBatchSerialization extends BatchSerialization {
     serializedResponses: string,
     request: BatchRequest
   ): string {
-    let parenthesesPosition: number = request.getUrl().indexOf("(");
-    parenthesesPosition--;
-    if (parenthesesPosition < 0) {
-      parenthesesPosition = request.getUrl().length;
+    const parenthesesPosition: number = request.getUrl().indexOf("(");
+    const queryPosition: number = request.getUrl().indexOf("?");
+    let offsetPosition: number = -1;
+    if (
+      queryPosition > 0 &&
+      (queryPosition < parenthesesPosition || parenthesesPosition === -1)
+    ) {
+      offsetPosition = queryPosition;
+    } else {
+      offsetPosition = parenthesesPosition;
     }
-    const trimmedUrl: string = request
-      .getUrl()
-      .substring(0, parenthesesPosition);
+    offsetPosition--;
+    if (offsetPosition < 0) {
+      offsetPosition = request.getUrl().length;
+    }
+    const trimmedUrl: string = request.getUrl().substring(0, offsetPosition);
     let entityPath = trimmedUrl + "(PartitionKey='";
     entityPath += request.params.tableEntityProperties!.PartitionKey;
     entityPath += "',";
