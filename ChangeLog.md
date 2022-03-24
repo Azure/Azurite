@@ -6,7 +6,9 @@
 
 Table:
 
-- Fix empty partition key and row key handling in batch write operations
+- Fix empty partition key and row key handling in batch write operations.
+- Fix batch reponse for Go SDK, includes additional CRLF on closure of changesetresponse section.
+- Removes query strings from Location and DataServiceId batch response headers.
 
 ## 2022.02 Version 3.16.0
 
@@ -23,6 +25,7 @@ Blob:
 Queue:
 
 - Fixed issue that queue list result is not in alphabetical order.
+- Fixed class name of QueueSASAuthenticator mistakenly named BlobSASAuthenticator.
 
 Table:
 
@@ -38,6 +41,7 @@ Table:
 - Adds several tests for Table APIs
 - Fixes issues for upsert and merge with etag matching
 - Allow any valid weak etag even though we know it will fail with a 412
+- Added check for table query validity
 
 ## 2021.12 Version 3.15.0
 
