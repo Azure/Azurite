@@ -2,7 +2,7 @@
 
 import * as assert from "assert";
 import LogicAppReproEntity from "../models/table.entity.test.logicapp.entity";
-import { odata, TableEntity, TableTransaction } from "@azure/data-tables";
+import { Edm, odata, TableEntity, TableTransaction } from "@azure/data-tables";
 import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
 import { getUniqueName } from "../../testutils";
@@ -353,43 +353,43 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     const queriesAndExpectedResult = [
       {
         queryOptions: {
-          filter: odata`PartitionKey eq ${partitionKeyForQueryTest} && number gt 11`
+          filter: odata`PartitionKey eq ${partitionKeyForQueryTest} and number gt 11`
         },
         expectedResult: 0
       },
       {
         queryOptions: {
-          filter: odata`PartitionKey eq ${partitionKeyForQueryTest} && number lt 11`
+          filter: odata`PartitionKey eq ${partitionKeyForQueryTest} and number lt 11`
         },
         expectedResult: 10
       },
       {
         queryOptions: {
-          filter: odata`PartitionKey eq ${partitionKeyForQueryTest} && number gt 11 && Timestamp lt datetime'${newTimeStamp}'`
+          filter: odata`PartitionKey eq ${partitionKeyForQueryTest} and number gt 11 and Timestamp lt datetime'${newTimeStamp}'`
         },
         expectedResult: 0
       },
       {
         queryOptions: {
-          filter: odata`PartitionKey eq ${partitionKeyForQueryTest} && number lt 11 && Timestamp lt datetime'${newTimeStamp}'`
+          filter: odata`PartitionKey eq ${partitionKeyForQueryTest} and number lt 11 and Timestamp lt datetime'${newTimeStamp}'`
         },
         expectedResult: 10
       },
       {
         queryOptions: {
-          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) && (number lt 12) && (Timestamp lt datetime'${newTimeStamp}')`
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (number lt 12) and (Timestamp lt datetime'${newTimeStamp}')`
         },
         expectedResult: 10
       },
       {
         queryOptions: {
-          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})&& (number lt 12) &&(Timestamp lt datetime'${newTimeStamp}')`
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and (number lt 12) and(Timestamp lt datetime'${newTimeStamp}')`
         },
         expectedResult: 10
       },
       {
         queryOptions: {
-          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})&&(number lt 12)and(Timestamp lt datetime'${newTimeStamp}')`
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and(number lt 12)and(Timestamp lt datetime'${newTimeStamp}')`
         },
         expectedResult: 10
       }
@@ -399,7 +399,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       const entities = tableClient.listEntities<
         TableEntity<{ number: number }>
       >({
-        queryOptions: queryTest.queryOptions
+        queryOptions: queryTest.queryOptions,
+        disableTypeConversion: true
       });
       let all: TableEntity<{ number: number }>[] = [];
       for await (const entity of entities.byPage({
@@ -407,10 +408,14 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       })) {
         all = [...all, ...entity];
       }
-      assert.strictEqual(all.length, queryTest.expectedResult);
+      assert.strictEqual(
+        all.length,
+        queryTest.expectedResult,
+        `Failed on query ${queryTest.queryOptions.filter}`
+      );
       testsCompleted++;
     }
-    assert.strictEqual(testsCompleted, 7);
+    assert.strictEqual(testsCompleted, 7, "Not all tests completed");
     await tableClient.deleteTable();
   });
 
@@ -513,37 +518,45 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
         partitionKeyForQueryTest
       );
-      testEntity.int64Field = `${i}`;
+      testEntity.int64Field = { value: `${i}`, type: "Int64" };
       const result = await tableClient.createEntity(testEntity);
       assert.notStrictEqual(result.etag, undefined);
     }
     const maxPageSize = 10;
     let testsCompleted = 0;
+    type queryOptions = {
+      filter: string;
+    };
+    type queryAndResult = {
+      queryOptions: queryOptions;
+      expectedResult: Edm<"Int64">;
+    };
     // take note of the different whitespacing and query formatting:
-    const queriesAndExpectedResult = [
+    const queriesAndExpectedResult: queryAndResult[] = [
       {
         queryOptions: {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (int64Field eq 1L )`
         },
-        expectedResult: 1
+        expectedResult: { value: "1", type: "Int64" }
       },
       {
         queryOptions: {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (int64Field eq 2L)`
         },
-        expectedResult: 2
+        expectedResult: { value: "2", type: "Int64" }
       },
       {
         queryOptions: {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (int64Field eq 6L)`
         },
-        expectedResult: 6
+        expectedResult: { value: "6", type: "Int64" }
       }
     ];
 
     for (const queryTest of queriesAndExpectedResult) {
       const entities = tableClient.listEntities<AzureDataTablesTestEntity>({
-        queryOptions: queryTest.queryOptions
+        queryOptions: queryTest.queryOptions,
+        disableTypeConversion: true
       });
       let all: AzureDataTablesTestEntity[] = [];
       for await (const entity of entities.byPage({
@@ -556,9 +569,10 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
         1,
         `Failed on number of results with query ${queryTest.queryOptions.filter}`
       );
+
       assert.strictEqual(
-        all[0].int64Field,
-        queryTest.expectedResult.toString(),
+        all[0].int64Field.value,
+        queryTest.expectedResult.value,
         `Failed to validate value with query ${queryTest.queryOptions.filter}`
       );
       testsCompleted++;
@@ -659,8 +673,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
         partitionKeyForQueryTest
       );
-      testEntity.doubleField = 5;
-      testEntity["doubleField@odata.type"] = "Edm.Double";
+      testEntity.doubleField = { value: 5, type: "Double" };
       const result = await tableClient.createEntity(testEntity);
       assert.notStrictEqual(result.etag, undefined);
     }
@@ -883,5 +896,103 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     const deleteResult = await tableClient.deleteEntity("", "");
 
     assert.notStrictEqual(deleteResult.version, undefined);
+  });
+
+  it("should error on query with invalid filter string, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("datatables")
+    );
+    const partitionKeyForQueryTest = createUniquePartitionKey("filter");
+    const totalItems = 10;
+    await tableClient.createTable();
+    const timestamp = new Date();
+    timestamp.setDate(timestamp.getDate() + 1);
+    for (let i = 0; i < totalItems; i++) {
+      const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
+        partitionKeyForQueryTest
+      );
+      testEntity.doubleField = { value: 5, type: "Double" };
+      const result = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(result.etag, undefined);
+    }
+    const maxPageSize = 10;
+    let testsCompleted = 0;
+    // each of these queries is invalid and generates an error against the service
+    // case (1 === 1) leads to status code 501 from the service, we return 400
+    const queriesAndExpectedResult = [
+      {
+        queryOptions: {
+          filter: odata`(1 === 1)`
+        },
+        expectedResult: 0
+      },
+      {
+        queryOptions: {
+          filter: odata`(1)`
+        },
+        expectedResult: 0
+      },
+      {
+        queryOptions: {
+          filter: odata`(1 1 1)`
+        },
+        expectedResult: 0
+      },
+      {
+        queryOptions: {
+          filter: odata`("a" eq "a")`
+        },
+        expectedResult: 0
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest} eq 5.0)`
+        },
+        expectedResult: 0
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq eq ${partitionKeyForQueryTest}) and (doubleField eq 5)`
+        },
+        expectedResult: 0
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and and (doubleField gt 4)`
+        },
+        expectedResult: 0
+      }
+    ];
+    for (const queryTest of queriesAndExpectedResult) {
+      const entities = tableClient.listEntities<AzureDataTablesTestEntity>({
+        queryOptions: queryTest.queryOptions
+      });
+
+      try {
+        let all: AzureDataTablesTestEntity[] = [];
+        for await (const entity of entities.byPage({
+          maxPageSize
+        })) {
+          all = [...all, ...entity];
+        }
+        // we should not hit this assert if the exception is generated.
+        // it helps catch the cases which slip through filter validation
+        assert.strictEqual(
+          all.length,
+          -1,
+          `Failed on number of results with query ${queryTest.queryOptions.filter}.`
+        );
+      } catch (filterException: any) {
+        assert.strictEqual(
+          [400, 501].includes(filterException.statusCode),
+          true,
+          `Filter "${queryTest.queryOptions.filter}". Unexpected error. We got : ${filterException.message}`
+        );
+      }
+      testsCompleted++;
+    }
+    assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
+    await tableClient.deleteTable();
   });
 });
