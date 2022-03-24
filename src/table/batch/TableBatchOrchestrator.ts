@@ -164,7 +164,8 @@ export default class TableBatchOrchestrator {
     // (currently static header) ToDo: Validate if we need to correct headers via tests
     responseString +=
       "Content-Type: multipart/mixed; boundary=" + changesetBoundary + "\r\n";
-    const changesetBoundaryClose: string = "--" + changesetBoundary + "--\r\n";
+    const changesetBoundaryClose: string =
+      "\r\n--" + changesetBoundary + "--\r\n";
     changesetBoundary = "\r\n--" + changesetBoundary;
     if (this.wasError === false) {
       this.requests.forEach((request) => {
@@ -576,7 +577,9 @@ export default class TableBatchOrchestrator {
    * @return {*}  {string}
    * @memberof TableBatchOrchestrator
    */
-  private extractRequestPartitionKey(request: BatchRequest): string | undefined {
+  private extractRequestPartitionKey(
+    request: BatchRequest
+  ): string | undefined {
     let partitionKey: string | undefined;
 
     const url = decodeURI(request.getUrl());
