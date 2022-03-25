@@ -53,7 +53,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const accept = this.getAndCheckPayloadFormat(tableContext);
     const account = this.getAndCheckAccountName(tableContext);
-    const table = tableProperties.tableName; // Table name is in request body instead of URL
+    // Table name is in request body instead of URL
+    // we must also force casing as service is case insensitive
+    const table = tableProperties.tableName?.toLowerCase();
     if (table === undefined) {
       throw StorageErrorFactory.getTableNameEmpty(context);
     }
@@ -273,13 +275,13 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   private static getAndCheck(
     key: string | undefined,
     getFromContext: () => string,
-    contextForThrow: Context,
+    contextForThrow: Context
   ): string {
     if (key !== undefined) {
       return key;
     }
 
-    const fromContext = getFromContext()
+    const fromContext = getFromContext();
     if (fromContext === undefined) {
       throw StorageErrorFactory.getPropertiesNeedValue(contextForThrow);
     }
@@ -291,12 +293,20 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     partitionKey: string | undefined,
     rowKey: string | undefined,
     tableContext: TableStorageContext,
-    contextForThrow: Context,
+    contextForThrow: Context
   ) {
-    partitionKey = TableHandler.getAndCheck(partitionKey, () => tableContext.partitionKey!, contextForThrow);
-    rowKey = TableHandler.getAndCheck(rowKey, () => tableContext.rowKey!, contextForThrow);
+    partitionKey = TableHandler.getAndCheck(
+      partitionKey,
+      () => tableContext.partitionKey!,
+      contextForThrow
+    );
+    rowKey = TableHandler.getAndCheck(
+      rowKey,
+      () => tableContext.rowKey!,
+      contextForThrow
+    );
 
-    return [partitionKey, rowKey]
+    return [partitionKey, rowKey];
   }
 
   // TODO: Create data structures to hold entity properties and support serialize, merge, deserialize, filter
@@ -313,7 +323,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
 
-    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(partitionKey, rowKey, tableContext, context);
+    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(
+      partitionKey,
+      rowKey,
+      tableContext,
+      context
+    );
 
     const ifMatch = options.ifMatch;
 
@@ -398,7 +413,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
 
-    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(partitionKey, rowKey, tableContext, context);
+    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(
+      partitionKey,
+      rowKey,
+      tableContext,
+      context
+    );
 
     if (!options.tableEntityProperties) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
@@ -472,7 +492,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const accountName = tableContext.account;
 
-    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(partitionKey, rowKey, tableContext, context);
+    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(
+      partitionKey,
+      rowKey,
+      tableContext,
+      context
+    );
 
     if (ifMatch === "" || ifMatch === undefined) {
       throw StorageErrorFactory.getPreconditionFailed(context);
@@ -612,7 +637,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const account = this.getAndCheckAccountName(tableContext);
     const table = _table ? _table : this.getAndCheckTableName(tableContext);
 
-    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(partitionKey, rowKey, tableContext, context);
+    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(
+      partitionKey,
+      rowKey,
+      tableContext,
+      context
+    );
 
     const accept = this.getAndCheckPayloadFormat(tableContext);
 

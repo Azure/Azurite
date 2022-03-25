@@ -261,12 +261,16 @@ export function getPayloadFormat(context: Context): string {
   return format;
 }
 
+// https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-the-table-service-data-model#table-names
 export function validateTableName(context: Context, tableName: string) {
   if (tableName !== "" && (tableName!.length < 3 || tableName!.length > 63)) {
     throw StorageErrorFactory.getOutOfRangeName(context);
   }
   const reg = new RegExp("^[A-Za-z][A-Za-z0-9]{2,62}$");
   if (!reg.test(tableName!) && !tableName.startsWith("$Metric")) {
+    throw StorageErrorFactory.getInvalidResourceName(context);
+  }
+  if (tableName.toLowerCase() === "tables") {
     throw StorageErrorFactory.getInvalidResourceName(context);
   }
 }
@@ -290,8 +294,6 @@ export function newTableEntityEtag(startTime: Date): string {
 export function checkEtagIsInvalidFormat(etag: string): boolean {
   // Weak etag is required. This is parity with Azure and legacy emulator.
   // Source for regex: https://stackoverflow.com/a/11572348
-  const match = etag.match(
-    /^[wW]\/"([^"]|\\")*"$/
-  );
+  const match = etag.match(/^[wW]\/"([^"]|\\")*"$/);
   return match === null;
 }
