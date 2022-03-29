@@ -124,9 +124,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   public async createTable(context: Context, tableModel: Table): Promise<void> {
     // Check for table entry in the table registry collection
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
+    // Azure Storage Service is case insensitive
+    const tableLower = tableModel.table.toLocaleLowerCase();
     const doc = coll.findOne({
       account: tableModel.account,
-      table: tableModel.table
+      table: tableLower
     });
 
     // If the metadata exists, we will throw getTableAlreadyExists error
@@ -160,9 +162,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   ): Promise<void> {
     // remove table reference from collection registry
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
+    // Azure Storage Service is case insensitive
+    const tableLower = table.toLocaleLowerCase();
     const doc = coll.findOne({
       account,
-      table
+      table: tableLower
     });
     if (doc) {
       coll.remove(doc);
@@ -170,7 +174,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       throw StorageErrorFactory.ResourceNotFound(context);
     }
 
-    const tableCollectionName = this.getTableCollectionName(account, table);
+    const tableCollectionName = this.getTableCollectionName(
+      account,
+      tableLower
+    );
     const tableEntityCollection = this.db.getCollection(tableCollectionName);
     if (tableEntityCollection) {
       this.db.removeCollection(tableCollectionName);
@@ -194,14 +201,16 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     tableACL?: TableACL
   ): Promise<void> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
-    const doc = coll.findOne({ account, table });
+    // Azure Storage Service is case insensitive
+    const tableLower = table.toLocaleLowerCase();
+    const persistedTable = coll.findOne({ account, table: tableLower });
 
-    if (!doc) {
+    if (!persistedTable) {
       throw StorageErrorFactory.getTableNotFound(context);
     }
 
-    doc.tableAcl = tableACL;
-    coll.update(doc);
+    persistedTable.tableAcl = tableACL;
+    coll.update(persistedTable);
   }
 
   public async getTable(
@@ -210,7 +219,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     context: Context
   ): Promise<Table> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
-    const doc = coll.findOne({ account, table });
+    // Azure Storage Service is case insensitive
+    const tableLower = table.toLocaleLowerCase();
+    const doc = coll.findOne({ account, table: tableLower });
     if (!doc) {
       throw StorageErrorFactory.getTableNotFound(context);
     }
@@ -643,8 +654,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     rowKey: string,
     batchId?: string
   ): Promise<Entity | undefined> {
+    // Azure Storage Service is case insensitive
+    const tableLower = table.toLocaleLowerCase();
     const tableColl = this.db.getCollection(
-      this.getTableCollectionName(account, table)
+      this.getTableCollectionName(account, tableLower)
     );
 
     // Throw error, if table not exists
