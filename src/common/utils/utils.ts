@@ -89,8 +89,11 @@ export function truncatedISO8061Date(
   // Date.toISOString() will return like "2018-10-29T06:34:36.139Z"
   const dateString = date.toISOString();
 
+  // some clients are very fast, and require more than ms precision available in JS
   return withMilliseconds
-    ? dateString.substring(0, dateString.length - 1) + "0000" + "Z"
+    ? dateString.substring(0, dateString.length - 1) +
+        process.hrtime()[1].toString().padEnd(4, "0").slice(0, 3) +
+        "Z"
     : dateString.substring(0, dateString.length - 5) + "Z";
 }
 

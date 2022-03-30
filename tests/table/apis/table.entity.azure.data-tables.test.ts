@@ -995,4 +995,64 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
     await tableClient.deleteTable();
   });
+
+  // https://github.com/Azure/Azurite/issues/1286
+  it("Should update Etags with sufficient granualrity, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("etags")
+    );
+    const etags = new Map();
+    const iterations = 99;
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntities: AzureDataTablesTestEntity[] = [];
+    const testEntity = createBasicEntityForTest(partitionKey);
+    const mergeResults: any[] = [];
+    const replaceResults: any[] = [];
+    for (let i = 0; i < iterations; i++) {
+      testEntities[i] = testEntity;
+    }
+
+    await tableClient.createEntity(testEntity);
+
+    const result1 = await tableClient.getEntity(
+      testEntity.partitionKey,
+      testEntity.rowKey
+    );
+    etags.set(result1.etag, 1);
+
+    // Update entity multiple times
+    for (let i = 0; i < iterations; i++) {
+      testEntities[i].myValue = i.toString();
+    }
+    for (let i = 0; i < iterations; i++) {
+      mergeResults[i] = await tableClient.updateEntity(
+        testEntities[i],
+        "Merge"
+      );
+    }
+    for (let i = 0; i < iterations; i++) {
+      replaceResults[i] = await tableClient.updateEntity(
+        testEntities[i],
+        "Replace"
+      );
+    }
+
+    // now check if any etags were duplicated
+    for (let i = 0; i < iterations; i++) {
+      if (etags.has(mergeResults[i].etag)) {
+        assert.fail(`We had 2 etags the same in merge iteration ${i}`);
+      } else {
+        etags.set(mergeResults[i].etag, 1);
+      }
+      if (etags.has(replaceResults[i].etag)) {
+        assert.fail(`We had 2 etags the same in replace iteration ${i}`);
+      } else {
+        etags.set(replaceResults[i].etag, 1);
+      }
+    }
+
+    await tableClient.deleteTable();
+  });
 });
