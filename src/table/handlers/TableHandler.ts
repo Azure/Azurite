@@ -54,8 +54,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const accept = this.getAndCheckPayloadFormat(tableContext);
     const account = this.getAndCheckAccountName(tableContext);
     // Table name is in request body instead of URL
-    // we must also force casing as service is case insensitive
-    const table = tableProperties.tableName?.toLowerCase();
+    const table = tableProperties.tableName;
     if (table === undefined) {
       throw StorageErrorFactory.getTableNameEmpty(context);
     }
