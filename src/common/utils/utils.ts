@@ -90,6 +90,10 @@ export function truncatedISO8061Date(
   const dateString = date.toISOString();
 
   // some clients are very fast, and require more than ms precision available in JS
+  // This is an approximation based on the hrtime function in nodejs.
+  // The nanosecond value is appended to the millisecond value from the datetime
+  // object which gives us a good enough difference in the case of faster high
+  // volume transactions
   return withMilliseconds
     ? dateString.substring(0, dateString.length - 1) +
         process.hrtime()[1].toString().padEnd(4, "0").slice(0, 3) +
