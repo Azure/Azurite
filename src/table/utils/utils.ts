@@ -273,9 +273,10 @@ export function validateTableName(context: Context, tableName: string) {
 
 export function newTableEntityEtag(startTime: Date): string {
   // Etag as returned by Table Storage should match W/"datetime'<ISO8601datetime>'"
+  // we use the additional hrtime precsion option
   return (
     "W/\"datetime'" +
-    encodeURIComponent(truncatedISO8061Date(startTime, true)) +
+    encodeURIComponent(truncatedISO8061Date(startTime, true, true)) +
     "'\""
   );
 }
@@ -290,8 +291,6 @@ export function newTableEntityEtag(startTime: Date): string {
 export function checkEtagIsInvalidFormat(etag: string): boolean {
   // Weak etag is required. This is parity with Azure and legacy emulator.
   // Source for regex: https://stackoverflow.com/a/11572348
-  const match = etag.match(
-    /^[wW]\/"([^"]|\\")*"$/
-  );
+  const match = etag.match(/^[wW]\/"([^"]|\\")*"$/);
   return match === null;
 }

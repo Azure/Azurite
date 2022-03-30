@@ -84,7 +84,8 @@ export function computeHMACSHA256(stringToSign: string, key: Buffer): string {
  */
 export function truncatedISO8061Date(
   date: Date,
-  withMilliseconds: boolean = true
+  withMilliseconds: boolean = true,
+  hrtimePrecision: boolean = false
 ): string {
   // Date.toISOString() will return like "2018-10-29T06:34:36.139Z"
   const dateString = date.toISOString();
@@ -94,10 +95,15 @@ export function truncatedISO8061Date(
   // The nanosecond value is appended to the millisecond value from the datetime
   // object which gives us a good enough difference in the case of faster high
   // volume transactions
+  if (hrtimePrecision) {
+    return (
+      dateString.substring(0, dateString.length - 1) +
+      process.hrtime()[1].toString().padEnd(4, "0").slice(0, 3) +
+      "Z"
+    );
+  }
   return withMilliseconds
-    ? dateString.substring(0, dateString.length - 1) +
-        process.hrtime()[1].toString().padEnd(4, "0").slice(0, 3) +
-        "Z"
+    ? dateString.substring(0, dateString.length - 1) + "0000" + "Z"
     : dateString.substring(0, dateString.length - 5) + "Z";
 }
 
