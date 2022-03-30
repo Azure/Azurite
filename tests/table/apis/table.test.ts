@@ -398,4 +398,17 @@ describe("table APIs test", () => {
       });
     });
   });
+
+  it("should delete a table using case insensitive logic, @loki", (done) => {
+    tableName = getUniqueName("caseInsensitive");
+    tableService.createTable(tableName, (error) => {
+      if (error) {
+        assert.ifError(error);
+      }
+      tableService.deleteTable(tableName.toUpperCase(), (err, res) => {
+        assert.ifError(err);
+        done();
+      });
+    });
+  });
 });

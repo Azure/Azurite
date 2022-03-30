@@ -125,10 +125,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     // Check for table entry in the table registry collection
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
     // Azure Storage Service is case insensitive
-    const tableLower = tableModel.table.toLocaleLowerCase();
+    tableModel.table = tableModel.table.toLowerCase();
     const doc = coll.findOne({
       account: tableModel.account,
-      table: tableLower
+      table: { $regex: [tableModel.table, "i"] }
     });
 
     // If the metadata exists, we will throw getTableAlreadyExists error
@@ -136,13 +136,12 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       throw StorageErrorFactory.getTableAlreadyExists(context);
     }
 
-    tableModel.table = tableModel.table.toLowerCase();
     coll.insert(tableModel);
 
     // now we create the collection to represent the table using a unique string
     const tableCollectionName = this.getTableCollectionName(
       tableModel.account,
-      tableModel.table
+      tableModel.table.toLowerCase()
     );
     const extentColl = this.db.getCollection(tableCollectionName);
     if (extentColl) {
@@ -167,7 +166,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     const tableLower = table.toLocaleLowerCase();
     const doc = coll.findOne({
       account,
-      table: tableLower
+      table: { $regex: [tableLower, "i"] }
     });
     if (doc) {
       coll.remove(doc);
@@ -175,10 +174,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       throw StorageErrorFactory.ResourceNotFound(context);
     }
 
-    const tableCollectionName = this.getTableCollectionName(
-      account,
-      tableLower
-    );
+    const tableCollectionName = this.getTableCollectionName(account, doc.table);
     const tableEntityCollection = this.db.getCollection(tableCollectionName);
     if (tableEntityCollection) {
       this.db.removeCollection(tableCollectionName);
@@ -204,7 +200,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
     // Azure Storage Service is case insensitive
     const tableLower = table.toLocaleLowerCase();
-    const persistedTable = coll.findOne({ account, table: tableLower });
+    const persistedTable = coll.findOne({
+      account,
+      table: { $regex: [tableLower, "i"] }
+    });
 
     if (!persistedTable) {
       throw StorageErrorFactory.getTableNotFound(context);
@@ -230,8 +229,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   ): Promise<Table> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
     // Azure Storage Service is case insensitive
-    const tableLower = table.toLowerCase();
-    const doc = coll.findOne({ account, table: tableLower });
+    const doc = coll.findOne({ account, table: { $regex: [table, "i"] } });
     if (!doc) {
       throw StorageErrorFactory.getTableNotFound(context);
     }
@@ -328,11 +326,17 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     table: string,
     context: Context
   ): Collection<any> {
-    const tableEntityCollection = this.db.getCollection(
+    let tableEntityCollection = this.db.getCollection(
       this.getTableCollectionName(account, table.toLowerCase())
     );
     if (!tableEntityCollection) {
-      throw StorageErrorFactory.getTableNotExist(context);
+      // this is to avoid a breaking change for users of persisted storage
+      tableEntityCollection = this.db.getCollection(
+        this.getTableCollectionName(account, table)
+      );
+      if (!tableEntityCollection) {
+        throw StorageErrorFactory.getTableNotExist(context);
+      }
     }
     return tableEntityCollection;
   }
