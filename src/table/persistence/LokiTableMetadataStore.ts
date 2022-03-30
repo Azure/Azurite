@@ -229,7 +229,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   ): Promise<Table> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
     // Azure Storage Service is case insensitive
-    const tableLower = table.toLocaleLowerCase();
+    const tableLower = table.toLowerCase();
     const doc = coll.findOne({ account, table: tableLower });
     if (!doc) {
       throw StorageErrorFactory.getTableNotFound(context);
