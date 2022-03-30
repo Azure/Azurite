@@ -98,7 +98,7 @@ export function truncatedISO8061Date(
   if (hrtimePrecision) {
     return (
       dateString.substring(0, dateString.length - 1) +
-      process.hrtime()[1].toString().padEnd(4, "0").slice(0, 3) +
+      process.hrtime()[1].toString().padStart(4, "0").slice(0, 3) +
       "Z"
     );
   }
