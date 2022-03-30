@@ -136,6 +136,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       throw StorageErrorFactory.getTableAlreadyExists(context);
     }
 
+    tableModel.table = tableModel.table.toLowerCase();
     coll.insert(tableModel);
 
     // now we create the collection to represent the table using a unique string
