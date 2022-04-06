@@ -195,7 +195,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       lastModifiedTime: context.startTime!,
       eTag: newTableEntityEtag(context.startTime!)
     };
-
+    // check that key properties are valid
+    this.validateKey(context, entity.PartitionKey);
+    this.validateKey(context, entity.RowKey);
     let normalizedEntity;
     try {
       normalizedEntity = new NormalizedEntity(entity);
@@ -273,13 +275,13 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   private static getAndCheck(
     key: string | undefined,
     getFromContext: () => string,
-    contextForThrow: Context,
+    contextForThrow: Context
   ): string {
     if (key !== undefined) {
       return key;
     }
 
-    const fromContext = getFromContext()
+    const fromContext = getFromContext();
     if (fromContext === undefined) {
       throw StorageErrorFactory.getPropertiesNeedValue(contextForThrow);
     }
@@ -291,12 +293,20 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     partitionKey: string | undefined,
     rowKey: string | undefined,
     tableContext: TableStorageContext,
-    contextForThrow: Context,
+    contextForThrow: Context
   ) {
-    partitionKey = TableHandler.getAndCheck(partitionKey, () => tableContext.partitionKey!, contextForThrow);
-    rowKey = TableHandler.getAndCheck(rowKey, () => tableContext.rowKey!, contextForThrow);
+    partitionKey = TableHandler.getAndCheck(
+      partitionKey,
+      () => tableContext.partitionKey!,
+      contextForThrow
+    );
+    rowKey = TableHandler.getAndCheck(
+      rowKey,
+      () => tableContext.rowKey!,
+      contextForThrow
+    );
 
-    return [partitionKey, rowKey]
+    return [partitionKey, rowKey];
   }
 
   // TODO: Create data structures to hold entity properties and support serialize, merge, deserialize, filter
@@ -313,7 +323,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
 
-    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(partitionKey, rowKey, tableContext, context);
+    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(
+      partitionKey,
+      rowKey,
+      tableContext,
+      context
+    );
 
     const ifMatch = options.ifMatch;
 
@@ -353,6 +368,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       eTag
     };
 
+    // check that key properties are valid
+    this.validateKey(context, entity.PartitionKey);
+    this.validateKey(context, entity.RowKey);
     let normalizedEntity;
     try {
       normalizedEntity = new NormalizedEntity(entity);
@@ -398,7 +416,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
 
-    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(partitionKey, rowKey, tableContext, context);
+    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(
+      partitionKey,
+      rowKey,
+      tableContext,
+      context
+    );
 
     if (!options.tableEntityProperties) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
@@ -427,7 +450,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       lastModifiedTime: context.startTime!,
       eTag
     };
-
+    // check that key properties are valid
+    this.validateKey(context, entity.PartitionKey);
+    this.validateKey(context, entity.RowKey);
     let normalizedEntity;
     try {
       normalizedEntity = new NormalizedEntity(entity);
@@ -472,7 +497,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const accountName = tableContext.account;
 
-    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(partitionKey, rowKey, tableContext, context);
+    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(
+      partitionKey,
+      rowKey,
+      tableContext,
+      context
+    );
 
     if (ifMatch === "" || ifMatch === undefined) {
       throw StorageErrorFactory.getPreconditionFailed(context);
@@ -612,7 +642,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const account = this.getAndCheckAccountName(tableContext);
     const table = _table ? _table : this.getAndCheckTableName(tableContext);
 
-    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(partitionKey, rowKey, tableContext, context);
+    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(
+      partitionKey,
+      rowKey,
+      tableContext,
+      context
+    );
 
     const accept = this.getAndCheckPayloadFormat(tableContext);
 
@@ -931,5 +966,25 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       response.preferenceApplied = RETURN_CONTENT;
     }
     return response;
+  }
+
+  /**
+   * Checks if key is valid based on rules outlined here:
+   * https://docs.microsoft.com/en-us/rest/api/storageservices/Understanding-the-Table-Service-Data-Model#characters-disallowed-in-key-fields
+   * Checks that key length is less than 1Kib (1024 chars)
+   * Checks for invalid chars
+   * @private
+   * @param {string} key
+   * @return {*}  {boolean}
+   * @memberof TableHandler
+   */
+  private validateKey(context: Context, key: string) {
+    if (key.length > 1024) {
+      throw StorageErrorFactory.getInvalidInput(context);
+    }
+    const match = key.match(/[\u0000-\u001f,\u007f-\u009f,\/,\\,\#,\?]+/);
+    if (match !== null && match.length > 0) {
+      throw StorageErrorFactory.getInvalidInput(context);
+    }
   }
 }
