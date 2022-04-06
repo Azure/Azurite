@@ -9,6 +9,7 @@ export const DEFAULT_TABLE_LISTENING_PORT = 10002;
 export const DEFAULT_ENABLE_ACCESS_LOG = true;
 export const DEFAULT_ENABLE_DEBUG_LOG = true;
 export const DEFAULT_TABLE_PERSISTENCE_PATH = "__tablestorage__";
+export const DEFAULT_KEY_MAX_LENGTH = 512;
 
 export enum TABLE_STATUSCODE {
   CREATED = 201,

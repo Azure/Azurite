@@ -12,6 +12,7 @@ import Context from "../generated/Context";
 import ITableHandler from "../generated/handlers/ITableHandler";
 import { Entity, Table } from "../persistence/ITableMetadataStore";
 import {
+  DEFAULT_KEY_MAX_LENGTH,
   DEFAULT_TABLE_LISTENING_PORT,
   DEFAULT_TABLE_SERVER_HOST_NAME,
   FULL_METADATA_ACCEPT,
@@ -979,7 +980,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
    * @memberof TableHandler
    */
   private validateKey(context: Context, key: string) {
-    if (key.length > 1024) {
+    // key is a string value that may be up to 1 KiB in size.
+    // although a little arbitrary, for performance and
+    // generally a better idea, choosing a shorter length
+    if (key.length > DEFAULT_KEY_MAX_LENGTH) {
       throw StorageErrorFactory.getInvalidInput(context);
     }
     const match = key.match(/[\u0000-\u001f,\u007f-\u009f,\/,\\,\#,\?]+/);
