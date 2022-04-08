@@ -37,15 +37,20 @@ export class TableBatchSerialization extends BatchSerialization {
   public deserializeBatchRequest(
     batchRequestsString: string
   ): TableBatchOperation[] {
-    batchRequestsString = decodeURI(batchRequestsString);
-    this.extractBatchBoundary(batchRequestsString);
-    this.extractChangeSetBoundary(batchRequestsString);
-    this.extractLineEndings(batchRequestsString);
+    let batchRequestToProcess = "";
+    try {
+      batchRequestToProcess = decodeURI(batchRequestsString);
+    } catch (err: any) {
+      batchRequestToProcess = batchRequestsString;
+    }
+    this.extractBatchBoundary(batchRequestToProcess);
+    this.extractChangeSetBoundary(batchRequestToProcess);
+    this.extractLineEndings(batchRequestToProcess);
 
     // the line endings might be \r\n or \n
     const HTTP_LINE_ENDING = this.lineEnding;
     const subRequestPrefix = `--${this.changesetBoundary}${HTTP_LINE_ENDING}`;
-    const splitBody = batchRequestsString.split(subRequestPrefix);
+    const splitBody = batchRequestToProcess.split(subRequestPrefix);
 
     // dropping first element as boundary if we have a batch with multiple requests
     let subRequests: string[];
