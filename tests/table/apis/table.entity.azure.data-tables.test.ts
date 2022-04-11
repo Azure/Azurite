@@ -995,4 +995,118 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
     await tableClient.deleteTable();
   });
+
+  it("Should not insert entities containing string properties longer than 32K chars, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: AzureDataTablesTestEntity =
+      createBasicEntityForTest(partitionKey);
+
+    testEntity.myValue = testEntity.myValue.padEnd(1024 * 32 + 1, "a");
+    try {
+      const result = await tableClient.createEntity(testEntity);
+      assert.strictEqual(
+        result.etag,
+        null,
+        "We should not have created an entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        400,
+        "We did not get the expected Bad Request error"
+      );
+      assert.strictEqual(
+        err.message.match(/PropertyValueTooLarge/gi).length,
+        1,
+        "Did not match PropertyValueTooLarge"
+      );
+    }
+
+    await tableClient.deleteTable();
+  });
+
+  it("Should not merge entities containing string properties longer than 32K chars, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: AzureDataTablesTestEntity =
+      createBasicEntityForTest(partitionKey);
+
+    try {
+      const result1 = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(
+        result1.etag,
+        null,
+        "We should have created the first test entity!"
+      );
+      testEntity.myValue = testEntity.myValue.padEnd(1024 * 32 + 1, "a");
+      const result2 = await tableClient.updateEntity(testEntity, "Merge");
+      assert.strictEqual(
+        result2.etag,
+        null,
+        "We should not have updated the entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        400,
+        "We did not get the expected Bad Request error"
+      );
+      assert.strictEqual(
+        err.message.match(/PropertyValueTooLarge/gi).length,
+        1,
+        "Did not match PropertyValueTooLarge"
+      );
+    }
+
+    await tableClient.deleteTable();
+  });
+
+  it("Should not replace entities containing string properties longer than 32K chars, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: AzureDataTablesTestEntity =
+      createBasicEntityForTest(partitionKey);
+
+    try {
+      const result1 = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(
+        result1.etag,
+        null,
+        "We should have created the first test entity!"
+      );
+      testEntity.myValue = testEntity.myValue.padEnd(1024 * 32 + 1, "a");
+      const result2 = await tableClient.updateEntity(testEntity, "Replace");
+      assert.strictEqual(
+        result2.etag,
+        null,
+        "We should not have updated the entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        400,
+        "We did not get the expected Bad Request error"
+      );
+      assert.strictEqual(
+        err.message.match(/PropertyValueTooLarge/gi).length,
+        1,
+        "Did not match PropertyValueTooLarge"
+      );
+    }
+
+    await tableClient.deleteTable();
+  });
 });

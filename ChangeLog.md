@@ -9,6 +9,7 @@ Table:
 - Fix empty partition key and row key handling in batch write operations.
 - Fix batch reponse for Go SDK, includes additional CRLF on closure of changesetresponse section.
 - Removes query strings from Location and DataServiceId batch response headers.
+- Rejects entities with string props longer than 32K chars.
 
 ## 2022.02 Version 3.16.0
 
