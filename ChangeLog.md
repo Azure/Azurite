@@ -10,6 +10,7 @@ Table:
 - Fix batch reponse for Go SDK, includes additional CRLF on closure of changesetresponse section.
 - Removes query strings from Location and DataServiceId batch response headers.
 - Rejects entities with string props longer than 32K chars.
+- Adds check for body length greater than 4MB.
 
 ## 2022.02 Version 3.16.0
 

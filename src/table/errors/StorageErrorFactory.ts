@@ -393,4 +393,15 @@ export default class StorageErrorFactory {
       context
     );
   }
+
+  public static getRequestBodyTooLarge(context: Context): StorageError {
+    return new StorageError(
+      413,
+      "RequestBodyTooLarge",
+      `The request body is too large and exceeds the maximum permissible limit.`,
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
 }

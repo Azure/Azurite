@@ -1,7 +1,11 @@
 import toReadableStream from "to-readable-stream";
 
 import BufferStream from "../../common/utils/BufferStream";
-import { checkEtagIsInvalidFormat, newTableEntityEtag } from "../utils/utils";
+import {
+  checkEtagIsInvalidFormat,
+  getUTF8ByteSize,
+  newTableEntityEtag
+} from "../utils/utils";
 import TableBatchOrchestrator from "../batch/TableBatchOrchestrator";
 import TableBatchUtils from "../batch/TableBatchUtils";
 import TableStorageContext from "../context/TableStorageContext";
@@ -12,6 +16,7 @@ import Context from "../generated/Context";
 import ITableHandler from "../generated/handlers/ITableHandler";
 import { Entity, Table } from "../persistence/ITableMetadataStore";
 import {
+  BODY_SIZE_MAX,
   DEFAULT_TABLE_LISTENING_PORT,
   DEFAULT_TABLE_SERVER_HOST_NAME,
   FULL_METADATA_ACCEPT,
@@ -174,6 +179,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const table = this.getAndCheckTableName(tableContext);
     const accept = this.getAndCheckPayloadFormat(tableContext);
     const prefer = this.getAndCheckPreferHeader(tableContext);
+    this.checkBodyLimit(context, context.request?.getBody());
 
     // curently unable to use checking functions as the partitionKey
     // and rowKey are not coming through the context.
@@ -322,6 +328,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
+    this.checkBodyLimit(context, context.request?.getBody());
 
     [partitionKey, rowKey] = TableHandler.getAndCheckKeys(
       partitionKey,
@@ -344,6 +351,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         `TableHandler:updateEntity() Incoming PartitionKey:${partitionKey} RowKey:${rowKey} in URL parameters don't align with entity body PartitionKey:${options.tableEntityProperties.PartitionKey} RowKey:${options.tableEntityProperties.RowKey}.`
       );
     }
+
     this.checkProperties(context, options.tableEntityProperties);
 
     // Test if etag is available
@@ -413,6 +421,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
+    this.checkBodyLimit(context, context.request?.getBody());
 
     [partitionKey, rowKey] = TableHandler.getAndCheckKeys(
       partitionKey,
@@ -438,6 +447,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         `TableHandler:mergeEntity() Incoming PartitionKey:${partitionKey} RowKey:${rowKey} in URL parameters don't align with entity body PartitionKey:${options.tableEntityProperties.PartitionKey} RowKey:${options.tableEntityProperties.RowKey}.`
       );
     }
+
     this.checkProperties(context, options.tableEntityProperties);
     const eTag = newTableEntityEtag(context.startTime!);
 
@@ -535,6 +545,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const table = this.getAndCheckTableName(tableContext);
     const account = this.getAndCheckAccountName(tableContext);
     const accept = this.getAndCheckPayloadFormat(tableContext);
+    this.checkBodyLimit(context, context.request?.getBody());
 
     const [result, nextPartitionKey, nextRowKey] =
       await this.metadataStore.queryTableEntities(
@@ -795,6 +806,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const accountName = this.getAndCheckAccountName(tableContext);
     const tableName = this.getAndCheckTableName(tableContext);
+    this.checkBodyLimit(context, context.request?.getBody());
 
     // The policy number should be within 5, the permission should follow the Table permission.
     // See as https://docs.microsoft.com/en-us/rest/api/storageservices/create-service-sas.
@@ -850,6 +862,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableBatchResponse> {
     const tableCtx = new TableStorageContext(context);
+    this.checkBodyLimit(context, context.request?.getBody());
+
     const contentTypeResponse = tableCtx.request
       ?.getHeader("content-type")
       ?.replace("batch", "batchresponse");
@@ -990,6 +1004,21 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
           throw StorageErrorFactory.getPropertyValueTooLargeError(context);
         }
       }
+    }
+  }
+
+  /**
+   * Checks the size of the body against service limit as per documentation
+   * https://docs.microsoft.com/en-us/troubleshoot/azure/general/request-body-large
+   *
+   * @private
+   * @param {Context} context
+   * @param {string} body
+   * @memberof TableHandler
+   */
+  private checkBodyLimit(context: Context, body: string | undefined) {
+    if (undefined !== body && getUTF8ByteSize(body) > BODY_SIZE_MAX) {
+      throw StorageErrorFactory.getRequestBodyTooLarge(context);
     }
   }
 }

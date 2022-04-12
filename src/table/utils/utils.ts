@@ -290,8 +290,17 @@ export function newTableEntityEtag(startTime: Date): string {
 export function checkEtagIsInvalidFormat(etag: string): boolean {
   // Weak etag is required. This is parity with Azure and legacy emulator.
   // Source for regex: https://stackoverflow.com/a/11572348
-  const match = etag.match(
-    /^[wW]\/"([^"]|\\")*"$/
-  );
+  const match = etag.match(/^[wW]\/"([^"]|\\")*"$/);
   return match === null;
+}
+
+/**
+ * Get the byte size of a string in UTF8.
+ *
+ * @public
+ * @param {Date} requestDate
+ * @returns {string}
+ */
+export function getUTF8ByteSize(text: string): number {
+  return Buffer.from(text, "utf8").length;
 }
