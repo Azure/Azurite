@@ -6,7 +6,7 @@
 
 General:
 
-- Fix SAS generation to cater for version 2020-12-06 and later
+- Fix SAS validation failure for version 2020-12-06 and later
 
 Table:
 

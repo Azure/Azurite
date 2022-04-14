@@ -1546,7 +1546,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.ok(error !== undefined);
     assert.equal(error.statusCode, 403);
     assert.equal(error.details.errorCode, "CannotVerifyCopySource");
-    assert.equal(error.details.Code, "CannotVerifyCopySource");
+    assert.equal(error.details.code, "CannotVerifyCopySource");
 
     // this copy should work
     const operation = await targetBlob.beginCopyFromURL(
@@ -1780,6 +1780,6 @@ describe("Shared Access Signature (SAS) authentication", () => {
     }
     assert.ok(error !== undefined);
     assert.equal(error.statusCode, 409);
-    assert.equal(error.details.Code, "BlobArchived");
+    assert.equal(error.details.code, "BlobArchived");
   });
 });

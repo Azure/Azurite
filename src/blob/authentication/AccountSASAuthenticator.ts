@@ -13,6 +13,7 @@ import {
 } from "./IAccountSASSignatureValues";
 import IAuthenticator from "./IAuthenticator";
 import OPERATION_ACCOUNT_SAS_PERMISSIONS from "./OperationAccountSASPermission";
+import StrictModelNotSupportedError from "../errors/StrictModelNotSupportedError";
 
 export default class AccountSASAuthenticator implements IAuthenticator {
   public constructor(
@@ -78,6 +79,11 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       )}`,
       context.contextId
     );
+
+    if (!context.context.loose && values.encryptionScope !== undefined)
+    {
+      throw new StrictModelNotSupportedError("SAS Encryption Scope 'ses'", context.contextId);
+    }
 
     this.logger.info(
       `AccountSASAuthenticator:validate() Validate signature based account key1.`,
@@ -293,8 +299,7 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       permissions === undefined ||
       services === undefined ||
       resourceTypes === undefined ||
-      signature === undefined ||
-      encryptionScope === undefined
+      signature === undefined
     ) {
       return undefined;
     }

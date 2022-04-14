@@ -17,10 +17,11 @@ import { checkApiVersion, validateContainerName } from "../utils/utils";
 
 export default function createStorageBlobContextMiddleware(
   skipApiVersionCheck?: boolean,
-  disableProductStyleUrl?: boolean
+  disableProductStyleUrl?: boolean,
+  loose?: boolean
 ): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
-    return blobStorageContextMiddleware(req, res, next, skipApiVersionCheck, disableProductStyleUrl);
+    return blobStorageContextMiddleware(req, res, next, skipApiVersionCheck, disableProductStyleUrl, loose);
   };
 }
 
@@ -38,6 +39,7 @@ export function blobStorageContextMiddleware(
   next: NextFunction,
   skipApiVersionCheck?: boolean,
   disableProductStyleUrl?: boolean,
+  loose?: boolean,
 ): void {
   // Set server header in every Azurite response
   res.setHeader(HeaderConstants.SERVER, `Azurite-Blob/${VERSION}`);
@@ -53,6 +55,7 @@ export function blobStorageContextMiddleware(
   const blobContext = new BlobStorageContext(res.locals, DEFAULT_CONTEXT_PATH);
   blobContext.startTime = new Date();
   blobContext.disableProductStyleUrl = disableProductStyleUrl;
+  blobContext.loose = loose;
 
   blobContext.xMsRequestID = requestID;
 

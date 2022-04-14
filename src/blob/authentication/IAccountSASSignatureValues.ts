@@ -113,7 +113,7 @@ export interface IAccountSASSignatureValues {
    * @type {string}
    * @memberof IAccountSASSignatureValues
    */
-   encryptionScope: string;
+   encryptionScope?: string;
 }
 
 /**
@@ -128,6 +128,28 @@ export interface IAccountSASSignatureValues {
  * @memberof IAccountSASSignatureValues
  */
 export function generateAccountSASSignature(
+  accountSASSignatureValues: IAccountSASSignatureValues,
+  accountName: string,
+  sharedKey: Buffer
+): [string, string] {
+
+  if (accountSASSignatureValues.version >= "2020-12-06") {
+    return generateAccountSASSignature20201206(
+      accountSASSignatureValues,
+      accountName,
+      sharedKey
+    );
+  }
+  else {
+    return generateAccountSASSignature20150405(
+      accountSASSignatureValues,
+      accountName,
+      sharedKey
+    );
+  }
+}
+
+function generateAccountSASSignature20201206(
   accountSASSignatureValues: IAccountSASSignatureValues,
   accountName: string,
   sharedKey: Buffer
@@ -169,6 +191,53 @@ export function generateAccountSASSignature(
     parsedProtocol,
     version,
     encryptionScope,
+    "" // Account SAS requires an additional newline character
+  ].join("\n");
+
+  const signature: string = computeHMACSHA256(stringToSign, sharedKey);
+  return [signature, stringToSign];
+}
+
+function generateAccountSASSignature20150405(
+  accountSASSignatureValues: IAccountSASSignatureValues,
+  accountName: string,
+  sharedKey: Buffer
+): [string, string] {
+  const parsedPermissions = accountSASSignatureValues.permissions.toString();
+  const parsedServices = accountSASSignatureValues.services.toString();
+  const parsedResourceTypes = accountSASSignatureValues.resourceTypes.toString();
+  const parsedStartTime =
+    accountSASSignatureValues.startTime === undefined
+      ? ""
+      : typeof accountSASSignatureValues.startTime === "string"
+      ? accountSASSignatureValues.startTime
+      : truncatedISO8061Date(accountSASSignatureValues.startTime, false);
+  const parsedExpiryTime =
+    typeof accountSASSignatureValues.expiryTime === "string"
+      ? accountSASSignatureValues.expiryTime
+      : truncatedISO8061Date(accountSASSignatureValues.expiryTime, false);
+  const parsedIPRange =
+    accountSASSignatureValues.ipRange === undefined
+      ? ""
+      : typeof accountSASSignatureValues.ipRange === "string"
+      ? accountSASSignatureValues.ipRange
+      : ipRangeToString(accountSASSignatureValues.ipRange);
+  const parsedProtocol =
+    accountSASSignatureValues.protocol === undefined
+      ? ""
+      : accountSASSignatureValues.protocol;
+  const version = accountSASSignatureValues.version;
+
+  const stringToSign = [
+    accountName,
+    parsedPermissions,
+    parsedServices,
+    parsedResourceTypes,
+    parsedStartTime,
+    parsedExpiryTime,
+    parsedIPRange,
+    parsedProtocol,
+    version,
     "" // Account SAS requires an additional newline character
   ].join("\n");
 
