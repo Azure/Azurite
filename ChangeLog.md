@@ -4,9 +4,52 @@
 
 ## Upcoming Release
 
+Table:
+
+- Fix empty partition key and row key handling in batch write operations.
+- Fix batch reponse for Go SDK, includes additional CRLF on closure of changesetresponse section.
+- Removes query strings from Location and DataServiceId batch response headers.
+
+## 2022.02 Version 3.16.0
+
 General:
 
+- Bump up service API version to 2021-04-10
+- Ensure the storage location exists, and allow relative paths in the VSCode extension settings that are resolved based on the workspace folder.
+- Update Azure CI to use latest image of windows due to deprecation of `vs2017-win2016` image
+
+Blob:
+
+- Fixed issue that startCopyFromURL and copyFromURL API not respect `--disableProductStyleUrl` parameter in parse source Uri.
+
+Queue:
+
+- Fixed issue that queue list result is not in alphabetical order.
+- Fixed class name of QueueSASAuthenticator mistakenly named BlobSASAuthenticator.
+
+Table:
+
+- Fixed issues with deleting entities using empty string for RowKey.
+- Fixed HTTP 500 causes by continuation token containing non-ASCII. Values are now encoded with base64.
+- Fixed a table sas test case failure.
+- Added support for batch transaction rollback on error in batch.
+- Fixes issues with Whitespacing in Table Queries
+- Fixes issue with Edm Type Validation
+- Fixes issue when trying to add entity with Boolean or Int32
+- Failed table transaction correctly returns 409 Status code
+- Refactors tests for Table APIs
+- Adds several tests for Table APIs
+- Fixes issues for upsert and merge with etag matching
+- Allow any valid weak etag even though we know it will fail with a 412
+- Added check for table query validity
+
+## 2021.12 Version 3.15.0
+
+General:
+
+- Bump up service API version to 2021-02-12
 - Fixed access to secondary location with IP style Uri from JS/.net SDK failure.
+- Fixed an issue in Visual Studio Code extension, by changing the Location with relative path, from base on Visual Studio Code installation path, to base on the current opened workspace folder.
 
 Blob:
 

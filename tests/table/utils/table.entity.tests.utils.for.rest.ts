@@ -3,7 +3,7 @@ import {
   getURLQueries
 } from "../../../src/common/utils/utils";
 import { HeaderConstants } from "../../../src/table/utils/constants";
-import TableEntityTestConfig from "./table.entity.test.config";
+import TableEntityTestConfig from "../models/table.entity.test.config";
 
 const key1 = Buffer.from(TableEntityTestConfig.sharedKey, "base64");
 

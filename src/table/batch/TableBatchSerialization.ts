@@ -37,23 +37,14 @@ export class TableBatchSerialization extends BatchSerialization {
   public deserializeBatchRequest(
     batchRequestsString: string
   ): TableBatchOperation[] {
+    batchRequestsString = decodeURI(batchRequestsString);
     this.extractBatchBoundary(batchRequestsString);
     this.extractChangeSetBoundary(batchRequestsString);
     this.extractLineEndings(batchRequestsString);
-    // we can't rely on case of strings we use in delimiters
-    // ToDo: might be easier and more efficient to use i option on the regex here...
-    const contentTypeHeaderString = this.extractRequestHeaderString(
-      batchRequestsString,
-      "(\\n)+(([c,C])+(ontent-)+([t,T])+(ype)+)+(?=:)+"
-    );
-    const contentTransferEncodingString = this.extractRequestHeaderString(
-      batchRequestsString,
-      "(\\n)+(([c,C])+(ontent-)+([t,T])+(ransfer-)+([e,E])+(ncoding))+(?=:)+"
-    );
 
     // the line endings might be \r\n or \n
     const HTTP_LINE_ENDING = this.lineEnding;
-    const subRequestPrefix = `--${this.changesetBoundary}${HTTP_LINE_ENDING}${contentTypeHeaderString}: application/http${HTTP_LINE_ENDING}${contentTransferEncodingString}: binary`;
+    const subRequestPrefix = `--${this.changesetBoundary}${HTTP_LINE_ENDING}`;
     const splitBody = batchRequestsString.split(subRequestPrefix);
 
     // dropping first element as boundary if we have a batch with multiple requests
@@ -95,8 +86,6 @@ export class TableBatchSerialization extends BatchSerialization {
 
         const jsonOperationBody = subRequest.match(/{+.+}+/);
 
-        // ToDo: not sure if this logic is valid, it might be better
-        // to just have an empty body and then error out when determining routing of request in Handler
         if (
           subRequests.length > 1 &&
           null !== requestType &&
@@ -453,9 +442,8 @@ export class TableBatchSerialization extends BatchSerialization {
    * @memberof TableBatchSerialization
    */
   private SerializeNoSniffNoCache(serializedResponses: string) {
-    serializedResponses = this.SerializeXContentTypeOptions(
-      serializedResponses
-    );
+    serializedResponses =
+      this.SerializeXContentTypeOptions(serializedResponses);
     serializedResponses += "Cache-Control: no-cache\r\n";
     return serializedResponses;
   }
@@ -485,29 +473,13 @@ export class TableBatchSerialization extends BatchSerialization {
         return "Not Found";
       case 400:
         return "Bad Request";
+      case 409:
+        return "Conflict";
+      case 412:
+        return "Precondition Failed";
       default:
         return "STATUS_CODE_NOT_IMPLEMENTED";
     }
-  }
-
-  /**
-   * extract a header request string
-   *
-   * @private
-   * @param {string} batchRequestsString
-   * @param {string} regExPattern
-   * @return {*}
-   * @memberof TableBatchSerialization
-   */
-  private extractRequestHeaderString(
-    batchRequestsString: string,
-    regExPattern: string
-  ) {
-    const headerStringMatches = batchRequestsString.match(regExPattern);
-    if (headerStringMatches == null) {
-      throw StorageError;
-    }
-    return headerStringMatches[2];
   }
 
   /**
@@ -549,14 +521,22 @@ export class TableBatchSerialization extends BatchSerialization {
     serializedResponses: string,
     request: BatchRequest
   ): string {
-    let parenthesesPosition: number = request.getUrl().indexOf("(");
-    parenthesesPosition--;
-    if (parenthesesPosition < 0) {
-      parenthesesPosition = request.getUrl().length;
+    const parenthesesPosition: number = request.getUrl().indexOf("(");
+    const queryPosition: number = request.getUrl().indexOf("?");
+    let offsetPosition: number = -1;
+    if (
+      queryPosition > 0 &&
+      (queryPosition < parenthesesPosition || parenthesesPosition === -1)
+    ) {
+      offsetPosition = queryPosition;
+    } else {
+      offsetPosition = parenthesesPosition;
     }
-    const trimmedUrl: string = request
-      .getUrl()
-      .substring(0, parenthesesPosition);
+    offsetPosition--;
+    if (offsetPosition < 0) {
+      offsetPosition = request.getUrl().length;
+    }
+    const trimmedUrl: string = request.getUrl().substring(0, offsetPosition);
     let entityPath = trimmedUrl + "(PartitionKey='";
     entityPath += request.params.tableEntityProperties!.PartitionKey;
     entityPath += "',";
@@ -609,14 +589,20 @@ export class TableBatchSerialization extends BatchSerialization {
     let errorReponse = "";
     const odataError = err as StorageError;
     // Errors in batch processing generate Bad Request error
-    errorReponse = this.serializeHttpStatusCode(errorReponse, 400);
+    errorReponse = this.serializeHttpStatusCode(errorReponse, err.statusCode);
     errorReponse += "Content-ID: " + contentID + "\r\n";
     errorReponse = this.serializeDataServiceVersion(errorReponse, request);
     // ToDo: Check if we need to observe other odata formats for errors
     errorReponse +=
       "Content-Type: application/json;odata=minimalmetadata;charset=utf-8\r\n";
     errorReponse += "\r\n";
-    errorReponse += odataError.body + "\r\n";
+    // the odata error needs to include the index of the operation that fails
+    // see sample from:
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/performing-entity-group-transactions#sample-error-response
+    // In this case, we need to use a 0 based index for the failing operation
+    errorReponse +=
+      odataError.body?.replace('"value":"', `\"value\":\"${contentID - 1}:`) +
+      "\r\n";
     return errorReponse;
   }
 

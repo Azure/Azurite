@@ -1,34 +1,34 @@
 import * as assert from "assert";
 import { TableServiceClient } from "@azure/data-tables";
 import { AzureNamedKeyCredential } from "@azure/core-auth";
-import { configLogger } from "../../src/common/Logger";
-import TableServer from "../../src/table/TableServer";
+import { configLogger } from "../../../src/common/Logger";
+import TableServer from "../../../src/table/TableServer";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
   sleep
-} from "../testutils";
+} from "../../testutils";
 import {
   createTableServerForTestHttps,
   HOST,
   PORT
-} from "./apis/table.entity.test.utils";
-import OPTIONSRequestPolicy from "./RequestPolicy/OPTIONSRequestPolicy";
-import OriginPolicy from "./RequestPolicy/OriginPolicy";
+} from "../utils/table.entity.test.utils";
+import OPTIONSRequestPolicy from "../RequestPolicy/OPTIONSRequestPolicy";
+import OriginPolicy from "../RequestPolicy/OriginPolicy";
 
 // Set true to enable debug log
 configLogger(false);
 
-const sharedKeyCredential = new AzureNamedKeyCredential(EMULATOR_ACCOUNT_NAME, EMULATOR_ACCOUNT_KEY);
+const sharedKeyCredential = new AzureNamedKeyCredential(
+  EMULATOR_ACCOUNT_NAME,
+  EMULATOR_ACCOUNT_KEY
+);
 
 describe("table Entity APIs test", () => {
   let server: TableServer;
   const baseURL = `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`;
 
-  const serviceClient = new TableServiceClient(
-    baseURL,
-    sharedKeyCredential
-  );
+  const serviceClient = new TableServiceClient(baseURL, sharedKeyCredential);
 
   const requestOverride = { headers: {} };
 
@@ -50,7 +50,11 @@ describe("table Entity APIs test", () => {
     serviceProperties.cors = [];
     await serviceClient.setProperties(serviceProperties);
 
-    const customPolicy = new OPTIONSRequestPolicy("OPTIONSpolicy", "Origin", "GET");
+    const customPolicy = new OPTIONSRequestPolicy(
+      "OPTIONSpolicy",
+      "Origin",
+      "GET"
+    );
 
     const serviceClientForOPTIONS = new TableServiceClient(
       baseURL,
@@ -62,7 +66,7 @@ describe("table Entity APIs test", () => {
     let error;
     try {
       await serviceClientForOPTIONS.getProperties();
-    } catch (err) {
+    } catch (err: any) {
       error = err;
     }
 
@@ -91,7 +95,11 @@ describe("table Entity APIs test", () => {
 
     await sleep(100);
 
-    let customPolicy = new OPTIONSRequestPolicy("OPTIONSpolicy", "Origin", "GET");
+    let customPolicy = new OPTIONSRequestPolicy(
+      "OPTIONSpolicy",
+      "Origin",
+      "GET"
+    );
 
     let serviceClientForOPTIONS = new TableServiceClient(
       baseURL,
@@ -103,7 +111,7 @@ describe("table Entity APIs test", () => {
     let error;
     try {
       await serviceClientForOPTIONS.getProperties();
-    } catch (err) {
+    } catch (err: any) {
       error = err;
     }
 
@@ -144,7 +152,11 @@ describe("table Entity APIs test", () => {
 
     await sleep(100);
 
-    let customPolicy = new OPTIONSRequestPolicy("OPTIONSpolicy", "Origin", "GET");
+    let customPolicy = new OPTIONSRequestPolicy(
+      "OPTIONSpolicy",
+      "Origin",
+      "GET"
+    );
 
     let serviceClientForOPTIONS = new TableServiceClient(
       baseURL,
@@ -156,7 +168,7 @@ describe("table Entity APIs test", () => {
     let error;
     try {
       await serviceClientForOPTIONS.getProperties();
-    } catch (err) {
+    } catch (err: any) {
       error = err;
     }
 
@@ -178,7 +190,7 @@ describe("table Entity APIs test", () => {
 
     try {
       await serviceClientForOPTIONS.getProperties();
-    } catch (err) {
+    } catch (err: any) {
       error = err;
     }
 
@@ -219,7 +231,7 @@ describe("table Entity APIs test", () => {
     let error;
     try {
       await serviceClientForOPTIONS.getProperties();
-    } catch (err) {
+    } catch (err: any) {
       error = err;
     }
 
@@ -241,7 +253,7 @@ describe("table Entity APIs test", () => {
 
     try {
       await serviceClientForOPTIONS.getProperties();
-    } catch (err) {
+    } catch (err: any) {
       error = err;
     }
 
@@ -282,7 +294,12 @@ describe("table Entity APIs test", () => {
 
     await sleep(100);
 
-    let customPolicy = new OPTIONSRequestPolicy("OPTIONSpolicy", "test", "GET", "head");
+    let customPolicy = new OPTIONSRequestPolicy(
+      "OPTIONSpolicy",
+      "test",
+      "GET",
+      "head"
+    );
 
     let serviceClientForOPTIONS = new TableServiceClient(
       baseURL,
@@ -294,7 +311,7 @@ describe("table Entity APIs test", () => {
     let error;
     try {
       await serviceClientForOPTIONS.getProperties();
-    } catch (err) {
+    } catch (err: any) {
       error = err;
     }
 
@@ -306,7 +323,12 @@ describe("table Entity APIs test", () => {
     );
 
     // Match first cors.
-    customPolicy = new OPTIONSRequestPolicy("OPTIONSpolicy", "test", "GET", "header");
+    customPolicy = new OPTIONSRequestPolicy(
+      "OPTIONSpolicy",
+      "test",
+      "GET",
+      "header"
+    );
 
     serviceClientForOPTIONS = new TableServiceClient(
       baseURL,
@@ -319,7 +341,12 @@ describe("table Entity APIs test", () => {
     await serviceClientForOPTIONS.getProperties();
 
     // Match second cors.
-    customPolicy = new OPTIONSRequestPolicy("OPTIONSpolicy", "test", "PUT", "head");
+    customPolicy = new OPTIONSRequestPolicy(
+      "OPTIONSpolicy",
+      "test",
+      "PUT",
+      "head"
+    );
 
     serviceClientForOPTIONS = new TableServiceClient(
       baseURL,
@@ -332,7 +359,12 @@ describe("table Entity APIs test", () => {
     await serviceClientForOPTIONS.getProperties();
 
     // No match.
-    customPolicy = new OPTIONSRequestPolicy("OPTIONSpolicy", "test", "POST", "hea");
+    customPolicy = new OPTIONSRequestPolicy(
+      "OPTIONSpolicy",
+      "test",
+      "POST",
+      "hea"
+    );
 
     serviceClientForOPTIONS = new TableServiceClient(
       baseURL,
@@ -341,10 +373,9 @@ describe("table Entity APIs test", () => {
 
     serviceClientForOPTIONS.pipeline.addPolicy(customPolicy);
 
-    error;
     try {
       await serviceClientForOPTIONS.getProperties();
-    } catch (err) {
+    } catch (err: any) {
       error = err;
     }
 
@@ -356,7 +387,12 @@ describe("table Entity APIs test", () => {
     );
 
     // Match third cors.
-    customPolicy = new OPTIONSRequestPolicy("OPTIONSpolicy", "test", "POST", "headerheader");
+    customPolicy = new OPTIONSRequestPolicy(
+      "OPTIONSpolicy",
+      "test",
+      "POST",
+      "headerheader"
+    );
 
     serviceClientForOPTIONS = new TableServiceClient(
       baseURL,
@@ -386,7 +422,11 @@ describe("table Entity APIs test", () => {
 
     await sleep(100);
 
-    const customPolicy = new OPTIONSRequestPolicy("OPTIONSpolicy", "anyOrigin", "GET");
+    const customPolicy = new OPTIONSRequestPolicy(
+      "OPTIONSpolicy",
+      "anyOrigin",
+      "GET"
+    );
 
     const serviceClientForOPTIONS = new TableServiceClient(
       baseURL,
@@ -554,7 +594,7 @@ describe("table Entity APIs test", () => {
 
     try {
       await serviceClientWithOrigin.getProperties();
-    } catch (err) {
+    } catch (err: any) {
       assert.ok(
         err.response.headers._headersMap["access-control-allow-origin"]
           .value === "exactOrigin"

@@ -60,11 +60,7 @@ export default interface ITableMetadataStore {
     context: Context,
     queueACL?: TableACL
   ): Promise<void>;
-  getTable(
-    account: string,
-    table: string,
-    context: Context
-  ): Promise<Table>;
+  getTable(account: string, table: string, context: Context): Promise<Table>;
   queryTableEntities(
     context: Context,
     account: string,
@@ -78,21 +74,24 @@ export default interface ITableMetadataStore {
     table: string,
     account: string,
     partitionKey: string,
-    rowKey: string
+    rowKey: string,
+    batchID?: string
   ): Promise<Entity | undefined>;
   insertOrUpdateTableEntity(
     context: Context,
     table: string,
     account: string,
     entity: Entity,
-    ifMatch?: string
+    ifMatch?: string,
+    batchID?: string
   ): Promise<Entity>;
   insertOrMergeTableEntity(
     context: Context,
     table: string,
     account: string,
     entity: Entity,
-    ifMatch?: string
+    ifMatch?: string,
+    batchID?: string
   ): Promise<Entity>;
   deleteTableEntity(
     context: Context,
@@ -100,13 +99,15 @@ export default interface ITableMetadataStore {
     account: string,
     partitionKey: string,
     rowKey: string,
-    etag: string
+    etag: string,
+    batchID?: string
   ): Promise<void>;
   insertTableEntity(
     context: Context,
     table: string,
     account: string,
-    entity: Entity
+    entity: Entity,
+    batchID?: string
   ): Promise<Entity>;
   getTableAccessPolicy(
     context: Context,
@@ -128,4 +129,12 @@ export default interface ITableMetadataStore {
     context: Context,
     serviceProperties: ServicePropertiesModel
   ): Promise<ServicePropertiesModel>;
+  beginBatchTransaction(batchID: string): Promise<void>;
+  endBatchTransaction(
+    account: string,
+    table: string,
+    batchID: string,
+    context: Context,
+    succeeded: boolean
+  ): Promise<void>;
 }

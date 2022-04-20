@@ -631,7 +631,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       sourceAccount,
       sourceContainer,
       sourceBlob
-    ] = extractStoragePartsFromPath(url.hostname, url.pathname);
+    ] = extractStoragePartsFromPath(url.hostname, url.pathname, blobCtx.disableProductStyleUrl);
     const snapshot = url.searchParams.get("snapshot") || "";
 
     if (
@@ -822,7 +822,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       sourceAccount,
       sourceContainer,
       sourceBlob
-    ] = extractStoragePartsFromPath(url.hostname, url.pathname);
+    ] = extractStoragePartsFromPath(url.hostname, url.pathname, blobCtx.disableProductStyleUrl);
     const snapshot = url.searchParams.get("snapshot") || "";
 
     if (
