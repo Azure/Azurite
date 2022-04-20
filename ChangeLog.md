@@ -4,6 +4,12 @@
 
 ## Upcoming Release
 
+## 2022.02 Version 3.16.0
+
+General:
+
+- Bump up service API version to 2021-06-08
+
 Table:
 
 - Fix empty partition key and row key handling in batch write operations.
