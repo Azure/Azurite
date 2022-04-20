@@ -60,15 +60,6 @@ export function newEtag(): string {
   );
 }
 
-export function newTableEntityEtag(startTime: Date): string {
-  // Etag as returned by Table Storage should match W/"datetime'<ISO8601datetime>'"
-  return (
-    "W/\"datetime'" +
-    encodeURIComponent(truncatedISO8061Date(startTime, true)) +
-    "'\""
-  );
-}
-
 /**
  * Generates a hash signature for an HTTP request or for a SAS.
  *
@@ -159,19 +150,4 @@ export async function getMD5FromStream(
         reject(err);
       });
   });
-}
-
-/**
- * Checks if an eTag is valid
- *
- * @export
- * @param {string} etag
- * @return {*}  {boolean}
- */
-export function checkEtagIsInvalidFormat(etag: string): boolean {
-  // Etag should match ^W\/"datetime'\d{4}-\d{2}-\d{2}T\d{2}%3A\d{2}%3A\d{2}.\d{7}Z'"$
-  const match = etag.match(
-    /^W\/"datetime'\d{4}-\d{2}-\d{2}T\d{2}%3A\d{2}%3A\d{2}.\d{7}Z'"$/
-  );
-  return match === null;
 }

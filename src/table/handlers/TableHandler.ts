@@ -1,10 +1,7 @@
 import toReadableStream from "to-readable-stream";
 
 import BufferStream from "../../common/utils/BufferStream";
-import {
-  checkEtagIsInvalidFormat,
-  newTableEntityEtag
-} from "../../common/utils/utils";
+import { checkEtagIsInvalidFormat, newTableEntityEtag } from "../utils/utils";
 import TableBatchOrchestrator from "../batch/TableBatchOrchestrator";
 import TableBatchUtils from "../batch/TableBatchUtils";
 import TableStorageContext from "../context/TableStorageContext";
@@ -199,11 +196,11 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       eTag: newTableEntityEtag(context.startTime!)
     };
 
-    let nomarlizedEntity;
+    let normalizedEntity;
     try {
-      nomarlizedEntity = new NormalizedEntity(entity);
-      nomarlizedEntity.normalize();
-    } catch (e) {
+      normalizedEntity = new NormalizedEntity(entity);
+      normalizedEntity.normalize();
+    } catch (e: any) {
       this.logger.error(
         `TableHandler:insertEntity() ${e.name} ${JSON.stringify(e.stack)}`,
         context.contextID
@@ -211,7 +208,13 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getInvalidInput(context);
     }
 
-    await this.metadataStore.insertTableEntity(context, table, account, entity);
+    await this.metadataStore.insertTableEntity(
+      context,
+      table,
+      account,
+      entity,
+      tableContext.batchId
+    );
 
     const response: Models.TableInsertEntityResponse = {
       clientRequestId: options.requestId,
@@ -251,7 +254,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       // }
 
       // response.body = new BufferStream(Buffer.from(JSON.stringify(body)));
-      const rawResponse = nomarlizedEntity.toResponseString(accept, body);
+      const rawResponse = normalizedEntity.toResponseString(accept, body);
       this.logger.debug(
         `TableHandler:insertEntity() Raw response string is ${JSON.stringify(
           rawResponse
@@ -267,21 +270,51 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     return response;
   }
 
+  private static getAndCheck(
+    key: string | undefined,
+    getFromContext: () => string,
+    contextForThrow: Context,
+  ): string {
+    if (key !== undefined) {
+      return key;
+    }
+
+    const fromContext = getFromContext()
+    if (fromContext === undefined) {
+      throw StorageErrorFactory.getPropertiesNeedValue(contextForThrow);
+    }
+
+    return fromContext;
+  }
+
+  private static getAndCheckKeys(
+    partitionKey: string | undefined,
+    rowKey: string | undefined,
+    tableContext: TableStorageContext,
+    contextForThrow: Context,
+  ) {
+    partitionKey = TableHandler.getAndCheck(partitionKey, () => tableContext.partitionKey!, contextForThrow);
+    rowKey = TableHandler.getAndCheck(rowKey, () => tableContext.rowKey!, contextForThrow);
+
+    return [partitionKey, rowKey]
+  }
+
   // TODO: Create data structures to hold entity properties and support serialize, merge, deserialize, filter
   // Note: Batch is using the partition key and row key args, handler receives these values from middleware via
   // context
   public async updateEntity(
     _table: string,
-    partitionKey: string,
-    rowKey: string,
+    partitionKey: string | undefined,
+    rowKey: string | undefined,
     options: Models.TableUpdateEntityOptionalParams,
     context: Context
   ): Promise<Models.TableUpdateEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
-    partitionKey = partitionKey || this.getAndCheckPartitionKey(tableContext);
-    rowKey = rowKey || this.getAndCheckRowKey(tableContext);
+
+    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(partitionKey, rowKey, tableContext, context);
+
     const ifMatch = options.ifMatch;
 
     if (!options.tableEntityProperties) {
@@ -320,11 +353,11 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       eTag
     };
 
-    let nomarlizedEntity;
+    let normalizedEntity;
     try {
-      nomarlizedEntity = new NormalizedEntity(entity);
-      nomarlizedEntity.normalize();
-    } catch (e) {
+      normalizedEntity = new NormalizedEntity(entity);
+      normalizedEntity.normalize();
+    } catch (e: any) {
       this.logger.error(
         `TableHandler:updateEntity() ${e.name} ${JSON.stringify(e.stack)}`,
         context.contextID
@@ -337,7 +370,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       table,
       account,
       entity,
-      ifMatch
+      ifMatch,
+      tableContext.batchId
     );
 
     // Response definition
@@ -355,16 +389,16 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
   public async mergeEntity(
     _table: string,
-    partitionKey: string,
-    rowKey: string,
+    partitionKey: string | undefined,
+    rowKey: string | undefined,
     options: Models.TableMergeEntityOptionalParams,
     context: Context
   ): Promise<Models.TableMergeEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
-    partitionKey = partitionKey || this.getAndCheckPartitionKey(tableContext);
-    rowKey = rowKey || this.getAndCheckRowKey(tableContext);
+
+    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(partitionKey, rowKey, tableContext, context);
 
     if (!options.tableEntityProperties) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
@@ -394,11 +428,11 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       eTag
     };
 
-    let nomarlizedEntity;
+    let normalizedEntity;
     try {
-      nomarlizedEntity = new NormalizedEntity(entity);
-      nomarlizedEntity.normalize();
-    } catch (e) {
+      normalizedEntity = new NormalizedEntity(entity);
+      normalizedEntity.normalize();
+    } catch (e: any) {
       this.logger.error(
         `TableHandler:mergeEntity() ${e.name} ${JSON.stringify(e.stack)}`,
         context.contextID
@@ -411,7 +445,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       table,
       account,
       entity,
-      options.ifMatch
+      options.ifMatch,
+      tableContext.batchId
     );
 
     const response: Models.TableMergeEntityResponse = {
@@ -428,20 +463,17 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
   public async deleteEntity(
     _table: string,
-    partitionKey: string,
-    rowKey: string,
+    partitionKey: string | undefined,
+    rowKey: string | undefined,
     ifMatch: string,
     options: Models.TableDeleteEntityOptionalParams,
     context: Context
   ): Promise<Models.TableDeleteEntityResponse> {
     const tableContext = new TableStorageContext(context);
     const accountName = tableContext.account;
-    partitionKey = partitionKey || tableContext.partitionKey!; // Get partitionKey from context
-    rowKey = rowKey || tableContext.rowKey!; // Get rowKey from context
 
-    if (!partitionKey || !rowKey) {
-      throw StorageErrorFactory.getPropertiesNeedValue(context);
-    }
+    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(partitionKey, rowKey, tableContext, context);
+
     if (ifMatch === "" || ifMatch === undefined) {
       throw StorageErrorFactory.getPreconditionFailed(context);
     }
@@ -455,7 +487,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       accountName!,
       partitionKey,
       rowKey,
-      ifMatch
+      ifMatch,
+      tableContext.batchId
     );
 
     return {
@@ -534,9 +567,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         entity["odata.editLink"] = annotation.odataeditLink;
       }
 
-      const nomarlizedEntity = new NormalizedEntity(element);
+      const normalizedEntity = new NormalizedEntity(element);
       entities.push(
-        nomarlizedEntity.toResponseString(accept, entity, selectSet)
+        normalizedEntity.toResponseString(accept, entity, selectSet)
       );
     });
 
@@ -570,16 +603,17 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
   public async queryEntitiesWithPartitionAndRowKey(
     _table: string,
-    partitionKey: string,
-    rowKey: string,
+    partitionKey: string | undefined,
+    rowKey: string | undefined,
     options: Models.TableQueryEntitiesWithPartitionAndRowKeyOptionalParams,
     context: Context
   ): Promise<Models.TableQueryEntitiesWithPartitionAndRowKeyResponse> {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = _table ? _table : this.getAndCheckTableName(tableContext);
-    partitionKey = partitionKey || this.getAndCheckPartitionKey(tableContext);
-    rowKey = rowKey || this.getAndCheckRowKey(tableContext);
+
+    [partitionKey, rowKey] = TableHandler.getAndCheckKeys(partitionKey, rowKey, tableContext, context);
+
     const accept = this.getAndCheckPayloadFormat(tableContext);
 
     const entity =
@@ -588,7 +622,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         table,
         account,
         partitionKey,
-        rowKey
+        rowKey,
+        tableContext.batchId
       );
 
     if (entity === undefined || entity === null) {
@@ -637,8 +672,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       selectSet = new Set(selectArray);
     }
 
-    const nomarlizedEntity = new NormalizedEntity(entity);
-    const rawResponse = nomarlizedEntity.toResponseString(
+    const normalizedEntity = new NormalizedEntity(entity);
+    const rawResponse = normalizedEntity.toResponseString(
       accept,
       body,
       selectSet
@@ -799,7 +834,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     const response =
       await tableBatchManager.processBatchRequestAndSerializeResponse(
-        requestBody
+        requestBody,
+        this.metadataStore
       );
 
     this.logger.debug(
@@ -869,22 +905,6 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getTableNameEmpty(context);
     }
     return table;
-  }
-
-  private getAndCheckPartitionKey(context: TableStorageContext): string {
-    const partitionKey = context.partitionKey;
-    if (partitionKey === undefined) {
-      throw StorageErrorFactory.getTableNameEmpty(context);
-    }
-    return partitionKey;
-  }
-
-  private getAndCheckRowKey(context: TableStorageContext): string {
-    const rowKey = context.rowKey;
-    if (rowKey === undefined) {
-      throw StorageErrorFactory.getTableNameEmpty(context);
-    }
-    return rowKey;
   }
 
   private updateResponseAccept(

@@ -4,12 +4,12 @@
 [![Build Status](https://dev.azure.com/azure/Azurite/_apis/build/status/Azure.Azurite?branchName=main)](https://dev.azure.com/azure/Azurite/_build/latest?definitionId=105&branchName=main)
 
 > Note:
-> The latest Azurite V3 code, which supports Blob, Queue, and Table (preview) is in the master branch.
+> The latest Azurite V3 code, which supports Blob, Queue, and Table (preview) is in the main branch.
 > The legacy Azurite V2 code is in the [legacy-master](https://github.com/Azure/azurite/tree/legacy-master) branch.
 
 | Version                                                            | Azure Storage API Version | Service Support                | Description                                       | Reference Links                                                                                                                                                                                                         |
 | ------------------------------------------------------------------ | ------------------------- | ------------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.14.3                                                             | 2020-10-02                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| 3.16.0                                                             | 2021-04-10                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
 | [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table          | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
 - [Azurite V3](#azurite-v3)
@@ -75,20 +75,20 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
 
 ## Features & Key Changes in Azurite V3
 
-- Blob storage features align with Azure Storage API version 2020-10-02 (Refer to support matrix section below)
-  - SharedKey/Account SAS/Service SAS/Public Access Authentications
+- Blob storage features align with Azure Storage API version 2021-04-10 (Refer to support matrix section below)
+  - SharedKey/Account SAS/Service SAS/Public Access Authentications/OAuth
   - Get/Set Blob Service Properties
   - Create/List/Delete Containers
   - Create/Read/List/Update/Delete Block Blobs
   - Create/Read/List/Update/Delete Page Blobs
-- Queue storage features align with Azure Storage API version 2020-10-02 (Refer to support matrix section below)
-  - SharedKey/Account SAS/Service SAS
+- Queue storage features align with Azure Storage API version 2021-04-10 (Refer to support matrix section below)
+  - SharedKey/Account SAS/Service SAS/OAuth
   - Get/Set Queue Service Properties
   - Preflight Request
   - Create/List/Delete Queues
   - Put/Get/Peek/Updata/Deleta/Clear Messages
-- Table storage features align with Azure Storage API version 2020-10-02 (Refer to support matrix section below)
-  - SharedKey/Account SAS/Service SAS
+- Table storage features align with Azure Storage API version 2021-04-10 (Refer to support matrix section below)
+  - SharedKey/Account SAS/Service SAS/OAuth
   - Create/List/Delete Tables
   - Insert/Update/Query/Delete Table Entities
 - Features **NEW** on V3
@@ -117,7 +117,8 @@ azurite
 
 ### NPM
 
-In order to run Azurite V3 you need Node.js >= 8.0 installed on your system. Azurite works cross-platform on Windows, Linux, and OS X.
+In order to run Azurite V3 you need Node.js installed on your system. Azurite works cross-platform on Windows, Linux, and OS X.
+Azurite is compatible with the current Node.Js LTS Versions in support.
 
 After installation you can install Azurite simply with npm which is the Node.js package management tool included with every Node.js installation.
 
@@ -186,7 +187,7 @@ Following extension configurations are supported:
 - `azurite.queuePort` Queue service listening port, by default 10001
 - `azurite.tableHost` Table service listening endpoint, by default 127.0.0.1
 - `azurite.tablePort` Table service listening port, by default 10002
-- `azurite.location` Workspace location path, by default existing Visual Studio Code opened folder
+- `azurite.location` Workspace location folder path (can be relative or absolute). By default, in the VS Code extension, the currently opened folder is used. If launched from the command line, the current process working directory is the default. Relative paths are resolved relative to the default folder.
 - `azurite.silent` Silent mode to disable access log in Visual Studio channel, by default false
 - `azurite.debug` Output debug log into Azurite channel, by default false
 - `azurite.loose` Enable loose mode which ignores unsupported headers and parameters, by default false
@@ -632,7 +633,7 @@ UseDevelopmentStorage=true;
 The full HTTPS connection string is:
 
 ```bash
-DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://127.0.0.1:10000/devstoreaccount1;QueueEndpoint=https://127.0.0.1:10001/devstoreaccount1;
+DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://127.0.0.1:10000/devstoreaccount1;QueueEndpoint=https://127.0.0.1:10001/devstoreaccount1;TableEndpoint=https://127.0.0.1:10002/devstoreaccount1
 ```
 
 To use the Blob service only, the HTTPS connection string is:
@@ -883,7 +884,7 @@ Legacy Azurite V2 supports Azure Storage Blob, Queue and Table services.
 Azurite V3 currently only supports Azure Storage blob service. Queue service is supported after V3.2.0-preview.
 Table service support is currently under discussion.
 
-Azurite V3 supports features from Azure Storage API version 2020-10-02, and will maintain parity with the latest API versions, in a more frequent update frequency than legacy Azurite V2.
+Azurite V3 supports features from Azure Storage API version 2021-04-10, and will maintain parity with the latest API versions, in a more frequent update frequency than legacy Azurite V2.
 
 ## TypeScript Server Code Generator
 
@@ -894,7 +895,7 @@ All the generated code is kept in `generated` folder, including the generated mi
 
 ## Support Matrix
 
-Latest release targets **2020-10-02** API version **blob** service.
+Latest release targets **2021-04-10** API version **blob** service.
 
 Detailed support matrix:
 
@@ -940,6 +941,7 @@ Detailed support matrix:
   - Static Website
   - Soft delete & Undelete Blob
   - Incremental Copy Blob
+  - Batch
   - Blob Tags
   - Blob Query
   - Blob Versions
@@ -950,8 +952,9 @@ Detailed support matrix:
   - Put Blob From URL
   - Version Level Worm
   - Sync copy blob by access source with oauth
+  - Encryption Scope
 
-Latest version supports for **2020-10-02** API version **queue** service.
+Latest version supports for **2021-04-10** API version **queue** service.
 Detailed support matrix:
 
 - Supported Vertical Features
@@ -981,7 +984,7 @@ Detailed support matrix:
   - SharedKey Lite
   - Delegation SAS
 
-Latest version supports for **2020-10-02** API version **table** service (preview).
+Latest version supports for **2021-04-10** API version **table** service (preview).
 Detailed support matrix:
 
 - Supported Vertical Features
@@ -1022,7 +1025,7 @@ We are currently working on Azurite V3 to implement the remaining Azure Storage 
 We finished the basic structure and majority of features in Blob Storage, as can be seen in the support matrix.
 The detailed work items are also tracked in GitHub repository projects and issues.
 
-Any contribution and suggestions for Azurite V3 is welcome, please goto [CONTRIBUTION.md](https://github.com/Azure/Azurite/blob/master/CONTRIBUTION.md) for detailed contribution guidelines. Alternatively, you can open GitHub issues voting for any missing features in Azurite V3.
+Any contribution and suggestions for Azurite V3 is welcome, please goto [CONTRIBUTION.md](https://github.com/Azure/Azurite/blob/main/CONTRIBUTION.md) for detailed contribution guidelines. Alternatively, you can open GitHub issues voting for any missing features in Azurite V3.
 
 Most contributions require you to agree to a
 Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us

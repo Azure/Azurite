@@ -145,11 +145,11 @@ export function parseEntityProperty(
           isSystemProperty
         );
       case EdmType.Double:
-        EdmDouble.validate(value);
+        const dblval = EdmDouble.validate(value);
         return new EntityProperty(
           name,
-          value,
-          new EdmDouble(value),
+          dblval,
+          new EdmDouble(dblval),
           isSystemProperty
         );
       case EdmType.Guid:

@@ -1,4 +1,4 @@
-import { access } from "fs";
+import { access, ensureDir } from "fs-extra";
 import { join } from "path";
 import { promisify } from "util";
 
@@ -19,7 +19,6 @@ import VSCServerManagerBase from "./VSCServerManagerBase";
 import VSCServerManagerClosedState from "./VSCServerManagerClosedState";
 
 import rimraf = require("rimraf");
-const accessAsync = promisify(access);
 const rimrafAsync = promisify(rimraf);
 
 export default class VSCServerManagerBlob extends VSCServerManagerBase {
@@ -74,7 +73,8 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
   private async getConfiguration(): Promise<QueueConfiguration> {
     const env = new VSCEnvironment();
     const location = await env.location();
-    await accessAsync(location);
+    await ensureDir(location);
+    await access(location);
 
     DEFAULT_QUEUE_PERSISTENCE_ARRAY[0].locationPath = join(
       location,

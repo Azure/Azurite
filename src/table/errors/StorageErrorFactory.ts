@@ -371,4 +371,15 @@ export default class StorageErrorFactory {
       context
     );
   }
+
+  public static getNotImplementedError(context: Context): StorageError {
+    return new StorageError(
+      501,
+      "NotImplemented",
+      "The requested operation is not implemented on the specified resource.",
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
 }

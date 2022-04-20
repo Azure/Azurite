@@ -3,7 +3,7 @@
   "displayName": "Azurite",
   "description": "An open source Azure Storage API compatible server",
   "icon": "icon.png",
-  "version": "3.14.3",
+  "version": "3.16.0",
   "publisher": "Azurite",
   "categories": [
     "Other"
@@ -22,9 +22,10 @@
   "dependencies": {
     "@azure/ms-rest-js": "^1.5.0",
     "args": "^5.0.1",
-    "axios": "^0.24.0",
+    "axios": "^0.26.0",
     "etag": "^1.8.1",
     "express": "^4.16.4",
+    "fs-extra": "^10.1.0",
     "jsonwebtoken": "^8.5.1",
     "lokijs": "^1.5.6",
     "morgan": "^1.9.1",
@@ -43,7 +44,7 @@
   "devDependencies": {
     "@azure/core-auth": "^1.3.2",
     "@azure/core-rest-pipeline": "^1.2.0",
-    "@azure/data-tables": "^12.1.1",
+    "@azure/data-tables": "^13.0.1",
     "@azure/storage-blob": "^12.1.2",
     "@azure/storage-queue": "^12.0.5",
     "@types/args": "^5.0.0",
@@ -51,6 +52,7 @@
     "@types/bluebird": "^3.5.27",
     "@types/etag": "^1.8.0",
     "@types/express": "^4.16.0",
+    "@types/fs-extra": "^9.0.13",
     "@types/jsonwebtoken": "^8.3.9",
     "@types/lokijs": "^1.5.2",
     "@types/mocha": "^9.0.0",
@@ -63,7 +65,7 @@
     "@types/validator": "^13.1.4",
     "@types/vscode": "^1.39.0",
     "@types/xml2js": "^0.4.3",
-    "autorest": "^2.0.4413",
+    "autorest": "^3.6.0",
     "azure-storage": "^2.10.3",
     "cross-env": "^6.0.3",
     "cross-var": "^1.1.0",
@@ -79,7 +81,7 @@
     "ts-node": "^10.0.0",
     "tslint": "^6.1.3",
     "typescript": "^4.2.4",
-    "vsce": "^1.64.0"
+    "vsce": "^2.7.0"
   },
   "activationEvents": [
     "*",
@@ -200,7 +202,7 @@
           },
           "azurite.location": {
             "type": "string",
-            "description": "Workspace location folder path, by default Visual Studio Code current opened folder"
+            "description": "Workspace location folder path (can be relative or absolute). By default, in the VS Code extension, the currently opened folder is used. If launched from the command line, the current process working directory is the default. Relative paths are resolved relative to the default folder."
           },
           "azurite.blobHost": {
             "type": "string",
@@ -265,6 +267,7 @@
     "watch": "tsc -watch -p ./",
     "blob": "node -r ts-node/register src/blob/main.ts",
     "queue": "node -r ts-node/register src/queue/main.ts",
+    "table": "node -r ts-node/register src/table/main.ts",
     "azurite": "node -r ts-node/register src/azurite.ts",
     "lint": "tslint -p tsconfig.json -c tslint.json src/**/*.ts",
     "test": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --compilers ts-node/register --no-timeouts --grep @loki --recursive tests/**/*.test.ts tests/**/**/*.test.ts",
