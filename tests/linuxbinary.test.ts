@@ -18,7 +18,7 @@ import { HeaderConstants, TABLE_API_VERSION } from '../src/table/utils/constants
 import BlobTestServerFactory from './BlobTestServerFactory';
 import {
   createConnectionStringForTest, HOST, PORT, PROTOCOL
-} from './table/apis/table.entity.test.utils';
+} from './table/utils/table.entity.test.utils';
 import {
   bodyToString, EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName, overrideRequest,
   restoreBuildRequestOptions
