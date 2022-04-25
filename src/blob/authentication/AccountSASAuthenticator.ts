@@ -6,7 +6,7 @@ import Operation from "../generated/artifacts/operation";
 import Context from "../generated/Context";
 import IRequest from "../generated/IRequest";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
-import { AccountSASPermission } from "./AccountSASPermissions";
+import { AccountSASPermission } from "../../common/authentication/AccountSASPermissions";
 import {
   generateAccountSASSignature,
   IAccountSASSignatureValues
