@@ -139,8 +139,17 @@ const entityQueries = [
 describe("unit tests for converting an entity OData query to a JavaScript query for LokiJS", () => {
   entityQueries.forEach(({ input, expected }) => {
     it(`should transform '${input}' into '${expected}'`, (done) => {
-      const actual = LokiTableMetadataStore.transformEntityQuery(input);
-      assert.strictEqual(actual, expected);
+      try {
+        const actual = LokiTableMetadataStore.transformEntityQuery(input);
+        assert.strictEqual(actual, expected);
+      } catch (err: any) {
+        if (input === "1 eq 1")
+          assert.strictEqual(
+            err.message,
+            "Invalid token after value",
+            `Did not get expected error on invalid query ${input}`
+          );
+      }
       done();
     });
   });
@@ -184,8 +193,17 @@ const tableQueries = [
 describe("unit tests for converting an table OData query to a JavaScript query for LokiJS", () => {
   tableQueries.forEach(({ input, expected }) => {
     it(`should transform '${input}' into '${expected}'`, (done) => {
-      const actual = LokiTableMetadataStore.transformTableQuery(input);
-      assert.strictEqual(actual, expected);
+      try {
+        const actual = LokiTableMetadataStore.transformTableQuery(input);
+        assert.strictEqual(actual, expected);
+      } catch (err: any) {
+        if (input === "1 eq 1")
+          assert.strictEqual(
+            err.message,
+            "Invalid token after value",
+            `Did not get expected error on invalid query ${input}`
+          );
+      }
       done();
     });
   });

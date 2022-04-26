@@ -1475,4 +1475,66 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
 
     await tableClient.deleteTable();
   });
+
+  it("should correctly insert and retrieve entities using special values using batch api", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("decodeURI")
+    );
+    const partitionKeyForQueryTest = createUniquePartitionKey("decode");
+    await tableClient.createTable();
+    const timestamp = new Date();
+    timestamp.setDate(timestamp.getDate() + 1);
+    const valuesForTest = [
+      "%D1%88%D0%B5%D0%BB%D0%BB%D1%8B",
+      "%2B",
+      "%1C",
+      "\u001c",
+      "Übermütige Kühe mögen Umlaute",
+      "grave à et aigu é"
+    ];
+    let testsCompleted = 0;
+    for (const valToTest of valuesForTest) {
+      const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
+        partitionKeyForQueryTest
+      );
+      testEntity.myValue = valToTest;
+      const transaction = new TableTransaction();
+      transaction.createEntity(testEntity);
+
+      try {
+        const result = await tableClient.submitTransaction(transaction.actions);
+        assert.ok(result.subResponses[0].rowKey);
+      } catch (err: any) {
+        assert.strictEqual(err, undefined, `We failed with ${err}`);
+      }
+
+      const maxPageSize = 10;
+
+      const entities = tableClient.listEntities<AzureDataTablesTestEntity>({
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myValue eq ${valToTest})`
+        }
+      });
+      let all: AzureDataTablesTestEntity[] = [];
+      for await (const entity of entities.byPage({
+        maxPageSize
+      })) {
+        all = [...all, ...entity];
+      }
+      assert.strictEqual(
+        all.length,
+        1,
+        `Failed on number of results with this value ${valToTest}`
+      );
+      assert.strictEqual(
+        all[0].myValue,
+        valToTest,
+        `Failed on value returned by query ${all[0].myValue} was not the same as ${valToTest}`
+      );
+      testsCompleted++;
+    }
+    assert.strictEqual(testsCompleted, valuesForTest.length);
+    await tableClient.deleteTable();
+  });
 });
