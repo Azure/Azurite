@@ -5,9 +5,9 @@ import {
 } from "@azure/storage-blob";
 
 import Operation from "../generated/artifacts/operation";
-import { AccountSASPermission } from "./AccountSASPermissions";
-import { AccountSASResourceType } from "./AccountSASResourceTypes";
-import { AccountSASService } from "./AccountSASServices";
+import { AccountSASPermission } from "../../common/authentication/AccountSASPermissions";
+import { AccountSASResourceType } from "../../common/authentication/AccountSASResourceTypes";
+import { AccountSASService } from "../../common/authentication/AccountSASServices";
 
 export class OperationAccountSASPermission {
   constructor(

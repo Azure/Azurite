@@ -62,4 +62,12 @@ export default class BlobStorageContext extends Context
   public set disableProductStyleUrl(disableProductStyleUrl: boolean| undefined) {
     this.context.disableProductStyleUrl = disableProductStyleUrl;
   }
+
+  public get loose(): boolean | undefined {
+    return this.context.loose;
+  }
+
+  public set loose(loose: boolean| undefined) {
+    this.context.loose = loose;
+  }
 }

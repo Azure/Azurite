@@ -2,6 +2,7 @@ import IAccountDataStore from "../../common/IAccountDataStore";
 import ILogger from "../../common/ILogger";
 import BlobStorageContext from "../context/BlobStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
+import StrictModelNotSupportedError from "../errors/StrictModelNotSupportedError";
 import { AccessPolicy, BlobType } from "../generated/artifacts/models";
 import Operation from "../generated/artifacts/operation";
 import Context from "../generated/Context";
@@ -130,6 +131,11 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       )}`,
       context.contextId
     );
+
+    if (!context.context.loose && values.encryptionScope !== undefined)
+    {
+      throw new StrictModelNotSupportedError("SAS Encryption Scope 'ses'", context.contextId);
+    }
 
     this.logger.info(
       `BlobSASAuthenticator:validate() Validate signature based account key1.`,
@@ -368,6 +374,7 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     const contentType = req.getQuery("rsct");
     const signedResource = this.decodeIfExist(req.getQuery("sr"));
     const snapshot = this.decodeIfExist(req.getQuery("snapshot"));
+    const encryptionScope = this.decodeIfExist(req.getQuery("ses"));
 
     if (!identifier && (!permissions || !expiryTime)) {
       this.logger.warn(
@@ -397,6 +404,7 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       containerName,
       blobName,
       identifier,
+      encryptionScope,
       cacheControl,
       contentDisposition,
       contentEncoding,
