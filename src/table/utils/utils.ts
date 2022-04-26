@@ -294,3 +294,14 @@ export function checkEtagIsInvalidFormat(etag: string): boolean {
   const match = etag.match(/^[wW]\/"([^"]|\\")*"$/);
   return match === null;
 }
+
+/**
+ * Get the byte size of a string in UTF8.
+ *
+ * @public
+ * @param {Date} requestDate
+ * @returns {string}
+ */
+export function getUTF8ByteSize(text: string): number {
+  return Buffer.from(text, "utf8").length;
+}
