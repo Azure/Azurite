@@ -1,7 +1,11 @@
 import toReadableStream from "to-readable-stream";
 
 import BufferStream from "../../common/utils/BufferStream";
-import { checkEtagIsInvalidFormat, newTableEntityEtag } from "../utils/utils";
+import {
+  checkEtagIsInvalidFormat,
+  getUTF8ByteSize,
+  newTableEntityEtag
+} from "../utils/utils";
 import TableBatchOrchestrator from "../batch/TableBatchOrchestrator";
 import TableBatchUtils from "../batch/TableBatchUtils";
 import TableStorageContext from "../context/TableStorageContext";
@@ -12,6 +16,8 @@ import Context from "../generated/Context";
 import ITableHandler from "../generated/handlers/ITableHandler";
 import { Entity, Table } from "../persistence/ITableMetadataStore";
 import {
+  DEFAULT_KEY_MAX_LENGTH,
+  BODY_SIZE_MAX,
   DEFAULT_TABLE_LISTENING_PORT,
   DEFAULT_TABLE_SERVER_HOST_NAME,
   FULL_METADATA_ACCEPT,
@@ -175,6 +181,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const table = this.getAndCheckTableName(tableContext);
     const accept = this.getAndCheckPayloadFormat(tableContext);
     const prefer = this.getAndCheckPreferHeader(tableContext);
+    this.checkBodyLimit(context, context.request?.getBody());
 
     // curently unable to use checking functions as the partitionKey
     // and rowKey are not coming through the context.
@@ -189,6 +196,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
     }
 
+    this.checkProperties(context, options.tableEntityProperties);
+
     const entity: Entity = {
       PartitionKey: options.tableEntityProperties.PartitionKey,
       RowKey: options.tableEntityProperties.RowKey,
@@ -196,7 +205,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       lastModifiedTime: context.startTime!,
       eTag: newTableEntityEtag(context.startTime!)
     };
-
+    // check that key properties are valid
+    this.validateKey(context, entity.PartitionKey);
+    this.validateKey(context, entity.RowKey);
     let normalizedEntity;
     try {
       normalizedEntity = new NormalizedEntity(entity);
@@ -321,6 +332,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
+    this.checkBodyLimit(context, context.request?.getBody());
 
     [partitionKey, rowKey] = TableHandler.getAndCheckKeys(
       partitionKey,
@@ -343,6 +355,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         `TableHandler:updateEntity() Incoming PartitionKey:${partitionKey} RowKey:${rowKey} in URL parameters don't align with entity body PartitionKey:${options.tableEntityProperties.PartitionKey} RowKey:${options.tableEntityProperties.RowKey}.`
       );
     }
+
+    this.checkProperties(context, options.tableEntityProperties);
 
     // Test if etag is available
     // this is considered an upsert if no etag header, an empty header is an error.
@@ -367,6 +381,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       eTag
     };
 
+    // check that key properties are valid
+    this.validateKey(context, entity.PartitionKey);
+    this.validateKey(context, entity.RowKey);
     let normalizedEntity;
     try {
       normalizedEntity = new NormalizedEntity(entity);
@@ -411,6 +428,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
+    this.checkBodyLimit(context, context.request?.getBody());
 
     [partitionKey, rowKey] = TableHandler.getAndCheckKeys(
       partitionKey,
@@ -437,6 +455,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       );
     }
 
+    this.checkProperties(context, options.tableEntityProperties);
     const eTag = newTableEntityEtag(context.startTime!);
 
     const entity: Entity = {
@@ -446,7 +465,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       lastModifiedTime: context.startTime!,
       eTag
     };
-
+    // check that key properties are valid
+    this.validateKey(context, entity.PartitionKey);
+    this.validateKey(context, entity.RowKey);
     let normalizedEntity;
     try {
       normalizedEntity = new NormalizedEntity(entity);
@@ -533,6 +554,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const table = this.getAndCheckTableName(tableContext);
     const account = this.getAndCheckAccountName(tableContext);
     const accept = this.getAndCheckPayloadFormat(tableContext);
+    this.checkBodyLimit(context, context.request?.getBody());
 
     const [result, nextPartitionKey, nextRowKey] =
       await this.metadataStore.queryTableEntities(
@@ -793,6 +815,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const accountName = this.getAndCheckAccountName(tableContext);
     const tableName = this.getAndCheckTableName(tableContext);
+    this.checkBodyLimit(context, context.request?.getBody());
 
     // The policy number should be within 5, the permission should follow the Table permission.
     // See as https://docs.microsoft.com/en-us/rest/api/storageservices/create-service-sas.
@@ -848,6 +871,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableBatchResponse> {
     const tableCtx = new TableStorageContext(context);
+    this.checkBodyLimit(context, context.request?.getBody());
+
     const contentTypeResponse = tableCtx.request
       ?.getHeader("content-type")
       ?.replace("batch", "batchresponse");
@@ -960,5 +985,72 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       response.preferenceApplied = RETURN_CONTENT;
     }
     return response;
+  }
+
+  /**
+   * Checks if key is valid based on rules outlined here:
+   * https://docs.microsoft.com/en-us/rest/api/storageservices/Understanding-the-Table-Service-Data-Model#characters-disallowed-in-key-fields
+   * Checks that key length is less than 1Kib (1024 chars)
+   * Checks for invalid chars
+   * @private
+   * @param {string} key
+   * @return {*}  {boolean}
+   * @memberof TableHandler
+   */
+  private validateKey(context: Context, key: string) {
+    // key is a string value that may be up to 1 KiB in size.
+    // although a little arbitrary, for performance and
+    // generally a better idea, choosing a shorter length
+    if (key.length > DEFAULT_KEY_MAX_LENGTH) {
+      throw StorageErrorFactory.getInvalidInput(context);
+    }
+    const match = key.match(/[\u0000-\u001f,\u007f-\u009f,\/,\\,\#,\?]+/);
+    if (match !== null && match.length > 0) {
+      throw StorageErrorFactory.getInvalidInput(context);
+    }
+  }
+
+  /**
+   * Checks that properties are valid according to rules given here:
+   * https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-the-table-service-data-model#property-types
+   *
+   * @private
+   * @param {Context} context
+   * @param {{
+   *       [propertyName: string]: any;
+   *     }} properties
+   * @memberof TableHandler
+   */
+  private checkProperties(
+    context: Context,
+    properties: {
+      [propertyName: string]: any;
+    }
+  ) {
+    for (const prop in properties) {
+      if (properties.hasOwnProperty(prop)) {
+        if (
+          undefined !== properties[prop].length &&
+          properties[prop].length > 1024 * 32
+        ) {
+          throw StorageErrorFactory.getPropertyValueTooLargeError(context);
+        }
+      }
+    }
+  }
+
+  /**
+   * Checks the size of the body against service limit as per documentation
+   * https://docs.microsoft.com/en-us/troubleshoot/azure/general/request-body-large
+   *
+   * @private
+   * @param {Context} context
+   * @param {string} body
+   * @memberof TableHandler
+   */
+  private checkBodyLimit(context: Context, body: string | undefined) {
+    if (undefined !== body && getUTF8ByteSize(body) > BODY_SIZE_MAX) {
+      throw StorageErrorFactory.getRequestBodyTooLarge(context);
+    }
   }
 }
