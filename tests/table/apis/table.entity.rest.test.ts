@@ -424,4 +424,93 @@ describe("table Entity APIs test", () => {
       );
     }
   });
+
+  // validation based on:
+  // https://docs.microsoft.com/en-us/rest/api/storageservices/Understanding-the-Table-Service-Data-Model#characters-disallowed-in-key-fields
+  it("Should not accept invalid characters in partitionkey or rowKey, @loki", async () => {
+    reproFlowsTableName = getUniqueName("keyvalidation");
+    const body = JSON.stringify({
+      TableName: reproFlowsTableName
+    });
+    const createTableHeaders = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=nometadata"
+    };
+    const createTableResult = await postToAzurite(
+      "Tables",
+      body,
+      createTableHeaders
+    );
+    assert.strictEqual(createTableResult.status, 201);
+
+    const invalidKeyRequests: string[] = [
+      '{"PartitionKey":"doNotAllow/ForwardSlash","RowKey":"1","value":"val1"}',
+      '{"PartitionKey":"1","RowKey":"doNotAllow/ForwardSlash","value":"val1"}',
+      '{"PartitionKey":"doNotAllow#hash","RowKey":"1","value":"val1"}',
+      '{"PartitionKey":"1","RowKey":"doNotAllow#hash","value":"val1"}',
+      '{"PartitionKey":"doNotAllow?questionmark","RowKey":"1","value":"val1"}',
+      '{"PartitionKey":"1","RowKey":"doNotAllow?questionmark","value":"val1"}',
+      '{"PartitionKey":"doNotAllow\\backslash","RowKey":"1","value":"val1"}'
+    ];
+    // need to test u0000 to u001f and u007f to u009f
+    for (let i = 0x0; i <= 0x1f; i++) {
+      invalidKeyRequests.push(
+        `{"PartitionKey":"doNotAllow-\\u${i
+          .toString(16)
+          .padStart(4, "0")
+          .toUpperCase()}unicodecontrol","RowKey":"1","value":"val1"}`
+      );
+      invalidKeyRequests.push(
+        `{"PartitionKey":"1","RowKey":"doNotAllow-\\u${i
+          .toString(16)
+          .padStart(4, "0")
+          .toUpperCase()}unicodecontrol","value":"val1"}`
+      );
+    }
+    for (let i = 0x007f; i <= 0x9f; i++) {
+      invalidKeyRequests.push(
+        `{"PartitionKey":"doNotAllow-\\u${i
+          .toString(16)
+          .padStart(4, "0")
+          .toUpperCase()}unicodecontrol","RowKey":"1","value":"val1"}`
+      );
+      invalidKeyRequests.push(
+        `{"PartitionKey":"1","RowKey":"doNotAllow-\\u${i
+          .toString(16)
+          .padStart(4, "0")
+          .toUpperCase()}unicodecontrol","value":"val1"}`
+      );
+    }
+
+    for (const invalidKeyRequest of invalidKeyRequests) {
+      try {
+        const queryRequestResult = await postToAzurite(
+          reproFlowsTableName,
+          invalidKeyRequest,
+          {
+            "x-ms-version": "2019-02-02",
+            "x-ms-client-request-id": "req1",
+            "Content-Type": "application/json",
+            Accept: "application/json;odata=nometadata"
+          }
+        );
+
+        // we expect this to fail, as we are using an invalid key,
+        // and this should jump to the catch block
+        assert.strictEqual(queryRequestResult.status, 400);
+      } catch (err: any) {
+        if (err.response !== undefined) {
+          assert.strictEqual(
+            err.response.status,
+            400,
+            `We did not get the expected status code, we got: ${err} for request ${invalidKeyRequest}`
+          );
+        } else {
+          assert.fail(
+            `Failed to get an error on this request: ${invalidKeyRequest}`
+          );
+        }
+      }
+    }
+  });
 });
