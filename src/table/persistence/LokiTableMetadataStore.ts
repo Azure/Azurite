@@ -125,7 +125,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     // Check for table entry in the table registry collection
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
     // Azure Storage Service is case insensitive
-    tableModel.table = tableModel.table.toLowerCase();
+    tableModel.table = tableModel.table;
     const doc = coll.findOne({
       account: tableModel.account,
       table: { $regex: [tableModel.table, "i"] }
@@ -141,7 +141,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     // now we create the collection to represent the table using a unique string
     const tableCollectionName = this.getTableCollectionName(
       tableModel.account,
-      tableModel.table.toLowerCase()
+      tableModel.table
     );
     const extentColl = this.db.getCollection(tableCollectionName);
     if (extentColl) {

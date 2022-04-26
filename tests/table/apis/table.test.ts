@@ -411,4 +411,29 @@ describe("table APIs test", () => {
       });
     });
   });
+
+  it("should preserve casing on table names, @loki", (done) => {
+    tableName = getUniqueName("myTable");
+    tableService.createTable(tableName, (createError) => {
+      if (createError) {
+        assert.ifError(createError);
+      }
+      tableService.listTablesSegmentedWithPrefix(
+        "myTable",
+        null as any,
+        { maxResults: 10 },
+        (error: any, result: any, response: any) => {
+          assert.strictEqual(error, null);
+          const validResult: boolean = result.entries.length > 0;
+          assert.strictEqual(
+            validResult,
+            true,
+            "We did not find the expected table!"
+          );
+          assert.notStrictEqual(response, null);
+          done();
+        }
+      );
+    });
+  });
 });
