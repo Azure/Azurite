@@ -273,9 +273,10 @@ export function validateTableName(context: Context, tableName: string) {
 
 export function newTableEntityEtag(startTime: Date): string {
   // Etag as returned by Table Storage should match W/"datetime'<ISO8601datetime>'"
+  // we use the additional hrtime precsion option
   return (
     "W/\"datetime'" +
-    encodeURIComponent(truncatedISO8061Date(startTime, true)) +
+    encodeURIComponent(truncatedISO8061Date(startTime, true, true)) +
     "'\""
   );
 }
