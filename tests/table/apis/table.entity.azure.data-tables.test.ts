@@ -16,6 +16,10 @@ import {
   createUniquePartitionKey
 } from "../utils/table.entity.test.utils";
 import { TestBooleanPropEntity } from "../models/TestBooleanPropEntity";
+import {
+  createLargeEntityForTest,
+  LargeDataTablesTestEntity
+} from "../models/LargeDataTablesTestEntity";
 // Set true to enable debug log
 configLogger(false);
 // For convenience, we have a switch to control the use
@@ -993,6 +997,235 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       testsCompleted++;
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
+    await tableClient.deleteTable();
+  });
+
+  it("Should not insert entities containing string properties longer than 32K chars, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: AzureDataTablesTestEntity =
+      createBasicEntityForTest(partitionKey);
+
+    testEntity.myValue = testEntity.myValue.padEnd(1024 * 32 + 1, "a");
+    try {
+      const result = await tableClient.createEntity(testEntity);
+      assert.strictEqual(
+        result.etag,
+        null,
+        "We should not have created an entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        400,
+        "We did not get the expected Bad Request error"
+      );
+      assert.strictEqual(
+        err.message.match(/PropertyValueTooLarge/gi).length,
+        1,
+        "Did not match PropertyValueTooLarge"
+      );
+    }
+
+    await tableClient.deleteTable();
+  });
+
+  it("Should not merge entities containing string properties longer than 32K chars, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: AzureDataTablesTestEntity =
+      createBasicEntityForTest(partitionKey);
+
+    try {
+      const result1 = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(
+        result1.etag,
+        null,
+        "We should have created the first test entity!"
+      );
+      testEntity.myValue = testEntity.myValue.padEnd(1024 * 32 + 1, "a");
+      const result2 = await tableClient.updateEntity(testEntity, "Merge");
+      assert.strictEqual(
+        result2.etag,
+        null,
+        "We should not have updated the entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        400,
+        "We did not get the expected Bad Request error"
+      );
+      assert.strictEqual(
+        err.message.match(/PropertyValueTooLarge/gi).length,
+        1,
+        "Did not match PropertyValueTooLarge"
+      );
+    }
+
+    await tableClient.deleteTable();
+  });
+
+  it("Should not replace entities containing string properties longer than 32K chars, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: AzureDataTablesTestEntity =
+      createBasicEntityForTest(partitionKey);
+
+    try {
+      const result1 = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(
+        result1.etag,
+        null,
+        "We should have created the first test entity!"
+      );
+      testEntity.myValue = testEntity.myValue.padEnd(1024 * 32 + 1, "a");
+      const result2 = await tableClient.updateEntity(testEntity, "Replace");
+      assert.strictEqual(
+        result2.etag,
+        null,
+        "We should not have updated the entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        400,
+        "We did not get the expected Bad Request error"
+      );
+      assert.strictEqual(
+        err.message.match(/PropertyValueTooLarge/gi).length,
+        1,
+        "Did not match PropertyValueTooLarge"
+      );
+    }
+
+    await tableClient.deleteTable();
+  });
+
+  it("Should not insert entities with request body greater than 4 MB, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: LargeDataTablesTestEntity =
+      createLargeEntityForTest(partitionKey);
+
+    try {
+      const result = await tableClient.createEntity(testEntity);
+      assert.strictEqual(
+        result.etag,
+        null,
+        "We should not have created an entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        413,
+        "We did not get the expected 413 error"
+      );
+      assert.strictEqual(
+        err.message.match(/RequestBodyTooLarge/gi).length,
+        1,
+        "Did not match RequestBodyTooLarge"
+      );
+    }
+
+    await tableClient.deleteTable();
+  });
+
+  it("Should not merge entities with request body greater than 4 MB, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: LargeDataTablesTestEntity =
+      createLargeEntityForTest(partitionKey);
+    testEntity.bigString01a = "";
+
+    try {
+      const result1 = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(
+        result1.etag,
+        null,
+        "We should have created the first test entity!"
+      );
+      testEntity.bigString01a = testEntity.myValue.padEnd(1024 * 32, "a");
+      const result2 = await tableClient.updateEntity(testEntity, "Merge");
+      assert.strictEqual(
+        result2.etag,
+        null,
+        "We should not have updated the entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        413,
+        "We did not get the expected 413 error"
+      );
+      assert.strictEqual(
+        err.message.match(/RequestBodyTooLarge/gi).length,
+        1,
+        "Did not match RequestBodyTooLarge"
+      );
+    }
+
+    await tableClient.deleteTable();
+  });
+
+  it("Should not replace entities with request body greater than 4 MB, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: LargeDataTablesTestEntity =
+      createLargeEntityForTest(partitionKey);
+    testEntity.bigString01a = "";
+
+    try {
+      const result1 = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(
+        result1.etag,
+        null,
+        "We should have created the first test entity!"
+      );
+      testEntity.bigString01a = testEntity.myValue.padEnd(1024 * 32, "a");
+      const result2 = await tableClient.updateEntity(testEntity, "Replace");
+      assert.strictEqual(
+        result2.etag,
+        null,
+        "We should not have updated the entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        413,
+        "We did not get the expected 413 error"
+      );
+      assert.strictEqual(
+        err.message.match(/RequestBodyTooLarge/gi).length,
+        1,
+        "Did not match RequestBodyTooLarge"
+      );
+    }
+
     await tableClient.deleteTable();
   });
 });

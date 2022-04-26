@@ -11,8 +11,8 @@ trigger:
   - dev
 
 jobs:
-  - job: blobtestlinux
-    displayName: Blob Test Linux
+  - job: blobtestubuntu20_04
+    displayName: Blob Test Linux Ubuntu 20.04 LTS
     pool:
       vmImage: "ubuntu-latest"
     strategy:
@@ -32,6 +32,33 @@ jobs:
         workingDirectory: "./"
         displayName: "npm ci"
 
+      - script: |
+          npm run test:blob
+        workingDirectory: "./"
+        displayName: "npm run test:blob"
+        env: {}
+        
+  - job: blobtestubuntu18_04
+    displayName: Blob Test Linux Ubuntu 18.04
+    pool:
+      vmImage: "ubuntu-latest"
+    strategy:
+      matrix:
+        node_10_x:
+          node_version: 10.x
+        node_12_x:
+          node_version: 12.x
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(node_version)"
+        displayName: "Install Node.js"
+  
+      - script: |
+          npm ci
+        workingDirectory: "./"
+        displayName: "npm ci"
+  
       - script: |
           npm run test:blob
         workingDirectory: "./"
@@ -505,4 +532,41 @@ jobs:
           npm run test:exe
         workingDirectory: "./"
         displayName: "npm run test:exe"
+        env: {}
+
+  - job: linuxTest
+    displayName: binary Test Linux
+    pool:
+      vmImage: "ubuntu-latest"
+    strategy:
+      matrix:
+        # one of the node modules use a try/catch syntax not supported by node 8
+        # node_8_x:
+        #   node_version: 8.x
+        # our .exe build program is currently incompatible with node 10
+        # node_10_x:
+        #   node_version: 10.x
+        node_12_x:
+          node_version: 12.x
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(node_version)"
+        displayName: "Install Node.js"
+
+      - script: |
+          npm ci
+        workingDirectory: "./"
+        displayName: "npm ci"
+
+      - script: |
+          npm run build:linux
+        workingDirectory: "./"
+        displayName: "npm run build:linux"
+        env: {}
+
+      - script: |
+          npm run test:linux
+        workingDirectory: "./"
+        displayName: "npm run test:linux"
         env: {}
