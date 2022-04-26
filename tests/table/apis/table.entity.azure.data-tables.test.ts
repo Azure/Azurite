@@ -16,6 +16,10 @@ import {
   createUniquePartitionKey
 } from "../utils/table.entity.test.utils";
 import { TestBooleanPropEntity } from "../models/TestBooleanPropEntity";
+import {
+  createLargeEntityForTest,
+  LargeDataTablesTestEntity
+} from "../models/LargeDataTablesTestEntity";
 // Set true to enable debug log
 configLogger(false);
 // For convenience, we have a switch to control the use
@@ -1016,6 +1020,66 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
+  // https://github.com/Azure/Azurite/issues/1286
+  it("Should update Etags with sufficient granualrity, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("etags")
+    );
+    const etags = new Map();
+    const iterations = 99;
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntities: AzureDataTablesTestEntity[] = [];
+    const testEntity = createBasicEntityForTest(partitionKey);
+    const mergeResults: any[] = [];
+    const replaceResults: any[] = [];
+    for (let i = 0; i < iterations; i++) {
+      testEntities[i] = testEntity;
+    }
+
+    await tableClient.createEntity(testEntity);
+
+    const result1 = await tableClient.getEntity(
+      testEntity.partitionKey,
+      testEntity.rowKey
+    );
+    etags.set(result1.etag, 1);
+
+    // Update entity multiple times
+    for (let i = 0; i < iterations; i++) {
+      testEntities[i].myValue = i.toString();
+    }
+    for (let i = 0; i < iterations; i++) {
+      mergeResults[i] = await tableClient.updateEntity(
+        testEntities[i],
+        "Merge"
+      );
+    }
+    for (let i = 0; i < iterations; i++) {
+      replaceResults[i] = await tableClient.updateEntity(
+        testEntities[i],
+        "Replace"
+      );
+    }
+
+    // now check if any etags were duplicated
+    for (let i = 0; i < iterations; i++) {
+      if (etags.has(mergeResults[i].etag)) {
+        assert.fail(`We had 2 etags the same in merge iteration ${i}`);
+      } else {
+        etags.set(mergeResults[i].etag, 1);
+      }
+      if (etags.has(replaceResults[i].etag)) {
+        assert.fail(`We had 2 etags the same in replace iteration ${i}`);
+      } else {
+        etags.set(replaceResults[i].etag, 1);
+      }
+    }
+
+    await tableClient.deleteTable();
+  });
+
   it("Should delete entity with PartitionKey starting with %, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
@@ -1059,6 +1123,80 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
+  it("Should not insert entities containing string properties longer than 32K chars, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: AzureDataTablesTestEntity =
+      createBasicEntityForTest(partitionKey);
+
+    testEntity.myValue = testEntity.myValue.padEnd(1024 * 32 + 1, "a");
+    try {
+      const result = await tableClient.createEntity(testEntity);
+      assert.strictEqual(
+        result.etag,
+        null,
+        "We should not have created an entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        400,
+        "We did not get the expected Bad Request error"
+      );
+      assert.strictEqual(
+        err.message.match(/PropertyValueTooLarge/gi).length,
+        1,
+        "Did not match PropertyValueTooLarge"
+      );
+    }
+
+    await tableClient.deleteTable();
+  });
+
+  it("Should not merge entities containing string properties longer than 32K chars, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: AzureDataTablesTestEntity =
+      createBasicEntityForTest(partitionKey);
+
+    try {
+      const result1 = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(
+        result1.etag,
+        null,
+        "We should have created the first test entity!"
+      );
+      testEntity.myValue = testEntity.myValue.padEnd(1024 * 32 + 1, "a");
+      const result2 = await tableClient.updateEntity(testEntity, "Merge");
+      assert.strictEqual(
+        result2.etag,
+        null,
+        "We should not have updated the entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        400,
+        "We did not get the expected Bad Request error"
+      );
+      assert.strictEqual(
+        err.message.match(/PropertyValueTooLarge/gi).length,
+        1,
+        "Did not match PropertyValueTooLarge"
+      );
+    }
+
+    await tableClient.deleteTable();
+  });
+
   it("Should create entity with RowKey starting with %, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
@@ -1076,6 +1214,46 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       undefined,
       "Did not create entity!"
     );
+
+    await tableClient.deleteTable();
+  });
+
+  it("Should not replace entities containing string properties longer than 32K chars, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: AzureDataTablesTestEntity =
+      createBasicEntityForTest(partitionKey);
+
+    try {
+      const result1 = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(
+        result1.etag,
+        null,
+        "We should have created the first test entity!"
+      );
+      testEntity.myValue = testEntity.myValue.padEnd(1024 * 32 + 1, "a");
+      const result2 = await tableClient.updateEntity(testEntity, "Replace");
+      assert.strictEqual(
+        result2.etag,
+        null,
+        "We should not have updated the entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        400,
+        "We did not get the expected Bad Request error"
+      );
+      assert.strictEqual(
+        err.message.match(/PropertyValueTooLarge/gi).length,
+        1,
+        "Did not match PropertyValueTooLarge"
+      );
+    }
 
     await tableClient.deleteTable();
   });
@@ -1124,6 +1302,39 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
+  it("Should not insert entities with request body greater than 4 MB, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: LargeDataTablesTestEntity =
+      createLargeEntityForTest(partitionKey);
+
+    try {
+      const result = await tableClient.createEntity(testEntity);
+      assert.strictEqual(
+        result.etag,
+        null,
+        "We should not have created an entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        413,
+        "We did not get the expected 413 error"
+      );
+      assert.strictEqual(
+        err.message.match(/RequestBodyTooLarge/gi).length,
+        1,
+        "Did not match RequestBodyTooLarge"
+      );
+    }
+
+    await tableClient.deleteTable();
+  });
+
   // https://github.com/Azure/Azurite/issues/754
   it("Should create and delete entity using batch and PartitionKey starting with %, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
@@ -1147,6 +1358,47 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       assert.ok(result.subResponses[0].rowKey);
     } catch (err: any) {
       assert.strictEqual(err, undefined, `We failed with ${err}`);
+    }
+
+    await tableClient.deleteTable();
+  });
+
+  it("Should not merge entities with request body greater than 4 MB, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: LargeDataTablesTestEntity =
+      createLargeEntityForTest(partitionKey);
+    testEntity.bigString01a = "";
+
+    try {
+      const result1 = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(
+        result1.etag,
+        null,
+        "We should have created the first test entity!"
+      );
+      testEntity.bigString01a = testEntity.myValue.padEnd(1024 * 32, "a");
+      const result2 = await tableClient.updateEntity(testEntity, "Merge");
+      assert.strictEqual(
+        result2.etag,
+        null,
+        "We should not have updated the entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        413,
+        "We did not get the expected 413 error"
+      );
+      assert.strictEqual(
+        err.message.match(/RequestBodyTooLarge/gi).length,
+        1,
+        "Did not match RequestBodyTooLarge"
+      );
     }
 
     await tableClient.deleteTable();
@@ -1178,6 +1430,47 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       assert.ok(result.subResponses[0].rowKey);
     } catch (err: any) {
       assert.strictEqual(err, undefined, `We failed with ${err}`);
+    }
+
+    await tableClient.deleteTable();
+  });
+
+  it("Should not replace entities with request body greater than 4 MB, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity: LargeDataTablesTestEntity =
+      createLargeEntityForTest(partitionKey);
+    testEntity.bigString01a = "";
+
+    try {
+      const result1 = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(
+        result1.etag,
+        null,
+        "We should have created the first test entity!"
+      );
+      testEntity.bigString01a = testEntity.myValue.padEnd(1024 * 32, "a");
+      const result2 = await tableClient.updateEntity(testEntity, "Replace");
+      assert.strictEqual(
+        result2.etag,
+        null,
+        "We should not have updated the entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        413,
+        "We did not get the expected 413 error"
+      );
+      assert.strictEqual(
+        err.message.match(/RequestBodyTooLarge/gi).length,
+        1,
+        "Did not match RequestBodyTooLarge"
+      );
     }
 
     await tableClient.deleteTable();
