@@ -2,6 +2,7 @@ import * as assert from "assert";
 import * as Azure from "azure-storage";
 
 import { configLogger } from "../../../src/common/Logger";
+import StorageError from "../../../src/table/errors/StorageError";
 import TableServer from "../../../src/table/TableServer";
 import {
   HeaderConstants,
@@ -301,49 +302,48 @@ describe("table APIs test", () => {
         Start: new Date("2017-12-31T11:22:33.4567890Z")
       }
     };
-
-    tableService.createTable(tableName + "setACL", (error) => {
+    const aclTableName: string = tableName + "setAcl";
+    tableService.createTable(aclTableName, (error, result, response) => {
       if (error) {
-        assert.ifError(error);
+        const storageErr = error as StorageError;
+        assert.strictEqual(storageErr.statusCode, 409, "TableDidNotExist");
       }
 
       // a random id used to test whether response returns the client id sent in request
       const setClientRequestId = "b86e2b01-a7b5-4df2-b190-205a0c24bd36";
 
-      // tslint:disable-next-line: no-shadowed-variable
       tableService.setTableAcl(
-        tableName + "setACL",
+        aclTableName,
         tableAcl,
         { clientRequestId: setClientRequestId },
-        (error, result, response) => {
-          if (error) {
-            assert.ifError(error);
+        (error2, result2, response2) => {
+          if (error2) {
+            assert.ifError(error2);
           }
-          if (response.headers) {
+          if (response2.headers) {
             assert.strictEqual(
-              response.headers["x-ms-client-request-id"],
+              response2.headers["x-ms-client-request-id"],
               setClientRequestId
             );
           }
 
           // tslint:disable-next-line: no-shadowed-variable
           tableService.getTableAcl(
-            tableName + "setACL",
+            aclTableName,
             { clientRequestId: setClientRequestId },
-            (error, result, response) => {
-              if (error) {
-                assert.ifError(error);
+            (error3, result3, response3) => {
+              if (error3) {
+                assert.ifError(error3);
               }
 
-              if (response.headers) {
+              if (response3.headers) {
                 assert.strictEqual(
-                  response.headers["x-ms-client-request-id"],
+                  response3.headers["x-ms-client-request-id"],
                   setClientRequestId
                 );
               }
 
-              assert.deepStrictEqual(result.signedIdentifiers, tableAcl);
-
+              assert.deepStrictEqual(result3.signedIdentifiers, tableAcl);
               done();
             }
           );
@@ -396,6 +396,44 @@ describe("table APIs test", () => {
         );
         done();
       });
+    });
+  });
+
+  it("should delete a table using case insensitive logic, @loki", (done) => {
+    tableName = getUniqueName("caseInsensitive");
+    tableService.createTable(tableName, (error) => {
+      if (error) {
+        assert.ifError(error);
+      }
+      tableService.deleteTable(tableName.toUpperCase(), (err, res) => {
+        assert.ifError(err);
+        done();
+      });
+    });
+  });
+
+  it("should preserve casing on table names, @loki", (done) => {
+    tableName = getUniqueName("myTable");
+    tableService.createTable(tableName, (createError) => {
+      if (createError) {
+        assert.ifError(createError);
+      }
+      tableService.listTablesSegmentedWithPrefix(
+        "myTable",
+        null as any,
+        { maxResults: 10 },
+        (error: any, result: any, response: any) => {
+          assert.strictEqual(error, null);
+          const validResult: boolean = result.entries.length > 0;
+          assert.strictEqual(
+            validResult,
+            true,
+            "We did not find the expected table!"
+          );
+          assert.notStrictEqual(response, null);
+          done();
+        }
+      );
     });
   });
 });

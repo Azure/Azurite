@@ -24,8 +24,7 @@ import {
 export async function postToAzurite(
   path: string,
   body: string,
-  headers: any,
-  useFetch?: boolean
+  headers: any
 ): Promise<AxiosResponse<any, any>> {
   const url = `${TableEntityTestConfig.protocol}://${
     TableEntityTestConfig.host
@@ -38,9 +37,7 @@ export async function postToAzurite(
 }
 
 /**
- * Submits POST request to Azurite table service on the path given
- * This could be modified to accept the entire URL, rather than just path
- * ToDo: Need to consider cases with query strings etc.
+ * Submits GET request to Azurite table service on the path given
  *
  * @export
  * @param {string} path
@@ -49,8 +46,7 @@ export async function postToAzurite(
  */
 export async function getToAzurite(
   path: string,
-  headers: any,
-  useFetch?: boolean
+  headers: any
 ): Promise<AxiosResponse<any, any>> {
   const url = `${TableEntityTestConfig.protocol}://${TableEntityTestConfig.host}:${TableEntityTestConfig.port}/${TableEntityTestConfig.accountName}/${path}`;
   const requestConfig = axiosRequestConfig(url, path, headers);

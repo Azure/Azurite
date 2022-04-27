@@ -1,4 +1,3 @@
-import { exception } from "console";
 import { StorageError } from "../../blob/generated/artifacts/mappers";
 
 /**
@@ -17,14 +16,20 @@ export class BatchSerialization {
   public lineEnding: string = "";
 
   public extractBatchBoundary(batchRequestsString: string): void {
-    const batchBoundaryMatch = batchRequestsString.match(
+    let batchRequestToProcess = "";
+    try {
+      batchRequestToProcess = decodeURI(batchRequestsString);
+    } catch (err: any) {
+      batchRequestToProcess = batchRequestsString;
+    }
+    const batchBoundaryMatch = batchRequestToProcess.match(
       // prettier-ignore
       /--batch_(\w+-?)+/
     );
     if (null != batchBoundaryMatch) {
       this.batchBoundary = batchBoundaryMatch[0];
     } else {
-      throw exception("no batch boiundary found in request");
+      throw Error("no batch boundary found in request");
     }
   }
 
