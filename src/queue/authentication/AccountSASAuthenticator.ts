@@ -7,7 +7,7 @@ import IRequest from "../generated/IRequest";
 import {
   generateAccountSASSignature,
   IAccountSASSignatureValues
-} from "./IAccountSASSignatureValues";
+} from "../../common/authentication/IAccountSASSignatureValues";
 import IAuthenticator from "./IAuthenticator";
 import OPERATION_ACCOUNT_SAS_PERMISSIONS from "./OperationAccountSASPermission";
 

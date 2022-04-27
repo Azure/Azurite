@@ -3,7 +3,7 @@ import {
   truncatedISO8061Date
 } from "../../common/utils/utils";
 import { BlobSASResourceType } from "./BlobSASResourceType";
-import { SASProtocol } from "./IAccountSASSignatureValues";
+import { SASProtocol } from "../../common/authentication/IAccountSASSignatureValues";
 import { IIPRange, ipRangeToString } from "./IIPRange";
 
 /**
