@@ -13,6 +13,7 @@ Table:
 - Fix empty partition key and row key handling in batch write operations.
 - Fix batch reponse for Go SDK, includes additional CRLF on closure of changesetresponse section.
 - Removes query strings from Location and DataServiceId batch response headers.
+- Modifies the deserialization of batch request for case that a raw / not url encoded % is present in the body.
 - Adds additional tests and checks for table names on creation.
 - Adds more granularity and precision to etags.
 - Adds checks for invalid characters in partition and row keys.
