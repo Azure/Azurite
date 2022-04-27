@@ -59,7 +59,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const accept = this.getAndCheckPayloadFormat(tableContext);
     const account = this.getAndCheckAccountName(tableContext);
-    const table = tableProperties.tableName; // Table name is in request body instead of URL
+    // Table name is in request body instead of URL
+    const table = tableProperties.tableName;
     if (table === undefined) {
       throw StorageErrorFactory.getTableNameEmpty(context);
     }

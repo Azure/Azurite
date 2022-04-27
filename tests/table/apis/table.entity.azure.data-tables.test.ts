@@ -50,7 +50,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   it("Batch API should return row keys in format understood by @azure/data-tables, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
-      getUniqueName("datatables")
+      getUniqueName("dataTables")
     );
     await tableClient.createTable();
     const partitionKey = createUniquePartitionKey("");
@@ -905,7 +905,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   it("should error on query with invalid filter string, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
-      getUniqueName("datatables")
+      getUniqueName("dataTables")
     );
     const partitionKeyForQueryTest = createUniquePartitionKey("filter");
     const totalItems = 10;

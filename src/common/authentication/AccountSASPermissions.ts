@@ -2,11 +2,16 @@ export enum AccountSASPermission {
   Read = "r",
   Write = "w",
   Delete = "d",
+  DeleteVersion = "x",
   List = "l",
   Add = "a",
   Create = "c",
   Update = "u",
-  Process = "p"
+  Process = "p",
+  Tag = "t",
+  Filter = "f",
+  SetImmutabilityPolicy  = "i",
+  PermanentDelete = "y"
 }
 
 /**
@@ -51,6 +56,12 @@ export default class AccountSASPermissions {
           }
           accountSASPermissions.delete = true;
           break;
+        case AccountSASPermission.DeleteVersion:
+          if (accountSASPermissions.deleteVersion) {
+            throw new RangeError(`Duplicated permission character: ${c}`);
+          }
+          accountSASPermissions.deleteVersion = true;
+          break;
         case AccountSASPermission.List:
           if (accountSASPermissions.list) {
             throw new RangeError(`Duplicated permission character: ${c}`);
@@ -80,6 +91,30 @@ export default class AccountSASPermissions {
             throw new RangeError(`Duplicated permission character: ${c}`);
           }
           accountSASPermissions.process = true;
+          break;
+        case AccountSASPermission.Tag:
+          if (accountSASPermissions.tag) {
+            throw new RangeError(`Duplicated permission character: ${c}`);
+          }
+          accountSASPermissions.tag = true;
+          break;
+        case AccountSASPermission.Filter:
+          if (accountSASPermissions.filter) {
+            throw new RangeError(`Duplicated permission character: ${c}`);
+          }
+          accountSASPermissions.filter = true;
+          break;
+        case AccountSASPermission.SetImmutabilityPolicy:
+          if (accountSASPermissions.setImmutabilityPolicy) {
+            throw new RangeError(`Duplicated permission character: ${c}`);
+          }
+          accountSASPermissions.setImmutabilityPolicy = true;
+          break;
+        case AccountSASPermission.PermanentDelete:
+          if (accountSASPermissions.permanentDelete) {
+            throw new RangeError(`Duplicated permission character: ${c}`);
+          }
+          accountSASPermissions.permanentDelete = true;
           break;
         default:
           throw new RangeError(`Invalid permission character: ${c}`);
@@ -112,6 +147,14 @@ export default class AccountSASPermissions {
    * @memberof AccountSASPermissions
    */
   public delete: boolean = false;
+
+  /**
+   * Permission to delete blob version.
+   *
+   * @type {boolean}
+   * @memberof AccountSASPermissions
+   */
+  public deleteVersion: boolean = false;
 
   /**
    * Permission to list blob containers, blobs, shares, directories, and files granted.
@@ -154,6 +197,38 @@ export default class AccountSASPermissions {
   public process: boolean = false;
 
   /**
+   * Permission to handle blob tag.
+   *
+   * @type {boolean}
+   * @memberof AccountSASPermissions
+   */
+  public tag: boolean = false;
+
+  /**
+   * Permission to filter blob by tag.
+   *
+   * @type {boolean}
+   * @memberof AccountSASPermissions
+   */
+  public filter: boolean = false;
+
+  /**
+   * Permission to set ImmutabilityPolicy on blob.
+   *
+   * @type {boolean}
+   * @memberof AccountSASPermissions
+   */
+  public setImmutabilityPolicy: boolean = false;
+
+  /**
+   * Permission to permanent delete a blob.
+   *
+   * @type {boolean}
+   * @memberof AccountSASPermissions
+   */
+  public permanentDelete: boolean = false;
+
+  /**
    * Produces the SAS permissions string for an Azure Storage account.
    * Call this method to set AccountSASSignatureValues Permissions field.
    *
@@ -179,6 +254,9 @@ export default class AccountSASPermissions {
     if (this.delete) {
       permissions.push(AccountSASPermission.Delete);
     }
+    if (this.deleteVersion) {
+      permissions.push(AccountSASPermission.DeleteVersion);
+    }
     if (this.list) {
       permissions.push(AccountSASPermission.List);
     }
@@ -193,6 +271,18 @@ export default class AccountSASPermissions {
     }
     if (this.process) {
       permissions.push(AccountSASPermission.Process);
+    }
+    if (this.tag) {
+      permissions.push(AccountSASPermission.Tag);
+    }
+    if (this.filter) {
+      permissions.push(AccountSASPermission.Filter);
+    }
+    if (this.setImmutabilityPolicy) {
+      permissions.push(AccountSASPermission.SetImmutabilityPolicy);
+    }
+    if (this.permanentDelete) {
+      permissions.push(AccountSASPermission.PermanentDelete);
     }
     return permissions.join("");
   }
