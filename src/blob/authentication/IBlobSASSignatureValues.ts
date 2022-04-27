@@ -4,7 +4,7 @@ import {
 } from "../../common/utils/utils";
 import { BlobSASResourceType } from "./BlobSASResourceType";
 import { SASProtocol } from "../../common/authentication/IAccountSASSignatureValues";
-import { IIPRange, ipRangeToString } from "./IIPRange";
+import { IIPRange, ipRangeToString } from "../../common/authentication/IIPRange";
 
 /**
  * IBlobSASSignatureValues is used to help generating Blob service SAS tokens for containers or blobs.

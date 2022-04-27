@@ -7,7 +7,7 @@ import {
 import AccountSASPermissions from "./AccountSASPermissions";
 import AccountSASResourceTypes from "./AccountSASResourceTypes";
 import AccountSASServices from "./AccountSASServices";
-import { ipRangeToString } from "../../blob/authentication/IIPRange";
+import { ipRangeToString } from "./IIPRange";
 
 /**
  * Protocols for generated SAS.
