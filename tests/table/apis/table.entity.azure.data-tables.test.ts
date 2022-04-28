@@ -1537,4 +1537,23 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     assert.strictEqual(testsCompleted, valuesForTest.length);
     await tableClient.deleteTable();
   });
+
+  it('Should create entity with RowKey containing comma ",", @loki', async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("comma")
+    );
+    await tableClient.createTable();
+    const commaRowEntity = createBasicEntityForTest("comma");
+    commaRowEntity.rowKey = "Commas,InRow,Keys";
+    const insertedEntityHeaders =
+      await tableClient.createEntity<AzureDataTablesTestEntity>(commaRowEntity);
+    assert.notStrictEqual(
+      insertedEntityHeaders.etag,
+      undefined,
+      "Did not create entity!"
+    );
+
+    await tableClient.deleteTable();
+  });
 });

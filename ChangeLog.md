@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Removes commas from RegEx checking key validity.
+
 ## 2022.04 Version 3.17.0
 
 General:
