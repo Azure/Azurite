@@ -4,21 +4,24 @@
 
 ## Upcoming Release
 
+## 2022.04 Version 3.17.0
+
 General:
 
-- Fix SAS validation failure for version 2020-12-06 and later
+- Bump up service API version to 2021-06-08
+- Fixed SAS validation failure for version 2020-12-06 and later
 
 Table:
 
-- Fix empty partition key and row key handling in batch write operations.
-- Fix batch reponse for Go SDK, includes additional CRLF on closure of changesetresponse section.
-- Removes query strings from Location and DataServiceId batch response headers.
-- Modifies the deserialization of batch request for case that a raw / not url encoded % is present in the body.
-- Adds additional tests and checks for table names on creation.
-- Adds more granularity and precision to etags.
-- Adds checks for invalid characters in partition and row keys.
+- Fixed empty partition key and row key handling in batch write operations.
+- Fixed batch reponse for Go SDK, includes additional CRLF on closure of changesetresponse section.
+- Removed query strings from Location and DataServiceId batch response headers.
+- Modified the deserialization of batch request for case that a raw / not url encoded % is present in the body.
+- Added additional tests and checks for table names on creation.
+- Added more granularity and precision to etags.
+- Added checks for invalid characters in partition and row keys.
 - Rejects entities with string props longer than 32K chars.
-- Adds check for body length greater than 4MB.
+- Added check for body length greater than 4MB.
 
 ## 2022.02 Version 3.16.0
 

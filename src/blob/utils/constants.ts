@@ -1,8 +1,8 @@
 import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 import * as Models from "../generated/artifacts/models";
 
-export const VERSION = "3.16.0";
-export const BLOB_API_VERSION = "2021-04-10";
+export const VERSION = "3.17.0";
+export const BLOB_API_VERSION = "2021-06-08";
 export const DEFAULT_BLOB_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_LIST_BLOBS_MAX_RESULTS = 5000;
 export const DEFAULT_LIST_CONTAINERS_MAX_RESULTS = 5000;
@@ -96,6 +96,7 @@ export const DEFAULT_BLOB_PERSISTENCE_ARRAY: StoreDestinationArray = [
 ];
 
 export const ValidAPIVersions = [
+  "2021-06-08",
   "2021-04-10",
   "2021-02-12",
   "2020-12-06",
