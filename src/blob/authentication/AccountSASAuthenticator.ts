@@ -6,13 +6,14 @@ import Operation from "../generated/artifacts/operation";
 import Context from "../generated/Context";
 import IRequest from "../generated/IRequest";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
-import { AccountSASPermission } from "./AccountSASPermissions";
+import { AccountSASPermission } from "../../common/authentication/AccountSASPermissions";
 import {
   generateAccountSASSignature,
   IAccountSASSignatureValues
-} from "./IAccountSASSignatureValues";
+} from "../../common/authentication/IAccountSASSignatureValues";
 import IAuthenticator from "./IAuthenticator";
 import OPERATION_ACCOUNT_SAS_PERMISSIONS from "./OperationAccountSASPermission";
+import StrictModelNotSupportedError from "../errors/StrictModelNotSupportedError";
 
 export default class AccountSASAuthenticator implements IAuthenticator {
   public constructor(
@@ -78,6 +79,11 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       )}`,
       context.contextId
     );
+
+    if (!context.context.loose && values.encryptionScope !== undefined)
+    {
+      throw new StrictModelNotSupportedError("SAS Encryption Scope 'ses'", context.contextId);
+    }
 
     this.logger.info(
       `AccountSASAuthenticator:validate() Validate signature based account key1.`,
@@ -285,6 +291,7 @@ export default class AccountSASAuthenticator implements IAuthenticator {
     const ipRange = this.decodeIfExist(req.getQuery("sip"));
     const permissions = this.decodeIfExist(req.getQuery("sp"));
     const signature = this.decodeIfExist(req.getQuery("sig"));
+    const encryptionScope = this.decodeIfExist(req.getQuery("ses"));
 
     if (
       version === undefined ||
@@ -305,7 +312,8 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       permissions,
       ipRange,
       services,
-      resourceTypes
+      resourceTypes,
+      encryptionScope
     };
 
     return accountSASValues;

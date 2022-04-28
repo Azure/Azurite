@@ -3,8 +3,8 @@ import {
   truncatedISO8061Date
 } from "../../common/utils/utils";
 import { BlobSASResourceType } from "./BlobSASResourceType";
-import { SASProtocol } from "./IAccountSASSignatureValues";
-import { IIPRange, ipRangeToString } from "./IIPRange";
+import { SASProtocol } from "../../common/authentication/IAccountSASSignatureValues";
+import { IIPRange, ipRangeToString } from "../../common/authentication/IIPRange";
 
 /**
  * IBlobSASSignatureValues is used to help generating Blob service SAS tokens for containers or blobs.
@@ -91,6 +91,14 @@ export interface IBlobSASSignatureValues {
   identifier?: string;
 
   /**
+   * Optional.  Encryption scope to use when sending requests authorized with this SAS URI.
+   *
+   * @type {string}
+   * @memberof IBlobSASSignatureValues
+   */
+  encryptionScope?: string;
+
+  /**
    * Optional. The cache-control header for the SAS.
    *
    * @type {string}
@@ -170,7 +178,15 @@ export function generateBlobSASSignature(
   accountName: string,
   sharedKey: Buffer
 ): [string, string] {
-  if (blobSASSignatureValues.version >= "2018-11-09") {
+  if (blobSASSignatureValues.version >= "2020-12-06") {
+    return generateBlobSASSignature20201206(
+      blobSASSignatureValues,
+      resource,
+      accountName,
+      sharedKey
+    );
+  }
+  else if (blobSASSignatureValues.version >= "2018-11-09") {
     return generateBlobSASSignature20181109(
       blobSASSignatureValues,
       resource,
@@ -185,6 +201,79 @@ export function generateBlobSASSignature(
       sharedKey
     );
   }
+}
+
+function generateBlobSASSignature20201206(
+  blobSASSignatureValues: IBlobSASSignatureValues,
+  resource: BlobSASResourceType,
+  accountName: string,
+  sharedKey: Buffer
+): [string, string] {
+  if (
+    !blobSASSignatureValues.identifier &&
+    (!blobSASSignatureValues.permissions && !blobSASSignatureValues.expiryTime)
+  ) {
+    throw new RangeError(
+      // tslint:disable-next-line:max-line-length
+      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided."
+    );
+  }
+
+  const version = blobSASSignatureValues.version;
+  const verifiedPermissions = blobSASSignatureValues.permissions;
+
+  // Signature is generated on the un-url-encoded values.
+  // TODO: Check whether validating the snapshot is necessary.
+  const stringToSign = [
+    verifiedPermissions ? verifiedPermissions : "",
+    blobSASSignatureValues.startTime === undefined
+      ? ""
+      : typeof blobSASSignatureValues.startTime === "string"
+      ? blobSASSignatureValues.startTime
+      : truncatedISO8061Date(blobSASSignatureValues.startTime, false),
+    blobSASSignatureValues.expiryTime === undefined
+      ? ""
+      : typeof blobSASSignatureValues.expiryTime === "string"
+      ? blobSASSignatureValues.expiryTime
+      : truncatedISO8061Date(blobSASSignatureValues.expiryTime, false),
+    getCanonicalName(
+      accountName,
+      blobSASSignatureValues.containerName,
+      resource === BlobSASResourceType.Blob ||
+        resource === BlobSASResourceType.BlobSnapshot
+        ? blobSASSignatureValues.blobName
+        : ""
+    ),
+    blobSASSignatureValues.identifier, // TODO: ? blobSASSignatureValues.identifier : "",
+    blobSASSignatureValues.ipRange
+      ? typeof blobSASSignatureValues.ipRange === "string"
+        ? blobSASSignatureValues.ipRange
+        : ipRangeToString(blobSASSignatureValues.ipRange)
+      : "",
+    blobSASSignatureValues.protocol ? blobSASSignatureValues.protocol : "",
+    version,
+    blobSASSignatureValues.signedResource,
+    blobSASSignatureValues.snapshot,
+    blobSASSignatureValues.encryptionScope
+      ? blobSASSignatureValues.encryptionScope
+      : "",
+    blobSASSignatureValues.cacheControl
+      ? blobSASSignatureValues.cacheControl
+      : "",
+    blobSASSignatureValues.contentDisposition
+      ? blobSASSignatureValues.contentDisposition
+      : "",
+    blobSASSignatureValues.contentEncoding
+      ? blobSASSignatureValues.contentEncoding
+      : "",
+    blobSASSignatureValues.contentLanguage
+      ? blobSASSignatureValues.contentLanguage
+      : "",
+    blobSASSignatureValues.contentType ? blobSASSignatureValues.contentType : ""
+  ].join("\n");
+
+  const signature = computeHMACSHA256(stringToSign, sharedKey);
+  return [signature, stringToSign];
 }
 
 function generateBlobSASSignature20181109(

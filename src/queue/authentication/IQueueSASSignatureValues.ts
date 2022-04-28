@@ -2,8 +2,8 @@ import {
   computeHMACSHA256,
   truncatedISO8061Date
 } from "../../common/utils/utils";
-import { SASProtocol } from "./IAccountSASSignatureValues";
-import { IIPRange, ipRangeToString } from "./IIPRange";
+import { SASProtocol } from "../../common/authentication/IAccountSASSignatureValues";
+import { IIPRange, ipRangeToString } from "../../common/authentication/IIPRange";
 
 /**
  * ONLY AVAILABLE IN NODE.JS RUNTIME.

@@ -37,7 +37,6 @@ export class TableBatchSerialization extends BatchSerialization {
   public deserializeBatchRequest(
     batchRequestsString: string
   ): TableBatchOperation[] {
-    batchRequestsString = decodeURI(batchRequestsString);
     this.extractBatchBoundary(batchRequestsString);
     this.extractChangeSetBoundary(batchRequestsString);
     this.extractLineEndings(batchRequestsString);
@@ -123,7 +122,7 @@ export class TableBatchSerialization extends BatchSerialization {
           operation.httpMethod = requestType[0] as HttpMethod;
         }
         operation.path = path[1];
-        operation.uri = fullRequestURI[0];
+        operation.uri = decodeURI(fullRequestURI[0]);
         operation.jsonRequestBody = jsonBody;
         return operation;
       }

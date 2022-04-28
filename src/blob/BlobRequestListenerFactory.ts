@@ -133,7 +133,7 @@ export default class BlobRequestListenerFactory
     }
 
     // Manually created middleware to deserialize feature related context which swagger doesn"t know
-    app.use(createStorageBlobContextMiddleware(this.skipApiVersionCheck, this.disableProductStyleUrl));
+    app.use(createStorageBlobContextMiddleware(this.skipApiVersionCheck, this.disableProductStyleUrl, this.loose));
 
     // Dispatch incoming HTTP request to specific operation
     app.use(middlewareFactory.createDispatchMiddleware());

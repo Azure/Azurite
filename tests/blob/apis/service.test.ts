@@ -401,7 +401,7 @@ describe("ServiceAPIs", () => {
     await serviceClient.getStatistics()
       .catch((err) => {
         assert.strictEqual(err.statusCode, 400);
-        assert.strictEqual(err.details.Code, "InvalidQueryParameterValue");
+        assert.strictEqual(err.code, "InvalidQueryParameterValue");
         assert.ok(err);
       });;
   });

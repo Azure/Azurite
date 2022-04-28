@@ -3,5 +3,11 @@ export enum BlobSASPermission {
   Add = "a",
   Create = "c",
   Write = "w",
-  Delete = "d"
+  Delete = "d",
+  DeleteVersion  = "x",
+  Tag  = "t",
+  Move  = "m",
+  execute  = "e",
+  SetImmutabilityPolicy  = "i",
+  permanentDelete  = "y"
 }

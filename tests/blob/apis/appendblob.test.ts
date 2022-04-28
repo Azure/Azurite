@@ -417,7 +417,7 @@ describe("AppendBlobAPIs", () => {
     try {
       await appendBlobClient.appendBlock("a", 1);
     } catch (err) {
-      assert.deepStrictEqual(err.message.includes("InvalidBlobType"), true);
+      assert.deepStrictEqual(err.code, "InvalidBlobType");
       return;
     }
     assert.fail();
@@ -429,7 +429,7 @@ describe("AppendBlobAPIs", () => {
     try {
       await appendBlobClient.appendBlock("", 0);
     } catch (err) {
-      assert.deepStrictEqual(err.message.includes("InvalidHeaderValue"), true);
+      assert.deepStrictEqual(err.code, "InvalidHeaderValue");
       return;
     }
     assert.fail();
@@ -452,9 +452,8 @@ describe("AppendBlobAPIs", () => {
       });
     } catch (err) {
       assert.deepStrictEqual(
-        err.message.includes("MaxBlobSizeConditionNotMet"),
-        true
-      );
+        err.code, 
+        "MaxBlobSizeConditionNotMet");
       assert.deepStrictEqual(err.statusCode, 412);
 
       await appendBlobClient.appendBlock("a", 1, {
@@ -471,9 +470,8 @@ describe("AppendBlobAPIs", () => {
         });
       } catch (err) {
         assert.deepStrictEqual(
-          err.message.includes("AppendPositionConditionNotMet"),
-          true
-        );
+          err.code, 
+          "AppendPositionConditionNotMet");
         assert.deepStrictEqual(err.statusCode, 412);
         return;
       }
@@ -493,7 +491,7 @@ describe("AppendBlobAPIs", () => {
         transactionalContentMD5: await getMD5FromString("invalid")
       });
     } catch (err) {
-      assert.deepStrictEqual(err.message.includes("Md5Mismatch"), true);
+      assert.deepStrictEqual(err.code, "Md5Mismatch");
       assert.deepStrictEqual(err.statusCode, 400);
       return;
     }
@@ -533,7 +531,7 @@ describe("AppendBlobAPIs", () => {
         }
       });
     } catch (err) {
-      assert.deepStrictEqual(err.message.includes("ConditionNotMet"), true);
+      assert.deepStrictEqual(err.code, "ConditionNotMet");
       assert.deepStrictEqual(err.statusCode, 412);
       return;
     }
@@ -561,7 +559,7 @@ describe("AppendBlobAPIs", () => {
     try {
       await appendBlobClient.appendBlock("c", 1);
     } catch (err) {
-      assert.deepStrictEqual(err.message.includes("LeaseIdMissing"), true);
+      assert.deepStrictEqual(err.code, "LeaseIdMissing");
       assert.deepStrictEqual(err.statusCode, 412);
       return;
     }

@@ -68,7 +68,7 @@ describe("Blob OAuth Basic", () => {
       await containerClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
-        err.message.includes("AuthenticationFailed"),
+        err.message.includes("Server failed to authenticate the request."),
         true
       );
       return;
@@ -145,10 +145,10 @@ describe("Blob OAuth Basic", () => {
       await containerClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
-        err.message.includes("AuthenticationFailed"),
+        err.message.includes("Server failed to authenticate the request."),
         true
       );
-      assert.deepStrictEqual(err.message.includes("audience"), true);
+      assert.deepStrictEqual(err.details.AuthenticationErrorDetail.includes("audience"), true);
       return;
     }
     assert.fail();
@@ -216,10 +216,10 @@ describe("Blob OAuth Basic", () => {
       await containerClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
-        err.message.includes("AuthenticationFailed"),
+        err.message.includes("Server failed to authenticate the request."),
         true
       );
-      assert.deepStrictEqual(err.message.includes("issuer"), true);
+      assert.deepStrictEqual(err.details.AuthenticationErrorDetail.includes("issuer"), true);
       return;
     }
     assert.fail();
@@ -252,10 +252,10 @@ describe("Blob OAuth Basic", () => {
       await containerClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
-        err.message.includes("AuthenticationFailed"),
+        err.message.includes("Server failed to authenticate the request."),
         true
       );
-      assert.deepStrictEqual(err.message.includes("Lifetime"), true);
+      assert.deepStrictEqual(err.details.AuthenticationErrorDetail.includes("Lifetime"), true);
       return;
     }
     assert.fail();
@@ -288,10 +288,10 @@ describe("Blob OAuth Basic", () => {
       await containerClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
-        err.message.includes("AuthenticationFailed"),
+        err.message.includes("Server failed to authenticate the request."),
         true
       );
-      assert.deepStrictEqual(err.message.includes("expire"), true);
+      assert.deepStrictEqual(err.details.AuthenticationErrorDetail.includes("expire"), true);
       return;
     }
     assert.fail();
@@ -324,7 +324,7 @@ describe("Blob OAuth Basic", () => {
       await containerClient.getAccessPolicy();
     } catch (err) {
       assert.deepStrictEqual(
-        err.message.includes("AuthorizationFailure"),
+        err.message.includes("Server failed to authenticate the request."),
         true
       );
       await containerClient.delete();
@@ -361,7 +361,7 @@ describe("Blob OAuth Basic", () => {
       await containerClient.setAccessPolicy("container");
     } catch (err) {
       assert.deepStrictEqual(
-        err.message.includes("AuthorizationFailure"),
+        err.message.includes("Server failed to authenticate the request."),
         true
       );
       await containerClient.delete();
@@ -406,10 +406,10 @@ describe("Blob OAuth Basic", () => {
       await containerClient.delete();
     } catch (err) {
       assert.deepStrictEqual(
-        err.message.includes("AuthenticationFailed"),
+        err.message.includes("Bearer token authentication is not permitted"),
         true
       );
-      assert.deepStrictEqual(err.message.includes("HTTP"), true);
+      assert.deepStrictEqual(err.message.includes("non-https"), true);
       return;
     }
     assert.fail();

@@ -19,7 +19,13 @@ export default function createTableStorageContextMiddleware(
   disableProductStyleUrl?: boolean
 ): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
-    return tableStorageContextMiddleware(req, res, next, skipApiVersionCheck, disableProductStyleUrl);
+    return tableStorageContextMiddleware(
+      req,
+      res,
+      next,
+      skipApiVersionCheck,
+      disableProductStyleUrl
+    );
   };
 }
 
@@ -225,11 +231,13 @@ export function extractStoragePartsFromPath(
   const firstDotIndex = hostname.indexOf(".");
   // If hostname is not an IP address or a known host name, and has a dot inside,
   // we assume user wants to access emulator with a production-like URL.
-  if (! disableProductStyleUrl && !isIPAddress && !isNoAccountHostName && firstDotIndex > 0) {
-    account = hostname.substring(
-      0,
-      firstDotIndex
-    );
+  if (
+    !disableProductStyleUrl &&
+    !isIPAddress &&
+    !isNoAccountHostName &&
+    firstDotIndex > 0
+  ) {
+    account = hostname.substring(0, firstDotIndex);
   } else {
     account = parts[urlPartIndex++];
   }
