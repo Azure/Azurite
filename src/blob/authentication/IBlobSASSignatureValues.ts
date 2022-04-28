@@ -3,8 +3,8 @@ import {
   truncatedISO8061Date
 } from "../../common/utils/utils";
 import { BlobSASResourceType } from "./BlobSASResourceType";
-import { SASProtocol } from "./IAccountSASSignatureValues";
-import { IIPRange, ipRangeToString } from "./IIPRange";
+import { SASProtocol } from "../../common/authentication/IAccountSASSignatureValues";
+import { IIPRange, ipRangeToString } from "../../common/authentication/IIPRange";
 
 /**
  * IBlobSASSignatureValues is used to help generating Blob service SAS tokens for containers or blobs.

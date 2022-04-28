@@ -10,7 +10,7 @@ import { AccountSASPermission } from "../../common/authentication/AccountSASPerm
 import {
   generateAccountSASSignature,
   IAccountSASSignatureValues
-} from "./IAccountSASSignatureValues";
+} from "../../common/authentication/IAccountSASSignatureValues";
 import IAuthenticator from "./IAuthenticator";
 import OPERATION_ACCOUNT_SAS_PERMISSIONS from "./OperationAccountSASPermission";
 import StrictModelNotSupportedError from "../errors/StrictModelNotSupportedError";
