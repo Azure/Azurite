@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Updated property check to handle null property and added regression test.
+
 ## 2022.04 Version 3.17.0
 
 General:
