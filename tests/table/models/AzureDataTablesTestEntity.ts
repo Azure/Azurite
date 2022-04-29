@@ -30,6 +30,7 @@ export class AzureDataTablesTestEntity {
   public int32Field: number = 54321;
   public int64Field: Edm<"Int64"> = { value: "12345", type: "Int64" };
   public doubleField: Edm<"Double"> = { value: 54.321, type: "Double" };
+  public nullableString: string | null = "notNull";
   constructor(part: string, row: string, value: string) {
     this.partitionKey = part;
     this.rowKey = row;
