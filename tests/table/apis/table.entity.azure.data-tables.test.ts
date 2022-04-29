@@ -1537,4 +1537,44 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     assert.strictEqual(testsCompleted, valuesForTest.length);
     await tableClient.deleteTable();
   });
+
+  it("Should insert entities with null properties, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("nullable");
+    const testEntity = createBasicEntityForTest(partitionKey);
+    testEntity.nullableString = null;
+
+    try {
+      const result1 = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(
+        result1.etag,
+        null,
+        "We should have created the first test entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        413,
+        "We did not get the expected 413 error"
+      );
+    }
+
+    const entity: AzureDataTablesTestEntity =
+      await tableClient.getEntity<AzureDataTablesTestEntity>(
+        testEntity.partitionKey,
+        testEntity.rowKey
+      );
+
+    assert.strictEqual(
+      entity.nullableString === undefined,
+      true,
+      "Null property on retrieved entity should not exist!"
+    );
+
+    await tableClient.deleteTable();
+  });
 });
