@@ -1030,6 +1030,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     for (const prop in properties) {
       if (properties.hasOwnProperty(prop)) {
         if (
+          null !== properties[prop] &&
           undefined !== properties[prop].length &&
           properties[prop].length > 1024 * 32
         ) {
