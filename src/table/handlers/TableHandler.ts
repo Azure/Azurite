@@ -1004,7 +1004,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     if (key.length > DEFAULT_KEY_MAX_LENGTH) {
       throw StorageErrorFactory.getInvalidInput(context);
     }
-    const match = key.match(/[\u0000-\u001f,\u007f-\u009f,\/,\\,\#,\?]+/);
+    const match = key.match(/[\u0000-\u001f\u007f-\u009f\/\\\#\?]+/);
     if (match !== null && match.length > 0) {
       throw StorageErrorFactory.getInvalidInput(context);
     }
