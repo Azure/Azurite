@@ -1335,6 +1335,47 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
+  it("Should reject batches with request body larger than 4 MB, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("bigBatch")
+    );
+    await tableClient.createTable();
+    const partitionKey = "pk";
+    const transaction = new TableTransaction();
+
+    // Each entity is a bit over 4 * 32 * 1024 bytes.
+    // This means 32 of these entities will exceed the 4 MB limit.
+    for (var i = 0; i < 32; i++) {
+      transaction.createEntity({
+        partitionKey: partitionKey,
+        rowKey: "rk" + i,
+        a: "a".repeat(32 * 1024),
+        b: "b".repeat(32 * 1024),
+        c: "c".repeat(32 * 1024),
+        d: "d".repeat(32 * 1024),
+      })
+    }
+
+    try {
+      await tableClient.submitTransaction(transaction.actions);
+      assert.fail("We should not have succeeded with the batch!");
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        413,
+        "We did not get the expected 413 error"
+      );
+      assert.strictEqual(
+        err.code.match(/RequestBodyTooLarge/gi).length,
+        1,
+        "Did not match RequestBodyTooLarge"
+      );
+    }
+
+    await tableClient.deleteTable();
+  });
+
   // https://github.com/Azure/Azurite/issues/754
   it("Should create and delete entity using batch and PartitionKey starting with %, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
