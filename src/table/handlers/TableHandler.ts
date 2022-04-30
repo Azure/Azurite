@@ -1038,10 +1038,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
             type = getEdmType(properties[typeKey])
           }
           if (type === EdmType.Binary) {
-            // Max binary size is 64 * 1024 bytes, but binary is represented as a base64 string.
-            // 4 * ( ( 64 * 1024 ) / 3 ), rounded up to a multiple of 4 = 87384
-            // Source: https://stackoverflow.com/a/13378842
-            if (properties[prop].length > 87384) {
+            if (Buffer.from(properties[prop], 'base64').length > 64 * 1024) {
               throw StorageErrorFactory.getPropertyValueTooLargeError(context);
             }
           } else if (properties[prop].length > 32 * 1024) {
