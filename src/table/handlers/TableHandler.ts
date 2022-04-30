@@ -1032,7 +1032,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     for (const prop in properties) {
       if (properties.hasOwnProperty(prop)) {
         if (null !== properties[prop] && undefined !== properties[prop].length) {
-          let typeKey = `${prop}${ODATA_TYPE}`;
+          const typeKey = `${prop}${ODATA_TYPE}`;
           let type;
           if (properties[typeKey]) {
             type = getEdmType(properties[typeKey])
