@@ -1123,18 +1123,18 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  [-2, -1, 0].map(delta => {
+  [2, 1, 0].map(delta => {
     it(`Should not insert entities containing binary properties less than or equal than 64K bytes (delta ${delta}), @loki`, async () => {
       const tableClient = createAzureDataTablesClient(
         testLocalAzuriteInstance,
-        getUniqueName("longbinary")
+        getUniqueName(`longbinary${delta}`)
       );
       await tableClient.createTable();
       const partitionKey = createUniquePartitionKey("");
       const testEntity: AzureDataTablesTestEntity =
         createBasicEntityForTest(partitionKey);
 
-      testEntity.binaryField = Buffer.alloc((64 * 1024) + delta);
+      testEntity.binaryField = Buffer.alloc((64 * 1024) - delta);
 
       const result = await tableClient.createEntity(testEntity);
       assert.notStrictEqual(
@@ -1151,7 +1151,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     it(`Should not insert entities containing binary properties greater than 64K bytes (delta ${delta}), @loki`, async () => {
       const tableClient = createAzureDataTablesClient(
         testLocalAzuriteInstance,
-        getUniqueName("longbinary")
+        getUniqueName(`toolongbinary${delta}`)
       );
       await tableClient.createTable();
       const partitionKey = createUniquePartitionKey("");
