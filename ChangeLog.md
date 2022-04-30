@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Reject table batch request bodies exceeding 4MB.
+
 ## 2022.04 Version 3.17.1
 
 Table:
