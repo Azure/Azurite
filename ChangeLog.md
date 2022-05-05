@@ -6,7 +6,8 @@
 
 Table:
 
-- Fix binary table property validation to be 64K bytes not 32K characters
+- Reject table batch request bodies exceeding 4MB.
+- Fix binary table property validation to be 64K bytes not 32K characters.
 
 ## 2022.04 Version 3.17.1
 
