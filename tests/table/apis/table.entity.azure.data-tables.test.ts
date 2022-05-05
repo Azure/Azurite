@@ -1124,7 +1124,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   });
 
   [2, 1, 0].map(delta => {
-    it(`Should not insert entities containing binary properties less than or equal than 64K bytes (delta ${delta}), @loki`, async () => {
+    it(`Should insert entities containing binary properties less than or equal than 64K bytes (delta ${delta}), @loki`, async () => {
       const tableClient = createAzureDataTablesClient(
         testLocalAzuriteInstance,
         getUniqueName(`longbinary${delta}`)
