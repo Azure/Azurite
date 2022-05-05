@@ -655,7 +655,7 @@ export default class ContainerHandler extends BaseHandler
       options.maxresults = DEFAULT_LIST_BLOBS_MAX_RESULTS;
     }
 
-    const [blobs, nextMarker] = await this.metadataStore.listBlobs(
+    const [blobs, _nextMarker] = await this.metadataStore.listBlobs(
       context,
       accountName,
       containerName,
@@ -667,12 +667,16 @@ export default class ContainerHandler extends BaseHandler
       includeUncommittedBlobs
     );
 
+    let nextMarker: string  = "";
     const blobItems: Models.BlobItem[] = [];
     const blobPrefixes: Models.BlobPrefix[] = [];
     const blobPrefixesSet = new Set<string>();
 
     const prefixLength = options.prefix.length;
     for (const blob of blobs) {
+      if (blob.name > nextMarker) {
+        nextMarker = blob.name;
+      }
       const delimiterPosAfterPrefix = blob.name.indexOf(
         delimiter,
         prefixLength
@@ -687,6 +691,9 @@ export default class ContainerHandler extends BaseHandler
         const prefix = blob.name.substr(0, delimiterPosAfterPrefix + 1);
         blobPrefixesSet.add(prefix);
       }
+      if (blobItems.length + blobPrefixesSet.size === options.maxresults) {
+        break;
+      }
     }
 
     const iter = blobPrefixesSet.values();
@@ -695,6 +702,10 @@ export default class ContainerHandler extends BaseHandler
       blobPrefixes.push({ name: val.value });
     }
 
+    const itemCount = blobItems.length + blobPrefixes.length;
+    if (itemCount < options.maxresults || blobPrefixes.length !== blobPrefixesSet.size) {
+      nextMarker = "";
+    }
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const response: Models.ContainerListBlobHierarchySegmentResponse = {
       statusCode: 200,
