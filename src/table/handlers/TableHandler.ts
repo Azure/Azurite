@@ -871,7 +871,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableBatchResponse> {
     const tableCtx = new TableStorageContext(context);
-    this.checkBodyLimit(context, context.request?.getBody());
+
+    if (contentLength && contentLength > BODY_SIZE_MAX) {
+      throw StorageErrorFactory.getRequestBodyTooLarge(context);
+    } else {
+      this.checkBodyLimit(context, context.request?.getBody());
+    }
 
     const contentTypeResponse = tableCtx.request
       ?.getHeader("content-type")
