@@ -1123,6 +1123,66 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
+  [2, 1, 0].map(delta => {
+    it(`Should insert entities containing binary properties less than or equal than 64K bytes (delta ${delta}), @loki`, async () => {
+      const tableClient = createAzureDataTablesClient(
+        testLocalAzuriteInstance,
+        getUniqueName(`longbinary${delta}`)
+      );
+      await tableClient.createTable();
+      const partitionKey = createUniquePartitionKey("");
+      const testEntity: AzureDataTablesTestEntity =
+        createBasicEntityForTest(partitionKey);
+
+      testEntity.binaryField = Buffer.alloc((64 * 1024) - delta);
+
+      const result = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(
+        result.etag,
+        undefined,
+        "Did not create entity!"
+      );
+
+      await tableClient.deleteTable();
+    });
+  });
+
+  [1, 2, 3].map(delta => {
+    it(`Should not insert entities containing binary properties greater than 64K bytes (delta ${delta}), @loki`, async () => {
+      const tableClient = createAzureDataTablesClient(
+        testLocalAzuriteInstance,
+        getUniqueName(`toolongbinary${delta}`)
+      );
+      await tableClient.createTable();
+      const partitionKey = createUniquePartitionKey("");
+      const testEntity: AzureDataTablesTestEntity =
+        createBasicEntityForTest(partitionKey);
+
+      testEntity.binaryField = Buffer.alloc((64 * 1024) + delta);
+      try {
+        const result = await tableClient.createEntity(testEntity);
+        assert.strictEqual(
+          result.etag,
+          null,
+          "We should not have created an entity!"
+        );
+      } catch (err: any) {
+        assert.strictEqual(
+          err.statusCode,
+          400,
+          "We did not get the expected Bad Request error"
+        );
+        assert.strictEqual(
+          err.message.match(/PropertyValueTooLarge/gi).length,
+          1,
+          "Did not match PropertyValueTooLarge"
+        );
+      }
+
+      await tableClient.deleteTable();
+    });
+  });
+
   it("Should not insert entities containing string properties longer than 32K chars, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
@@ -1597,7 +1657,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
 
     await tableClient.deleteTable();
   });
-      
+
 
   it("Should insert entities with null properties, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
