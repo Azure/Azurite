@@ -141,6 +141,9 @@ export type BlobModel = IBlobAdditionalProperties &
   Models.BlobItem &
   IPersistencyPropertiesOptional;
 
+export type BlobPrefixModel = IPersistencyPropertiesOptional &
+  Models.BlobPrefix;
+
 // The response model for getContainerProperties.
 interface IGetBlobPropertiesRes {
   properties: Models.BlobProperties;
