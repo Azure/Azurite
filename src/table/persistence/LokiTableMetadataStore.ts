@@ -128,7 +128,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     tableModel.table = tableModel.table;
     const doc = coll.findOne({
       account: tableModel.account,
-      table: { $regex: [tableModel.table, "i"] }
+      table: { $regex: [String.raw`\b${tableModel.table}\b`, "i"] }
     });
 
     // If the metadata exists, we will throw getTableAlreadyExists error

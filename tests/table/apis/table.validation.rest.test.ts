@@ -188,4 +188,50 @@ describe("table name validation tests", () => {
       );
     }
   });
+
+  it.only("should create a table with a name which is a substring of an existing table, @loki", async () => {
+    tableName = getUniqueName("table");
+    const body = JSON.stringify({
+      TableName: tableName
+    });
+    const createTableHeaders = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=nometadata"
+    };
+    try {
+      await postToAzurite("Tables", body, createTableHeaders);
+    } catch (err: any) {
+      assert.strictEqual(
+        err.response.status,
+        201,
+        `unexpected status code : ${err.response.status}`
+      );
+    }
+    const tableName2 = tableName.substring(0, tableName.length - 4);
+    const body2 = JSON.stringify({
+      TableName: tableName2
+    });
+    try {
+      await postToAzurite("Tables", body2, createTableHeaders);
+    } catch (err: any) {
+      assert.strictEqual(
+        err,
+        undefined,
+        `unexpected exception with end trimmed! : ${err}`
+      );
+    }
+    const tableName3 = tableName.substring(4);
+    const body3 = JSON.stringify({
+      TableName: tableName3
+    });
+    try {
+      await postToAzurite("Tables", body3, createTableHeaders);
+    } catch (err: any) {
+      assert.strictEqual(
+        err,
+        undefined,
+        `unexpected exception with start trimmed! : ${err}`
+      );
+    }
+  });
 });
