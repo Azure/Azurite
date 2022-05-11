@@ -189,7 +189,7 @@ describe("table name validation tests", () => {
     }
   });
 
-  it.only("should create a table with a name which is a substring of an existing table, @loki", async () => {
+  it("should create a table with a name which is a substring of an existing table, @loki", async () => {
     tableName = getUniqueName("table");
     const body = JSON.stringify({
       TableName: tableName
