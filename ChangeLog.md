@@ -4,6 +4,18 @@
 
 ## Upcoming Release
 
+Table:
+
+- Reject table batch request bodies exceeding 4MB.
+- Fix binary table property validation to be 64K bytes not 32K characters.
+
+## 2022.04 Version 3.17.1
+
+Table:
+
+- Removes commas from RegEx checking key validity.
+- Updated property check to handle null property and added regression test.
+
 ## 2022.04 Version 3.17.0
 
 General:

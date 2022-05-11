@@ -27,7 +27,8 @@ import {
   RETURN_CONTENT,
   RETURN_NO_CONTENT,
   TABLE_API_VERSION,
-  TABLE_SERVICE_PERMISSION
+  TABLE_SERVICE_PERMISSION,
+  ODATA_TYPE
 } from "../utils/constants";
 import {
   getEntityOdataAnnotationsForResponse,
@@ -38,6 +39,7 @@ import {
   validateTableName
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
+import { EdmType, getEdmType } from "../entity/IEdmType";
 
 interface IPartialResponsePreferProperties {
   statusCode: 200 | 201 | 204;
@@ -871,7 +873,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     context: Context
   ): Promise<Models.TableBatchResponse> {
     const tableCtx = new TableStorageContext(context);
-    this.checkBodyLimit(context, context.request?.getBody());
+
+    if (contentLength && contentLength > BODY_SIZE_MAX) {
+      throw StorageErrorFactory.getRequestBodyTooLarge(context);
+    } else {
+      this.checkBodyLimit(context, context.request?.getBody());
+    }
 
     const contentTypeResponse = tableCtx.request
       ?.getHeader("content-type")
@@ -1004,7 +1011,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     if (key.length > DEFAULT_KEY_MAX_LENGTH) {
       throw StorageErrorFactory.getInvalidInput(context);
     }
-    const match = key.match(/[\u0000-\u001f,\u007f-\u009f,\/,\\,\#,\?]+/);
+    const match = key.match(/[\u0000-\u001f\u007f-\u009f\/\\\#\?]+/);
     if (match !== null && match.length > 0) {
       throw StorageErrorFactory.getInvalidInput(context);
     }
@@ -1029,11 +1036,19 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   ) {
     for (const prop in properties) {
       if (properties.hasOwnProperty(prop)) {
-        if (
-          undefined !== properties[prop].length &&
-          properties[prop].length > 1024 * 32
-        ) {
-          throw StorageErrorFactory.getPropertyValueTooLargeError(context);
+        if (null !== properties[prop] && undefined !== properties[prop].length) {
+          const typeKey = `${prop}${ODATA_TYPE}`;
+          let type;
+          if (properties[typeKey]) {
+            type = getEdmType(properties[typeKey])
+          }
+          if (type === EdmType.Binary) {
+            if (Buffer.from(properties[prop], 'base64').length > 64 * 1024) {
+              throw StorageErrorFactory.getPropertyValueTooLargeError(context);
+            }
+          } else if (properties[prop].length > 32 * 1024) {
+            throw StorageErrorFactory.getPropertyValueTooLargeError(context);
+          }
         }
       }
     }

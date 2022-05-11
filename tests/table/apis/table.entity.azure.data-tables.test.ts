@@ -1123,6 +1123,66 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
+  [2, 1, 0].map(delta => {
+    it(`Should insert entities containing binary properties less than or equal than 64K bytes (delta ${delta}), @loki`, async () => {
+      const tableClient = createAzureDataTablesClient(
+        testLocalAzuriteInstance,
+        getUniqueName(`longbinary${delta}`)
+      );
+      await tableClient.createTable();
+      const partitionKey = createUniquePartitionKey("");
+      const testEntity: AzureDataTablesTestEntity =
+        createBasicEntityForTest(partitionKey);
+
+      testEntity.binaryField = Buffer.alloc((64 * 1024) - delta);
+
+      const result = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(
+        result.etag,
+        undefined,
+        "Did not create entity!"
+      );
+
+      await tableClient.deleteTable();
+    });
+  });
+
+  [1, 2, 3].map(delta => {
+    it(`Should not insert entities containing binary properties greater than 64K bytes (delta ${delta}), @loki`, async () => {
+      const tableClient = createAzureDataTablesClient(
+        testLocalAzuriteInstance,
+        getUniqueName(`toolongbinary${delta}`)
+      );
+      await tableClient.createTable();
+      const partitionKey = createUniquePartitionKey("");
+      const testEntity: AzureDataTablesTestEntity =
+        createBasicEntityForTest(partitionKey);
+
+      testEntity.binaryField = Buffer.alloc((64 * 1024) + delta);
+      try {
+        const result = await tableClient.createEntity(testEntity);
+        assert.strictEqual(
+          result.etag,
+          null,
+          "We should not have created an entity!"
+        );
+      } catch (err: any) {
+        assert.strictEqual(
+          err.statusCode,
+          400,
+          "We did not get the expected Bad Request error"
+        );
+        assert.strictEqual(
+          err.message.match(/PropertyValueTooLarge/gi).length,
+          1,
+          "Did not match PropertyValueTooLarge"
+        );
+      }
+
+      await tableClient.deleteTable();
+    });
+  });
+
   it("Should not insert entities containing string properties longer than 32K chars, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
@@ -1335,6 +1395,47 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
+  it("Should reject batches with request body larger than 4 MB, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("bigBatch")
+    );
+    await tableClient.createTable();
+    const partitionKey = "pk";
+    const transaction = new TableTransaction();
+
+    // Each entity is a bit over 4 * 32 * 1024 bytes.
+    // This means 32 of these entities will exceed the 4 MB limit.
+    for (var i = 0; i < 32; i++) {
+      transaction.createEntity({
+        partitionKey: partitionKey,
+        rowKey: "rk" + i,
+        a: "a".repeat(32 * 1024),
+        b: "b".repeat(32 * 1024),
+        c: "c".repeat(32 * 1024),
+        d: "d".repeat(32 * 1024),
+      })
+    }
+
+    try {
+      await tableClient.submitTransaction(transaction.actions);
+      assert.fail("We should not have succeeded with the batch!");
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        413,
+        "We did not get the expected 413 error"
+      );
+      assert.strictEqual(
+        err.code.match(/RequestBodyTooLarge/gi).length,
+        1,
+        "Did not match RequestBodyTooLarge"
+      );
+    }
+
+    await tableClient.deleteTable();
+  });
+
   // https://github.com/Azure/Azurite/issues/754
   it("Should create and delete entity using batch and PartitionKey starting with %, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
@@ -1535,6 +1636,66 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       testsCompleted++;
     }
     assert.strictEqual(testsCompleted, valuesForTest.length);
+    await tableClient.deleteTable();
+  });
+
+  it('Should create entity with RowKey containing comma ",", @loki', async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("comma")
+    );
+    await tableClient.createTable();
+    const commaRowEntity = createBasicEntityForTest("comma");
+    commaRowEntity.rowKey = "Commas,InRow,Keys";
+    const insertedEntityHeaders =
+      await tableClient.createEntity<AzureDataTablesTestEntity>(commaRowEntity);
+    assert.notStrictEqual(
+      insertedEntityHeaders.etag,
+      undefined,
+      "Did not create entity!"
+    );
+
+    await tableClient.deleteTable();
+  });
+
+
+  it("Should insert entities with null properties, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("nullable");
+    const testEntity = createBasicEntityForTest(partitionKey);
+    testEntity.nullableString = null;
+
+    try {
+      const result1 = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(
+        result1.etag,
+        null,
+        "We should have created the first test entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        413,
+        "We did not get the expected 413 error"
+      );
+    }
+
+    const entity: AzureDataTablesTestEntity =
+      await tableClient.getEntity<AzureDataTablesTestEntity>(
+        testEntity.partitionKey,
+        testEntity.rowKey
+      );
+
+    assert.strictEqual(
+      entity.nullableString === undefined,
+      true,
+      "Null property on retrieved entity should not exist!"
+    );
+
     await tableClient.deleteTable();
   });
 });
