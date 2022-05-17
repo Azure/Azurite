@@ -656,6 +656,56 @@ describe("ContainerAPIs", () => {
     }
   });
 
+  it("returns no continuationToken when squashed by delimiter @loki @sql", async () => {
+    const blobClients = [];
+    let blobNames: Array<string> = [
+      "blockblob/abc-001",
+      "blockblob/abc-003",
+      "blockblob/abc-002",
+      "blockblob/abc-004"
+    ];
+    for (let i = 0; i < blobNames.length; i++) {
+      const blobClient = containerClient.getBlobClient(blobNames[i]);
+      const blockBlobClient = blobClient.getBlockBlobClient();
+      await blockBlobClient.upload("", 0);
+      blobClients.push(blobClient);
+    }
+
+    const inputmarker = undefined;
+    let result = (
+      await containerClient
+        .listBlobsByHierarchy("/",{
+          prefix: ""
+        })
+        .byPage({
+          continuationToken: inputmarker,
+          maxPageSize: 2
+        })
+        .next()
+    ).value;
+    assert.ok(result.serviceEndpoint.length > 0);
+    assert.ok(containerClient.url.indexOf(result.containerName));
+    assert.equal(result.continuationToken, "");
+    assert.equal(result.segment.blobItems.length, 0);
+    assert.equal(result.segment.blobPrefixes.length, 1);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+
+    const gotPrefixes: Array<string> = [];
+
+    for (const item of result.segment.blobPrefixes) {
+      gotPrefixes.push(item.name);
+    }
+
+    assert.deepStrictEqual(gotPrefixes, ["blockblob/"]);
+
+    for (const blob of blobClients) {
+      await blob.delete();
+    }
+  });
+
   it("returns a valid, correct continuationToken @loki @sql", async () => {
     const blobClients = [];
     let blobNames: Array<string> = [
