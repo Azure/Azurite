@@ -89,3 +89,27 @@ function generateSas(): string {
 
   return new AzureSASCredential(accountSas).signature;
 }
+
+/**
+ * Sends raw patch request to Azurite
+ *
+ * @export
+ * @param {string} path
+ * @param {string} body
+ * @param {*} headers
+ * @return {*}  {Promise<AxiosResponse<any, any>>}
+ */
+export async function patchToAzurite(
+  path: string,
+  body: string,
+  headers: any
+): Promise<AxiosResponse<any, any>> {
+  const url = `${TableEntityTestConfig.protocol}://${
+    TableEntityTestConfig.host
+  }:${TableEntityTestConfig.port}/${
+    TableEntityTestConfig.accountName
+  }/${path}?${generateSas()}`;
+  const requestConfig = axiosRequestConfig(url, path, headers);
+  const result = await axios.patch(url, body, requestConfig);
+  return result;
+}
