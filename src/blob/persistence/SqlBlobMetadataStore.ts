@@ -45,6 +45,7 @@ import IBlobMetadataStore, {
   AcquireContainerLeaseResponse,
   BlobId,
   BlobModel,
+  BlobPrefixModel,
   BlockModel,
   BreakBlobLeaseResponse,
   BreakContainerLeaseResponse,
@@ -65,6 +66,7 @@ import IBlobMetadataStore, {
   ServicePropertiesModel,
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
+import PageWithDelimiter from "./PageWithDelimiter";
 
 // tslint:disable: max-classes-per-file
 class ServicesModel extends Model {}
@@ -1225,13 +1227,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     context: Context,
     account: string,
     container: string,
+    delimiter?: string,
     blob?: string,
     prefix: string = "",
     maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
     marker?: string,
     includeSnapshots?: boolean,
     includeUncommittedBlobs?: boolean
-  ): Promise<[BlobModel[], any | undefined]> {
+  ): Promise<[BlobModel[], BlobPrefixModel[], any | undefined]> {
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -1267,13 +1270,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       }
       whereQuery.deleting = 0;
 
-      const blobFindResult = await BlobsModel.findAll({
-        limit: maxResults + 1,
-        where: whereQuery as any,
-        order: [["blobName", "ASC"]],
-        transaction: t
-      });
-
       const leaseUpdateMapper = (model: BlobsModel) => {
         const blobModel = this.convertDbModelToBlobModel(model);
         return LeaseFactory.createLeaseState(
@@ -1282,14 +1278,26 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         ).sync(new BlobLeaseSyncer(blobModel));
       };
 
-      if (blobFindResult.length <= maxResults) {
-        return [blobFindResult.map(leaseUpdateMapper), undefined];
-      } else {
-        blobFindResult.pop();
-        const tail = blobFindResult[blobFindResult.length - 1];
-        const nextMarker = this.getModelValue<string>(tail, "blobName", true);
-        return [blobFindResult.map(leaseUpdateMapper), nextMarker];
-      }
+      // fill the page by possibly querying multiple times
+      const page = new PageWithDelimiter<BlobsModel>(maxResults, delimiter, prefix);
+
+      const nameItem = (item: BlobsModel): string => {
+        return this.getModelValue<string>(item, "blobName", true);
+      };
+
+      const readPage = async (off: number): Promise<BlobsModel[]> => {
+        return await BlobsModel.findAll({
+          where: whereQuery as any,
+          order: [["blobName", "ASC"]],
+          transaction: t,
+          limit: maxResults,
+          offset: off
+        });
+      };
+
+      const [blobItems, blobPrefixes, nextMarker] = await page.fill(readPage, nameItem);
+
+      return [blobItems.map(leaseUpdateMapper), blobPrefixes, nextMarker];
     });
   }
 

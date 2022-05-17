@@ -141,6 +141,9 @@ export type BlobModel = IBlobAdditionalProperties &
   Models.BlobItem &
   IPersistencyPropertiesOptional;
 
+export type BlobPrefixModel = IPersistencyPropertiesOptional &
+  Models.BlobPrefix;
+
 // The response model for getContainerProperties.
 interface IGetBlobPropertiesRes {
   properties: Models.BlobProperties;
@@ -482,13 +485,14 @@ export interface IBlobMetadataStore
     context: Context,
     account: string,
     container: string,
+    delimiter?: string,
     blob?: string,
     prefix?: string,
     maxResults?: number,
     marker?: string,
     includeSnapshots?: boolean,
     includeUncommittedBlobs?: boolean
-  ): Promise<[BlobModel[], string | undefined]>;
+  ): Promise<[BlobModel[], BlobPrefixModel[], string | undefined]>;
 
   listAllBlobs(
     maxResults?: number,
