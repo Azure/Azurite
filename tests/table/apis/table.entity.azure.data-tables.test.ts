@@ -1123,7 +1123,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  [2, 1, 0].map(delta => {
+  [2, 1, 0].map((delta) => {
     it(`Should insert entities containing binary properties less than or equal than 64K bytes (delta ${delta}), @loki`, async () => {
       const tableClient = createAzureDataTablesClient(
         testLocalAzuriteInstance,
@@ -1134,20 +1134,16 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       const testEntity: AzureDataTablesTestEntity =
         createBasicEntityForTest(partitionKey);
 
-      testEntity.binaryField = Buffer.alloc((64 * 1024) - delta);
+      testEntity.binaryField = Buffer.alloc(64 * 1024 - delta);
 
       const result = await tableClient.createEntity(testEntity);
-      assert.notStrictEqual(
-        result.etag,
-        undefined,
-        "Did not create entity!"
-      );
+      assert.notStrictEqual(result.etag, undefined, "Did not create entity!");
 
       await tableClient.deleteTable();
     });
   });
 
-  [1, 2, 3].map(delta => {
+  [1, 2, 3].map((delta) => {
     it(`Should not insert entities containing binary properties greater than 64K bytes (delta ${delta}), @loki`, async () => {
       const tableClient = createAzureDataTablesClient(
         testLocalAzuriteInstance,
@@ -1158,7 +1154,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       const testEntity: AzureDataTablesTestEntity =
         createBasicEntityForTest(partitionKey);
 
-      testEntity.binaryField = Buffer.alloc((64 * 1024) + delta);
+      testEntity.binaryField = Buffer.alloc(64 * 1024 + delta);
       try {
         const result = await tableClient.createEntity(testEntity);
         assert.strictEqual(
@@ -1413,8 +1409,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
         a: "a".repeat(32 * 1024),
         b: "b".repeat(32 * 1024),
         c: "c".repeat(32 * 1024),
-        d: "d".repeat(32 * 1024),
-      })
+        d: "d".repeat(32 * 1024)
+      });
     }
 
     try {
@@ -1658,7 +1654,6 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-
   it("Should insert entities with null properties, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
@@ -1696,6 +1691,64 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       "Null property on retrieved entity should not exist!"
     );
 
+    await tableClient.deleteTable();
+  });
+
+  it.only("should correctly return results for query on a binary property, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("binquery")
+    );
+    const partitionKeyForQueryTest = createUniquePartitionKey("bin");
+    const totalItems = 10;
+    await tableClient.createTable();
+    const timestamp = new Date();
+    timestamp.setDate(timestamp.getDate() + 1);
+    for (let i = 0; i < totalItems; i++) {
+      const entity = createBasicEntityForTest(partitionKeyForQueryTest);
+      if (i % 2 === 0) {
+        entity.binaryField.fill(1);
+      }
+      const result = await tableClient.createEntity(entity);
+      assert.notStrictEqual(result.etag, undefined);
+    }
+    const maxPageSize = 10;
+    let testsCompleted = 0;
+    const queriesAndExpectedResult = [
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and(binaryField eq X'11111111')`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (binaryField eq X'00000000')`
+        },
+        expectedResult: 5
+      }
+    ];
+
+    for (const queryTest of queriesAndExpectedResult) {
+      const entities = tableClient.listEntities<
+        TableEntity<{ number: number }>
+      >({
+        queryOptions: queryTest.queryOptions
+      });
+      let all: TableEntity<{ number: number }>[] = [];
+      for await (const entity of entities.byPage({
+        maxPageSize
+      })) {
+        all = [...all, ...entity];
+      }
+      assert.strictEqual(
+        all.length,
+        queryTest.expectedResult,
+        `Failed with query ${queryTest.queryOptions.filter}`
+      );
+      testsCompleted++;
+    }
+    assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
     await tableClient.deleteTable();
   });
 });
