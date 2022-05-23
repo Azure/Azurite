@@ -455,21 +455,38 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         RowKey: rowKey
       }) as Entity;
 
-      if (!doc) {
-        throw StorageErrorFactory.getEntityNotFound(context);
-      } else {
-        if (etag !== "*" && doc.eTag !== etag) {
-          throw StorageErrorFactory.getPreconditionFailed(context);
-        }
-      }
-      if (batchId !== "") {
-        this.transactionRollbackTheseEntities.push(doc);
-      }
+      this.checkForMissingEntity(doc, context);
+
+      this.checkIfMatchPrecondition(etag, doc, context);
+
+      this.trackRollback(batchId, doc);
       tableEntityCollection.remove(doc);
       return;
     }
 
     throw StorageErrorFactory.getPropertiesNeedValue(context);
+  }
+
+  private trackRollback(batchId: string, doc: Entity) {
+    if (batchId !== "") {
+      this.transactionRollbackTheseEntities.push(doc);
+    }
+  }
+
+  private checkIfMatchPrecondition(
+    etag: string,
+    doc: Entity,
+    context: Context
+  ) {
+    if (etag !== "*" && doc.eTag !== etag) {
+      throw StorageErrorFactory.getPreconditionFailed(context);
+    }
+  }
+
+  private checkForMissingEntity(doc: Entity, context: Context) {
+    if (!doc) {
+      throw StorageErrorFactory.getEntityNotFound(context);
+    }
   }
 
   public async queryTableEntities(
@@ -486,12 +503,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       context
     );
 
-    let queryWhere;
-    try {
-      queryWhere = this.generateQueryEntityWhereFunction(queryOptions.filter);
-    } catch (e) {
-      throw StorageErrorFactory.getQueryConditionInvalid(context);
-    }
+    const queryWhere = this.generateQueryForPersistenceLayer(
+      queryOptions,
+      context
+    );
 
     const maxResults = queryOptions.top || QUERY_RESULT_MAX_NUM;
 
@@ -547,6 +562,54 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     let nextPartitionKeyResponse;
     let nextRowKeyResponse;
 
+    ({ nextPartitionKeyResponse, nextRowKeyResponse } =
+      this.adjustQueryResultforTop(
+        result,
+        maxResults,
+        nextPartitionKeyResponse,
+        nextRowKeyResponse
+      ));
+
+    return [result, nextPartitionKeyResponse, nextRowKeyResponse];
+  }
+
+  /**
+   * Will throw an exception on invalid query syntax
+   *
+   * @param queryOptions
+   * @param context
+   * @returns
+   */
+  private generateQueryForPersistenceLayer(
+    queryOptions: Models.QueryOptions,
+    context: Context
+  ) {
+    let queryWhere;
+    try {
+      queryWhere = this.generateQueryEntityWhereFunction(queryOptions.filter);
+    } catch (e) {
+      throw StorageErrorFactory.getQueryConditionInvalid(context);
+    }
+    return queryWhere;
+  }
+
+  /**
+   * Adjusts the query result for the max results specified in top parameter
+   *
+   * @private
+   * @param {any[]} result
+   * @param {number} maxResults
+   * @param {*} nextPartitionKeyResponse
+   * @param {*} nextRowKeyResponse
+   * @return {*}
+   * @memberof LokiTableMetadataStore
+   */
+  private adjustQueryResultforTop(
+    result: any[],
+    maxResults: number,
+    nextPartitionKeyResponse: any,
+    nextRowKeyResponse: any
+  ) {
     if (result.length > maxResults) {
       const tail = result.pop();
       nextPartitionKeyResponse = this.encodeContinuationHeader(
@@ -554,8 +617,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       );
       nextRowKeyResponse = this.encodeContinuationHeader(tail.RowKey);
     }
-
-    return [result, nextPartitionKeyResponse, nextRowKeyResponse];
+    return { nextPartitionKeyResponse, nextRowKeyResponse };
   }
 
   private decodeContinuationHeader(input?: string) {
