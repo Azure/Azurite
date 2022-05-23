@@ -2,7 +2,7 @@
 
 import * as assert from "assert";
 import LogicAppReproEntity from "../models/table.entity.test.logicapp.entity";
-import { Edm, odata, TableEntity, TableTransaction } from "@azure/data-tables";
+import { TableTransaction } from "@azure/data-tables";
 import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
 import { getUniqueName } from "../../testutils";
