@@ -1694,7 +1694,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it.only("should correctly return results for query on a binary property, @loki", async () => {
+  it("should correctly return results for query on a binary property, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("binquery")
@@ -1707,7 +1707,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     for (let i = 0; i < totalItems; i++) {
       const entity = createBasicEntityForTest(partitionKeyForQueryTest);
       if (i % 2 === 0) {
-        entity.binaryField.fill(1);
+        entity.binaryField = Buffer.from("one zero 1 0 = equals");
       }
       const result = await tableClient.createEntity(entity);
       assert.notStrictEqual(result.etag, undefined);
@@ -1717,13 +1717,13 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     const queriesAndExpectedResult = [
       {
         queryOptions: {
-          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and(binaryField eq X'11111111')`
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (binaryField eq binary'11111111')`
         },
         expectedResult: 5
       },
       {
         queryOptions: {
-          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (binaryField eq X'00000000')`
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (binaryField eq X'one zero 1 0 = equals')`
         },
         expectedResult: 5
       }

@@ -730,8 +730,12 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   }
 
   private static tokenizeQuery(originalQuery: string): string[] {
+    // detect binary values and change to base64 strings
+    const binCheckedQuery =
+      LokiTableMetadataStore.convertBinaryQueryTokens(originalQuery);
+
     // Escape a single backtick to prevent interpreting the start of a template literal.
-    const query = originalQuery.replace(/`/g, "\\`");
+    const query = binCheckedQuery.replace(/`/g, "\\`");
 
     let tokenStart = 0;
     const tokens: string[] = [];
@@ -831,6 +835,46 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     appendToken();
 
     return tokens;
+  }
+
+  private static convertBinaryQueryTokens(originalQuery: string) {
+    // assuming that we can skip the use of the full regex to match binary tokens
+    // in their entirety /\s(binary|X)'[\d\D]*?'/
+    if (originalQuery.match(/\s(binary|X)'/gim)?.length !== undefined) {
+      const tokensReplaced =
+        LokiTableMetadataStore.replaceBinaryQueryTokens(originalQuery);
+      if (tokensReplaced.match(/\s(binary|X)'/gim)?.length !== undefined) {
+        return LokiTableMetadataStore.replaceBinaryQueryTokens(tokensReplaced);
+      } else {
+        return tokensReplaced;
+      }
+    } else {
+      return originalQuery;
+    }
+  }
+
+  private static replaceBinaryQueryTokens(originalQuery: string) {
+    // we need to replace the query string with a base64 encoded version
+    if (
+      originalQuery.match(/\s(binary|X)'[\d\D]*?'/gim)?.length !== undefined
+    ) {
+      const firstBinValue = originalQuery.match(
+        /\s(binary|X)'[\d\D]*?'/gim
+      )![0];
+      const conversionBuffer =
+        LokiTableMetadataStore.base64EncodeBinaryQueryValue(firstBinValue);
+      return originalQuery.replace(firstBinValue, ` '${conversionBuffer}'`);
+    }
+    return originalQuery;
+  }
+
+  private static base64EncodeBinaryQueryValue(firstBinValue: string): string {
+    const correctedBinValue = firstBinValue
+      .replace(/^\sbinary'/, "")
+      .replace(/^\sX'/, "")
+      .replace(/'$/, "");
+    const conversionBuffer = Buffer.from(correctedBinValue);
+    return conversionBuffer.toString("base64");
   }
 
   /**
