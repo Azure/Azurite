@@ -3,6 +3,11 @@ import { AnnotationLevel } from "./EntityProperty";
 import { IEdmType } from "./IEdmType";
 
 export class EdmGuid implements IEdmType {
+  /**
+   * Stores value as base64
+   * @param value
+   * @returns
+   */
   public static validate(value: any): string {
     if (typeof value !== "string") {
       throw TypeError(`Not a valid EdmGuid string.`);
@@ -10,7 +15,9 @@ export class EdmGuid implements IEdmType {
 
     // TODO: Check GUID string format
 
-    return value;
+    // we need to store GUID in base64 to avoid finding with a string query
+    const guidBuff = Buffer.from(value);
+    return guidBuff.toString("base64");
   }
 
   public typedValue: string;

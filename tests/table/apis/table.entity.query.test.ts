@@ -865,6 +865,6 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       testsCompleted++;
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
-    await tableClient.deleteTable();
+    // await tableClient.deleteTable();
   });
 });
