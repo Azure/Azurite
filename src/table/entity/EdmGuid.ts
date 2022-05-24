@@ -31,7 +31,9 @@ export class EdmGuid implements IEdmType {
   }
 
   public toJsonPropertyValueString(name: string): string {
-    return `"${name}":${JSON.stringify(this.typedValue)}`;
+    const binData = Buffer.from(this.value, "base64");
+    const decoded = binData.toString("utf8");
+    return `"${name}":${JSON.stringify(decoded)}`;
   }
 
   public toJsonPropertyTypePair(

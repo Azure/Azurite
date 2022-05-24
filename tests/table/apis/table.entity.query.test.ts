@@ -798,7 +798,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it.only("should correctly return results for query on a guid property, @loki", async () => {
+  it.only("should only find guids when using guid type not plain strings, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("guidquery")
@@ -823,35 +823,37 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
         queryOptions: {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (guidField eq guid'${guidEntities[1].guidField.value}')`
         },
-        expectedResult: 1
+        expectedResult: 1,
+        expectedValue: guidEntities[1].guidField.value
       },
       {
         queryOptions: {
-          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (guidField eq ${guidEntities[1].guidField.value})`
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and (guidField eq ${guidEntities[1].guidField.value})`
         },
-        expectedResult: 0
+        expectedResult: 0,
+        expectedValue: undefined
       },
       {
         queryOptions: {
-          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (guidField eq guid'${guidEntities[8].guidField.value}')`
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and(guidField eq guid'${guidEntities[8].guidField.value}')`
         },
-        expectedResult: 1
+        expectedResult: 1,
+        expectedValue: guidEntities[8].guidField.value
       },
       {
         queryOptions: {
-          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (guidField eq '${guidEntities[8].guidField.value}')`
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and(guidField eq '${guidEntities[8].guidField.value}')`
         },
-        expectedResult: 0
+        expectedResult: 0,
+        expectedValue: undefined
       }
     ];
 
     for (const queryTest of queriesAndExpectedResult) {
-      const entities = tableClient.listEntities<
-        TableEntity<{ number: number }>
-      >({
+      const entities = tableClient.listEntities<AzureDataTablesTestEntity>({
         queryOptions: queryTest.queryOptions
       });
-      let all: TableEntity<{ number: number }>[] = [];
+      let all: AzureDataTablesTestEntity[] = [];
       for await (const entity of entities.byPage({
         maxPageSize
       })) {
@@ -862,9 +864,23 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
         queryTest.expectedResult,
         `Failed with query ${queryTest.queryOptions.filter}`
       );
+      if (all[0] !== undefined) {
+        assert.strictEqual(
+          all[0].guidField.value,
+          queryTest.expectedValue,
+          `Value ${all[0].guidField.value} was not equal to ${queryTest.expectedValue} with query ${queryTest.queryOptions.filter}`
+        );
+      } else {
+        assert.strictEqual(
+          all[0],
+          queryTest.expectedValue,
+          `Value ${all[0]} was not equal to ${queryTest.expectedValue} with query ${queryTest.queryOptions.filter}`
+        );
+      }
+
       testsCompleted++;
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
-    // await tableClient.deleteTable();
+    await tableClient.deleteTable();
   });
 });
