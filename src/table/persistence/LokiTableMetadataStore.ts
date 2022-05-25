@@ -50,7 +50,38 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     });
   }
 
+  /**
+   * Initializes the persistence layer
+   *
+   * @return {*}  {Promise<void>}
+   * @memberof LokiTableMetadataStore
+   */
   public async init(): Promise<void> {
+    await this.loadDB();
+    this.createTablesCollection();
+    this.createServicePropsCollection();
+    await this.saveDBState();
+    this.finalizeInitializionState();
+  }
+
+  /**
+   * Sets variables that track state of initialized DB
+   *
+   * @private
+   * @memberof LokiTableMetadataStore
+   */
+  private finalizeInitializionState() {
+    this.initialized = true;
+    this.closed = false;
+  }
+
+  /**
+   * Loads the DB from disk
+   *
+   * @private
+   * @memberof LokiTableMetadataStore
+   */
+  private async loadDB() {
     await new Promise<void>((resolve, reject) => {
       stat(this.lokiDBPath, (statError, stats) => {
         if (!statError) {
@@ -67,24 +98,9 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         }
       });
     });
+  }
 
-    // Create tables collection if not exists
-    if (this.db.getCollection(this.TABLES_COLLECTION) === null) {
-      this.db.addCollection(this.TABLES_COLLECTION, {
-        // Optimization for indexing and searching
-        // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
-        indices: ["account", "table"]
-      }); // Optimize for find operation
-    }
-
-    // Create service properties collection if not exists
-    let servicePropertiesColl = this.db.getCollection(this.SERVICES_COLLECTION);
-    if (servicePropertiesColl === null) {
-      servicePropertiesColl = this.db.addCollection(this.SERVICES_COLLECTION, {
-        unique: ["accountName"]
-      });
-    }
-
+  private async saveDBState() {
     await new Promise<void>((resolve, reject) => {
       this.db.saveDatabase((err) => {
         if (err) {
@@ -94,11 +110,45 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         }
       });
     });
-
-    this.initialized = true;
-    this.closed = false;
   }
 
+  /**
+   * Creates the Service Properties collection if it does not exist
+   *
+   * @private
+   * @memberof LokiTableMetadataStore
+   */
+  private createServicePropsCollection() {
+    let servicePropertiesColl = this.db.getCollection(this.SERVICES_COLLECTION);
+    if (servicePropertiesColl === null) {
+      servicePropertiesColl = this.db.addCollection(this.SERVICES_COLLECTION, {
+        unique: ["accountName"]
+      });
+    }
+  }
+
+  /**
+   * Creates the tables collection if it does not exist
+   *
+   * @private
+   * @memberof LokiTableMetadataStore
+   */
+  private createTablesCollection() {
+    if (this.db.getCollection(this.TABLES_COLLECTION) === null) {
+      this.db.addCollection(this.TABLES_COLLECTION, {
+        // Optimization for indexing and searching
+        // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
+        indices: ["account", "table"]
+      });
+    }
+  }
+
+  /**
+   * Close down the DB
+   *
+   * @return {*}  {Promise<void>}
+   * @memberof LokiTableMetadataStore
+   */
   public async close(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
       this.db.close((err) => {
@@ -121,24 +171,35 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     return this.closed;
   }
 
+  /**
+   * Create a table in the persistence layer
+   *
+   * @param {Context} context
+   * @param {Table} tableModel
+   * @return {*}  {Promise<void>}
+   * @memberof LokiTableMetadataStore
+   */
   public async createTable(context: Context, tableModel: Table): Promise<void> {
     // Check for table entry in the table registry collection
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
     // Azure Storage Service is case insensitive
     tableModel.table = tableModel.table;
-    const doc = coll.findOne({
-      account: tableModel.account,
-      table: { $regex: [tableModel.table, "i"] }
-    });
-
-    // If the metadata exists, we will throw getTableAlreadyExists error
-    if (doc) {
-      throw StorageErrorFactory.getTableAlreadyExists(context);
-    }
+    this.checkIfTableExists(coll, tableModel, context);
 
     coll.insert(tableModel);
 
-    // now we create the collection to represent the table using a unique string
+    this.createCollectionForTable(tableModel);
+  }
+
+  /**
+   * Create a collection to represent the table using a unique string.
+   * This optimizes using an index for find operations.
+   *
+   * @private
+   * @param {Table} tableModel
+   * @memberof LokiTableMetadataStore
+   */
+  private createCollectionForTable(tableModel: Table) {
     const tableCollectionName = this.getTableCollectionName(
       tableModel.account,
       tableModel.table
@@ -152,9 +213,43 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       // Optimization for indexing and searching
       // https://rawgit.com/techfort/LokiJS/master/jsdoc/tutorial-Indexing%20and%20Query%20performance.html
       indices: ["PartitionKey", "RowKey"]
-    }); // Optimize for find operation
+    });
   }
 
+  /**
+   * Throws an exception if a table exists
+   *
+   * @private
+   * @param {Collection<any>} coll
+   * @param {Table} tableModel
+   * @param {Context} context
+   * @memberof LokiTableMetadataStore
+   */
+  private checkIfTableExists(
+    coll: Collection<any>,
+    tableModel: Table,
+    context: Context
+  ) {
+    const doc = coll.findOne({
+      account: tableModel.account,
+      table: { $regex: [tableModel.table, "i"] }
+    });
+
+    // If the metadata exists, we will throw getTableAlreadyExists error
+    if (doc) {
+      throw StorageErrorFactory.getTableAlreadyExists(context);
+    }
+  }
+
+  /**
+   * Delete a table from the persistence layer
+   *
+   * @param {Context} context
+   * @param {string} table
+   * @param {string} account
+   * @return {*}  {Promise<void>}
+   * @memberof LokiTableMetadataStore
+   */
   public async deleteTable(
     context: Context,
     table: string,
@@ -168,12 +263,35 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       account,
       table: { $regex: [tableLower, "i"] }
     });
-    if (doc) {
-      coll.remove(doc);
-    } else {
+    this.checkIfResourceExists(doc, context);
+    coll.remove(doc);
+
+    this.removeTableCollection(account, doc);
+  }
+
+  /**
+   * With throw a storage exception if resource not found.
+   *
+   * @private
+   * @param {*} doc
+   * @param {Context} context
+   * @memberof LokiTableMetadataStore
+   */
+  private checkIfResourceExists(doc: any, context: Context) {
+    if (!doc) {
       throw StorageErrorFactory.ResourceNotFound(context);
     }
+  }
 
+  /**
+   * Removes a table collection and index when deleting a table.
+   *
+   * @private
+   * @param {string} account
+   * @param {*} doc
+   * @memberof LokiTableMetadataStore
+   */
+  private removeTableCollection(account: string, doc: any) {
     const tableCollectionName = this.getTableCollectionName(account, doc.table);
     const tableEntityCollection = this.db.getCollection(tableCollectionName);
     if (tableEntityCollection) {
@@ -744,9 +862,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     // this does not always seem to be consistent...
     const encodedEtag = doc.eTag.replace(":", "%3A").replace(":", "%3A");
     let encodedIfMatch: string | undefined;
-    if (ifMatch !== undefined) {
-      encodedIfMatch = ifMatch!.replace(":", "%3A").replace(":", "%3A");
-    }
+    encodedIfMatch = this.unencodeIfMatch(ifMatch, encodedIfMatch);
+
     if (
       encodedIfMatch === undefined ||
       encodedIfMatch === "*" ||
@@ -771,26 +888,53 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           const value = entity.properties[key];
           mergedDEntity.properties[key] = value;
 
-          if (entity.properties[`${key}${ODATA_TYPE}`] !== undefined) {
-            mergedDEntity.properties[`${key}${ODATA_TYPE}`] =
-              entity.properties[`${key}${ODATA_TYPE}`];
-          } else {
-            delete mergedDEntity.properties[`${key}${ODATA_TYPE}`];
-          }
+          this.filterOdataMetaData(entity, key, mergedDEntity);
         }
       }
 
       tableEntityCollection.update(mergedDEntity);
       return mergedDEntity;
-    } else {
-      throw StorageErrorFactory.getPreconditionFailed(context);
     }
+    throw StorageErrorFactory.getPreconditionFailed(context);
+  }
+
+  private filterOdataMetaData(
+    entity: Entity,
+    key: string,
+    mergedDEntity: Entity
+  ) {
+    if (entity.properties[`${key}${ODATA_TYPE}`] !== undefined) {
+      mergedDEntity.properties[`${key}${ODATA_TYPE}`] =
+        entity.properties[`${key}${ODATA_TYPE}`];
+    } else {
+      delete mergedDEntity.properties[`${key}${ODATA_TYPE}`];
+    }
+  }
+
+  private unencodeIfMatch(
+    ifMatch: string | undefined,
+    encodedIfMatch: string | undefined
+  ) {
+    if (ifMatch !== undefined) {
+      encodedIfMatch = ifMatch!.replace(":", "%3A").replace(":", "%3A");
+    }
+    return encodedIfMatch;
   }
 
   private getTableCollectionName(account: string, table: string): string {
     return `${account}$${table}`;
   }
 
+  /**
+   * Breaks a query into tokens which we use to build the query
+   * to the persistence layer.
+   *
+   * @private
+   * @static
+   * @param {string} originalQuery
+   * @return {*}  {string[]}
+   * @memberof LokiTableMetadataStore
+   */
   private static tokenizeQuery(originalQuery: string): string[] {
     const query = originalQuery.replace(/`/g, "\\`");
 
@@ -870,6 +1014,18 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     return [stringPos, tokenStart];
   }
 
+  /**
+   * Extracts and formats tokens for query function
+   *
+   * @private
+   * @static
+   * @param {string} token
+   * @param {string} query
+   * @param {number} tokenStart
+   * @param {number} stringPos
+   * @return {*}
+   * @memberof LokiTableMetadataStore
+   */
   private static extractAndFormatToken(
     token: string,
     query: string,
@@ -883,8 +1039,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     const typePrefix = token.substring(0, stringStart);
     const backtickString = "`" + token.substring(typePrefix.length + 1) + "`";
 
-    // Remove the GUID and BINARY type prefix and convert to base64
-    // since we compare and store these as base64 strings
     token = LokiTableMetadataStore.convertTypeRepresentation(
       typePrefix,
       token,
@@ -981,11 +1135,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
 
     const transformedQuery = LokiTableMetadataStore.transformTableQuery(query);
-
-    // tslint:disable-next-line: no-console
-    // console.log(query);
-    // tslint:disable-next-line: no-console
-    // console.log(transformedQuery);
 
     return new Function("item", transformedQuery) as any;
   }
@@ -1180,9 +1329,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
    * TODO: Account's service property should be created when storage account is created or metadata
    * storage initialization. This method should only be responsible for updating existing record.
    * In this way, we can reduce one I/O call to get account properties.
+   * Undefined properties will be ignored during properties setup.
    *
    * @param {ServicePropertiesModel} serviceProperties
-   * @returns {Promise<ServicePropertiesModel>} undefined properties will be ignored during properties setup
+   * @returns {Promise<ServicePropertiesModel>}
    * @memberof LokiBlobMetadataStore
    */
   public async setServiceProperties(
@@ -1219,10 +1369,17 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
   }
 
+  /**
+   * Validates state for start of batch.
+   * Instead of copying all entities / rows in the collection,
+   * we shall just backup those rows that we change.
+   * Keeping the batchId in the interface to allow logging scenarios to extend.
+   *
+   * @param {string} batchId
+   * @return {*}  {Promise<void>}
+   * @memberof LokiTableMetadataStore
+   */
   public async beginBatchTransaction(batchId: string): Promise<void> {
-    // instead of copying all entities / rows in the collection,
-    // we shall just backup those rows that we change
-    // Keeping the batchId in the interface to allow logging scenarios to extend
     if (
       this.transactionRollbackTheseEntities.length > 0 ||
       this.transactionDeleteTheseEntities.length > 0
@@ -1231,6 +1388,17 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     }
   }
 
+  /**
+   * Ends a batch transaction and will allow for rollback if needed.
+   *
+   * @param {string} account
+   * @param {string} table
+   * @param {string} batchId
+   * @param {Context} context
+   * @param {boolean} succeeded
+   * @return {*}  {Promise<void>}
+   * @memberof LokiTableMetadataStore
+   */
   public async endBatchTransaction(
     account: string,
     table: string,
@@ -1244,36 +1412,56 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         this.getTableCollectionName(account, table)
       );
       if (tableBatchCollection) {
-        // for entities deleted or modified
-        for (const entity of this.transactionRollbackTheseEntities) {
-          const copiedEntity: Entity = {
-            PartitionKey: entity.PartitionKey,
-            RowKey: entity.RowKey,
-            properties: entity.properties,
-            lastModifiedTime: entity.lastModifiedTime,
-            eTag: entity.eTag
-          };
-          // lokijs applies this insert as an upsert
-          const doc = tableBatchCollection.findOne({
-            PartitionKey: entity.PartitionKey,
-            RowKey: entity.RowKey
-          });
-          // we can't rely on upsert behavior if documents already exist
-          if (doc) {
-            tableBatchCollection.remove(doc);
-          }
-          tableBatchCollection.insert(copiedEntity);
-        }
+        this.rollbackEntityChanges(tableBatchCollection);
 
-        // for entities added to the collection
-        for (const deleteRow of this.transactionDeleteTheseEntities) {
-          tableBatchCollection.remove(deleteRow);
-        }
+        this.removeEntitiesAddedInBatch(tableBatchCollection);
       }
     }
     // reset entity rollback trackers
     this.transactionRollbackTheseEntities = [];
     this.transactionDeleteTheseEntities = [];
+  }
+
+  /**
+   * Rolls back changes for deleted or modified entities
+   *
+   * @private
+   * @param {Collection<any>} tableBatchCollection
+   * @memberof LokiTableMetadataStore
+   */
+  private rollbackEntityChanges(tableBatchCollection: Collection<any>) {
+    for (const entity of this.transactionRollbackTheseEntities) {
+      const copiedEntity: Entity = {
+        PartitionKey: entity.PartitionKey,
+        RowKey: entity.RowKey,
+        properties: entity.properties,
+        lastModifiedTime: entity.lastModifiedTime,
+        eTag: entity.eTag
+      };
+      // lokijs applies this insert as an upsert
+      const doc = tableBatchCollection.findOne({
+        PartitionKey: entity.PartitionKey,
+        RowKey: entity.RowKey
+      });
+      // we can't rely on upsert behavior if documents already exist
+      if (doc) {
+        tableBatchCollection.remove(doc);
+      }
+      tableBatchCollection.insert(copiedEntity);
+    }
+  }
+
+  /**
+   * Removes entities added to the batch collection
+   *
+   * @private
+   * @param {Collection<any>} tableBatchCollection
+   * @memberof LokiTableMetadataStore
+   */
+  private removeEntitiesAddedInBatch(tableBatchCollection: Collection<any>) {
+    for (const deleteRow of this.transactionDeleteTheseEntities) {
+      tableBatchCollection.remove(deleteRow);
+    }
   }
 }
 
