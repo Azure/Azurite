@@ -30,6 +30,12 @@ export class EdmGuid implements IEdmType {
     return [name, this.typedValue];
   }
 
+  /**
+   * We store GUIDs as base64 encoded strings to stop them being found
+   * by simple string searches
+   * @param name
+   * @returns
+   */
   public toJsonPropertyValueString(name: string): string {
     const binData = Buffer.from(this.value, "base64");
     const decoded = binData.toString("utf8");

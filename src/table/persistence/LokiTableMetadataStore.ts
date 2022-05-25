@@ -799,72 +799,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     let inString = false;
     let i: number;
 
-    function appendToken() {
-      if (i - tokenStart > 0) {
-        let token: string;
-        if (inString) {
-          // Extract the token and unescape quotes
-          token = query.substring(tokenStart, i).replace(/''/g, "'");
-
-          // Extract the leading type prefix, if any.
-          const stringStart = token.indexOf("'");
-          const typePrefix = token.substring(0, stringStart);
-          const backtickString =
-            "`" + token.substring(typePrefix.length + 1) + "`";
-
-          // Remove the GUID type prefix and convert to base64
-          // since we compare these as base64 strings
-          if (
-            typePrefix === "guid" ||
-            typePrefix === "binary" ||
-            typePrefix === "X"
-          ) {
-            // token = backtickString;
-            const conversionBuffer = Buffer.from(
-              token.substring(typePrefix.length + 1)
-            );
-            token = "`" + conversionBuffer.toString("base64") + "`";
-          } else {
-            token = typePrefix + backtickString;
-          }
-        } else {
-          token = convertToken(query.substring(tokenStart, i));
-        }
-
-        if (token) {
-          tokens.push(token);
-        }
-      }
-      tokenStart = i + 1;
-    }
-
-    function convertToken(token: string): string {
-      switch (token) {
-        case "TableName":
-          return "name";
-        case "eq":
-          return "===";
-        case "gt":
-          return ">";
-        case "ge":
-          return ">=";
-        case "lt":
-          return "<";
-        case "le":
-          return "<=";
-        case "ne":
-          return "!==";
-        case "and":
-          return "&&";
-        case "or":
-          return "||";
-        case "not":
-          return "!";
-        default:
-          return token;
-      }
-    }
-
     for (i = 0; i < query.length; i++) {
       if (inString) {
         // Look for a double quote, inside of a string.
@@ -872,7 +806,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           i++;
           continue;
         } else if (query[i] === "'") {
-          appendToken();
+          // prettier-ignore
+          [i, tokenStart] = this.appendToken(i, tokenStart, inString, query, tokens);
           inString = false;
         }
       } else if (query[i] === "(" || query[i] === ")") {
@@ -884,23 +819,155 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           query.substring(tokenStart, i).match(/\b[0-9]+L\b/g) != null
         ) {
           // this is needed if query does not contain whitespace between number token / boolean and paren
-          appendToken();
+          // prettier-ignore
+          [i, tokenStart] = this.appendToken(i, tokenStart, inString, query, tokens);
         }
         i--;
-        appendToken();
+        // prettier-ignore
+        [i, tokenStart] = this.appendToken(i, tokenStart, inString, query, tokens);
         i++;
         tokens.push(query[i]);
         tokenStart++;
       } else if (/\s/.test(query[i])) {
-        appendToken();
+        // prettier-ignore
+        [i, tokenStart] = this.appendToken(i, tokenStart, inString, query, tokens);
       } else if (query[i] === "'") {
         inString = true;
       }
     }
-
-    appendToken();
+    // prettier-ignore
+    [i, tokenStart] = this.appendToken(i, tokenStart, inString, query, tokens);
 
     return tokens;
+  }
+
+  private static appendToken(
+    stringPos: number,
+    tokenStart: number,
+    inString: boolean,
+    query: string,
+    tokens: string[]
+  ) {
+    if (stringPos - tokenStart > 0) {
+      let token: string = "";
+      if (inString) {
+        // Extract the token and unescape quotes
+        token = LokiTableMetadataStore.extractAndFormatToken(
+          token,
+          query,
+          tokenStart,
+          stringPos
+        );
+      } else {
+        token = LokiTableMetadataStore.convertToken(
+          query.substring(tokenStart, stringPos)
+        );
+      }
+
+      LokiTableMetadataStore.addTokenIfValid(token, tokens);
+    }
+    tokenStart = stringPos + 1;
+    return [stringPos, tokenStart];
+  }
+
+  private static extractAndFormatToken(
+    token: string,
+    query: string,
+    tokenStart: number,
+    stringPos: number
+  ) {
+    token = query.substring(tokenStart, stringPos).replace(/''/g, "'");
+
+    // Extract the leading type prefix, if any.
+    const stringStart = token.indexOf("'");
+    const typePrefix = token.substring(0, stringStart);
+    const backtickString = "`" + token.substring(typePrefix.length + 1) + "`";
+
+    // Remove the GUID and BINARY type prefix and convert to base64
+    // since we compare and store these as base64 strings
+    token = LokiTableMetadataStore.convertTypeRepresentation(
+      typePrefix,
+      token,
+      backtickString
+    );
+    return token;
+  }
+
+  /**
+   * This converts types with base64 representations in the persistence
+   * layer to the correct format.
+   * i.e. We do this as searching for a Guid Type as a string type should not
+   * return a matching Guid.
+   *
+   * @private
+   * @static
+   * @param {string} typePrefix
+   * @param {string} token
+   * @param {string} backtickString
+   * @return {*}
+   * @memberof LokiTableMetadataStore
+   */
+  private static convertTypeRepresentation(
+    typePrefix: string,
+    token: string,
+    backtickString: string
+  ) {
+    if (
+      typePrefix === "guid" ||
+      typePrefix === "binary" ||
+      typePrefix === "X"
+    ) {
+      const conversionBuffer = Buffer.from(
+        token.substring(typePrefix.length + 1)
+      );
+      token = "`" + conversionBuffer.toString("base64") + "`";
+    } else {
+      token = typePrefix + backtickString;
+    }
+    return token;
+  }
+
+  private static addTokenIfValid(token: string, tokens: string[]) {
+    if (token) {
+      tokens.push(token);
+    }
+  }
+
+  /**
+   * Converts a token from query request to a type used in persistence
+   * layer query function.
+   *
+   * @private
+   * @static
+   * @param {string} token
+   * @return {*}  {string}
+   * @memberof LokiTableMetadataStore
+   */
+  private static convertToken(token: string): string {
+    switch (token) {
+      case "TableName":
+        return "name";
+      case "eq":
+        return "===";
+      case "gt":
+        return ">";
+      case "ge":
+        return ">=";
+      case "lt":
+        return "<";
+      case "le":
+        return "<=";
+      case "ne":
+        return "!==";
+      case "and":
+        return "&&";
+      case "or":
+        return "||";
+      case "not":
+        return "!";
+      default:
+        return token;
+    }
   }
 
   /**

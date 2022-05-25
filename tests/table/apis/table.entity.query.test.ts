@@ -798,7 +798,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it.only("should only find guids when using guid type not plain strings, @loki", async () => {
+  it("should only find guids when using guid type not plain strings, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("guidquery")
