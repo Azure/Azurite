@@ -7,10 +7,7 @@ export function checkApiVersion(
   requestId: string
 ): void {
   if (!validApiVersions.includes(inputApiVersion)) {
-    throw StorageErrorFactory.getInvalidHeaderValue(requestId, {
-      HeaderName: "x-ms-version",
-      HeaderValue: inputApiVersion
-    });
+    throw StorageErrorFactory.getInvalidAPIVersion(requestId, inputApiVersion);
   }
 }
 

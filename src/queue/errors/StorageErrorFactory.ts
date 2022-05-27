@@ -42,6 +42,18 @@ export default class StorageErrorFactory {
       additionalMessages
     );
   }
+  
+  public static getInvalidAPIVersion(
+    contextID: string = "",
+    apiVersion?: string,
+  ): StorageError {
+    return new StorageError(
+      400,
+      "InvalidHeaderValue",
+      `The API version ${apiVersion} is not supported by Azurite. Please upgrade Azurite to latest version and retry. If you are using Azurite in Visual Studio, please check you have installed latest Visual Studio patch. Azurite command line parameter \"--skipApiVersionCheck\" or Visual Studio Code configuration \"Skip Api Version Check\" can skip this error. `,
+      contextID
+    );
+  }
 
   public static getInvaidXmlDocument(
     contextID: string = defaultID
