@@ -556,10 +556,11 @@ export default class ContainerHandler extends BaseHandler
       options.maxresults = DEFAULT_LIST_BLOBS_MAX_RESULTS;
     }
 
-    const [blobs, nextMarker] = await this.metadataStore.listBlobs(
+    const [blobs, _prefixes, nextMarker] = await this.metadataStore.listBlobs(
       context,
       accountName,
       containerName,
+      undefined,
       undefined,
       options.prefix,
       options.maxresults,
@@ -655,10 +656,11 @@ export default class ContainerHandler extends BaseHandler
       options.maxresults = DEFAULT_LIST_BLOBS_MAX_RESULTS;
     }
 
-    const [blobs, nextMarker] = await this.metadataStore.listBlobs(
+    const [blobItems, blobPrefixes, nextMarker] = await this.metadataStore.listBlobs(
       context,
       accountName,
       containerName,
+      delimiter,
       undefined,
       options.prefix,
       options.maxresults,
@@ -666,34 +668,6 @@ export default class ContainerHandler extends BaseHandler
       includeSnapshots,
       includeUncommittedBlobs
     );
-
-    const blobItems: Models.BlobItem[] = [];
-    const blobPrefixes: Models.BlobPrefix[] = [];
-    const blobPrefixesSet = new Set<string>();
-
-    const prefixLength = options.prefix.length;
-    for (const blob of blobs) {
-      const delimiterPosAfterPrefix = blob.name.indexOf(
-        delimiter,
-        prefixLength
-      );
-
-      // This is a blob
-      if (delimiterPosAfterPrefix < 0) {
-        blob.deleted = blob.deleted !== true ? undefined : true;
-        blobItems.push(blob);
-      } else {
-        // This is a prefix
-        const prefix = blob.name.substr(0, delimiterPosAfterPrefix + 1);
-        blobPrefixesSet.add(prefix);
-      }
-    }
-
-    const iter = blobPrefixesSet.values();
-    let val;
-    while (!(val = iter.next()).done) {
-      blobPrefixes.push({ name: val.value });
-    }
 
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const response: Models.ContainerListBlobHierarchySegmentResponse = {
@@ -711,6 +685,7 @@ export default class ContainerHandler extends BaseHandler
       segment: {
         blobPrefixes,
         blobItems: blobItems.map(item => {
+          item.deleted = item.deleted !== true ? undefined : true;
           return {
             ...item,
             snapshot: item.snapshot || undefined,

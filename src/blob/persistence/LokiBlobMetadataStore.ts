@@ -39,6 +39,7 @@ import IBlobMetadataStore, {
   AcquireContainerLeaseResponse,
   BlobId,
   BlobModel,
+  BlobPrefixModel,
   BlockModel,
   BreakBlobLeaseResponse,
   BreakContainerLeaseResponse,
@@ -60,6 +61,7 @@ import IBlobMetadataStore, {
   ServicePropertiesModel,
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
+import PageWithDelimiter from "./PageWithDelimiter";
 
 /**
  * This is a metadata source implementation for blob based on loki DB.
@@ -819,13 +821,14 @@ export default class LokiBlobMetadataStore
     context: Context,
     account: string,
     container: string,
+    delimiter?: string,
     blob?: string,
     prefix: string = "",
     maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
     marker: string = "",
     includeSnapshots?: boolean,
     includeUncommittedBlobs?: boolean
-  ): Promise<[BlobModel[], string | undefined]> {
+  ): Promise<[BlobModel[], BlobPrefixModel[], string | undefined]> {
     const query: any = {};
     if (prefix !== "") {
       query.name = { $regex: `^${this.escapeRegex(prefix)}` };
@@ -841,57 +844,49 @@ export default class LokiBlobMetadataStore
     }
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    const page = new PageWithDelimiter<BlobModel>(maxResults, delimiter, prefix);
+    const readPage = async (offset: number): Promise<BlobModel[]> => {
+      return await coll
+        .chain()
+        .find(query)
+        .where((obj) => {
+          return obj.name > marker!;
+        })
+        .where((obj) => {
+          return includeSnapshots ? true : obj.snapshot.length === 0;
+        })
+        .where((obj) => {
+          return includeUncommittedBlobs ? true : obj.isCommitted;
+        })
+        .sort((obj1, obj2) => {
+          if (obj1.name === obj2.name) return 0;
+          if (obj1.name > obj2.name) return 1;
+          return -1;
+        })
+        .offset(offset)
+        .limit(maxResults)
+        .data();
+    };
 
-    const docs = await coll
-      .chain()
-      .find(query)
-      .where((obj) => {
-        return obj.name > marker!;
-      })
-      .where((obj) => {
-        return includeSnapshots ? true : obj.snapshot.length === 0;
-      })
-      .where((obj) => {
-        return includeUncommittedBlobs ? true : obj.isCommitted;
-      })
-      .sort((obj1, obj2) => {
-        if (obj1.name === obj2.name) return 0;
-        if (obj1.name > obj2.name) return 1;
-        return -1;
-      })
-      .limit(maxResults + 1)
-      .data();
+    const nameItem = (item: BlobModel) => {
+      return item.name;
+    };
 
-    for (const doc of docs) {
-      const blobDoc = doc as BlobModel;
-      blobDoc.properties.contentMD5 = this.restoreUint8Array(
-        blobDoc.properties.contentMD5
-      );
-    }
+    const [blobItems, blobPrefixes, nextMarker] = await page.fill(readPage, nameItem);
 
-    if (docs.length <= maxResults) {
-      return [
-        docs.map((doc) => {
-          return LeaseFactory.createLeaseState(
-            new BlobLeaseAdapter(doc),
-            context
-          ).sync(new BlobLeaseSyncer(doc));
-        }),
-        undefined
-      ];
-    } else {
-      const nextMarker = docs[docs.length - 2].name;
-      docs.pop();
-      return [
-        docs.map((doc) => {
-          return LeaseFactory.createLeaseState(
-            new BlobLeaseAdapter(doc),
-            context
-          ).sync(new BlobLeaseSyncer(doc));
-        }),
-        nextMarker
-      ];
-    }
+    return [
+      blobItems.map((doc) => {
+        doc.properties.contentMD5 = this.restoreUint8Array(
+          doc.properties.contentMD5
+        );
+        return LeaseFactory.createLeaseState(
+          new BlobLeaseAdapter(doc),
+          context
+        ).sync(new BlobLeaseSyncer(doc));
+      }),
+      blobPrefixes,
+      nextMarker
+    ];
   }
 
   public async listAllBlobs(

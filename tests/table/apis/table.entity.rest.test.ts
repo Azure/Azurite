@@ -12,19 +12,20 @@ import { getUniqueName } from "../../testutils";
 import { createUniquePartitionKey } from "../utils/table.entity.test.utils";
 import {
   getToAzurite,
+  patchToAzurite,
   postToAzurite
 } from "../utils/table.entity.tests.rest.submitter";
 
 // Set true to enable debug log
 configLogger(false);
 
-describe("table Entity APIs test", () => {
+describe("table Entity APIs REST tests", () => {
   // TODO: Create a server factory as tests utils
   const host = "127.0.0.1";
   const port = 11002;
   const metadataDbPath = "__tableTestsStorage__";
   const enableDebugLog: boolean = true;
-  const debugLogPath: string = "g:/debug.log";
+  const debugLogPath: string = "";
   const config = new TableConfiguration(
     host,
     port,
@@ -511,6 +512,51 @@ describe("table Entity APIs test", () => {
           );
         }
       }
+    }
+  });
+
+  it("Should fail to update using patch verb if entity does not exist, @loki", async () => {
+    const patchTable = getUniqueName("patch");
+    const body = JSON.stringify({
+      TableName: patchTable
+    });
+    const createTableHeaders = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=nometadata"
+    };
+    const createTableResult = await postToAzurite(
+      "Tables",
+      body,
+      createTableHeaders
+    );
+    assert.strictEqual(createTableResult.status, 201);
+
+    try {
+      const patchRequestResult = await patchToAzurite(
+        `${patchTable}(PartitionKey='9b0afb2e-3be7-4b95-9ce1-45e9a410cc19',RowKey='a')`,
+        '{"PartitionKey":"9b0afb2e-3be7-4b95-9ce1-45e9a410cc19","RowKey":"a"}',
+        {
+          "If-Match": "*",
+          "Content-Type": "application/json",
+          version: "",
+          "x-ms-client-request-id": "1",
+          DataServiceVersion: "3"
+        }
+      );
+      assert.strictEqual(patchRequestResult.status, 404);
+      // we expect this to fail, as our batch request specifies the etag
+      // https://docs.microsoft.com/en-us/rest/api/storageservices/merge-entity
+    } catch (err: any) {
+      assert.notStrictEqual(
+        err.response,
+        undefined,
+        "Axios error response state invalid"
+      );
+      assert.strictEqual(
+        err.response.status,
+        404,
+        "We did not get the expected failure."
+      );
     }
   });
 

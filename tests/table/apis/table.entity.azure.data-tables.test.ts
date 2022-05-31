@@ -766,9 +766,9 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
 
     // Each entity is a bit over 4 * 32 * 1024 bytes.
     // This means 32 of these entities will exceed the 4 MB limit.
-    for (var i = 0; i < 32; i++) {
+    for (let i = 0; i < 32; i++) {
       transaction.createEntity({
-        partitionKey: partitionKey,
+        partitionKey,
         rowKey: "rk" + i,
         a: "a".repeat(32 * 1024),
         b: "b".repeat(32 * 1024),

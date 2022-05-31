@@ -232,7 +232,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   ) {
     const doc = coll.findOne({
       account: tableModel.account,
-      table: { $regex: [tableModel.table, "i"] }
+      table: { $regex: [String.raw`\b${tableModel.table}\b`, "i"] }
     });
 
     // If the metadata exists, we will throw getTableAlreadyExists error
@@ -536,6 +536,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           batchId
         );
       } else {
+        this.failPatchOnMissingEntity(context);
         // Insert
         return this.insertTableEntity(context, table, account, entity, batchId);
       }
@@ -549,6 +550,15 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         ifMatch,
         batchId
       );
+    }
+  }
+
+  private failPatchOnMissingEntity(context: Context) {
+    if (
+      context.context.request.req !== undefined &&
+      context.context.request.req.method === "PATCH"
+    ) {
+      throw StorageErrorFactory.ResourceNotFound(context);
     }
   }
 
