@@ -46,9 +46,13 @@ export async function postToAzurite(
  */
 export async function getToAzurite(
   path: string,
-  headers: any
+  headers: any,
+  queryString?: string
 ): Promise<AxiosResponse<any, any>> {
-  const url = `${TableEntityTestConfig.protocol}://${TableEntityTestConfig.host}:${TableEntityTestConfig.port}/${TableEntityTestConfig.accountName}/${path}`;
+  if (undefined === queryString) {
+    queryString = "";
+  }
+  const url = `${TableEntityTestConfig.protocol}://${TableEntityTestConfig.host}:${TableEntityTestConfig.port}/${TableEntityTestConfig.accountName}/${path}${queryString}`;
   const requestConfig = axiosRequestConfig(url, path, headers);
   const result = await axios.get(url, requestConfig);
   return result;

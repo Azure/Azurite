@@ -513,4 +513,76 @@ describe("table Entity APIs test", () => {
       }
     }
   });
+
+  // https://github.com/Azure/Azurite/issues/1428
+  it("Should not receive any results when querying with filter and top = 0, @loki", async () => {
+    // first create the table for these tests
+    reproFlowsTableName = getUniqueName("top");
+    const body = JSON.stringify({
+      TableName: reproFlowsTableName
+    });
+    const createTableHeaders = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=nometadata"
+    };
+    const createTableResult = await postToAzurite(
+      "Tables",
+      body,
+      createTableHeaders
+    );
+    assert.strictEqual(createTableResult.status, 201);
+
+    // now create entities for these tests
+    const createEntityHeaders = {
+      "x-ms-version": "2019-02-02",
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=nometadata"
+    };
+    const partitionKey = createUniquePartitionKey();
+
+    // first create entities to query
+
+    for (let i = 0; i < 5; i++) {
+      const rowKey = i.toString();
+      const createEntityResult = await postToAzurite(
+        reproFlowsTableName,
+        `{"PartitionKey":"${partitionKey}","RowKey":"${rowKey}"}`,
+        createEntityHeaders
+      );
+
+      assert.strictEqual(
+        createEntityResult.status,
+        201,
+        `We failed to create the entity 0${i.toString()} to prepare rest query test`
+      );
+    }
+
+    // this is the query from storage explorer based on the repro in the issue:
+    // GET /devstoreaccount1/test01?%24select=&%24filter=PartitionKey%20eq%20%270%27&%24top=0 HTTP/1.1" 200 -
+    await getToAzurite(
+      `${reproFlowsTableName}`,
+      {
+        "x-ms-version": "2021-06-08",
+        "Content-Type": "application/json",
+        Accept: "application/json;odata=nometadata"
+      },
+      "?%24select=&%24filter=PartitionKey%20eq%20%270%27&%24top=0"
+    )
+      .catch((getErr) => {
+        assert.strictEqual(
+          getErr.response.status,
+          200,
+          "We should not error on query!"
+        );
+      })
+      .then((response) => {
+        if (response) {
+          assert.strictEqual(
+            response.status,
+            200,
+            `${response.status} was not expected status code for query!`
+          );
+        }
+      });
+  });
 });

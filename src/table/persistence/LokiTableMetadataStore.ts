@@ -626,7 +626,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       context
     );
 
-    const maxResults = queryOptions.top || QUERY_RESULT_MAX_NUM;
+    const maxResults = this.setMaxResults(queryOptions);
 
     // Decode the nextPartitionKey and nextRowKey. This is necessary since non-ASCII characters can
     // be in partition and row keys but should not be in headers.
@@ -689,6 +689,17 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       ));
 
     return [result, nextPartitionKeyResponse, nextRowKeyResponse];
+  }
+
+  private setMaxResults(queryOptions: Models.QueryOptions) {
+    if (
+      undefined === queryOptions.top ||
+      null === queryOptions.top ||
+      QUERY_RESULT_MAX_NUM < queryOptions.top
+    ) {
+      return QUERY_RESULT_MAX_NUM;
+    }
+    return queryOptions.top;
   }
 
   /**
