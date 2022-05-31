@@ -996,7 +996,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("Should not return timestamp odata type with nometadata option, @loki", async () => {
+  it("Should not return timestamp odata type with minimal meta data option, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("odatadate")
@@ -1027,7 +1027,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       {
         requestOptions: {
           customHeaders: {
-            accept: "application/json;odata=nometadata"
+            accept: "application/json;odata=minimalmetadata"
           }
         }
       }

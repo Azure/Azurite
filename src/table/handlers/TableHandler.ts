@@ -1036,14 +1036,17 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   ) {
     for (const prop in properties) {
       if (properties.hasOwnProperty(prop)) {
-        if (null !== properties[prop] && undefined !== properties[prop].length) {
+        if (
+          null !== properties[prop] &&
+          undefined !== properties[prop].length
+        ) {
           const typeKey = `${prop}${ODATA_TYPE}`;
           let type;
           if (properties[typeKey]) {
-            type = getEdmType(properties[typeKey])
+            type = getEdmType(properties[typeKey]);
           }
           if (type === EdmType.Binary) {
-            if (Buffer.from(properties[prop], 'base64').length > 64 * 1024) {
+            if (Buffer.from(properties[prop], "base64").length > 64 * 1024) {
               throw StorageErrorFactory.getPropertyValueTooLargeError(context);
             }
           } else if (properties[prop].length > 32 * 1024) {
