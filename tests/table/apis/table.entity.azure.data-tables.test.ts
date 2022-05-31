@@ -32,15 +32,15 @@ const testLocalAzuriteInstance = true;
 describe("table Entity APIs test - using Azure/data-tables", () => {
   let server: TableServer;
 
-  const requestOverride = { headers: {} };
+  // const requestOverride = { headers: {} };
 
   before(async () => {
     server = createTableServerForTestHttps();
     await server.start();
-    requestOverride.headers = {
-      Prefer: "return-content",
-      accept: "application/json;odata=fullmetadata"
-    };
+    // requestOverride.headers = {
+    //   Prefer: "return-content",
+    //   accept: "application/json;odata=fullmetadata"
+    // };
   });
 
   after(async () => {
@@ -991,6 +991,52 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       entity.nullableString === undefined,
       true,
       "Null property on retrieved entity should not exist!"
+    );
+
+    await tableClient.deleteTable();
+  });
+
+  it("Should not return timestamp odata type with nometadata option, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("odatadate")
+    );
+    await tableClient.createTable();
+    const partitionKey = createUniquePartitionKey("odatadate");
+    const testEntity = createBasicEntityForTest(partitionKey);
+    testEntity.nullableString = null;
+
+    try {
+      const result1 = await tableClient.createEntity(testEntity);
+      assert.notStrictEqual(
+        result1.etag,
+        null,
+        "We should have created the first test entity!"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        200,
+        `We should not see status ${err.statusCode}!`
+      );
+    }
+
+    const entity: any = await tableClient.getEntity<AzureDataTablesTestEntity>(
+      testEntity.partitionKey,
+      testEntity.rowKey,
+      {
+        requestOptions: {
+          customHeaders: {
+            accept: "application/json;odata=nometadata"
+          }
+        }
+      }
+    );
+
+    assert.strictEqual(
+      typeof entity.timestamp === "string",
+      true,
+      "Timestamp should be string!"
     );
 
     await tableClient.deleteTable();
