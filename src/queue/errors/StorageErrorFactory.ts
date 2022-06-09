@@ -42,7 +42,7 @@ export default class StorageErrorFactory {
       additionalMessages
     );
   }
-  
+
   public static getInvalidAPIVersion(
     contextID: string = "",
     apiVersion?: string,
