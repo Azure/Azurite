@@ -62,7 +62,7 @@ export default class VSCEnvironment implements IEnvironment {
       } else {
         folder = workspace.workspaceFolders[0];
       }
-      location = resolve(folder.uri.fsPath, location ?? '');
+      location = resolve(folder.uri.fsPath, location || '.azurite');
     }
 
     await ensureDir(location);

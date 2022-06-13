@@ -1,4 +1,5 @@
 import args from "args";
+import { join } from "path";
 
 import {
   DEFAULT_BLOB_LISTENING_PORT,
@@ -16,6 +17,8 @@ import {
 } from "../table/utils/constants";
 
 import IEnvironment from "./IEnvironment";
+
+const DEFAULT_LOCATION = join(process.cwd(), '.azurite');
 
 args
   .option(
@@ -50,8 +53,8 @@ args
   )
   .option(
     ["l", "location"],
-    "Optional. Use an existing folder as workspace path, default is current working directory",
-    process.cwd()
+    "Optional. Use an existing folder as workspace path, default is an .azurite folder in the current working directory",
+    DEFAULT_LOCATION
   )
   .option(["s", "silent"], "Optional. Disable access log displayed in console")
   .option(
@@ -105,7 +108,7 @@ export default class Environment implements IEnvironment {
   }
 
   public async location(): Promise<string> {
-    return this.flags.location || process.cwd();
+    return this.flags.location || DEFAULT_LOCATION;
   }
 
   public silent(): boolean {
