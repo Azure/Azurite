@@ -422,18 +422,18 @@ When starting Azurite from npm command line `azurite` or docker image, following
 
 ### Customized Storage Accounts & Keys
 
-Azurite V3 allows customizing storage account names and keys by providing environment variable `AZURITE_ACCOUNTS` with format `account1:key1[:key2];account2:key1[:key2];...`.
+Azurite V3 allows customizing storage account names and keys by providing environment variable `AZURITE_ACCOUNTS` with format `account1:base64(key1a)[:base64(key1b)];account2:base64(key2a)[:base64(key2b)];...`.
 
 For example, customize one storage account which has only one key:
 
 ```cmd
-set AZURITE_ACCOUNTS="account1:key1"
+set AZURITE_ACCOUNTS="account1:a2V5MWE=" # base64(key1a)="a2V5MWE="
 ```
 
 Or customize multi storage accounts and each has 2 keys:
 
 ```cmd
-set AZURITE_ACCOUNTS="account1:key1:key2;account2:key1:key2"
+set AZURITE_ACCOUNTS="account1:a2V5MWE=:a2V5MWI=;account2:a2V5MmE=:a2V5MmI="
 ```
 
 Azurite will refresh customized account name and key from environment variable every minute by default. With this feature, we can dynamically rotate account key, or add new storage accounts on the air without restarting Azurite instance.
@@ -590,18 +590,18 @@ Azurite V3 provides support for a default storage account as General Storage Acc
 
 ### Customized Storage Accounts & Keys
 
-As mentioned by above section. Azurite V3 allows customizing storage account names and keys by providing environment variable `AZURITE_ACCOUNTS` with format `account1:key1[:key2];account2:key1[:key2];...`.
+As mentioned by above section. Azurite V3 allows customizing storage account names and keys by providing environment variable `AZURITE_ACCOUNTS` with format `account1:base64(key1a)[:base64(key1b)];account2:base64(key2a)[:base64(key2b)];...`.
 
 For example, customize one storage account which has only one key:
 
 ```cmd
-set AZURITE_ACCOUNTS="account1:key1"
+set AZURITE_ACCOUNTS="account1:a2V5MWE=" # base64(key1a)="a2V5MWE="
 ```
 
 Or customize multi storage accounts and each has 2 keys:
 
 ```cmd
-set AZURITE_ACCOUNTS="account1:key1:key2;account2:key1:key2"
+set AZURITE_ACCOUNTS="account1:a2V5MWE=:a2V5MWI=;account2:a2V5MmE=:a2V5MmI="
 ```
 
 ### Connection Strings
@@ -800,7 +800,7 @@ First, add line(s) to your hosts file, like:
 Secondly, set environment variables to enable customized storage accounts & keys:
 
 ```
-set AZURITE_ACCOUNTS="account1:key1:key2"
+set AZURITE_ACCOUNTS="account1:base64(key1a):base64(key1b)"
 ```
 
 You could add more accounts. See the [section](#customized-storage-accounts--keys-1) above.
@@ -810,7 +810,7 @@ Finally, start Azurite and use a customized connection string to access your acc
 In the connection string below, it is assumed default ports are used.
 
 ```
-DefaultEndpointsProtocol=http;AccountName=account1;AccountKey=key1;BlobEndpoint=http://account1.blob.localhost:10000;QueueEndpoint=http://account1.queue.localhost:10001;TableEndpoint=http://account1.table.localhost:10002;
+DefaultEndpointsProtocol=http;AccountName=account1;AccountKey=a2V5MWE=;BlobEndpoint=http://account1.blob.localhost:10000;QueueEndpoint=http://account1.queue.localhost:10001;TableEndpoint=http://account1.table.localhost:10002;
 ```
 
 > Note. Do not access default account in this way with Azure Storage Explorer. There is a bug that Storage Explorer is always adding account name in URL path, causing failures.
