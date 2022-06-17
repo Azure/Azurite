@@ -359,7 +359,7 @@ jobs:
       - script: |
           sudo npm uninstall -g azurite
           npm run build
-          sudo npm install -g
+          sudo npm install --legacy-peer-deps -g
           azurite -v
           azurite-blob -v
           azurite-queue -v
@@ -407,7 +407,7 @@ jobs:
       - script: |
           npm uninstall -g azurite
           npm run build
-          npm install -g
+          npm install --legacy-peer-deps -g
           azurite -v
           azurite-blob -v
           azurite-queue -v
@@ -455,7 +455,7 @@ jobs:
       - script: |
           sudo npm uninstall -g azurite
           npm run build
-          sudo npm install -g
+          sudo npm install --legacy-peer-deps -g
           azurite -v
           azurite-blob -v
           azurite-queue -v
