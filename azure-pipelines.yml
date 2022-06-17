@@ -359,7 +359,7 @@ jobs:
       - script: |
           sudo npm uninstall -g azurite
           npm run build
-          sudo npm install --location=global
+          npm install --location=global
           azurite -v
           azurite-blob -v
           azurite-queue -v
