@@ -28,9 +28,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:blob
@@ -55,9 +55,9 @@ jobs:
         displayName: "Install Node.js"
   
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
   
       - script: |
           npm run test:blob
@@ -82,9 +82,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:blob
@@ -109,9 +109,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:blob
@@ -136,9 +136,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           docker run --name mysql -p 13306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql
@@ -171,9 +171,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:queue
@@ -198,9 +198,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:queue
@@ -225,9 +225,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:queue
@@ -253,9 +253,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:table
@@ -281,9 +281,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:table
@@ -309,9 +309,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:table
@@ -337,9 +337,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run lint
@@ -385,9 +385,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run lint
@@ -433,9 +433,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run lint
@@ -469,9 +469,9 @@ jobs:
       vmImage: "ubuntu-latest"
     steps:
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run docker:build
@@ -518,9 +518,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run build:exe
@@ -555,9 +555,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run build:linux
