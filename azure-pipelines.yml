@@ -28,9 +28,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:blob
@@ -55,9 +55,9 @@ jobs:
         displayName: "Install Node.js"
   
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
   
       - script: |
           npm run test:blob
@@ -82,9 +82,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:blob
@@ -109,9 +109,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:blob
@@ -136,9 +136,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           docker run --name mysql -p 13306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql
@@ -171,9 +171,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:queue
@@ -198,9 +198,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:queue
@@ -225,9 +225,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:queue
@@ -253,9 +253,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:table
@@ -281,9 +281,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:table
@@ -309,9 +309,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run test:table
@@ -326,8 +326,10 @@ jobs:
     strategy:
       matrix:
         # Table tests no longer suport older node versions
-        node_14_x:
-          node_version: 14.x
+        # skip node 14 Azurite install test, since it has issue iwth new npm, which is not azurite issue. 
+        # Track with https://github.com/Azure/Azurite/issues/1550. Will add node 14 back later when the issue resolved.
+        #node_14_x:
+        #  node_version: 14.x
         node_16_x:
           node_version: 16.x
     steps:
@@ -337,9 +339,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run lint
@@ -359,7 +361,7 @@ jobs:
       - script: |
           sudo npm uninstall -g azurite
           npm run build
-          sudo npm install -g
+          npm install --location=global
           azurite -v
           azurite-blob -v
           azurite-queue -v
@@ -385,9 +387,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run lint
@@ -433,9 +435,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run lint
@@ -469,9 +471,9 @@ jobs:
       vmImage: "ubuntu-latest"
     steps:
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run docker:build
@@ -518,9 +520,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run build:exe
@@ -555,9 +557,9 @@ jobs:
         displayName: "Install Node.js"
 
       - script: |
-          npm ci
+          npm ci --legacy-peer-deps
         workingDirectory: "./"
-        displayName: "npm ci"
+        displayName: "npm ci --legacy-peer-deps"
 
       - script: |
           npm run build:linux
