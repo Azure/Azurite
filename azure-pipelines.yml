@@ -326,8 +326,10 @@ jobs:
     strategy:
       matrix:
         # Table tests no longer suport older node versions
-        node_14_x:
-          node_version: 14.x
+        # skip node 14 Azurite install test, since it has issue iwth new npm, which is not azurite issue. 
+        # Track with https://github.com/Azure/Azurite/issues/1550. Will add node 14 back later when the issue resolved.
+        #node_14_x:
+        #  node_version: 14.x
         node_16_x:
           node_version: 16.x
     steps:
