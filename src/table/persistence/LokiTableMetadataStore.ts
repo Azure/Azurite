@@ -510,7 +510,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     const decodedNextPartitionKey =
       this.decodeContinuationHeader(nextPartitionKey);
     const decodedNextRowKey = this.decodeContinuationHeader(nextRowKey);
-
+    
     // .find using a segment filter is not filtering in the same way that the sorting function sorts
     // I think offset will cause more problems than it solves, as we will have to step and sort all
     // results here, so I am adding 2 additional predicates here to cover the cases with
@@ -533,6 +533,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
             return true;
           }
           return false;
+        }
+        if (decodedNextPartitionKey !== undefined) {
+          if (data.PartitionKey < decodedNextPartitionKey) {
+            return false;
+          }
         }
         return true;
       })
