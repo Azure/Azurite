@@ -229,10 +229,7 @@ export function checkApiVersion(
   context: Context
 ): void {
   if (!validApiVersions.includes(inputApiVersion)) {
-    throw StorageErrorFactory.getInvalidHeaderValue(context, {
-      HeaderName: HeaderConstants.X_MS_VERSION,
-      HeaderValue: inputApiVersion
-    });
+    throw StorageErrorFactory.getInvalidAPIVersion(context, inputApiVersion);
   }
 }
 

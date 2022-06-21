@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Modified the error messge for invalid API version to make it more actionable.
+
 Table:
 
 - Reject table batch request bodies exceeding 4MB.
