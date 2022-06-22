@@ -534,6 +534,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           }
           return false;
         }
+        if (decodedNextPartitionKey !== undefined) {
+          if (data.PartitionKey < decodedNextPartitionKey) {
+            return false;
+          }
+        }
         return true;
       })
       .sort((obj1, obj2) => {
