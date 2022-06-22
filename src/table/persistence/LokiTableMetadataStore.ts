@@ -636,7 +636,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       context
     );
 
-    const maxResults = this.setMaxResults(queryOptions);
+    const maxResults = this.getMaxResultsOption(queryOptions);
 
     // Decode the nextPartitionKey and nextRowKey. This is necessary since non-ASCII characters can
     // be in partition and row keys but should not be in headers.
@@ -701,7 +701,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     return [result, nextPartitionKeyResponse, nextRowKeyResponse];
   }
 
-  private setMaxResults(queryOptions: Models.QueryOptions) {
+  private getMaxResultsOption(queryOptions: Models.QueryOptions) {
     if (
       undefined === queryOptions.top ||
       null === queryOptions.top ||
