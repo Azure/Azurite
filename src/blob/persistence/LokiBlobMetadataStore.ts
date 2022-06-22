@@ -1823,6 +1823,15 @@ export default class LokiBlobMetadataStore
       destBlob
     );
 
+    // Copy if not exists
+    if (
+      options.modifiedAccessConditions &&
+      options.modifiedAccessConditions.ifNoneMatch === "*" &&
+      destBlob
+    ) {
+      throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+    }
+
     if (destBlob) {
       new BlobWriteLeaseValidator(options.leaseAccessConditions).validate(
         new BlobLeaseAdapter(destBlob),
@@ -1998,6 +2007,15 @@ export default class LokiBlobMetadataStore
       options.modifiedAccessConditions,
       destBlob
     );
+
+    // Copy if not exists
+    if (
+      options.modifiedAccessConditions &&
+      options.modifiedAccessConditions.ifNoneMatch === "*" &&
+      destBlob
+    ) {
+      throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+    }
 
     if (destBlob) {
       const lease = new BlobLeaseAdapter(destBlob);
