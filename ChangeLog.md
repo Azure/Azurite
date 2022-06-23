@@ -4,8 +4,11 @@
 
 ## Upcoming Release
 
+## 2022.06 Version 3.18.0
+
 General:
 
+- Bump up service API version to 2021-08-06
 - Modified the error messge for invalid API version to make it more actionable.
 
 Blob:
