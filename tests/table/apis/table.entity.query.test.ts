@@ -763,13 +763,13 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     const queriesAndExpectedResult = [
       {
         queryOptions: {
-          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (binaryField eq binary'11111111')`
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (binaryField eq binary'3131313131313131')`
         },
         expectedResult: 5
       },
       {
         queryOptions: {
-          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (binaryField eq X'one zero 1 0 = equals')`
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (binaryField eq X'3131313131313131')`
         },
         expectedResult: 5
       }
