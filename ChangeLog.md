@@ -8,6 +8,10 @@ General:
 
 - Modified the error messge for invalid API version to make it more actionable.
 
+Blob:
+
+- Fixed issue that startCopyFromURL and copyFromURL API not fail, when request container if-none-match="\*" and dest blob already exist.
+
 Table:
 
 - Reject table batch request bodies exceeding 4MB.

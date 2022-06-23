@@ -1062,6 +1062,77 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(err.statusCode, 400);
   });
 
+  it("Copy blob should not work with  ifNoneMatch * when dest exist @loki", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    const metadata = { key: "value" };
+    const blobHTTPHeaders = {
+      blobCacheControl: "blobCacheControl",
+      blobContentDisposition: "blobContentDisposition",
+      blobContentEncoding: "blobContentEncoding",
+      blobContentLanguage: "blobContentLanguage",
+      blobContentType: "blobContentType"
+    };
+
+    // upload source
+    const result_uploadsrc = await sourceBlobClient.upload("hello", 5, {
+      metadata,
+      blobHTTPHeaders
+    });
+    assert.equal(
+      result_uploadsrc._response.request.headers.get("x-ms-client-request-id"),
+      result_uploadsrc.clientRequestId
+    );
+
+    // upload destination
+    const result_uploaddest = await destBlobClient.upload("hello", 5, {
+      metadata,
+      blobHTTPHeaders
+    });
+    assert.equal(
+      result_uploaddest._response.request.headers.get("x-ms-client-request-id"),
+      result_uploaddest.clientRequestId
+    );
+
+    // async copy
+    try {
+      await destBlobClient.beginCopyFromURL(
+      sourceBlobClient.url,       
+      {
+        conditions: 
+        {
+          ifNoneMatch: "*"
+        }
+      });
+    } 
+    catch (error) {
+      assert.deepStrictEqual(error.statusCode, 409);
+      return;
+    }
+    assert.fail();
+
+    // Sync copy
+    try {
+      await destBlobClient.syncCopyFromURL(
+      sourceBlobClient.url,       
+      {
+        conditions: 
+        {
+          ifNoneMatch: "*"
+        }
+      });
+    } 
+    catch (error) {
+      assert.deepStrictEqual(error.statusCode, 409);
+      return;
+    }
+    assert.fail();
+  });
+
   it("Synchronized copy blob should work @loki", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
