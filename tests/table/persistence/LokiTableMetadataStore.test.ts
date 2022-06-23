@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import LokiTableStoreQuery from "../../../src/table/persistence/LokiTableStoreQuery";
+import LokiTableStoreQueryGenerator from "../../../src/table/persistence/LokiTableStoreQueryGenerator";
 
 const entityQueries = [
   {
@@ -140,7 +140,7 @@ describe("unit tests for converting an entity OData query to a JavaScript query 
   entityQueries.forEach(({ input, expected }) => {
     it(`should transform '${input}' into '${expected}'`, (done) => {
       try {
-        const actual = LokiTableStoreQuery.transformEntityQuery(input);
+        const actual = LokiTableStoreQueryGenerator.transformEntityQuery(input);
         assert.strictEqual(actual, expected);
       } catch (err: any) {
         if (input === "1 eq 1")
@@ -194,7 +194,7 @@ describe("unit tests for converting an table OData query to a JavaScript query f
   tableQueries.forEach(({ input, expected }) => {
     it(`should transform '${input}' into '${expected}'`, (done) => {
       try {
-        const actual = LokiTableStoreQuery.transformTableQuery(input);
+        const actual = LokiTableStoreQueryGenerator.transformTableQuery(input);
         assert.strictEqual(actual, expected);
       } catch (err: any) {
         if (input === "1 eq 1")

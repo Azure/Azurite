@@ -9,7 +9,7 @@ import { Entity, Table } from "../persistence/ITableMetadataStore";
 import { ODATA_TYPE, QUERY_RESULT_MAX_NUM } from "../utils/constants";
 import { getTimestampString } from "../utils/utils";
 import ITableMetadataStore, { TableACL } from "./ITableMetadataStore";
-import LokiTableStoreQuery from "./LokiTableStoreQuery";
+import LokiTableStoreQueryGenerator from "./LokiTableStoreQueryGenerator";
 
 /** MODELS FOR SERVICE */
 interface IServiceAdditionalProperties {
@@ -359,8 +359,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
     let queryWhere;
     try {
-      const queryGenerator = new LokiTableStoreQuery();
-      queryWhere = queryGenerator.generateQueryTableWhereFunction(
+      queryWhere = LokiTableStoreQueryGenerator.generateQueryTableWhereFunction(
         queryOptions.filter
       );
     } catch (e) {
@@ -624,11 +623,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       context
     );
 
-    const queryGenerator = new LokiTableStoreQuery();
-    const queryWhere = queryGenerator.generateQueryForPersistenceLayer(
-      queryOptions,
-      context
-    );
+    const queryWhere =
+      LokiTableStoreQueryGenerator.generateQueryForPersistenceLayer(
+        queryOptions,
+        context
+      );
 
     const maxResults = this.getMaxResultsOption(queryOptions);
 

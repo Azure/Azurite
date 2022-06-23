@@ -1,6 +1,5 @@
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import { Entity, Table } from "./ITableMetadataStore";
-import ITableStoreQuery from "./ITableStoreQuery";
 import Context from "../generated/Context";
 import * as Models from "../generated/artifacts/models";
 import { ICollumnQueryType } from "./ICollumnQueryType";
@@ -21,7 +20,7 @@ enum TokenType {
 }
 
 // Handles Query Logic For LokiJs Table Implementation
-export default class LokiTableStoreQuery implements ITableStoreQuery {
+export default class LokiTableStoreQueryGenerator {
   /**
    * Will throw an exception on invalid query syntax
    *
@@ -29,13 +28,16 @@ export default class LokiTableStoreQuery implements ITableStoreQuery {
    * @param context
    * @returns
    */
-  public generateQueryForPersistenceLayer(
+  public static generateQueryForPersistenceLayer(
     queryOptions: Models.QueryOptions,
     context: Context
   ) {
     let queryWhere;
     try {
-      queryWhere = this.generateQueryEntityWhereFunction(queryOptions.filter);
+      queryWhere =
+        LokiTableStoreQueryGenerator.generateQueryEntityWhereFunction(
+          queryOptions.filter
+        );
     } catch (e) {
       throw StorageErrorFactory.getQueryConditionInvalid(context);
     }
@@ -45,14 +47,15 @@ export default class LokiTableStoreQuery implements ITableStoreQuery {
   /**
    * @param query Query Tables $query string.
    */
-  public generateQueryTableWhereFunction(
+  public static generateQueryTableWhereFunction(
     query: string | undefined
   ): (entity: Table) => boolean {
     if (query === undefined) {
       return () => true;
     }
 
-    const transformedQuery = LokiTableStoreQuery.transformTableQuery(query);
+    const transformedQuery =
+      LokiTableStoreQueryGenerator.transformTableQuery(query);
 
     return new Function("item", transformedQuery) as any;
   }
@@ -66,7 +69,7 @@ export default class LokiTableStoreQuery implements ITableStoreQuery {
     ]);
     const allowCustomProperties = false;
 
-    return LokiTableStoreQuery.transformQuery(
+    return LokiTableStoreQueryGenerator.transformQuery(
       query,
       systemProperties,
       allowCustomProperties
@@ -76,14 +79,15 @@ export default class LokiTableStoreQuery implements ITableStoreQuery {
   /**
    * @param query Query Enties $query string.
    */
-  private generateQueryEntityWhereFunction(
+  public static generateQueryEntityWhereFunction(
     query: string | undefined
   ): (entity: Entity) => boolean {
     if (query === undefined) {
       return () => true;
     }
 
-    const transformedQuery = LokiTableStoreQuery.transformEntityQuery(query);
+    const transformedQuery =
+      LokiTableStoreQueryGenerator.transformEntityQuery(query);
 
     return new Function("item", transformedQuery) as any;
   }
@@ -95,7 +99,7 @@ export default class LokiTableStoreQuery implements ITableStoreQuery {
     ]);
     const allowCustomProperties = true;
 
-    return LokiTableStoreQuery.transformQuery(
+    return LokiTableStoreQueryGenerator.transformQuery(
       query,
       systemProperties,
       allowCustomProperties
@@ -113,7 +117,7 @@ export default class LokiTableStoreQuery implements ITableStoreQuery {
     let transformedQuery = "return ( ";
     let isOp = false;
     let previousIsOp = false;
-    const tokens = LokiTableStoreQuery.tokenizeQuery(query);
+    const tokens = LokiTableStoreQueryGenerator.tokenizeQuery(query);
 
     const tokenTuples: TokenTuple[] = [];
     for (const token of tokens) {
@@ -212,7 +216,7 @@ export default class LokiTableStoreQuery implements ITableStoreQuery {
 
     // we need to validate that the filter has some valide predicate logic
     // simply we check if we have sequence identifier > op > value through the tokens
-    LokiTableStoreQuery.validatePredicateSequence(tokenTuples);
+    LokiTableStoreQueryGenerator.validatePredicateSequence(tokenTuples);
 
     return transformedQuery;
   }
@@ -322,14 +326,13 @@ export default class LokiTableStoreQuery implements ITableStoreQuery {
   ) {
     token = query.substring(tokenStart, stringPos).replace(/''/g, "'");
 
-    // EDWINTODO: FIX THIS!
     // Extract the leading type prefix, if any.
     const stringStart = token.indexOf("'");
     const typePrefix = token.substring(0, stringStart);
     const backtickString = "`" + token.substring(typePrefix.length + 1) + "`";
 
-    token = LokiTableStoreQuery.convertTypeRepresentation(
-      LokiTableStoreQuery.getCollumnType(typePrefix),
+    token = LokiTableStoreQueryGenerator.convertTypeRepresentation(
+      LokiTableStoreQueryGenerator.getCollumnType(typePrefix),
       token,
       backtickString
     );
@@ -463,19 +466,19 @@ export default class LokiTableStoreQuery implements ITableStoreQuery {
       let token: string = "";
       if (inString) {
         // Extract the token and unescape quotes
-        token = LokiTableStoreQuery.extractAndFormatToken(
+        token = LokiTableStoreQueryGenerator.extractAndFormatToken(
           token,
           query,
           tokenStart,
           stringPos
         );
       } else {
-        token = LokiTableStoreQuery.convertToken(
+        token = LokiTableStoreQueryGenerator.convertToken(
           query.substring(tokenStart, stringPos)
         );
       }
 
-      LokiTableStoreQuery.addTokenIfValid(token, tokens);
+      LokiTableStoreQueryGenerator.addTokenIfValid(token, tokens);
     }
     tokenStart = stringPos + 1;
     return [stringPos, tokenStart];
