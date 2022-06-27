@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Updated Readme by adding account key must be base64 encoded string.
+
 ## 2022.06 Version 3.18.0
 
 General:
