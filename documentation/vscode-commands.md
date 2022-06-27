@@ -1,3 +1,7 @@
+### Visual Studio Code Extension
+
+Azurite V3 can be installed from [Visual Studio Code extension market](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite).
+
 You can quickly start or close Azurite by clicking Azurite **status bar item** or following commands.
 
 Extension supports following Visual Studio Code commands:
