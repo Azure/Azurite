@@ -120,7 +120,7 @@ _Integrate Azurite with Visual Studio is under investigation._
 
 ## Supported Command Line Options
 
-### Listening Host Configuration
+### 1. Listening Host Configuration
 
 Optional. By default, Azurite V3 will listen to 127.0.0.1 as a local server.
 You can customize the listening address per your requirements.
@@ -141,7 +141,7 @@ You can customize the listening address per your requirements.
 --tableHost 0.0.0.0
 ```
 
-### Listening Port Configuration
+### 2. Listening Port Configuration
 
 Optional. By default, Azurite V3 will listen to 10000 as blob service port, and 10001 as queue service port, and 10002 as the table service port.
 You can customize the listening port per your requirements.
@@ -167,7 +167,7 @@ You can customize the listening port per your requirements.
 
 > Note: The port in use is displayed on Azurite startup.
 
-### Workspace Path Configuration
+### 3. Workspace Path Configuration
 
 Optional. Azurite V3 needs to persist metadata and binary data to local disk during execution.
 
@@ -178,7 +178,7 @@ You can provide a customized path as the workspace location, or by default, Curr
 --location c:\azurite
 ```
 
-### Access Log Configuration
+### 4. Access Log Configuration
 
 Optional. By default Azurite will display access log in console. **Disable** it by:
 
@@ -187,7 +187,7 @@ Optional. By default Azurite will display access log in console. **Disable** it 
 --silent
 ```
 
-### Debug Log Configuration
+### 5. Debug Log Configuration
 
 Optional. Debug log includes detailed information on every request and exception stack traces.
 Enable it by providing a valid local file path for the debug log destination.
@@ -197,7 +197,7 @@ Enable it by providing a valid local file path for the debug log destination.
 --debug path/debug.log
 ```
 
-### Loose Mode Configuration
+### 6. Loose Mode Configuration
 
 Optional. By default Azurite will apply strict mode. Strict mode will block unsupported request headers or parameters. **Disable** it by enabling loose mode:
 
@@ -206,7 +206,7 @@ Optional. By default Azurite will apply strict mode. Strict mode will block unsu
 --loose
 ```
 
-### Certificate Configuration (HTTPS)
+### 7. Certificate Configuration (HTTPS)
 
 Optional. By default Azurite will listen on HTTP protocol. Provide a PEM or PFX certificate file path to enable HTTPS mode:
 
@@ -226,7 +226,7 @@ When `--cert` is provided for a PFX file, must provide coresponding `--pwd`
 --pwd pfxpassword
 ```
 
-### OAuth Configuration
+### 8. OAuth Configuration
 
 Optional. By default, Azurite doesn't support OAuth and bearer token. Enable OAuth authentication for Azurite by:
 
@@ -242,7 +242,7 @@ Currently, Azurite supports following OAuth authentication levels:
 
 In basic level, `--oauth basic`, Azurite will do basic authentication, like validating incoming bearer token, checking issuer, audience, expiry. But Azurite will NOT check token signature and permission.
 
-### Skip API Version Check
+### 9. Skip API Version Check
 
 Optional. By default Azurite will check the request API version is valid API version. Skip the API version check by:
 
@@ -250,7 +250,7 @@ Optional. By default Azurite will check the request API version is valid API ver
 --skipApiVersionCheck
 ```
 
-### Disable Product Style Url
+### 10. Disable Product Style Url
 
 Optional. When using FQDN instead of IP in request Uri host, by default Azurite will parse storage account name from request Uri host. Force parsing storage account name from request Uri path by:
 
@@ -258,7 +258,7 @@ Optional. When using FQDN instead of IP in request Uri host, by default Azurite 
 --disableProductStyleUrl
 ```
 
-### Command Line Options Differences between Azurite V2
+### 11. Command Line Options Differences between Azurite V2
 
 Azurite V3 supports SharedKey, Account Shared Access Signature (SAS), Service SAS, OAuth, and Public Container Access authentications, you can use any Azure Storage SDKs or tools like Storage Explorer to connect Azurite V3 with any authentication strategy.
 
