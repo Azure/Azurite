@@ -1,4 +1,4 @@
-# Azurite V3
+# Azurite V3 ![alt text](https://github.com/maxisl/Azurite/documentation/azure_logo.png "Azure Logo")
 
 [![npm version](https://badge.fury.io/js/azurite.svg)](https://badge.fury.io/js/azurite)
 [![Build Status](https://dev.azure.com/azure/Azurite/_apis/build/status/Azure.Azurite?branchName=main)](https://dev.azure.com/azure/Azurite/_build/latest?definitionId=105&branchName=main)
