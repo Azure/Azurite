@@ -81,7 +81,7 @@ For a full list of all key changes and new features in V3, see [Features & Key C
 
 Try with any of following ways to start an Azurite V3 instance (follow the links for detailed explanations).
 
-### GitHub
+### 1. GitHub
 
 After cloning source code, execute following commands to install and start Azurite V3.
 
@@ -92,29 +92,28 @@ npm install -g
 azurite
 ```
 
-### Visual Studio Code Extension
+
+### 2. Visual Studio Code Extension
 
 Azurite V3 can be installed from [Visual Studio Code extension market](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite).
-
 You can quickly start or close Azurite by clicking Azurite **status bar item** or following commands.
 
-For all supported Visual Studio Code commands, see [Supported Commands](documentation/vscode-commands.md)
+For all supported Visual Studio Code commands, see [Supported Commands](documentation/vscode-commands.md).
 
 
-### [NPM](documentation/getting_started_npm.md)
+### 3. [NPM](documentation/getting_started_npm.md)
 
 
-### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
+### 4. [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite) 
+#### - [see the docker image guide](documentation/docker_image_guide.md)
 
-#### [see the docker image guide](documentation/docker_image_guide.md)
 
-
-### NuGet
+### 5. NuGet
 
 _Releasing Azurite V3 to NuGet is under investigation._
 
 
-### Visual Studio
+### 6. Visual Studio
 
 _Integrate Azurite with Visual Studio is under investigation._
 
