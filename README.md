@@ -164,7 +164,7 @@ Azurite V3 can be installed from [Visual Studio Code extension market](https://m
 
 You can quickly start or close Azurite by clicking Azurite **status bar item** or following commands.
 
-For all supported Visual Studio Code commands, see [Supported Commands]Azurite/documentation/vscode-commands.md
+For all supported Visual Studio Code commands, see [Supported Commands](documentation/vscode-commands.md)
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
