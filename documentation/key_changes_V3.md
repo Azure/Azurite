@@ -1,20 +1,20 @@
 ## Features & Key Changes in Azurite V3
 
-### 1. Blob storage features align with Azure Storage API version 2021-08-06 (Refer to support matrix section below)
+### Blob storage features align with Azure Storage API version 2021-08-06 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/Public Access Authentications/OAuth
   - Get/Set Blob Service Properties
   - Create/List/Delete Containers
   - Create/Read/List/Update/Delete Block Blobs
   - Create/Read/List/Update/Delete Page Blobs
   
-### 2. Queue storage features align with Azure Storage API version 2021-08-06 (Refer to support matrix section below)
+### Queue storage features align with Azure Storage API version 2021-08-06 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/OAuth
   - Get/Set Queue Service Properties
   - Preflight Request
   - Create/List/Delete Queues
   - Put/Get/Peek/Updata/Deleta/Clear Messages
   
-### 3. Table storage features align with Azure Storage API version 2021-08-06 (Refer to support matrix section below)
+### Table storage features align with Azure Storage API version 2021-08-06 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/OAuth
   - Create/List/Delete Tables
   - Insert/Update/Query/Delete Table Entities
