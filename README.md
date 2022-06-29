@@ -12,7 +12,6 @@
 | 3.18.0                                                             | 2021-08-06                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
 | [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table          | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
-- [Azurite V3](#azurite-v3)
   - [Introduction](#introduction)
   - [Features & Key Changes in Azurite V3](#features--key-changes-in-azurite-v3)
   - [Getting Started](#getting-started)
