@@ -105,9 +105,9 @@ You can customize the listening address per your requirements.
 --tableHost 0.0.0.0
 ```
 
-### 2. Listening Port Configuration
+### 2. Listening Port Configuration [Optional]
 
-Optional. By default, Azurite V3 will listen to 10000 as blob service port, and 10001 as queue service port, and 10002 as the table service port.
+By default, Azurite V3 will listen to 10000 as blob service port, and 10001 as queue service port, and 10002 as the table service port.
 You can customize the listening port per your requirements.
 
 > Warning: After using a customized port, you need to update connection string or configurations correspondingly in your Storage Tools or SDKs.
@@ -131,9 +131,9 @@ You can customize the listening port per your requirements.
 
 > Note: The port in use is displayed on Azurite startup.
 
-### 3. Workspace Path Configuration
+### 3. Workspace Path Configuration [Optional]
 
-Optional. Azurite V3 needs to persist metadata and binary data to local disk during execution.
+Azurite V3 needs to persist metadata and binary data to local disk during execution.
 
 You can provide a customized path as the workspace location, or by default, Current process working directory will be used.
 
@@ -142,18 +142,18 @@ You can provide a customized path as the workspace location, or by default, Curr
 --location c:\azurite
 ```
 
-### 4. Access Log Configuration
+### 4. Access Log Configuration [Optional]
 
-Optional. By default Azurite will display access log in console. **Disable** it by:
+By default Azurite will display access log in console. **Disable** it by:
 
 ```cmd
 -s
 --silent
 ```
 
-### 5. Debug Log Configuration
+### 5. Debug Log Configuration [Optional]
 
-Optional. Debug log includes detailed information on every request and exception stack traces.
+Debug log includes detailed information on every request and exception stack traces.
 Enable it by providing a valid local file path for the debug log destination.
 
 ```cmd
@@ -161,18 +161,18 @@ Enable it by providing a valid local file path for the debug log destination.
 --debug path/debug.log
 ```
 
-### 6. Loose Mode Configuration
+### 6. Loose Mode Configuration [Optional]
 
-Optional. By default Azurite will apply strict mode. Strict mode will block unsupported request headers or parameters. **Disable** it by enabling loose mode:
+By default Azurite will apply strict mode. Strict mode will block unsupported request headers or parameters. **Disable** it by enabling loose mode:
 
 ```cmd
 -L
 --loose
 ```
 
-### 7. Certificate Configuration (HTTPS)
+### 7. Certificate Configuration (HTTPS) [Optional]
 
-Optional. By default Azurite will listen on HTTP protocol. Provide a PEM or PFX certificate file path to enable HTTPS mode:
+By default Azurite will listen on HTTP protocol. Provide a PEM or PFX certificate file path to enable HTTPS mode:
 
 ```cmd
 --cert path/server.pem
@@ -190,9 +190,9 @@ When `--cert` is provided for a PFX file, must provide coresponding `--pwd`
 --pwd pfxpassword
 ```
 
-### 8. OAuth Configuration
+### 8. OAuth Configuration [Optional]
 
-Optional. By default, Azurite doesn't support OAuth and bearer token. Enable OAuth authentication for Azurite by:
+By default, Azurite doesn't support OAuth and bearer token. Enable OAuth authentication for Azurite by:
 
 ```
 --oauth basic
@@ -206,17 +206,17 @@ Currently, Azurite supports following OAuth authentication levels:
 
 In basic level, `--oauth basic`, Azurite will do basic authentication, like validating incoming bearer token, checking issuer, audience, expiry. But Azurite will NOT check token signature and permission.
 
-### 9. Skip API Version Check
+### 9. Skip API Version Check [Optional]
 
-Optional. By default Azurite will check the request API version is valid API version. Skip the API version check by:
+By default Azurite will check the request API version is valid API version. Skip the API version check by:
 
 ```cmd
 --skipApiVersionCheck
 ```
 
-### 10. Disable Product Style Url
+### 10. Disable Product Style Url [Optional]
 
-Optional. When using FQDN instead of IP in request Uri host, by default Azurite will parse storage account name from request Uri host. Force parsing storage account name from request Uri path by:
+When using FQDN instead of IP in request Uri host, by default Azurite will parse storage account name from request Uri host. Force parsing storage account name from request Uri path by:
 
 ```cmd
 --disableProductStyleUrl
