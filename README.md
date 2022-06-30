@@ -24,7 +24,7 @@
 
 ## Introduction
 
-Azurite is an open source Azure Storage API compatible server (emulator) based on Node.js. Azurite provides cross platform experiences for customers wanting to try Azure Storage easily in a local environment. Azurite can simulate most of the commands supported by Azure Storage with minimal dependencies.
+Azurite is an open source Azure Storage API compatible server (emulator) based on Node.js. It provides cross platform experiences for customers wanting to try Azure Storage easily in a local environment. Azurite can simulate most of the commands supported by Azure Storage with minimal dependencies.
 
 Azurite V2 is manually created with pure JavaScript, popular and active as an open source project. However, Azure Storage APIs are growing and keep being updated, therefore manually keeping Azurite up to date is not efficient and prone to bugs. JavaScript also lacks strong type validation which prevents easy collaboration.
 
@@ -167,8 +167,7 @@ The detailed work items are also tracked in GitHub repository projects and issue
 
 Any contribution and suggestions for Azurite V3 is welcome, please goto [CONTRIBUTION.md](https://github.com/Azure/Azurite/blob/main/CONTRIBUTION.md) for detailed contribution guidelines. Alternatively, you can open GitHub issues voting for any missing features in Azurite V3.
 
-Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
+Most contributions require you to agree to a Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
 the rights to use your contribution. For details, visit <https://cla.microsoft.com.>
 
 When you submit a pull request, a CLA-bot will automatically determine whether you need to provide
