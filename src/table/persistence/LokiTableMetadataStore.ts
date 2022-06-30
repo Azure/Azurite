@@ -418,6 +418,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           batchId
         );
       } else {
+        this.failPatchOnMissingEntity(context);
         // Insert
         return this.insertTableEntity(context, table, account, entity, batchId);
       }
@@ -431,6 +432,15 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         ifMatch,
         batchId
       );
+    }
+  }
+
+  private failPatchOnMissingEntity(context: Context) {
+    if (
+      context.context.request.req !== undefined &&
+      context.context.request.req.method === "PATCH"
+    ) {
+      throw StorageErrorFactory.ResourceNotFound(context);
     }
   }
 
@@ -523,6 +533,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
             return true;
           }
           return false;
+        }
+        if (decodedNextPartitionKey !== undefined) {
+          if (data.PartitionKey < decodedNextPartitionKey) {
+            return false;
+          }
         }
         return true;
       })

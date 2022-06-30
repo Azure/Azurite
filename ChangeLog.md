@@ -4,11 +4,24 @@
 
 ## Upcoming Release
 
+## 2022.06 Version 3.18.0
+
+General:
+
+- Bump up service API version to 2021-08-06
+- Modified the error messge for invalid API version to make it more actionable.
+
+Blob:
+
+- Fixed issue that startCopyFromURL and copyFromURL API not fail, when request container if-none-match="\*" and dest blob already exist.
+
 Table:
 
 - Reject table batch request bodies exceeding 4MB.
 - Fix binary table property validation to be 64K bytes not 32K characters.
 - Does not error when table created is a substring of another table.
+- Correctly responds with status 404 on patch with non-existant entity.
+- Fix pagination when no rowkey in continuation token
 
 ## 2022.04 Version 3.17.1
 

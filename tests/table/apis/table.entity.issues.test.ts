@@ -28,7 +28,7 @@ configLogger(false);
 // Azure Storage Connection String (using SAS or Key).
 const testLocalAzuriteInstance = true;
 
-describe("table Entity APIs test", () => {
+describe("table Entity APIs test : Issues", () => {
   let server: TableServer;
   const tableName: string = getUniqueName("datatables");
 
@@ -64,19 +64,22 @@ describe("table Entity APIs test", () => {
 
       const entity = {
         partitionKey: partitionKey,
-        rowKey: "rk",
-      }
+        rowKey: "rk"
+      };
       const response = await tableClient.createEntity(entity);
 
       try {
-        await tableClient.updateEntity(entity, 'Replace', { etag })
+        await tableClient.updateEntity(entity, "Replace", { etag });
         assert.fail();
       } catch (error: any) {
         assert.strictEqual(error.statusCode, 412);
       }
 
-      const existing = await tableClient.getEntity(entity.partitionKey, entity.rowKey)
-      assert.strictEqual(response.etag, existing.etag)
+      const existing = await tableClient.getEntity(
+        entity.partitionKey,
+        entity.rowKey
+      );
+      assert.strictEqual(response.etag, existing.etag);
 
       await tableClient.deleteTable();
     });
@@ -100,19 +103,22 @@ describe("table Entity APIs test", () => {
 
       const entity = {
         partitionKey: partitionKey,
-        rowKey: "rk",
-      }
+        rowKey: "rk"
+      };
       const response = await tableClient.createEntity(entity);
 
       try {
-        await tableClient.updateEntity(entity, 'Replace', { etag })
+        await tableClient.updateEntity(entity, "Replace", { etag });
         assert.fail();
       } catch (error: any) {
         assert.strictEqual(error.statusCode, 400);
       }
 
-      const existing = await tableClient.getEntity(entity.partitionKey, entity.rowKey)
-      assert.strictEqual(response.etag, existing.etag)
+      const existing = await tableClient.getEntity(
+        entity.partitionKey,
+        entity.rowKey
+      );
+      assert.strictEqual(response.etag, existing.etag);
 
       await tableClient.deleteTable();
     });
@@ -151,12 +157,46 @@ describe("table Entity APIs test", () => {
       assert.notStrictEqual(result.etag, undefined);
     }
 
-    const maxPageSize = 250; // this should work with a page size of 1000, but fails during response serialization on my machine
+    const maxPageSize = 50; // this should work with a page size of 1000, but fails during response serialization on my machine
 
     const entities = tableClient.listEntities<TableEntity<{ number: number }>>({
       queryOptions: {
         filter: odata`PartitionKey eq ${partitionKeyForQueryTest1}`
       }
+    });
+
+    let all: TableEntity<{ number: number }>[] = [];
+    for await (const entity of entities.byPage({
+      maxPageSize
+    })) {
+      all = [...all, ...entity];
+    }
+    assert.strictEqual(all.length, totalItems);
+
+    await tableClient.deleteTable();
+  });
+
+  it("should return 101 entities from a paged query at 20 entities per page and each different partition, @loki", async () => {
+    const totalItems = 101;
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      tableName
+    );
+    await tableClient.createTable();
+
+    // creates entities individually
+    for (let i = 0; i < totalItems; i++) {
+      const result = await tableClient.createEntity({
+        partitionKey: createUniquePartitionKey(`A${i}_`),
+        rowKey: "",
+        number: i
+      });
+      assert.notStrictEqual(result.etag, undefined);
+    }
+
+    const maxPageSize = 20;
+    const entities = tableClient.listEntities<TableEntity<{ number: number }>>({
+      queryOptions: {}
     });
 
     let all: TableEntity<{ number: number }>[] = [];
