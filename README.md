@@ -88,7 +88,7 @@ Find a comprehensive list of all [command line options here](/documentation/comm
 
 ## Supported Environment Variable Options
 
-Find a comprehensive list of all [supported environment variable options here](/documentation/commandline_options.md), which are supported for advanced customization when starting Azurite from npm command line `azurite` or docker image.
+Find a comprehensive list of all [supported environment variable options here](/documentation/environment_variable_options.md), which are supported for advanced customization when starting Azurite from npm command line `azurite` or docker image.
 
 
 ## HTTPS Setup
@@ -102,30 +102,9 @@ Azurite natively supports HTTPS with self-signed certificates via the `--cert` a
 
 ## Usage with Azure Storage SDKs or Tools
 
-### Default Storage Account
+### Default Storage Account & Customized Storage Accounts & Keys
 
-Azurite V3 provides support for a default storage account as General Storage Account V2 and associated features.
-
-- Account name: `devstoreaccount1`
-- Account key: `Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==`
-
-> Note. Besides SharedKey authentication, Azurite V3 supports account, OAuth, and service SAS authentication. Anonymous access is also available when container is set to allow public access.
-
-### Customized Storage Accounts & Keys
-
-As mentioned by above section. Azurite V3 allows customizing storage account names and keys by providing environment variable `AZURITE_ACCOUNTS` with format `account1:key1[:key2];account2:key1[:key2];...`.
-
-For example, customize one storage account which has only one key:
-
-```cmd
-set AZURITE_ACCOUNTS="account1:key1"
-```
-
-Or customize multi storage accounts and each has 2 keys:
-
-```cmd
-set AZURITE_ACCOUNTS="account1:key1:key2;account2:key1:key2"
-```
+See the [dedicated documentation](/documenation/default_customized_storage_account.md) for information on the default storage account and customization of storage account names and keys.
 
 ### Connection Strings
 
@@ -173,43 +152,11 @@ DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02
 
 ### Azure SDKs
 
-To use Azurite with the [Azure SDKs](https://aka.ms/azsdk), you can use OAuth with HTTPS options:
-
-`azurite --oauth basic --cert certname.pem --key certname-key.pem`
-
-#### Azure Blob Storage
-
-You can then instantiate BlobContainerClient, BlobServiceClient, or BlobClient.
-
-```csharp
-// With container url and DefaultAzureCredential
-var client = new BlobContainerClient(new Uri("https://127.0.0.1:10000/devstoreaccount1/container-name"), new DefaultAzureCredential());
-
-// With connection string
-var client = new BlobContainerClient("DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://127.0.0.1:10000/devstoreaccount1;QueueEndpoint=https://127.0.0.1:10001/devstoreaccount1;", "container-name");
-
-// With account name and key
-var client = new BlobContainerClient(new Uri("https://127.0.0.1:10000/devstoreaccount1/container-name"), new StorageSharedKeyCredential("devstoreaccount1", "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="));
-```
-
-#### Azure Queue Storage
-
-You can also instantiate QueueClient or QueueServiceClient.
-
-```csharp
-// With queue url and DefaultAzureCredential
-var client = new QueueClient(new Uri("https://127.0.0.1:10001/devstoreaccount1/queue-name"), new DefaultAzureCredential());
-
-// With connection string
-var client = new QueueClient("DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://127.0.0.1:10000/devstoreaccount1;QueueEndpoint=https://127.0.0.1:10001/devstoreaccount1;", "queue-name");
-
-// With account name and key
-var client = new QueueClient(new Uri("https://127.0.0.1:10001/devstoreaccount1/queue-name"), new StorageSharedKeyCredential("devstoreaccount1", "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="));
-```
+See the [SDK Documentation](documentation/sdk_guide.md), for details on how to use Azurite with the Azure SDKs.
 
 ### Storage Explorer
 
-See the [Documentation](documentation/storage_explorer.md), for details on how to connect to Storage Explorer with Azurite HTTP or Azurite HTTPS (Connection String / Importing Certificates).
+See the [Storage Explorer Documentation](documentation/storage_explorer.md), for details on how to connect to Storage Explorer with Azurite HTTP or Azurite HTTPS (Connection String / Importing Certificates).
 
 ## Workspace Structure
 
