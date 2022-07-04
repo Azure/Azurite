@@ -134,11 +134,13 @@ Following files or folders may be created when initializing Azurite in selected 
 
 ## Differences between Azurite and Azure Storage
 
-See the [dedicated documentation](/documenation/differences_azurite_azure-storage.md) for an overview of the differences between Azurite and Azure Storage.
+See the [dedicated overview](/documenation/differences_azurite_azure-storage.md) of the differences between Azurite and Azure Storage.
 
 ## Differences between Azurite V3 and Azurite V2
 
-Both Azurite V3 and Azurite V2 aim to provide a convenient emulation for customers to quickly try out Azure Storage services locally. There are lots of differences between Azurite V3 and legacy Azurite V2. For more information you can visit [Differences between Azurite V3 and Azurite V2](/documenation/differences_azurite_v3_v2.md).
+Both Azurite V3 and Azurite V2 aim to provide a convenient emulation for customers to quickly try out Azure Storage services locally. There are lots of differences between Azurite V3 and legacy Azurite V2. 
+
+For more information you can visit [Differences between Azurite V3 and Azurite V2](/documenation/differences_azurite_v3_v2.md).
 
 ## TypeScript Server Code Generator
 
