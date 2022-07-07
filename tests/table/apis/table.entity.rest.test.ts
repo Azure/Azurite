@@ -5,6 +5,7 @@
 // special care is needed to replace etags and folders when used
 
 import * as assert from "assert";
+import { AxiosResponse } from "axios";
 import { configLogger } from "../../../src/common/Logger";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
@@ -12,8 +13,11 @@ import { getUniqueName } from "../../testutils";
 import { createUniquePartitionKey } from "../utils/table.entity.test.utils";
 import {
   getToAzurite,
+  mergeToAzurite,
+  // mergeToAzurite,
   patchToAzurite,
-  postToAzurite
+  postToAzurite,
+  putToAzurite
 } from "../utils/table.entity.tests.rest.submitter";
 
 // Set true to enable debug log
@@ -559,4 +563,287 @@ describe("table Entity APIs REST tests", () => {
       );
     }
   });
+
+  /**
+   * Check that ifmatch * update works...
+   * if etag == *, then tableClient.updateEntity is calling "Merge" via PATCH with merge option.
+   * Same if etag is omitted. Patch usage is not documented.
+   * if Replace option, calling "Update" in the table handler, which is caling insertOrUpdate in metadata
+   *
+   * Test If-Match cases
+   * https://docs.microsoft.com/en-us/rest/api/storageservices/update-entity2
+   * Update Entity: If-Match Required, via PUT
+   * https://docs.microsoft.com/en-us/rest/api/storageservices/insert-or-replace-entity
+   * Insert or Replace: no If-Match, via PUT
+   * https://docs.microsoft.com/en-us/rest/api/storageservices/merge-entity
+   * Merge-Entity: If-Match Required, via MERGE
+   * https://docs.microsoft.com/en-us/rest/api/storageservices/insert-or-merge-entity
+   * Insert or Merge: no  If-Match, via MERGE
+   */
+  it("Should check different merge,update and replace scenarios using if-match", async () => {
+    const mergeTable = getUniqueName("ifmatch");
+    const body = JSON.stringify({
+      TableName: mergeTable
+    });
+    const createTableHeaders = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=nometadata"
+    };
+    const createTableResult = await postToAzurite(
+      "Tables",
+      body,
+      createTableHeaders
+    );
+    assert.strictEqual(createTableResult.status, 201);
+
+    let oldEtag = "";
+    let newEtag = "";
+
+    const testHeaders = {
+      "Content-Type": "application/json",
+      version: "",
+      "x-ms-client-request-id": "1",
+      DataServiceVersion: "3"
+    };
+    // First create entity for updating PUT without etag
+    try {
+      const firstPutRequestResult = await putToAzurite(
+        `${mergeTable}(PartitionKey='9b0afb2e-3be7-4b95-9ce1-45e9a410cc19',RowKey='a')`,
+        '{"PartitionKey":"9b0afb2e-3be7-4b95-9ce1-45e9a410cc19","RowKey":"a", "stringValue":"blank"}',
+        testHeaders
+      );
+      assert.strictEqual(firstPutRequestResult.status, 204);
+      oldEtag = firstPutRequestResult.headers.etag;
+    } catch (err: any) {
+      assert.notStrictEqual(
+        err.response,
+        undefined,
+        "Axios error response state invalid"
+      );
+      assert.strictEqual(
+        err.response.status,
+        404,
+        "We did not get the expected failure."
+      );
+    }
+
+    const testCases = [
+      {
+        name: "case 1: Update Entity : PUT with * If-Match.",
+        body: "case1",
+        useIfMatch: true,
+        ifMatch: "*",
+        restFunction: putToAzurite,
+        expectedStatus: 204,
+        expectSuccess: true,
+        errorMessage: "We should not fail PUT with with * If-Match"
+      },
+      {
+        name: "case 2 : Update Entity : PUT with old etag in If-Match.",
+        body: "case2",
+        useIfMatch: true,
+        ifMatch: oldEtag,
+        restFunction: putToAzurite,
+        expectedStatus: 412,
+        expectSuccess: false,
+        errorMessage: "We should not succeed Update PUT using the oldEtag."
+      },
+      {
+        name: "case 3 : Update Entity : PUT with most recent etag in If-Match.",
+        body: "case3",
+        useIfMatch: true,
+        ifMatch: "new",
+        restFunction: putToAzurite,
+        expectedStatus: 204,
+        expectSuccess: true,
+        errorMessage: `We should not fail with the new etag.`
+      },
+      {
+        name: "case 4 : Insert or Replace Entity: PUT without If-Match.",
+        body: "case4",
+        useIfMatch: false,
+        ifMatch: "",
+        restFunction: putToAzurite,
+        expectedStatus: 204,
+        expectSuccess: true,
+        errorMessage: "We did expected PUT without if-match to succeed."
+      },
+      {
+        name: "case 5 : Update Entity : PATCH with * If-Match",
+        body: "case5",
+        useIfMatch: true,
+        ifMatch: "*",
+        restFunction: patchToAzurite,
+        expectedStatus: 204,
+        expectSuccess: true,
+        errorMessage: "We did expected PATCH with * if-match to fail."
+      },
+      {
+        name: "case 6 : Update Entity : PATCH with old etag in If-Match",
+        body: "case6",
+        useIfMatch: true,
+        ifMatch: oldEtag,
+        restFunction: patchToAzurite,
+        expectedStatus: 412,
+        expectSuccess: false,
+        errorMessage:
+          "We did not get the expected failure patching with old etag."
+      },
+      {
+        name: "case 7 : Update Entity : PATCH with new etag in If-Match",
+        body: "case7",
+        useIfMatch: true,
+        ifMatch: "new",
+        restFunction: patchToAzurite,
+        expectedStatus: 204,
+        expectSuccess: true,
+        errorMessage:
+          "We did not get the expected success patching with most recent etag."
+      },
+      {
+        name: "case 8 : Insert or Replace Entity : PATCH with no If-Match",
+        body: "case8",
+        useIfMatch: false,
+        ifMatch: "",
+        restFunction: patchToAzurite,
+        expectedStatus: 204,
+        expectSuccess: true,
+        errorMessage:
+          "We did not get the expected success patching without if-match."
+      },
+      {
+        name: "case 9 : Merge Entity : MERGE with If-Match as *",
+        body: "case9",
+        useIfMatch: true,
+        ifMatch: "*",
+        restFunction: mergeToAzurite,
+        expectedStatus: 204,
+        expectSuccess: true,
+        errorMessage:
+          "We did not get the expected success merging with * if-match."
+      },
+      {
+        name: "case 10 : Merge Entity : MERGE with If-Match as old etag",
+        body: "case10",
+        useIfMatch: true,
+        ifMatch: oldEtag,
+        restFunction: mergeToAzurite,
+        expectedStatus: 412,
+        expectSuccess: false,
+        errorMessage:
+          "We did not get the expected failure merging with old if-match."
+      },
+      {
+        name: "case 11 : Merge Entity : MERGE with If-Match as most recent etag",
+        body: "case11",
+        useIfMatch: true,
+        ifMatch: "new",
+        restFunction: mergeToAzurite,
+        expectedStatus: 204,
+        expectSuccess: true,
+        errorMessage:
+          "We did not get the expected success merging with most recent etag in if-match."
+      },
+      {
+        name: "case 12 : Insert or Merge Entity : MERGE with no If-Match",
+        body: "case12",
+        useIfMatch: false,
+        ifMatch: "",
+        restFunction: mergeToAzurite,
+        expectedStatus: 204,
+        expectSuccess: true,
+        errorMessage:
+          "We did not get the expected success merging with no if-match."
+      }
+    ];
+
+    for (const testCase of testCases) {
+      try {
+        const headers = createHeadersForIfMatchTest(
+          testCase,
+          getHeadersForTest(),
+          newEtag
+        );
+        const testCaseRequestResult = await testCase.restFunction(
+          `${mergeTable}(PartitionKey='9b0afb2e-3be7-4b95-9ce1-45e9a410cc19',RowKey='a')`,
+          `{"PartitionKey":"9b0afb2e-3be7-4b95-9ce1-45e9a410cc19","RowKey":"a","stringValue":"${testCase.body}"}`,
+          headers
+        );
+        assert.strictEqual(
+          testCaseRequestResult.status,
+          testCase.expectedStatus,
+          testCase.errorMessage
+        );
+        if (testCase.expectSuccess) {
+          newEtag = testCaseRequestResult.headers.etag;
+        }
+      } catch (err: any) {
+        assert.notStrictEqual(
+          err.response,
+          undefined,
+          `Axios error ${err} response state invalid for ${testCase.name}`
+        );
+        assert.strictEqual(
+          err.response.status,
+          testCase.expectedStatus,
+          testCase.errorMessage
+        );
+        assert.strictEqual(
+          false,
+          testCase.expectSuccess,
+          testCase.errorMessage
+        );
+      }
+    }
+  });
 });
+
+/**
+ * Creates the headers for our test cases.
+ *
+ * @param {IfMatchTestCase} testCase
+ * @param {TestHeaders} headers
+ * @param {string} newEtag
+ * @param {boolean} useNewEtag
+ * @return {*}  {*}
+ */
+function createHeadersForIfMatchTest(
+  testCase: IfMatchTestCase,
+  headers: TestHeaders,
+  newEtag: string
+): any {
+  testCase.ifMatch = testCase.ifMatch === "new" ? newEtag : testCase.ifMatch;
+  if (testCase.useIfMatch) {
+    headers["If-Match"] = testCase.ifMatch;
+  }
+  return headers;
+}
+
+function getHeadersForTest(): TestHeaders {
+  const testHeaders: TestHeaders = {
+    "Content-Type": "application/json",
+    version: "",
+    "x-ms-client-request-id": "1",
+    DataServiceVersion: "3"
+  };
+  return testHeaders;
+}
+
+interface TestHeaders {
+  [key: string]: any;
+}
+
+interface IfMatchTestCase {
+  name: string;
+  body: string;
+  useIfMatch: boolean;
+  ifMatch: string;
+  restFunction: (
+    path: string,
+    body: string,
+    headers: any
+  ) => Promise<AxiosResponse<any, any>>;
+  expectedStatus: number;
+  expectSuccess: boolean;
+  errorMessage: string;
+}
