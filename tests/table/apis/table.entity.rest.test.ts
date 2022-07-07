@@ -580,7 +580,7 @@ describe("table Entity APIs REST tests", () => {
    * https://docs.microsoft.com/en-us/rest/api/storageservices/insert-or-merge-entity
    * Insert or Merge: no  If-Match, via MERGE
    */
-  it("Should check different merge,update and replace scenarios using if-match", async () => {
+  it("Should check different merge, update and replace scenarios on existing entity using if-match", async () => {
     const mergeTable = getUniqueName("ifmatch");
     const body = JSON.stringify({
       TableName: mergeTable
