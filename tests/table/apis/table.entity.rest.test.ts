@@ -761,7 +761,7 @@ describe("table Entity APIs REST tests", () => {
       try {
         const headers = createHeadersForIfMatchTest(
           testCase,
-          getHeadersForTest(),
+          getHeadersForIfMatchTest(),
           newEtag
         );
         const testCaseRequestResult = await testCase.restFunction(
@@ -819,7 +819,7 @@ function createHeadersForIfMatchTest(
   return headers;
 }
 
-function getHeadersForTest(): TestHeaders {
+function getHeadersForIfMatchTest(): TestHeaders {
   const testHeaders: TestHeaders = {
     "Content-Type": "application/json",
     version: "",
