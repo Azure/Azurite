@@ -113,3 +113,60 @@ export async function patchToAzurite(
   const result = await axios.patch(url, body, requestConfig);
   return result;
 }
+
+/**
+ * Sends raw put request to Azurite
+ *
+ * @export
+ * @param {string} path
+ * @param {string} body
+ * @param {*} headers
+ * @return {*}  {Promise<AxiosResponse<any, any>>}
+ */
+export async function putToAzurite(
+  path: string,
+  body: string,
+  headers: any
+): Promise<AxiosResponse<any, any>> {
+  const url = `${TableEntityTestConfig.protocol}://${
+    TableEntityTestConfig.host
+  }:${TableEntityTestConfig.port}/${
+    TableEntityTestConfig.accountName
+  }/${path}?${generateSas()}`;
+  try {
+    const requestConfig = axiosRequestConfig(url, path, headers);
+    const result = await axios.put(url, body, requestConfig);
+    return result;
+  } catch (err: any) {
+    throw err;
+  }
+}
+
+/**
+ * Sends raw merge request to Azurite
+ *
+ * @export
+ * @param {string} path
+ * @param {string} body
+ * @param {*} headers
+ * @return {*}  {Promise<AxiosResponse<any, any>>}
+ */
+export async function mergeToAzurite(
+  path: string,
+  body: string,
+  headers: any
+): Promise<AxiosResponse<any, any>> {
+  const url = `${TableEntityTestConfig.protocol}://${
+    TableEntityTestConfig.host
+  }:${TableEntityTestConfig.port}/${
+    TableEntityTestConfig.accountName
+  }/${path}?${generateSas()}`;
+  const requestConfig = axiosRequestConfig(url, path, headers);
+  const result = await axios({
+    method: "merge",
+    url,
+    data: body,
+    headers: requestConfig.headers
+  });
+  return result;
+}

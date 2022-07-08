@@ -4,6 +4,12 @@
 
 ## Upcoming Release
 
+Table:
+
+- Correctly responds with status 202 on merge with non-existent entity.
+- Properly differentiate between upsert and update in batch merge and replace.
+- Added additional tests via raw REST tests.
+
 ## 2022.06 Version 3.18.0
 
 General:
