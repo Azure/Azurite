@@ -451,7 +451,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
       );
 
       // this upserts, so we expect success
-      sasService.replaceEntity(
+      sasService.insertOrReplaceEntity(
         tableName,
         { PartitionKey: "part1", RowKey: "row4", myValue: "newValue" },
         (updateError, updateResult, updateResponse) => {
@@ -466,7 +466,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
               updateResponse.statusCode,
               204,
               "We did not get the expected status code : " +
-                updateResponse.statusCode
+              updateResponse.statusCode
             );
           }
           done();
