@@ -21,7 +21,7 @@ configLogger(false);
 describe("table name validation tests", () => {
   const host = "127.0.0.1";
   const port = 11002;
-  const metadataDbPath = "__tableTestsStorage__";
+  const metadataDbPath = getUniqueName("__tableTestsStorage__");
   const enableDebugLog: boolean = true;
   const debugLogPath: string = "g:/debug.log";
   const config = new TableConfiguration(

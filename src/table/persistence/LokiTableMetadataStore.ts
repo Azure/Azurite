@@ -166,7 +166,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     const tableLower = table.toLocaleLowerCase();
     const doc = coll.findOne({
       account,
-      table: { $regex: ["^" + tableLower + "$", "i"] }
+      table: { $regex: [`^${tableLower}$`, "i"] }
     });
     if (doc) {
       coll.remove(doc);
@@ -202,7 +202,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     const tableLower = table.toLocaleLowerCase();
     const persistedTable = coll.findOne({
       account,
-      table: { $regex: [tableLower, "i"] }
+      table: { $regex: [`^${tableLower}$`, "i"] }
     });
 
     if (!persistedTable) {
@@ -229,7 +229,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   ): Promise<Table> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
     // Azure Storage Service is case insensitive
-    const doc = coll.findOne({ account, table: { $regex: [table, "i"] } });
+    const doc = coll.findOne({
+      account,
+      table: { $regex: [`^${table}$`, "i"] }
+    });
     if (!doc) {
       throw StorageErrorFactory.getTableNotFound(context);
     }
