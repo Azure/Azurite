@@ -170,3 +170,32 @@ export async function mergeToAzurite(
   });
   return result;
 }
+
+/**
+ * Sends raw delete request to Azurite
+ *
+ * @export
+ * @param {string} path
+ * @param {string} body
+ * @param {*} headers
+ * @return {*}  {Promise<AxiosResponse<any, any>>}
+ */
+export async function deleteToAzurite(
+  path: string,
+  body: string,
+  headers: any
+): Promise<AxiosResponse<any, any>> {
+  const url = `${TableEntityTestConfig.protocol}://${
+    TableEntityTestConfig.host
+  }:${TableEntityTestConfig.port}/${
+    TableEntityTestConfig.accountName
+  }/${path}?${generateSas()}`;
+  const requestConfig = axiosRequestConfig(url, path, headers);
+  const result = await axios({
+    method: "delete",
+    url,
+    data: body,
+    headers: requestConfig.headers
+  });
+  return result;
+}

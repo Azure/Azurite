@@ -166,7 +166,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     const tableLower = table.toLocaleLowerCase();
     const doc = coll.findOne({
       account,
-      table: { $regex: [tableLower, "i"] }
+      table: { $regex: ["^" + tableLower + "$", "i"] }
     });
     if (doc) {
       coll.remove(doc);

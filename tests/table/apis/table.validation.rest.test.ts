@@ -9,7 +9,11 @@ import { configLogger } from "../../../src/common/Logger";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
 import { getUniqueName } from "../../testutils";
-import { postToAzurite } from "../utils/table.entity.tests.rest.submitter";
+import {
+  deleteToAzurite,
+  getToAzurite,
+  postToAzurite
+} from "../utils/table.entity.tests.rest.submitter";
 
 // Set true to enable debug log
 configLogger(false);
@@ -226,6 +230,125 @@ describe("table name validation tests", () => {
     });
     try {
       await postToAzurite("Tables", body3, createTableHeaders);
+    } catch (err: any) {
+      assert.strictEqual(
+        err,
+        undefined,
+        `unexpected exception with start trimmed! : ${err}`
+      );
+    }
+  });
+
+  it.only("should delete a table with a name which is a substring of an existing table, @loki", async () => {
+    tableName = getUniqueName("table");
+    const shortName = tableName.substring(0, 6);
+    const basicBody = JSON.stringify({
+      TableName: shortName
+    });
+    const createTableHeaders = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=nometadata"
+    };
+    // create table 1
+    try {
+      await postToAzurite("Tables", basicBody, createTableHeaders);
+    } catch (err: any) {
+      assert.strictEqual(
+        err.response.status,
+        201,
+        `unexpected status code creating first table : ${err.response.status}`
+      );
+    }
+    const body = JSON.stringify({
+      TableName: tableName
+    });
+    // create table 2
+    try {
+      await postToAzurite("Tables", body, createTableHeaders);
+    } catch (err: any) {
+      assert.strictEqual(
+        err.response.status,
+        201,
+        `unexpected status code : ${err.response.status}`
+      );
+    }
+    const tableName2 = tableName.substring(0, tableName.length - 4);
+    const body2 = JSON.stringify({
+      TableName: tableName2
+    });
+    // create table 3
+    try {
+      await postToAzurite("Tables", body2, createTableHeaders);
+    } catch (err: any) {
+      assert.strictEqual(
+        err,
+        undefined,
+        `unexpected exception with end trimmed! : ${err}`
+      );
+    }
+    const tableName3 = tableName.substring(4);
+    const body3 = JSON.stringify({
+      TableName: tableName3
+    });
+    // create table 4
+    try {
+      await postToAzurite("Tables", body3, createTableHeaders);
+    } catch (err: any) {
+      assert.strictEqual(
+        err,
+        undefined,
+        `unexpected exception with start trimmed! : ${err}`
+      );
+    }
+    // now list tables after deletion...
+    try {
+      const listTableResult1 = await getToAzurite("Tables", createTableHeaders);
+      assert.strictEqual(
+        listTableResult1.data.value.length,
+        4,
+        "Did not have the expected number of tables before deletion"
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err,
+        undefined,
+        `unexpected exception with start trimmed! : ${err}`
+      );
+    }
+    // now delete "table"
+    try {
+      const deleteResult = await deleteToAzurite(
+        `Tables('${shortName}')`,
+        "",
+        createTableHeaders
+      );
+      assert.strictEqual(
+        deleteResult.status,
+        204,
+        "Delete was not successful."
+      );
+    } catch (err: any) {
+      assert.strictEqual(
+        err,
+        undefined,
+        `unexpected exception with start trimmed! : ${err}`
+      );
+    }
+    // now list tables after deletion...
+    try {
+      const listTableResult2 = await getToAzurite("Tables", createTableHeaders);
+      assert.strictEqual(
+        listTableResult2.data.value.length,
+        3,
+        "Did not have the expected number of tables after deletion"
+      );
+      for (const table of listTableResult2.data.value) {
+        assert.notStrictEqual(
+          table.TableName,
+          shortName,
+          "We still list the table we should have deleted."
+        );
+      }
     } catch (err: any) {
       assert.strictEqual(
         err,
