@@ -239,7 +239,7 @@ describe("table name validation tests", () => {
     }
   });
 
-  it.only("should delete a table with a name which is a substring of an existing table, @loki", async () => {
+  it("should delete a table with a name which is a substring of an existing table, @loki", async () => {
     tableName = getUniqueName("table");
     const shortName = tableName.substring(0, 6);
     const basicBody = JSON.stringify({
@@ -251,7 +251,16 @@ describe("table name validation tests", () => {
     };
     // create table 1
     try {
-      await postToAzurite("Tables", basicBody, createTableHeaders);
+      const createTable1 = await postToAzurite(
+        "Tables",
+        basicBody,
+        createTableHeaders
+      );
+      assert.strictEqual(
+        createTable1.status,
+        201,
+        "Did not have the expected number of tables before deletion"
+      );
     } catch (err: any) {
       assert.strictEqual(
         err.response.status,
@@ -264,7 +273,16 @@ describe("table name validation tests", () => {
     });
     // create table 2
     try {
-      await postToAzurite("Tables", body, createTableHeaders);
+      const createTable2 = await postToAzurite(
+        "Tables",
+        body,
+        createTableHeaders
+      );
+      assert.strictEqual(
+        createTable2.status,
+        201,
+        "Did not have the expected number of tables before deletion"
+      );
     } catch (err: any) {
       assert.strictEqual(
         err.response.status,
@@ -278,7 +296,16 @@ describe("table name validation tests", () => {
     });
     // create table 3
     try {
-      await postToAzurite("Tables", body2, createTableHeaders);
+      const createTable3 = await postToAzurite(
+        "Tables",
+        body2,
+        createTableHeaders
+      );
+      assert.strictEqual(
+        createTable3.status,
+        201,
+        "Did not have the expected number of tables before deletion"
+      );
     } catch (err: any) {
       assert.strictEqual(
         err,
@@ -292,7 +319,16 @@ describe("table name validation tests", () => {
     });
     // create table 4
     try {
-      await postToAzurite("Tables", body3, createTableHeaders);
+      const createTable4 = await postToAzurite(
+        "Tables",
+        body3,
+        createTableHeaders
+      );
+      assert.strictEqual(
+        createTable4.status,
+        201,
+        "Did not have the expected number of tables before deletion"
+      );
     } catch (err: any) {
       assert.strictEqual(
         err,
@@ -303,9 +339,10 @@ describe("table name validation tests", () => {
     // now list tables after deletion...
     try {
       const listTableResult1 = await getToAzurite("Tables", createTableHeaders);
+      // we count all tables created in the tests before this one as well
       assert.strictEqual(
         listTableResult1.data.value.length,
-        4,
+        8,
         "Did not have the expected number of tables before deletion"
       );
     } catch (err: any) {
@@ -339,7 +376,7 @@ describe("table name validation tests", () => {
       const listTableResult2 = await getToAzurite("Tables", createTableHeaders);
       assert.strictEqual(
         listTableResult2.data.value.length,
-        3,
+        7,
         "Did not have the expected number of tables after deletion"
       );
       for (const table of listTableResult2.data.value) {
