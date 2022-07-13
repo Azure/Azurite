@@ -1,3 +1,5 @@
+### Connection Strings
+
 #### HTTP Connection Strings
 
 You can pass the following connection strings to the [Azure SDKs](https://aka.ms/azsdk) or tools (like Azure CLI 2.0 or Storage Explorer)
