@@ -166,7 +166,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     const tableLower = table.toLocaleLowerCase();
     const doc = coll.findOne({
       account,
-      table: { $regex: [tableLower, "i"] }
+      table: { $regex: [`^${tableLower}$`, "i"] }
     });
     if (doc) {
       coll.remove(doc);
@@ -202,7 +202,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     const tableLower = table.toLocaleLowerCase();
     const persistedTable = coll.findOne({
       account,
-      table: { $regex: [tableLower, "i"] }
+      table: { $regex: [`^${tableLower}$`, "i"] }
     });
 
     if (!persistedTable) {
@@ -229,7 +229,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   ): Promise<Table> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
     // Azure Storage Service is case insensitive
-    const doc = coll.findOne({ account, table: { $regex: [table, "i"] } });
+    const doc = coll.findOne({
+      account,
+      table: { $regex: [`^${table}$`, "i"] }
+    });
     if (!doc) {
       throw StorageErrorFactory.getTableNotFound(context);
     }
@@ -349,7 +352,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     ifMatch?: string,
     batchId?: string
   ): Promise<Entity> {
-    if (ifMatch === undefined || ifMatch === "*") {
+    if (ifMatch === undefined) {
       // Upsert
       const existingEntity =
         await this.queryTableEntitiesWithPartitionAndRowKey(
@@ -396,7 +399,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     ifMatch?: string,
     batchId?: string
   ): Promise<Entity> {
-    if (ifMatch === undefined || ifMatch === "*") {
+    if (ifMatch === undefined) {
       // Upsert
       const existingEntity =
         await this.queryTableEntitiesWithPartitionAndRowKey(
@@ -418,7 +421,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           batchId
         );
       } else {
-        this.failPatchOnMissingEntity(context);
         // Insert
         return this.insertTableEntity(context, table, account, entity, batchId);
       }
@@ -432,15 +434,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         ifMatch,
         batchId
       );
-    }
-  }
-
-  private failPatchOnMissingEntity(context: Context) {
-    if (
-      context.context.request.req !== undefined &&
-      context.context.request.req.method === "PATCH"
-    ) {
-      throw StorageErrorFactory.ResourceNotFound(context);
     }
   }
 
