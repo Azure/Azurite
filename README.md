@@ -102,13 +102,13 @@ Azurite natively supports HTTPS with self-signed certificates via the `--cert` a
 
 ## Usage with Azure Storage SDKs or Tools
 
-### Default Storage Account & Customized Storage Accounts & Keys
+### Default Storage Account / Customized Storage Accounts & Keys
 
 See the [dedicated documentation](/documentation/default_customized_storage_account.md) for information on the default storage account and customization of storage account names and keys.
 
 ### Connection Strings
 
-See the [dedicated documentation](/documentation/default_customized_storage_account.md) for information on the connection strings to the [Azure SDKs](https://aka.ms/azsdk) or tools (like Azure CLI 2.0 or Storage Explorer).
+See the [dedicated documentation](/documentation/connection_strings.md) for information on the connection strings to the [Azure SDKs](https://aka.ms/azsdk) or tools (like Azure CLI 2.0 or Storage Explorer).
 
 ### Azure SDKs
 
