@@ -440,6 +440,8 @@ Azurite will refresh customized account name and key from environment variable e
 
 > Note. Default storage account `devstoreaccount1` will be disabled when providing customized storage accounts.
 
+> Note. The account keys must be base64 encoded string.
+
 > Note. Should update connection string accordingly if using customized account name and key.
 
 > Note. Use `export` keyword to set environment variable in Linux like environment, `set` in Windows.
@@ -590,7 +592,7 @@ Azurite V3 provides support for a default storage account as General Storage Acc
 
 ### Customized Storage Accounts & Keys
 
-As mentioned by above section. Azurite V3 allows customizing storage account names and keys by providing environment variable `AZURITE_ACCOUNTS` with format `account1:key1[:key2];account2:key1[:key2];...`.
+As mentioned by above section. Azurite V3 allows customizing storage account names and keys by providing environment variable `AZURITE_ACCOUNTS` with format `account1:key1[:key2];account2:key1[:key2];...`. Account keys must be base64 encoded string.
 
 For example, customize one storage account which has only one key:
 

@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Updated Readme by adding account key must be base64 encoded string.
+
 Table:
 
 - Correctly responds with status 202 on merge with non-existent entity.
