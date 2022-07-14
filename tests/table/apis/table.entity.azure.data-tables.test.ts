@@ -1698,4 +1698,57 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
 
     await tableClient.deleteTable();
   });
+
+  // pseudo 
+  // 1 create table client
+  /* const tableClient = createAzureDataTablesClient(
+     testLocalAzuriteInstance,
+    getUniqueName("longstrings")
+  );
+  */
+
+  // 2 create table 
+  /* table1 = await tableClient.createTable(); 
+  const partitionKey = createUniquePartitionKey("nullable");
+  const testEntity = createBasicEntityForTest(partitionKey);
+  testEntity.nullableString = null;
+  */
+
+  // 3 create second table?
+  /* 
+  table2 = await tableClient.createTable(); 
+  const partitionKey = createUniquePartitionKey("nullable");
+  const testEntity = createBasicEntityForTest(partitionKey);
+  testEntity.nullableString = null;
+  */
+
+  // 4 delete one table 
+  // await tableClient.deleteTable();  
+
+  // 5 list table: possible to find or not?
+  // GET Entity with PartitionKey= and RowKey= does not return etag in header?
+
+  it('Should create entity with RowKey containing comma ",", @loki', async () => {
+    const partitionKey = createUnivquePartitionKey("");
+    const testEntity: AzureDataTablesTestEntity = 
+      createBasicEntityForTest(partitionKey);
+
+    await 
+
+    await tableClient.createTable();
+    const commaRowEntity = createBasicEntityForTest("comma");
+    commaRowEntity.rowKey = "Commas,InRow,Keys";
+    const insertedEntityHeaders =
+      await tableClient.createEntity<AzureDataTablesTestEntity>(commaRowEntity);
+    assert.notStrictEqual(
+      insertedEntityHeaders.etag,
+      undefined,
+      "Did not create entity!"
+    );
+
+    await tableClient.deleteTable();
+  });
+
 });
+
+

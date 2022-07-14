@@ -796,6 +796,39 @@ describe("table Entity APIs REST tests", () => {
       }
     }
   });
+
+  //issue 1579
+  it("Should return etag when queryig an entity, @loki", async () => {
+    const testTable = getUniqueName("ifmatch");
+    const body = JSON.stringify({
+      TableName: testTable
+    });
+    const createTableHeaders = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=nometadata"
+    };
+    const createTableResult = await postToAzurite(
+      "Tables",
+      body,
+      createTableHeaders
+      );
+    assert.strictEqual(createTableResult.status, 201);
+
+    let oldEtag = "";
+    let newEtag = "";
+
+    const testHeaders = {
+      "Content-Type": "application/json",
+      version: "",
+      "x-ms-client-request-id":"1",
+      DataServiceVersion: "3"
+    }
+    try{
+      const firstPutRequestResult = await 
+    }
+  
+  });
+
 });
 
 /**
@@ -847,3 +880,6 @@ interface IfMatchTestCase {
   expectSuccess: boolean;
   errorMessage: string;
 }
+
+
+
