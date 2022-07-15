@@ -1729,7 +1729,11 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   // GET Entity with PartitionKey= and RowKey= does not return etag in header?
 
   it('Should create entity with RowKey containing comma ",", @loki', async () => {
-    const partitionKey = createUnivquePartitionKey("");
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("longstrings")
+    );
+    const partitionKey = createUniquePartitionKey("");
     const testEntity: AzureDataTablesTestEntity = 
       createBasicEntityForTest(partitionKey);
 

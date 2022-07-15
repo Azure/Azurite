@@ -798,7 +798,8 @@ describe("table Entity APIs REST tests", () => {
   });
 
   //issue 1579
-  it("Should return etag when queryig an entity, @loki", async () => {
+  it.only("Should return etag when queryig an entity, @loki", async () => {
+    // create test table 
     const testTable = getUniqueName("ifmatch");
     const body = JSON.stringify({
       TableName: testTable
@@ -807,26 +808,26 @@ describe("table Entity APIs REST tests", () => {
       "Content-Type": "application/json",
       Accept: "application/json;odata=nometadata"
     };
+
+    // post table to Azurite
     const createTableResult = await postToAzurite(
       "Tables",
       body,
       createTableHeaders
       );
+
+    // check if successfully created
     assert.strictEqual(createTableResult.status, 201);
-
-    let oldEtag = "";
-    let newEtag = "";
-
-    const testHeaders = {
-      "Content-Type": "application/json",
-      version: "",
-      "x-ms-client-request-id":"1",
-      DataServiceVersion: "3"
-    }
-    try{
-      const firstPutRequestResult = await 
-    }
-  
+    // assert.ok(createTableResult.headers.etag);
+    // get from Azurite
+    const getTableResult = await getToAzurite(
+      "Tables",
+      createTableHeaders
+    );
+    // check if successfully queried
+    assert.strictEqual(getTableResult.status, 200);
+    // check etag - exists?
+    console.log(getTableResult)
   });
 
 });
