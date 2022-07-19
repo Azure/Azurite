@@ -798,7 +798,7 @@ describe("table Entity APIs REST tests", () => {
   });
 
   //issue 1579
-  it.only("Should return etag when queryig an entity, @loki", async () => {
+  it.only("Should return etag when querying an entity, @loki", async () => {
     // create test table 
     const body = JSON.stringify({
       TableName: reproFlowsTableName
@@ -814,6 +814,7 @@ describe("table Entity APIs REST tests", () => {
       body,
       createTableHeaders
       );
+
     // check if successfully created
     assert.strictEqual(createTableResult.status, 201);
 
@@ -845,6 +846,7 @@ describe("table Entity APIs REST tests", () => {
         accept: "application/json;odata=minimalmetadata"
       }
     );
+    
     // check if successfully returned
     assert.strictEqual(request2Result.status, 200);
     
@@ -854,8 +856,8 @@ describe("table Entity APIs REST tests", () => {
     // check if etag exists
     assert.ok(flowEtag);
     
-
-    const request3Result = await postToAzurite(
+    // idea: create second table and check if etags are equals => unique etags?
+    /* const request3Result = await postToAzurite(
       "$batch",
       batchRequest1RawRequestString,
       batchRequest1Headers
@@ -879,7 +881,7 @@ describe("table Entity APIs REST tests", () => {
     const result4Data2: any = request4Result.data;
     // prettier-ignore
     const flowEtag2: string = result4Data2["odata.etag"];
-    console.log(flowEtag2);
+    console.log(flowEtag2); */
     
     // TODO? check if etag is unique
     // assert.notStrictEqual(flowEtag, flowEtag2);
