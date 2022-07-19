@@ -848,12 +848,44 @@ describe("table Entity APIs REST tests", () => {
     // check if successfully returned
     assert.strictEqual(request2Result.status, 200);
     
-    const result6Data: any = request6Result.data;
+    const result2Data: any = request2Result.data;
     // prettier-ignore
-    const flowEtag: string = result6Data["odata.etag"];
+    const flowEtag: string = result2Data["odata.etag"];
+    // check if etag exists
+    assert.ok(flowEtag);
+    
+
+    const request3Result = await postToAzurite(
+      "$batch",
+      batchRequest1RawRequestString,
+      batchRequest1Headers
+    );
+    // we submitted the batch OK
+    assert.strictEqual(request3Result.status, 202);
+    
+    // get from Azurite
+    const request4Result = await getToAzurite(
+      `${reproFlowsTableName}(PartitionKey='09CEE',RowKey='EA5F528CF1B84658A5CECC574848547B_FLOWIDENTIFIER-5539F65E020B44FCA32CF9CBE56E286A')`,
+      {
+        "user-agent": "ResourceStack/6.0.0.1260",
+        "x-ms-version": "2018-03-28",
+        "x-ms-client-request-id": "7bbeb6b2-a1c7-4fed-8a3c-80f6b3e7db8c",
+        accept: "application/json;odata=minimalmetadata"
+      }
+    );
+    // check if successfully returned
+    assert.strictEqual(request4Result.status, 200);
+    
+    const result4Data2: any = request4Result.data;
+    // prettier-ignore
+    const flowEtag2: string = result4Data2["odata.etag"];
+    console.log(flowEtag2);
+    
+    // TODO? check if etag is unique
+    // assert.notStrictEqual(flowEtag, flowEtag2);
     
     // check etag - exists?
-    // console.log(getTableResult) // where is the etag in a result?
+    
   });
 
 });
