@@ -825,13 +825,14 @@ describe("table Entity APIs REST tests", () => {
 
     const partitionKey = createUniquePartitionKey();
     const rowKey = "RK";
-    
+
     // post to Azurite
     const createEntityResult = await postToAzurite(
       reproFlowsTableName,
       `{"PartitionKey":"${partitionKey}","RowKey":"${rowKey}","Value":"01"}`,
       createEntityHeaders
     );
+    // check if successfully added
     assert.strictEqual(createEntityResult.status, 201);
 
     // get from Azurite
@@ -845,13 +846,10 @@ describe("table Entity APIs REST tests", () => {
       }
     );
 
-    console.log(request2Result);
-
     // check if successfully returned
     assert.strictEqual(request2Result.status, 200);
 
     const result2Data: any = request2Result.data;
-    // prettier-ignore
     const flowEtag: string = result2Data["odata.etag"];
     // check if etag exists
     assert.ok(flowEtag);
