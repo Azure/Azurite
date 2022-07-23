@@ -820,7 +820,7 @@ describe("table Entity APIs REST tests", () => {
 
     const createEntityHeaders = {
       "Content-Type": "application/json",
-      Accept: "application/json;odata=fullmetadata"
+      Accept: "application/json;odata=nometadata"
     };
 
     const partitionKey = createUniquePartitionKey();
@@ -848,12 +848,13 @@ describe("table Entity APIs REST tests", () => {
 
     // check if successfully returned
     assert.strictEqual(request2Result.status, 200);
-
-    const result2Data: any = request2Result.data;
-    const flowEtag: string = result2Data["odata.etag"];
+    // check for etag in headers
+    const result2Data: any = request2Result.headers;
+    console.log(result2Data);
+    const flowEtag: string = result2Data["eTag"];
     // check if etag exists
     assert.ok(flowEtag);
-
+    
   });
 
 });
