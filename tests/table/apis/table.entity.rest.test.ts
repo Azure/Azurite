@@ -835,7 +835,7 @@ describe("table Entity APIs REST tests", () => {
     // check if successfully added
     assert.strictEqual(createEntityResult.status, 201);
 
-    // get from Azurite
+    // get from Azurite; set odata=nometadata 
     const request2Result = await getToAzurite(
       `${reproFlowsTableName}(PartitionKey='${partitionKey}',RowKey='${rowKey}')`,
       {
@@ -845,13 +845,13 @@ describe("table Entity APIs REST tests", () => {
         accept: "application/json;odata=fullmetadata"
       }
     );
-
     // check if successfully returned
     assert.strictEqual(request2Result.status, 200);
-    // check for etag in headers
+    // check headers
     const result2Data: any = request2Result.headers;
-    console.log(result2Data);
-    const flowEtag: string = result2Data["eTag"];
+    // look for etag in headers; using a variable instead of a string literal to avoid TSLint "no-string-literal" warning
+    const key = 'etag';
+    const flowEtag: string = result2Data[key];
     // check if etag exists
     assert.ok(flowEtag);
     
