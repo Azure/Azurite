@@ -842,7 +842,7 @@ describe("table Entity APIs REST tests", () => {
         "user-agent": "ResourceStack/6.0.0.1260",
         "x-ms-version": "2018-03-28",
         "x-ms-client-request-id": "7bbeb6b2-a1c7-4fed-8a3c-80f6b3e7db8c",
-        accept: "application/json;odata=fullmetadata"
+        accept: "application/json;odata=nometadata"
       }
     );
     // check if successfully returned
@@ -854,7 +854,6 @@ describe("table Entity APIs REST tests", () => {
     const flowEtag: string = result2Data[key];
     // check if etag exists
     assert.ok(flowEtag);
-    
   });
 
 });
