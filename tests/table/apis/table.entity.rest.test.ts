@@ -798,7 +798,7 @@ describe("table Entity APIs REST tests", () => {
   });
 
   // issue 1579
-  it.only("Should return etag when querying an entity, @loki", async () => {
+  it("Should return etag when querying an entity, @loki", async () => {
     // create test table
     const body = JSON.stringify({
       TableName: reproFlowsTableName
