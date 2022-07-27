@@ -688,6 +688,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       date: tableContext.startTime,
       clientRequestId: options.requestId,
       requestId: context.contextID,
+      eTag: entity.eTag,
       version: TABLE_API_VERSION
     };
 
