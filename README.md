@@ -20,6 +20,7 @@
     - [NPM](#npm)
     - [Visual Studio Code Extension](#visual-studio-code-extension)
     - [DockerHub](#dockerhub)
+      - [Docker Compose](#docker-compose)
     - [NuGet](#nuget)
     - [Visual Studio](#visual-studio)
   - [Supported Command Line Options](#supported-command-line-options)
@@ -261,6 +262,23 @@ Above command will try to start Azurite image with configurations:
 > In above sample, you need to use **double first forward slash** for location and debug path parameters to avoid a [known issue](https://stackoverflow.com/questions/48427366/docker-build-command-add-c-program-files-git-to-the-path-passed-as-build-argu) for Git on Windows.
 
 > Will support more release channels for Azurite V3 in the future.
+
+#### Docker Compose
+To run Azurite in Docker Compose, use the following configuration:
+```yml
+---
+version: '3.9'
+services:
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: "azurite"
+    hostname: azurite
+    restart: always
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002" 
+```
 
 ### NuGet
 
