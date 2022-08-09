@@ -7,6 +7,7 @@
 General:
 
 - Updated Readme by adding account key must be base64 encoded string.
+- Add script to build ARM64 docker image
 
 Table:
 
