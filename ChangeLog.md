@@ -7,6 +7,7 @@
 General:
 
 - Updated Readme by adding account key must be base64 encoded string.
+- Make emulator start commands async so that they can be awaited by clients
 
 Table:
 
