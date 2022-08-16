@@ -264,7 +264,7 @@ Above command will try to start Azurite image with configurations:
 > Will support more release channels for Azurite V3 in the future.
 
 #### Docker Compose
-To run Azurite in Docker Compose, use the following configuration:
+To run Azurite in Docker Compose, you can start with the following configuration:
 ```yml
 ---
 version: '3.9'
