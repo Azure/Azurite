@@ -796,6 +796,65 @@ describe("table Entity APIs REST tests", () => {
       }
     }
   });
+
+  // issue 1579
+  it("Should return etag when querying an entity, @loki", async () => {
+    // create test table
+    const body = JSON.stringify({
+      TableName: reproFlowsTableName
+    });
+    const createTableHeaders = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=nometadata"
+    };
+
+    // post table to Azurite
+    const createTableResult = await postToAzurite(
+      "Tables",
+      body,
+      createTableHeaders
+      );
+
+    // check if successfully created
+    assert.strictEqual(createTableResult.status, 201);
+
+    const createEntityHeaders = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=nometadata"
+    };
+
+    const partitionKey = createUniquePartitionKey();
+    const rowKey = "RK";
+
+    // post to Azurite
+    const createEntityResult = await postToAzurite(
+      reproFlowsTableName,
+      `{"PartitionKey":"${partitionKey}","RowKey":"${rowKey}","Value":"01"}`,
+      createEntityHeaders
+    );
+    // check if successfully added
+    assert.strictEqual(createEntityResult.status, 201);
+
+    // get from Azurite; set odata=nometadata 
+    const request2Result = await getToAzurite(
+      `${reproFlowsTableName}(PartitionKey='${partitionKey}',RowKey='${rowKey}')`,
+      {
+        "user-agent": "ResourceStack/6.0.0.1260",
+        "x-ms-version": "2018-03-28",
+        "x-ms-client-request-id": "7bbeb6b2-a1c7-4fed-8a3c-80f6b3e7db8c",
+        accept: "application/json;odata=nometadata"
+      }
+    );
+    // check if successfully returned
+    assert.strictEqual(request2Result.status, 200);
+    // check headers
+    const result2Data: any = request2Result.headers;
+    // look for etag in headers; using a variable instead of a string literal to avoid TSLint "no-string-literal" warning
+    const key = 'etag';
+    const flowEtag: string = result2Data[key];
+    // check if etag exists
+    assert.ok(flowEtag);
+  });  
 });
 
 /**
