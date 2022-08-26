@@ -14,6 +14,8 @@ Table:
 - Properly differentiate between upsert and update in batch merge and replace.
 - Added additional tests via raw REST tests.
 - Correctly deletes a table that is a substring of another table.
+- Adds Sample Go App to check that Batch responses work for Go SDK.
+- Removes extra CRLFs from all serialized Batch responses, adds missing CRLF after Etag header.
 
 ## 2022.06 Version 3.18.0
 
