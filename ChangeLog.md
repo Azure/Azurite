@@ -4,8 +4,12 @@
 
 ## Upcoming Release
 
+2022.09 Version 3.19.0
+
 General:
 
+- Bump up service API version to 2021-10-04
+- Added support for docker image on arm64 architecture.
 - Updated Readme by adding account key must be base64 encoded string.
 
 Table:
