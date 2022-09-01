@@ -25,15 +25,17 @@ describe("batch serialization unit tests, these are not the API integration test
       SerializationRequestMockStrings.BatchQueryWithPartitionKeyAndRowKeyRequest
     );
 
-    const request = SerializationObjectForBatchRequestFactory.GetBatchRequestForQueryWithPartitionandRowKeyResponseMock();
+    const request =
+      SerializationObjectForBatchRequestFactory.GetBatchRequestForQueryWithPartitionandRowKeyResponseMock();
     request.ingestOptionalParams(
       new BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams()
     );
 
-    const serializedBatchOperationResponse = await serializer.serializeTableQueryEntityWithPartitionAndRowKeyBatchResponse(
-      request,
-      SerializationObjectForBatchRequestFactory.GetBatchTableQueryEntitiesWithPartitionAndRowKeyResponseMock()
-    );
+    const serializedBatchOperationResponse =
+      await serializer.serializeTableQueryEntityWithPartitionAndRowKeyBatchResponse(
+        request,
+        SerializationObjectForBatchRequestFactory.GetBatchTableQueryEntitiesWithPartitionAndRowKeyResponseMock()
+      );
 
     const splitResponse = serializedBatchOperationResponse.split("\r\n");
     const splitExpected = expectedResponseString.split("\r\n");
@@ -60,13 +62,15 @@ describe("batch serialization unit tests, these are not the API integration test
       SerializationRequestMockStrings.BatchSingleInsertOrReplaceRequestString
     );
 
-    const request = SerializationObjectForBatchRequestFactory.GetBatchRequestForSingleInsertResponseMock();
+    const request =
+      SerializationObjectForBatchRequestFactory.GetBatchRequestForSingleInsertResponseMock();
     request.ingestOptionalParams(new BatchTableInsertEntityOptionalParams());
 
-    const serializedBatchOperationResponse = serializer.serializeTableInsertEntityBatchResponse(
-      request,
-      SerializationObjectForBatchRequestFactory.GetBatchOperationMockForSingleInsert()
-    );
+    const serializedBatchOperationResponse =
+      serializer.serializeTableInsertEntityBatchResponse(
+        request,
+        SerializationObjectForBatchRequestFactory.GetBatchOperationMockForSingleInsert()
+      );
 
     const splitResponse = serializedBatchOperationResponse.split("\r\n");
     const splitExpected = expectedResponseString.split("\r\n");
@@ -93,19 +97,29 @@ describe("batch serialization unit tests, these are not the API integration test
       SerializationRequestMockStrings.BatchSingleDeleteRequestString
     );
 
-    const request = SerializationObjectForBatchRequestFactory.GetBatchRequestForSingleDeletetResponseMock();
+    const request =
+      SerializationObjectForBatchRequestFactory.GetBatchRequestForSingleDeletetResponseMock();
     request.ingestOptionalParams(new BatchTableDeleteEntityOptionalParams());
 
-    const serializedBatchOperationResponse = serializer.serializeTableDeleteEntityBatchResponse(
-      request,
-      SerializationObjectForBatchRequestFactory.GetBatchOperationMockForSingleDelete()
-    );
+    const serializedBatchOperationResponse =
+      serializer.serializeTableDeleteEntityBatchResponse(
+        request,
+        SerializationObjectForBatchRequestFactory.GetBatchOperationMockForSingleDelete()
+      );
 
     const splitResponse = serializedBatchOperationResponse.split("\r\n");
     const splitExpected = expectedResponseString.split("\r\n");
     splitExpected.forEach((value) => {
-      if (value.length > 2) {
-        assert.notEqual(
+      if (value === "DataServiceVersion: 3.0;") {
+        assert.notStrictEqual(
+          // Azure Table Storage responds with a data service version header of 1.0
+          // on batch delete
+          splitResponse.indexOf("DataServiceVersion: 1.0;"),
+          -1,
+          "Could not find DataServiceVersion: 1.0; in serialized response."
+        );
+      } else if (value.length > 2) {
+        assert.notStrictEqual(
           splitResponse.indexOf(value),
           -1,
           "Could not find " + value + " in serialized response."
