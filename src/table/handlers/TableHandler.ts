@@ -40,6 +40,7 @@ import {
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import { EdmType, getEdmType } from "../entity/IEdmType";
+import { truncatedISO8061Date } from "../../common/utils/utils";
 
 interface IPartialResponsePreferProperties {
   statusCode: 200 | 201 | 204;
@@ -199,13 +200,15 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     }
 
     this.checkProperties(context, options.tableEntityProperties);
+    const modTime = truncatedISO8061Date(context.startTime!, true, true);
+    const eTag = newTableEntityEtag(modTime);
 
     const entity: Entity = {
       PartitionKey: options.tableEntityProperties.PartitionKey,
       RowKey: options.tableEntityProperties.RowKey,
       properties: options.tableEntityProperties,
-      lastModifiedTime: context.startTime!,
-      eTag: newTableEntityEtag(context.startTime!)
+      lastModifiedTime: modTime,
+      eTag
     };
     // check that key properties are valid
     this.validateKey(context, entity.PartitionKey);
@@ -236,7 +239,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       version: TABLE_API_VERSION,
       date: context.startTime,
       statusCode: 201,
-      eTag: entity.eTag
+      eTag
     };
 
     if (prefer === RETURN_CONTENT || prefer === undefined) {
@@ -372,14 +375,15 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       }
     }
 
-    const eTag = newTableEntityEtag(context.startTime!);
+    const modTime = truncatedISO8061Date(context.startTime!, true, true);
+    const eTag = newTableEntityEtag(modTime);
 
     // Entity, which is used to update an existing entity
     const entity: Entity = {
       PartitionKey: partitionKey,
       RowKey: rowKey,
       properties: options.tableEntityProperties,
-      lastModifiedTime: context.startTime!,
+      lastModifiedTime: modTime,
       eTag
     };
 
@@ -458,13 +462,14 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     }
 
     this.checkProperties(context, options.tableEntityProperties);
-    const eTag = newTableEntityEtag(context.startTime!);
+    const modTime = truncatedISO8061Date(context.startTime!, true, true);
+    const eTag = newTableEntityEtag(modTime);
 
     const entity: Entity = {
       PartitionKey: partitionKey,
       RowKey: rowKey,
       properties: options.tableEntityProperties,
-      lastModifiedTime: context.startTime!,
+      lastModifiedTime: modTime,
       eTag
     };
     // check that key properties are valid
@@ -1037,14 +1042,17 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   ) {
     for (const prop in properties) {
       if (properties.hasOwnProperty(prop)) {
-        if (null !== properties[prop] && undefined !== properties[prop].length) {
+        if (
+          null !== properties[prop] &&
+          undefined !== properties[prop].length
+        ) {
           const typeKey = `${prop}${ODATA_TYPE}`;
           let type;
           if (properties[typeKey]) {
-            type = getEdmType(properties[typeKey])
+            type = getEdmType(properties[typeKey]);
           }
           if (type === EdmType.Binary) {
-            if (Buffer.from(properties[prop], 'base64').length > 64 * 1024) {
+            if (Buffer.from(properties[prop], "base64").length > 64 * 1024) {
               throw StorageErrorFactory.getPropertyValueTooLargeError(context);
             }
           } else if (properties[prop].length > 32 * 1024) {

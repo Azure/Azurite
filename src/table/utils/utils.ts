@@ -272,14 +272,14 @@ export function validateTableName(context: Context, tableName: string) {
   }
 }
 
-export function newTableEntityEtag(startTime: Date): string {
+export function newTableEntityEtag(highPresModTime: string): string {
   // Etag as returned by Table Storage should match W/"datetime'<ISO8601datetime>'"
-  // we use the additional hrtime precsion option
-  return (
-    "W/\"datetime'" +
-    encodeURIComponent(truncatedISO8061Date(startTime, true, true)) +
-    "'\""
-  );
+  // as we need the same value for last Modification time, we now only accept a string here
+  return "W/\"datetime'" + encodeURIComponent(highPresModTime) + "'\"";
+}
+
+export function newHighPrecisionTimeStamp(startTime: Date): string {
+  return truncatedISO8061Date(startTime, true, true);
 }
 
 /**
