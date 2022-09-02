@@ -8,7 +8,7 @@ General:
 
 - Make emulator start commands async so that they can be awaited by clients.
 
-2022.09 Version 3.19.0
+## 2022.09 Version 3.19.0
 
 General:
 
