@@ -289,7 +289,7 @@ export function newHighPrecisionTimeStamp(startTime: Date): string {
  * @param {string} etag
  * @return {*}  {boolean}
  */
-export function checkEtagIsInvalidFormat(etag: string): boolean {
+export function isEtagValid(etag: string): boolean {
   // Weak etag is required. This is parity with Azure and legacy emulator.
   // Source for regex: https://stackoverflow.com/a/11572348
   const match = etag.match(/^[wW]\/"([^"]|\\")*"$/);
