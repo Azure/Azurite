@@ -71,8 +71,8 @@ export function activate(context: ExtensionContext) {
       tableServerManager.clean();
     }),
 
-    commands.registerCommand(blobServerManager.getStartCommand(), () => {
-      blobServerManager.start();
+    commands.registerCommand(blobServerManager.getStartCommand(), async () => {
+      await blobServerManager.start();
     }),
     commands.registerCommand(blobServerManager.getCloseCommand(), () => {
       blobServerManager.close();
@@ -81,8 +81,8 @@ export function activate(context: ExtensionContext) {
       blobServerManager.clean();
     }),
 
-    commands.registerCommand(queueServerManager.getStartCommand(), () => {
-      queueServerManager.start();
+    commands.registerCommand(queueServerManager.getStartCommand(), async () => {
+      await queueServerManager.start();
     }),
     commands.registerCommand(queueServerManager.getCloseCommand(), () => {
       queueServerManager.close();
@@ -91,8 +91,8 @@ export function activate(context: ExtensionContext) {
       queueServerManager.clean();
     }),
 
-    commands.registerCommand(tableServerManager.getStartCommand(), () => {
-      tableServerManager.start();
+    commands.registerCommand(tableServerManager.getStartCommand(), async () => {
+      await tableServerManager.start();
     }),
     commands.registerCommand(tableServerManager.getCloseCommand(), () => {
       tableServerManager.close();

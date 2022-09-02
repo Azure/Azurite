@@ -11,6 +11,7 @@ General:
 - Bump up service API version to 2021-10-04
 - Added support for docker image on arm64 architecture.
 - Updated Readme by adding account key must be base64 encoded string.
+- Make emulator start commands async so that they can be awaited by clients.
 
 Table:
 
