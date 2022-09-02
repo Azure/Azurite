@@ -4,11 +4,15 @@
 
 ## Upcoming Release
 
+General:
+
+- Make emulator start commands async so that they can be awaited by clients.
+
 Table:
 
 - TimeStamp and Etag use the same high precision value as source.
 
-  2022.09 Version 3.19.0
+## 2022.09 Version 3.19.0
 
 General:
 
