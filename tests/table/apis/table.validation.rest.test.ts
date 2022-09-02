@@ -249,6 +249,10 @@ describe("table name validation tests", () => {
       "Content-Type": "application/json",
       Accept: "application/json;odata=nometadata"
     };
+
+    // get the table count before test
+    const tableCountBeforeTest = (await getToAzurite("Tables", createTableHeaders)).data.value.length;
+
     // create table 1
     try {
       const createTable1 = await postToAzurite(
@@ -342,7 +346,7 @@ describe("table name validation tests", () => {
       // we count all tables created in the tests before this one as well
       assert.strictEqual(
         listTableResult1.data.value.length,
-        8,
+        tableCountBeforeTest + 4,
         "Did not have the expected number of tables before deletion"
       );
     } catch (err: any) {
@@ -376,7 +380,7 @@ describe("table name validation tests", () => {
       const listTableResult2 = await getToAzurite("Tables", createTableHeaders);
       assert.strictEqual(
         listTableResult2.data.value.length,
-        7,
+        tableCountBeforeTest + 3,
         "Did not have the expected number of tables after deletion"
       );
       for (const table of listTableResult2.data.value) {
