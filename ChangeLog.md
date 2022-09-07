@@ -8,6 +8,10 @@ General:
 
 - Make emulator start commands async so that they can be awaited by clients.
 
+Blob:
+
+- Add support for blob batch operation.
+
 Table:
 
 - TimeStamp and Etag use the same high precision value as source.

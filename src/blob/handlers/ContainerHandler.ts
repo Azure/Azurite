@@ -1,8 +1,14 @@
+import { Readable } from "stream";
+import IAccountDataStore from "../../common/IAccountDataStore";
+import ILogger from "../../common/ILogger";
+import { OAuthLevel } from "../../common/models";
+import IExtentStore from "../../common/persistence/IExtentStore";
 import { convertRawHeadersToMetadata, newEtag } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IContainerHandler from "../generated/handlers/IContainerHandler";
+import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import {
   BLOB_API_VERSION,
   EMULATOR_ACCOUNT_KIND,
@@ -11,6 +17,7 @@ import {
 import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
 import { removeQuotationFromListBlobEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
+import { BlobBatchHandler } from "./BlobBatchHandler";
 
 /**
  * ContainerHandler handles Azure Storage Blob container related requests.
@@ -21,6 +28,18 @@ import BaseHandler from "./BaseHandler";
  */
 export default class ContainerHandler extends BaseHandler
   implements IContainerHandler {
+
+  constructor(
+    private readonly accountDataStore: IAccountDataStore,
+    private readonly oauth: OAuthLevel | undefined,
+    metadataStore: IBlobMetadataStore,
+    extentStore: IExtentStore,
+    logger: ILogger,
+    loose: boolean
+  ) {
+    super(metadataStore, extentStore, logger, loose);
+  }
+
   /**
    * Create container.
    *
@@ -301,6 +320,41 @@ export default class ContainerHandler extends BaseHandler
     return response;
   }
 
+  public async submitBatch(
+    body: NodeJS.ReadableStream,
+    contentLength: number,
+    multipartContentType: string,
+    containerName: string,
+    options: Models.ContainerSubmitBatchOptionalParams,
+    context: Context): Promise<Models.ContainerSubmitBatchResponse> {
+      const blobServiceCtx = new BlobStorageContext(context);
+      const requestBatchBoundary = blobServiceCtx.request!.getHeader("content-type")!.split("=")[1];
+
+      const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
+         this.metadataStore, this.extentStore, this.logger, this.loose);
+
+      const responseBodyString = await blobBatchHandler.submitBatch(body,
+        requestBatchBoundary,
+        context.request!,
+        context);
+
+      const responseBody = new Readable();
+      responseBody.push(responseBodyString);
+      responseBody.push(null);
+
+      // No client request id defined in batch response, should refine swagger and regenerate from it.
+      // batch response succeed code should be 202 instead of 200, should refine swagger and regenerate from it.
+      const response: Models.ServiceSubmitBatchResponse = {
+        statusCode: 202,
+        requestId: context.contextId,
+        version: BLOB_API_VERSION,
+        contentType: "multipart/mixed; boundary=" + requestBatchBoundary,
+        body: responseBody
+      };
+
+      return response;
+  }
+
   /**
    * Acquire container lease.
    *
@@ -536,17 +590,14 @@ export default class ContainerHandler extends BaseHandler
     let includeSnapshots: boolean = false;
     let includeUncommittedBlobs: boolean = false;
     if (options.include !== undefined) {
-      options.include.forEach(element =>
-        {
-          if(Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase())
-          {
-            includeSnapshots = true;
-          }
-          if(Models.ListBlobsIncludeItem.Uncommittedblobs.toLowerCase() === element.toLowerCase())
-          {
-            includeUncommittedBlobs = true;
-          }
+      options.include.forEach(element => {
+        if (Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase()) {
+          includeSnapshots = true;
         }
+        if (Models.ListBlobsIncludeItem.Uncommittedblobs.toLowerCase() === element.toLowerCase()) {
+          includeUncommittedBlobs = true;
+        }
+      }
       )
     }
     if (
@@ -636,17 +687,14 @@ export default class ContainerHandler extends BaseHandler
     let includeSnapshots: boolean = false;
     let includeUncommittedBlobs: boolean = false;
     if (options.include !== undefined) {
-      options.include.forEach(element =>
-        {
-          if(Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase())
-          {
-            includeSnapshots = true;
-          }
-          if(Models.ListBlobsIncludeItem.Uncommittedblobs.toLowerCase() === element.toLowerCase())
-          {
-            includeUncommittedBlobs = true;
-          }
+      options.include.forEach(element => {
+        if (Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase()) {
+          includeSnapshots = true;
         }
+        if (Models.ListBlobsIncludeItem.Uncommittedblobs.toLowerCase() === element.toLowerCase()) {
+          includeUncommittedBlobs = true;
+        }
+      }
       )
     }
     if (
