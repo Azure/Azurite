@@ -1123,7 +1123,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  [2, 1, 0].map(delta => {
+  [2, 1, 0].map((delta) => {
     it(`Should insert entities containing binary properties less than or equal than 64K bytes (delta ${delta}), @loki`, async () => {
       const tableClient = createAzureDataTablesClient(
         testLocalAzuriteInstance,
@@ -1134,20 +1134,16 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       const testEntity: AzureDataTablesTestEntity =
         createBasicEntityForTest(partitionKey);
 
-      testEntity.binaryField = Buffer.alloc((64 * 1024) - delta);
+      testEntity.binaryField = Buffer.alloc(64 * 1024 - delta);
 
       const result = await tableClient.createEntity(testEntity);
-      assert.notStrictEqual(
-        result.etag,
-        undefined,
-        "Did not create entity!"
-      );
+      assert.notStrictEqual(result.etag, undefined, "Did not create entity!");
 
       await tableClient.deleteTable();
     });
   });
 
-  [1, 2, 3].map(delta => {
+  [1, 2, 3].map((delta) => {
     it(`Should not insert entities containing binary properties greater than 64K bytes (delta ${delta}), @loki`, async () => {
       const tableClient = createAzureDataTablesClient(
         testLocalAzuriteInstance,
@@ -1158,7 +1154,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       const testEntity: AzureDataTablesTestEntity =
         createBasicEntityForTest(partitionKey);
 
-      testEntity.binaryField = Buffer.alloc((64 * 1024) + delta);
+      testEntity.binaryField = Buffer.alloc(64 * 1024 + delta);
       try {
         const result = await tableClient.createEntity(testEntity);
         assert.strictEqual(
@@ -1413,8 +1409,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
         a: "a".repeat(32 * 1024),
         b: "b".repeat(32 * 1024),
         c: "c".repeat(32 * 1024),
-        d: "d".repeat(32 * 1024),
-      })
+        d: "d".repeat(32 * 1024)
+      });
     }
 
     try {
@@ -1657,7 +1653,6 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
 
     await tableClient.deleteTable();
   });
-
 
   it("Should insert entities with null properties, @loki", async () => {
     const tableClient = createAzureDataTablesClient(

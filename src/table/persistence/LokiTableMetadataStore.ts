@@ -7,7 +7,6 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { Entity, Table } from "../persistence/ITableMetadataStore";
 import { ODATA_TYPE, QUERY_RESULT_MAX_NUM } from "../utils/constants";
-import { getTimestampString } from "../utils/utils";
 import ITableMetadataStore, { TableACL } from "./ITableMetadataStore";
 
 /** MODELS FOR SERVICE */
@@ -303,7 +302,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       throw StorageErrorFactory.getEntityAlreadyExist(context);
     }
 
-    entity.properties.Timestamp = getTimestampString(entity.lastModifiedTime);
+    entity.properties.Timestamp = entity.lastModifiedTime;
     entity.properties["Timestamp@odata.type"] = "Edm.DateTime";
 
     if (batchId !== "" && batchId !== undefined) {
@@ -650,7 +649,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     ) {
       tableEntityCollection.remove(doc);
 
-      entity.properties.Timestamp = getTimestampString(entity.lastModifiedTime);
+      entity.properties.Timestamp = entity.lastModifiedTime;
       entity.properties["Timestamp@odata.type"] = "Edm.DateTime";
 
       tableEntityCollection.insert(entity);

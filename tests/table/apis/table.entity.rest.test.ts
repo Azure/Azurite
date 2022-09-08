@@ -813,7 +813,7 @@ describe("table Entity APIs REST tests", () => {
       "Tables",
       body,
       createTableHeaders
-      );
+    );
 
     // check if successfully created
     assert.strictEqual(createTableResult.status, 201);
@@ -835,7 +835,7 @@ describe("table Entity APIs REST tests", () => {
     // check if successfully added
     assert.strictEqual(createEntityResult.status, 201);
 
-    // get from Azurite; set odata=nometadata 
+    // get from Azurite; set odata=nometadata
     const request2Result = await getToAzurite(
       `${reproFlowsTableName}(PartitionKey='${partitionKey}',RowKey='${rowKey}')`,
       {
@@ -850,11 +850,63 @@ describe("table Entity APIs REST tests", () => {
     // check headers
     const result2Data: any = request2Result.headers;
     // look for etag in headers; using a variable instead of a string literal to avoid TSLint "no-string-literal" warning
-    const key = 'etag';
+    const key = "etag";
     const flowEtag: string = result2Data[key];
     // check if etag exists
     assert.ok(flowEtag);
-  });  
+  });
+
+  it("Etag and timestamp precision and time value must match, @loki", async () => {
+    // first create the table for these tests
+    const body = JSON.stringify({
+      TableName: reproFlowsTableName
+    });
+    const createTableHeaders = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=nometadata"
+    };
+    const createTableResult = await postToAzurite(
+      "Tables",
+      body,
+      createTableHeaders
+    );
+    assert.strictEqual(createTableResult.status, 201);
+
+    const createEntityHeaders = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=fullmetadata"
+    };
+    const partitionKey = createUniquePartitionKey();
+    const rowKey = "RK";
+    // first create entity to overwrite
+    const createEntityResult = await postToAzurite(
+      reproFlowsTableName,
+      `{"PartitionKey":"${partitionKey}","RowKey":"${rowKey}","Value":"01"}`,
+      createEntityHeaders
+    );
+
+    assert.strictEqual(
+      createEntityResult.status,
+      201,
+      "We failed to create the entity to be later upserted using Rest"
+    );
+
+    const headers = createEntityResult.headers;
+    assert.notStrictEqual(
+      headers.etag,
+      undefined,
+      "We did not get an Etag that we need for our test!"
+    );
+    assert.strictEqual(
+      headers.etag
+        .replace("W/\"datetime'", "")
+        .replace("'\"", "")
+        .replace("%3A", ":")
+        .replace("%3A", ":"),
+      createEntityResult.data.Timestamp,
+      "Etag and Timestamp value must match"
+    );
+  });
 });
 
 /**
