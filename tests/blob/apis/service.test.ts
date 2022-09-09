@@ -398,7 +398,7 @@ describe("ServiceAPIs", () => {
   });
 
   it("Get Blob service stats negative @loki", async () => {
-    await serviceClient.getStatistics()
+    await serviceClient.getStatistics() 
       .catch((err) => {
         assert.strictEqual(err.statusCode, 400);
         assert.strictEqual(err.code, "InvalidQueryParameterValue");
