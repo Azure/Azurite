@@ -120,6 +120,7 @@ export default class LokiTableStoreQueryGenerator {
     const tokens = LokiTableStoreQueryGenerator.tokenizeQuery(query);
 
     const tokenTuples: TokenTuple[] = [];
+
     for (const token of tokens) {
       tokenTuples.push([token, TokenType.Unknown]);
     }
@@ -371,7 +372,12 @@ export default class LokiTableStoreQueryGenerator {
     token: string,
     backtickString: string
   ) {
+    // ToDo: Move conversion of type representation into the collumn
+    // query type class
     if (type.isGuid()) {
+      // GUID query will have both the base64 and string
+      // representation to ensure backwards compatability
+      // however this is the wrong point to change it.
       const conversionBuffer = Buffer.from(
         token.substring(type.getPrefix().length + 1)
       );

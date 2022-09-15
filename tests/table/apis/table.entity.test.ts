@@ -24,7 +24,7 @@ configLogger(false);
 // ENV VAR called AZURE_TABLE_STORAGE added to mocha
 // script or launch.json containing
 // Azure Storage Connection String (using SAS or Key).
-const testLocalAzuriteInstance = true;
+const testLocalAzuriteInstance = false;
 
 describe("table Entity APIs test - using Azure-Storage", () => {
   let server: TableServer;
@@ -605,17 +605,20 @@ describe("table Entity APIs test - using Azure-Storage", () => {
 
   [
     { pk: "", rk: "rk", label: "empty partition key" },
-    { pk: "pk", rk: "", label: "empty row key" },
+    { pk: "pk", rk: "", label: "empty row key" }
   ].forEach(({ pk, rk, label }) => {
-
-    ["INSERT", "INSERT_OR_MERGE", "INSERT_OR_REPLACE"].forEach(operation => {
+    ["INSERT", "INSERT_OR_MERGE", "INSERT_OR_REPLACE"].forEach((operation) => {
       it(`${operation} entity with ${label} in a BATCH, @loki`, (done) => {
         requestOverride.headers = {
           Prefer: "return-content",
           accept: "application/json;odata=fullmetadata"
         };
 
-        const batchEntity1 = new TestEntity(!pk ? pk : getUniqueName(pk), !rk ? rk : getUniqueName(rk), "value1");
+        const batchEntity1 = new TestEntity(
+          !pk ? pk : getUniqueName(pk),
+          !rk ? rk : getUniqueName(rk),
+          "value1"
+        );
 
         const entityBatch: Azure.TableBatch = new Azure.TableBatch();
         entityBatch.addOperation(operation, batchEntity1);
@@ -638,7 +641,10 @@ describe("table Entity APIs test - using Azure-Storage", () => {
                     assert.ifError(error);
                   } else if (result) {
                     const entity: TestEntity = result;
-                    assert.strictEqual(entity.myValue._, batchEntity1.myValue._);
+                    assert.strictEqual(
+                      entity.myValue._,
+                      batchEntity1.myValue._
+                    );
                   }
                   done();
                 }
@@ -649,14 +655,18 @@ describe("table Entity APIs test - using Azure-Storage", () => {
       });
     });
 
-    ["MERGE", "REPLACE"].forEach(operation => {
+    ["MERGE", "REPLACE"].forEach((operation) => {
       it(`${operation} of entity with ${label} in a BATCH, @loki`, (done) => {
         requestOverride.headers = {
           Prefer: "return-content",
           accept: "application/json;odata=fullmetadata"
         };
 
-        const batchEntity1 = new TestEntity(!pk ? pk : getUniqueName(pk), !rk ? rk : getUniqueName(rk), "value1");
+        const batchEntity1 = new TestEntity(
+          !pk ? pk : getUniqueName(pk),
+          !rk ? rk : getUniqueName(rk),
+          "value1"
+        );
 
         tableService.insertEntity(
           tableName,
@@ -680,7 +690,8 @@ describe("table Entity APIs test - using Azure-Storage", () => {
                 }
               }
             );
-          })
+          }
+        );
       });
     });
 
@@ -690,7 +701,11 @@ describe("table Entity APIs test - using Azure-Storage", () => {
         accept: "application/json;odata=fullmetadata"
       };
 
-      const batchEntity1 = new TestEntity(!pk ? pk : getUniqueName(pk), !rk ? rk : getUniqueName(rk), "value1");
+      const batchEntity1 = new TestEntity(
+        !pk ? pk : getUniqueName(pk),
+        !rk ? rk : getUniqueName(rk),
+        "value1"
+      );
 
       tableService.insertEntity(
         tableName,
@@ -722,7 +737,8 @@ describe("table Entity APIs test - using Azure-Storage", () => {
               }
             }
           );
-        })
+        }
+      );
     });
   });
 
