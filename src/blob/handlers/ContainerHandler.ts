@@ -5,6 +5,7 @@ import { OAuthLevel } from "../../common/models";
 import IExtentStore from "../../common/persistence/IExtentStore";
 import { convertRawHeadersToMetadata, newEtag } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
+import NotImplementedError from "../errors/NotImplementedError";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IContainerHandler from "../generated/handlers/IContainerHandler";
@@ -320,11 +321,28 @@ export default class ContainerHandler extends BaseHandler
     return response;
   }
 
+  public async restore(
+    options: Models.ContainerRestoreOptionalParams,
+    context: Context
+  ): Promise<Models.ContainerRestoreResponse> {
+    throw new NotImplementedError(context.contextId!);
+  }
+
+  // Service doesn't support this feature either. 
+  // The SDK marked rename function to be private to hide it from customer.
+  // From SDK comments: Need to hide this interface for now. Make it public and turn on the live tests for it when the service is ready.
+  public async rename(
+    sourceContainerName: string,
+    options: Models.ContainerRenameOptionalParams,
+    context: Context
+  ): Promise<Models.ContainerRenameResponse>{
+    throw new NotImplementedError(context.contextId!);
+  }
+
   public async submitBatch(
     body: NodeJS.ReadableStream,
     contentLength: number,
     multipartContentType: string,
-    containerName: string,
     options: Models.ContainerSubmitBatchOptionalParams,
     context: Context): Promise<Models.ContainerSubmitBatchResponse> {
       const blobServiceCtx = new BlobStorageContext(context);
@@ -345,7 +363,7 @@ export default class ContainerHandler extends BaseHandler
 
       // No client request id defined in batch response, should refine swagger and regenerate from it.
       // batch response succeed code should be 202 instead of 200, should refine swagger and regenerate from it.
-      const response: Models.ServiceSubmitBatchResponse = {
+      const response: Models.ContainerSubmitBatchResponse = {
         statusCode: 202,
         requestId: context.contextId,
         version: BLOB_API_VERSION,
@@ -354,6 +372,11 @@ export default class ContainerHandler extends BaseHandler
       };
 
       return response;
+  }
+
+  public async filterBlobs(options: Models.ContainerFilterBlobsOptionalParams, context: Context
+    ): Promise<Models.ContainerFilterBlobsResponse> {
+    throw new NotImplementedError(context.contextId!);
   }
 
   /**
@@ -586,7 +609,6 @@ export default class ContainerHandler extends BaseHandler
 
     const request = context.request!;
     const marker = options.marker;
-    const delimiter = "";
     options.marker = options.marker || "";
     let includeSnapshots: boolean = false;
     let includeUncommittedBlobs: boolean = false;
@@ -633,7 +655,6 @@ export default class ContainerHandler extends BaseHandler
       prefix: options.prefix || "",
       marker: options.marker,
       maxResults: options.maxresults,
-      delimiter,
       segment: {
         blobItems: blobs.map(item => {
           return {

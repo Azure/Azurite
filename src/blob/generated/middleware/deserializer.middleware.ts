@@ -1,12 +1,12 @@
-import Operation from "../artifacts/operation";
-import Specifications from "../artifacts/specifications";
-import Context from "../Context";
-import DeserializationError from "../errors/DeserializationError";
-import OperationMismatchError from "../errors/OperationMismatchError";
-import IRequest from "../IRequest";
-import { NextFunction } from "../MiddlewareFactory";
-import ILogger from "../utils/ILogger";
-import { deserialize } from "../utils/serializer";
+import Operation from '../artifacts/operation';
+import Specifications from '../artifacts/specifications';
+import Context from '../Context';
+import DeserializationError from '../errors/DeserializationError';
+import OperationMismatchError from '../errors/OperationMismatchError';
+import IRequest from '../IRequest';
+import { NextFunction } from '../MiddlewareFactory';
+import ILogger from '../utils/ILogger';
+import { deserialize } from '../utils/serializer';
 
 /**
  * Deserializer Middleware. Deserialize incoming HTTP request into models.

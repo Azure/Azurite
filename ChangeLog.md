@@ -11,6 +11,10 @@ General:
 - Typescript upgraded from 4.2.4 to 4.9.5.
 - Migrated test pipeline from Node.js 10/12 to Node.js 14/16/18.
 
+Blob:
+
+- Upgraded swagger spec to API version 2021-10-04.
+
 Table:
 
 - Fixed issue for querying on identifiers starting with underscore.

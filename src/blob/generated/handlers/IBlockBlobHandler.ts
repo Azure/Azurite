@@ -9,11 +9,12 @@
  */
 // tslint:disable:max-line-length
 
-import * as Models from "../artifacts/models";
-import Context from "../Context";
+import * as Models from '../artifacts/models';
+import Context from '../Context';
 
 export default interface IBlockBlobHandler {
   upload(body: NodeJS.ReadableStream, contentLength: number, options: Models.BlockBlobUploadOptionalParams, context: Context): Promise<Models.BlockBlobUploadResponse>;
+  putBlobFromUrl(contentLength: number, copySource: string, options: Models.BlockBlobPutBlobFromUrlOptionalParams, context: Context): Promise<Models.BlockBlobPutBlobFromUrlResponse>;
   stageBlock(blockId: string, contentLength: number, body: NodeJS.ReadableStream, options: Models.BlockBlobStageBlockOptionalParams, context: Context): Promise<Models.BlockBlobStageBlockResponse>;
   stageBlockFromURL(blockId: string, contentLength: number, sourceUrl: string, options: Models.BlockBlobStageBlockFromURLOptionalParams, context: Context): Promise<Models.BlockBlobStageBlockFromURLResponse>;
   commitBlockList(blocks: Models.BlockLookupList, options: Models.BlockBlobCommitBlockListOptionalParams, context: Context): Promise<Models.BlockBlobCommitBlockListResponse>;

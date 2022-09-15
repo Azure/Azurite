@@ -9,18 +9,21 @@
  */
 // tslint:disable:max-line-length
 
-import * as Models from "../artifacts/models";
-import Context from "../Context";
+import * as Models from '../artifacts/models';
+import Context from '../Context';
 
 export default interface IContainerHandler {
   create(options: Models.ContainerCreateOptionalParams, context: Context): Promise<Models.ContainerCreateResponse>;
   getProperties(options: Models.ContainerGetPropertiesOptionalParams, context: Context): Promise<Models.ContainerGetPropertiesResponse>;
-  getPropertiesWithHead(options: Models.ContainerGetPropertiesWithHeadOptionalParams, context: Context): Promise<Models.ContainerGetPropertiesWithHeadResponse>;
+  getProperties(options: Models.ContainerGetProperties1OptionalParams, context: Context): Promise<Models.ContainerGetPropertiesHeaders12>;
   delete(options: Models.ContainerDeleteMethodOptionalParams, context: Context): Promise<Models.ContainerDeleteResponse>;
   setMetadata(options: Models.ContainerSetMetadataOptionalParams, context: Context): Promise<Models.ContainerSetMetadataResponse>;
   getAccessPolicy(options: Models.ContainerGetAccessPolicyOptionalParams, context: Context): Promise<Models.ContainerGetAccessPolicyResponse>;
   setAccessPolicy(options: Models.ContainerSetAccessPolicyOptionalParams, context: Context): Promise<Models.ContainerSetAccessPolicyResponse>;
-  submitBatch(body: NodeJS.ReadableStream, contentLength: number, multipartContentType: string, containerName: string, options: Models.ContainerSubmitBatchOptionalParams, context: Context): Promise<Models.ContainerSubmitBatchResponse>;
+  restore(options: Models.ContainerRestoreOptionalParams, context: Context): Promise<Models.ContainerRestoreResponse>;
+  rename(sourceContainerName: string, options: Models.ContainerRenameOptionalParams, context: Context): Promise<Models.ContainerRenameResponse>;
+  submitBatch(body: NodeJS.ReadableStream, contentLength: number, multipartContentType: string, options: Models.ContainerSubmitBatchOptionalParams, context: Context): Promise<Models.ContainerSubmitBatchResponse>;
+  filterBlobs(options: Models.ContainerFilterBlobsOptionalParams, context: Context): Promise<Models.ContainerFilterBlobsResponse>;
   acquireLease(options: Models.ContainerAcquireLeaseOptionalParams, context: Context): Promise<Models.ContainerAcquireLeaseResponse>;
   releaseLease(leaseId: string, options: Models.ContainerReleaseLeaseOptionalParams, context: Context): Promise<Models.ContainerReleaseLeaseResponse>;
   renewLease(leaseId: string, options: Models.ContainerRenewLeaseOptionalParams, context: Context): Promise<Models.ContainerRenewLeaseResponse>;
@@ -29,5 +32,4 @@ export default interface IContainerHandler {
   listBlobFlatSegment(options: Models.ContainerListBlobFlatSegmentOptionalParams, context: Context): Promise<Models.ContainerListBlobFlatSegmentResponse>;
   listBlobHierarchySegment(delimiter: string, options: Models.ContainerListBlobHierarchySegmentOptionalParams, context: Context): Promise<Models.ContainerListBlobHierarchySegmentResponse>;
   getAccountInfo(context: Context): Promise<Models.ContainerGetAccountInfoResponse>;
-  getAccountInfoWithHead(context: Context): Promise<Models.ContainerGetAccountInfoWithHeadResponse>;
 }

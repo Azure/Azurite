@@ -41,7 +41,7 @@ describe("AppendBlobHandler", () => {
 
   const buffer = Buffer.from("deadbeef");
 
-  const properties: Models.BlobProperties = {
+  const properties: Models.BlobPropertiesInternal = {
     lastModified: new Date(),
     etag: getUniqueName("etag"),
     blobType: Models.BlobType.AppendBlob,

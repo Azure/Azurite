@@ -1,4 +1,4 @@
-import URITemplate from "uri-templates";
+import URITemplate from 'uri-templates';
 
 export function isURITemplateMatch(url: string, template: string): boolean {
   const uriTemplate = URITemplate(template);

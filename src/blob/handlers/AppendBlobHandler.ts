@@ -222,4 +222,10 @@ export default class AppendBlobHandler extends BaseHandler
   ): Promise<Models.AppendBlobAppendBlockFromUrlResponse> {
     throw new NotImplementedError(context.contextId);
   }
+  public async seal(
+    options: Models.AppendBlobSealOptionalParams,
+    context: Context
+  ): Promise<Models.AppendBlobSealResponse> {
+    throw new NotImplementedError(context.contextId);
+  }
 }
