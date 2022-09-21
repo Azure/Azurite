@@ -96,16 +96,18 @@ export default class LokiJsQueryTranscriber {
    * @memberof LokiJsQueryTranscriber
    */
   update() {
-    if (this.queryContext.stateQueue.length > 0) {
-      const name = this.queryContext.stateQueue.shift()!;
-      this.setState(name);
-    }
+    while (this.queryContext.stateQueue.length > 0) {
+      if (this.queryContext.stateQueue.length > 0) {
+        const name = this.queryContext.stateQueue.shift()!;
+        this.setState(name);
+      }
 
-    if (this.currentState === undefined) {
-      return;
-    }
+      if (this.currentState === undefined) {
+        return;
+      }
 
-    this.currentState?.onUpdate?.(this.queryContext);
+      this.currentState?.onUpdate?.(this.queryContext);
+    }
   }
 
   /**
