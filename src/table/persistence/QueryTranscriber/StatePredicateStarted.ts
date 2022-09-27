@@ -5,9 +5,9 @@ import { QueryStateName } from "./QueryStateName";
 
 export default class StatePredicateStarted extends QPState implements IQPState {
   name = QueryStateName.PredicateStarted;
-  onEnter = (context: QueryContext) => {
+  onProcess = (context: QueryContext) => {
     // tslint:disable-next-line: no-console
-    console.log("predicate started enter");
+    console.log("predicate started processing");
 
     // now process next tokens
     let nextToken = "";
@@ -26,11 +26,7 @@ export default class StatePredicateStarted extends QPState implements IQPState {
 
     return context;
   };
-  onUpdate = (context: QueryContext) => {
-    // tslint:disable-next-line: no-console
-    console.log("predicate started update");
-    return context;
-  };
+
   onExit = (context: QueryContext) => {
     // tslint:disable-next-line: no-console
     console.log("predicate started exit");

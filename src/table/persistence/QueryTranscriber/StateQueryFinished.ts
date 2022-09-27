@@ -4,9 +4,9 @@ import { QueryStateName } from "./QueryStateName";
 
 export default class StateQueryFinished implements IQPState {
   name = QueryStateName.QueryFinished;
-  onEnter = (context: QueryContext) => {
+  onProcess = (context: QueryContext) => {
     // tslint:disable-next-line: no-console
-    console.log("query finished enter");
+    console.log("query finished processing");
 
     // add tagged predicates to the query output, then close the query function
     for (const taggedPredicate of context.taggedPredicates) {
@@ -19,11 +19,6 @@ export default class StateQueryFinished implements IQPState {
       context.transcribedQuery += predicate;
     }
 
-    return context;
-  };
-  onUpdate = (context: QueryContext) => {
-    // tslint:disable-next-line: no-console
-    console.log("query finished update");
     return context;
   };
   onExit = (context: QueryContext) => {

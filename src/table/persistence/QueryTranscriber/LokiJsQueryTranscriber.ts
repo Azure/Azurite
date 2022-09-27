@@ -16,10 +16,7 @@ export default class LokiJsQueryTranscriber {
     this.name = name ?? "machine";
     this.currentState = {
       name: QueryStateName.None,
-      onEnter: (context: QueryContext) => {
-        return context;
-      },
-      onUpdate: (context: QueryContext) => {
+      onProcess: (context: QueryContext) => {
         return context;
       },
       onExit: (context: QueryContext) => {
@@ -43,8 +40,7 @@ export default class LokiJsQueryTranscriber {
   addState(name: QueryStateName, config: IQPState) {
     this.states.set(name, {
       name,
-      onEnter: config.onEnter?.bind(this.queryContext),
-      onUpdate: config.onUpdate?.bind(this.queryContext),
+      onProcess: config.onProcess?.bind(this.queryContext),
       onExit: config.onExit?.bind(this.queryContext)
     });
 
@@ -82,32 +78,19 @@ export default class LokiJsQueryTranscriber {
     } else {
       throw Error(`${this.name} does not have a state named ${name}`);
     }
-    this.queryContext = this.currentState.onEnter(this.queryContext);
+    this.queryContext = this.currentState.onProcess(this.queryContext);
 
     this.isSwitchingState = false;
 
-    return this;
-  }
-
-  /**
-   * Update the machine.
-   *
-   * @return {*}
-   * @memberof LokiJsQueryTranscriber
-   */
-  update() {
+    // process state queue
     while (this.queryContext.stateQueue.length > 0) {
       if (this.queryContext.stateQueue.length > 0) {
         const name = this.queryContext.stateQueue.shift()!;
         this.setState(name);
       }
-
-      if (this.currentState === undefined) {
-        return;
-      }
-
-      this.currentState?.onUpdate?.(this.queryContext);
     }
+    this.currentState.onExit(this.queryContext);
+    return this;
   }
 
   /**

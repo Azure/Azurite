@@ -4,9 +4,9 @@ import { QueryStateName } from "./QueryStateName";
 
 export default class StatePredicateFinished implements IQPState {
   name = QueryStateName.PredicateFinished;
-  onEnter = (context: QueryContext) => {
+  onProcess = (context: QueryContext) => {
     // tslint:disable-next-line: no-console
-    console.log("predicate finished enter");
+    console.log("predicate finished processing");
 
     // set next state
     // need a choosing function
@@ -14,11 +14,7 @@ export default class StatePredicateFinished implements IQPState {
     context.stateQueue.push(QueryStateName.QueryFinished);
     return context;
   };
-  onUpdate = (context: QueryContext) => {
-    // tslint:disable-next-line: no-console
-    console.log("predicate finished update");
-    return context;
-  };
+
   onExit = (context: QueryContext) => {
     // tslint:disable-next-line: no-console
     console.log("predicate finished exit");

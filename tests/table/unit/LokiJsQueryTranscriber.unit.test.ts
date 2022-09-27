@@ -24,7 +24,6 @@ describe("LokiJs Query Transcribing unit tests, to ensure backward compatability
         );
 
       queryTranscriber.setState(QueryStateName.QueryStarted);
-      queryTranscriber.update();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
