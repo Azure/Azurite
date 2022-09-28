@@ -101,6 +101,7 @@ export default class ServiceHandler extends BaseHandler
 
     const responseBodyString = await blobBatchHandler.submitBatch(body,
       requestBatchBoundary,
+      "",
       context.request!,
       context);
 

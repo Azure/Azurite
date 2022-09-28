@@ -335,6 +335,7 @@ export default class ContainerHandler extends BaseHandler
 
       const responseBodyString = await blobBatchHandler.submitBatch(body,
         requestBatchBoundary,
+        blobServiceCtx.request!.getPath(),
         context.request!,
         context);
 

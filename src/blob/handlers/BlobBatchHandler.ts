@@ -11,7 +11,9 @@ import PublicAccessAuthenticator from "../authentication/PublicAccessAuthenticat
 import BlobStorageContext from "../context/BlobStorageContext";
 import StorageError from "../errors/StorageError";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
+import Operation from "../generated/artifacts/operation";
 import Context from "../generated/Context";
+import MiddlewareError from "../generated/errors/MiddlewareError";
 import IHandlers from "../generated/handlers/IHandlers";
 import IRequest, { HttpMethod } from "../generated/IRequest";
 import IResponse from "../generated/IResponse";
@@ -46,6 +48,7 @@ export class BlobBatchHandler {
 
   private handlePipeline: SubRequestHandler[];
   private errorHandler: SubRequestErrorHandler;
+  private operationFinder: SubRequestHandler[];
 
   constructor(
     private readonly accountDataStore: IAccountDataStore,
@@ -231,6 +234,11 @@ export class BlobBatchHandler {
       subRequestEndMiddleWare
     ];
 
+    this.operationFinder = [
+      subRequestContextMiddleware,
+      subRequestDispatchMiddleware,
+    ];
+
     this.errorHandler = subRequestErrorMiddleWare;
   }
 
@@ -284,11 +292,45 @@ export class BlobBatchHandler {
     return buffer.toString();
   }
 
-private parseSubRequests(
+private async getSubRequestOperation(request: IRequest) : Promise<Operation>
+{
+    const subRequestHandlePipeline = this.operationFinder;
+    const fakeResponse = new BlobBatchSubResponse(0, "HTTP/1.1");
+    return new Promise((resolve, reject) => {
+      const locals: any = {};
+      let i = 0;
+      const next = (error: any) =>
+        {
+          if (error) {
+            reject(error);
+          }
+          else {
+            ++i;
+            if (i < subRequestHandlePipeline.length) {
+              subRequestHandlePipeline[i](request, fakeResponse, locals, next);
+            }
+            else {
+              resolve((new Context(locals, DEFAULT_CONTEXT_PATH, request, fakeResponse)).operation!);
+            }
+          }
+        };
+
+      subRequestHandlePipeline[i](
+          request,
+          fakeResponse,
+          locals,
+          next
+        );
+    });
+}
+
+private async parseSubRequests(
+  commonRequestId: string,
   perRequestPrefix: string,
   batchRequestEnding: string,
+  subRequestPathPrefix: string,
   request: IRequest,
-  body: string) : BlobBatchSubRequest[]
+  body: string) : Promise<BlobBatchSubRequest[]>
 {
   const requestAll = body.split(batchRequestEnding);
   const response1 = requestAll[0]; // string after ending is useless
@@ -296,6 +338,8 @@ private parseSubRequests(
   const subRequests = response2.slice(1);
 
   const blobBatchSubRequests: BlobBatchSubRequest[] =[];
+
+  let previousOperation : Operation | undefined;
 
   for (const subRequest of subRequests)
   {
@@ -331,13 +375,13 @@ private parseSubRequests(
     ++lineIndex;
     const operationInfos = requestLines[lineIndex].split(" ");
     if (operationInfos.length < 3) throw new Error("Bad request");
-    const url = `${request.getEndpoint()}${operationInfos[1]}`;
-    const method = operationInfos[0] as HttpMethod;
-    if (blobBatchSubRequests.length !== 0)
-    {
-      if (method !== blobBatchSubRequests[0].getMethod()) throw new Error("Not support different method");
+
+    if (!operationInfos[1].startsWith(subRequestPathPrefix)) {
+      throw new Error("Request from a different container");
     }
 
+    const url = `${request.getEndpoint()}${operationInfos[1]}`;
+    const method = operationInfos[0] as HttpMethod;
     const blobBatchSubRequest = new BlobBatchSubRequest(content_id!, url, method, operationInfos[2], {});
 
     ++lineIndex;
@@ -349,6 +393,22 @@ private parseSubRequests(
       if (header.length !== 2) throw new Error("Bad Request");
       blobBatchSubRequest.setHeader(header[0], header[1]);
       ++lineIndex;
+    }
+    const operation = await this.getSubRequestOperation(blobBatchSubRequest);
+    if (operation !== Operation.Blob_Delete && operation !== Operation.Blob_SetTier) {
+      throw new Error("Not supported operation");
+    }
+
+    if (previousOperation === undefined) {
+      previousOperation = operation;
+    }
+    else if (operation !== previousOperation!) {
+      throw new StorageError(
+        400,
+        "AllBatchSubRequestsShouldBeSameApi",
+        "All batch subrequests should be the same api.",
+        commonRequestId
+      );
     }
 
     blobBatchSubRequests.push(blobBatchSubRequest);
@@ -394,11 +454,12 @@ private serializeSubResponse(
   return responseBody;
 }
 
-  public async submitBatch(
-    body: NodeJS.ReadableStream,
-    requestBatchBoundary: string,
-    batchRequest: IRequest,
-    context: Context
+public async submitBatch(
+  body: NodeJS.ReadableStream,
+  requestBatchBoundary: string,
+  subRequestPathPrefix: string,
+  batchRequest: IRequest,
+  context: Context
   ): Promise<string>
   {
     const perRequestPrefix = `--${requestBatchBoundary}${HTTP_LINE_ENDING}`;
@@ -408,34 +469,65 @@ private serializeSubResponse(
     let subRequests: BlobBatchSubRequest[] | undefined;
     let error: any | undefined;
     try {
-      subRequests = this.parseSubRequests(
+      subRequests = await this.parseSubRequests(
+        context.contextId!,
         perRequestPrefix,
         batchRequestEnding,
+        subRequestPathPrefix,
         batchRequest,
         requestBody);
-    } catch {
+    } catch (err) {
+      if ((err instanceof MiddlewareError)
+      && err.hasOwnProperty("storageErrorCode")
+      && err.hasOwnProperty("storageErrorMessage")
+      && err.hasOwnProperty("storageRequestID")) {
+        error = err;
+      }
+      else {
+        error = new StorageError(
+          400,
+          "InvalidInput",
+          "One of the request inputs is not valid.",
+          context.contextId!
+        );
+      }
+    }
+
+    const subResponses: BlobBatchSubResponse[] = [];
+    if (subRequests && subRequests.length > 256)
+    {
       error = new StorageError(
         400,
-        "InvalidInput",
-        "One of the request inputs is not valid.",
+        "ExceedsMaxBatchRequestCount",
+        "The batch operation exceeds maximum number of allowed subrequests.",
         context.contextId!
       );
     }
 
-    const subResponses: BlobBatchSubResponse[] = [];
-
-    if (subRequests) {
-      for (const subRequest of subRequests) {
+    if (error) {
+      this.logger.error(
+        `BlobBatchHandler: ${error.message}`,
+        context.contextId
+      );
+      const errorResponse = new BlobBatchSubResponse(undefined, "HTTP/1.1");
+      await this.HandleOneFailedRequest(error, batchRequest, errorResponse);
+      subResponses.push(errorResponse);
+    }
+    else {
+      for (const subRequest of subRequests!) {
+        this.logger.info(
+          `BlobBatchHandler: starting on subrequest ${subRequest.content_id}`,
+          context.contextId
+        );
         const subResponse = new BlobBatchSubResponse(subRequest.content_id, subRequest.protocolWithVersion);
         await this.HandleOneSubRequest(subRequest,
           subResponse);
         subResponses.push(subResponse);
+        this.logger.info(
+          `BlobBatchHandler: completed on subrequest ${subRequest.content_id} ${subResponse.getHeader("x-ms-request-id")}`,
+          context.contextId
+        );
       }
-    }
-    else {
-      const errorResponse = new BlobBatchSubResponse(undefined, "HTTP/1.1");
-      await this.HandleOneFailedRequest(error, batchRequest, errorResponse);
-      subResponses.push(errorResponse);
     }
 
     return this.serializeSubResponse(perRequestPrefix, batchRequestEnding, subResponses);
