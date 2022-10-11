@@ -12,10 +12,28 @@ export default class StateQueryStarted extends QPState implements IQPState {
     // todo: validate performance of estimating size of query array
     // here, or just extending array size as needed
 
-    context.transcribedQuery = "return ( ";
+    context.transcribedQuery = "return (";
+    // let token = "";
 
-    context.stateQueue.push(QueryStateName.PredicateStarted);
+    // [context, token] = this.determineNextToken(context);
 
+    // ***
+    // Determine next step
+    // thinking that defaulting to a predicate is a good idea
+    // Will leave tokenization to the predicate processing State
+    // tslint:disable-next-line: no-console
+    // console.log(token);
+
+    // option: force predicate processing
+    // context.stateQueue.push(QueryStateName.PredicateStarted);
+
+    // vs deciding? (this will decide if we need a stack or queue)
+
+    let token = "";
+    [context, token] = this.determineNextToken(context);
+    context = this.handleToken(context, token);
+
+    // *** end determine next step
     return context;
   };
 

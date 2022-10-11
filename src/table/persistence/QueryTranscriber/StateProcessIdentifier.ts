@@ -3,38 +3,34 @@ import QPState from "./QPState";
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
 
-export default class StatePredicateFinished
+export default class StateProcessIdentifier
   extends QPState
   implements IQPState
 {
-  name = QueryStateName.PredicateFinished;
+  name = QueryStateName.ProcessIdentifier;
   onProcess = (context: QueryContext) => {
     // tslint:disable-next-line: no-console
-    console.log("predicate finished processing");
+    console.log("Processing Identifier");
 
-    // ToDo: if finished ?
     let token = "";
     [context, token] = this.determineNextToken(context);
 
     context.transcribedQuery += ` ${token}`;
     context.currentPos += token.length;
 
-    if (context.currentPos === context.originalQuery.length) {
-      context.stateQueue.push(QueryStateName.QueryFinished);
-    } else {
-      [context, token] = this.determineNextToken(context);
-      context = this.handleToken(context, token);
-    }
+    [context, token] = this.determineNextToken(context);
+    context = this.handleToken(context, token);
 
     return context;
   };
 
   onExit = (context: QueryContext) => {
     // tslint:disable-next-line: no-console
-    console.log("predicate finished exit");
+    console.log("Processing Identifier exit");
 
-    // validate current predicate?
-
+    // decide on next state
+    // simple case fiorst with identifier, operator, value
+    // context.stateQueue.push(QueryStateName.ProcessOperator);
     return context;
   };
 }

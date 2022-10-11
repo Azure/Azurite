@@ -9,16 +9,17 @@ export default class StateQueryFinished implements IQPState {
     console.log("query finished processing");
 
     // add tagged predicates to the query output, then close the query function
-    for (const taggedPredicate of context.taggedPredicates) {
-      let predicate = "";
-      for (const taggedPredicateToken of taggedPredicate[0]) {
-        predicate += " ";
-        predicate += taggedPredicateToken[0];
-      }
+    // for (const taggedPredicate of context.taggedPredicates) {
+    //   let predicate = "";
+    //   for (const taggedPredicateToken of taggedPredicate[0]) {
+    //     predicate += " ";
+    //     predicate += taggedPredicateToken[0];
+    //   }
 
-      context.transcribedQuery += predicate;
-    }
-
+    //   context.transcribedQuery += predicate;
+    // }
+    // Close off query function:
+    context.transcribedQuery += " )";
     return context;
   };
   onExit = (context: QueryContext) => {

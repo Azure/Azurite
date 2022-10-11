@@ -67,9 +67,13 @@ export default class LokiJsQueryTranscriber {
 
     this.isSwitchingState = true;
 
-    if (this.isCurrentState(name)) {
-      throw new Error(`${this.name} is already in state ${name}`);
-    }
+    // ToDO: Validate this logic, as we can open nested
+    // predicate inside predicate
+    // if (this.isCurrentState(name)) {
+    //   throw new Error(
+    //     `${this.name} is already in state ${QueryStateName[name]}`
+    //   );
+    // }
 
     this.queryContext = this.currentState.onExit(this.queryContext);
     const state = this.states.get(name);
@@ -83,10 +87,13 @@ export default class LokiJsQueryTranscriber {
     this.isSwitchingState = false;
 
     // process state queue
+    // ToDo: Validate: Currently recursive, might be better to
+    // externalize to allow a serial non-recursive processing in
+    // a loop outside of setState function.
     while (this.queryContext.stateQueue.length > 0) {
       if (this.queryContext.stateQueue.length > 0) {
-        const name = this.queryContext.stateQueue.shift()!;
-        this.setState(name);
+        const newState = this.queryContext.stateQueue.shift()!;
+        this.setState(newState);
       }
     }
     this.currentState.onExit(this.queryContext);

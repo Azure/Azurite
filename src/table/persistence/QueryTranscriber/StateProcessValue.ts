@@ -3,38 +3,33 @@ import QPState from "./QPState";
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
 
-export default class StatePredicateFinished
-  extends QPState
-  implements IQPState
-{
-  name = QueryStateName.PredicateFinished;
+export default class StateProcessOperator extends QPState implements IQPState {
+  name = QueryStateName.ProcessValue;
   onProcess = (context: QueryContext) => {
     // tslint:disable-next-line: no-console
-    console.log("predicate finished processing");
+    console.log("Processing Value");
 
-    // ToDo: if finished ?
     let token = "";
     [context, token] = this.determineNextToken(context);
 
     context.transcribedQuery += ` ${token}`;
     context.currentPos += token.length;
 
-    if (context.currentPos === context.originalQuery.length) {
-      context.stateQueue.push(QueryStateName.QueryFinished);
-    } else {
-      [context, token] = this.determineNextToken(context);
-      context = this.handleToken(context, token);
-    }
+    [context, token] = this.determineNextToken(context);
+    context = this.handleToken(context, token);
 
     return context;
   };
 
   onExit = (context: QueryContext) => {
     // tslint:disable-next-line: no-console
-    console.log("predicate finished exit");
+    console.log("Processing Value exit");
 
-    // validate current predicate?
-
+    // decide on next state
+    // simple case first with identifier, operator, value
+    // context.stateQueue.push(QueryStateName.PredicateFinished);
+    // Should check the predicate structure here?
+    // or on the parens case?
     return context;
   };
 }

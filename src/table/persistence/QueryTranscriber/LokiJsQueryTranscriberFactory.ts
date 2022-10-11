@@ -3,6 +3,9 @@ import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
 import StatePredicateFinished from "./StatePredicateFinished";
 import StatePredicateStarted from "./StatePredicateStarted";
+import StateProcessIdentifier from "./StateProcessIdentifier";
+import StateProcessOperator from "./StateProcessOperator";
+import StateProcessValue from "./StateProcessValue";
 import StateQueryFinished from "./StateQueryFinished";
 import StateQueryStarted from "./StateQueryStarted";
 
@@ -21,6 +24,15 @@ export default class LokiJsQueryTranscriberFactory {
       QueryStateName.PredicateStarted,
       new StatePredicateStarted()
     );
+    transcriber.addState(
+      QueryStateName.ProcessIdentifier,
+      new StateProcessIdentifier()
+    );
+    transcriber.addState(
+      QueryStateName.ProcessOperator,
+      new StateProcessOperator()
+    );
+    transcriber.addState(QueryStateName.ProcessValue, new StateProcessValue());
     transcriber.addState(
       QueryStateName.PredicateFinished,
       new StatePredicateFinished()

@@ -8,11 +8,11 @@ describe("LokiJs Query Transcribing unit tests, to ensure backward compatability
     const testArray = [
       {
         originalQuery: "( )",
-        expectedQuery: "return ( )"
+        expectedQuery: "return ( ( ) )"
       },
       {
         originalQuery: "(partitionKey eq 'test')",
-        expectedQuery: "return (partitionKey eq 'test')"
+        expectedQuery: "return ( ( partitionKey === 'test' ) )"
       }
     ];
 

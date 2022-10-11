@@ -3,5 +3,8 @@ export enum QueryStateName {
   QueryStarted,
   QueryFinished,
   PredicateStarted,
-  PredicateFinished
+  PredicateFinished,
+  ProcessIdentifier,
+  ProcessOperator,
+  ProcessValue
 }

@@ -10,19 +10,24 @@ export default class StatePredicateStarted extends QPState implements IQPState {
     console.log("predicate started processing");
 
     // now process next tokens
-    let nextToken = "";
-    [context, nextToken] = this.determineNextToken(context);
+    let token = "";
+    [context, token] = this.determineNextToken(context);
+    // tslint:disable-next-line: no-console
+    console.log(token);
+    // ***
+    // Determine next step
 
-    context = this.handleToken(context, nextToken);
+    context.transcribedQuery += ` ${token}`;
+    context.currentPos += token.length;
 
-    // handle token
-    // change state to handle tokens?
-    // we check the curent predicate to validate if state change was valid
-    // when invalid, throw Error
-    // or choose next state
+    [context, token] = this.determineNextToken(context);
+    context = this.handleToken(context, token);
 
-    // set next state
-    context.stateQueue.push(QueryStateName.PredicateFinished);
+    // Check if predicate ends...
+    // (this should always be the case in proper processing)
+    if (context.currentPos === context.transcribedQuery.length - 1) {
+      context.stateQueue.push(QueryStateName.PredicateFinished);
+    }
 
     return context;
   };
