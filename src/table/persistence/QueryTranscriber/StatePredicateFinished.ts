@@ -40,7 +40,7 @@ export default class StatePredicateFinished
 
   onExit = (context: QueryContext) => {
     // ToDo: validate current predicate now or during transcribing?
-    // might even be able to remove the onExit hook.
+    // might even be able to remove the onExit hooks.
     return context;
   };
 

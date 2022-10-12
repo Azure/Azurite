@@ -133,7 +133,7 @@ export default class QPState {
     // match string (starts with ', or " ?)
     // match guid (is exactly guid'<guidval>')
     // ToDo: Validate regex for Long value rep
-    const match = token.match(/^L\d+|$^d+$|^guid'|^'|^"/);
+    const match = token.match(/^\d+L$|^\d+\.{1}\d+$|^guid'|^'|^"/);
     if (match !== null && match!.length > 0) {
       return true;
     }
