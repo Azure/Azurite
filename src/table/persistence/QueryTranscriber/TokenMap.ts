@@ -1,12 +1,12 @@
-import { QueryType } from "./QueryType";
+import { PredicateType } from "./PredicateType";
 
 export type TaggedToken = [string, TokenType];
-export type TokenMap = [TaggedToken[], QueryType];
+export type TokenMap = [TaggedToken[], PredicateType];
 export enum TokenType {
   Unknown,
   Identifier,
   Comparisson,
-  LogicalOp,
+  Operator,
   Value,
   ParensOpen,
   ParensClose

@@ -1,4 +1,5 @@
-export enum QueryType {
+export enum PredicateType {
+  "unknown",
   "parensOpen",
   "parensClose",
   "stringValue",

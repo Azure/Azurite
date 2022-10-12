@@ -2,28 +2,26 @@ import IQPState from "./IQPState";
 import QPState from "./QPState";
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
+import { PredicateType } from "./PredicateType";
+import { TaggedToken, TokenMap, TokenType } from "./TokenMap";
 
 export default class StatePredicateStarted extends QPState implements IQPState {
   name = QueryStateName.PredicateStarted;
-  onProcess = (context: QueryContext) => {
-    // tslint:disable-next-line: no-console
-    console.log("predicate started processing");
 
-    // now process next tokens
+  // Starts the processing of a predicate clause
+  // these ar the units in which we need to maintain
+  // backwards schema compatibility
+  onProcess = (context: QueryContext) => {
     let token = "";
     [context, token] = this.determineNextToken(context);
-    // tslint:disable-next-line: no-console
-    console.log(token);
-    // ***
-    // Determine next step
 
-    context.transcribedQuery += ` ${token}`;
-    context.currentPos += token.length;
+    context = this.storeTaggedTokens(context, token);
 
     [context, token] = this.determineNextToken(context);
     context = this.handleToken(context, token);
 
-    // Check if predicate ends...
+    // Checks if predicate ends... option for error handling
+    // or earlier query logic validation
     // (this should always be the case in proper processing)
     if (context.currentPos === context.transcribedQuery.length - 1) {
       context.stateQueue.push(QueryStateName.PredicateFinished);
@@ -32,9 +30,23 @@ export default class StatePredicateStarted extends QPState implements IQPState {
     return context;
   };
 
+  // perform any post porcessing on state
   onExit = (context: QueryContext) => {
-    // tslint:disable-next-line: no-console
-    console.log("predicate started exit");
     return context;
   };
+
+  private storeTaggedTokens(
+    context: QueryContext,
+    token: string
+  ): QueryContext {
+    // parens are stored in their own entry
+    context.currentPredicate += 1;
+    const taggedToken: TaggedToken = [token, TokenType.ParensOpen];
+    const tokenMap: TokenMap = [[taggedToken], PredicateType.parensOpen];
+    context.taggedPredicates[context.currentPredicate] = tokenMap;
+    context.currentPos += token.length;
+    context.currentPredicate += 1;
+
+    return context;
+  }
 }

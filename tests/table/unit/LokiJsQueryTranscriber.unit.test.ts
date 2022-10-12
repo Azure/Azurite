@@ -13,6 +13,18 @@ describe("LokiJs Query Transcribing unit tests, to ensure backward compatability
       {
         originalQuery: "(partitionKey eq 'test')",
         expectedQuery: "return ( ( partitionKey === 'test' ) )"
+      },
+      {
+        originalQuery: "( partitionKey eq 'test' )",
+        expectedQuery: "return ( ( partitionKey === 'test' ) )"
+      },
+      {
+        originalQuery: "('test' eq partitionKey)",
+        expectedQuery: "return ( ( 'test' === partitionKey ) )"
+      },
+      {
+        originalQuery: "( 'test' eq partitionKey )",
+        expectedQuery: "return ( ( 'test' === partitionKey ) )"
       }
     ];
 

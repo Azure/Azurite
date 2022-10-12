@@ -2,18 +2,18 @@ import IQPState from "./IQPState";
 import QPState from "./QPState";
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
+import { TaggedToken, TokenType } from "./TokenMap";
 
 export default class StateProcessOperator extends QPState implements IQPState {
   name = QueryStateName.ProcessOperator;
+
+  // process current query token which is operator
   onProcess = (context: QueryContext) => {
-    // tslint:disable-next-line: no-console
-    console.log("Processing Operator");
     let token = "";
     [context, token] = this.determineNextToken(context);
 
     token = StateProcessOperator.convertOperatorToken(token);
-    context.transcribedQuery += ` ${token}`;
-    context.currentPos += token.length;
+    context = this.storeTaggedTokens(context, token);
 
     [context, token] = this.determineNextToken(context);
     context = this.handleToken(context, token);
@@ -21,13 +21,8 @@ export default class StateProcessOperator extends QPState implements IQPState {
     return context;
   };
 
+  // perform optional post processing
   onExit = (context: QueryContext) => {
-    // tslint:disable-next-line: no-console
-    console.log("Processing Operator exit");
-
-    // decide on next state
-    // simple case fiorst with identifier, operator, value
-    // context.stateQueue.push(QueryStateName.ProcessValue);
     return context;
   };
 
@@ -66,5 +61,19 @@ export default class StateProcessOperator extends QPState implements IQPState {
       default:
         return token;
     }
+  }
+
+  private storeTaggedTokens(
+    context: QueryContext,
+    token: string
+  ): QueryContext {
+    const taggedToken: TaggedToken = [token, TokenType.Operator];
+
+    const taggedTokens = this.updateTaggedTokens(context, taggedToken);
+    context = this.updateTaggedPredicate(taggedTokens, context);
+
+    context.currentPos += token.length;
+
+    return context;
   }
 }

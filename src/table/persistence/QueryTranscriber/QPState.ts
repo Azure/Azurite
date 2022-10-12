@@ -1,7 +1,7 @@
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
-import { QueryType } from "./QueryType";
-import { TaggedToken, TokenType } from "./TokenMap";
+import { PredicateType } from "./PredicateType";
+import { TaggedToken, TokenMap, TokenType } from "./TokenMap";
 
 export default class QPState {
   /**
@@ -15,7 +15,7 @@ export default class QPState {
   ): QueryContext {
     if (token.match(/\(/) && context.currentPos === 0) {
       const taggedToken: TaggedToken = ["(", TokenType.ParensOpen];
-      context.taggedPredicates.push([[taggedToken], QueryType.parensOpen]);
+      context.taggedPredicates.push([[taggedToken], PredicateType.parensOpen]);
       context.currentPos += 1;
     }
     return context;
@@ -29,7 +29,7 @@ export default class QPState {
   protected processClosingParens(context: QueryContext): QueryContext {
     if (context.originalQuery.match(/^\)/)) {
       const taggedToken: TaggedToken = [")", TokenType.ParensClose];
-      context.taggedPredicates.push([[taggedToken], QueryType.parensClose]);
+      context.taggedPredicates.push([[taggedToken], PredicateType.parensClose]);
       context.currentPos += 1;
     }
     return context;
@@ -174,5 +174,26 @@ export default class QPState {
         isOperator = false;
     }
     return isOperator;
+  }
+
+  protected updateTaggedTokens(
+    context: QueryContext,
+    taggedToken: TaggedToken
+  ) {
+    let taggedTokens: TaggedToken[] = [];
+    if (context.taggedPredicates.length === context.currentPredicate + 1) {
+      taggedTokens = context.taggedPredicates[context.currentPredicate][0];
+    }
+    taggedTokens.push(taggedToken);
+    return taggedTokens;
+  }
+
+  protected updateTaggedPredicate(
+    taggedTokens: TaggedToken[],
+    context: QueryContext
+  ): QueryContext {
+    const tokenMap: TokenMap = [taggedTokens, PredicateType.unknown];
+    context.taggedPredicates[context.currentPredicate] = tokenMap;
+    return context;
   }
 }

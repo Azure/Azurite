@@ -2,21 +2,20 @@ import IQPState from "./IQPState";
 import QPState from "./QPState";
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
+import { TaggedToken, TokenType } from "./TokenMap";
 
 export default class StateProcessIdentifier
   extends QPState
   implements IQPState
 {
   name = QueryStateName.ProcessIdentifier;
-  onProcess = (context: QueryContext) => {
-    // tslint:disable-next-line: no-console
-    console.log("Processing Identifier");
 
+  // process current query token which is identifier
+  onProcess = (context: QueryContext) => {
     let token = "";
     [context, token] = this.determineNextToken(context);
 
-    context.transcribedQuery += ` ${token}`;
-    context.currentPos += token.length;
+    context = this.storeTaggedTokens(context, token);
 
     [context, token] = this.determineNextToken(context);
     context = this.handleToken(context, token);
@@ -24,13 +23,22 @@ export default class StateProcessIdentifier
     return context;
   };
 
+  // perform any post processing for state
   onExit = (context: QueryContext) => {
-    // tslint:disable-next-line: no-console
-    console.log("Processing Identifier exit");
-
-    // decide on next state
-    // simple case fiorst with identifier, operator, value
-    // context.stateQueue.push(QueryStateName.ProcessOperator);
     return context;
   };
+
+  private storeTaggedTokens(
+    context: QueryContext,
+    token: string
+  ): QueryContext {
+    const taggedToken: TaggedToken = [token, TokenType.Identifier];
+
+    const taggedTokens = this.updateTaggedTokens(context, taggedToken);
+    context = this.updateTaggedPredicate(taggedTokens, context);
+
+    context.currentPos += token.length;
+
+    return context;
+  }
 }
