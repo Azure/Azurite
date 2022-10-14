@@ -12,9 +12,9 @@ export default class StateProcessOperator extends QPState implements IQPState {
   onProcess = (context: QueryContext) => {
     let token = "";
     [context, token] = this.determineNextToken(context);
-
+    const originalTokenLength = token.length;
     token = StateProcessOperator.convertOperatorToken(token);
-    context = this.storeTaggedTokens(context, token);
+    context = this.storeTaggedTokens(context, token, originalTokenLength);
 
     [context, token] = this.determineNextToken(context);
     context = this.handleToken(context, token);
@@ -66,14 +66,15 @@ export default class StateProcessOperator extends QPState implements IQPState {
 
   private storeTaggedTokens(
     context: QueryContext,
-    token: string
+    token: string,
+    originalTokenLength: number
   ): QueryContext {
     const taggedToken: TaggedToken = new TaggedToken(token, TokenType.Operator);
 
     const taggedTokens = this.updateTaggedTokens(context, taggedToken);
     context = this.updateTaggedPredicate(taggedTokens, context);
 
-    context.currentPos += token.length;
+    context.currentPos += originalTokenLength;
 
     return context;
   }

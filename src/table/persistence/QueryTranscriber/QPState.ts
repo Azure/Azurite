@@ -150,7 +150,9 @@ export default class QPState {
    * @memberof QPState
    */
   isValue(token: string): boolean {
-    const match = token.match(/^-?\d+|^guid'|^'|^"|^X'|^binary'/);
+    const match = token.match(
+      /^true$|^false$|^-?\d+|^guid'|^'|^"|^X'|^binary'/
+    );
     if (match !== null && match!.length > 0) {
       return true;
     }
@@ -265,6 +267,21 @@ export default class QPState {
   }
 
   /**
+   * Checks if token matches boolean value syntax
+   *
+   * @param {string} token
+   * @return {*}  {boolean}
+   * @memberof QPState
+   */
+  isBooleanValue(token: string): boolean {
+    const match = token.match(/^true$|^false$/);
+    if (match !== null && match!.length > 0) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Checks if token is an identifier
    *
    * @param {string} token
@@ -273,7 +290,7 @@ export default class QPState {
    */
   isIdentifier(token: string): boolean {
     const match = token.match(
-      /^(?!guid')(?!binary')(?!X')(?!datetime')[a-zA-Z]/
+      /^(?!true$)(?!false$)(?!guid')(?!binary')(?!X')(?!datetime')[a-zA-Z]/
     );
     if (match !== null && match!.length > 0) {
       return true;

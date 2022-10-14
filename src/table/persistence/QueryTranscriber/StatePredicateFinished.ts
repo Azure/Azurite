@@ -43,7 +43,7 @@ export default class StatePredicateFinished
 
   setPredicateType(context: QueryContext): QueryContext {
     const taggedTokens =
-      context.taggedPredicates[context.currentPredicate - 1].tokens;
+      context.taggedPredicates[context.currentPredicate].tokens;
     taggedTokens.forEach((taggedToken) => {
       if (taggedToken.type === TokenType.Value) {
         context = this.ifGuidPredicate(context, taggedToken.token);
@@ -53,6 +53,7 @@ export default class StatePredicateFinished
         context = this.ifIntegerPredicate(context, taggedToken.token);
         context = this.ifStringPredicate(context, taggedToken.token);
         context = this.ifDatePredicate(context, taggedToken.token);
+        context = this.ifBooleanPredicate(context, taggedToken.token);
       }
     });
     return context;
@@ -119,6 +120,18 @@ export default class StatePredicateFinished
     if (this.isDateValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate - 1].predicateType =
         PredicateType.dateValue;
+      return context;
+    }
+    return context;
+  }
+
+  ifBooleanPredicate(
+    context: QueryContext,
+    tokenToCheck: string
+  ): QueryContext {
+    if (this.isBooleanValue(tokenToCheck)) {
+      context.taggedPredicates[context.currentPredicate - 1].predicateType =
+        PredicateType.booleanValue;
       return context;
     }
     return context;
