@@ -1,9 +1,16 @@
+/**
+ * What type of value is a predicate evaluating
+ * based on EdmType
+ *
+ * @export
+ * @enum {number}
+ */
 export enum PredicateType {
   "unknown",
   "parensOpen",
   "parensClose",
   "stringValue",
-  "numberValue",
+  "integerValue",
   "booleanValue",
   "dateValue",
   "doubleValue",

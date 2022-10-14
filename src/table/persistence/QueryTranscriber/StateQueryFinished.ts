@@ -12,9 +12,9 @@ export default class StateQueryFinished implements IQPState {
     for (const taggedPredicate of context.taggedPredicates) {
       let predicate = "";
       if (taggedPredicate !== undefined) {
-        for (const taggedPredicateToken of taggedPredicate[0]) {
+        for (const taggedPredicateToken of taggedPredicate.tokens) {
           predicate += " ";
-          predicate += taggedPredicateToken[0];
+          predicate += taggedPredicateToken.token;
         }
       }
 
