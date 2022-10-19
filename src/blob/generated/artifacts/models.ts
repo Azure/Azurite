@@ -1036,6 +1036,23 @@ export interface ContainerSetAccessPolicyOptionalParams {
 /**
  * Optional Parameters.
  */
+export interface ContainerSubmitBatchOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+}
+
+/**
+ * Optional Parameters.
+ */
 export interface ContainerAcquireLeaseOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
@@ -3332,6 +3349,28 @@ export interface ContainerSetAccessPolicyHeaders {
    * initiated
    */
   date?: Date;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for SubmitBatch operation.
+ */
+export interface ContainerSubmitBatchHeaders {
+  /**
+   * The media type of the body of the response. For batch requests, this is multipart/mixed;
+   * boundary=batchresponse_GUID
+   */
+  contentType?: string;
+  /**
+   * This header uniquely identifies the request that was made and can be used for troubleshooting
+   * the request.
+   */
+  requestId?: string;
+  /**
+   * Indicates the version of the Blob service used to execute the request. This header is returned
+   * for requests made against version 2009-09-19 and above.
+   */
+  version?: string;
   errorCode?: string;
 }
 
@@ -6374,7 +6413,7 @@ export type ServiceSubmitBatchResponse = ServiceSubmitBatchHeaders & {
   /**
    * The response status code.
    */
-  statusCode: 200;
+  statusCode: 202;
 };
 
 /**
@@ -6445,6 +6484,21 @@ export type ContainerSetAccessPolicyResponse = ContainerSetAccessPolicyHeaders &
    * The response status code.
    */
   statusCode: 200;
+};
+
+/**
+ * Contains response data for the submitBatch operation.
+ */
+export type ContainerSubmitBatchResponse = ContainerSubmitBatchHeaders & {
+  /**
+   * The response body as a node.js Readable stream.
+   */
+  body?: NodeJS.ReadableStream;
+} & {
+  /**
+   * The response status code.
+   */
+  statusCode: 202;
 };
 
 /**

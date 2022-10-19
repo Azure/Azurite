@@ -49,6 +49,7 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
    */
   public createDispatchMiddleware(): RequestHandler {
     return (req: Request, res: Response, next: NextFunction) => {
+      req.baseUrl
       const request = new ExpressRequestAdapter(req);
       const response = new ExpressResponseAdapter(res);
       dispatchMiddleware(

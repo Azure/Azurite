@@ -2574,6 +2574,40 @@ export const ContainerSetAccessPolicyHeaders: msRest.CompositeMapper = {
   }
 };
 
+export const ContainerSubmitBatchHeaders: msRest.CompositeMapper = {
+  serializedName: "container-submitbatch-headers",
+  type: {
+    name: "Composite",
+    className: "ContainerSubmitBatchHeaders",
+    modelProperties: {
+      contentType: {
+        serializedName: "content-type",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
 export const ContainerAcquireLeaseHeaders: msRest.CompositeMapper = {
   serializedName: "container-acquirelease-headers",
   type: {

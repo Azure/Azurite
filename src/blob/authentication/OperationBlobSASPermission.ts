@@ -10,12 +10,17 @@ export class OperationBlobSASPermission {
   }
 
   public validatePermissions(permissions: string): boolean {
-    for (const p of this.permission) {
-      if (permissions.toString().includes(p)) {
-        return true;
+    if (this.permission !== "") {
+      for (const p of this.permission) {
+        if (permissions.toString().includes(p)) {
+          return true;
+        }
       }
+      return false;
     }
-    return false;
+    else {
+      return permissions.toString() !== "";
+    }
   }
 }
 
@@ -318,6 +323,10 @@ OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Container_SetMetadata,
+  new OperationBlobSASPermission()
+);
+OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
+  Operation.Container_SubmitBatch,
   new OperationBlobSASPermission()
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(

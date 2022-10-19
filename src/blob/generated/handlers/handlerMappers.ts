@@ -116,6 +116,17 @@ operationHandlerMapping[Operation.Container_SetAccessPolicy] = {
   handler: "containerHandler",
   method: "setAccessPolicy"
 };
+operationHandlerMapping[Operation.Container_SubmitBatch] = {
+  arguments: [
+    "body",
+    "contentLength",
+    "multipartContentType",
+    "containerName",
+    "options"
+  ],
+  handler: "containerHandler",
+  method: "submitBatch"
+};
 operationHandlerMapping[Operation.Container_AcquireLease] = {
   arguments: [
     "options"

@@ -6,6 +6,8 @@ import { configLogger } from "../../src/common/Logger";
 import BlobTestServerFactory from "../BlobTestServerFactory";
 import { generateJWTToken, getUniqueName } from "../testutils";
 import { SimpleTokenCredential } from "../simpleTokenCredential";
+import { BlobClient } from "@azure/storage-blob";
+import { BlobBatch } from "@azure/storage-blob";
 
 // Set true to enable debug log
 configLogger(false);
@@ -48,6 +50,139 @@ describe("Blob OAuth Basic", () => {
 
     await containerClient.create();
     await containerClient.delete();
+  });
+  
+  it(`Should work with blob batch deleting @loki @sql`, async () => {
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation"
+    );
+
+    const serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(new SimpleTokenCredential(token), {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+
+    const containerName: string = getUniqueName("1container-with-dash");
+    const containerClient = serviceClient.getContainerClient(containerName);
+
+    await containerClient.create();
+
+    const blobClients: BlobClient[] = [];
+    const blobCount = 3;
+    const content = "Hello World";
+
+    for (let i = 0; i < blobCount; ++i) {
+      const blobName = getUniqueName("blob");
+      const blobClient = containerClient.getBlobClient(blobName);
+      const blockBlobClient = blobClient.getBlockBlobClient();
+      await blockBlobClient.upload(content, content.length);
+      blobClients.push(blobClient);
+    }
+
+    const blobBatchClient = serviceClient.getBlobBatchClient();
+    // Assemble batch delete request.
+    const batchDeleteRequest = new BlobBatch();
+    for (let i = 0; i < blobCount; i++) {
+      await batchDeleteRequest.deleteBlob(blobClients[i]);
+    }
+
+    // Submit batch request and verify response.
+    const resp = await blobBatchClient.submitBatch(batchDeleteRequest, {});
+    assert.equal(resp.subResponses.length, blobCount);
+    assert.equal(resp.subResponsesSucceededCount, blobCount);
+    assert.equal(resp.subResponsesFailedCount, 0);
+
+    for (let i = 0; i < blobCount; i++) {
+      assert.equal(resp.subResponses[i].errorCode, undefined);
+      assert.equal(resp.subResponses[i].status, 202);
+      assert.ok(resp.subResponses[i].statusMessage !== "");
+      assert.ok(resp.subResponses[i].headers.contains("x-ms-request-id"));
+      assert.equal(resp.subResponses[i]._request.url, blobClients[i].url);
+    }
+
+    // Verify blobs deleted.
+    const resp2 = (
+      await containerClient
+        .listBlobsFlat({
+          includeSnapshots: true,
+        })
+        .byPage({ maxPageSize: 1 })
+        .next()
+    ).value;
+    assert.equal(resp2.segment.blobItems.length, 0);
+  });
+  
+  it(`Should work with blob batch set tier @loki @sql`, async () => {
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation"
+    );
+
+    const serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(new SimpleTokenCredential(token), {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+
+    const containerName: string = getUniqueName("1container-with-dash");
+    const containerClient = serviceClient.getContainerClient(containerName);
+
+    await containerClient.create();
+
+    const blobClients: BlobClient[] = [];
+    const blobCount = 3;
+    const content = "Hello World";
+
+    for (let i = 0; i < blobCount; ++i) {
+      const blobName = getUniqueName("blob");
+      const blobClient = containerClient.getBlobClient(blobName);
+      const blockBlobClient = blobClient.getBlockBlobClient();
+      await blockBlobClient.upload(content, content.length);
+      blobClients.push(blobClient);
+    }
+
+    const blobBatchClient = serviceClient.getBlobBatchClient();
+    // Assemble batch delete request.
+    const batchRequest = new BlobBatch();
+    for (let i = 0; i < blobCount; i++) {
+      await batchRequest.setBlobAccessTier(blobClients[i], "Archive");
+    }
+
+    // Submit batch request and verify response.
+    const resp = await blobBatchClient.submitBatch(batchRequest, {});
+    assert.equal(resp.subResponses.length, blobCount);
+    assert.equal(resp.subResponsesSucceededCount, blobCount);
+    assert.equal(resp.subResponsesFailedCount, 0);
+
+    for (let i = 0; i < blobCount; i++) {
+      assert.equal(resp.subResponses[i].errorCode, undefined);
+      assert.equal(resp.subResponses[i].status, 200);
+      assert.ok(resp.subResponses[i].statusMessage !== "");
+      assert.ok(resp.subResponses[i].headers.contains("x-ms-request-id"));
+      assert.equal(resp.subResponses[i]._request.url, blobClients[i].url);
+    }
+    
+    for (const blobClient of blobClients) {
+      // Check blob tier set properly.
+      const resp2 = await blobClient.getProperties();
+      assert.equal(resp2.accessTier, "Archive");
+    }
   });
 
   it(`Should not work with invalid JWT token @loki @sql`, async () => {

@@ -153,3 +153,6 @@ export const VALID_BLOB_AUDIENCES = [
   /^https:\/\/(.*)\.blob\.core\.usgovcloudapi\.net[\/]?$/,
   /^https:\/\/(.*)\.blob\.core\.cloudapi\.de[\/]?$/
 ];
+
+export const HTTP_LINE_ENDING = "\r\n";
+export const HTTP_HEADER_DELIMITER = ": ";
