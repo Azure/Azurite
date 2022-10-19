@@ -1,12 +1,13 @@
-import { PredicateType } from "./PredicateType";
+import IPredicate from "./PredicateModel/IPredicate";
+import UnknownPredicate from "./PredicateModel/UnknownPredicate";
 import TaggedToken from "./TaggedToken";
 
 export class TokenMap {
   public tokens: TaggedToken[] = [];
-  public predicateType: PredicateType = PredicateType.unknown;
+  public predicateType: IPredicate = new UnknownPredicate();
   constructor(
     tokens: TaggedToken[] = [],
-    predicateType: PredicateType = PredicateType.unknown
+    predicateType: IPredicate = new UnknownPredicate()
   ) {
     this.tokens = tokens;
     this.predicateType = predicateType;

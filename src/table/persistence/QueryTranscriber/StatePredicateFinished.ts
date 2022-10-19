@@ -2,10 +2,18 @@ import IQPState from "./IQPState";
 import QPState from "./QPState";
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
-import { PredicateType } from "./PredicateType";
 import { TokenMap } from "./TokenMap";
 import TaggedToken from "./TaggedToken";
 import ParensCloseToken from "./TokenModel/ParensCloseToken";
+import GuidPredicate from "./PredicateModel/GuidPredicate";
+import BinaryPredicate from "./PredicateModel/BinaryPredicate";
+import LongPredicate from "./PredicateModel/LongPredicate";
+import DoublePredicate from "./PredicateModel/DoublePredicate";
+import IntegerPredicate from "./PredicateModel/IntegerPredicate";
+import StringPredicate from "./PredicateModel/StringPredicate";
+import DatePredicate from "./PredicateModel/DatePredicate";
+import BooleanPredicate from "./PredicateModel/BooleanPredicate";
+import ParensClose from "./PredicateModel/ParensClose";
 
 export default class StatePredicateFinished
   extends QPState
@@ -65,7 +73,7 @@ export default class StatePredicateFinished
   ifGuidPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isGuidValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate].predicateType =
-        PredicateType.guidValue;
+        new GuidPredicate();
       return context;
     }
     return context;
@@ -74,7 +82,7 @@ export default class StatePredicateFinished
   ifBinaryPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isBinaryValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate - 1].predicateType =
-        PredicateType.binaryValue;
+        new BinaryPredicate();
       return context;
     }
     return context;
@@ -83,7 +91,7 @@ export default class StatePredicateFinished
   ifLongPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isLongValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate - 1].predicateType =
-        PredicateType.longValue;
+        new LongPredicate();
       return context;
     }
     return context;
@@ -92,7 +100,7 @@ export default class StatePredicateFinished
   ifDoublePredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isDoubleValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate - 1].predicateType =
-        PredicateType.doubleValue;
+        new DoublePredicate();
       return context;
     }
     return context;
@@ -104,7 +112,7 @@ export default class StatePredicateFinished
   ): QueryContext {
     if (this.isIntegerValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate - 1].predicateType =
-        PredicateType.integerValue;
+        new IntegerPredicate();
       return context;
     }
     return context;
@@ -113,7 +121,7 @@ export default class StatePredicateFinished
   ifStringPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isStringValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate - 1].predicateType =
-        PredicateType.stringValue;
+        new StringPredicate();
       return context;
     }
     return context;
@@ -122,7 +130,7 @@ export default class StatePredicateFinished
   ifDatePredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isDateValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate - 1].predicateType =
-        PredicateType.dateValue;
+        new DatePredicate();
       return context;
     }
     return context;
@@ -134,7 +142,7 @@ export default class StatePredicateFinished
   ): QueryContext {
     if (this.isBooleanValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate - 1].predicateType =
-        PredicateType.booleanValue;
+        new BooleanPredicate();
       return context;
     }
     return context;
@@ -221,10 +229,7 @@ export default class StatePredicateFinished
       token,
       new ParensCloseToken()
     );
-    const tokenMap: TokenMap = new TokenMap(
-      [taggedToken],
-      PredicateType.parensClose
-    );
+    const tokenMap: TokenMap = new TokenMap([taggedToken], new ParensClose());
     context.taggedPredicates[context.currentPredicate] = tokenMap;
     context.currentPos += token.length;
 

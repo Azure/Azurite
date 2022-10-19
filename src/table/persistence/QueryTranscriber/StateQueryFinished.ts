@@ -1,5 +1,4 @@
 import IQPState from "./IQPState";
-import { PredicateType } from "./PredicateType";
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
 import TaggedToken from "./TaggedToken";
@@ -57,7 +56,7 @@ export default class StateQueryFinished implements IQPState {
    * @memberof StateQueryFinished
    */
   convertGuidPredicate(taggedPredicate: TokenMap): TokenMap {
-    if (taggedPredicate.predicateType === PredicateType.guidValue) {
+    if (taggedPredicate.predicateType.isGuidValue()) {
       const newTokens: TaggedToken[] = [];
       this.pushStringGuidPredicate(newTokens, taggedPredicate);
       newTokens.push(new TaggedToken("||", new OperatorToken()));

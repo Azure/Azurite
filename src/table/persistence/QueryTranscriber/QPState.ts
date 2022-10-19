@@ -1,10 +1,12 @@
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
-import { PredicateType } from "./PredicateType";
 import { TokenMap } from "./TokenMap";
 import TaggedToken from "./TaggedToken";
 import ParensOpenToken from "./TokenModel/ParensOpenToken";
 import ParensCloseToken from "./TokenModel/ParensCloseToken";
+import ParensClose from "./PredicateModel/ParensClose";
+import ParensOpen from "./PredicateModel/ParensOpen";
+import UnknownPredicate from "./PredicateModel/UnknownPredicate";
 
 export default class QPState {
   /**
@@ -22,7 +24,7 @@ export default class QPState {
         new ParensOpenToken()
       );
       context.taggedPredicates.push(
-        new TokenMap([taggedToken], PredicateType.parensOpen)
+        new TokenMap([taggedToken], new ParensOpen())
       );
       context.currentPos += 1;
     }
@@ -41,7 +43,7 @@ export default class QPState {
         new ParensCloseToken()
       );
       context.taggedPredicates.push(
-        new TokenMap([taggedToken], PredicateType.parensClose)
+        new TokenMap([taggedToken], new ParensClose())
       );
       context.currentPos += 1;
     }
@@ -355,7 +357,7 @@ export default class QPState {
   ): QueryContext {
     const tokenMap: TokenMap = new TokenMap(
       taggedTokens,
-      PredicateType.unknown
+      new UnknownPredicate()
     );
     context.taggedPredicates[context.currentPredicate] = tokenMap;
     return context;

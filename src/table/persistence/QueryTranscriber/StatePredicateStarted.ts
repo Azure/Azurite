@@ -2,10 +2,10 @@ import IQPState from "./IQPState";
 import QPState from "./QPState";
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
-import { PredicateType } from "./PredicateType";
 import { TokenMap } from "./TokenMap";
 import TaggedToken from "./TaggedToken";
 import ParensOpenToken from "./TokenModel/ParensOpenToken";
+import ParensOpen from "./PredicateModel/ParensOpen";
 
 export default class StatePredicateStarted extends QPState implements IQPState {
   name = QueryStateName.PredicateStarted;
@@ -47,10 +47,7 @@ export default class StatePredicateStarted extends QPState implements IQPState {
       token,
       new ParensOpenToken()
     );
-    const tokenMap: TokenMap = new TokenMap(
-      [taggedToken],
-      PredicateType.parensOpen
-    );
+    const tokenMap: TokenMap = new TokenMap([taggedToken], new ParensOpen());
     context.taggedPredicates[context.currentPredicate] = tokenMap;
     context.currentPos += token.length;
     context.currentPredicate += 1;
