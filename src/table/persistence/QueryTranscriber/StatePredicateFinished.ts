@@ -55,6 +55,7 @@ export default class StatePredicateFinished
     }
     const taggedTokens =
       context.taggedPredicates[context.currentPredicate].tokens;
+    // ToDo: decision should be moved out into a factory type for the predicates
     taggedTokens.forEach((taggedToken) => {
       if (taggedToken.type.isValue()) {
         context = this.ifGuidPredicate(context, taggedToken.token);
