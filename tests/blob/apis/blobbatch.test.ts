@@ -15,7 +15,7 @@ import BlobTestServerFactory from "../../BlobTestServerFactory";
 import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName } from "../../testutils";
 
 // Set true to enable debug log
-configLogger(true);
+configLogger(false);
 
 describe("Blob batch API", () => {
   const factory = new BlobTestServerFactory();

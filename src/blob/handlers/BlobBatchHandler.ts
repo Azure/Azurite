@@ -376,11 +376,13 @@ private async parseSubRequests(
     const operationInfos = requestLines[lineIndex].split(" ");
     if (operationInfos.length < 3) throw new Error("Bad request");
 
-    if (!operationInfos[1].startsWith(subRequestPathPrefix)) {
+    const requestPath = operationInfos[1].startsWith("/") ? operationInfos[1] : "/" + operationInfos[1];
+
+    if (!requestPath.startsWith(subRequestPathPrefix)) {
       throw new Error("Request from a different container");
     }
 
-    const url = `${request.getEndpoint()}${operationInfos[1]}`;
+    const url = `${request.getEndpoint()}${requestPath}`;
     const method = operationInfos[0] as HttpMethod;
     const blobBatchSubRequest = new BlobBatchSubRequest(content_id!, url, method, operationInfos[2], {});
 
