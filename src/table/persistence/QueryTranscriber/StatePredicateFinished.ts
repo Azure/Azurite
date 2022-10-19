@@ -4,8 +4,8 @@ import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
 import { PredicateType } from "./PredicateType";
 import { TokenMap } from "./TokenMap";
-import { TokenType } from "./TokenType";
 import TaggedToken from "./TaggedToken";
+import ParensCloseToken from "./TokenModel/ParensCloseToken";
 
 export default class StatePredicateFinished
   extends QPState
@@ -42,10 +42,13 @@ export default class StatePredicateFinished
   }
 
   setPredicateType(context: QueryContext): QueryContext {
+    if (context.taggedPredicates[context.currentPredicate] === undefined) {
+      return context;
+    }
     const taggedTokens =
       context.taggedPredicates[context.currentPredicate].tokens;
     taggedTokens.forEach((taggedToken) => {
-      if (taggedToken.type === TokenType.Value) {
+      if (taggedToken.type.isValue()) {
         context = this.ifGuidPredicate(context, taggedToken.token);
         context = this.ifBinaryPredicate(context, taggedToken.token);
         context = this.ifLongPredicate(context, taggedToken.token);
@@ -61,7 +64,7 @@ export default class StatePredicateFinished
 
   ifGuidPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isGuidValue(tokenToCheck)) {
-      context.taggedPredicates[context.currentPredicate - 1].predicateType =
+      context.taggedPredicates[context.currentPredicate].predicateType =
         PredicateType.guidValue;
       return context;
     }
@@ -163,20 +166,23 @@ export default class StatePredicateFinished
       // This checks that a single tagged token is of a type allowed to be
       // on it's own in a predicate;
       if (
-        context.taggedPredicates[context.currentPredicate - 1].tokens[0]
-          .type === TokenType.ParensOpen
+        context.taggedPredicates[
+          context.currentPredicate - 1
+        ].tokens[0].type.isParensOpen()
       ) {
         return;
       }
       if (
-        context.taggedPredicates[context.currentPredicate - 1].tokens[0]
-          .type === TokenType.ParensClose
+        context.taggedPredicates[
+          context.currentPredicate - 1
+        ].tokens[0].type.isParensClose()
       ) {
         return;
       }
       if (
-        context.taggedPredicates[context.currentPredicate - 1].tokens[0]
-          .type === TokenType.Value
+        context.taggedPredicates[
+          context.currentPredicate - 1
+        ].tokens[0].type.isValue()
       ) {
         return;
       }
@@ -213,7 +219,7 @@ export default class StatePredicateFinished
     context.currentPredicate += 1;
     const taggedToken: TaggedToken = new TaggedToken(
       token,
-      TokenType.ParensClose
+      new ParensCloseToken()
     );
     const tokenMap: TokenMap = new TokenMap(
       [taggedToken],

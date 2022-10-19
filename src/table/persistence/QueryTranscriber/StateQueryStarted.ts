@@ -9,7 +9,7 @@ export default class StateQueryStarted extends QPState implements IQPState {
   // start the processing and state machine
   onProcess = (context: QueryContext) => {
     // todo: validate performance of estimating size of query array
-    // here, or just extending array size as needed
+    // here, or just extending array size as needed?
 
     // first setup the query output function
     context.transcribedQuery = "return (";

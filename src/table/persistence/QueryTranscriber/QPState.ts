@@ -2,8 +2,9 @@ import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
 import { PredicateType } from "./PredicateType";
 import { TokenMap } from "./TokenMap";
-import { TokenType } from "./TokenType";
 import TaggedToken from "./TaggedToken";
+import ParensOpenToken from "./TokenModel/ParensOpenToken";
+import ParensCloseToken from "./TokenModel/ParensCloseToken";
 
 export default class QPState {
   /**
@@ -18,7 +19,7 @@ export default class QPState {
     if (token.match(/\(/) && context.currentPos === 0) {
       const taggedToken: TaggedToken = new TaggedToken(
         "(",
-        TokenType.ParensOpen
+        new ParensOpenToken()
       );
       context.taggedPredicates.push(
         new TokenMap([taggedToken], PredicateType.parensOpen)
@@ -37,7 +38,7 @@ export default class QPState {
     if (context.originalQuery.match(/^\)/)) {
       const taggedToken: TaggedToken = new TaggedToken(
         ")",
-        TokenType.ParensClose
+        new ParensCloseToken()
       );
       context.taggedPredicates.push(
         new TokenMap([taggedToken], PredicateType.parensClose)
@@ -168,7 +169,7 @@ export default class QPState {
    */
   isGuidValue(token: string): boolean {
     const match = token.match(
-      /^guid'[A-Z0-9]{8}-([A-Z0-9]{4}-){3}[A-Z0-9]{12}'/
+      /^guid'[A-Z0-9]{8}-([A-Z0-9]{4}-){3}[A-Z0-9]{12}'/gim
     );
     if (match !== null && match!.length > 0) {
       return true;

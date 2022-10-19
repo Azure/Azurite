@@ -114,7 +114,7 @@ describe("LokiJs Query Transcribing unit tests, to ensure backward compatability
     // no closing "done()" callback in async test
   });
 
-  it.only("correctly transcribes a Guid query", async () => {
+  it("correctly transcribes a Guid query", async () => {
     // use the expected response string to compare the reult to.
     // guid should have both simple string rep and base64 encoded
     // version for legacy schema compatibility
@@ -123,7 +123,7 @@ describe("LokiJs Query Transcribing unit tests, to ensure backward compatability
         originalQuery:
           "(myGuid eq guid'12345678-1234-1234-1234-1234567890ab' )",
         expectedQuery:
-          "return ( ( ( myGuid === 'MTIzNDU2NzgtMTIzNC0xMjM0LTEyMzQtMTIzNDU2Nzg5MGFi' ) || myGuid === '12345678-1234-1234-1234-1234567890ab' ) ) )"
+          "return ( ( ( item.properties.myGuid === '12345678-1234-1234-1234-1234567890ab' ) || ( item.properties.myGuid === 'MTIzNDU2NzgtMTIzNC0xMjM0LTEyMzQtMTIzNDU2Nzg5MGFi' ) ) )"
       }
     ];
 

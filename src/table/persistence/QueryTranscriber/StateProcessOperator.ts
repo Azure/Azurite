@@ -2,8 +2,8 @@ import IQPState from "./IQPState";
 import QPState from "./QPState";
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
-import { TokenType } from "./TokenType";
 import TaggedToken from "./TaggedToken";
+import OperatorToken from "./TokenModel/OperatorToken";
 
 export default class StateProcessOperator extends QPState implements IQPState {
   name = QueryStateName.ProcessOperator;
@@ -69,7 +69,10 @@ export default class StateProcessOperator extends QPState implements IQPState {
     token: string,
     originalTokenLength: number
   ): QueryContext {
-    const taggedToken: TaggedToken = new TaggedToken(token, TokenType.Operator);
+    const taggedToken: TaggedToken = new TaggedToken(
+      token,
+      new OperatorToken()
+    );
 
     const taggedTokens = this.updateTaggedTokens(context, taggedToken);
     context = this.updateTaggedPredicate(taggedTokens, context);

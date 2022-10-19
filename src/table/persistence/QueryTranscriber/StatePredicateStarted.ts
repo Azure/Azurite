@@ -4,8 +4,8 @@ import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
 import { PredicateType } from "./PredicateType";
 import { TokenMap } from "./TokenMap";
-import { TokenType } from "./TokenType";
 import TaggedToken from "./TaggedToken";
+import ParensOpenToken from "./TokenModel/ParensOpenToken";
 
 export default class StatePredicateStarted extends QPState implements IQPState {
   name = QueryStateName.PredicateStarted;
@@ -45,7 +45,7 @@ export default class StatePredicateStarted extends QPState implements IQPState {
     context.currentPredicate += 1;
     const taggedToken: TaggedToken = new TaggedToken(
       token,
-      TokenType.ParensOpen
+      new ParensOpenToken()
     );
     const tokenMap: TokenMap = new TokenMap(
       [taggedToken],
