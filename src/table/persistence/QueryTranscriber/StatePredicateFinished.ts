@@ -91,7 +91,7 @@ export default class StatePredicateFinished
 
   ifLongPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isLongValue(tokenToCheck)) {
-      context.taggedPredicates[context.currentPredicate - 1].predicateType =
+      context.taggedPredicates[context.currentPredicate].predicateType =
         new LongPredicate();
       return context;
     }
@@ -100,7 +100,7 @@ export default class StatePredicateFinished
 
   ifDoublePredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isDoubleValue(tokenToCheck)) {
-      context.taggedPredicates[context.currentPredicate - 1].predicateType =
+      context.taggedPredicates[context.currentPredicate].predicateType =
         new DoublePredicate();
       return context;
     }
@@ -112,7 +112,7 @@ export default class StatePredicateFinished
     tokenToCheck: string
   ): QueryContext {
     if (this.isIntegerValue(tokenToCheck)) {
-      context.taggedPredicates[context.currentPredicate - 1].predicateType =
+      context.taggedPredicates[context.currentPredicate].predicateType =
         new IntegerPredicate();
       return context;
     }
@@ -121,7 +121,7 @@ export default class StatePredicateFinished
 
   ifStringPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isStringValue(tokenToCheck)) {
-      context.taggedPredicates[context.currentPredicate - 1].predicateType =
+      context.taggedPredicates[context.currentPredicate].predicateType =
         new StringPredicate();
       return context;
     }
@@ -130,7 +130,7 @@ export default class StatePredicateFinished
 
   ifDatePredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isDateValue(tokenToCheck)) {
-      context.taggedPredicates[context.currentPredicate - 1].predicateType =
+      context.taggedPredicates[context.currentPredicate].predicateType =
         new DatePredicate();
       return context;
     }
@@ -142,7 +142,7 @@ export default class StatePredicateFinished
     tokenToCheck: string
   ): QueryContext {
     if (this.isBooleanValue(tokenToCheck)) {
-      context.taggedPredicates[context.currentPredicate - 1].predicateType =
+      context.taggedPredicates[context.currentPredicate].predicateType =
         new BooleanPredicate();
       return context;
     }

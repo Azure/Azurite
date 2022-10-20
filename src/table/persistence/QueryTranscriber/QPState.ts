@@ -154,7 +154,7 @@ export default class QPState {
    */
   isValue(token: string): boolean {
     const match = token.match(
-      /^true$|^false$|^-?\d+|^guid'|^'|^"|^X'|^binary'/
+      /^true$|^false$|^-?\d+|^guid'|^'|^"|^X'|^binary'|^datetime'/
     );
     if (match !== null && match!.length > 0) {
       return true;
