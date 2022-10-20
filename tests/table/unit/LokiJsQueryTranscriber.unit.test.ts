@@ -2,7 +2,7 @@ import * as assert from "assert";
 import LokiJsQueryTranscriberFactory from "../../../src/table/persistence/QueryTranscriber/LokiJsQueryTranscriberFactory";
 import { QueryStateName } from "../../../src/table/persistence/QueryTranscriber/QueryStateName";
 
-describe("LokiJs Query Transcribing unit tests, to ensure backward compatability with earlier schemas:", () => {
+describe("LokiJs Query Transcribing unit tests, also ensures backward compatability with earlier schemas:", () => {
   it("correctly transcribes a simple query with irregular whitespace", async () => {
     // use the expected response string to compare the reult to.
     const testArray = [
@@ -281,4 +281,8 @@ describe("LokiJs Query Transcribing unit tests, to ensure backward compatability
 
     // no closing "done()" callback in async test
   });
+
+  // binary query
+
+  // table query
 });

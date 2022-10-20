@@ -54,7 +54,7 @@ export default class StatePredicateFinished
       return context;
     }
     const taggedTokens =
-      context.taggedPredicates[context.currentPredicate].tokens;
+      context.taggedPredicates[context.currentPredicate].tokenMap.tokens;
     // ToDo: decision should be moved out into a factory type for the predicates
     taggedTokens.forEach((taggedToken) => {
       if (taggedToken.type.isValue()) {
@@ -73,8 +73,9 @@ export default class StatePredicateFinished
 
   ifGuidPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isGuidValue(tokenToCheck)) {
-      context.taggedPredicates[context.currentPredicate].predicateType =
-        new GuidPredicate();
+      context.taggedPredicates[context.currentPredicate] = new GuidPredicate(
+        context.taggedPredicates[context.currentPredicate].tokenMap
+      );
       return context;
     }
     return context;
@@ -82,8 +83,9 @@ export default class StatePredicateFinished
 
   ifBinaryPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isBinaryValue(tokenToCheck)) {
-      context.taggedPredicates[context.currentPredicate - 1].predicateType =
-        new BinaryPredicate();
+      context.taggedPredicates[context.currentPredicate] = new BinaryPredicate(
+        context.taggedPredicates[context.currentPredicate].tokenMap
+      );
       return context;
     }
     return context;
@@ -91,8 +93,9 @@ export default class StatePredicateFinished
 
   ifLongPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isLongValue(tokenToCheck)) {
-      context.taggedPredicates[context.currentPredicate].predicateType =
-        new LongPredicate();
+      context.taggedPredicates[context.currentPredicate] = new LongPredicate(
+        context.taggedPredicates[context.currentPredicate].tokenMap
+      );
       return context;
     }
     return context;
@@ -100,8 +103,9 @@ export default class StatePredicateFinished
 
   ifDoublePredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isDoubleValue(tokenToCheck)) {
-      context.taggedPredicates[context.currentPredicate].predicateType =
-        new DoublePredicate();
+      context.taggedPredicates[context.currentPredicate] = new DoublePredicate(
+        context.taggedPredicates[context.currentPredicate].tokenMap
+      );
       return context;
     }
     return context;
@@ -112,8 +116,9 @@ export default class StatePredicateFinished
     tokenToCheck: string
   ): QueryContext {
     if (this.isIntegerValue(tokenToCheck)) {
-      context.taggedPredicates[context.currentPredicate].predicateType =
-        new IntegerPredicate();
+      context.taggedPredicates[context.currentPredicate] = new IntegerPredicate(
+        context.taggedPredicates[context.currentPredicate].tokenMap
+      );
       return context;
     }
     return context;
@@ -121,8 +126,9 @@ export default class StatePredicateFinished
 
   ifStringPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isStringValue(tokenToCheck)) {
-      context.taggedPredicates[context.currentPredicate].predicateType =
-        new StringPredicate();
+      context.taggedPredicates[context.currentPredicate] = new StringPredicate(
+        context.taggedPredicates[context.currentPredicate].tokenMap
+      );
       return context;
     }
     return context;
@@ -130,8 +136,9 @@ export default class StatePredicateFinished
 
   ifDatePredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isDateValue(tokenToCheck)) {
-      context.taggedPredicates[context.currentPredicate].predicateType =
-        new DatePredicate();
+      context.taggedPredicates[context.currentPredicate] = new DatePredicate(
+        context.taggedPredicates[context.currentPredicate].tokenMap
+      );
       return context;
     }
     return context;
@@ -142,8 +149,9 @@ export default class StatePredicateFinished
     tokenToCheck: string
   ): QueryContext {
     if (this.isBooleanValue(tokenToCheck)) {
-      context.taggedPredicates[context.currentPredicate].predicateType =
-        new BooleanPredicate();
+      context.taggedPredicates[context.currentPredicate] = new BooleanPredicate(
+        context.taggedPredicates[context.currentPredicate].tokenMap
+      );
       return context;
     }
     return context;
@@ -157,9 +165,10 @@ export default class StatePredicateFinished
 
   private checkPredicateLength(context: QueryContext) {
     if (
-      context.taggedPredicates[context.currentPredicate - 1].tokens.length !==
-        1 &&
-      context.taggedPredicates[context.currentPredicate - 1].tokens.length !== 3
+      context.taggedPredicates[context.currentPredicate - 1].tokenMap.tokens
+        .length !== 1 &&
+      context.taggedPredicates[context.currentPredicate - 1].tokenMap.tokens
+        .length !== 3
     ) {
       // we must have form "x operator b", or a single value
       throw new Error("Invalid Query");
@@ -168,7 +177,8 @@ export default class StatePredicateFinished
 
   private checkSingleTerm(context: QueryContext) {
     if (
-      context.taggedPredicates[context.currentPredicate - 1].tokens.length === 1
+      context.taggedPredicates[context.currentPredicate - 1].tokenMap.tokens
+        .length === 1
     ) {
       // we must have a parens or a single value
       // ToDo: should we convert unions to objects to allow dot notation?
@@ -177,21 +187,21 @@ export default class StatePredicateFinished
       if (
         context.taggedPredicates[
           context.currentPredicate - 1
-        ].tokens[0].type.isParensOpen()
+        ].tokenMap.tokens[0].type.isParensOpen()
       ) {
         return;
       }
       if (
         context.taggedPredicates[
           context.currentPredicate - 1
-        ].tokens[0].type.isParensClose()
+        ].tokenMap.tokens[0].type.isParensClose()
       ) {
         return;
       }
       if (
         context.taggedPredicates[
           context.currentPredicate - 1
-        ].tokens[0].type.isValue()
+        ].tokenMap.tokens[0].type.isValue()
       ) {
         return;
       }
@@ -201,9 +211,10 @@ export default class StatePredicateFinished
 
   private checkMultipleTerms(context: QueryContext) {
     if (
-      context.taggedPredicates[context.currentPredicate - 1].tokens.length !==
-        1 &&
-      context.taggedPredicates[context.currentPredicate - 1].tokens.length !== 3
+      context.taggedPredicates[context.currentPredicate - 1].tokenMap.tokens
+        .length !== 1 &&
+      context.taggedPredicates[context.currentPredicate - 1].tokenMap.tokens
+        .length !== 3
     ) {
       // we must have form "x operator b", or a single value
       throw new Error("Invalid Query");
@@ -230,8 +241,10 @@ export default class StatePredicateFinished
       token,
       new ParensCloseToken()
     );
-    const tokenMap: TokenMap = new TokenMap([taggedToken], new ParensClose());
-    context.taggedPredicates[context.currentPredicate] = tokenMap;
+    const tokenMap: TokenMap = new TokenMap([taggedToken]);
+    context.taggedPredicates[context.currentPredicate] = new ParensClose(
+      tokenMap
+    );
     context.currentPos += token.length;
 
     return context;

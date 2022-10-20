@@ -1,13 +1,17 @@
+import { TokenMap } from "../TokenMap";
+
 export default interface IPredicate {
+  convertPredicateForLokiJS(): IPredicate;
+  tokenMap: TokenMap;
   isUnknown(): boolean;
-  isParensOpen(): boolean;
-  isParensClose(): boolean;
-  isStringValue(): boolean;
-  isIntegerValue(): boolean;
+  isBinaryValue(): boolean;
   isBooleanValue(): boolean;
   isDateValue(): boolean;
   isDoubleValue(): boolean;
-  isLongValue(): boolean;
-  isBinaryValue(): boolean;
   isGuidValue(): boolean;
+  isIntegerValue(): boolean;
+  isLongValue(): boolean;
+  isParensClose(): boolean;
+  isParensOpen(): boolean;
+  isStringValue(): boolean;
 }

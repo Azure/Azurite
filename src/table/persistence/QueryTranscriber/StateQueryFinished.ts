@@ -1,8 +1,6 @@
 import IQPState from "./IQPState";
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
-import { TokenMap } from "./TokenMap";
-// import { TokenType } from "./TokenType";
 
 export default class StateQueryFinished implements IQPState {
   name = QueryStateName.QueryFinished;
@@ -15,9 +13,8 @@ export default class StateQueryFinished implements IQPState {
     for (const taggedPredicate of context.taggedPredicates) {
       let predicate = "";
       if (taggedPredicate !== undefined) {
-        const convertedPredicate =
-          this.convertPredicateForLokiJS(taggedPredicate);
-        for (const taggedPredicateToken of convertedPredicate.tokens) {
+        const convertedPredicate = taggedPredicate.convertPredicateForLokiJS();
+        for (const taggedPredicateToken of convertedPredicate.tokenMap.tokens) {
           predicate += " ";
           predicate += taggedPredicateToken.token;
         }
@@ -34,15 +31,4 @@ export default class StateQueryFinished implements IQPState {
     // Log converted query?
     return context;
   };
-
-  convertPredicateForLokiJS(taggedPredicate: TokenMap): TokenMap {
-    let predicate = taggedPredicate.convertGuidPredicate();
-    predicate = taggedPredicate.convertDoublePredicate();
-    predicate = taggedPredicate.convertBooleanPredicate();
-    predicate = taggedPredicate.convertStringPredicate();
-    predicate = taggedPredicate.convertIntegerPredicate();
-    predicate = taggedPredicate.convertLongPredicate();
-    predicate = taggedPredicate.convertDatePredicate();
-    return predicate;
-  }
 }

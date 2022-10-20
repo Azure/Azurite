@@ -1,12 +1,12 @@
+import IPredicate from "./PredicateModel/IPredicate";
 import { QueryStateName } from "./QueryStateName";
-import { TokenMap } from "./TokenMap";
 
 export default class QueryContext {
   public currentPos: number = 0;
   // the original query string passed into the transcriber
   public originalQuery: string = "";
   // a collection of predicates which are used in the query function
-  public taggedPredicates: TokenMap[] = [];
+  public taggedPredicates: IPredicate[] = [];
   // represents the current predicate that is being processed
   public currentPredicate: number = 0;
   public transcribedQuery: string = "";

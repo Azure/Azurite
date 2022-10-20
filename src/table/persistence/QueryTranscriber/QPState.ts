@@ -24,7 +24,7 @@ export default class QPState {
         new ParensOpenToken()
       );
       context.taggedPredicates.push(
-        new TokenMap([taggedToken], new ParensOpen())
+        new ParensOpen(new TokenMap([taggedToken]))
       );
       context.currentPos += 1;
     }
@@ -43,7 +43,7 @@ export default class QPState {
         new ParensCloseToken()
       );
       context.taggedPredicates.push(
-        new TokenMap([taggedToken], new ParensClose())
+        new ParensClose(new TokenMap([taggedToken]))
       );
       context.currentPos += 1;
     }
@@ -335,7 +335,8 @@ export default class QPState {
   ) {
     let taggedTokens: TaggedToken[] = [];
     if (context.taggedPredicates.length === context.currentPredicate + 1) {
-      taggedTokens = context.taggedPredicates[context.currentPredicate].tokens;
+      taggedTokens =
+        context.taggedPredicates[context.currentPredicate].tokenMap.tokens;
     }
     taggedTokens.push(taggedToken);
     return taggedTokens;
@@ -355,11 +356,10 @@ export default class QPState {
     taggedTokens: TaggedToken[],
     context: QueryContext
   ): QueryContext {
-    const tokenMap: TokenMap = new TokenMap(
-      taggedTokens,
-      new UnknownPredicate()
+    const tokenMap: TokenMap = new TokenMap(taggedTokens);
+    context.taggedPredicates[context.currentPredicate] = new UnknownPredicate(
+      tokenMap
     );
-    context.taggedPredicates[context.currentPredicate] = tokenMap;
     return context;
   }
 }

@@ -47,8 +47,10 @@ export default class StatePredicateStarted extends QPState implements IQPState {
       token,
       new ParensOpenToken()
     );
-    const tokenMap: TokenMap = new TokenMap([taggedToken], new ParensOpen());
-    context.taggedPredicates[context.currentPredicate] = tokenMap;
+    const tokenMap: TokenMap = new TokenMap([taggedToken]);
+    context.taggedPredicates[context.currentPredicate] = new ParensOpen(
+      tokenMap
+    );
     context.currentPos += token.length;
     context.currentPredicate += 1;
 
