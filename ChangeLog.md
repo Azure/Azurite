@@ -2,6 +2,8 @@
 
 > Note. This file includes changes after 3.0.0-preview. For legacy Azurite changes, please goto GitHub [releases](https://github.com/Azure/Azurite/releases).
 
+## Upcoming Release
+
 ## 2022.10 Version 3.20.0
 
 General:
