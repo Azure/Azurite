@@ -4,6 +4,12 @@
 
 ## Upcoming Release
 
+## 2022.10 Version 3.20.1
+
+General:
+
+- Bump package version.
+
 ## 2022.10 Version 3.20.0
 
 General:
