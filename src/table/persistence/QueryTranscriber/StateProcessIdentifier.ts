@@ -2,7 +2,7 @@ import IQPState from "./IQPState";
 import QPState from "./QPState";
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
-import TaggedToken from "./TaggedToken";
+import TaggedToken from "./TokenModel/TaggedToken";
 import IdentifierToken from "./TokenModel/IdentifierToken";
 
 export default class StateProcessIdentifier

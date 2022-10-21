@@ -1,7 +1,7 @@
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
-import { TokenMap } from "./TokenMap";
-import TaggedToken from "./TaggedToken";
+import { TokenMap } from "./PredicateModel/TokenMap";
+import TaggedToken from "./TokenModel/TaggedToken";
 import ParensOpenToken from "./TokenModel/ParensOpenToken";
 import ParensCloseToken from "./TokenModel/ParensCloseToken";
 import ParensClose from "./PredicateModel/ParensClose";

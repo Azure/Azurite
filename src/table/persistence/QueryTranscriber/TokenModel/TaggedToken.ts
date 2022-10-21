@@ -1,4 +1,4 @@
-import ITokenType from "./TokenModel/ITokenType";
+import ITokenType from "./ITokenType";
 
 export default class TaggedToken {
   public token: string;

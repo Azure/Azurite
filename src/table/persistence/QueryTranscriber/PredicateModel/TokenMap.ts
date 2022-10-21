@@ -1,4 +1,4 @@
-import TaggedToken from "./TaggedToken";
+import TaggedToken from "../TokenModel/TaggedToken";
 
 /**
  * Contains a map of the predicate with tagged tokens indicating

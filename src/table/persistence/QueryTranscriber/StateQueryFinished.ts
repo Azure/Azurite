@@ -5,7 +5,11 @@ import { QueryStateName } from "./QueryStateName";
 export default class StateQueryFinished implements IQPState {
   name = QueryStateName.QueryFinished;
 
-  // completes query transcribing
+  /**
+   * completes query transcribing
+   *
+   * @memberof StateQueryFinished
+   */
   onProcess = (context: QueryContext) => {
     // add tagged predicates to the query output, then close the query function
     // this is where we add support for backwards compatability in the schema
@@ -28,7 +32,7 @@ export default class StateQueryFinished implements IQPState {
   };
 
   onExit = (context: QueryContext) => {
-    // Log converted query?
+    // ToDo: Log converted query?
     return context;
   };
 }

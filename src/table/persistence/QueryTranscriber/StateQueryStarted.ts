@@ -5,8 +5,11 @@ import { QueryStateName } from "./QueryStateName";
 
 export default class StateQueryStarted extends QPState implements IQPState {
   name = QueryStateName.QueryStarted;
-
-  // start the processing and state machine
+  /**
+   * start the processing and state machine
+   *
+   * @memberof StateQueryStarted
+   */
   onProcess = (context: QueryContext) => {
     // todo: validate performance of estimating size of query array
     // here, or just extending array size as needed?

@@ -1,5 +1,5 @@
-import TaggedToken from "../TaggedToken";
-import { TokenMap } from "../TokenMap";
+import TaggedToken from "../TokenModel/TaggedToken";
+import { TokenMap } from "./TokenMap";
 import IdentifierToken from "../TokenModel/IdentifierToken";
 import ValueToken from "../TokenModel/ValueToken";
 import IPredicate from "./IPredicate";
@@ -31,39 +31,5 @@ export default class DoublePredicate implements IPredicate {
     this.tokenMap.tokens = newTokens;
 
     return this;
-  }
-
-  isUnknown(): boolean {
-    return false;
-  }
-  isParensOpen(): boolean {
-    return false;
-  }
-  isParensClose(): boolean {
-    return false;
-  }
-  isStringValue(): boolean {
-    return false;
-  }
-  isIntegerValue(): boolean {
-    return false;
-  }
-  isBooleanValue(): boolean {
-    return false;
-  }
-  isDateValue(): boolean {
-    return false;
-  }
-  isDoubleValue(): boolean {
-    return true;
-  }
-  isLongValue(): boolean {
-    return false;
-  }
-  isBinaryValue(): boolean {
-    return false;
-  }
-  isGuidValue(): boolean {
-    return false;
   }
 }
