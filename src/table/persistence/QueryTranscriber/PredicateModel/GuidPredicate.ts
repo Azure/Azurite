@@ -13,6 +13,15 @@ export default class GuidPredicate implements IPredicate {
     this.tokenMap = tokenMap;
   }
 
+  /**
+   * Guid predicate has special handling as we need to support
+   * older schema for the cases that database is not new before
+   * updating to new logic to differentiate between guid type
+   * and string type
+   *
+   * @return {*}
+   * @memberof GuidPredicate
+   */
   public convertPredicateForLokiJS() {
     const newTokens: TaggedToken[] = [];
     this.pushStringGuidPredicate(newTokens, this.tokenMap);
@@ -22,6 +31,14 @@ export default class GuidPredicate implements IPredicate {
     return this;
   }
 
+  /**
+   * new schema converts guids to base64 representation
+   *
+   * @private
+   * @param {TaggedToken[]} newTokens
+   * @param {TokenMap} taggedPredicate
+   * @memberof GuidPredicate
+   */
   private pushBase64GuidPredicate(
     newTokens: TaggedToken[],
     taggedPredicate: TokenMap
@@ -35,6 +52,14 @@ export default class GuidPredicate implements IPredicate {
     newTokens.push(new TaggedToken(")", new ParensCloseToken()));
   }
 
+  /**
+   * pushes the base64 guid to the predicate
+   *
+   * @private
+   * @param {TaggedToken} taggedToken
+   * @param {TaggedToken[]} newTokens
+   * @memberof GuidPredicate
+   */
   private pushBase64Guid(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isValue()) {
       const newToken = taggedToken.token.substring(
@@ -48,6 +73,14 @@ export default class GuidPredicate implements IPredicate {
     }
   }
 
+  /**
+   * old schema guids used string representation
+   *
+   * @private
+   * @param {TaggedToken[]} newTokens
+   * @param {TokenMap} taggedPredicate
+   * @memberof GuidPredicate
+   */
   private pushStringGuidPredicate(
     newTokens: TaggedToken[],
     taggedPredicate: TokenMap
@@ -61,6 +94,14 @@ export default class GuidPredicate implements IPredicate {
     newTokens.push(new TaggedToken(")", new ParensCloseToken()));
   }
 
+  /**
+   * pushes the string guid to the predicate
+   *
+   * @private
+   * @param {TaggedToken} taggedToken
+   * @param {TaggedToken[]} newTokens
+   * @memberof GuidPredicate
+   */
   private pushStringGuid(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isValue()) {
       const newToken = taggedToken.token.substring(4);
@@ -68,6 +109,14 @@ export default class GuidPredicate implements IPredicate {
     }
   }
 
+  /**
+   * pushes the guid identifier to the predicate
+   *
+   * @private
+   * @param {TaggedToken} taggedToken
+   * @param {TaggedToken[]} newTokens
+   * @memberof GuidPredicate
+   */
   private pushIdentifier(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isIdentifier()) {
       newTokens.push(
@@ -79,6 +128,14 @@ export default class GuidPredicate implements IPredicate {
     }
   }
 
+  /**
+   * pushes the operator to the guid predicate
+   *
+   * @private
+   * @param {TaggedToken} taggedToken
+   * @param {TaggedToken[]} newTokens
+   * @memberof GuidPredicate
+   */
   private pushOperator(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isOperator()) {
       newTokens.push(taggedToken);

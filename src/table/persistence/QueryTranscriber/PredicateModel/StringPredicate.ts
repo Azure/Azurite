@@ -23,25 +23,57 @@ export default class StringPredicate implements IPredicate {
     return this;
   }
 
+  /**
+   * pushes the value to the string predicate
+   *
+   * @private
+   * @param {TaggedToken} taggedToken
+   * @param {TaggedToken[]} newTokens
+   * @memberof StringPredicate
+   */
   private pushValue(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isValue()) {
       newTokens.push(new TaggedToken(taggedToken.token, new ValueToken()));
     }
   }
 
+  /**
+   * pushes the identifier to the string predicate
+   *
+   * @private
+   * @param {TaggedToken} taggedToken
+   * @param {TaggedToken[]} newTokens
+   * @memberof StringPredicate
+   */
   private pushIdentifier(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isIdentifier()) {
-      const newToken = this.createStringToken(taggedToken.token);
+      const newToken = this.createStringIdentifierToken(taggedToken.token);
       newTokens.push(newToken);
     }
   }
-  createStringToken(token: string) {
+
+  /**
+   * handles the special case for "TableName"
+   *
+   * @param {string} token
+   * @return {*}
+   * @memberof StringPredicate
+   */
+  createStringIdentifierToken(token: string) {
     if (token.toLocaleLowerCase() === "tablename") {
       return new TaggedToken(`name`, new IdentifierToken());
     }
     return new TaggedToken(`item.properties.${token}`, new IdentifierToken());
   }
 
+  /**
+   * pushes the operator to the string predicate
+   *
+   * @private
+   * @param {TaggedToken} taggedToken
+   * @param {TaggedToken[]} newTokens
+   * @memberof StringPredicate
+   */
   private pushOperator(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isOperator()) {
       newTokens.push(taggedToken);

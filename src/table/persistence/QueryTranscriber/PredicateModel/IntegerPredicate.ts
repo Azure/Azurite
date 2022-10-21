@@ -9,6 +9,7 @@ export default class IntegerPredicate implements IPredicate {
   constructor(tokenMap: TokenMap) {
     this.tokenMap = tokenMap;
   }
+
   public convertPredicateForLokiJS() {
     // ToDo: check if better to change the existing array
     const newTokens: TaggedToken[] = [];
@@ -22,11 +23,27 @@ export default class IntegerPredicate implements IPredicate {
 
     return this;
   }
+
+  /**
+   * pushes the value to the integer predicate
+   *
+   * @param {TaggedToken} taggedToken
+   * @param {TaggedToken[]} newTokens
+   * @memberof IntegerPredicate
+   */
   pushValue(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isValue()) {
       newTokens.push(new TaggedToken(taggedToken.token, new ValueToken()));
     }
   }
+
+  /**
+   * pushes the identifier to the integer predicate
+   *
+   * @param {TaggedToken} taggedToken
+   * @param {TaggedToken[]} newTokens
+   * @memberof IntegerPredicate
+   */
   pushIdentifier(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isIdentifier()) {
       newTokens.push(
@@ -38,6 +55,14 @@ export default class IntegerPredicate implements IPredicate {
     }
   }
 
+  /**
+   * pushes the operator to the integer predicate
+   *
+   * @private
+   * @param {TaggedToken} taggedToken
+   * @param {TaggedToken[]} newTokens
+   * @memberof IntegerPredicate
+   */
   private pushOperator(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isOperator()) {
       newTokens.push(taggedToken);

@@ -9,6 +9,7 @@ export default class DoublePredicate implements IPredicate {
   constructor(tokenMap: TokenMap) {
     this.tokenMap = tokenMap;
   }
+
   public convertPredicateForLokiJS() {
     // ToDo: check if better to change the existing array
     const newTokens: TaggedToken[] = [];
@@ -22,11 +23,27 @@ export default class DoublePredicate implements IPredicate {
 
     return this;
   }
+
+  /**
+   * pushes value for double predicate
+   *
+   * @param {TaggedToken} taggedToken
+   * @param {TaggedToken[]} newTokens
+   * @memberof DoublePredicate
+   */
   pushValue(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isValue()) {
       newTokens.push(new TaggedToken(taggedToken.token, new ValueToken()));
     }
   }
+
+  /**
+   * pushes identifier for double predicate
+   *
+   * @param {TaggedToken} taggedToken
+   * @param {TaggedToken[]} newTokens
+   * @memberof DoublePredicate
+   */
   pushIdentifier(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isIdentifier()) {
       newTokens.push(
@@ -37,6 +54,14 @@ export default class DoublePredicate implements IPredicate {
       );
     }
   }
+
+  /**
+   * pushes operator for double predicate
+   *
+   * @param {TaggedToken} taggedToken
+   * @param {TaggedToken[]} newTokens
+   * @memberof DoublePredicate
+   */
   pushOperator(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isOperator()) {
       newTokens.push(taggedToken);

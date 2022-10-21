@@ -22,6 +22,14 @@ export default class LongPredicate implements IPredicate {
 
     return this;
   }
+
+  /**
+   * pushes value for long predicate
+   *
+   * @param {TaggedToken} taggedToken
+   * @param {TaggedToken[]} newTokens
+   * @memberof LongPredicate
+   */
   pushValue(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isValue()) {
       newTokens.push(
@@ -32,6 +40,14 @@ export default class LongPredicate implements IPredicate {
       );
     }
   }
+
+  /**
+   * pushes identifier for long predicate
+   *
+   * @param {TaggedToken} taggedToken
+   * @param {TaggedToken[]} newTokens
+   * @memberof LongPredicate
+   */
   pushIdentifier(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isIdentifier()) {
       newTokens.push(
@@ -43,6 +59,14 @@ export default class LongPredicate implements IPredicate {
     }
   }
 
+  /**
+   * pushes operator for long predicate
+   *
+   * @private
+   * @param {TaggedToken} taggedToken
+   * @param {TaggedToken[]} newTokens
+   * @memberof LongPredicate
+   */
   private pushOperator(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isOperator()) {
       newTokens.push(taggedToken);
