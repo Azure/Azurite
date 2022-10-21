@@ -6,6 +6,13 @@ export default class BinaryPredicate implements IPredicate {
   constructor(tokenMap: TokenMap) {
     this.tokenMap = tokenMap;
   }
+
+  /**
+   * currently no special handling required
+   *
+   * @return {*}
+   * @memberof ParensClose
+   */
   public convertPredicateForLokiJS() {
     return this;
   }

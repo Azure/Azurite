@@ -28,8 +28,8 @@ export default class GuidPredicate implements IPredicate {
   ) {
     newTokens.push(new TaggedToken("(", new ParensOpenToken()));
     taggedPredicate.tokens.forEach((taggedToken) => {
-      this.pushIdentifier(newTokens, taggedToken);
-      this.pushOperator(newTokens, taggedToken);
+      this.pushIdentifier(taggedToken, newTokens);
+      this.pushOperator(taggedToken, newTokens);
       this.pushBase64Guid(taggedToken, newTokens);
     });
     newTokens.push(new TaggedToken(")", new ParensCloseToken()));
@@ -55,8 +55,8 @@ export default class GuidPredicate implements IPredicate {
     newTokens.push(new TaggedToken("(", new ParensOpenToken()));
     taggedPredicate.tokens.forEach((taggedToken) => {
       this.pushStringGuid(taggedToken, newTokens);
-      this.pushIdentifier(newTokens, taggedToken);
-      this.pushOperator(newTokens, taggedToken);
+      this.pushIdentifier(taggedToken, newTokens);
+      this.pushOperator(taggedToken, newTokens);
     });
     newTokens.push(new TaggedToken(")", new ParensCloseToken()));
   }
@@ -68,7 +68,7 @@ export default class GuidPredicate implements IPredicate {
     }
   }
 
-  private pushIdentifier(newTokens: TaggedToken[], taggedToken: TaggedToken) {
+  private pushIdentifier(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isIdentifier()) {
       newTokens.push(
         new TaggedToken(
@@ -79,7 +79,7 @@ export default class GuidPredicate implements IPredicate {
     }
   }
 
-  private pushOperator(newTokens: TaggedToken[], taggedToken: TaggedToken) {
+  private pushOperator(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isOperator()) {
       newTokens.push(taggedToken);
     }

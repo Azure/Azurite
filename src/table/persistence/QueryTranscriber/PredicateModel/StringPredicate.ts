@@ -14,23 +14,37 @@ export default class StringPredicate implements IPredicate {
     const newTokens: TaggedToken[] = [];
 
     this.tokenMap.tokens.forEach((taggedToken) => {
-      if (taggedToken.type.isValue()) {
-        newTokens.push(new TaggedToken(taggedToken.token, new ValueToken()));
-      } else if (taggedToken.type.isIdentifier()) {
-        // ToDo: Add case for TableName!?!
-        newTokens.push(
-          new TaggedToken(
-            `item.properties.${taggedToken.token}`,
-            new IdentifierToken()
-          )
-        );
-      } else {
-        // is operator
-        newTokens.push(taggedToken);
-      }
+      this.pushValue(taggedToken, newTokens);
+      this.pushIdentifier(taggedToken, newTokens);
+      this.pushOperator(taggedToken, newTokens);
     });
     this.tokenMap.tokens = newTokens;
 
     return this;
+  }
+
+  private pushValue(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
+    if (taggedToken.type.isValue()) {
+      newTokens.push(new TaggedToken(taggedToken.token, new ValueToken()));
+    }
+  }
+
+  private pushIdentifier(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
+    if (taggedToken.type.isIdentifier()) {
+      const newToken = this.createStringToken(taggedToken.token);
+      newTokens.push(newToken);
+    }
+  }
+  createStringToken(token: string) {
+    if (token.toLocaleLowerCase() === "tablename") {
+      return new TaggedToken(`name`, new IdentifierToken());
+    }
+    return new TaggedToken(`item.properties.${token}`, new IdentifierToken());
+  }
+
+  private pushOperator(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
+    if (taggedToken.type.isOperator()) {
+      newTokens.push(taggedToken);
+    }
   }
 }

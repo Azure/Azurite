@@ -282,7 +282,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
     // no closing "done()" callback in async test
   });
 
-  // binary query
+  // binary query - not yet supported
 
-  // table query
+  // table query - ToDo!
 });
