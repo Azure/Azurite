@@ -11,6 +11,8 @@ export default class StateQueryFinished implements IQPState {
    * @memberof StateQueryFinished
    */
   onProcess = (context: QueryContext) => {
+    // first setup the query output function
+    context.transcribedQuery = "return (";
     // add tagged predicates to the query output, then close the query function
     // this is where we add support for backwards compatability in the schema
     // and do conversions for special types etc and their DB schema representation
@@ -31,6 +33,13 @@ export default class StateQueryFinished implements IQPState {
     return context;
   };
 
+  /**
+   * optional post processing, here we can add logging
+   * or additional validation etc
+   *
+   * @param {QueryContext} context
+   * @memberof StateProcessValue
+   */
   onExit = (context: QueryContext) => {
     // ToDo: Log converted query?
     return context;

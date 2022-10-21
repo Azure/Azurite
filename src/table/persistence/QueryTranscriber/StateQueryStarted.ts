@@ -14,9 +14,6 @@ export default class StateQueryStarted extends QPState implements IQPState {
     // todo: validate performance of estimating size of query array
     // here, or just extending array size as needed?
 
-    // first setup the query output function
-    context.transcribedQuery = "return (";
-
     let token = "";
     [context, token] = this.determineNextToken(context);
     context = this.handleToken(context, token);
@@ -24,7 +21,13 @@ export default class StateQueryStarted extends QPState implements IQPState {
     return context;
   };
 
-  // optional post processing
+  /**
+   * optional post processing, here we can add logging
+   * or additional validation etc
+   *
+   * @param {QueryContext} context
+   * @memberof StateProcessValue
+   */
   onExit = (context: QueryContext) => {
     return context;
   };

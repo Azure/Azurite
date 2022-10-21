@@ -10,9 +10,14 @@ import ParensOpen from "./PredicateModel/ParensOpen";
 export default class StatePredicateStarted extends QPState implements IQPState {
   name = QueryStateName.PredicateStarted;
 
-  // Starts the processing of a predicate clause
-  // these ar the units in which we need to maintain
-  // backwards schema compatibility
+  /**
+   * Starts the processing of a predicate clause
+   * these ar the units in which we need to maintain
+   * backwards schema compatibility
+   *
+   * @param {QueryContext} context
+   * @memberof StatePredicateStarted
+   */
   onProcess = (context: QueryContext) => {
     let token = "";
     [context, token] = this.determineNextToken(context);
@@ -32,11 +37,26 @@ export default class StatePredicateStarted extends QPState implements IQPState {
     return context;
   };
 
-  // perform any post porcessing on state
+  /**
+   * optional post processing, here we can add logging
+   * or additional validation etc
+   *
+   * @param {QueryContext} context
+   * @memberof StateProcessValue
+   */
   onExit = (context: QueryContext) => {
     return context;
   };
 
+  /**
+   * stores the tagged tokens
+   *
+   * @private
+   * @param {QueryContext} context
+   * @param {string} token
+   * @return {*}  {QueryContext}
+   * @memberof StatePredicateStarted
+   */
   private storeTaggedTokens(
     context: QueryContext,
     token: string

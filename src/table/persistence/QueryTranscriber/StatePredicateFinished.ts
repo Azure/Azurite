@@ -21,7 +21,13 @@ export default class StatePredicateFinished
 {
   name = QueryStateName.PredicateFinished;
 
-  // when finishing a predicate, we need to update the query type
+  /**
+   * when finishing a predicate, we need to update the query type
+   * based on the value being queried
+   *
+   * @param {QueryContext} context
+   * @memberof StatePredicateFinished
+   */
   onProcess = (context: QueryContext) => {
     let token = "";
 
@@ -41,6 +47,14 @@ export default class StatePredicateFinished
     return context;
   };
 
+  /**
+   * validates the predicate using some simple logic
+   * ToDo: ensure correct error codes!!!
+   *
+   * @param {QueryContext} context
+   * @return {*}  {QueryContext}
+   * @memberof StatePredicateFinished
+   */
   validatePredicate(context: QueryContext): QueryContext {
     this.checkPredicateLength(context);
     this.checkSingleTerm(context);
@@ -49,6 +63,14 @@ export default class StatePredicateFinished
     return context;
   }
 
+  /**
+   * tags the predicate based on the type of value found in the
+   * predicate terms
+   *
+   * @param {QueryContext} context
+   * @return {*}  {QueryContext}
+   * @memberof StatePredicateFinished
+   */
   setPredicateType(context: QueryContext): QueryContext {
     if (context.taggedPredicates[context.currentPredicate] === undefined) {
       return context;
@@ -71,6 +93,14 @@ export default class StatePredicateFinished
     return context;
   }
 
+  /**
+   * tags predicate for the case of a guid predicate
+   *
+   * @param {QueryContext} context
+   * @param {string} tokenToCheck
+   * @return {*}  {QueryContext}
+   * @memberof StatePredicateFinished
+   */
   ifGuidPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isGuidValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate] = new GuidPredicate(
@@ -81,6 +111,14 @@ export default class StatePredicateFinished
     return context;
   }
 
+  /**
+   * tags predicate for the case of a binary value
+   *
+   * @param {QueryContext} context
+   * @param {string} tokenToCheck
+   * @return {*}  {QueryContext}
+   * @memberof StatePredicateFinished
+   */
   ifBinaryPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isBinaryValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate] = new BinaryPredicate(
@@ -91,6 +129,14 @@ export default class StatePredicateFinished
     return context;
   }
 
+  /**
+   * tags predicate for the case of a long value
+   *
+   * @param {QueryContext} context
+   * @param {string} tokenToCheck
+   * @return {*}  {QueryContext}
+   * @memberof StatePredicateFinished
+   */
   ifLongPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isLongValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate] = new LongPredicate(
@@ -101,6 +147,14 @@ export default class StatePredicateFinished
     return context;
   }
 
+  /**
+   * tags predicate for the case of a double value
+   *
+   * @param {QueryContext} context
+   * @param {string} tokenToCheck
+   * @return {*}  {QueryContext}
+   * @memberof StatePredicateFinished
+   */
   ifDoublePredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isDoubleValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate] = new DoublePredicate(
@@ -111,6 +165,14 @@ export default class StatePredicateFinished
     return context;
   }
 
+  /**
+   * tags predicate for the case of an integer value
+   *
+   * @param {QueryContext} context
+   * @param {string} tokenToCheck
+   * @return {*}  {QueryContext}
+   * @memberof StatePredicateFinished
+   */
   ifIntegerPredicate(
     context: QueryContext,
     tokenToCheck: string
@@ -124,6 +186,14 @@ export default class StatePredicateFinished
     return context;
   }
 
+  /**
+   * tags predicate for the case of a string value
+   *
+   * @param {QueryContext} context
+   * @param {string} tokenToCheck
+   * @return {*}  {QueryContext}
+   * @memberof StatePredicateFinished
+   */
   ifStringPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isStringValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate] = new StringPredicate(
@@ -134,6 +204,14 @@ export default class StatePredicateFinished
     return context;
   }
 
+  /**
+   * tags predicate for the case of a date value
+   *
+   * @param {QueryContext} context
+   * @param {string} tokenToCheck
+   * @return {*}  {QueryContext}
+   * @memberof StatePredicateFinished
+   */
   ifDatePredicate(context: QueryContext, tokenToCheck: string): QueryContext {
     if (this.isDateValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate] = new DatePredicate(
@@ -144,6 +222,14 @@ export default class StatePredicateFinished
     return context;
   }
 
+  /**
+   * tags predicate for the case of a boolean value
+   *
+   * @param {QueryContext} context
+   * @param {string} tokenToCheck
+   * @return {*}  {QueryContext}
+   * @memberof StatePredicateFinished
+   */
   ifBooleanPredicate(
     context: QueryContext,
     tokenToCheck: string
@@ -157,12 +243,27 @@ export default class StatePredicateFinished
     return context;
   }
 
+  /**
+   * optional post processing, here we can add logging
+   * or additional validation etc
+   *
+   * @param {QueryContext} context
+   * @memberof StateProcessValue
+   */
   onExit = (context: QueryContext) => {
-    // ToDo: validate current predicate now or during transcribing?
+    // ToDo: validate current predicate early or during transcribing?
     // might even be able to remove the onExit hooks.
     return context;
   };
 
+  /**
+   * checks the number of terms in a predicate based on the state
+   * machines own logic (1 or 3 terms)
+   *
+   * @private
+   * @param {QueryContext} context
+   * @memberof StatePredicateFinished
+   */
   private checkPredicateLength(context: QueryContext) {
     if (
       context.taggedPredicates[context.currentPredicate - 1].tokenMap.tokens
@@ -175,6 +276,14 @@ export default class StatePredicateFinished
     }
   }
 
+  /**
+   * checks a single term
+   *
+   * @private
+   * @param {QueryContext} context
+   * @return {*}
+   * @memberof StatePredicateFinished
+   */
   private checkSingleTerm(context: QueryContext) {
     if (
       context.taggedPredicates[context.currentPredicate - 1].tokenMap.tokens
@@ -209,6 +318,13 @@ export default class StatePredicateFinished
     }
   }
 
+  /**
+   * checks multiple terms
+   *
+   * @private
+   * @param {QueryContext} context
+   * @memberof StatePredicateFinished
+   */
   private checkMultipleTerms(context: QueryContext) {
     if (
       context.taggedPredicates[context.currentPredicate - 1].tokenMap.tokens

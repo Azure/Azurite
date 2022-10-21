@@ -11,7 +11,12 @@ export default class StateProcessIdentifier
 {
   name = QueryStateName.ProcessIdentifier;
 
-  // process current query token which is identifier
+  /**
+   * process current token which is an identifier
+   *
+   * @param {QueryContext} context
+   * @memberof StateProcessIdentifier
+   */
   onProcess = (context: QueryContext) => {
     let token = "";
     [context, token] = this.determineNextToken(context);
@@ -24,7 +29,13 @@ export default class StateProcessIdentifier
     return context;
   };
 
-  // perform any post processing for state
+  /**
+   * optional post processing, here we can add logging
+   * or additional validation etc
+   *
+   * @param {QueryContext} context
+   * @memberof StateProcessValue
+   */
   onExit = (context: QueryContext) => {
     return context;
   };

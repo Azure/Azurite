@@ -8,7 +8,12 @@ import OperatorToken from "./TokenModel/OperatorToken";
 export default class StateProcessOperator extends QPState implements IQPState {
   name = QueryStateName.ProcessOperator;
 
-  // process current query token which is operator
+  /**
+   * process current query token which is operator
+   *
+   * @param {QueryContext} context
+   * @memberof StateProcessOperator
+   */
   onProcess = (context: QueryContext) => {
     let token = "";
     [context, token] = this.determineNextToken(context);
@@ -22,7 +27,13 @@ export default class StateProcessOperator extends QPState implements IQPState {
     return context;
   };
 
-  // perform optional post processing
+  /**
+   * optional post processing, here we can add logging
+   * or additional validation etc
+   *
+   * @param {QueryContext} context
+   * @memberof StateProcessValue
+   */
   onExit = (context: QueryContext) => {
     return context;
   };
