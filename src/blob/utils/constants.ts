@@ -156,3 +156,7 @@ export const VALID_BLOB_AUDIENCES = [
 
 export const HTTP_LINE_ENDING = "\r\n";
 export const HTTP_HEADER_DELIMITER = ": ";
+
+export const AAD_OBJECT_ID = "23657296-5cd5-45b0-a809-d972a7f4dfe1";
+export const AAD_TENANT_ID = "dd0d0df1-06c3-436c-8034-4b9a153097ce";
+export const USERDELEGATIONKEY_BASIC_KEY = "I17GKLvcJUossaebtsEDZZ2RJ8GNLwLH4m7hRMxbVbkx6wNIRAABj4Rtw0FBhFuEAgmbL4gFMzUw+AStz9Sqdg==";

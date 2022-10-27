@@ -1,4 +1,6 @@
+import { createHmac } from "crypto";
 import URITemplate from "uri-templates";
+import { USERDELEGATIONKEY_BASIC_KEY } from "../../utils/constants";
 
 export function isURITemplateMatch(url: string, template: string): boolean {
   const uriTemplate = URITemplate(template);
@@ -17,4 +19,24 @@ export function isURITemplateMatch(url: string, template: string): boolean {
     }
   }
   return true;
+}
+
+export function getUserDelegationKeyValue(
+  signedObjectid: string,
+  signedTenantid: string,
+  signedStartsOn: string,
+  signedExpiresOn: string,
+  signedVersion: string,
+) : string {
+  
+  const stringToSign = [
+    signedObjectid,
+    signedTenantid,
+    signedStartsOn,
+    signedExpiresOn,
+    "b",
+    signedVersion
+  ].join("\n");
+
+  return createHmac("sha256", USERDELEGATIONKEY_BASIC_KEY).update(stringToSign, "utf8").digest("base64");
 }

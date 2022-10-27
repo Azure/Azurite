@@ -7,12 +7,14 @@ import { AccessPolicy, BlobType } from "../generated/artifacts/models";
 import Operation from "../generated/artifacts/operation";
 import Context from "../generated/Context";
 import IRequest from "../generated/IRequest";
+import { getUserDelegationKeyValue } from "../generated/utils/utils";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import { BlobSASPermission } from "./BlobSASPermissions";
 import { BlobSASResourceType } from "./BlobSASResourceType";
 import IAuthenticator from "./IAuthenticator";
 import {
   generateBlobSASSignature,
+  generateBlobSASSignatureWithUDK,
   IBlobSASSignatureValues
 } from "./IBlobSASSignatureValues";
 import {
@@ -137,75 +139,162 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       throw new StrictModelNotSupportedError("SAS Encryption Scope 'ses'", context.contextId);
     }
 
-    this.logger.info(
-      `BlobSASAuthenticator:validate() Validate signature based account key1.`,
-      context.contextId
-    );
-    const [sig1, stringToSign1] = generateBlobSASSignature(
-      values,
-      resource,
-      account,
-      accountProperties.key1
-    );
-    this.logger.debug(
-      `BlobSASAuthenticator:validate() String to sign is: ${JSON.stringify(
-        stringToSign1
-      )}`,
-      context.contextId!
-    );
-    this.logger.debug(
-      `BlobSASAuthenticator:validate() Calculated signature is: ${sig1}`,
-      context.contextId!
-    );
-
-    const sig1Pass = sig1 === signature;
-    this.logger.info(
-      `BlobSASAuthenticator:validate() Signature based on key1 validation ${
-        sig1Pass ? "passed" : "failed"
-      }.`,
-      context.contextId
-    );
-
-    if (accountProperties.key2 !== undefined) {
+    if (values.signedObjectId
+      || values.signedTenantId
+      || values.signedService
+      || values.signedVersion
+      || values.signedStartsOn
+      || values.signedExpiresOn) {
       this.logger.info(
-        `BlobSASAuthenticator:validate() Account key2 is not empty, validate signature based account key2.`,
+        `BlobSASAuthenticator:validate() Validate signature based on user delegation key.`,
         context.contextId
       );
-      const [sig2, stringToSign2] = generateBlobSASSignature(
+
+      if (!values.signedObjectId
+        || !values.signedTenantId
+        || !values.signedStartsOn
+        || !values.signedExpiresOn
+        || !values.signedService
+        || !values.signedVersion
+        || values.signedService !== "b") {
+        this.logger.info(
+          `BlobSASAuthenticator:validate() Signature based on user delegation key validation failed"
+          }.`,
+          context.contextId
+        );
+        throw StorageErrorFactory.getAuthorizationFailure(context.contextId!);
+      }
+
+      const savedPolicy = this.decodeIfExist(req.getQuery("si"));
+      if (savedPolicy) {
+        this.logger.info(
+          `BlobSASAuthenticator:validate() Access policy used in UDK SAS.`,
+          context.contextId
+        );
+        throw StorageErrorFactory.getAuthorizationFailure(context.contextId!);
+      }
+
+      this.logger.info(
+        `BlobSASAuthenticator:validate() Validate UDK start and expiry time.`,
+        context.contextId
+      );
+
+      if (!this.validateTime(values.signedExpiresOn!, values.signedStartsOn!)) {
+        this.logger.info(
+          `BlobSASAuthenticator:validate() Validate UDK start and expiry failed.`,
+          context.contextId
+        );
+        throw StorageErrorFactory.getAuthorizationFailure(context.contextId!);
+      }
+
+      const keyValue = getUserDelegationKeyValue(
+        values.signedObjectId!,
+        values.signedTenantId!,
+        values.signedStartsOn!,
+        values.signedExpiresOn!,
+        values.signedVersion!
+      );
+      const [sig, stringToSign] = generateBlobSASSignatureWithUDK(
         values,
         resource,
         account,
-        accountProperties.key2
+        Buffer.from(keyValue, "base64")
       );
+
       this.logger.debug(
         `BlobSASAuthenticator:validate() String to sign is: ${JSON.stringify(
-          stringToSign2
+          stringToSign
         )}`,
         context.contextId!
       );
       this.logger.debug(
-        `BlobSASAuthenticator:validate() Calculated signature is: ${sig2}`,
+        `BlobSASAuthenticator:validate() Calculated signature is: ${sig}`,
         context.contextId!
       );
 
-      const sig2Pass = sig2 !== signature;
+      const sigPass = sig === signature;
       this.logger.info(
-        `BlobSASAuthenticator:validate() Signature based on key2 validation ${
-          sig2Pass ? "passed" : "failed"
+        `BlobSASAuthenticator:validate() Signature based on UDK ${
+          sigPass ? "passed" : "failed"
         }.`,
         context.contextId
       );
 
-      if (!sig2Pass && !sig1Pass) {
+      if (!sigPass) {
+        return sigPass;
+      }
+    }
+    else {
+      this.logger.info(
+        `BlobSASAuthenticator:validate() Validate signature based account key1.`,
+        context.contextId
+      );
+      const [sig1, stringToSign1] = generateBlobSASSignature(
+        values,
+        resource,
+        account,
+        accountProperties.key1
+      );
+      this.logger.debug(
+        `BlobSASAuthenticator:validate() String to sign is: ${JSON.stringify(
+          stringToSign1
+        )}`,
+        context.contextId!
+      );
+      this.logger.debug(
+        `BlobSASAuthenticator:validate() Calculated signature is: ${sig1}`,
+        context.contextId!
+      );
+
+      const sig1Pass = sig1 === signature;
+      this.logger.info(
+        `BlobSASAuthenticator:validate() Signature based on key1 validation ${
+          sig1Pass ? "passed" : "failed"
+        }.`,
+        context.contextId
+      );
+
+      if (accountProperties.key2 !== undefined) {
         this.logger.info(
-          `BlobSASAuthenticator:validate() Validate signature based account key1 and key2 failed.`,
+          `BlobSASAuthenticator:validate() Account key2 is not empty, validate signature based account key2.`,
           context.contextId
         );
-        return false;
-      }
-    } else {
-      if (!sig1Pass) {
-        return false;
+        const [sig2, stringToSign2] = generateBlobSASSignature(
+          values,
+          resource,
+          account,
+          accountProperties.key2
+        );
+        this.logger.debug(
+          `BlobSASAuthenticator:validate() String to sign is: ${JSON.stringify(
+            stringToSign2
+          )}`,
+          context.contextId!
+        );
+        this.logger.debug(
+          `BlobSASAuthenticator:validate() Calculated signature is: ${sig2}`,
+          context.contextId!
+        );
+
+        const sig2Pass = sig2 !== signature;
+        this.logger.info(
+          `BlobSASAuthenticator:validate() Signature based on key2 validation ${
+            sig2Pass ? "passed" : "failed"
+          }.`,
+          context.contextId
+        );
+
+        if (!sig2Pass && !sig1Pass) {
+          this.logger.info(
+            `BlobSASAuthenticator:validate() Validate signature based account key1 and key2 failed.`,
+            context.contextId
+          );
+          return false;
+        }
+      } else {
+        if (!sig1Pass) {
+          return false;
+        }
       }
     }
 
@@ -375,6 +464,12 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     const signedResource = this.decodeIfExist(req.getQuery("sr"));
     const snapshot = this.decodeIfExist(req.getQuery("snapshot"));
     const encryptionScope = this.decodeIfExist(req.getQuery("ses"));
+    const signedObjectId = this.decodeIfExist(req.getQuery("skoid"));
+    const signedTenantId = this.decodeIfExist(req.getQuery("sktid"));
+    const signedStartsOn = this.decodeIfExist(req.getQuery("skt"));
+    const signedExpiresOn = this.decodeIfExist(req.getQuery("ske"));
+    const signedVersion = this.decodeIfExist(req.getQuery("skv"));
+    const signedService = this.decodeIfExist(req.getQuery("sks"));
 
     if (!identifier && (!permissions || !expiryTime)) {
       this.logger.warn(
@@ -411,7 +506,13 @@ export default class BlobSASAuthenticator implements IAuthenticator {
       contentLanguage,
       contentType,
       signedResource,
-      snapshot
+      snapshot,
+      signedObjectId,
+      signedTenantId,
+      signedService,
+      signedVersion,
+      signedStartsOn,
+      signedExpiresOn
     };
 
     return blobSASValues;

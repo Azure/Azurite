@@ -1,11 +1,12 @@
 import BlobStorageContext from "../context/BlobStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
-import NotImplementedError from "../errors/NotImplementedError";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IServiceHandler from "../generated/handlers/IServiceHandler";
 import { parseXML } from "../generated/utils/xml";
 import {
+  AAD_OBJECT_ID,
+  AAD_TENANT_ID,
   BLOB_API_VERSION,
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
   EMULATOR_ACCOUNT_KIND,
@@ -19,6 +20,7 @@ import ILogger from "../../common/ILogger";
 import { BlobBatchHandler } from "./BlobBatchHandler";
 import { Readable } from "stream";
 import { OAuthLevel } from "../../common/models";
+import { getUserDelegationKeyValue } from "../generated/utils/utils";
 
 /**
  * ServiceHandler handles Azure Storage Blob service related requests.
@@ -77,12 +79,31 @@ export default class ServiceHandler extends BaseHandler
     }
   };
 
-  public getUserDelegationKey(
+  public async getUserDelegationKey(
     keyInfo: Models.KeyInfo,
     options: Models.ServiceGetUserDelegationKeyOptionalParams,
     context: Context
   ): Promise<Models.ServiceGetUserDelegationKeyResponse> {
-    throw new NotImplementedError(context.contextId);
+    const keyValue = getUserDelegationKeyValue(
+      AAD_OBJECT_ID,
+      AAD_TENANT_ID,
+      keyInfo.start,
+      keyInfo.expiry,
+      BLOB_API_VERSION
+    );
+
+    const response: Models.ServiceGetUserDelegationKeyResponse = {
+      statusCode: 200,
+      signedOid: AAD_OBJECT_ID,
+      signedTid: AAD_TENANT_ID,
+      signedService: "b",
+      signedVersion: BLOB_API_VERSION,
+      signedStart: keyInfo.start,
+      signedExpiry: keyInfo.expiry,
+      value: keyValue
+    };
+
+    return response;
   }
 
 
