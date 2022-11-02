@@ -1537,6 +1537,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
 
+    // Begin Copy blob from Uri
     let error;
     try {
       await targetBlob.beginCopyFromURL(sourceBlob.url);
@@ -1556,6 +1557,26 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.equal("success", copyResponse.copyStatus);
     const fileBuffer = await targetBlob.downloadToBuffer();
     assert.equal(fileBuffer.toString(), "hello");
+
+    // Copy blob from Uri
+    targetBlob.delete();
+    try {
+      await targetBlob.syncCopyFromURL(sourceBlob.url);
+    } catch (err) {
+      error = err;
+    }
+    assert.ok(error !== undefined);
+    assert.equal(error.statusCode, 403);
+    assert.equal(error.details.errorCode, "CannotVerifyCopySource");
+    assert.equal(error.details.code, "CannotVerifyCopySource");
+
+    // this copy should work
+    const copyResponse2 = await targetBlob.syncCopyFromURL(
+      `${sourceBlob.url}?${sas}`
+    );
+    assert.equal("success", copyResponse2.copyStatus);
+    const fileBuffer2 = await targetBlob.downloadToBuffer();
+    assert.equal(fileBuffer2.toString(), "hello");
   });
 
   it("Copy blob across accounts should error if hosts mismatch @loki @sql", async () => {
@@ -1583,9 +1604,19 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const sourceUriBuilder = URLBuilder.parse(sourceBlob.url);
     sourceUriBuilder.setHost("somewhereelse");
 
+    // Begin Copy blob from Uri
     let error;
     try {
       await targetBlob.beginCopyFromURL(sourceUriBuilder.toString());
+    } catch (err) {
+      error = err;
+    }
+    assert.deepEqual(error.statusCode, 404);
+    assert.ok(error !== undefined);
+
+    // Copy blob from Uri
+    try {
+      await targetBlob.syncCopyFromURL(sourceUriBuilder.toString());
     } catch (err) {
       error = err;
     }
@@ -1617,11 +1648,20 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await sourceBlob.upload("hello", 5);
 
     const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
+    
+    // Begin Copy blob from Uri
     const operation = await targetBlob.beginCopyFromURL(sourceBlob.url);
     const copyResponse = await operation.pollUntilDone();
     assert.equal("success", copyResponse.copyStatus);
     const fileBuffer = await targetBlob.downloadToBuffer();
     assert.equal(fileBuffer.toString(), "hello");
+    
+    // Copy blob from Uri
+    targetBlob.delete();
+    const copyResponse2 = await targetBlob.syncCopyFromURL(sourceBlob.url);
+    assert.equal("success", copyResponse2.copyStatus);
+    const fileBuffer2 = await targetBlob.downloadToBuffer();
+    assert.equal(fileBuffer2.toString(), "hello");
   });
 
   it("Copy blob across accounts should succeed for public container access @loki @sql", async () => {
@@ -1648,11 +1688,20 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await sourceBlob.upload("hello", 5);
 
     const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
+
+    // Begin Copy From Uri
     const operation = await targetBlob.beginCopyFromURL(sourceBlob.url);
     const copyResponse = await operation.pollUntilDone();
     assert.equal("success", copyResponse.copyStatus);
     const fileBuffer = await targetBlob.downloadToBuffer();
     assert.equal(fileBuffer.toString(), "hello");
+    
+    // Copy From Uri
+    targetBlob.delete();
+    const copyResponse2 = await targetBlob.syncCopyFromURL(sourceBlob.url);
+    assert.equal("success", copyResponse2.copyStatus);
+    const fileBuffer2 = await targetBlob.downloadToBuffer();
+    assert.equal(fileBuffer2.toString(), "hello");
   });
 
   it("Copy blob across accounts should honor metadata when provided @loki @sql", async () => {
@@ -1700,6 +1749,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
       }
     });
 
+    // Begin Copy From Uri
     const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
     const operation = await targetBlob.beginCopyFromURL(
       `${sourceBlob.url}?${sas}`
@@ -1713,6 +1763,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const targetBlobWithProps = targetContainerClient.getBlockBlobClient(
       blobName2
     );
+    
     const operation2 = await targetBlobWithProps.beginCopyFromURL(
       `${sourceBlob.url}?${sas}`,
       {
@@ -1728,6 +1779,31 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.equal(properties2.metadata!["foo"], undefined);
     assert.equal(properties2.metadata!["bar"], undefined);
     assert.equal(properties2.metadata!["baz"], "3");
+
+    // Copy From Uri
+    targetBlob.delete();
+    const copyResponse3 = await targetBlob.syncCopyFromURL(
+      `${sourceBlob.url}?${sas}`
+    );
+    assert.equal("success", copyResponse3.copyStatus);
+    const properties3 = await targetBlob.getProperties();
+    assert.equal(properties3.metadata!["foo"], "1");
+    assert.equal(properties3.metadata!["bar"], "2");
+    
+    const copyResponse4 = await targetBlobWithProps.syncCopyFromURL(
+      `${sourceBlob.url}?${sas}`,
+      {
+        metadata: {
+          baz: "3"
+        }
+      }
+    );
+
+    assert.equal("success", copyResponse4.copyStatus);
+    const properties4 = await targetBlobWithProps.getProperties();
+    assert.equal(properties4.metadata!["foo"], undefined);
+    assert.equal(properties4.metadata!["bar"], undefined);
+    assert.equal(properties4.metadata!["baz"], "3");
   });
 
   it("Copy blob across accounts should fail if source is archived @loki @sql", async () => {
@@ -1772,9 +1848,20 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
 
+    // Begin Copy From Uri
     let error;
     try {
       await targetBlob.beginCopyFromURL(`${sourceBlob.url}?${sas}`);
+    } catch (err) {
+      error = err;
+    }
+    assert.ok(error !== undefined);
+    assert.equal(error.statusCode, 409);
+    assert.equal(error.details.code, "BlobArchived");
+
+    // Copy From Uri
+    try {
+      await targetBlob.syncCopyFromURL(`${sourceBlob.url}?${sas}`);
     } catch (err) {
       error = err;
     }

@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Support Copy Blob From URL API when use different source and destination account (in same Azurite instance).
+
 ## 2022.10 Version 3.20.1
 
 General:
