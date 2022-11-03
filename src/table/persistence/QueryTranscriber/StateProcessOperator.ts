@@ -5,6 +5,14 @@ import { QueryStateName } from "./QueryStateName";
 import TaggedToken from "./TokenModel/TaggedToken";
 import OperatorToken from "./TokenModel/OperatorToken";
 
+/**
+ * contains logic to handle operators
+ *
+ * @export
+ * @class StateProcessOperator
+ * @extends {QPState}
+ * @implements {IQPState}
+ */
 export default class StateProcessOperator extends QPState implements IQPState {
   name = QueryStateName.ProcessOperator;
 
@@ -27,6 +35,15 @@ export default class StateProcessOperator extends QPState implements IQPState {
     return context;
   };
 
+  /**
+   * state transition logic
+   *
+   * @protected
+   * @param {QueryContext} context
+   * @param {string} token
+   * @return {*}  {QueryContext}
+   * @memberof StateProcessOperator
+   */
   protected handleToken(context: QueryContext, token: string): QueryContext {
     // categorize the token
     if (token === "") {
@@ -104,6 +121,16 @@ export default class StateProcessOperator extends QPState implements IQPState {
     }
   }
 
+  /**
+   * stores and tags the token as an operator
+   *
+   * @private
+   * @param {QueryContext} context
+   * @param {string} token
+   * @param {number} originalTokenLength
+   * @return {*}  {QueryContext}
+   * @memberof StateProcessOperator
+   */
   private storeTaggedTokens(
     context: QueryContext,
     token: string,

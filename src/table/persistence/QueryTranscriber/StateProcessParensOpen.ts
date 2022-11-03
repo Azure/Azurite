@@ -7,6 +7,14 @@ import { TokenMap } from "./PredicateModel/TokenMap";
 import ParensOpenToken from "./TokenModel/ParensOpenToken";
 import ParensOpen from "./PredicateModel/ParensOpen";
 
+/**
+ * contains the logic for parens open
+ *
+ * @export
+ * @class StateProcessParensOpen
+ * @extends {QPState}
+ * @implements {IQPState}
+ */
 export default class StateProcessParensOpen
   extends QPState
   implements IQPState
@@ -30,6 +38,15 @@ export default class StateProcessParensOpen
     return context;
   };
 
+  /**
+   * state transition logic
+   *
+   * @protected
+   * @param {QueryContext} context
+   * @param {string} token
+   * @return {*}  {QueryContext}
+   * @memberof StateProcessParensOpen
+   */
   protected handleToken(context: QueryContext, token: string): QueryContext {
     // Parens Open will always start a predicate
     context.stateQueue.push(QueryStateName.PredicateStarted);

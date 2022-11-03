@@ -7,6 +7,14 @@ import { TokenMap } from "./PredicateModel/TokenMap";
 import ParensCloseToken from "./TokenModel/ParensCloseToken";
 import ParensClose from "./PredicateModel/ParensClose";
 
+/**
+ * contains the logic to handle parens close
+ *
+ * @export
+ * @class StateProcessParensClose
+ * @extends {QPState}
+ * @implements {IQPState}
+ */
 export default class StateProcessParensClose
   extends QPState
   implements IQPState
@@ -31,6 +39,15 @@ export default class StateProcessParensClose
     return context;
   };
 
+  /**
+   * state transition logic
+   *
+   * @protected
+   * @param {QueryContext} context
+   * @param {string} token
+   * @return {*}  {QueryContext}
+   * @memberof StateProcessParensClose
+   */
   protected handleToken(context: QueryContext, token: string): QueryContext {
     // Parens Close will always end the predicate
     context.stateQueue.push(QueryStateName.PredicateFinished);
@@ -62,8 +79,6 @@ export default class StateProcessParensClose
     context: QueryContext,
     token: string
   ): QueryContext {
-    // const match = token.match(/^\)$/);
-    // if (match !== null && match.length === 1) {
     const taggedParensToken: TaggedToken = new TaggedToken(
       token,
       new ParensCloseToken()
@@ -72,7 +87,6 @@ export default class StateProcessParensClose
     context.taggedPredicates.push(new ParensClose(parensTokenMap));
     context.currentPredicate += 1;
     context.currentPos += token.length;
-    // }
     return context;
   }
 }

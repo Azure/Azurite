@@ -10,8 +10,13 @@ export default class DoublePredicate implements IPredicate {
     this.tokenMap = tokenMap;
   }
 
+  /**
+   * converts a double predicate for lokijs schema
+   *
+   * @return {*}
+   * @memberof DoublePredicate
+   */
   public convertPredicateForLokiJS() {
-    // ToDo: check if better to change the existing array
     const newTokens: TaggedToken[] = [];
 
     this.tokenMap.tokens.forEach((taggedToken) => {

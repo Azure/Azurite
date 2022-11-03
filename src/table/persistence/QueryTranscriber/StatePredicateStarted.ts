@@ -24,6 +24,15 @@ export default class StatePredicateStarted extends QPState implements IQPState {
     return context;
   };
 
+  /**
+   * state transition logic
+   *
+   * @protected
+   * @param {QueryContext} context
+   * @param {string} token
+   * @return {*}  {QueryContext}
+   * @memberof StatePredicateStarted
+   */
   protected handleToken(context: QueryContext, token: string): QueryContext {
     // categorize the token
     if (token === "") {

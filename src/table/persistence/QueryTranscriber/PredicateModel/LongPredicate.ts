@@ -9,8 +9,14 @@ export default class LongPredicate implements IPredicate {
   constructor(tokenMap: TokenMap) {
     this.tokenMap = tokenMap;
   }
+
+  /**
+   * converts a long predicate for lokijs schema
+   *
+   * @return {*}
+   * @memberof LongPredicate
+   */
   public convertPredicateForLokiJS() {
-    // ToDo: check if better to change the existing array
     const newTokens: TaggedToken[] = [];
 
     this.tokenMap.tokens.forEach((taggedToken) => {

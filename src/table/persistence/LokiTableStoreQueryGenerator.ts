@@ -96,7 +96,7 @@ export default class LokiTableStoreQueryGenerator {
         "lokiJsQueryTranscriber"
       );
 
-    queryTranscriber.start();
+    queryTranscriber.transcribe();
 
     return new Function("item", queryTranscriber.getTranscribedQuery()) as any;
   }

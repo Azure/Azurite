@@ -1,6 +1,13 @@
 import IPredicate from "./PredicateModel/IPredicate";
 import { QueryStateName } from "./QueryStateName";
 
+/**
+ * This object contains the state of the query
+ * as it undergoes transcription processing
+ *
+ * @export
+ * @class QueryContext
+ */
 export default class QueryContext {
   public currentPos: number = 0;
   // the original query string passed into the transcriber

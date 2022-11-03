@@ -10,8 +10,13 @@ export default class BooleanPredicate implements IPredicate {
     this.tokenMap = tokenMap;
   }
 
+  /**
+   * converts a boolean predicate for lokijs schema
+   *
+   * @return {*}
+   * @memberof BooleanPredicate
+   */
   public convertPredicateForLokiJS() {
-    // ToDo: check if better to change the existing array
     const newTokens: TaggedToken[] = [];
 
     this.tokenMap.tokens.forEach((taggedToken) => {

@@ -7,6 +7,14 @@ import { QueryStateName } from "./QueryStateName";
 import TaggedToken from "./TokenModel/TaggedToken";
 import ValueToken from "./TokenModel/ValueToken";
 
+/**
+ * contains the logic for processing values
+ *
+ * @export
+ * @class StateProcessValue
+ * @extends {QPState}
+ * @implements {IQPState}
+ */
 export default class StateProcessValue extends QPState implements IQPState {
   name = QueryStateName.ProcessValue;
 
@@ -38,17 +46,21 @@ export default class StateProcessValue extends QPState implements IQPState {
   protected override getNextToken(
     context: QueryContext
   ): [QueryContext, string] {
-    // detmermine what the next token should be.
-    // logic:
-    // from current position in query string
-    // determine start if token:
     let tokenStart: number;
     [context, tokenStart] = this.startofNextRelevantToken(context);
-    // determine end:
     const tokenEnd = this.handleStringValue(context, tokenStart);
     return this.validateToken(context, tokenStart, tokenEnd);
   }
 
+  /**
+   * extract a string value
+   *
+   * @private
+   * @param {QueryContext} context
+   * @param {number} tokenStart
+   * @return {*}
+   * @memberof StateProcessValue
+   */
   private handleStringValue(context: QueryContext, tokenStart: number) {
     if (context.originalQuery[tokenStart] === "'") {
       return context.originalQuery.indexOf("'", tokenStart + 1) + 1;
@@ -56,6 +68,15 @@ export default class StateProcessValue extends QPState implements IQPState {
     return this.endOfToken(context, tokenStart);
   }
 
+  /**
+   * state transition logic
+   *
+   * @protected
+   * @param {QueryContext} context
+   * @param {string} token
+   * @return {*}  {QueryContext}
+   * @memberof StateProcessValue
+   */
   protected handleToken(context: QueryContext, token: string): QueryContext {
     // categorize the token
     if (token === "") {
@@ -98,6 +119,15 @@ export default class StateProcessValue extends QPState implements IQPState {
     return context;
   };
 
+  /**
+   * stores the token as value
+   *
+   * @private
+   * @param {QueryContext} context
+   * @param {string} token
+   * @return {*}  {QueryContext}
+   * @memberof StateProcessValue
+   */
   private storeTaggedTokens(
     context: QueryContext,
     token: string
@@ -114,6 +144,13 @@ export default class StateProcessValue extends QPState implements IQPState {
     return context;
   }
 
+  /**
+   * determines if we need to start a new predicate
+   *
+   * @param {QueryContext} context
+   * @return {*}  {QueryContext}
+   * @memberof StateProcessValue
+   */
   startNewPredicate(context: QueryContext): QueryContext {
     if (
       context.taggedPredicates[context.currentPredicate] !== undefined &&

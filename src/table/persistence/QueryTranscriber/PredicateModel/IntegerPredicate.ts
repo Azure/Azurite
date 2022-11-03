@@ -10,8 +10,13 @@ export default class IntegerPredicate implements IPredicate {
     this.tokenMap = tokenMap;
   }
 
+  /**
+   * converts an integer predicate for lokijs schema
+   *
+   * @return {*}
+   * @memberof IntegerPredicate
+   */
   public convertPredicateForLokiJS() {
-    // ToDo: check if better to change the existing array
     const newTokens: TaggedToken[] = [];
 
     this.tokenMap.tokens.forEach((taggedToken) => {

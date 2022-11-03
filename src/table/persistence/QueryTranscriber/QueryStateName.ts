@@ -1,3 +1,10 @@
+/**
+ * Query state names are used in state store to
+ * access and identify states
+ *
+ * @export
+ * @enum {number}
+ */
 export enum QueryStateName {
   None,
   QueryStarted,

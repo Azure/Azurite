@@ -2,6 +2,13 @@ import IQPState from "./IQPState";
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
 
+/**
+ * state to complete the transcribing of a query
+ *
+ * @export
+ * @class StateQueryFinished
+ * @implements {IQPState}
+ */
 export default class StateQueryFinished implements IQPState {
   name = QueryStateName.QueryFinished;
 

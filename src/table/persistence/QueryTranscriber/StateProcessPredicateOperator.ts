@@ -8,6 +8,14 @@ import UnknownPredicate from "./PredicateModel/UnknownPredicate";
 import { TokenMap } from "./PredicateModel/TokenMap";
 import PredicateOperator from "./PredicateModel/PredicateOperator";
 
+/**
+ * contains the logic for handling operators between predicates
+ *
+ * @export
+ * @class StateProcessPredicateOperator
+ * @extends {QPState}
+ * @implements {IQPState}
+ */
 export default class StateProcessPredicateOperator
   extends QPState
   implements IQPState
@@ -32,6 +40,15 @@ export default class StateProcessPredicateOperator
     return context;
   };
 
+  /**
+   * contains state transition logic
+   *
+   * @protected
+   * @param {QueryContext} context
+   * @param {string} token
+   * @return {*}  {QueryContext}
+   * @memberof StateProcessPredicateOperator
+   */
   protected handleToken(context: QueryContext, token: string): QueryContext {
     // with a predicate operator we always finish the last predicate and start another
 

@@ -14,6 +14,7 @@ export default class GuidPredicate implements IPredicate {
   }
 
   /**
+   * Converts a guid predicate for lokijs schema
    * Guid predicate has special handling as we need to support
    * older schema for the cases that database is not new before
    * updating to new logic to differentiate between guid type

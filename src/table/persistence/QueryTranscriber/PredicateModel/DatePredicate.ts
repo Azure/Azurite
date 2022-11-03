@@ -10,8 +10,13 @@ export default class DatePredicate implements IPredicate {
     this.tokenMap = tokenMap;
   }
 
+  /**
+   * converts a datetime predicate for lokijs schema
+   *
+   * @return {*}
+   * @memberof DatePredicate
+   */
   public convertPredicateForLokiJS() {
-    // ToDo: check if better to change the existing array
     const newTokens: TaggedToken[] = [];
 
     this.tokenMap.tokens.forEach((taggedToken) => {

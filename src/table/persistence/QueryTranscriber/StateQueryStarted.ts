@@ -3,6 +3,14 @@ import QPState from "./QPState";
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
 
+/**
+ * This is the first state of the query processing
+ *
+ * @export
+ * @class StateQueryStarted
+ * @extends {QPState}
+ * @implements {IQPState}
+ */
 export default class StateQueryStarted extends QPState implements IQPState {
   name = QueryStateName.QueryStarted;
   /**
@@ -11,9 +19,6 @@ export default class StateQueryStarted extends QPState implements IQPState {
    * @memberof StateQueryStarted
    */
   onProcess = (context: QueryContext) => {
-    // todo: validate performance of estimating size of query array
-    // here, or just extending array size as needed?
-
     let token = "";
     [context, token] = this.getNextToken(context);
     context = this.handleToken(context, token);
@@ -21,6 +26,15 @@ export default class StateQueryStarted extends QPState implements IQPState {
     return context;
   };
 
+  /**
+   * State transition logic
+   *
+   * @protected
+   * @param {QueryContext} context
+   * @param {string} token
+   * @return {*}  {QueryContext}
+   * @memberof StateQueryStarted
+   */
   protected handleToken(context: QueryContext, token: string): QueryContext {
     // categorize the token
     if (token === "") {

@@ -20,7 +20,7 @@ export default class LokiJsQueryTranscriber extends QueryTranscriber {
    *
    * @memberof LokiJsQueryTranscriber
    */
-  public start() {
+  public transcribe() {
     this.setState(QueryStateName.QueryStarted);
   }
 }

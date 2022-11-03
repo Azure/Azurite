@@ -11,6 +11,14 @@ import StringPredicate from "./PredicateModel/StringPredicate";
 import DatePredicate from "./PredicateModel/DatePredicate";
 import BooleanPredicate from "./PredicateModel/BooleanPredicate";
 
+/**
+ * contains the logic for checking a predicate when it is finished
+ *
+ * @export
+ * @class StatePredicateFinished
+ * @extends {QPState}
+ * @implements {IQPState}
+ */
 export default class StatePredicateFinished
   extends QPState
   implements IQPState
@@ -36,6 +44,15 @@ export default class StatePredicateFinished
     return context;
   };
 
+  /**
+   * state transition logic
+   *
+   * @protected
+   * @param {QueryContext} context
+   * @param {string} token
+   * @return {*}  {QueryContext}
+   * @memberof StatePredicateFinished
+   */
   protected handleToken(context: QueryContext, token: string): QueryContext {
     // categorize the token
     if (token === "") {
@@ -100,7 +117,7 @@ export default class StatePredicateFinished
     }
     const taggedTokens =
       context.taggedPredicates[context.currentPredicate].tokenMap.tokens;
-    // ToDo: decision should be moved out into a factory type for the predicates
+
     taggedTokens.forEach((taggedToken) => {
       if (taggedToken.type.isValue()) {
         context = this.ifGuidPredicate(context, taggedToken.token);
@@ -412,6 +429,13 @@ export default class StatePredicateFinished
     this.checkPredicateTermCount(valueCount);
   }
 
+  /**
+   * checks that there is only 1 of this type of term
+   *
+   * @private
+   * @param {number} count
+   * @memberof StatePredicateFinished
+   */
   private checkPredicateTermCount(count: number) {
     if (count !== 1) {
       throw new Error("Invalid number of terms in query!");

@@ -34,7 +34,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.start();
+      queryTranscriber.transcribe();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -67,7 +67,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.start();
+      queryTranscriber.transcribe();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -100,7 +100,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.start();
+      queryTranscriber.transcribe();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -133,7 +133,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.start();
+      queryTranscriber.transcribe();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -171,7 +171,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.start();
+      queryTranscriber.transcribe();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -204,7 +204,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.start();
+      queryTranscriber.transcribe();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -242,7 +242,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.start();
+      queryTranscriber.transcribe();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -290,7 +290,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.start();
+      queryTranscriber.transcribe();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -320,7 +320,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.start();
+      queryTranscriber.transcribe();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -350,7 +350,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.start();
+      queryTranscriber.transcribe();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -384,7 +384,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.start();
+      queryTranscriber.transcribe();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,

@@ -2,9 +2,13 @@ import IQPState from "./IQPState";
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
 
-// Statemachine implementation for the LokiJS query transcriber.
+/**
+ * Statemachine implementation for the Azurite query transcriber.
+ *
+ * @export
+ * @class QueryTranscriber
+ */
 export default class QueryTranscriber {
-  // maybe rename context to data... or we need a data type for actions and transitions
   private queryContext: QueryContext;
   private states = new Map<QueryStateName, IQPState>();
   private currentState: IQPState;
@@ -65,23 +69,12 @@ export default class QueryTranscriber {
       return;
     }
 
-    this.isSwitchingState = true;
+    this.switchState(name);
 
-    this.queryContext = this.currentState.onExit(this.queryContext);
-    const state = this.states.get(name);
-    if (state !== undefined) {
-      this.currentState = state;
-    } else {
-      throw Error(`${this.name} does not have a state named ${name}`);
-    }
-    this.queryContext = this.currentState.onProcess(this.queryContext);
-
-    this.isSwitchingState = false;
-
-    // process state queue
-    // ToDo: Validate: Currently recursive, might be better to
-    // externalize to allow a serial non-recursive processing in
-    // a loop outside of setState function.
+    // processes state queue
+    // if there is a problem with state transitions, recursive call of
+    // setState will cause a stack overflow, which is OK:
+    // as otherwise we would hang the process...
     while (this.queryContext.stateQueue.length > 0) {
       if (this.queryContext.stateQueue.length > 0) {
         const newState = this.queryContext.stateQueue.shift()!;
@@ -90,6 +83,33 @@ export default class QueryTranscriber {
     }
     this.currentState.onExit(this.queryContext);
     return this;
+  }
+
+  /**
+   * switches states by exiting last state and processing new state
+   *
+   * @private
+   * @param {QueryStateName} name
+   * @memberof QueryTranscriber
+   */
+  private switchState(name: QueryStateName) {
+    this.isSwitchingState = true;
+
+    this.queryContext = this.currentState.onExit(this.queryContext);
+    const state = this.states.get(name);
+
+    this.checkState(state, name);
+    this.queryContext = this.currentState.onProcess(this.queryContext);
+
+    this.isSwitchingState = false;
+  }
+
+  private checkState(state: IQPState | undefined, name: QueryStateName) {
+    if (state !== undefined) {
+      this.currentState = state;
+    } else {
+      throw Error(`${this.name} does not have a state named ${name}`);
+    }
   }
 
   /**

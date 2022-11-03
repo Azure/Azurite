@@ -11,13 +11,12 @@ export default class BinaryPredicate implements IPredicate {
   }
 
   /**
-   * ToDo: not yet implemented
+   * Converts a binary predicate for LokiJs filter
    *
    * @return {*}
    * @memberof BinaryPredicate
    */
   public convertPredicateForLokiJS() {
-    // ToDo: check if better to change the existing array
     const newTokens: TaggedToken[] = [];
     try {
       this.tokenMap.tokens.forEach((taggedToken) => {
@@ -44,6 +43,7 @@ export default class BinaryPredicate implements IPredicate {
     if (taggedToken.type.isValue()) {
       // assumption is that we have a binary value which needs to be
       // converted to base64
+      // decision on type is made earlier so no additional check
       const trim = this.getTrimLength(taggedToken.token);
       const binaryString = taggedToken.token.slice(
         trim,

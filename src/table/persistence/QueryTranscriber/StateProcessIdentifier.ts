@@ -7,6 +7,14 @@ import IdentifierToken from "./TokenModel/IdentifierToken";
 import UnknownPredicate from "./PredicateModel/UnknownPredicate";
 import { TokenMap } from "./PredicateModel/TokenMap";
 
+/**
+ * contains the logic to handle an identifier
+ *
+ * @export
+ * @class StateProcessIdentifier
+ * @extends {QPState}
+ * @implements {IQPState}
+ */
 export default class StateProcessIdentifier
   extends QPState
   implements IQPState
@@ -31,6 +39,15 @@ export default class StateProcessIdentifier
     return context;
   };
 
+  /**
+   * state transition logic
+   *
+   * @protected
+   * @param {QueryContext} context
+   * @param {string} token
+   * @return {*}  {QueryContext}
+   * @memberof StateProcessIdentifier
+   */
   protected handleToken(context: QueryContext, token: string): QueryContext {
     // categorize the token
     if (token === "") {
@@ -73,6 +90,15 @@ export default class StateProcessIdentifier
     return context;
   };
 
+  /**
+   * stores the token as an identifier
+   *
+   * @private
+   * @param {QueryContext} context
+   * @param {string} token
+   * @return {*}  {QueryContext}
+   * @memberof StateProcessIdentifier
+   */
   private storeTaggedTokens(
     context: QueryContext,
     token: string
@@ -92,7 +118,15 @@ export default class StateProcessIdentifier
     return context;
   }
 
-  startNewPredicate(context: QueryContext): QueryContext {
+  /**
+   * This determines if we need to start a new predicate clause
+   *
+   * @private
+   * @param {QueryContext} context
+   * @return {*}  {QueryContext}
+   * @memberof StateProcessIdentifier
+   */
+  private startNewPredicate(context: QueryContext): QueryContext {
     if (
       context.taggedPredicates[context.currentPredicate] !== undefined &&
       context.taggedPredicates[context.currentPredicate].tokenMap.tokens
