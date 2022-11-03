@@ -34,7 +34,9 @@ export default class LongPredicate implements IPredicate {
     if (taggedToken.type.isValue()) {
       newTokens.push(
         new TaggedToken(
-          taggedToken.token.substring(0, taggedToken.token.length - 1),
+          "'" +
+            taggedToken.token.substring(0, taggedToken.token.length - 1) +
+            "'",
           new ValueToken()
         )
       );

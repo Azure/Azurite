@@ -2,9 +2,6 @@ import IQPState from "./IQPState";
 import QPState from "./QPState";
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
-import { TokenMap } from "./PredicateModel/TokenMap";
-import TaggedToken from "./TokenModel/TaggedToken";
-import ParensCloseToken from "./TokenModel/ParensCloseToken";
 import GuidPredicate from "./PredicateModel/GuidPredicate";
 import BinaryPredicate from "./PredicateModel/BinaryPredicate";
 import LongPredicate from "./PredicateModel/LongPredicate";
@@ -13,7 +10,6 @@ import IntegerPredicate from "./PredicateModel/IntegerPredicate";
 import StringPredicate from "./PredicateModel/StringPredicate";
 import DatePredicate from "./PredicateModel/DatePredicate";
 import BooleanPredicate from "./PredicateModel/BooleanPredicate";
-import ParensClose from "./PredicateModel/ParensClose";
 
 export default class StatePredicateFinished
   extends QPState
@@ -33,19 +29,41 @@ export default class StatePredicateFinished
 
     context = this.validatePredicate(context);
 
-    [context, token] = this.determineNextToken(context);
+    [context, token] = this.getNextToken(context);
 
-    context = this.storeTaggedTokens(context, token);
-
-    if (context.currentPos === context.originalQuery.length) {
-      context.stateQueue.push(QueryStateName.QueryFinished);
-    } else {
-      [context, token] = this.determineNextToken(context);
-      context = this.handleToken(context, token);
-    }
+    context = this.handleToken(context, token);
 
     return context;
   };
+
+  protected handleToken(context: QueryContext, token: string): QueryContext {
+    // categorize the token
+    if (token === "") {
+      context.stateQueue.push(QueryStateName.QueryFinished);
+    } else if (token === "(") {
+      context.stateQueue.push(QueryStateName.PredicateStarted);
+    } else if (token === ")") {
+      context.stateQueue.push(QueryStateName.ProcessParensClose);
+    } else if (this.isPredicateOperator(token)) {
+      context.stateQueue.push(QueryStateName.ProcessPredicateOperator);
+      // will need to end current predicate and create a new predicate
+    } else if (this.isOperand(token)) {
+      // match operand (specific set)
+      throw new Error(
+        "Invalid Query, unable to process operand starting predicate!"
+      );
+    } else if (this.isValue(token)) {
+      // match number (long & doubles? needed)
+      // match string (starts with ', or " ?)
+      // match guid (is exactly guid'<guidval>')
+      context.stateQueue.push(QueryStateName.PredicateStarted);
+    } else if (this.isIdentifier(token)) {
+      // match identifier (can only start with letter)
+      context.stateQueue.push(QueryStateName.PredicateStarted);
+    }
+
+    return context;
+  }
 
   /**
    * validates the predicate using some simple logic
@@ -55,12 +73,17 @@ export default class StatePredicateFinished
    * @return {*}  {QueryContext}
    * @memberof StatePredicateFinished
    */
-  validatePredicate(context: QueryContext): QueryContext {
-    this.checkPredicateLength(context);
-    this.checkSingleTerm(context);
-    this.checkMultipleTerms(context);
+  private validatePredicate(context: QueryContext): QueryContext {
+    const predicateOffset: number = this.getPredicateOffsetToCheck(context);
+    this.checkPredicateLength(predicateOffset, context);
+    this.checkSingleTerm(predicateOffset, context);
+    this.checkMultipleTerms(predicateOffset, context);
     context = this.setPredicateType(context);
     return context;
+  }
+
+  private getPredicateOffsetToCheck(context: QueryContext): number {
+    return context.currentPredicate > 0 ? context.currentPredicate - 1 : 0;
   }
 
   /**
@@ -71,7 +94,7 @@ export default class StatePredicateFinished
    * @return {*}  {QueryContext}
    * @memberof StatePredicateFinished
    */
-  setPredicateType(context: QueryContext): QueryContext {
+  private setPredicateType(context: QueryContext): QueryContext {
     if (context.taggedPredicates[context.currentPredicate] === undefined) {
       return context;
     }
@@ -101,7 +124,10 @@ export default class StatePredicateFinished
    * @return {*}  {QueryContext}
    * @memberof StatePredicateFinished
    */
-  ifGuidPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
+  private ifGuidPredicate(
+    context: QueryContext,
+    tokenToCheck: string
+  ): QueryContext {
     if (this.isGuidValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate] = new GuidPredicate(
         context.taggedPredicates[context.currentPredicate].tokenMap
@@ -119,7 +145,10 @@ export default class StatePredicateFinished
    * @return {*}  {QueryContext}
    * @memberof StatePredicateFinished
    */
-  ifBinaryPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
+  private ifBinaryPredicate(
+    context: QueryContext,
+    tokenToCheck: string
+  ): QueryContext {
     if (this.isBinaryValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate] = new BinaryPredicate(
         context.taggedPredicates[context.currentPredicate].tokenMap
@@ -137,7 +166,10 @@ export default class StatePredicateFinished
    * @return {*}  {QueryContext}
    * @memberof StatePredicateFinished
    */
-  ifLongPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
+  private ifLongPredicate(
+    context: QueryContext,
+    tokenToCheck: string
+  ): QueryContext {
     if (this.isLongValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate] = new LongPredicate(
         context.taggedPredicates[context.currentPredicate].tokenMap
@@ -155,7 +187,10 @@ export default class StatePredicateFinished
    * @return {*}  {QueryContext}
    * @memberof StatePredicateFinished
    */
-  ifDoublePredicate(context: QueryContext, tokenToCheck: string): QueryContext {
+  private ifDoublePredicate(
+    context: QueryContext,
+    tokenToCheck: string
+  ): QueryContext {
     if (this.isDoubleValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate] = new DoublePredicate(
         context.taggedPredicates[context.currentPredicate].tokenMap
@@ -173,7 +208,7 @@ export default class StatePredicateFinished
    * @return {*}  {QueryContext}
    * @memberof StatePredicateFinished
    */
-  ifIntegerPredicate(
+  private ifIntegerPredicate(
     context: QueryContext,
     tokenToCheck: string
   ): QueryContext {
@@ -194,7 +229,10 @@ export default class StatePredicateFinished
    * @return {*}  {QueryContext}
    * @memberof StatePredicateFinished
    */
-  ifStringPredicate(context: QueryContext, tokenToCheck: string): QueryContext {
+  private ifStringPredicate(
+    context: QueryContext,
+    tokenToCheck: string
+  ): QueryContext {
     if (this.isStringValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate] = new StringPredicate(
         context.taggedPredicates[context.currentPredicate].tokenMap
@@ -212,7 +250,10 @@ export default class StatePredicateFinished
    * @return {*}  {QueryContext}
    * @memberof StatePredicateFinished
    */
-  ifDatePredicate(context: QueryContext, tokenToCheck: string): QueryContext {
+  private ifDatePredicate(
+    context: QueryContext,
+    tokenToCheck: string
+  ): QueryContext {
     if (this.isDateValue(tokenToCheck)) {
       context.taggedPredicates[context.currentPredicate] = new DatePredicate(
         context.taggedPredicates[context.currentPredicate].tokenMap
@@ -230,7 +271,7 @@ export default class StatePredicateFinished
    * @return {*}  {QueryContext}
    * @memberof StatePredicateFinished
    */
-  ifBooleanPredicate(
+  private ifBooleanPredicate(
     context: QueryContext,
     tokenToCheck: string
   ): QueryContext {
@@ -264,12 +305,10 @@ export default class StatePredicateFinished
    * @param {QueryContext} context
    * @memberof StatePredicateFinished
    */
-  private checkPredicateLength(context: QueryContext) {
+  private checkPredicateLength(offset: number, context: QueryContext) {
     if (
-      context.taggedPredicates[context.currentPredicate - 1].tokenMap.tokens
-        .length !== 1 &&
-      context.taggedPredicates[context.currentPredicate - 1].tokenMap.tokens
-        .length !== 3
+      context.taggedPredicates[offset].tokenMap.tokens.length !== 1 &&
+      context.taggedPredicates[offset].tokenMap.tokens.length !== 3
     ) {
       // we must have form "x operator b", or a single value
       throw new Error("Invalid Query");
@@ -284,33 +323,18 @@ export default class StatePredicateFinished
    * @return {*}
    * @memberof StatePredicateFinished
    */
-  private checkSingleTerm(context: QueryContext) {
-    if (
-      context.taggedPredicates[context.currentPredicate - 1].tokenMap.tokens
-        .length === 1
-    ) {
+  private checkSingleTerm(offset: number, context: QueryContext) {
+    if (context.taggedPredicates[offset].tokenMap.tokens.length === 1) {
       // we must have a parens or a single value
-      // ToDo: should we convert unions to objects to allow dot notation?
+      // ToDo: validate this logic has parity with Azure service
       // This checks that a single tagged token is of a type allowed to be
       // on it's own in a predicate;
+      const predicateType =
+        context.taggedPredicates[offset].tokenMap.tokens[0].type;
       if (
-        context.taggedPredicates[
-          context.currentPredicate - 1
-        ].tokenMap.tokens[0].type.isParensOpen()
-      ) {
-        return;
-      }
-      if (
-        context.taggedPredicates[
-          context.currentPredicate - 1
-        ].tokenMap.tokens[0].type.isParensClose()
-      ) {
-        return;
-      }
-      if (
-        context.taggedPredicates[
-          context.currentPredicate - 1
-        ].tokenMap.tokens[0].type.isValue()
+        predicateType.isParensOpen() ||
+        predicateType.isParensClose() ||
+        predicateType.isOperator()
       ) {
         return;
       }
@@ -325,44 +349,72 @@ export default class StatePredicateFinished
    * @param {QueryContext} context
    * @memberof StatePredicateFinished
    */
-  private checkMultipleTerms(context: QueryContext) {
-    if (
-      context.taggedPredicates[context.currentPredicate - 1].tokenMap.tokens
-        .length !== 1 &&
-      context.taggedPredicates[context.currentPredicate - 1].tokenMap.tokens
-        .length !== 3
-    ) {
-      // we must have form "x operator b", or a single value
-      throw new Error("Invalid Query");
+  private checkMultipleTerms(offset: number, context: QueryContext) {
+    if (context.taggedPredicates[offset].tokenMap.tokens.length === 3) {
+      // we must have form "x operator b"
+      this.checkNumberOfValues(offset, context);
+      this.checkNumberOfOperators(offset, context);
+      this.checkNumberOfIdentifiers(offset, context);
     }
   }
 
   /**
-   * Function name still set to be generic in case it is defined in interface
-   * Otherwise should be renamed to indicate that it only stores a parens
+   * Checks that there is only 1 value in the predicate
    *
    * @private
+   * @param {number} offset
    * @param {QueryContext} context
-   * @param {string} token
-   * @return {*}  {QueryContext}
    * @memberof StatePredicateFinished
    */
-  private storeTaggedTokens(
-    context: QueryContext,
-    token: string
-  ): QueryContext {
-    // parens should be stored singly
-    context.currentPredicate += 1;
-    const taggedToken: TaggedToken = new TaggedToken(
-      token,
-      new ParensCloseToken()
-    );
-    const tokenMap: TokenMap = new TokenMap([taggedToken]);
-    context.taggedPredicates[context.currentPredicate] = new ParensClose(
-      tokenMap
-    );
-    context.currentPos += token.length;
+  private checkNumberOfValues(offset: number, context: QueryContext) {
+    let valueCount = 0;
+    context.taggedPredicates[offset].tokenMap.tokens.forEach((taggedToken) => {
+      if (taggedToken.type.isValue()) {
+        valueCount++;
+      }
+    });
+    this.checkPredicateTermCount(valueCount);
+  }
 
-    return context;
+  /**
+   * Checks that there is only 1 identifier in the predicate
+   *
+   * @private
+   * @param {number} offset
+   * @param {QueryContext} context
+   * @memberof StatePredicateFinished
+   */
+  private checkNumberOfIdentifiers(offset: number, context: QueryContext) {
+    let valueCount = 0;
+    context.taggedPredicates[offset].tokenMap.tokens.forEach((taggedToken) => {
+      if (taggedToken.type.isIdentifier()) {
+        valueCount++;
+      }
+    });
+    this.checkPredicateTermCount(valueCount);
+  }
+
+  /**
+   * Checks that there is only 1 operator in the predicate
+   *
+   * @private
+   * @param {number} offset
+   * @param {QueryContext} context
+   * @memberof StatePredicateFinished
+   */
+  private checkNumberOfOperators(offset: number, context: QueryContext) {
+    let valueCount = 0;
+    context.taggedPredicates[offset].tokenMap.tokens.forEach((taggedToken) => {
+      if (taggedToken.type.isOperator()) {
+        valueCount++;
+      }
+    });
+    this.checkPredicateTermCount(valueCount);
+  }
+
+  private checkPredicateTermCount(count: number) {
+    if (count !== 1) {
+      throw new Error("Invalid number of terms in query!");
+    }
   }
 }

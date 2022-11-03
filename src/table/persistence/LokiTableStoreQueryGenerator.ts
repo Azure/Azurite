@@ -7,6 +7,7 @@ import { GuidCollumnQueryType } from "./GuidCollumnQueryType";
 import { BinaryBinaryCollumnQueryType } from "./BinaryBinaryCollumnQueryType";
 import { OtherCollumnQueryType } from "./OtherCollumnQueryType";
 import { XBinaryCollumnQueryType } from "./XBinaryCollumQueryType";
+import LokiJsQueryTranscriberFactory from "./QueryTranscriber/LokiJsQueryTranscriberFactory";
 
 // used by the query filter checking logic
 type TokenTuple = [string, TokenType];
@@ -86,10 +87,18 @@ export default class LokiTableStoreQueryGenerator {
       return () => true;
     }
 
-    const transformedQuery =
-      LokiTableStoreQueryGenerator.transformEntityQuery(query);
+    // const transformedQuery =
+    //   LokiTableStoreQueryGenerator.transformEntityQuery(query);
 
-    return new Function("item", transformedQuery) as any;
+    const queryTranscriber =
+      LokiJsQueryTranscriberFactory.createQueryTranscriber(
+        query,
+        "lokiJsQueryTranscriber"
+      );
+
+    queryTranscriber.start();
+
+    return new Function("item", queryTranscriber.getTranscribedQuery()) as any;
   }
 
   public static transformEntityQuery(query: string): string {

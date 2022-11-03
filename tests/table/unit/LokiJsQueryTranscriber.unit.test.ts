@@ -1,6 +1,5 @@
 import * as assert from "assert";
 import LokiJsQueryTranscriberFactory from "../../../src/table/persistence/QueryTranscriber/LokiJsQueryTranscriberFactory";
-import { QueryStateName } from "../../../src/table/persistence/QueryTranscriber/QueryStateName";
 
 describe("LokiJs Query Transcribing unit tests, also ensures backward compatability with earlier schemas:", () => {
   it("correctly transcribes a simple query with irregular whitespace", async () => {
@@ -35,7 +34,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.setState(QueryStateName.QueryStarted);
+      queryTranscriber.start();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -68,7 +67,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.setState(QueryStateName.QueryStarted);
+      queryTranscriber.start();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -101,7 +100,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.setState(QueryStateName.QueryStarted);
+      queryTranscriber.start();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -134,7 +133,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.setState(QueryStateName.QueryStarted);
+      queryTranscriber.start();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -157,6 +156,11 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
       {
         originalQuery: "( '123.01L' eq myString )",
         expectedQuery: "return ( ( '123.01L' === item.properties.myString ) )"
+      },
+      {
+        originalQuery: "( 'I am a string' eq myString )",
+        expectedQuery:
+          "return ( ( 'I am a string' === item.properties.myString ) )"
       }
     ];
 
@@ -167,7 +171,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.setState(QueryStateName.QueryStarted);
+      queryTranscriber.start();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -200,7 +204,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.setState(QueryStateName.QueryStarted);
+      queryTranscriber.start();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -218,11 +222,16 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
     const testArray = [
       {
         originalQuery: "(myLong eq 123.01L )",
-        expectedQuery: "return ( ( item.properties.myLong === 123.01 ) )"
+        expectedQuery: "return ( ( item.properties.myLong === '123.01' ) )"
       },
       {
         originalQuery: "( 123.01L eq myLong )",
-        expectedQuery: "return ( ( 123.01 === item.properties.myLong ) )"
+        expectedQuery: "return ( ( '123.01' === item.properties.myLong ) )"
+      },
+      {
+        originalQuery: "PartitionKey eq 'partition1' and int64Field eq 12345L",
+        expectedQuery:
+          "return ( item.properties.PartitionKey === 'partition1' && item.properties.int64Field === '12345' )"
       }
     ];
 
@@ -233,7 +242,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.setState(QueryStateName.QueryStarted);
+      queryTranscriber.start();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -254,11 +263,23 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
     const testArray = [
       {
         originalQuery: `(myDate eq datetime'${newTimeStamp}'  )`,
-        expectedQuery: `return ( ( new Date(item.properties.myDate).getTime() === '${newTimeStamp}' ) )`
+        expectedQuery: `return ( ( new Date(item.properties.myDate).getTime() === new Date('${newTimeStamp}').getTime() ) )`
       },
       {
         originalQuery: `( datetime'${newTimeStamp}' eq myDate )`,
-        expectedQuery: `return ( ( '${newTimeStamp}' === new Date(item.properties.myDate).getTime() ) )`
+        expectedQuery: `return ( ( new Date('${newTimeStamp}').getTime() === new Date(item.properties.myDate).getTime() ) )`
+      },
+      {
+        originalQuery: `PartitionKey eq 'partition1' and number gt 11 and Timestamp lt datetime'${newTimeStamp}'`,
+        expectedQuery: `return ( item.properties.PartitionKey === 'partition1' && item.properties.number > 11 && new Date(item.properties.Timestamp).getTime() < new Date('${newTimeStamp}').getTime() )`
+      },
+      {
+        originalQuery: `PartitionKey eq 'partition1' and number lt 11 and Timestamp lt datetime'${newTimeStamp}'`,
+        expectedQuery: `return ( item.properties.PartitionKey === 'partition1' && item.properties.number < 11 && new Date(item.properties.Timestamp).getTime() < new Date('${newTimeStamp}').getTime() )`
+      },
+      {
+        originalQuery: `(PartitionKey eq 'partition1') and (number lt 12) and (Timestamp lt datetime'${newTimeStamp}')`,
+        expectedQuery: `return ( ( item.properties.PartitionKey === 'partition1' ) && ( item.properties.number < 12 ) && ( new Date(item.properties.Timestamp).getTime() < new Date('${newTimeStamp}').getTime() ) )`
       }
     ];
 
@@ -269,7 +290,67 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
           "stateMachineTest"
         );
 
-      queryTranscriber.setState(QueryStateName.QueryStarted);
+      queryTranscriber.start();
+      assert.strictEqual(
+        queryTranscriber.getTranscribedQuery(),
+        test.expectedQuery,
+        `Transcribed query "${queryTranscriber.getTranscribedQuery()}" did not match expected ${
+          test.expectedQuery
+        }`
+      );
+    }
+
+    // no closing "done()" callback in async test
+  });
+
+  it("correctly transcribes a query with multiple predicates", async () => {
+    // use the expected response string to compare the reult to.
+    const testArray = [
+      {
+        originalQuery: "(myInt eq 123 ) and (myString eq 'hello')",
+        expectedQuery:
+          "return ( ( item.properties.myInt === 123 ) && ( item.properties.myString === 'hello' ) )"
+      }
+    ];
+
+    for (const test of testArray) {
+      const queryTranscriber =
+        LokiJsQueryTranscriberFactory.createQueryTranscriber(
+          test.originalQuery,
+          "stateMachineTest"
+        );
+
+      queryTranscriber.start();
+      assert.strictEqual(
+        queryTranscriber.getTranscribedQuery(),
+        test.expectedQuery,
+        `Transcribed query "${queryTranscriber.getTranscribedQuery()}" did not match expected ${
+          test.expectedQuery
+        }`
+      );
+    }
+
+    // no closing "done()" callback in async test
+  });
+
+  it("correctly transcribes a query with multiple predicates and no brackets", async () => {
+    // use the expected response string to compare the reult to.
+    const testArray = [
+      {
+        originalQuery: "PartitionKey eq 'partitionKey' and int32Field eq 54321",
+        expectedQuery:
+          "return ( item.properties.PartitionKey === 'partitionKey' && item.properties.int32Field === 54321 )"
+      }
+    ];
+
+    for (const test of testArray) {
+      const queryTranscriber =
+        LokiJsQueryTranscriberFactory.createQueryTranscriber(
+          test.originalQuery,
+          "stateMachineTest"
+        );
+
+      queryTranscriber.start();
       assert.strictEqual(
         queryTranscriber.getTranscribedQuery(),
         test.expectedQuery,
@@ -283,6 +364,38 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
   });
 
   // binary query - not yet supported
+  it("correctly transcribes a query for a value of type binary", async () => {
+    // use the expected response string to compare the reult to.
+    const testArray = [
+      {
+        originalQuery: `(PartitionKey eq 'part1') and (binaryField eq binary'62696e61727944617461')`,
+        expectedQuery: `return ( ( item.properties.PartitionKey === 'part1' ) && ( item.properties.binaryField === 'YmluYXJ5RGF0YQ==' ) )`
+      },
+      {
+        originalQuery: `(PartitionKey eq 'part1') and (binaryField eq X'62696e61727944617461')`,
+        expectedQuery: `return ( ( item.properties.PartitionKey === 'part1' ) && ( item.properties.binaryField === 'YmluYXJ5RGF0YQ==' ) )`
+      }
+    ];
 
-  // table query - ToDo!
+    for (const test of testArray) {
+      const queryTranscriber =
+        LokiJsQueryTranscriberFactory.createQueryTranscriber(
+          test.originalQuery,
+          "stateMachineTest"
+        );
+
+      queryTranscriber.start();
+      assert.strictEqual(
+        queryTranscriber.getTranscribedQuery(),
+        test.expectedQuery,
+        `Transcribed query "${queryTranscriber.getTranscribedQuery()}" did not match expected ${
+          test.expectedQuery
+        }`
+      );
+    }
+
+    // no closing "done()" callback in async test
+  });
+
+  // table tablename query - ToDo!
 });

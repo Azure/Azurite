@@ -2,10 +2,6 @@ import IQPState from "./IQPState";
 import QPState from "./QPState";
 import QueryContext from "./QueryContext";
 import { QueryStateName } from "./QueryStateName";
-import { TokenMap } from "./PredicateModel/TokenMap";
-import TaggedToken from "./TokenModel/TaggedToken";
-import ParensOpenToken from "./TokenModel/ParensOpenToken";
-import ParensOpen from "./PredicateModel/ParensOpen";
 
 export default class StatePredicateStarted extends QPState implements IQPState {
   name = QueryStateName.PredicateStarted;
@@ -19,23 +15,44 @@ export default class StatePredicateStarted extends QPState implements IQPState {
    * @memberof StatePredicateStarted
    */
   onProcess = (context: QueryContext) => {
+    // context = this.startNewPredicate(context);
+
     let token = "";
-    [context, token] = this.determineNextToken(context);
-
-    context = this.storeTaggedTokens(context, token);
-
-    [context, token] = this.determineNextToken(context);
+    [context, token] = this.getNextToken(context);
     context = this.handleToken(context, token);
-
-    // Checks if predicate ends... option for error handling
-    // or earlier query logic validation
-    // (this should always be the case in proper processing)
-    if (context.currentPos === context.transcribedQuery.length - 1) {
-      context.stateQueue.push(QueryStateName.PredicateFinished);
-    }
 
     return context;
   };
+
+  protected handleToken(context: QueryContext, token: string): QueryContext {
+    // categorize the token
+    if (token === "") {
+      context.stateQueue.push(QueryStateName.PredicateFinished);
+    } else if (token === "(") {
+      context.stateQueue.push(QueryStateName.ProcessParensOpen);
+    } else if (token === ")") {
+      context.stateQueue.push(QueryStateName.ProcessParensClose);
+    } else if (this.isPredicateOperator(token)) {
+      context.stateQueue.push(QueryStateName.PredicateFinished);
+
+      // will need to end current predicate and create a new predicate
+    } else if (this.isOperand(token)) {
+      // match operand (specific set)
+      throw new Error(
+        "Invalid Query, cannot start predicate with operator! " + token
+      );
+    } else if (this.isValue(token)) {
+      // match number (long & doubles? needed)
+      // match string (starts with ', or " ?)
+      // match guid (is exactly guid'<guidval>')
+      context.stateQueue.push(QueryStateName.ProcessValue);
+    } else if (this.isIdentifier(token)) {
+      // match identifier (can only start with letter)
+      context.stateQueue.push(QueryStateName.ProcessIdentifier);
+    }
+
+    return context;
+  }
 
   /**
    * optional post processing, here we can add logging
@@ -47,33 +64,4 @@ export default class StatePredicateStarted extends QPState implements IQPState {
   onExit = (context: QueryContext) => {
     return context;
   };
-
-  /**
-   * stores the tagged tokens
-   *
-   * @private
-   * @param {QueryContext} context
-   * @param {string} token
-   * @return {*}  {QueryContext}
-   * @memberof StatePredicateStarted
-   */
-  private storeTaggedTokens(
-    context: QueryContext,
-    token: string
-  ): QueryContext {
-    // parens are stored in their own entry
-    context.currentPredicate += 1;
-    const taggedToken: TaggedToken = new TaggedToken(
-      token,
-      new ParensOpenToken()
-    );
-    const tokenMap: TokenMap = new TokenMap([taggedToken]);
-    context.taggedPredicates[context.currentPredicate] = new ParensOpen(
-      tokenMap
-    );
-    context.currentPos += token.length;
-    context.currentPredicate += 1;
-
-    return context;
-  }
 }

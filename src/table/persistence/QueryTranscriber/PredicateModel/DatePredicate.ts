@@ -35,7 +35,9 @@ export default class DatePredicate implements IPredicate {
     if (taggedToken.type.isValue()) {
       newTokens.push(
         new TaggedToken(
-          taggedToken.token.substring(8, taggedToken.token.length),
+          "new Date(" +
+            taggedToken.token.substring(8, taggedToken.token.length) +
+            ").getTime()",
           new ValueToken()
         )
       );

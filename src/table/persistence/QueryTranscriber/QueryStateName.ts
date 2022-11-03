@@ -6,5 +6,8 @@ export enum QueryStateName {
   PredicateFinished,
   ProcessIdentifier,
   ProcessOperator,
-  ProcessValue
+  ProcessValue,
+  ProcessPredicateOperator,
+  ProcessParensOpen,
+  ProcessParensClose
 }

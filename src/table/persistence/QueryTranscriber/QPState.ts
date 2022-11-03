@@ -1,4 +1,5 @@
 import QueryContext from "./QueryContext";
+import IQPState from "./IQPState";
 import { QueryStateName } from "./QueryStateName";
 import { TokenMap } from "./PredicateModel/TokenMap";
 import TaggedToken from "./TokenModel/TaggedToken";
@@ -7,8 +8,19 @@ import ParensCloseToken from "./TokenModel/ParensCloseToken";
 import ParensClose from "./PredicateModel/ParensClose";
 import ParensOpen from "./PredicateModel/ParensOpen";
 import UnknownPredicate from "./PredicateModel/UnknownPredicate";
+import PredicateOperator from "./PredicateModel/PredicateOperator";
 
-export default class QPState {
+export default class QPState implements IQPState {
+  name: QueryStateName = QueryStateName.None;
+
+  onProcess(context: QueryContext): QueryContext {
+    return context;
+  }
+
+  onExit(context: QueryContext): QueryContext {
+    return context;
+  }
+
   /**
    * Processes the first opening parens of a query
    * @param context
@@ -109,7 +121,7 @@ export default class QPState {
    * @param context
    * @returns
    */
-  protected determineNextToken(context: QueryContext): [QueryContext, string] {
+  protected getNextToken(context: QueryContext): [QueryContext, string] {
     // detmermine what the next token should be.
     // logic:
     // from current position in query string
@@ -118,29 +130,33 @@ export default class QPState {
     [context, tokenStart] = this.startofNextRelevantToken(context);
     // determine end:
     const tokenEnd = this.endOfToken(context, tokenStart);
+    return this.validateToken(context, tokenStart, tokenEnd);
+  }
+
+  protected validateToken(
+    context: QueryContext,
+    tokenStart: number,
+    tokenEnd: number
+  ): [QueryContext, string] {
+    if (tokenEnd > context.originalQuery.length) {
+      return [context, ""];
+    }
     return [context, context.originalQuery.slice(tokenStart, tokenEnd)];
   }
 
-  protected handleToken(context: QueryContext, token: string): QueryContext {
-    // categorize the token
-    if (token === "(") {
-      context.stateQueue.push(QueryStateName.PredicateStarted);
-    } else if (token === ")") {
-      context.stateQueue.push(QueryStateName.PredicateFinished);
-    } else if (this.isOperand(token)) {
-      // match operand (specific set)
-      context.stateQueue.push(QueryStateName.ProcessOperator);
-    } else if (this.isValue(token)) {
-      // match number (long & doubles? needed)
-      // match string (starts with ', or " ?)
-      // match guid (is exactly guid'<guidval>')
-      context.stateQueue.push(QueryStateName.ProcessValue);
-    } else if (this.isIdentifier(token)) {
-      // match identifier (can only start with letter)
-      context.stateQueue.push(QueryStateName.ProcessIdentifier);
+  isPredicateOperator(token: string): boolean {
+    let isOperator = true;
+    switch (token) {
+      case "and":
+        break;
+      case "or":
+        break;
+      case "not":
+        break;
+      default:
+        isOperator = false;
     }
-
-    return context;
+    return isOperator;
   }
 
   /**
@@ -317,12 +333,6 @@ export default class QPState {
         break;
       case "ne":
         break;
-      case "and":
-        break;
-      case "or":
-        break;
-      case "not":
-        break;
       default:
         isOperator = false;
     }
@@ -354,12 +364,13 @@ export default class QPState {
    */
   protected updateTaggedPredicate(
     taggedTokens: TaggedToken[],
-    context: QueryContext
+    context: QueryContext,
+    isPredicateOperator: boolean = false
   ): QueryContext {
     const tokenMap: TokenMap = new TokenMap(taggedTokens);
-    context.taggedPredicates[context.currentPredicate] = new UnknownPredicate(
-      tokenMap
-    );
+    context.taggedPredicates[context.currentPredicate] = isPredicateOperator
+      ? new PredicateOperator(tokenMap)
+      : new UnknownPredicate(tokenMap);
     return context;
   }
 }

@@ -16,16 +16,47 @@ export default class StateProcessOperator extends QPState implements IQPState {
    */
   onProcess = (context: QueryContext) => {
     let token = "";
-    [context, token] = this.determineNextToken(context);
+    [context, token] = this.getNextToken(context);
     const originalTokenLength = token.length;
-    token = StateProcessOperator.convertOperatorToken(token);
+    token = this.convertOperatorToken(token);
     context = this.storeTaggedTokens(context, token, originalTokenLength);
 
-    [context, token] = this.determineNextToken(context);
+    [context, token] = this.getNextToken(context);
     context = this.handleToken(context, token);
 
     return context;
   };
+
+  protected handleToken(context: QueryContext, token: string): QueryContext {
+    // categorize the token
+    if (token === "") {
+      context.stateQueue.push(QueryStateName.PredicateFinished);
+    } else if (token === "(") {
+      context.stateQueue.push(QueryStateName.PredicateStarted);
+    } else if (token === ")") {
+      context.stateQueue.push(QueryStateName.PredicateFinished);
+    } else if (this.isPredicateOperator(token)) {
+      if (this.name === QueryStateName.PredicateFinished) {
+        context.stateQueue.push(QueryStateName.ProcessPredicateOperator);
+      } else {
+        context.stateQueue.push(QueryStateName.PredicateFinished);
+      }
+      // will need to end current predicate and create a new predicate
+    } else if (this.isOperand(token)) {
+      // match operand (specific set)
+      context.stateQueue.push(QueryStateName.ProcessOperator);
+    } else if (this.isValue(token)) {
+      // match number (long & doubles? needed)
+      // match string (starts with ', or " ?)
+      // match guid (is exactly guid'<guidval>')
+      context.stateQueue.push(QueryStateName.ProcessValue);
+    } else if (this.isIdentifier(token)) {
+      // match identifier (can only start with letter)
+      context.stateQueue.push(QueryStateName.ProcessIdentifier);
+    }
+
+    return context;
+  }
 
   /**
    * optional post processing, here we can add logging
@@ -48,10 +79,8 @@ export default class StateProcessOperator extends QPState implements IQPState {
    * @return {*}  {string}
    * @memberof LokiTableMetadataStore
    */
-  private static convertOperatorToken(token: string): string {
+  private convertOperatorToken(token: string): string {
     switch (token) {
-      case "TableName":
-        return "name";
       case "eq":
         return "===";
       case "gt":

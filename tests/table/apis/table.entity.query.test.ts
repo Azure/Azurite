@@ -16,7 +16,7 @@ import {
 } from "../utils/table.entity.test.utils";
 // import uuid from "uuid";
 // Set true to enable debug log
-configLogger(true);
+configLogger(false);
 // For convenience, we have a switch to control the use
 // of a local Azurite instance, otherwise we need an
 // ENV VAR called AZURE_TABLE_STORAGE added to mocha
@@ -753,7 +753,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     for (let i = 0; i < totalItems; i++) {
       const entity = createBasicEntityForTest(partitionKeyForQueryTest);
       if (i % 2 === 0) {
-        entity.binaryField = Buffer.from("one zero 1 0 = equals");
+        entity.binaryField = Buffer.from("binaryData"); // should equal YmluYXJ5RGF0YQ==
       }
       const result = await tableClient.createEntity(entity);
       assert.notStrictEqual(result.etag, undefined);
@@ -763,13 +763,13 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     const queriesAndExpectedResult = [
       {
         queryOptions: {
-          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (binaryField eq binary'3131313131313131')`
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (binaryField eq binary'62696e61727944617461')`
         },
         expectedResult: 5
       },
       {
         queryOptions: {
-          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (binaryField eq X'3131313131313131')`
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (binaryField eq X'62696e61727944617461')`
         },
         expectedResult: 5
       }
@@ -795,10 +795,10 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       testsCompleted++;
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
-    await tableClient.deleteTable();
+    // await tableClient.deleteTable();
   });
 
-  it.only("should only find guids when using guid type not plain strings, @loki", async () => {
+  it("should only find guids when using guid type not plain strings, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       "reproTable"
