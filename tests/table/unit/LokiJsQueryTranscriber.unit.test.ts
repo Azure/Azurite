@@ -29,7 +29,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
 
     for (const test of testArray) {
       const queryTranscriber =
-        LokiJsQueryTranscriberFactory.createQueryTranscriber(
+        LokiJsQueryTranscriberFactory.createEntityQueryTranscriber(
           test.originalQuery,
           "stateMachineTest"
         );
@@ -62,7 +62,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
 
     for (const test of testArray) {
       const queryTranscriber =
-        LokiJsQueryTranscriberFactory.createQueryTranscriber(
+        LokiJsQueryTranscriberFactory.createEntityQueryTranscriber(
           test.originalQuery,
           "stateMachineTest"
         );
@@ -95,7 +95,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
 
     for (const test of testArray) {
       const queryTranscriber =
-        LokiJsQueryTranscriberFactory.createQueryTranscriber(
+        LokiJsQueryTranscriberFactory.createEntityQueryTranscriber(
           test.originalQuery,
           "stateMachineTest"
         );
@@ -128,7 +128,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
 
     for (const test of testArray) {
       const queryTranscriber =
-        LokiJsQueryTranscriberFactory.createQueryTranscriber(
+        LokiJsQueryTranscriberFactory.createEntityQueryTranscriber(
           test.originalQuery,
           "stateMachineTest"
         );
@@ -166,7 +166,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
 
     for (const test of testArray) {
       const queryTranscriber =
-        LokiJsQueryTranscriberFactory.createQueryTranscriber(
+        LokiJsQueryTranscriberFactory.createEntityQueryTranscriber(
           test.originalQuery,
           "stateMachineTest"
         );
@@ -199,7 +199,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
 
     for (const test of testArray) {
       const queryTranscriber =
-        LokiJsQueryTranscriberFactory.createQueryTranscriber(
+        LokiJsQueryTranscriberFactory.createEntityQueryTranscriber(
           test.originalQuery,
           "stateMachineTest"
         );
@@ -237,7 +237,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
 
     for (const test of testArray) {
       const queryTranscriber =
-        LokiJsQueryTranscriberFactory.createQueryTranscriber(
+        LokiJsQueryTranscriberFactory.createEntityQueryTranscriber(
           test.originalQuery,
           "stateMachineTest"
         );
@@ -285,7 +285,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
 
     for (const test of testArray) {
       const queryTranscriber =
-        LokiJsQueryTranscriberFactory.createQueryTranscriber(
+        LokiJsQueryTranscriberFactory.createEntityQueryTranscriber(
           test.originalQuery,
           "stateMachineTest"
         );
@@ -315,7 +315,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
 
     for (const test of testArray) {
       const queryTranscriber =
-        LokiJsQueryTranscriberFactory.createQueryTranscriber(
+        LokiJsQueryTranscriberFactory.createEntityQueryTranscriber(
           test.originalQuery,
           "stateMachineTest"
         );
@@ -345,7 +345,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
 
     for (const test of testArray) {
       const queryTranscriber =
-        LokiJsQueryTranscriberFactory.createQueryTranscriber(
+        LokiJsQueryTranscriberFactory.createEntityQueryTranscriber(
           test.originalQuery,
           "stateMachineTest"
         );
@@ -363,7 +363,6 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
     // no closing "done()" callback in async test
   });
 
-  // binary query - not yet supported
   it("correctly transcribes a query for a value of type binary", async () => {
     // use the expected response string to compare the reult to.
     const testArray = [
@@ -379,7 +378,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
 
     for (const test of testArray) {
       const queryTranscriber =
-        LokiJsQueryTranscriberFactory.createQueryTranscriber(
+        LokiJsQueryTranscriberFactory.createEntityQueryTranscriber(
           test.originalQuery,
           "stateMachineTest"
         );
@@ -397,5 +396,34 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
     // no closing "done()" callback in async test
   });
 
-  // table tablename query - ToDo!
+  it("correctly transcribes a query for tables", async () => {
+    // allow custom props = false!
+    // system props : "name", "table"
+    const testArray = [
+      {
+        originalQuery: "TableName ge 'myTable' and TableName lt 'myTable{'",
+        expectedQuery:
+          "return ( item.table >= 'myTable' && item.table < 'myTable{' )"
+      }
+    ];
+
+    for (const test of testArray) {
+      const queryTranscriber =
+        LokiJsQueryTranscriberFactory.createTableQueryTranscriber(
+          test.originalQuery,
+          "stateMachineTest"
+        );
+
+      queryTranscriber.transcribe();
+      assert.strictEqual(
+        queryTranscriber.getTranscribedQuery(),
+        test.expectedQuery,
+        `Transcribed query "${queryTranscriber.getTranscribedQuery()}" did not match expected ${
+          test.expectedQuery
+        }`
+      );
+    }
+
+    // no closing "done()" callback in async test
+  });
 });

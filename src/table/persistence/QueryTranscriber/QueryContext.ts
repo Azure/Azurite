@@ -18,7 +18,9 @@ export default class QueryContext {
   public currentPredicate: number = 0;
   public transcribedQuery: string = "";
   public stateQueue: QueryStateName[] = [];
-  constructor(queryString: string) {
+  public isTableQuery: boolean = false;
+  constructor(queryString: string, isTableQuery: boolean = false) {
     this.originalQuery = queryString;
+    this.isTableQuery = isTableQuery;
   }
 }

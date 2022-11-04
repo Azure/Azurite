@@ -103,6 +103,8 @@ export default class StateProcessIdentifier
     context: QueryContext,
     token: string
   ): QueryContext {
+    token = this.updateTableIdentifier(context, token);
+
     const taggedToken: TaggedToken = new TaggedToken(
       token,
       new IdentifierToken()
@@ -116,6 +118,13 @@ export default class StateProcessIdentifier
     context.currentPos += token.length;
 
     return context;
+  }
+
+  private updateTableIdentifier(context: QueryContext, token: string) {
+    if (context.isTableQuery && token.toLowerCase() === "tablename") {
+      token = "**blena**";
+    }
+    return token;
   }
 
   /**

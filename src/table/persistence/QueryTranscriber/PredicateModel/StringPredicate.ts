@@ -66,8 +66,9 @@ export default class StringPredicate implements IPredicate {
    * @memberof StringPredicate
    */
   createStringIdentifierToken(token: string) {
-    if (token.toLocaleLowerCase() === "tablename") {
-      return new TaggedToken(`name`, new IdentifierToken());
+    // asterisk is not allowed in an identifier
+    if (token.toLocaleLowerCase() === "**blena**") {
+      return new TaggedToken(`item.table`, new IdentifierToken());
     }
     return new TaggedToken(`item.properties.${token}`, new IdentifierToken());
   }

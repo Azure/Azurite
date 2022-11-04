@@ -14,6 +14,7 @@ import {
   createTableServerForQueryTestHttps,
   createUniquePartitionKey
 } from "../utils/table.entity.test.utils";
+import uuid from "uuid";
 // import uuid from "uuid";
 // Set true to enable debug log
 configLogger(false);
@@ -798,13 +799,13 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     // await tableClient.deleteTable();
   });
 
-  it("should only find guids when using guid type not plain strings, @loki", async () => {
+  it("should find both old and new guids (backwards compatible) when using guid type, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       "reproTable"
     );
-    const partitionKeyForQueryTest = "1"; //createUniquePartitionKey("guid");
-    // const totalItems = 2;
+    const partitionKeyForQueryTest = "1"; // partition key used in repro db with old schema
+    const totalItems = 10;
     await tableClient.createTable();
     const timestamp = new Date();
     timestamp.setDate(timestamp.getDate() + 1);
@@ -824,15 +825,15 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     /// Edwin quick test remove afterwards!
     guidEntities.push(dupOldGuid);
 
-    // for (let i = 1; i < totalItems; i++) {
-    //   const entity = createBasicEntityForTest(partitionKeyForQueryTest);
-    //   entity.guidField.value = uuid.v4();
-    //   // The chances of hitting a duplicate GUID are extremely low
-    //   // will only affect our pipelines in dev
-    //   const result = await tableClient.createEntity(entity);
-    //   assert.notStrictEqual(result.etag, undefined);
-    //   guidEntities.push(entity);
-    // }
+    for (let i = 1; i < totalItems; i++) {
+      const entity = createBasicEntityForTest(partitionKeyForQueryTest);
+      entity.guidField.value = uuid.v4();
+      // The chances of hitting a duplicate GUID are extremely low
+      // will only affect our pipelines in dev
+      const result = await tableClient.createEntity(entity);
+      assert.notStrictEqual(result.etag, undefined);
+      guidEntities.push(entity);
+    }
     const maxPageSize = 10;
     let testsCompleted = 0;
     const queriesAndExpectedResult = [
@@ -843,35 +844,35 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
         expectedResult: 2, // we expect the old GUID to be found for backwards compatability and the one we just inserted
         // not sure that this is the right behavior
         expectedValue: guidEntities[0].guidField.value
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (guidField eq guid'${guidEntities[1].guidField.value}')`
+        },
+        expectedResult: 1,
+        expectedValue: guidEntities[1].guidField.value
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and (guidField eq ${guidEntities[1].guidField.value})`
+        },
+        expectedResult: 0,
+        expectedValue: undefined
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and(guidField eq guid'${guidEntities[8].guidField.value}')`
+        },
+        expectedResult: 1,
+        expectedValue: guidEntities[8].guidField.value
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and(guidField eq '${guidEntities[8].guidField.value}')`
+        },
+        expectedResult: 0,
+        expectedValue: undefined
       }
-      // {
-      //   queryOptions: {
-      //     filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (guidField eq guid'${guidEntities[1].guidField.value}')`
-      //   },
-      //   expectedResult: 1,
-      //   expectedValue: guidEntities[1].guidField.value
-      // },
-      // {
-      //   queryOptions: {
-      //     filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and (guidField eq ${guidEntities[1].guidField.value})`
-      //   },
-      //   expectedResult: 0,
-      //   expectedValue: undefined
-      // },
-      // {
-      //   queryOptions: {
-      //     filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and(guidField eq guid'${guidEntities[8].guidField.value}')`
-      //   },
-      //   expectedResult: 1,
-      //   expectedValue: guidEntities[8].guidField.value
-      // },
-      // {
-      //   queryOptions: {
-      //     filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and(guidField eq '${guidEntities[8].guidField.value}')`
-      //   },
-      //   expectedResult: 0,
-      //   expectedValue: undefined
-      // }
     ];
 
     for (const queryTest of queriesAndExpectedResult) {
