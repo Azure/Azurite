@@ -25,7 +25,8 @@ const AZURE_TABLE_STORAGE: string = "AZURE_TABLE_STORAGE";
 const AZURE_DATATABLES_STORAGE_STRING = "AZURE_DATATABLES_STORAGE_STRING";
 const AZURE_DATATABLES_SAS = "AZURE_DATATABLES_SAS";
 const AZURITE_TABLE_BASE_URL = "AZURITE_TABLE_BASE_URL";
-const REPRO_DB_PATH = "./querydb.json";
+// Azure Pipelines need a unique name per test instance
+// const REPRO_DB_PATH = "./querydb.json";
 
 const config = new TableConfiguration(
   HOST,
@@ -41,20 +42,6 @@ const httpsConfig = new TableConfiguration(
   HOST,
   PORT,
   metadataDbPath,
-  enableDebugLog,
-  false,
-  undefined,
-  debugLogPath,
-  false,
-  true,
-  "tests/server.cert",
-  "tests/server.key"
-);
-
-const queryConfig = new TableConfiguration(
-  HOST,
-  PORT,
-  REPRO_DB_PATH, // contains guid and binProp object from legacy schema DB
   enableDebugLog,
   false,
   undefined,
@@ -97,7 +84,12 @@ export function createTableServerForTestHttps(): TableServer {
  * @return {*}  {TableServer}
  */
 export function createTableServerForQueryTestHttps(): TableServer {
-  duplicateReproDBForTest();
+  // we need a unique name for the pipieline tests which
+  // all run on the same VM.
+  const uniqueDbName = getUniqueName("querydb");
+  const uniqueDBpath = ". /" + uniqueDbName + ".json";
+  duplicateReproDBForTest(uniqueDBpath);
+  const queryConfig = createQueryConfig(uniqueDBpath);
   return new TableServer(queryConfig);
 }
 
@@ -215,14 +207,31 @@ export function createAzureDataTablesClient(
  * run our tests to ensure backwards compatability.
  *
  */
-function duplicateReproDBForTest() {
+function duplicateReproDBForTest(uniqueDBpath: string) {
   copyFile(
     "./tests/table/database/__db_table_guid_bin__.json",
-    REPRO_DB_PATH,
+    uniqueDBpath,
     (exception) => {
       if (exception) {
         throw exception;
       }
     }
   );
+}
+
+function createQueryConfig(uniqueDBpath: string): TableConfiguration {
+  const queryConfig = new TableConfiguration(
+    HOST,
+    PORT,
+    uniqueDBpath, // contains guid and binProp object from legacy schema DB
+    enableDebugLog,
+    false,
+    undefined,
+    debugLogPath,
+    false,
+    true,
+    "tests/server.cert",
+    "tests/server.key"
+  );
+  return queryConfig;
 }
