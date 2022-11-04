@@ -1,0 +1,232 @@
+{
+  "filename": "G:\\repo\\azurite_main\\azurite\\__azurite_db_table__.json",
+  "collections": [
+    {
+      "name": "$TABLES_COLLECTION$",
+      "data": [
+        {
+          "account": "devstoreaccount1",
+          "table": "reproTable",
+          "meta": {
+            "revision": 0,
+            "created": 1656085720173,
+            "version": 0
+          },
+          "$loki": 1
+        }
+      ],
+      "idIndex": null,
+      "binaryIndices": {
+        "account": {
+          "name": "account",
+          "dirty": false,
+          "values": [
+            0
+          ]
+        },
+        "table": {
+          "name": "table",
+          "dirty": false,
+          "values": [
+            0
+          ]
+        }
+      },
+      "constraints": null,
+      "uniqueNames": [],
+      "transforms": {},
+      "objType": "$TABLES_COLLECTION$",
+      "dirty": false,
+      "cachedIndex": null,
+      "cachedBinaryIndex": null,
+      "cachedData": null,
+      "adaptiveBinaryIndices": true,
+      "transactional": false,
+      "cloneObjects": false,
+      "cloneMethod": "parse-stringify",
+      "asyncListeners": false,
+      "disableMeta": false,
+      "disableChangesApi": true,
+      "disableDeltaChangesApi": true,
+      "autoupdate": false,
+      "serializableIndices": true,
+      "disableFreeze": true,
+      "ttl": null,
+      "maxId": 1,
+      "DynamicViews": [],
+      "events": {
+        "insert": [],
+        "update": [],
+        "pre-insert": [],
+        "pre-update": [],
+        "close": [],
+        "flushbuffer": [],
+        "error": [],
+        "delete": [
+          null
+        ],
+        "warning": [
+          null
+        ]
+      },
+      "changes": [],
+      "dirtyIds": []
+    },
+    {
+      "name": "$SERVICES_COLLECTION$",
+      "data": [],
+      "idIndex": null,
+      "binaryIndices": {},
+      "constraints": null,
+      "uniqueNames": [
+        "accountName"
+      ],
+      "transforms": {},
+      "objType": "$SERVICES_COLLECTION$",
+      "dirty": false,
+      "cachedIndex": null,
+      "cachedBinaryIndex": null,
+      "cachedData": null,
+      "adaptiveBinaryIndices": true,
+      "transactional": false,
+      "cloneObjects": false,
+      "cloneMethod": "parse-stringify",
+      "asyncListeners": false,
+      "disableMeta": false,
+      "disableChangesApi": true,
+      "disableDeltaChangesApi": true,
+      "autoupdate": false,
+      "serializableIndices": true,
+      "disableFreeze": true,
+      "ttl": null,
+      "maxId": 0,
+      "DynamicViews": [],
+      "events": {
+        "insert": [],
+        "update": [],
+        "pre-insert": [],
+        "pre-update": [],
+        "close": [],
+        "flushbuffer": [],
+        "error": [],
+        "delete": [
+          null
+        ],
+        "warning": [
+          null
+        ]
+      },
+      "changes": [],
+      "dirtyIds": []
+    },
+    {
+      "name": "devstoreaccount1$reproTable",
+      "data": [
+        {
+          "PartitionKey": "1",
+          "RowKey": "1",
+          "properties": {
+            "PartitionKey": "1",
+            "RowKey": "1",
+            "guidField": "5d62a508-f0f7-45bc-be10-4b192d7fed2d",
+            "guidField@odata.type": "Edm.Guid",
+            "binaryProp": "cmVwcm9WYWx1ZQ==",
+            "binaryProp@odata.type": "Edm.Binary",
+            "Timestamp": "2022-06-24T15:50:57.0550000Z",
+            "Timestamp@odata.type": "Edm.DateTime"
+          },
+          "lastModifiedTime": "2022-06-24T15:50:57.055Z",
+          "eTag": "W/\"datetime'2022-06-24T15%3A50%3A57.055658Z'\"",
+          "meta": {
+            "revision": 0,
+            "created": 1656085857057,
+            "version": 0
+          },
+          "$loki": 1
+        }
+      ],
+      "idIndex": null,
+      "binaryIndices": {
+        "PartitionKey": {
+          "name": "PartitionKey",
+          "dirty": false,
+          "values": [
+            0
+          ]
+        },
+        "RowKey": {
+          "name": "RowKey",
+          "dirty": false,
+          "values": [
+            0
+          ]
+        }
+      },
+      "constraints": null,
+      "uniqueNames": [],
+      "transforms": {},
+      "objType": "devstoreaccount1$reproTable",
+      "dirty": false,
+      "cachedIndex": null,
+      "cachedBinaryIndex": null,
+      "cachedData": null,
+      "adaptiveBinaryIndices": true,
+      "transactional": false,
+      "cloneObjects": false,
+      "cloneMethod": "parse-stringify",
+      "asyncListeners": false,
+      "disableMeta": false,
+      "disableChangesApi": true,
+      "disableDeltaChangesApi": true,
+      "autoupdate": false,
+      "serializableIndices": true,
+      "disableFreeze": true,
+      "ttl": null,
+      "maxId": 1,
+      "DynamicViews": [],
+      "events": {
+        "insert": [],
+        "update": [],
+        "pre-insert": [],
+        "pre-update": [],
+        "close": [],
+        "flushbuffer": [],
+        "error": [],
+        "delete": [
+          null
+        ],
+        "warning": [
+          null
+        ]
+      },
+      "changes": [],
+      "dirtyIds": []
+    }
+  ],
+  "databaseVersion": 1.5,
+  "engineVersion": 1.5,
+  "autosave": true,
+  "autosaveInterval": 5000,
+  "autosaveHandle": null,
+  "throttledSaves": true,
+  "options": {
+    "autosave": true,
+    "autosaveInterval": 5000,
+    "serializationMethod": "normal",
+    "destructureDelimiter": "$<\n"
+  },
+  "persistenceMethod": "fs",
+  "persistenceAdapter": null,
+  "verbose": false,
+  "events": {
+    "init": [
+      null
+    ],
+    "loaded": [],
+    "flushChanges": [],
+    "close": [],
+    "changes": [],
+    "warning": []
+  },
+  "ENV": "NODEJS"
+}
