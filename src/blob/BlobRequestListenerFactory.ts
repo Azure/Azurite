@@ -92,6 +92,8 @@ export default class BlobRequestListenerFactory
         loose
       ),
       containerHandler: new ContainerHandler(
+        this.accountDataStore,
+        this.oauth,
         this.metadataStore,
         this.extentStore,
         logger,
@@ -105,6 +107,8 @@ export default class BlobRequestListenerFactory
         pageBlobRangesManager
       ),
       serviceHandler: new ServiceHandler(
+        this.accountDataStore,
+        this.oauth,
         this.metadataStore,
         this.extentStore,
         logger,

@@ -7,7 +7,6 @@ import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { Entity, Table } from "../persistence/ITableMetadataStore";
 import { ODATA_TYPE, QUERY_RESULT_MAX_NUM } from "../utils/constants";
-import { getTimestampString } from "../utils/utils";
 import ITableMetadataStore, { TableACL } from "./ITableMetadataStore";
 import LokiTableStoreQueryGenerator from "./LokiTableStoreQueryGenerator";
 
@@ -251,7 +250,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     const tableLower = table.toLocaleLowerCase();
     const doc = coll.findOne({
       account,
-      table: { $regex: [tableLower, "i"] }
+      table: { $regex: [`^${tableLower}$`, "i"] }
     });
     this.checkIfResourceExists(doc, context);
     coll.remove(doc);
@@ -310,7 +309,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     const tableLower = table.toLocaleLowerCase();
     const persistedTable = coll.findOne({
       account,
-      table: { $regex: [tableLower, "i"] }
+      table: { $regex: [`^${tableLower}$`, "i"] }
     });
 
     if (!persistedTable) {
@@ -337,7 +336,10 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   ): Promise<Table> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
     // Azure Storage Service is case insensitive
-    const doc = coll.findOne({ account, table: { $regex: [table, "i"] } });
+    const doc = coll.findOne({
+      account,
+      table: { $regex: [`^${table}$`, "i"] }
+    });
     if (!doc) {
       throw StorageErrorFactory.getTableNotFound(context);
     }
@@ -410,7 +412,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       throw StorageErrorFactory.getEntityAlreadyExist(context);
     }
 
-    entity.properties.Timestamp = getTimestampString(entity.lastModifiedTime);
+    entity.properties.Timestamp = entity.lastModifiedTime;
     entity.properties["Timestamp@odata.type"] = "Edm.DateTime";
 
     if (batchId !== "" && batchId !== undefined) {
@@ -459,7 +461,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     ifMatch?: string,
     batchId?: string
   ): Promise<Entity> {
-    if (ifMatch === undefined || ifMatch === "*") {
+    if (ifMatch === undefined) {
       // Upsert
       const existingEntity =
         await this.queryTableEntitiesWithPartitionAndRowKey(
@@ -506,7 +508,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     ifMatch?: string,
     batchId?: string
   ): Promise<Entity> {
-    if (ifMatch === undefined || ifMatch === "*") {
+    if (ifMatch === undefined) {
       // Upsert
       const existingEntity =
         await this.queryTableEntitiesWithPartitionAndRowKey(
@@ -528,7 +530,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           batchId
         );
       } else {
-        this.failPatchOnMissingEntity(context);
         // Insert
         return this.insertTableEntity(context, table, account, entity, batchId);
       }
@@ -542,15 +543,6 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
         ifMatch,
         batchId
       );
-    }
-  }
-
-  private failPatchOnMissingEntity(context: Context) {
-    if (
-      context.context.request.req !== undefined &&
-      context.context.request.req.method === "PATCH"
-    ) {
-      throw StorageErrorFactory.ResourceNotFound(context);
     }
   }
 
@@ -659,6 +651,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
             return true;
           }
           return false;
+        }
+        if (decodedNextPartitionKey !== undefined) {
+          if (data.PartitionKey < decodedNextPartitionKey) {
+            return false;
+          }
         }
         return true;
       })
@@ -816,7 +813,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     ) {
       tableEntityCollection.remove(doc);
 
-      entity.properties.Timestamp = getTimestampString(entity.lastModifiedTime);
+      entity.properties.Timestamp = entity.lastModifiedTime;
       entity.properties["Timestamp@odata.type"] = "Edm.DateTime";
 
       tableEntityCollection.insert(entity);

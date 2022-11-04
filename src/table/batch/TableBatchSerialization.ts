@@ -204,7 +204,8 @@ export class TableBatchSerialization extends BatchSerialization {
     serializedResponses = this.SerializeNoSniffNoCache(serializedResponses);
     serializedResponses = this.serializeDataServiceVersion(
       serializedResponses,
-      request
+      request,
+      true
     );
 
     return serializedResponses;
@@ -307,7 +308,7 @@ export class TableBatchSerialization extends BatchSerialization {
     );
 
     if (null !== response.eTag && undefined !== response.eTag) {
-      serializedResponses += "ETag: " + response.eTag;
+      serializedResponses += "ETag: " + response.eTag + "\r\n";
     }
     return serializedResponses;
   }
@@ -556,19 +557,24 @@ export class TableBatchSerialization extends BatchSerialization {
    */
   private serializeDataServiceVersion(
     serializedResponses: string,
-    request: BatchRequest | undefined
+    request: BatchRequest | undefined,
+    forceDataServiceVersion1: boolean = false
   ) {
     if (
       undefined !== request &&
       undefined !== request.params &&
-      request.params.dataServiceVersion
+      request.params.dataServiceVersion &&
+      forceDataServiceVersion1 === false
     ) {
       serializedResponses +=
         "DataServiceVersion: " + request.params.dataServiceVersion + ";\r\n";
+    } else if (forceDataServiceVersion1) {
+      // defaults to 3.0 unless we force to 1 (as seen in service tests)
+      serializedResponses += "DataServiceVersion: 1.0;\r\n";
     } else {
-      // default to 3.0
       serializedResponses += "DataServiceVersion: 3.0;\r\n";
     }
+    // note that we remove the extra CRLF at the end of this header response!
     return serializedResponses;
   }
 

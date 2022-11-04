@@ -510,6 +510,16 @@ export const comp9: msRest.OperationQueryParameter = {
     }
   }
 };
+export const containerName: msRest.OperationURLParameter = {
+  parameterPath: "containerName",
+  mapper: {
+    required: true,
+    serializedName: "containerName",
+    type: {
+      name: "String"
+    }
+  }
+};
 export const contentDisposition: msRest.OperationParameter = {
   parameterPath: [
     "options",

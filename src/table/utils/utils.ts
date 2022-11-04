@@ -229,10 +229,7 @@ export function checkApiVersion(
   context: Context
 ): void {
   if (!validApiVersions.includes(inputApiVersion)) {
-    throw StorageErrorFactory.getInvalidHeaderValue(context, {
-      HeaderName: HeaderConstants.X_MS_VERSION,
-      HeaderValue: inputApiVersion
-    });
+    throw StorageErrorFactory.getInvalidAPIVersion(context, inputApiVersion);
   }
 }
 
@@ -275,14 +272,14 @@ export function validateTableName(context: Context, tableName: string) {
   }
 }
 
-export function newTableEntityEtag(startTime: Date): string {
+export function newTableEntityEtag(highPresModTime: string): string {
   // Etag as returned by Table Storage should match W/"datetime'<ISO8601datetime>'"
-  // we use the additional hrtime precsion option
-  return (
-    "W/\"datetime'" +
-    encodeURIComponent(truncatedISO8061Date(startTime, true, true)) +
-    "'\""
-  );
+  // as we need the same value for last Modification time, we now only accept a string here
+  return "W/\"datetime'" + encodeURIComponent(highPresModTime) + "'\"";
+}
+
+export function newHighPrecisionTimeStamp(startTime: Date): string {
+  return truncatedISO8061Date(startTime, true, true);
 }
 
 /**
@@ -292,7 +289,7 @@ export function newTableEntityEtag(startTime: Date): string {
  * @param {string} etag
  * @return {*}  {boolean}
  */
-export function checkEtagIsInvalidFormat(etag: string): boolean {
+export function isEtagValid(etag: string): boolean {
   // Weak etag is required. This is parity with Azure and legacy emulator.
   // Source for regex: https://stackoverflow.com/a/11572348
   const match = etag.match(/^[wW]\/"([^"]|\\")*"$/);

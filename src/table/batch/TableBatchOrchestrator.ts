@@ -163,10 +163,11 @@ export default class TableBatchOrchestrator {
     responseString += batchBoundary + "\r\n";
     // (currently static header) ToDo: Validate if we need to correct headers via tests
     responseString +=
-      "Content-Type: multipart/mixed; boundary=" + changesetBoundary + "\r\n";
-    const changesetBoundaryClose: string =
-      "\r\n--" + changesetBoundary + "--\r\n";
-    changesetBoundary = "\r\n--" + changesetBoundary;
+      "Content-Type: multipart/mixed; boundary=" +
+      changesetBoundary +
+      "\r\n\r\n";
+    const changesetBoundaryClose: string = "--" + changesetBoundary + "--\r\n";
+    changesetBoundary = "--" + changesetBoundary;
     if (this.wasError === false) {
       this.requests.forEach((request) => {
         responseString += changesetBoundary;
@@ -425,14 +426,14 @@ export default class TableBatchOrchestrator {
     updatedContext.batchId = batchId;
     const partitionKey = this.extractRequestPartitionKey(request);
     const rowKey = this.extractRequestRowKey(request);
-    const ifmatch: string = request.getHeader("if-match") || "*";
+    const ifMatch = request.getHeader("if-match");
 
     response = await this.parentHandler.updateEntity(
       request.getPath(),
       partitionKey,
       rowKey,
       {
-        ifMatch: ifmatch,
+        ifMatch,
         ...request.params
       } as BatchTableUpdateEntityOptionalParams,
       updatedContext
@@ -547,14 +548,14 @@ export default class TableBatchOrchestrator {
 
     const partitionKey = this.extractRequestPartitionKey(request);
     const rowKey = this.extractRequestRowKey(request);
-    const ifmatch: string = request.getHeader("if-match") || "*";
+    const ifMatch = request.getHeader("if-match");
 
     response = await this.parentHandler.mergeEntity(
       request.getPath(),
       partitionKey,
       rowKey,
       {
-        ifMatch: ifmatch,
+        ifMatch,
         ...request.params
       } as BatchTableMergeEntityOptionalParams,
       updatedContext

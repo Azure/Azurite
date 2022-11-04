@@ -1,6 +1,6 @@
+import { truncatedISO8061Date } from "../../common/utils/utils";
 import { Entity } from "../persistence/ITableMetadataStore";
 import { ODATA_TYPE } from "../utils/constants";
-import { getTimestampString } from "../utils/utils";
 import { EdmString } from "./EdmString";
 import { EntityProperty, parseEntityProperty } from "./EntityProperty";
 // import { EdmType } from "./IEdmType";
@@ -34,12 +34,11 @@ export class NormalizedEntity {
     this.propertiesMap.RowKey = rowKeyProperty;
 
     // Sync Timestamp from entity last modified time
-    entity.properties.Timestamp = getTimestampString(
-      typeof entity.lastModifiedTime === "string"
-        ? new Date(entity.lastModifiedTime)
-        : entity.lastModifiedTime
-    );
-    // timestamp should be a system property
+    entity.properties.Timestamp =
+      typeof entity.lastModifiedTime === "string" &&
+      entity.lastModifiedTime === ""
+        ? truncatedISO8061Date(new Date(), true, true)
+        : entity.lastModifiedTime;
     entity.properties["Timestamp@odata.type"] = "Edm.DateTime";
 
     for (const key in entity.properties) {

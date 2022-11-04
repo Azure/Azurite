@@ -9,7 +9,7 @@
 
 | Version                                                            | Azure Storage API Version | Service Support                | Description                                       | Reference Links                                                                                                                                                                                                         |
 | ------------------------------------------------------------------ | ------------------------- | ------------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.17.1                                                             | 2021-06-08                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| 3.20.1                                                             | 2021-10-04                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
 | [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table          | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
 - [Azurite V3](#azurite-v3)
@@ -20,6 +20,7 @@
     - [NPM](#npm)
     - [Visual Studio Code Extension](#visual-studio-code-extension)
     - [DockerHub](#dockerhub)
+      - [Docker Compose](#docker-compose)
     - [NuGet](#nuget)
     - [Visual Studio](#visual-studio)
   - [Supported Command Line Options](#supported-command-line-options)
@@ -75,19 +76,19 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
 
 ## Features & Key Changes in Azurite V3
 
-- Blob storage features align with Azure Storage API version 2021-06-08 (Refer to support matrix section below)
+- Blob storage features align with Azure Storage API version 2021-10-04 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/Public Access Authentications/OAuth
   - Get/Set Blob Service Properties
   - Create/List/Delete Containers
   - Create/Read/List/Update/Delete Block Blobs
   - Create/Read/List/Update/Delete Page Blobs
-- Queue storage features align with Azure Storage API version 2021-06-08 (Refer to support matrix section below)
+- Queue storage features align with Azure Storage API version 2021-10-04 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/OAuth
   - Get/Set Queue Service Properties
   - Preflight Request
   - Create/List/Delete Queues
   - Put/Get/Peek/Updata/Deleta/Clear Messages
-- Table storage features align with Azure Storage API version 2021-06-08 (Refer to support matrix section below)
+- Table storage features align with Azure Storage API version 2021-10-04 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/OAuth
   - Create/List/Delete Tables
   - Insert/Update/Query/Delete Table Entities
@@ -261,6 +262,23 @@ Above command will try to start Azurite image with configurations:
 > In above sample, you need to use **double first forward slash** for location and debug path parameters to avoid a [known issue](https://stackoverflow.com/questions/48427366/docker-build-command-add-c-program-files-git-to-the-path-passed-as-build-argu) for Git on Windows.
 
 > Will support more release channels for Azurite V3 in the future.
+
+#### Docker Compose
+To run Azurite in Docker Compose, you can start with the following configuration:
+```yml
+---
+version: '3.9'
+services:
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: "azurite"
+    hostname: azurite
+    restart: always
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002" 
+```
 
 ### NuGet
 
@@ -440,6 +458,8 @@ Azurite will refresh customized account name and key from environment variable e
 
 > Note. Default storage account `devstoreaccount1` will be disabled when providing customized storage accounts.
 
+> Note. The account keys must be base64 encoded string.
+
 > Note. Should update connection string accordingly if using customized account name and key.
 
 > Note. Use `export` keyword to set environment variable in Linux like environment, `set` in Windows.
@@ -590,7 +610,7 @@ Azurite V3 provides support for a default storage account as General Storage Acc
 
 ### Customized Storage Accounts & Keys
 
-As mentioned by above section. Azurite V3 allows customizing storage account names and keys by providing environment variable `AZURITE_ACCOUNTS` with format `account1:key1[:key2];account2:key1[:key2];...`.
+As mentioned by above section. Azurite V3 allows customizing storage account names and keys by providing environment variable `AZURITE_ACCOUNTS` with format `account1:key1[:key2];account2:key1[:key2];...`. Account keys must be base64 encoded string.
 
 For example, customize one storage account which has only one key:
 
@@ -884,7 +904,7 @@ Legacy Azurite V2 supports Azure Storage Blob, Queue and Table services.
 Azurite V3 currently only supports Azure Storage blob service. Queue service is supported after V3.2.0-preview.
 Table service support is currently under discussion.
 
-Azurite V3 supports features from Azure Storage API version 2021-06-08, and will maintain parity with the latest API versions, in a more frequent update frequency than legacy Azurite V2.
+Azurite V3 supports features from Azure Storage API version 2021-10-04, and will maintain parity with the latest API versions, in a more frequent update frequency than legacy Azurite V2.
 
 ## TypeScript Server Code Generator
 
@@ -895,7 +915,7 @@ All the generated code is kept in `generated` folder, including the generated mi
 
 ## Support Matrix
 
-Latest release targets **2021-06-08** API version **blob** service.
+Latest release targets **2021-10-04** API version **blob** service.
 
 Detailed support matrix:
 
@@ -955,7 +975,7 @@ Detailed support matrix:
   - Encryption Scope
   - Get Page Ranges Continuation Token
 
-Latest version supports for **2021-06-08** API version **queue** service.
+Latest version supports for **2021-10-04** API version **queue** service.
 Detailed support matrix:
 
 - Supported Vertical Features
@@ -985,7 +1005,7 @@ Detailed support matrix:
   - SharedKey Lite
   - Delegation SAS
 
-Latest version supports for **2021-06-08** API version **table** service (preview).
+Latest version supports for **2021-10-04** API version **table** service (preview).
 Detailed support matrix:
 
 - Supported Vertical Features
