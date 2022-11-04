@@ -24,7 +24,7 @@ configLogger(false);
 // ENV VAR called AZURE_TABLE_STORAGE added to mocha
 // script or launch.json containing
 // Azure Storage Connection String (using SAS or Key).
-const testLocalAzuriteInstance = false;
+const testLocalAzuriteInstance = true;
 
 describe("table Entity APIs test - using Azure-Storage", () => {
   let server: TableServer;
