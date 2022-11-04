@@ -136,7 +136,7 @@ const entityQueries = [
   }
 ];
 
-describe("unit tests for converting an entity OData query to a JavaScript query for LokiJS", () => {
+describe("Unit tests for converting an entity OData query to a JavaScript query for LokiJS", () => {
   entityQueries.forEach(({ input, expected }) => {
     it(`should transform '${input}' into '${expected}'`, (done) => {
       try {
@@ -197,7 +197,7 @@ const tableQueries = [
   }
 ];
 
-describe("unit tests for converting an table OData query to a JavaScript query for LokiJS", () => {
+describe("Unit tests for converting an table OData query to a JavaScript query for LokiJS", () => {
   tableQueries.forEach(({ input, expected }) => {
     it(`should transform '${input}' into '${expected}'`, (done) => {
       try {
