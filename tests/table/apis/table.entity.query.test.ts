@@ -11,10 +11,11 @@ import {
 } from "../models/AzureDataTablesTestEntity";
 import {
   createAzureDataTablesClient,
-  createTableServerForTestHttps,
+  createTableServerForQueryTestHttps,
   createUniquePartitionKey
 } from "../utils/table.entity.test.utils";
 import uuid from "uuid";
+// import uuid from "uuid";
 // Set true to enable debug log
 configLogger(false);
 // For convenience, we have a switch to control the use
@@ -27,14 +28,14 @@ const testLocalAzuriteInstance = true;
 describe("table Entity APIs test - using Azure/data-tables", () => {
   let server: TableServer;
 
-  const requestOverride = { headers: {} };
+  const requestOverride = { headers: {} }; // this is not used with data tables and this test set yet
 
   before(async () => {
-    server = createTableServerForTestHttps();
+    server = createTableServerForQueryTestHttps();
     await server.start();
     requestOverride.headers = {
       Prefer: "return-content",
-      accept: "application/json;odata=fullmetadata"
+      accept: "application/json;odata=nometadata" //fullmetadata"
     };
   });
 
@@ -753,7 +754,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     for (let i = 0; i < totalItems; i++) {
       const entity = createBasicEntityForTest(partitionKeyForQueryTest);
       if (i % 2 === 0) {
-        entity.binaryField = Buffer.from("one zero 1 0 = equals");
+        entity.binaryField = Buffer.from("binaryData"); // should equal YmluYXJ5RGF0YQ==
       }
       const result = await tableClient.createEntity(entity);
       assert.notStrictEqual(result.etag, undefined);
@@ -763,13 +764,13 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     const queriesAndExpectedResult = [
       {
         queryOptions: {
-          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (binaryField eq binary'3131313131313131')`
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (binaryField eq binary'62696e61727944617461')`
         },
         expectedResult: 5
       },
       {
         queryOptions: {
-          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (binaryField eq X'3131313131313131')`
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (binaryField eq X'62696e61727944617461')`
         },
         expectedResult: 5
       }
@@ -795,23 +796,40 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       testsCompleted++;
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
-    await tableClient.deleteTable();
+    // await tableClient.deleteTable();
   });
 
-  it("should only find guids when using guid type not plain strings, @loki", async () => {
+  it("should find both old and new guids (backwards compatible) when using guid type, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
-      getUniqueName("guidquery")
+      "reproTable"
     );
-    const partitionKeyForQueryTest = createUniquePartitionKey("guid");
+    const partitionKeyForQueryTest = "1"; // partition key used in repro db with old schema
     const totalItems = 10;
     await tableClient.createTable();
     const timestamp = new Date();
     timestamp.setDate(timestamp.getDate() + 1);
     const guidEntities: AzureDataTablesTestEntity[] = [];
-    for (let i = 0; i < totalItems; i++) {
+    const guidFromOldDB = "5d62a508-f0f7-45bc-be10-4b192d7fed2d";
+
+    const dupOldGuid = createBasicEntityForTest(partitionKeyForQueryTest);
+    dupOldGuid.guidField.value = guidFromOldDB;
+    const dupResult = await tableClient.createEntity(dupOldGuid);
+    assert.notStrictEqual(dupResult.etag, undefined);
+    /// Edwin quick test remove afterwards!
+    const getResult = await tableClient.getEntity(
+      dupOldGuid.partitionKey,
+      dupOldGuid.rowKey
+    );
+    assert.notStrictEqual(getResult.etag, undefined);
+    /// Edwin quick test remove afterwards!
+    guidEntities.push(dupOldGuid);
+
+    for (let i = 1; i < totalItems; i++) {
       const entity = createBasicEntityForTest(partitionKeyForQueryTest);
       entity.guidField.value = uuid.v4();
+      // The chances of hitting a duplicate GUID are extremely low
+      // will only affect our pipelines in dev
       const result = await tableClient.createEntity(entity);
       assert.notStrictEqual(result.etag, undefined);
       guidEntities.push(entity);
@@ -819,6 +837,14 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     const maxPageSize = 10;
     let testsCompleted = 0;
     const queriesAndExpectedResult = [
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (guidField eq guid'${guidFromOldDB}')`
+        },
+        expectedResult: 2, // we expect the old GUID to be found for backwards compatability and the one we just inserted
+        // not sure that this is the right behavior
+        expectedValue: guidEntities[0].guidField.value
+      },
       {
         queryOptions: {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (guidField eq guid'${guidEntities[1].guidField.value}')`
@@ -881,6 +907,6 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       testsCompleted++;
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
-    await tableClient.deleteTable();
+    // await tableClient.deleteTable();
   });
 });

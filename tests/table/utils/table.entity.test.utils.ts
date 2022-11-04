@@ -7,6 +7,7 @@ import { TestEntity } from "../models/TestEntity";
 import TableServer from "../../../src/table/TableServer";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import { AzureNamedKeyCredential, TableClient } from "@azure/data-tables";
+import { copyFile } from "fs";
 
 export const PROTOCOL = "http";
 export const HOST = "127.0.0.1";
@@ -24,6 +25,7 @@ const AZURE_TABLE_STORAGE: string = "AZURE_TABLE_STORAGE";
 const AZURE_DATATABLES_STORAGE_STRING = "AZURE_DATATABLES_STORAGE_STRING";
 const AZURE_DATATABLES_SAS = "AZURE_DATATABLES_SAS";
 const AZURITE_TABLE_BASE_URL = "AZURITE_TABLE_BASE_URL";
+const REPRO_DB_PATH = "./querydb.json";
 
 const config = new TableConfiguration(
   HOST,
@@ -39,6 +41,20 @@ const httpsConfig = new TableConfiguration(
   HOST,
   PORT,
   metadataDbPath,
+  enableDebugLog,
+  false,
+  undefined,
+  debugLogPath,
+  false,
+  true,
+  "tests/server.cert",
+  "tests/server.key"
+);
+
+const queryConfig = new TableConfiguration(
+  HOST,
+  PORT,
+  REPRO_DB_PATH, // contains guid and binProp object from legacy schema DB
   enableDebugLog,
   false,
   undefined,
@@ -71,6 +87,18 @@ export function createTableServerForTest(): TableServer {
 
 export function createTableServerForTestHttps(): TableServer {
   return new TableServer(httpsConfig);
+}
+
+/**
+ * Creates a copy of the legacy schema database to use in tests
+ * and to ensure backwards compatability.
+ *
+ * @export
+ * @return {*}  {TableServer}
+ */
+export function createTableServerForQueryTestHttps(): TableServer {
+  duplicateReproDBForTest();
+  return new TableServer(queryConfig);
 }
 
 export function createTableServerForTestOAuth(oauth?: string): TableServer {
@@ -175,8 +203,26 @@ export function createAzureDataTablesClient(
   } else {
     return new TableClient(
       process.env[AZURE_DATATABLES_STORAGE_STRING]! +
-      process.env[AZURE_DATATABLES_SAS]!,
+        process.env[AZURE_DATATABLES_SAS]!,
       tableName
     );
   }
+}
+
+/**
+ * Default behavior will overwrite target.
+ * This will copy the old db file with older schema on which we then
+ * run our tests to ensure backwards compatability.
+ *
+ */
+function duplicateReproDBForTest() {
+  copyFile(
+    "./tests/table/database/__db_table_guid_bin__.json",
+    REPRO_DB_PATH,
+    (exception) => {
+      if (exception) {
+        throw exception;
+      }
+    }
+  );
 }
