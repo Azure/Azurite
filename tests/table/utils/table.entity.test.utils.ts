@@ -87,7 +87,7 @@ export function createTableServerForQueryTestHttps(): TableServer {
   // we need a unique name for the pipieline tests which
   // all run on the same VM.
   const uniqueDbName = getUniqueName("querydb");
-  const uniqueDBpath = ". /" + uniqueDbName + ".json";
+  const uniqueDBpath = "./" + uniqueDbName + ".json";
   duplicateReproDBForTest(uniqueDBpath);
   const queryConfig = createQueryConfig(uniqueDBpath);
   return new TableServer(queryConfig);
