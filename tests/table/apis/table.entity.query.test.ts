@@ -796,7 +796,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       testsCompleted++;
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
-    // await tableClient.deleteTable();
+    await tableClient.deleteTable();
   });
 
   it("should find both old and new guids (backwards compatible) when using guid type, @loki", async () => {
