@@ -47,7 +47,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await server.close();
   });
 
-  it("Batch API should return row keys in format understood by @azure/data-tables, @loki", async () => {
+  it("01. Batch API should return row keys in format understood by @azure/data-tables, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("dataTables")
@@ -71,7 +71,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   });
 
   // https://github.com/Azure/Azurite/issues/754
-  it("Batch API should correctly process LogicApp style update request sequence", async () => {
+  it("02. Batch API should correctly process LogicApp style update request sequence, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("logicapp")
@@ -161,7 +161,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("Should return bad request error for incorrectly formatted etags, @loki", async () => {
+  it("03. Should return bad request error for incorrectly formatted etags, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("etags")
@@ -210,7 +210,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("Should respect Boolean property as edm string, @loki", async () => {
+  it("04. Should respect Boolean property as edm string, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("issue1259")
@@ -267,9 +267,10 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     } catch (err1259b) {
       assert.ifError(err1259b);
     }
+    await tableClient.deleteTable();
   });
 
-  it("Should respect Int32 property as edm string, @loki", async () => {
+  it("05. Should respect Int32 property as edm string, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("issue1259")
@@ -343,9 +344,10 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
         "Expecting invalid input!"
       );
     }
+    await tableClient.deleteTable();
   });
 
-  it("should delete an entity with empty row and partition keys, @loki", async () => {
+  it("06. should delete an entity with empty row and partition keys, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("empty")
@@ -362,9 +364,10 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     const deleteResult = await tableClient.deleteEntity("", "");
 
     assert.notStrictEqual(deleteResult.version, undefined);
+    await tableClient.deleteTable();
   });
 
-  it("Should create entity with PartitionKey starting with %, @loki", async () => {
+  it("07. Should create entity with PartitionKey starting with %, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("percent")
@@ -385,7 +388,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   });
 
   // https://github.com/Azure/Azurite/issues/1286
-  it("Should update Etags with sufficient granualrity, @loki", async () => {
+  it("08. Should update Etags with sufficient granualrity, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("etags")
@@ -444,7 +447,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("Should delete entity with PartitionKey starting with %, @loki", async () => {
+  it("09. Should delete entity with PartitionKey starting with %, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("percent")
@@ -488,7 +491,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   });
 
   [2, 1, 0].map((delta) => {
-    it(`Should insert entities containing binary properties less than or equal than 64K bytes (delta ${delta}), @loki`, async () => {
+    it(`10. Should insert entities containing binary properties less than or equal than 64K bytes (delta ${delta}), @loki`, async () => {
       const tableClient = createAzureDataTablesClient(
         testLocalAzuriteInstance,
         getUniqueName(`longbinary${delta}`)
@@ -508,7 +511,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   });
 
   [1, 2, 3].map((delta) => {
-    it(`Should not insert entities containing binary properties greater than 64K bytes (delta ${delta}), @loki`, async () => {
+    it(`11. Should not insert entities containing binary properties greater than 64K bytes (delta ${delta}), @loki`, async () => {
       const tableClient = createAzureDataTablesClient(
         testLocalAzuriteInstance,
         getUniqueName(`toolongbinary${delta}`)
@@ -543,7 +546,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     });
   });
 
-  it("Should not insert entities containing string properties longer than 32K chars, @loki", async () => {
+  it("12. Should not insert entities containing string properties longer than 32K chars, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("longstrings")
@@ -577,7 +580,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("Should not merge entities containing string properties longer than 32K chars, @loki", async () => {
+  it("13. Should not merge entities containing string properties longer than 32K chars, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("longstrings")
@@ -617,7 +620,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("Should create entity with RowKey starting with %, @loki", async () => {
+  it("14. Should create entity with RowKey starting with %, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("percent")
@@ -638,7 +641,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("Should not replace entities containing string properties longer than 32K chars, @loki", async () => {
+  it("15. Should not replace entities containing string properties longer than 32K chars, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("longstrings")
@@ -678,7 +681,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("Should delete entity with RowKey starting with %, @loki", async () => {
+  it("16. Should delete entity with RowKey starting with %, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("percent")
@@ -722,7 +725,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("Should not insert entities with request body greater than 4 MB, @loki", async () => {
+  it("17. Should not insert entities with request body greater than 4 MB, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("longstrings")
@@ -755,7 +758,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("Should reject batches with request body larger than 4 MB, @loki", async () => {
+  it("18. Should reject batches with request body larger than 4 MB, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("bigBatch")
@@ -797,7 +800,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   });
 
   // https://github.com/Azure/Azurite/issues/754
-  it("Should create and delete entity using batch and PartitionKey starting with %, @loki", async () => {
+  it("19. Should create and delete entity using batch and PartitionKey starting with %, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("percentBatch")
@@ -824,7 +827,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("Should not merge entities with request body greater than 4 MB, @loki", async () => {
+  it("20. Should not merge entities with request body greater than 4 MB, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("longstrings")
@@ -866,7 +869,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   });
 
   // https://github.com/Azure/Azurite/issues/754
-  it("Should create and delete entity using batch and RowKey starting with %, @loki", async () => {
+  it("21. Should create and delete entity using batch and RowKey starting with %, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("percentBatch")
@@ -896,7 +899,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("Should not replace entities with request body greater than 4 MB, @loki", async () => {
+  it("22. Should not replace entities with request body greater than 4 MB, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("longstrings")
@@ -937,7 +940,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it('Should create entity with RowKey containing comma ",", @loki', async () => {
+  it('23. Should create entity with RowKey containing comma ",", @loki', async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("comma")
@@ -956,7 +959,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("Should insert entities with null properties, @loki", async () => {
+  it("24. Should insert entities with null properties, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("longstrings")
@@ -996,7 +999,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("Should not return timestamp odata type with minimal meta data option, @loki", async () => {
+  it("25. Should not return timestamp odata type with minimal meta data option, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("odatadate")
