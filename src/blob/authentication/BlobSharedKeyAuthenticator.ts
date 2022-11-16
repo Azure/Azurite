@@ -50,19 +50,17 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
     }
 
     const authHeaderValues = authHeaderValue.split(" ");
-    let authType: "SharedKey" | "SharedKeyLite";
-    if (authHeaderValues[0].match(/^SharedKey(Lite)?$/)) {
-      authType = authHeaderValues[0] as "SharedKey" | "SharedKeyLite";
-    } else {
+    if (!authHeaderValues[0].match(/^SharedKey(Lite)?|Bearer$/)) {
       this.logger.error(
         `BlobSharedKeyAuthenticator:validate() Invalid auth type ${authHeaderValues[0]}.`,
         blobContext.contextId
       );
       throw StorageErrorFactory.getInvalidOperation(
         blobContext.contextId!,
-        "Invalid auth type."
+        `Invalid auth type ${authHeaderValues[0]}.`
       );
     }
+    const authType = authHeaderValues[0] as "SharedKey" | "SharedKeyLite" | "Bearer";
     const authValue = authHeaderValues[1];
     const headersToSign = this.getHeadersToSign(authType, req);
 
@@ -263,13 +261,13 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
    * Retrieves canonicalized resource string.
    *
    * @private
-   * @param {"SharedKey" | "SharedKeyLite"} type
+   * @param {"SharedKey" | "SharedKeyLite" | "Bearer"} type
    * @param {IRequest} request
    * @returns {string}
    * @memberof SharedKeyCredentialPolicy
    */
   private getCanonicalizedResourceString(
-    type: "SharedKey" | "SharedKeyLite",
+    type: "SharedKey" | "SharedKeyLite" | "Bearer",
     request: IRequest,
     account: string,
     authenticationPath?: string
@@ -287,7 +285,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
     const queries = getURLQueries(request.getUrl());
     const lowercaseQueries: { [key: string]: string } = {};
     if (queries) {
-      if (type === "SharedKey") {
+      if (type === "SharedKey" || type === "Bearer") {
         const queryKeys: string[] = [];
         for (const key in queries) {
           if (queries.hasOwnProperty(key)) {
@@ -327,10 +325,10 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
    * @memberof BlobSharedKeyAuthenticator
    */
   private getHeadersToSign(
-    type: "SharedKey" | "SharedKeyLite",
+    type: "SharedKey" | "SharedKeyLite" | "Bearer",
     req: IRequest
   ): string {
-    if (type === "SharedKey") {
+    if (type === "SharedKey" || type === "Bearer") {
       return (
         [
           req.getMethod().toUpperCase(),
