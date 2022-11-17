@@ -6,6 +6,7 @@
 
 General:
 
+- Fixed shared key authentication failure when request uri contains "+"
 - Stop accepting new connections and closes existing, idle connections (including keep-alives) without killing requests that are in-flight.
 
 Table:
