@@ -4,6 +4,7 @@ import * as https from "https";
 import ConfigurationBase from "./ConfigurationBase";
 import ICleaner from "./ICleaner";
 import IRequestListenerFactory from "./IRequestListenerFactory";
+import stoppable from "stoppable";
 
 export type RequestListener = (
   request: http.IncomingMessage,
@@ -26,6 +27,7 @@ export enum ServerStatus {
  */
 export default abstract class ServerBase implements ICleaner {
   protected status: ServerStatus = ServerStatus.Closed;
+  public readonly httpServer: (http.Server | https.Server) & stoppable.WithStop;
 
   /**
    * Creates an instance of HTTP or HTTPS server.
@@ -39,11 +41,12 @@ export default abstract class ServerBase implements ICleaner {
   public constructor(
     public readonly host: string,
     public readonly port: number,
-    public readonly httpServer: http.Server | https.Server,
+    httpServer: http.Server | https.Server,
     requestListenerFactory: IRequestListenerFactory,
     public readonly config: ConfigurationBase
   ) {
     // Remove predefined request listeners to avoid double request handling
+    this.httpServer = stoppable(httpServer);
     this.httpServer.removeAllListeners("request");
     this.httpServer.on(
       "request",
@@ -133,16 +136,7 @@ export default abstract class ServerBase implements ICleaner {
     // Remove request listener to reject incoming requests
     this.httpServer.removeAllListeners("request");
 
-    // Close HTTP server first to deny incoming connections
-    // You will find this will not close server immediately because there maybe existing keep-alive connections
-    // Calling httpServer.close will only stop accepting incoming requests
-    // and wait for existing keep-alive connections timeout
-    // Default keep-alive timeout is 5 seconds defined by httpServer.keepAliveTimeout
-    // TODO: Add a middleware to reject incoming request over existing keep-alive connections
-    // https://github.com/nodejs/node/issues/2642
-    await new Promise(resolve => {
-      this.httpServer.close(resolve);
-    });
+    this.httpServer.stop();
 
     await this.afterClose();
 
