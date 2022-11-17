@@ -7,6 +7,11 @@
 General:
 
 - Fixed shared key authentication failure when request uri contains "+"
+- Stop accepting new connections and closes existing, idle connections (including keep-alives) without killing requests that are in-flight.
+
+Table:
+
+- Added exit parameter to tests so they don't hang.
 
 ## 2022.10 Version 3.20.1
 
