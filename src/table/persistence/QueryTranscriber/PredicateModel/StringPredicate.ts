@@ -30,7 +30,7 @@ export default class StringPredicate implements IPredicate {
   }
 
   /**
-   * pushes the value to the string predicate
+   * Pushes the value to the string predicate
    *
    * @private
    * @param {TaggedToken} taggedToken
@@ -44,7 +44,7 @@ export default class StringPredicate implements IPredicate {
   }
 
   /**
-   * pushes the identifier to the string predicate
+   * Pushes the identifier to the string predicate
    *
    * @private
    * @param {TaggedToken} taggedToken
@@ -74,7 +74,7 @@ export default class StringPredicate implements IPredicate {
   }
 
   /**
-   * pushes the operator to the string predicate
+   * Pushes the operator to the string predicate
    *
    * @private
    * @param {TaggedToken} taggedToken

@@ -83,7 +83,7 @@ export default class LokiTableStoreQueryGenerator {
    * @return {*}  {(entity: Entity) => boolean}
    * @memberof LokiTableStoreQueryGenerator
    */
-  public static generateQueryEntityWhereFunction(
+  private static generateQueryEntityWhereFunction(
     query: string | undefined
   ): (entity: Entity) => boolean {
     if (query === undefined) {

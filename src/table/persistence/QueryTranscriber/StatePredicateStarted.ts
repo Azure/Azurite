@@ -15,8 +15,6 @@ export default class StatePredicateStarted extends QPState implements IQPState {
    * @memberof StatePredicateStarted
    */
   onProcess = (context: QueryContext) => {
-    // context = this.startNewPredicate(context);
-
     let token = "";
     [context, token] = this.getNextToken(context);
     context = this.handleToken(context, token);

@@ -38,10 +38,10 @@ export default class QueryTranscriber {
    *
    * @param {string} name
    * @param {IQPState} state - The state to add.
-   * @return {*}
+   * @return {QueryTranscriber}
    * @memberof LokiJsQueryTranscriber
    */
-  addState(name: QueryStateName, config: IQPState) {
+  addState(name: QueryStateName, config: IQPState): QueryTranscriber {
     this.states.set(name, {
       name,
       onProcess: config.onProcess?.bind(this.queryContext),
@@ -56,17 +56,20 @@ export default class QueryTranscriber {
    *
    * @param {string} name,
    * @param {QueryContext} queryContext
-   * @return {*}
+   * @return {QueryTranscriber}
    * @memberof LokiJsQueryTranscriber
    */
-  setState(name: QueryStateName) {
+  setState(name: QueryStateName): QueryTranscriber {
     if (this.states.has(name) === false) {
-      return;
+      // This is a case which should only occur in testing
+      // or when adding new states.
+      // We do not expect to see this during run time!
+      throw new Error("Invalid State Name!");
     }
 
     if (this.isSwitchingState) {
       this.queryContext.stateQueue.push(name);
-      return;
+      return this;
     }
 
     this.switchState(name);
@@ -98,13 +101,13 @@ export default class QueryTranscriber {
     this.queryContext = this.currentState.onExit(this.queryContext);
     const state = this.states.get(name);
 
-    this.checkState(state, name);
+    this.updateState(state, name);
     this.queryContext = this.currentState.onProcess(this.queryContext);
 
     this.isSwitchingState = false;
   }
 
-  private checkState(state: IQPState | undefined, name: QueryStateName) {
+  private updateState(state: IQPState | undefined, name: QueryStateName) {
     if (state !== undefined) {
       this.currentState = state;
     } else {

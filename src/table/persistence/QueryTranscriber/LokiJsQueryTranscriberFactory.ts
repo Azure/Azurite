@@ -70,40 +70,23 @@ export default class LokiJsQueryTranscriberFactory {
     const transcriber = new LokiJsQueryTranscriber(queryContext, name);
 
     // Add the states to the transcriber.
-    transcriber.addState(QueryStateName.QueryStarted, new StateQueryStarted());
-    transcriber.addState(
-      QueryStateName.ProcessParensOpen,
-      new StateProcessParensOpen()
-    );
-    transcriber.addState(
-      QueryStateName.ProcessParensClose,
-      new StateProcessParensClose()
-    );
-    transcriber.addState(
-      QueryStateName.PredicateStarted,
-      new StatePredicateStarted()
-    );
-    transcriber.addState(
-      QueryStateName.ProcessIdentifier,
-      new StateProcessIdentifier()
-    );
-    transcriber.addState(
-      QueryStateName.ProcessOperator,
-      new StateProcessOperator()
-    );
-    transcriber.addState(
-      QueryStateName.ProcessPredicateOperator,
-      new StateProcessPredicateOperator()
-    );
-    transcriber.addState(QueryStateName.ProcessValue, new StateProcessValue());
-    transcriber.addState(
-      QueryStateName.PredicateFinished,
-      new StatePredicateFinished()
-    );
-    transcriber.addState(
-      QueryStateName.QueryFinished,
-      new StateQueryFinished()
-    );
+    transcriber
+      .addState(QueryStateName.QueryStarted, new StateQueryStarted())
+      .addState(QueryStateName.ProcessParensOpen, new StateProcessParensOpen())
+      .addState(
+        QueryStateName.ProcessParensClose,
+        new StateProcessParensClose()
+      )
+      .addState(QueryStateName.PredicateStarted, new StatePredicateStarted())
+      .addState(QueryStateName.ProcessIdentifier, new StateProcessIdentifier())
+      .addState(QueryStateName.ProcessOperator, new StateProcessOperator())
+      .addState(
+        QueryStateName.ProcessPredicateOperator,
+        new StateProcessPredicateOperator()
+      )
+      .addState(QueryStateName.ProcessValue, new StateProcessValue())
+      .addState(QueryStateName.PredicateFinished, new StatePredicateFinished())
+      .addState(QueryStateName.QueryFinished, new StateQueryFinished());
 
     return transcriber;
   }

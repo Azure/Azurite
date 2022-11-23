@@ -11,7 +11,7 @@ export default class IntegerPredicate implements IPredicate {
   }
 
   /**
-   * converts an integer predicate for lokijs schema
+   * Converts an integer predicate for lokijs schema
    *
    * @return {*}
    * @memberof IntegerPredicate
@@ -30,7 +30,7 @@ export default class IntegerPredicate implements IPredicate {
   }
 
   /**
-   * pushes the value to the integer predicate
+   * Pushes the value to the integer predicate
    *
    * @param {TaggedToken} taggedToken
    * @param {TaggedToken[]} newTokens
@@ -43,7 +43,7 @@ export default class IntegerPredicate implements IPredicate {
   }
 
   /**
-   * pushes the identifier to the integer predicate
+   * Pushes the identifier to the integer predicate
    *
    * @param {TaggedToken} taggedToken
    * @param {TaggedToken[]} newTokens
@@ -61,7 +61,7 @@ export default class IntegerPredicate implements IPredicate {
   }
 
   /**
-   * pushes the operator to the integer predicate
+   * Pushes the operator to the integer predicate
    *
    * @private
    * @param {TaggedToken} taggedToken

@@ -32,15 +32,9 @@ const testLocalAzuriteInstance = true;
 describe("table Entity APIs test - using Azure/data-tables", () => {
   let server: TableServer;
 
-  // const requestOverride = { headers: {} };
-
   before(async () => {
     server = createTableServerForTestHttps();
     await server.start();
-    // requestOverride.headers = {
-    //   Prefer: "return-content",
-    //   accept: "application/json;odata=fullmetadata"
-    // };
   });
 
   after(async () => {

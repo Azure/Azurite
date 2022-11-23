@@ -54,7 +54,7 @@ export default class GuidPredicate implements IPredicate {
   }
 
   /**
-   * pushes the base64 guid to the predicate
+   * Pushes the base64 guid to the predicate
    *
    * @private
    * @param {TaggedToken} taggedToken
@@ -96,7 +96,7 @@ export default class GuidPredicate implements IPredicate {
   }
 
   /**
-   * pushes the string guid to the predicate
+   * Pushes the string guid to the predicate
    *
    * @private
    * @param {TaggedToken} taggedToken
@@ -111,7 +111,7 @@ export default class GuidPredicate implements IPredicate {
   }
 
   /**
-   * pushes the guid identifier to the predicate
+   * Pushes the guid identifier to the predicate
    *
    * @private
    * @param {TaggedToken} taggedToken
@@ -130,7 +130,7 @@ export default class GuidPredicate implements IPredicate {
   }
 
   /**
-   * pushes the operator to the guid predicate
+   * Pushes the operator to the guid predicate
    *
    * @private
    * @param {TaggedToken} taggedToken

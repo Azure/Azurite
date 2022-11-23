@@ -76,7 +76,7 @@ export class EdmGuid implements IEdmType {
   }
 
   /**
-   * will return "<propname>@odata.type":"Edm.guid"
+   * Will return "<propname>@odata.type":"Edm.guid"
    *
    * @param {string} name
    * @param {AnnotationLevel} annotationLevel

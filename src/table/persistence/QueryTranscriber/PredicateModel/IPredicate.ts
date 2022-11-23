@@ -1,7 +1,7 @@
 import { TokenMap } from "./TokenMap";
 
 /**
- * interface used with predicates to allow conversion
+ * Interface used with predicates to allow conversion
  * to different database representation / schemas
  *
  * @export
