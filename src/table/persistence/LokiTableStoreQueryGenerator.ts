@@ -16,12 +16,12 @@ export default class LokiTableStoreQueryGenerator {
    *
    * @param queryOptions
    * @param context
-   * @returns
+   * @returns (entity: Entity) => boolean
    */
   public static generateQueryForPersistenceLayer(
     queryOptions: Models.QueryOptions,
     context: Context
-  ) {
+  ): (entity: Entity) => boolean {
     let queryWhere;
     try {
       queryWhere =
