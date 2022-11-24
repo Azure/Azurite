@@ -682,7 +682,6 @@ export default class ContainerHandler extends BaseHandler
 
     const request = context.request!;
     const marker = options.marker;
-    delimiter = delimiter === "" ? "/" : delimiter;
     options.prefix = options.prefix || "";
     options.marker = options.marker || "";
     let includeSnapshots: boolean = false;
@@ -709,7 +708,7 @@ export default class ContainerHandler extends BaseHandler
       context,
       accountName,
       containerName,
-      delimiter,
+      delimiter === "" ? undefined : delimiter,
       undefined,
       options.prefix,
       options.maxresults,
