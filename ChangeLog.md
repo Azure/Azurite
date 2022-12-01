@@ -9,6 +9,10 @@ General:
 - Fixed shared key authentication failure when request uri contains "+"
 - Stop accepting new connections and closes existing, idle connections (including keep-alives) without killing requests that are in-flight.
 
+Blob:
+
+- Support Copy Blob From URL API when use different source and destination account (in same Azurite instance).
+
 Table:
 
 - Added exit parameter to tests so they don't hang.
