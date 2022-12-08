@@ -7,6 +7,7 @@ import * as assert from "assert";
 
 import { configLogger } from "../../src/common/Logger";
 import BlobTestServerFactory from "../BlobTestServerFactory";
+import { RestError } from "@azure/core-http";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
@@ -531,6 +532,77 @@ describe("Blob Cors requests test", () => {
     assert.ok(res._response.status === 200);
   });
 
+  context(
+    "OPTIONS request should work with matching rule containing wildcard in Origin @loki @sql",
+    async () => {
+      const testCases = [
+        { origin: undefined, expected: 403 },
+        { origin: "contoso.com", expected: 403 },
+        { origin: "bar.notcontoso.com", expected: 403 },
+        { origin: "foo.contoso.com", expected: 200 },
+        { origin: "foo.bar.baz.contoso.com", expected: 200 },
+        { origin: "foo.CONTOSO.com", expected: 200 }
+      ];
+
+      testCases.forEach(async (testCase) => {
+        it(`${testCase.origin}`, async () => {
+          const serviceProperties = await serviceClient.getProperties();
+
+          const newCORS = {
+            allowedHeaders: "header",
+            allowedMethods: "GET",
+            allowedOrigins: "*.contoso.com",
+            exposedHeaders: "*",
+            maxAgeInSeconds: 8888
+          };
+
+          serviceProperties.cors = [newCORS];
+
+          await serviceClient.setProperties(serviceProperties);
+
+          await sleep(100);
+
+          const origin = testCase.origin;
+          const requestMethod = "GET";
+          const expectedStatus = testCase.expected;
+
+          const pipeline = newPipeline(
+            new StorageSharedKeyCredential(
+              EMULATOR_ACCOUNT_NAME,
+              EMULATOR_ACCOUNT_KEY
+            ),
+            {
+              retryOptions: { maxTries: 1 },
+              // Make sure socket is closed once the operation is done.
+              keepAliveOptions: { enable: false }
+            }
+          );
+          pipeline.factories.unshift(
+            new OPTIONSRequestPolicyFactory(origin, requestMethod)
+          );
+          const serviceClientForOptions = new BlobServiceClient(
+            baseURL,
+            pipeline
+          );
+
+          let status: number = 0;
+          try {
+            const res = await serviceClientForOptions.getProperties();
+            status = res._response.status;
+          } catch (e: any) {
+            if (!(e instanceof RestError)) {
+              throw e;
+            }
+
+            status = e.response?.status || 0;
+          }
+
+          assert.ok(status === expectedStatus);
+        });
+      });
+    }
+  );
+
   it("Response of request to service without cors rules should not contains cors info @loki @sql", async () => {
     const serviceProperties = await serviceClient.getProperties();
 
@@ -714,9 +786,8 @@ describe("Blob Cors requests test", () => {
     pipeline.factories.unshift(new OriginPolicyFactory(origin));
     const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
-    const containerClientWithOrigin = serviceClientWithOrigin.getContainerClient(
-      "notexistcontainer"
-    );
+    const containerClientWithOrigin =
+      serviceClientWithOrigin.getContainerClient("notexistcontainer");
 
     try {
       await containerClientWithOrigin.getProperties();
