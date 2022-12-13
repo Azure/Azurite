@@ -16,6 +16,7 @@ Blob:
 Table:
 
 - Added exit parameter to tests so they don't hang.
+- Fixed request not fail on creating an entity without specifying a property value of type DateTimeOffset
 - Fixes issues using and querying GUID types.
 - Removes odata Timestamp type from entities when accept is set to minimalmetadata.
 - Ensures no entities are returned when queries use $top=0.

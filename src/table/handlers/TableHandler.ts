@@ -1071,6 +1071,13 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
           } else if (properties[prop].length > 32 * 1024) {
             throw StorageErrorFactory.getPropertyValueTooLargeError(context);
           }
+          else if (properties[prop] === undefined || properties[prop] === "")
+          {
+            const propertyType = properties[`${prop}${ODATA_TYPE}`];
+            if (propertyType !== undefined && propertyType === "Edm.DateTime") {
+              throw StorageErrorFactory.getInvalidInput(context);
+            }
+          }
         }
       }
     }
