@@ -5,12 +5,11 @@ import Context from "../generated/Context";
 import IServiceHandler from "../generated/handlers/IServiceHandler";
 import { parseXML } from "../generated/utils/xml";
 import {
-  AAD_OBJECT_ID,
-  AAD_TENANT_ID,
   BLOB_API_VERSION,
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
   EMULATOR_ACCOUNT_KIND,
   EMULATOR_ACCOUNT_SKUNAME,
+  HeaderConstants,
 } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
 import IAccountDataStore from "../../common/IAccountDataStore";
@@ -20,7 +19,9 @@ import ILogger from "../../common/ILogger";
 import { BlobBatchHandler } from "./BlobBatchHandler";
 import { Readable } from "stream";
 import { OAuthLevel } from "../../common/models";
-import { getUserDelegationKeyValue } from "../generated/utils/utils";
+import { BEARER_TOKEN_PREFIX } from "../../common/utils/constants";
+import { decode } from "jsonwebtoken";
+import { getUserDelegationKeyValue } from "../utils/utils";
 
 /**
  * ServiceHandler handles Azure Storage Blob service related requests.
@@ -84,9 +85,14 @@ export default class ServiceHandler extends BaseHandler
     options: Models.ServiceGetUserDelegationKeyOptionalParams,
     context: Context
   ): Promise<Models.ServiceGetUserDelegationKeyResponse> {
+    const blobContext = new BlobStorageContext(context);
+    const request = blobContext.request!;
+    const authHeaderValue = request.getHeader(HeaderConstants.AUTHORIZATION);
+    const token = authHeaderValue!.substr(BEARER_TOKEN_PREFIX.length + 1);
+    const decodedToken = decode(token) as { [key: string]: any };
     const keyValue = getUserDelegationKeyValue(
-      AAD_OBJECT_ID,
-      AAD_TENANT_ID,
+      decodedToken.oid,
+      decodedToken.tid,
       keyInfo.start,
       keyInfo.expiry,
       BLOB_API_VERSION
@@ -94,8 +100,8 @@ export default class ServiceHandler extends BaseHandler
 
     const response: Models.ServiceGetUserDelegationKeyResponse = {
       statusCode: 200,
-      signedOid: AAD_OBJECT_ID,
-      signedTid: AAD_TENANT_ID,
+      signedOid: decodedToken.oid,
+      signedTid: decodedToken.tid,
       signedService: "b",
       signedVersion: BLOB_API_VERSION,
       signedStart: keyInfo.start,

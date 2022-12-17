@@ -32,7 +32,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://storage.azure.com",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -58,7 +60,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://storage.azure.com",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -127,7 +131,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://storage.azure.com",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -191,7 +197,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://storage.azure.com",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -207,6 +215,7 @@ describe("Blob OAuth Basic", () => {
     startTime.setHours(startTime.getHours() - 1);
     const expiryTime = new Date();
     expiryTime.setDate(expiryTime.getDate() + 1);
+    
     const userDelegationKey = await serviceClient.getUserDelegationKey(startTime, expiryTime);
 
     const containerName: string = getUniqueName("1container-with-dash")
@@ -239,7 +248,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://storage.azure.com",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -330,7 +341,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://storage.azure.com",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -453,7 +466,9 @@ describe("Blob OAuth Basic", () => {
         new Date("2100/01/01"),
         "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
         audience,
-        "user_impersonation"
+        "user_impersonation",
+        "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+        "dd0d0df1-06c3-436c-8034-4b9a153097ce"
       );
 
       const serviceClient = new BlobServiceClient(
@@ -480,7 +495,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://invalidaccount.blob.core.windows.net",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -524,7 +541,9 @@ describe("Blob OAuth Basic", () => {
         new Date("2100/01/01"),
         `${issuerPrefix}/ab1f708d-50f6-404c-a006-d71b2ac7a606/`,
         "e406a681-f3d4-42a8-90b6-c2b029497af1",
-        "user_impersonation"
+        "user_impersonation",
+        "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+        "dd0d0df1-06c3-436c-8034-4b9a153097ce"
       );
 
       const serviceClient = new BlobServiceClient(
@@ -551,7 +570,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://invalidissuer/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://invalidaccount.blob.core.windows.net",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -587,7 +608,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://devstoreaccount1.blob.core.windows.net",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -623,7 +646,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2019/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://devstoreaccount1.blob.core.windows.net",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -659,7 +684,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://devstoreaccount1.blob.core.windows.net",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -696,7 +723,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://devstoreaccount1.blob.core.windows.net",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -741,7 +770,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2019/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://devstoreaccount1.blob.core.windows.net",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(

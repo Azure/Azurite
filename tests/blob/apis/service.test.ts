@@ -1,6 +1,11 @@
 import {
+  AccountSASPermissions,
+  AccountSASResourceTypes,
+  AccountSASServices,
   BlobServiceClient,
+  generateAccountSASQueryParameters,
   newPipeline,
+  SASProtocol,
   StorageSharedKeyCredential
 } from "@azure/storage-blob";
 import * as assert from "assert";
@@ -47,6 +52,61 @@ describe("ServiceAPIs", () => {
   after(async () => {
     await server.close();
     await server.clean();
+  });
+
+  it(`getUserDelegationKey with Key credential should fail @loki @sql`, async () => {    
+    const startTime = new Date();
+    startTime.setHours(startTime.getHours() - 1);
+    const expiryTime = new Date();
+    expiryTime.setDate(expiryTime.getDate() + 1);
+    
+    try {
+      await serviceClient.getUserDelegationKey(startTime, expiryTime);
+      assert.fail("Should fail to invoke getUserDelegationKey with account key credentials")
+    } catch (error) {
+      assert.strictEqual((error as any).details.AuthenticationErrorDetail, "Only authentication scheme Bearer is supported");
+    }
+  });
+
+  it(`getUserDelegationKey with SAS token credential should fail @loki @sql`, async () => {
+    const sasTokenStart = new Date();
+    sasTokenStart.setHours(sasTokenStart.getHours() - 1);
+    
+    const sasTokenExpiry = new Date();
+    sasTokenExpiry.setDate(sasTokenExpiry.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const sharedKeyCredential = factories[factories.length - 1];
+
+    const sas = generateAccountSASQueryParameters(
+      {
+        startsOn: sasTokenStart,
+        expiresOn: sasTokenExpiry,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: AccountSASPermissions.parse("rwdlacup"),
+        protocol: SASProtocol.HttpsAndHttp,
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("btqf").toString(),
+      },
+      sharedKeyCredential as StorageSharedKeyCredential
+    ).toString();
+
+    const sasClient = `${serviceClient.url}?${sas}`;
+    const serviceClientWithSAS = new BlobServiceClient(sasClient, newPipeline());
+
+    const skStart = new Date();
+    skStart.setHours(skStart.getHours() - 1);
+    
+    const skExpiry = new Date();
+    skExpiry.setDate(skExpiry.getDate() + 1);
+    
+    try {      
+      await serviceClientWithSAS.getUserDelegationKey(skStart, skExpiry);
+      assert.fail("Should fail to invoke getUserDelegationKey with SAS token credentials")
+    } catch (error) {
+      assert.strictEqual((error as any).details.AuthenticationErrorDetail, "Only authentication scheme Bearer is supported");
+    }
   });
 
   it("GetServiceProperties @loki @sql", async () => {

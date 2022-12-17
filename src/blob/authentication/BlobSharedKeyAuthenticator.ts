@@ -3,9 +3,10 @@ import ILogger from "../../common/ILogger";
 import { computeHMACSHA256, getURLQueries } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
+import Operation from "../generated/artifacts/operation";
 import Context from "../generated/Context";
 import IRequest from "../generated/IRequest";
-import { HeaderConstants } from "../utils/constants";
+import { AUTHENTICATION_BEARERTOKEN_REQUIRED, HeaderConstants } from "../utils/constants";
 import IAuthenticator from "./IAuthenticator";
 
 export default class BlobSharedKeyAuthenticator implements IAuthenticator {
@@ -35,6 +36,14 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       );
       return undefined;
     }
+    else if (!authHeaderValue.startsWith("SharedKey")) {
+      this.logger.info(
+        // tslint:disable-next-line:max-line-length
+        `BlobSharedKeyAuthenticator:validate() Request doesn't include shared key authentication.`,
+        blobContext.contextId
+      );
+      return undefined;
+    }
 
     // TODO: Make following async
     const accountProperties = this.dataStore.getAccount(account);
@@ -47,6 +56,23 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
         blobContext.contextId!,
         "Invalid storage account."
       );
+    }
+
+    const operation = context.operation;
+    if (operation === undefined) {
+      throw new Error(
+        // tslint:disable-next-line:max-line-length
+        `BlobSharedKeyAuthenticator:validate() Operation shouldn't be undefined. Please make sure DispatchMiddleware is hooked before authentication related middleware.`
+      );
+    }
+    else if (operation === Operation.Service_GetUserDelegationKey) {
+      this.logger.info(
+        `BlobSharedKeyAuthenticator:validate() Service_GetUserDelegationKey requires OAuth credentials"
+        }.`,
+        context.contextId
+      );
+      throw StorageErrorFactory.getAuthenticationFailed(context.contextId!,
+        AUTHENTICATION_BEARERTOKEN_REQUIRED);
     }
 
     const stringToSign: string =

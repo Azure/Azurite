@@ -7,8 +7,9 @@ import { AccessPolicy, BlobType } from "../generated/artifacts/models";
 import Operation from "../generated/artifacts/operation";
 import Context from "../generated/Context";
 import IRequest from "../generated/IRequest";
-import { getUserDelegationKeyValue } from "../generated/utils/utils";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
+import { AUTHENTICATION_BEARERTOKEN_REQUIRED } from "../utils/constants";
+import { getUserDelegationKeyValue } from "../utils/utils";
 import { BlobSASPermission } from "./BlobSASPermissions";
 import { BlobSASResourceType } from "./BlobSASResourceType";
 import IAuthenticator from "./IAuthenticator";
@@ -370,6 +371,15 @@ export default class BlobSASAuthenticator implements IAuthenticator {
         // tslint:disable-next-line:max-line-length
         `BlobSASAuthenticator:validate() Operation shouldn't be undefined. Please make sure DispatchMiddleware is hooked before authentication related middleware.`
       );
+    }
+    else if (operation === Operation.Service_GetUserDelegationKey) {
+      this.logger.info(
+        `BlobSASAuthenticator:validate() Service_GetUserDelegationKey requires OAuth credentials"
+        }.`,
+        context.contextId
+      );
+      throw StorageErrorFactory.getAuthenticationFailed(context.contextId!,
+        AUTHENTICATION_BEARERTOKEN_REQUIRED);
     }
 
     const blobSASPermission =
