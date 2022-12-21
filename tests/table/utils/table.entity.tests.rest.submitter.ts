@@ -87,8 +87,7 @@ function generateSas(): string {
 
   // Generate an account SAS with the NamedKeyCredential and the permissions set previously
   const accountSas = generateAccountSas(cred, {
-    permissions,
-    expiresOn: new Date("2022-12-12")
+    permissions
   });
 
   return new AzureSASCredential(accountSas).signature;
