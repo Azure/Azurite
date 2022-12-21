@@ -309,7 +309,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       queryKeys.sort();
       for (const key of queryKeys) {
         canonicalizedResourceString += `\n${key}:${decodeURIComponent(
-          lowercaseQueries[key]
+          lowercaseQueries[key].replace(/\+/g, '%20')
         )}`;
       }
     }

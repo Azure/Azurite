@@ -289,14 +289,14 @@ export default class QueueSharedKeyAuthenticator implements IAuthenticator {
         queryKeys.sort();
         for (const key of queryKeys) {
           canonicalizedResourceString += `\n${key}:${decodeURIComponent(
-            lowercaseQueries[key]
+            lowercaseQueries[key].replace(/\+/g, '%20')
           )}`;
         }
       } else if (type === "SharedKeyLite") {
         for (const key in queries) {
           if (queries.hasOwnProperty(key) && key.toLowerCase() === "comp") {
             canonicalizedResourceString += `?comp=${decodeURIComponent(
-              queries[key]
+              queries[key].replace(/\+/g, '%20')
             )}`;
           }
         }
