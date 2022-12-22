@@ -657,37 +657,6 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     });
 
     ["MERGE", "REPLACE"].forEach((operation) => {
-      it(`${operation} of non-existent entity with ${label} in a BATCH, @loki`, (done) => {
-        requestOverride.headers = {
-          Prefer: "return-content",
-          accept: "application/json;odata=fullmetadata"
-        };
-
-        const batchEntity1 = new TestEntity(
-          !pk ? pk : getUniqueName(pk),
-          !rk ? rk : getUniqueName(rk),
-          "value1"
-        );
-
-        const entityBatch: Azure.TableBatch = new Azure.TableBatch();
-        entityBatch.addOperation(operation, batchEntity1);
-
-        tableService.executeBatch(
-          tableName,
-          entityBatch,
-          (updateError, updateResult, updateResponse) => {
-            if (!updateError) {
-              assert.fail("Test should have thrown an error");
-            } else {
-              assert.strictEqual(updateResponse.statusCode, 404);
-              done();
-            }
-          }
-        );
-      });
-    });
-
-    ["MERGE", "REPLACE"].forEach((operation) => {
       it(`${operation} of entity with ${label} in a BATCH, @loki`, (done) => {
         requestOverride.headers = {
           Prefer: "return-content",
