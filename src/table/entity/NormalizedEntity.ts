@@ -57,12 +57,35 @@ export class NormalizedEntity {
               `Invalid EdmType value:${type} for key:${key}${ODATA_TYPE}`
             );
           }
-          const property = parseEntityProperty(key, element, type, false);
+          const property = this.validateSystemProperty(key, element, type);
           this.properties.push(property);
           this.propertiesMap[key] = property;
         }
       }
     }
+  }
+
+  /**
+   * Removes oData type from Timestamp property
+   *
+   * @private
+   * @param {string} key
+   * @param {(string | number | boolean | null)} element
+   * @param {string} type
+   * @return {*}
+   * @memberof NormalizedEntity
+   */
+  private validateSystemProperty(
+    key: string,
+    element: string | number | boolean | null,
+    type: string
+  ) {
+    let isSystemProperty = false;
+    if (key === "Timestamp") {
+      isSystemProperty = true;
+    }
+    const property = parseEntityProperty(key, element, type, isSystemProperty);
+    return property;
   }
 
   // Convert to HTTP response payload string

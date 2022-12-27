@@ -17,6 +17,11 @@ Blob:
 Table:
 
 - Added exit parameter to tests so they don't hang.
+- Fixes issues using and querying GUID types.
+- Removes odata Timestamp type from entities when accept is set to minimalmetadata.
+- Ensures no entities are returned when queries use $top=0.
+- Fixes issues querying for binary values.
+- Implements new query parsing logic.
 
 ## 2022.10 Version 3.20.1
 
