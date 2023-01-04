@@ -34,7 +34,7 @@ export class AzureDataTablesTestEntity {
   public nullableString: string | null = "notNull";
   public binaryField: Buffer = Buffer.from("11111111");
   public booleanField: boolean = true;
-  public dateField: Edm<"DateTime"> = { value: "", type: "DateTime" };
+  public dateField: Edm<"DateTime"> = { value: "2023-01-01T23:00:00", type: "DateTime" };
   constructor(part: string, row: string, value: string) {
     this.partitionKey = part;
     this.rowKey = row;

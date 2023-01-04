@@ -134,6 +134,30 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
+  // Insert empty entity property with type "Edm.DateTime", server will return error
+  it("Insert new Entity property with type Edm.DateTime will convert to UTC, @loki", (done) => {
+    const timeValue = "";
+    const entity = {
+      PartitionKey: "part1",
+      RowKey: "utctest",
+      myValue: timeValue,
+      "myValue@odata.type": "Edm.DateTime"
+    };
+
+    tableService.insertEntity(
+      tableName,
+      entity,
+      (insertError, insertResult, insertResponse) => {
+        if (!insertError) {
+          assert.fail("Insert should fail with DataTime type property has empty value.");
+        } else {
+          assert.strictEqual(true, insertError.message.startsWith("An error occurred while processing this request."));
+          done();
+        }
+      }
+    );
+  });
+
   // Simple test in here until we have the full set checked in, as we need
   // a starting point for delete and query entity APIs
   it("Should insert new Entity with empty RowKey, @loki", (done) => {
