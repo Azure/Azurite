@@ -4,6 +4,8 @@
 
 ## Upcoming Release
 
+## 2023.01 Version 3.21.0
+
 General:
 
 - Fixed shared key authentication failure when request uri contains "+"
