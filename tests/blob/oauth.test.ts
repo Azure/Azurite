@@ -1,13 +1,12 @@
-import { BlobServiceClient, newPipeline } from "@azure/storage-blob";
+import { AnonymousCredential, BlobServiceClient, ContainerClient, ContainerSASPermissions, generateBlobSASQueryParameters, newPipeline } from "@azure/storage-blob";
 
 import * as assert from "assert";
 
 import { configLogger } from "../../src/common/Logger";
 import BlobTestServerFactory from "../BlobTestServerFactory";
-import { generateJWTToken, getUniqueName } from "../testutils";
+import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, generateJWTToken, getUniqueName } from "../testutils";
 import { SimpleTokenCredential } from "../simpleTokenCredential";
-import { BlobClient } from "@azure/storage-blob";
-import { BlobBatch } from "@azure/storage-blob";
+import { BlobClient, StorageSharedKeyCredential, BlobBatch} from "@azure/storage-blob";
 
 // Set true to enable debug log
 configLogger(false);
@@ -33,7 +32,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://storage.azure.com",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -59,7 +60,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://storage.azure.com",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -128,7 +131,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://storage.azure.com",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -185,6 +190,234 @@ describe("Blob OAuth Basic", () => {
     }
   });
 
+  it(`Should work with delegation SAS @loki @sql`, async () => {
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+
+    const serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(new SimpleTokenCredential(token), {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+
+    const startTime = new Date();
+    startTime.setHours(startTime.getHours() - 1);
+    const expiryTime = new Date();
+    expiryTime.setDate(expiryTime.getDate() + 1);
+    
+    const userDelegationKey = await serviceClient.getUserDelegationKey(startTime, expiryTime);
+
+    const containerName: string = getUniqueName("1container-with-dash")
+
+    const sasExpirytime = new Date();
+    sasExpirytime.setHours(sasExpirytime.getHours() + 1);
+
+    const containerSAS = generateBlobSASQueryParameters(
+      {
+        containerName: containerName,
+        expiresOn: sasExpirytime,
+        permissions: ContainerSASPermissions.parse("racwdl"),
+      },
+      userDelegationKey,
+      "devstoreaccount1"
+    );
+
+    const containerClient = new ContainerClient(
+      `${serviceClient.url}/${containerName}?${containerSAS}`,
+      newPipeline(new AnonymousCredential())
+    );
+    await containerClient.create();
+    await containerClient.delete();
+  });
+
+  it(`Should fail with delegation SAS with invalid time duration @loki @sql`, async () => {
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+
+    const serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(new SimpleTokenCredential(token), {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+    const containerName: string = getUniqueName("1container-with-dash")
+
+    // Later user delegation key start time
+    let startTime = new Date();
+    startTime.setMinutes(startTime.getMinutes() + 20);
+    let expiryTime = new Date();
+    expiryTime.setDate(expiryTime.getDate() + 1);
+    let userDelegationKey = await serviceClient.getUserDelegationKey(startTime, expiryTime);
+
+    let sasExpirytime = new Date();
+    sasExpirytime.setHours(sasExpirytime.getHours() + 1);
+
+    let containerSAS = generateBlobSASQueryParameters(
+      {
+        containerName: containerName,
+        expiresOn: sasExpirytime,
+        permissions: ContainerSASPermissions.parse("racwdl"),
+      },
+      userDelegationKey,
+      "devstoreaccount1"
+    );
+
+    let containerClient = new ContainerClient(
+      `${serviceClient.url}/${containerName}?${containerSAS}`,
+      newPipeline(new AnonymousCredential())
+    );
+    let failed = false;
+    try {
+      await containerClient.create();
+    }
+    catch (err) {
+      failed = true;
+      assert.equal(err.statusCode, 403);
+    }    
+    assert.ok(failed);
+
+    // Eearlier user delegation key expirty time
+    startTime = new Date();
+    startTime.setDate(startTime.getDate() - 1);
+    expiryTime = new Date();
+    expiryTime.setMinutes(expiryTime.getMinutes() - 1);
+    userDelegationKey = await serviceClient.getUserDelegationKey(startTime, expiryTime);
+
+    sasExpirytime = new Date();
+    sasExpirytime.setHours(sasExpirytime.getHours() + 1);
+
+    containerSAS = generateBlobSASQueryParameters(
+      {
+        containerName: containerName,
+        expiresOn: sasExpirytime,
+        permissions: ContainerSASPermissions.parse("racwdl"),
+      },
+      userDelegationKey,
+      "devstoreaccount1"
+    );
+
+    containerClient = new ContainerClient(
+      `${serviceClient.url}/${containerName}?${containerSAS}`,
+      newPipeline(new AnonymousCredential())
+    );
+    
+    failed = false;
+    try {
+      await containerClient.create();
+    }
+    catch (err) {
+      failed = true;
+      assert.equal(err.statusCode, 403);
+    }    
+    assert.ok(failed);
+  });
+
+  
+  it(`Should fail with delegation SAS with access policy @loki @sql`, async () => {
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+
+    const serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(new SimpleTokenCredential(token), {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+
+    const startTime = new Date();
+    startTime.setHours(startTime.getHours() - 1);
+    const expiryTime = new Date();
+    expiryTime.setDate(expiryTime.getDate() + 1);
+    const userDelegationKey = await serviceClient.getUserDelegationKey(startTime, expiryTime);
+
+    const serviceClientWithAccountKey = new BlobServiceClient(
+      baseURL,
+      newPipeline(
+        new StorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        ),
+        {
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
+        }
+      )
+    );
+    const containerName: string = getUniqueName("1container-with-dash");
+    const containerClientWithKey = serviceClientWithAccountKey.getContainerClient(containerName);
+    await containerClientWithKey.create();
+    await containerClientWithKey.setAccessPolicy(undefined, 
+      [
+        {
+          accessPolicy: {
+            permissions: "racwdl"
+          },
+          id: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
+        }
+      ]);
+
+    const sasExpirytime = new Date();
+    sasExpirytime.setHours(sasExpirytime.getHours() + 1);
+
+    const containerSAS = generateBlobSASQueryParameters(
+      {
+        containerName: containerName,
+        expiresOn: sasExpirytime,        
+        permissions: ContainerSASPermissions.parse("racwdl"),
+        identifier: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
+      },
+      userDelegationKey,
+      "devstoreaccount1"
+    );
+
+    const containerClient = new ContainerClient(
+      `${serviceClient.url}/${containerName}?${containerSAS}`,
+      newPipeline(new AnonymousCredential())
+    );
+    
+    let failed = false;
+    try {
+      await containerClient.getProperties();
+    }
+    catch (err) {
+      failed = true;
+      assert.equal(err.statusCode, 403);
+    }    
+    assert.ok(failed);
+  });
+
   it(`Should not work with invalid JWT token @loki @sql`, async () => {
     const serviceClient = new BlobServiceClient(
       baseURL,
@@ -233,7 +466,9 @@ describe("Blob OAuth Basic", () => {
         new Date("2100/01/01"),
         "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
         audience,
-        "user_impersonation"
+        "user_impersonation",
+        "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+        "dd0d0df1-06c3-436c-8034-4b9a153097ce"
       );
 
       const serviceClient = new BlobServiceClient(
@@ -260,7 +495,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://invalidaccount.blob.core.windows.net",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -304,7 +541,9 @@ describe("Blob OAuth Basic", () => {
         new Date("2100/01/01"),
         `${issuerPrefix}/ab1f708d-50f6-404c-a006-d71b2ac7a606/`,
         "e406a681-f3d4-42a8-90b6-c2b029497af1",
-        "user_impersonation"
+        "user_impersonation",
+        "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+        "dd0d0df1-06c3-436c-8034-4b9a153097ce"
       );
 
       const serviceClient = new BlobServiceClient(
@@ -331,7 +570,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://invalidissuer/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://invalidaccount.blob.core.windows.net",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -367,7 +608,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://devstoreaccount1.blob.core.windows.net",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -403,7 +646,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2019/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://devstoreaccount1.blob.core.windows.net",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -439,7 +684,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://devstoreaccount1.blob.core.windows.net",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -476,7 +723,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2100/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://devstoreaccount1.blob.core.windows.net",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(
@@ -521,7 +770,9 @@ describe("Blob OAuth Basic", () => {
       new Date("2019/01/01"),
       "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
       "https://devstoreaccount1.blob.core.windows.net",
-      "user_impersonation"
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
     );
 
     const serviceClient = new BlobServiceClient(

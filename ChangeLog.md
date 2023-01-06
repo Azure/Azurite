@@ -13,6 +13,7 @@ Blob:
 
 - Support Copy Blob From URL API when use different source and destination account (in same Azurite instance).
 - Support use of wildcard character to allow all subdomains of a given domain to make requests via CORS
+- Add support for user delegation key.
 
 Table:
 

@@ -182,7 +182,9 @@ export function generateJWTToken(
   exp: Date,
   iss: string,
   aud: string,
-  scp: string
+  scp: string,
+  oid: string,
+  tid: string,
 ) {
   const privateKey = readFileSync("./tests/server.key");
   const token = sign(
@@ -192,7 +194,9 @@ export function generateJWTToken(
       exp: Math.floor(exp.getTime() / 1000),
       iss,
       aud,
-      scp
+      scp,
+      oid,
+      tid
     },
     privateKey,
     { algorithm: "RS256" }

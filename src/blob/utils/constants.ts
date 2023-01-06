@@ -156,3 +156,7 @@ export const VALID_BLOB_AUDIENCES = [
 
 export const HTTP_LINE_ENDING = "\r\n";
 export const HTTP_HEADER_DELIMITER = ": ";
+
+export const USERDELEGATIONKEY_BASIC_KEY = "I17GKLvcJUossaebtsEDZZ2RJ8GNLwLH4m7hRMxbVbkx6wNIRAABj4Rtw0FBhFuEAgmbL4gFMzUw+AStz9Sqdg==";
+
+export const AUTHENTICATION_BEARERTOKEN_REQUIRED = "Only authentication scheme Bearer is supported";

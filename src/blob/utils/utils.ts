@@ -1,5 +1,7 @@
+import { createHmac } from "crypto";
 import { createWriteStream, PathLike } from "fs";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
+import { USERDELEGATIONKEY_BASIC_KEY } from "./constants";
 
 export function checkApiVersion(
   inputApiVersion: string,
@@ -142,4 +144,23 @@ export function validateContainerName(
   if (!reg.test(containerName!)) {
     throw StorageErrorFactory.getInvalidResourceName(requestID);
   }
+}
+
+export function getUserDelegationKeyValue(
+  signedObjectid: string,
+  signedTenantid: string,
+  signedStartsOn: string,
+  signedExpiresOn: string,
+  signedVersion: string,
+) : string {
+  const stringToSign = [
+    signedObjectid,
+    signedTenantid,
+    signedStartsOn,
+    signedExpiresOn,
+    "b",
+    signedVersion
+  ].join("\n");
+
+  return createHmac("sha256", USERDELEGATIONKEY_BASIC_KEY).update(stringToSign, "utf8").digest("base64");
 }

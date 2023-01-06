@@ -85,9 +85,13 @@ function generateSas(): string {
     delete: true
   };
 
+  const expiriesOn = new Date();
+  expiriesOn.setDate(expiriesOn.getDate() + 1);
+
   // Generate an account SAS with the NamedKeyCredential and the permissions set previously
   const accountSas = generateAccountSas(cred, {
-    permissions
+    permissions,
+    expiresOn: expiriesOn
   });
 
   return new AzureSASCredential(accountSas).signature;
