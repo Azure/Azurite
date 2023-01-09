@@ -957,11 +957,9 @@ Detailed support matrix:
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
 
   - SharedKey Lite
-  - Delegation SAS
   - Static Website
   - Soft delete & Undelete Blob
   - Incremental Copy Blob
-  - Batch
   - Blob Tags
   - Blob Query
   - Blob Versions
@@ -1003,7 +1001,6 @@ Detailed support matrix:
   - Clear Message
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
   - SharedKey Lite
-  - Delegation SAS
 
 Latest version supports for **2021-10-04** API version **table** service (preview).
 Detailed support matrix:
