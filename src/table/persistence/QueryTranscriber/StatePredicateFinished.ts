@@ -348,10 +348,13 @@ export default class StatePredicateFinished
       // on it's own in a predicate;
       const predicateType =
         context.taggedPredicates[offset].tokenMap.tokens[0].type;
+      const predicateValue =
+          context.taggedPredicates[offset].tokenMap.tokens[0].token;
       if (
         predicateType.isParensOpen() ||
         predicateType.isParensClose() ||
-        predicateType.isOperator()
+        predicateType.isOperator()||
+        (predicateType.isValue() && this.isBooleanValue(predicateValue))
       ) {
         return;
       }

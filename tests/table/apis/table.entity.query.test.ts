@@ -908,5 +908,43 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
     await tableClient.deleteTable();
+  });  
+
+  it("should work correctly when query filter contains true or false, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("querywithbool")
+    );
+    const partitionKeyForQueryTest = createUniquePartitionKey("");
+    const totalItems = 5;
+    await tableClient.createTable();
+
+    for (let i = 0; i < totalItems; i++) {
+      const result = await tableClient.createEntity({
+        partitionKey: `${partitionKeyForQueryTest}${i}`,
+        rowKey: `${i}`,
+        foo: "testEntity"
+      });
+      assert.notStrictEqual(result.etag, undefined);
+    }
+
+    const maxPageSize = 5;
+    const entities = tableClient.listEntities<TableEntity<{ foo: string }>>({
+      queryOptions: {
+        filter: odata`(true and RowKey eq '1') and ((false or PartitionKey eq '${partitionKeyForQueryTest}1') or PartitionKey eq '${partitionKeyForQueryTest}2') or PartitionKey eq '${partitionKeyForQueryTest}3'`
+      }
+    });
+    let all: TableEntity<{ foo: string }>[] = [];
+    for await (const entity of entities.byPage({
+      maxPageSize
+    })) {
+      all = [...all, ...entity];
+    }
+    assert.strictEqual(all.length, 2);
+    all.forEach((entity) =>
+    {
+      assert.ok(entity.partitionKey === `${partitionKeyForQueryTest}3` || ((entity.partitionKey === `${partitionKeyForQueryTest}1` || entity.partitionKey === `${partitionKeyForQueryTest}2`) && entity.rowKey === '1' ))
+    })
+    await tableClient.deleteTable();
   });
 });
