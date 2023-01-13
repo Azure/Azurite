@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Fixed issue that True/False in table query will fail the request.
+
 ## 2023.01 Version 3.21.0
 
 General:
