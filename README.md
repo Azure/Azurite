@@ -222,22 +222,22 @@ docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite azurite-blob -
 #### Run Azurite V3 docker image with customized persisted data location
 
 ```bash
-docker run -p 10000:10000 -p 10001:10001 -v c:/azurite:/data mcr.microsoft.com/azure-storage/azurite
+docker run -p 10000:10000 -p 10001:10001 -v c:/azurite:/data mcr.microsoft.com/azure-storage/azurite -l data
 ```
 
-`-v c:/azurite:/data` will use and map host path `c:/azurite` as Azurite's workspace location.
+`-v c:/azurite:/opt/azurite/data` will use and map host path `c:/azurite` as Azurite's workspace location.
 
 #### Customize all Azurite V3 supported parameters for docker image
 
 ```bash
-docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0 --loose --skipApiVersionCheck --disableProductStyleUrl
+docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/opt/azurite/workspace mcr.microsoft.com/azure-storage/azurite azurite -l workspace -d workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0 --loose --skipApiVersionCheck --disableProductStyleUrl
 ```
 
 Above command will try to start Azurite image with configurations:
 
-`-l //workspace` defines folder `/workspace` as Azurite's location path inside docker instance, while `/workspace` is mapped to `c:/azurite` in host environment by `-v c:/azurite:/workspace`
+`-l workspace` defines folder `/opt/azurite/workspace` as Azurite's location path inside docker instance, while `/opt/azurite/workspace` is mapped to `c:/azurite` in host environment by `-v c:/azurite:/opt/azurite/workspace`
 
-`-d //workspace/debug.log` enables debug log into `/workspace/debug.log` inside docker instance. `debug.log` will also mapped to `c:/azurite/debug.log` in host machine because of docker volume mapping.
+`-d workspace/debug.log` enables debug log into `/opt/azurite/workspace/debug.log` inside docker instance. `debug.log` will also mapped to `c:/azurite/debug.log` in host machine because of docker volume mapping.
 
 `--blobPort 7777` makes Azurite blob service listen to port 7777, while `-p 7777:7777` redirects requests from host machine's port 7777 to docker instance.
 
@@ -273,11 +273,14 @@ services:
     image: mcr.microsoft.com/azure-storage/azurite
     container_name: "azurite"
     hostname: azurite
+    entrypoint: ["azurite", "--blobHost", "0.0.0.0", "--queueHost", "0.0.0.0", "--tableHost", "0.0.0.0", "-l", "data"]
     restart: always
     ports:
       - "10000:10000"
       - "10001:10001"
       - "10002:10002" 
+    volumes:
+      - "c:/azurite:/opt/azurite/data"
 ```
 
 ### NuGet
