@@ -12,8 +12,8 @@ import { AccountSASService } from "../../common/authentication/AccountSASService
 export class OperationAccountSASPermission {
   constructor(
     public readonly service: string,
-    public readonly resourceType: string,
-    public readonly permission: string
+    public readonly resourceType?: string,
+    public readonly permission?: string
   ) {}
 
   public validate(
@@ -35,23 +35,33 @@ export class OperationAccountSASPermission {
   public validateResourceTypes(
     resourceTypes: AccountSASResourceTypes | string
   ): boolean {
-    for (const p of this.resourceType) {
-      if (resourceTypes.toString().includes(p)) {
-        return true;
+    if (this.resourceType) {
+      for (const p of this.resourceType) {
+        if (resourceTypes.toString().includes(p)) {
+          return true;
+        }
       }
+      return false;
     }
-    return false;
+    else {
+      return resourceTypes.toString() !== "";
+    }
   }
 
   public validatePermissions(
     permissions: AccountSASPermissions | string
   ): boolean {
-    for (const p of this.permission) {
-      if (permissions.toString().includes(p)) {
-        return true;
+    if (this.permission) {
+      for (const p of this.permission) {
+        if (permissions.toString().includes(p)) {
+          return true;
+        }
       }
+      return false;
     }
-    return false;
+    else {
+      return permissions.toString() !== "";
+    }
   }
 }
 
@@ -194,6 +204,15 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
     AccountSASService.Blob,
     AccountSASResourceType.Service,
     AccountSASPermission.Write
+  )
+);
+
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.Service_SubmitBatch,
+  new OperationAccountSASPermission(
+    AccountSASService.Blob,
+    "",
+    "" // NOT ALLOWED
   )
 );
 

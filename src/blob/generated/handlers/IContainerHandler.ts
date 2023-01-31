@@ -20,6 +20,7 @@ export default interface IContainerHandler {
   setMetadata(options: Models.ContainerSetMetadataOptionalParams, context: Context): Promise<Models.ContainerSetMetadataResponse>;
   getAccessPolicy(options: Models.ContainerGetAccessPolicyOptionalParams, context: Context): Promise<Models.ContainerGetAccessPolicyResponse>;
   setAccessPolicy(options: Models.ContainerSetAccessPolicyOptionalParams, context: Context): Promise<Models.ContainerSetAccessPolicyResponse>;
+  submitBatch(body: NodeJS.ReadableStream, contentLength: number, multipartContentType: string, containerName: string, options: Models.ContainerSubmitBatchOptionalParams, context: Context): Promise<Models.ContainerSubmitBatchResponse>;
   acquireLease(options: Models.ContainerAcquireLeaseOptionalParams, context: Context): Promise<Models.ContainerAcquireLeaseResponse>;
   releaseLease(leaseId: string, options: Models.ContainerReleaseLeaseOptionalParams, context: Context): Promise<Models.ContainerReleaseLeaseResponse>;
   renewLease(leaseId: string, options: Models.ContainerRenewLeaseOptionalParams, context: Context): Promise<Models.ContainerRenewLeaseResponse>;

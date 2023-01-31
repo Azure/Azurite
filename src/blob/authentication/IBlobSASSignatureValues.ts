@@ -153,6 +153,54 @@ export interface IBlobSASSignatureValues {
    * @memberof IBlobSASSignatureValues
    */
   snapshot?: string;
+
+  /**
+   * Optional. Specifies the Azure Active Directory object ID in GUID format.
+   *
+   * @type {string}
+   * @memberof IBlobSASSignatureValues
+   */
+  signedObjectId?: string;
+
+  /**
+   * Optional. Specifies the Azure Active Directory object ID in GUID format.
+   *
+   * @type {string}
+   * @memberof IBlobSASSignatureValues
+   */
+  signedTenantId?: string;
+
+  /**
+   * Optional. Abbreviation of the Azure Storage service that accepts the key..
+   *
+   * @type {string}
+   * @memberof IBlobSASSignatureValues
+   */
+  signedService?: string;
+
+  /**
+   * Optional. Specifies the service version to create the key.
+   *
+   * @type {string}
+   * @memberof IBlobSASSignatureValues
+   */
+  signedVersion?: string;
+
+  /**
+   * Optional. Specifies date-time when the key is active.
+   *
+   * @type {string}
+   * @memberof IBlobSASSignatureValues
+   */
+  signedStartsOn?: string;
+
+  /**
+   * Optional. Specifies date-time when the key expires.
+   *
+   * @type {string}
+   * @memberof IBlobSASSignatureValues
+   */
+  signedExpiresOn?: string;
 }
 
 /**
@@ -200,6 +248,58 @@ export function generateBlobSASSignature(
       accountName,
       sharedKey
     );
+  }
+}
+
+/**
+ * Creates an instance of SASQueryParameters.
+ *
+ * Only accepts required settings needed to create a SAS. For optional settings please
+ * set corresponding properties directly, such as permissions, startTime and identifier.
+ *
+ * WARNING: When identifier is not provided, permissions and expiryTime are required.
+ * You MUST assign value to identifier or expiryTime & permissions manually if you initial with
+ * this constructor.
+ *
+ * @export
+ * @param {IBlobSASSignatureValues} blobSASSignatureValues
+ * @param {BlobSASResourceType} resource
+ * @param {string} accountName
+ * @param {Buffer} udkValue
+ * @returns {[string, string]} signature and stringToSign
+ */
+export function generateBlobSASSignatureWithUDK(
+  blobSASSignatureValues: IBlobSASSignatureValues,
+  resource: BlobSASResourceType,
+  accountName: string,
+  udkValue: Buffer
+): [string, string] {
+  if (blobSASSignatureValues.version >= "2020-12-06") {
+    return generateBlobSASBlobSASSignatureWithUDK20201206(
+      blobSASSignatureValues,
+      resource,
+      accountName,
+      udkValue
+    );
+  }
+  else if (blobSASSignatureValues.version >= "2020-02-10"){
+    return generateBlobSASSignatureWithUDK20200210(
+      blobSASSignatureValues,
+      resource,
+      accountName,
+      udkValue
+    );
+  }
+  else if (blobSASSignatureValues.version >= "2018-11-09") {
+    return generateBlobSASSignatureUDK20181109(
+      blobSASSignatureValues,
+      resource,
+      accountName,
+      udkValue
+    );
+  }
+  else {
+    throw new RangeError("SAS token version is not valid");
   }
 }
 
@@ -409,6 +509,199 @@ function generateBlobSASSignature20150405(
   ].join("\n");
 
   const signature = computeHMACSHA256(stringToSign, sharedKey);
+  return [signature, stringToSign];
+}
+
+function generateBlobSASSignatureUDK20181109(
+  blobSASSignatureValues: IBlobSASSignatureValues,
+  resource: BlobSASResourceType,
+  accountName: string,
+  userDelegationKeyValue: Buffer
+): [string, string] {
+  if (
+    !blobSASSignatureValues.identifier &&
+    (!blobSASSignatureValues.permissions && !blobSASSignatureValues.expiryTime)
+  ) {
+    throw new RangeError(
+      // tslint:disable-next-line:max-line-length
+      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided."
+    );
+  }
+
+  const verifiedPermissions = blobSASSignatureValues.permissions;
+
+  // Signature is generated on the un-url-encoded values.
+  const stringToSign = [
+    verifiedPermissions ? verifiedPermissions : "",
+    blobSASSignatureValues.startTime === undefined
+      ? ""
+      : typeof blobSASSignatureValues.startTime === "string"
+      ? blobSASSignatureValues.startTime
+      : truncatedISO8061Date(blobSASSignatureValues.startTime, false),
+      blobSASSignatureValues.expiryTime === undefined
+        ? ""
+        : typeof blobSASSignatureValues.expiryTime === "string"
+        ? blobSASSignatureValues.expiryTime
+        : truncatedISO8061Date(blobSASSignatureValues.expiryTime, false),
+    getCanonicalName(
+      accountName,
+      blobSASSignatureValues.containerName,
+      blobSASSignatureValues.blobName
+    ),
+    blobSASSignatureValues.signedObjectId,
+    blobSASSignatureValues.signedTenantId,
+    blobSASSignatureValues.signedStartsOn,
+    blobSASSignatureValues.signedExpiresOn,
+    blobSASSignatureValues.signedService,
+    blobSASSignatureValues.signedVersion,
+    blobSASSignatureValues.ipRange === undefined
+    ? ""
+    : typeof blobSASSignatureValues.ipRange === "string"
+    ? blobSASSignatureValues.ipRange
+    : ipRangeToString(blobSASSignatureValues.ipRange),
+    blobSASSignatureValues.protocol ? blobSASSignatureValues.protocol : "",
+    blobSASSignatureValues.version,
+    resource,
+    undefined, // blob version timestamp,
+    blobSASSignatureValues.cacheControl,
+    blobSASSignatureValues.contentDisposition,
+    blobSASSignatureValues.contentEncoding,
+    blobSASSignatureValues.contentLanguage,
+    blobSASSignatureValues.contentType,
+  ].join("\n");
+
+  const signature = computeHMACSHA256(stringToSign, userDelegationKeyValue);
+  return [signature, stringToSign];
+}
+
+function generateBlobSASSignatureWithUDK20200210(
+  blobSASSignatureValues: IBlobSASSignatureValues,
+  resource: BlobSASResourceType,
+  accountName: string,
+  userDelegationKeyValue: Buffer
+): [string, string] {
+  if (
+    !blobSASSignatureValues.identifier &&
+    (!blobSASSignatureValues.permissions && !blobSASSignatureValues.expiryTime)
+  ) {
+    throw new RangeError(
+      // tslint:disable-next-line:max-line-length
+      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided."
+    );
+  }
+
+  const verifiedPermissions = blobSASSignatureValues.permissions;
+
+  // Signature is generated on the un-url-encoded values.
+  const stringToSign = [
+    verifiedPermissions ? verifiedPermissions : "",
+    blobSASSignatureValues.startTime === undefined
+      ? ""
+      : typeof blobSASSignatureValues.startTime === "string"
+      ? blobSASSignatureValues.startTime
+      : truncatedISO8061Date(blobSASSignatureValues.startTime, false),
+      blobSASSignatureValues.expiryTime === undefined
+        ? ""
+        : typeof blobSASSignatureValues.expiryTime === "string"
+        ? blobSASSignatureValues.expiryTime
+        : truncatedISO8061Date(blobSASSignatureValues.expiryTime, false),
+    getCanonicalName(
+      accountName,
+      blobSASSignatureValues.containerName,
+      blobSASSignatureValues.blobName
+    ),
+    blobSASSignatureValues.signedObjectId,
+    blobSASSignatureValues.signedTenantId,
+    blobSASSignatureValues.signedStartsOn,
+    blobSASSignatureValues.signedExpiresOn,
+    blobSASSignatureValues.signedService,
+    blobSASSignatureValues.signedVersion,
+    undefined, // blobSASSignatureValues.preauthorizedAgentObjectId,
+    undefined, // agentObjectId
+    undefined, // blobSASSignatureValues.correlationId,
+    blobSASSignatureValues.ipRange === undefined
+      ? ""
+      : typeof blobSASSignatureValues.ipRange === "string"
+      ? blobSASSignatureValues.ipRange
+      : ipRangeToString(blobSASSignatureValues.ipRange),
+    blobSASSignatureValues.protocol ? blobSASSignatureValues.protocol : "",
+    blobSASSignatureValues.version,
+    resource,
+    undefined, // blob versiontimestamp,
+    blobSASSignatureValues.cacheControl,
+    blobSASSignatureValues.contentDisposition,
+    blobSASSignatureValues.contentEncoding,
+    blobSASSignatureValues.contentLanguage,
+    blobSASSignatureValues.contentType,
+  ].join("\n");
+
+  const signature = computeHMACSHA256(stringToSign, userDelegationKeyValue);
+  return [signature, stringToSign];
+}
+
+function generateBlobSASBlobSASSignatureWithUDK20201206(
+  blobSASSignatureValues: IBlobSASSignatureValues,
+  resource: BlobSASResourceType,
+  accountName: string,
+  userDelegationKeyValue: Buffer
+): [string, string] {
+  if (
+    !blobSASSignatureValues.identifier &&
+    (!blobSASSignatureValues.permissions && !blobSASSignatureValues.expiryTime)
+  ) {
+    throw new RangeError(
+      // tslint:disable-next-line:max-line-length
+      "generateBlobSASSignature(): Must provide 'permissions' and 'expiryTime' for Blob SAS generation when 'identifier' is not provided."
+    );
+  }
+
+  const verifiedPermissions = blobSASSignatureValues.permissions;
+
+  // Signature is generated on the un-url-encoded values.
+  const stringToSign = [
+    verifiedPermissions ? verifiedPermissions : "",
+    blobSASSignatureValues.startTime === undefined
+      ? ""
+      : typeof blobSASSignatureValues.startTime === "string"
+      ? blobSASSignatureValues.startTime
+      : truncatedISO8061Date(blobSASSignatureValues.startTime, false),
+      blobSASSignatureValues.expiryTime === undefined
+        ? ""
+        : typeof blobSASSignatureValues.expiryTime === "string"
+        ? blobSASSignatureValues.expiryTime
+        : truncatedISO8061Date(blobSASSignatureValues.expiryTime, false),
+    getCanonicalName(
+      accountName,
+      blobSASSignatureValues.containerName,
+      blobSASSignatureValues.blobName
+    ),
+    blobSASSignatureValues.signedObjectId,
+    blobSASSignatureValues.signedTenantId,
+    blobSASSignatureValues.signedStartsOn,
+    blobSASSignatureValues.signedExpiresOn,
+    blobSASSignatureValues.signedService,
+    blobSASSignatureValues.signedVersion,
+    undefined, // blobSASSignatureValues.preauthorizedAgentObjectId,
+    undefined, // agentObjectId
+    undefined, // blobSASSignatureValues.correlationId,
+    blobSASSignatureValues.ipRange === undefined
+      ? ""
+      : typeof blobSASSignatureValues.ipRange === "string"
+      ? blobSASSignatureValues.ipRange
+      : ipRangeToString(blobSASSignatureValues.ipRange),
+    blobSASSignatureValues.protocol ? blobSASSignatureValues.protocol : "",
+    blobSASSignatureValues.version,
+    resource,
+    undefined, // blob version timestamp,
+    blobSASSignatureValues.encryptionScope,
+    blobSASSignatureValues.cacheControl,
+    blobSASSignatureValues.contentDisposition,
+    blobSASSignatureValues.contentEncoding,
+    blobSASSignatureValues.contentLanguage,
+    blobSASSignatureValues.contentType,
+  ].join("\n");
+
+  const signature = computeHMACSHA256(stringToSign, userDelegationKeyValue);
   return [signature, stringToSign];
 }
 

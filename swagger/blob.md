@@ -29,3 +29,5 @@ enum-types: true
 5. Add `x-ms-creation-time` to Blob_Download API responds
 
 6. Add "","deleted" to "ListContainersInclude" enum, add "","tags","versions","deletedwithversions","legalhold","permissions" to "ListBlobsInclude" enum.
+
+7. Add section for "Container_SubmitBatch" operation.

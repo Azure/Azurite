@@ -68,7 +68,7 @@ jobs:
   - job: blobtestwin
     displayName: Blob Test Windows
     pool:
-      vmImage: "windows-2022"
+      vmImage: "windows-latest"
     strategy:
       matrix:
         node_10_x:
@@ -95,7 +95,7 @@ jobs:
   - job: blobtestmac
     displayName: Blob Test Mac
     pool:
-      vmImage: "macOS-10.15"
+      vmImage: "macOS-latest"
     strategy:
       matrix:
         node_10_x:
@@ -184,7 +184,7 @@ jobs:
   - job: queuetestwin
     displayName: Queue Test Windows
     pool:
-      vmImage: "windows-2022"
+      vmImage: "windows-latest"
     strategy:
       matrix:
         node_10_x:
@@ -211,7 +211,7 @@ jobs:
   - job: queuetestmac
     displayName: Queue Test Mac
     pool:
-      vmImage: "macOS-10.15"
+      vmImage: "macOS-latest"
     strategy:
       matrix:
         node_10_x:
@@ -266,7 +266,7 @@ jobs:
   - job: tabletestwin
     displayName: Table Test Windows
     pool:
-      vmImage: "windows-2022"
+      vmImage: "windows-latest"
     strategy:
       matrix:
         # Table tests no longer suport older node versions
@@ -294,7 +294,7 @@ jobs:
   - job: tabletestmac
     displayName: Table Test Mac
     pool:
-      vmImage: "macOS-10.15"
+      vmImage: "macOS-latest"
     strategy:
       matrix:
         # Table tests no longer suport older node versions
@@ -372,7 +372,7 @@ jobs:
   - job: azuritenodejswin
     displayName: Azurite Windows
     pool:
-      vmImage: "windows-2022"
+      vmImage: "windows-latest"
     strategy:
       matrix:
         # Table tests no longer suport older node versions
@@ -420,7 +420,7 @@ jobs:
   - job: azuritenodejsmac
     displayName: Azurite Mac
     pool:
-      vmImage: "macOS-10.15"
+      vmImage: "macOS-latest"
     strategy:
       matrix:
         # Table tests no longer suport node_8_x
@@ -502,7 +502,7 @@ jobs:
   - job: exetest
     displayName: .exe Test Windows
     pool:
-      vmImage: "windows-2022"
+      vmImage: "windows-latest"
     strategy:
       matrix:
         # one of the node modules use a try/catch syntax not supported by node 8

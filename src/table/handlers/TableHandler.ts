@@ -2,7 +2,7 @@ import toReadableStream from "to-readable-stream";
 
 import BufferStream from "../../common/utils/BufferStream";
 import {
-  checkEtagIsInvalidFormat,
+  isEtagValid,
   getUTF8ByteSize,
   newTableEntityEtag
 } from "../utils/utils";
@@ -40,6 +40,7 @@ import {
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import { EdmType, getEdmType } from "../entity/IEdmType";
+import { truncatedISO8061Date } from "../../common/utils/utils";
 
 interface IPartialResponsePreferProperties {
   statusCode: 200 | 201 | 204;
@@ -198,18 +199,17 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
     }
 
-    this.checkProperties(context, options.tableEntityProperties);
-
-    const entity: Entity = {
-      PartitionKey: options.tableEntityProperties.PartitionKey,
-      RowKey: options.tableEntityProperties.RowKey,
-      properties: options.tableEntityProperties,
-      lastModifiedTime: context.startTime!,
-      eTag: newTableEntityEtag(context.startTime!)
-    };
     // check that key properties are valid
-    this.validateKey(context, entity.PartitionKey);
-    this.validateKey(context, entity.RowKey);
+    this.validateKey(context, options.tableEntityProperties.PartitionKey);
+    this.validateKey(context, options.tableEntityProperties.RowKey);
+
+    this.checkProperties(context, options.tableEntityProperties);
+    const entity: Entity = this.createPersistedEntity(
+      context,
+      options,
+      options.tableEntityProperties.PartitionKey,
+      options.tableEntityProperties.RowKey
+    );
     let normalizedEntity;
     try {
       normalizedEntity = new NormalizedEntity(entity);
@@ -282,6 +282,31 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     this.updateResponsePrefer(response, tableContext);
 
     return response;
+  }
+
+  private createPersistedEntity(
+    context: Context,
+    options:
+      | Models.TableMergeEntityOptionalParams
+      | Models.TableInsertEntityOptionalParams
+      | Models.TableUpdateEntityOptionalParams,
+    partitionKey: string,
+    rowKey: string
+  ) {
+    const modTime = truncatedISO8061Date(context.startTime!, true, true);
+    const eTag = newTableEntityEtag(modTime);
+
+    const entity: Entity = {
+      PartitionKey: partitionKey,
+      RowKey: rowKey,
+      properties:
+        options.tableEntityProperties === undefined
+          ? {}
+          : options.tableEntityProperties,
+      lastModifiedTime: modTime,
+      eTag
+    };
+    return entity;
   }
 
   private static getAndCheck(
@@ -367,25 +392,21 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getPreconditionFailed(context);
     }
     if (options?.ifMatch && options.ifMatch !== "*") {
-      if (checkEtagIsInvalidFormat(options.ifMatch)) {
+      if (isEtagValid(options.ifMatch)) {
         throw StorageErrorFactory.getInvalidOperation(context);
       }
     }
-
-    const eTag = newTableEntityEtag(context.startTime!);
-
-    // Entity, which is used to update an existing entity
-    const entity: Entity = {
-      PartitionKey: partitionKey,
-      RowKey: rowKey,
-      properties: options.tableEntityProperties,
-      lastModifiedTime: context.startTime!,
-      eTag
-    };
-
     // check that key properties are valid
-    this.validateKey(context, entity.PartitionKey);
-    this.validateKey(context, entity.RowKey);
+    this.validateKey(context, partitionKey);
+    this.validateKey(context, rowKey);
+
+    const entity: Entity = this.createPersistedEntity(
+      context,
+      options,
+      partitionKey,
+      rowKey
+    );
+
     let normalizedEntity;
     try {
       normalizedEntity = new NormalizedEntity(entity);
@@ -413,7 +434,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       requestId: tableContext.contextID,
       version: TABLE_API_VERSION,
       date: context.startTime,
-      eTag,
+      eTag: entity.eTag,
       statusCode: 204
     };
 
@@ -443,7 +464,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
     }
     if (options?.ifMatch && options.ifMatch !== "*" && options.ifMatch !== "") {
-      if (checkEtagIsInvalidFormat(options.ifMatch)) {
+      if (isEtagValid(options.ifMatch)) {
         throw StorageErrorFactory.getInvalidOperation(context);
       }
     }
@@ -456,20 +477,17 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         `TableHandler:mergeEntity() Incoming PartitionKey:${partitionKey} RowKey:${rowKey} in URL parameters don't align with entity body PartitionKey:${options.tableEntityProperties.PartitionKey} RowKey:${options.tableEntityProperties.RowKey}.`
       );
     }
+    // check that key properties are valid
+    this.validateKey(context, partitionKey);
+    this.validateKey(context, rowKey);
 
     this.checkProperties(context, options.tableEntityProperties);
-    const eTag = newTableEntityEtag(context.startTime!);
-
-    const entity: Entity = {
-      PartitionKey: partitionKey,
-      RowKey: rowKey,
-      properties: options.tableEntityProperties,
-      lastModifiedTime: context.startTime!,
-      eTag
-    };
-    // check that key properties are valid
-    this.validateKey(context, entity.PartitionKey);
-    this.validateKey(context, entity.RowKey);
+    const entity: Entity = this.createPersistedEntity(
+      context,
+      options,
+      partitionKey,
+      rowKey
+    );
     let normalizedEntity;
     try {
       normalizedEntity = new NormalizedEntity(entity);
@@ -497,7 +515,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       version: TABLE_API_VERSION,
       date: context.startTime,
       statusCode: 204,
-      eTag
+      eTag: entity.eTag
     };
 
     return response;
@@ -524,7 +542,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     if (ifMatch === "" || ifMatch === undefined) {
       throw StorageErrorFactory.getPreconditionFailed(context);
     }
-    if (ifMatch !== "*" && checkEtagIsInvalidFormat(ifMatch)) {
+    if (ifMatch !== "*" && isEtagValid(ifMatch)) {
       throw StorageErrorFactory.getInvalidOperation(context);
     }
     // currently the props are not coming through as args, so we take them from the table context
@@ -1009,7 +1027,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     // key is a string value that may be up to 1 KiB in size.
     // although a little arbitrary, for performance and
     // generally a better idea, choosing a shorter length
-    if (key.length > DEFAULT_KEY_MAX_LENGTH) {
+    if (key !== undefined && key.length > DEFAULT_KEY_MAX_LENGTH) {
       throw StorageErrorFactory.getInvalidInput(context);
     }
     const match = key.match(/[\u0000-\u001f\u007f-\u009f\/\\\#\?]+/);
@@ -1037,18 +1055,28 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   ) {
     for (const prop in properties) {
       if (properties.hasOwnProperty(prop)) {
-        if (null !== properties[prop] && undefined !== properties[prop].length) {
+        if (
+          null !== properties[prop] &&
+          undefined !== properties[prop].length
+        ) {
           const typeKey = `${prop}${ODATA_TYPE}`;
           let type;
           if (properties[typeKey]) {
-            type = getEdmType(properties[typeKey])
+            type = getEdmType(properties[typeKey]);
           }
           if (type === EdmType.Binary) {
-            if (Buffer.from(properties[prop], 'base64').length > 64 * 1024) {
+            if (Buffer.from(properties[prop], "base64").length > 64 * 1024) {
               throw StorageErrorFactory.getPropertyValueTooLargeError(context);
             }
           } else if (properties[prop].length > 32 * 1024) {
             throw StorageErrorFactory.getPropertyValueTooLargeError(context);
+          }
+          else if (properties[prop] === undefined || properties[prop] === "")
+          {
+            const propertyType = properties[`${prop}${ODATA_TYPE}`];
+            if (propertyType !== undefined && propertyType === "Edm.DateTime") {
+              throw StorageErrorFactory.getInvalidInput(context);
+            }
           }
         }
       }

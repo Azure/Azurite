@@ -1,6 +1,5 @@
 import BlobStorageContext from "../context/BlobStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
-import NotImplementedError from "../errors/NotImplementedError";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IServiceHandler from "../generated/handlers/IServiceHandler";
@@ -9,9 +8,20 @@ import {
   BLOB_API_VERSION,
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
   EMULATOR_ACCOUNT_KIND,
-  EMULATOR_ACCOUNT_SKUNAME
+  EMULATOR_ACCOUNT_SKUNAME,
+  HeaderConstants,
 } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
+import IAccountDataStore from "../../common/IAccountDataStore";
+import IExtentStore from "../../common/persistence/IExtentStore";
+import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
+import ILogger from "../../common/ILogger";
+import { BlobBatchHandler } from "./BlobBatchHandler";
+import { Readable } from "stream";
+import { OAuthLevel } from "../../common/models";
+import { BEARER_TOKEN_PREFIX } from "../../common/utils/constants";
+import { decode } from "jsonwebtoken";
+import { getUserDelegationKeyValue } from "../utils/utils";
 
 /**
  * ServiceHandler handles Azure Storage Blob service related requests.
@@ -22,6 +32,17 @@ import BaseHandler from "./BaseHandler";
  */
 export default class ServiceHandler extends BaseHandler
   implements IServiceHandler {
+
+  constructor(
+      private readonly accountDataStore: IAccountDataStore,
+      private readonly oauth: OAuthLevel | undefined,
+      metadataStore: IBlobMetadataStore,
+      extentStore: IExtentStore,
+      logger: ILogger,
+      loose: boolean
+    ) {
+      super(metadataStore, extentStore, logger, loose);
+    }
   /**
    * Default service properties.
    *
@@ -59,22 +80,73 @@ export default class ServiceHandler extends BaseHandler
     }
   };
 
-  public getUserDelegationKey(
+  public async getUserDelegationKey(
     keyInfo: Models.KeyInfo,
     options: Models.ServiceGetUserDelegationKeyOptionalParams,
     context: Context
   ): Promise<Models.ServiceGetUserDelegationKeyResponse> {
-    throw new NotImplementedError(context.contextId);
+    const blobContext = new BlobStorageContext(context);
+    const request = blobContext.request!;
+    const authHeaderValue = request.getHeader(HeaderConstants.AUTHORIZATION);
+    const token = authHeaderValue!.substr(BEARER_TOKEN_PREFIX.length + 1);
+    const decodedToken = decode(token) as { [key: string]: any };
+    const keyValue = getUserDelegationKeyValue(
+      decodedToken.oid,
+      decodedToken.tid,
+      keyInfo.start,
+      keyInfo.expiry,
+      BLOB_API_VERSION
+    );
+
+    const response: Models.ServiceGetUserDelegationKeyResponse = {
+      statusCode: 200,
+      signedOid: decodedToken.oid,
+      signedTid: decodedToken.tid,
+      signedService: "b",
+      signedVersion: BLOB_API_VERSION,
+      signedStart: keyInfo.start,
+      signedExpiry: keyInfo.expiry,
+      value: keyValue
+    };
+
+    return response;
   }
 
-  public submitBatch(
+
+  public async submitBatch(
     body: NodeJS.ReadableStream,
     contentLength: number,
     multipartContentType: string,
     options: Models.ServiceSubmitBatchOptionalParams,
     context: Context
   ): Promise<Models.ServiceSubmitBatchResponse> {
-    throw new NotImplementedError(context.contextId);
+    const blobServiceCtx = new BlobStorageContext(context);
+    const requestBatchBoundary = blobServiceCtx.request!.getHeader("content-type")!.split("=")[1];
+
+    const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
+       this.metadataStore, this.extentStore, this.logger, this.loose);
+
+    const responseBodyString = await blobBatchHandler.submitBatch(body,
+      requestBatchBoundary,
+      "",
+      context.request!,
+      context);
+
+    const responseBody = new Readable();
+    responseBody.push(responseBodyString);
+    responseBody.push(null);
+
+    // No client request id defined in batch response, should refine swagger and regenerate from it.
+    // batch response succeed code should be 202 instead of 200, should refine swagger and regenerate from it.
+    const response: Models.ServiceSubmitBatchResponse = {
+      statusCode: 202,
+      requestId: context.contextId,
+      version: BLOB_API_VERSION,
+      contentType: "multipart/mixed; boundary=" + requestBatchBoundary,
+      body: responseBody
+    };
+
+    return response;
   }
 
   /**

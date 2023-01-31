@@ -245,7 +245,7 @@ const serviceSubmitBatchOperationSpec: msRest.OperationSpec = {
   },
   contentType: "application/xml; charset=utf-8",
   responses: {
-    200: {
+    202: {
       bodyMapper: {
         serializedName: "Stream",
         type: {
@@ -488,6 +488,53 @@ const containerSetAccessPolicyOperationSpec: msRest.OperationSpec = {
   responses: {
     200: {
       headersMapper: Mappers.ContainerSetAccessPolicyHeaders
+    },
+    default: {
+      bodyMapper: Mappers.StorageError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
+const containerSubmitBatchOperationSpec: msRest.OperationSpec = {
+  httpMethod: "POST",
+  path: "{containerName}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.containerName
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.restype2,
+    Parameters.comp4
+  ],
+  headerParameters: [
+    Parameters.contentLength,
+    Parameters.multipartContentType,
+    Parameters.version,
+    Parameters.requestId
+  ],
+  requestBody: {
+    parameterPath: "body",
+    mapper: {
+      required: true,
+      serializedName: "body",
+      type: {
+        name: "Stream"
+      }
+    }
+  },
+  contentType: "application/xml; charset=utf-8",
+  responses: {
+    202: {
+      bodyMapper: {
+        serializedName: "Stream",
+        type: {
+          name: "Stream"
+        }
+      },
+      headersMapper: Mappers.ContainerSubmitBatchHeaders
     },
     default: {
       bodyMapper: Mappers.StorageError
@@ -2395,6 +2442,7 @@ Specifications[Operation.Container_Delete] = containerDeleteOperationSpec;
 Specifications[Operation.Container_SetMetadata] = containerSetMetadataOperationSpec;
 Specifications[Operation.Container_GetAccessPolicy] = containerGetAccessPolicyOperationSpec;
 Specifications[Operation.Container_SetAccessPolicy] = containerSetAccessPolicyOperationSpec;
+Specifications[Operation.Container_SubmitBatch] = containerSubmitBatchOperationSpec;
 Specifications[Operation.Container_AcquireLease] = containerAcquireLeaseOperationSpec;
 Specifications[Operation.Container_ReleaseLease] = containerReleaseLeaseOperationSpec;
 Specifications[Operation.Container_RenewLease] = containerRenewLeaseOperationSpec;

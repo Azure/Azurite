@@ -14,6 +14,7 @@ import {
 import IAuthenticator from "./IAuthenticator";
 import OPERATION_ACCOUNT_SAS_PERMISSIONS from "./OperationAccountSASPermission";
 import StrictModelNotSupportedError from "../errors/StrictModelNotSupportedError";
+import { AUTHENTICATION_BEARERTOKEN_REQUIRED } from "../utils/constants";
 
 export default class AccountSASAuthenticator implements IAuthenticator {
   public constructor(
@@ -204,6 +205,15 @@ export default class AccountSASAuthenticator implements IAuthenticator {
         // tslint:disable-next-line:max-line-length
         `AccountSASAuthenticator:validate() operation shouldn't be undefined. Please make sure DispatchMiddleware is hooked before authentication related middleware.`
       );
+    }
+    else if (operation === Operation.Service_GetUserDelegationKey) {
+      this.logger.info(
+        `AccountSASAuthenticator:validate() Service_GetUserDelegationKey requires OAuth credentials"
+        }.`,
+        context.contextId
+      );
+      throw StorageErrorFactory.getAuthenticationFailed(context.contextId!,
+        AUTHENTICATION_BEARERTOKEN_REQUIRED);
     }
 
     const accountSASPermission = OPERATION_ACCOUNT_SAS_PERMISSIONS.get(

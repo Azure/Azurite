@@ -4,8 +4,59 @@
 
 ## Upcoming Release
 
+Table:
+
+- Fixed issue that True/False in table query will fail the request.
+
+## 2023.01 Version 3.21.0
+
 General:
 
+- Fixed shared key authentication failure when request uri contains "+"
+- Stop accepting new connections and closes existing, idle connections (including keep-alives) without killing requests that are in-flight.
+
+Blob:
+
+- Support Copy Blob From URL API when use different source and destination account (in same Azurite instance).
+- Support use of wildcard character to allow all subdomains of a given domain to make requests via CORS
+- Add support for user delegation key.
+
+Table:
+
+- Added exit parameter to tests so they don't hang.
+- Fixed request not fail on creating an entity without specifying a property value of type DateTimeOffset
+- Fixes issues using and querying GUID types.
+- Removes odata Timestamp type from entities when accept is set to minimalmetadata.
+- Ensures no entities are returned when queries use $top=0.
+- Fixes issues querying for binary values.
+- Implements new query parsing logic.
+
+## 2022.10 Version 3.20.1
+
+General:
+
+- Bump package version.
+
+## 2022.10 Version 3.20.0
+
+General:
+
+- Make emulator start commands async so that they can be awaited by clients.
+
+Blob:
+
+- Add support for blob batch operation.
+
+Table:
+
+- TimeStamp and Etag use the same high precision value as source.
+
+## 2022.09 Version 3.19.0
+
+General:
+
+- Bump up service API version to 2021-10-04
+- Added support for docker image on arm64 architecture.
 - Updated Readme by adding account key must be base64 encoded string.
 
 Table:
@@ -14,6 +65,8 @@ Table:
 - Properly differentiate between upsert and update in batch merge and replace.
 - Added additional tests via raw REST tests.
 - Correctly deletes a table that is a substring of another table.
+- Adds Sample Go App to check that Batch responses work for Go SDK.
+- Removes extra CRLFs from all serialized Batch responses, adds missing CRLF after Etag header.
 
 ## 2022.06 Version 3.18.0
 

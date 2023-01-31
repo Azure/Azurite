@@ -19,7 +19,7 @@ export function createBasicEntityForTest(
 
 /**
  * This is the Entity Class used by Azure Data-Tables SDK tests
- *
+ * https://docs.microsoft.com/en-us/rest/api/storageservices/payload-format-for-table-service-operations
  * @export
  * @class AzureDataTablesTestEntity
  */
@@ -30,8 +30,11 @@ export class AzureDataTablesTestEntity {
   public int32Field: number = 54321;
   public int64Field: Edm<"Int64"> = { value: "12345", type: "Int64" };
   public doubleField: Edm<"Double"> = { value: 54.321, type: "Double" };
+  public guidField: Edm<"Guid"> = { value: "", type: "Guid" };
   public nullableString: string | null = "notNull";
-  public binaryField: Buffer = Buffer.alloc(8);
+  public binaryField: Buffer = Buffer.from("11111111");
+  public booleanField: boolean = true;
+  public dateField: Edm<"DateTime"> = { value: "2023-01-01T23:00:00", type: "DateTime" };
   constructor(part: string, row: string, value: string) {
     this.partitionKey = part;
     this.rowKey = row;

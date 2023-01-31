@@ -1150,4 +1150,65 @@ describe("ContainerAPIs", () => {
     assert.ok(result);
     assert.equal(result.segment.blobItems.length, 4);
   });
+
+  // Skip the case currently since js sdk caculate the stringToSign with "+" in prefix instead of decode to space
+  it.skip("List blob should success with '+' in query @loki @sql", async () => {
+    const blobClients = [];
+    let blobNames: Array<string> = [
+      "block blob/abc-001",
+      "block blob/abc-002"
+    ];
+
+    for (let i = 0; i < 2; i++) {
+      const blobClient = containerClient.getBlobClient(blobNames[i]);
+      const blockBlobClient = blobClient.getBlockBlobClient();
+      await blockBlobClient.upload("", 0);
+      blobClients.push(blobClient);
+    }
+    
+    // list with prefix has "+" instead of "%20" for space
+    // create service client 
+    let pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(
+      new QueryRequestPolicyFactory("prefix=block%20blob", "prefix=block+blob")
+    );
+    const serviceClientForOptions = new BlobServiceClient(`${baseURL}`, pipeline);
+    const containerClientForOptions = serviceClientForOptions.getContainerClient(containerClient.containerName);
+
+    // List blobs
+    const inputmarker = undefined;
+    const result = (
+      await containerClientForOptions
+        .listBlobsFlat({
+          prefix: "block blob"
+        })
+        .byPage({ continuationToken: inputmarker })
+        .next()
+    ).value;
+    assert.ok(result.serviceEndpoint.length > 0);
+    assert.ok(containerClient.url.indexOf(result.containerName));
+    assert.equal(result.segment.blobItems.length, 2);
+
+    // verify list out blob names   
+    const gotNames: Array<string> = [];
+    for (const item of result.segment.blobItems) {
+      gotNames.push(item.name);
+    }
+    assert.deepStrictEqual(gotNames, blobNames);
+    
+    // clean up
+    for (const blob of blobClients) {
+      await blob.delete();
+    }
+  });
 });

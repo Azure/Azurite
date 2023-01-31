@@ -1,8 +1,8 @@
 import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 import * as Models from "../generated/artifacts/models";
 
-export const VERSION = "3.18.0";
-export const BLOB_API_VERSION = "2021-08-06";
+export const VERSION = "3.21.0";
+export const BLOB_API_VERSION = "2021-10-04";
 export const DEFAULT_BLOB_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_LIST_BLOBS_MAX_RESULTS = 5000;
 export const DEFAULT_LIST_CONTAINERS_MAX_RESULTS = 5000;
@@ -96,6 +96,7 @@ export const DEFAULT_BLOB_PERSISTENCE_ARRAY: StoreDestinationArray = [
 ];
 
 export const ValidAPIVersions = [
+  "2021-10-04",
   "2021-08-06",
   "2021-06-08",
   "2021-04-10",
@@ -152,3 +153,10 @@ export const VALID_BLOB_AUDIENCES = [
   /^https:\/\/(.*)\.blob\.core\.usgovcloudapi\.net[\/]?$/,
   /^https:\/\/(.*)\.blob\.core\.cloudapi\.de[\/]?$/
 ];
+
+export const HTTP_LINE_ENDING = "\r\n";
+export const HTTP_HEADER_DELIMITER = ": ";
+
+export const USERDELEGATIONKEY_BASIC_KEY = "I17GKLvcJUossaebtsEDZZ2RJ8GNLwLH4m7hRMxbVbkx6wNIRAABj4Rtw0FBhFuEAgmbL4gFMzUw+AStz9Sqdg==";
+
+export const AUTHENTICATION_BEARERTOKEN_REQUIRED = "Only authentication scheme Bearer is supported";

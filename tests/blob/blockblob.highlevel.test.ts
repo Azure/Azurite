@@ -260,7 +260,7 @@ describe("BlockBlobHighlevel", () => {
         abortSignal: AbortController.timeout(1)
       });
       assert.fail();
-    } catch (err) {
+    } catch (err:any) {
       assert.ok((err.message as string).toLowerCase().includes("abort"));
     }
   }).timeout(timeoutForLargeFileUploadingTest);

@@ -134,6 +134,30 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
+  // Insert empty entity property with type "Edm.DateTime", server will return error
+  it("Insert new Entity property with type Edm.DateTime will convert to UTC, @loki", (done) => {
+    const timeValue = "";
+    const entity = {
+      PartitionKey: "part1",
+      RowKey: "utctest",
+      myValue: timeValue,
+      "myValue@odata.type": "Edm.DateTime"
+    };
+
+    tableService.insertEntity(
+      tableName,
+      entity,
+      (insertError, insertResult, insertResponse) => {
+        if (!insertError) {
+          assert.fail("Insert should fail with DataTime type property has empty value.");
+        } else {
+          assert.strictEqual(true, insertError.message.startsWith("An error occurred while processing this request."));
+          done();
+        }
+      }
+    );
+  });
+
   // Simple test in here until we have the full set checked in, as we need
   // a starting point for delete and query entity APIs
   it("Should insert new Entity with empty RowKey, @loki", (done) => {
@@ -606,17 +630,20 @@ describe("table Entity APIs test - using Azure-Storage", () => {
   [
     { pk: "pk", rk: "rk", label: "normal partition key and row key" },
     { pk: "", rk: "rk", label: "empty partition key" },
-    { pk: "pk", rk: "", label: "empty row key" },
+    { pk: "pk", rk: "", label: "empty row key" }
   ].forEach(({ pk, rk, label }) => {
-
-    ["INSERT", "INSERT_OR_MERGE", "INSERT_OR_REPLACE"].forEach(operation => {
+    ["INSERT", "INSERT_OR_MERGE", "INSERT_OR_REPLACE"].forEach((operation) => {
       it(`${operation} entity with ${label} in a BATCH, @loki`, (done) => {
         requestOverride.headers = {
           Prefer: "return-content",
           accept: "application/json;odata=fullmetadata"
         };
 
-        const batchEntity1 = new TestEntity(!pk ? pk : getUniqueName(pk), !rk ? rk : getUniqueName(rk), "value1");
+        const batchEntity1 = new TestEntity(
+          !pk ? pk : getUniqueName(pk),
+          !rk ? rk : getUniqueName(rk),
+          "value1"
+        );
 
         const entityBatch: Azure.TableBatch = new Azure.TableBatch();
         entityBatch.addOperation(operation, batchEntity1);
@@ -639,7 +666,10 @@ describe("table Entity APIs test - using Azure-Storage", () => {
                     assert.ifError(error);
                   } else if (result) {
                     const entity: TestEntity = result;
-                    assert.strictEqual(entity.myValue._, batchEntity1.myValue._);
+                    assert.strictEqual(
+                      entity.myValue._,
+                      batchEntity1.myValue._
+                    );
                   }
                   done();
                 }
@@ -650,41 +680,18 @@ describe("table Entity APIs test - using Azure-Storage", () => {
       });
     });
 
-    ["MERGE", "REPLACE"].forEach(operation => {
-      it(`${operation} of non-existent entity with ${label} in a BATCH, @loki`, (done) => {
-        requestOverride.headers = {
-          Prefer: "return-content",
-          accept: "application/json;odata=fullmetadata"
-        };
-
-        const batchEntity1 = new TestEntity(!pk ? pk : getUniqueName(pk), !rk ? rk : getUniqueName(rk), "value1");
-
-        const entityBatch: Azure.TableBatch = new Azure.TableBatch();
-        entityBatch.addOperation(operation, batchEntity1);
-
-        tableService.executeBatch(
-          tableName,
-          entityBatch,
-          (updateError, updateResult, updateResponse) => {
-            if (!updateError) {
-              assert.fail("Test should have thrown an error");
-            } else {
-              assert.strictEqual(updateResponse.statusCode, 404);
-              done();
-            }
-          }
-        );
-      });
-    });
-
-    ["MERGE", "REPLACE"].forEach(operation => {
+    ["MERGE", "REPLACE"].forEach((operation) => {
       it(`${operation} of entity with ${label} in a BATCH, @loki`, (done) => {
         requestOverride.headers = {
           Prefer: "return-content",
           accept: "application/json;odata=fullmetadata"
         };
 
-        const batchEntity1 = new TestEntity(!pk ? pk : getUniqueName(pk), !rk ? rk : getUniqueName(rk), "value1");
+        const batchEntity1 = new TestEntity(
+          !pk ? pk : getUniqueName(pk),
+          !rk ? rk : getUniqueName(rk),
+          "value1"
+        );
 
         tableService.insertEntity(
           tableName,
@@ -708,7 +715,8 @@ describe("table Entity APIs test - using Azure-Storage", () => {
                 }
               }
             );
-          })
+          }
+        );
       });
     });
 
@@ -718,7 +726,11 @@ describe("table Entity APIs test - using Azure-Storage", () => {
         accept: "application/json;odata=fullmetadata"
       };
 
-      const batchEntity1 = new TestEntity(!pk ? pk : getUniqueName(pk), !rk ? rk : getUniqueName(rk), "value1");
+      const batchEntity1 = new TestEntity(
+        !pk ? pk : getUniqueName(pk),
+        !rk ? rk : getUniqueName(rk),
+        "value1"
+      );
 
       tableService.insertEntity(
         tableName,
@@ -750,7 +762,8 @@ describe("table Entity APIs test - using Azure-Storage", () => {
               }
             }
           );
-        })
+        }
+      );
     });
   });
 

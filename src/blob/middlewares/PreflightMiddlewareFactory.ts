@@ -7,6 +7,7 @@ import {
   Response
 } from "express";
 
+import glob from "glob-to-regexp";
 import ILogger from "../../common/ILogger";
 import BlobStorageContext from "../context/BlobStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -19,6 +20,7 @@ import {
   HeaderConstants,
   MethodConstants
 } from "../utils/constants";
+
 
 export default class PreflightMiddlewareFactory {
   constructor(private readonly logger: ILogger) {}
@@ -76,7 +78,7 @@ export default class PreflightMiddlewareFactory {
 
         metadataStore
           .getServiceProperties(context, account)
-          .then(properties => {
+          .then((properties) => {
             if (properties === undefined || properties.cors === undefined) {
               return next(
                 StorageErrorFactory.corsPreflightFailure(requestId, {
@@ -168,7 +170,7 @@ export default class PreflightMiddlewareFactory {
 
       metadataStore
         .getServiceProperties(context, account)
-        .then(properties => {
+        .then((properties) => {
           if (properties === undefined || properties.cors === undefined) {
             return next(err);
           }
@@ -241,6 +243,12 @@ export default class PreflightMiddlewareFactory {
 
     const allowedOriginArray = allowedOrigin.split(",");
     for (const corsOrigin of allowedOriginArray) {
+      if (corsOrigin.includes("*")) {
+        return glob(corsOrigin.trim().toLowerCase()).test(
+          origin.trim().toLowerCase()
+        );
+      }
+
       if (origin.trim().toLowerCase() === corsOrigin.trim().toLowerCase()) {
         return true;
       }
@@ -323,8 +331,9 @@ export default class PreflightMiddlewareFactory {
             );
 
             // Handle collection of headers starting with same prefix, such as x-ms-meta prefix
-            const headerCollectionPrefix = (headerMapper as msRest.DictionaryMapper)
-              .headerCollectionPrefix;
+            const headerCollectionPrefix = (
+              headerMapper as msRest.DictionaryMapper
+            ).headerCollectionPrefix;
             if (
               headerCollectionPrefix !== undefined &&
               headerValueOriginal !== undefined

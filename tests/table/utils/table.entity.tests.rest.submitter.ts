@@ -46,9 +46,13 @@ export async function postToAzurite(
  */
 export async function getToAzurite(
   path: string,
-  headers: any
+  headers: any,
+  queryString?: string
 ): Promise<AxiosResponse<any, any>> {
-  const url = `${TableEntityTestConfig.protocol}://${TableEntityTestConfig.host}:${TableEntityTestConfig.port}/${TableEntityTestConfig.accountName}/${path}`;
+  if (undefined === queryString) {
+    queryString = "";
+  }
+  const url = `${TableEntityTestConfig.protocol}://${TableEntityTestConfig.host}:${TableEntityTestConfig.port}/${TableEntityTestConfig.accountName}/${path}${queryString}`;
   const requestConfig = axiosRequestConfig(url, path, headers);
   const result = await axios.get(url, requestConfig);
   return result;
@@ -81,10 +85,13 @@ function generateSas(): string {
     delete: true
   };
 
+  const expiriesOn = new Date();
+  expiriesOn.setDate(expiriesOn.getDate() + 1);
+
   // Generate an account SAS with the NamedKeyCredential and the permissions set previously
   const accountSas = generateAccountSas(cred, {
     permissions,
-    expiresOn: new Date("2022-12-12")
+    expiresOn: expiriesOn
   });
 
   return new AzureSASCredential(accountSas).signature;

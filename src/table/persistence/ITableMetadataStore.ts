@@ -37,7 +37,7 @@ export interface IEntity {
   PartitionKey: string;
   RowKey: string;
   eTag: string;
-  lastModifiedTime: Date;
+  lastModifiedTime: string;
   properties: {
     [propertyName: string]: string | number | boolean | null;
   };

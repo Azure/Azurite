@@ -6,6 +6,8 @@ import { IP_REGEX } from "../../common/utils/constants";
 import { NO_ACCOUNT_HOST_NAMES } from "../../common/utils/constants";
 import BlobStorageContext from "../context/BlobStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
+import IRequest from "../generated/IRequest";
+import IResponse from "../generated/IResponse";
 import {
   DEFAULT_CONTEXT_PATH,
   HeaderConstants,
@@ -21,8 +23,112 @@ export default function createStorageBlobContextMiddleware(
   loose?: boolean
 ): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
-    return blobStorageContextMiddleware(req, res, next, skipApiVersionCheck, disableProductStyleUrl, loose);
+    return blobStorageContextMiddleware(
+      req,
+      res,
+      next,
+      skipApiVersionCheck,
+      disableProductStyleUrl,
+      loose);
   };
+}
+
+/**
+ * A middleware extract related blob service context.
+ *
+ * @export
+ * @param {Request} req An express compatible Request object
+ * @param {Response} res An express compatible Response object
+ * @param {NextFunction} next An express middleware next callback
+ */
+export function internnalBlobStorageContextMiddleware(
+  blobContext: BlobStorageContext,
+  req: IRequest,
+  res: IResponse,
+  reqHost: string,
+  reqPath: string,
+  next: NextFunction,
+  skipApiVersionCheck?: boolean,
+  disableProductStyleUrl?: boolean,
+  loose?: boolean,
+): void {
+  // Set server header in every Azurite response
+  res.setHeader(HeaderConstants.SERVER, `Azurite-Blob/${VERSION}`);
+  const requestID = uuid();
+
+  if (!skipApiVersionCheck) {
+    const apiVersion = req.getHeader(HeaderConstants.X_MS_VERSION);
+    if (apiVersion !== undefined) {
+      checkApiVersion(apiVersion, ValidAPIVersions, requestID);
+    }
+  }
+
+  blobContext.startTime = new Date();
+  blobContext.disableProductStyleUrl = disableProductStyleUrl;
+  blobContext.loose = loose;
+
+  blobContext.xMsRequestID = requestID;
+
+  logger.info(
+    `BlobStorageContextMiddleware: RequestMethod=${req.getMethod()} RequestURL=${req.getUrl()} RequestHeaders:${JSON.stringify(
+      req.getHeaders()
+    )} ClientIP=${req.getEndpoint()} Protocol=${req.getProtocol()} HTTPVersion=version`,
+    requestID
+  );
+
+  const [account, container, blob, isSecondary] = extractStoragePartsFromPath(
+    reqHost,
+    reqPath,
+    disableProductStyleUrl
+  );
+
+  blobContext.account = account;
+  blobContext.container = container;
+  blobContext.blob = blob;
+  blobContext.isSecondary = isSecondary;
+
+  // Emulator's URL pattern is like http://hostname[:port]/account/container
+  // (or, alternatively, http[s]://account.localhost[:port]/container)
+  // Create a router to exclude account name from req.path, as url path in swagger doesn't include account
+  // Exclude account name from req.path for dispatchMiddleware
+  blobContext.dispatchPattern = container
+    ? blob
+      ? `/container/blob`
+      : `/container`
+    : "/";
+
+  blobContext.authenticationPath = reqPath;
+  if (isSecondary) {
+    const pos = blobContext.authenticationPath!.search(SECONDARY_SUFFIX);
+    blobContext.authenticationPath =
+      blobContext.authenticationPath!.substr(0, pos) +
+      blobContext.authenticationPath!.substr(pos + SECONDARY_SUFFIX.length);
+  }
+
+  if (!account) {
+    const handlerError = StorageErrorFactory.getInvalidQueryParameterValue(
+      requestID
+    );
+
+    logger.error(
+      `BlobStorageContextMiddleware: BlobStorageContextMiddleware: ${handlerError.message}`,
+      requestID
+    );
+
+    return next(handlerError);
+  }
+
+  // validate conatainer name, when container name has value (not undefined or empty string)
+  // skip validate system container
+  if (container && !container.startsWith("$")) {
+    validateContainerName(requestID, container);
+  }
+
+  logger.info(
+    `BlobStorageContextMiddleware: Account=${account} Container=${container} Blob=${blob}`,
+    requestID
+  );
+  next();
 }
 
 /**

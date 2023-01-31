@@ -22,6 +22,7 @@ export enum Operation {
   Container_SetMetadata,
   Container_GetAccessPolicy,
   Container_SetAccessPolicy,
+  Container_SubmitBatch,
   Container_AcquireLease,
   Container_ReleaseLease,
   Container_RenewLease,
