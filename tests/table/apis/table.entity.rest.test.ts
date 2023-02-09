@@ -980,7 +980,6 @@ describe("table Entity APIs REST tests", () => {
     );
   });
 
-  // do we really want to support deprecated SDKs?
   it("Should be able to handle a batch request format from Azure-Storage/9.3.2, @loki", async () => {
     const body = JSON.stringify({
       TableName: reproFlowsTableName
