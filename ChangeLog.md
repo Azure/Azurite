@@ -7,6 +7,7 @@
 Table:
 
 - Fixed issue that True/False in table query will fail the request.
+- Fixed an issue: it cannot return result correctly when querying for a table entity with filters including some special characters.
 
 ## 2023.01 Version 3.21.0
 
