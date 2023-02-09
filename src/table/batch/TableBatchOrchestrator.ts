@@ -582,8 +582,7 @@ export default class TableBatchOrchestrator {
     request: BatchRequest
   ): string | undefined {
     let partitionKey: string | undefined;
-
-    const url = decodeURI(request.getUrl());
+    const url = this.safeDecodeUrl(request.getUrl());
     const partKeyMatch = url.match(/(?<=PartitionKey=')(.*)(?=',)/gi);
 
     if (partKeyMatch === null) {
@@ -610,9 +609,7 @@ export default class TableBatchOrchestrator {
    */
   private extractRequestRowKey(request: BatchRequest): string {
     let rowKey: string;
-
-    const url = decodeURI(request.getUrl());
-
+    const url = this.safeDecodeUrl(request.getUrl());
     const rowKeyMatch = url.match(/(?<=RowKey=')(.+)(?='\))/gi);
     rowKey = rowKeyMatch ? rowKeyMatch[0] : "";
 
@@ -625,8 +622,24 @@ export default class TableBatchOrchestrator {
       }
     } else {
       // keys can have more complex values which are URI encoded
-      rowKey = decodeURIComponent(rowKey);
+      rowKey = this.safeDecodeUriComponent(rowKey);
     }
     return rowKey;
+  }
+
+  private safeDecodeUriComponent(stringValue: string): string {
+    try {
+      return decodeURIComponent(stringValue);
+    } catch {
+      return stringValue;
+    }
+  }
+
+  private safeDecodeUrl(url: string) {
+    try {
+      return decodeURI(url);
+    } catch {
+      return url;
+    }
   }
 }

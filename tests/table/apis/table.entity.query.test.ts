@@ -40,7 +40,11 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   });
 
   after(async () => {
-    await server.close();
+    try {
+      await server.close();
+    } catch {
+      // we don't care
+    }
   });
 
   it("should find an int as a number, @loki", async () => {
@@ -908,7 +912,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
     await tableClient.deleteTable();
-  });  
+  });
 
   it("should work correctly when query filter contains true or false, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
@@ -941,10 +945,14 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       all = [...all, ...entity];
     }
     assert.strictEqual(all.length, 2);
-    all.forEach((entity) =>
-    {
-      assert.ok(entity.partitionKey === `${partitionKeyForQueryTest}3` || ((entity.partitionKey === `${partitionKeyForQueryTest}1` || entity.partitionKey === `${partitionKeyForQueryTest}2`) && entity.rowKey === '1' ))
-    })
+    all.forEach((entity) => {
+      assert.ok(
+        entity.partitionKey === `${partitionKeyForQueryTest}3` ||
+          ((entity.partitionKey === `${partitionKeyForQueryTest}1` ||
+            entity.partitionKey === `${partitionKeyForQueryTest}2`) &&
+            entity.rowKey === "1")
+      );
+    });
     await tableClient.deleteTable();
   });
 });
