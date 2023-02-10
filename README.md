@@ -264,10 +264,12 @@ Above command will try to start Azurite image with configurations:
 > Will support more release channels for Azurite V3 in the future.
 
 #### Docker Compose
+
 To run Azurite in Docker Compose, you can start with the following configuration:
+
 ```yml
 ---
-version: '3.9'
+version: "3.9"
 services:
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite
@@ -277,7 +279,7 @@ services:
     ports:
       - "10000:10000"
       - "10001:10001"
-      - "10002:10002" 
+      - "10002:10002"
 ```
 
 ### NuGet
@@ -972,6 +974,7 @@ Detailed support matrix:
   - Sync copy blob by access source with oauth
   - Encryption Scope
   - Get Page Ranges Continuation Token
+  - Cold Tier
 
 Latest version supports for **2021-12-02** API version **queue** service.
 Detailed support matrix:
