@@ -1,6 +1,6 @@
 import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 
-export const VERSION = "3.21.0";
+export const VERSION = "3.22.0";
 export const QUEUE_API_VERSION = "2021-10-04";
 export const DEFAULT_QUEUE_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_QUEUE_LISTENING_PORT = 10001;
@@ -90,6 +90,7 @@ export const DEFAULT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
 ];
 
 export const ValidAPIVersions = [
+  "2021-12-02",
   "2021-10-04",
   "2021-08-06",
   "2021-06-08",

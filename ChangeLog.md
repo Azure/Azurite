@@ -4,6 +4,12 @@
 
 ## Upcoming Release
 
+## 2023.02 Version 3.22.0
+
+General:
+
+- Bump up service API version to 2021-12-02
+
 Table:
 
 - Fixed issue that True/False in table query will fail the request.
