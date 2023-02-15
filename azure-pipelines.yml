@@ -17,10 +17,14 @@ jobs:
       vmImage: "ubuntu-latest"
     strategy:
       matrix:
-        node_10_x:
-          node_version: 10.x
         node_12_x:
           node_version: 12.x
+        node_14_x:
+          node_version: 14.x
+        node_16_x:
+          node_version: 16.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -44,10 +48,14 @@ jobs:
       vmImage: "ubuntu-latest"
     strategy:
       matrix:
-        node_10_x:
-          node_version: 10.x
         node_12_x:
           node_version: 12.x
+        node_14_x:
+          node_version: 14.x
+        node_16_x:
+          node_version: 16.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -71,10 +79,14 @@ jobs:
       vmImage: "windows-latest"
     strategy:
       matrix:
-        node_10_x:
-          node_version: 10.x
         node_12_x:
           node_version: 12.x
+        node_14_x:
+          node_version: 14.x
+        node_16_x:
+          node_version: 16.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -98,10 +110,14 @@ jobs:
       vmImage: "macOS-latest"
     strategy:
       matrix:
-        node_10_x:
-          node_version: 10.x
         node_12_x:
           node_version: 12.x
+        node_14_x:
+          node_version: 14.x
+        node_16_x:
+          node_version: 16.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -125,10 +141,14 @@ jobs:
       vmImage: "ubuntu-latest"
     strategy:
       matrix:
-        node_10_x:
-          node_version: 10.x
         node_12_x:
           node_version: 12.x
+        node_14_x:
+          node_version: 14.x
+        node_16_x:
+          node_version: 16.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -160,10 +180,14 @@ jobs:
       vmImage: "ubuntu-latest"
     strategy:
       matrix:
-        node_10_x:
-          node_version: 10.x
         node_12_x:
           node_version: 12.x
+        node_14_x:
+          node_version: 14.x
+        node_16_x:
+          node_version: 16.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -187,10 +211,14 @@ jobs:
       vmImage: "windows-latest"
     strategy:
       matrix:
-        node_10_x:
-          node_version: 10.x
         node_12_x:
           node_version: 12.x
+        node_14_x:
+          node_version: 14.x
+        node_16_x:
+          node_version: 16.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -214,10 +242,14 @@ jobs:
       vmImage: "macOS-latest"
     strategy:
       matrix:
-        node_10_x:
-          node_version: 10.x
         node_12_x:
           node_version: 12.x
+        node_14_x:
+          node_version: 14.x
+        node_16_x:
+          node_version: 16.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -246,6 +278,8 @@ jobs:
           node_version: 14.x
         node_16_x:
           node_version: 16.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -274,6 +308,8 @@ jobs:
           node_version: 14.x
         node_16_x:
           node_version: 16.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -302,6 +338,8 @@ jobs:
           node_version: 14.x
         node_16_x:
           node_version: 16.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -332,6 +370,8 @@ jobs:
         #  node_version: 14.x
         node_16_x:
           node_version: 16.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -380,6 +420,8 @@ jobs:
           node_version: 14.x
         node_16_x:
           node_version: 16.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -428,6 +470,8 @@ jobs:
           node_version: 14.x
         node_16_x:
           node_version: 16.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -512,7 +556,13 @@ jobs:
         # node_10_x:
         #   node_version: 10.x
         node_12_x:
+          node_version: 12.x
+        node_14_x:
           node_version: 14.x
+        node_16_x:
+          node_version: 16.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -550,6 +600,12 @@ jobs:
         #   node_version: 10.x
         node_12_x:
           node_version: 12.x
+        node_14_x:
+          node_version: 14.x
+        node_16_x:
+          node_version: 16.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
