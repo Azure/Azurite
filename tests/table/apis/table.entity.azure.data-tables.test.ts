@@ -7,9 +7,9 @@ import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
 import { getUniqueName } from "../../testutils";
 import {
-  AzureDataTablesTestEntity,
-  createBasicEntityForTest
-} from "../models/AzureDataTablesTestEntity";
+  AzureDataTablesTestEntityFactory,
+  TableTestEntity
+} from "../models/AzureDataTablesTestEntityFactory";
 import {
   createAzureDataTablesClient,
   createTableServerForTestHttps,
@@ -17,9 +17,9 @@ import {
 } from "../utils/table.entity.test.utils";
 import { TestBooleanPropEntity } from "../models/TestBooleanPropEntity";
 import {
-  createLargeEntityForTest,
-  LargeDataTablesTestEntity
-} from "../models/LargeDataTablesTestEntity";
+  LargeDataTablesTestEntityFactory,
+  LargeTableTestEntity
+} from "../models/LargeDataTablesTestEntityFactory";
 // Set true to enable debug log
 configLogger(false);
 // For convenience, we have a switch to control the use
@@ -28,6 +28,9 @@ configLogger(false);
 // script or launch.json containing
 // Azure Storage Connection String (using SAS or Key).
 const testLocalAzuriteInstance = true;
+
+const entityFactory = new AzureDataTablesTestEntityFactory();
+const largeEntityFactory = new LargeDataTablesTestEntityFactory();
 
 describe("table Entity APIs test - using Azure/data-tables", () => {
   let server: TableServer;
@@ -48,10 +51,10 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     );
     await tableClient.createTable();
     const partitionKey = createUniquePartitionKey("");
-    const testEntities: AzureDataTablesTestEntity[] = [
-      createBasicEntityForTest(partitionKey),
-      createBasicEntityForTest(partitionKey),
-      createBasicEntityForTest(partitionKey)
+    const testEntities: TableTestEntity[] = [
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey)
     ];
     const transaction = new TableTransaction();
     for (const testEntity of testEntities) {
@@ -162,8 +165,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     );
     await tableClient.createTable();
     const partitionKey = createUniquePartitionKey("");
-    const testEntity: AzureDataTablesTestEntity =
-      createBasicEntityForTest(partitionKey);
+    const testEntity: TableTestEntity =
+      entityFactory.createBasicEntityForTest(partitionKey);
 
     const result = await tableClient.createEntity(testEntity);
 
@@ -347,8 +350,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       getUniqueName("empty")
     );
     const partitionKey = "";
-    const testEntity: AzureDataTablesTestEntity =
-      createBasicEntityForTest(partitionKey);
+    const testEntity: TableTestEntity =
+      entityFactory.createBasicEntityForTest(partitionKey);
     testEntity.rowKey = "";
 
     await tableClient.createTable({ requestOptions: { timeout: 60000 } });
@@ -367,11 +370,10 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       getUniqueName("percent")
     );
     await tableClient.createTable();
-    const percentPartitionEntity = createBasicEntityForTest("%percent");
+    const percentPartitionEntity =
+      entityFactory.createBasicEntityForTest("%percent");
     const insertedEntityHeaders =
-      await tableClient.createEntity<AzureDataTablesTestEntity>(
-        percentPartitionEntity
-      );
+      await tableClient.createEntity<TableTestEntity>(percentPartitionEntity);
     assert.notStrictEqual(
       insertedEntityHeaders.etag,
       undefined,
@@ -391,8 +393,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     const iterations = 99;
     await tableClient.createTable();
     const partitionKey = createUniquePartitionKey("");
-    const testEntities: AzureDataTablesTestEntity[] = [];
-    const testEntity = createBasicEntityForTest(partitionKey);
+    const testEntities: TableTestEntity[] = [];
+    const testEntity = entityFactory.createBasicEntityForTest(partitionKey);
     const mergeResults: any[] = [];
     const replaceResults: any[] = [];
     for (let i = 0; i < iterations; i++) {
@@ -447,11 +449,10 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       getUniqueName("percent")
     );
     await tableClient.createTable();
-    const percentPartitionEntity = createBasicEntityForTest("%percent");
+    const percentPartitionEntity =
+      entityFactory.createBasicEntityForTest("%percent");
     const insertedEntityHeaders =
-      await tableClient.createEntity<AzureDataTablesTestEntity>(
-        percentPartitionEntity
-      );
+      await tableClient.createEntity<TableTestEntity>(percentPartitionEntity);
     assert.notStrictEqual(insertedEntityHeaders.etag, undefined);
 
     const deleteEntityHeaders = await tableClient.deleteEntity(
@@ -492,8 +493,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       );
       await tableClient.createTable();
       const partitionKey = createUniquePartitionKey("");
-      const testEntity: AzureDataTablesTestEntity =
-        createBasicEntityForTest(partitionKey);
+      const testEntity: TableTestEntity =
+        entityFactory.createBasicEntityForTest(partitionKey);
 
       testEntity.binaryField = Buffer.alloc(64 * 1024 - delta);
 
@@ -512,8 +513,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       );
       await tableClient.createTable();
       const partitionKey = createUniquePartitionKey("");
-      const testEntity: AzureDataTablesTestEntity =
-        createBasicEntityForTest(partitionKey);
+      const testEntity: TableTestEntity =
+        entityFactory.createBasicEntityForTest(partitionKey);
 
       testEntity.binaryField = Buffer.alloc(64 * 1024 + delta);
       try {
@@ -547,8 +548,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     );
     await tableClient.createTable();
     const partitionKey = createUniquePartitionKey("");
-    const testEntity: AzureDataTablesTestEntity =
-      createBasicEntityForTest(partitionKey);
+    const testEntity: TableTestEntity =
+      entityFactory.createBasicEntityForTest(partitionKey);
 
     testEntity.myValue = testEntity.myValue.padEnd(1024 * 32 + 1, "a");
     try {
@@ -581,8 +582,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     );
     await tableClient.createTable();
     const partitionKey = createUniquePartitionKey("");
-    const testEntity: AzureDataTablesTestEntity =
-      createBasicEntityForTest(partitionKey);
+    const testEntity: TableTestEntity =
+      entityFactory.createBasicEntityForTest(partitionKey);
 
     try {
       const result1 = await tableClient.createEntity(testEntity);
@@ -620,12 +621,10 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       getUniqueName("percent")
     );
     await tableClient.createTable();
-    const percentRowEntity = createBasicEntityForTest("percent");
+    const percentRowEntity = entityFactory.createBasicEntityForTest("percent");
     percentRowEntity.rowKey = "%" + percentRowEntity.rowKey;
     const insertedEntityHeaders =
-      await tableClient.createEntity<AzureDataTablesTestEntity>(
-        percentRowEntity
-      );
+      await tableClient.createEntity<TableTestEntity>(percentRowEntity);
     assert.notStrictEqual(
       insertedEntityHeaders.etag,
       undefined,
@@ -642,8 +641,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     );
     await tableClient.createTable();
     const partitionKey = createUniquePartitionKey("");
-    const testEntity: AzureDataTablesTestEntity =
-      createBasicEntityForTest(partitionKey);
+    const testEntity: TableTestEntity =
+      entityFactory.createBasicEntityForTest(partitionKey);
 
     try {
       const result1 = await tableClient.createEntity(testEntity);
@@ -681,12 +680,11 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       getUniqueName("percent")
     );
     await tableClient.createTable();
-    const percentRowEntity = createBasicEntityForTest("percentRow");
+    const percentRowEntity =
+      entityFactory.createBasicEntityForTest("percentRow");
     percentRowEntity.rowKey = "%" + percentRowEntity.rowKey;
     const insertedEntityHeaders =
-      await tableClient.createEntity<AzureDataTablesTestEntity>(
-        percentRowEntity
-      );
+      await tableClient.createEntity<TableTestEntity>(percentRowEntity);
     assert.notStrictEqual(insertedEntityHeaders.etag, undefined);
 
     const deleteEntityHeaders = await tableClient.deleteEntity(
@@ -726,8 +724,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     );
     await tableClient.createTable();
     const partitionKey = createUniquePartitionKey("");
-    const testEntity: LargeDataTablesTestEntity =
-      createLargeEntityForTest(partitionKey);
+    const testEntity: LargeTableTestEntity =
+      largeEntityFactory.createLargeEntityForTest(partitionKey);
 
     try {
       const result = await tableClient.createEntity(testEntity);
@@ -801,10 +799,10 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     );
     await tableClient.createTable();
     const percentPartition = "%partition";
-    const testEntities: AzureDataTablesTestEntity[] = [
-      createBasicEntityForTest(percentPartition),
-      createBasicEntityForTest(percentPartition),
-      createBasicEntityForTest(percentPartition)
+    const testEntities: TableTestEntity[] = [
+      entityFactory.createBasicEntityForTest(percentPartition),
+      entityFactory.createBasicEntityForTest(percentPartition),
+      entityFactory.createBasicEntityForTest(percentPartition)
     ];
     const transaction = new TableTransaction();
     for (const testEntity of testEntities) {
@@ -821,15 +819,15 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("20. Should not merge entities with request body greater than 4 MB, @loki", async () => {
+  it("20. Should not merge entities with a size greater than 1 MB, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("longstrings")
     );
     await tableClient.createTable();
     const partitionKey = createUniquePartitionKey("");
-    const testEntity: LargeDataTablesTestEntity =
-      createLargeEntityForTest(partitionKey);
+    const testEntity: LargeTableTestEntity =
+      largeEntityFactory.createLargeEntityForTest(partitionKey);
     testEntity.bigString01a = "";
 
     try {
@@ -847,15 +845,18 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
         "We should not have updated the entity!"
       );
     } catch (err: any) {
+      // the service returns HTTP Status 400
+      // and
+      // "{\"odata.error\":{\"code\":\"EntityTooLarge\",\"message\":{\"lang\":\"en-US\",\"value\":\"The entity is larger than the maximum allowed size (1MB).\\nRequestId:fa37b1b6-e002-002e-3021-412111000000\\nTime:2023-02-15T09:37:02.4207423Z\"}}}"
       assert.strictEqual(
         err.statusCode,
-        413,
+        400,
         "We did not get the expected 413 error"
       );
       assert.strictEqual(
-        err.message.match(/RequestBodyTooLarge/gi).length,
+        err.message.match(/EntityTooLarge/gi).length,
         1,
-        "Did not match RequestBodyTooLarge"
+        "Did not match EntityTooLarge"
       );
     }
 
@@ -863,17 +864,17 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   });
 
   // https://github.com/Azure/Azurite/issues/754
-  it("21. Should create and delete entity using batch and RowKey starting with %, @loki", async () => {
+  it("21. Should create entities using batch and RowKey starting with %, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("percentBatch")
     );
     await tableClient.createTable();
     const percentPartition = "percentRowBatch";
-    const testEntities: AzureDataTablesTestEntity[] = [
-      createBasicEntityForTest(percentPartition),
-      createBasicEntityForTest(percentPartition),
-      createBasicEntityForTest(percentPartition)
+    const testEntities: TableTestEntity[] = [
+      entityFactory.createBasicEntityForTest(percentPartition),
+      entityFactory.createBasicEntityForTest(percentPartition),
+      entityFactory.createBasicEntityForTest(percentPartition)
     ];
     testEntities[0].rowKey = "%" + testEntities[0].rowKey;
     testEntities[1].rowKey = "%" + testEntities[1].rowKey;
@@ -900,8 +901,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     );
     await tableClient.createTable();
     const partitionKey = createUniquePartitionKey("");
-    const testEntity: LargeDataTablesTestEntity =
-      createLargeEntityForTest(partitionKey);
+    const testEntity: LargeTableTestEntity =
+      largeEntityFactory.createLargeEntityForTest(partitionKey);
     testEntity.bigString01a = "";
 
     try {
@@ -921,13 +922,13 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     } catch (err: any) {
       assert.strictEqual(
         err.statusCode,
-        413,
-        "We did not get the expected 413 error"
+        400,
+        "We did not get the expected 400 error"
       );
       assert.strictEqual(
-        err.message.match(/RequestBodyTooLarge/gi).length,
+        err.message.match(/EntityTooLarge/gi).length,
         1,
-        "Did not match RequestBodyTooLarge"
+        "Did not match EntityTooLarge"
       );
     }
 
@@ -940,10 +941,10 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       getUniqueName("comma")
     );
     await tableClient.createTable();
-    const commaRowEntity = createBasicEntityForTest("comma");
+    const commaRowEntity = entityFactory.createBasicEntityForTest("comma");
     commaRowEntity.rowKey = "Commas,InRow,Keys";
     const insertedEntityHeaders =
-      await tableClient.createEntity<AzureDataTablesTestEntity>(commaRowEntity);
+      await tableClient.createEntity<TableTestEntity>(commaRowEntity);
     assert.notStrictEqual(
       insertedEntityHeaders.etag,
       undefined,
@@ -960,7 +961,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     );
     await tableClient.createTable();
     const partitionKey = createUniquePartitionKey("nullable");
-    const testEntity = createBasicEntityForTest(partitionKey);
+    const testEntity = entityFactory.createBasicEntityForTest(partitionKey);
     testEntity.nullableString = null;
 
     try {
@@ -978,8 +979,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       );
     }
 
-    const entity: AzureDataTablesTestEntity =
-      await tableClient.getEntity<AzureDataTablesTestEntity>(
+    const entity: TableTestEntity =
+      await tableClient.getEntity<TableTestEntity>(
         testEntity.partitionKey,
         testEntity.rowKey
       );
@@ -1000,7 +1001,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     );
     await tableClient.createTable();
     const partitionKey = createUniquePartitionKey("odatadate");
-    const testEntity = createBasicEntityForTest(partitionKey);
+    const testEntity = entityFactory.createBasicEntityForTest(partitionKey);
     testEntity.nullableString = null;
 
     try {
@@ -1018,7 +1019,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       );
     }
 
-    const entity: any = await tableClient.getEntity<AzureDataTablesTestEntity>(
+    const entity: any = await tableClient.getEntity<TableTestEntity>(
       testEntity.partitionKey,
       testEntity.rowKey,
       {
@@ -1035,6 +1036,247 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       true,
       "Timestamp should be string!"
     );
+
+    await tableClient.deleteTable();
+  });
+
+  it("26. Should create, get and delete entities using batch and RowKey containing numbers and %, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("percentBatch")
+    );
+    await tableClient.createTable();
+    const percentPartition = "percentRowBatch";
+    const testEntities: TableTestEntity[] = [
+      // { rowKey: "@r%25o%0123512512356", partitionKey: percentPartition },
+      // { rowKey: "r%25131463146346", partitionKey: percentPartition },
+      // { rowKey: "@r%25o%21235136314613", partitionKey: percentPartition }
+      entityFactory.createBasicEntityForTest(percentPartition),
+      entityFactory.createBasicEntityForTest(percentPartition),
+      entityFactory.createBasicEntityForTest(percentPartition)
+    ];
+    testEntities[0].rowKey = testEntities[0].rowKey.replace("row", "@r%25o%");
+    testEntities[1].rowKey = testEntities[1].rowKey.replace("row", "r%25");
+    testEntities[2].rowKey = testEntities[2].rowKey.replace("row", "@r%25o%");
+    const transaction = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction.createEntity(testEntity);
+    }
+
+    try {
+      const result = await tableClient.submitTransaction(transaction.actions);
+      assert.ok(result.subResponses[0].rowKey);
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to create with ${err}`);
+    }
+
+    // validate that we successfully created each entity,
+    // and that the format of the row key was not changed by serialization
+    try {
+      const entity0 = await tableClient.getEntity<TableTestEntity>(
+        testEntities[0].partitionKey,
+        testEntities[0].rowKey
+      );
+      const entity1 = await tableClient.getEntity<TableTestEntity>(
+        testEntities[1].partitionKey,
+        testEntities[1].rowKey
+      );
+      const entity2 = await tableClient.getEntity<TableTestEntity>(
+        testEntities[2].partitionKey,
+        testEntities[2].rowKey
+      );
+      assert.strictEqual(entity0.rowKey, testEntities[0].rowKey);
+      assert.strictEqual(entity1.rowKey, testEntities[1].rowKey);
+      assert.strictEqual(entity2.rowKey, testEntities[2].rowKey);
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to retrieve with ${err}`);
+    }
+
+    // now delete the entities and ensure that delete path is valid
+    const transaction2 = new TableTransaction();
+    transaction2.deleteEntity(
+      testEntities[0].partitionKey,
+      testEntities[0].rowKey
+    );
+    transaction2.deleteEntity(
+      testEntities[1].partitionKey,
+      testEntities[1].rowKey
+    );
+    transaction2.deleteEntity(
+      testEntities[2].partitionKey,
+      testEntities[2].rowKey
+    );
+
+    try {
+      const result = await tableClient.submitTransaction(transaction2.actions);
+      assert.notStrictEqual(result, undefined);
+      assert.strictEqual(
+        result.status,
+        202,
+        "We did not get a 202 on batch delete"
+      );
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to delete with ${err}`);
+    }
+
+    await tableClient.deleteTable();
+  });
+
+  it("27. Should create, get and delete entities using batch and PartitionKey containing numbers and %, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("percentBatch")
+    );
+    await tableClient.createTable();
+    const percentPartition = "percent%25Batch";
+    const testEntities: TableTestEntity[] = [
+      entityFactory.createBasicEntityForTest(percentPartition),
+      entityFactory.createBasicEntityForTest(percentPartition),
+      entityFactory.createBasicEntityForTest(percentPartition)
+    ];
+    testEntities[0].rowKey = testEntities[0].rowKey.replace("row", "row%");
+    testEntities[1].rowKey = testEntities[1].rowKey.replace("row", "row%");
+    testEntities[2].rowKey = testEntities[2].rowKey.replace("row", "r%25");
+    const transaction = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction.createEntity(testEntity);
+    }
+
+    try {
+      const result = await tableClient.submitTransaction(transaction.actions);
+      assert.ok(result.subResponses[0].rowKey);
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to create with ${err}`);
+    }
+
+    // validate that we successfully created each entity,
+    // and that the format of the row key was not changed by serialization
+    try {
+      const entity0 = await tableClient.getEntity<TableTestEntity>(
+        testEntities[0].partitionKey,
+        testEntities[0].rowKey
+      );
+      const entity1 = await tableClient.getEntity<TableTestEntity>(
+        testEntities[1].partitionKey,
+        testEntities[1].rowKey
+      );
+      const entity2 = await tableClient.getEntity<TableTestEntity>(
+        testEntities[2].partitionKey,
+        testEntities[2].rowKey
+      );
+      assert.strictEqual(entity0.rowKey, testEntities[0].rowKey);
+      assert.strictEqual(entity1.rowKey, testEntities[1].rowKey);
+      assert.strictEqual(entity2.rowKey, testEntities[2].rowKey);
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to retrieve with ${err}`);
+    }
+
+    // now delete the entities and ensure that delete path is valid
+    const transaction2 = new TableTransaction();
+    transaction2.deleteEntity(
+      testEntities[0].partitionKey,
+      testEntities[0].rowKey
+    );
+    transaction2.deleteEntity(
+      testEntities[1].partitionKey,
+      testEntities[1].rowKey
+    );
+    transaction2.deleteEntity(
+      testEntities[2].partitionKey,
+      testEntities[2].rowKey
+    );
+
+    try {
+      const result = await tableClient.submitTransaction(transaction2.actions);
+      assert.notStrictEqual(result, undefined);
+      assert.strictEqual(
+        result.status,
+        202,
+        "We did not get a 202 on batch delete"
+      );
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to delete with ${err}`);
+    }
+
+    await tableClient.deleteTable();
+  });
+
+  it("28. Should create, get and delete entities using batch and PartitionKey with complex form, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("percentBatch")
+    );
+    await tableClient.createTable();
+    const percentPartition =
+      "@DurableTask.AzureStorage.Tests.AzureStorageScenarioTests+Orchestrations+AutoStartOrchestration+Responder";
+    const testEntities: TableTestEntity[] = [
+      entityFactory.createBasicEntityForTest(percentPartition),
+      entityFactory.createBasicEntityForTest(percentPartition),
+      entityFactory.createBasicEntityForTest(percentPartition)
+    ];
+    testEntities[0].rowKey = testEntities[0].rowKey.replace("row", "row%");
+    testEntities[1].rowKey = testEntities[1].rowKey.replace("row", "row%");
+    testEntities[2].rowKey = testEntities[2].rowKey.replace("row", "r%25");
+    const transaction = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction.createEntity(testEntity);
+    }
+
+    try {
+      const result = await tableClient.submitTransaction(transaction.actions);
+      assert.ok(result.subResponses[0].rowKey);
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to create with ${err}`);
+    }
+
+    // validate that we successfully created each entity,
+    // and that the format of the row key was not changed by serialization
+    try {
+      const entity0 = await tableClient.getEntity(
+        testEntities[0].partitionKey,
+        testEntities[0].rowKey
+      );
+      const entity1 = await tableClient.getEntity(
+        testEntities[1].partitionKey,
+        testEntities[1].rowKey
+      );
+      const entity2 = await tableClient.getEntity(
+        testEntities[2].partitionKey,
+        testEntities[2].rowKey
+      );
+      assert.strictEqual(entity0.rowKey, testEntities[0].rowKey);
+      assert.strictEqual(entity1.rowKey, testEntities[1].rowKey);
+      assert.strictEqual(entity2.rowKey, testEntities[2].rowKey);
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to retrieve with ${err}`);
+    }
+
+    // now delete the entities and ensure that delete path is valid
+    const transaction2 = new TableTransaction();
+    transaction2.deleteEntity(
+      testEntities[0].partitionKey,
+      testEntities[0].rowKey
+    );
+    transaction2.deleteEntity(
+      testEntities[1].partitionKey,
+      testEntities[1].rowKey
+    );
+    transaction2.deleteEntity(
+      testEntities[2].partitionKey,
+      testEntities[2].rowKey
+    );
+
+    try {
+      const result = await tableClient.submitTransaction(transaction2.actions);
+      assert.notStrictEqual(result, undefined);
+      assert.strictEqual(
+        result.status,
+        202,
+        "We did not get a 202 on batch delete"
+      );
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to delete with ${err}`);
+    }
 
     await tableClient.deleteTable();
   });

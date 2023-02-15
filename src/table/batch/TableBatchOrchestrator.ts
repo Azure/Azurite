@@ -582,7 +582,8 @@ export default class TableBatchOrchestrator {
     request: BatchRequest
   ): string | undefined {
     let partitionKey: string | undefined;
-    const url = this.safeDecodeUrl(request.getUrl());
+    const originalUrl = request.getUrl();
+    const url = decodeURIComponent(originalUrl);
     const partKeyMatch = url.match(/(?<=PartitionKey=')(.*)(?=',)/gi);
 
     if (partKeyMatch === null) {
@@ -593,8 +594,9 @@ export default class TableBatchOrchestrator {
         partitionKey = jsonBody.PartitionKey;
       }
     } else {
-      // keys can have more complex values which are URI encoded
-      partitionKey = decodeURIComponent(partKeyMatch[0]);
+      // keys can have more complex values which are URI encoded if they come from the URL
+      // we decode above.
+      partitionKey = partKeyMatch[0];
     }
     return partitionKey;
   }
@@ -609,37 +611,21 @@ export default class TableBatchOrchestrator {
    */
   private extractRequestRowKey(request: BatchRequest): string {
     let rowKey: string;
-    const url = this.safeDecodeUrl(request.getUrl());
+    // problem: sometimes the ticks are encoded, sometimes not!
+    // this is a difference between Azure Data-Tables and the deprecated
+    // Azure Storage SDK
+    const url = decodeURIComponent(request.getUrl());
     const rowKeyMatch = url.match(/(?<=RowKey=')(.+)(?='\))/gi);
     rowKey = rowKeyMatch ? rowKeyMatch[0] : "";
 
-    if (rowKey === "") {
+    if (rowKeyMatch === null) {
       // row key not in URL, must be in body
       const body = request.getBody();
       if (body !== "") {
         const jsonBody = JSON.parse(body ? body : "{}");
         rowKey = jsonBody.RowKey;
       }
-    } else {
-      // keys can have more complex values which are URI encoded
-      rowKey = this.safeDecodeUriComponent(rowKey);
     }
     return rowKey;
-  }
-
-  private safeDecodeUriComponent(stringValue: string): string {
-    try {
-      return decodeURIComponent(stringValue);
-    } catch {
-      return stringValue;
-    }
-  }
-
-  private safeDecodeUrl(url: string) {
-    try {
-      return decodeURI(url);
-    } catch {
-      return url;
-    }
   }
 }

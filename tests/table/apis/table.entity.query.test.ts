@@ -6,9 +6,9 @@ import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
 import { getUniqueName } from "../../testutils";
 import {
-  AzureDataTablesTestEntity,
-  createBasicEntityForTest
-} from "../models/AzureDataTablesTestEntity";
+  AzureDataTablesTestEntityFactory,
+  TableTestEntity
+} from "../models/AzureDataTablesTestEntityFactory";
 import {
   createAzureDataTablesClient,
   createTableServerForQueryTestHttps,
@@ -24,6 +24,8 @@ configLogger(false);
 // script or launch.json containing
 // Azure Storage Connection String (using SAS or Key).
 const testLocalAzuriteInstance = true;
+
+const entityFactory = new AzureDataTablesTestEntityFactory();
 
 describe("table Entity APIs test - using Azure/data-tables", () => {
   let server: TableServer;
@@ -47,21 +49,21 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     }
   });
 
-  it("should find an int as a number, @loki", async () => {
+  it("01. should find an int as a number, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("int")
     );
     const partitionKey = createUniquePartitionKey("");
-    const testEntity: AzureDataTablesTestEntity =
-      createBasicEntityForTest(partitionKey);
+    const testEntity: TableTestEntity =
+      entityFactory.createBasicEntityForTest(partitionKey);
 
     await tableClient.createTable({ requestOptions: { timeout: 60000 } });
     const result = await tableClient.createEntity(testEntity);
     assert.ok(result.etag);
 
     const queryResult = await tableClient
-      .listEntities<AzureDataTablesTestEntity>({
+      .listEntities<TableTestEntity>({
         queryOptions: {
           filter: `PartitionKey eq '${partitionKey}' and int32Field eq 54321`
         }
@@ -71,21 +73,21 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("should find a long int, @loki", async () => {
+  it("02. should find a long int, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("longint")
     );
     const partitionKey = createUniquePartitionKey("");
-    const testEntity: AzureDataTablesTestEntity =
-      createBasicEntityForTest(partitionKey);
+    const testEntity: TableTestEntity =
+      entityFactory.createBasicEntityForTest(partitionKey);
 
     await tableClient.createTable({ requestOptions: { timeout: 60000 } });
     const result = await tableClient.createEntity(testEntity);
     assert.ok(result.etag);
 
     const queryResult = await tableClient
-      .listEntities<AzureDataTablesTestEntity>({
+      .listEntities<TableTestEntity>({
         queryOptions: {
           filter: `PartitionKey eq '${partitionKey}' and int64Field eq 12345L`
         }
@@ -96,21 +98,21 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("should find an entity using a partition key with multiple spaces, @loki", async () => {
+  it("03. should find an entity using a partition key with multiple spaces, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("query1s")
     );
     const partitionKey = createUniquePartitionKey("") + " with spaces";
-    const testEntity: AzureDataTablesTestEntity =
-      createBasicEntityForTest(partitionKey);
+    const testEntity: TableTestEntity =
+      entityFactory.createBasicEntityForTest(partitionKey);
 
     await tableClient.createTable({ requestOptions: { timeout: 60000 } });
     const result = await tableClient.createEntity(testEntity);
     assert.ok(result.etag);
 
     const queryResult = await tableClient
-      .listEntities<AzureDataTablesTestEntity>({
+      .listEntities<TableTestEntity>({
         queryOptions: {
           filter: `PartitionKey eq '${partitionKey}'`
         }
@@ -121,7 +123,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("should provide a complete query result when using query entities by page, @loki", async () => {
+  it("04. should provide a complete query result when using query entities by page, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("querybypage")
@@ -169,7 +171,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("should return the correct number of results querying with a timestamp or different SDK whitespacing behaviours, @loki", async () => {
+  it("05. should return the correct number of results querying with a timestamp or different SDK whitespacing behaviours, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("sdkspace")
@@ -260,7 +262,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("should return the correct number of results querying with a boolean field regardless of whitespacing behaviours, @loki", async () => {
+  it("06. should return the correct number of results querying with a boolean field regardless of whitespacing behaviours, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("bool")
@@ -345,7 +347,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("should return the correct number of results querying with an int64 field regardless of whitespacing behaviours, @loki", async () => {
+  it("07. should return the correct number of results querying with an int64 field regardless of whitespacing behaviours, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("int64")
@@ -356,9 +358,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     const timestamp = new Date();
     timestamp.setDate(timestamp.getDate() + 1);
     for (let i = 0; i < totalItems; i++) {
-      const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
-        partitionKeyForQueryTest
-      );
+      const testEntity: TableTestEntity =
+        entityFactory.createBasicEntityForTest(partitionKeyForQueryTest);
       testEntity.int64Field = { value: `${i}`, type: "Int64" };
       const result = await tableClient.createEntity(testEntity);
       assert.notStrictEqual(result.etag, undefined);
@@ -395,11 +396,11 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     ];
 
     for (const queryTest of queriesAndExpectedResult) {
-      const entities = tableClient.listEntities<AzureDataTablesTestEntity>({
+      const entities = tableClient.listEntities<TableTestEntity>({
         queryOptions: queryTest.queryOptions,
         disableTypeConversion: true
       });
-      let all: AzureDataTablesTestEntity[] = [];
+      let all: TableTestEntity[] = [];
       for await (const entity of entities.byPage({
         maxPageSize
       })) {
@@ -422,7 +423,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("should return the correct number of results querying with a double field regardless of whitespacing behaviours, @loki", async () => {
+  it("08. should return the correct number of results querying with a double field regardless of whitespacing behaviours, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("datatables")
@@ -433,9 +434,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     const timestamp = new Date();
     timestamp.setDate(timestamp.getDate() + 1);
     for (let i = 0; i < totalItems; i++) {
-      const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
-        partitionKeyForQueryTest
-      );
+      const testEntity: TableTestEntity =
+        entityFactory.createBasicEntityForTest(partitionKeyForQueryTest);
       const result = await tableClient.createEntity(testEntity);
       assert.notStrictEqual(result.etag, undefined);
     }
@@ -475,10 +475,10 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       }
     ];
     for (const queryTest of queriesAndExpectedResult) {
-      const entities = tableClient.listEntities<AzureDataTablesTestEntity>({
+      const entities = tableClient.listEntities<TableTestEntity>({
         queryOptions: queryTest.queryOptions
       });
-      let all: AzureDataTablesTestEntity[] = [];
+      let all: TableTestEntity[] = [];
       for await (const entity of entities.byPage({
         maxPageSize
       })) {
@@ -500,7 +500,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("should return the correct number of results querying with a double field containing a single digit number regardless of whitespacing behaviours, @loki", async () => {
+  it("09. should return the correct number of results querying with a double field containing a single digit number regardless of whitespacing behaviours, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("datatables")
@@ -511,9 +511,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     const timestamp = new Date();
     timestamp.setDate(timestamp.getDate() + 1);
     for (let i = 0; i < totalItems; i++) {
-      const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
-        partitionKeyForQueryTest
-      );
+      const testEntity: TableTestEntity =
+        entityFactory.createBasicEntityForTest(partitionKeyForQueryTest);
       testEntity.doubleField = { value: 5, type: "Double" };
       const result = await tableClient.createEntity(testEntity);
       assert.notStrictEqual(result.etag, undefined);
@@ -560,10 +559,10 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       }
     ];
     for (const queryTest of queriesAndExpectedResult) {
-      const entities = tableClient.listEntities<AzureDataTablesTestEntity>({
+      const entities = tableClient.listEntities<TableTestEntity>({
         queryOptions: queryTest.queryOptions
       });
-      let all: AzureDataTablesTestEntity[] = [];
+      let all: TableTestEntity[] = [];
       for await (const entity of entities.byPage({
         maxPageSize
       })) {
@@ -585,7 +584,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("should error on query with invalid filter string, @loki", async () => {
+  it("10. should error on query with invalid filter string, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("dataTables")
@@ -596,9 +595,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     const timestamp = new Date();
     timestamp.setDate(timestamp.getDate() + 1);
     for (let i = 0; i < totalItems; i++) {
-      const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
-        partitionKeyForQueryTest
-      );
+      const testEntity: TableTestEntity =
+        entityFactory.createBasicEntityForTest(partitionKeyForQueryTest);
       testEntity.doubleField = { value: 5, type: "Double" };
       const result = await tableClient.createEntity(testEntity);
       assert.notStrictEqual(result.etag, undefined);
@@ -652,12 +650,12 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       }
     ];
     for (const queryTest of queriesAndExpectedResult) {
-      const entities = tableClient.listEntities<AzureDataTablesTestEntity>({
+      const entities = tableClient.listEntities<TableTestEntity>({
         queryOptions: queryTest.queryOptions
       });
 
       try {
-        let all: AzureDataTablesTestEntity[] = [];
+        let all: TableTestEntity[] = [];
         for await (const entity of entities.byPage({
           maxPageSize
         })) {
@@ -683,7 +681,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("should correctly insert and query entities using special values using batch api", async () => {
+  it("11. should correctly insert and query entities using special values using batch api", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("decodeURI")
@@ -702,9 +700,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     ];
     let testsCompleted = 0;
     for (const valToTest of valuesForTest) {
-      const testEntity: AzureDataTablesTestEntity = createBasicEntityForTest(
-        partitionKeyForQueryTest
-      );
+      const testEntity: TableTestEntity =
+        entityFactory.createBasicEntityForTest(partitionKeyForQueryTest);
       testEntity.myValue = valToTest;
       const transaction = new TableTransaction();
       transaction.createEntity(testEntity);
@@ -718,12 +715,12 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
 
       const maxPageSize = 10;
 
-      const entities = tableClient.listEntities<AzureDataTablesTestEntity>({
+      const entities = tableClient.listEntities<TableTestEntity>({
         queryOptions: {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myValue eq ${valToTest})`
         }
       });
-      let all: AzureDataTablesTestEntity[] = [];
+      let all: TableTestEntity[] = [];
       for await (const entity of entities.byPage({
         maxPageSize
       })) {
@@ -745,7 +742,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("should correctly return results for query on a binary property, @loki", async () => {
+  it("12. should correctly return results for query on a binary property, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("binquery")
@@ -756,7 +753,9 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     const timestamp = new Date();
     timestamp.setDate(timestamp.getDate() + 1);
     for (let i = 0; i < totalItems; i++) {
-      const entity = createBasicEntityForTest(partitionKeyForQueryTest);
+      const entity = entityFactory.createBasicEntityForTest(
+        partitionKeyForQueryTest
+      );
       if (i % 2 === 0) {
         entity.binaryField = Buffer.from("binaryData"); // should equal YmluYXJ5RGF0YQ==
       }
@@ -803,7 +802,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("should find both old and new guids (backwards compatible) when using guid type, @loki", async () => {
+  it("13. should find both old and new guids (backwards compatible) when using guid type, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       "reproTable"
@@ -813,24 +812,45 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.createTable();
     const timestamp = new Date();
     timestamp.setDate(timestamp.getDate() + 1);
-    const guidEntities: AzureDataTablesTestEntity[] = [];
+    const guidEntities: TableTestEntity[] = [];
     const guidFromOldDB = "5d62a508-f0f7-45bc-be10-4b192d7fed2d";
 
-    const dupOldGuid = createBasicEntityForTest(partitionKeyForQueryTest);
+    const getResult1 = await tableClient.getEntity<TableTestEntity>(
+      partitionKeyForQueryTest,
+      "1"
+    );
+    assert.notStrictEqual(getResult1.etag, undefined);
+    assert.strictEqual(
+      getResult1.timestamp,
+      "2022-06-24T15:50:57.055Z",
+      "Did not match the timestamp on the legacy schema entity!"
+    );
+
+    const dupOldGuid = entityFactory.createBasicEntityForTest(
+      partitionKeyForQueryTest
+    );
     dupOldGuid.guidField.value = guidFromOldDB;
+    dupOldGuid.myValue = "I am the new format GUID entry!";
     const dupResult = await tableClient.createEntity(dupOldGuid);
     assert.notStrictEqual(dupResult.etag, undefined);
-    /// Edwin quick test remove afterwards!
-    const getResult = await tableClient.getEntity(
+
+    const getResult = await tableClient.getEntity<TableTestEntity>(
       dupOldGuid.partitionKey,
       dupOldGuid.rowKey
     );
     assert.notStrictEqual(getResult.etag, undefined);
-    /// Edwin quick test remove afterwards!
+    assert.strictEqual(
+      getResult.myValue,
+      "I am the new format GUID entry!",
+      "New Guid entity not created as expected!"
+    );
+
     guidEntities.push(dupOldGuid);
 
     for (let i = 1; i < totalItems; i++) {
-      const entity = createBasicEntityForTest(partitionKeyForQueryTest);
+      const entity = entityFactory.createBasicEntityForTest(
+        partitionKeyForQueryTest
+      );
       entity.guidField.value = uuid.v4();
       // The chances of hitting a duplicate GUID are extremely low
       // will only affect our pipelines in dev
@@ -842,14 +862,16 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     let testsCompleted = 0;
     const queriesAndExpectedResult = [
       {
+        index: 0,
         queryOptions: {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (guidField eq guid'${guidFromOldDB}')`
         },
         expectedResult: 2, // we expect the old GUID to be found for backwards compatability and the one we just inserted
         // not sure that this is the right behavior
-        expectedValue: guidEntities[0].guidField.value
+        expectedValue: guidFromOldDB
       },
       {
+        index: 1,
         queryOptions: {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (guidField eq guid'${guidEntities[1].guidField.value}')`
         },
@@ -857,6 +879,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
         expectedValue: guidEntities[1].guidField.value
       },
       {
+        index: 2,
         queryOptions: {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and (guidField eq ${guidEntities[1].guidField.value})`
         },
@@ -864,6 +887,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
         expectedValue: undefined
       },
       {
+        index: 3,
         queryOptions: {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and(guidField eq guid'${guidEntities[8].guidField.value}')`
         },
@@ -871,6 +895,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
         expectedValue: guidEntities[8].guidField.value
       },
       {
+        index: 4,
         queryOptions: {
           filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and(guidField eq '${guidEntities[8].guidField.value}')`
         },
@@ -880,10 +905,10 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     ];
 
     for (const queryTest of queriesAndExpectedResult) {
-      const entities = tableClient.listEntities<AzureDataTablesTestEntity>({
+      const entities = tableClient.listEntities<TableTestEntity>({
         queryOptions: queryTest.queryOptions
       });
-      let all: AzureDataTablesTestEntity[] = [];
+      let all: TableTestEntity[] = [];
       for await (const entity of entities.byPage({
         maxPageSize
       })) {
@@ -898,7 +923,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
         assert.strictEqual(
           all[0].guidField.value,
           queryTest.expectedValue,
-          `Value ${all[0].guidField.value} was not equal to ${queryTest.expectedValue} with query ${queryTest.queryOptions.filter}`
+          `Test ${queryTest.index}: Guid value ${all[0].guidField.value} was not equal to ${queryTest.expectedValue} with query ${queryTest.queryOptions.filter}`
         );
       } else {
         assert.strictEqual(
@@ -914,7 +939,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("should work correctly when query filter contains true or false, @loki", async () => {
+  it("14. should work correctly when query filter contains true or false, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("querywithbool")

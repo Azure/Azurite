@@ -11,9 +11,9 @@ import {
   getUniqueName
 } from "../../testutils";
 import {
-  AzureDataTablesTestEntity,
-  createBasicEntityForTest
-} from "../models/AzureDataTablesTestEntity";
+  AzureDataTablesTestEntityFactory,
+  TableTestEntity
+} from "../models/AzureDataTablesTestEntityFactory";
 import {
   createAzureDataTablesClient,
   createTableServerForTestHttps,
@@ -31,6 +31,8 @@ configLogger(false);
 // script or launch.json containing
 // Azure Storage Connection String (using SAS or Key).
 const testLocalAzuriteInstance = true;
+
+const entityFactory = new AzureDataTablesTestEntityFactory();
 
 describe("table Entity APIs test", () => {
   let server: TableServer;
@@ -50,12 +52,12 @@ describe("table Entity APIs test", () => {
     await server.close();
   });
 
-  it("Batch API should serialize errors according to group transaction spec, @loki", async () => {
+  it("01. Batch API should serialize errors according to group transaction spec, @loki", async () => {
     const partitionKey = createUniquePartitionKey("");
-    const testEntities: AzureDataTablesTestEntity[] = [
-      createBasicEntityForTest(partitionKey),
-      createBasicEntityForTest(partitionKey),
-      createBasicEntityForTest(partitionKey)
+    const testEntities: TableTestEntity[] = [
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey)
     ];
 
     const sharedKeyCredential = new AzureNamedKeyCredential(
@@ -83,13 +85,13 @@ describe("table Entity APIs test", () => {
     }
   });
 
-  it("Batch API should reject request with more than 100 transactions, @loki", async () => {
+  it("02. Batch API should reject request with more than 100 transactions, @loki", async () => {
     const partitionKey = createUniquePartitionKey("");
     const tableName100: string = getUniqueName("datatables");
-    const testEntities: AzureDataTablesTestEntity[] = [];
+    const testEntities: TableTestEntity[] = [];
     const TOO_MANY_REQUESTS = 101;
     while (testEntities.length < TOO_MANY_REQUESTS) {
-      testEntities.push(createBasicEntityForTest(partitionKey));
+      testEntities.push(entityFactory.createBasicEntityForTest(partitionKey));
     }
 
     const tooManyRequestsClient = createAzureDataTablesClient(
@@ -112,13 +114,13 @@ describe("table Entity APIs test", () => {
     }
   });
 
-  it("Batch API should rollback insert Entity transactions, @loki", async () => {
+  it("03. Batch API should rollback insert Entity transactions, @loki", async () => {
     const partitionKey = createUniquePartitionKey("");
     const tableNameBatchError: string = getUniqueName("datatables");
-    const testEntities: AzureDataTablesTestEntity[] = [
-      createBasicEntityForTest(partitionKey),
-      createBasicEntityForTest(partitionKey),
-      createBasicEntityForTest(partitionKey)
+    const testEntities: TableTestEntity[] = [
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey)
     ];
 
     const tableClientrollback = createAzureDataTablesClient(
@@ -133,11 +135,6 @@ describe("table Entity APIs test", () => {
       transaction.createEntity(testEntity);
     }
 
-    // force "Entity already exists" error
-    for (const testEntity of testEntities) {
-      transaction.createEntity(testEntity);
-    }
-
     try {
       const result = await tableClientrollback.submitTransaction(
         transaction.actions
@@ -147,36 +144,60 @@ describe("table Entity APIs test", () => {
       const restErr = err as RestError;
       assert.strictEqual(
         restErr.statusCode,
+        202,
+        `Should not have got status code ${restErr.statusCode} on first transaction.`
+      );
+    }
+
+    testEntities[1].myValue = "ShouldNotHaveChanged";
+    const transaction2 = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction2.createEntity(testEntity);
+    }
+
+    try {
+      const result2 = await tableClientrollback.submitTransaction(
+        transaction2.actions
+      );
+      assert.ok(result2.subResponses[0].rowKey);
+    } catch (err: any) {
+      const restErr = err as RestError;
+      assert.strictEqual(
+        restErr.statusCode,
         409,
-        "Did not get expected entity already exists error."
+        "Did not get expected 409 (EntityAlreadyExists) error."
       );
     }
 
     try {
       const shouldNotExist =
-        await tableClientrollback.getEntity<AzureDataTablesTestEntity>(
-          testEntities[0].partitionKey,
-          testEntities[0].rowKey
+        await tableClientrollback.getEntity<TableTestEntity>(
+          testEntities[1].partitionKey,
+          testEntities[1].rowKey
         );
-      assert.strictEqual(shouldNotExist, null, "We should not have an entity.");
+      assert.strictEqual(
+        shouldNotExist.myValue,
+        "value1",
+        "We should not have changed the value!"
+      );
     } catch (err: any) {
       const restErr2 = err as RestError;
       assert.strictEqual(
         restErr2.statusCode,
-        404,
-        "We expected an entity not found error."
+        202,
+        "We did not expect the entity to have been changed."
       );
     }
     await tableClientrollback.deleteTable();
   });
 
-  it("Batch API should rollback delete Entity transactions, @loki", async () => {
+  it("04. Batch API should rollback delete Entity transactions, @loki", async () => {
     const partitionKey = createUniquePartitionKey("");
     const tableNameDeleteError: string = getUniqueName("datatables");
-    const testEntities: AzureDataTablesTestEntity[] = [
-      createBasicEntityForTest(partitionKey),
-      createBasicEntityForTest(partitionKey),
-      createBasicEntityForTest(partitionKey)
+    const testEntities: TableTestEntity[] = [
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey)
     ];
 
     const tableClientrollback = createAzureDataTablesClient(
@@ -227,11 +248,10 @@ describe("table Entity APIs test", () => {
     }
 
     try {
-      const shouldExist =
-        await tableClientrollback.getEntity<AzureDataTablesTestEntity>(
-          testEntities[0].partitionKey,
-          testEntities[0].rowKey
-        );
+      const shouldExist = await tableClientrollback.getEntity<TableTestEntity>(
+        testEntities[0].partitionKey,
+        testEntities[0].rowKey
+      );
       assert.notStrictEqual(shouldExist, null, "We have an entity.");
     } catch (err: any) {
       const restErr2 = err as RestError;
@@ -244,13 +264,13 @@ describe("table Entity APIs test", () => {
     await tableClientrollback.deleteTable();
   });
 
-  it("Batch API should rollback update Entity transactions, @loki", async () => {
+  it("05. Batch API should rollback update Entity transactions, @loki", async () => {
     const partitionKey = createUniquePartitionKey("");
     const tableNameDeleteError: string = getUniqueName("datatables");
-    const testEntities: AzureDataTablesTestEntity[] = [
-      createBasicEntityForTest(partitionKey),
-      createBasicEntityForTest(partitionKey),
-      createBasicEntityForTest(partitionKey)
+    const testEntities: TableTestEntity[] = [
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey)
     ];
 
     const tableClientrollback = createAzureDataTablesClient(
@@ -298,11 +318,10 @@ describe("table Entity APIs test", () => {
     }
 
     try {
-      const shouldExist =
-        await tableClientrollback.getEntity<AzureDataTablesTestEntity>(
-          testEntities[0].partitionKey,
-          testEntities[0].rowKey
-        );
+      const shouldExist = await tableClientrollback.getEntity<TableTestEntity>(
+        testEntities[0].partitionKey,
+        testEntities[0].rowKey
+      );
       assert.notStrictEqual(shouldExist, null, "We have an entity.");
       assert.notStrictEqual(
         shouldExist.myValue,
@@ -320,13 +339,13 @@ describe("table Entity APIs test", () => {
     await tableClientrollback.deleteTable();
   });
 
-  it("Batch API should rollback upsert Entity transactions, @loki", async () => {
+  it("06. Batch API should rollback upsert Entity transactions, @loki", async () => {
     const partitionKey = createUniquePartitionKey("");
     const tableNameDeleteError: string = getUniqueName("datatables");
-    const testEntities: AzureDataTablesTestEntity[] = [
-      createBasicEntityForTest(partitionKey),
-      createBasicEntityForTest(partitionKey),
-      createBasicEntityForTest(partitionKey)
+    const testEntities: TableTestEntity[] = [
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey)
     ];
 
     const tableClientrollback = createAzureDataTablesClient(
@@ -354,7 +373,8 @@ describe("table Entity APIs test", () => {
 
     testEntities[0].myValue = "a new value";
     testEntities[1].myValue = "a new value";
-    const newUpsertEntity = createBasicEntityForTest(partitionKey);
+    const newUpsertEntity =
+      entityFactory.createBasicEntityForTest(partitionKey);
     newUpsertEntity.myValue = "ephemeral";
     transactionUpdateThenError.upsertEntity(testEntities[0]);
     transactionUpdateThenError.upsertEntity(testEntities[1]);
@@ -376,11 +396,10 @@ describe("table Entity APIs test", () => {
     }
 
     try {
-      const shouldExist =
-        await tableClientrollback.getEntity<AzureDataTablesTestEntity>(
-          testEntities[0].partitionKey,
-          testEntities[0].rowKey
-        );
+      const shouldExist = await tableClientrollback.getEntity<TableTestEntity>(
+        testEntities[0].partitionKey,
+        testEntities[0].rowKey
+      );
       assert.notStrictEqual(shouldExist, null, "We have an entity.");
       assert.notStrictEqual(
         shouldExist.myValue,
@@ -398,7 +417,7 @@ describe("table Entity APIs test", () => {
 
     try {
       const shouldNotExist =
-        await tableClientrollback.getEntity<AzureDataTablesTestEntity>(
+        await tableClientrollback.getEntity<TableTestEntity>(
           newUpsertEntity.partitionKey,
           newUpsertEntity.rowKey
         );
@@ -414,13 +433,13 @@ describe("table Entity APIs test", () => {
     await tableClientrollback.deleteTable();
   });
 
-  it("Batch API should return valid batch failure index for Azure.Data.Tables, @loki", async () => {
+  it("07. Batch API should return valid batch failure index for Azure.Data.Tables, @loki", async () => {
     const partitionKey = createUniquePartitionKey("");
     const tableNameDeleteError: string = getUniqueName("datatables");
-    const testEntities: AzureDataTablesTestEntity[] = [
-      createBasicEntityForTest(partitionKey),
-      createBasicEntityForTest(partitionKey),
-      createBasicEntityForTest(partitionKey)
+    const testEntities: TableTestEntity[] = [
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey)
     ];
 
     const tableClientrollback = createAzureDataTablesClient(
@@ -458,10 +477,11 @@ describe("table Entity APIs test", () => {
     await tableClientrollback.deleteTable();
   });
 
-  it("Batch API Etag should be rolled back after transaction failure on update, @loki", async () => {
+  it("08. Batch API Etag should be rolled back after transaction failure on update, @loki", async () => {
     const partitionKey = createUniquePartitionKey("");
     const tableNameDeleteError: string = getUniqueName("datatables");
-    const singleTestEntity = createBasicEntityForTest(partitionKey);
+    const singleTestEntity =
+      entityFactory.createBasicEntityForTest(partitionKey);
 
     const tableClientrollback = createAzureDataTablesClient(
       testLocalAzuriteInstance,
@@ -474,10 +494,10 @@ describe("table Entity APIs test", () => {
       singleTestEntity
     );
 
-    const testEntities: AzureDataTablesTestEntity[] = [
-      createBasicEntityForTest(partitionKey),
-      createBasicEntityForTest(partitionKey),
-      createBasicEntityForTest(partitionKey)
+    const testEntities: TableTestEntity[] = [
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey)
     ];
 
     const transaction = new TableTransaction();
@@ -520,11 +540,10 @@ describe("table Entity APIs test", () => {
     }
 
     try {
-      const shouldExist =
-        await tableClientrollback.getEntity<AzureDataTablesTestEntity>(
-          testEntities[0].partitionKey,
-          testEntities[0].rowKey
-        );
+      const shouldExist = await tableClientrollback.getEntity<TableTestEntity>(
+        testEntities[0].partitionKey,
+        testEntities[0].rowKey
+      );
       assert.notStrictEqual(shouldExist, null, "We have an entity.");
       assert.notStrictEqual(
         shouldExist.myValue,

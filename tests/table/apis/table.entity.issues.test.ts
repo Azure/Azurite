@@ -15,9 +15,9 @@ import {
   createUniquePartitionKey
 } from "../utils/table.entity.test.utils";
 import {
-  AzureDataTablesTestEntity,
-  createBasicEntityForTest
-} from "../models/AzureDataTablesTestEntity";
+  AzureDataTablesTestEntityFactory,
+  TableTestEntity
+} from "../models/AzureDataTablesTestEntityFactory";
 
 // Set true to enable debug log
 configLogger(false);
@@ -27,6 +27,8 @@ configLogger(false);
 // script or launch.json containing
 // Azure Storage Connection String (using SAS or Key).
 const testLocalAzuriteInstance = true;
+
+const entityFactory = new AzureDataTablesTestEntityFactory();
 
 describe("table Entity APIs test : Issues", () => {
   let server: TableServer;
@@ -49,11 +51,11 @@ describe("table Entity APIs test : Issues", () => {
 
   // from issue #1229
   [
-    "W/\"wrong\"",
+    'W/"wrong"',
     "W/\"datetime'2015-01-01T23%3A14%3A33.4980000Z'\"",
-    "w/\"wrong\"",
-    "w/\"datetime'2015-01-01T23%3A14%3A33.4980000Z'\"",
-  ].forEach(etag => {
+    'w/"wrong"',
+    "w/\"datetime'2015-01-01T23%3A14%3A33.4980000Z'\""
+  ].forEach((etag) => {
     it(`should allow any valid weak etag <${etag}>, @loki`, async () => {
       const partitionKey = createUniquePartitionKey();
       const tableClient = createAzureDataTablesClient(
@@ -87,12 +89,12 @@ describe("table Entity APIs test : Issues", () => {
 
   // from issue #1229
   [
-    "\"wrong\"",
+    '"wrong"',
     "\"datetime'2015-01-01T23%3A14%3A33.4980000Z'\"",
     "wrong",
     "datetime'2015-01-01T23%3A14%3A33.4980000Z'",
-    "\"",
-  ].forEach(etag => {
+    '"'
+  ].forEach((etag) => {
     it(`should reject invalid or strong etag <${etag}>, @loki`, async () => {
       const partitionKey = createUniquePartitionKey();
       const tableClient = createAzureDataTablesClient(
@@ -304,15 +306,15 @@ describe("table Entity APIs test : Issues", () => {
     );
     await tableClient.createTable();
     const entityWithEmptyPartitionKey =
-      createBasicEntityForTest(emptyPartitionKey);
+      entityFactory.createBasicEntityForTest(emptyPartitionKey);
 
-    const result = await tableClient.createEntity<AzureDataTablesTestEntity>(
+    const result = await tableClient.createEntity<TableTestEntity>(
       entityWithEmptyPartitionKey
     );
     assert.notStrictEqual(result.etag, undefined);
 
     const entityWithEmptyPartitionKeyRes =
-      await tableClient.getEntity<AzureDataTablesTestEntity>(
+      await tableClient.getEntity<TableTestEntity>(
         "",
         entityWithEmptyPartitionKey.rowKey
       );
@@ -335,14 +337,12 @@ describe("table Entity APIs test : Issues", () => {
       });
 
     // deliberately being more explicit in the resolution of the promise and errors
-    let res: AzureDataTablesTestEntity | undefined;
+    let res: TableTestEntity | undefined;
     try {
       res = (await tableClient.getEntity(
         "",
         entityWithEmptyPartitionKey.rowKey
-      )) as GetTableEntityResponse<
-        TableEntityResult<AzureDataTablesTestEntity>
-      >;
+      )) as GetTableEntityResponse<TableEntityResult<TableTestEntity>>;
     } catch (deleteError: any) {
       assert.strictEqual(deleteError.statusCode, 404);
     } finally {
@@ -363,19 +363,19 @@ describe("table Entity APIs test : Issues", () => {
       tableName
     );
     await tableClient.createTable();
-    const entityWithEmptyRowKey = createBasicEntityForTest(
+    const entityWithEmptyRowKey = entityFactory.createBasicEntityForTest(
       partitionKeyForEmptyRowKey
     );
 
     entityWithEmptyRowKey.rowKey = "";
 
-    const result = await tableClient.createEntity<AzureDataTablesTestEntity>(
+    const result = await tableClient.createEntity<TableTestEntity>(
       entityWithEmptyRowKey
     );
     assert.notStrictEqual(result.etag, undefined);
 
     const entityWithEmptyRowKeyRes =
-      await tableClient.getEntity<AzureDataTablesTestEntity>(
+      await tableClient.getEntity<TableTestEntity>(
         partitionKeyForEmptyRowKey,
         ""
       );
@@ -398,14 +398,12 @@ describe("table Entity APIs test : Issues", () => {
       });
 
     // deliberately being more explicit in the resolution of the promise and errors
-    let res: AzureDataTablesTestEntity | undefined;
+    let res: TableTestEntity | undefined;
     try {
       res = (await tableClient.getEntity(
         partitionKeyForEmptyRowKey,
         ""
-      )) as GetTableEntityResponse<
-        TableEntityResult<AzureDataTablesTestEntity>
-      >;
+      )) as GetTableEntityResponse<TableEntityResult<TableTestEntity>>;
     } catch (deleteError: any) {
       assert.strictEqual(deleteError.statusCode, 404);
     } finally {

@@ -108,7 +108,7 @@ describe("batch deserialization unit tests, these are not the API integration te
     );
     assert.strictEqual(
       batchOperationArray[0].uri,
-      "http://127.0.0.1:11002/devstoreaccount1/table160837567141205013(PartitionKey='part1',RowKey='row160837567145205850')",
+      "http://127.0.0.1:11002/devstoreaccount1/table160837567141205013(PartitionKey=%27part1%27,RowKey=%27row160837567145205850%27)",
       "wrong url parsed"
     );
     assert.strictEqual(
@@ -162,7 +162,7 @@ describe("batch deserialization unit tests, these are not the API integration te
     );
     assert.strictEqual(
       batchOperationArray[1].uri,
-      "http://127.0.0.1:11002/devstoreaccount1/table160837770303307822(PartitionKey='part1',RowKey='row160837770307508823')",
+      "http://127.0.0.1:11002/devstoreaccount1/table160837770303307822(PartitionKey=%27part1%27,RowKey=%27row160837770307508823%27)",
       "wrong url parsed"
     );
     assert.strictEqual(
@@ -194,7 +194,7 @@ describe("batch deserialization unit tests, these are not the API integration te
     );
     assert.strictEqual(
       batchOperationArray[0].uri,
-      "http://127.0.0.1:11002/devstoreaccount1/table161216830457901592(PartitionKey='part1',RowKey='row161216830462208585')",
+      "http://127.0.0.1:11002/devstoreaccount1/table161216830457901592(PartitionKey=%27part1%27,RowKey=%27row161216830462208585%27)",
       "wrong url parsed"
     );
     assert.strictEqual(
@@ -216,7 +216,7 @@ describe("batch deserialization unit tests, these are not the API integration te
     );
     assert.strictEqual(
       batchOperationArray[1].uri,
-      "http://127.0.0.1:11002/devstoreaccount1/table161216830457901592(PartitionKey='part1',RowKey='row161216830462204546')",
+      "http://127.0.0.1:11002/devstoreaccount1/table161216830457901592(PartitionKey=%27part1%27,RowKey=%27row161216830462204546%27)",
       "wrong url parsed"
     );
     assert.strictEqual(

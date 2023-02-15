@@ -11,11 +11,11 @@ import {
   restoreBuildRequestOptions
 } from "../../testutils";
 import {
-  createBasicEntityForTest,
   createConnectionStringForTest,
   createTableServerForTest
 } from "../utils/table.entity.test.utils";
 import { TestEntity } from "../models/TestEntity";
+import { AzureStorageSDKEntityFactory } from "../utils/AzureStorageSDKEntityFactory";
 
 // Set true to enable debug log
 configLogger(false);
@@ -25,6 +25,8 @@ configLogger(false);
 // script or launch.json containing
 // Azure Storage Connection String (using SAS or Key).
 const testLocalAzuriteInstance = true;
+
+const entityFactory = new AzureStorageSDKEntityFactory();
 
 describe("table Entity APIs test - using Azure-Storage", () => {
   let server: TableServer;
@@ -73,9 +75,9 @@ describe("table Entity APIs test - using Azure-Storage", () => {
 
   // Simple test in here until we have the full set checked in, as we need
   // a starting point for delete and query entity APIs
-  it("Should insert new Entity, @loki", (done) => {
+  it("01. Should insert new Entity, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-entity
-    const entity = createBasicEntityForTest();
+    const entity = entityFactory.createBasicEntityForTest();
     tableService.insertEntity<TestEntity>(
       tableName,
       entity,
@@ -99,7 +101,7 @@ describe("table Entity APIs test - using Azure-Storage", () => {
   });
 
   // Insert entity property with type "Edm.DateTime", server will convert to UTC time
-  it("Insert new Entity property with type Edm.DateTime will convert to UTC, @loki", (done) => {
+  it("02. Insert new Entity property with type Edm.DateTime will convert to UTC, @loki", (done) => {
     const timeValue = "2012-01-02T23:00:00";
     const entity = {
       PartitionKey: "part1",
@@ -135,7 +137,7 @@ describe("table Entity APIs test - using Azure-Storage", () => {
   });
 
   // Insert empty entity property with type "Edm.DateTime", server will return error
-  it("Insert new Entity property with type Edm.DateTime will convert to UTC, @loki", (done) => {
+  it("03. Insert new Entity property with type Edm.DateTime will convert to UTC, @loki", (done) => {
     const timeValue = "";
     const entity = {
       PartitionKey: "part1",
@@ -149,9 +151,16 @@ describe("table Entity APIs test - using Azure-Storage", () => {
       entity,
       (insertError, insertResult, insertResponse) => {
         if (!insertError) {
-          assert.fail("Insert should fail with DataTime type property has empty value.");
+          assert.fail(
+            "Insert should fail with DataTime type property has empty value."
+          );
         } else {
-          assert.strictEqual(true, insertError.message.startsWith("An error occurred while processing this request."));
+          assert.strictEqual(
+            true,
+            insertError.message.startsWith(
+              "An error occurred while processing this request."
+            )
+          );
           done();
         }
       }
@@ -160,9 +169,9 @@ describe("table Entity APIs test - using Azure-Storage", () => {
 
   // Simple test in here until we have the full set checked in, as we need
   // a starting point for delete and query entity APIs
-  it("Should insert new Entity with empty RowKey, @loki", (done) => {
+  it("04. Should insert new Entity with empty RowKey, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-entity
-    const entity = createBasicEntityForTest();
+    const entity = entityFactory.createBasicEntityForTest();
     entity.RowKey._ = "";
     tableService.insertEntity<TestEntity>(
       tableName,
@@ -186,8 +195,8 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Should retrieve entity with empty RowKey, @loki", (done) => {
-    const entityInsert = createBasicEntityForTest();
+  it("05. Should retrieve entity with empty RowKey, @loki", (done) => {
+    const entityInsert = entityFactory.createBasicEntityForTest();
     entityInsert.RowKey._ = "";
     entityInsert.myValue._ = getUniqueName("uniqueValue");
     tableService.insertOrReplaceEntity(
@@ -225,10 +234,10 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Should delete an Entity using etag wildcard, @loki", (done) => {
+  it("06. Should delete an Entity using etag wildcard, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
 
-    const entity = createBasicEntityForTest();
+    const entity = entityFactory.createBasicEntityForTest();
     tableService.insertEntity<TestEntity>(
       tableName,
       entity,
@@ -254,9 +263,9 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Should not delete an Entity not matching Etag, @loki", (done) => {
+  it("07. Should not delete an Entity not matching Etag, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
-    const entityInsert = createBasicEntityForTest();
+    const entityInsert = entityFactory.createBasicEntityForTest();
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
@@ -286,9 +295,9 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Should delete a matching Etag, @loki", (done) => {
+  it("08. Should delete a matching Etag, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/delete-entity1
-    const entityInsert = createBasicEntityForTest();
+    const entityInsert = entityFactory.createBasicEntityForTest();
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
@@ -320,8 +329,8 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Update an Entity that exists, @loki", (done) => {
-    const entityInsert = createBasicEntityForTest();
+  it("09. Update an Entity that exists, @loki", (done) => {
+    const entityInsert = entityFactory.createBasicEntityForTest();
     tableService.insertEntity(
       tableName,
       entityInsert,
@@ -353,8 +362,8 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Upserts when an Entity does not exist using replaceEntity(), @loki", (done) => {
-    const entityToUpdate = createBasicEntityForTest();
+  it("10. Upserts when an Entity does not exist using replaceEntity(), @loki", (done) => {
+    const entityToUpdate = entityFactory.createBasicEntityForTest();
     // this is submitting an update with if-match == *
     tableService.replaceEntity(
       tableName,
@@ -370,8 +379,8 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Should not update an Entity not matching Etag, @loki", (done) => {
-    const entityInsert = createBasicEntityForTest();
+  it("11. Should not update an Entity not matching Etag, @loki", (done) => {
+    const entityInsert = entityFactory.createBasicEntityForTest();
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
@@ -404,8 +413,8 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Should update, if Etag matches, @loki", (done) => {
-    const entityTemplate = createBasicEntityForTest();
+  it("12. Should update, if Etag matches, @loki", (done) => {
+    const entityTemplate = entityFactory.createBasicEntityForTest();
     const entityInsert = {
       PartitionKey: entityTemplate.PartitionKey,
       RowKey: entityTemplate.RowKey,
@@ -452,8 +461,8 @@ describe("table Entity APIs test - using Azure-Storage", () => {
   });
 
   // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-or-replace-entity
-  it("Insert or Replace (upsert) on an Entity that does not exist, @loki", (done) => {
-    const entityToInsert = createBasicEntityForTest();
+  it("13. Insert or Replace (upsert) on an Entity that does not exist, @loki", (done) => {
+    const entityToInsert = entityFactory.createBasicEntityForTest();
     tableService.insertOrReplaceEntity(
       tableName,
       entityToInsert,
@@ -483,8 +492,8 @@ describe("table Entity APIs test - using Azure-Storage", () => {
   });
 
   // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-or-replace-entity
-  it("Insert or Replace (upsert) on an Entity that exists, @loki", (done) => {
-    const upsertEntity = createBasicEntityForTest();
+  it("14. Insert or Replace (upsert) on an Entity that exists, @loki", (done) => {
+    const upsertEntity = entityFactory.createBasicEntityForTest();
     tableService.insertEntity(tableName, upsertEntity, () => {
       upsertEntity.myValue._ = "updated";
       tableService.insertOrReplaceEntity(
@@ -516,8 +525,8 @@ describe("table Entity APIs test - using Azure-Storage", () => {
   });
 
   // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-or-merge-entity
-  it("Insert or Merge on an Entity that exists, @loki", (done) => {
-    const entityInsert = createBasicEntityForTest();
+  it("15. Insert or Merge on an Entity that exists, @loki", (done) => {
+    const entityInsert = entityFactory.createBasicEntityForTest();
     tableService.insertEntity(
       tableName,
       entityInsert,
@@ -558,8 +567,8 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Insert or Merge on an Entity that does not exist, @loki", (done) => {
-    const entityToInsertOrMerge = createBasicEntityForTest();
+  it("16. Insert or Merge on an Entity that does not exist, @loki", (done) => {
+    const entityToInsertOrMerge = entityFactory.createBasicEntityForTest();
     tableService.insertOrMergeEntity(
       tableName,
       entityToInsertOrMerge,
@@ -588,13 +597,13 @@ describe("table Entity APIs test - using Azure-Storage", () => {
   });
 
   // Start of Batch Tests:
-  it("Simple Insert Or Replace of a SINGLE entity as a BATCH, @loki", (done) => {
+  it("17. Simple Insert Or Replace of a SINGLE entity as a BATCH, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
 
-    const batchEntity1 = createBasicEntityForTest();
+    const batchEntity1 = entityFactory.createBasicEntityForTest();
 
     const entityBatch: Azure.TableBatch = new Azure.TableBatch();
     entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity1); // resulting in PUT
@@ -633,7 +642,7 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     { pk: "pk", rk: "", label: "empty row key" }
   ].forEach(({ pk, rk, label }) => {
     ["INSERT", "INSERT_OR_MERGE", "INSERT_OR_REPLACE"].forEach((operation) => {
-      it(`${operation} entity with ${label} in a BATCH, @loki`, (done) => {
+      it(`18. ${operation} entity with ${label} in a BATCH, @loki`, (done) => {
         requestOverride.headers = {
           Prefer: "return-content",
           accept: "application/json;odata=fullmetadata"
@@ -681,12 +690,11 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     });
 
     ["MERGE", "REPLACE"].forEach((operation) => {
-      it(`${operation} of entity with ${label} in a BATCH, @loki`, (done) => {
+      it(`19. ${operation} of entity with ${label} in a BATCH, @loki`, (done) => {
         requestOverride.headers = {
           Prefer: "return-content",
           accept: "application/json;odata=fullmetadata"
         };
-
         const batchEntity1 = new TestEntity(
           !pk ? pk : getUniqueName(pk),
           !rk ? rk : getUniqueName(rk),
@@ -720,7 +728,7 @@ describe("table Entity APIs test - using Azure-Storage", () => {
       });
     });
 
-    it(`DELETE of entity with ${label} in a BATCH, @loki`, (done) => {
+    it("20. DELETE of entity with ${label} in a BATCH, @loki", (done) => {
       requestOverride.headers = {
         Prefer: "return-content",
         accept: "application/json;odata=fullmetadata"
@@ -767,14 +775,14 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     });
   });
 
-  it("Simple batch test: Inserts multiple entities as a batch, @loki", (done) => {
+  it("21. Simple batch test: Inserts multiple entities as a batch, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
-    const batchEntity1 = createBasicEntityForTest();
-    const batchEntity2 = createBasicEntityForTest();
-    const batchEntity3 = createBasicEntityForTest();
+    const batchEntity1 = entityFactory.createBasicEntityForTest();
+    const batchEntity2 = entityFactory.createBasicEntityForTest();
+    const batchEntity3 = entityFactory.createBasicEntityForTest();
 
     const entityBatch: Azure.TableBatch = new Azure.TableBatch();
     entityBatch.addOperation("INSERT", batchEntity1, { echoContent: true });
@@ -806,15 +814,15 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Simple batch test: Delete multiple entities as a batch, @loki", (done) => {
+  it("22. Simple batch test: Delete multiple entities as a batch, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
     // First insert multiple entities to delete
-    const batchEntity1 = createBasicEntityForTest();
-    const batchEntity2 = createBasicEntityForTest();
-    const batchEntity3 = createBasicEntityForTest();
+    const batchEntity1 = entityFactory.createBasicEntityForTest();
+    const batchEntity2 = entityFactory.createBasicEntityForTest();
+    const batchEntity3 = entityFactory.createBasicEntityForTest();
 
     assert.notDeepEqual(
       batchEntity1.RowKey,
@@ -905,15 +913,15 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Insert Or Replace multiple entities as a batch, @loki", (done) => {
+  it("23. Insert Or Replace multiple entities as a batch, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
 
-    const batchEntity1 = createBasicEntityForTest();
-    const batchEntity2 = createBasicEntityForTest();
-    const batchEntity3 = createBasicEntityForTest();
+    const batchEntity1 = entityFactory.createBasicEntityForTest();
+    const batchEntity2 = entityFactory.createBasicEntityForTest();
+    const batchEntity3 = entityFactory.createBasicEntityForTest();
 
     const entityBatch: Azure.TableBatch = new Azure.TableBatch();
     entityBatch.addOperation("INSERT_OR_REPLACE", batchEntity1);
@@ -948,14 +956,14 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Insert Or Merge multiple entities as a batch, @loki", (done) => {
+  it("24. Insert Or Merge multiple entities as a batch, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
-    const batchEntity1 = createBasicEntityForTest();
-    const batchEntity2 = createBasicEntityForTest();
-    const batchEntity3 = createBasicEntityForTest();
+    const batchEntity1 = entityFactory.createBasicEntityForTest();
+    const batchEntity2 = entityFactory.createBasicEntityForTest();
+    const batchEntity3 = entityFactory.createBasicEntityForTest();
 
     const entityBatch: Azure.TableBatch = new Azure.TableBatch();
     entityBatch.addOperation("INSERT_OR_MERGE", batchEntity1);
@@ -990,19 +998,19 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Insert and Update entity via a batch, @loki", (done) => {
+  it("25. Insert and Update entity via a batch, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
-    const batchEntity1 = createBasicEntityForTest();
+    const batchEntity1 = entityFactory.createBasicEntityForTest();
 
     tableService.insertEntity(
       tableName,
       batchEntity1,
       (initialInsertError, initialInsertResult) => {
         assert.ifError(initialInsertError);
-        const batchEntity2 = createBasicEntityForTest();
+        const batchEntity2 = entityFactory.createBasicEntityForTest();
         const entityBatch: Azure.TableBatch = new Azure.TableBatch();
         entityBatch.addOperation("INSERT", batchEntity2, { echoContent: true });
         batchEntity1.myValue._ = "value2";
@@ -1042,18 +1050,18 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Insert and Merge entity via a batch, @loki", (done) => {
+  it("26. Insert and Merge entity via a batch, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
-    const batchEntity1 = createBasicEntityForTest();
+    const batchEntity1 = entityFactory.createBasicEntityForTest();
     tableService.insertEntity(
       tableName,
       batchEntity1,
       (initialInsertError, initialInsertResult) => {
         assert.ifError(initialInsertError);
-        const batchEntity2 = createBasicEntityForTest();
+        const batchEntity2 = entityFactory.createBasicEntityForTest();
         const entityBatch: Azure.TableBatch = new Azure.TableBatch();
         entityBatch.addOperation("INSERT", batchEntity2, { echoContent: true });
         batchEntity1.myValue._ = "value2";
@@ -1092,19 +1100,19 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Insert and Delete entity via a batch, @loki", (done) => {
+  it("27. Insert and Delete entity via a batch, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
-    const batchEntity1 = createBasicEntityForTest();
+    const batchEntity1 = entityFactory.createBasicEntityForTest();
     tableService.insertEntity(
       tableName,
       batchEntity1,
       (initialInsertError, initialInsertResult) => {
         assert.ifError(initialInsertError);
 
-        const batchEntity2 = createBasicEntityForTest();
+        const batchEntity2 = entityFactory.createBasicEntityForTest();
         // Should fail
         // The batch request contains multiple changes with same row key. An entity can appear only once in a batch request.
         const entityBatch: Azure.TableBatch = new Azure.TableBatch();
@@ -1141,12 +1149,12 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Query / Retrieve single entity via a batch, requestion Options undefined / default @loki", (done) => {
+  it("28. Query / Retrieve single entity via a batch, requestion Options undefined / default @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
-    const batchEntity1 = createBasicEntityForTest();
+    const batchEntity1 = entityFactory.createBasicEntityForTest();
 
     tableService.insertEntity(tableName, batchEntity1, (error, result) => {
       const entityBatch: Azure.TableBatch = new Azure.TableBatch();
@@ -1175,12 +1183,12 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     });
   });
 
-  it("Single Delete entity via a batch, @loki", (done) => {
+  it("29. Single Delete entity via a batch, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
-    const batchEntity1 = createBasicEntityForTest();
+    const batchEntity1 = entityFactory.createBasicEntityForTest();
 
     tableService.insertEntity<TestEntity>(tableName, batchEntity1, () => {
       const entityBatch: Azure.TableBatch = new Azure.TableBatch();
@@ -1218,18 +1226,18 @@ describe("table Entity APIs test - using Azure-Storage", () => {
   // https://github.com/Azure/Azurite/issues/750
   // https://github.com/Azure/Azurite/issues/733
   // https://github.com/Azure/Azurite/issues/745
-  it("Operates on batch items with complex row keys, @loki", (done) => {
+  it("30. Operates on batch items with complex row keys, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
-    const insertEntity1 = createBasicEntityForTest();
+    const insertEntity1 = entityFactory.createBasicEntityForTest();
     insertEntity1.RowKey._ = "8b0a63c8-9542-49d8-9dd2-d7af9fa8790f_0B";
-    const insertEntity2 = createBasicEntityForTest();
+    const insertEntity2 = entityFactory.createBasicEntityForTest();
     insertEntity2.RowKey._ = "8b0a63c8-9542-49d8-9dd2-d7af9fa8790f_0C";
-    const insertEntity3 = createBasicEntityForTest();
+    const insertEntity3 = entityFactory.createBasicEntityForTest();
     insertEntity3.RowKey._ = "8b0a63c8-9542-49d8-9dd2-d7af9fa8790f_0D";
-    const insertEntity4 = createBasicEntityForTest();
+    const insertEntity4 = entityFactory.createBasicEntityForTest();
     insertEntity4.RowKey._ = "8b0a63c8-9542-49d8-9dd2-d7af9fa8790f_0E";
 
     tableService.insertEntity<TestEntity>(tableName, insertEntity1, () => {
@@ -1305,21 +1313,21 @@ describe("table Entity APIs test - using Azure-Storage", () => {
   });
 
   // this covers https://github.com/Azure/Azurite/issues/741
-  it("Operates on batch items with complex partition keys, @loki", (done) => {
+  it("31. Operates on batch items with complex partition keys, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
-    const insertEntity1 = createBasicEntityForTest();
+    const insertEntity1 = entityFactory.createBasicEntityForTest();
     insertEntity1.PartitionKey._ =
       "@DurableTask.AzureStorage.Tests.AzureStorageScenarioTests+Orchestrations+AutoStartOrchestration+Responder";
-    const insertEntity2 = createBasicEntityForTest();
+    const insertEntity2 = entityFactory.createBasicEntityForTest();
     insertEntity2.PartitionKey._ =
       "@DurableTask.AzureStorage.Tests.AzureStorageScenarioTests+Orchestrations+AutoStartOrchestration+Responder";
-    const insertEntity3 = createBasicEntityForTest();
+    const insertEntity3 = entityFactory.createBasicEntityForTest();
     insertEntity3.PartitionKey._ =
       "@DurableTask.AzureStorage.Tests.AzureStorageScenarioTests+Orchestrations+AutoStartOrchestration+Responder";
-    const insertEntity4 = createBasicEntityForTest();
+    const insertEntity4 = entityFactory.createBasicEntityForTest();
     insertEntity4.PartitionKey._ =
       "@DurableTask.AzureStorage.Tests.AzureStorageScenarioTests+Orchestrations+AutoStartOrchestration+Responder";
 
@@ -1395,15 +1403,15 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     });
   });
 
-  it("Ensure Valid Etag format from Batch, @loki", (done) => {
+  it("32. Ensure Valid Etag format from Batch, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
-    const batchEntity1 = createBasicEntityForTest();
+    const batchEntity1 = entityFactory.createBasicEntityForTest();
 
     tableService.insertEntity<TestEntity>(tableName, batchEntity1, () => {
-      const batchEntity2 = createBasicEntityForTest();
+      const batchEntity2 = entityFactory.createBasicEntityForTest();
       const entityBatch: Azure.TableBatch = new Azure.TableBatch();
       entityBatch.addOperation("INSERT", batchEntity2, { echoContent: true });
       batchEntity1.myValue._ = "value2";
@@ -1450,9 +1458,9 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     });
   });
 
-  it("Should have a valid OData Metadata value when inserting an entity, @loki", (done) => {
+  it("33. Should have a valid OData Metadata value when inserting an entity, @loki", (done) => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-entity
-    const entityInsert = createBasicEntityForTest();
+    const entityInsert = entityFactory.createBasicEntityForTest();
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
@@ -1478,12 +1486,12 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     );
   });
 
-  it("Can create entities with empty string for row and partition key, @loki", (done) => {
+  it("34. Can create entities with empty string for row and partition key, @loki", (done) => {
     requestOverride.headers = {
       Prefer: "return-content",
       accept: "application/json;odata=fullmetadata"
     };
-    const emptyKeysEntity = createBasicEntityForTest();
+    const emptyKeysEntity = entityFactory.createBasicEntityForTest();
     emptyKeysEntity.PartitionKey._ = "";
     emptyKeysEntity.RowKey._ = "";
 
@@ -1513,5 +1521,91 @@ describe("table Entity APIs test - using Azure-Storage", () => {
         }
       }
     );
+  });
+
+  it("35. Operates on batch items with partition keys with %25 in the middle, @loki", (done) => {
+    requestOverride.headers = {
+      Prefer: "return-content",
+      accept: "application/json;odata=fullmetadata"
+    };
+    const insertEntity1 = entityFactory.createBasicEntityForTest();
+    insertEntity1.PartitionKey._ = "percent2%25batch";
+    const insertEntity2 = entityFactory.createBasicEntityForTest();
+    insertEntity2.PartitionKey._ = "percent2%25batch";
+    const insertEntity3 = entityFactory.createBasicEntityForTest();
+    insertEntity3.PartitionKey._ = "percent2%25batch";
+    const insertEntity4 = entityFactory.createBasicEntityForTest();
+    insertEntity4.PartitionKey._ = "percent2%25batch";
+
+    tableService.insertEntity<TestEntity>(tableName, insertEntity1, () => {
+      tableService.insertEntity<TestEntity>(tableName, insertEntity2, () => {
+        const entityBatch: Azure.TableBatch = new Azure.TableBatch();
+        entityBatch.insertEntity(insertEntity3, { echoContent: true });
+        entityBatch.insertEntity(insertEntity4, { echoContent: true });
+        entityBatch.deleteEntity(insertEntity1);
+        entityBatch.deleteEntity(insertEntity2);
+        tableService.executeBatch(
+          tableName,
+          entityBatch,
+          (batchError, batchResult, batchResponse) => {
+            if (batchError) {
+              assert.ifError(batchError);
+              done();
+            } else {
+              assert.strictEqual(batchResponse.statusCode, 202);
+              tableService.retrieveEntity<TestEntity>(
+                tableName,
+                insertEntity3.PartitionKey._,
+                insertEntity3.RowKey._,
+                (error: any, result, response) => {
+                  assert.strictEqual(
+                    response.statusCode,
+                    200,
+                    "We did not find the 3rd entity!"
+                  );
+                  tableService.retrieveEntity<TestEntity>(
+                    tableName,
+                    insertEntity4.PartitionKey._,
+                    insertEntity4.RowKey._,
+                    (error2: any, result2, response2) => {
+                      assert.strictEqual(
+                        response2.statusCode,
+                        200,
+                        "We did not find the 4th entity!"
+                      );
+                      tableService.retrieveEntity<TestEntity>(
+                        tableName,
+                        insertEntity1.PartitionKey._,
+                        insertEntity1.RowKey._,
+                        (error3: any, result3, response3) => {
+                          assert.strictEqual(
+                            response3.statusCode,
+                            404,
+                            "We did not delete the 1st entity!"
+                          );
+                          tableService.retrieveEntity<TestEntity>(
+                            tableName,
+                            insertEntity2.PartitionKey._,
+                            insertEntity2.RowKey._,
+                            (error4: any, result4, response4) => {
+                              assert.strictEqual(
+                                response4.statusCode,
+                                404,
+                                "We did not delete the 2nd entity!"
+                              );
+                              done();
+                            }
+                          );
+                        }
+                      );
+                    }
+                  );
+                }
+              );
+            }
+          }
+        );
+      });
+    });
   });
 });

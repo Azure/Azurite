@@ -28,7 +28,8 @@ import {
   RETURN_NO_CONTENT,
   TABLE_API_VERSION,
   TABLE_SERVICE_PERMISSION,
-  ODATA_TYPE
+  ODATA_TYPE,
+  ENTITY_SIZE_MAX
 } from "../utils/constants";
 import {
   getEntityOdataAnnotationsForResponse,
@@ -359,7 +360,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
-    this.checkBodyLimit(context, context.request?.getBody());
+    this.checkEntityLimit(context, context.request?.getBody());
 
     [partitionKey, rowKey] = TableHandler.getAndCheckKeys(
       partitionKey,
@@ -451,7 +452,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const tableContext = new TableStorageContext(context);
     const account = this.getAndCheckAccountName(tableContext);
     const table = this.getAndCheckTableName(tableContext);
-    this.checkBodyLimit(context, context.request?.getBody());
+    this.checkEntityLimit(context, context.request?.getBody());
 
     [partitionKey, rowKey] = TableHandler.getAndCheckKeys(
       partitionKey,
@@ -1070,9 +1071,10 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
             }
           } else if (properties[prop].length > 32 * 1024) {
             throw StorageErrorFactory.getPropertyValueTooLargeError(context);
-          }
-          else if (properties[prop] === undefined || properties[prop] === "")
-          {
+          } else if (
+            properties[prop] === undefined ||
+            properties[prop] === ""
+          ) {
             const propertyType = properties[`${prop}${ODATA_TYPE}`];
             if (propertyType !== undefined && propertyType === "Edm.DateTime") {
               throw StorageErrorFactory.getInvalidInput(context);
@@ -1095,6 +1097,12 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
   private checkBodyLimit(context: Context, body: string | undefined) {
     if (undefined !== body && getUTF8ByteSize(body) > BODY_SIZE_MAX) {
       throw StorageErrorFactory.getRequestBodyTooLarge(context);
+    }
+  }
+
+  private checkEntityLimit(context: Context, body: string | undefined) {
+    if (undefined !== body && getUTF8ByteSize(body) > ENTITY_SIZE_MAX) {
+      throw StorageErrorFactory.getEntityTooLarge(context);
     }
   }
 }
