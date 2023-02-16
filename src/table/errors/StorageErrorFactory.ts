@@ -29,7 +29,7 @@ export default class StorageErrorFactory {
 
   public static getInvalidAPIVersion(
     context: Context,
-    apiVersion?: string,
+    apiVersion?: string
   ): StorageError {
     return new StorageError(
       400,
@@ -413,6 +413,17 @@ export default class StorageErrorFactory {
       413,
       "RequestBodyTooLarge",
       `The request body is too large and exceeds the maximum permissible limit.`,
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
+
+  public static getEntityTooLarge(context: Context): StorageError {
+    return new StorageError(
+      400,
+      "EntityTooLarge",
+      `The entity is larger than the maximum allowed size (1MB).`,
       context.contextID || defaultID,
       undefined,
       context

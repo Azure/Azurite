@@ -3,10 +3,14 @@ import {
   EMULATOR_ACCOUNT_NAME,
   getUniqueName
 } from "../../testutils";
-import { TestEntity } from "../models/TestEntity";
+
 import TableServer from "../../../src/table/TableServer";
 import TableConfiguration from "../../../src/table/TableConfiguration";
-import { AzureNamedKeyCredential, TableClient } from "@azure/data-tables";
+import {
+  AzureNamedKeyCredential,
+  AzureSASCredential,
+  TableClient
+} from "@azure/data-tables";
 import { copyFile } from "fs";
 
 export const PROTOCOL = "http";
@@ -51,16 +55,6 @@ const httpsConfig = new TableConfiguration(
   "tests/server.cert",
   "tests/server.key"
 );
-
-/**
- * Creates an entity for tests, with a randomized row key,
- * to avoid conflicts on inserts.
- *
- * @return {*}  {TestEntity}
- */
-export function createBasicEntityForTest(): TestEntity {
-  return new TestEntity("part1", getUniqueName("row"), "value1");
-}
 
 /**
  * Creates the Azurite TableServer used in Table API tests
@@ -193,10 +187,16 @@ export function createAzureDataTablesClient(
       sharedKeyCredential
     );
   } else {
+    // return new TableClient(
+    //   process.env[AZURE_DATATABLES_STORAGE_STRING]! +
+    //     process.env[AZURE_DATATABLES_SAS]!,
+    //   tableName
+    // );
+
     return new TableClient(
-      process.env[AZURE_DATATABLES_STORAGE_STRING]! +
-        process.env[AZURE_DATATABLES_SAS]!,
-      tableName
+      process.env[AZURE_DATATABLES_STORAGE_STRING]!,
+      tableName,
+      new AzureSASCredential(process.env[AZURE_DATATABLES_SAS]!)
     );
   }
 }
