@@ -979,6 +979,51 @@ describe("table Entity APIs REST tests", () => {
       "Etag and Timestamp value must match"
     );
   });
+
+  it("Should be able to handle a batch request format from Azure-Storage/9.3.2, @loki", async () => {
+    const body = JSON.stringify({
+      TableName: reproFlowsTableName
+    });
+    const createTableHeaders = {
+      "Content-Type": "application/json",
+      Accept: "application/json;odata=nometadata"
+    };
+    const createTableResult = await postToAzurite(
+      "Tables",
+      body,
+      createTableHeaders
+    );
+    assert.strictEqual(createTableResult.status, 201);
+
+    // raw request from issue 1798 debug log ln 5368
+
+    const batchWithFailingRequestString = `--batch_5ba88789-f5e2-415a-b48a-f2d3c3062937\r\nContent-Type: multipart/mixed; boundary=changeset_c71314eb-b086-4e81-a14b-668f8cbdbc12\r\n\r\n--changeset_c71314eb-b086-4e81-a14b-668f8cbdbc12\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nPUT http://127.0.0.1:10002/devstoreaccount1/${reproFlowsTableName}(PartitionKey='0',RowKey='port_0_test-06gmr-cis-1_0_tengigabitethernet0%25fs3%25fs0') HTTP/1.1\r\nAccept: application/json;odata=minimalmetadata\r\nContent-Type: application/json\r\nDataServiceVersion: 3.0;\r\nIf-Match: W/\"datetime'2023-01-23T19%3A39%3A54.978799Z'\"\r\n\r\n{\"DeviceName\":\"test-06gmr-cis-1\",\"PortId\":\"port_0_test-06gmr-cis-1_0_tengigabitethernet0%fs3%fs0\",\"Bandwidth\":10000,\"AvailableBandwidth\":-1,\"Direction\":\"ToServiceProvider\",\"AzurePortName\":\"TenGigabitEthernet0/3/0\",\"ServiceProviderName\":\"microsoft er test\",\"ServiceProviderPortName\":\"A51-TEST-06GMR-CIS-1-PRI-A\",\"AuthorizedUsers\":\"\",\"PortpairId\":\"ppport_0_test-06gmr-cis-1_0_tengigabitethernet0%fs3%fs0\",\"TunnelInterfaceNames\":\"\",\"RackId\":\"\",\"PatchPanelId\":\"\",\"ConnectorType\":\"\",\"AdminState\":\"\",\"Description\":\"\",\"ExtendedLocationProperty\":\"\"}\r\n--changeset_c71314eb-b086-4e81-a14b-668f8cbdbc12\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nPUT http://127.0.0.1:10002/devstoreaccount1/${reproFlowsTableName}(PartitionKey='0',RowKey='port_0_test-06gmr-cis-2_0_tengigabitethernet0%25fs3%25fs0') HTTP/1.1\r\nAccept: application/json;odata=minimalmetadata\r\nContent-Type: application/json\r\nDataServiceVersion: 3.0;\r\nIf-Match: W/\"datetime'2023-01-23T19%3A39%3A54.978799Z'\"\r\n\r\n{\"DeviceName\":\"test-06gmr-cis-2\",\"PortId\":\"port_0_test-06gmr-cis-2_0_tengigabitethernet0%fs3%fs0\",\"Bandwidth\":10000,\"AvailableBandwidth\":-1,\"Direction\":\"ToServiceProvider\",\"AzurePortName\":\"TenGigabitEthernet0/3/0\",\"ServiceProviderName\":\"microsoft er test\",\"ServiceProviderPortName\":\"A51-TEST-06GMR-CIS-2-SEC-A\",\"AuthorizedUsers\":\"\",\"PortpairId\":\"ppport_0_test-06gmr-cis-1_0_tengigabitethernet0%fs3%fs0\",\"TunnelInterfaceNames\":\"\",\"RackId\":\"\",\"PatchPanelId\":\"\",\"ConnectorType\":\"\",\"AdminState\":\"\",\"Description\":\"\",\"ExtendedLocationProperty\":\"\"}\r\n--changeset_c71314eb-b086-4e81-a14b-668f8cbdbc12\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nPOST http://127.0.0.1:10002/devstoreaccount1/${reproFlowsTableName}() HTTP/1.1\r\nAccept: application/json;odata=minimalmetadata\r\nContent-Type: application/json\r\nPrefer: return-no-content\r\nDataServiceVersion: 3.0;\r\n\r\n{\"PartitionKey\":\"0\",\"RowKey\":\"portpair_0_microsoft er test_a51-test-06gmr-cis-1-pri-a\",\"PortPairName\":\"microsoft er test_A51-TEST-06GMR-CIS-1-PRI-A\",\"PortPairId\":\"ppport_0_test-06gmr-cis-1_0_tengigabitethernet0%fs3%fs0\",\"PrimaryDeviceName\":\"test-06gmr-cis-1\",\"PrimaryDevicePortId\":\"port_0_test-06gmr-cis-1_0_tengigabitethernet0%fs3%fs0\",\"PrimaryDevicePortName\":\"TenGigabitEthernet0/3/0\",\"SecondaryDeviceName\":\"test-06gmr-cis-2\",\"SecondaryDevicePortId\":\"port_0_test-06gmr-cis-2_0_tengigabitethernet0%fs3%fs0\",\"SecondaryDevicePortName\":\"TenGigabitEthernet0/3/0\",\"Description\":\"A51-TEST-06GMR-CIS-1-PRI-A\",\"ExtendedLocationProperty\":\"\",\"OverprovisionFactor\":4,\"AvailableBandwidth\":40000,\"ServiceProviderName\":\"microsoft er test\",\"AuthorizedUsers\":\"\",\"Stags\":\"\",\"PortPairUsabilityStatus\":true,\"AllowedSubscriptionsList\":\"\",\"SkipBilling\":false,\"PortpairEncapType\":\"\",\"PortpairType\":\"\",\"AllocationStatus\":\"\",\"AllocationDate\":\"\",\"PeeringLocation\":\"\",\"OwnerSubscriptionId\":\"00000000-0000-0000-0000-000000000000\",\"OwnerSubscriptionId@odata.type\":\"Edm.Guid\"}\r\n--changeset_c71314eb-b086-4e81-a14b-668f8cbdbc12--\r\n--batch_5ba88789-f5e2-415a-b48a-f2d3c3062937--\r\n`;
+
+    const patchRequestResult = await postToAzurite(
+      `$batch`,
+      batchWithFailingRequestString,
+      {
+        version: "2019-02-02",
+        options: {
+          requestId: "5c43f514-9598-421a-a8d3-7b55a08a10c9",
+          dataServiceVersion: "3.0"
+        },
+        multipartContentType:
+          "multipart/mixed; boundary=batch_a10acba3-03e0-4200-b4da-a0cd4f0017f6",
+        contentLength: 791,
+        body: "ReadableStream"
+      }
+    );
+
+    assert.strictEqual(patchRequestResult.status, 202);
+    // we respond with a 404 inside the batch request for the
+    // resources being modified, but that is irrelevant for the test.
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/merge-entity
+    const resourceNotFound = patchRequestResult.data.match(
+      "HTTP/1.1 404 Not Found"
+    ).length;
+    assert.strictEqual(resourceNotFound, 1);
+  });
 });
 
 /**
