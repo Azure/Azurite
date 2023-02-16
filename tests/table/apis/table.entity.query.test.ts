@@ -908,7 +908,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
     await tableClient.deleteTable();
-  });  
+  });
 
   it("should work correctly when query filter contains true or false, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
@@ -941,10 +941,37 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       all = [...all, ...entity];
     }
     assert.strictEqual(all.length, 2);
-    all.forEach((entity) =>
-    {
-      assert.ok(entity.partitionKey === `${partitionKeyForQueryTest}3` || ((entity.partitionKey === `${partitionKeyForQueryTest}1` || entity.partitionKey === `${partitionKeyForQueryTest}2`) && entity.rowKey === '1' ))
-    })
+    all.forEach((entity) => {
+      assert.ok(
+        entity.partitionKey === `${partitionKeyForQueryTest}3` ||
+          ((entity.partitionKey === `${partitionKeyForQueryTest}1` ||
+            entity.partitionKey === `${partitionKeyForQueryTest}2`) &&
+            entity.rowKey === "1")
+      );
+    });
+    await tableClient.deleteTable();
+  });
+
+  it("should find a property identifier starting with underscore, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("under")
+    );
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity = { partitionKey, rowKey: "1", _foo: "bar" };
+
+    await tableClient.createTable({ requestOptions: { timeout: 60000 } });
+    const result = await tableClient.createEntity(testEntity);
+    assert.ok(result.etag);
+
+    const queryResult = await tableClient
+      .listEntities<AzureDataTablesTestEntity>({
+        queryOptions: {
+          filter: `PartitionKey eq '${partitionKey}' and _foo eq 'bar'`
+        }
+      })
+      .next();
+    assert.notStrictEqual(queryResult.value, undefined);
     await tableClient.deleteTable();
   });
 });

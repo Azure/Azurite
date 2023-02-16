@@ -133,6 +133,10 @@ const entityQueries = [
   {
     input: "PartitionKey eq 'I am ''good'' at TypeScript'",
     expected: "return ( item.PartitionKey === `I am 'good' at TypeScript` )"
+  },
+  {
+    input: "_foo eq 'bar'",
+    expected: "return ( _foo === `bar` )"
   }
 ];
 

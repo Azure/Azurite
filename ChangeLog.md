@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Fixed issue for querying on identifiers starting with underscore.
+
 ## 2023.02 Version 3.22.0
 
 General:
