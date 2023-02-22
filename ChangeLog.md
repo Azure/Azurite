@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Base image alpine version bumped to 3.17
+
 ## 2023.02 Version 3.22.0
 
 General:
