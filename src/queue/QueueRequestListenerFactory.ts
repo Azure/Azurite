@@ -47,7 +47,7 @@ export default class QueueRequestListenerFactory
     private readonly skipApiVersionCheck?: boolean,
     private readonly oauth?: OAuthLevel,
     private readonly disableProductStyleUrl?: boolean
-  ) {}
+  ) { }
 
   public createRequestListener(): RequestListener {
     const app = express().disable("x-powered-by");
@@ -95,6 +95,14 @@ export default class QueueRequestListenerFactory
     // Manually created middleware to deserialize feature related context which swagger doesn't know
     app.use(createQueueStorageContextMiddleware(this.skipApiVersionCheck, this.disableProductStyleUrl));
 
+    // Sometimes Azure Functions sends messagettl as -1 with a unicode minus sign (−)
+    app.use((req, res, next) => {
+      if (req && req.query && req.query.messagettl) {
+        let messagettl = req.query.messagettl?.replace("−", "-");
+        req.query.messagettl = messagettl;
+      }
+      next();
+    })
     // Dispatch incoming HTTP request to specific operation
     app.use(middlewareFactory.createDispatchMiddleware());
 
