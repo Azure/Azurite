@@ -47,7 +47,7 @@ export default class QueueRequestListenerFactory
     private readonly skipApiVersionCheck?: boolean,
     private readonly oauth?: OAuthLevel,
     private readonly disableProductStyleUrl?: boolean
-  ) { }
+  ) {}
 
   public createRequestListener(): RequestListener {
     const app = express().disable("x-powered-by");
