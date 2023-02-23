@@ -98,11 +98,12 @@ export default class QueueRequestListenerFactory
     // Sometimes Azure Functions sends messagettl as -1 with a unicode minus sign (−)
     app.use((req, res, next) => {
       if (req && req.query && req.query.messagettl) {
-        let messagettl = req.query.messagettl?.replace("−", "-");
+        const messagettl = req.query.messagettl?.replace("−", "-");
         req.query.messagettl = messagettl;
       }
       next();
-    })
+    });
+
     // Dispatch incoming HTTP request to specific operation
     app.use(middlewareFactory.createDispatchMiddleware());
 
