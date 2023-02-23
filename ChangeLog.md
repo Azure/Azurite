@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Queue:
+
+- Fixed issue with running Durable Functions from Azure Functions where the Functions would send oddly an formatted negative number the messagettl parameter.
+
 ## 2023.02 Version 3.22.0
 
 General:
