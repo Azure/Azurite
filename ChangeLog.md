@@ -7,7 +7,8 @@
 Table:
 
 - Fixed issue for querying on identifiers starting with underscore.
-  Queue:
+
+Queue:
 
 - Fixed issue that queue service SAS without start time not work.
 
