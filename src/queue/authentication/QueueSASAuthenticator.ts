@@ -325,8 +325,8 @@ export default class QueueSASAuthenticator implements IAuthenticator {
   }
 
   private validateTime(expiry?: Date | string, start?: Date | string): boolean {
-    // The same as Azure storage, each part is required.
-    if (expiry === undefined || start === undefined) {
+    // start is optional, expire is required, per https://learn.microsoft.com/en-us/rest/api/storageservices/create-service-sas#specify-the-access-policy
+    if (expiry === undefined) {
       return false;
     }
 
