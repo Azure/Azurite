@@ -681,5 +681,40 @@ describe("Queue SAS test", () => {
       dResult.receivedMessageItems[0].popReceipt
     );
     assert.ok(deleteResult.requestId);
+  });  
+
+  it("generateQueueSASQueryParameters should work without startTime @loki", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
+
+    const queueName = getUniqueName("queue");
+    const queueClient = serviceClient.getQueueClient(queueName);
+    await queueClient.create();
+
+    const queueSAS = generateQueueSASQueryParameters(
+      {
+        queueName,
+        expiresOn: tmr,
+        permissions: QueueSASPermissions.parse("raup"),
+        version: "2019-02-02"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    );
+
+    const sasURL = `${queueClient.url}?${queueSAS}`;
+    const queueClientWithSAS = new QueueClient(
+      sasURL,
+      newPipeline(new AnonymousCredential())
+    );
+
+    await queueClientWithSAS.getProperties();
+    await queueClient.delete();
   });
 });
