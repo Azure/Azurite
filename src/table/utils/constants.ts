@@ -21,6 +21,8 @@ export const TABLE_API_VERSION = "2021-12-02";
 export const VERSION = "3.22.0";
 // Max Body size is 4 MB
 export const BODY_SIZE_MAX = 1024 * 1024 * 4;
+// Max Entity sizxe is 1 MB
+export const ENTITY_SIZE_MAX = 1024 * 1024;
 
 export const HeaderConstants = {
   SERVER: "Server",

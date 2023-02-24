@@ -122,7 +122,7 @@ export class TableBatchSerialization extends BatchSerialization {
           operation.httpMethod = requestType[0] as HttpMethod;
         }
         operation.path = path[1];
-        operation.uri = decodeURI(fullRequestURI[0]);
+        operation.uri = fullRequestURI[0];
         operation.jsonRequestBody = jsonBody;
         return operation;
       }
@@ -538,10 +538,14 @@ export class TableBatchSerialization extends BatchSerialization {
     }
     const trimmedUrl: string = request.getUrl().substring(0, offsetPosition);
     let entityPath = trimmedUrl + "(PartitionKey='";
-    entityPath += request.params.tableEntityProperties!.PartitionKey;
+    entityPath += encodeURIComponent(
+      request.params.tableEntityProperties!.PartitionKey
+    );
     entityPath += "',";
     entityPath += "RowKey='";
-    entityPath += request.params.tableEntityProperties!.RowKey;
+    entityPath += encodeURIComponent(
+      request.params.tableEntityProperties!.RowKey
+    );
     entityPath += "')\r\n";
     return entityPath;
   }

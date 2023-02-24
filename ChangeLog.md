@@ -7,6 +7,9 @@
 Table:
 
 - Fixed issue for querying on identifiers starting with underscore.
+  Queue:
+
+- Fixed issue that queue service SAS without start time not work.
 
 ## 2023.02 Version 3.22.0
 
@@ -18,6 +21,7 @@ Table:
 
 - Fixed issue that True/False in table query will fail the request.
 - Fixed an issue: it cannot return result correctly when querying for a table entity with filters including some special characters.
+- Fixed issue with decoding URIs from batch request submitted by old Azure Storage SDK.
 
 ## 2023.01 Version 3.21.0
 
