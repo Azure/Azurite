@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Fixed issue for querying on identifiers starting with underscore.
+
 Queue:
 
 - Fixed issue that queue service SAS without start time not work.

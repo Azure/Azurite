@@ -980,4 +980,27 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     });
     await tableClient.deleteTable();
   });
+
+  it("should find a property identifier starting with underscore, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("under")
+    );
+    const partitionKey = createUniquePartitionKey("");
+    const testEntity = { partitionKey, rowKey: "1", _foo: "bar" };
+
+    await tableClient.createTable({ requestOptions: { timeout: 60000 } });
+    const result = await tableClient.createEntity(testEntity);
+    assert.ok(result.etag);
+
+    const queryResult = await tableClient
+      .listEntities<TableTestEntity>({
+        queryOptions: {
+          filter: `PartitionKey eq '${partitionKey}' and _foo eq 'bar'`
+        }
+      })
+      .next();
+    assert.notStrictEqual(queryResult.value, undefined);
+    await tableClient.deleteTable();
+  });
 });
