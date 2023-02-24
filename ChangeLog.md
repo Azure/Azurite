@@ -7,6 +7,7 @@
 Queue:
 
 - Fixed issue with running Durable Functions from Azure Functions where the Functions would send oddly an formatted negative number the messagettl parameter.
+- Fixed issue that queue service SAS without start time not work.
 
 ## 2023.02 Version 3.22.0
 
