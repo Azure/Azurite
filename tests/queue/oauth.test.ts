@@ -1,4 +1,4 @@
-import { QueueServiceClient, newPipeline } from "@azure/storage-queue";
+import { QueueServiceClient, newPipeline, generateAccountSASQueryParameters, AccountSASPermissions, SASProtocol, AccountSASResourceTypes, AccountSASServices, AnonymousCredential, generateQueueSASQueryParameters, QueueSASPermissions, StorageSharedKeyCredential } from "@azure/storage-queue";
 
 import * as assert from "assert";
 import Server from "../../src/queue/QueueServer";
@@ -6,7 +6,7 @@ import Server from "../../src/queue/QueueServer";
 import { configLogger } from "../../src/common/Logger";
 import { StoreDestinationArray } from "../../src/common/persistence/IExtentStore";
 import QueueConfiguration from "../../src/queue/QueueConfiguration";
-import { generateJWTToken, getUniqueName } from "../testutils";
+import { EMULATOR_ACCOUNT_KEY, generateJWTToken, getUniqueName } from "../testutils";
 import { SimpleTokenCredential } from "../simpleTokenCredential";
 
 // Set true to enable debug log
@@ -403,6 +403,131 @@ describe("Queue OAuth Basic", () => {
     }
     await queueClient.delete();
     assert.fail();
+  });
+
+  it("Create Queue with not exist Account, return 404 @loki @sql", async () => {
+    const accountNameNotExist = "devstoreaccountnotexist";
+    const invalidBaseURL = `https://${server.config.host}:${port}/${accountNameNotExist}`;
+    const queueName: string = getUniqueName("queue");
+
+    // Shared key
+    const sharedKeyCredential = new StorageSharedKeyCredential(
+      accountNameNotExist,
+      EMULATOR_ACCOUNT_KEY
+    );
+    let serviceClient = new QueueServiceClient(
+      invalidBaseURL,
+      newPipeline(
+        sharedKeyCredential,
+        {
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
+        }
+      )
+    );
+    let queueClientNotExist = serviceClient.getQueueClient(queueName);  
+    try {
+      await queueClientNotExist.create();
+    } catch (err) {
+      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound'){
+        assert.fail( "Create Queue with shared key not fail as expected." + err.toString()); 
+      }
+    }
+
+    // Oauth
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+
+    serviceClient = new QueueServiceClient(
+      invalidBaseURL,
+      newPipeline(new SimpleTokenCredential(token), {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+    queueClientNotExist = serviceClient.getQueueClient(queueName);  
+    try {
+      await queueClientNotExist.create();
+    } catch (err) {
+      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound'){
+        assert.fail( "Create queue with oauth not fail as expected." + err.toString()); 
+      }
+    }
+
+    // Account SAS
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); 
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+    const sas = generateAccountSASQueryParameters(
+      {
+        expiresOn: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: AccountSASPermissions.parse("rwdlacup"),
+        protocol: SASProtocol.HttpsAndHttp,
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("btqf").toString(),
+        startsOn: now,
+        version: "2016-05-31"
+      },
+      sharedKeyCredential
+    ).toString();
+    let sasURL = `${serviceClient.url}?${sas}`;
+    let serviceClientSas = new QueueServiceClient(
+      sasURL,
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+    queueClientNotExist = serviceClientSas.getQueueClient(queueName);  
+    try {
+      await queueClientNotExist.create();
+    } catch (err) {
+      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound'){
+        assert.fail( "Create queue with account sas not fail as expected." + err.toString()); 
+      }
+    }
+
+    // Service SAS
+    const queueSAS = generateQueueSASQueryParameters(
+      {
+        queueName,
+        expiresOn: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: QueueSASPermissions.parse("raup"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
+        version: "2019-02-02"
+      },
+      sharedKeyCredential
+    );
+    sasURL = `${serviceClient.url}?${queueSAS}`;
+    serviceClientSas = new QueueServiceClient(
+      sasURL,
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+    queueClientNotExist = serviceClientSas.getQueueClient(queueName);
+    try {
+      await queueClientNotExist.create();
+    } catch (err) {
+      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound'){
+        assert.fail( "Create queue with service sas not fail as expected." + err.toString()); 
+      }
+    }
   });
 
   it(`Should not work with HTTP @loki @sql`, async () => {

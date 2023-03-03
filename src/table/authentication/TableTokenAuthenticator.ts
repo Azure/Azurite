@@ -41,9 +41,8 @@ export default class TableTokenAuthenticator implements IAuthenticator {
         `TableTokenAuthenticator:validate() Invalid storage account ${account}.`,
         tableContext.contextID
       );
-      throw StorageErrorFactory.getInvalidOperation(
-        tableContext,
-        "Invalid storage account."
+      throw StorageErrorFactory.ResourceNotFound(
+        context
       );
     }
 

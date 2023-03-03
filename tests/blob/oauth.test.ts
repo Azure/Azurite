@@ -1,4 +1,4 @@
-import { AnonymousCredential, BlobServiceClient, ContainerClient, ContainerSASPermissions, generateBlobSASQueryParameters, newPipeline } from "@azure/storage-blob";
+import { AccountSASPermissions, AccountSASResourceTypes, AccountSASServices, AnonymousCredential, BlobServiceClient, ContainerClient, ContainerSASPermissions, generateAccountSASQueryParameters, generateBlobSASQueryParameters, newPipeline, SASProtocol } from "@azure/storage-blob";
 
 import * as assert from "assert";
 
@@ -799,5 +799,129 @@ describe("Blob OAuth Basic", () => {
       return;
     }
     assert.fail();
+  });
+
+  it("Create container with not exist Account, return 404 @loki @sql", async () => {
+    const accountNameNotExist = "devstoreaccountnotexist";
+    const baseURL = `https://${server.config.host}:${server.config.port}/${accountNameNotExist}`;
+    const containerName: string = getUniqueName("1container-with-dash");
+
+    // Shared key
+    const sharedKeyCredential = new StorageSharedKeyCredential(
+      accountNameNotExist,
+      EMULATOR_ACCOUNT_KEY
+    );
+    let serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(
+        sharedKeyCredential,
+        {
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
+        }
+      )
+    );
+    let containerClientNotExist = serviceClient.getContainerClient(containerName);
+    try {
+      await containerClientNotExist.create();
+    } catch (err) {
+      if (err.statusCode !== 404 && err.response.parsedBody.code !== 'ResourceNotFound'){
+        assert.fail( "Create queue with shared key not fail as expected." + err.toString()); 
+      }
+    }
+
+    // Oauth
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+
+    serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(new SimpleTokenCredential(token), {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+    containerClientNotExist = serviceClient.getContainerClient(containerName);
+    try {
+      await containerClientNotExist.create();
+    } catch (err) {
+      if (err.statusCode !== 404 && err.response.parsedBody.code !== 'ResourceNotFound'){
+        assert.fail( "Create queue with oauth not fail as expected." + err.toString()); 
+      }
+    }
+    // Account SAS
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); 
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+    const sas = generateAccountSASQueryParameters(
+      {
+        expiresOn: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: AccountSASPermissions.parse("rwdlacup"),
+        protocol: SASProtocol.HttpsAndHttp,
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("btqf").toString(),
+        startsOn: now,
+        version: "2016-05-31"
+      },
+      sharedKeyCredential
+    ).toString();
+    let sasURL = `${serviceClient.url}?${sas}`;
+    serviceClient = new BlobServiceClient(
+      sasURL,
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+    containerClientNotExist = serviceClient.getContainerClient(containerName); 
+    try {
+      await containerClientNotExist.create();
+    } catch (err) {
+      if (err.statusCode !== 404 && err.response.parsedBody.code !== 'ResourceNotFound'){
+        assert.fail( "Create queue with account sas not fail as expected." + err.toString()); 
+      }
+    }
+
+    // Service SAS
+    const containerSAS = generateBlobSASQueryParameters(
+      {
+        containerName,
+        expiresOn: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: ContainerSASPermissions.parse("racwdl"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
+        version: "2016-05-31"
+      },
+      sharedKeyCredential
+    );
+    sasURL = `${serviceClient.url}?${containerSAS}`;
+    serviceClient = new BlobServiceClient(
+      sasURL,
+      newPipeline(new AnonymousCredential(), {
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+    containerClientNotExist = serviceClient.getContainerClient(containerName);
+    try {
+      await containerClientNotExist.create();
+    } catch (err) {
+      if (err.statusCode !== 404 && err.response.parsedBody.code !== 'ResourceNotFound'){
+        assert.fail( "Create queue with service sas not fail as expected." + err.toString()); 
+      }
+    }
   });
 });

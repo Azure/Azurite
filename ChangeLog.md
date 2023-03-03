@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Return 404 StatusCode when Storage account not exist
+
 Table:
 
 - Fixed issue for querying on identifiers starting with underscore.

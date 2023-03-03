@@ -1,11 +1,12 @@
-import { TableClient } from "@azure/data-tables";
+import { AzureNamedKeyCredential, AzureSASCredential, generateTableSas, TableClient } from "@azure/data-tables";
 
 import * as assert from "assert";
 
 import { configLogger } from "../../../src/common/Logger";
 import TableTestServerFactory from "../utils/TableTestServerFactory";
-import { generateJWTToken, getUniqueName } from "../../testutils";
+import { EMULATOR_ACCOUNT_KEY, generateJWTToken, getUniqueName } from "../../testutils";
 import { SimpleTokenCredential } from "../../simpleTokenCredential";
+import { AccountSASPermissions, AccountSASResourceTypes, AccountSASServices, generateAccountSASQueryParameters, SASProtocol, StorageSharedKeyCredential } from "@azure/storage-blob";
 
 // Set true to enable debug log
 configLogger(false);
@@ -423,5 +424,108 @@ describe("Table OAuth Basic", () => {
       return;
     }
     assert.fail();
+  });
+
+  it("Create Table with not exist Account, return 404 @loki @sql", async () => {
+    const accountNameNotExist = "devstoreaccountnotexist";
+    const baseURL = `https://${server.config.host}:${server.config.port}/${accountNameNotExist}`;
+    const tableName: string = getUniqueName("table");
+
+    // Shared key
+    const sharedKeyCredential = new AzureNamedKeyCredential(
+      accountNameNotExist,
+      EMULATOR_ACCOUNT_KEY
+    );
+    let tableClient = new TableClient(
+      baseURL,
+      tableName,
+      sharedKeyCredential
+    ); 
+    try {
+      await tableClient.createTable();
+    } catch (err) {
+      if (err.statusCode !== 404 || err.response.parsedBody.Code !== 'ResourceNotFound'){
+        assert.fail( "Create Table with shared key not fail as expected." + err.toString()); 
+      }
+    }
+
+    // Oauth
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+    tableClient = new TableClient(
+      baseURL,
+      tableName,
+      new SimpleTokenCredential(token),
+      {
+        redirectOptions: { maxRetries: 1 }
+      }
+    );
+    try {
+      await tableClient.createTable();
+    } catch (err) {
+      if (err.statusCode !== 404 || err.response.parsedBody.Code !== 'ResourceNotFound'){
+        assert.fail( "Create Table with oauth not fail as expected." + err.toString()); 
+      }
+    }
+
+    // Account SAS
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); 
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+    let sas = generateAccountSASQueryParameters(
+      {
+        expiresOn: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: AccountSASPermissions.parse("rwdlacup"),
+        protocol: SASProtocol.HttpsAndHttp,
+        resourceTypes: AccountSASResourceTypes.parse("sco").toString(),
+        services: AccountSASServices.parse("btqf").toString(),
+        startsOn: now,
+        version: "2016-05-31"
+      },
+      new StorageSharedKeyCredential(
+        accountNameNotExist,
+        EMULATOR_ACCOUNT_KEY
+      )
+    ).toString();
+    tableClient = new TableClient(
+      baseURL,
+      tableName,
+      new AzureSASCredential(sas)
+    );
+    try {
+      await tableClient.createTable();
+    } catch (err) {
+      if (err.statusCode !== 404 || err.response.parsedBody.Code !== 'ResourceNotFound'){
+        assert.fail( "Create Table with account sas not fail as expected." + err.toString()); 
+      }
+    }
+
+    // Service SAS
+    sas = generateTableSas(
+      tableName,
+      sharedKeyCredential,
+    ).toString();
+    tableClient = new TableClient(
+      baseURL,
+      tableName,
+      new AzureSASCredential(sas)
+    ); 
+    try {
+      await tableClient.createTable();
+    } catch (err) {
+      if (err.statusCode !== 404 || err.response.parsedBody.Code !== 'ResourceNotFound'){
+        assert.fail( "Create Table with service sas not fail as expected." + err.toString()); 
+      }
+    }
   });
 });

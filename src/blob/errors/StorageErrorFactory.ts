@@ -73,6 +73,15 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static ResourceNotFound(contextID: string = DefaultID): StorageError {
+    return new StorageError(
+      404,
+      "ResourceNotFound",
+      "The specified resource does not exist.",
+      contextID
+    );
+  }
+
   public static getInvalidQueryParameterValue(
     contextID: string = DefaultID,
     parameterName?: string,

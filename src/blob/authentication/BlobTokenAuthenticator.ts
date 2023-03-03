@@ -41,9 +41,8 @@ export default class BlobTokenAuthenticator implements IAuthenticator {
         `BlobTokenAuthenticator:validate() Invalid storage account ${account}.`,
         blobContext.contextId
       );
-      throw StorageErrorFactory.getInvalidOperation(
-        blobContext.contextId!,
-        "Invalid storage account."
+      throw StorageErrorFactory.ResourceNotFound(
+        blobContext.contextId!
       );
     }
 

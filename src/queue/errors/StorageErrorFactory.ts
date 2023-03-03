@@ -149,6 +149,17 @@ export default class StorageErrorFactory {
     return new StorageError(400, "InvalidOperation", message, contextID);
   }
 
+  public static ResourceNotFound(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      404,
+      "ResourceNotFound",
+      "The specified resource does not exist.",
+      contextID
+    )
+  }
+
   public static getAuthorizationSourceIPMismatch(
     contextID: string
   ): StorageError {
