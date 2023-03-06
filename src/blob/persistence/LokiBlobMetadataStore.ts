@@ -2232,7 +2232,8 @@ export default class LokiBlobMetadataStore
     const blobDoc = blobColl.findOne({
       accountName: block.accountName,
       containerName: block.containerName,
-      name: block.blobName
+      name: block.blobName,
+      snapshot: ""
     });
 
     let blobExist = false;
@@ -2273,7 +2274,8 @@ export default class LokiBlobMetadataStore
       const existBlockDoc = coll.findOne({
         accountName: block.accountName,
         containerName: block.containerName,
-        blobName: block.blobName
+        blobName: block.blobName,
+        snapshot: ""
       });
       if (existBlockDoc) {
         if (
@@ -2289,6 +2291,7 @@ export default class LokiBlobMetadataStore
       accountName: block.accountName,
       containerName: block.containerName,
       blobName: block.blobName,
+      snapshot: "",
       name: block.name,
       isCommitted: block.isCommitted
     });

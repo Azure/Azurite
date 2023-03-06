@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Fixed a bug where stageBlock with a valid lease fails on a blob with a snapshot. 
+
 Table:
 
 - Fixed issue for querying on identifiers starting with underscore.

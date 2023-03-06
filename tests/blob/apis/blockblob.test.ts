@@ -1,4 +1,4 @@
-import {
+﻿import {
   StorageSharedKeyCredential,
   BlobServiceClient,
   newPipeline
@@ -512,6 +512,32 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.uncommittedBlocks!.length, 0);
     assert.equal(listResponse.committedBlocks![0].name, base64encode("1"));
     assert.equal(listResponse.committedBlocks![0].size, body.length);
+  });
+
+  it("stageBlock with lease after creating snapshot @loki @sql", async () => {
+    const body = "HelloWorld";
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.commitBlockList([base64encode("1")]);
+
+    let blobLeaseClient = await blobClient.getBlobLeaseClient();
+    const leaseResult = await blobLeaseClient.acquireLease(-1);
+    const leaseId = leaseResult.leaseId;
+    assert.ok(leaseId);
+
+    // Create blob snapshot
+    const result = await blobClient.createSnapshot();
+    assert.ok(result.snapshot);
+
+    const getResult = await blobClient.getProperties();
+    assert.equal(getResult.leaseState, "leased");
+    assert.equal(getResult.leaseStatus, "locked");
+
+    // Attempt to stage a block using the acquired lease
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length, {
+      conditions: { leaseId }
+    });
+
+    await blobLeaseClient.releaseLease();
   });
 
   it("upload with Readable stream body and default parameters @loki @sql", async () => {
