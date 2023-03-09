@@ -309,7 +309,7 @@ export default class QPState implements IQPState {
    */
   isIdentifier(token: string): boolean {
     const match = token.match(
-      /^(?!true$)(?!false$)(?!guid')(?!binary')(?!X')(?!datetime')[a-zA-Z]/
+      /^(?!true$)(?!false$)(?!guid')(?!binary')(?!X')(?!datetime')[_a-zA-Z]/
     );
     if (match !== null && match!.length > 0) {
       return true;
