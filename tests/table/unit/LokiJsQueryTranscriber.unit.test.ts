@@ -116,7 +116,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
         originalQuery:
           "(myGuid eq guid'12345678-1234-1234-1234-1234567890ab' )",
         expectedQuery:
-          "return ( ( ( item.properties.myGuid === '12345678-1234-1234-1234-1234567890ab' ) || ( item.properties.myGuid === 'MTIzNDU2NzgtMTIzNC0xMjM0LTEyMzQtMTIzNDU2Nzg5MGFi' ) ) )"
+          "return ( ( ( item.properties.myGuid === 'MTIzNDU2NzgtMTIzNC0xMjM0LTEyMzQtMTIzNDU2Nzg5MGFi' ) || ( item.properties.myGuid === '12345678-1234-1234-1234-1234567890ab' ) ) )"
       }
     ];
 
