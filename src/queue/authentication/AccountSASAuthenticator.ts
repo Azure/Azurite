@@ -42,9 +42,8 @@ export default class AccountSASAuthenticator implements IAuthenticator {
     // TODO: Make following async
     const accountProperties = this.accountDataStore.getAccount(account);
     if (accountProperties === undefined) {
-      throw StorageErrorFactory.getInvalidOperation(
-        context.contextID!,
-        "Invalid storage account."
+      throw StorageErrorFactory.ResourceNotFound(
+        context.contextID!
       );
     }
     this.logger.debug(

@@ -46,9 +46,8 @@ export default class TableSharedKeyLiteAuthenticator implements IAuthenticator {
         `TableSharedKeyLiteAuthenticator:validate() Invalid storage account ${account}.`,
         tableContext.contextID
       );
-      throw StorageErrorFactory.getInvalidOperation(
-        tableContext,
-        "Invalid storage account."
+      throw StorageErrorFactory.ResourceNotFound(
+        context
       );
     }
 

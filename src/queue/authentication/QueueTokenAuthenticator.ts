@@ -41,9 +41,8 @@ export default class QueueTokenAuthenticator implements IAuthenticator {
         `QueueTokenAuthenticator:validate() Invalid storage account ${account}.`,
         queueContext.contextID
       );
-      throw StorageErrorFactory.getInvalidOperation(
-        queueContext.contextID!,
-        "Invalid storage account."
+      throw StorageErrorFactory.ResourceNotFound(
+        context.contextID!
       );
     }
 

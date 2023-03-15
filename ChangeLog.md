@@ -4,6 +4,13 @@
 
 ## Upcoming Release
 
+General:
+
+- Return 404 StatusCode when Storage account not exist
+- Migrated tslint to eslint.
+- Typescript upgraded from 4.2.4 to 4.9.5.
+- Migrated test pipeline from Node.js 10/12 to Node.js 14/16/18.
+
 Table:
 
 - Fixed issue for querying on identifiers starting with underscore.
