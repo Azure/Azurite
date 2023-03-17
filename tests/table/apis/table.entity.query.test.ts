@@ -1004,7 +1004,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("16. should find guids when using filter with ge, gt and ne, @loki", async () => {
+  it("16. should find guids when using filter with ge, lt, gt and ne, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("guidfilters")
@@ -1064,6 +1064,14 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
         },
         expectedResult: 2,
         expectedValue: guidEntities[1].guidField.value
+      },
+      {
+        index: 3,
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (guidField gt guid'${guidEntities[1].guidField.value}')`
+        },
+        expectedResult: 1,
+        expectedValue: guidEntities[2].guidField.value
       }
     ];
 
