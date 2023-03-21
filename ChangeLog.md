@@ -14,6 +14,8 @@ General:
 Table:
 
 - Fixed issue for querying on identifiers starting with underscore.
+- Fixed issue for querying GUIDs using operators other than eq and ne
+- GUID queries only support persistent storage on legacy (string) format GUIDs for eq and ne operators, other operators will only evaluate newly stored entities.
 
 Queue:
 
