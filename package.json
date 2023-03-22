@@ -27,7 +27,7 @@
     "express": "^4.16.4",
     "fs-extra": "^11.1.1",
     "glob-to-regexp": "^0.4.1",
-    "jsonwebtoken": "^8.5.1",
+    "jsonwebtoken": "^9.0.0",
     "lokijs": "^1.5.6",
     "morgan": "^1.9.1",
     "multistream": "^2.1.1",
