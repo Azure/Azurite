@@ -9,8 +9,8 @@
  */
 // tslint:disable:max-line-length
 
-import * as Models from '../artifacts/models';
-import Context from '../Context';
+import * as Models from "../artifacts/models";
+import Context from "../Context";
 
 export default interface IServiceHandler {
   setProperties(storageServiceProperties: Models.StorageServiceProperties, options: Models.ServiceSetPropertiesOptionalParams, context: Context): Promise<Models.ServiceSetPropertiesResponse>;

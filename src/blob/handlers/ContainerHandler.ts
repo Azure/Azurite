@@ -328,54 +328,43 @@ export default class ContainerHandler extends BaseHandler
     throw new NotImplementedError(context.contextId!);
   }
 
-  // Service doesn't support this feature either. 
-  // The SDK marked rename function to be private to hide it from customer.
-  // From SDK comments: Need to hide this interface for now. Make it public and turn on the live tests for it when the service is ready.
-  public async rename(
-    sourceContainerName: string,
-    options: Models.ContainerRenameOptionalParams,
-    context: Context
-  ): Promise<Models.ContainerRenameResponse>{
-    throw new NotImplementedError(context.contextId!);
-  }
-
   public async submitBatch(
     body: NodeJS.ReadableStream,
     contentLength: number,
     multipartContentType: string,
     options: Models.ContainerSubmitBatchOptionalParams,
     context: Context): Promise<Models.ContainerSubmitBatchResponse> {
-      const blobServiceCtx = new BlobStorageContext(context);
-      const requestBatchBoundary = blobServiceCtx.request!.getHeader("content-type")!.split("=")[1];
+    const blobServiceCtx = new BlobStorageContext(context);
+    const requestBatchBoundary = blobServiceCtx.request!.getHeader("content-type")!.split("=")[1];
 
-      const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
-         this.metadataStore, this.extentStore, this.logger, this.loose);
+    const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
+      this.metadataStore, this.extentStore, this.logger, this.loose);
 
-      const responseBodyString = await blobBatchHandler.submitBatch(body,
-        requestBatchBoundary,
-        blobServiceCtx.request!.getPath(),
-        context.request!,
-        context);
+    const responseBodyString = await blobBatchHandler.submitBatch(body,
+      requestBatchBoundary,
+      blobServiceCtx.request!.getPath(),
+      context.request!,
+      context);
 
-      const responseBody = new Readable();
-      responseBody.push(responseBodyString);
-      responseBody.push(null);
+    const responseBody = new Readable();
+    responseBody.push(responseBodyString);
+    responseBody.push(null);
 
-      // No client request id defined in batch response, should refine swagger and regenerate from it.
-      // batch response succeed code should be 202 instead of 200, should refine swagger and regenerate from it.
-      const response: Models.ContainerSubmitBatchResponse = {
-        statusCode: 202,
-        requestId: context.contextId,
-        version: BLOB_API_VERSION,
-        contentType: "multipart/mixed; boundary=" + requestBatchBoundary,
-        body: responseBody
-      };
+    // No client request id defined in batch response, should refine swagger and regenerate from it.
+    // batch response succeed code should be 202 instead of 200, should refine swagger and regenerate from it.
+    const response: Models.ContainerSubmitBatchResponse = {
+      statusCode: 202,
+      requestId: context.contextId,
+      version: BLOB_API_VERSION,
+      contentType: "multipart/mixed; boundary=" + requestBatchBoundary,
+      body: responseBody
+    };
 
-      return response;
+    return response;
   }
 
   public async filterBlobs(options: Models.ContainerFilterBlobsOptionalParams, context: Context
-    ): Promise<Models.ContainerFilterBlobsResponse> {
+  ): Promise<Models.ContainerFilterBlobsResponse> {
     throw new NotImplementedError(context.contextId!);
   }
 

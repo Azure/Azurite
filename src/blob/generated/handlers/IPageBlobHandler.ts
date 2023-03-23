@@ -9,8 +9,8 @@
  */
 // tslint:disable:max-line-length
 
-import * as Models from '../artifacts/models';
-import Context from '../Context';
+import * as Models from "../artifacts/models";
+import Context from "../Context";
 
 export default interface IPageBlobHandler {
   create(contentLength: number, blobContentLength: number, options: Models.PageBlobCreateOptionalParams, context: Context): Promise<Models.PageBlobCreateResponse>;

@@ -9,11 +9,11 @@
  */
 // tslint:disable:object-literal-sort-keys
 
-import * as msRest from '@azure/ms-rest-js';
+import * as msRest from "@azure/ms-rest-js";
 
-import * as Mappers from './mappers';
-import { Operation } from './operation';
-import * as Parameters from './parameters';
+import * as Mappers from "./mappers";
+import { Operation } from "./operation";
+import * as Parameters from "./parameters";
 
 const serializer = new msRest.Serializer(Mappers, true);
 // specifications for new method group start
@@ -195,7 +195,7 @@ const serviceGetAccountInfoOperationSpec: msRest.OperationSpec = {
 };
 
 const serviceGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
-  httpMethod: "GET",
+  httpMethod: "HEAD",
   urlParameters: [
     Parameters.url
   ],
@@ -208,7 +208,7 @@ const serviceGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
   ],
   responses: {
     200: {
-      headersMapper: Mappers.ServiceGetAccountInfoHeaders
+      headersMapper: Mappers.ServiceGetAccountInfoWithHeadHeaders
     },
     default: {
       bodyMapper: Mappers.StorageError
@@ -370,7 +370,7 @@ const containerGetPropertiesWithHeadOperationSpec: msRest.OperationSpec = {
   ],
   responses: {
     200: {
-      headersMapper: Mappers.ContainerGetPropertiesHeaders1
+      headersMapper: Mappers.ContainerGetPropertiesWithHeadHeaders
     },
     default: {
       bodyMapper: Mappers.StorageError
@@ -566,36 +566,6 @@ const containerRestoreOperationSpec: msRest.OperationSpec = {
   serializer
 };
 
-const containerRenameOperationSpec: msRest.OperationSpec = {
-  httpMethod: "PUT",
-  path: "{containerName}",
-  urlParameters: [
-    Parameters.url,
-    Parameters.containerName
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.restype2,
-    Parameters.comp9
-  ],
-  headerParameters: [
-    Parameters.version,
-    Parameters.requestId,
-    Parameters.sourceContainerName,
-    Parameters.sourceLeaseId
-  ],
-  responses: {
-    200: {
-      headersMapper: Mappers.ContainerRenameHeaders
-    },
-    default: {
-      bodyMapper: Mappers.StorageError
-    }
-  },
-  isXML: true,
-  serializer
-};
-
 const containerSubmitBatchOperationSpec: msRest.OperationSpec = {
   httpMethod: "POST",
   path: "{containerName}",
@@ -685,7 +655,7 @@ const containerAcquireLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp10,
+    Parameters.comp9,
     Parameters.restype2
   ],
   headerParameters: [
@@ -718,7 +688,7 @@ const containerReleaseLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp10,
+    Parameters.comp9,
     Parameters.restype2
   ],
   headerParameters: [
@@ -750,7 +720,7 @@ const containerRenewLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp10,
+    Parameters.comp9,
     Parameters.restype2
   ],
   headerParameters: [
@@ -782,7 +752,7 @@ const containerBreakLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp10,
+    Parameters.comp9,
     Parameters.restype2
   ],
   headerParameters: [
@@ -814,7 +784,7 @@ const containerChangeLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp10,
+    Parameters.comp9,
     Parameters.restype2
   ],
   headerParameters: [
@@ -931,7 +901,6 @@ const containerGetAccountInfoOperationSpec: msRest.OperationSpec = {
   serializer
 };
 
-
 const containerGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
   httpMethod: "HEAD",
   path: "{containerName}",
@@ -948,7 +917,7 @@ const containerGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
   ],
   responses: {
     200: {
-      headersMapper: Mappers.ContainerGetAccountInfoHeaders
+      headersMapper: Mappers.ContainerGetAccountInfoWithHeadHeaders
     },
     default: {
       bodyMapper: Mappers.StorageError
@@ -1128,7 +1097,7 @@ const blobSetExpiryOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp11
+    Parameters.comp10
   ],
   headerParameters: [
     Parameters.version,
@@ -1198,7 +1167,7 @@ const blobSetImmutabilityPolicyOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp12
+    Parameters.comp11
   ],
   headerParameters: [
     Parameters.version,
@@ -1229,7 +1198,7 @@ const blobDeleteImmutabilityPolicyOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp12
+    Parameters.comp11
   ],
   headerParameters: [
     Parameters.version,
@@ -1257,7 +1226,7 @@ const blobSetLegalHoldOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp13
+    Parameters.comp12
   ],
   headerParameters: [
     Parameters.version,
@@ -1325,7 +1294,7 @@ const blobAcquireLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp10
+    Parameters.comp9
   ],
   headerParameters: [
     Parameters.duration,
@@ -1361,7 +1330,7 @@ const blobReleaseLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp10
+    Parameters.comp9
   ],
   headerParameters: [
     Parameters.leaseId1,
@@ -1396,7 +1365,7 @@ const blobRenewLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp10
+    Parameters.comp9
   ],
   headerParameters: [
     Parameters.leaseId1,
@@ -1431,7 +1400,7 @@ const blobChangeLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp10
+    Parameters.comp9
   ],
   headerParameters: [
     Parameters.leaseId1,
@@ -1467,7 +1436,7 @@ const blobBreakLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp10
+    Parameters.comp9
   ],
   headerParameters: [
     Parameters.breakPeriod,
@@ -1502,7 +1471,7 @@ const blobCreateSnapshotOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp14
+    Parameters.comp13
   ],
   headerParameters: [
     Parameters.metadata,
@@ -1638,7 +1607,7 @@ const blobAbortCopyFromURLOperationSpec: msRest.OperationSpec = {
   queryParameters: [
     Parameters.copyId,
     Parameters.timeout,
-    Parameters.comp15
+    Parameters.comp14
   ],
   headerParameters: [
     Parameters.version,
@@ -1670,7 +1639,7 @@ const blobSetTierOperationSpec: msRest.OperationSpec = {
     Parameters.snapshot,
     Parameters.versionId,
     Parameters.timeout,
-    Parameters.comp16
+    Parameters.comp15
   ],
   headerParameters: [
     Parameters.tier1,
@@ -1739,7 +1708,7 @@ const blobGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
   ],
   responses: {
     200: {
-      headersMapper: Mappers.BlobGetAccountInfoHeaders
+      headersMapper: Mappers.BlobGetAccountInfoWithHeadHeaders
     },
     default: {
       bodyMapper: Mappers.StorageError
@@ -1760,7 +1729,7 @@ const blobQueryOperationSpec: msRest.OperationSpec = {
   queryParameters: [
     Parameters.snapshot,
     Parameters.timeout,
-    Parameters.comp17
+    Parameters.comp16
   ],
   headerParameters: [
     Parameters.version,
@@ -1822,7 +1791,7 @@ const blobGetTagsOperationSpec: msRest.OperationSpec = {
     Parameters.timeout,
     Parameters.snapshot,
     Parameters.versionId,
-    Parameters.comp18
+    Parameters.comp17
   ],
   headerParameters: [
     Parameters.version,
@@ -1854,7 +1823,7 @@ const blobSetTagsOperationSpec: msRest.OperationSpec = {
   queryParameters: [
     Parameters.timeout,
     Parameters.versionId,
-    Parameters.comp18
+    Parameters.comp17
   ],
   headerParameters: [
     Parameters.version,
@@ -1948,7 +1917,7 @@ const pageBlobUploadPagesOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp19
+    Parameters.comp18
   ],
   headerParameters: [
     Parameters.contentLength,
@@ -2005,7 +1974,7 @@ const pageBlobClearPagesOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp19
+    Parameters.comp18
   ],
   headerParameters: [
     Parameters.contentLength,
@@ -2049,7 +2018,7 @@ const pageBlobUploadPagesFromURLOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp19
+    Parameters.comp18
   ],
   headerParameters: [
     Parameters.sourceUrl,
@@ -2105,7 +2074,7 @@ const pageBlobGetPageRangesOperationSpec: msRest.OperationSpec = {
     Parameters.timeout,
     Parameters.marker,
     Parameters.maxresults,
-    Parameters.comp20
+    Parameters.comp19
   ],
   headerParameters: [
     Parameters.range0,
@@ -2145,7 +2114,7 @@ const pageBlobGetPageRangesDiffOperationSpec: msRest.OperationSpec = {
     Parameters.prevsnapshot,
     Parameters.marker,
     Parameters.maxresults,
-    Parameters.comp20
+    Parameters.comp19
   ],
   headerParameters: [
     Parameters.prevSnapshotUrl,
@@ -2257,7 +2226,7 @@ const pageBlobCopyIncrementalOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp21
+    Parameters.comp20
   ],
   headerParameters: [
     Parameters.copySource,
@@ -2342,7 +2311,7 @@ const appendBlobAppendBlockOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp22
+    Parameters.comp21
   ],
   headerParameters: [
     Parameters.contentLength,
@@ -2396,7 +2365,7 @@ const appendBlobAppendBlockFromUrlOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp22
+    Parameters.comp21
   ],
   headerParameters: [
     Parameters.sourceUrl,
@@ -2447,7 +2416,7 @@ const appendBlobSealOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp23
+    Parameters.comp22
   ],
   headerParameters: [
     Parameters.version,
@@ -2606,7 +2575,7 @@ const blockBlobStageBlockOperationSpec: msRest.OperationSpec = {
   queryParameters: [
     Parameters.blockId,
     Parameters.timeout,
-    Parameters.comp24
+    Parameters.comp23
   ],
   headerParameters: [
     Parameters.contentLength,
@@ -2654,7 +2623,7 @@ const blockBlobStageBlockFromURLOperationSpec: msRest.OperationSpec = {
   queryParameters: [
     Parameters.blockId,
     Parameters.timeout,
-    Parameters.comp24
+    Parameters.comp23
   ],
   headerParameters: [
     Parameters.contentLength,
@@ -2697,7 +2666,7 @@ const blockBlobCommitBlockListOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp25
+    Parameters.comp24
   ],
   headerParameters: [
     Parameters.transactionalContentMD5,
@@ -2759,7 +2728,7 @@ const blockBlobGetBlockListOperationSpec: msRest.OperationSpec = {
     Parameters.snapshot,
     Parameters.listType,
     Parameters.timeout,
-    Parameters.comp25
+    Parameters.comp24
   ],
   headerParameters: [
     Parameters.version,
@@ -2798,7 +2767,6 @@ Specifications[Operation.Container_SetMetadata] = containerSetMetadataOperationS
 Specifications[Operation.Container_GetAccessPolicy] = containerGetAccessPolicyOperationSpec;
 Specifications[Operation.Container_SetAccessPolicy] = containerSetAccessPolicyOperationSpec;
 Specifications[Operation.Container_Restore] = containerRestoreOperationSpec;
-Specifications[Operation.Container_Rename] = containerRenameOperationSpec;
 Specifications[Operation.Container_SubmitBatch] = containerSubmitBatchOperationSpec;
 Specifications[Operation.Container_FilterBlobs] = containerFilterBlobsOperationSpec;
 Specifications[Operation.Container_AcquireLease] = containerAcquireLeaseOperationSpec;

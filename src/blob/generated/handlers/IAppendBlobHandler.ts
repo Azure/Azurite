@@ -9,8 +9,8 @@
  */
 // tslint:disable:max-line-length
 
-import * as Models from '../artifacts/models';
-import Context from '../Context';
+import * as Models from "../artifacts/models";
+import Context from "../Context";
 
 export default interface IAppendBlobHandler {
   create(contentLength: number, options: Models.AppendBlobCreateOptionalParams, context: Context): Promise<Models.AppendBlobCreateResponse>;

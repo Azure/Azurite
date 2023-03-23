@@ -9,19 +9,18 @@
  */
 // tslint:disable:max-line-length
 
-import * as Models from '../artifacts/models';
-import Context from '../Context';
+import * as Models from "../artifacts/models";
+import Context from "../Context";
 
 export default interface IContainerHandler {
   create(options: Models.ContainerCreateOptionalParams, context: Context): Promise<Models.ContainerCreateResponse>;
   getProperties(options: Models.ContainerGetPropertiesOptionalParams, context: Context): Promise<Models.ContainerGetPropertiesResponse>;
-  getProperties(options: Models.ContainerGetProperties1OptionalParams, context: Context): Promise<Models.ContainerGetPropertiesHeaders12>;
+  getPropertiesWithHead(options: Models.ContainerGetPropertiesWithHeadOptionalParams, context: Context): Promise<Models.ContainerGetPropertiesWithHeadResponse>;
   delete(options: Models.ContainerDeleteMethodOptionalParams, context: Context): Promise<Models.ContainerDeleteResponse>;
   setMetadata(options: Models.ContainerSetMetadataOptionalParams, context: Context): Promise<Models.ContainerSetMetadataResponse>;
   getAccessPolicy(options: Models.ContainerGetAccessPolicyOptionalParams, context: Context): Promise<Models.ContainerGetAccessPolicyResponse>;
   setAccessPolicy(options: Models.ContainerSetAccessPolicyOptionalParams, context: Context): Promise<Models.ContainerSetAccessPolicyResponse>;
   restore(options: Models.ContainerRestoreOptionalParams, context: Context): Promise<Models.ContainerRestoreResponse>;
-  rename(sourceContainerName: string, options: Models.ContainerRenameOptionalParams, context: Context): Promise<Models.ContainerRenameResponse>;
   submitBatch(body: NodeJS.ReadableStream, contentLength: number, multipartContentType: string, options: Models.ContainerSubmitBatchOptionalParams, context: Context): Promise<Models.ContainerSubmitBatchResponse>;
   filterBlobs(options: Models.ContainerFilterBlobsOptionalParams, context: Context): Promise<Models.ContainerFilterBlobsResponse>;
   acquireLease(options: Models.ContainerAcquireLeaseOptionalParams, context: Context): Promise<Models.ContainerAcquireLeaseResponse>;

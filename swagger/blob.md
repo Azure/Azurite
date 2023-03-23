@@ -10,7 +10,7 @@ enable-xml: true
 generate-metadata: false
 license-header: MICROSOFT_MIT_NO_VERSION
 output-folder: ../src/blob/generated
-input-file: blob-storage.json
+input-file: blob-storage-2021-10-04.json
 model-date-time-as-string: true
 optional-response-headers: true
 enum-types: true
@@ -48,15 +48,15 @@ enum-types: true
 
 9. Make `ApiVersionParameter` parameter from required to optional.
 
-10. Add `x-ms-creation-time` to Blob_Download API responds
+10. Add `x-ms-creation-time` to Blob_Download API response.
 
-11. Add "" to "ListContainersInclude" enum, add "", "permissions" to "ListBlobsInclude" enum.
-
-12. Add "Premium" to "AccessTierRequired" enum and "AccessTierOptional" enum.
+11. Add "Premium" to "AccessTierRequired" enum and "AccessTierOptional" enum.
     Add "Mutable" to "ImmutabilityPolicyMode" at around line #11994
 
-13. Add spec for: Blob_GetAccountInfoWithHead, Container_GetAccountInfoWithHead and Service_GetAccountInfoWithHead.
+12. Add spec for: Blob_GetAccountInfoWithHead, Container_GetAccountInfoWithHead and Service_GetAccountInfoWithHead.
 
-14. Change return code from '200' to '202' for service_submitbatch.
+13. Change return code from '200' to '202' for service_submitbatch.
 
-15. Change "AllowedHeaders" and "ExposedHeaders" to be not required.
+14. Change "AllowedHeaders" and "ExposedHeaders" to from required to optional.
+
+15. Remove "Container_Rename" section.

@@ -1,10 +1,10 @@
-import IAppendBlobHandler from './IAppendBlobHandler';
-import IBlobHandler from './IBlobHandler';
-import IBlockBlobHandler from './IBlockBlobHandler';
-import IContainerHandler from './IContainerHandler';
-import IPageBlobHandler from './IPageBlobHandler';
 // tslint:disable:ordered-imports
-import IServiceHandler from './IServiceHandler';
+import IServiceHandler from "./IServiceHandler";
+import IContainerHandler from "./IContainerHandler";
+import IBlobHandler from "./IBlobHandler";
+import IPageBlobHandler from "./IPageBlobHandler";
+import IAppendBlobHandler from "./IAppendBlobHandler";
+import IBlockBlobHandler from "./IBlockBlobHandler";
 
 export interface IHandlers {
   serviceHandler: IServiceHandler;

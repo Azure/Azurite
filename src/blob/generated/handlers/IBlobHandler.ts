@@ -9,8 +9,8 @@
  */
 // tslint:disable:max-line-length
 
-import * as Models from '../artifacts/models';
-import Context from '../Context';
+import * as Models from "../artifacts/models";
+import Context from "../Context";
 
 export default interface IBlobHandler {
   download(options: Models.BlobDownloadOptionalParams, context: Context): Promise<Models.BlobDownloadResponse>;

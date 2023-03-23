@@ -24,7 +24,6 @@ export enum Operation {
   Container_GetAccessPolicy,
   Container_SetAccessPolicy,
   Container_Restore,
-  Container_Rename,
   Container_SubmitBatch,
   Container_FilterBlobs,
   Container_AcquireLease,

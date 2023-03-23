@@ -1,4 +1,4 @@
-import Operation from '../artifacts/operation';
+import Operation from "../artifacts/operation";
 
 // tslint:disable:one-line
 
@@ -8,7 +8,7 @@ export interface IHandlerPath {
   arguments: string[];
 }
 
-const operationHandlerMapping: {[key: number]: IHandlerPath} = {};
+const operationHandlerMapping: { [key: number]: IHandlerPath } = {};
 
 operationHandlerMapping[Operation.Service_SetProperties] = {
   arguments: [
@@ -129,14 +129,6 @@ operationHandlerMapping[Operation.Container_Restore] = {
   ],
   handler: "containerHandler",
   method: "restore"
-};
-operationHandlerMapping[Operation.Container_Rename] = {
-  arguments: [
-    "sourceContainerName",
-    "options"
-  ],
-  handler: "containerHandler",
-  method: "rename"
 };
 operationHandlerMapping[Operation.Container_SubmitBatch] = {
   arguments: [
