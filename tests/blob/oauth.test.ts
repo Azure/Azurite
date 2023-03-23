@@ -241,6 +241,60 @@ describe("Blob OAuth Basic", () => {
     await containerClient.delete();
   });
 
+  it(`Should work with delegation SAS container client doing blob upload @loki @sql`, async () => {
+    const token = generateJWTToken(
+      new Date("2019/01/01"),
+      new Date("2019/01/01"),
+      new Date("2100/01/01"),
+      "https://sts.windows-ppe.net/ab1f708d-50f6-404c-a006-d71b2ac7a606/",
+      "https://storage.azure.com",
+      "user_impersonation",
+      "23657296-5cd5-45b0-a809-d972a7f4dfe1",
+      "dd0d0df1-06c3-436c-8034-4b9a153097ce"
+    );
+
+    const serviceClient = new BlobServiceClient(
+      baseURL,
+      newPipeline(new SimpleTokenCredential(token), {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      })
+    );
+
+    const startTime = new Date();
+    startTime.setHours(startTime.getHours() - 1);
+    const expiryTime = new Date();
+    expiryTime.setDate(expiryTime.getDate() + 1);
+    
+    const userDelegationKey = await serviceClient.getUserDelegationKey(startTime, expiryTime);
+
+    const containerName: string = getUniqueName("1container-with-dash")
+
+    const sasExpirytime = new Date();
+    sasExpirytime.setHours(sasExpirytime.getHours() + 1);
+
+    const containerSAS = generateBlobSASQueryParameters(
+      {
+        containerName: containerName,
+        expiresOn: sasExpirytime,
+        permissions: ContainerSASPermissions.parse("racwdl"),
+      },
+      userDelegationKey,
+      "devstoreaccount1"
+    );
+
+    const containerClient = new ContainerClient(
+      `${serviceClient.url}/${containerName}?${containerSAS}`,
+      newPipeline(new AnonymousCredential())
+    );
+    await containerClient.create();
+    const blobClient = await containerClient.getBlockBlobClient("test");
+    const data = "Test Data";
+    await blobClient.upload(data, data.length);
+    await containerClient.delete();
+  });
+
   it(`Should fail with delegation SAS with invalid time duration @loki @sql`, async () => {
     const token = generateJWTToken(
       new Date("2019/01/01"),
