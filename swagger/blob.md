@@ -10,7 +10,7 @@ enable-xml: true
 generate-metadata: false
 license-header: MICROSOFT_MIT_NO_VERSION
 output-folder: ../src/blob/generated
-input-file: blob-storage-2021-10-04.json
+input-file: blob-storage.json
 model-date-time-as-string: true
 optional-response-headers: true
 enum-types: true
@@ -22,24 +22,22 @@ enum-types: true
 
 2. Updated blocklisttype for list blob blocks from required to optional.
 
-3. Only for 2019-02-02, make "Deleted" and "Snapshot" from required to optional for BlobItem model.
+3. Make "Deleted" and "Snapshot" from required to optional for "BlobItemInternal" model from:
 
-4. Only for 2021-10-04, make "Deleted" and "Snapshot" from required to optional for "BlobItemInternal" model from:
-
-5. Change for 2021-10-04, change "Name" definition in "BlobItemInternal" from:
+4. Change "Name" definition in "BlobItemInternal" from:
    "Name": {
-   "$ref": "#/definitions/BlobName"
+      "$ref": "#/definitions/BlobName"
    }
    to
    "Name": {
    "type": "string"
    }
 
-6. Add "","deleted" to "ListContainersInclude" enum, add "","tags","versions","deletedwithversions","legalhold","permissions" to "ListBlobsInclude" enum.
+5. Add "","deleted" to "ListContainersInclude" enum, add "","tags","versions","deletedwithversions","legalhold","permissions" to "ListBlobsInclude" enum.
 
-7. Add section for "Container_SubmitBatch" operation.
+6. Add section for "Container_SubmitBatch" operation.
 
-8. Only for 2021-10-04, change "Name" definition in "BlobPrefix" from:
+7. Change "Name" definition in "BlobPrefix" from:
    "Name": {
    "$ref": "#/definitions/BlobName"
    }
@@ -52,15 +50,13 @@ enum-types: true
 
 10. Add `x-ms-creation-time` to Blob_Download API responds
 
-11. Only for 2019-02-02, add "", "deleted" to "ListContainersInclude" enum, add "", "tags", "versions", "deletedwithversions", "legalhold", "permissions" to "ListBlobsInclude" enum.
+11. Add "" to "ListContainersInclude" enum, add "", "permissions" to "ListBlobsInclude" enum.
 
-12. Only for 2021-10-04, add "" to "ListContainersInclude" enum, add "", "permissions" to "ListBlobsInclude" enum.
-
-13. Only for 2021-10-04, add "Premium" to "AccessTierRequired" enum and "AccessTierOptional" enum.
+12. Add "Premium" to "AccessTierRequired" enum and "AccessTierOptional" enum.
     Add "Mutable" to "ImmutabilityPolicyMode" at around line #11994
 
-14. Only for 2021-10-04, add spec for: Blob_GetAccountInfoWithHead, Container_GetAccountInfoWithHead and Service_GetAccountInfoWithHead.
+13. Add spec for: Blob_GetAccountInfoWithHead, Container_GetAccountInfoWithHead and Service_GetAccountInfoWithHead.
 
-15. Only for 2021-10-04, change return code from '200' to '202' for service_submitbatch.
+14. Change return code from '200' to '202' for service_submitbatch.
 
-16. Only for 2021-10-04, change "AllowedHeaders" and "ExposedHeaders" to be not required.
+15. Change "AllowedHeaders" and "ExposedHeaders" to be not required.
