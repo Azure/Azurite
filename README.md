@@ -466,6 +466,9 @@ Azurite will refresh customized account name and key from environment variable e
 
 > Note. Use `export` keyword to set environment variable in Linux like environment, `set` in Windows.
 
+> Note. When changing storage account name, keep these rules in mind as same as [Azure Storage Account](https://learn.microsoft.com/en-us/azure/storage/common/storage-account-overview#storage-account-name):
+>  - Storage account names must be between 3 and 24 characters in length and may contain numbers and lowercase letters only.
+
 ### Customized Metadata Storage by External Database (Preview)
 
 By default, Azurite leverages [loki](https://github.com/techfort/LokiJS) as metadata database.
