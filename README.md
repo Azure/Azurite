@@ -460,15 +460,14 @@ Azurite will refresh customized account name and key from environment variable e
 
 > Note. Default storage account `devstoreaccount1` will be disabled when providing customized storage accounts.
 
-> Note. When changing storage account name, keep these rules in mind as same as [Azure Storage Account](https://learn.microsoft.com/en-us/azure/storage/common/storage-account-overview#storage-account-name):
->  - Storage account names must be between 3 and 24 characters in length and may contain numbers and lowercase letters only.
->  - Your storage account name must be unique within Azurite. No two storage accounts can have the same name.
-
 > Note. The account keys must be base64 encoded string.
 
 > Note. Should update connection string accordingly if using customized account name and key.
 
 > Note. Use `export` keyword to set environment variable in Linux like environment, `set` in Windows.
+
+> Note. When changing storage account name, keep these rules in mind as same as [Azure Storage Account](https://learn.microsoft.com/en-us/azure/storage/common/storage-account-overview#storage-account-name):
+>  - Storage account names must be between 3 and 24 characters in length and may contain numbers and lowercase letters only.
 
 ### Customized Metadata Storage by External Database (Preview)
 
