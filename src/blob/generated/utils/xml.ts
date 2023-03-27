@@ -1,4 +1,4 @@
-import * as xml2js from "xml2js";
+import * as xml2js from 'xml2js';
 
 export function stringifyXML(obj: any, opts?: { rootName?: string }) {
   const builder = new xml2js.Builder({

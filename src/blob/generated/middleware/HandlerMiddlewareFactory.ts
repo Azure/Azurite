@@ -1,11 +1,11 @@
-import Operation from "../artifacts/operation";
-import Specifications from "../artifacts/specifications";
-import Context from "../Context";
-import OperationMismatchError from "../errors/OperationMismatchError";
-import getHandlerByOperation from "../handlers/handlerMappers";
-import IHandlers from "../handlers/IHandlers";
-import { NextFunction } from "../MiddlewareFactory";
-import ILogger from "../utils/ILogger";
+import Operation from '../artifacts/operation';
+import Specifications from '../artifacts/specifications';
+import Context from '../Context';
+import OperationMismatchError from '../errors/OperationMismatchError';
+import getHandlerByOperation from '../handlers/handlerMappers';
+import IHandlers from '../handlers/IHandlers';
+import { NextFunction } from '../MiddlewareFactory';
+import ILogger from '../utils/ILogger';
 
 /**
  * Auto generated. HandlerMiddlewareFactory will accept handlers and create handler middleware.

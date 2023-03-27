@@ -1,7 +1,7 @@
-import { Response } from "express";
-import { OutgoingHttpHeaders } from "http";
+import { Response } from 'express';
+import { OutgoingHttpHeaders } from 'http';
 
-import IResponse from "./IResponse";
+import IResponse from './IResponse';
 
 export default class ExpressResponseAdapter implements IResponse {
   public constructor(private readonly res: Response) {}

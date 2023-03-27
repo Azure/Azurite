@@ -1,13 +1,13 @@
-import * as msRest from "@azure/ms-rest-js";
+import * as msRest from '@azure/ms-rest-js';
 
-import Operation from "../artifacts/operation";
-import Specifications from "../artifacts/specifications";
-import Context from "../Context";
-import UnsupportedRequestError from "../errors/UnsupportedRequestError";
-import IRequest from "../IRequest";
-import { NextFunction } from "../MiddlewareFactory";
-import ILogger from "../utils/ILogger";
-import { isURITemplateMatch } from "../utils/utils";
+import Operation from '../artifacts/operation';
+import Specifications from '../artifacts/specifications';
+import Context from '../Context';
+import UnsupportedRequestError from '../errors/UnsupportedRequestError';
+import IRequest from '../IRequest';
+import { NextFunction } from '../MiddlewareFactory';
+import ILogger from '../utils/ILogger';
+import { isURITemplateMatch } from '../utils/utils';
 
 /**
  * Dispatch Middleware will try to find out which operation of current HTTP request belongs to,

@@ -157,6 +157,11 @@ export default class BlockBlobHandler
     return response;
   }
 
+  public async putBlobFromUrl(contentLength: number, copySource: string, options: Models.BlockBlobPutBlobFromUrlOptionalParams, context: Context
+    ): Promise<Models.BlockBlobPutBlobFromUrlResponse> {
+    throw new NotImplementedError(context.contextId);
+    }
+
   public async stageBlock(
     blockId: string,
     contentLength: number,
@@ -170,9 +175,11 @@ export default class BlockBlobHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
-    options.blobHTTPHeaders = options.blobHTTPHeaders || {};
+    // stageBlock operation doesn't have blobHTTPHeaders
+    // https://learn.microsoft.com/en-us/rest/api/storageservices/put-block
+    // options.blobHTTPHeaders = options.blobHTTPHeaders || {};
     const contentMD5 = context.request!.getHeader("content-md5")
-      ? options.blobHTTPHeaders.blobContentMD5 ||
+      ? options.transactionalContentMD5 ||
         context.request!.getHeader("content-md5")
       : undefined;
 

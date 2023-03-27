@@ -1,9 +1,9 @@
-import Context from "../Context";
-import MiddlewareError from "../errors/MiddlewareError";
-import IRequest from "../IRequest";
-import IResponse from "../IResponse";
-import { NextFunction } from "../MiddlewareFactory";
-import ILogger from "../utils/ILogger";
+import Context from '../Context';
+import MiddlewareError from '../errors/MiddlewareError';
+import IRequest from '../IRequest';
+import IResponse from '../IResponse';
+import { NextFunction } from '../MiddlewareFactory';
+import ILogger from '../utils/ILogger';
 
 /**
  * ErrorMiddleware handles following 2 kinds of errors thrown from previous middleware or handlers:

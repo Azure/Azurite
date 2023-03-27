@@ -20,7 +20,9 @@ export default interface IContainerHandler {
   setMetadata(options: Models.ContainerSetMetadataOptionalParams, context: Context): Promise<Models.ContainerSetMetadataResponse>;
   getAccessPolicy(options: Models.ContainerGetAccessPolicyOptionalParams, context: Context): Promise<Models.ContainerGetAccessPolicyResponse>;
   setAccessPolicy(options: Models.ContainerSetAccessPolicyOptionalParams, context: Context): Promise<Models.ContainerSetAccessPolicyResponse>;
-  submitBatch(body: NodeJS.ReadableStream, contentLength: number, multipartContentType: string, containerName: string, options: Models.ContainerSubmitBatchOptionalParams, context: Context): Promise<Models.ContainerSubmitBatchResponse>;
+  restore(options: Models.ContainerRestoreOptionalParams, context: Context): Promise<Models.ContainerRestoreResponse>;
+  submitBatch(body: NodeJS.ReadableStream, contentLength: number, multipartContentType: string, options: Models.ContainerSubmitBatchOptionalParams, context: Context): Promise<Models.ContainerSubmitBatchResponse>;
+  filterBlobs(options: Models.ContainerFilterBlobsOptionalParams, context: Context): Promise<Models.ContainerFilterBlobsResponse>;
   acquireLease(options: Models.ContainerAcquireLeaseOptionalParams, context: Context): Promise<Models.ContainerAcquireLeaseResponse>;
   releaseLease(leaseId: string, options: Models.ContainerReleaseLeaseOptionalParams, context: Context): Promise<Models.ContainerReleaseLeaseResponse>;
   renewLease(leaseId: string, options: Models.ContainerRenewLeaseOptionalParams, context: Context): Promise<Models.ContainerRenewLeaseResponse>;
@@ -29,5 +31,4 @@ export default interface IContainerHandler {
   listBlobFlatSegment(options: Models.ContainerListBlobFlatSegmentOptionalParams, context: Context): Promise<Models.ContainerListBlobFlatSegmentResponse>;
   listBlobHierarchySegment(delimiter: string, options: Models.ContainerListBlobHierarchySegmentOptionalParams, context: Context): Promise<Models.ContainerListBlobHierarchySegmentResponse>;
   getAccountInfo(context: Context): Promise<Models.ContainerGetAccountInfoResponse>;
-  getAccountInfoWithHead(context: Context): Promise<Models.ContainerGetAccountInfoWithHeadResponse>;
 }

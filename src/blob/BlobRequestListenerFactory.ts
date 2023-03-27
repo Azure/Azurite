@@ -113,8 +113,7 @@ export default class BlobRequestListenerFactory
         this.extentStore,
         logger,
         loose
-      ),
-      directoryHandler: {} as any
+      )
     };
 
     // CORS request handling, preflight request and the corresponding actual request

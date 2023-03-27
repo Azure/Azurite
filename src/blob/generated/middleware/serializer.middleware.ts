@@ -1,11 +1,11 @@
-import Operation from "../artifacts/operation";
-import Specifications from "../artifacts/specifications";
-import Context from "../Context";
-import OperationMismatchError from "../errors/OperationMismatchError";
-import IResponse from "../IResponse";
-import { NextFunction } from "../MiddlewareFactory";
-import ILogger from "../utils/ILogger";
-import { serialize } from "../utils/serializer";
+import Operation from '../artifacts/operation';
+import Specifications from '../artifacts/specifications';
+import Context from '../Context';
+import OperationMismatchError from '../errors/OperationMismatchError';
+import IResponse from '../IResponse';
+import { NextFunction } from '../MiddlewareFactory';
+import ILogger from '../utils/ILogger';
+import { serialize } from '../utils/serializer';
 
 /**
  * SerializerMiddleware will serialize models into HTTP responses.
