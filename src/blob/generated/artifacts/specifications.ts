@@ -112,7 +112,7 @@ const serviceListContainersSegmentOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.prefix,
-    Parameters.marker0,
+    Parameters.marker,
     Parameters.maxresults,
     Parameters.include0,
     Parameters.timeout,
@@ -262,12 +262,43 @@ const serviceSubmitBatchOperationSpec: msRest.OperationSpec = {
   serializer
 };
 
+const serviceFilterBlobsOperationSpec: msRest.OperationSpec = {
+  httpMethod: "GET",
+  urlParameters: [
+    Parameters.url
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.where,
+    Parameters.marker,
+    Parameters.maxresults,
+    Parameters.include1,
+    Parameters.comp5
+  ],
+  headerParameters: [
+    Parameters.version,
+    Parameters.requestId
+  ],
+  responses: {
+    200: {
+      bodyMapper: Mappers.FilterBlobSegment,
+      headersMapper: Mappers.ServiceFilterBlobsHeaders
+    },
+    default: {
+      bodyMapper: Mappers.StorageError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
 // specifications for new method group start
 const containerCreateOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName
   ],
   queryParameters: [
     Parameters.timeout,
@@ -277,7 +308,9 @@ const containerCreateOperationSpec: msRest.OperationSpec = {
     Parameters.metadata,
     Parameters.access,
     Parameters.version,
-    Parameters.requestId
+    Parameters.requestId,
+    Parameters.defaultEncryptionScope,
+    Parameters.preventEncryptionScopeOverride
   ],
   responses: {
     201: {
@@ -295,7 +328,8 @@ const containerGetPropertiesOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName
   ],
   queryParameters: [
     Parameters.timeout,
@@ -322,7 +356,8 @@ const containerGetPropertiesWithHeadOperationSpec: msRest.OperationSpec = {
   httpMethod: "HEAD",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName
   ],
   queryParameters: [
     Parameters.timeout,
@@ -349,7 +384,8 @@ const containerDeleteOperationSpec: msRest.OperationSpec = {
   httpMethod: "DELETE",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName
   ],
   queryParameters: [
     Parameters.timeout,
@@ -378,12 +414,13 @@ const containerSetMetadataOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName
   ],
   queryParameters: [
     Parameters.timeout,
     Parameters.restype2,
-    Parameters.comp5
+    Parameters.comp6
   ],
   headerParameters: [
     Parameters.metadata,
@@ -408,12 +445,13 @@ const containerGetAccessPolicyOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName
   ],
   queryParameters: [
     Parameters.timeout,
     Parameters.restype2,
-    Parameters.comp6
+    Parameters.comp7
   ],
   headerParameters: [
     Parameters.version,
@@ -449,12 +487,13 @@ const containerSetAccessPolicyOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName
   ],
   queryParameters: [
     Parameters.timeout,
     Parameters.restype2,
-    Parameters.comp6
+    Parameters.comp7
   ],
   headerParameters: [
     Parameters.access,
@@ -488,6 +527,36 @@ const containerSetAccessPolicyOperationSpec: msRest.OperationSpec = {
   responses: {
     200: {
       headersMapper: Mappers.ContainerSetAccessPolicyHeaders
+    },
+    default: {
+      bodyMapper: Mappers.StorageError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
+const containerRestoreOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PUT",
+  path: "{containerName}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.containerName
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.restype2,
+    Parameters.comp8
+  ],
+  headerParameters: [
+    Parameters.version,
+    Parameters.requestId,
+    Parameters.deletedContainerName,
+    Parameters.deletedContainerVersion
+  ],
+  responses: {
+    201: {
+      headersMapper: Mappers.ContainerRestoreHeaders
     },
     default: {
       bodyMapper: Mappers.StorageError
@@ -544,15 +613,49 @@ const containerSubmitBatchOperationSpec: msRest.OperationSpec = {
   serializer
 };
 
+const containerFilterBlobsOperationSpec: msRest.OperationSpec = {
+  httpMethod: "GET",
+  path: "{containerName}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.containerName
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.where,
+    Parameters.marker,
+    Parameters.maxresults,
+    Parameters.include1,
+    Parameters.restype2,
+    Parameters.comp5
+  ],
+  headerParameters: [
+    Parameters.version,
+    Parameters.requestId
+  ],
+  responses: {
+    200: {
+      bodyMapper: Mappers.FilterBlobSegment,
+      headersMapper: Mappers.ContainerFilterBlobsHeaders
+    },
+    default: {
+      bodyMapper: Mappers.StorageError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
 const containerAcquireLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7,
+    Parameters.comp9,
     Parameters.restype2
   ],
   headerParameters: [
@@ -580,11 +683,12 @@ const containerReleaseLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7,
+    Parameters.comp9,
     Parameters.restype2
   ],
   headerParameters: [
@@ -611,11 +715,12 @@ const containerRenewLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7,
+    Parameters.comp9,
     Parameters.restype2
   ],
   headerParameters: [
@@ -642,11 +747,12 @@ const containerBreakLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7,
+    Parameters.comp9,
     Parameters.restype2
   ],
   headerParameters: [
@@ -673,11 +779,12 @@ const containerChangeLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7,
+    Parameters.comp9,
     Parameters.restype2
   ],
   headerParameters: [
@@ -705,13 +812,14 @@ const containerListBlobFlatSegmentOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName
   ],
   queryParameters: [
     Parameters.prefix,
-    Parameters.marker0,
+    Parameters.marker,
     Parameters.maxresults,
-    Parameters.include1,
+    Parameters.include2,
     Parameters.timeout,
     Parameters.restype2,
     Parameters.comp2
@@ -737,14 +845,15 @@ const containerListBlobHierarchySegmentOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName
   ],
   queryParameters: [
     Parameters.prefix,
     Parameters.delimiter,
-    Parameters.marker0,
+    Parameters.marker,
     Parameters.maxresults,
-    Parameters.include1,
+    Parameters.include2,
     Parameters.timeout,
     Parameters.restype2,
     Parameters.comp2
@@ -770,7 +879,8 @@ const containerGetAccountInfoOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName
   ],
   queryParameters: [
     Parameters.restype1,
@@ -795,7 +905,8 @@ const containerGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
   httpMethod: "HEAD",
   path: "{containerName}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName
   ],
   queryParameters: [
     Parameters.restype1,
@@ -817,199 +928,17 @@ const containerGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
 };
 
 // specifications for new method group start
-const directoryCreateOperationSpec: msRest.OperationSpec = {
-  httpMethod: "PUT",
-  path: "{filesystem}/{path}",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.resource
-  ],
-  headerParameters: [
-    Parameters.directoryProperties,
-    Parameters.posixPermissions,
-    Parameters.posixUmask,
-    Parameters.version,
-    Parameters.requestId,
-    Parameters.cacheControl,
-    Parameters.contentType,
-    Parameters.contentEncoding,
-    Parameters.contentLanguage,
-    Parameters.contentDisposition,
-    Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch
-  ],
-  responses: {
-    201: {
-      headersMapper: Mappers.DirectoryCreateHeaders
-    },
-    default: {
-      bodyMapper: Mappers.DataLakeStorageError
-    }
-  },
-  isXML: true,
-  serializer
-};
-
-const directoryRenameOperationSpec: msRest.OperationSpec = {
-  httpMethod: "PUT",
-  path: "{filesystem}/{path}",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.marker1,
-    Parameters.pathRenameMode
-  ],
-  headerParameters: [
-    Parameters.renameSource,
-    Parameters.directoryProperties,
-    Parameters.posixPermissions,
-    Parameters.posixUmask,
-    Parameters.sourceLeaseId,
-    Parameters.version,
-    Parameters.requestId,
-    Parameters.cacheControl,
-    Parameters.contentType,
-    Parameters.contentEncoding,
-    Parameters.contentLanguage,
-    Parameters.contentDisposition,
-    Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
-    Parameters.sourceIfModifiedSince,
-    Parameters.sourceIfUnmodifiedSince,
-    Parameters.sourceIfMatches,
-    Parameters.sourceIfNoneMatch
-  ],
-  responses: {
-    201: {
-      headersMapper: Mappers.DirectoryRenameHeaders
-    },
-    default: {
-      bodyMapper: Mappers.DataLakeStorageError
-    }
-  },
-  isXML: true,
-  serializer
-};
-
-const directoryDeleteOperationSpec: msRest.OperationSpec = {
-  httpMethod: "DELETE",
-  path: "{filesystem}/{path}",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.recursiveDirectoryDelete,
-    Parameters.marker1
-  ],
-  headerParameters: [
-    Parameters.version,
-    Parameters.requestId,
-    Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch
-  ],
-  responses: {
-    200: {
-      headersMapper: Mappers.DirectoryDeleteHeaders
-    },
-    default: {
-      bodyMapper: Mappers.DataLakeStorageError
-    }
-  },
-  isXML: true,
-  serializer
-};
-
-const directorySetAccessControlOperationSpec: msRest.OperationSpec = {
-  httpMethod: "PATCH",
-  path: "{filesystem}/{path}",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.action5
-  ],
-  headerParameters: [
-    Parameters.owner,
-    Parameters.group,
-    Parameters.posixPermissions,
-    Parameters.posixAcl,
-    Parameters.requestId,
-    Parameters.version,
-    Parameters.leaseId0,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince
-  ],
-  responses: {
-    200: {
-      headersMapper: Mappers.DirectorySetAccessControlHeaders
-    },
-    default: {
-      bodyMapper: Mappers.DataLakeStorageError
-    }
-  },
-  isXML: true,
-  serializer
-};
-
-const directoryGetAccessControlOperationSpec: msRest.OperationSpec = {
-  httpMethod: "HEAD",
-  path: "{filesystem}/{path}",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.upn,
-    Parameters.action6
-  ],
-  headerParameters: [
-    Parameters.requestId,
-    Parameters.version,
-    Parameters.leaseId0,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince
-  ],
-  responses: {
-    200: {
-      headersMapper: Mappers.DirectoryGetAccessControlHeaders
-    },
-    default: {
-      bodyMapper: Mappers.DataLakeStorageError
-    }
-  },
-  isXML: true,
-  serializer
-};
-
-// specifications for new method group start
 const blobDownloadOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.snapshot,
+    Parameters.versionId,
     Parameters.timeout
   ],
   headerParameters: [
@@ -1025,7 +954,8 @@ const blobDownloadOperationSpec: msRest.OperationSpec = {
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     200: {
@@ -1058,10 +988,13 @@ const blobGetPropertiesOperationSpec: msRest.OperationSpec = {
   httpMethod: "HEAD",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.snapshot,
+    Parameters.versionId,
     Parameters.timeout
   ],
   headerParameters: [
@@ -1074,7 +1007,8 @@ const blobGetPropertiesOperationSpec: msRest.OperationSpec = {
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     200: {
@@ -1092,11 +1026,15 @@ const blobDeleteOperationSpec: msRest.OperationSpec = {
   httpMethod: "DELETE",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.snapshot,
-    Parameters.timeout
+    Parameters.versionId,
+    Parameters.timeout,
+    Parameters.blobDeleteType
   ],
   headerParameters: [
     Parameters.deleteSnapshots,
@@ -1106,7 +1044,8 @@ const blobDeleteOperationSpec: msRest.OperationSpec = {
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     202: {
@@ -1120,123 +1059,13 @@ const blobDeleteOperationSpec: msRest.OperationSpec = {
   serializer
 };
 
-const blobSetAccessControlOperationSpec: msRest.OperationSpec = {
-  httpMethod: "PATCH",
-  path: "{filesystem}/{path}",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.action5
-  ],
-  headerParameters: [
-    Parameters.owner,
-    Parameters.group,
-    Parameters.posixPermissions,
-    Parameters.posixAcl,
-    Parameters.requestId,
-    Parameters.version,
-    Parameters.leaseId0,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince
-  ],
-  responses: {
-    200: {
-      headersMapper: Mappers.BlobSetAccessControlHeaders
-    },
-    default: {
-      bodyMapper: Mappers.DataLakeStorageError
-    }
-  },
-  isXML: true,
-  serializer
-};
-
-const blobGetAccessControlOperationSpec: msRest.OperationSpec = {
-  httpMethod: "HEAD",
-  path: "{filesystem}/{path}",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.upn,
-    Parameters.action6
-  ],
-  headerParameters: [
-    Parameters.requestId,
-    Parameters.version,
-    Parameters.leaseId0,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince
-  ],
-  responses: {
-    200: {
-      headersMapper: Mappers.BlobGetAccessControlHeaders
-    },
-    default: {
-      bodyMapper: Mappers.DataLakeStorageError
-    }
-  },
-  isXML: true,
-  serializer
-};
-
-const blobRenameOperationSpec: msRest.OperationSpec = {
-  httpMethod: "PUT",
-  path: "{filesystem}/{path}",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.pathRenameMode
-  ],
-  headerParameters: [
-    Parameters.renameSource,
-    Parameters.directoryProperties,
-    Parameters.posixPermissions,
-    Parameters.posixUmask,
-    Parameters.sourceLeaseId,
-    Parameters.version,
-    Parameters.requestId,
-    Parameters.cacheControl,
-    Parameters.contentType,
-    Parameters.contentEncoding,
-    Parameters.contentLanguage,
-    Parameters.contentDisposition,
-    Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
-    Parameters.sourceIfModifiedSince,
-    Parameters.sourceIfUnmodifiedSince,
-    Parameters.sourceIfMatches,
-    Parameters.sourceIfNoneMatch
-  ],
-  responses: {
-    201: {
-      headersMapper: Mappers.BlobRenameHeaders
-    },
-    default: {
-      bodyMapper: Mappers.DataLakeStorageError
-    }
-  },
-  isXML: true,
-  serializer
-};
-
 const blobUndeleteOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1258,11 +1087,43 @@ const blobUndeleteOperationSpec: msRest.OperationSpec = {
   serializer
 };
 
+const blobSetExpiryOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PUT",
+  path: "{containerName}/{blob}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.comp10
+  ],
+  headerParameters: [
+    Parameters.version,
+    Parameters.requestId,
+    Parameters.expiryOptions,
+    Parameters.expiresOn
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.BlobSetExpiryHeaders
+    },
+    default: {
+      bodyMapper: Mappers.StorageError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
 const blobSetHTTPHeadersOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1281,7 +1142,8 @@ const blobSetHTTPHeadersOperationSpec: msRest.OperationSpec = {
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     200: {
@@ -1295,15 +1157,105 @@ const blobSetHTTPHeadersOperationSpec: msRest.OperationSpec = {
   serializer
 };
 
+const blobSetImmutabilityPolicyOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PUT",
+  path: "{containerName}/{blob}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.comp11
+  ],
+  headerParameters: [
+    Parameters.version,
+    Parameters.requestId,
+    Parameters.immutabilityPolicyExpiry,
+    Parameters.immutabilityPolicyMode,
+    Parameters.ifUnmodifiedSince
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.BlobSetImmutabilityPolicyHeaders
+    },
+    default: {
+      bodyMapper: Mappers.StorageError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
+const blobDeleteImmutabilityPolicyOperationSpec: msRest.OperationSpec = {
+  httpMethod: "DELETE",
+  path: "{containerName}/{blob}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.comp11
+  ],
+  headerParameters: [
+    Parameters.version,
+    Parameters.requestId
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.BlobDeleteImmutabilityPolicyHeaders
+    },
+    default: {
+      bodyMapper: Mappers.StorageError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
+const blobSetLegalHoldOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PUT",
+  path: "{containerName}/{blob}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.comp12
+  ],
+  headerParameters: [
+    Parameters.version,
+    Parameters.requestId,
+    Parameters.legalHold0
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.BlobSetLegalHoldHeaders
+    },
+    default: {
+      bodyMapper: Mappers.StorageError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
 const blobSetMetadataOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp5
+    Parameters.comp6
   ],
   headerParameters: [
     Parameters.metadata,
@@ -1313,10 +1265,12 @@ const blobSetMetadataOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
+    Parameters.encryptionScope,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     200: {
@@ -1334,11 +1288,13 @@ const blobAcquireLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7
+    Parameters.comp9
   ],
   headerParameters: [
     Parameters.duration,
@@ -1349,7 +1305,8 @@ const blobAcquireLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     201: {
@@ -1367,11 +1324,13 @@ const blobReleaseLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7
+    Parameters.comp9
   ],
   headerParameters: [
     Parameters.leaseId1,
@@ -1381,7 +1340,8 @@ const blobReleaseLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     200: {
@@ -1399,11 +1359,13 @@ const blobRenewLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7
+    Parameters.comp9
   ],
   headerParameters: [
     Parameters.leaseId1,
@@ -1413,7 +1375,8 @@ const blobRenewLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     200: {
@@ -1431,11 +1394,13 @@ const blobChangeLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7
+    Parameters.comp9
   ],
   headerParameters: [
     Parameters.leaseId1,
@@ -1446,7 +1411,8 @@ const blobChangeLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     200: {
@@ -1464,11 +1430,13 @@ const blobBreakLeaseOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7
+    Parameters.comp9
   ],
   headerParameters: [
     Parameters.breakPeriod,
@@ -1478,7 +1446,8 @@ const blobBreakLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     202: {
@@ -1496,11 +1465,13 @@ const blobCreateSnapshotOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp9
+    Parameters.comp13
   ],
   headerParameters: [
     Parameters.metadata,
@@ -1509,10 +1480,12 @@ const blobCreateSnapshotOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
+    Parameters.encryptionScope,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
     Parameters.ifNoneMatch,
+    Parameters.ifTags,
     Parameters.leaseId0
   ],
   responses: {
@@ -1531,7 +1504,9 @@ const blobStartCopyFromURLOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout
@@ -1543,14 +1518,21 @@ const blobStartCopyFromURLOperationSpec: msRest.OperationSpec = {
     Parameters.copySource,
     Parameters.version,
     Parameters.requestId,
+    Parameters.blobTagsString,
+    Parameters.sealBlob,
+    Parameters.immutabilityPolicyExpiry,
+    Parameters.immutabilityPolicyMode,
+    Parameters.legalHold1,
     Parameters.sourceIfModifiedSince,
     Parameters.sourceIfUnmodifiedSince,
-    Parameters.sourceIfMatches,
+    Parameters.sourceIfMatch,
     Parameters.sourceIfNoneMatch,
+    Parameters.sourceIfTags,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
     Parameters.ifNoneMatch,
+    Parameters.ifTags,
     Parameters.leaseId0
   ],
   responses: {
@@ -1569,7 +1551,9 @@ const blobCopyFromURLOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout
@@ -1580,16 +1564,25 @@ const blobCopyFromURLOperationSpec: msRest.OperationSpec = {
     Parameters.copySource,
     Parameters.version,
     Parameters.requestId,
+    Parameters.sourceContentMD5,
+    Parameters.blobTagsString,
+    Parameters.immutabilityPolicyExpiry,
+    Parameters.immutabilityPolicyMode,
+    Parameters.legalHold1,
+    Parameters.copySourceAuthorization,
+    Parameters.copySourceTags,
     Parameters.xMsRequiresSync,
     Parameters.sourceIfModifiedSince,
     Parameters.sourceIfUnmodifiedSince,
-    Parameters.sourceIfMatches,
+    Parameters.sourceIfMatch,
     Parameters.sourceIfNoneMatch,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
     Parameters.ifNoneMatch,
-    Parameters.leaseId0
+    Parameters.ifTags,
+    Parameters.leaseId0,
+    Parameters.encryptionScope
   ],
   responses: {
     202: {
@@ -1607,12 +1600,14 @@ const blobAbortCopyFromURLOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.copyId,
     Parameters.timeout,
-    Parameters.comp10
+    Parameters.comp14
   ],
   headerParameters: [
     Parameters.version,
@@ -1636,18 +1631,23 @@ const blobSetTierOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
+    Parameters.snapshot,
+    Parameters.versionId,
     Parameters.timeout,
-    Parameters.comp11
+    Parameters.comp15
   ],
   headerParameters: [
     Parameters.tier1,
     Parameters.rehydratePriority,
     Parameters.version,
     Parameters.requestId,
-    Parameters.leaseId0
+    Parameters.leaseId0,
+    Parameters.ifTags
   ],
   responses: {
     200: {
@@ -1668,7 +1668,9 @@ const blobGetAccountInfoOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.restype1,
@@ -1693,7 +1695,9 @@ const blobGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
   httpMethod: "HEAD",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.restype1,
@@ -1714,24 +1718,165 @@ const blobGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
   serializer
 };
 
+const blobQueryOperationSpec: msRest.OperationSpec = {
+  httpMethod: "POST",
+  path: "{containerName}/{blob}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
+  ],
+  queryParameters: [
+    Parameters.snapshot,
+    Parameters.timeout,
+    Parameters.comp16
+  ],
+  headerParameters: [
+    Parameters.version,
+    Parameters.requestId,
+    Parameters.leaseId0,
+    Parameters.encryptionKey,
+    Parameters.encryptionKeySha256,
+    Parameters.encryptionAlgorithm,
+    Parameters.ifModifiedSince,
+    Parameters.ifUnmodifiedSince,
+    Parameters.ifMatch,
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
+  ],
+  requestBody: {
+    parameterPath: [
+      "options",
+      "queryRequest"
+    ],
+    mapper: Mappers.QueryRequest
+  },
+  contentType: "application/xml; charset=utf-8",
+  responses: {
+    200: {
+      bodyMapper: {
+        serializedName: "Stream",
+        type: {
+          name: "Stream"
+        }
+      },
+      headersMapper: Mappers.BlobQueryHeaders
+    },
+    206: {
+      bodyMapper: {
+        serializedName: "Stream",
+        type: {
+          name: "Stream"
+        }
+      },
+      headersMapper: Mappers.BlobQueryHeaders
+    },
+    default: {
+      bodyMapper: Mappers.StorageError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
+const blobGetTagsOperationSpec: msRest.OperationSpec = {
+  httpMethod: "GET",
+  path: "{containerName}/{blob}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.snapshot,
+    Parameters.versionId,
+    Parameters.comp17
+  ],
+  headerParameters: [
+    Parameters.version,
+    Parameters.requestId,
+    Parameters.ifTags,
+    Parameters.leaseId0
+  ],
+  responses: {
+    200: {
+      bodyMapper: Mappers.BlobTags,
+      headersMapper: Mappers.BlobGetTagsHeaders
+    },
+    default: {
+      bodyMapper: Mappers.StorageError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
+const blobSetTagsOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PUT",
+  path: "{containerName}/{blob}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.versionId,
+    Parameters.comp17
+  ],
+  headerParameters: [
+    Parameters.version,
+    Parameters.transactionalContentMD5,
+    Parameters.transactionalContentCrc64,
+    Parameters.requestId,
+    Parameters.ifTags,
+    Parameters.leaseId0
+  ],
+  requestBody: {
+    parameterPath: [
+      "options",
+      "tags"
+    ],
+    mapper: Mappers.BlobTags
+  },
+  contentType: "application/xml; charset=utf-8",
+  responses: {
+    204: {
+      headersMapper: Mappers.BlobSetTagsHeaders
+    },
+    default: {
+      bodyMapper: Mappers.StorageError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
 // specifications for new method group start
 const pageBlobCreateOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout
   ],
   headerParameters: [
     Parameters.contentLength,
+    Parameters.tier0,
     Parameters.metadata,
     Parameters.blobContentLength,
     Parameters.blobSequenceNumber,
-    Parameters.pageBlobAccessTier,
     Parameters.version,
     Parameters.requestId,
+    Parameters.blobTagsString,
+    Parameters.immutabilityPolicyExpiry,
+    Parameters.immutabilityPolicyMode,
+    Parameters.legalHold1,
     Parameters.blobType0,
     Parameters.blobContentType,
     Parameters.blobContentEncoding,
@@ -1743,10 +1888,12 @@ const pageBlobCreateOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
+    Parameters.encryptionScope,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     201: {
@@ -1764,14 +1911,17 @@ const pageBlobUploadPagesOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp12
+    Parameters.comp18
   ],
   headerParameters: [
     Parameters.contentLength,
+    Parameters.transactionalContentMD5,
     Parameters.transactionalContentCrc64,
     Parameters.range0,
     Parameters.version,
@@ -1781,13 +1931,15 @@ const pageBlobUploadPagesOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
+    Parameters.encryptionScope,
     Parameters.ifSequenceNumberLessThanOrEqualTo,
     Parameters.ifSequenceNumberLessThan,
     Parameters.ifSequenceNumberEqualTo,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   requestBody: {
     parameterPath: "body",
@@ -1816,11 +1968,13 @@ const pageBlobClearPagesOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp12
+    Parameters.comp18
   ],
   headerParameters: [
     Parameters.contentLength,
@@ -1832,13 +1986,15 @@ const pageBlobClearPagesOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
+    Parameters.encryptionScope,
     Parameters.ifSequenceNumberLessThanOrEqualTo,
     Parameters.ifSequenceNumberLessThan,
     Parameters.ifSequenceNumberEqualTo,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     201: {
@@ -1856,11 +2012,13 @@ const pageBlobUploadPagesFromURLOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp12
+    Parameters.comp18
   ],
   headerParameters: [
     Parameters.sourceUrl,
@@ -1871,10 +2029,12 @@ const pageBlobUploadPagesFromURLOperationSpec: msRest.OperationSpec = {
     Parameters.range1,
     Parameters.version,
     Parameters.requestId,
+    Parameters.copySourceAuthorization,
     Parameters.pageWrite0,
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
+    Parameters.encryptionScope,
     Parameters.leaseId0,
     Parameters.ifSequenceNumberLessThanOrEqualTo,
     Parameters.ifSequenceNumberLessThan,
@@ -1883,9 +2043,10 @@ const pageBlobUploadPagesFromURLOperationSpec: msRest.OperationSpec = {
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
     Parameters.ifNoneMatch,
+    Parameters.ifTags,
     Parameters.sourceIfModifiedSince,
     Parameters.sourceIfUnmodifiedSince,
-    Parameters.sourceIfMatches,
+    Parameters.sourceIfMatch,
     Parameters.sourceIfNoneMatch
   ],
   responses: {
@@ -1904,12 +2065,16 @@ const pageBlobGetPageRangesOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.snapshot,
     Parameters.timeout,
-    Parameters.comp13
+    Parameters.marker,
+    Parameters.maxresults,
+    Parameters.comp19
   ],
   headerParameters: [
     Parameters.range0,
@@ -1919,7 +2084,8 @@ const pageBlobGetPageRangesOperationSpec: msRest.OperationSpec = {
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     200: {
@@ -1938,15 +2104,20 @@ const pageBlobGetPageRangesDiffOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.snapshot,
     Parameters.timeout,
     Parameters.prevsnapshot,
-    Parameters.comp13
+    Parameters.marker,
+    Parameters.maxresults,
+    Parameters.comp19
   ],
   headerParameters: [
+    Parameters.prevSnapshotUrl,
     Parameters.range0,
     Parameters.version,
     Parameters.requestId,
@@ -1954,7 +2125,8 @@ const pageBlobGetPageRangesDiffOperationSpec: msRest.OperationSpec = {
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     200: {
@@ -1973,7 +2145,9 @@ const pageBlobResizeOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
@@ -1987,10 +2161,12 @@ const pageBlobResizeOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
+    Parameters.encryptionScope,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     200: {
@@ -2008,7 +2184,9 @@ const pageBlobUpdateSequenceNumberOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
@@ -2023,7 +2201,8 @@ const pageBlobUpdateSequenceNumberOperationSpec: msRest.OperationSpec = {
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     200: {
@@ -2041,21 +2220,23 @@ const pageBlobCopyIncrementalOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp14
+    Parameters.comp20
   ],
   headerParameters: [
-    Parameters.metadata,
     Parameters.copySource,
     Parameters.version,
     Parameters.requestId,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     202: {
@@ -2074,7 +2255,9 @@ const appendBlobCreateOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout
@@ -2084,6 +2267,10 @@ const appendBlobCreateOperationSpec: msRest.OperationSpec = {
     Parameters.metadata,
     Parameters.version,
     Parameters.requestId,
+    Parameters.blobTagsString,
+    Parameters.immutabilityPolicyExpiry,
+    Parameters.immutabilityPolicyMode,
+    Parameters.legalHold1,
     Parameters.blobType1,
     Parameters.blobContentType,
     Parameters.blobContentEncoding,
@@ -2095,10 +2282,12 @@ const appendBlobCreateOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
+    Parameters.encryptionScope,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   responses: {
     201: {
@@ -2116,14 +2305,17 @@ const appendBlobAppendBlockOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp15
+    Parameters.comp21
   ],
   headerParameters: [
     Parameters.contentLength,
+    Parameters.transactionalContentMD5,
     Parameters.transactionalContentCrc64,
     Parameters.version,
     Parameters.requestId,
@@ -2133,10 +2325,12 @@ const appendBlobAppendBlockOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
+    Parameters.encryptionScope,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   requestBody: {
     parameterPath: "body",
@@ -2148,7 +2342,7 @@ const appendBlobAppendBlockOperationSpec: msRest.OperationSpec = {
       }
     }
   },
-  contentType: "application/xml; charset=utf-8",
+  contentType: "application/octet-stream",
   responses: {
     201: {
       headersMapper: Mappers.AppendBlobAppendBlockHeaders
@@ -2165,11 +2359,13 @@ const appendBlobAppendBlockFromUrlOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp15
+    Parameters.comp21
   ],
   headerParameters: [
     Parameters.sourceUrl,
@@ -2177,11 +2373,14 @@ const appendBlobAppendBlockFromUrlOperationSpec: msRest.OperationSpec = {
     Parameters.sourceContentMD5,
     Parameters.sourceContentcrc64,
     Parameters.contentLength,
+    Parameters.transactionalContentMD5,
     Parameters.version,
     Parameters.requestId,
+    Parameters.copySourceAuthorization,
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
+    Parameters.encryptionScope,
     Parameters.leaseId0,
     Parameters.maxSize,
     Parameters.appendPosition,
@@ -2189,9 +2388,10 @@ const appendBlobAppendBlockFromUrlOperationSpec: msRest.OperationSpec = {
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
     Parameters.ifNoneMatch,
+    Parameters.ifTags,
     Parameters.sourceIfModifiedSince,
     Parameters.sourceIfUnmodifiedSince,
-    Parameters.sourceIfMatches,
+    Parameters.sourceIfMatch,
     Parameters.sourceIfNoneMatch
   ],
   responses: {
@@ -2206,22 +2406,64 @@ const appendBlobAppendBlockFromUrlOperationSpec: msRest.OperationSpec = {
   serializer
 };
 
+const appendBlobSealOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PUT",
+  path: "{containerName}/{blob}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.comp22
+  ],
+  headerParameters: [
+    Parameters.version,
+    Parameters.requestId,
+    Parameters.leaseId0,
+    Parameters.ifModifiedSince,
+    Parameters.ifUnmodifiedSince,
+    Parameters.ifMatch,
+    Parameters.ifNoneMatch,
+    Parameters.appendPosition
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.AppendBlobSealHeaders
+    },
+    default: {
+      bodyMapper: Mappers.StorageError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
 // specifications for new method group start
 const blockBlobUploadOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout
   ],
   headerParameters: [
+    Parameters.transactionalContentMD5,
     Parameters.contentLength,
     Parameters.metadata,
     Parameters.tier0,
     Parameters.version,
     Parameters.requestId,
+    Parameters.blobTagsString,
+    Parameters.immutabilityPolicyExpiry,
+    Parameters.immutabilityPolicyMode,
+    Parameters.legalHold1,
+    Parameters.transactionalContentCrc64,
     Parameters.blobType2,
     Parameters.blobContentType,
     Parameters.blobContentEncoding,
@@ -2233,10 +2475,12 @@ const blockBlobUploadOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
+    Parameters.encryptionScope,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   requestBody: {
     parameterPath: "body",
@@ -2261,26 +2505,89 @@ const blockBlobUploadOperationSpec: msRest.OperationSpec = {
   serializer
 };
 
+const blockBlobPutBlobFromUrlOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PUT",
+  path: "{containerName}/{blob}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
+  ],
+  queryParameters: [
+    Parameters.timeout
+  ],
+  headerParameters: [
+    Parameters.transactionalContentMD5,
+    Parameters.contentLength,
+    Parameters.metadata,
+    Parameters.tier0,
+    Parameters.version,
+    Parameters.requestId,
+    Parameters.sourceContentMD5,
+    Parameters.blobTagsString,
+    Parameters.copySource,
+    Parameters.copySourceBlobProperties,
+    Parameters.copySourceAuthorization,
+    Parameters.copySourceTags,
+    Parameters.blobType2,
+    Parameters.blobContentType,
+    Parameters.blobContentEncoding,
+    Parameters.blobContentLanguage,
+    Parameters.blobContentMD5,
+    Parameters.blobCacheControl,
+    Parameters.blobContentDisposition,
+    Parameters.leaseId0,
+    Parameters.encryptionKey,
+    Parameters.encryptionKeySha256,
+    Parameters.encryptionAlgorithm,
+    Parameters.encryptionScope,
+    Parameters.ifModifiedSince,
+    Parameters.ifUnmodifiedSince,
+    Parameters.ifMatch,
+    Parameters.ifNoneMatch,
+    Parameters.ifTags,
+    Parameters.sourceIfModifiedSince,
+    Parameters.sourceIfUnmodifiedSince,
+    Parameters.sourceIfMatch,
+    Parameters.sourceIfNoneMatch,
+    Parameters.sourceIfTags
+  ],
+  responses: {
+    201: {
+      headersMapper: Mappers.BlockBlobPutBlobFromUrlHeaders
+    },
+    default: {
+      bodyMapper: Mappers.StorageError
+    }
+  },
+  isXML: true,
+  serializer
+};
+
 const blockBlobStageBlockOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.blockId,
     Parameters.timeout,
-    Parameters.comp16
+    Parameters.comp23
   ],
   headerParameters: [
     Parameters.contentLength,
+    Parameters.transactionalContentMD5,
     Parameters.transactionalContentCrc64,
     Parameters.version,
     Parameters.requestId,
     Parameters.leaseId0,
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
-    Parameters.encryptionAlgorithm
+    Parameters.encryptionAlgorithm,
+    Parameters.encryptionScope
   ],
   requestBody: {
     parameterPath: "body",
@@ -2309,12 +2616,14 @@ const blockBlobStageBlockFromURLOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.blockId,
     Parameters.timeout,
-    Parameters.comp16
+    Parameters.comp23
   ],
   headerParameters: [
     Parameters.contentLength,
@@ -2324,13 +2633,15 @@ const blockBlobStageBlockFromURLOperationSpec: msRest.OperationSpec = {
     Parameters.sourceContentcrc64,
     Parameters.version,
     Parameters.requestId,
+    Parameters.copySourceAuthorization,
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
+    Parameters.encryptionScope,
     Parameters.leaseId0,
     Parameters.sourceIfModifiedSince,
     Parameters.sourceIfUnmodifiedSince,
-    Parameters.sourceIfMatches,
+    Parameters.sourceIfMatch,
     Parameters.sourceIfNoneMatch
   ],
   responses: {
@@ -2349,18 +2660,25 @@ const blockBlobCommitBlockListOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp17
+    Parameters.comp24
   ],
   headerParameters: [
+    Parameters.transactionalContentMD5,
     Parameters.transactionalContentCrc64,
     Parameters.metadata,
     Parameters.tier0,
     Parameters.version,
     Parameters.requestId,
+    Parameters.blobTagsString,
+    Parameters.immutabilityPolicyExpiry,
+    Parameters.immutabilityPolicyMode,
+    Parameters.legalHold1,
     Parameters.blobCacheControl,
     Parameters.blobContentType,
     Parameters.blobContentEncoding,
@@ -2371,10 +2689,12 @@ const blockBlobCommitBlockListOperationSpec: msRest.OperationSpec = {
     Parameters.encryptionKey,
     Parameters.encryptionKeySha256,
     Parameters.encryptionAlgorithm,
+    Parameters.encryptionScope,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
-    Parameters.ifNoneMatch
+    Parameters.ifNoneMatch,
+    Parameters.ifTags
   ],
   requestBody: {
     parameterPath: "blocks",
@@ -2400,18 +2720,21 @@ const blockBlobGetBlockListOperationSpec: msRest.OperationSpec = {
   httpMethod: "GET",
   path: "{containerName}/{blob}",
   urlParameters: [
-    Parameters.url
+    Parameters.url,
+    Parameters.containerName,
+    Parameters.blob
   ],
   queryParameters: [
     Parameters.snapshot,
     Parameters.listType,
     Parameters.timeout,
-    Parameters.comp17
+    Parameters.comp24
   ],
   headerParameters: [
     Parameters.version,
     Parameters.requestId,
-    Parameters.leaseId0
+    Parameters.leaseId0,
+    Parameters.ifTags
   ],
   responses: {
     200: {
@@ -2435,6 +2758,7 @@ Specifications[Operation.Service_GetUserDelegationKey] = serviceGetUserDelegatio
 Specifications[Operation.Service_GetAccountInfo] = serviceGetAccountInfoOperationSpec;
 Specifications[Operation.Service_GetAccountInfoWithHead] = serviceGetAccountInfoWithHeadOperationSpec;
 Specifications[Operation.Service_SubmitBatch] = serviceSubmitBatchOperationSpec;
+Specifications[Operation.Service_FilterBlobs] = serviceFilterBlobsOperationSpec;
 Specifications[Operation.Container_Create] = containerCreateOperationSpec;
 Specifications[Operation.Container_GetProperties] = containerGetPropertiesOperationSpec;
 Specifications[Operation.Container_GetPropertiesWithHead] = containerGetPropertiesWithHeadOperationSpec;
@@ -2442,7 +2766,9 @@ Specifications[Operation.Container_Delete] = containerDeleteOperationSpec;
 Specifications[Operation.Container_SetMetadata] = containerSetMetadataOperationSpec;
 Specifications[Operation.Container_GetAccessPolicy] = containerGetAccessPolicyOperationSpec;
 Specifications[Operation.Container_SetAccessPolicy] = containerSetAccessPolicyOperationSpec;
+Specifications[Operation.Container_Restore] = containerRestoreOperationSpec;
 Specifications[Operation.Container_SubmitBatch] = containerSubmitBatchOperationSpec;
+Specifications[Operation.Container_FilterBlobs] = containerFilterBlobsOperationSpec;
 Specifications[Operation.Container_AcquireLease] = containerAcquireLeaseOperationSpec;
 Specifications[Operation.Container_ReleaseLease] = containerReleaseLeaseOperationSpec;
 Specifications[Operation.Container_RenewLease] = containerRenewLeaseOperationSpec;
@@ -2452,19 +2778,15 @@ Specifications[Operation.Container_ListBlobFlatSegment] = containerListBlobFlatS
 Specifications[Operation.Container_ListBlobHierarchySegment] = containerListBlobHierarchySegmentOperationSpec;
 Specifications[Operation.Container_GetAccountInfo] = containerGetAccountInfoOperationSpec;
 Specifications[Operation.Container_GetAccountInfoWithHead] = containerGetAccountInfoWithHeadOperationSpec;
-Specifications[Operation.Directory_Create] = directoryCreateOperationSpec;
-Specifications[Operation.Directory_Rename] = directoryRenameOperationSpec;
-Specifications[Operation.Directory_Delete] = directoryDeleteOperationSpec;
-Specifications[Operation.Directory_SetAccessControl] = directorySetAccessControlOperationSpec;
-Specifications[Operation.Directory_GetAccessControl] = directoryGetAccessControlOperationSpec;
 Specifications[Operation.Blob_Download] = blobDownloadOperationSpec;
 Specifications[Operation.Blob_GetProperties] = blobGetPropertiesOperationSpec;
 Specifications[Operation.Blob_Delete] = blobDeleteOperationSpec;
-Specifications[Operation.Blob_SetAccessControl] = blobSetAccessControlOperationSpec;
-Specifications[Operation.Blob_GetAccessControl] = blobGetAccessControlOperationSpec;
-Specifications[Operation.Blob_Rename] = blobRenameOperationSpec;
 Specifications[Operation.Blob_Undelete] = blobUndeleteOperationSpec;
+Specifications[Operation.Blob_SetExpiry] = blobSetExpiryOperationSpec;
 Specifications[Operation.Blob_SetHTTPHeaders] = blobSetHTTPHeadersOperationSpec;
+Specifications[Operation.Blob_SetImmutabilityPolicy] = blobSetImmutabilityPolicyOperationSpec;
+Specifications[Operation.Blob_DeleteImmutabilityPolicy] = blobDeleteImmutabilityPolicyOperationSpec;
+Specifications[Operation.Blob_SetLegalHold] = blobSetLegalHoldOperationSpec;
 Specifications[Operation.Blob_SetMetadata] = blobSetMetadataOperationSpec;
 Specifications[Operation.Blob_AcquireLease] = blobAcquireLeaseOperationSpec;
 Specifications[Operation.Blob_ReleaseLease] = blobReleaseLeaseOperationSpec;
@@ -2478,6 +2800,9 @@ Specifications[Operation.Blob_AbortCopyFromURL] = blobAbortCopyFromURLOperationS
 Specifications[Operation.Blob_SetTier] = blobSetTierOperationSpec;
 Specifications[Operation.Blob_GetAccountInfo] = blobGetAccountInfoOperationSpec;
 Specifications[Operation.Blob_GetAccountInfoWithHead] = blobGetAccountInfoWithHeadOperationSpec;
+Specifications[Operation.Blob_Query] = blobQueryOperationSpec;
+Specifications[Operation.Blob_GetTags] = blobGetTagsOperationSpec;
+Specifications[Operation.Blob_SetTags] = blobSetTagsOperationSpec;
 Specifications[Operation.PageBlob_Create] = pageBlobCreateOperationSpec;
 Specifications[Operation.PageBlob_UploadPages] = pageBlobUploadPagesOperationSpec;
 Specifications[Operation.PageBlob_ClearPages] = pageBlobClearPagesOperationSpec;
@@ -2490,7 +2815,9 @@ Specifications[Operation.PageBlob_CopyIncremental] = pageBlobCopyIncrementalOper
 Specifications[Operation.AppendBlob_Create] = appendBlobCreateOperationSpec;
 Specifications[Operation.AppendBlob_AppendBlock] = appendBlobAppendBlockOperationSpec;
 Specifications[Operation.AppendBlob_AppendBlockFromUrl] = appendBlobAppendBlockFromUrlOperationSpec;
+Specifications[Operation.AppendBlob_Seal] = appendBlobSealOperationSpec;
 Specifications[Operation.BlockBlob_Upload] = blockBlobUploadOperationSpec;
+Specifications[Operation.BlockBlob_PutBlobFromUrl] = blockBlobPutBlobFromUrlOperationSpec;
 Specifications[Operation.BlockBlob_StageBlock] = blockBlobStageBlockOperationSpec;
 Specifications[Operation.BlockBlob_StageBlockFromURL] = blockBlobStageBlockFromURLOperationSpec;
 Specifications[Operation.BlockBlob_CommitBlockList] = blockBlobCommitBlockListOperationSpec;

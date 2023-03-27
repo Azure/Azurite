@@ -14,6 +14,7 @@ General:
 Blob:
 
 - Fixed issue for user delegation key when uploading a blob from a container SAS
+- Upgraded swagger spec to API version 2021-10-04.
 
 Table:
 

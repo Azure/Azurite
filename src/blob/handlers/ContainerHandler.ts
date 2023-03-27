@@ -5,6 +5,7 @@ import { OAuthLevel } from "../../common/models";
 import IExtentStore from "../../common/persistence/IExtentStore";
 import { convertRawHeadersToMetadata, newEtag } from "../../common/utils/utils";
 import BlobStorageContext from "../context/BlobStorageContext";
+import NotImplementedError from "../errors/NotImplementedError";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import IContainerHandler from "../generated/handlers/IContainerHandler";
@@ -320,40 +321,51 @@ export default class ContainerHandler extends BaseHandler
     return response;
   }
 
+  public async restore(
+    options: Models.ContainerRestoreOptionalParams,
+    context: Context
+  ): Promise<Models.ContainerRestoreResponse> {
+    throw new NotImplementedError(context.contextId!);
+  }
+
   public async submitBatch(
     body: NodeJS.ReadableStream,
     contentLength: number,
     multipartContentType: string,
-    containerName: string,
     options: Models.ContainerSubmitBatchOptionalParams,
     context: Context): Promise<Models.ContainerSubmitBatchResponse> {
-      const blobServiceCtx = new BlobStorageContext(context);
-      const requestBatchBoundary = blobServiceCtx.request!.getHeader("content-type")!.split("=")[1];
+    const blobServiceCtx = new BlobStorageContext(context);
+    const requestBatchBoundary = blobServiceCtx.request!.getHeader("content-type")!.split("=")[1];
 
-      const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
-         this.metadataStore, this.extentStore, this.logger, this.loose);
+    const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
+      this.metadataStore, this.extentStore, this.logger, this.loose);
 
-      const responseBodyString = await blobBatchHandler.submitBatch(body,
-        requestBatchBoundary,
-        blobServiceCtx.request!.getPath(),
-        context.request!,
-        context);
+    const responseBodyString = await blobBatchHandler.submitBatch(body,
+      requestBatchBoundary,
+      blobServiceCtx.request!.getPath(),
+      context.request!,
+      context);
 
-      const responseBody = new Readable();
-      responseBody.push(responseBodyString);
-      responseBody.push(null);
+    const responseBody = new Readable();
+    responseBody.push(responseBodyString);
+    responseBody.push(null);
 
-      // No client request id defined in batch response, should refine swagger and regenerate from it.
-      // batch response succeed code should be 202 instead of 200, should refine swagger and regenerate from it.
-      const response: Models.ServiceSubmitBatchResponse = {
-        statusCode: 202,
-        requestId: context.contextId,
-        version: BLOB_API_VERSION,
-        contentType: "multipart/mixed; boundary=" + requestBatchBoundary,
-        body: responseBody
-      };
+    // No client request id defined in batch response, should refine swagger and regenerate from it.
+    // batch response succeed code should be 202 instead of 200, should refine swagger and regenerate from it.
+    const response: Models.ContainerSubmitBatchResponse = {
+      statusCode: 202,
+      requestId: context.contextId,
+      version: BLOB_API_VERSION,
+      contentType: "multipart/mixed; boundary=" + requestBatchBoundary,
+      body: responseBody
+    };
 
-      return response;
+    return response;
+  }
+
+  public async filterBlobs(options: Models.ContainerFilterBlobsOptionalParams, context: Context
+  ): Promise<Models.ContainerFilterBlobsResponse> {
+    throw new NotImplementedError(context.contextId!);
   }
 
   /**
@@ -586,7 +598,6 @@ export default class ContainerHandler extends BaseHandler
 
     const request = context.request!;
     const marker = options.marker;
-    const delimiter = "";
     options.marker = options.marker || "";
     let includeSnapshots: boolean = false;
     let includeUncommittedBlobs: boolean = false;
@@ -633,7 +644,6 @@ export default class ContainerHandler extends BaseHandler
       prefix: options.prefix || "",
       marker: options.marker,
       maxResults: options.maxresults,
-      delimiter,
       segment: {
         blobItems: blobs.map(item => {
           return {

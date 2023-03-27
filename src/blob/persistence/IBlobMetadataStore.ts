@@ -138,7 +138,7 @@ interface IBlobAdditionalProperties {
 export type BlobModel = IBlobAdditionalProperties &
   IPageBlobAdditionalProperties &
   IBlockBlobAdditionalProperties &
-  Models.BlobItem &
+  Models.BlobItemInternal &
   IPersistencyPropertiesOptional;
 
 export type BlobPrefixModel = IPersistencyPropertiesOptional &
@@ -146,7 +146,7 @@ export type BlobPrefixModel = IPersistencyPropertiesOptional &
 
 // The response model for getContainerProperties.
 interface IGetBlobPropertiesRes {
-  properties: Models.BlobProperties;
+  properties: Models.BlobPropertiesInternal;
   metadata?: Models.BlobMetadata;
   blobCommittedBlockCount?: number; // AppendBlobOnly
 }
@@ -154,7 +154,7 @@ export type GetBlobPropertiesRes = IGetBlobPropertiesRes;
 
 // The response model for each lease-related request.
 interface IBlobLeaseResponse {
-  properties: Models.BlobProperties;
+  properties: Models.BlobPropertiesInternal;
   leaseId?: string;
   leaseTime?: number;
 }
@@ -166,7 +166,7 @@ export type ChangeBlobLeaseResponse = IBlobLeaseResponse;
 
 // The response model for create snapshot.
 interface ICreateSnapshotResponse {
-  properties: Models.BlobProperties;
+  properties: Models.BlobPropertiesInternal;
   snapshot: string;
 }
 export type CreateSnapshotResponse = ICreateSnapshotResponse;
@@ -183,7 +183,7 @@ export type BlobId = IBlobId;
 // The model contain required attributes of pageblob for request getPageRanges.
 interface IGetPageRangeResponse {
   pageRangesInOrder?: PersistencyPageRange[];
-  properties: Models.BlobProperties;
+  properties: Models.BlobPropertiesInternal;
 }
 export type GetPageRangeResponse = IGetPageRangeResponse;
 
@@ -628,7 +628,7 @@ export interface IBlobMetadataStore
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     blobHTTPHeaders: Models.BlobHTTPHeaders | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobProperties>;
+  ): Promise<Models.BlobPropertiesInternal>;
 
   /**
    * Set blob metadata.
@@ -651,7 +651,7 @@ export interface IBlobMetadataStore
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     metadata: Models.BlobMetadata | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobProperties>;
+  ): Promise<Models.BlobPropertiesInternal>;
 
   /**
    * Acquire blob lease.
@@ -823,7 +823,7 @@ export interface IBlobMetadataStore
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
     leaseAccessConditions?: Models.BlobStartCopyFromURLOptionalParams
-  ): Promise<Models.BlobProperties>;
+  ): Promise<Models.BlobPropertiesInternal>;
 
   /**
    * Sync copy from Url.
@@ -846,7 +846,7 @@ export interface IBlobMetadataStore
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
     leaseAccessConditions?: Models.BlobCopyFromURLOptionalParams
-  ): Promise<Models.BlobProperties>;
+  ): Promise<Models.BlobPropertiesInternal>;
 
   /**
    * Update Tier for a blob.
@@ -901,7 +901,7 @@ export interface IBlobMetadataStore
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions,
     appendPositionAccessConditions?: Models.AppendPositionAccessConditions
-  ): Promise<Models.BlobProperties>;
+  ): Promise<Models.BlobPropertiesInternal>;
 
   /**
    * Commit block list for a blob.
@@ -947,7 +947,7 @@ export interface IBlobMetadataStore
     isCommitted: boolean | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined
   ): Promise<{
-    properties: Models.BlobProperties;
+    properties: Models.BlobPropertiesInternal;
     uncommittedBlocks: Models.Block[];
     committedBlocks: Models.Block[];
   }>;
@@ -975,7 +975,7 @@ export interface IBlobMetadataStore
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions,
     sequenceNumberAccessConditions?: Models.SequenceNumberAccessConditions
-  ): Promise<Models.BlobProperties>;
+  ): Promise<Models.BlobPropertiesInternal>;
 
   /**
    * Clear range for a page blob.
@@ -998,7 +998,7 @@ export interface IBlobMetadataStore
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions,
     sequenceNumberAccessConditions?: Models.SequenceNumberAccessConditions
-  ): Promise<Models.BlobProperties>;
+  ): Promise<Models.BlobPropertiesInternal>;
 
   /**
    * Returns the list of valid page ranges for a page blob or snapshot of a page blob.
@@ -1044,7 +1044,7 @@ export interface IBlobMetadataStore
     blobContentLength: number,
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobProperties>;
+  ): Promise<Models.BlobPropertiesInternal>;
 
   /**
    * Update the sequence number of a page blob.
@@ -1069,7 +1069,7 @@ export interface IBlobMetadataStore
     blobSequenceNumber: number | undefined,
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobProperties>;
+  ): Promise<Models.BlobPropertiesInternal>;
 
   /**
    * Gets uncommitted blocks list for a blob from persistency layer.

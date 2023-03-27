@@ -60,7 +60,7 @@ export default class PageBlobHandler extends BaseHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
-    if (options.pageBlobAccessTier !== undefined) {
+    if (options.tier !== undefined) {
       throw StorageErrorFactory.getAccessTierNotSupportedForBlobType(
         context.contextId!
       );
@@ -400,7 +400,6 @@ export default class PageBlobHandler extends BaseHandler
   }
 
   public async getPageRangesDiff(
-    prevsnapshot: string,
     options: Models.PageBlobGetPageRangesDiffOptionalParams,
     context: Context
   ): Promise<Models.PageBlobGetPageRangesDiffResponse> {

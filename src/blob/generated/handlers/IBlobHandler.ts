@@ -16,11 +16,12 @@ export default interface IBlobHandler {
   download(options: Models.BlobDownloadOptionalParams, context: Context): Promise<Models.BlobDownloadResponse>;
   getProperties(options: Models.BlobGetPropertiesOptionalParams, context: Context): Promise<Models.BlobGetPropertiesResponse>;
   delete(options: Models.BlobDeleteMethodOptionalParams, context: Context): Promise<Models.BlobDeleteResponse>;
-  setAccessControl(options: Models.BlobSetAccessControlOptionalParams, context: Context): Promise<Models.BlobSetAccessControlResponse>;
-  getAccessControl(options: Models.BlobGetAccessControlOptionalParams, context: Context): Promise<Models.BlobGetAccessControlResponse>;
-  rename(renameSource: string, options: Models.BlobRenameOptionalParams, context: Context): Promise<Models.BlobRenameResponse>;
   undelete(options: Models.BlobUndeleteOptionalParams, context: Context): Promise<Models.BlobUndeleteResponse>;
+  setExpiry(expiryOptions: Models.BlobExpiryOptions, options: Models.BlobSetExpiryOptionalParams, context: Context): Promise<Models.BlobSetExpiryResponse>;
   setHTTPHeaders(options: Models.BlobSetHTTPHeadersOptionalParams, context: Context): Promise<Models.BlobSetHTTPHeadersResponse>;
+  setImmutabilityPolicy(options: Models.BlobSetImmutabilityPolicyOptionalParams, context: Context): Promise<Models.BlobSetImmutabilityPolicyResponse>;
+  deleteImmutabilityPolicy(options: Models.BlobDeleteImmutabilityPolicyOptionalParams, context: Context): Promise<Models.BlobDeleteImmutabilityPolicyResponse>;
+  setLegalHold(legalHold: boolean, options: Models.BlobSetLegalHoldOptionalParams, context: Context): Promise<Models.BlobSetLegalHoldResponse>;
   setMetadata(options: Models.BlobSetMetadataOptionalParams, context: Context): Promise<Models.BlobSetMetadataResponse>;
   acquireLease(options: Models.BlobAcquireLeaseOptionalParams, context: Context): Promise<Models.BlobAcquireLeaseResponse>;
   releaseLease(leaseId: string, options: Models.BlobReleaseLeaseOptionalParams, context: Context): Promise<Models.BlobReleaseLeaseResponse>;
@@ -33,5 +34,7 @@ export default interface IBlobHandler {
   abortCopyFromURL(copyId: string, options: Models.BlobAbortCopyFromURLOptionalParams, context: Context): Promise<Models.BlobAbortCopyFromURLResponse>;
   setTier(tier: Models.AccessTier, options: Models.BlobSetTierOptionalParams, context: Context): Promise<Models.BlobSetTierResponse>;
   getAccountInfo(context: Context): Promise<Models.BlobGetAccountInfoResponse>;
-  getAccountInfoWithHead(context: Context): Promise<Models.BlobGetAccountInfoWithHeadResponse>;
+  query(options: Models.BlobQueryOptionalParams, context: Context): Promise<Models.BlobQueryResponse>;
+  getTags(options: Models.BlobGetTagsOptionalParams, context: Context): Promise<Models.BlobGetTagsResponse>;
+  setTags(options: Models.BlobSetTagsOptionalParams, context: Context): Promise<Models.BlobSetTagsResponse>;
 }
