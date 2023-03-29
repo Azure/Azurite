@@ -10,7 +10,7 @@ enable-xml: true
 generate-metadata: false
 license-header: MICROSOFT_MIT_NO_VERSION
 output-folder: ../src/blob/generated
-input-file: blob-storage-2019-02-02.json
+input-file: blob-storage-2021-10-04.json
 model-date-time-as-string: true
 optional-response-headers: true
 enum-types: true
@@ -22,12 +22,41 @@ enum-types: true
 
 2. Updated blocklisttype for list blob blocks from required to optional.
 
-3. Make "Deleted" and "Snapshot" from required to optional for BlobItem model.
+3. Make "Deleted" and "Snapshot" from required to optional for "BlobItemInternal" model from:
 
-4. Make `ApiVersionParameter` parameter from required to optional.
+4. Change "Name" definition in "BlobItemInternal" from:
+   "Name": {
+      "$ref": "#/definitions/BlobName"
+   }
+   to
+   "Name": {
+   "type": "string"
+   }
 
-5. Add `x-ms-creation-time` to Blob_Download API responds
+5. Add "","deleted" to "ListContainersInclude" enum, add "","tags","versions","deletedwithversions","legalhold","permissions" to "ListBlobsInclude" enum.
 
-6. Add "","deleted" to "ListContainersInclude" enum, add "","tags","versions","deletedwithversions","legalhold","permissions" to "ListBlobsInclude" enum.
+6. Add section for "Container_SubmitBatch" operation.
 
-7. Add section for "Container_SubmitBatch" operation.
+7. Change "Name" definition in "BlobPrefix" from:
+   "Name": {
+   "$ref": "#/definitions/BlobName"
+   }
+   to
+   "Name": {
+   "type": "string"
+   }
+
+9. Make `ApiVersionParameter` parameter from required to optional.
+
+10. Add `x-ms-creation-time` to Blob_Download API response.
+
+11. Add "Premium" to "AccessTierRequired" enum and "AccessTierOptional" enum.
+    Add "Mutable" to "ImmutabilityPolicyMode" at around line #11994
+
+12. Add spec for: Blob_GetAccountInfoWithHead, Container_GetAccountInfoWithHead and Service_GetAccountInfoWithHead.
+
+13. Change return code from '200' to '202' for service_submitbatch.
+
+14. Change "AllowedHeaders" and "ExposedHeaders" to from required to optional.
+
+15. Remove "Container_Rename" section.

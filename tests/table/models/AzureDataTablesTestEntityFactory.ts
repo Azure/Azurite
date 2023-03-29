@@ -10,17 +10,21 @@ export class AzureDataTablesTestEntityFactory {
   private int32Field: number = 54321;
   private int64Field: Edm<"Int64"> = { value: "12345", type: "Int64" };
   private doubleField: Edm<"Double"> = { value: 54.321, type: "Double" };
-  private guidField: Edm<"Guid"> = {
-    value: "d3365292-0f33-4e13-9ec6-2ea5053c32ad",
-    type: "Guid"
-  };
   private nullableString: string | null = "notNull";
   private binaryField: Buffer = Buffer.from("11111111");
   private booleanField: boolean = true;
-  private dateField: Edm<"DateTime"> = {
-    value: "2023-01-01T23:00:00",
-    type: "DateTime"
-  };
+  private newGuid(): Edm<"Guid"> {
+    return {
+      value: "d3365292-0f33-4e13-9ec6-2ea5053c32ad",
+      type: "Guid"
+    };
+  }
+  private newDateField(): Edm<"DateTime"> {
+    return {
+      value: "2023-01-01T23:00:00",
+      type: "DateTime"
+    };
+  }
   public Create(part: string, row: string, value: string): TableTestEntity {
     return {
       partitionKey: part,
@@ -29,11 +33,11 @@ export class AzureDataTablesTestEntityFactory {
       int32Field: this.int32Field,
       int64Field: this.int64Field,
       doubleField: this.doubleField,
-      guidField: this.guidField,
+      guidField: this.newGuid(),
       nullableString: this.nullableString,
       binaryField: this.binaryField,
       booleanField: this.booleanField,
-      dateField: this.dateField
+      dateField: this.newDateField()
     };
   }
 

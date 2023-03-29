@@ -1,4 +1,4 @@
-import { OutgoingHttpHeaders } from "http";
+import { OutgoingHttpHeaders } from 'http';
 
 export default class MiddlewareError extends Error {
   /**

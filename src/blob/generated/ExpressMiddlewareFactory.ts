@@ -1,17 +1,17 @@
-import { ErrorRequestHandler, NextFunction, Request, RequestHandler, Response } from "express";
+import { ErrorRequestHandler, NextFunction, Request, RequestHandler, Response } from 'express';
 
-import Context from "./Context";
-import ExpressRequestAdapter from "./ExpressRequestAdapter";
-import ExpressResponseAdapter from "./ExpressResponseAdapter";
-import IHandlers from "./handlers/IHandlers";
-import deserializerMiddleware from "./middleware/deserializer.middleware";
-import dispatchMiddleware from "./middleware/dispatch.middleware";
-import endMiddleware from "./middleware/end.middleware";
-import errorMiddleware from "./middleware/error.middleware";
-import HandlerMiddlewareFactory from "./middleware/HandlerMiddlewareFactory";
-import serializerMiddleware from "./middleware/serializer.middleware";
-import MiddlewareFactory from "./MiddlewareFactory";
-import ILogger from "./utils/ILogger";
+import Context from './Context';
+import ExpressRequestAdapter from './ExpressRequestAdapter';
+import ExpressResponseAdapter from './ExpressResponseAdapter';
+import IHandlers from './handlers/IHandlers';
+import deserializerMiddleware from './middleware/deserializer.middleware';
+import dispatchMiddleware from './middleware/dispatch.middleware';
+import endMiddleware from './middleware/end.middleware';
+import errorMiddleware from './middleware/error.middleware';
+import HandlerMiddlewareFactory from './middleware/HandlerMiddlewareFactory';
+import serializerMiddleware from './middleware/serializer.middleware';
+import MiddlewareFactory from './MiddlewareFactory';
+import ILogger from './utils/ILogger';
 
 /**
  * ExpressMiddlewareFactory will generate Express compatible middleware according to swagger definitions.

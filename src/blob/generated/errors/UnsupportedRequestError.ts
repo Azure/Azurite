@@ -1,4 +1,4 @@
-import MiddlewareError from "./MiddlewareError";
+import MiddlewareError from './MiddlewareError';
 
 export default class UnsupportedRequestError extends MiddlewareError {
   public constructor() {

@@ -11,10 +11,20 @@ General:
 - Typescript upgraded from 4.2.4 to 4.9.5.
 - Migrated test pipeline from Node.js 10/12 to Node.js 14/16/18.
 
+Blob:
+
+- Fixed issue for user delegation key when uploading a blob from a container SAS
+- Upgraded swagger spec to API version 2021-10-04.
+
 Table:
 
 - Fixed issue for querying on identifiers starting with underscore.
+<<<<<<< HEAD
 - Corrected query parsing logic for single boolean terms.
+=======
+- Fixed issue for querying GUIDs using operators other than eq and ne
+- GUID queries only support persistent storage on legacy (string) format GUIDs for eq and ne operators, other operators will only evaluate newly stored entities.
+>>>>>>> a1527fc0ec75137de6982b8dd3ce60fd38f9504d
 
 Queue:
 

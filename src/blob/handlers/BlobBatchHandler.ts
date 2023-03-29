@@ -179,8 +179,7 @@ export class BlobBatchHandler {
         this.extentStore,
         this.logger,
         this.loose
-      ),
-      directoryHandler: {} as any
+      )
     };
 
     const handlerMiddlewareFactory = new HandlerMiddlewareFactory(

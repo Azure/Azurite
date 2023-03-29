@@ -1,5 +1,5 @@
-import IHandlers from "./handlers/IHandlers";
-import ILogger from "./utils/ILogger";
+import IHandlers from './handlers/IHandlers';
+import ILogger from './utils/ILogger';
 
 export type Callback = (...args: any[]) => any;
 export type MiddlewareTypes = Callback;

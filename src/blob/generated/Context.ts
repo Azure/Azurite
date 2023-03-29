@@ -1,6 +1,6 @@
-import Operation from "./artifacts/operation";
-import IRequest from "./IRequest";
-import IResponse from "./IResponse";
+import Operation from './artifacts/operation';
+import IRequest from './IRequest';
+import IResponse from './IResponse';
 
 export interface IHandlerParameters {
   [key: string]: any;

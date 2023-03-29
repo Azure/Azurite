@@ -70,30 +70,6 @@ export interface StorageError {
 }
 
 /**
- * The service error response object.
- */
-export interface DataLakeStorageErrorError {
-  /**
-   * The service error code.
-   */
-  code?: string;
-  /**
-   * The service error message.
-   */
-  message?: string;
-}
-
-/**
- * An interface representing DataLakeStorageError.
- */
-export interface DataLakeStorageError {
-  /**
-   * The service error response object.
-   */
-  error?: DataLakeStorageErrorError;
-}
-
-/**
  * An Access policy
  */
 export interface AccessPolicy {
@@ -112,13 +88,13 @@ export interface AccessPolicy {
   /**
    * the permissions for the acl policy
    */
-  permission: string;
+  permission?: string;
 }
 
 /**
  * Properties of a blob
  */
-export interface BlobProperties {
+export interface BlobPropertiesInternal {
   creationTime?: Date;
   lastModified: Date;
   etag: string;
@@ -165,7 +141,7 @@ export interface BlobProperties {
   remainingRetentionDays?: number;
   /**
    * Possible values include: 'P4', 'P6', 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70',
-   * 'P80', 'Hot', 'Cool', 'Archive'
+   * 'P80', 'Hot', 'Cool', 'Archive', 'Premium'
    */
   accessTier?: AccessTier;
   accessTierInferred?: boolean;
@@ -174,7 +150,25 @@ export interface BlobProperties {
    */
   archiveStatus?: ArchiveStatus;
   customerProvidedKeySha256?: string;
+  /**
+   * The name of the encryption scope under which the blob is encrypted.
+   */
+  encryptionScope?: string;
   accessTierChangeTime?: Date;
+  tagCount?: number;
+  expiresOn?: Date;
+  isSealed?: boolean;
+  /**
+   * Possible values include: 'High', 'Standard'
+   */
+  rehydratePriority?: RehydratePriority;
+  lastAccessedOn?: Date;
+  immutabilityPolicyExpiresOn?: Date;
+  /**
+   * Possible values include: 'Mutable', 'Unlocked', 'Locked'
+   */
+  immutabilityPolicyMode?: BlobImmutabilityPolicyMode;
+  legalHold?: boolean;
 }
 
 /**
@@ -190,21 +184,41 @@ export interface BlobMetadata {
 }
 
 /**
+ * An interface representing BlobTag.
+ */
+export interface BlobTag {
+  key: string;
+  value: string;
+}
+
+/**
+ * Blob tags
+ */
+export interface BlobTags {
+  blobTagSet: BlobTag[];
+}
+
+/**
  * An Azure Storage blob
  */
-export interface BlobItem {
+export interface BlobItemInternal {
   name: string;
   deleted?: boolean;
   snapshot?: string;
-  properties: BlobProperties;
+  versionId?: string;
+  isCurrentVersion?: boolean;
+  properties: BlobPropertiesInternal;
   metadata?: BlobMetadata;
+  blobTags?: BlobTags;
+  objectReplicationMetadata?: { [propertyName: string]: string };
+  hasVersionsOnly?: boolean;
 }
 
 /**
  * An interface representing BlobFlatListSegment.
  */
 export interface BlobFlatListSegment {
-  blobItems: BlobItem[];
+  blobItems: BlobItemInternal[];
 }
 
 /**
@@ -216,7 +230,6 @@ export interface ListBlobsFlatSegmentResponse {
   prefix?: string;
   marker?: string;
   maxResults?: number;
-  delimiter?: string;
   segment: BlobFlatListSegment;
   nextMarker?: string;
 }
@@ -233,7 +246,7 @@ export interface BlobPrefix {
  */
 export interface BlobHierarchyListSegment {
   blobPrefixes?: BlobPrefix[];
-  blobItems: BlobItem[];
+  blobItems: BlobItemInternal[];
 }
 
 /**
@@ -248,6 +261,20 @@ export interface ListBlobsHierarchySegmentResponse {
   delimiter?: string;
   segment: BlobHierarchyListSegment;
   nextMarker?: string;
+}
+
+/**
+ * An interface representing BlobName.
+ */
+export interface BlobName {
+  /**
+   * Indicates if the blob name is encoded.
+   */
+  encoded?: boolean;
+  /**
+   * The name of the blob.
+   */
+  content?: string;
 }
 
 /**
@@ -305,6 +332,14 @@ export interface ContainerProperties {
   publicAccess?: PublicAccessType;
   hasImmutabilityPolicy?: boolean;
   hasLegalHold?: boolean;
+  defaultEncryptionScope?: string;
+  preventEncryptionScopeOverride?: boolean;
+  deletedTime?: Date;
+  remainingRetentionDays?: number;
+  /**
+   * Indicates if version level worm is enabled on this container.
+   */
+  isImmutableStorageWithVersioningEnabled?: boolean;
 }
 
 /**
@@ -312,8 +347,63 @@ export interface ContainerProperties {
  */
 export interface ContainerItem {
   name: string;
+  deleted?: boolean;
+  version?: string;
   properties: ContainerProperties;
   metadata?: { [propertyName: string]: string };
+}
+
+/**
+ * Groups the settings used for interpreting the blob data if the blob is delimited text formatted.
+ */
+export interface DelimitedTextConfiguration {
+  /**
+   * The string used to separate columns.
+   */
+  columnSeparator?: string;
+  /**
+   * The string used to quote a specific field.
+   */
+  fieldQuote?: string;
+  /**
+   * The string used to separate records.
+   */
+  recordSeparator?: string;
+  /**
+   * The string used as an escape character.
+   */
+  escapeChar?: string;
+  /**
+   * Represents whether the data has headers.
+   */
+  headersPresent?: boolean;
+}
+
+/**
+ * json text configuration
+ */
+export interface JsonTextConfiguration {
+  /**
+   * The string used to separate records.
+   */
+  recordSeparator?: string;
+}
+
+/**
+ * Groups settings regarding specific field of an arrow schema
+ */
+export interface ArrowField {
+  type: string;
+  name?: string;
+  precision?: number;
+  scale?: number;
+}
+
+/**
+ * Groups the settings used for formatting the response if the response should be Arrow formatted.
+ */
+export interface ArrowConfiguration {
+  schema: ArrowField[];
 }
 
 /**
@@ -363,6 +453,27 @@ export interface CorsRule {
 }
 
 /**
+ * Blob info from a Filter Blobs API call
+ */
+export interface FilterBlobItem {
+  name: string;
+  containerName: string;
+  tags?: BlobTags;
+  versionId?: string;
+  isCurrentVersion?: boolean;
+}
+
+/**
+ * The result of a Filter Blobs API call
+ */
+export interface FilterBlobSegment {
+  serviceEndpoint: string;
+  where: string;
+  blobs: FilterBlobItem[];
+  nextMarker?: string;
+}
+
+/**
  * Geo-Replication information for the Secondary Storage Service
  */
 export interface GeoReplication {
@@ -392,6 +503,10 @@ export interface RetentionPolicy {
    * All data older than this value will be deleted
    */
   days?: number;
+  /**
+   * Indicates whether permanent delete is allowed on this storage account.
+   */
+  allowPermanentDelete?: boolean;
 }
 
 /**
@@ -458,6 +573,40 @@ export interface ClearRange {
 export interface PageList {
   pageRange?: PageRange[];
   clearRange?: ClearRange[];
+  nextMarker?: string;
+}
+
+/**
+ * An interface representing QueryFormat.
+ */
+export interface QueryFormat {
+  /**
+   * Possible values include: 'delimited', 'json', 'arrow', 'parquet'
+   */
+  type: QueryFormatType;
+  delimitedTextConfiguration?: DelimitedTextConfiguration;
+  jsonTextConfiguration?: JsonTextConfiguration;
+  arrowConfiguration?: ArrowConfiguration;
+  parquetTextConfiguration?: any;
+}
+
+/**
+ * An interface representing QuerySerialization.
+ */
+export interface QuerySerialization {
+  format: QueryFormat;
+}
+
+/**
+ * Groups the set of query request settings.
+ */
+export interface QueryRequest {
+  /**
+   * The query expression in SQL. The maximum size of the query expression is 256KiB.
+   */
+  expression: string;
+  inputSerialization?: QuerySerialization;
+  outputSerialization?: QuerySerialization;
 }
 
 /**
@@ -487,6 +636,10 @@ export interface StaticWebsite {
    * The absolute path of the custom 404 page
    */
   errorDocument404Path?: string;
+  /**
+   * Absolute path of the default index page
+   */
+  defaultIndexDocumentPath?: string;
 }
 
 /**
@@ -517,11 +670,27 @@ export interface StorageServiceStats {
 }
 
 /**
+ * Additional parameters for create operation.
+ */
+export interface ContainerCpkScopeInfo {
+  /**
+   * Optional.  Version 2019-07-07 and later.  Specifies the default encryption scope to set on the
+   * container and use for all future writes.
+   */
+  defaultEncryptionScope?: string;
+  /**
+   * Optional.  Version 2019-07-07 and newer.  If true, prevents any request from specifying a
+   * different encryption scope than the scope set on the container.
+   */
+  preventEncryptionScopeOverride?: boolean;
+}
+
+/**
  * Additional parameters for a set of operations.
  */
 export interface LeaseAccessConditions {
   /**
-   * If specified, the operation only succeeds if the container's lease is active and matches this
+   * If specified, the operation only succeeds if the resource's lease is active and matches this
    * ID.
    */
   leaseId?: string;
@@ -549,57 +718,10 @@ export interface ModifiedAccessConditions {
    * Specify an ETag value to operate only on blobs without a matching value.
    */
   ifNoneMatch?: string;
-}
-
-/**
- * Additional parameters for a set of operations, such as: Directory_create, Directory_rename,
- * Blob_rename.
- */
-export interface DirectoryHttpHeaders {
   /**
-   * Cache control for given resource
+   * Specify a SQL where clause on blob tags to operate only on blobs with a matching value.
    */
-  cacheControl?: string;
-  /**
-   * Content type for given resource
-   */
-  contentType?: string;
-  /**
-   * Content encoding for given resource
-   */
-  contentEncoding?: string;
-  /**
-   * Content language for given resource
-   */
-  contentLanguage?: string;
-  /**
-   * Content disposition for given resource
-   */
-  contentDisposition?: string;
-}
-
-/**
- * Additional parameters for a set of operations.
- */
-export interface SourceModifiedAccessConditions {
-  /**
-   * Specify this header value to operate only on a blob if it has been modified since the
-   * specified date/time.
-   */
-  sourceIfModifiedSince?: Date;
-  /**
-   * Specify this header value to operate only on a blob if it has not been modified since the
-   * specified date/time.
-   */
-  sourceIfUnmodifiedSince?: Date;
-  /**
-   * Specify an ETag value to operate only on blobs with a matching value.
-   */
-  sourceIfMatches?: string;
-  /**
-   * Specify an ETag value to operate only on blobs without a matching value.
-   */
-  sourceIfNoneMatch?: string;
+  ifTags?: string;
 }
 
 /**
@@ -661,6 +783,47 @@ export interface BlobHTTPHeaders {
 }
 
 /**
+ * Additional parameters for a set of operations.
+ */
+export interface CpkScopeInfo {
+  /**
+   * Optional. Version 2019-07-07 and later.  Specifies the name of the encryption scope to use to
+   * encrypt the data provided in the request. If not specified, encryption is performed with the
+   * default account encryption scope.  For more information, see Encryption at Rest for Azure
+   * Storage Services.
+   */
+  encryptionScope?: string;
+}
+
+/**
+ * Additional parameters for a set of operations.
+ */
+export interface SourceModifiedAccessConditions {
+  /**
+   * Specify this header value to operate only on a blob if it has been modified since the
+   * specified date/time.
+   */
+  sourceIfModifiedSince?: Date;
+  /**
+   * Specify this header value to operate only on a blob if it has not been modified since the
+   * specified date/time.
+   */
+  sourceIfUnmodifiedSince?: Date;
+  /**
+   * Specify an ETag value to operate only on blobs with a matching value.
+   */
+  sourceIfMatch?: string;
+  /**
+   * Specify an ETag value to operate only on blobs without a matching value.
+   */
+  sourceIfNoneMatch?: string;
+  /**
+   * Specify a SQL where clause on blob tags to operate only on blobs with a matching value.
+   */
+  sourceIfTags?: string;
+}
+
+/**
  * Additional parameters for a set of operations, such as: PageBlob_uploadPages,
  * PageBlob_clearPages, PageBlob_uploadPagesFromURL.
  */
@@ -683,7 +846,7 @@ export interface SequenceNumberAccessConditions {
 
 /**
  * Additional parameters for a set of operations, such as: AppendBlob_appendBlock,
- * AppendBlob_appendBlockFromUrl.
+ * AppendBlob_appendBlockFromUrl, AppendBlob_seal.
  */
 export interface AppendPositionAccessConditions {
   /**
@@ -707,13 +870,10 @@ export interface AppendPositionAccessConditions {
  */
 export interface AzuriteServerBlobOptions {
   /**
-   * Specifies the version of the operation to use for this request.
+   * Specifies the version of the operation to use for this request. Possible values include:
+   * '2021-10-04'
    */
-  version?: string;
-  /**
-   * Determines the behavior of the rename operation. Possible values include: 'legacy', 'posix'
-   */
-  pathRenameMode?: PathRenameMode;
+  version?: Version;
 }
 
 /**
@@ -794,9 +954,9 @@ export interface ServiceListContainersSegmentOptionalParams {
   maxresults?: number;
   /**
    * Include this parameter to specify that the container's metadata be returned as part of the
-   * response body. Possible values include: '', 'metadata', 'deleted'
+   * response body.
    */
-  include?: ListContainersIncludeType;
+  include?: ListContainersIncludeType[];
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
    * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
@@ -847,6 +1007,49 @@ export interface ServiceSubmitBatchOptionalParams {
 /**
  * Optional Parameters.
  */
+export interface ServiceFilterBlobsOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * Filters the results to return only to return only blobs whose tags match the specified
+   * expression.
+   */
+  where?: string;
+  /**
+   * A string value that identifies the portion of the list of containers to be returned with the
+   * next listing operation. The operation returns the NextMarker value within the response body if
+   * the listing operation did not return all containers remaining to be listed with the current
+   * page. The NextMarker value can be used as the value for the marker parameter in a subsequent
+   * call to request the next page of list items. The marker value is opaque to the client.
+   */
+  marker?: string;
+  /**
+   * Specifies the maximum number of containers to return. If the request does not specify
+   * maxresults, or specifies a value greater than 5000, the server will return up to 5000 items.
+   * Note that if the listing operation crosses a partition boundary, then the service will return
+   * a continuation token for retrieving the remainder of the results. For this reason, it is
+   * possible that the service will return fewer results than specified by maxresults, or than the
+   * default of 5000.
+   */
+  maxresults?: number;
+  /**
+   * Include this parameter to specify one or more datasets to include in the response.
+   */
+  include?: FilterBlobsIncludeItem[];
+}
+
+/**
+ * Optional Parameters.
+ */
 export interface ContainerCreateOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
@@ -874,6 +1077,10 @@ export interface ContainerCreateOptionalParams {
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * Additional parameters for the operation
+   */
+  containerCpkScopeInfo?: ContainerCpkScopeInfo;
 }
 
 /**
@@ -1036,6 +1243,33 @@ export interface ContainerSetAccessPolicyOptionalParams {
 /**
  * Optional Parameters.
  */
+export interface ContainerRestoreOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * Optional.  Version 2019-12-12 and later.  Specifies the name of the deleted container to
+   * restore.
+   */
+  deletedContainerName?: string;
+  /**
+   * Optional.  Version 2019-12-12 and later.  Specifies the version of the deleted container to
+   * restore.
+   */
+  deletedContainerVersion?: string;
+}
+
+/**
+ * Optional Parameters.
+ */
 export interface ContainerSubmitBatchOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
@@ -1048,6 +1282,49 @@ export interface ContainerSubmitBatchOptionalParams {
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface ContainerFilterBlobsOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * Filters the results to return only to return only blobs whose tags match the specified
+   * expression.
+   */
+  where?: string;
+  /**
+   * A string value that identifies the portion of the list of containers to be returned with the
+   * next listing operation. The operation returns the NextMarker value within the response body if
+   * the listing operation did not return all containers remaining to be listed with the current
+   * page. The NextMarker value can be used as the value for the marker parameter in a subsequent
+   * call to request the next page of list items. The marker value is opaque to the client.
+   */
+  marker?: string;
+  /**
+   * Specifies the maximum number of containers to return. If the request does not specify
+   * maxresults, or specifies a value greater than 5000, the server will return up to 5000 items.
+   * Note that if the listing operation crosses a partition boundary, then the service will return
+   * a continuation token for retrieving the remainder of the results. For this reason, it is
+   * possible that the service will return fewer results than specified by maxresults, or than the
+   * default of 5000.
+   */
+  maxresults?: number;
+  /**
+   * Include this parameter to specify one or more datasets to include in the response.
+   */
+  include?: FilterBlobsIncludeItem[];
 }
 
 /**
@@ -1264,236 +1541,6 @@ export interface ContainerListBlobHierarchySegmentOptionalParams {
 /**
  * Optional Parameters.
  */
-export interface DirectoryCreateOptionalParams {
-  /**
-   * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-   * Timeouts for Blob Service Operations.</a>
-   */
-  timeout?: number;
-  /**
-   * Optional.  User-defined properties to be stored with the file or directory, in the format of a
-   * comma-separated list of name and value pairs "n1=v1, n2=v2, ...", where each value is base64
-   * encoded.
-   */
-  directoryProperties?: string;
-  /**
-   * Optional and only valid if Hierarchical Namespace is enabled for the account. Sets POSIX
-   * access permissions for the file owner, the file owning group, and others. Each class may be
-   * granted read, write, or execute permission.  The sticky bit is also supported.  Both symbolic
-   * (rwxrw-rw-) and 4-digit octal notation (e.g. 0766) are supported.
-   */
-  posixPermissions?: string;
-  /**
-   * Only valid if Hierarchical Namespace is enabled for the account. This umask restricts
-   * permission settings for file and directory, and will only be applied when default Acl does not
-   * exist in parent directory. If the umask bit has set, it means that the corresponding
-   * permission will be disabled. Otherwise the corresponding permission will be determined by the
-   * permission. A 4-digit octal notation (e.g. 0022) is supported here. If no umask was specified,
-   * a default umask - 0027 will be used.
-   */
-  posixUmask?: string;
-  /**
-   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
-   * analytics logs when storage analytics logging is enabled.
-   */
-  requestId?: string;
-  /**
-   * Additional parameters for the operation
-   */
-  directoryHttpHeaders?: DirectoryHttpHeaders;
-  /**
-   * Additional parameters for the operation
-   */
-  leaseAccessConditions?: LeaseAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  modifiedAccessConditions?: ModifiedAccessConditions;
-}
-
-/**
- * Optional Parameters.
- */
-export interface DirectoryRenameOptionalParams {
-  /**
-   * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-   * Timeouts for Blob Service Operations.</a>
-   */
-  timeout?: number;
-  /**
-   * When renaming a directory, the number of paths that are renamed with each invocation is
-   * limited.  If the number of paths to be renamed exceeds this limit, a continuation token is
-   * returned in this response header.  When a continuation token is returned in the response, it
-   * must be specified in a subsequent invocation of the rename operation to continue renaming the
-   * directory.
-   */
-  marker?: string;
-  /**
-   * Optional.  User-defined properties to be stored with the file or directory, in the format of a
-   * comma-separated list of name and value pairs "n1=v1, n2=v2, ...", where each value is base64
-   * encoded.
-   */
-  directoryProperties?: string;
-  /**
-   * Optional and only valid if Hierarchical Namespace is enabled for the account. Sets POSIX
-   * access permissions for the file owner, the file owning group, and others. Each class may be
-   * granted read, write, or execute permission.  The sticky bit is also supported.  Both symbolic
-   * (rwxrw-rw-) and 4-digit octal notation (e.g. 0766) are supported.
-   */
-  posixPermissions?: string;
-  /**
-   * Only valid if Hierarchical Namespace is enabled for the account. This umask restricts
-   * permission settings for file and directory, and will only be applied when default Acl does not
-   * exist in parent directory. If the umask bit has set, it means that the corresponding
-   * permission will be disabled. Otherwise the corresponding permission will be determined by the
-   * permission. A 4-digit octal notation (e.g. 0022) is supported here. If no umask was specified,
-   * a default umask - 0027 will be used.
-   */
-  posixUmask?: string;
-  /**
-   * A lease ID for the source path. If specified, the source path must have an active lease and
-   * the leaase ID must match.
-   */
-  sourceLeaseId?: string;
-  /**
-   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
-   * analytics logs when storage analytics logging is enabled.
-   */
-  requestId?: string;
-  /**
-   * Additional parameters for the operation
-   */
-  directoryHttpHeaders?: DirectoryHttpHeaders;
-  /**
-   * Additional parameters for the operation
-   */
-  leaseAccessConditions?: LeaseAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  modifiedAccessConditions?: ModifiedAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  sourceModifiedAccessConditions?: SourceModifiedAccessConditions;
-}
-
-/**
- * Optional Parameters.
- */
-export interface DirectoryDeleteMethodOptionalParams {
-  /**
-   * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-   * Timeouts for Blob Service Operations.</a>
-   */
-  timeout?: number;
-  /**
-   * When renaming a directory, the number of paths that are renamed with each invocation is
-   * limited.  If the number of paths to be renamed exceeds this limit, a continuation token is
-   * returned in this response header.  When a continuation token is returned in the response, it
-   * must be specified in a subsequent invocation of the rename operation to continue renaming the
-   * directory.
-   */
-  marker?: string;
-  /**
-   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
-   * analytics logs when storage analytics logging is enabled.
-   */
-  requestId?: string;
-  /**
-   * Additional parameters for the operation
-   */
-  leaseAccessConditions?: LeaseAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  modifiedAccessConditions?: ModifiedAccessConditions;
-}
-
-/**
- * Optional Parameters.
- */
-export interface DirectorySetAccessControlOptionalParams {
-  /**
-   * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-   * Timeouts for Blob Service Operations.</a>
-   */
-  timeout?: number;
-  /**
-   * Optional. The owner of the blob or directory.
-   */
-  owner?: string;
-  /**
-   * Optional. The owning group of the blob or directory.
-   */
-  group?: string;
-  /**
-   * Optional and only valid if Hierarchical Namespace is enabled for the account. Sets POSIX
-   * access permissions for the file owner, the file owning group, and others. Each class may be
-   * granted read, write, or execute permission.  The sticky bit is also supported.  Both symbolic
-   * (rwxrw-rw-) and 4-digit octal notation (e.g. 0766) are supported.
-   */
-  posixPermissions?: string;
-  /**
-   * Sets POSIX access control rights on files and directories. The value is a comma-separated list
-   * of access control entries. Each access control entry (ACE) consists of a scope, a type, a user
-   * or group identifier, and permissions in the format "[scope:][type]:[id]:[permissions]".
-   */
-  posixAcl?: string;
-  /**
-   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
-   * analytics logs when storage analytics logging is enabled.
-   */
-  requestId?: string;
-  /**
-   * Additional parameters for the operation
-   */
-  leaseAccessConditions?: LeaseAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  modifiedAccessConditions?: ModifiedAccessConditions;
-}
-
-/**
- * Optional Parameters.
- */
-export interface DirectoryGetAccessControlOptionalParams {
-  /**
-   * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-   * Timeouts for Blob Service Operations.</a>
-   */
-  timeout?: number;
-  /**
-   * Optional. Valid only when Hierarchical Namespace is enabled for the account. If "true", the
-   * identity values returned in the x-ms-owner, x-ms-group, and x-ms-acl response headers will be
-   * transformed from Azure Active Directory Object IDs to User Principal Names.  If "false", the
-   * values will be returned as Azure Active Directory Object IDs. The default value is false.
-   */
-  upn?: boolean;
-  /**
-   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
-   * analytics logs when storage analytics logging is enabled.
-   */
-  requestId?: string;
-  /**
-   * Additional parameters for the operation
-   */
-  leaseAccessConditions?: LeaseAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  modifiedAccessConditions?: ModifiedAccessConditions;
-}
-
-/**
- * Optional Parameters.
- */
 export interface BlobDownloadOptionalParams {
   /**
    * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
@@ -1502,6 +1549,11 @@ export interface BlobDownloadOptionalParams {
    * a Snapshot of a Blob.</a>
    */
   snapshot?: string;
+  /**
+   * The version id parameter is an opaque DateTime value that, when present, specifies the version
+   * of the blob to operate on. It's for service version 2019-10-10 and newer.
+   */
+  versionId?: string;
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
    * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
@@ -1553,6 +1605,11 @@ export interface BlobGetPropertiesOptionalParams {
    */
   snapshot?: string;
   /**
+   * The version id parameter is an opaque DateTime value that, when present, specifies the version
+   * of the blob to operate on. It's for service version 2019-10-10 and newer.
+   */
+  versionId?: string;
+  /**
    * The timeout parameter is expressed in seconds. For more information, see <a
    * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
@@ -1589,6 +1646,11 @@ export interface BlobDeleteMethodOptionalParams {
    */
   snapshot?: string;
   /**
+   * The version id parameter is an opaque DateTime value that, when present, specifies the version
+   * of the blob to operate on. It's for service version 2019-10-10 and newer.
+   */
+  versionId?: string;
+  /**
    * The timeout parameter is expressed in seconds. For more information, see <a
    * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
@@ -1606,51 +1668,10 @@ export interface BlobDeleteMethodOptionalParams {
    */
   requestId?: string;
   /**
-   * Additional parameters for the operation
+   * Optional.  Only possible value is 'permanent', which specifies to permanently delete a blob if
+   * blob soft delete is enabled. Possible values include: 'Permanent'
    */
-  leaseAccessConditions?: LeaseAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  modifiedAccessConditions?: ModifiedAccessConditions;
-}
-
-/**
- * Optional Parameters.
- */
-export interface BlobSetAccessControlOptionalParams {
-  /**
-   * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-   * Timeouts for Blob Service Operations.</a>
-   */
-  timeout?: number;
-  /**
-   * Optional. The owner of the blob or directory.
-   */
-  owner?: string;
-  /**
-   * Optional. The owning group of the blob or directory.
-   */
-  group?: string;
-  /**
-   * Optional and only valid if Hierarchical Namespace is enabled for the account. Sets POSIX
-   * access permissions for the file owner, the file owning group, and others. Each class may be
-   * granted read, write, or execute permission.  The sticky bit is also supported.  Both symbolic
-   * (rwxrw-rw-) and 4-digit octal notation (e.g. 0766) are supported.
-   */
-  posixPermissions?: string;
-  /**
-   * Sets POSIX access control rights on files and directories. The value is a comma-separated list
-   * of access control entries. Each access control entry (ACE) consists of a scope, a type, a user
-   * or group identifier, and permissions in the format "[scope:][type]:[id]:[permissions]".
-   */
-  posixAcl?: string;
-  /**
-   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
-   * analytics logs when storage analytics logging is enabled.
-   */
-  requestId?: string;
+  blobDeleteType?: BlobDeleteType;
   /**
    * Additional parameters for the operation
    */
@@ -1659,98 +1680,6 @@ export interface BlobSetAccessControlOptionalParams {
    * Additional parameters for the operation
    */
   modifiedAccessConditions?: ModifiedAccessConditions;
-}
-
-/**
- * Optional Parameters.
- */
-export interface BlobGetAccessControlOptionalParams {
-  /**
-   * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-   * Timeouts for Blob Service Operations.</a>
-   */
-  timeout?: number;
-  /**
-   * Optional. Valid only when Hierarchical Namespace is enabled for the account. If "true", the
-   * identity values returned in the x-ms-owner, x-ms-group, and x-ms-acl response headers will be
-   * transformed from Azure Active Directory Object IDs to User Principal Names.  If "false", the
-   * values will be returned as Azure Active Directory Object IDs. The default value is false.
-   */
-  upn?: boolean;
-  /**
-   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
-   * analytics logs when storage analytics logging is enabled.
-   */
-  requestId?: string;
-  /**
-   * Additional parameters for the operation
-   */
-  leaseAccessConditions?: LeaseAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  modifiedAccessConditions?: ModifiedAccessConditions;
-}
-
-/**
- * Optional Parameters.
- */
-export interface BlobRenameOptionalParams {
-  /**
-   * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-   * Timeouts for Blob Service Operations.</a>
-   */
-  timeout?: number;
-  /**
-   * Optional.  User-defined properties to be stored with the file or directory, in the format of a
-   * comma-separated list of name and value pairs "n1=v1, n2=v2, ...", where each value is base64
-   * encoded.
-   */
-  directoryProperties?: string;
-  /**
-   * Optional and only valid if Hierarchical Namespace is enabled for the account. Sets POSIX
-   * access permissions for the file owner, the file owning group, and others. Each class may be
-   * granted read, write, or execute permission.  The sticky bit is also supported.  Both symbolic
-   * (rwxrw-rw-) and 4-digit octal notation (e.g. 0766) are supported.
-   */
-  posixPermissions?: string;
-  /**
-   * Only valid if Hierarchical Namespace is enabled for the account. This umask restricts
-   * permission settings for file and directory, and will only be applied when default Acl does not
-   * exist in parent directory. If the umask bit has set, it means that the corresponding
-   * permission will be disabled. Otherwise the corresponding permission will be determined by the
-   * permission. A 4-digit octal notation (e.g. 0022) is supported here. If no umask was specified,
-   * a default umask - 0027 will be used.
-   */
-  posixUmask?: string;
-  /**
-   * A lease ID for the source path. If specified, the source path must have an active lease and
-   * the leaase ID must match.
-   */
-  sourceLeaseId?: string;
-  /**
-   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
-   * analytics logs when storage analytics logging is enabled.
-   */
-  requestId?: string;
-  /**
-   * Additional parameters for the operation
-   */
-  directoryHttpHeaders?: DirectoryHttpHeaders;
-  /**
-   * Additional parameters for the operation
-   */
-  leaseAccessConditions?: LeaseAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  modifiedAccessConditions?: ModifiedAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  sourceModifiedAccessConditions?: SourceModifiedAccessConditions;
 }
 
 /**
@@ -1768,6 +1697,27 @@ export interface BlobUndeleteOptionalParams {
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface BlobSetExpiryOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * The time to set the blob to expiry
+   */
+  expiresOn?: string;
 }
 
 /**
@@ -1797,6 +1747,70 @@ export interface BlobSetHTTPHeadersOptionalParams {
    * Additional parameters for the operation
    */
   modifiedAccessConditions?: ModifiedAccessConditions;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface BlobSetImmutabilityPolicyOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * Specifies the date time when the blobs immutability policy is set to expire.
+   */
+  immutabilityPolicyExpiry?: Date;
+  /**
+   * Specifies the immutability policy mode to set on the blob. Possible values include: 'Mutable',
+   * 'Unlocked', 'Locked'
+   */
+  immutabilityPolicyMode?: BlobImmutabilityPolicyMode;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface BlobDeleteImmutabilityPolicyOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface BlobSetLegalHoldOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
 }
 
 /**
@@ -1832,6 +1846,10 @@ export interface BlobSetMetadataOptionalParams {
    * Additional parameters for the operation
    */
   cpkInfo?: CpkInfo;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkScopeInfo?: CpkScopeInfo;
   /**
    * Additional parameters for the operation
    */
@@ -1997,6 +2015,10 @@ export interface BlobCreateSnapshotOptionalParams {
   /**
    * Additional parameters for the operation
    */
+  cpkScopeInfo?: CpkScopeInfo;
+  /**
+   * Additional parameters for the operation
+   */
   modifiedAccessConditions?: ModifiedAccessConditions;
   /**
    * Additional parameters for the operation
@@ -2026,7 +2048,8 @@ export interface BlobStartCopyFromURLOptionalParams {
   metadata?: { [propertyName: string]: string };
   /**
    * Optional. Indicates the tier to be set on the blob. Possible values include: 'P4', 'P6',
-   * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive'
+   * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive',
+   * 'Premium'
    */
   tier?: AccessTier;
   /**
@@ -2039,6 +2062,27 @@ export interface BlobStartCopyFromURLOptionalParams {
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * Optional.  Used to set blob tags in various blob operations.
+   */
+  blobTagsString?: string;
+  /**
+   * Overrides the sealed state of the destination blob.  Service version 2019-12-12 and newer.
+   */
+  sealBlob?: boolean;
+  /**
+   * Specifies the date time when the blobs immutability policy is set to expire.
+   */
+  immutabilityPolicyExpiry?: Date;
+  /**
+   * Specifies the immutability policy mode to set on the blob. Possible values include: 'Mutable',
+   * 'Unlocked', 'Locked'
+   */
+  immutabilityPolicyMode?: BlobImmutabilityPolicyMode;
+  /**
+   * Specified if a legal hold should be set on the blob.
+   */
+  legalHold?: boolean;
   /**
    * Additional parameters for the operation
    */
@@ -2075,7 +2119,8 @@ export interface BlobCopyFromURLOptionalParams {
   metadata?: { [propertyName: string]: string };
   /**
    * Optional. Indicates the tier to be set on the blob. Possible values include: 'P4', 'P6',
-   * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive'
+   * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive',
+   * 'Premium'
    */
   tier?: AccessTier;
   /**
@@ -2083,6 +2128,37 @@ export interface BlobCopyFromURLOptionalParams {
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * Specify the md5 calculated for the range of bytes that must be read from the copy source.
+   */
+  sourceContentMD5?: Uint8Array;
+  /**
+   * Optional.  Used to set blob tags in various blob operations.
+   */
+  blobTagsString?: string;
+  /**
+   * Specifies the date time when the blobs immutability policy is set to expire.
+   */
+  immutabilityPolicyExpiry?: Date;
+  /**
+   * Specifies the immutability policy mode to set on the blob. Possible values include: 'Mutable',
+   * 'Unlocked', 'Locked'
+   */
+  immutabilityPolicyMode?: BlobImmutabilityPolicyMode;
+  /**
+   * Specified if a legal hold should be set on the blob.
+   */
+  legalHold?: boolean;
+  /**
+   * Only Bearer type is supported. Credentials should be a valid OAuth access token to copy
+   * source.
+   */
+  copySourceAuthorization?: string;
+  /**
+   * Optional, default 'replace'.  Indicates if source tags should be copied or replaced with the
+   * tags specified by x-ms-tags. Possible values include: 'REPLACE', 'COPY'
+   */
+  copySourceTags?: BlobCopySourceTags;
   /**
    * Additional parameters for the operation
    */
@@ -2095,6 +2171,10 @@ export interface BlobCopyFromURLOptionalParams {
    * Additional parameters for the operation
    */
   leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkScopeInfo?: CpkScopeInfo;
 }
 
 /**
@@ -2123,6 +2203,18 @@ export interface BlobAbortCopyFromURLOptionalParams {
  */
 export interface BlobSetTierOptionalParams {
   /**
+   * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
+   * snapshot to retrieve. For more information on working with blob snapshots, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/creating-a-snapshot-of-a-blob">Creating
+   * a Snapshot of a Blob.</a>
+   */
+  snapshot?: string;
+  /**
+   * The version id parameter is an opaque DateTime value that, when present, specifies the version
+   * of the blob to operate on. It's for service version 2019-10-10 and newer.
+   */
+  versionId?: string;
+  /**
    * The timeout parameter is expressed in seconds. For more information, see <a
    * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
    * Timeouts for Blob Service Operations.</a>
@@ -2142,12 +2234,27 @@ export interface BlobSetTierOptionalParams {
    * Additional parameters for the operation
    */
   leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
 }
 
 /**
  * Optional Parameters.
  */
-export interface PageBlobCreateOptionalParams {
+export interface BlobQueryOptionalParams {
+  /**
+   * the query request
+   */
+  queryRequest?: QueryRequest;
+  /**
+   * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
+   * snapshot to retrieve. For more information on working with blob snapshots, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/creating-a-snapshot-of-a-blob">Creating
+   * a Snapshot of a Blob.</a>
+   */
+  snapshot?: string;
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
    * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
@@ -2155,36 +2262,10 @@ export interface PageBlobCreateOptionalParams {
    */
   timeout?: number;
   /**
-   * Optional. Specifies a user-defined name-value pair associated with the blob. If no name-value
-   * pairs are specified, the operation will copy the metadata from the source blob or file to the
-   * destination blob. If one or more name-value pairs are specified, the destination blob is
-   * created with the specified metadata, and metadata is not copied from the source blob or file.
-   * Note that beginning with version 2009-09-19, metadata names must adhere to the naming rules
-   * for C# identifiers. See Naming and Referencing Containers, Blobs, and Metadata for more
-   * information.
-   */
-  metadata?: { [propertyName: string]: string };
-  /**
-   * Set for page blobs only. The sequence number is a user-controlled value that you can use to
-   * track requests. The value of the sequence number must be between 0 and 2^63 - 1. Default
-   * value: 0.
-   */
-  blobSequenceNumber?: number;
-  /**
-   * Set for page blobs only. For page blobs on a premium storage account only. Specifies the tier
-   * to be set on the blob. Possible values include: 'P4', 'P6', 'P10', 'P15', 'P20', 'P30', 'P40',
-   * 'P50', 'P60', 'P70', 'P80'
-   */
-  pageBlobAccessTier?: PageBlobAccessTier;
-  /**
    * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
-  /**
-   * Additional parameters for the operation
-   */
-  blobHTTPHeaders?: BlobHTTPHeaders;
   /**
    * Additional parameters for the operation
    */
@@ -2202,7 +2283,165 @@ export interface PageBlobCreateOptionalParams {
 /**
  * Optional Parameters.
  */
+export interface BlobGetTagsOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
+   * snapshot to retrieve. For more information on working with blob snapshots, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/creating-a-snapshot-of-a-blob">Creating
+   * a Snapshot of a Blob.</a>
+   */
+  snapshot?: string;
+  /**
+   * The version id parameter is an opaque DateTime value that, when present, specifies the version
+   * of the blob to operate on. It's for service version 2019-10-10 and newer.
+   */
+  versionId?: string;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  leaseAccessConditions?: LeaseAccessConditions;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface BlobSetTagsOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * The version id parameter is an opaque DateTime value that, when present, specifies the version
+   * of the blob to operate on. It's for service version 2019-10-10 and newer.
+   */
+  versionId?: string;
+  /**
+   * Specify the transactional md5 for the body, to be validated by the service.
+   */
+  transactionalContentMD5?: Uint8Array;
+  /**
+   * Specify the transactional crc64 for the body, to be validated by the service.
+   */
+  transactionalContentCrc64?: Uint8Array;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * Blob tags
+   */
+  tags?: BlobTags;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  leaseAccessConditions?: LeaseAccessConditions;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface PageBlobCreateOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Optional. Indicates the tier to be set on the page blob. Possible values include: 'P4', 'P6',
+   * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80'
+   */
+  tier?: PremiumPageBlobAccessTier;
+  /**
+   * Optional. Specifies a user-defined name-value pair associated with the blob. If no name-value
+   * pairs are specified, the operation will copy the metadata from the source blob or file to the
+   * destination blob. If one or more name-value pairs are specified, the destination blob is
+   * created with the specified metadata, and metadata is not copied from the source blob or file.
+   * Note that beginning with version 2009-09-19, metadata names must adhere to the naming rules
+   * for C# identifiers. See Naming and Referencing Containers, Blobs, and Metadata for more
+   * information.
+   */
+  metadata?: { [propertyName: string]: string };
+  /**
+   * Set for page blobs only. The sequence number is a user-controlled value that you can use to
+   * track requests. The value of the sequence number must be between 0 and 2^63 - 1. Default
+   * value: 0.
+   */
+  blobSequenceNumber?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * Optional.  Used to set blob tags in various blob operations.
+   */
+  blobTagsString?: string;
+  /**
+   * Specifies the date time when the blobs immutability policy is set to expire.
+   */
+  immutabilityPolicyExpiry?: Date;
+  /**
+   * Specifies the immutability policy mode to set on the blob. Possible values include: 'Mutable',
+   * 'Unlocked', 'Locked'
+   */
+  immutabilityPolicyMode?: BlobImmutabilityPolicyMode;
+  /**
+   * Specified if a legal hold should be set on the blob.
+   */
+  legalHold?: boolean;
+  /**
+   * Additional parameters for the operation
+   */
+  blobHTTPHeaders?: BlobHTTPHeaders;
+  /**
+   * Additional parameters for the operation
+   */
+  leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkInfo?: CpkInfo;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkScopeInfo?: CpkScopeInfo;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
+}
+
+/**
+ * Optional Parameters.
+ */
 export interface PageBlobUploadPagesOptionalParams {
+  /**
+   * Specify the transactional md5 for the body, to be validated by the service.
+   */
+  transactionalContentMD5?: Uint8Array;
   /**
    * Specify the transactional crc64 for the body, to be validated by the service.
    */
@@ -2230,6 +2469,10 @@ export interface PageBlobUploadPagesOptionalParams {
    * Additional parameters for the operation
    */
   cpkInfo?: CpkInfo;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkScopeInfo?: CpkScopeInfo;
   /**
    * Additional parameters for the operation
    */
@@ -2270,6 +2513,10 @@ export interface PageBlobClearPagesOptionalParams {
   /**
    * Additional parameters for the operation
    */
+  cpkScopeInfo?: CpkScopeInfo;
+  /**
+   * Additional parameters for the operation
+   */
   sequenceNumberAccessConditions?: SequenceNumberAccessConditions;
   /**
    * Additional parameters for the operation
@@ -2301,9 +2548,18 @@ export interface PageBlobUploadPagesFromURLOptionalParams {
    */
   requestId?: string;
   /**
+   * Only Bearer type is supported. Credentials should be a valid OAuth access token to copy
+   * source.
+   */
+  copySourceAuthorization?: string;
+  /**
    * Additional parameters for the operation
    */
   cpkInfo?: CpkInfo;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkScopeInfo?: CpkScopeInfo;
   /**
    * Additional parameters for the operation
    */
@@ -2349,6 +2605,23 @@ export interface PageBlobGetPageRangesOptionalParams {
    */
   requestId?: string;
   /**
+   * A string value that identifies the portion of the list of containers to be returned with the
+   * next listing operation. The operation returns the NextMarker value within the response body if
+   * the listing operation did not return all containers remaining to be listed with the current
+   * page. The NextMarker value can be used as the value for the marker parameter in a subsequent
+   * call to request the next page of list items. The marker value is opaque to the client.
+   */
+  marker?: string;
+  /**
+   * Specifies the maximum number of containers to return. If the request does not specify
+   * maxresults, or specifies a value greater than 5000, the server will return up to 5000 items.
+   * Note that if the listing operation crosses a partition boundary, then the service will return
+   * a continuation token for retrieving the remainder of the results. For this reason, it is
+   * possible that the service will return fewer results than specified by maxresults, or than the
+   * default of 5000.
+   */
+  maxresults?: number;
+  /**
    * Additional parameters for the operation
    */
   leaseAccessConditions?: LeaseAccessConditions;
@@ -2376,6 +2649,21 @@ export interface PageBlobGetPageRangesDiffOptionalParams {
    */
   timeout?: number;
   /**
+   * Optional in version 2015-07-08 and newer. The prevsnapshot parameter is a DateTime value that
+   * specifies that the response will contain only pages that were changed between target blob and
+   * previous snapshot. Changed pages include both updated and cleared pages. The target blob may
+   * be a snapshot, as long as the snapshot specified by prevsnapshot is the older of the two. Note
+   * that incremental snapshots are currently supported only for blobs created on or after January
+   * 1, 2016.
+   */
+  prevsnapshot?: string;
+  /**
+   * Optional. This header is only supported in service versions 2019-04-19 and after and specifies
+   * the URL of a previous snapshot of the target blob. The response will only contain pages that
+   * were changed between the target blob and its previous snapshot.
+   */
+  prevSnapshotUrl?: string;
+  /**
    * Return only the bytes of the blob in the specified range.
    */
   range?: string;
@@ -2384,6 +2672,23 @@ export interface PageBlobGetPageRangesDiffOptionalParams {
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * A string value that identifies the portion of the list of containers to be returned with the
+   * next listing operation. The operation returns the NextMarker value within the response body if
+   * the listing operation did not return all containers remaining to be listed with the current
+   * page. The NextMarker value can be used as the value for the marker parameter in a subsequent
+   * call to request the next page of list items. The marker value is opaque to the client.
+   */
+  marker?: string;
+  /**
+   * Specifies the maximum number of containers to return. If the request does not specify
+   * maxresults, or specifies a value greater than 5000, the server will return up to 5000 items.
+   * Note that if the listing operation crosses a partition boundary, then the service will return
+   * a continuation token for retrieving the remainder of the results. For this reason, it is
+   * possible that the service will return fewer results than specified by maxresults, or than the
+   * default of 5000.
+   */
+  maxresults?: number;
   /**
    * Additional parameters for the operation
    */
@@ -2417,6 +2722,10 @@ export interface PageBlobResizeOptionalParams {
    * Additional parameters for the operation
    */
   cpkInfo?: CpkInfo;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkScopeInfo?: CpkScopeInfo;
   /**
    * Additional parameters for the operation
    */
@@ -2465,16 +2774,6 @@ export interface PageBlobCopyIncrementalOptionalParams {
    */
   timeout?: number;
   /**
-   * Optional. Specifies a user-defined name-value pair associated with the blob. If no name-value
-   * pairs are specified, the operation will copy the metadata from the source blob or file to the
-   * destination blob. If one or more name-value pairs are specified, the destination blob is
-   * created with the specified metadata, and metadata is not copied from the source blob or file.
-   * Note that beginning with version 2009-09-19, metadata names must adhere to the naming rules
-   * for C# identifiers. See Naming and Referencing Containers, Blobs, and Metadata for more
-   * information.
-   */
-  metadata?: { [propertyName: string]: string };
-  /**
    * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
    * analytics logs when storage analytics logging is enabled.
    */
@@ -2511,6 +2810,23 @@ export interface AppendBlobCreateOptionalParams {
    */
   requestId?: string;
   /**
+   * Optional.  Used to set blob tags in various blob operations.
+   */
+  blobTagsString?: string;
+  /**
+   * Specifies the date time when the blobs immutability policy is set to expire.
+   */
+  immutabilityPolicyExpiry?: Date;
+  /**
+   * Specifies the immutability policy mode to set on the blob. Possible values include: 'Mutable',
+   * 'Unlocked', 'Locked'
+   */
+  immutabilityPolicyMode?: BlobImmutabilityPolicyMode;
+  /**
+   * Specified if a legal hold should be set on the blob.
+   */
+  legalHold?: boolean;
+  /**
    * Additional parameters for the operation
    */
   blobHTTPHeaders?: BlobHTTPHeaders;
@@ -2522,6 +2838,10 @@ export interface AppendBlobCreateOptionalParams {
    * Additional parameters for the operation
    */
   cpkInfo?: CpkInfo;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkScopeInfo?: CpkScopeInfo;
   /**
    * Additional parameters for the operation
    */
@@ -2538,6 +2858,10 @@ export interface AppendBlobAppendBlockOptionalParams {
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
+  /**
+   * Specify the transactional md5 for the body, to be validated by the service.
+   */
+  transactionalContentMD5?: Uint8Array;
   /**
    * Specify the transactional crc64 for the body, to be validated by the service.
    */
@@ -2559,6 +2883,10 @@ export interface AppendBlobAppendBlockOptionalParams {
    * Additional parameters for the operation
    */
   cpkInfo?: CpkInfo;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkScopeInfo?: CpkScopeInfo;
   /**
    * Additional parameters for the operation
    */
@@ -2588,14 +2916,27 @@ export interface AppendBlobAppendBlockFromUrlOptionalParams {
    */
   timeout?: number;
   /**
+   * Specify the transactional md5 for the body, to be validated by the service.
+   */
+  transactionalContentMD5?: Uint8Array;
+  /**
    * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
   /**
+   * Only Bearer type is supported. Credentials should be a valid OAuth access token to copy
+   * source.
+   */
+  copySourceAuthorization?: string;
+  /**
    * Additional parameters for the operation
    */
   cpkInfo?: CpkInfo;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkScopeInfo?: CpkScopeInfo;
   /**
    * Additional parameters for the operation
    */
@@ -2617,6 +2958,35 @@ export interface AppendBlobAppendBlockFromUrlOptionalParams {
 /**
  * Optional Parameters.
  */
+export interface AppendBlobSealOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * Additional parameters for the operation
+   */
+  leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  appendPositionAccessConditions?: AppendPositionAccessConditions;
+}
+
+/**
+ * Optional Parameters.
+ */
 export interface BlockBlobUploadOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
@@ -2624,6 +2994,10 @@ export interface BlockBlobUploadOptionalParams {
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
+  /**
+   * Specify the transactional md5 for the body, to be validated by the service.
+   */
+  transactionalContentMD5?: Uint8Array;
   /**
    * Optional. Specifies a user-defined name-value pair associated with the blob. If no name-value
    * pairs are specified, the operation will copy the metadata from the source blob or file to the
@@ -2636,7 +3010,8 @@ export interface BlockBlobUploadOptionalParams {
   metadata?: { [propertyName: string]: string };
   /**
    * Optional. Indicates the tier to be set on the blob. Possible values include: 'P4', 'P6',
-   * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive'
+   * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive',
+   * 'Premium'
    */
   tier?: AccessTier;
   /**
@@ -2644,6 +3019,27 @@ export interface BlockBlobUploadOptionalParams {
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * Optional.  Used to set blob tags in various blob operations.
+   */
+  blobTagsString?: string;
+  /**
+   * Specifies the date time when the blobs immutability policy is set to expire.
+   */
+  immutabilityPolicyExpiry?: Date;
+  /**
+   * Specifies the immutability policy mode to set on the blob. Possible values include: 'Mutable',
+   * 'Unlocked', 'Locked'
+   */
+  immutabilityPolicyMode?: BlobImmutabilityPolicyMode;
+  /**
+   * Specified if a legal hold should be set on the blob.
+   */
+  legalHold?: boolean;
+  /**
+   * Specify the transactional crc64 for the body, to be validated by the service.
+   */
+  transactionalContentCrc64?: Uint8Array;
   /**
    * Additional parameters for the operation
    */
@@ -2659,13 +3055,104 @@ export interface BlockBlobUploadOptionalParams {
   /**
    * Additional parameters for the operation
    */
+  cpkScopeInfo?: CpkScopeInfo;
+  /**
+   * Additional parameters for the operation
+   */
   modifiedAccessConditions?: ModifiedAccessConditions;
 }
 
 /**
  * Optional Parameters.
  */
+export interface BlockBlobPutBlobFromUrlOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Specify the transactional md5 for the body, to be validated by the service.
+   */
+  transactionalContentMD5?: Uint8Array;
+  /**
+   * Optional. Specifies a user-defined name-value pair associated with the blob. If no name-value
+   * pairs are specified, the operation will copy the metadata from the source blob or file to the
+   * destination blob. If one or more name-value pairs are specified, the destination blob is
+   * created with the specified metadata, and metadata is not copied from the source blob or file.
+   * Note that beginning with version 2009-09-19, metadata names must adhere to the naming rules
+   * for C# identifiers. See Naming and Referencing Containers, Blobs, and Metadata for more
+   * information.
+   */
+  metadata?: { [propertyName: string]: string };
+  /**
+   * Optional. Indicates the tier to be set on the blob. Possible values include: 'P4', 'P6',
+   * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive',
+   * 'Premium'
+   */
+  tier?: AccessTier;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * Specify the md5 calculated for the range of bytes that must be read from the copy source.
+   */
+  sourceContentMD5?: Uint8Array;
+  /**
+   * Optional.  Used to set blob tags in various blob operations.
+   */
+  blobTagsString?: string;
+  /**
+   * Optional, default is true.  Indicates if properties from the source blob should be copied.
+   */
+  copySourceBlobProperties?: boolean;
+  /**
+   * Only Bearer type is supported. Credentials should be a valid OAuth access token to copy
+   * source.
+   */
+  copySourceAuthorization?: string;
+  /**
+   * Optional, default 'replace'.  Indicates if source tags should be copied or replaced with the
+   * tags specified by x-ms-tags. Possible values include: 'REPLACE', 'COPY'
+   */
+  copySourceTags?: BlobCopySourceTags;
+  /**
+   * Additional parameters for the operation
+   */
+  blobHTTPHeaders?: BlobHTTPHeaders;
+  /**
+   * Additional parameters for the operation
+   */
+  leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkInfo?: CpkInfo;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkScopeInfo?: CpkScopeInfo;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  sourceModifiedAccessConditions?: SourceModifiedAccessConditions;
+}
+
+/**
+ * Optional Parameters.
+ */
 export interface BlockBlobStageBlockOptionalParams {
+  /**
+   * Specify the transactional md5 for the body, to be validated by the service.
+   */
+  transactionalContentMD5?: Uint8Array;
   /**
    * Specify the transactional crc64 for the body, to be validated by the service.
    */
@@ -2692,7 +3179,7 @@ export interface BlockBlobStageBlockOptionalParams {
   /**
    * Additional parameters for the operation
    */
-  blobHTTPHeaders?: BlobHTTPHeaders;
+  cpkScopeInfo?: CpkScopeInfo;
 }
 
 /**
@@ -2723,9 +3210,18 @@ export interface BlockBlobStageBlockFromURLOptionalParams {
    */
   requestId?: string;
   /**
+   * Only Bearer type is supported. Credentials should be a valid OAuth access token to copy
+   * source.
+   */
+  copySourceAuthorization?: string;
+  /**
    * Additional parameters for the operation
    */
   cpkInfo?: CpkInfo;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkScopeInfo?: CpkScopeInfo;
   /**
    * Additional parameters for the operation
    */
@@ -2747,6 +3243,10 @@ export interface BlockBlobCommitBlockListOptionalParams {
    */
   timeout?: number;
   /**
+   * Specify the transactional md5 for the body, to be validated by the service.
+   */
+  transactionalContentMD5?: Uint8Array;
+  /**
    * Specify the transactional crc64 for the body, to be validated by the service.
    */
   transactionalContentCrc64?: Uint8Array;
@@ -2762,7 +3262,8 @@ export interface BlockBlobCommitBlockListOptionalParams {
   metadata?: { [propertyName: string]: string };
   /**
    * Optional. Indicates the tier to be set on the blob. Possible values include: 'P4', 'P6',
-   * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive'
+   * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive',
+   * 'Premium'
    */
   tier?: AccessTier;
   /**
@@ -2770,6 +3271,23 @@ export interface BlockBlobCommitBlockListOptionalParams {
    * analytics logs when storage analytics logging is enabled.
    */
   requestId?: string;
+  /**
+   * Optional.  Used to set blob tags in various blob operations.
+   */
+  blobTagsString?: string;
+  /**
+   * Specifies the date time when the blobs immutability policy is set to expire.
+   */
+  immutabilityPolicyExpiry?: Date;
+  /**
+   * Specifies the immutability policy mode to set on the blob. Possible values include: 'Mutable',
+   * 'Unlocked', 'Locked'
+   */
+  immutabilityPolicyMode?: BlobImmutabilityPolicyMode;
+  /**
+   * Specified if a legal hold should be set on the blob.
+   */
+  legalHold?: boolean;
   /**
    * Additional parameters for the operation
    */
@@ -2782,6 +3300,10 @@ export interface BlockBlobCommitBlockListOptionalParams {
    * Additional parameters for the operation
    */
   cpkInfo?: CpkInfo;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkScopeInfo?: CpkScopeInfo;
   /**
    * Additional parameters for the operation
    */
@@ -2820,6 +3342,10 @@ export interface BlockBlobGetBlockListOptionalParams {
    * Additional parameters for the operation
    */
   leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
 }
 
 /**
@@ -2972,9 +3498,14 @@ export interface ServiceGetAccountInfoHeaders {
    */
   skuName?: SkuName;
   /**
-   * Identifies the account kind. Possible values include: 'Storage', 'BlobStorage', 'StorageV2'
+   * Identifies the account kind. Possible values include: 'Storage', 'BlobStorage', 'StorageV2',
+   * 'FileStorage', 'BlockBlobStorage'
    */
   accountKind?: AccountKind;
+  /**
+   * Version 2019-07-07 and newer. Indicates if the account has a hierarchical namespace enabled.
+   */
+  isHierarchicalNamespaceEnabled?: boolean;
   errorCode?: string;
 }
 
@@ -3008,9 +3539,14 @@ export interface ServiceGetAccountInfoWithHeadHeaders {
    */
   skuName?: SkuName;
   /**
-   * Identifies the account kind. Possible values include: 'Storage', 'BlobStorage', 'StorageV2'
+   * Identifies the account kind. Possible values include: 'Storage', 'BlobStorage', 'StorageV2',
+   * 'FileStorage', 'BlockBlobStorage'
    */
   accountKind?: AccountKind;
+  /**
+   * Version 2019-07-07 and newer. Indicates if the account has a hierarchical namespace enabled.
+   */
+  isHierarchicalNamespaceEnabled?: boolean;
   errorCode?: string;
 }
 
@@ -3033,6 +3569,33 @@ export interface ServiceSubmitBatchHeaders {
    * for requests made against version 2009-09-19 and above.
    */
   version?: string;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for FilterBlobs operation.
+ */
+export interface ServiceFilterBlobsHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * This header uniquely identifies the request that was made and can be used for troubleshooting
+   * the request.
+   */
+  requestId?: string;
+  /**
+   * Indicates the version of the Blob service used to execute the request. This header is returned
+   * for requests made against version 2009-09-19 and above.
+   */
+  version?: string;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the response was
+   * initiated
+   */
+  date?: Date;
   errorCode?: string;
 }
 
@@ -3137,6 +3700,18 @@ export interface ContainerGetPropertiesHeaders {
    * Indicates whether the container has a legal hold.
    */
   hasLegalHold?: boolean;
+  /**
+   * The default encryption scope for the container.
+   */
+  defaultEncryptionScope?: string;
+  /**
+   * Indicates whether the container's default encryption scope can be overriden.
+   */
+  denyEncryptionScopeOverride?: boolean;
+  /**
+   * Indicates whether version level worm is enabled on a container.
+   */
+  isImmutableStorageWithVersioningEnabled?: boolean;
   errorCode?: string;
 }
 
@@ -3203,6 +3778,18 @@ export interface ContainerGetPropertiesWithHeadHeaders {
    * Indicates whether the container has a legal hold.
    */
   hasLegalHold?: boolean;
+  /**
+   * The default encryption scope for the container.
+   */
+  defaultEncryptionScope?: string;
+  /**
+   * Indicates whether the container's default encryption scope can be overriden.
+   */
+  denyEncryptionScopeOverride?: boolean;
+  /**
+   * Indicates whether version level worm is enabled on a container.
+   */
+  isImmutableStorageWithVersioningEnabled?: boolean;
   errorCode?: string;
 }
 
@@ -3353,6 +3940,33 @@ export interface ContainerSetAccessPolicyHeaders {
 }
 
 /**
+ * Defines headers for Restore operation.
+ */
+export interface ContainerRestoreHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * This header uniquely identifies the request that was made and can be used for troubleshooting
+   * the request.
+   */
+  requestId?: string;
+  /**
+   * Indicates the version of the Blob service used to execute the request. This header is returned
+   * for requests made against version 2009-09-19 and above.
+   */
+  version?: string;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the response was
+   * initiated
+   */
+  date?: Date;
+  errorCode?: string;
+}
+
+/**
  * Defines headers for SubmitBatch operation.
  */
 export interface ContainerSubmitBatchHeaders {
@@ -3371,6 +3985,33 @@ export interface ContainerSubmitBatchHeaders {
    * for requests made against version 2009-09-19 and above.
    */
   version?: string;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for FilterBlobs operation.
+ */
+export interface ContainerFilterBlobsHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * This header uniquely identifies the request that was made and can be used for troubleshooting
+   * the request.
+   */
+  requestId?: string;
+  /**
+   * Indicates the version of the Blob service used to execute the request. This header is returned
+   * for requests made against version 2009-09-19 and above.
+   */
+  version?: string;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the response was
+   * initiated
+   */
+  date?: Date;
   errorCode?: string;
 }
 
@@ -3672,7 +4313,8 @@ export interface ContainerGetAccountInfoHeaders {
    */
   skuName?: SkuName;
   /**
-   * Identifies the account kind. Possible values include: 'Storage', 'BlobStorage', 'StorageV2'
+   * Identifies the account kind. Possible values include: 'Storage', 'BlobStorage', 'StorageV2',
+   * 'FileStorage', 'BlockBlobStorage'
    */
   accountKind?: AccountKind;
   errorCode?: string;
@@ -3708,210 +4350,11 @@ export interface ContainerGetAccountInfoWithHeadHeaders {
    */
   skuName?: SkuName;
   /**
-   * Identifies the account kind. Possible values include: 'Storage', 'BlobStorage', 'StorageV2'
+   * Identifies the account kind. Possible values include: 'Storage', 'BlobStorage', 'StorageV2',
+   * 'FileStorage', 'BlockBlobStorage'
    */
   accountKind?: AccountKind;
   errorCode?: string;
-}
-
-/**
- * Defines headers for Create operation.
- */
-export interface DirectoryCreateHeaders {
-  /**
-   * An HTTP entity tag associated with the file or directory.
-   */
-  eTag?: string;
-  /**
-   * The data and time the file or directory was last modified. Write operations on the file or
-   * directory update the last modified time.
-   */
-  lastModified?: Date;
-  /**
-   * If a client request id header is sent in the request, this header will be present in the
-   * response with the same value.
-   */
-  clientRequestId?: string;
-  /**
-   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
-   */
-  requestId?: string;
-  /**
-   * The version of the REST protocol used to process the request.
-   */
-  version?: string;
-  /**
-   * The size of the resource in bytes.
-   */
-  contentLength?: number;
-  /**
-   * A UTC date/time value generated by the service that indicates the time at which the response
-   * was initiated.
-   */
-  date?: Date;
-}
-
-/**
- * Defines headers for Rename operation.
- */
-export interface DirectoryRenameHeaders {
-  /**
-   * When renaming a directory, the number of paths that are renamed with each invocation is
-   * limited. If the number of paths to be renamed exceeds this limit, a continuation token is
-   * returned in this response header. When a continuation token is returned in the response, it
-   * must be specified in a subsequent invocation of the rename operation to continue renaming the
-   * directory.
-   */
-  marker?: string;
-  /**
-   * An HTTP entity tag associated with the file or directory.
-   */
-  eTag?: string;
-  /**
-   * The data and time the file or directory was last modified. Write operations on the file or
-   * directory update the last modified time.
-   */
-  lastModified?: Date;
-  /**
-   * If a client request id header is sent in the request, this header will be present in the
-   * response with the same value.
-   */
-  clientRequestId?: string;
-  /**
-   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
-   */
-  requestId?: string;
-  /**
-   * The version of the REST protocol used to process the request.
-   */
-  version?: string;
-  /**
-   * The size of the resource in bytes.
-   */
-  contentLength?: number;
-  /**
-   * A UTC date/time value generated by the service that indicates the time at which the response
-   * was initiated.
-   */
-  date?: Date;
-}
-
-/**
- * Defines headers for Delete operation.
- */
-export interface DirectoryDeleteHeaders {
-  /**
-   * When renaming a directory, the number of paths that are renamed with each invocation is
-   * limited. If the number of paths to be renamed exceeds this limit, a continuation token is
-   * returned in this response header. When a continuation token is returned in the response, it
-   * must be specified in a subsequent invocation of the rename operation to continue renaming the
-   * directory.
-   */
-  marker?: string;
-  /**
-   * If a client request id header is sent in the request, this header will be present in the
-   * response with the same value.
-   */
-  clientRequestId?: string;
-  /**
-   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
-   */
-  requestId?: string;
-  /**
-   * The version of the REST protocol used to process the request.
-   */
-  version?: string;
-  /**
-   * A UTC date/time value generated by the service that indicates the time at which the response
-   * was initiated.
-   */
-  date?: Date;
-}
-
-/**
- * Defines headers for SetAccessControl operation.
- */
-export interface DirectorySetAccessControlHeaders {
-  /**
-   * A UTC date/time value generated by the service that indicates the time at which the response
-   * was initiated.
-   */
-  date?: Date;
-  /**
-   * An HTTP entity tag associated with the file or directory.
-   */
-  eTag?: string;
-  /**
-   * The data and time the file or directory was last modified. Write operations on the file or
-   * directory update the last modified time.
-   */
-  lastModified?: Date;
-  /**
-   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
-   */
-  requestId?: string;
-  /**
-   * The version of the REST protocol used to process the request.
-   */
-  version?: string;
-  /**
-   * If a client request id header is sent in the request, this header will be present in the
-   * response with the same value.
-   */
-  clientRequestId?: string;
-}
-
-/**
- * Defines headers for GetAccessControl operation.
- */
-export interface DirectoryGetAccessControlHeaders {
-  /**
-   * A UTC date/time value generated by the service that indicates the time at which the response
-   * was initiated.
-   */
-  date?: Date;
-  /**
-   * An HTTP entity tag associated with the file or directory.
-   */
-  eTag?: string;
-  /**
-   * The data and time the file or directory was last modified. Write operations on the file or
-   * directory update the last modified time.
-   */
-  lastModified?: Date;
-  /**
-   * The owner of the file or directory. Included in the response if Hierarchical Namespace is
-   * enabled for the account.
-   */
-  xMsOwner?: string;
-  /**
-   * The owning group of the file or directory. Included in the response if Hierarchical Namespace
-   * is enabled for the account.
-   */
-  xMsGroup?: string;
-  /**
-   * The POSIX access permissions for the file owner, the file owning group, and others. Included
-   * in the response if Hierarchical Namespace is enabled for the account.
-   */
-  xMsPermissions?: string;
-  /**
-   * The POSIX access control list for the file or directory.  Included in the response only if the
-   * action is "getAccessControl" and Hierarchical Namespace is enabled for the account.
-   */
-  xMsAcl?: string;
-  /**
-   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
-   */
-  requestId?: string;
-  /**
-   * The version of the REST protocol used to process the request.
-   */
-  version?: string;
-  /**
-   * If a client request id header is sent in the request, this header will be present in the
-   * response with the same value.
-   */
-  clientRequestId?: string;
 }
 
 /**
@@ -3929,6 +4372,12 @@ export interface BlobDownloadHeaders {
    * Returns the date and time the blob was created.
    */
   creationTime?: Date;
+  /**
+   * Optional. Only valid when Object Replication is enabled for the storage container and on the
+   * destination blob of the replication.
+   */
+  objectReplicationPolicyId?: string;
+  objectReplicationRules?: { [propertyName: string]: string };
   /**
    * The number of bytes present in the response body.
    */
@@ -4054,6 +4503,17 @@ export interface BlobDownloadHeaders {
    */
   version?: string;
   /**
+   * A DateTime value returned by the service that uniquely identifies the blob. The value of this
+   * header indicates the blob version, and may be used in subsequent requests to access this
+   * version of the blob.
+   */
+  versionId?: string;
+  /**
+   * The value of this header indicates whether version of this blob is a current version, see also
+   * x-ms-version-id header.
+   */
+  isCurrentVersion?: boolean;
+  /**
    * Indicates that the service supports requests for partial blob content.
    */
   acceptRanges?: string;
@@ -4079,12 +4539,44 @@ export interface BlobDownloadHeaders {
    */
   encryptionKeySha256?: string;
   /**
+   * Returns the name of the encryption scope used to encrypt the blob contents and application
+   * metadata.  Note that the absence of this header implies use of the default account encryption
+   * scope.
+   */
+  encryptionScope?: string;
+  /**
    * If the blob has a MD5 hash, and if request contains range header (Range or x-ms-range), this
    * response header is returned with the value of the whole blob's MD5 value. This value may or
    * may not be equal to the value returned in Content-MD5 header, with the latter calculated from
    * the requested range
    */
   blobContentMD5?: Uint8Array;
+  /**
+   * The number of tags associated with the blob
+   */
+  tagCount?: number;
+  /**
+   * If this blob has been sealed
+   */
+  isSealed?: boolean;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the blob was
+   * last read or written to
+   */
+  lastAccessed?: Date;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the blob
+   * immutability policy will expire.
+   */
+  immutabilityPolicyExpiresOn?: Date;
+  /**
+   * Indicates immutability policy mode.
+   */
+  immutabilityPolicyMode?: string;
+  /**
+   * Indicates if a legal hold is present on the blob.
+   */
+  legalHold?: boolean;
   /**
    * If the request is to read a specified range and the x-ms-range-get-content-crc64 is set to
    * true, then the request returns a crc64 for the range, as long as the range size is less than
@@ -4110,6 +4602,12 @@ export interface BlobGetPropertiesHeaders {
    */
   creationTime?: Date;
   metadata?: { [propertyName: string]: string };
+  /**
+   * Optional. Only valid when Object Replication is enabled for the storage container and on the
+   * destination blob of the replication.
+   */
+  objectReplicationPolicyId?: string;
+  objectReplicationRules?: { [propertyName: string]: string };
   /**
    * The blob's type. Possible values include: 'BlockBlob', 'PageBlob', 'AppendBlob'
    */
@@ -4265,6 +4763,12 @@ export interface BlobGetPropertiesHeaders {
    */
   encryptionKeySha256?: string;
   /**
+   * Returns the name of the encryption scope used to encrypt the blob contents and application
+   * metadata.  Note that the absence of this header implies use of the default account encryption
+   * scope.
+   */
+  encryptionScope?: string;
+  /**
    * The tier of page blob on a premium storage account or tier of block blob on blob storage LRS
    * accounts. For a list of allowed premium page blob tiers, see
    * https://docs.microsoft.com/en-us/azure/virtual-machines/windows/premium-storage#features. For
@@ -4289,6 +4793,52 @@ export interface BlobGetPropertiesHeaders {
    * blob was ever set.
    */
   accessTierChangeTime?: Date;
+  /**
+   * A DateTime value returned by the service that uniquely identifies the blob. The value of this
+   * header indicates the blob version, and may be used in subsequent requests to access this
+   * version of the blob.
+   */
+  versionId?: string;
+  /**
+   * The value of this header indicates whether version of this blob is a current version, see also
+   * x-ms-version-id header.
+   */
+  isCurrentVersion?: boolean;
+  /**
+   * The number of tags associated with the blob
+   */
+  tagCount?: number;
+  /**
+   * The time this blob will expire.
+   */
+  expiresOn?: Date;
+  /**
+   * If this blob has been sealed
+   */
+  isSealed?: boolean;
+  /**
+   * If an object is in rehydrate pending state then this header is returned with priority of
+   * rehydrate. Valid values are High and Standard.
+   */
+  rehydratePriority?: string;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the blob was
+   * last read or written to
+   */
+  lastAccessed?: Date;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the blob
+   * immutability policy will expire.
+   */
+  immutabilityPolicyExpiresOn?: Date;
+  /**
+   * Indicates immutability policy mode. Possible values include: 'Mutable', 'Unlocked', 'Locked'
+   */
+  immutabilityPolicyMode?: BlobImmutabilityPolicyMode;
+  /**
+   * Indicates if a legal hold is present on the blob.
+   */
+  legalHold?: boolean;
   errorCode?: string;
 }
 
@@ -4317,129 +4867,6 @@ export interface BlobDeleteHeaders {
    */
   date?: Date;
   errorCode?: string;
-}
-
-/**
- * Defines headers for SetAccessControl operation.
- */
-export interface BlobSetAccessControlHeaders {
-  /**
-   * A UTC date/time value generated by the service that indicates the time at which the response
-   * was initiated.
-   */
-  date?: Date;
-  /**
-   * An HTTP entity tag associated with the file or directory.
-   */
-  eTag?: string;
-  /**
-   * The data and time the file or directory was last modified. Write operations on the file or
-   * directory update the last modified time.
-   */
-  lastModified?: Date;
-  /**
-   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
-   */
-  requestId?: string;
-  /**
-   * The version of the REST protocol used to process the request.
-   */
-  version?: string;
-  /**
-   * If a client request id header is sent in the request, this header will be present in the
-   * response with the same value.
-   */
-  clientRequestId?: string;
-}
-
-/**
- * Defines headers for GetAccessControl operation.
- */
-export interface BlobGetAccessControlHeaders {
-  /**
-   * A UTC date/time value generated by the service that indicates the time at which the response
-   * was initiated.
-   */
-  date?: Date;
-  /**
-   * An HTTP entity tag associated with the file or directory.
-   */
-  eTag?: string;
-  /**
-   * The data and time the file or directory was last modified. Write operations on the file or
-   * directory update the last modified time.
-   */
-  lastModified?: Date;
-  /**
-   * The owner of the file or directory. Included in the response if Hierarchical Namespace is
-   * enabled for the account.
-   */
-  xMsOwner?: string;
-  /**
-   * The owning group of the file or directory. Included in the response if Hierarchical Namespace
-   * is enabled for the account.
-   */
-  xMsGroup?: string;
-  /**
-   * The POSIX access permissions for the file owner, the file owning group, and others. Included
-   * in the response if Hierarchical Namespace is enabled for the account.
-   */
-  xMsPermissions?: string;
-  /**
-   * The POSIX access control list for the file or directory.  Included in the response only if the
-   * action is "getAccessControl" and Hierarchical Namespace is enabled for the account.
-   */
-  xMsAcl?: string;
-  /**
-   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
-   */
-  requestId?: string;
-  /**
-   * The version of the REST protocol used to process the request.
-   */
-  version?: string;
-  /**
-   * If a client request id header is sent in the request, this header will be present in the
-   * response with the same value.
-   */
-  clientRequestId?: string;
-}
-
-/**
- * Defines headers for Rename operation.
- */
-export interface BlobRenameHeaders {
-  /**
-   * An HTTP entity tag associated with the file or directory.
-   */
-  eTag?: string;
-  /**
-   * The data and time the file or directory was last modified.  Write operations on the file or
-   * directory update the last modified time.
-   */
-  lastModified?: Date;
-  /**
-   * If a client request id header is sent in the request, this header will be present in the
-   * response with the same value.
-   */
-  clientRequestId?: string;
-  /**
-   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
-   */
-  requestId?: string;
-  /**
-   * The version of the REST protocol used to process the request.
-   */
-  version?: string;
-  /**
-   * The size of the resource in bytes.
-   */
-  contentLength?: number;
-  /**
-   * A UTC date/time value generated by the service that indicates the time at which the response
-   * was initiated.
-   */
-  date?: Date;
 }
 
 /**
@@ -4478,6 +4905,12 @@ export interface PageBlobCreateHeaders {
    */
   version?: string;
   /**
+   * A DateTime value returned by the service that uniquely identifies the blob. The value of this
+   * header indicates the blob version, and may be used in subsequent requests to access this
+   * version of the blob.
+   */
+  versionId?: string;
+  /**
    * UTC date/time value generated by the service that indicates the time at which the response was
    * initiated
    */
@@ -4492,6 +4925,12 @@ export interface PageBlobCreateHeaders {
    * when the blob was encrypted with a customer-provided key.
    */
   encryptionKeySha256?: string;
+  /**
+   * Returns the name of the encryption scope used to encrypt the blob contents and application
+   * metadata.  Note that the absence of this header implies use of the default account encryption
+   * scope.
+   */
+  encryptionScope?: string;
   errorCode?: string;
 }
 
@@ -4531,6 +4970,12 @@ export interface AppendBlobCreateHeaders {
    */
   version?: string;
   /**
+   * A DateTime value returned by the service that uniquely identifies the blob. The value of this
+   * header indicates the blob version, and may be used in subsequent requests to access this
+   * version of the blob.
+   */
+  versionId?: string;
+  /**
    * UTC date/time value generated by the service that indicates the time at which the response was
    * initiated
    */
@@ -4545,6 +4990,12 @@ export interface AppendBlobCreateHeaders {
    * when the blob was encrypted with a customer-provided key.
    */
   encryptionKeySha256?: string;
+  /**
+   * Returns the name of the encryption scope used to encrypt the blob contents and application
+   * metadata.  Note that the absence of this header implies use of the default account encryption
+   * scope.
+   */
+  encryptionScope?: string;
   errorCode?: string;
 }
 
@@ -4584,6 +5035,12 @@ export interface BlockBlobUploadHeaders {
    */
   version?: string;
   /**
+   * A DateTime value returned by the service that uniquely identifies the blob. The value of this
+   * header indicates the blob version, and may be used in subsequent requests to access this
+   * version of the blob.
+   */
+  versionId?: string;
+  /**
    * UTC date/time value generated by the service that indicates the time at which the response was
    * initiated
    */
@@ -4598,6 +5055,77 @@ export interface BlockBlobUploadHeaders {
    * when the blob was encrypted with a customer-provided key.
    */
   encryptionKeySha256?: string;
+  /**
+   * Returns the name of the encryption scope used to encrypt the blob contents and application
+   * metadata.  Note that the absence of this header implies use of the default account encryption
+   * scope.
+   */
+  encryptionScope?: string;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for PutBlobFromUrl operation.
+ */
+export interface BlockBlobPutBlobFromUrlHeaders {
+  /**
+   * The ETag contains a value that you can use to perform operations conditionally. If the request
+   * version is 2011-08-18 or newer, the ETag value will be in quotes.
+   */
+  eTag?: string;
+  /**
+   * Returns the date and time the container was last modified. Any operation that modifies the
+   * blob, including an update of the blob's metadata or properties, changes the last-modified time
+   * of the blob.
+   */
+  lastModified?: Date;
+  /**
+   * If the blob has an MD5 hash and this operation is to read the full blob, this response header
+   * is returned so that the client can check for message content integrity.
+   */
+  contentMD5?: Uint8Array;
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * This header uniquely identifies the request that was made and can be used for troubleshooting
+   * the request.
+   */
+  requestId?: string;
+  /**
+   * Indicates the version of the Blob service used to execute the request. This header is returned
+   * for requests made against version 2009-09-19 and above.
+   */
+  version?: string;
+  /**
+   * A DateTime value returned by the service that uniquely identifies the blob. The value of this
+   * header indicates the blob version, and may be used in subsequent requests to access this
+   * version of the blob.
+   */
+  versionId?: string;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the response was
+   * initiated
+   */
+  date?: Date;
+  /**
+   * The value of this header is set to true if the contents of the request are successfully
+   * encrypted using the specified algorithm, and false otherwise.
+   */
+  isServerEncrypted?: boolean;
+  /**
+   * The SHA-256 hash of the encryption key used to encrypt the blob. This header is only returned
+   * when the blob was encrypted with a customer-provided key.
+   */
+  encryptionKeySha256?: string;
+  /**
+   * Returns the name of the encryption scope used to encrypt the blob contents and application
+   * metadata.  Note that the absence of this header implies use of the default account encryption
+   * scope.
+   */
+  encryptionScope?: string;
   errorCode?: string;
 }
 
@@ -4605,6 +5133,44 @@ export interface BlockBlobUploadHeaders {
  * Defines headers for Undelete operation.
  */
 export interface BlobUndeleteHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * This header uniquely identifies the request that was made and can be used for troubleshooting
+   * the request.
+   */
+  requestId?: string;
+  /**
+   * Indicates the version of the Blob service used to execute the request. This header is returned
+   * for requests made against version 2009-09-19 and above.
+   */
+  version?: string;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the response was
+   * initiated.
+   */
+  date?: Date;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for SetExpiry operation.
+ */
+export interface BlobSetExpiryHeaders {
+  /**
+   * The ETag contains a value that you can use to perform operations conditionally. If the request
+   * version is 2011-08-18 or newer, the ETag value will be in quotes.
+   */
+  eTag?: string;
+  /**
+   * Returns the date and time the container was last modified. Any operation that modifies the
+   * blob, including an update of the blob's metadata or properties, changes the last-modified time
+   * of the blob.
+   */
+  lastModified?: Date;
   /**
    * If a client request id header is sent in the request, this header will be present in the
    * response with the same value.
@@ -4672,6 +5238,99 @@ export interface BlobSetHTTPHeadersHeaders {
 }
 
 /**
+ * Defines headers for SetImmutabilityPolicy operation.
+ */
+export interface BlobSetImmutabilityPolicyHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * This header uniquely identifies the request that was made and can be used for troubleshooting
+   * the request.
+   */
+  requestId?: string;
+  /**
+   * Indicates the version of the Blob service used to execute the request. This header is returned
+   * for requests made against version 2009-09-19 and above.
+   */
+  version?: string;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the response was
+   * initiated
+   */
+  date?: Date;
+  /**
+   * Indicates the time the immutability policy will expire.
+   */
+  immutabilityPolicyExpiry?: Date;
+  /**
+   * Indicates immutability policy mode. Possible values include: 'Mutable', 'Unlocked', 'Locked'
+   */
+  immutabilityPolicyMode?: BlobImmutabilityPolicyMode;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for DeleteImmutabilityPolicy operation.
+ */
+export interface BlobDeleteImmutabilityPolicyHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * This header uniquely identifies the request that was made and can be used for troubleshooting
+   * the request.
+   */
+  requestId?: string;
+  /**
+   * Indicates the version of the Blob service used to execute the request. This header is returned
+   * for requests made against version 2009-09-19 and above.
+   */
+  version?: string;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the response was
+   * initiated
+   */
+  date?: Date;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for SetLegalHold operation.
+ */
+export interface BlobSetLegalHoldHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * This header uniquely identifies the request that was made and can be used for troubleshooting
+   * the request.
+   */
+  requestId?: string;
+  /**
+   * Indicates the version of the Blob service used to execute the request. This header is returned
+   * for requests made against version 2009-09-19 and above.
+   */
+  version?: string;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the response was
+   * initiated
+   */
+  date?: Date;
+  /**
+   * Indicates if the blob has a legal hold.
+   */
+  legalHold?: boolean;
+  errorCode?: string;
+}
+
+/**
  * Defines headers for SetMetadata operation.
  */
 export interface BlobSetMetadataHeaders {
@@ -4702,6 +5361,12 @@ export interface BlobSetMetadataHeaders {
    */
   version?: string;
   /**
+   * A DateTime value returned by the service that uniquely identifies the blob. The value of this
+   * header indicates the blob version, and may be used in subsequent requests to access this
+   * version of the blob.
+   */
+  versionId?: string;
+  /**
    * UTC date/time value generated by the service that indicates the time at which the response was
    * initiated
    */
@@ -4716,6 +5381,12 @@ export interface BlobSetMetadataHeaders {
    * returned when the metadata was encrypted with a customer-provided key.
    */
   encryptionKeySha256?: string;
+  /**
+   * Returns the name of the encryption scope used to encrypt the blob contents and application
+   * metadata.  Note that the absence of this header implies use of the default account encryption
+   * scope.
+   */
+  encryptionScope?: string;
   errorCode?: string;
 }
 
@@ -4735,7 +5406,7 @@ export interface BlobAcquireLeaseHeaders {
    */
   lastModified?: Date;
   /**
-   * Uniquely identifies a blobs's lease
+   * Uniquely identifies a blobs' lease
    */
   leaseId?: string;
   /**
@@ -4815,7 +5486,7 @@ export interface BlobRenewLeaseHeaders {
    */
   lastModified?: Date;
   /**
-   * Uniquely identifies a blobs's lease
+   * Uniquely identifies a blobs' lease
    */
   leaseId?: string;
   /**
@@ -4867,7 +5538,7 @@ export interface BlobChangeLeaseHeaders {
    */
   requestId?: string;
   /**
-   * Uniquely identifies a blobs's lease
+   * Uniquely identifies a blobs' lease
    */
   leaseId?: string;
   /**
@@ -4961,6 +5632,12 @@ export interface BlobCreateSnapshotHeaders {
    */
   version?: string;
   /**
+   * A DateTime value returned by the service that uniquely identifies the blob. The value of this
+   * header indicates the blob version, and may be used in subsequent requests to access this
+   * version of the blob.
+   */
+  versionId?: string;
+  /**
    * UTC date/time value generated by the service that indicates the time at which the response was
    * initiated
    */
@@ -5004,6 +5681,12 @@ export interface BlobStartCopyFromURLHeaders {
    * for requests made against version 2009-09-19 and above.
    */
   version?: string;
+  /**
+   * A DateTime value returned by the service that uniquely identifies the blob. The value of this
+   * header indicates the blob version, and may be used in subsequent requests to access this
+   * version of the blob.
+   */
+  versionId?: string;
   /**
    * UTC date/time value generated by the service that indicates the time at which the response was
    * initiated
@@ -5053,6 +5736,12 @@ export interface BlobCopyFromURLHeaders {
    */
   version?: string;
   /**
+   * A DateTime value returned by the service that uniquely identifies the blob. The value of this
+   * header indicates the blob version, and may be used in subsequent requests to access this
+   * version of the blob.
+   */
+  versionId?: string;
+  /**
    * UTC date/time value generated by the service that indicates the time at which the response was
    * initiated
    */
@@ -5065,6 +5754,22 @@ export interface BlobCopyFromURLHeaders {
    * State of the copy operation identified by x-ms-copy-id. Possible values include: 'success'
    */
   copyStatus?: SyncCopyStatusType;
+  /**
+   * This response header is returned so that the client can check for the integrity of the copied
+   * content. This header is only returned if the source content MD5 was specified.
+   */
+  contentMD5?: Uint8Array;
+  /**
+   * This response header is returned so that the client can check for the integrity of the copied
+   * content.
+   */
+  xMsContentCrc64?: Uint8Array;
+  /**
+   * Returns the name of the encryption scope used to encrypt the blob contents and application
+   * metadata.  Note that the absence of this header implies use of the default account encryption
+   * scope.
+   */
+  encryptionScope?: string;
   errorCode?: string;
 }
 
@@ -5147,7 +5852,8 @@ export interface BlobGetAccountInfoHeaders {
    */
   skuName?: SkuName;
   /**
-   * Identifies the account kind. Possible values include: 'Storage', 'BlobStorage', 'StorageV2'
+   * Identifies the account kind. Possible values include: 'Storage', 'BlobStorage', 'StorageV2',
+   * 'FileStorage', 'BlockBlobStorage'
    */
   accountKind?: AccountKind;
   errorCode?: string;
@@ -5183,7 +5889,8 @@ export interface BlobGetAccountInfoWithHeadHeaders {
    */
   skuName?: SkuName;
   /**
-   * Identifies the account kind. Possible values include: 'Storage', 'BlobStorage', 'StorageV2'
+   * Identifies the account kind. Possible values include: 'Storage', 'BlobStorage', 'StorageV2',
+   * 'FileStorage', 'BlockBlobStorage'
    */
   accountKind?: AccountKind;
   errorCode?: string;
@@ -5235,6 +5942,12 @@ export interface BlockBlobStageBlockHeaders {
    * when the block was encrypted with a customer-provided key.
    */
   encryptionKeySha256?: string;
+  /**
+   * Returns the name of the encryption scope used to encrypt the blob contents and application
+   * metadata.  Note that the absence of this header implies use of the default account encryption
+   * scope.
+   */
+  encryptionScope?: string;
   errorCode?: string;
 }
 
@@ -5284,6 +5997,12 @@ export interface BlockBlobStageBlockFromURLHeaders {
    * when the block was encrypted with a customer-provided key.
    */
   encryptionKeySha256?: string;
+  /**
+   * Returns the name of the encryption scope used to encrypt the blob contents and application
+   * metadata.  Note that the absence of this header implies use of the default account encryption
+   * scope.
+   */
+  encryptionScope?: string;
   errorCode?: string;
 }
 
@@ -5330,6 +6049,12 @@ export interface BlockBlobCommitBlockListHeaders {
    */
   version?: string;
   /**
+   * A DateTime value returned by the service that uniquely identifies the blob. The value of this
+   * header indicates the blob version, and may be used in subsequent requests to access this
+   * version of the blob.
+   */
+  versionId?: string;
+  /**
    * UTC date/time value generated by the service that indicates the time at which the response was
    * initiated
    */
@@ -5344,6 +6069,12 @@ export interface BlockBlobCommitBlockListHeaders {
    * when the blob was encrypted with a customer-provided key.
    */
   encryptionKeySha256?: string;
+  /**
+   * Returns the name of the encryption scope used to encrypt the blob contents and application
+   * metadata.  Note that the absence of this header implies use of the default account encryption
+   * scope.
+   */
+  encryptionScope?: string;
   errorCode?: string;
 }
 
@@ -5453,6 +6184,12 @@ export interface PageBlobUploadPagesHeaders {
    * when the pages were encrypted with a customer-provided key.
    */
   encryptionKeySha256?: string;
+  /**
+   * Returns the name of the encryption scope used to encrypt the blob contents and application
+   * metadata.  Note that the absence of this header implies use of the default account encryption
+   * scope.
+   */
+  encryptionScope?: string;
   errorCode?: string;
 }
 
@@ -5559,6 +6296,17 @@ export interface PageBlobUploadPagesFromURLHeaders {
    * encrypted using the specified algorithm, and false otherwise.
    */
   isServerEncrypted?: boolean;
+  /**
+   * The SHA-256 hash of the encryption key used to encrypt the blob. This header is only returned
+   * when the blob was encrypted with a customer-provided key.
+   */
+  encryptionKeySha256?: string;
+  /**
+   * Returns the name of the encryption scope used to encrypt the blob contents and application
+   * metadata.  Note that the absence of this header implies use of the default account encryption
+   * scope.
+   */
+  encryptionScope?: string;
   errorCode?: string;
 }
 
@@ -5846,6 +6594,12 @@ export interface AppendBlobAppendBlockHeaders {
    * when the block was encrypted with a customer-provided key.
    */
   encryptionKeySha256?: string;
+  /**
+   * Returns the name of the encryption scope used to encrypt the blob contents and application
+   * metadata.  Note that the absence of this header implies use of the default account encryption
+   * scope.
+   */
+  encryptionScope?: string;
   errorCode?: string;
 }
 
@@ -5905,6 +6659,296 @@ export interface AppendBlobAppendBlockFromUrlHeaders {
    * when the block was encrypted with a customer-provided key.
    */
   encryptionKeySha256?: string;
+  /**
+   * Returns the name of the encryption scope used to encrypt the blob contents and application
+   * metadata.  Note that the absence of this header implies use of the default account encryption
+   * scope.
+   */
+  encryptionScope?: string;
+  /**
+   * The value of this header is set to true if the contents of the request are successfully
+   * encrypted using the specified algorithm, and false otherwise.
+   */
+  isServerEncrypted?: boolean;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for Seal operation.
+ */
+export interface AppendBlobSealHeaders {
+  /**
+   * The ETag contains a value that you can use to perform operations conditionally. If the request
+   * version is 2011-08-18 or newer, the ETag value will be in quotes.
+   */
+  eTag?: string;
+  /**
+   * Returns the date and time the container was last modified. Any operation that modifies the
+   * blob, including an update of the blob's metadata or properties, changes the last-modified time
+   * of the blob.
+   */
+  lastModified?: Date;
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * This header uniquely identifies the request that was made and can be used for troubleshooting
+   * the request.
+   */
+  requestId?: string;
+  /**
+   * Indicates the version of the Blob service used to execute the request. This header is returned
+   * for requests made against version 2009-09-19 and above.
+   */
+  version?: string;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the response was
+   * initiated
+   */
+  date?: Date;
+  /**
+   * If this blob has been sealed
+   */
+  isSealed?: boolean;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for Query operation.
+ */
+export interface BlobQueryHeaders {
+  /**
+   * Returns the date and time the container was last modified. Any operation that modifies the
+   * blob, including an update of the blob's metadata or properties, changes the last-modified time
+   * of the blob.
+   */
+  lastModified?: Date;
+  metadata?: { [propertyName: string]: string };
+  /**
+   * The number of bytes present in the response body.
+   */
+  contentLength?: number;
+  /**
+   * The media type of the body of the response. For Download Blob this is
+   * 'application/octet-stream'
+   */
+  contentType?: string;
+  /**
+   * Indicates the range of bytes returned in the event that the client requested a subset of the
+   * blob by setting the 'Range' request header.
+   */
+  contentRange?: string;
+  /**
+   * The ETag contains a value that you can use to perform operations conditionally. If the request
+   * version is 2011-08-18 or newer, the ETag value will be in quotes.
+   */
+  eTag?: string;
+  /**
+   * If the blob has an MD5 hash and this operation is to read the full blob, this response header
+   * is returned so that the client can check for message content integrity.
+   */
+  contentMD5?: Uint8Array;
+  /**
+   * This header returns the value that was specified for the Content-Encoding request header
+   */
+  contentEncoding?: string;
+  /**
+   * This header is returned if it was previously specified for the blob.
+   */
+  cacheControl?: string;
+  /**
+   * This header returns the value that was specified for the 'x-ms-blob-content-disposition'
+   * header. The Content-Disposition response header field conveys additional information about how
+   * to process the response payload, and also can be used to attach additional metadata. For
+   * example, if set to attachment, it indicates that the user-agent should not display the
+   * response, but instead show a Save As dialog with a filename other than the blob name
+   * specified.
+   */
+  contentDisposition?: string;
+  /**
+   * This header returns the value that was specified for the Content-Language request header.
+   */
+  contentLanguage?: string;
+  /**
+   * The current sequence number for a page blob. This header is not returned for block blobs or
+   * append blobs
+   */
+  blobSequenceNumber?: number;
+  /**
+   * The blob's type. Possible values include: 'BlockBlob', 'PageBlob', 'AppendBlob'
+   */
+  blobType?: BlobType;
+  /**
+   * Conclusion time of the last attempted Copy Blob operation where this blob was the destination
+   * blob. This value can specify the time of a completed, aborted, or failed copy attempt. This
+   * header does not appear if a copy is pending, if this blob has never been the destination in a
+   * Copy Blob operation, or if this blob has been modified after a concluded Copy Blob operation
+   * using Set Blob Properties, Put Blob, or Put Block List.
+   */
+  copyCompletionTime?: Date;
+  /**
+   * Only appears when x-ms-copy-status is failed or pending. Describes the cause of the last fatal
+   * or non-fatal copy operation failure. This header does not appear if this blob has never been
+   * the destination in a Copy Blob operation, or if this blob has been modified after a concluded
+   * Copy Blob operation using Set Blob Properties, Put Blob, or Put Block List
+   */
+  copyStatusDescription?: string;
+  /**
+   * String identifier for this copy operation. Use with Get Blob Properties to check the status of
+   * this copy operation, or pass to Abort Copy Blob to abort a pending copy.
+   */
+  copyId?: string;
+  /**
+   * Contains the number of bytes copied and the total bytes in the source in the last attempted
+   * Copy Blob operation where this blob was the destination blob. Can show between 0 and
+   * Content-Length bytes copied. This header does not appear if this blob has never been the
+   * destination in a Copy Blob operation, or if this blob has been modified after a concluded Copy
+   * Blob operation using Set Blob Properties, Put Blob, or Put Block List
+   */
+  copyProgress?: string;
+  /**
+   * URL up to 2 KB in length that specifies the source blob or file used in the last attempted
+   * Copy Blob operation where this blob was the destination blob. This header does not appear if
+   * this blob has never been the destination in a Copy Blob operation, or if this blob has been
+   * modified after a concluded Copy Blob operation using Set Blob Properties, Put Blob, or Put
+   * Block List.
+   */
+  copySource?: string;
+  /**
+   * State of the copy operation identified by x-ms-copy-id. Possible values include: 'pending',
+   * 'success', 'aborted', 'failed'
+   */
+  copyStatus?: CopyStatusType;
+  /**
+   * When a blob is leased, specifies whether the lease is of infinite or fixed duration. Possible
+   * values include: 'infinite', 'fixed'
+   */
+  leaseDuration?: LeaseDurationType;
+  /**
+   * Lease state of the blob. Possible values include: 'available', 'leased', 'expired',
+   * 'breaking', 'broken'
+   */
+  leaseState?: LeaseStateType;
+  /**
+   * The current lease status of the blob. Possible values include: 'locked', 'unlocked'
+   */
+  leaseStatus?: LeaseStatusType;
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * This header uniquely identifies the request that was made and can be used for troubleshooting
+   * the request.
+   */
+  requestId?: string;
+  /**
+   * Indicates the version of the Blob service used to execute the request. This header is returned
+   * for requests made against version 2009-09-19 and above.
+   */
+  version?: string;
+  /**
+   * Indicates that the service supports requests for partial blob content.
+   */
+  acceptRanges?: string;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the response was
+   * initiated
+   */
+  date?: Date;
+  /**
+   * The number of committed blocks present in the blob. This header is returned only for append
+   * blobs.
+   */
+  blobCommittedBlockCount?: number;
+  /**
+   * The value of this header is set to true if the blob data and application metadata are
+   * completely encrypted using the specified algorithm. Otherwise, the value is set to false (when
+   * the blob is unencrypted, or if only parts of the blob/application metadata are encrypted).
+   */
+  isServerEncrypted?: boolean;
+  /**
+   * The SHA-256 hash of the encryption key used to encrypt the blob. This header is only returned
+   * when the blob was encrypted with a customer-provided key.
+   */
+  encryptionKeySha256?: string;
+  /**
+   * Returns the name of the encryption scope used to encrypt the blob contents and application
+   * metadata.  Note that the absence of this header implies use of the default account encryption
+   * scope.
+   */
+  encryptionScope?: string;
+  /**
+   * If the blob has a MD5 hash, and if request contains range header (Range or x-ms-range), this
+   * response header is returned with the value of the whole blob's MD5 value. This value may or
+   * may not be equal to the value returned in Content-MD5 header, with the latter calculated from
+   * the requested range
+   */
+  blobContentMD5?: Uint8Array;
+  /**
+   * If the request is to read a specified range and the x-ms-range-get-content-crc64 is set to
+   * true, then the request returns a crc64 for the range, as long as the range size is less than
+   * or equal to 4 MB. If both x-ms-range-get-content-crc64 and x-ms-range-get-content-md5 is
+   * specified in the same request, it will fail with 400(Bad Request)
+   */
+  contentCrc64?: Uint8Array;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for GetTags operation.
+ */
+export interface BlobGetTagsHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * This header uniquely identifies the request that was made and can be used for troubleshooting
+   * the request.
+   */
+  requestId?: string;
+  /**
+   * Indicates the version of the Blob service used to execute the request. This header is returned
+   * for requests made against version 2009-09-19 and above.
+   */
+  version?: string;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the response was
+   * initiated
+   */
+  date?: Date;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for SetTags operation.
+ */
+export interface BlobSetTagsHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * This header uniquely identifies the request that was made and can be used for troubleshooting
+   * the request.
+   */
+  requestId?: string;
+  /**
+   * Indicates the version of the Blob service used to execute the request. This header is returned
+   * for requests made against version 2009-09-19 and above.
+   */
+  version?: string;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the response was
+   * initiated
+   */
+  date?: Date;
   errorCode?: string;
 }
 
@@ -5971,7 +7015,7 @@ export enum LeaseStatusType {
 /**
  * Defines values for AccessTier.
  * Possible values include: 'P4', 'P6', 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70',
- * 'P80', 'Hot', 'Cool', 'Archive'
+ * 'P80', 'Hot', 'Cool', 'Archive', 'Premium'
  * @readonly
  * @enum {string}
  */
@@ -5990,6 +7034,7 @@ export enum AccessTier {
   Hot = 'Hot',
   Cool = 'Cool',
   Archive = 'Archive',
+  Premium = 'Premium',
 }
 
 /**
@@ -6016,40 +7061,68 @@ export enum BlobType {
 }
 
 /**
+ * Defines values for RehydratePriority.
+ * Possible values include: 'High', 'Standard'
+ * @readonly
+ * @enum {string}
+ */
+export enum RehydratePriority {
+  High = 'High',
+  Standard = 'Standard',
+}
+
+/**
+ * Defines values for BlobImmutabilityPolicyMode.
+ * Possible values include: 'Mutable', 'Unlocked', 'Locked'
+ * @readonly
+ * @enum {string}
+ */
+export enum BlobImmutabilityPolicyMode {
+  Mutable = 'Mutable',
+  Unlocked = 'Unlocked',
+  Locked = 'Locked',
+}
+
+/**
  * Defines values for StorageErrorCode.
  * Possible values include: 'AccountAlreadyExists', 'AccountBeingCreated', 'AccountIsDisabled',
- * 'AuthenticationFailed', 'ConditionHeadersNotSupported', 'ConditionNotMet', 'EmptyMetadataKey',
- * 'InsufficientAccountPermissions', 'InternalError', 'InvalidAuthenticationInfo',
- * 'InvalidHeaderValue', 'InvalidHttpVerb', 'InvalidInput', 'InvalidMd5', 'InvalidMetadata',
- * 'InvalidQueryParameterValue', 'InvalidRange', 'InvalidResourceName', 'InvalidUri',
- * 'InvalidXmlDocument', 'InvalidXmlNodeValue', 'Md5Mismatch', 'MetadataTooLarge',
- * 'MissingContentLengthHeader', 'MissingRequiredQueryParameter', 'MissingRequiredHeader',
- * 'MissingRequiredXmlNode', 'MultipleConditionHeadersNotSupported', 'OperationTimedOut',
- * 'OutOfRangeInput', 'OutOfRangeQueryParameterValue', 'RequestBodyTooLarge',
+ * 'AuthenticationFailed', 'AuthorizationFailure', 'ConditionHeadersNotSupported',
+ * 'ConditionNotMet', 'EmptyMetadataKey', 'InsufficientAccountPermissions', 'InternalError',
+ * 'InvalidAuthenticationInfo', 'InvalidHeaderValue', 'InvalidHttpVerb', 'InvalidInput',
+ * 'InvalidMd5', 'InvalidMetadata', 'InvalidQueryParameterValue', 'InvalidRange',
+ * 'InvalidResourceName', 'InvalidUri', 'InvalidXmlDocument', 'InvalidXmlNodeValue', 'Md5Mismatch',
+ * 'MetadataTooLarge', 'MissingContentLengthHeader', 'MissingRequiredQueryParameter',
+ * 'MissingRequiredHeader', 'MissingRequiredXmlNode', 'MultipleConditionHeadersNotSupported',
+ * 'OperationTimedOut', 'OutOfRangeInput', 'OutOfRangeQueryParameterValue', 'RequestBodyTooLarge',
  * 'ResourceTypeMismatch', 'RequestUrlFailedToParse', 'ResourceAlreadyExists', 'ResourceNotFound',
  * 'ServerBusy', 'UnsupportedHeader', 'UnsupportedXmlNode', 'UnsupportedQueryParameter',
- * 'UnsupportedHttpVerb', 'AppendPositionConditionNotMet', 'BlobAlreadyExists', 'BlobNotFound',
- * 'BlobOverwritten', 'BlobTierInadequateForContentLength', 'BlockCountExceedsLimit',
- * 'BlockListTooLong', 'CannotChangeToLowerTier', 'CannotVerifyCopySource',
- * 'ContainerAlreadyExists', 'ContainerBeingDeleted', 'ContainerDisabled', 'ContainerNotFound',
- * 'ContentLengthLargerThanTierLimit', 'CopyAcrossAccountsNotSupported', 'CopyIdMismatch',
- * 'FeatureVersionMismatch', 'IncrementalCopyBlobMismatch',
- * 'IncrementalCopyOfEralierVersionSnapshotNotAllowed', 'IncrementalCopySourceMustBeSnapshot',
- * 'InfiniteLeaseDurationRequired', 'InvalidBlobOrBlock', 'InvalidBlobTier', 'InvalidBlobType',
- * 'InvalidBlockId', 'InvalidBlockList', 'InvalidOperation', 'InvalidPageRange',
- * 'InvalidSourceBlobType', 'InvalidSourceBlobUrl', 'InvalidVersionForPageBlobOperation',
- * 'LeaseAlreadyPresent', 'LeaseAlreadyBroken', 'LeaseIdMismatchWithBlobOperation',
- * 'LeaseIdMismatchWithContainerOperation', 'LeaseIdMismatchWithLeaseOperation', 'LeaseIdMissing',
- * 'LeaseIsBreakingAndCannotBeAcquired', 'LeaseIsBreakingAndCannotBeChanged',
- * 'LeaseIsBrokenAndCannotBeRenewed', 'LeaseLost', 'LeaseNotPresentWithBlobOperation',
- * 'LeaseNotPresentWithContainerOperation', 'LeaseNotPresentWithLeaseOperation',
- * 'MaxBlobSizeConditionNotMet', 'NoPendingCopyOperation',
+ * 'UnsupportedHttpVerb', 'AppendPositionConditionNotMet', 'BlobAlreadyExists',
+ * 'BlobImmutableDueToPolicy', 'BlobNotFound', 'BlobOverwritten',
+ * 'BlobTierInadequateForContentLength', 'BlobUsesCustomerSpecifiedEncryption',
+ * 'BlockCountExceedsLimit', 'BlockListTooLong', 'CannotChangeToLowerTier',
+ * 'CannotVerifyCopySource', 'ContainerAlreadyExists', 'ContainerBeingDeleted',
+ * 'ContainerDisabled', 'ContainerNotFound', 'ContentLengthLargerThanTierLimit',
+ * 'CopyAcrossAccountsNotSupported', 'CopyIdMismatch', 'FeatureVersionMismatch',
+ * 'IncrementalCopyBlobMismatch', 'IncrementalCopyOfEarlierVersionSnapshotNotAllowed',
+ * 'IncrementalCopySourceMustBeSnapshot', 'InfiniteLeaseDurationRequired', 'InvalidBlobOrBlock',
+ * 'InvalidBlobTier', 'InvalidBlobType', 'InvalidBlockId', 'InvalidBlockList', 'InvalidOperation',
+ * 'InvalidPageRange', 'InvalidSourceBlobType', 'InvalidSourceBlobUrl',
+ * 'InvalidVersionForPageBlobOperation', 'LeaseAlreadyPresent', 'LeaseAlreadyBroken',
+ * 'LeaseIdMismatchWithBlobOperation', 'LeaseIdMismatchWithContainerOperation',
+ * 'LeaseIdMismatchWithLeaseOperation', 'LeaseIdMissing', 'LeaseIsBreakingAndCannotBeAcquired',
+ * 'LeaseIsBreakingAndCannotBeChanged', 'LeaseIsBrokenAndCannotBeRenewed', 'LeaseLost',
+ * 'LeaseNotPresentWithBlobOperation', 'LeaseNotPresentWithContainerOperation',
+ * 'LeaseNotPresentWithLeaseOperation', 'MaxBlobSizeConditionNotMet',
+ * 'NoAuthenticationInformation', 'NoPendingCopyOperation',
  * 'OperationNotAllowedOnIncrementalCopyBlob', 'PendingCopyOperation',
  * 'PreviousSnapshotCannotBeNewer', 'PreviousSnapshotNotFound',
  * 'PreviousSnapshotOperationNotSupported', 'SequenceNumberConditionNotMet',
- * 'SequenceNumberIncrementTooLarge', 'SnapshotCountExceeded', 'SnaphotOperationRateExceeded',
+ * 'SequenceNumberIncrementTooLarge', 'SnapshotCountExceeded', 'SnapshotOperationRateExceeded',
  * 'SnapshotsPresent', 'SourceConditionNotMet', 'SystemInUse', 'TargetConditionNotMet',
- * 'UnauthorizedBlobOverwrite', 'BlobBeingRehydrated', 'BlobArchived', 'BlobNotArchived'
+ * 'UnauthorizedBlobOverwrite', 'BlobBeingRehydrated', 'BlobArchived', 'BlobNotArchived',
+ * 'AuthorizationSourceIPMismatch', 'AuthorizationProtocolMismatch',
+ * 'AuthorizationPermissionMismatch', 'AuthorizationServiceMismatch',
+ * 'AuthorizationResourceTypeMismatch'
  * @readonly
  * @enum {string}
  */
@@ -6058,6 +7131,7 @@ export enum StorageErrorCode {
   AccountBeingCreated = 'AccountBeingCreated',
   AccountIsDisabled = 'AccountIsDisabled',
   AuthenticationFailed = 'AuthenticationFailed',
+  AuthorizationFailure = 'AuthorizationFailure',
   ConditionHeadersNotSupported = 'ConditionHeadersNotSupported',
   ConditionNotMet = 'ConditionNotMet',
   EmptyMetadataKey = 'EmptyMetadataKey',
@@ -6097,9 +7171,11 @@ export enum StorageErrorCode {
   UnsupportedHttpVerb = 'UnsupportedHttpVerb',
   AppendPositionConditionNotMet = 'AppendPositionConditionNotMet',
   BlobAlreadyExists = 'BlobAlreadyExists',
+  BlobImmutableDueToPolicy = 'BlobImmutableDueToPolicy',
   BlobNotFound = 'BlobNotFound',
   BlobOverwritten = 'BlobOverwritten',
   BlobTierInadequateForContentLength = 'BlobTierInadequateForContentLength',
+  BlobUsesCustomerSpecifiedEncryption = 'BlobUsesCustomerSpecifiedEncryption',
   BlockCountExceedsLimit = 'BlockCountExceedsLimit',
   BlockListTooLong = 'BlockListTooLong',
   CannotChangeToLowerTier = 'CannotChangeToLowerTier',
@@ -6113,7 +7189,7 @@ export enum StorageErrorCode {
   CopyIdMismatch = 'CopyIdMismatch',
   FeatureVersionMismatch = 'FeatureVersionMismatch',
   IncrementalCopyBlobMismatch = 'IncrementalCopyBlobMismatch',
-  IncrementalCopyOfEralierVersionSnapshotNotAllowed = 'IncrementalCopyOfEralierVersionSnapshotNotAllowed',
+  IncrementalCopyOfEarlierVersionSnapshotNotAllowed = 'IncrementalCopyOfEarlierVersionSnapshotNotAllowed',
   IncrementalCopySourceMustBeSnapshot = 'IncrementalCopySourceMustBeSnapshot',
   InfiniteLeaseDurationRequired = 'InfiniteLeaseDurationRequired',
   InvalidBlobOrBlock = 'InvalidBlobOrBlock',
@@ -6140,6 +7216,7 @@ export enum StorageErrorCode {
   LeaseNotPresentWithContainerOperation = 'LeaseNotPresentWithContainerOperation',
   LeaseNotPresentWithLeaseOperation = 'LeaseNotPresentWithLeaseOperation',
   MaxBlobSizeConditionNotMet = 'MaxBlobSizeConditionNotMet',
+  NoAuthenticationInformation = 'NoAuthenticationInformation',
   NoPendingCopyOperation = 'NoPendingCopyOperation',
   OperationNotAllowedOnIncrementalCopyBlob = 'OperationNotAllowedOnIncrementalCopyBlob',
   PendingCopyOperation = 'PendingCopyOperation',
@@ -6149,7 +7226,7 @@ export enum StorageErrorCode {
   SequenceNumberConditionNotMet = 'SequenceNumberConditionNotMet',
   SequenceNumberIncrementTooLarge = 'SequenceNumberIncrementTooLarge',
   SnapshotCountExceeded = 'SnapshotCountExceeded',
-  SnaphotOperationRateExceeded = 'SnaphotOperationRateExceeded',
+  SnapshotOperationRateExceeded = 'SnapshotOperationRateExceeded',
   SnapshotsPresent = 'SnapshotsPresent',
   SourceConditionNotMet = 'SourceConditionNotMet',
   SystemInUse = 'SystemInUse',
@@ -6158,6 +7235,11 @@ export enum StorageErrorCode {
   BlobBeingRehydrated = 'BlobBeingRehydrated',
   BlobArchived = 'BlobArchived',
   BlobNotArchived = 'BlobNotArchived',
+  AuthorizationSourceIPMismatch = 'AuthorizationSourceIPMismatch',
+  AuthorizationProtocolMismatch = 'AuthorizationProtocolMismatch',
+  AuthorizationPermissionMismatch = 'AuthorizationPermissionMismatch',
+  AuthorizationServiceMismatch = 'AuthorizationServiceMismatch',
+  AuthorizationResourceTypeMismatch = 'AuthorizationResourceTypeMismatch',
 }
 
 /**
@@ -6173,24 +7255,26 @@ export enum GeoReplicationStatusType {
 }
 
 /**
- * Defines values for RehydratePriority.
- * Possible values include: 'High', 'Standard'
+ * Defines values for QueryFormatType.
+ * Possible values include: 'delimited', 'json', 'arrow', 'parquet'
  * @readonly
  * @enum {string}
  */
-export enum RehydratePriority {
-  High = 'High',
-  Standard = 'Standard',
+export enum QueryFormatType {
+  Delimited = 'delimited',
+  Json = 'json',
+  Arrow = 'arrow',
+  Parquet = 'parquet',
 }
 
 /**
- * Defines values for PageBlobAccessTier.
+ * Defines values for PremiumPageBlobAccessTier.
  * Possible values include: 'P4', 'P6', 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70',
  * 'P80'
  * @readonly
  * @enum {string}
  */
-export enum PageBlobAccessTier {
+export enum PremiumPageBlobAccessTier {
   P4 = 'P4',
   P6 = 'P6',
   P10 = 'P10',
@@ -6205,6 +7289,29 @@ export enum PageBlobAccessTier {
 }
 
 /**
+ * Defines values for BlobDeleteType.
+ * Possible values include: 'Permanent'
+ * @readonly
+ * @enum {string}
+ */
+export enum BlobDeleteType {
+  Permanent = 'Permanent',
+}
+
+/**
+ * Defines values for BlobExpiryOptions.
+ * Possible values include: 'NeverExpire', 'RelativeToCreation', 'RelativeToNow', 'Absolute'
+ * @readonly
+ * @enum {string}
+ */
+export enum BlobExpiryOptions {
+  NeverExpire = 'NeverExpire',
+  RelativeToCreation = 'RelativeToCreation',
+  RelativeToNow = 'RelativeToNow',
+  Absolute = 'Absolute',
+}
+
+/**
  * Defines values for BlockListType.
  * Possible values include: 'committed', 'uncommitted', 'all'
  * @readonly
@@ -6214,6 +7321,17 @@ export enum BlockListType {
   Committed = 'committed',
   Uncommitted = 'uncommitted',
   All = 'all',
+}
+
+/**
+ * Defines values for BlobCopySourceTags.
+ * Possible values include: 'REPLACE', 'COPY'
+ * @readonly
+ * @enum {string}
+ */
+export enum BlobCopySourceTags {
+  REPLACE = 'REPLACE',
+  COPY = 'COPY',
 }
 
 /**
@@ -6238,9 +7356,20 @@ export enum EncryptionAlgorithmType {
 }
 
 /**
+ * Defines values for FilterBlobsIncludeItem.
+ * Possible values include: 'none', 'versions'
+ * @readonly
+ * @enum {string}
+ */
+export enum FilterBlobsIncludeItem {
+  None = 'none',
+  Versions = 'versions',
+}
+
+/**
  * Defines values for ListBlobsIncludeItem.
  * Possible values include: '', 'copy', 'deleted', 'metadata', 'snapshots', 'uncommittedblobs',
- * 'tags', 'versions', 'deletedwithversions', 'immutabilitypolicy', 'legalhold', 'permissions'
+ * 'versions', 'tags', 'immutabilitypolicy', 'legalhold', 'deletedwithversions', 'permissions'
  * @readonly
  * @enum {string}
  */
@@ -6251,17 +7380,17 @@ export enum ListBlobsIncludeItem {
   Metadata = 'metadata',
   Snapshots = 'snapshots',
   Uncommittedblobs = 'uncommittedblobs',
-  Tags = 'tags',
   Versions = 'versions',
-  Deletedwithversions = 'deletedwithversions',
+  Tags = 'tags',
   Immutabilitypolicy = 'immutabilitypolicy',
   Legalhold = 'legalhold',
+  Deletedwithversions = 'deletedwithversions',
   Permissions = 'permissions',
 }
 
 /**
  * Defines values for ListContainersIncludeType.
- * Possible values include: '', 'metadata', 'deleted'
+ * Possible values include: '', 'metadata', 'deleted', 'system'
  * @readonly
  * @enum {string}
  */
@@ -6269,17 +7398,7 @@ export enum ListContainersIncludeType {
   EmptyString = '',
   Metadata = 'metadata',
   Deleted = 'deleted',
-}
-
-/**
- * Defines values for PathRenameMode.
- * Possible values include: 'legacy', 'posix'
- * @readonly
- * @enum {string}
- */
-export enum PathRenameMode {
-  Legacy = 'legacy',
-  Posix = 'posix',
+  System = 'system',
 }
 
 /**
@@ -6311,7 +7430,8 @@ export enum SkuName {
 
 /**
  * Defines values for AccountKind.
- * Possible values include: 'Storage', 'BlobStorage', 'StorageV2'
+ * Possible values include: 'Storage', 'BlobStorage', 'StorageV2', 'FileStorage',
+ * 'BlockBlobStorage'
  * @readonly
  * @enum {string}
  */
@@ -6319,6 +7439,8 @@ export enum AccountKind {
   Storage = 'Storage',
   BlobStorage = 'BlobStorage',
   StorageV2 = 'StorageV2',
+  FileStorage = 'FileStorage',
+  BlockBlobStorage = 'BlockBlobStorage',
 }
 
 /**
@@ -6329,6 +7451,736 @@ export enum AccountKind {
  */
 export enum SyncCopyStatusType {
   Success = 'success',
+}
+
+/**
+ * Defines values for Version.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version1.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version1 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version2.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version2 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version3.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version3 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version4.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version4 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version5.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version5 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version6.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version6 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version7.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version7 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version8.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version8 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version9.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version9 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version10.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version10 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version11.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version11 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version12.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version12 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version13.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version13 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version14.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version14 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version15.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version15 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version16.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version16 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version17.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version17 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version18.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version18 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version19.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version19 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version20.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version20 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version21.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version21 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version22.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version22 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version23.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version23 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version24.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version24 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version25.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version25 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version26.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version26 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version27.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version27 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version28.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version28 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version29.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version29 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version30.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version30 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version31.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version31 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version32.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version32 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version33.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version33 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version34.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version34 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version35.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version35 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version36.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version36 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version37.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version37 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version38.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version38 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version39.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version39 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version40.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version40 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version41.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version41 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version42.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version42 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version43.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version43 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version44.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version44 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version45.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version45 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version46.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version46 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version47.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version47 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version48.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version48 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version49.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version49 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version50.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version50 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version51.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version51 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version52.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version52 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version53.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version53 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version54.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version54 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version55.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version55 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version56.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version56 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version57.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version57 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version58.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version58 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version59.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version59 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version60.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version60 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version61.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version61 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version62.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version62 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version63.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version63 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version64.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version64 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version65.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version65 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version66.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version66 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version67.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version67 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version68.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version68 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version69.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version69 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version70.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version70 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version71.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version71 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
+}
+
+/**
+ * Defines values for Version72.
+ * Possible values include: '2021-10-04'
+ * @readonly
+ * @enum {string}
+ */
+export enum Version72 {
+  TwoZeroTwoOneHyphenMinusOneZeroHyphenMinusZeroFour = '2021-10-04',
 }
 
 /**
@@ -6417,6 +8269,16 @@ export type ServiceSubmitBatchResponse = ServiceSubmitBatchHeaders & {
 };
 
 /**
+ * Contains response data for the filterBlobs operation.
+ */
+export type ServiceFilterBlobsResponse = FilterBlobSegment & ServiceFilterBlobsHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
  * Contains response data for the create operation.
  */
 export type ContainerCreateResponse = ContainerCreateHeaders & {
@@ -6487,6 +8349,16 @@ export type ContainerSetAccessPolicyResponse = ContainerSetAccessPolicyHeaders &
 };
 
 /**
+ * Contains response data for the restore operation.
+ */
+export type ContainerRestoreResponse = ContainerRestoreHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 201;
+};
+
+/**
  * Contains response data for the submitBatch operation.
  */
 export type ContainerSubmitBatchResponse = ContainerSubmitBatchHeaders & {
@@ -6499,6 +8371,16 @@ export type ContainerSubmitBatchResponse = ContainerSubmitBatchHeaders & {
    * The response status code.
    */
   statusCode: 202;
+};
+
+/**
+ * Contains response data for the filterBlobs operation.
+ */
+export type ContainerFilterBlobsResponse = FilterBlobSegment & ContainerFilterBlobsHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
 };
 
 /**
@@ -6592,56 +8474,6 @@ export type ContainerGetAccountInfoWithHeadResponse = ContainerGetAccountInfoWit
 };
 
 /**
- * Contains response data for the create operation.
- */
-export type DirectoryCreateResponse = DirectoryCreateHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 201;
-};
-
-/**
- * Contains response data for the rename operation.
- */
-export type DirectoryRenameResponse = DirectoryRenameHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 201;
-};
-
-/**
- * Contains response data for the deleteMethod operation.
- */
-export type DirectoryDeleteResponse = DirectoryDeleteHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
-
-/**
- * Contains response data for the setAccessControl operation.
- */
-export type DirectorySetAccessControlResponse = DirectorySetAccessControlHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
-
-/**
- * Contains response data for the getAccessControl operation.
- */
-export type DirectoryGetAccessControlResponse = DirectoryGetAccessControlHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
-
-/**
  * Contains response data for the download operation.
  */
 export type BlobDownloadResponse = BlobDownloadHeaders & {
@@ -6677,36 +8509,6 @@ export type BlobDeleteResponse = BlobDeleteHeaders & {
 };
 
 /**
- * Contains response data for the setAccessControl operation.
- */
-export type BlobSetAccessControlResponse = BlobSetAccessControlHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
-
-/**
- * Contains response data for the getAccessControl operation.
- */
-export type BlobGetAccessControlResponse = BlobGetAccessControlHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
-
-/**
- * Contains response data for the rename operation.
- */
-export type BlobRenameResponse = BlobRenameHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 201;
-};
-
-/**
  * Contains response data for the undelete operation.
  */
 export type BlobUndeleteResponse = BlobUndeleteHeaders & {
@@ -6717,9 +8519,49 @@ export type BlobUndeleteResponse = BlobUndeleteHeaders & {
 };
 
 /**
+ * Contains response data for the setExpiry operation.
+ */
+export type BlobSetExpiryResponse = BlobSetExpiryHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
  * Contains response data for the setHTTPHeaders operation.
  */
 export type BlobSetHTTPHeadersResponse = BlobSetHTTPHeadersHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
+ * Contains response data for the setImmutabilityPolicy operation.
+ */
+export type BlobSetImmutabilityPolicyResponse = BlobSetImmutabilityPolicyHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
+ * Contains response data for the deleteImmutabilityPolicy operation.
+ */
+export type BlobDeleteImmutabilityPolicyResponse = BlobDeleteImmutabilityPolicyHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
+ * Contains response data for the setLegalHold operation.
+ */
+export type BlobSetLegalHoldResponse = BlobSetLegalHoldHeaders & {
   /**
    * The response status code.
    */
@@ -6857,6 +8699,41 @@ export type BlobGetAccountInfoWithHeadResponse = BlobGetAccountInfoWithHeadHeade
 };
 
 /**
+ * Contains response data for the query operation.
+ */
+export type BlobQueryResponse = BlobQueryHeaders & {
+  /**
+   * The response body as a node.js Readable stream.
+   */
+  body?: NodeJS.ReadableStream;
+} & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200 | 206;
+};
+
+/**
+ * Contains response data for the getTags operation.
+ */
+export type BlobGetTagsResponse = BlobTags & BlobGetTagsHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
+ * Contains response data for the setTags operation.
+ */
+export type BlobSetTagsResponse = BlobSetTagsHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 204;
+};
+
+/**
  * Contains response data for the create operation.
  */
 export type PageBlobCreateResponse = PageBlobCreateHeaders & {
@@ -6977,9 +8854,29 @@ export type AppendBlobAppendBlockFromUrlResponse = AppendBlobAppendBlockFromUrlH
 };
 
 /**
+ * Contains response data for the seal operation.
+ */
+export type AppendBlobSealResponse = AppendBlobSealHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
  * Contains response data for the upload operation.
  */
 export type BlockBlobUploadResponse = BlockBlobUploadHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 201;
+};
+
+/**
+ * Contains response data for the putBlobFromUrl operation.
+ */
+export type BlockBlobPutBlobFromUrlResponse = BlockBlobPutBlobFromUrlHeaders & {
   /**
    * The response status code.
    */
