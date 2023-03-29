@@ -1037,6 +1037,7 @@ export default class LokiBlobMetadataStore
       snapshot: snapshotTime,
       properties: { ...doc.properties },
       metadata: metadata ? { ...metadata } : { ...doc.metadata },
+      blobTags: doc.blobTags,
       accountName: doc.accountName,
       containerName: doc.containerName,
       pageRangesInOrder:
@@ -3297,6 +3298,101 @@ export default class LokiBlobMetadataStore
     }
 
     return doc;
+  }
+
+  /**
+   * Set blob tags.
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} blob
+   * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
+   * @param {(Models.BlobTags | undefined)} tags
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @returns {Promise<void>}
+   * @memberof LokiBlobMetadataStore
+   */
+  public async setBlobTag(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string,
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
+    tags: Models.BlobTags | undefined,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
+  ): Promise<void> {
+    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    const doc = await this.getBlobWithLeaseUpdated(
+      account,
+      container,
+      blob,
+      undefined,
+      context,
+      false,
+      true
+    );
+
+    validateWriteConditions(context, modifiedAccessConditions, doc);
+
+    if (!doc) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }
+
+    const lease = new BlobLeaseAdapter(doc);
+    new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
+    new BlobWriteLeaseSyncer(doc).sync(lease);
+    doc.blobTags = tags;
+    doc.properties.etag = newEtag();
+    doc.properties.lastModified = context.startTime || new Date();
+    coll.update(doc);
+  }
+
+  /**
+   * Get blob tags.
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} blob
+   * @param {(string | undefined)} snapshot
+   * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @returns {Promise<BlobTags | undefined>}
+   * @memberof LokiBlobMetadataStore
+   */
+  public async getBlobTag(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string,
+    snapshot: string = "",
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
+  ): Promise<Models.BlobTags | undefined> {
+    const doc = await this.getBlobWithLeaseUpdated(
+      account,
+      container,
+      blob,
+      snapshot,
+      context,
+      false,
+      true
+    );
+
+    validateReadConditions(context, modifiedAccessConditions, doc);
+
+    // When block blob don't have commited block, should return 404
+    if (!doc) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }
+
+    new BlobReadLeaseValidator(leaseAccessConditions).validate(
+      new BlobLeaseAdapter(doc),
+      context
+    );
+
+    return doc.blobTags;
   }
 
   /**

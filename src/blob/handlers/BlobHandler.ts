@@ -1245,13 +1245,62 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobGetTagsOptionalParams,
     context: Context
   ): Promise<Models.BlobGetTagsResponse> {
-    throw new NotImplementedError(context.contextId);
+    const blobCtx = new BlobStorageContext(context);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+    const tags = await this.metadataStore.getBlobTag(
+      context,
+      account,
+      container,
+      blob,
+      options.snapshot,
+      options.leaseAccessConditions,
+      options.modifiedAccessConditions
+    );
+
+    const response: Models.BlobGetTagsResponse = {
+          statusCode: 200,
+          blobTagSet: tags === undefined ? []: tags.blobTagSet,
+          requestId: context.contextId,
+          version: BLOB_API_VERSION,
+          date: context.startTime,         
+          clientRequestId: options.requestId,
+        };
+
+    return response;
   }
 
   public async setTags(
     options: Models.BlobSetTagsOptionalParams,
     context: Context
   ): Promise<Models.BlobSetTagsResponse> {
-    throw new NotImplementedError(context.contextId);
+    const blobCtx = new BlobStorageContext(context);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+
+    // Preserve metadata key case
+    const tags = options.tags;
+
+    await this.metadataStore.setBlobTag(
+      context,
+      account,
+      container,
+      blob,
+      options.leaseAccessConditions,
+      tags,
+      options.modifiedAccessConditions
+    );
+
+    const response: Models.BlobSetTagsResponse = {
+      statusCode: 204,
+      requestId: context.contextId,
+      date: context.startTime,
+      version: BLOB_API_VERSION,
+      clientRequestId: options.requestId
+    };
+
+    return response;
   }
 }

@@ -289,6 +289,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         metadata: {
           type: "VARCHAR(2047)"
+        },
+        blobTags: {
+          type: "VARCHAR(2047)"
         }
       },
       {
@@ -1789,6 +1792,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
       snapshotBlob.snapshot = snapshotTime;
       snapshotBlob.metadata = metadata || snapshotBlob.metadata;
+      snapshotBlob.blobTags = snapshotBlob.blobTags;
 
       new BlobLeaseSyncer(snapshotBlob).sync({
         leaseId: undefined,
@@ -3132,7 +3136,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         dbModel,
         "committedBlocksInOrder"
       ),
-      metadata: this.deserializeModelValue(dbModel, "metadata")
+      metadata: this.deserializeModelValue(dbModel, "metadata"),
+      blobTags: this.deserializeModelValue(dbModel, "blobTags")
     };
   }
 
@@ -3168,6 +3173,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       committedBlocksInOrder:
         this.serializeModelValue(blob.committedBlocksInOrder) || null,
       metadata: this.serializeModelValue(blob.metadata) || null,
+      blobTags: this.serializeModelValue(blob.blobTags) || null,
       ...contentProperties
     };
   }
@@ -3301,6 +3307,125 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     }
 
     return doc;
+  }
+
+  public setBlobTag(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string,
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
+    tags: Models.BlobTags | undefined,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
+  ): Promise<void> {
+    return this.sequelize.transaction(async (t) => {
+      await this.assertContainerExists(context, account, container, t);
+
+      const blobFindResult = await BlobsModel.findOne({
+        where: {
+          accountName: account,
+          containerName: container,
+          blobName: blob,
+          snapshot: "",
+          deleting: 0,
+          isCommitted: true
+        },
+        transaction: t
+      });
+
+      validateWriteConditions(
+        context,
+        modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult) // TODO: Reduce double convert
+          : undefined
+      );
+
+      if (blobFindResult === null || blobFindResult === undefined) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
+
+      const blobModel = this.convertDbModelToBlobModel(blobFindResult);
+
+      LeaseFactory.createLeaseState(new BlobLeaseAdapter(blobModel), context)
+        .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
+        .sync(new BlobWriteLeaseSyncer(blobModel));
+
+      const lastModified = context.startTime! || new Date();
+      const etag = newEtag();
+
+      await BlobsModel.update(
+        {
+          blobTags: this.serializeModelValue(tags) || null,
+          lastModified,
+          etag,
+          ...this.convertLeaseToDbModel(new BlobLeaseAdapter(blobModel))
+        },
+        {
+          where: {
+            accountName: account,
+            containerName: container,
+            blobName: blob,
+            snapshot: "",
+            deleting: 0
+          },
+          transaction: t
+        }
+      );
+    });
+  }
+
+  public async getBlobTag(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string,
+    snapshot: string = "",
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
+  ): Promise<Models.BlobTags | undefined> {
+    return this.sequelize.transaction(async (t) => {
+      await this.assertContainerExists(context, account, container, t);
+
+      const blobFindResult = await BlobsModel.findOne({
+        where: {
+          accountName: account,
+          containerName: container,
+          blobName: blob,
+          snapshot,
+          deleting: 0,
+          isCommitted: true
+        },
+        transaction: t
+      });
+
+      validateReadConditions(
+        context,
+        modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult)
+          : undefined
+      );
+
+      if (blobFindResult === null || blobFindResult === undefined) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
+
+      const blobModel: BlobModel = this.convertDbModelToBlobModel(
+        blobFindResult
+      );
+
+      if (!blobModel.isCommitted) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }      
+      
+      LeaseFactory.createLeaseState(
+        new BlobLeaseAdapter(blobModel),
+        context
+      ).validate(new BlobReadLeaseValidator(leaseAccessConditions));
+
+      return blobModel.blobTags;
+    });
   }
 
   /**

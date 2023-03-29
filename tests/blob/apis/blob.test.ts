@@ -1327,6 +1327,26 @@ describe("BlobAPIs", () => {
       result.contentDisposition,
       blobHTTPHeaders.blobContentDisposition
     );
+  });  
+
+  it("set/get blob tag should work, with base blob or snapshot @loki @sql", async () => {
+    const tags = {
+      tag1: "val1",
+      tag2: "val2",
+    };
+
+    await blobClient.setTags(tags);
+
+    let tags1 = (await blobClient.getTags()).tags;
+    assert.deepStrictEqual(tags1, tags);
+
+    const snapshotResponse = await blobClient.createSnapshot();
+    const blobClientSnapshot = blobClient.withSnapshot(snapshotResponse.snapshot!);
+
+    let tags2 = (await blobClientSnapshot.getTags()).tags;
+    assert.deepStrictEqual(tags2, tags);
+
+    blobClientSnapshot.delete();
   });
 
   it("Acquire Lease on Breaking Lease status, if LeaseId not match, throw LeaseIdMismatchWithLease error @loki @sql", async () => {

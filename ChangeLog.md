@@ -8,6 +8,7 @@ Blob:
 
 - Fixed issue of: blob batch subresponse is slightly different from the on from Azure serivce, which causes exception in CPP SDK.
 - Fixed issue of: setMetadata API allows invalid metadata name with hyphen.
+- Supported rest API GetBlobTag, SetBlobTag.
 
 ## 2023.03 Version 3.23.0
 
