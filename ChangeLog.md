@@ -10,6 +10,7 @@ General:
 - Migrated tslint to eslint.
 - Typescript upgraded from 4.2.4 to 4.9.5.
 - Migrated test pipeline from Node.js 10/12 to Node.js 14/16/18.
+- Bump up service API version to 2022-11-02
 
 Blob:
 
