@@ -981,7 +981,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("should find a property identifier starting with underscore, @loki", async () => {
+  it("15. should find a property identifier starting with underscore, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("under")
@@ -1001,6 +1001,57 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       })
       .next();
     assert.notStrictEqual(queryResult.value, undefined);
+    await tableClient.deleteTable();
+  });
+
+  // issue 1828
+  it("16. should work correctly when query filter single boolean and partition filter, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("partwithnot")
+    );
+
+    await tableClient.createTable();
+
+    const result1 = await tableClient.createEntity({
+      partitionKey: `Part1`,
+      rowKey: `1`,
+      foo: "testEntity1"
+    });
+    assert.notStrictEqual(result1.etag, undefined);
+
+    const result2 = await tableClient.createEntity({
+      partitionKey: `Part2`,
+      rowKey: `1`,
+      foo: "testEntity2"
+    });
+    assert.notStrictEqual(result2.etag, undefined);
+
+    const result3 = await tableClient.createEntity({
+      partitionKey: `Part3`,
+      rowKey: `1`,
+      foo: "testEntity3"
+    });
+    assert.notStrictEqual(result3.etag, undefined);
+
+    const maxPageSize = 5;
+    const entities = tableClient.listEntities<TableEntity<{ foo: string }>>({
+      queryOptions: {
+        filter: odata`not (PartitionKey lt 'Part2')`
+      }
+    });
+    let all: TableEntity<{ foo: string }>[] = [];
+    for await (const entity of entities.byPage({
+      maxPageSize
+    })) {
+      all = [...all, ...entity];
+    }
+    assert.strictEqual(all.length, 2);
+    all.forEach((entity) => {
+      assert.ok(
+        entity.partitionKey === `Part2` || entity.partitionKey === `Part3`
+      );
+    });
     await tableClient.deleteTable();
   });
 });

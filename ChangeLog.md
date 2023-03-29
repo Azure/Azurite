@@ -14,6 +14,7 @@ General:
 Table:
 
 - Fixed issue for querying on identifiers starting with underscore.
+- Corrected query parsing logic for single boolean terms.
 
 Queue:
 
