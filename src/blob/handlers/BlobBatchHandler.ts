@@ -449,6 +449,7 @@ private serializeSubResponse(
     if (bodyContent !== "") {
       responseBody += HTTP_LINE_ENDING + bodyContent + HTTP_LINE_ENDING;
     }
+    responseBody += HTTP_LINE_ENDING;
   });
 
   responseBody += responseEnding;
