@@ -128,7 +128,7 @@ OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
   new OperationBlobSASPermission(BlobSASPermission.Read)
 );
 OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
-  Operation.Blob_Delete,
+  Operation.Path_Delete,
   new OperationBlobSASPermission(BlobSASPermission.Delete)
 );
 OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
@@ -382,7 +382,7 @@ OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   new OperationBlobSASPermission(BlobSASPermission.Read)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
-  Operation.Blob_Delete,
+  Operation.Path_Delete,
   new OperationBlobSASPermission(BlobSASPermission.Delete)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(

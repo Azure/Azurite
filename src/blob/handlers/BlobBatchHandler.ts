@@ -37,6 +37,8 @@ import ContainerHandler from "./ContainerHandler";
 import PageBlobHandler from "./PageBlobHandler";
 import PageBlobRangesManager from "./PageBlobRangesManager";
 import ServiceHandler from "./ServiceHandler";
+import FileSystemOperationsHandler from "./FileSystemOperationsHandler";
+import PathOperationsHandler from "./PathOperationsHandler";
 
 type SubRequestNextFunction = (err?: any) => void;
 type SubRequestHandler = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => any;
@@ -180,7 +182,21 @@ export class BlobBatchHandler {
         this.logger,
         this.loose
       ),
-      directoryHandler: {} as any
+      fileSystemOperationsHandler: new FileSystemOperationsHandler(
+        this.accountDataStore,
+        this.oauth,
+        this.metadataStore,
+        this.extentStore,
+        this.logger,
+        this.loose
+      ),
+      pathOperationsHandler: new PathOperationsHandler(
+        this.metadataStore,
+        this.extentStore,
+        this.logger,
+        this.loose,
+        new PageBlobRangesManager()
+      )
     };
 
     const handlerMiddlewareFactory = new HandlerMiddlewareFactory(
@@ -397,7 +413,7 @@ private async parseSubRequests(
       ++lineIndex;
     }
     const operation = await this.getSubRequestOperation(blobBatchSubRequest);
-    if (operation !== Operation.Blob_Delete && operation !== Operation.Blob_SetTier) {
+    if (operation !== Operation.Path_Delete && operation !== Operation.Blob_SetTier) {
       throw new Error("Not supported operation");
     }
 

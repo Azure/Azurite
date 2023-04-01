@@ -431,7 +431,7 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
 );
 
 OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
-  Operation.Blob_Delete,
+  Operation.Path_Delete,
   new OperationAccountSASPermission(
     AccountSASService.Blob,
     AccountSASResourceType.Object,

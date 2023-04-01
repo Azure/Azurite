@@ -90,7 +90,7 @@ function isRequestAgainstOperation(
     return [false, metConditionsNum];
   }
 
-  const xHttpMethod = req.getHeader("X-HTTP-Method");
+  const xHttpMethod = req.getHeader("X-HTTP-Method-Override") || req.getHeader("X-HTTP-Method");
   let method = req.getMethod();
   if (xHttpMethod && xHttpMethod.length > 0) {
     const value = xHttpMethod.trim();

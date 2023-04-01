@@ -170,11 +170,7 @@ export default class BlockBlobHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
-    options.blobHTTPHeaders = options.blobHTTPHeaders || {};
-    const contentMD5 = context.request!.getHeader("content-md5")
-      ? options.blobHTTPHeaders.blobContentMD5 ||
-        context.request!.getHeader("content-md5")
-      : undefined;
+    const contentMD5 = context.request!.getHeader("content-md5");
 
     this.validateBlockId(blockId, blobCtx);
 

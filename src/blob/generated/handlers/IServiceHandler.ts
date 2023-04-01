@@ -13,6 +13,7 @@ import * as Models from "../artifacts/models";
 import Context from "../Context";
 
 export default interface IServiceHandler {
+  listFileSystems(options: Models.ServiceListFileSystemsOptionalParams, context: Context): Promise<Models.ServiceListFileSystemsResponse>;
   setProperties(storageServiceProperties: Models.StorageServiceProperties, options: Models.ServiceSetPropertiesOptionalParams, context: Context): Promise<Models.ServiceSetPropertiesResponse>;
   getProperties(options: Models.ServiceGetPropertiesOptionalParams, context: Context): Promise<Models.ServiceGetPropertiesResponse>;
   getStatistics(options: Models.ServiceGetStatisticsOptionalParams, context: Context): Promise<Models.ServiceGetStatisticsResponse>;

@@ -9,6 +9,625 @@
 
 import * as msRest from "@azure/ms-rest-js";
 
+export const AclFailedEntry: msRest.CompositeMapper = {
+  serializedName: "AclFailedEntry",
+  type: {
+    name: "Composite",
+    className: "AclFailedEntry",
+    modelProperties: {
+      name: {
+        serializedName: "name",
+        type: {
+          name: "String"
+        }
+      },
+      type: {
+        serializedName: "type",
+        type: {
+          name: "String"
+        }
+      },
+      errorMessage: {
+        serializedName: "errorMessage",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const SetAccessControlRecursiveResponse: msRest.CompositeMapper = {
+  serializedName: "SetAccessControlRecursiveResponse",
+  type: {
+    name: "Composite",
+    className: "SetAccessControlRecursiveResponse",
+    modelProperties: {
+      directoriesSuccessful: {
+        serializedName: "directoriesSuccessful",
+        type: {
+          name: "Number"
+        }
+      },
+      filesSuccessful: {
+        serializedName: "filesSuccessful",
+        type: {
+          name: "Number"
+        }
+      },
+      failureCount: {
+        serializedName: "failureCount",
+        type: {
+          name: "Number"
+        }
+      },
+      failedEntries: {
+        serializedName: "failedEntries",
+        type: {
+          name: "Sequence",
+          element: {
+            type: {
+              name: "Composite",
+              className: "AclFailedEntry"
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
+export const Path: msRest.CompositeMapper = {
+  serializedName: "Path",
+  type: {
+    name: "Composite",
+    className: "Path",
+    modelProperties: {
+      name: {
+        serializedName: "name",
+        type: {
+          name: "String"
+        }
+      },
+      isDirectory: {
+        serializedName: "isDirectory",
+        defaultValue: false,
+        type: {
+          name: "Boolean"
+        }
+      },
+      lastModified: {
+        serializedName: "lastModified",
+        type: {
+          name: "String"
+        }
+      },
+      eTag: {
+        serializedName: "eTag",
+        type: {
+          name: "String"
+        }
+      },
+      contentLength: {
+        serializedName: "contentLength",
+        type: {
+          name: "Number"
+        }
+      },
+      owner: {
+        serializedName: "owner",
+        type: {
+          name: "String"
+        }
+      },
+      group: {
+        serializedName: "group",
+        type: {
+          name: "String"
+        }
+      },
+      permissions: {
+        serializedName: "permissions",
+        type: {
+          name: "String"
+        }
+      },
+      encryptionScope: {
+        serializedName: "EncryptionScope",
+        type: {
+          name: "String"
+        }
+      },
+      creationTime: {
+        serializedName: "creationTime",
+        type: {
+          name: "String"
+        }
+      },
+      expiryTime: {
+        serializedName: "expiryTime",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const PathList: msRest.CompositeMapper = {
+  serializedName: "PathList",
+  type: {
+    name: "Composite",
+    className: "PathList",
+    modelProperties: {
+      paths: {
+        serializedName: "paths",
+        type: {
+          name: "Sequence",
+          element: {
+            type: {
+              name: "Composite",
+              className: "Path"
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
+export const FileSystem: msRest.CompositeMapper = {
+  serializedName: "FileSystem",
+  type: {
+    name: "Composite",
+    className: "FileSystem",
+    modelProperties: {
+      name: {
+        serializedName: "name",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "lastModified",
+        type: {
+          name: "String"
+        }
+      },
+      eTag: {
+        serializedName: "eTag",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const BlobPrefix: msRest.CompositeMapper = {
+  serializedName: "BlobPrefix",
+  type: {
+    name: "Composite",
+    className: "BlobPrefix",
+    modelProperties: {
+      name: {
+        required: true,
+        serializedName: "Name",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const BlobPropertiesDataLake: msRest.CompositeMapper = {
+  serializedName: "BlobPropertiesDataLake",
+  type: {
+    name: "Composite",
+    className: "BlobPropertiesDataLake",
+    modelProperties: {
+      creationTime: {
+        serializedName: "Creation-Time",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      lastModified: {
+        required: true,
+        serializedName: "Last-Modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      etag: {
+        required: true,
+        serializedName: "Etag",
+        type: {
+          name: "String"
+        }
+      },
+      contentLength: {
+        serializedName: "Content-Length",
+        type: {
+          name: "Number"
+        }
+      },
+      contentType: {
+        serializedName: "Content-Type",
+        type: {
+          name: "String"
+        }
+      },
+      contentEncoding: {
+        serializedName: "Content-Encoding",
+        type: {
+          name: "String"
+        }
+      },
+      contentLanguage: {
+        serializedName: "Content-Language",
+        type: {
+          name: "String"
+        }
+      },
+      contentMD5: {
+        serializedName: "Content-MD5",
+        type: {
+          name: "ByteArray"
+        }
+      },
+      contentDisposition: {
+        serializedName: "Content-Disposition",
+        type: {
+          name: "String"
+        }
+      },
+      cacheControl: {
+        serializedName: "Cache-Control",
+        type: {
+          name: "String"
+        }
+      },
+      blobSequenceNumber: {
+        serializedName: "x-ms-blob-sequence-number",
+        type: {
+          name: "Number"
+        }
+      },
+      copyId: {
+        serializedName: "CopyId",
+        type: {
+          name: "String"
+        }
+      },
+      copySource: {
+        serializedName: "CopySource",
+        type: {
+          name: "String"
+        }
+      },
+      copyProgress: {
+        serializedName: "CopyProgress",
+        type: {
+          name: "String"
+        }
+      },
+      copyCompletionTime: {
+        serializedName: "CopyCompletionTime",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      copyStatusDescription: {
+        serializedName: "CopyStatusDescription",
+        type: {
+          name: "String"
+        }
+      },
+      serverEncrypted: {
+        serializedName: "ServerEncrypted",
+        type: {
+          name: "Boolean"
+        }
+      },
+      incrementalCopy: {
+        serializedName: "IncrementalCopy",
+        type: {
+          name: "Boolean"
+        }
+      },
+      destinationSnapshot: {
+        serializedName: "DestinationSnapshot",
+        type: {
+          name: "String"
+        }
+      },
+      deletedTime: {
+        serializedName: "DeletedTime",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      remainingRetentionDays: {
+        serializedName: "RemainingRetentionDays",
+        type: {
+          name: "Number"
+        }
+      },
+      accessTierInferred: {
+        serializedName: "AccessTierInferred",
+        type: {
+          name: "Boolean"
+        }
+      },
+      customerProvidedKeySha256: {
+        serializedName: "CustomerProvidedKeySha256",
+        type: {
+          name: "String"
+        }
+      },
+      encryptionScope: {
+        serializedName: "EncryptionScope",
+        type: {
+          name: "String"
+        }
+      },
+      accessTierChangeTime: {
+        serializedName: "AccessTierChangeTime",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      tagCount: {
+        serializedName: "TagCount",
+        type: {
+          name: "Number"
+        }
+      },
+      expiresOn: {
+        serializedName: "Expiry-Time",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      isSealed: {
+        serializedName: "Sealed",
+        type: {
+          name: "Boolean"
+        }
+      },
+      lastAccessedOn: {
+        serializedName: "LastAccessTime",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      deleteTime: {
+        serializedName: "DeleteTime",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      }
+    }
+  }
+};
+
+export const BlobItemDataLake: msRest.CompositeMapper = {
+  serializedName: "BlobItemDataLake",
+  type: {
+    name: "Composite",
+    className: "BlobItemDataLake",
+    modelProperties: {
+      name: {
+        required: true,
+        serializedName: "Name",
+        type: {
+          name: "String"
+        }
+      },
+      deleted: {
+        required: true,
+        serializedName: "Deleted",
+        type: {
+          name: "Boolean"
+        }
+      },
+      snapshot: {
+        required: true,
+        serializedName: "Snapshot",
+        type: {
+          name: "String"
+        }
+      },
+      versionId: {
+        serializedName: "VersionId",
+        type: {
+          name: "String"
+        }
+      },
+      isCurrentVersion: {
+        serializedName: "IsCurrentVersion",
+        type: {
+          name: "Boolean"
+        }
+      },
+      properties: {
+        required: true,
+        serializedName: "Properties",
+        type: {
+          name: "Composite",
+          className: "BlobPropertiesDataLake"
+        }
+      },
+      deletionId: {
+        serializedName: "DeletionId",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const BlobHierarchyListSegmentDataLake: msRest.CompositeMapper = {
+  serializedName: "BlobHierarchyListSegmentDataLake",
+  type: {
+    name: "Composite",
+    className: "BlobHierarchyListSegmentDataLake",
+    modelProperties: {
+      blobPrefixes: {
+        serializedName: "BlobPrefixes",
+        type: {
+          name: "Sequence",
+          element: {
+            type: {
+              name: "Composite",
+              className: "BlobPrefix"
+            }
+          }
+        }
+      },
+      blobItems: {
+        required: true,
+        serializedName: "BlobItems",
+        type: {
+          name: "Sequence",
+          element: {
+            type: {
+              name: "Composite",
+              className: "BlobItemDataLake"
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
+export const ListBlobsHierarchySegmentResponseDataLake: msRest.CompositeMapper = {
+  serializedName: "ListBlobsHierarchySegmentResponseDataLake",
+  type: {
+    name: "Composite",
+    className: "ListBlobsHierarchySegmentResponseDataLake",
+    modelProperties: {
+      serviceEndpoint: {
+        required: true,
+        serializedName: "ServiceEndpoint",
+        type: {
+          name: "String"
+        }
+      },
+      containerName: {
+        required: true,
+        serializedName: "ContainerName",
+        type: {
+          name: "String"
+        }
+      },
+      prefix: {
+        serializedName: "Prefix",
+        type: {
+          name: "String"
+        }
+      },
+      marker: {
+        serializedName: "Marker",
+        type: {
+          name: "String"
+        }
+      },
+      maxResults: {
+        serializedName: "MaxResults",
+        type: {
+          name: "Number"
+        }
+      },
+      delimiter: {
+        serializedName: "Delimiter",
+        type: {
+          name: "String"
+        }
+      },
+      segment: {
+        required: true,
+        serializedName: "Segment",
+        type: {
+          name: "Composite",
+          className: "BlobHierarchyListSegmentDataLake"
+        }
+      },
+      nextMarker: {
+        serializedName: "NextMarker",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const FileSystemList: msRest.CompositeMapper = {
+  serializedName: "FileSystemList",
+  type: {
+    name: "Composite",
+    className: "FileSystemList",
+    modelProperties: {
+      filesystems: {
+        serializedName: "filesystems",
+        type: {
+          name: "Sequence",
+          element: {
+            type: {
+              name: "Composite",
+              className: "FileSystem"
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
+export const DataLakeStorageErrorError: msRest.CompositeMapper = {
+  serializedName: "DataLakeStorageError_error",
+  type: {
+    name: "Composite",
+    className: "DataLakeStorageErrorError",
+    modelProperties: {
+      code: {
+        serializedName: "Code",
+        type: {
+          name: "String"
+        }
+      },
+      message: {
+        serializedName: "Message",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const DataLakeStorageError: msRest.CompositeMapper = {
+  serializedName: "DataLakeStorageError",
+  type: {
+    name: "Composite",
+    className: "DataLakeStorageError",
+    modelProperties: {
+      error: {
+        serializedName: "error",
+        type: {
+          name: "Composite",
+          className: "DataLakeStorageErrorError"
+        }
+      }
+    }
+  }
+};
+
 export const KeyInfo: msRest.CompositeMapper = {
   serializedName: "KeyInfo",
   type: {
@@ -16,7 +635,6 @@ export const KeyInfo: msRest.CompositeMapper = {
     className: "KeyInfo",
     modelProperties: {
       start: {
-        xmlName: "Start",
         required: true,
         serializedName: "Start",
         type: {
@@ -24,7 +642,6 @@ export const KeyInfo: msRest.CompositeMapper = {
         }
       },
       expiry: {
-        xmlName: "Expiry",
         required: true,
         serializedName: "Expiry",
         type: {
@@ -42,7 +659,6 @@ export const UserDelegationKey: msRest.CompositeMapper = {
     className: "UserDelegationKey",
     modelProperties: {
       signedOid: {
-        xmlName: "SignedOid",
         required: true,
         serializedName: "SignedOid",
         type: {
@@ -50,7 +666,6 @@ export const UserDelegationKey: msRest.CompositeMapper = {
         }
       },
       signedTid: {
-        xmlName: "SignedTid",
         required: true,
         serializedName: "SignedTid",
         type: {
@@ -58,7 +673,6 @@ export const UserDelegationKey: msRest.CompositeMapper = {
         }
       },
       signedStart: {
-        xmlName: "SignedStart",
         required: true,
         serializedName: "SignedStart",
         type: {
@@ -66,7 +680,6 @@ export const UserDelegationKey: msRest.CompositeMapper = {
         }
       },
       signedExpiry: {
-        xmlName: "SignedExpiry",
         required: true,
         serializedName: "SignedExpiry",
         type: {
@@ -74,7 +687,6 @@ export const UserDelegationKey: msRest.CompositeMapper = {
         }
       },
       signedService: {
-        xmlName: "SignedService",
         required: true,
         serializedName: "SignedService",
         type: {
@@ -82,7 +694,6 @@ export const UserDelegationKey: msRest.CompositeMapper = {
         }
       },
       signedVersion: {
-        xmlName: "SignedVersion",
         required: true,
         serializedName: "SignedVersion",
         type: {
@@ -90,7 +701,6 @@ export const UserDelegationKey: msRest.CompositeMapper = {
         }
       },
       value: {
-        xmlName: "Value",
         required: true,
         serializedName: "Value",
         type: {
@@ -108,52 +718,9 @@ export const StorageError: msRest.CompositeMapper = {
     className: "StorageError",
     modelProperties: {
       message: {
-        xmlName: "Message",
         serializedName: "Message",
         type: {
           name: "String"
-        }
-      }
-    }
-  }
-};
-
-export const DataLakeStorageErrorError: msRest.CompositeMapper = {
-  serializedName: "DataLakeStorageError_error",
-  type: {
-    name: "Composite",
-    className: "DataLakeStorageErrorError",
-    modelProperties: {
-      code: {
-        xmlName: "Code",
-        serializedName: "Code",
-        type: {
-          name: "String"
-        }
-      },
-      message: {
-        xmlName: "Message",
-        serializedName: "Message",
-        type: {
-          name: "String"
-        }
-      }
-    }
-  }
-};
-
-export const DataLakeStorageError: msRest.CompositeMapper = {
-  serializedName: "DataLakeStorageError",
-  type: {
-    name: "Composite",
-    className: "DataLakeStorageError",
-    modelProperties: {
-      error: {
-        xmlName: "error",
-        serializedName: "error",
-        type: {
-          name: "Composite",
-          className: "DataLakeStorageErrorError"
         }
       }
     }
@@ -167,21 +734,18 @@ export const AccessPolicy: msRest.CompositeMapper = {
     className: "AccessPolicy",
     modelProperties: {
       start: {
-        xmlName: "Start",
         serializedName: "Start",
         type: {
           name: "String"
         }
       },
       expiry: {
-        xmlName: "Expiry",
         serializedName: "Expiry",
         type: {
           name: "String"
         }
       },
       permission: {
-        xmlName: "Permission",
         required: true,
         serializedName: "Permission",
         type: {
@@ -193,21 +757,18 @@ export const AccessPolicy: msRest.CompositeMapper = {
 };
 
 export const BlobProperties: msRest.CompositeMapper = {
-  xmlName: "Properties",
   serializedName: "BlobProperties",
   type: {
     name: "Composite",
     className: "BlobProperties",
     modelProperties: {
       creationTime: {
-        xmlName: "Creation-Time",
         serializedName: "Creation-Time",
         type: {
           name: "DateTimeRfc1123"
         }
       },
       lastModified: {
-        xmlName: "Last-Modified",
         required: true,
         serializedName: "Last-Modified",
         type: {
@@ -215,7 +776,6 @@ export const BlobProperties: msRest.CompositeMapper = {
         }
       },
       etag: {
-        xmlName: "Etag",
         required: true,
         serializedName: "Etag",
         type: {
@@ -223,63 +783,54 @@ export const BlobProperties: msRest.CompositeMapper = {
         }
       },
       contentLength: {
-        xmlName: "Content-Length",
         serializedName: "Content-Length",
         type: {
           name: "Number"
         }
       },
       contentType: {
-        xmlName: "Content-Type",
         serializedName: "Content-Type",
         type: {
           name: "String"
         }
       },
       contentEncoding: {
-        xmlName: "Content-Encoding",
         serializedName: "Content-Encoding",
         type: {
           name: "String"
         }
       },
       contentLanguage: {
-        xmlName: "Content-Language",
         serializedName: "Content-Language",
         type: {
           name: "String"
         }
       },
       contentMD5: {
-        xmlName: "Content-MD5",
         serializedName: "Content-MD5",
         type: {
           name: "ByteArray"
         }
       },
       contentDisposition: {
-        xmlName: "Content-Disposition",
         serializedName: "Content-Disposition",
         type: {
           name: "String"
         }
       },
       cacheControl: {
-        xmlName: "Cache-Control",
         serializedName: "Cache-Control",
         type: {
           name: "String"
         }
       },
       blobSequenceNumber: {
-        xmlName: "x-ms-blob-sequence-number",
         serializedName: "x-ms-blob-sequence-number",
         type: {
           name: "Number"
         }
       },
       blobType: {
-        xmlName: "BlobType",
         serializedName: "BlobType",
         type: {
           name: "Enum",
@@ -291,7 +842,6 @@ export const BlobProperties: msRest.CompositeMapper = {
         }
       },
       leaseStatus: {
-        xmlName: "LeaseStatus",
         serializedName: "LeaseStatus",
         type: {
           name: "Enum",
@@ -302,7 +852,6 @@ export const BlobProperties: msRest.CompositeMapper = {
         }
       },
       leaseState: {
-        xmlName: "LeaseState",
         serializedName: "LeaseState",
         type: {
           name: "Enum",
@@ -316,7 +865,6 @@ export const BlobProperties: msRest.CompositeMapper = {
         }
       },
       leaseDuration: {
-        xmlName: "LeaseDuration",
         serializedName: "LeaseDuration",
         type: {
           name: "Enum",
@@ -327,14 +875,12 @@ export const BlobProperties: msRest.CompositeMapper = {
         }
       },
       copyId: {
-        xmlName: "CopyId",
         serializedName: "CopyId",
         type: {
           name: "String"
         }
       },
       copyStatus: {
-        xmlName: "CopyStatus",
         serializedName: "CopyStatus",
         type: {
           name: "Enum",
@@ -347,98 +893,84 @@ export const BlobProperties: msRest.CompositeMapper = {
         }
       },
       copySource: {
-        xmlName: "CopySource",
         serializedName: "CopySource",
         type: {
           name: "String"
         }
       },
       copyProgress: {
-        xmlName: "CopyProgress",
         serializedName: "CopyProgress",
         type: {
           name: "String"
         }
       },
       copyCompletionTime: {
-        xmlName: "CopyCompletionTime",
         serializedName: "CopyCompletionTime",
         type: {
           name: "DateTimeRfc1123"
         }
       },
       copyStatusDescription: {
-        xmlName: "CopyStatusDescription",
         serializedName: "CopyStatusDescription",
         type: {
           name: "String"
         }
       },
       serverEncrypted: {
-        xmlName: "ServerEncrypted",
         serializedName: "ServerEncrypted",
         type: {
           name: "Boolean"
         }
       },
       incrementalCopy: {
-        xmlName: "IncrementalCopy",
         serializedName: "IncrementalCopy",
         type: {
           name: "Boolean"
         }
       },
       destinationSnapshot: {
-        xmlName: "DestinationSnapshot",
         serializedName: "DestinationSnapshot",
         type: {
           name: "String"
         }
       },
       deletedTime: {
-        xmlName: "DeletedTime",
         serializedName: "DeletedTime",
         type: {
           name: "DateTimeRfc1123"
         }
       },
       remainingRetentionDays: {
-        xmlName: "RemainingRetentionDays",
         serializedName: "RemainingRetentionDays",
         type: {
           name: "Number"
         }
       },
       accessTier: {
-        xmlName: "AccessTier",
         serializedName: "AccessTier",
         type: {
           name: "String"
         }
       },
       accessTierInferred: {
-        xmlName: "AccessTierInferred",
         serializedName: "AccessTierInferred",
         type: {
           name: "Boolean"
         }
       },
       archiveStatus: {
-        xmlName: "ArchiveStatus",
         serializedName: "ArchiveStatus",
         type: {
           name: "String"
         }
       },
       customerProvidedKeySha256: {
-        xmlName: "CustomerProvidedKeySha256",
         serializedName: "CustomerProvidedKeySha256",
         type: {
           name: "String"
         }
       },
       accessTierChangeTime: {
-        xmlName: "AccessTierChangeTime",
         serializedName: "AccessTierChangeTime",
         type: {
           name: "DateTimeRfc1123"
@@ -449,15 +981,12 @@ export const BlobProperties: msRest.CompositeMapper = {
 };
 
 export const BlobMetadata: msRest.CompositeMapper = {
-  xmlName: "Metadata",
   serializedName: "BlobMetadata",
   type: {
     name: "Composite",
     className: "BlobMetadata",
     modelProperties: {
       encrypted: {
-        xmlIsAttribute: true,
-        xmlName: "Encrypted",
         serializedName: "Encrypted",
         type: {
           name: "String"
@@ -473,14 +1002,12 @@ export const BlobMetadata: msRest.CompositeMapper = {
 };
 
 export const BlobItem: msRest.CompositeMapper = {
-  xmlName: "Blob",
   serializedName: "BlobItem",
   type: {
     name: "Composite",
     className: "BlobItem",
     modelProperties: {
       name: {
-        xmlName: "Name",
         required: true,
         serializedName: "Name",
         type: {
@@ -488,21 +1015,18 @@ export const BlobItem: msRest.CompositeMapper = {
         }
       },
       deleted: {
-        xmlName: "Deleted",
         serializedName: "Deleted",
         type: {
           name: "Boolean"
         }
       },
       snapshot: {
-        xmlName: "Snapshot",
         serializedName: "Snapshot",
         type: {
           name: "String"
         }
       },
       properties: {
-        xmlName: "Properties",
         required: true,
         serializedName: "Properties",
         type: {
@@ -511,7 +1035,6 @@ export const BlobItem: msRest.CompositeMapper = {
         }
       },
       metadata: {
-        xmlName: "Metadata",
         serializedName: "Metadata",
         type: {
           name: "Composite",
@@ -528,15 +1051,12 @@ export const BlobItem: msRest.CompositeMapper = {
 };
 
 export const BlobFlatListSegment: msRest.CompositeMapper = {
-  xmlName: "Blobs",
   serializedName: "BlobFlatListSegment",
   type: {
     name: "Composite",
     className: "BlobFlatListSegment",
     modelProperties: {
       blobItems: {
-        xmlName: "BlobItems",
-        xmlElementName: "Blob",
         required: true,
         serializedName: "BlobItems",
         type: {
@@ -554,15 +1074,12 @@ export const BlobFlatListSegment: msRest.CompositeMapper = {
 };
 
 export const ListBlobsFlatSegmentResponse: msRest.CompositeMapper = {
-  xmlName: "EnumerationResults",
   serializedName: "ListBlobsFlatSegmentResponse",
   type: {
     name: "Composite",
     className: "ListBlobsFlatSegmentResponse",
     modelProperties: {
       serviceEndpoint: {
-        xmlIsAttribute: true,
-        xmlName: "ServiceEndpoint",
         required: true,
         serializedName: "ServiceEndpoint",
         type: {
@@ -570,8 +1087,6 @@ export const ListBlobsFlatSegmentResponse: msRest.CompositeMapper = {
         }
       },
       containerName: {
-        xmlIsAttribute: true,
-        xmlName: "ContainerName",
         required: true,
         serializedName: "ContainerName",
         type: {
@@ -579,35 +1094,30 @@ export const ListBlobsFlatSegmentResponse: msRest.CompositeMapper = {
         }
       },
       prefix: {
-        xmlName: "Prefix",
         serializedName: "Prefix",
         type: {
           name: "String"
         }
       },
       marker: {
-        xmlName: "Marker",
         serializedName: "Marker",
         type: {
           name: "String"
         }
       },
       maxResults: {
-        xmlName: "MaxResults",
         serializedName: "MaxResults",
         type: {
           name: "Number"
         }
       },
       delimiter: {
-        xmlName: "Delimiter",
         serializedName: "Delimiter",
         type: {
           name: "String"
         }
       },
       segment: {
-        xmlName: "Blobs",
         required: true,
         serializedName: "Segment",
         type: {
@@ -616,7 +1126,6 @@ export const ListBlobsFlatSegmentResponse: msRest.CompositeMapper = {
         }
       },
       nextMarker: {
-        xmlName: "NextMarker",
         serializedName: "NextMarker",
         type: {
           name: "String"
@@ -626,34 +1135,13 @@ export const ListBlobsFlatSegmentResponse: msRest.CompositeMapper = {
   }
 };
 
-export const BlobPrefix: msRest.CompositeMapper = {
-  serializedName: "BlobPrefix",
-  type: {
-    name: "Composite",
-    className: "BlobPrefix",
-    modelProperties: {
-      name: {
-        xmlName: "Name",
-        required: true,
-        serializedName: "Name",
-        type: {
-          name: "String"
-        }
-      }
-    }
-  }
-};
-
 export const BlobHierarchyListSegment: msRest.CompositeMapper = {
-  xmlName: "Blobs",
   serializedName: "BlobHierarchyListSegment",
   type: {
     name: "Composite",
     className: "BlobHierarchyListSegment",
     modelProperties: {
       blobPrefixes: {
-        xmlName: "BlobPrefixes",
-        xmlElementName: "BlobPrefix",
         serializedName: "BlobPrefixes",
         type: {
           name: "Sequence",
@@ -666,8 +1154,6 @@ export const BlobHierarchyListSegment: msRest.CompositeMapper = {
         }
       },
       blobItems: {
-        xmlName: "BlobItems",
-        xmlElementName: "Blob",
         required: true,
         serializedName: "BlobItems",
         type: {
@@ -685,15 +1171,12 @@ export const BlobHierarchyListSegment: msRest.CompositeMapper = {
 };
 
 export const ListBlobsHierarchySegmentResponse: msRest.CompositeMapper = {
-  xmlName: "EnumerationResults",
   serializedName: "ListBlobsHierarchySegmentResponse",
   type: {
     name: "Composite",
     className: "ListBlobsHierarchySegmentResponse",
     modelProperties: {
       serviceEndpoint: {
-        xmlIsAttribute: true,
-        xmlName: "ServiceEndpoint",
         required: true,
         serializedName: "ServiceEndpoint",
         type: {
@@ -701,8 +1184,6 @@ export const ListBlobsHierarchySegmentResponse: msRest.CompositeMapper = {
         }
       },
       containerName: {
-        xmlIsAttribute: true,
-        xmlName: "ContainerName",
         required: true,
         serializedName: "ContainerName",
         type: {
@@ -710,35 +1191,30 @@ export const ListBlobsHierarchySegmentResponse: msRest.CompositeMapper = {
         }
       },
       prefix: {
-        xmlName: "Prefix",
         serializedName: "Prefix",
         type: {
           name: "String"
         }
       },
       marker: {
-        xmlName: "Marker",
         serializedName: "Marker",
         type: {
           name: "String"
         }
       },
       maxResults: {
-        xmlName: "MaxResults",
         serializedName: "MaxResults",
         type: {
           name: "Number"
         }
       },
       delimiter: {
-        xmlName: "Delimiter",
         serializedName: "Delimiter",
         type: {
           name: "String"
         }
       },
       segment: {
-        xmlName: "Blobs",
         required: true,
         serializedName: "Segment",
         type: {
@@ -747,7 +1223,6 @@ export const ListBlobsHierarchySegmentResponse: msRest.CompositeMapper = {
         }
       },
       nextMarker: {
-        xmlName: "NextMarker",
         serializedName: "NextMarker",
         type: {
           name: "String"
@@ -764,7 +1239,6 @@ export const Block: msRest.CompositeMapper = {
     className: "Block",
     modelProperties: {
       name: {
-        xmlName: "Name",
         required: true,
         serializedName: "Name",
         type: {
@@ -772,7 +1246,6 @@ export const Block: msRest.CompositeMapper = {
         }
       },
       size: {
-        xmlName: "Size",
         required: true,
         serializedName: "Size",
         type: {
@@ -790,9 +1263,6 @@ export const BlockList: msRest.CompositeMapper = {
     className: "BlockList",
     modelProperties: {
       committedBlocks: {
-        xmlIsWrapped: true,
-        xmlName: "CommittedBlocks",
-        xmlElementName: "Block",
         serializedName: "CommittedBlocks",
         type: {
           name: "Sequence",
@@ -805,9 +1275,6 @@ export const BlockList: msRest.CompositeMapper = {
         }
       },
       uncommittedBlocks: {
-        xmlIsWrapped: true,
-        xmlName: "UncommittedBlocks",
-        xmlElementName: "Block",
         serializedName: "UncommittedBlocks",
         type: {
           name: "Sequence",
@@ -824,15 +1291,12 @@ export const BlockList: msRest.CompositeMapper = {
 };
 
 export const BlockLookupList: msRest.CompositeMapper = {
-  xmlName: "BlockList",
   serializedName: "BlockLookupList",
   type: {
     name: "Composite",
     className: "BlockLookupList",
     modelProperties: {
       committed: {
-        xmlName: "Committed",
-        xmlElementName: "Committed",
         serializedName: "Committed",
         type: {
           name: "Sequence",
@@ -844,8 +1308,6 @@ export const BlockLookupList: msRest.CompositeMapper = {
         }
       },
       uncommitted: {
-        xmlName: "Uncommitted",
-        xmlElementName: "Uncommitted",
         serializedName: "Uncommitted",
         type: {
           name: "Sequence",
@@ -857,8 +1319,6 @@ export const BlockLookupList: msRest.CompositeMapper = {
         }
       },
       latest: {
-        xmlName: "Latest",
-        xmlElementName: "Latest",
         serializedName: "Latest",
         type: {
           name: "Sequence",
@@ -880,7 +1340,6 @@ export const ContainerProperties: msRest.CompositeMapper = {
     className: "ContainerProperties",
     modelProperties: {
       lastModified: {
-        xmlName: "Last-Modified",
         required: true,
         serializedName: "Last-Modified",
         type: {
@@ -888,7 +1347,6 @@ export const ContainerProperties: msRest.CompositeMapper = {
         }
       },
       etag: {
-        xmlName: "Etag",
         required: true,
         serializedName: "Etag",
         type: {
@@ -896,7 +1354,6 @@ export const ContainerProperties: msRest.CompositeMapper = {
         }
       },
       leaseStatus: {
-        xmlName: "LeaseStatus",
         serializedName: "LeaseStatus",
         type: {
           name: "Enum",
@@ -907,7 +1364,6 @@ export const ContainerProperties: msRest.CompositeMapper = {
         }
       },
       leaseState: {
-        xmlName: "LeaseState",
         serializedName: "LeaseState",
         type: {
           name: "Enum",
@@ -921,7 +1377,6 @@ export const ContainerProperties: msRest.CompositeMapper = {
         }
       },
       leaseDuration: {
-        xmlName: "LeaseDuration",
         serializedName: "LeaseDuration",
         type: {
           name: "Enum",
@@ -932,21 +1387,18 @@ export const ContainerProperties: msRest.CompositeMapper = {
         }
       },
       publicAccess: {
-        xmlName: "PublicAccess",
         serializedName: "PublicAccess",
         type: {
           name: "String"
         }
       },
       hasImmutabilityPolicy: {
-        xmlName: "HasImmutabilityPolicy",
         serializedName: "HasImmutabilityPolicy",
         type: {
           name: "Boolean"
         }
       },
       hasLegalHold: {
-        xmlName: "HasLegalHold",
         serializedName: "HasLegalHold",
         type: {
           name: "Boolean"
@@ -957,14 +1409,12 @@ export const ContainerProperties: msRest.CompositeMapper = {
 };
 
 export const ContainerItem: msRest.CompositeMapper = {
-  xmlName: "Container",
   serializedName: "ContainerItem",
   type: {
     name: "Composite",
     className: "ContainerItem",
     modelProperties: {
       name: {
-        xmlName: "Name",
         required: true,
         serializedName: "Name",
         type: {
@@ -972,7 +1422,6 @@ export const ContainerItem: msRest.CompositeMapper = {
         }
       },
       properties: {
-        xmlName: "Properties",
         required: true,
         serializedName: "Properties",
         type: {
@@ -981,7 +1430,6 @@ export const ContainerItem: msRest.CompositeMapper = {
         }
       },
       metadata: {
-        xmlName: "Metadata",
         serializedName: "Metadata",
         type: {
           name: "Dictionary",
@@ -997,15 +1445,12 @@ export const ContainerItem: msRest.CompositeMapper = {
 };
 
 export const ListContainersSegmentResponse: msRest.CompositeMapper = {
-  xmlName: "EnumerationResults",
   serializedName: "ListContainersSegmentResponse",
   type: {
     name: "Composite",
     className: "ListContainersSegmentResponse",
     modelProperties: {
       serviceEndpoint: {
-        xmlIsAttribute: true,
-        xmlName: "ServiceEndpoint",
         required: true,
         serializedName: "ServiceEndpoint",
         type: {
@@ -1013,30 +1458,24 @@ export const ListContainersSegmentResponse: msRest.CompositeMapper = {
         }
       },
       prefix: {
-        xmlName: "Prefix",
         serializedName: "Prefix",
         type: {
           name: "String"
         }
       },
       marker: {
-        xmlName: "Marker",
         serializedName: "Marker",
         type: {
           name: "String"
         }
       },
       maxResults: {
-        xmlName: "MaxResults",
         serializedName: "MaxResults",
         type: {
           name: "Number"
         }
       },
       containerItems: {
-        xmlIsWrapped: true,
-        xmlName: "Containers",
-        xmlElementName: "Container",
         required: true,
         serializedName: "ContainerItems",
         type: {
@@ -1050,7 +1489,6 @@ export const ListContainersSegmentResponse: msRest.CompositeMapper = {
         }
       },
       nextMarker: {
-        xmlName: "NextMarker",
         serializedName: "NextMarker",
         type: {
           name: "String"
@@ -1067,7 +1505,6 @@ export const CorsRule: msRest.CompositeMapper = {
     className: "CorsRule",
     modelProperties: {
       allowedOrigins: {
-        xmlName: "AllowedOrigins",
         required: true,
         serializedName: "AllowedOrigins",
         type: {
@@ -1075,7 +1512,6 @@ export const CorsRule: msRest.CompositeMapper = {
         }
       },
       allowedMethods: {
-        xmlName: "AllowedMethods",
         required: true,
         serializedName: "AllowedMethods",
         type: {
@@ -1083,21 +1519,18 @@ export const CorsRule: msRest.CompositeMapper = {
         }
       },
       allowedHeaders: {
-        xmlName: "AllowedHeaders",
         serializedName: "AllowedHeaders",
         type: {
           name: "String"
         }
       },
       exposedHeaders: {
-        xmlName: "ExposedHeaders",
         serializedName: "ExposedHeaders",
         type: {
           name: "String"
         }
       },
       maxAgeInSeconds: {
-        xmlName: "MaxAgeInSeconds",
         required: true,
         serializedName: "MaxAgeInSeconds",
         constraints: {
@@ -1118,7 +1551,6 @@ export const GeoReplication: msRest.CompositeMapper = {
     className: "GeoReplication",
     modelProperties: {
       status: {
-        xmlName: "Status",
         required: true,
         serializedName: "Status",
         type: {
@@ -1126,7 +1558,6 @@ export const GeoReplication: msRest.CompositeMapper = {
         }
       },
       lastSyncTime: {
-        xmlName: "LastSyncTime",
         required: true,
         serializedName: "LastSyncTime",
         type: {
@@ -1144,7 +1575,6 @@ export const RetentionPolicy: msRest.CompositeMapper = {
     className: "RetentionPolicy",
     modelProperties: {
       enabled: {
-        xmlName: "Enabled",
         required: true,
         serializedName: "Enabled",
         type: {
@@ -1152,7 +1582,6 @@ export const RetentionPolicy: msRest.CompositeMapper = {
         }
       },
       days: {
-        xmlName: "Days",
         serializedName: "Days",
         constraints: {
           InclusiveMinimum: 1
@@ -1172,7 +1601,6 @@ export const Logging: msRest.CompositeMapper = {
     className: "Logging",
     modelProperties: {
       version: {
-        xmlName: "Version",
         required: true,
         serializedName: "Version",
         type: {
@@ -1180,7 +1608,6 @@ export const Logging: msRest.CompositeMapper = {
         }
       },
       deleteProperty: {
-        xmlName: "Delete",
         required: true,
         serializedName: "Delete",
         type: {
@@ -1188,7 +1615,6 @@ export const Logging: msRest.CompositeMapper = {
         }
       },
       read: {
-        xmlName: "Read",
         required: true,
         serializedName: "Read",
         type: {
@@ -1196,7 +1622,6 @@ export const Logging: msRest.CompositeMapper = {
         }
       },
       write: {
-        xmlName: "Write",
         required: true,
         serializedName: "Write",
         type: {
@@ -1204,7 +1629,6 @@ export const Logging: msRest.CompositeMapper = {
         }
       },
       retentionPolicy: {
-        xmlName: "RetentionPolicy",
         required: true,
         serializedName: "RetentionPolicy",
         type: {
@@ -1223,14 +1647,12 @@ export const Metrics: msRest.CompositeMapper = {
     className: "Metrics",
     modelProperties: {
       version: {
-        xmlName: "Version",
         serializedName: "Version",
         type: {
           name: "String"
         }
       },
       enabled: {
-        xmlName: "Enabled",
         required: true,
         serializedName: "Enabled",
         type: {
@@ -1238,14 +1660,12 @@ export const Metrics: msRest.CompositeMapper = {
         }
       },
       includeAPIs: {
-        xmlName: "IncludeAPIs",
         serializedName: "IncludeAPIs",
         type: {
           name: "Boolean"
         }
       },
       retentionPolicy: {
-        xmlName: "RetentionPolicy",
         serializedName: "RetentionPolicy",
         type: {
           name: "Composite",
@@ -1263,7 +1683,6 @@ export const PageRange: msRest.CompositeMapper = {
     className: "PageRange",
     modelProperties: {
       start: {
-        xmlName: "Start",
         required: true,
         serializedName: "Start",
         type: {
@@ -1271,7 +1690,6 @@ export const PageRange: msRest.CompositeMapper = {
         }
       },
       end: {
-        xmlName: "End",
         required: true,
         serializedName: "End",
         type: {
@@ -1289,7 +1707,6 @@ export const ClearRange: msRest.CompositeMapper = {
     className: "ClearRange",
     modelProperties: {
       start: {
-        xmlName: "Start",
         required: true,
         serializedName: "Start",
         type: {
@@ -1297,7 +1714,6 @@ export const ClearRange: msRest.CompositeMapper = {
         }
       },
       end: {
-        xmlName: "End",
         required: true,
         serializedName: "End",
         type: {
@@ -1315,8 +1731,6 @@ export const PageList: msRest.CompositeMapper = {
     className: "PageList",
     modelProperties: {
       pageRange: {
-        xmlName: "PageRange",
-        xmlElementName: "PageRange",
         serializedName: "PageRange",
         type: {
           name: "Sequence",
@@ -1329,8 +1743,6 @@ export const PageList: msRest.CompositeMapper = {
         }
       },
       clearRange: {
-        xmlName: "ClearRange",
-        xmlElementName: "ClearRange",
         serializedName: "ClearRange",
         type: {
           name: "Sequence",
@@ -1353,7 +1765,6 @@ export const SignedIdentifier: msRest.CompositeMapper = {
     className: "SignedIdentifier",
     modelProperties: {
       id: {
-        xmlName: "Id",
         required: true,
         serializedName: "Id",
         type: {
@@ -1361,7 +1772,6 @@ export const SignedIdentifier: msRest.CompositeMapper = {
         }
       },
       accessPolicy: {
-        xmlName: "AccessPolicy",
         required: true,
         serializedName: "AccessPolicy",
         type: {
@@ -1380,7 +1790,6 @@ export const StaticWebsite: msRest.CompositeMapper = {
     className: "StaticWebsite",
     modelProperties: {
       enabled: {
-        xmlName: "Enabled",
         required: true,
         serializedName: "Enabled",
         type: {
@@ -1388,14 +1797,12 @@ export const StaticWebsite: msRest.CompositeMapper = {
         }
       },
       indexDocument: {
-        xmlName: "IndexDocument",
         serializedName: "IndexDocument",
         type: {
           name: "String"
         }
       },
       errorDocument404Path: {
-        xmlName: "ErrorDocument404Path",
         serializedName: "ErrorDocument404Path",
         type: {
           name: "String"
@@ -1412,7 +1819,6 @@ export const StorageServiceProperties: msRest.CompositeMapper = {
     className: "StorageServiceProperties",
     modelProperties: {
       logging: {
-        xmlName: "Logging",
         serializedName: "Logging",
         type: {
           name: "Composite",
@@ -1420,7 +1826,6 @@ export const StorageServiceProperties: msRest.CompositeMapper = {
         }
       },
       hourMetrics: {
-        xmlName: "HourMetrics",
         serializedName: "HourMetrics",
         type: {
           name: "Composite",
@@ -1428,7 +1833,6 @@ export const StorageServiceProperties: msRest.CompositeMapper = {
         }
       },
       minuteMetrics: {
-        xmlName: "MinuteMetrics",
         serializedName: "MinuteMetrics",
         type: {
           name: "Composite",
@@ -1436,9 +1840,6 @@ export const StorageServiceProperties: msRest.CompositeMapper = {
         }
       },
       cors: {
-        xmlIsWrapped: true,
-        xmlName: "Cors",
-        xmlElementName: "CorsRule",
         serializedName: "Cors",
         type: {
           name: "Sequence",
@@ -1451,14 +1852,12 @@ export const StorageServiceProperties: msRest.CompositeMapper = {
         }
       },
       defaultServiceVersion: {
-        xmlName: "DefaultServiceVersion",
         serializedName: "DefaultServiceVersion",
         type: {
           name: "String"
         }
       },
       deleteRetentionPolicy: {
-        xmlName: "DeleteRetentionPolicy",
         serializedName: "DeleteRetentionPolicy",
         type: {
           name: "Composite",
@@ -1466,7 +1865,6 @@ export const StorageServiceProperties: msRest.CompositeMapper = {
         }
       },
       staticWebsite: {
-        xmlName: "StaticWebsite",
         serializedName: "StaticWebsite",
         type: {
           name: "Composite",
@@ -1484,7 +1882,6 @@ export const StorageServiceStats: msRest.CompositeMapper = {
     className: "StorageServiceStats",
     modelProperties: {
       geoReplication: {
-        xmlName: "GeoReplication",
         serializedName: "GeoReplication",
         type: {
           name: "Composite",
@@ -1495,48 +1892,27 @@ export const StorageServiceStats: msRest.CompositeMapper = {
   }
 };
 
-export const LeaseAccessConditions: msRest.CompositeMapper = {
-  xmlName: "lease-access-conditions",
-  type: {
-    name: "Composite",
-    className: "LeaseAccessConditions",
-    modelProperties: {
-      leaseId: {
-        xmlName: "leaseId",
-        type: {
-          name: "String"
-        }
-      }
-    }
-  }
-};
-
 export const ModifiedAccessConditions: msRest.CompositeMapper = {
-  xmlName: "modified-access-conditions",
   type: {
     name: "Composite",
     className: "ModifiedAccessConditions",
     modelProperties: {
       ifModifiedSince: {
-        xmlName: "ifModifiedSince",
         type: {
           name: "DateTimeRfc1123"
         }
       },
       ifUnmodifiedSince: {
-        xmlName: "ifUnmodifiedSince",
         type: {
           name: "DateTimeRfc1123"
         }
       },
       ifMatch: {
-        xmlName: "ifMatch",
         type: {
           name: "String"
         }
       },
       ifNoneMatch: {
-        xmlName: "ifNoneMatch",
         type: {
           name: "String"
         }
@@ -1545,38 +1921,56 @@ export const ModifiedAccessConditions: msRest.CompositeMapper = {
   }
 };
 
-export const DirectoryHttpHeaders: msRest.CompositeMapper = {
-  xmlName: "directory-http-headers",
+export const PathHTTPHeaders: msRest.CompositeMapper = {
   type: {
     name: "Composite",
-    className: "DirectoryHttpHeaders",
+    className: "PathHTTPHeaders",
     modelProperties: {
       cacheControl: {
-        xmlName: "cacheControl",
-        type: {
-          name: "String"
-        }
-      },
-      contentType: {
-        xmlName: "contentType",
         type: {
           name: "String"
         }
       },
       contentEncoding: {
-        xmlName: "contentEncoding",
         type: {
           name: "String"
         }
       },
       contentLanguage: {
-        xmlName: "contentLanguage",
         type: {
           name: "String"
         }
       },
       contentDisposition: {
-        xmlName: "contentDisposition",
+        type: {
+          name: "String"
+        }
+      },
+      contentType: {
+        type: {
+          name: "String"
+        }
+      },
+      contentMD5: {
+        type: {
+          name: "ByteArray"
+        }
+      },
+      transactionalContentMD5: {
+        type: {
+          name: "ByteArray"
+        }
+      }
+    }
+  }
+};
+
+export const LeaseAccessConditions: msRest.CompositeMapper = {
+  type: {
+    name: "Composite",
+    className: "LeaseAccessConditions",
+    modelProperties: {
+      leaseId: {
         type: {
           name: "String"
         }
@@ -1586,33 +1980,28 @@ export const DirectoryHttpHeaders: msRest.CompositeMapper = {
 };
 
 export const SourceModifiedAccessConditions: msRest.CompositeMapper = {
-  xmlName: "source-modified-access-conditions",
   type: {
     name: "Composite",
     className: "SourceModifiedAccessConditions",
     modelProperties: {
-      sourceIfModifiedSince: {
-        xmlName: "sourceIfModifiedSince",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      },
-      sourceIfUnmodifiedSince: {
-        xmlName: "sourceIfUnmodifiedSince",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      },
-      sourceIfMatches: {
-        xmlName: "sourceIfMatches",
+      sourceIfMatch: {
         type: {
           name: "String"
         }
       },
       sourceIfNoneMatch: {
-        xmlName: "sourceIfNoneMatch",
         type: {
           name: "String"
+        }
+      },
+      sourceIfModifiedSince: {
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      sourceIfUnmodifiedSince: {
+        type: {
+          name: "DateTimeRfc1123"
         }
       }
     }
@@ -1620,25 +2009,21 @@ export const SourceModifiedAccessConditions: msRest.CompositeMapper = {
 };
 
 export const CpkInfo: msRest.CompositeMapper = {
-  xmlName: "cpk-info",
   type: {
     name: "Composite",
     className: "CpkInfo",
     modelProperties: {
       encryptionKey: {
-        xmlName: "encryptionKey",
         type: {
           name: "String"
         }
       },
       encryptionKeySha256: {
-        xmlName: "encryptionKeySha256",
         type: {
           name: "String"
         }
       },
       encryptionAlgorithm: {
-        xmlName: "encryptionAlgorithm",
         type: {
           name: "Enum",
           allowedValues: [
@@ -1651,43 +2036,36 @@ export const CpkInfo: msRest.CompositeMapper = {
 };
 
 export const BlobHTTPHeaders: msRest.CompositeMapper = {
-  xmlName: "blob-HTTP-headers",
   type: {
     name: "Composite",
     className: "BlobHTTPHeaders",
     modelProperties: {
       blobCacheControl: {
-        xmlName: "blobCacheControl",
         type: {
           name: "String"
         }
       },
       blobContentType: {
-        xmlName: "blobContentType",
         type: {
           name: "String"
         }
       },
       blobContentMD5: {
-        xmlName: "blobContentMD5",
         type: {
           name: "ByteArray"
         }
       },
       blobContentEncoding: {
-        xmlName: "blobContentEncoding",
         type: {
           name: "String"
         }
       },
       blobContentLanguage: {
-        xmlName: "blobContentLanguage",
         type: {
           name: "String"
         }
       },
       blobContentDisposition: {
-        xmlName: "blobContentDisposition",
         type: {
           name: "String"
         }
@@ -1697,25 +2075,21 @@ export const BlobHTTPHeaders: msRest.CompositeMapper = {
 };
 
 export const SequenceNumberAccessConditions: msRest.CompositeMapper = {
-  xmlName: "sequence-number-access-conditions",
   type: {
     name: "Composite",
     className: "SequenceNumberAccessConditions",
     modelProperties: {
       ifSequenceNumberLessThanOrEqualTo: {
-        xmlName: "ifSequenceNumberLessThanOrEqualTo",
         type: {
           name: "Number"
         }
       },
       ifSequenceNumberLessThan: {
-        xmlName: "ifSequenceNumberLessThan",
         type: {
           name: "Number"
         }
       },
       ifSequenceNumberEqualTo: {
-        xmlName: "ifSequenceNumberEqualTo",
         type: {
           name: "Number"
         }
@@ -1725,21 +2099,1264 @@ export const SequenceNumberAccessConditions: msRest.CompositeMapper = {
 };
 
 export const AppendPositionAccessConditions: msRest.CompositeMapper = {
-  xmlName: "append-position-access-conditions",
   type: {
     name: "Composite",
     className: "AppendPositionAccessConditions",
     modelProperties: {
       maxSize: {
-        xmlName: "maxSize",
         type: {
           name: "Number"
         }
       },
       appendPosition: {
-        xmlName: "appendPosition",
         type: {
           name: "Number"
+        }
+      }
+    }
+  }
+};
+
+export const ServiceListFileSystemsHeaders: msRest.CompositeMapper = {
+  serializedName: "service-listfilesystems-headers",
+  type: {
+    name: "Composite",
+    className: "ServiceListFileSystemsHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      continuation: {
+        serializedName: "x-ms-continuation",
+        type: {
+          name: "String"
+        }
+      },
+      contentType: {
+        serializedName: "content-type",
+        type: {
+          name: "String"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const FileSystemCreateHeaders: msRest.CompositeMapper = {
+  serializedName: "filesystem-create-headers",
+  type: {
+    name: "Composite",
+    className: "FileSystemCreateHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      namespaceEnabled: {
+        serializedName: "x-ms-namespace-enabled",
+        type: {
+          name: "String"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const FileSystemSetPropertiesHeaders: msRest.CompositeMapper = {
+  serializedName: "filesystem-setproperties-headers",
+  type: {
+    name: "Composite",
+    className: "FileSystemSetPropertiesHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const FileSystemGetPropertiesHeaders: msRest.CompositeMapper = {
+  serializedName: "filesystem-getproperties-headers",
+  type: {
+    name: "Composite",
+    className: "FileSystemGetPropertiesHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      properties: {
+        serializedName: "x-ms-properties",
+        type: {
+          name: "String"
+        }
+      },
+      namespaceEnabled: {
+        serializedName: "x-ms-namespace-enabled",
+        type: {
+          name: "String"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const FileSystemDeleteHeaders: msRest.CompositeMapper = {
+  serializedName: "filesystem-delete-headers",
+  type: {
+    name: "Composite",
+    className: "FileSystemDeleteHeaders",
+    modelProperties: {
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const FileSystemListPathsHeaders: msRest.CompositeMapper = {
+  serializedName: "filesystem-listpaths-headers",
+  type: {
+    name: "Composite",
+    className: "FileSystemListPathsHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      continuation: {
+        serializedName: "x-ms-continuation",
+        type: {
+          name: "String"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const FileSystemListBlobHierarchySegmentHeaders: msRest.CompositeMapper = {
+  serializedName: "filesystem-listblobhierarchysegment-headers",
+  type: {
+    name: "Composite",
+    className: "FileSystemListBlobHierarchySegmentHeaders",
+    modelProperties: {
+      contentType: {
+        serializedName: "content-type",
+        type: {
+          name: "String"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const PathCreateHeaders: msRest.CompositeMapper = {
+  serializedName: "path-create-headers",
+  type: {
+    name: "Composite",
+    className: "PathCreateHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      continuation: {
+        serializedName: "x-ms-continuation",
+        type: {
+          name: "String"
+        }
+      },
+      contentLength: {
+        serializedName: "content-length",
+        type: {
+          name: "Number"
+        }
+      },
+      isServerEncrypted: {
+        serializedName: "x-ms-request-server-encrypted",
+        type: {
+          name: "Boolean"
+        }
+      },
+      encryptionKeySha256: {
+        serializedName: "x-ms-encryption-key-sha256",
+        type: {
+          name: "String"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const PathUpdateHeaders: msRest.CompositeMapper = {
+  serializedName: "path-update-headers",
+  type: {
+    name: "Composite",
+    className: "PathUpdateHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      acceptRanges: {
+        serializedName: "accept-ranges",
+        type: {
+          name: "String"
+        }
+      },
+      cacheControl: {
+        serializedName: "cache-control",
+        type: {
+          name: "String"
+        }
+      },
+      contentDisposition: {
+        serializedName: "content-disposition",
+        type: {
+          name: "String"
+        }
+      },
+      contentEncoding: {
+        serializedName: "content-encoding",
+        type: {
+          name: "String"
+        }
+      },
+      contentLanguage: {
+        serializedName: "content-language",
+        type: {
+          name: "String"
+        }
+      },
+      contentLength: {
+        serializedName: "content-length",
+        type: {
+          name: "Number"
+        }
+      },
+      contentRange: {
+        serializedName: "content-range",
+        type: {
+          name: "String"
+        }
+      },
+      contentType: {
+        serializedName: "content-type",
+        type: {
+          name: "String"
+        }
+      },
+      contentMD5: {
+        serializedName: "content-md5",
+        type: {
+          name: "String"
+        }
+      },
+      properties: {
+        serializedName: "x-ms-properties",
+        type: {
+          name: "String"
+        }
+      },
+      xMsContinuation: {
+        serializedName: "x-ms-continuation",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const PathLeaseHeaders: msRest.CompositeMapper = {
+  serializedName: "path-lease-headers",
+  type: {
+    name: "Composite",
+    className: "PathLeaseHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      leaseId: {
+        serializedName: "x-ms-lease-id",
+        type: {
+          name: "String"
+        }
+      },
+      leaseTime: {
+        serializedName: "x-ms-lease-time",
+        type: {
+          name: "String"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const PathReadHeaders: msRest.CompositeMapper = {
+  serializedName: "path-read-headers",
+  type: {
+    name: "Composite",
+    className: "PathReadHeaders",
+    modelProperties: {
+      acceptRanges: {
+        serializedName: "accept-ranges",
+        type: {
+          name: "String"
+        }
+      },
+      cacheControl: {
+        serializedName: "cache-control",
+        type: {
+          name: "String"
+        }
+      },
+      contentDisposition: {
+        serializedName: "content-disposition",
+        type: {
+          name: "String"
+        }
+      },
+      contentEncoding: {
+        serializedName: "content-encoding",
+        type: {
+          name: "String"
+        }
+      },
+      contentLanguage: {
+        serializedName: "content-language",
+        type: {
+          name: "String"
+        }
+      },
+      contentLength: {
+        serializedName: "content-length",
+        type: {
+          name: "Number"
+        }
+      },
+      contentRange: {
+        serializedName: "content-range",
+        type: {
+          name: "String"
+        }
+      },
+      contentType: {
+        serializedName: "content-type",
+        type: {
+          name: "String"
+        }
+      },
+      contentMD5: {
+        serializedName: "content-md5",
+        type: {
+          name: "String"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      resourceType: {
+        serializedName: "x-ms-resource-type",
+        type: {
+          name: "String"
+        }
+      },
+      properties: {
+        serializedName: "x-ms-properties",
+        type: {
+          name: "String"
+        }
+      },
+      leaseDuration: {
+        serializedName: "x-ms-lease-duration",
+        type: {
+          name: "String"
+        }
+      },
+      leaseState: {
+        serializedName: "x-ms-lease-state",
+        type: {
+          name: "String"
+        }
+      },
+      leaseStatus: {
+        serializedName: "x-ms-lease-status",
+        type: {
+          name: "String"
+        }
+      },
+      isServerEncrypted: {
+        serializedName: "x-ms-request-server-encrypted",
+        type: {
+          name: "Boolean"
+        }
+      },
+      encryptionKeySha256: {
+        serializedName: "x-ms-encryption-key-sha256",
+        type: {
+          name: "String"
+        }
+      },
+      xMsContentMd5: {
+        serializedName: "x-ms-content-md5",
+        type: {
+          name: "String"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const PathGetPropertiesHeaders: msRest.CompositeMapper = {
+  serializedName: "path-getproperties-headers",
+  type: {
+    name: "Composite",
+    className: "PathGetPropertiesHeaders",
+    modelProperties: {
+      acceptRanges: {
+        serializedName: "accept-ranges",
+        type: {
+          name: "String"
+        }
+      },
+      cacheControl: {
+        serializedName: "cache-control",
+        type: {
+          name: "String"
+        }
+      },
+      contentDisposition: {
+        serializedName: "content-disposition",
+        type: {
+          name: "String"
+        }
+      },
+      contentEncoding: {
+        serializedName: "content-encoding",
+        type: {
+          name: "String"
+        }
+      },
+      contentLanguage: {
+        serializedName: "content-language",
+        type: {
+          name: "String"
+        }
+      },
+      contentLength: {
+        serializedName: "content-length",
+        type: {
+          name: "Number"
+        }
+      },
+      contentRange: {
+        serializedName: "content-range",
+        type: {
+          name: "String"
+        }
+      },
+      contentType: {
+        serializedName: "content-type",
+        type: {
+          name: "String"
+        }
+      },
+      contentMD5: {
+        serializedName: "content-md5",
+        type: {
+          name: "String"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      resourceType: {
+        serializedName: "x-ms-resource-type",
+        type: {
+          name: "String"
+        }
+      },
+      properties: {
+        serializedName: "x-ms-properties",
+        type: {
+          name: "String"
+        }
+      },
+      owner: {
+        serializedName: "x-ms-owner",
+        type: {
+          name: "String"
+        }
+      },
+      group: {
+        serializedName: "x-ms-group",
+        type: {
+          name: "String"
+        }
+      },
+      permissions: {
+        serializedName: "x-ms-permissions",
+        type: {
+          name: "String"
+        }
+      },
+      aCL: {
+        serializedName: "x-ms-acl",
+        type: {
+          name: "String"
+        }
+      },
+      leaseDuration: {
+        serializedName: "x-ms-lease-duration",
+        type: {
+          name: "String"
+        }
+      },
+      leaseState: {
+        serializedName: "x-ms-lease-state",
+        type: {
+          name: "String"
+        }
+      },
+      leaseStatus: {
+        serializedName: "x-ms-lease-status",
+        type: {
+          name: "String"
+        }
+      },
+      metadata: {
+        serializedName: "x-ms-meta",
+        type: {
+          name: "Dictionary",
+          value: {
+            type: {
+              name: "String"
+            }
+          }
+        },
+        headerCollectionPrefix: "x-ms-meta-"
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const PathDeleteHeaders: msRest.CompositeMapper = {
+  serializedName: "path-delete-headers",
+  type: {
+    name: "Composite",
+    className: "PathDeleteHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      continuation: {
+        serializedName: "x-ms-continuation",
+        type: {
+          name: "String"
+        }
+      },
+      deletionId: {
+        serializedName: "x-ms-deletion-id",
+        type: {
+          name: "String"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const PathSetAccessControlHeaders: msRest.CompositeMapper = {
+  serializedName: "path-setaccesscontrol-headers",
+  type: {
+    name: "Composite",
+    className: "PathSetAccessControlHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const PathSetAccessControlRecursiveHeaders: msRest.CompositeMapper = {
+  serializedName: "path-setaccesscontrolrecursive-headers",
+  type: {
+    name: "Composite",
+    className: "PathSetAccessControlRecursiveHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      continuation: {
+        serializedName: "x-ms-continuation",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const PathFlushDataHeaders: msRest.CompositeMapper = {
+  serializedName: "path-flushdata-headers",
+  type: {
+    name: "Composite",
+    className: "PathFlushDataHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      contentLength: {
+        serializedName: "content-length",
+        type: {
+          name: "Number"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      isServerEncrypted: {
+        serializedName: "x-ms-request-server-encrypted",
+        type: {
+          name: "Boolean"
+        }
+      },
+      encryptionKeySha256: {
+        serializedName: "x-ms-encryption-key-sha256",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const PathAppendDataHeaders: msRest.CompositeMapper = {
+  serializedName: "path-appenddata-headers",
+  type: {
+    name: "Composite",
+    className: "PathAppendDataHeaders",
+    modelProperties: {
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      contentMD5: {
+        serializedName: "content-md5",
+        type: {
+          name: "ByteArray"
+        }
+      },
+      xMsContentCrc64: {
+        serializedName: "x-ms-content-crc64",
+        type: {
+          name: "ByteArray"
+        }
+      },
+      isServerEncrypted: {
+        serializedName: "x-ms-request-server-encrypted",
+        type: {
+          name: "Boolean"
+        }
+      },
+      encryptionKeySha256: {
+        serializedName: "x-ms-encryption-key-sha256",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const PathSetExpiryHeaders: msRest.CompositeMapper = {
+  serializedName: "path-setexpiry-headers",
+  type: {
+    name: "Composite",
+    className: "PathSetExpiryHeaders",
+    modelProperties: {
+      eTag: {
+        serializedName: "etag",
+        type: {
+          name: "String"
+        }
+      },
+      lastModified: {
+        serializedName: "last-modified",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const PathUndeleteHeaders: msRest.CompositeMapper = {
+  serializedName: "path-undelete-headers",
+  type: {
+    name: "Composite",
+    className: "PathUndeleteHeaders",
+    modelProperties: {
+      clientRequestId: {
+        serializedName: "x-ms-client-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      requestId: {
+        serializedName: "x-ms-request-id",
+        type: {
+          name: "String"
+        }
+      },
+      resourceType: {
+        serializedName: "x-ms-resource-type",
+        type: {
+          name: "String"
+        }
+      },
+      version: {
+        serializedName: "x-ms-version",
+        type: {
+          name: "String"
+        }
+      },
+      date: {
+        serializedName: "date",
+        type: {
+          name: "DateTimeRfc1123"
+        }
+      },
+      errorCode: {
+        serializedName: "x-ms-error-code",
+        type: {
+          name: "String"
         }
       }
     }
@@ -3112,272 +4729,6 @@ export const ContainerGetAccountInfoWithHeadHeaders: msRest.CompositeMapper = {
   }
 };
 
-export const DirectoryCreateHeaders: msRest.CompositeMapper = {
-  serializedName: "directory-create-headers",
-  type: {
-    name: "Composite",
-    className: "DirectoryCreateHeaders",
-    modelProperties: {
-      eTag: {
-        serializedName: "etag",
-        type: {
-          name: "String"
-        }
-      },
-      lastModified: {
-        serializedName: "last-modified",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      },
-      clientRequestId: {
-        serializedName: "x-ms-client-request-id",
-        type: {
-          name: "String"
-        }
-      },
-      requestId: {
-        serializedName: "x-ms-request-id",
-        type: {
-          name: "String"
-        }
-      },
-      version: {
-        serializedName: "x-ms-version",
-        type: {
-          name: "String"
-        }
-      },
-      contentLength: {
-        serializedName: "content-length",
-        type: {
-          name: "Number"
-        }
-      },
-      date: {
-        serializedName: "date",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      }
-    }
-  }
-};
-
-export const DirectoryRenameHeaders: msRest.CompositeMapper = {
-  serializedName: "directory-rename-headers",
-  type: {
-    name: "Composite",
-    className: "DirectoryRenameHeaders",
-    modelProperties: {
-      marker: {
-        serializedName: "x-ms-continuation",
-        type: {
-          name: "String"
-        }
-      },
-      eTag: {
-        serializedName: "etag",
-        type: {
-          name: "String"
-        }
-      },
-      lastModified: {
-        serializedName: "last-modified",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      },
-      clientRequestId: {
-        serializedName: "x-ms-client-request-id",
-        type: {
-          name: "String"
-        }
-      },
-      requestId: {
-        serializedName: "x-ms-request-id",
-        type: {
-          name: "String"
-        }
-      },
-      version: {
-        serializedName: "x-ms-version",
-        type: {
-          name: "String"
-        }
-      },
-      contentLength: {
-        serializedName: "content-length",
-        type: {
-          name: "Number"
-        }
-      },
-      date: {
-        serializedName: "date",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      }
-    }
-  }
-};
-
-export const DirectoryDeleteHeaders: msRest.CompositeMapper = {
-  serializedName: "directory-delete-headers",
-  type: {
-    name: "Composite",
-    className: "DirectoryDeleteHeaders",
-    modelProperties: {
-      marker: {
-        serializedName: "x-ms-continuation",
-        type: {
-          name: "String"
-        }
-      },
-      clientRequestId: {
-        serializedName: "x-ms-client-request-id",
-        type: {
-          name: "String"
-        }
-      },
-      requestId: {
-        serializedName: "x-ms-request-id",
-        type: {
-          name: "String"
-        }
-      },
-      version: {
-        serializedName: "x-ms-version",
-        type: {
-          name: "String"
-        }
-      },
-      date: {
-        serializedName: "date",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      }
-    }
-  }
-};
-
-export const DirectorySetAccessControlHeaders: msRest.CompositeMapper = {
-  serializedName: "directory-setaccesscontrol-headers",
-  type: {
-    name: "Composite",
-    className: "DirectorySetAccessControlHeaders",
-    modelProperties: {
-      date: {
-        serializedName: "date",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      },
-      eTag: {
-        serializedName: "etag",
-        type: {
-          name: "String"
-        }
-      },
-      lastModified: {
-        serializedName: "last-modified",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      },
-      requestId: {
-        serializedName: "x-ms-request-id",
-        type: {
-          name: "String"
-        }
-      },
-      version: {
-        serializedName: "x-ms-version",
-        type: {
-          name: "String"
-        }
-      },
-      clientRequestId: {
-        serializedName: "x-ms-client-request-id",
-        type: {
-          name: "String"
-        }
-      }
-    }
-  }
-};
-
-export const DirectoryGetAccessControlHeaders: msRest.CompositeMapper = {
-  serializedName: "directory-getaccesscontrol-headers",
-  type: {
-    name: "Composite",
-    className: "DirectoryGetAccessControlHeaders",
-    modelProperties: {
-      date: {
-        serializedName: "date",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      },
-      eTag: {
-        serializedName: "etag",
-        type: {
-          name: "String"
-        }
-      },
-      lastModified: {
-        serializedName: "last-modified",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      },
-      xMsOwner: {
-        serializedName: "x-ms-owner",
-        type: {
-          name: "String"
-        }
-      },
-      xMsGroup: {
-        serializedName: "x-ms-group",
-        type: {
-          name: "String"
-        }
-      },
-      xMsPermissions: {
-        serializedName: "x-ms-permissions",
-        type: {
-          name: "String"
-        }
-      },
-      xMsAcl: {
-        serializedName: "x-ms-acl",
-        type: {
-          name: "String"
-        }
-      },
-      requestId: {
-        serializedName: "x-ms-request-id",
-        type: {
-          name: "String"
-        }
-      },
-      version: {
-        serializedName: "x-ms-version",
-        type: {
-          name: "String"
-        }
-      },
-      clientRequestId: {
-        serializedName: "x-ms-client-request-id",
-        type: {
-          name: "String"
-        }
-      }
-    }
-  }
-};
-
 export const BlobDownloadHeaders: msRest.CompositeMapper = {
   serializedName: "blob-download-headers",
   type: {
@@ -3888,46 +5239,6 @@ export const BlobGetPropertiesHeaders: msRest.CompositeMapper = {
   }
 };
 
-export const BlobDeleteHeaders: msRest.CompositeMapper = {
-  serializedName: "blob-delete-headers",
-  type: {
-    name: "Composite",
-    className: "BlobDeleteHeaders",
-    modelProperties: {
-      clientRequestId: {
-        serializedName: "x-ms-client-request-id",
-        type: {
-          name: "String"
-        }
-      },
-      requestId: {
-        serializedName: "x-ms-request-id",
-        type: {
-          name: "String"
-        }
-      },
-      version: {
-        serializedName: "x-ms-version",
-        type: {
-          name: "String"
-        }
-      },
-      date: {
-        serializedName: "date",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      },
-      errorCode: {
-        serializedName: "x-ms-error-code",
-        type: {
-          name: "String"
-        }
-      }
-    }
-  }
-};
-
 export const BlobSetAccessControlHeaders: msRest.CompositeMapper = {
   serializedName: "blob-setaccesscontrol-headers",
   type: {
@@ -3968,128 +5279,6 @@ export const BlobSetAccessControlHeaders: msRest.CompositeMapper = {
         serializedName: "x-ms-client-request-id",
         type: {
           name: "String"
-        }
-      }
-    }
-  }
-};
-
-export const BlobGetAccessControlHeaders: msRest.CompositeMapper = {
-  serializedName: "blob-getaccesscontrol-headers",
-  type: {
-    name: "Composite",
-    className: "BlobGetAccessControlHeaders",
-    modelProperties: {
-      date: {
-        serializedName: "date",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      },
-      eTag: {
-        serializedName: "etag",
-        type: {
-          name: "String"
-        }
-      },
-      lastModified: {
-        serializedName: "last-modified",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      },
-      xMsOwner: {
-        serializedName: "x-ms-owner",
-        type: {
-          name: "String"
-        }
-      },
-      xMsGroup: {
-        serializedName: "x-ms-group",
-        type: {
-          name: "String"
-        }
-      },
-      xMsPermissions: {
-        serializedName: "x-ms-permissions",
-        type: {
-          name: "String"
-        }
-      },
-      xMsAcl: {
-        serializedName: "x-ms-acl",
-        type: {
-          name: "String"
-        }
-      },
-      requestId: {
-        serializedName: "x-ms-request-id",
-        type: {
-          name: "String"
-        }
-      },
-      version: {
-        serializedName: "x-ms-version",
-        type: {
-          name: "String"
-        }
-      },
-      clientRequestId: {
-        serializedName: "x-ms-client-request-id",
-        type: {
-          name: "String"
-        }
-      }
-    }
-  }
-};
-
-export const BlobRenameHeaders: msRest.CompositeMapper = {
-  serializedName: "blob-rename-headers",
-  type: {
-    name: "Composite",
-    className: "BlobRenameHeaders",
-    modelProperties: {
-      eTag: {
-        serializedName: "etag",
-        type: {
-          name: "String"
-        }
-      },
-      lastModified: {
-        serializedName: "last-modified",
-        type: {
-          name: "DateTimeRfc1123"
-        }
-      },
-      clientRequestId: {
-        serializedName: "x-ms-client-request-id",
-        type: {
-          name: "String"
-        }
-      },
-      requestId: {
-        serializedName: "x-ms-request-id",
-        type: {
-          name: "String"
-        }
-      },
-      version: {
-        serializedName: "x-ms-version",
-        type: {
-          name: "String"
-        }
-      },
-      contentLength: {
-        serializedName: "content-length",
-        type: {
-          name: "Number"
-        }
-      },
-      date: {
-        serializedName: "date",
-        type: {
-          name: "DateTimeRfc1123"
         }
       }
     }

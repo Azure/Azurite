@@ -762,4 +762,26 @@ export default class StorageErrorFactory {
       { ReceivedCopyStatus: copyStatus }
     );
   }
+
+  public static getDirectoryNotEmpty(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      409,
+      "DirectoryNotEmpty",
+      'The recursive query parameter value must be true to delete a non-empty directory',
+      contextID
+    );
+  }
+
+  public static getPathConflict(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      409,
+      "PathConflict",
+      'The specified path, or an element of the path, exists and its resource type is invalid for this operation.',
+      contextID
+    );
+  }
 }

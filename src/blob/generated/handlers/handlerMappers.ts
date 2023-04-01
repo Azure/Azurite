@@ -10,6 +10,13 @@ export interface IHandlerPath {
 
 const operationHandlerMapping: {[key: number]: IHandlerPath} = {};
 
+operationHandlerMapping[Operation.Service_ListFileSystems] = {
+  arguments: [
+    "options"
+  ],
+  handler: "serviceHandler",
+  method: "listFileSystems"
+};
 operationHandlerMapping[Operation.Service_SetProperties] = {
   arguments: [
     "storageServiceProperties",
@@ -66,6 +73,140 @@ operationHandlerMapping[Operation.Service_SubmitBatch] = {
   ],
   handler: "serviceHandler",
   method: "submitBatch"
+};
+operationHandlerMapping[Operation.FileSystem_Create] = {
+  arguments: [
+    "options"
+  ],
+  handler: "fileSystemOperationsHandler",
+  method: "create"
+};
+operationHandlerMapping[Operation.FileSystem_SetProperties] = {
+  arguments: [
+    "options"
+  ],
+  handler: "fileSystemOperationsHandler",
+  method: "setProperties"
+};
+operationHandlerMapping[Operation.FileSystem_GetProperties] = {
+  arguments: [
+    "options"
+  ],
+  handler: "fileSystemOperationsHandler",
+  method: "getProperties"
+};
+operationHandlerMapping[Operation.FileSystem_Delete] = {
+  arguments: [
+    "options"
+  ],
+  handler: "fileSystemOperationsHandler",
+  method: "delete"
+};
+operationHandlerMapping[Operation.FileSystem_ListPaths] = {
+  arguments: [
+    "recursive",
+    "options"
+  ],
+  handler: "fileSystemOperationsHandler",
+  method: "listPaths"
+};
+operationHandlerMapping[Operation.FileSystem_ListBlobHierarchySegment] = {
+  arguments: [
+    "options"
+  ],
+  handler: "fileSystemOperationsHandler",
+  method: "listBlobHierarchySegment"
+};
+operationHandlerMapping[Operation.Path_Create] = {
+  arguments: [
+    "options"
+  ],
+  handler: "pathOperationsHandler",
+  method: "create"
+};
+operationHandlerMapping[Operation.Path_Update] = {
+  arguments: [
+    "action",
+    "mode",
+    "body",
+    "options"
+  ],
+  handler: "pathOperationsHandler",
+  method: "update"
+};
+operationHandlerMapping[Operation.Path_Lease] = {
+  arguments: [
+    "xMsLeaseAction",
+    "options"
+  ],
+  handler: "pathOperationsHandler",
+  method: "lease"
+};
+operationHandlerMapping[Operation.Path_Read] = {
+  arguments: [
+    "options"
+  ],
+  handler: "pathOperationsHandler",
+  method: "read"
+};
+operationHandlerMapping[Operation.Path_GetProperties] = {
+  arguments: [
+    "options"
+  ],
+  handler: "pathOperationsHandler",
+  method: "getProperties"
+};
+operationHandlerMapping[Operation.Path_Delete] = {
+  arguments: [
+    "options"
+  ],
+  handler: "pathOperationsHandler",
+  method: "delete"
+};
+operationHandlerMapping[Operation.Path_SetAccessControl] = {
+  arguments: [
+    "options"
+  ],
+  handler: "pathOperationsHandler",
+  method: "setAccessControl"
+};
+operationHandlerMapping[Operation.Path_SetAccessControlRecursive] = {
+  arguments: [
+    "mode",
+    "options"
+  ],
+  handler: "pathOperationsHandler",
+  method: "setAccessControlRecursive"
+};
+operationHandlerMapping[Operation.Path_FlushData] = {
+  arguments: [
+    "options"
+  ],
+  handler: "pathOperationsHandler",
+  method: "flushData"
+};
+operationHandlerMapping[Operation.Path_AppendData] = {
+  arguments: [
+    "body",
+    "options"
+  ],
+  handler: "pathOperationsHandler",
+  method: "appendData"
+};
+operationHandlerMapping[Operation.Path_SetExpiry] = {
+  arguments: [
+    "expiryOptions",
+    "options"
+  ],
+  handler: "pathOperationsHandler",
+  method: "setExpiry"
+};
+operationHandlerMapping[Operation.Path_Undelete] = {
+  arguments: [
+    "options"
+  ],
+  handler: "pathOperationsHandler",
+  method: "undelete"
 };
 operationHandlerMapping[Operation.Container_Create] = {
   arguments: [
@@ -191,43 +332,6 @@ operationHandlerMapping[Operation.Container_GetAccountInfoWithHead] = {
   handler: "containerHandler",
   method: "getAccountInfoWithHead"
 };
-operationHandlerMapping[Operation.Directory_Create] = {
-  arguments: [
-    "options"
-  ],
-  handler: "directoryHandler",
-  method: "create"
-};
-operationHandlerMapping[Operation.Directory_Rename] = {
-  arguments: [
-    "renameSource",
-    "options"
-  ],
-  handler: "directoryHandler",
-  method: "rename"
-};
-operationHandlerMapping[Operation.Directory_Delete] = {
-  arguments: [
-    "recursiveDirectoryDelete",
-    "options"
-  ],
-  handler: "directoryHandler",
-  method: "delete"
-};
-operationHandlerMapping[Operation.Directory_SetAccessControl] = {
-  arguments: [
-    "options"
-  ],
-  handler: "directoryHandler",
-  method: "setAccessControl"
-};
-operationHandlerMapping[Operation.Directory_GetAccessControl] = {
-  arguments: [
-    "options"
-  ],
-  handler: "directoryHandler",
-  method: "getAccessControl"
-};
 operationHandlerMapping[Operation.Blob_Download] = {
   arguments: [
     "options"
@@ -242,34 +346,12 @@ operationHandlerMapping[Operation.Blob_GetProperties] = {
   handler: "blobHandler",
   method: "getProperties"
 };
-operationHandlerMapping[Operation.Blob_Delete] = {
-  arguments: [
-    "options"
-  ],
-  handler: "blobHandler",
-  method: "delete"
-};
 operationHandlerMapping[Operation.Blob_SetAccessControl] = {
   arguments: [
     "options"
   ],
   handler: "blobHandler",
   method: "setAccessControl"
-};
-operationHandlerMapping[Operation.Blob_GetAccessControl] = {
-  arguments: [
-    "options"
-  ],
-  handler: "blobHandler",
-  method: "getAccessControl"
-};
-operationHandlerMapping[Operation.Blob_Rename] = {
-  arguments: [
-    "renameSource",
-    "options"
-  ],
-  handler: "blobHandler",
-  method: "rename"
 };
 operationHandlerMapping[Operation.Blob_Undelete] = {
   arguments: [

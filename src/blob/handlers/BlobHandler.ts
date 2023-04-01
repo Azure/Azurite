@@ -17,7 +17,8 @@ import ILogger from "../generated/utils/ILogger";
 import { parseXML } from "../generated/utils/xml";
 import { extractStoragePartsFromPath } from "../middlewares/blobStorageContext.middleware";
 import IBlobMetadataStore, {
-  BlobModel
+  BlobModel,
+  GetBlobPropertiesRes
 } from "../persistence/IBlobMetadataStore";
 import {
   BLOB_API_VERSION,
@@ -55,21 +56,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobSetAccessControlOptionalParams,
     context: Context
   ): Promise<Models.BlobSetAccessControlResponse> {
-    throw new NotImplementedError(context.contextId);
-  }
-
-  public getAccessControl(
-    options: Models.BlobGetAccessControlOptionalParams,
-    context: Context
-  ): Promise<Models.BlobGetAccessControlResponse> {
-    throw new NotImplementedError(context.contextId);
-  }
-
-  public rename(
-    renameSource: string,
-    options: Models.BlobRenameOptionalParams,
-    context: Context
-  ): Promise<Models.BlobRenameResponse> {
     throw new NotImplementedError(context.contextId);
   }
 
@@ -127,15 +113,29 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const account = blobCtx.account!;
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
-    const res = await this.metadataStore.getBlobProperties(
-      context,
-      account,
-      container,
-      blob,
-      options.snapshot,
-      options.leaseAccessConditions,
-      options.modifiedAccessConditions
-    );
+
+    let res;
+    let isDir;
+    try {
+      res = await this.metadataStore.getBlobProperties(
+        context,
+        account,
+        container,
+        blob,
+        options.snapshot,
+        options.leaseAccessConditions,
+        options.modifiedAccessConditions
+      );
+      isDir = false;
+    } catch (err) {
+      res = await this.metadataStore.getDirectory(
+        context,
+        account,
+        container,
+        blob
+      );
+      isDir = true;
+    }
 
     // TODO: Create get metadata specific request in swagger
     const againstMetadata = context.request!.getQuery("comp") === "metadata";
@@ -143,7 +143,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const response: Models.BlobGetPropertiesResponse = againstMetadata
       ? {
           statusCode: 200,
-          metadata: res.metadata,
           eTag: res.properties.etag,
           requestId: context.contextId,
           version: BLOB_API_VERSION,
@@ -154,17 +153,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
         }
       : {
           statusCode: 200,
-          metadata: res.metadata,
           isIncrementalCopy: res.properties.incrementalCopy,
           eTag: res.properties.etag,
           requestId: context.contextId,
           version: BLOB_API_VERSION,
           date: context.startTime,
           acceptRanges: "bytes",
-          blobCommittedBlockCount:
-            res.properties.blobType === Models.BlobType.AppendBlob
-              ? res.blobCommittedBlockCount
-              : undefined,
           isServerEncrypted: true,
           clientRequestId: options.requestId,
           ...res.properties,
@@ -175,41 +169,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           contentType: context.request!.getQuery("rsct") ?? res.properties.contentType,
         };
 
-    return response;
-  }
-
-  /**
-   * Delete blob or snapshots.
-   *
-   * @param {Models.BlobDeleteMethodOptionalParams} options
-   * @param {Context} context
-   * @returns {Promise<Models.BlobDeleteResponse>}
-   * @memberof BlobHandler
-   */
-  public async delete(
-    options: Models.BlobDeleteMethodOptionalParams,
-    context: Context
-  ): Promise<Models.BlobDeleteResponse> {
-    const blobCtx = new BlobStorageContext(context);
-    const account = blobCtx.account!;
-    const container = blobCtx.container!;
-    const blob = blobCtx.blob!;
-    await this.metadataStore.deleteBlob(
-      context,
-      account,
-      container,
-      blob,
-      options
-    );
-
-    const response: Models.BlobDeleteResponse = {
-      statusCode: 202,
-      requestId: context.contextId,
-      date: context.startTime,
-      version: BLOB_API_VERSION,
-      clientRequestId: options.requestId
-    };
-
+    if (!isDir) {
+      const castedRes = res as GetBlobPropertiesRes;
+      response.metadata = castedRes.metadata;
+      // response.resourceType = "file";
+      response.blobCommittedBlockCount =
+        res.properties.blobType === Models.BlobType.AppendBlob
+          ? castedRes.blobCommittedBlockCount
+          : undefined;
+    } else {
+      // response.resourceType = "directory";
+      response.metadata = { hdi_isfolder: "true" };
+    }
     return response;
   }
 

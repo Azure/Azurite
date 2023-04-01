@@ -37,7 +37,8 @@ import { ILease } from "../lease/ILeaseState";
 import LeaseFactory from "../lease/LeaseFactory";
 import {
   DEFAULT_LIST_BLOBS_MAX_RESULTS,
-  DEFAULT_LIST_CONTAINERS_MAX_RESULTS
+  DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
+  MAX_APPEND_BLOB_BLOCK_COUNT
 } from "../utils/constants";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
 import IBlobMetadataStore, {
@@ -53,6 +54,7 @@ import IBlobMetadataStore, {
   ChangeContainerLeaseResponse,
   ContainerModel,
   CreateSnapshotResponse,
+  DirectoryModel,
   GetBlobPropertiesRes,
   GetContainerAccessPolicyResponse,
   GetContainerPropertiesResponse,
@@ -67,10 +69,12 @@ import IBlobMetadataStore, {
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
+import os from "os";
 
 // tslint:disable: max-classes-per-file
 class ServicesModel extends Model {}
 class ContainersModel extends Model {}
+class DirectoriesModel extends Model {}
 class BlobsModel extends Model {}
 class BlocksModel extends Model {}
 // class PagesModel extends Model {}
@@ -210,6 +214,70 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         charset: DEFAULT_SQL_CHARSET,
         collate: DEFAULT_SQL_COLLATE,
         timestamps: false
+      }
+    );
+
+    DirectoriesModel.init(
+      {
+        accountName: {
+          type: "VARCHAR(64)",
+          allowNull: false
+        },
+        containerName: {
+          type: "VARCHAR(255)",
+          allowNull: false
+        },
+        directoryName: {
+          type: "VARCHAR(255)",
+          allowNull: false
+        },
+        directoryId: {
+          type: INTEGER.UNSIGNED,
+          primaryKey: true,
+          autoIncrement: true
+        },
+        lastModified: {
+          allowNull: false,
+          type: DATE(6)
+        },
+        creationTime: {
+          allowNull: false,
+          type: DATE(6)
+        },
+        etag: {
+          allowNull: false,
+          type: "VARCHAR(127)"
+        },
+        lease: {
+          type: "VARCHAR(1023)"
+        },
+        isCommitted: {
+          type: BOOLEAN,
+          allowNull: false
+        },
+        metadata: {
+          type: "VARCHAR(2047)"
+        }
+      },
+      {
+        sequelize: this.sequelize,
+        modelName: "Directories",
+        tableName: "Directories",
+        timestamps: false,
+        charset: DEFAULT_SQL_CHARSET,
+        collate: DEFAULT_SQL_COLLATE,
+        indexes: [
+          {
+            // name: 'title_index',
+            // using: 'BTREE',
+            unique: true,
+            fields: [
+              "accountName",
+              "containerName",
+              "directoryName",
+            ]
+          }
+        ]
       }
     );
 
@@ -1235,6 +1303,23 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     includeSnapshots?: boolean,
     includeUncommittedBlobs?: boolean
   ): Promise<[BlobModel[], BlobPrefixModel[], any | undefined]> {
+    return await this.list(false, context, account, container, delimiter, blob, prefix,
+       maxResults, marker, includeSnapshots, includeUncommittedBlobs);
+  }
+
+  public async list(
+    listDirectories: boolean,
+    context: Context,
+    account: string,
+    container: string,
+    delimiter?: string,
+    blob?: string,
+    prefix: string = "",
+    maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
+    marker?: string,
+    includeSnapshots?: boolean,
+    includeUncommittedBlobs?: boolean
+  ): Promise<[BlobModel[] | DirectoryModel[], BlobPrefixModel[], any | undefined]> {
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -1243,52 +1328,61 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         containerName: container
       };
 
+      const name = listDirectories ? "directoryName" : "blobName";
       if (blob !== undefined) {
-        whereQuery.blobName = blob;
+        whereQuery[name] = blob;
       } else {
         if (prefix.length > 0) {
-          whereQuery.blobName = {
+          whereQuery[name] = {
             [Op.like]: `${prefix}%`
           };
         }
 
         if (marker !== undefined) {
-          if (whereQuery.blobName !== undefined) {
-            whereQuery.blobName[Op.gt] = marker;
+          if (whereQuery[name] !== undefined) {
+            whereQuery[name][Op.gt] = marker;
           } else {
-            whereQuery.blobName = {
+            whereQuery[name] = {
               [Op.gt]: marker
             };
           }
         }
       }
-      if (!includeSnapshots) {
-        whereQuery.snapshot = "";
+      if (!listDirectories) {
+        if (!includeSnapshots) {
+          whereQuery.snapshot = "";
+        }
+        if (!includeUncommittedBlobs) {
+          whereQuery.isCommitted = true;
+        }
+        whereQuery.deleting = 0;
       }
-      if (!includeUncommittedBlobs) {
-        whereQuery.isCommitted = true;
-      }
-      whereQuery.deleting = 0;
 
-      const leaseUpdateMapper = (model: BlobsModel) => {
-        const blobModel = this.convertDbModelToBlobModel(model);
+      const leaseUpdateMapper = (dbModel: BlobsModel | DirectoriesModel) => {
+        const model = dbModel instanceof BlobsModel ?
+          this.convertDbModelToBlobModel(dbModel) :
+          this.convertDbModelToDirectoryModel(dbModel);
+
         return LeaseFactory.createLeaseState(
-          new BlobLeaseAdapter(blobModel),
+          new BlobLeaseAdapter(model),
           context
-        ).sync(new BlobLeaseSyncer(blobModel));
+        ).sync(new BlobLeaseSyncer(model));
       };
 
       // fill the page by possibly querying multiple times
-      const page = new PageWithDelimiter<BlobsModel>(maxResults, delimiter, prefix);
+      const page = listDirectories ? 
+      new PageWithDelimiter<DirectoriesModel>(maxResults, delimiter, prefix):
+       new PageWithDelimiter<BlobsModel>(maxResults, delimiter, prefix);
 
-      const nameItem = (item: BlobsModel): string => {
-        return this.getModelValue<string>(item, "blobName", true);
+      const nameItem = (item: BlobsModel | DirectoriesModel): string => {
+        return this.getModelValue<string>(item, name, true);
       };
 
-      const readPage = async (off: number): Promise<BlobsModel[]> => {
-        return await BlobsModel.findAll({
+      const readPage = async (off: number): Promise<BlobsModel[] | DirectoriesModel[]> => {
+        const Model = listDirectories ? DirectoriesModel : BlobsModel;
+        return await Model.findAll({
           where: whereQuery as any,
-          order: [["blobName", "ASC"]],
+          order: [[name, "ASC"]],
           transaction: t,
           limit: maxResults,
           offset: off
@@ -1341,6 +1435,313 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         nextMarker
       ];
     }
+  }
+
+  public async createDirectory(context: Context, 
+    directory: DirectoryModel, 
+    leaseAccessConditions?: Models.LeaseAccessConditions, 
+    modifiedAccessConditions?: Models.ModifiedAccessConditions): Promise<void> {
+    return this.sequelize.transaction(async (t) => {
+      await this.assertContainerExists(
+        context,
+        directory.accountName,
+        directory.containerName,
+        t
+      );
+
+      const directoryFindResult = await DirectoriesModel.findOne({
+        where: {
+          accountName: directory.accountName,
+          containerName: directory.containerName,
+          directoryName: directory.name,
+          isCommitted: true
+        },
+        transaction: t
+      });
+
+      validateWriteConditions(
+        context,
+        modifiedAccessConditions,
+        directoryFindResult
+          ? this.convertDbModelToDirectoryModel(directoryFindResult)
+          : undefined
+      );
+
+      // Create if not exists
+      if (
+        modifiedAccessConditions &&
+        modifiedAccessConditions.ifNoneMatch === "*" &&
+        directoryFindResult
+      ) {
+        throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+      }
+
+      await DirectoriesModel.upsert(this.convertDirectoryModelToDbModel(directory), {
+        transaction: t
+      });
+    });
+  }
+
+  /**
+   * Rename Directory
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} sourceContainer
+   * @param {string} sourceDirectory
+   * @param {string} targetContainer
+   * @param {string} targetDirectory
+   * @param {Models.DirectoryRenameOptionalParams} options
+   * @returns {Promise<DirectoryModel>}
+   * @memberof IBlobMetadataStore
+   */
+  async renameDirectory(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourceDirectory: string,
+    targetContainer: string,
+    targetDirectory: string,
+    options: Models.PathCreateOptionalParams
+  ): Promise<DirectoryModel> {
+
+    let targetExists = true;
+    try {
+      await this.getDirectory(context, account, targetContainer, targetDirectory);
+    } catch(err) {
+      targetExists = false;
+    }
+
+    if (
+      options.modifiedAccessConditions &&
+      options.modifiedAccessConditions.ifNoneMatch === "*" &&
+      targetExists
+    ) {
+      throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+    }
+
+    const paths: Models.Path[] = await this.listPaths(context, account, sourceContainer, sourceDirectory, true, options);
+
+    paths.forEach(async path => {
+      await this.rename(path.isDirectory!, context, account, sourceContainer, path.name!, targetContainer, 
+        path.name!.replace(sourceDirectory, targetDirectory), options);
+    });
+
+    await this.rename(true, context, account, sourceContainer, sourceDirectory, targetContainer, targetDirectory, options);
+    return await this.getDirectory(context, account, targetContainer, targetDirectory);
+  }
+
+  /**
+   * List paths in Directory
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} directory
+   * @param {boolean} recursive
+   * @param {Models.FileSystemListPathsOptionalParams} options
+   * @returns {Promise<void>}
+   * @memberof IBlobMetadataStore
+   */
+  async listPaths(
+    context: Context,
+    account: string,
+    container: string,
+    directory: string,
+    recursive: boolean,
+    options: Models.FileSystemListPathsOptionalParams
+  ):Promise<Models.Path[]> {
+    const paths: Models.Path[] = [];
+    const userName = os.userInfo().username;
+
+    
+    directory = this.removeSlash(directory);
+    await this.getDirectory(context, account, container, directory);
+    const [blobs,,] = await this.list(false, context, account, container, 
+      recursive ? undefined : "/", 
+      undefined, directory + "/", 
+      options.maxResults, options.marker);
+    blobs.forEach(blob => {
+      paths.push({
+        name: blob.name,
+          isDirectory: false,
+          lastModified: this.dateToString(blob.properties.lastModified),
+          // eTag: blob.properties.etag,
+          contentLength: blob.properties.contentLength,
+          // creationTime: this.dateToString(blob.properties.creationTime),
+          owner: userName
+      })
+    });
+
+    const [directories,,] = await this.list(true, context, account, container, 
+      recursive ? undefined : "/", 
+      undefined, directory + "/", 
+      options.maxResults, options.marker);
+    directories.forEach(directory => {
+      paths.push({
+        name: directory.name,
+          isDirectory: true,
+          lastModified: this.dateToString(directory.properties.lastModified),
+          // eTag: blob.properties.etag,
+          contentLength: directory.properties.contentLength,
+          // creationTime: this.dateToString(blob.properties.creationTime),
+          owner: userName
+      })
+    });
+
+    return paths;
+  }
+
+  private dateToString(date: any): string | undefined {
+    return date === undefined
+      ? undefined
+      : date instanceof Date
+      ? date.toUTCString()
+      : new Date(date).toUTCString();
+  }
+
+    /**
+   * Delete Directory
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} directory
+   * @param {boolean} recursiveDirectoryDelete
+   * @param {Models.DirectoryDeleteMethodOptionalParams} options
+   * @returns {Promise<void>}
+   * @memberof IBlobMetadataStore
+   */
+  public async deleteDirectory(
+    context: Context,
+    account: string,
+    container: string,
+    directory: string,
+    recursiveDirectoryDelete: boolean,
+    options: Models.FileSystemDeleteMethodOptionalParams
+  ): Promise<void> {
+    const respone = await this.sequelize.transaction(async (t) => {
+      directory = this.removeSlash(directory);
+      await this.assertContainerExists(context, account, container, t);
+
+      const directoryFindResult = await DirectoriesModel.findOne({
+        where: {
+          accountName: account,
+          containerName: container,
+          directoryName: directory
+        },
+        transaction: t
+      });
+
+      validateWriteConditions(
+        context,
+        options.modifiedAccessConditions,
+        directoryFindResult
+          ? this.convertDbModelToDirectoryModel(directoryFindResult) // TODO: Reduce double convert
+          : undefined
+      );
+
+      if (directoryFindResult === null || directoryFindResult === undefined) {
+        return false;
+      }
+
+      const [blobs,] = await this.listBlobs(
+        context, 
+        account, 
+        container, 
+        undefined, 
+        undefined, 
+        directory, 
+        DEFAULT_LIST_BLOBS_MAX_RESULTS, 
+        undefined, 
+        true, 
+        true);
+
+      if (blobs.length > 0 && !recursiveDirectoryDelete) {
+        return false;
+      } else {
+        const options: Models.PathDeleteMethodOptionalParams = {};
+        for (const blob of blobs) {
+          await this.deleteBlob(context, account, container, blob.name, options);
+        }
+      }
+  
+      const where: any = {
+        accountName: account,
+        containerName: container,
+        directoryName: { [Op.like]: `${directory}%` }
+      };
+
+      const dirs = await DirectoriesModel.findAll({
+        where,
+        transaction: t
+      });
+
+      if (!recursiveDirectoryDelete && dirs.length > 1) {
+        throw StorageErrorFactory.getDirectoryNotEmpty(context.contextId!);
+      }
+      
+      await DirectoriesModel.destroy({
+        where,
+        transaction: t
+      });
+
+      return true;
+    });
+
+    if (!respone) throw StorageErrorFactory.getBlobNotFound(context.contextId);
+  }
+
+    /**
+   * Gets a Directory item from persistency layer by container name and directory name.
+   *
+   * @param {string} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} directory
+   * @returns {(Promise<DirectoryModel>)}
+   * @memberof LokiBlobMetadataStore
+   */
+    public async getDirectory(
+      context: Context,
+      account: string,
+      container: string,
+      directory: string,
+    ): Promise<DirectoryModel> {
+      directory = this.removeSlash(directory);
+      const response = await this.sequelize.transaction(async (t) => {
+        await this.assertContainerExists(
+          context,
+          account,
+          container,
+          t
+        );
+  
+        const directoryFindResult = await DirectoriesModel.findOne({
+          where: {
+            accountName: account,
+            containerName: container,
+            directoryName: directory,
+          },
+          transaction: t
+        });
+
+        if (!directoryFindResult) return undefined;
+        return this.convertDbModelToDirectoryModel(directoryFindResult);
+    });
+
+    if (response === undefined) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }
+
+    return response;
+    
+  }
+
+  private removeSlash(path: string): string {
+    if (!path.endsWith("/")) return path;
+
+    return path.substring(0, path.length - 1);
   }
 
   public async stageBlock(
@@ -1734,10 +2135,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
-  public undeleteBlob(): Promise<void> {
-    throw new Error("Method not implemented.");
-  }
-
   public async createSnapshot(
     context: Context,
     account: string,
@@ -1811,12 +2208,119 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
+  /**
+   * Rename Blob
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} sourceContainer
+   * @param {string} sourceBlob
+   * @param {string} targetContainer
+   * @param {string} targetBlob
+   * @param {Models.PathCreateOptionalParams} options
+   * @returns {Promise<BlobModel>}
+   * @memberof IBlobMetadataStore
+   */
+  async renameBlob(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourceBlob: string,
+    targetContainer: string,
+    targetBlob: string,
+    options: Models.PathCreateOptionalParams
+  ): Promise<BlobModel> {
+    return await this.rename(false, context, account, sourceContainer, sourceBlob, targetContainer, targetBlob, options);
+  }
+
+  private async rename(
+    isDirectory: boolean,
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourceBlob: string,
+    targetContainer: string,
+    targetBlob: string,
+    options: Models.PathCreateOptionalParams
+  ): Promise<BlobModel | DirectoryModel> {
+    return await this.sequelize.transaction(async (t) => {
+      await this.assertContainerExists(context, account, sourceContainer, t);
+      await this.assertContainerExists(context, account, targetContainer, t);
+
+      const name = isDirectory ? "directoryName" : "blobName" ;
+      const ModelClass = isDirectory ? DirectoriesModel : BlobsModel;
+      const target = await ModelClass.findOne({
+        where: {
+          accountName: account,
+          containerName: targetContainer,
+          [name]: targetBlob
+        },
+        transaction: t
+      });
+
+      if (target) {
+        const targetDoc = isDirectory ? 
+        this.convertDbModelToDirectoryModel(target) : 
+        this.convertDbModelToBlobModel(target);
+        validateWriteConditions(context, options.modifiedAccessConditions, targetDoc);
+      }
+
+      if (
+        options.modifiedAccessConditions &&
+        options.modifiedAccessConditions.ifNoneMatch === "*" &&
+        target
+      ) {
+        throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+      }
+
+      if (target) {
+        await ModelClass.destroy({
+          where : {
+              accountName: account,
+              containerName: targetContainer,
+              [name]: targetBlob
+          }
+        });
+      }
+
+      const func = isDirectory ? this.getDirectory : this.downloadBlob
+      const model = await func.apply(this, [
+        context,
+        account,
+        sourceContainer,
+        sourceBlob
+      ]);
+
+      model.containerName = targetContainer;
+      model.name = targetBlob;
+
+      const dbModel = isDirectory ? 
+        this.convertDirectoryModelToDbModel(model as DirectoryModel) : 
+        this.convertBlobModelToDbModel(model);
+
+      await ModelClass.upsert(dbModel, {
+        transaction: t
+      });
+
+      await ModelClass.destroy({
+        where: {
+          accountName: account,
+          containerName: sourceContainer,
+          [name]: sourceBlob
+        },
+        transaction: t
+      });
+
+      return model;
+    });
+  }
+
   public async deleteBlob(
     context: Context,
     account: string,
     container: string,
     blob: string,
-    options: Models.BlobDeleteMethodOptionalParams
+    options: Models.PathDeleteMethodOptionalParams
   ): Promise<void> {
     await this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
@@ -1826,8 +2330,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           accountName: account,
           containerName: container,
           blobName: blob,
-          snapshot: options.snapshot === undefined ? "" : options.snapshot,
-          deleting: 0,
           isCommitted: true // TODO: Support deleting uncommitted block blob
         },
         transaction: t
@@ -1847,140 +2349,19 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
       const blobModel = this.convertDbModelToBlobModel(blobFindResult);
 
-      const againstBaseBlob = blobModel.snapshot === "";
-
-      if (againstBaseBlob) {
-        LeaseFactory.createLeaseState(
-          new BlobLeaseAdapter(blobModel),
-          context
-        ).validate(new BlobWriteLeaseValidator(options.leaseAccessConditions));
-      }
-
-      // Check bad requests
-      if (!againstBaseBlob && options.deleteSnapshots !== undefined) {
-        throw StorageErrorFactory.getInvalidOperation(
-          context.contextId,
-          "Invalid operation against a blob snapshot."
-        );
-      }
-
-      // Scenario: Delete base blob only
-      if (againstBaseBlob && options.deleteSnapshots === undefined) {
-        const count = await BlobsModel.count({
-          where: {
-            accountName: account,
-            containerName: container,
-            blobName: blob,
-            deleting: 0
-          },
-          transaction: t
-        });
-
-        if (count > 1) {
-          throw StorageErrorFactory.getSnapshotsPresent(context.contextId!);
-        } else {
-          await BlobsModel.update(
-            {
-              deleting: literal("deleting + 1")
-            },
-            {
-              where: {
-                accountName: account,
-                containerName: container,
-                blobName: blob
-              },
-              transaction: t
-            }
-          );
-
-          await BlocksModel.update(
-            {
-              deleting: literal("deleting + 1")
-            },
-            {
-              where: {
-                accountName: account,
-                containerName: container,
-                blobName: blob
-              },
-              transaction: t
-            }
-          );
-        }
-      }
-
-      // Scenario: Delete one snapshot only
-      if (!againstBaseBlob) {
-        await BlobsModel.update(
-          {
-            deleting: literal("deleting + 1")
-          },
-          {
-            where: {
-              accountName: account,
-              containerName: container,
-              blobName: blob,
-              snapshot: blobModel.snapshot
-            },
-            transaction: t
-          }
-        );
-      }
+      LeaseFactory.createLeaseState(
+        new BlobLeaseAdapter(blobModel),
+        context
+      ).validate(new BlobWriteLeaseValidator(options.leaseAccessConditions));
 
       // Scenario: Delete base blob and snapshots
-      if (
-        againstBaseBlob &&
-        options.deleteSnapshots === Models.DeleteSnapshotsOptionType.Include
-      ) {
-        await BlobsModel.update(
-          {
-            deleting: literal("deleting + 1")
-          },
-          {
-            where: {
+        await BlobsModel.destroy({
+          where : {
               accountName: account,
               containerName: container,
               blobName: blob
-            },
-            transaction: t
           }
-        );
-
-        await BlocksModel.update(
-          {
-            deleting: literal("deleting + 1")
-          },
-          {
-            where: {
-              accountName: account,
-              containerName: container,
-              blobName: blob
-            },
-            transaction: t
-          }
-        );
-      }
-
-      // Scenario: Delete all snapshots only
-      if (
-        againstBaseBlob &&
-        options.deleteSnapshots === Models.DeleteSnapshotsOptionType.Only
-      ) {
-        await BlobsModel.update(
-          {
-            deleting: literal("deleting + 1")
-          },
-          {
-            where: {
-              accountName: account,
-              containerName: container,
-              blobName: blob,
-              snapshot: { [Op.gt]: "" }
-            },
-            transaction: t
-          }
-        );
-      }
+        });
     });
   }
 
@@ -2512,7 +2893,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
             options.sourceModifiedAccessConditions.sourceIfModifiedSince,
           ifUnmodifiedSince:
             options.sourceModifiedAccessConditions.sourceIfUnmodifiedSince,
-          ifMatch: options.sourceModifiedAccessConditions.sourceIfMatches,
+          ifMatch: options.sourceModifiedAccessConditions.sourceIfMatch,
           ifNoneMatch: options.sourceModifiedAccessConditions.sourceIfNoneMatch
         },
         sourceBlob
@@ -2814,16 +3195,80 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new Error("Method not implemented.");
   }
 
-  public appendBlock(
+  public async appendBlock(
     context: Context,
     block: BlockModel,
-    leaseAccessConditions?: Models.LeaseAccessConditions | undefined,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions | undefined,
-    appendPositionAccessConditions?:
-      | Models.AppendPositionAccessConditions
-      | undefined
+    leaseAccessConditions: Models.LeaseAccessConditions = {},
+    modifiedAccessConditions: Models.ModifiedAccessConditions = {},
+    appendPositionAccessConditions: Models.AppendPositionAccessConditions = {}
   ): Promise<Models.BlobProperties> {
-    throw new Error("Method not implemented.");
+    return this.sequelize.transaction(async (t) => {
+      const doc = await this.getBlobWithLeaseUpdated(
+        block.accountName,
+        block.containerName,
+        block.blobName,
+        undefined,
+        context,
+        false,
+        true
+      );
+
+      validateWriteConditions(context, modifiedAccessConditions, doc);
+
+      if (!doc) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
+
+      new BlobWriteLeaseValidator(leaseAccessConditions).validate(
+        new BlobLeaseAdapter(doc),
+        context
+      );
+
+      if (doc.properties.blobType !== Models.BlobType.AppendBlob) {
+        throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId);
+      }
+
+      if (
+        (doc.committedBlocksInOrder || []).length >= MAX_APPEND_BLOB_BLOCK_COUNT
+      ) {
+        throw StorageErrorFactory.getBlockCountExceedsLimit(context.contextId);
+      }
+
+      if (appendPositionAccessConditions.appendPosition !== undefined) {
+        if (
+          (doc.properties.contentLength || 0) !==
+          appendPositionAccessConditions.appendPosition
+        ) {
+          throw StorageErrorFactory.getAppendPositionConditionNotMet(
+            context.contextId
+          );
+        }
+      }
+
+      if (appendPositionAccessConditions.maxSize !== undefined) {
+        if (
+          (doc.properties.contentLength || 0) + block.size >
+          appendPositionAccessConditions.maxSize
+        ) {
+          throw StorageErrorFactory.getMaxBlobSizeConditionNotMet(
+            context.contextId
+          );
+        }
+      }
+
+      doc.committedBlocksInOrder = doc.committedBlocksInOrder || [];
+      doc.committedBlocksInOrder.push(block);
+      doc.properties.etag = newEtag();
+      doc.properties.lastModified = context.startTime || new Date();
+      doc.properties.contentLength =
+        (doc.properties.contentLength || 0) + block.size;
+
+      await BlobsModel.upsert(this.convertBlobModelToDbModel(doc), {
+        transaction: t
+      });
+
+      return doc.properties;
+    });
   }
 
   public async listUncommittedBlockPersistencyChunks(
@@ -3064,6 +3509,34 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     };
   }
 
+  private convertDbModelToDirectoryModel(dbModel: DirectoriesModel): DirectoryModel {
+    const lease = this.convertDbModelToLease(dbModel);
+
+    return {
+      accountName: this.getModelValue<string>(dbModel, "accountName", true),
+      containerName: this.getModelValue<string>(dbModel, "containerName", true),
+      name: this.getModelValue<string>(dbModel, "directoryName", true),
+      isCommitted: this.getModelValue<boolean>(dbModel, "isCommitted", true),
+      properties: {
+        lastModified: this.getModelValue<Date>(dbModel, "lastModified", true),
+        etag: this.getModelValue<string>(dbModel, "etag", true),
+        leaseDuration: lease.leaseDurationType,
+        creationTime: this.getModelValue<Date>(dbModel, "creationTime"),
+        leaseState: lease.leaseState,
+        leaseStatus: lease.leaseStatus,
+        accessTier: this.getModelValue<Models.AccessTier>(
+          dbModel,
+          "accessTier"
+        ),
+        accessTierInferred: this.getModelValue<boolean>(
+          dbModel,
+          "accessTierInferred"
+        )
+      },
+      metadata: this.deserializeModelValue(dbModel, "metadata"),
+    };
+  }
+
   private convertDbModelToBlobModel(dbModel: BlobsModel): BlobModel {
     const contentProperties: IBlobContentProperties = this.convertDbModelToBlobContentProperties(
       dbModel
@@ -3136,6 +3609,21 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     };
   }
 
+  private convertDirectoryModelToDbModel(directory: DirectoryModel): object {
+    const lease = this.convertLeaseToDbModel(new BlobLeaseAdapter(directory));
+    return {
+      accountName: directory.accountName,
+      containerName: directory.containerName,
+      directoryName: directory.name,
+      isCommitted: directory.isCommitted,
+      lastModified: directory.properties.lastModified,
+      creationTime: directory.properties.creationTime || null,
+      etag: directory.properties.etag,
+      ...lease,
+      metadata: this.serializeModelValue(directory.metadata) || null,
+    };
+  }
+
   private convertBlobModelToDbModel(blob: BlobModel): object {
     const contentProperties = this.convertBlobContentPropertiesToDbModel(
       blob.properties
@@ -3156,13 +3644,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       accessTier: blob.properties.accessTier || null,
       accessTierChangeTime: blob.properties.accessTierChangeTime || null,
       accessTierInferred: blob.properties.accessTierInferred || null,
-      leaseBreakExpireTime: blob.leaseBreakTime || null,
-      leaseExpireTime: blob.leaseExpireTime || null,
-      leaseId: blob.leaseId || null,
-      leasedurationNumber: blob.leaseDurationSeconds || null,
-      leaseDuration: blob.properties.leaseDuration || null,
-      leaseStatus: blob.properties.leaseStatus || null,
-      leaseState: blob.properties.leaseState || null,
       ...lease,
       persistency: this.serializeModelValue(blob.persistency) || null,
       committedBlocksInOrder:

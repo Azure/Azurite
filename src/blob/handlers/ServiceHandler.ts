@@ -43,6 +43,10 @@ export default class ServiceHandler extends BaseHandler
     ) {
       super(metadataStore, extentStore, logger, loose);
     }
+    
+  listFileSystems(options: Models.ServiceListFileSystemsOptionalParams, context: Context): Promise<Models.ServiceListFileSystemsResponse> {
+    throw new Error("Method not implemented.");
+  }
   /**
    * Default service properties.
    *

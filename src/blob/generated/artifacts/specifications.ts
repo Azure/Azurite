@@ -15,8 +15,36 @@ import * as Mappers from "./mappers";
 import { Operation } from "./operation";
 import * as Parameters from "./parameters";
 
-const serializer = new msRest.Serializer(Mappers, true);
+const serializer = new msRest.Serializer(Mappers);
 // specifications for new method group start
+const serviceListFileSystemsOperationSpec: msRest.OperationSpec = {
+  httpMethod: "GET",
+  urlParameters: [
+    Parameters.url
+  ],
+  queryParameters: [
+    Parameters.resource0,
+    Parameters.prefix,
+    Parameters.marker0,
+    Parameters.maxResults,
+    Parameters.timeout
+  ],
+  headerParameters: [
+    Parameters.requestId,
+    Parameters.version
+  ],
+  responses: {
+    200: {
+      bodyMapper: Mappers.FileSystemList,
+      headersMapper: Mappers.ServiceListFileSystemsHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
 const serviceSetPropertiesOperationSpec: msRest.OperationSpec = {
   httpMethod: "PUT",
   urlParameters: [
@@ -47,7 +75,6 @@ const serviceSetPropertiesOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -74,7 +101,6 @@ const serviceGetPropertiesOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -101,7 +127,6 @@ const serviceGetStatisticsOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -112,7 +137,7 @@ const serviceListContainersSegmentOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.prefix,
-    Parameters.marker0,
+    Parameters.marker1,
     Parameters.maxresults,
     Parameters.include0,
     Parameters.timeout,
@@ -131,7 +156,6 @@ const serviceListContainersSegmentOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -166,7 +190,6 @@ const serviceGetUserDelegationKeyOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -190,7 +213,6 @@ const serviceGetAccountInfoOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -214,7 +236,6 @@ const serviceGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -228,7 +249,7 @@ const serviceSubmitBatchOperationSpec: msRest.OperationSpec = {
     Parameters.comp4
   ],
   headerParameters: [
-    Parameters.contentLength,
+    Parameters.contentLength0,
     Parameters.multipartContentType,
     Parameters.version,
     Parameters.requestId
@@ -247,7 +268,7 @@ const serviceSubmitBatchOperationSpec: msRest.OperationSpec = {
   responses: {
     202: {
       bodyMapper: {
-        serializedName: "Stream",
+        serializedName: "parsedResponse",
         type: {
           name: "Stream"
         }
@@ -258,7 +279,682 @@ const serviceSubmitBatchOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
+  serializer
+};
+
+// specifications for new method group start
+const fileSystemCreateOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PUT",
+  path: "{filesystem}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem
+  ],
+  queryParameters: [
+    Parameters.resource1,
+    Parameters.timeout
+  ],
+  headerParameters: [
+    Parameters.properties,
+    Parameters.requestId,
+    Parameters.version
+  ],
+  responses: {
+    201: {
+      headersMapper: Mappers.FileSystemCreateHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+const fileSystemSetPropertiesOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PATCH",
+  path: "{filesystem}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem
+  ],
+  queryParameters: [
+    Parameters.resource1,
+    Parameters.timeout
+  ],
+  headerParameters: [
+    Parameters.properties,
+    Parameters.requestId,
+    Parameters.version,
+    Parameters.ifModifiedSince,
+    Parameters.ifUnmodifiedSince
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.FileSystemSetPropertiesHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+const fileSystemGetPropertiesOperationSpec: msRest.OperationSpec = {
+  httpMethod: "HEAD",
+  path: "{filesystem}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem
+  ],
+  queryParameters: [
+    Parameters.resource1,
+    Parameters.timeout
+  ],
+  headerParameters: [
+    Parameters.requestId,
+    Parameters.version
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.FileSystemGetPropertiesHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+const fileSystemDeleteOperationSpec: msRest.OperationSpec = {
+  httpMethod: "DELETE",
+  path: "{filesystem}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem
+  ],
+  queryParameters: [
+    Parameters.resource1,
+    Parameters.timeout
+  ],
+  headerParameters: [
+    Parameters.requestId,
+    Parameters.version,
+    Parameters.ifModifiedSince,
+    Parameters.ifUnmodifiedSince
+  ],
+  responses: {
+    202: {
+      headersMapper: Mappers.FileSystemDeleteHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+const fileSystemListPathsOperationSpec: msRest.OperationSpec = {
+  httpMethod: "GET",
+  path: "{filesystem}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem
+  ],
+  queryParameters: [
+    Parameters.marker0,
+    Parameters.path0,
+    Parameters.recursive0,
+    Parameters.maxResults,
+    Parameters.upn,
+    Parameters.resource1,
+    Parameters.timeout
+  ],
+  headerParameters: [
+    Parameters.requestId,
+    Parameters.version
+  ],
+  responses: {
+    200: {
+      bodyMapper: Mappers.PathList,
+      headersMapper: Mappers.FileSystemListPathsHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+const fileSystemListBlobHierarchySegmentOperationSpec: msRest.OperationSpec = {
+  httpMethod: "GET",
+  path: "{filesystem}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem
+  ],
+  queryParameters: [
+    Parameters.prefix,
+    Parameters.delimiter0,
+    Parameters.marker1,
+    Parameters.maxResults,
+    Parameters.include1,
+    Parameters.showonly,
+    Parameters.timeout,
+    Parameters.restype2,
+    Parameters.comp2
+  ],
+  headerParameters: [
+    Parameters.version,
+    Parameters.requestId
+  ],
+  responses: {
+    200: {
+      bodyMapper: Mappers.ListBlobsHierarchySegmentResponseDataLake,
+      headersMapper: Mappers.FileSystemListBlobHierarchySegmentHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+// specifications for new method group start
+const pathCreateOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PUT",
+  path: "{filesystem}/{path}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem,
+    Parameters.path1
+  ],
+  queryParameters: [
+    Parameters.resource2,
+    Parameters.marker0,
+    Parameters.mode0,
+    Parameters.timeout
+  ],
+  headerParameters: [
+    Parameters.renameSource,
+    Parameters.sourceLeaseId,
+    Parameters.properties,
+    Parameters.permissions,
+    Parameters.umask,
+    Parameters.owner,
+    Parameters.group,
+    Parameters.acl,
+    Parameters.proposedLeaseId0,
+    Parameters.leaseDuration,
+    Parameters.expiryOptions0,
+    Parameters.expiresOn,
+    Parameters.requestId,
+    Parameters.version,
+    Parameters.cacheControl,
+    Parameters.contentEncoding,
+    Parameters.contentLanguage,
+    Parameters.contentDisposition,
+    Parameters.contentType,
+    Parameters.leaseId0,
+    Parameters.ifMatch,
+    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince,
+    Parameters.ifUnmodifiedSince,
+    Parameters.sourceIfMatch,
+    Parameters.sourceIfNoneMatch,
+    Parameters.sourceIfModifiedSince,
+    Parameters.sourceIfUnmodifiedSince,
+    Parameters.encryptionKey,
+    Parameters.encryptionKeySha256,
+    Parameters.encryptionAlgorithm
+  ],
+  responses: {
+    201: {
+      headersMapper: Mappers.PathCreateHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+const pathUpdateOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PATCH",
+  path: "{filesystem}/{path}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem,
+    Parameters.path1
+  ],
+  queryParameters: [
+    Parameters.action0,
+    Parameters.maxRecords,
+    Parameters.continuation,
+    Parameters.mode1,
+    Parameters.forceFlag,
+    Parameters.position,
+    Parameters.retainUncommittedData,
+    Parameters.close,
+    Parameters.timeout
+  ],
+  headerParameters: [
+    Parameters.contentLength1,
+    Parameters.properties,
+    Parameters.owner,
+    Parameters.group,
+    Parameters.permissions,
+    Parameters.acl,
+    Parameters.requestId,
+    Parameters.version,
+    Parameters.contentMD5,
+    Parameters.cacheControl,
+    Parameters.contentType,
+    Parameters.contentDisposition,
+    Parameters.contentEncoding,
+    Parameters.contentLanguage,
+    Parameters.leaseId0,
+    Parameters.ifMatch,
+    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince,
+    Parameters.ifUnmodifiedSince
+  ],
+  requestBody: {
+    parameterPath: "body",
+    mapper: {
+      required: true,
+      serializedName: "body",
+      type: {
+        name: "Stream"
+      }
+    }
+  },
+  contentType: "application/octet-stream",
+  responses: {
+    200: {
+      bodyMapper: Mappers.SetAccessControlRecursiveResponse,
+      headersMapper: Mappers.PathUpdateHeaders
+    },
+    202: {
+      headersMapper: Mappers.PathUpdateHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+const pathLeaseOperationSpec: msRest.OperationSpec = {
+  httpMethod: "POST",
+  path: "{filesystem}/{path}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem,
+    Parameters.path1
+  ],
+  queryParameters: [
+    Parameters.timeout
+  ],
+  headerParameters: [
+    Parameters.xMsLeaseAction,
+    Parameters.xMsLeaseDuration,
+    Parameters.xMsLeaseBreakPeriod,
+    Parameters.proposedLeaseId0,
+    Parameters.requestId,
+    Parameters.version,
+    Parameters.leaseId0,
+    Parameters.ifMatch,
+    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince,
+    Parameters.ifUnmodifiedSince
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.PathLeaseHeaders
+    },
+    201: {
+      headersMapper: Mappers.PathLeaseHeaders
+    },
+    202: {
+      headersMapper: Mappers.PathLeaseHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+const pathReadOperationSpec: msRest.OperationSpec = {
+  httpMethod: "GET",
+  path: "{filesystem}/{path}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem,
+    Parameters.path1
+  ],
+  queryParameters: [
+    Parameters.timeout
+  ],
+  headerParameters: [
+    Parameters.range0,
+    Parameters.xMsRangeGetContentMd5,
+    Parameters.requestId,
+    Parameters.version,
+    Parameters.leaseId0,
+    Parameters.ifMatch,
+    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince,
+    Parameters.ifUnmodifiedSince,
+    Parameters.encryptionKey,
+    Parameters.encryptionKeySha256,
+    Parameters.encryptionAlgorithm
+  ],
+  responses: {
+    200: {
+      bodyMapper: {
+        serializedName: "parsedResponse",
+        type: {
+          name: "Stream"
+        }
+      },
+      headersMapper: Mappers.PathReadHeaders
+    },
+    206: {
+      bodyMapper: {
+        serializedName: "parsedResponse",
+        type: {
+          name: "Stream"
+        }
+      },
+      headersMapper: Mappers.PathReadHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+const pathGetPropertiesOperationSpec: msRest.OperationSpec = {
+  httpMethod: "HEAD",
+  path: "{filesystem}/{path}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem,
+    Parameters.path1
+  ],
+  queryParameters: [
+    Parameters.action1,
+    Parameters.upn,
+    Parameters.timeout
+  ],
+  headerParameters: [
+    Parameters.requestId,
+    Parameters.version,
+    Parameters.leaseId0,
+    Parameters.ifMatch,
+    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince,
+    Parameters.ifUnmodifiedSince
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.PathGetPropertiesHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+const pathDeleteOperationSpec: msRest.OperationSpec = {
+  httpMethod: "DELETE",
+  path: "{filesystem}/{path}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem,
+    Parameters.path1
+  ],
+  queryParameters: [
+    Parameters.recursive1,
+    Parameters.marker0,
+    Parameters.timeout
+  ],
+  headerParameters: [
+    Parameters.requestId,
+    Parameters.version,
+    Parameters.leaseId0,
+    Parameters.ifMatch,
+    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince,
+    Parameters.ifUnmodifiedSince
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.PathDeleteHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+const pathSetAccessControlOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PATCH",
+  path: "{filesystem}/{path}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem,
+    Parameters.path1
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.action2
+  ],
+  headerParameters: [
+    Parameters.owner,
+    Parameters.group,
+    Parameters.permissions,
+    Parameters.acl,
+    Parameters.requestId,
+    Parameters.version,
+    Parameters.leaseId0,
+    Parameters.ifMatch,
+    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince,
+    Parameters.ifUnmodifiedSince
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.PathSetAccessControlHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+const pathSetAccessControlRecursiveOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PATCH",
+  path: "{filesystem}/{path}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem,
+    Parameters.path1
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.marker0,
+    Parameters.mode1,
+    Parameters.forceFlag,
+    Parameters.maxRecords,
+    Parameters.action3
+  ],
+  headerParameters: [
+    Parameters.acl,
+    Parameters.requestId,
+    Parameters.version
+  ],
+  responses: {
+    200: {
+      bodyMapper: Mappers.SetAccessControlRecursiveResponse,
+      headersMapper: Mappers.PathSetAccessControlRecursiveHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+const pathFlushDataOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PATCH",
+  path: "{filesystem}/{path}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem,
+    Parameters.path1
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.position,
+    Parameters.retainUncommittedData,
+    Parameters.close,
+    Parameters.action4
+  ],
+  headerParameters: [
+    Parameters.contentLength1,
+    Parameters.requestId,
+    Parameters.version,
+    Parameters.contentMD5,
+    Parameters.cacheControl,
+    Parameters.contentType,
+    Parameters.contentDisposition,
+    Parameters.contentEncoding,
+    Parameters.contentLanguage,
+    Parameters.leaseId0,
+    Parameters.ifMatch,
+    Parameters.ifNoneMatch,
+    Parameters.ifModifiedSince,
+    Parameters.ifUnmodifiedSince,
+    Parameters.encryptionKey,
+    Parameters.encryptionKeySha256,
+    Parameters.encryptionAlgorithm
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.PathFlushDataHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+const pathAppendDataOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PATCH",
+  path: "{filesystem}/{path}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem,
+    Parameters.path1
+  ],
+  queryParameters: [
+    Parameters.position,
+    Parameters.timeout,
+    Parameters.action5
+  ],
+  headerParameters: [
+    Parameters.contentLength1,
+    Parameters.transactionalContentCrc64,
+    Parameters.requestId,
+    Parameters.version,
+    Parameters.transactionalContentMD5,
+    Parameters.leaseId0,
+    Parameters.encryptionKey,
+    Parameters.encryptionKeySha256,
+    Parameters.encryptionAlgorithm
+  ],
+  requestBody: {
+    parameterPath: "body",
+    mapper: {
+      required: true,
+      serializedName: "body",
+      type: {
+        name: "Stream"
+      }
+    }
+  },
+  responses: {
+    202: {
+      headersMapper: Mappers.PathAppendDataHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+const pathSetExpiryOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PUT",
+  path: "{filesystem}/{path}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem,
+    Parameters.path1
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.comp5
+  ],
+  headerParameters: [
+    Parameters.version,
+    Parameters.requestId,
+    Parameters.expiryOptions1,
+    Parameters.expiresOn
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.PathSetExpiryHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
+  serializer
+};
+
+const pathUndeleteOperationSpec: msRest.OperationSpec = {
+  httpMethod: "PUT",
+  path: "{filesystem}/{path}",
+  urlParameters: [
+    Parameters.url,
+    Parameters.fileSystem,
+    Parameters.path1
+  ],
+  queryParameters: [
+    Parameters.timeout,
+    Parameters.comp6
+  ],
+  headerParameters: [
+    Parameters.undeleteSource,
+    Parameters.version,
+    Parameters.requestId
+  ],
+  responses: {
+    200: {
+      headersMapper: Mappers.PathUndeleteHeaders
+    },
+    default: {
+      bodyMapper: Mappers.DataLakeStorageError
+    }
+  },
   serializer
 };
 
@@ -287,7 +983,6 @@ const containerCreateOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -314,7 +1009,6 @@ const containerGetPropertiesOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -341,7 +1035,6 @@ const containerGetPropertiesWithHeadOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -370,7 +1063,6 @@ const containerDeleteOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -383,7 +1075,7 @@ const containerSetMetadataOperationSpec: msRest.OperationSpec = {
   queryParameters: [
     Parameters.timeout,
     Parameters.restype2,
-    Parameters.comp5
+    Parameters.comp7
   ],
   headerParameters: [
     Parameters.metadata,
@@ -400,7 +1092,6 @@ const containerSetMetadataOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -413,7 +1104,7 @@ const containerGetAccessPolicyOperationSpec: msRest.OperationSpec = {
   queryParameters: [
     Parameters.timeout,
     Parameters.restype2,
-    Parameters.comp6
+    Parameters.comp8
   ],
   headerParameters: [
     Parameters.version,
@@ -423,8 +1114,7 @@ const containerGetAccessPolicyOperationSpec: msRest.OperationSpec = {
   responses: {
     200: {
       bodyMapper: {
-        xmlElementName: "SignedIdentifier",
-        serializedName: "SignedIdentifiers",
+        serializedName: "parsedResponse",
         type: {
           name: "Sequence",
           element: {
@@ -441,7 +1131,6 @@ const containerGetAccessPolicyOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -454,7 +1143,7 @@ const containerSetAccessPolicyOperationSpec: msRest.OperationSpec = {
   queryParameters: [
     Parameters.timeout,
     Parameters.restype2,
-    Parameters.comp6
+    Parameters.comp8
   ],
   headerParameters: [
     Parameters.access,
@@ -470,8 +1159,6 @@ const containerSetAccessPolicyOperationSpec: msRest.OperationSpec = {
       "containerAcl"
     ],
     mapper: {
-      xmlName: "SignedIdentifiers",
-      xmlElementName: "SignedIdentifier",
       serializedName: "containerAcl",
       type: {
         name: "Sequence",
@@ -493,7 +1180,6 @@ const containerSetAccessPolicyOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -510,7 +1196,7 @@ const containerSubmitBatchOperationSpec: msRest.OperationSpec = {
     Parameters.comp4
   ],
   headerParameters: [
-    Parameters.contentLength,
+    Parameters.contentLength0,
     Parameters.multipartContentType,
     Parameters.version,
     Parameters.requestId
@@ -529,7 +1215,7 @@ const containerSubmitBatchOperationSpec: msRest.OperationSpec = {
   responses: {
     202: {
       bodyMapper: {
-        serializedName: "Stream",
+        serializedName: "parsedResponse",
         type: {
           name: "Stream"
         }
@@ -540,7 +1226,6 @@ const containerSubmitBatchOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -552,7 +1237,7 @@ const containerAcquireLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7,
+    Parameters.comp9,
     Parameters.restype2
   ],
   headerParameters: [
@@ -560,7 +1245,7 @@ const containerAcquireLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.proposedLeaseId0,
     Parameters.version,
     Parameters.requestId,
-    Parameters.action0,
+    Parameters.action6,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince
   ],
@@ -572,7 +1257,6 @@ const containerAcquireLeaseOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -584,14 +1268,14 @@ const containerReleaseLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7,
+    Parameters.comp9,
     Parameters.restype2
   ],
   headerParameters: [
     Parameters.leaseId1,
     Parameters.version,
     Parameters.requestId,
-    Parameters.action1,
+    Parameters.action7,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince
   ],
@@ -603,7 +1287,6 @@ const containerReleaseLeaseOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -615,14 +1298,14 @@ const containerRenewLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7,
+    Parameters.comp9,
     Parameters.restype2
   ],
   headerParameters: [
     Parameters.leaseId1,
     Parameters.version,
     Parameters.requestId,
-    Parameters.action2,
+    Parameters.action8,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince
   ],
@@ -634,7 +1317,6 @@ const containerRenewLeaseOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -646,14 +1328,14 @@ const containerBreakLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7,
+    Parameters.comp9,
     Parameters.restype2
   ],
   headerParameters: [
     Parameters.breakPeriod,
     Parameters.version,
     Parameters.requestId,
-    Parameters.action3,
+    Parameters.action9,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince
   ],
@@ -665,7 +1347,6 @@ const containerBreakLeaseOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -677,7 +1358,7 @@ const containerChangeLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7,
+    Parameters.comp9,
     Parameters.restype2
   ],
   headerParameters: [
@@ -685,7 +1366,7 @@ const containerChangeLeaseOperationSpec: msRest.OperationSpec = {
     Parameters.proposedLeaseId1,
     Parameters.version,
     Parameters.requestId,
-    Parameters.action4,
+    Parameters.action10,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince
   ],
@@ -697,7 +1378,6 @@ const containerChangeLeaseOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -709,7 +1389,7 @@ const containerListBlobFlatSegmentOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.prefix,
-    Parameters.marker0,
+    Parameters.marker1,
     Parameters.maxresults,
     Parameters.include1,
     Parameters.timeout,
@@ -729,7 +1409,6 @@ const containerListBlobFlatSegmentOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -741,8 +1420,8 @@ const containerListBlobHierarchySegmentOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.prefix,
-    Parameters.delimiter,
-    Parameters.marker0,
+    Parameters.delimiter1,
+    Parameters.marker1,
     Parameters.maxresults,
     Parameters.include1,
     Parameters.timeout,
@@ -762,7 +1441,6 @@ const containerListBlobHierarchySegmentOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -787,7 +1465,6 @@ const containerGetAccountInfoOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -812,192 +1489,6 @@ const containerGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
-  serializer
-};
-
-// specifications for new method group start
-const directoryCreateOperationSpec: msRest.OperationSpec = {
-  httpMethod: "PUT",
-  path: "{filesystem}/{path}",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.resource
-  ],
-  headerParameters: [
-    Parameters.directoryProperties,
-    Parameters.posixPermissions,
-    Parameters.posixUmask,
-    Parameters.version,
-    Parameters.requestId,
-    Parameters.cacheControl,
-    Parameters.contentType,
-    Parameters.contentEncoding,
-    Parameters.contentLanguage,
-    Parameters.contentDisposition,
-    Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch
-  ],
-  responses: {
-    201: {
-      headersMapper: Mappers.DirectoryCreateHeaders
-    },
-    default: {
-      bodyMapper: Mappers.DataLakeStorageError
-    }
-  },
-  isXML: true,
-  serializer
-};
-
-const directoryRenameOperationSpec: msRest.OperationSpec = {
-  httpMethod: "PUT",
-  path: "{filesystem}/{path}",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.marker1,
-    Parameters.pathRenameMode
-  ],
-  headerParameters: [
-    Parameters.renameSource,
-    Parameters.directoryProperties,
-    Parameters.posixPermissions,
-    Parameters.posixUmask,
-    Parameters.sourceLeaseId,
-    Parameters.version,
-    Parameters.requestId,
-    Parameters.cacheControl,
-    Parameters.contentType,
-    Parameters.contentEncoding,
-    Parameters.contentLanguage,
-    Parameters.contentDisposition,
-    Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
-    Parameters.sourceIfModifiedSince,
-    Parameters.sourceIfUnmodifiedSince,
-    Parameters.sourceIfMatches,
-    Parameters.sourceIfNoneMatch
-  ],
-  responses: {
-    201: {
-      headersMapper: Mappers.DirectoryRenameHeaders
-    },
-    default: {
-      bodyMapper: Mappers.DataLakeStorageError
-    }
-  },
-  isXML: true,
-  serializer
-};
-
-const directoryDeleteOperationSpec: msRest.OperationSpec = {
-  httpMethod: "DELETE",
-  path: "{filesystem}/{path}",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.recursiveDirectoryDelete,
-    Parameters.marker1
-  ],
-  headerParameters: [
-    Parameters.version,
-    Parameters.requestId,
-    Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch
-  ],
-  responses: {
-    200: {
-      headersMapper: Mappers.DirectoryDeleteHeaders
-    },
-    default: {
-      bodyMapper: Mappers.DataLakeStorageError
-    }
-  },
-  isXML: true,
-  serializer
-};
-
-const directorySetAccessControlOperationSpec: msRest.OperationSpec = {
-  httpMethod: "PATCH",
-  path: "{filesystem}/{path}",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.action5
-  ],
-  headerParameters: [
-    Parameters.owner,
-    Parameters.group,
-    Parameters.posixPermissions,
-    Parameters.posixAcl,
-    Parameters.requestId,
-    Parameters.version,
-    Parameters.leaseId0,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince
-  ],
-  responses: {
-    200: {
-      headersMapper: Mappers.DirectorySetAccessControlHeaders
-    },
-    default: {
-      bodyMapper: Mappers.DataLakeStorageError
-    }
-  },
-  isXML: true,
-  serializer
-};
-
-const directoryGetAccessControlOperationSpec: msRest.OperationSpec = {
-  httpMethod: "HEAD",
-  path: "{filesystem}/{path}",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.upn,
-    Parameters.action6
-  ],
-  headerParameters: [
-    Parameters.requestId,
-    Parameters.version,
-    Parameters.leaseId0,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince
-  ],
-  responses: {
-    200: {
-      headersMapper: Mappers.DirectoryGetAccessControlHeaders
-    },
-    default: {
-      bodyMapper: Mappers.DataLakeStorageError
-    }
-  },
-  isXML: true,
   serializer
 };
 
@@ -1013,7 +1504,7 @@ const blobDownloadOperationSpec: msRest.OperationSpec = {
     Parameters.timeout
   ],
   headerParameters: [
-    Parameters.range0,
+    Parameters.range1,
     Parameters.rangeGetContentMD5,
     Parameters.rangeGetContentCRC64,
     Parameters.version,
@@ -1030,7 +1521,7 @@ const blobDownloadOperationSpec: msRest.OperationSpec = {
   responses: {
     200: {
       bodyMapper: {
-        serializedName: "Stream",
+        serializedName: "parsedResponse",
         type: {
           name: "Stream"
         }
@@ -1039,7 +1530,7 @@ const blobDownloadOperationSpec: msRest.OperationSpec = {
     },
     206: {
       bodyMapper: {
-        serializedName: "Stream",
+        serializedName: "parsedResponse",
         type: {
           name: "Stream"
         }
@@ -1050,7 +1541,6 @@ const blobDownloadOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1084,39 +1574,6 @@ const blobGetPropertiesOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
-  serializer
-};
-
-const blobDeleteOperationSpec: msRest.OperationSpec = {
-  httpMethod: "DELETE",
-  path: "{containerName}/{blob}",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.snapshot,
-    Parameters.timeout
-  ],
-  headerParameters: [
-    Parameters.deleteSnapshots,
-    Parameters.version,
-    Parameters.requestId,
-    Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch
-  ],
-  responses: {
-    202: {
-      headersMapper: Mappers.BlobDeleteHeaders
-    },
-    default: {
-      bodyMapper: Mappers.StorageError
-    }
-  },
-  isXML: true,
   serializer
 };
 
@@ -1128,7 +1585,7 @@ const blobSetAccessControlOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.action5
+    Parameters.action2
   ],
   headerParameters: [
     Parameters.owner,
@@ -1151,84 +1608,6 @@ const blobSetAccessControlOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.DataLakeStorageError
     }
   },
-  isXML: true,
-  serializer
-};
-
-const blobGetAccessControlOperationSpec: msRest.OperationSpec = {
-  httpMethod: "HEAD",
-  path: "{filesystem}/{path}",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.upn,
-    Parameters.action6
-  ],
-  headerParameters: [
-    Parameters.requestId,
-    Parameters.version,
-    Parameters.leaseId0,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince
-  ],
-  responses: {
-    200: {
-      headersMapper: Mappers.BlobGetAccessControlHeaders
-    },
-    default: {
-      bodyMapper: Mappers.DataLakeStorageError
-    }
-  },
-  isXML: true,
-  serializer
-};
-
-const blobRenameOperationSpec: msRest.OperationSpec = {
-  httpMethod: "PUT",
-  path: "{filesystem}/{path}",
-  urlParameters: [
-    Parameters.url
-  ],
-  queryParameters: [
-    Parameters.timeout,
-    Parameters.pathRenameMode
-  ],
-  headerParameters: [
-    Parameters.renameSource,
-    Parameters.directoryProperties,
-    Parameters.posixPermissions,
-    Parameters.posixUmask,
-    Parameters.sourceLeaseId,
-    Parameters.version,
-    Parameters.requestId,
-    Parameters.cacheControl,
-    Parameters.contentType,
-    Parameters.contentEncoding,
-    Parameters.contentLanguage,
-    Parameters.contentDisposition,
-    Parameters.leaseId0,
-    Parameters.ifModifiedSince,
-    Parameters.ifUnmodifiedSince,
-    Parameters.ifMatch,
-    Parameters.ifNoneMatch,
-    Parameters.sourceIfModifiedSince,
-    Parameters.sourceIfUnmodifiedSince,
-    Parameters.sourceIfMatches,
-    Parameters.sourceIfNoneMatch
-  ],
-  responses: {
-    201: {
-      headersMapper: Mappers.BlobRenameHeaders
-    },
-    default: {
-      bodyMapper: Mappers.DataLakeStorageError
-    }
-  },
-  isXML: true,
   serializer
 };
 
@@ -1240,7 +1619,7 @@ const blobUndeleteOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp8
+    Parameters.comp6
   ],
   headerParameters: [
     Parameters.version,
@@ -1254,7 +1633,6 @@ const blobUndeleteOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1291,7 +1669,6 @@ const blobSetHTTPHeadersOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1303,7 +1680,7 @@ const blobSetMetadataOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp5
+    Parameters.comp7
   ],
   headerParameters: [
     Parameters.metadata,
@@ -1326,7 +1703,6 @@ const blobSetMetadataOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1338,14 +1714,14 @@ const blobAcquireLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7
+    Parameters.comp9
   ],
   headerParameters: [
     Parameters.duration,
     Parameters.proposedLeaseId0,
     Parameters.version,
     Parameters.requestId,
-    Parameters.action0,
+    Parameters.action6,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
@@ -1359,7 +1735,6 @@ const blobAcquireLeaseOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1371,13 +1746,13 @@ const blobReleaseLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7
+    Parameters.comp9
   ],
   headerParameters: [
     Parameters.leaseId1,
     Parameters.version,
     Parameters.requestId,
-    Parameters.action1,
+    Parameters.action7,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
@@ -1391,7 +1766,6 @@ const blobReleaseLeaseOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1403,13 +1777,13 @@ const blobRenewLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7
+    Parameters.comp9
   ],
   headerParameters: [
     Parameters.leaseId1,
     Parameters.version,
     Parameters.requestId,
-    Parameters.action2,
+    Parameters.action8,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
@@ -1423,7 +1797,6 @@ const blobRenewLeaseOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1435,14 +1808,14 @@ const blobChangeLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7
+    Parameters.comp9
   ],
   headerParameters: [
     Parameters.leaseId1,
     Parameters.proposedLeaseId1,
     Parameters.version,
     Parameters.requestId,
-    Parameters.action4,
+    Parameters.action10,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
@@ -1456,7 +1829,6 @@ const blobChangeLeaseOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1468,13 +1840,13 @@ const blobBreakLeaseOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp7
+    Parameters.comp9
   ],
   headerParameters: [
     Parameters.breakPeriod,
     Parameters.version,
     Parameters.requestId,
-    Parameters.action3,
+    Parameters.action9,
     Parameters.ifModifiedSince,
     Parameters.ifUnmodifiedSince,
     Parameters.ifMatch,
@@ -1488,7 +1860,6 @@ const blobBreakLeaseOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1500,7 +1871,7 @@ const blobCreateSnapshotOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp9
+    Parameters.comp10
   ],
   headerParameters: [
     Parameters.metadata,
@@ -1523,7 +1894,6 @@ const blobCreateSnapshotOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1561,7 +1931,6 @@ const blobStartCopyFromURLOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1599,7 +1968,6 @@ const blobCopyFromURLOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1612,7 +1980,7 @@ const blobAbortCopyFromURLOperationSpec: msRest.OperationSpec = {
   queryParameters: [
     Parameters.copyId,
     Parameters.timeout,
-    Parameters.comp10
+    Parameters.comp11
   ],
   headerParameters: [
     Parameters.version,
@@ -1628,7 +1996,6 @@ const blobAbortCopyFromURLOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1640,7 +2007,7 @@ const blobSetTierOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp11
+    Parameters.comp12
   ],
   headerParameters: [
     Parameters.tier1,
@@ -1660,7 +2027,6 @@ const blobSetTierOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1685,7 +2051,6 @@ const blobGetAccountInfoOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1710,7 +2075,6 @@ const blobGetAccountInfoWithHeadOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1725,7 +2089,7 @@ const pageBlobCreateOperationSpec: msRest.OperationSpec = {
     Parameters.timeout
   ],
   headerParameters: [
-    Parameters.contentLength,
+    Parameters.contentLength0,
     Parameters.metadata,
     Parameters.blobContentLength,
     Parameters.blobSequenceNumber,
@@ -1756,7 +2120,6 @@ const pageBlobCreateOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1768,12 +2131,12 @@ const pageBlobUploadPagesOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp12
+    Parameters.comp13
   ],
   headerParameters: [
-    Parameters.contentLength,
+    Parameters.contentLength0,
     Parameters.transactionalContentCrc64,
-    Parameters.range0,
+    Parameters.range1,
     Parameters.version,
     Parameters.requestId,
     Parameters.pageWrite0,
@@ -1808,7 +2171,6 @@ const pageBlobUploadPagesOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1820,11 +2182,11 @@ const pageBlobClearPagesOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp12
+    Parameters.comp13
   ],
   headerParameters: [
-    Parameters.contentLength,
-    Parameters.range0,
+    Parameters.contentLength0,
+    Parameters.range1,
     Parameters.version,
     Parameters.requestId,
     Parameters.pageWrite1,
@@ -1848,7 +2210,6 @@ const pageBlobClearPagesOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1860,15 +2221,15 @@ const pageBlobUploadPagesFromURLOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp12
+    Parameters.comp13
   ],
   headerParameters: [
     Parameters.sourceUrl,
     Parameters.sourceRange0,
     Parameters.sourceContentMD5,
     Parameters.sourceContentcrc64,
-    Parameters.contentLength,
-    Parameters.range1,
+    Parameters.contentLength0,
+    Parameters.range2,
     Parameters.version,
     Parameters.requestId,
     Parameters.pageWrite0,
@@ -1896,7 +2257,6 @@ const pageBlobUploadPagesFromURLOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1909,10 +2269,10 @@ const pageBlobGetPageRangesOperationSpec: msRest.OperationSpec = {
   queryParameters: [
     Parameters.snapshot,
     Parameters.timeout,
-    Parameters.comp13
+    Parameters.comp14
   ],
   headerParameters: [
-    Parameters.range0,
+    Parameters.range1,
     Parameters.version,
     Parameters.requestId,
     Parameters.leaseId0,
@@ -1930,7 +2290,6 @@ const pageBlobGetPageRangesOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -1944,10 +2303,10 @@ const pageBlobGetPageRangesDiffOperationSpec: msRest.OperationSpec = {
     Parameters.snapshot,
     Parameters.timeout,
     Parameters.prevsnapshot,
-    Parameters.comp13
+    Parameters.comp14
   ],
   headerParameters: [
-    Parameters.range0,
+    Parameters.range1,
     Parameters.version,
     Parameters.requestId,
     Parameters.leaseId0,
@@ -1965,7 +2324,6 @@ const pageBlobGetPageRangesDiffOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -2000,7 +2358,6 @@ const pageBlobResizeOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -2033,7 +2390,6 @@ const pageBlobUpdateSequenceNumberOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -2045,7 +2401,7 @@ const pageBlobCopyIncrementalOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp14
+    Parameters.comp15
   ],
   headerParameters: [
     Parameters.metadata,
@@ -2065,7 +2421,6 @@ const pageBlobCopyIncrementalOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -2080,7 +2435,7 @@ const appendBlobCreateOperationSpec: msRest.OperationSpec = {
     Parameters.timeout
   ],
   headerParameters: [
-    Parameters.contentLength,
+    Parameters.contentLength0,
     Parameters.metadata,
     Parameters.version,
     Parameters.requestId,
@@ -2108,7 +2463,6 @@ const appendBlobCreateOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -2120,10 +2474,10 @@ const appendBlobAppendBlockOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp15
+    Parameters.comp16
   ],
   headerParameters: [
-    Parameters.contentLength,
+    Parameters.contentLength0,
     Parameters.transactionalContentCrc64,
     Parameters.version,
     Parameters.requestId,
@@ -2157,7 +2511,6 @@ const appendBlobAppendBlockOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -2169,14 +2522,14 @@ const appendBlobAppendBlockFromUrlOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp15
+    Parameters.comp16
   ],
   headerParameters: [
     Parameters.sourceUrl,
     Parameters.sourceRange1,
     Parameters.sourceContentMD5,
     Parameters.sourceContentcrc64,
-    Parameters.contentLength,
+    Parameters.contentLength0,
     Parameters.version,
     Parameters.requestId,
     Parameters.encryptionKey,
@@ -2202,7 +2555,6 @@ const appendBlobAppendBlockFromUrlOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -2217,7 +2569,7 @@ const blockBlobUploadOperationSpec: msRest.OperationSpec = {
     Parameters.timeout
   ],
   headerParameters: [
-    Parameters.contentLength,
+    Parameters.contentLength0,
     Parameters.metadata,
     Parameters.tier0,
     Parameters.version,
@@ -2257,7 +2609,6 @@ const blockBlobUploadOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -2270,10 +2621,10 @@ const blockBlobStageBlockOperationSpec: msRest.OperationSpec = {
   queryParameters: [
     Parameters.blockId,
     Parameters.timeout,
-    Parameters.comp16
+    Parameters.comp17
   ],
   headerParameters: [
-    Parameters.contentLength,
+    Parameters.contentLength0,
     Parameters.transactionalContentCrc64,
     Parameters.version,
     Parameters.requestId,
@@ -2301,7 +2652,6 @@ const blockBlobStageBlockOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -2314,10 +2664,10 @@ const blockBlobStageBlockFromURLOperationSpec: msRest.OperationSpec = {
   queryParameters: [
     Parameters.blockId,
     Parameters.timeout,
-    Parameters.comp16
+    Parameters.comp17
   ],
   headerParameters: [
-    Parameters.contentLength,
+    Parameters.contentLength0,
     Parameters.sourceUrl,
     Parameters.sourceRange1,
     Parameters.sourceContentMD5,
@@ -2341,7 +2691,6 @@ const blockBlobStageBlockFromURLOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -2353,7 +2702,7 @@ const blockBlobCommitBlockListOperationSpec: msRest.OperationSpec = {
   ],
   queryParameters: [
     Parameters.timeout,
-    Parameters.comp17
+    Parameters.comp18
   ],
   headerParameters: [
     Parameters.transactionalContentCrc64,
@@ -2392,7 +2741,6 @@ const blockBlobCommitBlockListOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
@@ -2406,7 +2754,7 @@ const blockBlobGetBlockListOperationSpec: msRest.OperationSpec = {
     Parameters.snapshot,
     Parameters.listType,
     Parameters.timeout,
-    Parameters.comp17
+    Parameters.comp18
   ],
   headerParameters: [
     Parameters.version,
@@ -2422,11 +2770,11 @@ const blockBlobGetBlockListOperationSpec: msRest.OperationSpec = {
       bodyMapper: Mappers.StorageError
     }
   },
-  isXML: true,
   serializer
 };
 
 const Specifications: { [key: number]: msRest.OperationSpec } = {};
+Specifications[Operation.Service_ListFileSystems] = serviceListFileSystemsOperationSpec;
 Specifications[Operation.Service_SetProperties] = serviceSetPropertiesOperationSpec;
 Specifications[Operation.Service_GetProperties] = serviceGetPropertiesOperationSpec;
 Specifications[Operation.Service_GetStatistics] = serviceGetStatisticsOperationSpec;
@@ -2435,6 +2783,24 @@ Specifications[Operation.Service_GetUserDelegationKey] = serviceGetUserDelegatio
 Specifications[Operation.Service_GetAccountInfo] = serviceGetAccountInfoOperationSpec;
 Specifications[Operation.Service_GetAccountInfoWithHead] = serviceGetAccountInfoWithHeadOperationSpec;
 Specifications[Operation.Service_SubmitBatch] = serviceSubmitBatchOperationSpec;
+Specifications[Operation.FileSystem_Create] = fileSystemCreateOperationSpec;
+Specifications[Operation.FileSystem_SetProperties] = fileSystemSetPropertiesOperationSpec;
+Specifications[Operation.FileSystem_GetProperties] = fileSystemGetPropertiesOperationSpec;
+Specifications[Operation.FileSystem_Delete] = fileSystemDeleteOperationSpec;
+Specifications[Operation.FileSystem_ListPaths] = fileSystemListPathsOperationSpec;
+Specifications[Operation.FileSystem_ListBlobHierarchySegment] = fileSystemListBlobHierarchySegmentOperationSpec;
+Specifications[Operation.Path_Create] = pathCreateOperationSpec;
+Specifications[Operation.Path_Update] = pathUpdateOperationSpec;
+Specifications[Operation.Path_Lease] = pathLeaseOperationSpec;
+Specifications[Operation.Path_Read] = pathReadOperationSpec;
+Specifications[Operation.Path_GetProperties] = pathGetPropertiesOperationSpec;
+Specifications[Operation.Path_Delete] = pathDeleteOperationSpec;
+Specifications[Operation.Path_SetAccessControl] = pathSetAccessControlOperationSpec;
+Specifications[Operation.Path_SetAccessControlRecursive] = pathSetAccessControlRecursiveOperationSpec;
+Specifications[Operation.Path_FlushData] = pathFlushDataOperationSpec;
+Specifications[Operation.Path_AppendData] = pathAppendDataOperationSpec;
+Specifications[Operation.Path_SetExpiry] = pathSetExpiryOperationSpec;
+Specifications[Operation.Path_Undelete] = pathUndeleteOperationSpec;
 Specifications[Operation.Container_Create] = containerCreateOperationSpec;
 Specifications[Operation.Container_GetProperties] = containerGetPropertiesOperationSpec;
 Specifications[Operation.Container_GetPropertiesWithHead] = containerGetPropertiesWithHeadOperationSpec;
@@ -2452,17 +2818,9 @@ Specifications[Operation.Container_ListBlobFlatSegment] = containerListBlobFlatS
 Specifications[Operation.Container_ListBlobHierarchySegment] = containerListBlobHierarchySegmentOperationSpec;
 Specifications[Operation.Container_GetAccountInfo] = containerGetAccountInfoOperationSpec;
 Specifications[Operation.Container_GetAccountInfoWithHead] = containerGetAccountInfoWithHeadOperationSpec;
-Specifications[Operation.Directory_Create] = directoryCreateOperationSpec;
-Specifications[Operation.Directory_Rename] = directoryRenameOperationSpec;
-Specifications[Operation.Directory_Delete] = directoryDeleteOperationSpec;
-Specifications[Operation.Directory_SetAccessControl] = directorySetAccessControlOperationSpec;
-Specifications[Operation.Directory_GetAccessControl] = directoryGetAccessControlOperationSpec;
 Specifications[Operation.Blob_Download] = blobDownloadOperationSpec;
 Specifications[Operation.Blob_GetProperties] = blobGetPropertiesOperationSpec;
-Specifications[Operation.Blob_Delete] = blobDeleteOperationSpec;
 Specifications[Operation.Blob_SetAccessControl] = blobSetAccessControlOperationSpec;
-Specifications[Operation.Blob_GetAccessControl] = blobGetAccessControlOperationSpec;
-Specifications[Operation.Blob_Rename] = blobRenameOperationSpec;
 Specifications[Operation.Blob_Undelete] = blobUndeleteOperationSpec;
 Specifications[Operation.Blob_SetHTTPHeaders] = blobSetHTTPHeadersOperationSpec;
 Specifications[Operation.Blob_SetMetadata] = blobSetMetadataOperationSpec;

@@ -11,6 +11,179 @@
 // tslint:disable:quotemark
 
 /**
+ * An interface representing AclFailedEntry.
+ */
+export interface AclFailedEntry {
+  name?: string;
+  type?: string;
+  errorMessage?: string;
+}
+
+/**
+ * An interface representing SetAccessControlRecursiveResponse.
+ */
+export interface SetAccessControlRecursiveResponse {
+  directoriesSuccessful?: number;
+  filesSuccessful?: number;
+  failureCount?: number;
+  failedEntries?: AclFailedEntry[];
+}
+
+/**
+ * An interface representing Path.
+ */
+export interface Path {
+  name?: string;
+  /**
+   * Default value: false.
+   */
+  isDirectory?: boolean;
+  lastModified?: string;
+  eTag?: string;
+  contentLength?: number;
+  owner?: string;
+  group?: string;
+  permissions?: string;
+  /**
+   * The name of the encryption scope under which the blob is encrypted.
+   */
+  encryptionScope?: string;
+  creationTime?: string;
+  expiryTime?: string;
+}
+
+/**
+ * An interface representing PathList.
+ */
+export interface PathList {
+  paths?: Path[];
+}
+
+/**
+ * An interface representing FileSystem.
+ */
+export interface FileSystem {
+  name?: string;
+  lastModified?: string;
+  eTag?: string;
+}
+
+/**
+ * An interface representing BlobPrefix.
+ */
+export interface BlobPrefix {
+  name: string;
+}
+
+/**
+ * Properties of a blob
+ */
+export interface BlobPropertiesDataLake {
+  creationTime?: Date;
+  lastModified: Date;
+  etag: string;
+  /**
+   * Size in bytes
+   */
+  contentLength?: number;
+  contentType?: string;
+  contentEncoding?: string;
+  contentLanguage?: string;
+  contentMD5?: Uint8Array;
+  contentDisposition?: string;
+  cacheControl?: string;
+  blobSequenceNumber?: number;
+  copyId?: string;
+  copySource?: string;
+  copyProgress?: string;
+  copyCompletionTime?: Date;
+  copyStatusDescription?: string;
+  serverEncrypted?: boolean;
+  incrementalCopy?: boolean;
+  destinationSnapshot?: string;
+  deletedTime?: Date;
+  remainingRetentionDays?: number;
+  accessTierInferred?: boolean;
+  customerProvidedKeySha256?: string;
+  /**
+   * The name of the encryption scope under which the blob is encrypted.
+   */
+  encryptionScope?: string;
+  accessTierChangeTime?: Date;
+  tagCount?: number;
+  expiresOn?: Date;
+  isSealed?: boolean;
+  lastAccessedOn?: Date;
+  deleteTime?: Date;
+}
+
+/**
+ * An Azure Storage blob
+ */
+export interface BlobItemDataLake {
+  name: string;
+  deleted: boolean;
+  snapshot: string;
+  versionId?: string;
+  isCurrentVersion?: boolean;
+  properties: BlobPropertiesDataLake;
+  deletionId?: string;
+}
+
+/**
+ * An interface representing BlobHierarchyListSegmentDataLake.
+ */
+export interface BlobHierarchyListSegmentDataLake {
+  blobPrefixes?: BlobPrefix[];
+  blobItems: BlobItemDataLake[];
+}
+
+/**
+ * An enumeration of blobs
+ */
+export interface ListBlobsHierarchySegmentResponseDataLake {
+  serviceEndpoint: string;
+  containerName: string;
+  prefix?: string;
+  marker?: string;
+  maxResults?: number;
+  delimiter?: string;
+  segment: BlobHierarchyListSegmentDataLake;
+  nextMarker?: string;
+}
+
+/**
+ * An interface representing FileSystemList.
+ */
+export interface FileSystemList {
+  filesystems?: FileSystem[];
+}
+
+/**
+ * The service error response object.
+ */
+export interface DataLakeStorageErrorError {
+  /**
+   * The service error code.
+   */
+  code?: string;
+  /**
+   * The service error message.
+   */
+  message?: string;
+}
+
+/**
+ * An interface representing DataLakeStorageError.
+ */
+export interface DataLakeStorageError {
+  /**
+   * The service error response object.
+   */
+  error?: DataLakeStorageErrorError;
+}
+
+/**
  * Key information
  */
 export interface KeyInfo {
@@ -67,30 +240,6 @@ export interface UserDelegationKey {
  */
 export interface StorageError {
   message?: string;
-}
-
-/**
- * The service error response object.
- */
-export interface DataLakeStorageErrorError {
-  /**
-   * The service error code.
-   */
-  code?: string;
-  /**
-   * The service error message.
-   */
-  message?: string;
-}
-
-/**
- * An interface representing DataLakeStorageError.
- */
-export interface DataLakeStorageError {
-  /**
-   * The service error response object.
-   */
-  error?: DataLakeStorageErrorError;
 }
 
 /**
@@ -219,13 +368,6 @@ export interface ListBlobsFlatSegmentResponse {
   delimiter?: string;
   segment: BlobFlatListSegment;
   nextMarker?: string;
-}
-
-/**
- * An interface representing BlobPrefix.
- */
-export interface BlobPrefix {
-  name: string;
 }
 
 /**
@@ -519,17 +661,6 @@ export interface StorageServiceStats {
 /**
  * Additional parameters for a set of operations.
  */
-export interface LeaseAccessConditions {
-  /**
-   * If specified, the operation only succeeds if the container's lease is active and matches this
-   * ID.
-   */
-  leaseId?: string;
-}
-
-/**
- * Additional parameters for a set of operations.
- */
 export interface ModifiedAccessConditions {
   /**
    * Specify this header value to operate only on a blob if it has been modified since the
@@ -552,36 +683,67 @@ export interface ModifiedAccessConditions {
 }
 
 /**
- * Additional parameters for a set of operations, such as: Directory_create, Directory_rename,
- * Blob_rename.
+ * Additional parameters for a set of operations, such as: Path_create, Path_update,
+ * Path_flushData, Path_appendData.
  */
-export interface DirectoryHttpHeaders {
+export interface PathHTTPHeaders {
   /**
-   * Cache control for given resource
+   * Optional. Sets the blob's cache control. If specified, this property is stored with the blob
+   * and returned with a read request.
    */
   cacheControl?: string;
   /**
-   * Content type for given resource
-   */
-  contentType?: string;
-  /**
-   * Content encoding for given resource
+   * Optional. Sets the blob's content encoding. If specified, this property is stored with the
+   * blob and returned with a read request.
    */
   contentEncoding?: string;
   /**
-   * Content language for given resource
+   * Optional. Set the blob's content language. If specified, this property is stored with the blob
+   * and returned with a read request.
    */
   contentLanguage?: string;
   /**
-   * Content disposition for given resource
+   * Optional. Sets the blob's Content-Disposition header.
    */
   contentDisposition?: string;
+  /**
+   * Optional. Sets the blob's content type. If specified, this property is stored with the blob
+   * and returned with a read request.
+   */
+  contentType?: string;
+  /**
+   * Specify the transactional md5 for the body, to be validated by the service.
+   */
+  contentMD5?: Uint8Array;
+  /**
+   * Specify the transactional md5 for the body, to be validated by the service.
+   */
+  transactionalContentMD5?: Uint8Array;
+}
+
+/**
+ * Additional parameters for a set of operations.
+ */
+export interface LeaseAccessConditions {
+  /**
+   * If specified, the operation only succeeds if the container's lease is active and matches this
+   * ID.
+   */
+  leaseId?: string;
 }
 
 /**
  * Additional parameters for a set of operations.
  */
 export interface SourceModifiedAccessConditions {
+  /**
+   * Specify an ETag value to operate only on blobs with a matching value.
+   */
+  sourceIfMatch?: string;
+  /**
+   * Specify an ETag value to operate only on blobs without a matching value.
+   */
+  sourceIfNoneMatch?: string;
   /**
    * Specify this header value to operate only on a blob if it has been modified since the
    * specified date/time.
@@ -592,14 +754,6 @@ export interface SourceModifiedAccessConditions {
    * specified date/time.
    */
   sourceIfUnmodifiedSince?: Date;
-  /**
-   * Specify an ETag value to operate only on blobs with a matching value.
-   */
-  sourceIfMatches?: string;
-  /**
-   * Specify an ETag value to operate only on blobs without a matching value.
-   */
-  sourceIfNoneMatch?: string;
 }
 
 /**
@@ -703,17 +857,60 @@ export interface AppendPositionAccessConditions {
 }
 
 /**
- * An interface representing AzuriteServerBlobOptions.
+ * An interface representing DataLakeStorageClientOptions.
  */
-export interface AzuriteServerBlobOptions {
+export interface DataLakeStorageClientOptions {
   /**
    * Specifies the version of the operation to use for this request.
    */
   version?: string;
   /**
+   * The lease duration is required to acquire a lease, and specifies the duration of the lease in
+   * seconds.  The lease duration must be between 15 and 60 seconds or -1 for infinite lease.
+   */
+  xMsLeaseDuration?: number;
+  /**
    * Determines the behavior of the rename operation. Possible values include: 'legacy', 'posix'
    */
   pathRenameMode?: PathRenameMode;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface ServiceListFileSystemsOptionalParams {
+  /**
+   * Filters the results to return only containers whose name begins with the specified prefix.
+   */
+  prefix?: string;
+  /**
+   * When renaming a directory, the number of paths that are renamed with each invocation is
+   * limited.  If the number of paths to be renamed exceeds this limit, a continuation token is
+   * returned in this response header.  When a continuation token is returned in the response, it
+   * must be specified in a subsequent invocation of the rename operation to continue renaming the
+   * directory.
+   */
+  marker?: string;
+  /**
+   * Specifies the maximum number of containers to return. If the request does not specify
+   * maxresults, or specifies a value greater than 5000, the server will return up to 5000 items.
+   * Note that if the listing operation crosses a partition boundary, then the service will return
+   * a continuation token for retrieving the remainder of the results. For this reason, it is
+   * possible that the service will return fewer results than specified by maxresults, or than the
+   * default of 5000.
+   */
+  maxResults?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
 }
 
 /**
@@ -837,6 +1034,859 @@ export interface ServiceSubmitBatchOptionalParams {
    * Timeouts for Blob Service Operations.</a>
    */
   timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface FileSystemCreateOptionalParams {
+  /**
+   * Optional. User-defined properties to be stored with the filesystem, in the format of a
+   * comma-separated list of name and value pairs "n1=v1, n2=v2, ...", where each value is a base64
+   * encoded string. Note that the string may only contain ASCII characters in the ISO-8859-1
+   * character set.  If the filesystem exists, any properties not included in the list will be
+   * removed.  All properties are removed if the header is omitted.  To merge new and existing
+   * properties, first get all existing properties and the current E-Tag, then make a conditional
+   * request with the E-Tag and include values for all properties.
+   */
+  properties?: string;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface FileSystemSetPropertiesOptionalParams {
+  /**
+   * Optional. User-defined properties to be stored with the filesystem, in the format of a
+   * comma-separated list of name and value pairs "n1=v1, n2=v2, ...", where each value is a base64
+   * encoded string. Note that the string may only contain ASCII characters in the ISO-8859-1
+   * character set.  If the filesystem exists, any properties not included in the list will be
+   * removed.  All properties are removed if the header is omitted.  To merge new and existing
+   * properties, first get all existing properties and the current E-Tag, then make a conditional
+   * request with the E-Tag and include values for all properties.
+   */
+  properties?: string;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface FileSystemGetPropertiesOptionalParams {
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface FileSystemDeleteMethodOptionalParams {
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface FileSystemListPathsOptionalParams {
+  /**
+   * When renaming a directory, the number of paths that are renamed with each invocation is
+   * limited.  If the number of paths to be renamed exceeds this limit, a continuation token is
+   * returned in this response header.  When a continuation token is returned in the response, it
+   * must be specified in a subsequent invocation of the rename operation to continue renaming the
+   * directory.
+   */
+  marker?: string;
+  /**
+   * Optional.  Filters results to paths within the specified directory. An error occurs if the
+   * directory does not exist.
+   */
+  path?: string;
+  /**
+   * Specifies the maximum number of containers to return. If the request does not specify
+   * maxresults, or specifies a value greater than 5000, the server will return up to 5000 items.
+   * Note that if the listing operation crosses a partition boundary, then the service will return
+   * a continuation token for retrieving the remainder of the results. For this reason, it is
+   * possible that the service will return fewer results than specified by maxresults, or than the
+   * default of 5000.
+   */
+  maxResults?: number;
+  /**
+   * Optional. Valid only when Hierarchical Namespace is enabled for the account. If "true", the
+   * identity values returned in the x-ms-owner, x-ms-group, and x-ms-acl response headers will be
+   * transformed from Azure Active Directory Object IDs to User Principal Names.  If "false", the
+   * values will be returned as Azure Active Directory Object IDs. The default value is false.
+   */
+  upn?: boolean;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface FileSystemListBlobHierarchySegmentOptionalParams {
+  /**
+   * Filters the results to return only containers whose name begins with the specified prefix.
+   */
+  prefix?: string;
+  /**
+   * When the request includes this parameter, the operation returns a BlobPrefix element in the
+   * response body that acts as a placeholder for all blobs whose names begin with the same
+   * substring up to the appearance of the delimiter character. The delimiter may be a single
+   * character or a string.
+   */
+  delimiter?: string;
+  /**
+   * A string value that identifies the portion of the list of containers to be returned with the
+   * next listing operation. The operation returns the NextMarker value within the response body if
+   * the listing operation did not return all containers remaining to be listed with the current
+   * page. The NextMarker value can be used as the value for the marker parameter in a subsequent
+   * call to request the next page of list items. The marker value is opaque to the client.
+   */
+  marker?: string;
+  /**
+   * Specifies the maximum number of containers to return. If the request does not specify
+   * maxresults, or specifies a value greater than 5000, the server will return up to 5000 items.
+   * Note that if the listing operation crosses a partition boundary, then the service will return
+   * a continuation token for retrieving the remainder of the results. For this reason, it is
+   * possible that the service will return fewer results than specified by maxresults, or than the
+   * default of 5000.
+   */
+  maxResults?: number;
+  /**
+   * Include this parameter to specify one or more datasets to include in the response.
+   */
+  include?: ListBlobsIncludeItem[];
+  /**
+   * Include this parameter to specify one or more datasets to include in the response. Possible
+   * values include: 'deleted'
+   */
+  showonly?: ListBlobsShowOnly;
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface PathCreateOptionalParams {
+  /**
+   * Required only for Create File and Create Directory. The value must be "file" or "directory".
+   * Possible values include: 'directory', 'file'
+   */
+  resource?: PathResourceType;
+  /**
+   * When renaming a directory, the number of paths that are renamed with each invocation is
+   * limited.  If the number of paths to be renamed exceeds this limit, a continuation token is
+   * returned in this response header.  When a continuation token is returned in the response, it
+   * must be specified in a subsequent invocation of the rename operation to continue renaming the
+   * directory.
+   */
+  marker?: string;
+  /**
+   * Optional. Valid only when namespace is enabled. This parameter determines the behavior of the
+   * rename operation. The value must be "legacy" or "posix", and the default value will be
+   * "posix". Possible values include: 'legacy', 'posix'
+   */
+  mode?: PathRenameMode;
+  /**
+   * An optional file or directory to be renamed.  The value must have the following format:
+   * "/{filesystem}/{path}".  If "x-ms-properties" is specified, the properties will overwrite the
+   * existing properties; otherwise, the existing properties will be preserved. This value must be
+   * a URL percent-encoded string. Note that the string may only contain ASCII characters in the
+   * ISO-8859-1 character set.
+   */
+  renameSource?: string;
+  /**
+   * A lease ID for the source path. If specified, the source path must have an active lease and
+   * the leaase ID must match.
+   */
+  sourceLeaseId?: string;
+  /**
+   * Optional. User-defined properties to be stored with the filesystem, in the format of a
+   * comma-separated list of name and value pairs "n1=v1, n2=v2, ...", where each value is a base64
+   * encoded string. Note that the string may only contain ASCII characters in the ISO-8859-1
+   * character set.  If the filesystem exists, any properties not included in the list will be
+   * removed.  All properties are removed if the header is omitted.  To merge new and existing
+   * properties, first get all existing properties and the current E-Tag, then make a conditional
+   * request with the E-Tag and include values for all properties.
+   */
+  properties?: string;
+  /**
+   * Optional and only valid if Hierarchical Namespace is enabled for the account. Sets POSIX
+   * access permissions for the file owner, the file owning group, and others. Each class may be
+   * granted read, write, or execute permission.  The sticky bit is also supported.  Both symbolic
+   * (rwxrw-rw-) and 4-digit octal notation (e.g. 0766) are supported.
+   */
+  permissions?: string;
+  /**
+   * Optional and only valid if Hierarchical Namespace is enabled for the account. When creating a
+   * file or directory and the parent folder does not have a default ACL, the umask restricts the
+   * permissions of the file or directory to be created.  The resulting permission is given by p
+   * bitwise and not u, where p is the permission and u is the umask.  For example, if p is 0777
+   * and u is 0057, then the resulting permission is 0720.  The default permission is 0777 for a
+   * directory and 0666 for a file.  The default umask is 0027.  The umask must be specified in
+   * 4-digit octal notation (e.g. 0766).
+   */
+  umask?: string;
+  /**
+   * Optional. The owner of the blob or directory.
+   */
+  owner?: string;
+  /**
+   * Optional. The owning group of the blob or directory.
+   */
+  group?: string;
+  /**
+   * Sets POSIX access control rights on files and directories. The value is a comma-separated list
+   * of access control entries. Each access control entry (ACE) consists of a scope, a type, a user
+   * or group identifier, and permissions in the format "[scope:][type]:[id]:[permissions]".
+   */
+  acl?: string;
+  /**
+   * Proposed lease ID, in a GUID string format. The Blob service returns 400 (Invalid request) if
+   * the proposed lease ID is not in the correct format. See Guid Constructor (String) for a list
+   * of valid GUID string formats.
+   */
+  proposedLeaseId?: string;
+  /**
+   * The lease duration is required to acquire a lease, and specifies the duration of the lease in
+   * seconds.  The lease duration must be between 15 and 60 seconds or -1 for infinite lease.
+   */
+  leaseDuration?: number;
+  /**
+   * Required. Indicates mode of the expiry time. Possible values include: 'NeverExpire',
+   * 'RelativeToCreation', 'RelativeToNow', 'Absolute'
+   */
+  expiryOptions?: PathExpiryOptions;
+  /**
+   * The time to set the blob to expiry
+   */
+  expiresOn?: string;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Additional parameters for the operation
+   */
+  pathHTTPHeaders?: PathHTTPHeaders;
+  /**
+   * Additional parameters for the operation
+   */
+  leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  sourceModifiedAccessConditions?: SourceModifiedAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkInfo?: CpkInfo;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface PathUpdateOptionalParams {
+  /**
+   * Optional. Valid for "SetAccessControlRecursive" operation. It specifies the maximum number of
+   * files or directories on which the acl change will be applied. If omitted or greater than
+   * 2,000, the request will process up to 2,000 items
+   */
+  maxRecords?: number;
+  /**
+   * Optional. The number of paths processed with each invocation is limited. If the number of
+   * paths to be processed exceeds this limit, a continuation token is returned in the response
+   * header x-ms-continuation. When a continuation token is  returned in the response, it must be
+   * percent-encoded and specified in a subsequent invocation of setAccessControlRecursive
+   * operation.
+   */
+  continuation?: string;
+  /**
+   * Optional. Valid for "SetAccessControlRecursive" operation. If set to false, the operation will
+   * terminate quickly on encountering user errors (4XX). If true, the operation will ignore user
+   * errors and proceed with the operation on other sub-entities of the directory. Continuation
+   * token will only be returned when forceFlag is true in case of user errors. If not set the
+   * default value is false for this.
+   */
+  forceFlag?: boolean;
+  /**
+   * This parameter allows the caller to upload data in parallel and control the order in which it
+   * is appended to the file.  It is required when uploading data to be appended to the file and
+   * when flushing previously uploaded data to the file.  The value must be the position where the
+   * data is to be appended.  Uploaded data is not immediately flushed, or written, to the file.
+   * To flush, the previously uploaded data must be contiguous, the position parameter must be
+   * specified and equal to the length of the file after all data has been written, and there must
+   * not be a request entity body included with the request.
+   */
+  position?: number;
+  /**
+   * Valid only for flush operations.  If "true", uncommitted data is retained after the flush
+   * operation completes; otherwise, the uncommitted data is deleted after the flush operation.
+   * The default is false.  Data at offsets less than the specified position are written to the
+   * file when flush succeeds, but this optional parameter allows data after the flush position to
+   * be retained for a future flush operation.
+   */
+  retainUncommittedData?: boolean;
+  /**
+   * Azure Storage Events allow applications to receive notifications when files change. When Azure
+   * Storage Events are enabled, a file changed event is raised. This event has a property
+   * indicating whether this is the final change to distinguish the difference between an
+   * intermediate flush to a file stream and the final close of a file stream. The close query
+   * parameter is valid only when the action is "flush" and change notifications are enabled. If
+   * the value of close is "true" and the flush operation completes successfully, the service
+   * raises a file change notification with a property indicating that this is the final update
+   * (the file stream has been closed). If "false" a change notification is raised indicating the
+   * file has changed. The default is false. This query parameter is set to true by the Hadoop ABFS
+   * driver to indicate that the file stream has been closed."
+   */
+  close?: boolean;
+  /**
+   * Required for "Append Data" and "Flush Data".  Must be 0 for "Flush Data".  Must be the length
+   * of the request content in bytes for "Append Data".
+   */
+  contentLength?: number;
+  /**
+   * Optional. User-defined properties to be stored with the filesystem, in the format of a
+   * comma-separated list of name and value pairs "n1=v1, n2=v2, ...", where each value is a base64
+   * encoded string. Note that the string may only contain ASCII characters in the ISO-8859-1
+   * character set.  If the filesystem exists, any properties not included in the list will be
+   * removed.  All properties are removed if the header is omitted.  To merge new and existing
+   * properties, first get all existing properties and the current E-Tag, then make a conditional
+   * request with the E-Tag and include values for all properties.
+   */
+  properties?: string;
+  /**
+   * Optional. The owner of the blob or directory.
+   */
+  owner?: string;
+  /**
+   * Optional. The owning group of the blob or directory.
+   */
+  group?: string;
+  /**
+   * Optional and only valid if Hierarchical Namespace is enabled for the account. Sets POSIX
+   * access permissions for the file owner, the file owning group, and others. Each class may be
+   * granted read, write, or execute permission.  The sticky bit is also supported.  Both symbolic
+   * (rwxrw-rw-) and 4-digit octal notation (e.g. 0766) are supported.
+   */
+  permissions?: string;
+  /**
+   * Sets POSIX access control rights on files and directories. The value is a comma-separated list
+   * of access control entries. Each access control entry (ACE) consists of a scope, a type, a user
+   * or group identifier, and permissions in the format "[scope:][type]:[id]:[permissions]".
+   */
+  acl?: string;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Additional parameters for the operation
+   */
+  pathHTTPHeaders?: PathHTTPHeaders;
+  /**
+   * Additional parameters for the operation
+   */
+  leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface PathLeaseOptionalParams {
+  /**
+   * The lease duration is required to acquire a lease, and specifies the duration of the lease in
+   * seconds.  The lease duration must be between 15 and 60 seconds or -1 for infinite lease.
+   */
+  xMsLeaseDuration?: number;
+  /**
+   * The lease break period duration is optional to break a lease, and  specifies the break period
+   * of the lease in seconds.  The lease break  duration must be between 0 and 60 seconds.
+   */
+  xMsLeaseBreakPeriod?: number;
+  /**
+   * Proposed lease ID, in a GUID string format. The Blob service returns 400 (Invalid request) if
+   * the proposed lease ID is not in the correct format. See Guid Constructor (String) for a list
+   * of valid GUID string formats.
+   */
+  proposedLeaseId?: string;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Additional parameters for the operation
+   */
+  leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface PathReadOptionalParams {
+  /**
+   * The HTTP Range request header specifies one or more byte ranges of the resource to be
+   * retrieved.
+   */
+  range?: string;
+  /**
+   * Optional. When this header is set to "true" and specified together with the Range header, the
+   * service returns the MD5 hash for the range, as long as the range is less than or equal to 4MB
+   * in size. If this header is specified without the Range header, the service returns status code
+   * 400 (Bad Request). If this header is set to true when the range exceeds 4 MB in size, the
+   * service returns status code 400 (Bad Request).
+   */
+  xMsRangeGetContentMd5?: boolean;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Additional parameters for the operation
+   */
+  leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkInfo?: CpkInfo;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface PathGetPropertiesOptionalParams {
+  /**
+   * Optional. If the value is "getStatus" only the system defined properties for the path are
+   * returned. If the value is "getAccessControl" the access control list is returned in the
+   * response headers (Hierarchical Namespace must be enabled for the account), otherwise the
+   * properties are returned. Possible values include: 'getAccessControl', 'getStatus'
+   */
+  action?: PathGetPropertiesAction;
+  /**
+   * Optional. Valid only when Hierarchical Namespace is enabled for the account. If "true", the
+   * identity values returned in the x-ms-owner, x-ms-group, and x-ms-acl response headers will be
+   * transformed from Azure Active Directory Object IDs to User Principal Names.  If "false", the
+   * values will be returned as Azure Active Directory Object IDs. The default value is false.
+   */
+  upn?: boolean;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Additional parameters for the operation
+   */
+  leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface PathDeleteMethodOptionalParams {
+  /**
+   * Required
+   */
+  recursive?: boolean;
+  /**
+   * When renaming a directory, the number of paths that are renamed with each invocation is
+   * limited.  If the number of paths to be renamed exceeds this limit, a continuation token is
+   * returned in this response header.  When a continuation token is returned in the response, it
+   * must be specified in a subsequent invocation of the rename operation to continue renaming the
+   * directory.
+   */
+  marker?: string;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Additional parameters for the operation
+   */
+  leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface PathSetAccessControlOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Optional. The owner of the blob or directory.
+   */
+  owner?: string;
+  /**
+   * Optional. The owning group of the blob or directory.
+   */
+  group?: string;
+  /**
+   * Optional and only valid if Hierarchical Namespace is enabled for the account. Sets POSIX
+   * access permissions for the file owner, the file owning group, and others. Each class may be
+   * granted read, write, or execute permission.  The sticky bit is also supported.  Both symbolic
+   * (rwxrw-rw-) and 4-digit octal notation (e.g. 0766) are supported.
+   */
+  permissions?: string;
+  /**
+   * Sets POSIX access control rights on files and directories. The value is a comma-separated list
+   * of access control entries. Each access control entry (ACE) consists of a scope, a type, a user
+   * or group identifier, and permissions in the format "[scope:][type]:[id]:[permissions]".
+   */
+  acl?: string;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * Additional parameters for the operation
+   */
+  leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface PathSetAccessControlRecursiveOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * When renaming a directory, the number of paths that are renamed with each invocation is
+   * limited.  If the number of paths to be renamed exceeds this limit, a continuation token is
+   * returned in this response header.  When a continuation token is returned in the response, it
+   * must be specified in a subsequent invocation of the rename operation to continue renaming the
+   * directory.
+   */
+  marker?: string;
+  /**
+   * Optional. Valid for "SetAccessControlRecursive" operation. If set to false, the operation will
+   * terminate quickly on encountering user errors (4XX). If true, the operation will ignore user
+   * errors and proceed with the operation on other sub-entities of the directory. Continuation
+   * token will only be returned when forceFlag is true in case of user errors. If not set the
+   * default value is false for this.
+   */
+  forceFlag?: boolean;
+  /**
+   * Optional. It specifies the maximum number of files or directories on which the acl change will
+   * be applied. If omitted or greater than 2,000, the request will process up to 2,000 items
+   */
+  maxRecords?: number;
+  /**
+   * Sets POSIX access control rights on files and directories. The value is a comma-separated list
+   * of access control entries. Each access control entry (ACE) consists of a scope, a type, a user
+   * or group identifier, and permissions in the format "[scope:][type]:[id]:[permissions]".
+   */
+  acl?: string;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface PathFlushDataOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * This parameter allows the caller to upload data in parallel and control the order in which it
+   * is appended to the file.  It is required when uploading data to be appended to the file and
+   * when flushing previously uploaded data to the file.  The value must be the position where the
+   * data is to be appended.  Uploaded data is not immediately flushed, or written, to the file.
+   * To flush, the previously uploaded data must be contiguous, the position parameter must be
+   * specified and equal to the length of the file after all data has been written, and there must
+   * not be a request entity body included with the request.
+   */
+  position?: number;
+  /**
+   * Valid only for flush operations.  If "true", uncommitted data is retained after the flush
+   * operation completes; otherwise, the uncommitted data is deleted after the flush operation.
+   * The default is false.  Data at offsets less than the specified position are written to the
+   * file when flush succeeds, but this optional parameter allows data after the flush position to
+   * be retained for a future flush operation.
+   */
+  retainUncommittedData?: boolean;
+  /**
+   * Azure Storage Events allow applications to receive notifications when files change. When Azure
+   * Storage Events are enabled, a file changed event is raised. This event has a property
+   * indicating whether this is the final change to distinguish the difference between an
+   * intermediate flush to a file stream and the final close of a file stream. The close query
+   * parameter is valid only when the action is "flush" and change notifications are enabled. If
+   * the value of close is "true" and the flush operation completes successfully, the service
+   * raises a file change notification with a property indicating that this is the final update
+   * (the file stream has been closed). If "false" a change notification is raised indicating the
+   * file has changed. The default is false. This query parameter is set to true by the Hadoop ABFS
+   * driver to indicate that the file stream has been closed."
+   */
+  close?: boolean;
+  /**
+   * Required for "Append Data" and "Flush Data".  Must be 0 for "Flush Data".  Must be the length
+   * of the request content in bytes for "Append Data".
+   */
+  contentLength?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * Additional parameters for the operation
+   */
+  pathHTTPHeaders?: PathHTTPHeaders;
+  /**
+   * Additional parameters for the operation
+   */
+  leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  modifiedAccessConditions?: ModifiedAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkInfo?: CpkInfo;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface PathAppendDataOptionalParams {
+  /**
+   * This parameter allows the caller to upload data in parallel and control the order in which it
+   * is appended to the file.  It is required when uploading data to be appended to the file and
+   * when flushing previously uploaded data to the file.  The value must be the position where the
+   * data is to be appended.  Uploaded data is not immediately flushed, or written, to the file.
+   * To flush, the previously uploaded data must be contiguous, the position parameter must be
+   * specified and equal to the length of the file after all data has been written, and there must
+   * not be a request entity body included with the request.
+   */
+  position?: number;
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Required for "Append Data" and "Flush Data".  Must be 0 for "Flush Data".  Must be the length
+   * of the request content in bytes for "Append Data".
+   */
+  contentLength?: number;
+  /**
+   * Specify the transactional crc64 for the body, to be validated by the service.
+   */
+  transactionalContentCrc64?: Uint8Array;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * Additional parameters for the operation
+   */
+  pathHTTPHeaders?: PathHTTPHeaders;
+  /**
+   * Additional parameters for the operation
+   */
+  leaseAccessConditions?: LeaseAccessConditions;
+  /**
+   * Additional parameters for the operation
+   */
+  cpkInfo?: CpkInfo;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface PathSetExpiryOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
+   * analytics logs when storage analytics logging is enabled.
+   */
+  requestId?: string;
+  /**
+   * The time to set the blob to expiry
+   */
+  expiresOn?: string;
+}
+
+/**
+ * Optional Parameters.
+ */
+export interface PathUndeleteOptionalParams {
+  /**
+   * The timeout parameter is expressed in seconds. For more information, see <a
+   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
+   * Timeouts for Blob Service Operations.</a>
+   */
+  timeout?: number;
+  /**
+   * Only for hierarchical namespace enabled accounts. Optional. The path of the soft deleted blob
+   * to undelete.
+   */
+  undeleteSource?: string;
   /**
    * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
    * analytics logs when storage analytics logging is enabled.
@@ -1264,236 +2314,6 @@ export interface ContainerListBlobHierarchySegmentOptionalParams {
 /**
  * Optional Parameters.
  */
-export interface DirectoryCreateOptionalParams {
-  /**
-   * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-   * Timeouts for Blob Service Operations.</a>
-   */
-  timeout?: number;
-  /**
-   * Optional.  User-defined properties to be stored with the file or directory, in the format of a
-   * comma-separated list of name and value pairs "n1=v1, n2=v2, ...", where each value is base64
-   * encoded.
-   */
-  directoryProperties?: string;
-  /**
-   * Optional and only valid if Hierarchical Namespace is enabled for the account. Sets POSIX
-   * access permissions for the file owner, the file owning group, and others. Each class may be
-   * granted read, write, or execute permission.  The sticky bit is also supported.  Both symbolic
-   * (rwxrw-rw-) and 4-digit octal notation (e.g. 0766) are supported.
-   */
-  posixPermissions?: string;
-  /**
-   * Only valid if Hierarchical Namespace is enabled for the account. This umask restricts
-   * permission settings for file and directory, and will only be applied when default Acl does not
-   * exist in parent directory. If the umask bit has set, it means that the corresponding
-   * permission will be disabled. Otherwise the corresponding permission will be determined by the
-   * permission. A 4-digit octal notation (e.g. 0022) is supported here. If no umask was specified,
-   * a default umask - 0027 will be used.
-   */
-  posixUmask?: string;
-  /**
-   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
-   * analytics logs when storage analytics logging is enabled.
-   */
-  requestId?: string;
-  /**
-   * Additional parameters for the operation
-   */
-  directoryHttpHeaders?: DirectoryHttpHeaders;
-  /**
-   * Additional parameters for the operation
-   */
-  leaseAccessConditions?: LeaseAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  modifiedAccessConditions?: ModifiedAccessConditions;
-}
-
-/**
- * Optional Parameters.
- */
-export interface DirectoryRenameOptionalParams {
-  /**
-   * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-   * Timeouts for Blob Service Operations.</a>
-   */
-  timeout?: number;
-  /**
-   * When renaming a directory, the number of paths that are renamed with each invocation is
-   * limited.  If the number of paths to be renamed exceeds this limit, a continuation token is
-   * returned in this response header.  When a continuation token is returned in the response, it
-   * must be specified in a subsequent invocation of the rename operation to continue renaming the
-   * directory.
-   */
-  marker?: string;
-  /**
-   * Optional.  User-defined properties to be stored with the file or directory, in the format of a
-   * comma-separated list of name and value pairs "n1=v1, n2=v2, ...", where each value is base64
-   * encoded.
-   */
-  directoryProperties?: string;
-  /**
-   * Optional and only valid if Hierarchical Namespace is enabled for the account. Sets POSIX
-   * access permissions for the file owner, the file owning group, and others. Each class may be
-   * granted read, write, or execute permission.  The sticky bit is also supported.  Both symbolic
-   * (rwxrw-rw-) and 4-digit octal notation (e.g. 0766) are supported.
-   */
-  posixPermissions?: string;
-  /**
-   * Only valid if Hierarchical Namespace is enabled for the account. This umask restricts
-   * permission settings for file and directory, and will only be applied when default Acl does not
-   * exist in parent directory. If the umask bit has set, it means that the corresponding
-   * permission will be disabled. Otherwise the corresponding permission will be determined by the
-   * permission. A 4-digit octal notation (e.g. 0022) is supported here. If no umask was specified,
-   * a default umask - 0027 will be used.
-   */
-  posixUmask?: string;
-  /**
-   * A lease ID for the source path. If specified, the source path must have an active lease and
-   * the leaase ID must match.
-   */
-  sourceLeaseId?: string;
-  /**
-   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
-   * analytics logs when storage analytics logging is enabled.
-   */
-  requestId?: string;
-  /**
-   * Additional parameters for the operation
-   */
-  directoryHttpHeaders?: DirectoryHttpHeaders;
-  /**
-   * Additional parameters for the operation
-   */
-  leaseAccessConditions?: LeaseAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  modifiedAccessConditions?: ModifiedAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  sourceModifiedAccessConditions?: SourceModifiedAccessConditions;
-}
-
-/**
- * Optional Parameters.
- */
-export interface DirectoryDeleteMethodOptionalParams {
-  /**
-   * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-   * Timeouts for Blob Service Operations.</a>
-   */
-  timeout?: number;
-  /**
-   * When renaming a directory, the number of paths that are renamed with each invocation is
-   * limited.  If the number of paths to be renamed exceeds this limit, a continuation token is
-   * returned in this response header.  When a continuation token is returned in the response, it
-   * must be specified in a subsequent invocation of the rename operation to continue renaming the
-   * directory.
-   */
-  marker?: string;
-  /**
-   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
-   * analytics logs when storage analytics logging is enabled.
-   */
-  requestId?: string;
-  /**
-   * Additional parameters for the operation
-   */
-  leaseAccessConditions?: LeaseAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  modifiedAccessConditions?: ModifiedAccessConditions;
-}
-
-/**
- * Optional Parameters.
- */
-export interface DirectorySetAccessControlOptionalParams {
-  /**
-   * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-   * Timeouts for Blob Service Operations.</a>
-   */
-  timeout?: number;
-  /**
-   * Optional. The owner of the blob or directory.
-   */
-  owner?: string;
-  /**
-   * Optional. The owning group of the blob or directory.
-   */
-  group?: string;
-  /**
-   * Optional and only valid if Hierarchical Namespace is enabled for the account. Sets POSIX
-   * access permissions for the file owner, the file owning group, and others. Each class may be
-   * granted read, write, or execute permission.  The sticky bit is also supported.  Both symbolic
-   * (rwxrw-rw-) and 4-digit octal notation (e.g. 0766) are supported.
-   */
-  posixPermissions?: string;
-  /**
-   * Sets POSIX access control rights on files and directories. The value is a comma-separated list
-   * of access control entries. Each access control entry (ACE) consists of a scope, a type, a user
-   * or group identifier, and permissions in the format "[scope:][type]:[id]:[permissions]".
-   */
-  posixAcl?: string;
-  /**
-   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
-   * analytics logs when storage analytics logging is enabled.
-   */
-  requestId?: string;
-  /**
-   * Additional parameters for the operation
-   */
-  leaseAccessConditions?: LeaseAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  modifiedAccessConditions?: ModifiedAccessConditions;
-}
-
-/**
- * Optional Parameters.
- */
-export interface DirectoryGetAccessControlOptionalParams {
-  /**
-   * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-   * Timeouts for Blob Service Operations.</a>
-   */
-  timeout?: number;
-  /**
-   * Optional. Valid only when Hierarchical Namespace is enabled for the account. If "true", the
-   * identity values returned in the x-ms-owner, x-ms-group, and x-ms-acl response headers will be
-   * transformed from Azure Active Directory Object IDs to User Principal Names.  If "false", the
-   * values will be returned as Azure Active Directory Object IDs. The default value is false.
-   */
-  upn?: boolean;
-  /**
-   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
-   * analytics logs when storage analytics logging is enabled.
-   */
-  requestId?: string;
-  /**
-   * Additional parameters for the operation
-   */
-  leaseAccessConditions?: LeaseAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  modifiedAccessConditions?: ModifiedAccessConditions;
-}
-
-/**
- * Optional Parameters.
- */
 export interface BlobDownloadOptionalParams {
   /**
    * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
@@ -1580,44 +2400,6 @@ export interface BlobGetPropertiesOptionalParams {
 /**
  * Optional Parameters.
  */
-export interface BlobDeleteMethodOptionalParams {
-  /**
-   * The snapshot parameter is an opaque DateTime value that, when present, specifies the blob
-   * snapshot to retrieve. For more information on working with blob snapshots, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/creating-a-snapshot-of-a-blob">Creating
-   * a Snapshot of a Blob.</a>
-   */
-  snapshot?: string;
-  /**
-   * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-   * Timeouts for Blob Service Operations.</a>
-   */
-  timeout?: number;
-  /**
-   * Required if the blob has associated snapshots. Specify one of the following two options:
-   * include: Delete the base blob and all of its snapshots. only: Delete only the blob's snapshots
-   * and not the blob itself. Possible values include: 'include', 'only'
-   */
-  deleteSnapshots?: DeleteSnapshotsOptionType;
-  /**
-   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
-   * analytics logs when storage analytics logging is enabled.
-   */
-  requestId?: string;
-  /**
-   * Additional parameters for the operation
-   */
-  leaseAccessConditions?: LeaseAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  modifiedAccessConditions?: ModifiedAccessConditions;
-}
-
-/**
- * Optional Parameters.
- */
 export interface BlobSetAccessControlOptionalParams {
   /**
    * The timeout parameter is expressed in seconds. For more information, see <a
@@ -1659,98 +2441,6 @@ export interface BlobSetAccessControlOptionalParams {
    * Additional parameters for the operation
    */
   modifiedAccessConditions?: ModifiedAccessConditions;
-}
-
-/**
- * Optional Parameters.
- */
-export interface BlobGetAccessControlOptionalParams {
-  /**
-   * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-   * Timeouts for Blob Service Operations.</a>
-   */
-  timeout?: number;
-  /**
-   * Optional. Valid only when Hierarchical Namespace is enabled for the account. If "true", the
-   * identity values returned in the x-ms-owner, x-ms-group, and x-ms-acl response headers will be
-   * transformed from Azure Active Directory Object IDs to User Principal Names.  If "false", the
-   * values will be returned as Azure Active Directory Object IDs. The default value is false.
-   */
-  upn?: boolean;
-  /**
-   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
-   * analytics logs when storage analytics logging is enabled.
-   */
-  requestId?: string;
-  /**
-   * Additional parameters for the operation
-   */
-  leaseAccessConditions?: LeaseAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  modifiedAccessConditions?: ModifiedAccessConditions;
-}
-
-/**
- * Optional Parameters.
- */
-export interface BlobRenameOptionalParams {
-  /**
-   * The timeout parameter is expressed in seconds. For more information, see <a
-   * href="https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations">Setting
-   * Timeouts for Blob Service Operations.</a>
-   */
-  timeout?: number;
-  /**
-   * Optional.  User-defined properties to be stored with the file or directory, in the format of a
-   * comma-separated list of name and value pairs "n1=v1, n2=v2, ...", where each value is base64
-   * encoded.
-   */
-  directoryProperties?: string;
-  /**
-   * Optional and only valid if Hierarchical Namespace is enabled for the account. Sets POSIX
-   * access permissions for the file owner, the file owning group, and others. Each class may be
-   * granted read, write, or execute permission.  The sticky bit is also supported.  Both symbolic
-   * (rwxrw-rw-) and 4-digit octal notation (e.g. 0766) are supported.
-   */
-  posixPermissions?: string;
-  /**
-   * Only valid if Hierarchical Namespace is enabled for the account. This umask restricts
-   * permission settings for file and directory, and will only be applied when default Acl does not
-   * exist in parent directory. If the umask bit has set, it means that the corresponding
-   * permission will be disabled. Otherwise the corresponding permission will be determined by the
-   * permission. A 4-digit octal notation (e.g. 0022) is supported here. If no umask was specified,
-   * a default umask - 0027 will be used.
-   */
-  posixUmask?: string;
-  /**
-   * A lease ID for the source path. If specified, the source path must have an active lease and
-   * the leaase ID must match.
-   */
-  sourceLeaseId?: string;
-  /**
-   * Provides a client-generated, opaque value with a 1 KB character limit that is recorded in the
-   * analytics logs when storage analytics logging is enabled.
-   */
-  requestId?: string;
-  /**
-   * Additional parameters for the operation
-   */
-  directoryHttpHeaders?: DirectoryHttpHeaders;
-  /**
-   * Additional parameters for the operation
-   */
-  leaseAccessConditions?: LeaseAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  modifiedAccessConditions?: ModifiedAccessConditions;
-  /**
-   * Additional parameters for the operation
-   */
-  sourceModifiedAccessConditions?: SourceModifiedAccessConditions;
 }
 
 /**
@@ -2689,10 +3379,6 @@ export interface BlockBlobStageBlockOptionalParams {
    * Additional parameters for the operation
    */
   cpkInfo?: CpkInfo;
-  /**
-   * Additional parameters for the operation
-   */
-  blobHTTPHeaders?: BlobHTTPHeaders;
 }
 
 /**
@@ -2820,6 +3506,908 @@ export interface BlockBlobGetBlockListOptionalParams {
    * Additional parameters for the operation
    */
   leaseAccessConditions?: LeaseAccessConditions;
+}
+
+/**
+ * Defines headers for ListFileSystems operation.
+ */
+export interface ServiceListFileSystemsHeaders {
+  /**
+   * A UTC date/time value generated by the service that indicates the time at which the response
+   * was initiated.
+   */
+  date?: Date;
+  /**
+   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
+   */
+  requestId?: string;
+  /**
+   * The version of the REST protocol used to process the request.
+   */
+  version?: string;
+  /**
+   * If the number of filesystems to be listed exceeds the maxResults limit, a continuation token
+   * is returned in this response header.  When a continuation token is returned in the response,
+   * it must be specified in a subsequent invocation of the list operation to continue listing the
+   * filesystems.
+   */
+  continuation?: string;
+  /**
+   * The content type of list filesystem response. The default content type is application/json.
+   */
+  contentType?: string;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for Create operation.
+ */
+export interface FileSystemCreateHeaders {
+  /**
+   * A UTC date/time value generated by the service that indicates the time at which the response
+   * was initiated.
+   */
+  date?: Date;
+  /**
+   * An HTTP entity tag associated with the FileSystem.
+   */
+  eTag?: string;
+  /**
+   * The data and time the filesystem was last modified.  Operations on files and directories do
+   * not affect the last modified time.
+   */
+  lastModified?: Date;
+  /**
+   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
+   */
+  clientRequestId?: string;
+  /**
+   * The version of the REST protocol used to process the request.
+   */
+  version?: string;
+  /**
+   * A bool string indicates whether the namespace feature is enabled. If "true", the namespace is
+   * enabled for the filesystem.
+   */
+  namespaceEnabled?: string;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for SetProperties operation.
+ */
+export interface FileSystemSetPropertiesHeaders {
+  /**
+   * A UTC date/time value generated by the service that indicates the time at which the response
+   * was initiated.
+   */
+  date?: Date;
+  /**
+   * An HTTP entity tag associated with the filesystem.  Changes to filesystem properties affect
+   * the entity tag, but operations on files and directories do not.
+   */
+  eTag?: string;
+  /**
+   * The data and time the filesystem was last modified.  Changes to filesystem properties update
+   * the last modified time, but operations on files and directories do not.
+   */
+  lastModified?: Date;
+  /**
+   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
+   */
+  requestId?: string;
+  /**
+   * The version of the REST protocol used to process the request.
+   */
+  version?: string;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for GetProperties operation.
+ */
+export interface FileSystemGetPropertiesHeaders {
+  /**
+   * A UTC date/time value generated by the service that indicates the time at which the response
+   * was initiated.
+   */
+  date?: Date;
+  /**
+   * An HTTP entity tag associated with the filesystem.  Changes to filesystem properties affect
+   * the entity tag, but operations on files and directories do not.
+   */
+  eTag?: string;
+  /**
+   * The data and time the filesystem was last modified.  Changes to filesystem properties update
+   * the last modified time, but operations on files and directories do not.
+   */
+  lastModified?: Date;
+  /**
+   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
+   */
+  requestId?: string;
+  /**
+   * The version of the REST protocol used to process the request.
+   */
+  version?: string;
+  /**
+   * The user-defined properties associated with the filesystem.  A comma-separated list of name
+   * and value pairs in the format "n1=v1, n2=v2, ...", where each value is a base64 encoded
+   * string. Note that the string may only contain ASCII characters in the ISO-8859-1 character
+   * set.
+   */
+  properties?: string;
+  /**
+   * A bool string indicates whether the namespace feature is enabled. If "true", the namespace is
+   * enabled for the filesystem.
+   */
+  namespaceEnabled?: string;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for Delete operation.
+ */
+export interface FileSystemDeleteHeaders {
+  /**
+   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
+   */
+  requestId?: string;
+  /**
+   * The version of the REST protocol used to process the request.
+   */
+  version?: string;
+  /**
+   * A UTC date/time value generated by the service that indicates the time at which the response
+   * was initiated.
+   */
+  date?: Date;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for ListPaths operation.
+ */
+export interface FileSystemListPathsHeaders {
+  /**
+   * A UTC date/time value generated by the service that indicates the time at which the response
+   * was initiated.
+   */
+  date?: Date;
+  /**
+   * An HTTP entity tag associated with the filesystem.  Changes to filesystem properties affect
+   * the entity tag, but operations on files and directories do not.
+   */
+  eTag?: string;
+  /**
+   * The data and time the filesystem was last modified.  Changes to filesystem properties update
+   * the last modified time, but operations on files and directories do not.
+   */
+  lastModified?: Date;
+  /**
+   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
+   */
+  requestId?: string;
+  /**
+   * The version of the REST protocol used to process the request.
+   */
+  version?: string;
+  /**
+   * If the number of paths to be listed exceeds the maxResults limit, a continuation token is
+   * returned in this response header.  When a continuation token is returned in the response, it
+   * must be specified in a subsequent invocation of the list operation to continue listing the
+   * paths.
+   */
+  continuation?: string;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for ListBlobHierarchySegment operation.
+ */
+export interface FileSystemListBlobHierarchySegmentHeaders {
+  /**
+   * The media type of the body of the response. For List Blobs this is 'application/xml'
+   */
+  contentType?: string;
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * This header uniquely identifies the request that was made and can be used for troubleshooting
+   * the request.
+   */
+  requestId?: string;
+  /**
+   * Indicates the version of the Blob service used to execute the request. This header is returned
+   * for requests made against version 2009-09-19 and above.
+   */
+  version?: string;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the response was
+   * initiated
+   */
+  date?: Date;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for Create operation.
+ */
+export interface PathCreateHeaders {
+  /**
+   * A UTC date/time value generated by the service that indicates the time at which the response
+   * was initiated.
+   */
+  date?: Date;
+  /**
+   * An HTTP entity tag associated with the file or directory.
+   */
+  eTag?: string;
+  /**
+   * The data and time the file or directory was last modified.  Write operations on the file or
+   * directory update the last modified time.
+   */
+  lastModified?: Date;
+  /**
+   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
+   */
+  requestId?: string;
+  /**
+   * The version of the REST protocol used to process the request.
+   */
+  version?: string;
+  /**
+   * When renaming a directory, the number of paths that are renamed with each invocation is
+   * limited.  If the number of paths to be renamed exceeds this limit, a continuation token is
+   * returned in this response header.  When a continuation token is returned in the response, it
+   * must be specified in a subsequent invocation of the rename operation to continue renaming the
+   * directory.
+   */
+  continuation?: string;
+  /**
+   * The size of the resource in bytes.
+   */
+  contentLength?: number;
+  /**
+   * The value of this header is set to true if the contents of the request are successfully
+   * encrypted using the specified algorithm, and false otherwise.
+   */
+  isServerEncrypted?: boolean;
+  /**
+   * The SHA-256 hash of the encryption key used to encrypt the blob. This header is only returned
+   * when the blob was encrypted with a customer-provided key.
+   */
+  encryptionKeySha256?: string;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for Update operation.
+ */
+export interface PathUpdateHeaders {
+  /**
+   * A UTC date/time value generated by the service that indicates the time at which the response
+   * was initiated.
+   */
+  date?: Date;
+  /**
+   * An HTTP entity tag associated with the file or directory.
+   */
+  eTag?: string;
+  /**
+   * The data and time the file or directory was last modified.  Write operations on the file or
+   * directory update the last modified time.
+   */
+  lastModified?: Date;
+  /**
+   * Indicates that the service supports requests for partial file content.
+   */
+  acceptRanges?: string;
+  /**
+   * If the Cache-Control request header has previously been set for the resource, that value is
+   * returned in this header.
+   */
+  cacheControl?: string;
+  /**
+   * If the Content-Disposition request header has previously been set for the resource, that value
+   * is returned in this header.
+   */
+  contentDisposition?: string;
+  /**
+   * If the Content-Encoding request header has previously been set for the resource, that value is
+   * returned in this header.
+   */
+  contentEncoding?: string;
+  /**
+   * If the Content-Language request header has previously been set for the resource, that value is
+   * returned in this header.
+   */
+  contentLanguage?: string;
+  /**
+   * The size of the resource in bytes.
+   */
+  contentLength?: number;
+  /**
+   * Indicates the range of bytes returned in the event that the client requested a subset of the
+   * file by setting the Range request header.
+   */
+  contentRange?: string;
+  /**
+   * The content type specified for the resource. If no content type was specified, the default
+   * content type is application/octet-stream.
+   */
+  contentType?: string;
+  /**
+   * An MD5 hash of the request content. This header is only returned for "Append" operation. This
+   * header is returned so that the client can check for message content integrity. The value of
+   * this header is computed by the service; it is not necessarily the same value specified in the
+   * request headers.
+   */
+  contentMD5?: string;
+  /**
+   * User-defined properties associated with the file or directory, in the format of a
+   * comma-separated list of name and value pairs "n1=v1, n2=v2, ...", where each value is a base64
+   * encoded string. Note that the string may only contain ASCII characters in the ISO-8859-1
+   * character set.
+   */
+  properties?: string;
+  /**
+   * When performing setAccessControlRecursive on a directory, the number of paths that are
+   * processed with each invocation is limited.  If the number of paths to be processed exceeds
+   * this limit, a continuation token is returned in this response header.  When a continuation
+   * token is returned in the response, it must be specified in a subsequent invocation of the
+   * setAccessControlRecursive operation to continue the setAccessControlRecursive operation on the
+   * directory.
+   */
+  xMsContinuation?: string;
+  /**
+   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
+   */
+  requestId?: string;
+  /**
+   * The version of the REST protocol used to process the request.
+   */
+  version?: string;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for Lease operation.
+ */
+export interface PathLeaseHeaders {
+  /**
+   * A UTC date/time value generated by the service that indicates the time at which the response
+   * was initiated.
+   */
+  date?: Date;
+  /**
+   * An HTTP entity tag associated with the file or directory.
+   */
+  eTag?: string;
+  /**
+   * The data and time the file or directory was last modified.  Write operations on the file or
+   * directory update the last modified time.
+   */
+  lastModified?: Date;
+  /**
+   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
+   */
+  requestId?: string;
+  /**
+   * The version of the REST protocol used to process the request.
+   */
+  version?: string;
+  /**
+   * A successful "acquire" action returns the lease ID.
+   */
+  leaseId?: string;
+  /**
+   * The time remaining in the lease period in seconds.
+   */
+  leaseTime?: string;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for Read operation.
+ */
+export interface PathReadHeaders {
+  /**
+   * Indicates that the service supports requests for partial file content.
+   */
+  acceptRanges?: string;
+  /**
+   * If the Cache-Control request header has previously been set for the resource, that value is
+   * returned in this header.
+   */
+  cacheControl?: string;
+  /**
+   * If the Content-Disposition request header has previously been set for the resource, that value
+   * is returned in this header.
+   */
+  contentDisposition?: string;
+  /**
+   * If the Content-Encoding request header has previously been set for the resource, that value is
+   * returned in this header.
+   */
+  contentEncoding?: string;
+  /**
+   * If the Content-Language request header has previously been set for the resource, that value is
+   * returned in this header.
+   */
+  contentLanguage?: string;
+  /**
+   * The size of the resource in bytes.
+   */
+  contentLength?: number;
+  /**
+   * Indicates the range of bytes returned in the event that the client requested a subset of the
+   * file by setting the Range request header.
+   */
+  contentRange?: string;
+  /**
+   * The content type specified for the resource. If no content type was specified, the default
+   * content type is application/octet-stream.
+   */
+  contentType?: string;
+  /**
+   * The MD5 hash of read range. If the request is to read a specified range and the
+   * "x-ms-range-get-content-md5" is set to true, then the request returns an MD5 hash for the
+   * range, as long as the range size is less than or equal to 4 MB.
+   */
+  contentMD5?: string;
+  /**
+   * A UTC date/time value generated by the service that indicates the time at which the response
+   * was initiated.
+   */
+  date?: Date;
+  /**
+   * An HTTP entity tag associated with the file or directory.
+   */
+  eTag?: string;
+  /**
+   * The data and time the file or directory was last modified.  Write operations on the file or
+   * directory update the last modified time.
+   */
+  lastModified?: Date;
+  /**
+   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
+   */
+  requestId?: string;
+  /**
+   * The version of the REST protocol used to process the request.
+   */
+  version?: string;
+  /**
+   * The type of the resource.  The value may be "file" or "directory".  If not set, the value is
+   * "file".
+   */
+  resourceType?: string;
+  /**
+   * The user-defined properties associated with the file or directory, in the format of a
+   * comma-separated list of name and value pairs "n1=v1, n2=v2, ...", where each value is a base64
+   * encoded string. Note that the string may only contain ASCII characters in the ISO-8859-1
+   * character set.
+   */
+  properties?: string;
+  /**
+   * When a resource is leased, specifies whether the lease is of infinite or fixed duration.
+   */
+  leaseDuration?: string;
+  /**
+   * Lease state of the resource.
+   */
+  leaseState?: string;
+  /**
+   * The lease status of the resource.
+   */
+  leaseStatus?: string;
+  /**
+   * The value of this header is set to true if the contents of the request are successfully
+   * encrypted using the specified algorithm, and false otherwise.
+   */
+  isServerEncrypted?: boolean;
+  /**
+   * The SHA-256 hash of the encryption key used to encrypt the blob. This header is only returned
+   * when the blob was encrypted with a customer-provided key.
+   */
+  encryptionKeySha256?: string;
+  /**
+   * The MD5 hash of complete file stored in storage. If the file has a MD5 hash, and if request
+   * contains range header (Range or x-ms-range), this response header is returned with the value
+   * of the complete file's MD5 value. This value may or may not be equal to the value returned in
+   * Content-MD5 header, with the latter calculated from the requested range.
+   */
+  xMsContentMd5?: string;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for GetProperties operation.
+ */
+export interface PathGetPropertiesHeaders {
+  /**
+   * Indicates that the service supports requests for partial file content.
+   */
+  acceptRanges?: string;
+  /**
+   * If the Cache-Control request header has previously been set for the resource, that value is
+   * returned in this header.
+   */
+  cacheControl?: string;
+  /**
+   * If the Content-Disposition request header has previously been set for the resource, that value
+   * is returned in this header.
+   */
+  contentDisposition?: string;
+  /**
+   * If the Content-Encoding request header has previously been set for the resource, that value is
+   * returned in this header.
+   */
+  contentEncoding?: string;
+  /**
+   * If the Content-Language request header has previously been set for the resource, that value is
+   * returned in this header.
+   */
+  contentLanguage?: string;
+  /**
+   * The size of the resource in bytes.
+   */
+  contentLength?: number;
+  /**
+   * Indicates the range of bytes returned in the event that the client requested a subset of the
+   * file by setting the Range request header.
+   */
+  contentRange?: string;
+  /**
+   * The content type specified for the resource. If no content type was specified, the default
+   * content type is application/octet-stream.
+   */
+  contentType?: string;
+  /**
+   * The MD5 hash of complete file stored in storage. This header is returned only for
+   * "GetProperties" operation. If the Content-MD5 header has been set for the file, this response
+   * header is returned for GetProperties call so that the client can check for message content
+   * integrity.
+   */
+  contentMD5?: string;
+  /**
+   * A UTC date/time value generated by the service that indicates the time at which the response
+   * was initiated.
+   */
+  date?: Date;
+  /**
+   * An HTTP entity tag associated with the file or directory.
+   */
+  eTag?: string;
+  /**
+   * The data and time the file or directory was last modified.  Write operations on the file or
+   * directory update the last modified time.
+   */
+  lastModified?: Date;
+  /**
+   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
+   */
+  requestId?: string;
+  /**
+   * The version of the REST protocol used to process the request.
+   */
+  version?: string;
+  /**
+   * The type of the resource.  The value may be "file" or "directory".  If not set, the value is
+   * "file".
+   */
+  resourceType?: string;
+  /**
+   * The user-defined properties associated with the file or directory, in the format of a
+   * comma-separated list of name and value pairs "n1=v1, n2=v2, ...", where each value is a base64
+   * encoded string. Note that the string may only contain ASCII characters in the ISO-8859-1
+   * character set.
+   */
+  properties?: string;
+  /**
+   * The owner of the file or directory. Included in the response if Hierarchical Namespace is
+   * enabled for the account.
+   */
+  owner?: string;
+  /**
+   * The owning group of the file or directory. Included in the response if Hierarchical Namespace
+   * is enabled for the account.
+   */
+  group?: string;
+  /**
+   * The POSIX access permissions for the file owner, the file owning group, and others. Included
+   * in the response if Hierarchical Namespace is enabled for the account.
+   */
+  permissions?: string;
+  /**
+   * The POSIX access control list for the file or directory.  Included in the response only if the
+   * action is "getAccessControl" and Hierarchical Namespace is enabled for the account.
+   */
+  aCL?: string;
+  /**
+   * When a resource is leased, specifies whether the lease is of infinite or fixed duration.
+   */
+  leaseDuration?: string;
+  /**
+   * Lease state of the resource.
+   */
+  leaseState?: string;
+  /**
+   * The lease status of the resource.
+   */
+  leaseStatus?: string;
+  metadata?: { [propertyName: string]: string };
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for Delete operation.
+ */
+export interface PathDeleteHeaders {
+  /**
+   * A UTC date/time value generated by the service that indicates the time at which the response
+   * was initiated.
+   */
+  date?: Date;
+  /**
+   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
+   */
+  requestId?: string;
+  /**
+   * The version of the REST protocol used to process the request.
+   */
+  version?: string;
+  /**
+   * When deleting a directory, the number of paths that are deleted with each invocation is
+   * limited.  If the number of paths to be deleted exceeds this limit, a continuation token is
+   * returned in this response header.  When a continuation token is returned in the response, it
+   * must be specified in a subsequent invocation of the delete operation to continue deleting the
+   * directory.
+   */
+  continuation?: string;
+  /**
+   * Returned only for hierarchical namespace space enabled accounts when soft delete is enabled. A
+   * unique identifier for the entity that can be used to restore it. See the Undelete REST API for
+   * more information.
+   */
+  deletionId?: string;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for SetAccessControl operation.
+ */
+export interface PathSetAccessControlHeaders {
+  /**
+   * A UTC date/time value generated by the service that indicates the time at which the response
+   * was initiated.
+   */
+  date?: Date;
+  /**
+   * An HTTP entity tag associated with the file or directory.
+   */
+  eTag?: string;
+  /**
+   * The data and time the file or directory was last modified. Write operations on the file or
+   * directory update the last modified time.
+   */
+  lastModified?: Date;
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
+   */
+  requestId?: string;
+  /**
+   * The version of the REST protocol used to process the request.
+   */
+  version?: string;
+}
+
+/**
+ * Defines headers for SetAccessControlRecursive operation.
+ */
+export interface PathSetAccessControlRecursiveHeaders {
+  /**
+   * A UTC date/time value generated by the service that indicates the time at which the response
+   * was initiated.
+   */
+  date?: Date;
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * When performing setAccessControlRecursive on a directory, the number of paths that are
+   * processed with each invocation is limited.  If the number of paths to be processed exceeds
+   * this limit, a continuation token is returned in this response header.  When a continuation
+   * token is returned in the response, it must be specified in a subsequent invocation of the
+   * setAccessControlRecursive operation to continue the setAccessControlRecursive operation on the
+   * directory.
+   */
+  continuation?: string;
+  /**
+   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
+   */
+  requestId?: string;
+  /**
+   * The version of the REST protocol used to process the request.
+   */
+  version?: string;
+}
+
+/**
+ * Defines headers for FlushData operation.
+ */
+export interface PathFlushDataHeaders {
+  /**
+   * A UTC date/time value generated by the service that indicates the time at which the response
+   * was initiated.
+   */
+  date?: Date;
+  /**
+   * An HTTP entity tag associated with the file or directory.
+   */
+  eTag?: string;
+  /**
+   * The data and time the file or directory was last modified.  Write operations on the file or
+   * directory update the last modified time.
+   */
+  lastModified?: Date;
+  /**
+   * The size of the resource in bytes.
+   */
+  contentLength?: number;
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
+   */
+  requestId?: string;
+  /**
+   * The version of the REST protocol used to process the request.
+   */
+  version?: string;
+  /**
+   * The value of this header is set to true if the contents of the request are successfully
+   * encrypted using the specified algorithm, and false otherwise.
+   */
+  isServerEncrypted?: boolean;
+  /**
+   * The SHA-256 hash of the encryption key used to encrypt the blob. This header is only returned
+   * when the blob was encrypted with a customer-provided key.
+   */
+  encryptionKeySha256?: string;
+}
+
+/**
+ * Defines headers for AppendData operation.
+ */
+export interface PathAppendDataHeaders {
+  /**
+   * A UTC date/time value generated by the service that indicates the time at which the response
+   * was initiated.
+   */
+  date?: Date;
+  /**
+   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
+   */
+  requestId?: string;
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * The version of the REST protocol used to process the request.
+   */
+  version?: string;
+  /**
+   * An HTTP entity tag associated with the file or directory.
+   */
+  eTag?: string;
+  /**
+   * If the blob has an MD5 hash and this operation is to read the full blob, this response header
+   * is returned so that the client can check for message content integrity.
+   */
+  contentMD5?: Uint8Array;
+  /**
+   * This header is returned so that the client can check for message content integrity. The value
+   * of this header is computed by the Blob service; it is not necessarily the same value specified
+   * in the request headers.
+   */
+  xMsContentCrc64?: Uint8Array;
+  /**
+   * The value of this header is set to true if the contents of the request are successfully
+   * encrypted using the specified algorithm, and false otherwise.
+   */
+  isServerEncrypted?: boolean;
+  /**
+   * The SHA-256 hash of the encryption key used to encrypt the blob. This header is only returned
+   * when the blob was encrypted with a customer-provided key.
+   */
+  encryptionKeySha256?: string;
+}
+
+/**
+ * Defines headers for SetExpiry operation.
+ */
+export interface PathSetExpiryHeaders {
+  /**
+   * The ETag contains a value that you can use to perform operations conditionally. If the request
+   * version is 2011-08-18 or newer, the ETag value will be in quotes.
+   */
+  eTag?: string;
+  /**
+   * Returns the date and time the container was last modified. Any operation that modifies the
+   * blob, including an update of the blob's metadata or properties, changes the last-modified time
+   * of the blob.
+   */
+  lastModified?: Date;
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * This header uniquely identifies the request that was made and can be used for troubleshooting
+   * the request.
+   */
+  requestId?: string;
+  /**
+   * Indicates the version of the Blob service used to execute the request. This header is returned
+   * for requests made against version 2009-09-19 and above.
+   */
+  version?: string;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the response was
+   * initiated.
+   */
+  date?: Date;
+  errorCode?: string;
+}
+
+/**
+ * Defines headers for Undelete operation.
+ */
+export interface PathUndeleteHeaders {
+  /**
+   * If a client request id header is sent in the request, this header will be present in the
+   * response with the same value.
+   */
+  clientRequestId?: string;
+  /**
+   * This header uniquely identifies the request that was made and can be used for troubleshooting
+   * the request.
+   */
+  requestId?: string;
+  /**
+   * The type of the resource.  The value may be "file" or "directory".  If not set, the value is
+   * "file".
+   */
+  resourceType?: string;
+  /**
+   * Indicates the version of the Blob service used to execute the request. This header is returned
+   * for requests made against version 2009-09-19 and above.
+   */
+  version?: string;
+  /**
+   * UTC date/time value generated by the service that indicates the time at which the response was
+   * initiated.
+   */
+  date?: Date;
+  errorCode?: string;
 }
 
 /**
@@ -3715,206 +5303,6 @@ export interface ContainerGetAccountInfoWithHeadHeaders {
 }
 
 /**
- * Defines headers for Create operation.
- */
-export interface DirectoryCreateHeaders {
-  /**
-   * An HTTP entity tag associated with the file or directory.
-   */
-  eTag?: string;
-  /**
-   * The data and time the file or directory was last modified. Write operations on the file or
-   * directory update the last modified time.
-   */
-  lastModified?: Date;
-  /**
-   * If a client request id header is sent in the request, this header will be present in the
-   * response with the same value.
-   */
-  clientRequestId?: string;
-  /**
-   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
-   */
-  requestId?: string;
-  /**
-   * The version of the REST protocol used to process the request.
-   */
-  version?: string;
-  /**
-   * The size of the resource in bytes.
-   */
-  contentLength?: number;
-  /**
-   * A UTC date/time value generated by the service that indicates the time at which the response
-   * was initiated.
-   */
-  date?: Date;
-}
-
-/**
- * Defines headers for Rename operation.
- */
-export interface DirectoryRenameHeaders {
-  /**
-   * When renaming a directory, the number of paths that are renamed with each invocation is
-   * limited. If the number of paths to be renamed exceeds this limit, a continuation token is
-   * returned in this response header. When a continuation token is returned in the response, it
-   * must be specified in a subsequent invocation of the rename operation to continue renaming the
-   * directory.
-   */
-  marker?: string;
-  /**
-   * An HTTP entity tag associated with the file or directory.
-   */
-  eTag?: string;
-  /**
-   * The data and time the file or directory was last modified. Write operations on the file or
-   * directory update the last modified time.
-   */
-  lastModified?: Date;
-  /**
-   * If a client request id header is sent in the request, this header will be present in the
-   * response with the same value.
-   */
-  clientRequestId?: string;
-  /**
-   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
-   */
-  requestId?: string;
-  /**
-   * The version of the REST protocol used to process the request.
-   */
-  version?: string;
-  /**
-   * The size of the resource in bytes.
-   */
-  contentLength?: number;
-  /**
-   * A UTC date/time value generated by the service that indicates the time at which the response
-   * was initiated.
-   */
-  date?: Date;
-}
-
-/**
- * Defines headers for Delete operation.
- */
-export interface DirectoryDeleteHeaders {
-  /**
-   * When renaming a directory, the number of paths that are renamed with each invocation is
-   * limited. If the number of paths to be renamed exceeds this limit, a continuation token is
-   * returned in this response header. When a continuation token is returned in the response, it
-   * must be specified in a subsequent invocation of the rename operation to continue renaming the
-   * directory.
-   */
-  marker?: string;
-  /**
-   * If a client request id header is sent in the request, this header will be present in the
-   * response with the same value.
-   */
-  clientRequestId?: string;
-  /**
-   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
-   */
-  requestId?: string;
-  /**
-   * The version of the REST protocol used to process the request.
-   */
-  version?: string;
-  /**
-   * A UTC date/time value generated by the service that indicates the time at which the response
-   * was initiated.
-   */
-  date?: Date;
-}
-
-/**
- * Defines headers for SetAccessControl operation.
- */
-export interface DirectorySetAccessControlHeaders {
-  /**
-   * A UTC date/time value generated by the service that indicates the time at which the response
-   * was initiated.
-   */
-  date?: Date;
-  /**
-   * An HTTP entity tag associated with the file or directory.
-   */
-  eTag?: string;
-  /**
-   * The data and time the file or directory was last modified. Write operations on the file or
-   * directory update the last modified time.
-   */
-  lastModified?: Date;
-  /**
-   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
-   */
-  requestId?: string;
-  /**
-   * The version of the REST protocol used to process the request.
-   */
-  version?: string;
-  /**
-   * If a client request id header is sent in the request, this header will be present in the
-   * response with the same value.
-   */
-  clientRequestId?: string;
-}
-
-/**
- * Defines headers for GetAccessControl operation.
- */
-export interface DirectoryGetAccessControlHeaders {
-  /**
-   * A UTC date/time value generated by the service that indicates the time at which the response
-   * was initiated.
-   */
-  date?: Date;
-  /**
-   * An HTTP entity tag associated with the file or directory.
-   */
-  eTag?: string;
-  /**
-   * The data and time the file or directory was last modified. Write operations on the file or
-   * directory update the last modified time.
-   */
-  lastModified?: Date;
-  /**
-   * The owner of the file or directory. Included in the response if Hierarchical Namespace is
-   * enabled for the account.
-   */
-  xMsOwner?: string;
-  /**
-   * The owning group of the file or directory. Included in the response if Hierarchical Namespace
-   * is enabled for the account.
-   */
-  xMsGroup?: string;
-  /**
-   * The POSIX access permissions for the file owner, the file owning group, and others. Included
-   * in the response if Hierarchical Namespace is enabled for the account.
-   */
-  xMsPermissions?: string;
-  /**
-   * The POSIX access control list for the file or directory.  Included in the response only if the
-   * action is "getAccessControl" and Hierarchical Namespace is enabled for the account.
-   */
-  xMsAcl?: string;
-  /**
-   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
-   */
-  requestId?: string;
-  /**
-   * The version of the REST protocol used to process the request.
-   */
-  version?: string;
-  /**
-   * If a client request id header is sent in the request, this header will be present in the
-   * response with the same value.
-   */
-  clientRequestId?: string;
-}
-
-/**
  * Defines headers for Download operation.
  */
 export interface BlobDownloadHeaders {
@@ -4293,33 +5681,6 @@ export interface BlobGetPropertiesHeaders {
 }
 
 /**
- * Defines headers for Delete operation.
- */
-export interface BlobDeleteHeaders {
-  /**
-   * If a client request id header is sent in the request, this header will be present in the
-   * response with the same value.
-   */
-  clientRequestId?: string;
-  /**
-   * This header uniquely identifies the request that was made and can be used for troubleshooting
-   * the request.
-   */
-  requestId?: string;
-  /**
-   * Indicates the version of the Blob service used to execute the request. This header is returned
-   * for requests made against version 2009-09-19 and above.
-   */
-  version?: string;
-  /**
-   * UTC date/time value generated by the service that indicates the time at which the response was
-   * initiated
-   */
-  date?: Date;
-  errorCode?: string;
-}
-
-/**
  * Defines headers for SetAccessControl operation.
  */
 export interface BlobSetAccessControlHeaders {
@@ -4350,96 +5711,6 @@ export interface BlobSetAccessControlHeaders {
    * response with the same value.
    */
   clientRequestId?: string;
-}
-
-/**
- * Defines headers for GetAccessControl operation.
- */
-export interface BlobGetAccessControlHeaders {
-  /**
-   * A UTC date/time value generated by the service that indicates the time at which the response
-   * was initiated.
-   */
-  date?: Date;
-  /**
-   * An HTTP entity tag associated with the file or directory.
-   */
-  eTag?: string;
-  /**
-   * The data and time the file or directory was last modified. Write operations on the file or
-   * directory update the last modified time.
-   */
-  lastModified?: Date;
-  /**
-   * The owner of the file or directory. Included in the response if Hierarchical Namespace is
-   * enabled for the account.
-   */
-  xMsOwner?: string;
-  /**
-   * The owning group of the file or directory. Included in the response if Hierarchical Namespace
-   * is enabled for the account.
-   */
-  xMsGroup?: string;
-  /**
-   * The POSIX access permissions for the file owner, the file owning group, and others. Included
-   * in the response if Hierarchical Namespace is enabled for the account.
-   */
-  xMsPermissions?: string;
-  /**
-   * The POSIX access control list for the file or directory.  Included in the response only if the
-   * action is "getAccessControl" and Hierarchical Namespace is enabled for the account.
-   */
-  xMsAcl?: string;
-  /**
-   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
-   */
-  requestId?: string;
-  /**
-   * The version of the REST protocol used to process the request.
-   */
-  version?: string;
-  /**
-   * If a client request id header is sent in the request, this header will be present in the
-   * response with the same value.
-   */
-  clientRequestId?: string;
-}
-
-/**
- * Defines headers for Rename operation.
- */
-export interface BlobRenameHeaders {
-  /**
-   * An HTTP entity tag associated with the file or directory.
-   */
-  eTag?: string;
-  /**
-   * The data and time the file or directory was last modified.  Write operations on the file or
-   * directory update the last modified time.
-   */
-  lastModified?: Date;
-  /**
-   * If a client request id header is sent in the request, this header will be present in the
-   * response with the same value.
-   */
-  clientRequestId?: string;
-  /**
-   * A server-generated UUID recorded in the analytics logs for troubleshooting and correlation.
-   */
-  requestId?: string;
-  /**
-   * The version of the REST protocol used to process the request.
-   */
-  version?: string;
-  /**
-   * The size of the resource in bytes.
-   */
-  contentLength?: number;
-  /**
-   * A UTC date/time value generated by the service that indicates the time at which the response
-   * was initiated.
-   */
-  date?: Date;
 }
 
 /**
@@ -6173,6 +7444,73 @@ export enum GeoReplicationStatusType {
 }
 
 /**
+ * Defines values for PathSetAccessControlRecursiveMode.
+ * Possible values include: 'set', 'modify', 'remove'
+ * @readonly
+ * @enum {string}
+ */
+export enum PathSetAccessControlRecursiveMode {
+  Set = 'set',
+  Modify = 'modify',
+  Remove = 'remove',
+}
+
+/**
+ * Defines values for PathExpiryOptions.
+ * Possible values include: 'NeverExpire', 'RelativeToCreation', 'RelativeToNow', 'Absolute'
+ * @readonly
+ * @enum {string}
+ */
+export enum PathExpiryOptions {
+  NeverExpire = 'NeverExpire',
+  RelativeToCreation = 'RelativeToCreation',
+  RelativeToNow = 'RelativeToNow',
+  Absolute = 'Absolute',
+}
+
+/**
+ * Defines values for ListBlobsIncludeItem.
+ * Possible values include: '', 'copy', 'deleted', 'metadata', 'snapshots', 'uncommittedblobs',
+ * 'tags', 'versions', 'deletedwithversions', 'immutabilitypolicy', 'legalhold', 'permissions'
+ * @readonly
+ * @enum {string}
+ */
+export enum ListBlobsIncludeItem {
+  EmptyString = '',
+  Copy = 'copy',
+  Deleted = 'deleted',
+  Metadata = 'metadata',
+  Snapshots = 'snapshots',
+  Uncommittedblobs = 'uncommittedblobs',
+  Tags = 'tags',
+  Versions = 'versions',
+  Deletedwithversions = 'deletedwithversions',
+  Immutabilitypolicy = 'immutabilitypolicy',
+  Legalhold = 'legalhold',
+  Permissions = 'permissions',
+}
+
+/**
+ * Defines values for ListBlobsShowOnly.
+ * Possible values include: 'deleted'
+ * @readonly
+ * @enum {string}
+ */
+export enum ListBlobsShowOnly {
+  Deleted = 'deleted',
+}
+
+/**
+ * Defines values for EncryptionAlgorithmType.
+ * Possible values include: 'AES256'
+ * @readonly
+ * @enum {string}
+ */
+export enum EncryptionAlgorithmType {
+  AES256 = 'AES256',
+}
+
+/**
  * Defines values for RehydratePriority.
  * Possible values include: 'High', 'Standard'
  * @readonly
@@ -6228,38 +7566,6 @@ export enum DeleteSnapshotsOptionType {
 }
 
 /**
- * Defines values for EncryptionAlgorithmType.
- * Possible values include: 'AES256'
- * @readonly
- * @enum {string}
- */
-export enum EncryptionAlgorithmType {
-  AES256 = 'AES256',
-}
-
-/**
- * Defines values for ListBlobsIncludeItem.
- * Possible values include: '', 'copy', 'deleted', 'metadata', 'snapshots', 'uncommittedblobs',
- * 'tags', 'versions', 'deletedwithversions', 'immutabilitypolicy', 'legalhold', 'permissions'
- * @readonly
- * @enum {string}
- */
-export enum ListBlobsIncludeItem {
-  EmptyString = '',
-  Copy = 'copy',
-  Deleted = 'deleted',
-  Metadata = 'metadata',
-  Snapshots = 'snapshots',
-  Uncommittedblobs = 'uncommittedblobs',
-  Tags = 'tags',
-  Versions = 'versions',
-  Deletedwithversions = 'deletedwithversions',
-  Immutabilitypolicy = 'immutabilitypolicy',
-  Legalhold = 'legalhold',
-  Permissions = 'permissions',
-}
-
-/**
  * Defines values for ListContainersIncludeType.
  * Possible values include: '', 'metadata', 'deleted'
  * @readonly
@@ -6292,6 +7598,57 @@ export enum SequenceNumberActionType {
   Max = 'max',
   Update = 'update',
   Increment = 'increment',
+}
+
+/**
+ * Defines values for PathResourceType.
+ * Possible values include: 'directory', 'file'
+ * @readonly
+ * @enum {string}
+ */
+export enum PathResourceType {
+  Directory = 'directory',
+  File = 'file',
+}
+
+/**
+ * Defines values for PathUpdateAction.
+ * Possible values include: 'append', 'flush', 'setProperties', 'setAccessControl',
+ * 'setAccessControlRecursive'
+ * @readonly
+ * @enum {string}
+ */
+export enum PathUpdateAction {
+  Append = 'append',
+  Flush = 'flush',
+  SetProperties = 'setProperties',
+  SetAccessControl = 'setAccessControl',
+  SetAccessControlRecursive = 'setAccessControlRecursive',
+}
+
+/**
+ * Defines values for PathLeaseAction.
+ * Possible values include: 'acquire', 'break', 'change', 'renew', 'release'
+ * @readonly
+ * @enum {string}
+ */
+export enum PathLeaseAction {
+  Acquire = 'acquire',
+  Break = 'break',
+  Change = 'change',
+  Renew = 'renew',
+  Release = 'release',
+}
+
+/**
+ * Defines values for PathGetPropertiesAction.
+ * Possible values include: 'getAccessControl', 'getStatus'
+ * @readonly
+ * @enum {string}
+ */
+export enum PathGetPropertiesAction {
+  GetAccessControl = 'getAccessControl',
+  GetStatus = 'getStatus',
 }
 
 /**
@@ -6330,6 +7687,16 @@ export enum AccountKind {
 export enum SyncCopyStatusType {
   Success = 'success',
 }
+
+/**
+ * Contains response data for the listFileSystems operation.
+ */
+export type ServiceListFileSystemsResponse = FileSystemList & ServiceListFileSystemsHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
 
 /**
  * Contains response data for the setProperties operation.
@@ -6414,6 +7781,191 @@ export type ServiceSubmitBatchResponse = ServiceSubmitBatchHeaders & {
    * The response status code.
    */
   statusCode: 202;
+};
+
+/**
+ * Contains response data for the create operation.
+ */
+export type FileSystemCreateResponse = FileSystemCreateHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 201;
+};
+
+/**
+ * Contains response data for the setProperties operation.
+ */
+export type FileSystemSetPropertiesResponse = FileSystemSetPropertiesHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
+ * Contains response data for the getProperties operation.
+ */
+export type FileSystemGetPropertiesResponse = FileSystemGetPropertiesHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
+ * Contains response data for the deleteMethod operation.
+ */
+export type FileSystemDeleteResponse = FileSystemDeleteHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 202;
+};
+
+/**
+ * Contains response data for the listPaths operation.
+ */
+export type FileSystemListPathsResponse = PathList & FileSystemListPathsHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
+ * Contains response data for the listBlobHierarchySegment operation.
+ */
+export type FileSystemListBlobHierarchySegmentResponse = ListBlobsHierarchySegmentResponseDataLake & FileSystemListBlobHierarchySegmentHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
+ * Contains response data for the create operation.
+ */
+export type PathCreateResponse = PathCreateHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 201;
+};
+
+/**
+ * Contains response data for the update operation.
+ */
+export type PathUpdateResponse = SetAccessControlRecursiveResponse & PathUpdateHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200 | 202;
+};
+
+/**
+ * Contains response data for the lease operation.
+ */
+export type PathLeaseResponse = PathLeaseHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200 | 201 | 202;
+};
+
+/**
+ * Contains response data for the read operation.
+ */
+export type PathReadResponse = PathReadHeaders & {
+  /**
+   * The response body as a node.js Readable stream.
+   */
+  body?: NodeJS.ReadableStream;
+} & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200 | 206;
+};
+
+/**
+ * Contains response data for the getProperties operation.
+ */
+export type PathGetPropertiesResponse = PathGetPropertiesHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
+ * Contains response data for the deleteMethod operation.
+ */
+export type PathDeleteResponse = PathDeleteHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
+ * Contains response data for the setAccessControl operation.
+ */
+export type PathSetAccessControlResponse = PathSetAccessControlHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
+ * Contains response data for the setAccessControlRecursive operation.
+ */
+export type PathSetAccessControlRecursiveResponse = SetAccessControlRecursiveResponse & PathSetAccessControlRecursiveHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
+ * Contains response data for the flushData operation.
+ */
+export type PathFlushDataResponse = PathFlushDataHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
+ * Contains response data for the appendData operation.
+ */
+export type PathAppendDataResponse = PathAppendDataHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 202;
+};
+
+/**
+ * Contains response data for the setExpiry operation.
+ */
+export type PathSetExpiryResponse = PathSetExpiryHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
+};
+
+/**
+ * Contains response data for the undelete operation.
+ */
+export type PathUndeleteResponse = PathUndeleteHeaders & {
+  /**
+   * The response status code.
+   */
+  statusCode: 200;
 };
 
 /**
@@ -6592,56 +8144,6 @@ export type ContainerGetAccountInfoWithHeadResponse = ContainerGetAccountInfoWit
 };
 
 /**
- * Contains response data for the create operation.
- */
-export type DirectoryCreateResponse = DirectoryCreateHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 201;
-};
-
-/**
- * Contains response data for the rename operation.
- */
-export type DirectoryRenameResponse = DirectoryRenameHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 201;
-};
-
-/**
- * Contains response data for the deleteMethod operation.
- */
-export type DirectoryDeleteResponse = DirectoryDeleteHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
-
-/**
- * Contains response data for the setAccessControl operation.
- */
-export type DirectorySetAccessControlResponse = DirectorySetAccessControlHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
-
-/**
- * Contains response data for the getAccessControl operation.
- */
-export type DirectoryGetAccessControlResponse = DirectoryGetAccessControlHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
-
-/**
  * Contains response data for the download operation.
  */
 export type BlobDownloadResponse = BlobDownloadHeaders & {
@@ -6667,16 +8169,6 @@ export type BlobGetPropertiesResponse = BlobGetPropertiesHeaders & {
 };
 
 /**
- * Contains response data for the deleteMethod operation.
- */
-export type BlobDeleteResponse = BlobDeleteHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 202;
-};
-
-/**
  * Contains response data for the setAccessControl operation.
  */
 export type BlobSetAccessControlResponse = BlobSetAccessControlHeaders & {
@@ -6684,26 +8176,6 @@ export type BlobSetAccessControlResponse = BlobSetAccessControlHeaders & {
    * The response status code.
    */
   statusCode: 200;
-};
-
-/**
- * Contains response data for the getAccessControl operation.
- */
-export type BlobGetAccessControlResponse = BlobGetAccessControlHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 200;
-};
-
-/**
- * Contains response data for the rename operation.
- */
-export type BlobRenameResponse = BlobRenameHeaders & {
-  /**
-   * The response status code.
-   */
-  statusCode: 201;
 };
 
 /**

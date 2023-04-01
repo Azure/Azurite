@@ -77,6 +77,18 @@ export type RenewContainerLeaseResponse = IContainerLeaseResponse;
 export type BreakContainerLeaseResponse = IContainerLeaseResponse;
 export type ChangeContainerLeaseResponse = IContainerLeaseResponse;
 
+/** MODELS FOR DIRECTORIES */
+interface IDirectoryModel {
+  accountName: string;
+  containerName: string;
+  name:string;
+  properties: Models.BlobProperties;
+  isCommitted: boolean;
+  metadata?: Models.BlobMetadata;
+
+}
+
+export type DirectoryModel = IDirectoryModel;
 /** MODELS FOR BLOBS */
 interface IPersistencyPropertiesRequired {
   /**
@@ -502,6 +514,105 @@ export interface IBlobMetadataStore
   ): Promise<[BlobModel[], string | undefined]>;
 
   /**
+   * Create Directory item in persistency layer. Will replace if directory exists.
+   *
+   * @param {Context} context
+   * @param {DirectoryModel} directory
+   * @param {Models.LeaseAccessConditions} [leaseAccessConditions] Optional. Will validate lease if provided
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @returns {Promise<void>}
+   * @memberof IBlobMetadataStore
+   */
+  createDirectory(
+    context: Context,
+    directory: DirectoryModel,
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
+  ): Promise<void>;
+
+  /**
+   * Rename Directory
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} sourceContainer
+   * @param {string} sourceDirectory
+   * @param {string} targetContainer
+   * @param {string} targetDirectory
+   * @param {Models.DirectoryRenameOptionalParams} options
+   * @returns {Promise<DirectoryModel>}
+   * @memberof IBlobMetadataStore
+   */
+  renameDirectory(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourceDirectory: string,
+    targetContainer: string,
+    targetDirectory: string,
+    options: Models.PathCreateOptionalParams
+  ): Promise<DirectoryModel>
+
+  /**
+   * List paths in Directory
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} directory
+   * @param {boolean} recursive
+   * @param {Models.FileSystemListPathsOptionalParams} options
+   * @returns {Promise<void>}
+   * @memberof IBlobMetadataStore
+   */
+  listPaths(
+    context: Context,
+    account: string,
+    container: string,
+    directory: string,
+    recursive: boolean,
+    options: Models.FileSystemListPathsOptionalParams
+  ):Promise<Models.Path[]>
+
+  /**
+   * Delete Directory
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} directory
+   * @param {boolean} recursiveDirectoryDelete
+   * @param {Models.DirectoryDeleteMethodOptionalParams} options
+   * @returns {Promise<void>}
+   * @memberof IBlobMetadataStore
+   */
+  deleteDirectory(
+    context: Context,
+    account: string,
+    container: string,
+    directory: string,
+    recursiveDirectoryDelete: boolean,
+    options: Models.PathDeleteMethodOptionalParams
+  ): Promise<void>;
+
+  /**
+   * Gets a Directory from persistency layer by container name and Directory name.
+   *
+   * @param {string} account
+   * @param {string} container
+   * @param {string} blob
+   * @param {string} [snapshot]
+   * @returns {(Promise<DirectoryModel>)}
+   * @memberof LokiBlobMetadataStore
+   */
+  getDirectory(
+    context: Context,
+    account: string,
+    container: string,
+    directory: string,
+  ): Promise<DirectoryModel> ;
+
+  /**
    * Create blob item in persistency layer. Will replace if blob exists.
    *
    * @param {Context} context
@@ -589,13 +700,36 @@ export interface IBlobMetadataStore
   ): Promise<GetBlobPropertiesRes>;
 
   /**
+   * Rename Blob
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} sourceContainer
+   * @param {string} sourceBlob
+   * @param {string} targetContainer
+   * @param {string} targetBlob
+   * @param {Models.PathCreateOptionalParams} options
+   * @returns {Promise<BlobModel>}
+   * @memberof IBlobMetadataStore
+   */
+  renameBlob(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourceBlob: string,
+    targetContainer: string,
+    targetBlob: string,
+    options: Models.PathCreateOptionalParams
+  ): Promise<BlobModel>;
+
+  /**
    * Delete blob or its snapshots.
    *
    * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
-   * @param {Models.BlobDeleteMethodOptionalParams} options
+   * @param {Models.PathDeleteMethodOptionalParams} options
    * @returns {Promise<void>}
    * @memberof IBlobMetadataStore
    */
@@ -604,7 +738,7 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    options: Models.BlobDeleteMethodOptionalParams
+    options: Models.PathDeleteMethodOptionalParams
   ): Promise<void>;
 
   /**

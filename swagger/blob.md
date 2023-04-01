@@ -5,12 +5,15 @@
 ```yaml
 package-name: azurite-server-blob
 title: AzuriteServerBlob
+package-version: 1.0.0
 description: Azurite Server for Blob
-enable-xml: true
+# enable-xml: true
 generate-metadata: false
 license-header: MICROSOFT_MIT_NO_VERSION
 output-folder: ../src/blob/generated
-input-file: blob-storage-2019-02-02.json
+input-file: 
+  - data-lake-storage.json-2021-04-10.json
+  - blob-storage-2019-02-02.json
 model-date-time-as-string: true
 optional-response-headers: true
 enum-types: true

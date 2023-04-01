@@ -47,6 +47,7 @@ import IBlobMetadataStore, {
   ChangeContainerLeaseResponse,
   ContainerModel,
   CreateSnapshotResponse,
+  DirectoryModel,
   GetBlobPropertiesRes,
   GetContainerAccessPolicyResponse,
   GetContainerPropertiesResponse,
@@ -62,6 +63,7 @@ import IBlobMetadataStore, {
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
+import os from "os";
 
 /**
  * This is a metadata source implementation for blob based on loki DB.
@@ -101,6 +103,7 @@ export default class LokiBlobMetadataStore
   private readonly CONTAINERS_COLLECTION = "$CONTAINERS_COLLECTION$";
   private readonly BLOBS_COLLECTION = "$BLOBS_COLLECTION$";
   private readonly BLOCKS_COLLECTION = "$BLOCKS_COLLECTION$";
+  private readonly DIRECTORIES_COLLECTION = "$DIRECTORIES_COLLECTION$";
 
   private readonly pageBlobRangesManager = new PageBlobRangesManager();
 
@@ -156,7 +159,15 @@ export default class LokiBlobMetadataStore
       }); // Optimize for find operation
     }
 
-    // Create containers collection if not exists
+    // Create directories collection if not exists
+    if (this.db.getCollection(this.DIRECTORIES_COLLECTION) === null) {
+      this.db.addCollection(this.DIRECTORIES_COLLECTION, {
+        unique: ["accountName,containerName,name"],
+        indices: ["accountName", "containerName", "name"] // Optimize for find operation
+      });
+    }
+
+    // Create blob collection if not exists
     if (this.db.getCollection(this.BLOBS_COLLECTION) === null) {
       this.db.addCollection(this.BLOBS_COLLECTION, {
         indices: ["accountName", "containerName", "name", "snapshot"] // Optimize for find operation
@@ -817,7 +828,8 @@ export default class LokiBlobMetadataStore
     }
   }
 
-  public async listBlobs(
+  private async list(
+    listDirectories:boolean,
     context: Context,
     account: string,
     container: string,
@@ -828,10 +840,12 @@ export default class LokiBlobMetadataStore
     marker: string = "",
     includeSnapshots?: boolean,
     includeUncommittedBlobs?: boolean
-  ): Promise<[BlobModel[], BlobPrefixModel[], string | undefined]> {
+  ) : Promise<[BlobModel[], BlobPrefixModel[], string | undefined]> {
     const query: any = {};
     if (prefix !== "") {
-      query.name = { $regex: `^${this.escapeRegex(prefix)}` };
+      query.name = {
+        $regex: `^${this.escapeRegex(prefix)}`
+      };
     }
     if (blob !== undefined) {
       query.name = blob;
@@ -843,10 +857,14 @@ export default class LokiBlobMetadataStore
       query.containerName = container;
     }
 
-    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const page = new PageWithDelimiter<BlobModel>(maxResults, delimiter, prefix);
-    const readPage = async (offset: number): Promise<BlobModel[]> => {
-      return await coll
+    const coll = this.db.getCollection(
+      listDirectories ? this.DIRECTORIES_COLLECTION : this.BLOBS_COLLECTION
+    );
+    const page = listDirectories
+      ? new PageWithDelimiter<DirectoryModel>(maxResults, delimiter, prefix)
+      : new PageWithDelimiter<BlobModel>(maxResults, delimiter, prefix);
+    const readPage = async (offset: number): Promise<BlobModel[] | DirectoryModel[]> => {
+      const result = coll
         .chain()
         .find(query)
         .where((obj) => {
@@ -866,16 +884,21 @@ export default class LokiBlobMetadataStore
         .offset(offset)
         .limit(maxResults)
         .data();
+
+        return result;
     };
 
-    const nameItem = (item: BlobModel) => {
-      return item.name;
+    const nameItem = (item: BlobModel | DirectoryModel) => {
+      return item.name as string;
     };
 
-    const [blobItems, blobPrefixes, nextMarker] = await page.fill(readPage, nameItem);
+    const [items, blobPrefixes, nextMarker] = await page.fill(
+      readPage,
+      nameItem
+    );
 
     return [
-      blobItems.map((doc) => {
+      items.map((doc) => {
         doc.properties.contentMD5 = this.restoreUint8Array(
           doc.properties.contentMD5
         );
@@ -887,6 +910,33 @@ export default class LokiBlobMetadataStore
       blobPrefixes,
       nextMarker
     ];
+  }
+
+  public async listBlobs(
+    context: Context,
+    account: string,
+    container: string,
+    delimiter?: string,
+    blob?: string,
+    prefix: string = "",
+    maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
+    marker: string = "",
+    includeSnapshots?: boolean,
+    includeUncommittedBlobs?: boolean
+  ): Promise<[BlobModel[], BlobPrefixModel[], string | undefined]> {
+    return this.list(
+      false,
+      context,
+      account,
+      container,
+      delimiter,
+      blob,
+      prefix,
+      maxResults,
+      marker,
+      includeSnapshots,
+      includeUncommittedBlobs,
+    );
   }
 
   public async listAllBlobs(
@@ -928,6 +978,280 @@ export default class LokiBlobMetadataStore
     }
   }
 
+  public async createDirectory(
+    context: Context,
+    directory: DirectoryModel,
+    leaseAccessConditions?: Models.LeaseAccessConditions | undefined,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions | undefined
+  ): Promise<void> {
+    await this.checkContainerExist(
+      context,
+      directory.accountName,
+      directory.containerName
+    );
+
+    const dirName = directory.name;
+    directory.name = this.removeSlash(dirName);
+
+    const coll = this.db.getCollection(this.DIRECTORIES_COLLECTION);
+    const directoryDoc = coll.findOne({
+      accountName: directory.accountName,
+      containerName: directory.containerName,
+      name: directory.name
+    });
+
+    validateWriteConditions(context, modifiedAccessConditions, directoryDoc);
+
+    // Create if not exists
+    if (
+      modifiedAccessConditions &&
+      modifiedAccessConditions.ifNoneMatch === "*" &&
+      directoryDoc
+    ) {
+      throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+    }
+
+    const coll2 = this.db.getCollection(this.BLOBS_COLLECTION);
+    const blobDoc = coll2.findOne({
+      accountName: directory.accountName,
+      containerName: directory.containerName,
+      name: directory.name
+    });
+
+    validateWriteConditions(context, modifiedAccessConditions, blobDoc);
+
+    // Create if not exists
+    if (
+      modifiedAccessConditions &&
+      modifiedAccessConditions.ifNoneMatch === "*" &&
+      blobDoc
+    ) {
+      throw StorageErrorFactory.getPathConflict(context.contextId!);
+    }
+
+    if (blobDoc) {
+      this.deleteBlob(
+        context,
+        directory.accountName,
+        directory.containerName,
+        directory.name,
+        {
+          leaseAccessConditions,
+          modifiedAccessConditions
+        }
+      );
+    }
+
+    if (directoryDoc) coll.remove(directoryDoc);
+    delete (directory as any).$loki;
+    return coll.insert(directory);
+  }
+
+  private dateToString(date: any): string | undefined {
+    return date === undefined
+      ? undefined
+      : date instanceof Date
+      ? date.toUTCString()
+      : new Date(date).toUTCString();
+  }
+
+  /**
+   * List paths in Directory
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} directory
+   * @param {boolean} recursive
+   * @param {Models.FileSystemListPathsOptionalParams} options
+   * @returns {Promise<void>}
+   * @memberof IBlobMetadataStore
+   */
+  async listPaths(
+    context: Context,
+    account: string,
+    container: string,
+    directory: string,
+    recursive: boolean,
+    options: Models.FileSystemListPathsOptionalParams
+  ): Promise<Models.Path[]> {
+    directory = this.removeSlash(directory);
+    const paths: Models.Path[] = [];
+    const userName = os.userInfo().username;
+
+    await this.getDirectory(context, account, container, directory);
+    const [blobs,,] = await this.list(false, context, account, container, 
+      recursive ? undefined : "/", 
+      undefined, directory + "/", 
+      options.maxResults, options.marker);
+    blobs.forEach(blob => {
+      paths.push({
+        name: blob.name,
+          isDirectory: false,
+          lastModified: this.dateToString(blob.properties.lastModified),
+          // eTag: blob.properties.etag,
+          contentLength: blob.properties.contentLength,
+          // creationTime: this.dateToString(blob.properties.creationTime),
+          owner: userName
+      })
+    });
+
+    const [directories,,] = await this.list(true, context, account, container, 
+      recursive ? undefined : "/", 
+      undefined, directory + "/", 
+      options.maxResults, options.marker, true, true);
+    directories.forEach(directory => {
+      paths.push({
+        name: directory.name,
+          isDirectory: true,
+          lastModified: this.dateToString(directory.properties.lastModified),
+          // eTag: blob.properties.etag,
+          contentLength: directory.properties.contentLength,
+          // creationTime: this.dateToString(blob.properties.creationTime),
+          owner: userName
+      })
+    });
+
+    return paths;
+  }
+
+  /**
+   * Rename Directory
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} sourceContainer
+   * @param {string} sourceDirectory
+   * @param {string} targetContainer
+   * @param {string} targetDirectory
+   * @param {Models.DirectoryRenameOptionalParams} options
+   * @returns {Promise<void>}
+   * @memberof IBlobMetadataStore
+   */
+  public async renameDirectory(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourceDirectory: string,
+    targetContainer: string,
+    targetDirectory: string,
+    options: Models.PathCreateOptionalParams
+  ): Promise<DirectoryModel> {
+    sourceDirectory = this.removeSlash(sourceDirectory);
+    targetDirectory = this.removeSlash(targetDirectory);
+
+    let targetExists = true;
+    try {
+      await this.getDirectory(context, account, targetContainer, targetDirectory);
+    } catch(err) {
+      targetExists = false;
+    }
+
+    if (
+      options.modifiedAccessConditions &&
+      options.modifiedAccessConditions.ifNoneMatch === "*" &&
+      targetExists
+    ) {
+      throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+    }
+
+    const paths: Models.Path[] = await this.listPaths(context, account, sourceContainer, sourceDirectory, true, options);
+
+    paths.forEach(async path => {
+      await this.rename(path.isDirectory!, context, account, sourceContainer, path.name!, targetContainer, 
+        path.name!.replace(sourceDirectory, targetDirectory), options);
+    });
+
+    await this.rename(true, context, account, sourceContainer, sourceDirectory, targetContainer, targetDirectory, options);
+    return await this.getDirectory(context, account, targetContainer, targetDirectory);
+  }
+
+  /**
+   * Delete Directory
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} directory
+   * @param {boolean} recursiveDirectoryDelete
+   * @param {Models.DirectoryDeleteMethodOptionalParams} options
+   * @returns {Promise<void>}
+   * @memberof IBlobMetadataStore
+   */
+  public async deleteDirectory(
+    context: Context,
+    account: string,
+    container: string,
+    directory: string,
+    recursiveDirectoryDelete: boolean,
+    options: Models.PathDeleteMethodOptionalParams
+  ): Promise<void> {
+    directory = this.removeSlash(directory);
+    await this.checkContainerExist(context, account, container);
+
+    const dir:DirectoryModel = await this.db
+      .getCollection(this.DIRECTORIES_COLLECTION)
+      .findOne({
+        accountName: account,
+        containerName: container,
+        name: directory
+      }
+    );
+
+    validateWriteConditions(
+      context,
+      options.modifiedAccessConditions,
+      dir
+    );
+
+    if (dir === null || dir === undefined) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }
+
+    const [blobs,] = await this.listBlobs(
+      context, 
+      account, 
+      container, 
+      undefined, 
+      undefined, 
+      directory, 
+      DEFAULT_LIST_BLOBS_MAX_RESULTS, 
+      undefined, 
+      true, 
+      true);
+
+    if (blobs.length > 0 && !recursiveDirectoryDelete) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    } else {
+      const options: Models.PathDeleteMethodOptionalParams = {};
+      for (const blob of blobs) {
+        await this.deleteBlob(context, account, container, blob.name, options);
+      }
+    }
+
+    const dirs = this.db
+      .getCollection(this.DIRECTORIES_COLLECTION)
+      .find({
+        accountName: account,
+        containerName: container,
+        name: { $regex: `^${this.escapeRegex(directory)}`},
+      }
+    );
+
+    if (!recursiveDirectoryDelete && dirs.length > 1) {
+      throw StorageErrorFactory.getDirectoryNotEmpty(context.contextId!);
+    }
+    
+    this.db
+      .getCollection(this.DIRECTORIES_COLLECTION)
+      .findAndRemove({
+        accountName: account,
+        containerName: container,
+        name: { $regex: `^${this.escapeRegex(directory)}`},
+      }
+    );
+  }
+
   /**
    * Create blob item in persistency layer. Will replace if blob exists.
    *
@@ -966,6 +1290,36 @@ export default class LokiBlobMetadataStore
       blobDoc
     ) {
       throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+    }
+
+    const coll2 = this.db.getCollection(this.DIRECTORIES_COLLECTION);
+    const dirDoc = coll2.findOne({
+      accountName: blob.accountName,
+      containerName: blob.containerName,
+      name: blob.name,
+      snapshot: blob.snapshot
+    });
+
+    if (
+      modifiedAccessConditions &&
+      modifiedAccessConditions.ifNoneMatch === "*" &&
+      dirDoc
+    ) {
+      throw StorageErrorFactory.getPathConflict(context.contextId!);
+    }
+
+    if (dirDoc) {
+      this.deleteDirectory(
+        context,
+        blob.accountName,
+        blob.containerName,
+        blob.name,
+        true,
+        {
+          leaseAccessConditions,
+          modifiedAccessConditions
+        }
+      );
     }
 
     if (blobDoc) {
@@ -1118,6 +1472,40 @@ export default class LokiBlobMetadataStore
   }
 
   /**
+   * Gets a Directory item from persistency layer by container name and directory name.
+   *
+   * @param {string} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} directory
+   * @returns {(Promise<DirectoryModel>)}
+   * @memberof LokiBlobMetadataStore
+   */
+  public async getDirectory(
+    context: Context,
+    account: string,
+    container: string,
+    directory: string
+  ): Promise<DirectoryModel> {
+    directory = this.removeSlash(directory);
+    const response = this.db
+      .getCollection(this.DIRECTORIES_COLLECTION)
+      .findOne({
+        accountName: account,
+        containerName: container,
+        name: directory
+      });
+
+    if (!response) throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    return response;
+  }
+
+  private removeSlash(path: string): string {
+    if (!path.endsWith("/")) return path;
+
+    return path.substring(0, path.length - 1);
+  }
+  /**
    * Gets a blob item from persistency layer by container name and blob name.
    * Will return block list or page list as well for downloading.
    *
@@ -1209,13 +1597,95 @@ export default class LokiBlobMetadataStore
   }
 
   /**
+   * Rename Blob
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} source
+   * @param {string} target
+   * @param {Models.BlobDeleteMethodOptionalParams} options
+   * @returns {Promise<BlobModel>}
+   * @memberof LokiBlobMetadataStore
+   */
+  public async renameBlob(
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourceBlob: string,
+    targetContainer: string,
+    targetBlob: string,
+    options: Models.PathCreateOptionalParams
+  ): Promise<BlobModel> {
+    return this.rename(false, context, account, sourceContainer, sourceBlob, targetContainer,targetBlob, options);
+  }
+
+  public async rename(
+    isDirectory: boolean,
+    context: Context,
+    account: string,
+    sourceContainer: string,
+    sourceBlob: string,
+    targetContainer: string,
+    targetBlob: string,
+    options: Models.PathCreateOptionalParams
+  ): Promise<BlobModel | DirectoryModel> {
+
+
+    
+    let target = undefined;
+    if (isDirectory) {
+      try {
+        target = await this.getDirectory(context, account, targetContainer, targetBlob);
+      } catch(err) {
+        //Ignored
+      }
+    } else {
+      target = await this.getBlobWithLeaseUpdated(account, targetContainer, targetBlob, "", context, false, false);
+    }
+
+
+    validateWriteConditions(
+      context,
+      options.modifiedAccessConditions,
+      target
+    );
+
+    if (
+      options.modifiedAccessConditions &&
+      options.modifiedAccessConditions.ifNoneMatch === "*" &&
+      target
+    ) {
+      throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+    }
+
+    if (target) {
+      isDirectory ? await this.deleteDirectory(context, account, targetContainer, targetBlob, true, options) :
+        await this.deleteBlob(context, account, targetContainer, targetBlob, options);
+    }
+
+    const func = isDirectory ? this.getDirectory : this.downloadBlob;
+    const model = await func.apply(this, [
+      context,
+      account,
+      sourceContainer,
+      sourceBlob
+    ]);
+
+    model.containerName = targetContainer;
+    model.name = targetBlob;
+
+    return model;
+  }
+
+  /**
    * Delete blob or its snapshots.
    *
    * @param {Context} context
    * @param {string} account
    * @param {string} container
    * @param {string} blob
-   * @param {Models.BlobDeleteMethodOptionalParams} options
+   * @param {Models.PathDeleteMethodOptionalParams} options
    * @returns {Promise<void>}
    * @memberof LokiBlobMetadataStore
    */
@@ -1224,7 +1694,7 @@ export default class LokiBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    options: Models.BlobDeleteMethodOptionalParams
+    options: Models.PathDeleteMethodOptionalParams
   ): Promise<void> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     await this.checkContainerExist(context, account, container);
@@ -1233,7 +1703,7 @@ export default class LokiBlobMetadataStore
       account,
       container,
       blob,
-      options.snapshot,
+      "",
       context,
       false
     );
@@ -1244,74 +1714,16 @@ export default class LokiBlobMetadataStore
       throw StorageErrorFactory.getBlobNotFound(context.contextId);
     }
 
-    const againstBaseBlob = doc.snapshot === "";
-
-    // Check bad requests
-    if (!againstBaseBlob && options.deleteSnapshots !== undefined) {
-      throw StorageErrorFactory.getInvalidOperation(
-        context.contextId!,
-        "Invalid operation against a blob snapshot."
-      );
-    }
-
     new BlobWriteLeaseValidator(options.leaseAccessConditions).validate(
       new BlobLeaseAdapter(doc),
       context
     );
 
-    // Scenario: Delete base blob only
-    if (againstBaseBlob && options.deleteSnapshots === undefined) {
-      const count = coll.count({
-        accountName: account,
-        containerName: container,
-        name: blob
-      });
-      if (count > 1) {
-        throw StorageErrorFactory.getSnapshotsPresent(context.contextId!);
-      } else {
-        coll.findAndRemove({
-          accountName: account,
-          containerName: container,
-          name: blob
-        });
-      }
-    }
-
-    // Scenario: Delete one snapshot only
-    if (!againstBaseBlob) {
-      coll.findAndRemove({
-        accountName: account,
-        containerName: container,
-        name: blob,
-        snapshot: doc.snapshot
-      });
-    }
-
-    // Scenario: Delete base blob and snapshots
-    if (
-      againstBaseBlob &&
-      options.deleteSnapshots === Models.DeleteSnapshotsOptionType.Include
-    ) {
-      coll.findAndRemove({
-        accountName: account,
-        containerName: container,
-        name: blob
-      });
-    }
-
-    // Scenario: Delete all snapshots only
-    if (
-      againstBaseBlob &&
-      options.deleteSnapshots === Models.DeleteSnapshotsOptionType.Only
-    ) {
-      const query = {
-        accountName: account,
-        containerName: container,
-        name: blob,
-        snapshot: { $gt: "" }
-      };
-      coll.findAndRemove(query);
-    }
+    coll.findAndRemove({
+      accountName: account,
+      containerName: container,
+      name: blob
+    });
   }
 
   /**
@@ -1802,7 +2214,7 @@ export default class LokiBlobMetadataStore
           options.sourceModifiedAccessConditions.sourceIfModifiedSince,
         ifUnmodifiedSince:
           options.sourceModifiedAccessConditions.sourceIfUnmodifiedSince,
-        ifMatch: options.sourceModifiedAccessConditions.sourceIfMatches,
+        ifMatch: options.sourceModifiedAccessConditions.sourceIfMatch,
         ifNoneMatch: options.sourceModifiedAccessConditions.sourceIfNoneMatch
       },
       sourceBlob
@@ -1987,7 +2399,7 @@ export default class LokiBlobMetadataStore
           options.sourceModifiedAccessConditions.sourceIfModifiedSince,
         ifUnmodifiedSince:
           options.sourceModifiedAccessConditions.sourceIfUnmodifiedSince,
-        ifMatch: options.sourceModifiedAccessConditions.sourceIfMatches,
+        ifMatch: options.sourceModifiedAccessConditions.sourceIfMatch,
         ifNoneMatch: options.sourceModifiedAccessConditions.sourceIfNoneMatch
       },
       sourceBlob

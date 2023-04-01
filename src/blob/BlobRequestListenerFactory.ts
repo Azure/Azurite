@@ -20,6 +20,7 @@ import ContainerHandler from "./handlers/ContainerHandler";
 import PageBlobHandler from "./handlers/PageBlobHandler";
 import PageBlobRangesManager from "./handlers/PageBlobRangesManager";
 import ServiceHandler from "./handlers/ServiceHandler";
+import FileSystemOperationsHandler from "./handlers/FileSystemOperationsHandler"
 import AuthenticationMiddlewareFactory from "./middlewares/AuthenticationMiddlewareFactory";
 import PreflightMiddlewareFactory from "./middlewares/PreflightMiddlewareFactory";
 import StrictModelMiddlewareFactory, {
@@ -33,6 +34,7 @@ import morgan = require("morgan");
 import { OAuthLevel } from "../common/models";
 import IAuthenticator from "./authentication/IAuthenticator";
 import createStorageBlobContextMiddleware from "./middlewares/blobStorageContext.middleware";
+import PathOperationsHandler from "./handlers/PathOperationsHandler";
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -114,7 +116,21 @@ export default class BlobRequestListenerFactory
         logger,
         loose
       ),
-      directoryHandler: {} as any
+      fileSystemOperationsHandler: new FileSystemOperationsHandler(
+        this.accountDataStore,
+        this.oauth,
+        this.metadataStore,
+        this.extentStore,
+        logger,
+        loose
+      ),
+      pathOperationsHandler: new PathOperationsHandler(
+        this.metadataStore,
+        this.extentStore,
+        logger,
+        loose,
+        pageBlobRangesManager
+      )
     };
 
     // CORS request handling, preflight request and the corresponding actual request

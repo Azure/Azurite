@@ -4,7 +4,7 @@ import {
   SequenceNumberAccessConditions
 } from "../generated/artifacts/models";
 import Context from "../generated/Context";
-import { BlobModel, ContainerModel } from "../persistence/IBlobMetadataStore";
+import { BlobModel, ContainerModel, DirectoryModel } from "../persistence/IBlobMetadataStore";
 import ConditionalHeadersAdapter from "./ConditionalHeadersAdapter";
 import ConditionResourceAdapter from "./ConditionResourceAdapter";
 import { IConditionalHeaders } from "./IConditionalHeaders";
@@ -60,7 +60,7 @@ export function validateSequenceNumberWriteConditions(
 export function validateWriteConditions(
   context: Context,
   conditionalHeaders?: ModifiedAccessConditions,
-  model?: BlobModel | ContainerModel | null
+  model?: BlobModel | DirectoryModel | ContainerModel | null
 ) {
   new WriteConditionalHeadersValidator().validate(
     context,
