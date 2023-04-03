@@ -35,6 +35,7 @@ export default class StatePredicateFinished
   onProcess = (context: QueryContext) => {
     let token = "";
 
+    // when first predicate is a single operator, our token map is empty
     context = this.validatePredicate(context);
 
     [context, token] = this.getNextToken(context);
@@ -349,11 +350,11 @@ export default class StatePredicateFinished
       const predicateType =
         context.taggedPredicates[offset].tokenMap.tokens[0].type;
       const predicateValue =
-          context.taggedPredicates[offset].tokenMap.tokens[0].token;
+        context.taggedPredicates[offset].tokenMap.tokens[0].token;
       if (
         predicateType.isParensOpen() ||
         predicateType.isParensClose() ||
-        predicateType.isOperator()||
+        predicateType.isOperator() ||
         (predicateType.isValue() && this.isBooleanValue(predicateValue))
       ) {
         return;

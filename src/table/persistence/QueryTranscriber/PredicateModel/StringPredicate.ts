@@ -39,8 +39,19 @@ export default class StringPredicate implements IPredicate {
    */
   private pushValue(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isValue()) {
+      taggedToken.token =
+        "`" +
+        // need to convert double apostrope to single
+        this.replaceDoubleApostrophes(
+          taggedToken.token.substring(1, taggedToken.token.length - 1)
+        ) +
+        "`";
       newTokens.push(new TaggedToken(taggedToken.token, new ValueToken()));
     }
+  }
+
+  private replaceDoubleApostrophes(token: string) {
+    return token.replace(/(\'\')/g, "'");
   }
 
   /**

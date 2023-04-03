@@ -62,8 +62,34 @@ export default class StateProcessValue extends QPState implements IQPState {
    * @memberof StateProcessValue
    */
   private handleStringValue(context: QueryContext, tokenStart: number) {
+    // need to account for apostrophe escaping
+    // http://docs.oasis-open.org/odata/odata/v4.0/errata03/os/complete/part2-url-conventions/odata-v4.0-errata03-os-part2-url-conventions-complete.html#ABNF
+    // OData the ABNF rules explicitly state whether the percent-encoded representation is treated identical to the plain literal representation.
+    // This is done to make the input strings in the ABNF test cases more readable.
+    // One of these rules is that single quotes within string literals are represented as two consecutive single quotes.
+    // Example 3: valid OData URLs:
+    // http://host/service/People('O''Neil')
+    // http://host/service/People(%27O%27%27Neil%27)
+    // http://host/service/People%28%27O%27%27Neil%27%29
+    // http://host/service/Categories('Smartphone%2FTablet')
     if (context.originalQuery[tokenStart] === "'") {
-      return context.originalQuery.indexOf("'", tokenStart + 1) + 1;
+      // if we have a string, we need to check for double appostrophe each time we find a valid end
+      let posApostrophe = context.originalQuery.indexOf("'", tokenStart + 1);
+
+      // Why minus 2 : becuase there must be enough room for 3 apostrophe otherwise
+      // the syntax would be invalid.
+      while (posApostrophe < context.originalQuery.length - 2) {
+        const nextChar = context.originalQuery.charAt(posApostrophe + 1);
+        if (nextChar === "'") {
+          // double apostrophe used as litteral '
+          posApostrophe += 1;
+        } else {
+          break;
+        }
+        posApostrophe = context.originalQuery.indexOf("'", posApostrophe + 1);
+      }
+
+      return posApostrophe + 1;
     }
     return this.endOfToken(context, tokenStart);
   }
