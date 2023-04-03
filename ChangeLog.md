@@ -26,12 +26,9 @@ Blob:
 Table:
 
 - Fixed issue for querying on identifiers starting with underscore.
-<<<<<<< HEAD
 - Corrected query parsing logic for single boolean terms.
-=======
 - Fixed issue for querying GUIDs using operators other than eq and ne
 - GUID queries only support persistent storage on legacy (string) format GUIDs for eq and ne operators, other operators will only evaluate newly stored entities.
->>>>>>> a1527fc0ec75137de6982b8dd3ce60fd38f9504d
 
 Queue:
 
