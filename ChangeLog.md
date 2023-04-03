@@ -4,12 +4,19 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Fixed issue of: blob batch subresponse is slightly different from the on from Azure serivce, which causes exception in CPP SDK.
+
+## 2023.03 Version 3.23.0
+
 General:
 
 - Return 404 StatusCode when Storage account not exist
 - Migrated tslint to eslint.
 - Typescript upgraded from 4.2.4 to 4.9.5.
 - Migrated test pipeline from Node.js 10/12 to Node.js 14/16/18.
+- Bump up service API version to 2022-11-02
 
 Blob:
 
