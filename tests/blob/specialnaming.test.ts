@@ -448,7 +448,7 @@ describe("SpecialNaming", () => {
   it(`Should work with production style URL when ${productionStyleHostName} is resolvable`, async () => {
     await dns.promises.lookup(productionStyleHostName).then(
       async (lookupAddress) => {
-        const baseURLProductionStyle = `http://${productionStyleHostName}:${server.config.port}`;
+        const baseURLProductionStyle = `http://${productionStyleHostName}:${server.config.port}/`;
         const serviceClientProductionStyle = new BlobServiceClient(
           baseURLProductionStyle,
           newPipeline(
@@ -463,14 +463,12 @@ describe("SpecialNaming", () => {
             }
           )
         );
-        const containerClientProductionStyle = serviceClientProductionStyle.getContainerClient(
-          containerName
-        );
+        const containerClientProductionStyle =
+          serviceClientProductionStyle.getContainerClient(containerName);
 
         const blobName: string = getUniqueName("myblob");
-        const blockBlobClient = containerClientProductionStyle.getBlockBlobClient(
-          blobName
-        );
+        const blockBlobClient =
+          containerClientProductionStyle.getBlockBlobClient(blobName);
 
         await blockBlobClient.upload("ABC", 3);
         const response = (
@@ -508,14 +506,12 @@ describe("SpecialNaming", () => {
             keepAliveOptions: { enable: false }
           }
         );
-        const containerClientProductionStyle = serviceClientNoHostName.getContainerClient(
-          containerName
-        );
+        const containerClientProductionStyle =
+          serviceClientNoHostName.getContainerClient(containerName);
 
         const blobName: string = getUniqueName("myblob");
-        const blockBlobClient = containerClientProductionStyle.getBlockBlobClient(
-          blobName
-        );
+        const blockBlobClient =
+          containerClientProductionStyle.getBlockBlobClient(blobName);
 
         await blockBlobClient.upload("ABC", 3);
         const response = (

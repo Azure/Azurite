@@ -12,6 +12,7 @@
   "bin": {
     "azurite": "./dist/src/azurite.js",
     "azurite-blob": "./dist/src/blob/main.js",
+    "azurite-datalake": "dist/src/dfs/main.js",
     "azurite-queue": "./dist/src/queue/main.js",
     "azurite-table": "./dist/src/table/main.js"
   },
@@ -32,6 +33,7 @@
     "morgan": "^1.9.1",
     "multistream": "^2.1.1",
     "mysql2": "^3.2.0",
+    "pg": "^8.10.0",
     "rimraf": "^3.0.2",
     "sequelize": "^6.3.0",
     "stoppable": "^1.1.0",
@@ -48,6 +50,7 @@
     "@azure/core-rest-pipeline": "^1.2.0",
     "@azure/data-tables": "^13.0.1",
     "@azure/storage-blob": "^12.9.0",
+    "@azure/storage-file-datalake": "^12.12.0",
     "@azure/storage-queue": "^12.8.0",
     "@types/args": "^5.0.0",
     "@types/async": "^3.0.1",
@@ -96,6 +99,9 @@
     "onCommand:azurite.start_blob",
     "onCommand:azurite.close_blob",
     "onCommand:azurite.clean_blob",
+    "onCommand:azurite.start_datalake",
+    "onCommand:azurite.close_blob",
+    "onCommand:azurite.clean_blob",
     "onCommand:azurite.start_queue",
     "onCommand:azurite.close_queue",
     "onCommand:azurite.clean_queue",
@@ -132,6 +138,21 @@
       },
       {
         "command": "azurite.clean_blob",
+        "title": "Clean Blob Service",
+        "category": "Azurite"
+      },
+      {
+        "command": "azurite.start_datalake",
+        "title": "Start DataLake Service",
+        "category": "Azurite"
+      },
+      {
+        "command": "azurite.close_datalake",
+        "title": "Close DataLake Service",
+        "category": "Azurite"
+      },
+      {
+        "command": "azurite.clean_datalake",
         "title": "Clean Blob Service",
         "category": "Azurite"
       },
@@ -219,6 +240,16 @@
             "default": 10000,
             "description": "Blob service listening port, by default 10000"
           },
+          "azurite.datalakeHost": {
+            "type": "string",
+            "default": "127.0.0.1",
+            "description": "DataLake service listening endpoint, by default 127.0.0.1"
+          },
+          "azurite.datalakePort": {
+            "type": "number",
+            "default": 10003,
+            "description": "DataLake service listening port, by default 10003"
+          },
           "azurite.queueHost": {
             "type": "string",
             "default": "127.0.0.1",
@@ -275,6 +306,7 @@
     "build": "tsc",
     "build:autorest:debug": "autorest ./swagger/blob.md --typescript --typescript.debugger --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorest:blob": "autorest ./swagger/blob.md --typescript  --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
+    "build:autorest:dfs": "autorest ./swagger/dfs.md --typescript --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorest:queue": "autorest ./swagger/queue.md --typescript  --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:autorest:table": "autorest ./swagger/table.md --typescript  --use=S:/GitHub/XiaoningLiu/autorest.typescript.server",
     "build:exe": "node ./scripts/buildExe.js",
@@ -283,9 +315,13 @@
     "blob": "node -r ts-node/register src/blob/main.ts",
     "queue": "node -r ts-node/register src/queue/main.ts",
     "table": "node -r ts-node/register src/table/main.ts",
+    "dfs": "node -r ts-node/register src/dfs/main.ts",
     "azurite": "node -r ts-node/register src/azurite.ts",
     "lint": "npx eslint src/**/*.ts",
-    "test": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --compilers ts-node/register --no-timeouts --grep @loki --recursive --exit tests/**/*.test.ts tests/**/**/*.test.ts",
+    "test": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --compilers ts-node/register --no-timeouts --recursive --exit tests/**/*.test.ts tests/**/**/*.test.ts tests/**/**/**/*.test.ts",
+    "test:dfs": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --compilers ts-node/register --no-timeouts --grep @loki --recursive --exit tests/dfs/*.test.ts  tests/dfs/**/*.test.ts tests/dfs/**/**/*.test.ts",
+    "test:dfs:sql": "npm run lint && cross-env cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 AZURITE_TEST_DB=mysql://root:my-secret-pw@127.0.0.1:3306/azurite_blob_test  mocha --compilers ts-node/register --no-timeouts --grep @sql --recursive --exit tests/dfs/*.test.ts  tests/dfs/**/*.test.ts tests/dfs/**/**/*.test.ts",
+    "test:dfs:sql:ci": "npm run lint && cross-env cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 AZURITE_TEST_DB=mysql://root:my-secret-pw@127.0.0.1:13306/azurite_blob_test mocha --compilers ts-node/register --no-timeouts --grep @sql --recursive --exit tests/dfs/*.test.ts  tests/dfs/**/*.test.ts tests/dfs/**/**/*.test.ts",
     "test:blob": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --compilers ts-node/register --no-timeouts --grep @loki --recursive --exit tests/blob/*.test.ts tests/blob/**/*.test.ts",
     "test:blob:sql": "npm run lint && cross-env cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 AZURITE_TEST_DB=mysql://root:my-secret-pw@127.0.0.1:3306/azurite_blob_test mocha --compilers ts-node/register --no-timeouts --grep @sql --recursive --exit tests/blob/*.test.ts tests/blob/**/*.test.ts",
     "test:blob:sql:ci": "npm run lint && cross-env cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 AZURITE_TEST_DB=mysql://root:my-secret-pw@127.0.0.1:13306/azurite_blob_test mocha --compilers ts-node/register --no-timeouts --grep @sql --recursive --exit tests/blob/*.test.ts tests/blob/**/*.test.ts",
@@ -295,8 +331,8 @@
     "test:linux": "npm run lint && cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 mocha --compilers ts-node/register --no-timeouts tests/linuxbinary.test.ts --exit",
     "clean": "rimraf dist typings *.log coverage __testspersistence__ temp __testsstorage__ .nyc_output debug.log *.vsix *.tgz",
     "clean:deep": "npm run clean && rimraf debug.log __*",
-    "validate:npmpack:win": "npm install --legacy-peer-deps && npm run build && npm pack && cross-var npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v && azurite-queue -v && azurite-table -v",
-    "validate:npmpack:linux_mac": "npm install --legacy-peer-deps && npm run build && npm pack && cross-var sudo npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v && azurite-queue -v && azurite-table -v",
+    "validate:npmpack:win": "npm install --legacy-peer-deps && npm run build && npm pack && cross-var npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v && azurite-queue -v && azurite-table -v && azurite-datalake -v",
+    "validate:npmpack:linux_mac": "npm install --legacy-peer-deps && npm run build && npm pack && cross-var sudo npm install -g azurite-$npm_package_version.tgz && azurite -v && azurite-blob -v && azurite-queue -v && azurite-table -v && azurite-datalake -v",
     "db:migrate:blob:metadata": "sequelize db:migrate --config migrations/blob/metadata/config/config.json --migrations-path migrations/blob/metadata/migrations",
     "db:create:blob:metadata": "sequelize db:create --config migrations/blob/metadata/config/config.json --migrations-path migrations/blob/metadata/migrations"
   },

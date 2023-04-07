@@ -15,6 +15,11 @@ import {
   QueueServiceClient,
   StorageSharedKeyCredential as queueStorageSharedKeyCredential
 } from "@azure/storage-queue";
+import {
+  DataLakeServiceClient,
+  newPipeline as datalakeNewPipeline,
+  StorageSharedKeyCredential as datalakeStorageSharedKeyCredential
+} from "@azure/storage-file-datalake";
 
 import { configLogger } from "../src/common/Logger";
 import {
@@ -36,6 +41,7 @@ import {
   overrideRequest,
   restoreBuildRequestOptions
 } from "./testutils";
+import DataLakeTestServerFactory from "./dfs/DataLakeTestServerFactory";
 
 // server address used for testing. Note that Azurite.exe has
 // server address of http://127.0.0.1:10000 and so on by default
@@ -43,6 +49,7 @@ import {
 const blobAddress = "http://127.0.0.1:11000";
 const queueAddress = "http://127.0.0.1:11001";
 const tableAddress = "http://127.0.0.1:11002";
+const datalakeAddress = "http://127.0.0.1:11003";
 
 // Set true to enable debug log
 configLogger(false);
@@ -70,7 +77,12 @@ describe("exe test", () => {
     tableName = getUniqueName("table");
     const child = execFile(
       ".\\release\\azurite.exe",
-      ["--blobPort 11000", "--queuePort 11001", "--tablePort 11002"],
+      [
+        "--blobPort 11000",
+        "--queuePort 11001",
+        "--tablePort 11002",
+        "--datalakePort 11003"
+      ],
       { cwd: process.cwd(), shell: true, env: {} }
     );
 
@@ -89,6 +101,10 @@ describe("exe test", () => {
       tableAddress +
       "\nAzurite Table service is successfully listening at " +
       tableAddress +
+      "\nAzurite DataLake service is starting at " +
+      datalakeAddress +
+      "\nAzurite DataLake service is successfully listening at " +
+      datalakeAddress +
       "\n";
     let messageReceived: string = "";
 
@@ -286,6 +302,82 @@ describe("exe test", () => {
     it("download should work with conditional headers @loki @sql", async () => {
       const properties = await blobClient.getProperties();
       const result = await blobClient.download(0, undefined, {
+        conditions: {
+          ifMatch: properties.etag,
+          ifNoneMatch: "invalidetag",
+          ifModifiedSince: new Date("2018/01/01"),
+          ifUnmodifiedSince: new Date("2188/01/01")
+        }
+      });
+      assert.deepStrictEqual(
+        await bodyToString(result, content.length),
+        content
+      );
+      assert.equal(result.contentRange, undefined);
+      assert.equal(
+        result._response.request.headers.get("x-ms-client-request-id"),
+        result.clientRequestId
+      );
+    });
+  });
+
+  describe("datalake test", () => {
+    const factory = new DataLakeTestServerFactory();
+    const datalakeServer = factory.createServer();
+
+    const datalakeBaseURL = `http://${datalakeServer.config.host}:${datalakeServer.config.port}/devstoreaccount1`;
+    const datalakeServiceClient = new DataLakeServiceClient(
+      datalakeBaseURL,
+      datalakeNewPipeline(
+        new datalakeStorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        ),
+        {
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
+        }
+      )
+    );
+
+    let filesystemName: string = getUniqueName("filesystem");
+    let filesystemClient =
+      datalakeServiceClient.getFileSystemClient(filesystemName);
+    let fileName: string = getUniqueName("file");
+    let fileClient = filesystemClient.getFileClient(fileName);
+    const content = "Hello World";
+
+    beforeEach(async () => {
+      filesystemName = getUniqueName("filesystem");
+      filesystemClient =
+        datalakeServiceClient.getFileSystemClient(filesystemName);
+      await filesystemClient.create();
+      fileName = getUniqueName("file");
+      fileClient = filesystemClient.getFileClient(fileName);
+      await fileClient.create();
+      await fileClient.append(content, 0, content.length, { flush: true });
+    });
+
+    afterEach(async () => {
+      await filesystemClient.delete();
+    });
+    it("download with with default parameters @loki @sql", async () => {
+      const result = await fileClient.read();
+      assert.deepStrictEqual(
+        await bodyToString(result, content.length),
+        content
+      );
+      assert.equal(result.contentRange, undefined);
+      assert.equal(
+        result._response.request.headers.get("x-ms-client-request-id"),
+        result.clientRequestId
+      );
+    });
+
+    it("download should work with conditional headers @loki @sql", async () => {
+      const properties = await fileClient.getProperties();
+      const result = await fileClient.read(0, undefined, {
         conditions: {
           ifMatch: properties.etag,
           ifNoneMatch: "invalidetag",

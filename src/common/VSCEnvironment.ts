@@ -15,6 +15,14 @@ export default class VSCEnvironment implements IEnvironment {
     return this.workspaceConfiguration.get<number>("blobPort");
   }
 
+  public datalakeHost(): string | undefined {
+    return this.workspaceConfiguration.get<string>("datalakeHost");
+  }
+
+  public datalakePort(): number | undefined {
+    return this.workspaceConfiguration.get<number>("datalakePort");
+  }
+
   public queueHost(): string | undefined {
     return this.workspaceConfiguration.get<string>("queueHost");
   }
@@ -62,7 +70,7 @@ export default class VSCEnvironment implements IEnvironment {
       } else {
         folder = workspace.workspaceFolders[0];
       }
-      location = resolve(folder.uri.fsPath, location ?? '');
+      location = resolve(folder.uri.fsPath, location ?? "");
     }
 
     await ensureDir(location);
@@ -106,7 +114,8 @@ export default class VSCEnvironment implements IEnvironment {
 
   public disableProductStyleUrl(): boolean {
     return (
-      this.workspaceConfiguration.get<boolean>("disableProductStyleUrl") || false
+      this.workspaceConfiguration.get<boolean>("disableProductStyleUrl") ||
+      false
     );
   }
 }

@@ -1,0 +1,411 @@
+import DataLakeContext from "../context/DataLakeContext";
+import StorageErrorFactory from "../errors/StorageErrorFactory";
+import * as Models from "../generated/artifacts/models";
+import Context from "../generated/Context";
+import IServiceHandler from "../generated/handlers/IServiceHandler";
+import { parseXML } from "../generated/utils/xml";
+import {
+  BLOB_API_VERSION,
+  DATA_LAKE_API_VERSION,
+  DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
+  EMULATOR_ACCOUNT_KIND,
+  EMULATOR_ACCOUNT_SKUNAME,
+  HeaderConstants
+} from "../utils/constants";
+import BaseHandler from "./BaseHandler";
+import IAccountDataStore from "../../common/IAccountDataStore";
+import IExtentStore from "../../common/persistence/IExtentStore";
+import IDataLakeMetadataStore from "../persistence/IDataLakeMetadataStore";
+import ILogger from "../../common/ILogger";
+import { BlobBatchHandler } from "./BlobBatchHandler";
+import { Readable } from "stream";
+import { OAuthLevel } from "../../common/models";
+import { BEARER_TOKEN_PREFIX } from "../../common/utils/constants";
+import { decode } from "jsonwebtoken";
+import { getUserDelegationKeyValue } from "../utils/utils";
+import NotImplementedError from "../errors/NotImplementedError";
+
+/**
+ * ServiceHandler handles Azure Storage Blob service related requests.
+ *
+ * @export
+ * @class ServiceHandler
+ * @implements {IHandler}
+ */
+export default class ServiceHandler
+  extends BaseHandler
+  implements IServiceHandler
+{
+  constructor(
+    private readonly accountDataStore: IAccountDataStore,
+    private readonly oauth: OAuthLevel | undefined,
+    metadataStore: IDataLakeMetadataStore,
+    extentStore: IExtentStore,
+    logger: ILogger,
+    loose: boolean
+  ) {
+    super(metadataStore, extentStore, logger, loose);
+  }
+  /**
+   * Default service properties.
+   *
+   * @private
+   * @memberof ServiceHandler
+   */
+  private readonly defaultServiceProperties = {
+    cors: [],
+    defaultServiceVersion: BLOB_API_VERSION,
+    hourMetrics: {
+      enabled: false,
+      retentionPolicy: {
+        enabled: false
+      },
+      version: "1.0"
+    },
+    logging: {
+      deleteProperty: true,
+      read: true,
+      retentionPolicy: {
+        enabled: false
+      },
+      version: "1.0",
+      write: true
+    },
+    minuteMetrics: {
+      enabled: false,
+      retentionPolicy: {
+        enabled: false
+      },
+      version: "1.0"
+    },
+    staticWebsite: {
+      enabled: false
+    }
+  };
+
+  /**
+   * List filesystems aka containers.
+   *
+   * @param {Models.ServiceListFileSystemsOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ServiceListFileSystemsResponse>}
+   * @memberof ServiceHandler
+   */
+  async listFileSystems(
+    options: Models.ServiceListFileSystemsOptionalParams,
+    context: Context
+  ): Promise<Models.ServiceListFileSystemsResponse> {
+    const blobCtx = new DataLakeContext(context);
+    const accountName = blobCtx.account!;
+
+    options.maxResults =
+      options.maxResults || DEFAULT_LIST_CONTAINERS_MAX_RESULTS;
+    options.prefix = options.prefix || "";
+
+    const marker = options.continuation || "";
+
+    const [filesystems, continuation] = await this.metadataStore.listContainers(
+      context,
+      accountName,
+      options.prefix,
+      options.maxResults,
+      marker
+    );
+
+    const res: Models.ServiceListFileSystemsResponse = {
+      filesystems,
+      continuation,
+      statusCode: 200,
+      requestId: context.contextId,
+      version: DATA_LAKE_API_VERSION
+    };
+
+    return res;
+  }
+
+  public async getUserDelegationKey(
+    keyInfo: Models.KeyInfo,
+    options: Models.ServiceGetUserDelegationKeyOptionalParams,
+    context: Context
+  ): Promise<Models.ServiceGetUserDelegationKeyResponse> {
+    const blobContext = new DataLakeContext(context);
+    const request = blobContext.request!;
+    const authHeaderValue = request.getHeader(HeaderConstants.AUTHORIZATION);
+    const token = authHeaderValue!.substr(BEARER_TOKEN_PREFIX.length + 1);
+    const decodedToken = decode(token) as { [key: string]: any };
+    const keyValue = getUserDelegationKeyValue(
+      decodedToken.oid,
+      decodedToken.tid,
+      keyInfo.start,
+      keyInfo.expiry,
+      BLOB_API_VERSION
+    );
+
+    const response: Models.ServiceGetUserDelegationKeyResponse = {
+      statusCode: 200,
+      signedOid: decodedToken.oid,
+      signedTid: decodedToken.tid,
+      signedService: "b",
+      signedVersion: BLOB_API_VERSION,
+      signedStart: keyInfo.start,
+      signedExpiry: keyInfo.expiry,
+      value: keyValue
+    };
+
+    return response;
+  }
+
+  public async submitBatch(
+    body: NodeJS.ReadableStream,
+    contentLength: number,
+    multipartContentType: string,
+    options: Models.ServiceSubmitBatchOptionalParams,
+    context: Context
+  ): Promise<Models.ServiceSubmitBatchResponse> {
+    const blobServiceCtx = new DataLakeContext(context);
+    const requestBatchBoundary = blobServiceCtx
+      .request!.getHeader("content-type")!
+      .split("=")[1];
+
+    const blobBatchHandler = new BlobBatchHandler(
+      this.accountDataStore,
+      this.oauth,
+      this.metadataStore,
+      this.extentStore,
+      this.logger,
+      this.loose
+    );
+
+    const responseBodyString = await blobBatchHandler.submitBatch(
+      body,
+      requestBatchBoundary,
+      "",
+      context.request!,
+      context
+    );
+
+    const responseBody = new Readable();
+    responseBody.push(responseBodyString);
+    responseBody.push(null);
+
+    // No client request id defined in batch response, should refine swagger and regenerate from it.
+    // batch response succeed code should be 202 instead of 200, should refine swagger and regenerate from it.
+    const response: Models.ServiceSubmitBatchResponse = {
+      statusCode: 202,
+      requestId: context.contextId,
+      version: BLOB_API_VERSION,
+      contentType: "multipart/mixed; boundary=" + requestBatchBoundary,
+      body: responseBody
+    };
+
+    return response;
+  }
+
+  /**
+   * Set blob service properties.
+   *
+   * @param {Models.StorageServiceProperties} storageServiceProperties
+   * @param {Models.ServiceSetPropertiesOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ServiceSetPropertiesResponse>}
+   * @memberof ServiceHandler
+   */
+  public async setProperties(
+    storageServiceProperties: Models.StorageServiceProperties,
+    options: Models.ServiceSetPropertiesOptionalParams,
+    context: Context
+  ): Promise<Models.ServiceSetPropertiesResponse> {
+    const blobCtx = new DataLakeContext(context);
+    const accountName = blobCtx.account!;
+
+    // TODO: deserializor has a bug that when cors is undefined,
+    // it will serialize it to empty array instead of undefined
+    const body = blobCtx.request!.getBody();
+    const parsedBody = await parseXML(body || "");
+    if (
+      !Object.hasOwnProperty.bind(parsedBody)("cors") &&
+      !Object.hasOwnProperty.bind(parsedBody)("Cors")
+    ) {
+      storageServiceProperties.cors = undefined;
+    }
+
+    // Azure Storage allows allowedHeaders and exposedHeaders to be empty,
+    // Azurite will set to empty string for this scenario
+    for (const cors of storageServiceProperties.cors || []) {
+      cors.allowedHeaders = cors.allowedHeaders || "";
+      cors.exposedHeaders = cors.exposedHeaders || "";
+    }
+
+    await this.metadataStore.setServiceProperties(context, {
+      ...storageServiceProperties,
+      accountName
+    });
+
+    const response: Models.ServiceSetPropertiesResponse = {
+      requestId: context.contextId,
+      statusCode: 202,
+      version: BLOB_API_VERSION,
+      clientRequestId: options.requestId
+    };
+    return response;
+  }
+
+  /**
+   * Get blob service properties.
+   *
+   * @param {Models.ServiceGetPropertiesOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ServiceGetPropertiesResponse>}
+   * @memberof ServiceHandler
+   */
+  public async getProperties(
+    options: Models.ServiceGetPropertiesOptionalParams,
+    context: Context
+  ): Promise<Models.ServiceGetPropertiesResponse> {
+    const blobCtx = new DataLakeContext(context);
+    const accountName = blobCtx.account!;
+
+    let properties = await this.metadataStore.getServiceProperties(
+      context,
+      accountName
+    );
+    if (!properties) {
+      properties = { ...this.defaultServiceProperties, accountName };
+    }
+
+    if (properties.cors === undefined) {
+      properties.cors = [];
+    }
+
+    if (properties.cors === undefined) {
+      properties.cors = [];
+    }
+
+    if (properties.hourMetrics === undefined) {
+      properties.hourMetrics = this.defaultServiceProperties.hourMetrics;
+    }
+
+    if (properties.logging === undefined) {
+      properties.logging = this.defaultServiceProperties.logging;
+    }
+
+    if (properties.minuteMetrics === undefined) {
+      properties.minuteMetrics = this.defaultServiceProperties.minuteMetrics;
+    }
+
+    if (properties.defaultServiceVersion === undefined) {
+      properties.defaultServiceVersion =
+        this.defaultServiceProperties.defaultServiceVersion;
+    }
+
+    if (properties.staticWebsite === undefined) {
+      properties.staticWebsite = this.defaultServiceProperties.staticWebsite;
+    }
+
+    const response: Models.ServiceGetPropertiesResponse = {
+      ...properties,
+      requestId: context.contextId,
+      statusCode: 200,
+      version: BLOB_API_VERSION,
+      clientRequestId: options.requestId
+    };
+    return response;
+  }
+
+  public async getStatistics(
+    options: Models.ServiceGetStatisticsOptionalParams,
+    context: Context
+  ): Promise<Models.ServiceGetStatisticsResponse> {
+    if (!context.context.isSecondary) {
+      throw StorageErrorFactory.getInvalidQueryParameterValue(context);
+    }
+
+    const response: Models.ServiceGetStatisticsResponse = {
+      statusCode: 200,
+      requestId: context.contextId,
+      version: BLOB_API_VERSION,
+      date: context.startTime,
+      clientRequestId: options.requestId,
+      geoReplication: {
+        status: Models.GeoReplicationStatusType.Live,
+        lastSyncTime: context.startTime!
+      }
+    };
+    return response;
+  }
+
+  /**
+   * List containers.
+   *
+   * @param {Models.ServiceListContainersSegmentOptionalParams} options
+   * @param {Context} context
+   * @returns {Promise<Models.ServiceListContainersSegmentResponse>}
+   * @memberof ServiceHandler
+   */
+  public async listContainersSegment(
+    options: Models.ServiceListContainersSegmentOptionalParams,
+    context: Context
+  ): Promise<Models.ServiceListContainersSegmentResponse> {
+    const blobCtx = new DataLakeContext(context);
+    const request = blobCtx.request!;
+    const accountName = blobCtx.account!;
+
+    options.maxresults =
+      options.maxresults || DEFAULT_LIST_CONTAINERS_MAX_RESULTS;
+    options.prefix = options.prefix || "";
+
+    const marker = options.marker || "";
+
+    const containers = await this.metadataStore.listContainers(
+      context,
+      accountName,
+      options.prefix,
+      options.maxresults,
+      marker
+    );
+
+    // TODO: Need update list out container lease properties with ContainerHandler.updateLeaseAttributes()
+    const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
+    const res: Models.ServiceListContainersSegmentResponse = {
+      containerItems: containers[0],
+      maxResults: options.maxresults,
+      nextMarker: `${containers[1] || ""}`,
+      prefix: options.prefix,
+      serviceEndpoint,
+      statusCode: 200,
+      requestId: context.contextId,
+      version: BLOB_API_VERSION,
+      clientRequestId: options.requestId
+    };
+
+    return res;
+  }
+
+  public async getAccountInfo(
+    context: Context
+  ): Promise<Models.ServiceGetAccountInfoResponse> {
+    const response: Models.ContainerGetAccountInfoResponse = {
+      statusCode: 200,
+      requestId: context.contextId,
+      clientRequestId: context.request!.getHeader("x-ms-client-request-id"),
+      skuName: EMULATOR_ACCOUNT_SKUNAME,
+      accountKind: EMULATOR_ACCOUNT_KIND,
+      date: context.startTime!,
+      version: BLOB_API_VERSION
+    };
+    return response;
+  }
+
+  public async getAccountInfoWithHead(
+    context: Context
+  ): Promise<Models.ServiceGetAccountInfoResponse> {
+    return this.getAccountInfo(context);
+  }
+
+  public filterBlobs(
+    options: Models.ServiceFilterBlobsOptionalParams,
+    context: Context
+  ): Promise<Models.ServiceFilterBlobsResponse> {
+    throw new NotImplementedError(context);
+  }
+}

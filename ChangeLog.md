@@ -7,6 +7,11 @@
 Blob:
 
 - Fixed issue of: blob batch subresponse is slightly different from the on from Azure serivce, which causes exception in CPP SDK.
+- support copy when using sql as metadatastore
+
+DataLake:
+
+- Introduced dfs endpoint with the following features see readme for more details on what is supported and what is not
 
 ## 2023.03 Version 3.23.0
 

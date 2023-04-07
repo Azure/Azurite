@@ -36,31 +36,31 @@ describe("PageWithDelimiter", () => {
       "e/2"
     ];
 
-    it("handles no blob results @loki", async () => {
+    it("handles no blob results @Loki @sql", async () => {
       const page = new PageWithDelimiter<string>(5);
       const [items, prefixes, marker] = await page.fill(createReader([], 5), namer);
       checkResult(items, prefixes, marker, 0, 0, "");
     });
 
-    it("fills 1 result properly @loki", async () => {
+    it("fills 1 result properly @Loki @sql", async () => {
       const page = new PageWithDelimiter<string>(1);
       const [items, prefixes, marker] = await page.fill(createReader(blobs, 1), namer);
       checkResult(items, prefixes, marker, 1, 0, "a");
     });
 
-    it("fills n results properly @loki", async () => {
+    it("fills n results properly @Loki @sql", async () => {
       const page = new PageWithDelimiter<string>(5);
       const [items, prefixes, marker] = await page.fill(createReader(blobs, 5), namer);
       checkResult(items, prefixes, marker, 5, 0, "c/sub/1");
     });
 
-    it("fills exact count with no continuation @loki", async () => {
+    it("fills exact count with no continuation @Loki @sql", async () => {
       const page = new PageWithDelimiter<string>(blobs.length);
       const [items, prefixes, marker] = await page.fill(createReader(blobs, blobs.length), namer);
       checkResult(items, prefixes, marker, blobs.length, 0, "");
     });
 
-    it("fills smaller than max page with no continuation @loki", async () => {
+    it("fills smaller than max page with no continuation @Loki @sql", async () => {
       const page = new PageWithDelimiter<string>(blobs.length+1);
       const [items, prefixes, marker] = await page.fill(createReader(blobs, blobs.length+1), namer);
       checkResult(items, prefixes, marker, blobs.length, 0, "");
@@ -71,21 +71,21 @@ describe("PageWithDelimiter", () => {
 
     describe("and 1 item page size", () => {
 
-      it("handles no blob results @loki", async () => {
+      it("handles no blob results @Loki @sql", async () => {
         const blobs: string[] = [];
         const page = new PageWithDelimiter<string>(1, "/");
         const [items, prefixes, marker] = await page.fill(createReader(blobs, 1), namer);
         checkResult(items, prefixes, marker, 0, 0, "");
       });
 
-      it("handles 1 blob results @loki", async () => {
+      it("handles 1 blob results @Loki @sql", async () => {
         const blobs = ["a"];
         const page = new PageWithDelimiter<string>(1, "/");
         const [items, prefixes, marker] = await page.fill(createReader(blobs, 1), namer);
         checkResult(items, prefixes, marker, 1, 0, "");
       });
 
-      it("returns 1 of 2 items with proper continuation @loki", async () => {
+      it("returns 1 of 2 items with proper continuation @Loki @sql", async () => {
         const blobs = ["a", "b"];
         const page = new PageWithDelimiter<string>(1, "/");
         let [items, prefixes, marker] = await page.fill(createReader(blobs, 1), namer);
@@ -97,14 +97,14 @@ describe("PageWithDelimiter", () => {
         checkResult(items, prefixes, marker, 1, 0, "");
       });
 
-      it("returns first item when prefixes exist @loki", async () => {
+      it("returns first item when prefixes exist @Loki @sql", async () => {
         const blobs = ["a/1", "a/2", "a/3", "a/sub/1"];
         const page = new PageWithDelimiter<string>(1, "/", "a/");
         const [items, prefixes, marker] = await page.fill(createReader(blobs, 1), namer);
         checkResult(items, prefixes, marker, 1, 0, "a/1");
       });
 
-      it("returns first prefix when blobs exist @loki", async () => {
+      it("returns first prefix when blobs exist @Loki @sql", async () => {
         const blobs = ["a/s0/1", "a/s0/2", "a/s0/3", "a/s1/1", "a/s2/2", "a/z"];
         const page = new PageWithDelimiter<string>(1, "/", "a/");
         const [items, prefixes, marker] = await page.fill(createReader(blobs, 1), namer);
@@ -114,21 +114,21 @@ describe("PageWithDelimiter", () => {
 
     describe("multiple item page size", () => {
 
-      it("squashes prefixes @loki", async () => {
+      it("squashes prefixes @Loki @sql", async () => {
         const blobs = ["a/s0/1", "a/s0/2", "a/s0/3", "a/s1/1", "a/s1/2", "a/s2/2", "a/z"];
         const page = new PageWithDelimiter<string>(2, "/", "a/");
         const [items, prefixes, marker] = await page.fill(createReader(blobs, 2), namer);
         checkResult(items, prefixes, marker, 0, 2, "a/s1/2");
       });
 
-      it("squashes a mix @loki", async () => {
+      it("squashes a mix @Loki @sql", async () => {
         const blobs = ["a/a", "a/s0/1", "a/s0/2", "a/s1/1", "a/s1/2", "a/z"];
         const page = new PageWithDelimiter<string>(2, "/", "a/");
         const [items, prefixes, marker] = await page.fill(createReader(blobs, 2), namer);
         checkResult(items, prefixes, marker, 1, 1, "a/s0/2");
       });
 
-      it("follows squashed pages @loki", async () => {
+      it("follows squashed pages @Loki @sql", async () => {
         const blobs = ["a/a", "a/s0/1", "a/s0/2", "a/s1/1", "a/s1/2", "a/z"];
         const page = new PageWithDelimiter<string>(2, "/", "a/");
         let [items, prefixes, marker] = await page.fill(createReader(blobs, 2), namer);
@@ -140,7 +140,7 @@ describe("PageWithDelimiter", () => {
         checkResult(items, prefixes, marker, 1, 1, "");
       });
 
-      it("squashes within one larger page @loki", async () => {
+      it("squashes within one larger page @Loki @sql", async () => {
         const blobs = ["a/a", "a/s0/1", "a/s0/2", "a/s1/1", "a/s1/2", "a/z"];
         const page = new PageWithDelimiter<string>(4, "/", "a/");
         let [items, prefixes, marker] = await page.fill(createReader(blobs, 4), namer);

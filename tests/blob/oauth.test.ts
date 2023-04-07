@@ -933,7 +933,7 @@ describe("Blob OAuth Basic", () => {
     }
   });  
 
-  it(`Should not work with HTTP @loki @sql`, async () => {
+  it(`Should not work with HTTP @loki`, async () => {
     await server.close();
     await server.clean();
 

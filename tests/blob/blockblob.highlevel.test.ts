@@ -100,7 +100,7 @@ describe("BlockBlobHighlevel", () => {
     await server.clean();
   });
 
-  it("uploadFile should success when blob >= BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES @loki @sql", async () => {
+  it("uploadFile should success when blob >= BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES @loki", async () => {
     const result = await blockBlobClient.uploadFile(tempFileLarge, {
       blockSize: 4 * 1024 * 1024,
       concurrency: 20
@@ -124,7 +124,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(downloadedData.equals(uploadedData));
   }).timeout(timeoutForLargeFileUploadingTest);
 
-  it("uploadFile should success when blob < BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES @loki @sql", async () => {
+  it("uploadFile should success when blob < BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES @loki", async () => {
     await blockBlobClient.uploadFile(tempFileSmall, {
       blockSize: 4 * 1024 * 1024,
       concurrency: 20
@@ -145,7 +145,7 @@ describe("BlockBlobHighlevel", () => {
   });
 
   // tslint:disable-next-line:max-line-length
-  it("uploadFile should success when blob < BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES and configured maxSingleShotSize @loki @sql", async () => {
+  it("uploadFile should success when blob < BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES and configured maxSingleShotSize @loki", async () => {
     await blockBlobClient.uploadFile(tempFileSmall, {
       maxSingleShotSize: 0
     });
@@ -165,7 +165,7 @@ describe("BlockBlobHighlevel", () => {
   });
 
   // tslint:disable-next-line: max-line-length
-  it("uploadFile should update progress when blob >= BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES @loki @sql", async () => {
+  it("uploadFile should update progress when blob >= BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES @loki", async () => {
     let eventTriggered = false;
     const aborter = new AbortController();
 
@@ -179,12 +179,14 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) {}
+    } catch (err) {
+      /**/
+    }
     assert.ok(eventTriggered);
   }).timeout(timeoutForLargeFileUploadingTest);
 
   // tslint:disable-next-line: max-line-length
-  it("uploadFile should update progress when blob < BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES @loki @sql", async () => {
+  it("uploadFile should update progress when blob < BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES @loki", async () => {
     let eventTriggered = false;
     const aborter = new AbortController();
 
@@ -198,11 +200,13 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) {}
+    } catch (err) {
+      /**/
+    }
     assert.ok(eventTriggered);
   });
 
-  it("uploadStream should success @loki @sql", async () => {
+  it("uploadStream should success @loki", async () => {
     const rs = fs.createReadStream(tempFileLarge);
     const result = await blockBlobClient.uploadStream(rs, 4 * 1024 * 1024, 20);
     assert.equal(
@@ -228,7 +232,7 @@ describe("BlockBlobHighlevel", () => {
     fs.unlinkSync(downloadFilePath);
   });
 
-  it("uploadStream should success for tiny buffers @loki @sql", async () => {
+  it("uploadStream should success for tiny buffers @loki", async () => {
     const buf = Buffer.from([0x62, 0x75, 0x66, 0x66, 0x65, 0x72]);
     const bufferStream = new PassThrough();
     bufferStream.end(buf);
@@ -252,7 +256,7 @@ describe("BlockBlobHighlevel", () => {
     fs.unlinkSync(downloadFilePath);
   });
 
-  it("uploadStream should abort @loki @sql", async () => {
+  it("uploadStream should abort @loki", async () => {
     const rs = fs.createReadStream(tempFileLarge);
 
     try {
@@ -260,12 +264,12 @@ describe("BlockBlobHighlevel", () => {
         abortSignal: AbortController.timeout(1)
       });
       assert.fail();
-    } catch (err:any) {
+    } catch (err: any) {
       assert.ok((err.message as string).toLowerCase().includes("abort"));
     }
   }).timeout(timeoutForLargeFileUploadingTest);
 
-  it("uploadStream should update progress event @loki @sql", async () => {
+  it("uploadStream should update progress event @loki", async () => {
     const rs = fs.createReadStream(tempFileLarge);
     let eventTriggered = false;
 
@@ -278,7 +282,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(eventTriggered);
   }).timeout(timeoutForLargeFileUploadingTest);
 
-  it("downloadToBuffer should success @loki @sql", async () => {
+  it("downloadToBuffer should success @loki", async () => {
     const rs = fs.createReadStream(tempFileLarge);
     const result = await blockBlobClient.uploadStream(rs, 4 * 1024 * 1024, 20);
     assert.equal(
@@ -297,7 +301,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(localFileContent.equals(buf));
   }).timeout(timeoutForLargeFileUploadingTest);
 
-  it("downloadToBuffer should update progress event @loki @sql", async () => {
+  it("downloadToBuffer should update progress event @loki", async () => {
     const rs = fs.createReadStream(tempFileSmall);
     await blockBlobClient.uploadStream(rs, 4 * 1024 * 1024, 10);
 
@@ -314,11 +318,13 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) {}
+    } catch (err) {
+      /**/
+    }
     assert.ok(eventTriggered);
   }).timeout(timeoutForLargeFileUploadingTest);
 
-  it("blobclient.download should success when internal stream unexpected ends at the stream end @loki @sql", async () => {
+  it("blobclient.download should success when internal stream unexpected ends at the stream end @loki", async () => {
     await blockBlobClient.uploadFile(tempFileSmall, {
       blockSize: 4 * 1024 * 1024,
       concurrency: 20
@@ -343,8 +349,9 @@ describe("BlockBlobHighlevel", () => {
       downloadResponse.clientRequestId
     );
 
-    retirableReadableStreamOptions = (downloadResponse.readableStreamBody! as any)
-      .options;
+    retirableReadableStreamOptions = (
+      downloadResponse.readableStreamBody! as any
+    ).options;
 
     const downloadedFile = join(tempFolderPath, getUniqueName("downloadfile."));
     await readStreamToLocalFile(
@@ -360,7 +367,7 @@ describe("BlockBlobHighlevel", () => {
   });
 
   // tslint:disable-next-line: max-line-length
-  it("blobclient.download should download full data successfully when internal stream unexpected ends @loki @sql", async () => {
+  it("blobclient.download should download full data successfully when internal stream unexpected ends @loki", async () => {
     await blockBlobClient.uploadFile(tempFileSmall, {
       blockSize: 4 * 1024 * 1024,
       concurrency: 20
@@ -382,8 +389,9 @@ describe("BlockBlobHighlevel", () => {
       }
     });
 
-    retirableReadableStreamOptions = (downloadResponse.readableStreamBody! as any)
-      .options;
+    retirableReadableStreamOptions = (
+      downloadResponse.readableStreamBody! as any
+    ).options;
 
     const downloadedFile = join(tempFolderPath, getUniqueName("downloadfile."));
     await readStreamToLocalFile(
@@ -398,7 +406,7 @@ describe("BlockBlobHighlevel", () => {
     assert.ok(downloadedData.equals(uploadedData));
   });
 
-  it("blobclient.download should download partial data when internal stream unexpected ends @loki @sql", async () => {
+  it("blobclient.download should download partial data when internal stream unexpected ends @loki", async () => {
     await blockBlobClient.uploadFile(tempFileSmall, {
       blockSize: 4 * 1024 * 1024,
       concurrency: 20
@@ -422,8 +430,9 @@ describe("BlockBlobHighlevel", () => {
       }
     });
 
-    retirableReadableStreamOptions = (downloadResponse.readableStreamBody! as any)
-      .options;
+    retirableReadableStreamOptions = (
+      downloadResponse.readableStreamBody! as any
+    ).options;
 
     const downloadedFile = join(tempFolderPath, getUniqueName("downloadfile."));
     await readStreamToLocalFile(
@@ -442,7 +451,7 @@ describe("BlockBlobHighlevel", () => {
     );
   });
 
-  it("blobclient.download should download data failed when exceeding max stream retry requests @loki @sql", async () => {
+  it("blobclient.download should download data failed when exceeding max stream retry requests @loki", async () => {
     await blockBlobClient.uploadFile(tempFileSmall, {
       blockSize: 4 * 1024 * 1024,
       concurrency: 20
@@ -468,8 +477,9 @@ describe("BlockBlobHighlevel", () => {
           }
         }
       });
-      retirableReadableStreamOptions = (downloadResponse.readableStreamBody! as any)
-        .options;
+      retirableReadableStreamOptions = (
+        downloadResponse.readableStreamBody! as any
+      ).options;
       await readStreamToLocalFile(
         downloadResponse.readableStreamBody!,
         downloadedFile

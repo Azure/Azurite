@@ -17,12 +17,13 @@ Azurite is an open source Azure Storage API compatible server (emulator). Based 
 # How to Use this Image
 
 ```bash
-docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite
+docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 -p 10003:10003 mcr.microsoft.com/azure-storage/azurite
 ```
 
 `-p 10000:10000` will expose blob service's default listening port.
 `-p 10001:10001` will expose queue service's default listening port.
 `-p 10002:10002` will expose table service's default listening port.
+`-p 10003:10003` will expose datalake service's default listening port.
 
 Just run blob service:
 
@@ -30,16 +31,22 @@ Just run blob service:
 docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite azurite-blob --blobHost 0.0.0.0
 ```
 
+Just run datalake service:
+
+```bash
+docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite azurite-datalake --datalakeHost 0.0.0.0
+```
+
 Run the image as a service (`-d` = deamon) named `azurite` and restart unless specifically stopped (this is useful when re-starting your development machine for example)
 
 ```bash
-docker run --name azurite -d --restart unless-stopped -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite
+docker run --name azurite -d --restart unless-stopped -p 10000:10000 -p 10001:10001 -p 10002:10002 -p 10003:10003 mcr.microsoft.com/azure-storage/azurite
 ```
 
 **Run Azurite V3 docker image with customized persisted data location**
 
 ```bash
-docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 -v c:/azurite:/data mcr.microsoft.com/azure-storage/azurite
+docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 -p 10003:10003 -v c:/azurite:/data mcr.microsoft.com/azure-storage/azurite
 ```
 
 `-v c:/azurite:/data` will use and map host path `c:/azurite` as Azurite's workspace location.
@@ -47,7 +54,7 @@ docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 -v c:/azurite:/data mcr.
 **Customize Azurite V3 supported parameters for docker image**
 
 ```bash
-docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0 --loose --skipApiVersionCheck --disableProductStyleUrl
+docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -p 6666:6666 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0--datalakePort 6666 --datalakeHost 0.0.0.0 --loose --skipApiVersionCheck --disableProductStyleUrl
 ```
 
 Above command will try to start Azurite image with configurations:
@@ -68,13 +75,17 @@ Above command will try to start Azurite image with configurations:
 
 `--tableHost 0.0.0.0` defines table service listening endpoint to accept requests from host machine.
 
+`--datalakePort 6666` makes Azurite blob service listen to port 6666, while `-p 6666:6666` redirects requests from host machine's port 6666 to docker instance.
+
+`--datalakeHost 0.0.0.0` defines blob service listening endpoint to accept requests from host machine.
+
 `--loose` enables loose mode which ignore unsupported headers and parameters.
 
 `--skipApiVersionCheck` skip the request API version check.
 
 `--disableProductStyleUrl` force parsing storage account name from request Uri path, instead of from request Uri host.
 
-> If you use customized azurite paramters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
+> If you use customized azurite paramters for docker image, `--blobHost 0.0.0.0`, `--datalakeHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 
 > In above sample, you need to use **double first forward slash** for location and debug path parameters to avoid a [known issue](https://stackoverflow.com/questions/48427366/docker-build-command-add-c-program-files-git-to-the-path-passed-as-build-argu) for Git on Windows.
 

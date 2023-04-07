@@ -66,7 +66,8 @@ export default class SqlBlobServer extends ServerBase {
 
     const metadataStore: IBlobMetadataStore = new SqlBlobMetadataStore(
       configuration.sqlURL,
-      configuration.sequelizeOptions
+      configuration.sequelizeOptions,
+      configuration.clearDB,
     );
 
     const extentMetadataStore: IExtentMetadataStore = new SqlExtentMetadataStore(
