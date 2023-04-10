@@ -99,10 +99,15 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
     return (req: Request, res: Response, next: NextFunction) => {
       const request = new ExpressRequestAdapter(req);
       const response = new ExpressResponseAdapter(res);
+      const context = new Context(res.locals, this.contextPath, request, response);
+      context.meta = res.locals.meta;
+      
       handlerMiddlewareFactory.createHandlerMiddleware()(
-        new Context(res.locals, this.contextPath, request, response),
+        context,
         next
       );
+
+      res.locals.meta = context.meta;
     };
   }
 

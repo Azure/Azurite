@@ -203,7 +203,7 @@ export function tableStorageContextMiddleware(
   if (tableContext.tableName && !tableContext.tableName.startsWith("$")) {
     validateTableName(tableContext, tableContext.tableName);
   }
-
+  res.locals.meta.tableName = tableContext.tableName;
   logger.info(
     `tableStorageContextMiddleware: Account=${account} tableName=${tableContext.tableName}`,
     requestID
