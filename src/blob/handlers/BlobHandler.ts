@@ -326,6 +326,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blobCtx.request!.getRawHeaders()
     );
 
+    context.meta.meta = metadata;
     const res = await this.metadataStore.setBlobMetadata(
       context,
       account,

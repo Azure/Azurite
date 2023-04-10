@@ -232,6 +232,9 @@ export function blobStorageContextMiddleware(
     validateContainerName(requestID, container);
   }
 
+  res.locals.meta.blob = blob;
+  res.locals.meta.container = container;
+
   logger.info(
     `BlobStorageContextMiddleware: Account=${account} Container=${container} Blob=${blob}`,
     requestID
