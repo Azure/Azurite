@@ -1,5 +1,5 @@
 import express from "express";
-
+import { NextFunction, Request, Response } from 'express';
 import IAccountDataStore from "../common/IAccountDataStore";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
@@ -134,6 +134,15 @@ export default class BlobRequestListenerFactory
     if (this.enableAccessLog) {
       app.use(morgan("common", { stream: this.accessLogWriteStream }));
     }
+
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if(!res.locals) {
+        res.locals = {}
+      }
+
+      res.locals.meta = {};
+      next();
+    })
 
     // Manually created middleware to deserialize feature related context which swagger doesn"t know
     app.use(createStorageBlobContextMiddleware(this.skipApiVersionCheck, this.disableProductStyleUrl, this.loose));

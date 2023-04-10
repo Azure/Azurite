@@ -1,5 +1,6 @@
 import { OperationSpec } from "@azure/ms-rest-js/es/lib/operationSpec";
 import express from "express";
+import { NextFunction, Request, Response } from 'express';
 import { RequestListener } from "http";
 import IAccountDataStore from "../common/IAccountDataStore";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
@@ -87,6 +88,15 @@ export default class TableRequestListenerFactory
       logger,
       DEFAULT_TABLE_CONTEXT_PATH
     );
+
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if(!res.locals) {
+        res.locals = {}
+      }
+
+      res.locals.meta = {};
+      next();
+    })
 
     // Create handlers into handler middleware factory
     const handlers: IHandlers = {

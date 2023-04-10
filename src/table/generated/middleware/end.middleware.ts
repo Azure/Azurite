@@ -20,12 +20,20 @@ export default function endMiddleware(
     ? new Date().getTime() - context.startTime.getTime()
     : undefined;
 
+  // tslint:disable-next-line
+  context.meta.statusCode = res.getStatusCode();
+  if(res.getHeaders() && res.getHeader('content-length')) {
+      context.meta.outputLen = res.getHeader('content-length');
+  }
+  console.log(context.meta);
   logger.info(
     // tslint:disable-next-line:max-line-length
-    `[${context.request?.getMethod()}] ${context.request?.getPath()} TableEndMiddleware: End response. TotalTimeInMS=${totalTimeInMS} StatusCode=${res.getStatusCode()} StatusMessage=${res.getStatusMessage()} Headers=${JSON.stringify(
+    `TableEndMiddleware: End response. TotalTimeInMS=${totalTimeInMS} StatusCode=${res.getStatusCode()} StatusMessage=${res.getStatusMessage()} Headers=${JSON.stringify(
       res.getHeaders()
-    )} Request Body: ${context.request?.getBody()} Response Body: ${context.response?.getBodyStream()}`,
-    context.contextID
+    )} Meta=${JSON.stringify(
+      context.meta
+    )}`,
+    context.contextId
   );
 
   res.getBodyStream().end();

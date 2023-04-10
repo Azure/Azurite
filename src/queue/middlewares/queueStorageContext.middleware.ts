@@ -84,6 +84,14 @@ export function queueStorageContextMiddleware(
   queueContext.messageId = messageId;
   queueContext.isSecondary = isSecondary;
 
+  res.locals.meta.reqId = requestID;
+  res.locals.meta.dbType = "queue";
+  res.locals.meta.ts = queueContext.startTime;
+
+  if(req.headers && req.headers['content-length']) {
+    res.locals.meta.inputLen = req.headers['content-length'];
+  }
+
   // Emulator's URL pattern is like http://hostname[:port]/account/queue/messages
   // (or, alternatively, http[s]://account.localhost[:port]/queue/messages)
   // Create a router to exclude account name from req.path, as url path in swagger doesn't include account

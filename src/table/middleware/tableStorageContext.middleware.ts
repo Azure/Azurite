@@ -178,6 +178,14 @@ export function tableStorageContextMiddleware(
       tableContext.authenticationPath.substr(pos + SECONDARY_SUFFIX.length);
   }
 
+  res.locals.meta.reqId = requestID;
+  res.locals.meta.dbType = "table";
+  res.locals.meta.ts = tableContext.startTime;
+
+  if(req.headers && req.headers['content-length']) {
+    res.locals.meta.inputLen = req.headers['content-length'];
+  }
+
   // Emulator's URL pattern is like http://hostname[:port]/account/table
   // (or, alternatively, http[s]://account.localhost[:port]/table/)
   // Create a router to exclude account name from req.path, as url path in swagger doesn't include account

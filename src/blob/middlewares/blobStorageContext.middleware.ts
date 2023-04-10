@@ -187,6 +187,14 @@ export function blobStorageContextMiddleware(
   blobContext.blob = blob;
   blobContext.isSecondary = isSecondary;
 
+  res.locals.meta.reqId = requestID;
+  res.locals.meta.dbType = "blob";
+  res.locals.meta.ts = blobContext.startTime;
+
+  if(req.headers && req.headers['content-length']) {
+    res.locals.meta.inputLen = req.headers['content-length'];
+  }
+
   // Emulator's URL pattern is like http://hostname[:port]/account/container
   // (or, alternatively, http[s]://account.localhost[:port]/container)
   // Create a router to exclude account name from req.path, as url path in swagger doesn't include account
