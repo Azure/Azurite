@@ -187,7 +187,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const accept = this.getAndCheckPayloadFormat(tableContext);
     const prefer = this.getAndCheckPreferHeader(tableContext);
     this.checkBodyLimit(context, context.request?.getBody());
-
+    context.meta.input = options.tableEntityProperties;
     // curently unable to use checking functions as the partitionKey
     // and rowKey are not coming through the context.
     // const partitionKey = this.getAndCheckPartitionKey(tableContext);
@@ -577,7 +577,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const account = this.getAndCheckAccountName(tableContext);
     const accept = this.getAndCheckPayloadFormat(tableContext);
     this.checkBodyLimit(context, context.request?.getBody());
-
+    context.meta.input = options.queryOptions;
     const [result, nextPartitionKey, nextRowKey] =
       await this.metadataStore.queryTableEntities(
         context,
@@ -772,6 +772,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     options: Models.TableMergeEntityWithMergeOptionalParams,
     context: Context
   ): Promise<Models.TableMergeEntityWithMergeResponse> {
+    context.meta.input = options.tableEntityProperties;
     return this.mergeEntity(
       table,
       partitionKey,
