@@ -20,12 +20,23 @@ export default function endMiddleware(
     ? new Date().getTime() - context.startTime.getTime()
     : undefined;
 
-  logger.info(
-    // tslint:disable-next-line:max-line-length
-    `EndMiddleware: End response. TotalTimeInMS=${totalTimeInMS} StatusCode=${res.getStatusCode()} StatusMessage=${res.getStatusMessage()} Headers=${JSON.stringify(
-      res.getHeaders()
-    )}`,
-    context.contextID
+    let chunks = [] as any[];
+  
+    res.on("data", (chunk: any) => {
+      chunks.push(chunk)
+    });
+  
+    res.on("end", () => {
+        const body: any = Buffer.concat(chunks);
+        logger.info(`TableEndMiddleware ${body}`);
+    });
+    
+    logger.info(
+      // tslint:disable-next-line:max-line-length
+      `[${context.request?.getMethod()}] ${context.request?.getPath()} TableEndMiddleware: End response. TotalTimeInMS=${totalTimeInMS} StatusCode=${res.getStatusCode()} StatusMessage=${res.getStatusMessage()} Headers=${JSON.stringify(
+        res.getHeaders()
+      )} Request Body: ${context.request?.getBody()} Response Body: ${context.response?.getBodyStream()}`,
+      context.contextID
   );
 
   res.getBodyStream().end();
