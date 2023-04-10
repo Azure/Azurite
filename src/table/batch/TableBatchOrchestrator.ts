@@ -49,11 +49,13 @@ export default class TableBatchOrchestrator {
    * @memberof TableBatchManager
    */
   public async processBatchRequestAndSerializeResponse(
+    context: Context,
     batchRequestBody: string,
     metadataStore: ITableMetadataStore
   ): Promise<string> {
     this.batchOperations =
       this.serialization.deserializeBatchRequest(batchRequestBody);
+      context.meta = {...context.meta, "inputLen": batchRequestBody.length,  "input": this.batchOperations.map(op => op.jsonRequestBody)};
     if (this.batchOperations.length > 100) {
       this.wasError = true;
       this.errorResponse = this.serialization.serializeGeneralRequestError(

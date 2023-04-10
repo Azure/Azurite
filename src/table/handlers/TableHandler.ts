@@ -656,7 +656,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     const body = `{${odatametadataPariString}"value":[${entities.join(",")}]}`;
     response.body = new BufferStream(Buffer.from(body));
-
+    context.meta.output = body;
+    context.meta.outputLen = JSON.stringify(body).length;
     this.logger.debug(
       `TableHandler:queryEntities() Raw response string is ${JSON.stringify(
         body
@@ -917,6 +918,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     const response =
       await tableBatchManager.processBatchRequestAndSerializeResponse(
+        context,
         requestBody,
         this.metadataStore
       );
