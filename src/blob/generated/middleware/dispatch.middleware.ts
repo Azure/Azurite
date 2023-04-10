@@ -65,6 +65,8 @@ export default function dispatchMiddleware(
     return next(handlerError);
   }
 
+  context.meta.operation = Operation[context.operation];
+
   logger.info(
     `DispatchMiddleware: Operation=${Operation[context.operation]}`,
     context.contextId

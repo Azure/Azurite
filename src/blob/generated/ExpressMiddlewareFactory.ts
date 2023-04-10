@@ -52,12 +52,16 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
       req.baseUrl
       const request = new ExpressRequestAdapter(req);
       const response = new ExpressResponseAdapter(res);
+      const context = new Context(res.locals, this.contextPath, request, response);
+      context.meta = res.locals.meta;
       dispatchMiddleware(
-        new Context(res.locals, this.contextPath, request, response),
+        context,
         request,
         next,
         this.logger
       );
+
+      res.locals.meta = context;
     };
   }
 
