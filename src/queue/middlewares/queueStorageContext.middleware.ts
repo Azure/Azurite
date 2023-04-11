@@ -158,6 +158,10 @@ export function queueStorageContextMiddleware(
     }
   }
 
+  res.locals.meta.queue = queue;
+  res.locals.meta.message = message;
+  res.locals.meta.messageId = messageId;
+
   logger.info(
     `QueueStorageContextMiddleware: Account=${account} Queue=${queue} Message=${message} MessageId=${messageId}`,
     requestID

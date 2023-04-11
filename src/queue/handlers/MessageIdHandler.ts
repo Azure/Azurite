@@ -49,7 +49,7 @@ export default class MessageIdHandler extends BaseHandler
     const accountName = queueCtx.account!;
     const queueName = queueCtx.queue!;
     const messageId = queueCtx.messageId!;
-
+    context.meta.input = { popReceipt };
     // TODO: Similar to enqueue, deserialize does not support the message text with only empty character.
     // If the text is undefined, try to retrive it from the XML body here.
     if (queueMessage.messageText === undefined) {

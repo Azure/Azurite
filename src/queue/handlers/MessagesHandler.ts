@@ -110,6 +110,9 @@ export default class MessagesHandler extends BaseHandler
       context
     );
 
+    const outputMessages = [];
+    context.meta.outputLen = 0;
+
     const response: any = [];
     const responseArray = response as Models.DequeuedMessageItem[];
     const responseObject = response as Models.MessagesDequeueHeaders & {
@@ -127,8 +130,15 @@ export default class MessagesHandler extends BaseHandler
         ...message,
         messageText: text
       };
+      context.meta.outputLen += text.length;
+      outputMessages.push({
+        popReceipt: message.popReceipt,
+        message: JSON.stringify(JSON.parse((Buffer.from(text, 'base64')).toString('ascii')))
+      })
       responseArray.push(dequeuedMessage);
     }
+
+    context.meta.output = outputMessages;
 
     responseObject.date = context.startTime!;
     responseObject.requestId = context.contextID;
@@ -211,6 +221,8 @@ export default class MessagesHandler extends BaseHandler
         MaxLimit: `${MESSAGETEXT_LENGTH_MAX}`
       });
     }
+
+    context.meta.input = JSON.parse((Buffer.from(queueMessage.messageText, 'base64')).toString('ascii'));
 
     const message: MessageModel = {
       accountName,

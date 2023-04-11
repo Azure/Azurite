@@ -590,7 +590,7 @@ export default class ContainerHandler extends BaseHandler
     const blobCtx = new BlobStorageContext(context);
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
-    context.data.blob = options.prefix;
+    context.meta.blob = options.prefix;
     await this.metadataStore.checkContainerExist(
       context,
       accountName,
