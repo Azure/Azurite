@@ -57,7 +57,7 @@ export default class MessageIdHandler extends BaseHandler
       const parsedBody = await parseXMLwithEmpty(body || "");
       for (const text in parsedBody) {
         if (
-          parsedBody.hasOwnProperty(text) &&
+          Object.hasOwnProperty.bind(parsedBody)(text) &&
           text.toLowerCase() === "messagetext"
         ) {
           queueMessage.messageText = parsedBody[text];
