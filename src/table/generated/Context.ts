@@ -16,6 +16,9 @@ export interface IHandlerParameters {
 export default class Context {
   public readonly context: any;
   public readonly path: string;
+  public meta: {
+    [key: string]: any;
+  }
 
   /**
    * Creates an instance of Context.
@@ -51,6 +54,7 @@ export default class Context {
     req?: IRequest,
     res?: IResponse
   ) {
+    this.meta = {};
     if (holderOrContext instanceof Context) {
       this.context = holderOrContext.context;
       this.path = holderOrContext.path;

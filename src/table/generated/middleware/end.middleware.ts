@@ -33,7 +33,7 @@ export default function endMiddleware(
     )} Meta=${JSON.stringify(
       context.meta
     )}`,
-    context.contextId
+    context.contextID
   );
 
   res.getBodyStream().end();
