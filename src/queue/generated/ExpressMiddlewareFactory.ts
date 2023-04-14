@@ -1,4 +1,5 @@
 import { ErrorRequestHandler, NextFunction, Request, RequestHandler, Response } from "express";
+import IEventsManager from "../../events/IEventsManager";
 
 import Context from "./Context";
 import ExpressRequestAdapter from "./ExpressRequestAdapter";
@@ -157,7 +158,7 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
    * @returns {RequestHandler}
    * @memberof MiddlewareFactory
    */
-  public createEndMiddleware(): RequestHandler {
+  public createEndMiddleware(eventsManager: IEventsManager): RequestHandler {
     return (req: Request, res: Response) => {
       const request = new ExpressRequestAdapter(req);
       const response = new ExpressResponseAdapter(res);
@@ -168,7 +169,7 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
         new ExpressResponseAdapter(res),
         this.logger
       );
-      res.locals.meta = context.meta;
+      eventsManager.addEvent(context, context.meta);
     };
   }
 }

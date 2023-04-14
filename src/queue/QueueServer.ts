@@ -18,6 +18,9 @@ import LokiQueueMetadataStore from "./persistence/LokiQueueMetadataStore";
 import QueueConfiguration from "./QueueConfiguration";
 import QueueRequestListenerFactory from "./QueueRequestListenerFactory";
 
+import IEventsManager from "../events/IEventsManager";
+import EventsManager from "../events/EventsManager";
+
 const BEFORE_CLOSE_MESSAGE = `Azurite Queue service is closing...`;
 const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Queue service is closing... Critical error happens during GC.`;
 const AFTER_CLOSE_MESSAGE = `Azurite Queue service successfully closed`;
@@ -48,7 +51,7 @@ export default class QueueServer extends ServerBase {
    * @param {BlobConfiguration} configuration
    * @memberof Server
    */
-  constructor(configuration?: QueueConfiguration) {
+  constructor(configuration?: QueueConfiguration, eventsManager?: IEventsManager) {
     if (configuration === undefined) {
       configuration = new QueueConfiguration();
     }
@@ -66,6 +69,10 @@ export default class QueueServer extends ServerBase {
         break;
       default:
         httpServer = http.createServer();
+    }
+
+    if(eventsManager == undefined) {
+      eventsManager = new EventsManager();
     }
 
     // We can change the persistency layer implementation by
@@ -95,6 +102,7 @@ export default class QueueServer extends ServerBase {
       metadataStore,
       extentStore,
       accountDataStore,
+      eventsManager,
       configuration.enableAccessLog, // Access log includes every handled HTTP request
       configuration.accessLogWriteStream,
       configuration.skipApiVersionCheck,

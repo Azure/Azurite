@@ -33,8 +33,8 @@ export default class EventsManager implements IEventsManager {
     this.start();
   }
 
-  public addEvent(context: any, meta: any): void {
-      this.dataStore.insertTableEntity(context as Context, this.table, this.account, meta as Entity);
+  public addEvent(context: any, event: any): void {
+      this.dataStore.insertTableEntity(context as Context, this.table, this.account, event as Entity);
   }
 
   protected async start(): Promise<void> {

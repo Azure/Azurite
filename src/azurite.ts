@@ -136,7 +136,7 @@ async function main() {
   Logger.configLogger(blobConfig.enableDebugLog, blobConfig.debugLogFilePath);
 
   // Create queue server instance
-  const queueServer = new QueueServer(queueConfig);
+  const queueServer = new QueueServer(queueConfig, eventsManager);
 
   // Create table server instance
   const tableServer = new TableServer(tableConfig, eventsManager);

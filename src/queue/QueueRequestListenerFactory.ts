@@ -27,6 +27,8 @@ import { OAuthLevel } from "../common/models";
 import IAuthenticator from "./authentication/IAuthenticator";
 import createQueueStorageContextMiddleware from "./middlewares/queueStorageContext.middleware";
 
+import IEventsManager from "../events/IEventsManager";
+
 /**
  * Default RequestListenerFactory based on express framework.
  *
@@ -43,6 +45,7 @@ export default class QueueRequestListenerFactory
     private readonly metadataStore: IQueueMetadataStore,
     private readonly extentStore: IExtentStore,
     private readonly accountDataStore: IAccountDataStore,
+    private readonly eventsManager: IEventsManager,
     private readonly enableAccessLog: boolean,
     private readonly accessLogWriteStream?: NodeJS.WritableStream,
     private readonly skipApiVersionCheck?: boolean,
@@ -169,7 +172,7 @@ export default class QueueRequestListenerFactory
     app.use(middlewareFactory.createErrorMiddleware());
 
     // Generated, will end and return HTTP response immediately
-    app.use(middlewareFactory.createEndMiddleware());
+    app.use(middlewareFactory.createEndMiddleware(this.eventsManager));
 
     return app;
   }
