@@ -23,7 +23,7 @@ export default function endMiddleware(
   // tslint:disable-next-line
   context.meta.statusCode = res.getStatusCode();
   if(res.getHeaders() && res.getHeader('content-length')) {
-      context.meta.outputLen = res.getHeader('content-length');
+    context.meta.outputLen = parseInt(res.getHeader('content-length') as string, 10);
   }
   logger.info(
     // tslint:disable-next-line:max-line-length

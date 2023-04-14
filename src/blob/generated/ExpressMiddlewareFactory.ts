@@ -169,7 +169,7 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
         new ExpressResponseAdapter(res),
         this.logger
       );
-      eventsManager.addEvent(context, context.meta);
+      eventsManager.addEvent(context.meta);
     };
   }
 }

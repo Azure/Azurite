@@ -1,5 +1,4 @@
 import logger from "../common/Logger";
-import Context from "./generated/Context";
 import IEventsManager from "./IEventsManager";
 import IEventsMetadataStore, { Entity } from "./persistence/IEventsMetadataStore";
 import LokiEventsMetadataStore from "./persistence/LokiEventsMetadataStore";
@@ -33,8 +32,8 @@ export default class EventsManager implements IEventsManager {
     this.start();
   }
 
-  public addEvent(context: any, event: any): void {
-      this.dataStore.insertTableEntity(context as Context, this.table, this.account, event as Entity);
+  public addEvent(event: any): void {
+      this.dataStore.insertTableEntity(this.table, this.account, event as Entity);
   }
 
   protected async start(): Promise<void> {
@@ -48,7 +47,29 @@ export default class EventsManager implements IEventsManager {
   }
 
   public async close(): Promise<void> {
+    const events = (await this.dataStore.queryTableEntities(this.account, this.table)) as Entity[];
+    const groupedByOp = this.groupEventsByParameter(events, 'operation');
+    const groupedByDB = this.groupEventsByParameter(events, 'dbType');
+    console.log('Operations grouped by Op is: ', groupedByOp);
+    console.log('Operations grouped by DB is: ', groupedByDB);
+    
     this.dataStore.close();
   }
 
+  private groupEventsByParameter(events: Entity[], param: string) {
+    const groupedByOp = events.reduce((acc, event: Entity) => {
+      const paramValue = event[param];
+      if(!acc[paramValue]) {
+        acc[paramValue] = {input: 0, output: 0, counts: 0};
+      }
+      acc[paramValue] = {
+        input: acc[paramValue]['input'] + (event.inputLen || 0),
+        output: acc[paramValue]['output'] + (event.outputLen || 0),
+        counts: acc[paramValue]['counts'] + 1
+      }
+      return acc;
+    }, {} as {[key: string]: any});
+
+    return groupedByOp;
+  }
 }

@@ -183,7 +183,7 @@ export function tableStorageContextMiddleware(
   res.locals.meta.ts = tableContext.startTime;
 
   if(req.headers && req.headers['content-length']) {
-    res.locals.meta.inputLen = req.headers['content-length'];
+    res.locals.meta.inputLen = parseInt(req.headers['content-length'], 10);
   }
 
   // Emulator's URL pattern is like http://hostname[:port]/account/table

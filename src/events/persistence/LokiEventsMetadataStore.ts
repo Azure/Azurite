@@ -2,8 +2,6 @@ import { stat } from "fs";
 import Loki from "lokijs";
 import { truncatedISO8061Date } from "../../common/utils/utils";
 
-import StorageErrorFactory from "../errors/StorageErrorFactory";
-import Context from "../generated/Context";
 import { Entity, Table } from "./IEventsMetadataStore";
 import IEventsMetadataStore from "./IEventsMetadataStore";
 
@@ -74,7 +72,6 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
   /**
    * Create a table in the persistence layer
    *
-   * @param {Context} context
    * @param {Table} tableModel
    * @return {*}  {Promise<void>}
    * @memberof LokiEventsMetadataStore
@@ -94,9 +91,7 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
   /**
    * Delete a table from the persistence layer
    *
-   * @param {Context} context
-   * @param {string} table
-   * @param {string} account
+   * @param {Table} table
    * @return {*}  {Promise<void>}
    * @memberof LokiEventsMetadataStore
    */
@@ -119,14 +114,12 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
    *
    * @param {string} account
    * @param {string} table
-   * @param {Context} context
    * @return {*}  {Promise<Table>}
    * @memberof LokiEventsMetadataStore
    */
   public async getTable(
     account: string,
-    table: string,
-    context: Context
+    table: string
   ): Promise<Table> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
     // Azure Storage Service is case insensitive
@@ -135,13 +128,12 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
       table: { $regex: [`^${table}$`, "i"] }
     });
     if (!doc) {
-      throw StorageErrorFactory.getTableNotFound(context);
+      throw new Error('Table not found');
     }
     return doc;
   }
 
   public async insertTableEntity(
-    context: Context,
     table: string,
     account: string,
     entity: Entity
@@ -149,7 +141,6 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
     const tableEntityCollection = this.getEntityCollection(
       account,
       table,
-      context
     );
 
     if(!entity.properties) {
@@ -159,24 +150,25 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
     entity.properties.Timestamp = truncatedISO8061Date(new Date(), true, true);
     entity.properties["Timestamp@odata.type"] = "Edm.DateTime";
 
-    console.log("Entity to insert: ", entity);
     tableEntityCollection.insert(entity);
     return entity;
   }
 
   public async queryTableEntities(
-    context: Context,
     account: string,
-    table: string,
-    nextPartitionKey?: string,
-    nextRowKey?: string
-  ): Promise<[Entity[], string | undefined, string | undefined]> {
-   
-    return [
-      [] as Entity[],
-      "",
-      ""
-    ];
+    table: string
+  ): Promise<Entity[]> {
+    const tableEntityCollection = this.getEntityCollection(
+      account,
+      table,
+    );
+
+    const result = tableEntityCollection
+      .chain()
+      .sort((a, b) => a.date - b.date)
+      .data();
+
+    return result;
   }
 
   /**
@@ -274,7 +266,6 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
    * @private
    * @param {Collection<any>} coll
    * @param {Table} tableModel
-   * @param {Context} context
    * @memberof LokiEventsMetadataStore
    */
   private checkIfTableExists(
@@ -313,14 +304,12 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
    * @private
    * @param {string} account
    * @param {string} table
-   * @param {Context} context
    * @return {*}  {Collection<any>}
    * @memberof LokiEventsMetadataStore
    */
   private getEntityCollection(
     account: string,
     table: string,
-    context: Context
   ): Collection<any> {
     let tableEntityCollection = this.db.getCollection(
       this.getTableCollectionName(account, table.toLowerCase())
@@ -331,7 +320,7 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
         this.getTableCollectionName(account, table)
       );
       if (!tableEntityCollection) {
-        throw StorageErrorFactory.getTableNotExist(context);
+        throw new Error('Table Collection does not exists');
       }
     }
     return tableEntityCollection;

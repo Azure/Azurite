@@ -1,4 +1,4 @@
 export default interface IEventsManager {
-  addEvent(context: any, meta: any): void;
+  addEvent(event: any): void;
   close(): void;
 }

@@ -192,7 +192,7 @@ export function blobStorageContextMiddleware(
   res.locals.meta.ts = blobContext.startTime;
 
   if(req.headers && req.headers['content-length']) {
-    res.locals.meta.inputLen = req.headers['content-length'];
+    res.locals.meta.inputLen = parseInt(req.headers['content-length'], 10);
   }
 
   // Emulator's URL pattern is like http://hostname[:port]/account/container

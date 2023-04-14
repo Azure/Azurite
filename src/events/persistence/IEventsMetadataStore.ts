@@ -1,5 +1,3 @@
-import Context from "../generated/Context";
-
 export interface IOdataAnnotationsOptional {
   odatametadata?: string;
   odatatype?: string;
@@ -18,27 +16,26 @@ export interface IEntity {
   reqId: string;
   dbType: string;
   ts: string;
-  operationName: string;
+  operation: string;
   statusCode: number;
+  outputLen?: number;
+  inputLen?: number;
   properties: {
     [propertyName: string]: string | number | boolean | null;
-  };
+  }; 
+  [key: string]: any;
 }
 
 export type Entity = IEntity & IOdataAnnotationsOptional;
 
 export default interface IEventsMetadataStore {
   createTable(tableModel: Table): Promise<void>;
-  getTable(account: string, table: string, context: Context): Promise<Table>;
+  getTable(account: string, table: string): Promise<Table>;
   queryTableEntities(
-    context: Context,
     account: string,
-    table: string,
-    nextPartitionKey?: string,
-    nextRowKey?: string
-  ): Promise<[Entity[], string | undefined, string | undefined]>;
+    table: string
+  ): Promise<Entity[]>;
   insertTableEntity(
-    context: Context,
     table: string,
     account: string,
     entity: Entity,
