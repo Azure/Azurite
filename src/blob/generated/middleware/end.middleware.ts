@@ -25,13 +25,10 @@ export default function endMiddleware(
   if(res.getHeaders() && res.getHeader('content-length')) {
       context.meta.outputLen = res.getHeader('content-length');
   }
-  console.log(context.meta);
   logger.info(
     // tslint:disable-next-line:max-line-length
     `BlobEndMiddleware: End response. TotalTimeInMS=${totalTimeInMS} StatusCode=${res.getStatusCode()} StatusMessage=${res.getStatusMessage()} Headers=${JSON.stringify(
       res.getHeaders()
-    )} Meta=${JSON.stringify(
-      context.meta
     )}`,
     context.contextId
   );

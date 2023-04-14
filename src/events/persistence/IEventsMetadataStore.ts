@@ -28,8 +28,7 @@ export interface IEntity {
 export type Entity = IEntity & IOdataAnnotationsOptional;
 
 export default interface IEventsMetadataStore {
-  createTable(context: Context, tableModel: Table): Promise<void>;
-  deleteTable(context: Context, table: string, account: string): Promise<void>;
+  createTable(tableModel: Table): Promise<void>;
   getTable(account: string, table: string, context: Context): Promise<Table>;
   queryTableEntities(
     context: Context,

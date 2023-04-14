@@ -16,8 +16,15 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
   public constructor(public readonly lokiDBPath: string) {
     this.db = new Loki(lokiDBPath, {
       autosave: true,
-      autosaveInterval: 5000
     });
+
+    setInterval(() => {
+      this.db.saveDatabase(function(err) {
+        if (err) {
+          console.error('Error autosaving database:', err);
+        }
+      });
+    }, 5000);
   }
 
   /**
@@ -69,11 +76,13 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
    * @return {*}  {Promise<void>}
    * @memberof LokiEventsMetadataStore
    */
-  public async createTable(context: Context, tableModel: Table): Promise<void> {
+  public async createTable(tableModel: Table): Promise<void> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
     
-    tableModel.table = tableModel.table;
-    this.checkIfTableExists(coll, tableModel, context);
+    tableModel.table = tableModel.table.toLowerCase();
+    if(this.checkIfTableExists(coll, tableModel)) {
+      this.deleteTable(tableModel);
+    }
 
     coll.insert(tableModel);
     this.createCollectionForTable(tableModel);
@@ -88,19 +97,15 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
    * @return {*}  {Promise<void>}
    * @memberof LokiEventsMetadataStore
    */
-  public async deleteTable(
-    context: Context,
-    table: string,
-    account: string
-  ): Promise<void> {
+  private async deleteTable({account, table}: Table): Promise<void> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
   
     const tableLower = table.toLocaleLowerCase();
+    
     const doc = coll.findOne({
       account,
       table: { $regex: [`^${tableLower}$`, "i"] }
     });
-    this.checkIfResourceExists(doc, context);
     coll.remove(doc);
 
     this.removeTableCollection(account, doc);
@@ -144,9 +149,14 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
       context
     );
 
+    if(!entity.properties) {
+      entity.properties = {};
+    }
+
     entity.properties.Timestamp = truncatedISO8061Date(new Date(), true, true);
     entity.properties["Timestamp@odata.type"] = "Edm.DateTime";
 
+    console.log("Entity to insert: ", entity);
     tableEntityCollection.insert(entity);
     return entity;
   }
@@ -266,32 +276,15 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
    */
   private checkIfTableExists(
     coll: Collection<any>,
-    tableModel: Table,
-    context: Context
-  ) {
+    tableModel: Table
+  ): boolean {
     const doc = coll.findOne({
       account: tableModel.account,
       table: { $regex: [String.raw`\b${tableModel.table}\b`, "i"] }
     });
 
     // If the metadata exists, we will throw getTableAlreadyExists error
-    if (doc) {
-      throw StorageErrorFactory.getTableAlreadyExists(context);
-    }
-  }
-
-  /**
-   * With throw a storage exception if resource not found.
-   *
-   * @private
-   * @param {*} doc
-   * @param {Context} context
-   * @memberof LokiEventsMetadataStore
-   */
-  private checkIfResourceExists(doc: any, context: Context) {
-    if (!doc) {
-      throw StorageErrorFactory.ResourceNotFound(context);
-    }
+    return !!doc;
   }
 
   /**
