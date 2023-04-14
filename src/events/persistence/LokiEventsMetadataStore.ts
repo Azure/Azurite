@@ -16,8 +16,9 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
   public constructor(public readonly lokiDBPath: string) {
     this.db = new Loki(lokiDBPath, {
       autosave: true,
+      autosaveInterval: 5000,
     });
-
+    /*
     setInterval(() => {
       this.db.saveDatabase(function(err) {
         if (err) {
@@ -25,6 +26,7 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
         }
       });
     }, 5000);
+    */
   }
 
   /**
@@ -47,6 +49,7 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
    * @memberof LokiEventsMetadataStore
    */
   public async close(): Promise<void> {
+    await this.saveDBState();
     await new Promise<void>((resolve, reject) => {
       this.db.close((err: any) => {
         if (err) {
