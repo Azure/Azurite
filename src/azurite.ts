@@ -23,6 +23,9 @@ import TableConfiguration from "./table/TableConfiguration";
 import TableServer from "./table/TableServer";
 
 import { DEFAULT_TABLE_LOKI_DB_PATH } from "./table/utils/constants";
+import {
+  DEFAULT_EVENTS_TABLE_LOKI_DB_PATH
+} from "./events/utils/constants";
 import EventsManager from "./events/EventsManager";
 import IEventsManager from "./events/IEventsManager";
 
@@ -77,7 +80,7 @@ async function main() {
   }
 
   // Create event manager instance
-  const eventsManager: IEventsManager = new EventsManager();
+  const eventsManager: IEventsManager = new EventsManager(join(location, DEFAULT_EVENTS_TABLE_LOKI_DB_PATH));
 
   const blobServerFactory = new BlobServerFactory();
   const blobServer = await blobServerFactory.createServer(env);
