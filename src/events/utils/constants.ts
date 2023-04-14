@@ -24,3 +24,4 @@ export const HeaderConstants = {
 
 export const MINIMAL_METADATA_ACCEPT = "application/json;odata=minimalmetadata";
 export const XML_METADATA = "application/atom+xml";
+export const DEFAULT_EVENTS_TABLE_LOKI_DB_PATH = "__azurite_events__.json";

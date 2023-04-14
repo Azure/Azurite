@@ -27,6 +27,7 @@ import morgan = require("morgan");
 import { OAuthLevel } from "../common/models";
 import TableSharedKeyAuthenticator from "./authentication/TableSharedKeyAuthenticator";
 import TableSharedKeyLiteAuthenticator from "./authentication/TableSharedKeyLiteAuthenticator";
+import IEventsManager from "../events/IEventsManager";
 /**
  * Default RequestListenerFactory based on express framework.
  *
@@ -42,6 +43,7 @@ export default class TableRequestListenerFactory
   public constructor(
     private readonly metadataStore: ITableMetadataStore,
     private readonly accountDataStore: IAccountDataStore,
+    private readonly eventsManager: IEventsManager,
     private readonly enableAccessLog: boolean,
     private readonly accessLogWriteStream?: NodeJS.WritableStream,
     private readonly skipApiVersionCheck?: boolean,
@@ -189,7 +191,7 @@ export default class TableRequestListenerFactory
     app.use(middlewareFactory.createErrorMiddleware());
 
     // Generated, will end and return HTTP response immediately
-    app.use(middlewareFactory.createEndMiddleware());
+    app.use(middlewareFactory.createEndMiddleware(this.eventsManager));
 
     return app;
   }

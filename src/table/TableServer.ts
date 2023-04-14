@@ -12,6 +12,8 @@ import LokiTableMetadataStore from "../table/persistence/LokiTableMetadataStore"
 import ServerBase from "../common/ServerBase";
 import TableConfiguration from "./TableConfiguration";
 import TableRequestListenerFactory from "./TableRequestListenerFactory";
+import IEventsManager from "../events/IEventsManager";
+import EventsManager from "../events/EventsManager";
 
 /**
  * Default implementation of Azurite Table HTTP server.
@@ -30,7 +32,7 @@ export default class TableServer extends ServerBase {
   private readonly /* Store the metadata of the table service */ metadataStore: ITableMetadataStore;
   private readonly /* Store the account data */ accountDataStore: IAccountDataStore;
 
-  constructor(configuration?: TableConfiguration) {
+  constructor(configuration?: TableConfiguration, eventsManager?: IEventsManager) {
     // If configuration is undefined, we'll use the default one
     if (configuration === undefined) {
       configuration = new TableConfiguration();
@@ -48,6 +50,10 @@ export default class TableServer extends ServerBase {
         httpServer = http.createServer();
     }
 
+    if(eventsManager == undefined) {
+      eventsManager = new EventsManager();
+    }
+
     // Create **dataStore with Loki.js
     const metadataStore: ITableMetadataStore = new LokiTableMetadataStore(
       configuration.metadataDBPath
@@ -58,6 +64,7 @@ export default class TableServer extends ServerBase {
     const requestListenerFactory: IRequestListenerFactory = new TableRequestListenerFactory(
       metadataStore,
       accountDataStore,
+      eventsManager,
       configuration.enableAccessLog, // Access log includes every handled HTTP request
       configuration.accessLogWriteStream,
       configuration.skipApiVersionCheck,

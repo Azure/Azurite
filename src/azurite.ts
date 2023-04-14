@@ -23,13 +23,16 @@ import TableConfiguration from "./table/TableConfiguration";
 import TableServer from "./table/TableServer";
 
 import { DEFAULT_TABLE_LOKI_DB_PATH } from "./table/utils/constants";
+import EventsManager from "./events/EventsManager";
+import IEventsManager from "./events/IEventsManager";
 
 // tslint:disable:no-console
 
 function shutdown(
   blobServer: BlobServer | SqlBlobServer,
   queueServer: QueueServer,
-  tableServer: TableServer
+  tableServer: TableServer,
+  eventsManager: IEventsManager,
 ) {
   const blobBeforeCloseMessage = `Azurite Blob service is closing...`;
   const blobAfterCloseMessage = `Azurite Blob service successfully closed`;
@@ -52,6 +55,8 @@ function shutdown(
   tableServer.close().then(() => {
     console.log(tableAfterCloseMessage);
   });
+
+  eventsManager.close();
 }
 
 /**
@@ -70,6 +75,9 @@ async function main() {
     await ensureDir(dirname(debugFilePath!));
     await access(dirname(debugFilePath!));
   }
+
+  // Create event manager instance
+  const eventsManager: IEventsManager = new EventsManager();
 
   const blobServerFactory = new BlobServerFactory();
   const blobServer = await blobServerFactory.createServer(env);
@@ -128,7 +136,7 @@ async function main() {
   const queueServer = new QueueServer(queueConfig);
 
   // Create table server instance
-  const tableServer = new TableServer(tableConfig);
+  const tableServer = new TableServer(tableConfig, eventsManager);
 
   // Start server
   console.log(
@@ -161,11 +169,11 @@ async function main() {
   process
     .once("message", (msg) => {
       if (msg === "shutdown") {
-        shutdown(blobServer, queueServer, tableServer);
+        shutdown(blobServer, queueServer, tableServer, eventsManager);
       }
     })
-    .once("SIGINT", () => shutdown(blobServer, queueServer, tableServer))
-    .once("SIGTERM", () => shutdown(blobServer, queueServer, tableServer));
+    .once("SIGINT", () => shutdown(blobServer, queueServer, tableServer, eventsManager))
+    .once("SIGTERM", () => shutdown(blobServer, queueServer, tableServer, eventsManager));
 }
 
 main().catch((err) => {
