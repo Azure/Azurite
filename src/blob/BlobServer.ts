@@ -13,6 +13,8 @@ import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
 import ServerBase, { ServerStatus } from "../common/ServerBase";
+import EventsManager from "../events/EventsManager";
+import IEventsManager from "../events/IEventsManager";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
 import BlobGCManager from "./gc/BlobGCManager";
@@ -49,9 +51,13 @@ export default class BlobServer extends ServerBase implements ICleaner {
    * @param {BlobConfiguration} configuration
    * @memberof Server
    */
-  constructor(configuration?: BlobConfiguration) {
+  constructor(configuration?: BlobConfiguration, eventsManager?: IEventsManager) {
     if (configuration === undefined) {
       configuration = new BlobConfiguration();
+    }
+
+    if(eventsManager == undefined) {
+      eventsManager = new EventsManager();
     }
 
     const host = configuration.host;
@@ -96,6 +102,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
       metadataStore,
       extentStore,
       accountDataStore,
+      eventsManager,
       configuration.enableAccessLog, // Access log includes every handled HTTP request
       configuration.accessLogWriteStream,
       configuration.loose,

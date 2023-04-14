@@ -1,3 +1,4 @@
+import IEventsManager from '../../events/IEventsManager';
 import IHandlers from './handlers/IHandlers';
 import ILogger from './utils/ILogger';
 
@@ -87,5 +88,5 @@ export default abstract class MiddlewareFactory {
    * @returns {MiddlewareTypes}
    * @memberof MiddlewareFactory
    */
-  public abstract createEndMiddleware(): MiddlewareTypes;
+  public abstract createEndMiddleware(eventsManager: IEventsManager): MiddlewareTypes;
 }

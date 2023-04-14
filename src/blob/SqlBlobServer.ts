@@ -12,6 +12,8 @@ import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import SqlExtentMetadataStore from "../common/persistence/SqlExtentMetadataStore";
 import ServerBase, { ServerStatus } from "../common/ServerBase";
+import EventsManager from "../events/EventsManager";
+import IEventsManager from "../events/IEventsManager";
 import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
 import BlobGCManager from "./gc/BlobGCManager";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
@@ -48,7 +50,12 @@ export default class SqlBlobServer extends ServerBase {
    * @param {BlobConfiguration} configuration
    * @memberof Server
    */
-  constructor(configuration: SqlBlobConfiguration) {
+  constructor(configuration: SqlBlobConfiguration, eventsManager?: IEventsManager) {
+    if(eventsManager == undefined) {
+      eventsManager = new EventsManager();
+    }
+
+
     const host = configuration.host;
     const port = configuration.port;
 
@@ -91,6 +98,7 @@ export default class SqlBlobServer extends ServerBase {
       metadataStore,
       extentStore,
       accountDataStore,
+      eventsManager,
       configuration.enableAccessLog, // Access log includes every handled HTTP request
       configuration.accessLogWriteStream,
       configuration.loose,

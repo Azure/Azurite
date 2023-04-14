@@ -83,7 +83,7 @@ async function main() {
   const eventsManager: IEventsManager = new EventsManager(join(location, DEFAULT_EVENTS_TABLE_LOKI_DB_PATH));
 
   const blobServerFactory = new BlobServerFactory();
-  const blobServer = await blobServerFactory.createServer(env);
+  const blobServer = await blobServerFactory.createServer(env, eventsManager);
   const blobConfig = blobServer.config;
 
   // TODO: Align with blob DEFAULT_BLOB_PERSISTENCE_ARRAY

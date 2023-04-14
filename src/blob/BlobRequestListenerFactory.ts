@@ -33,6 +33,7 @@ import morgan = require("morgan");
 import { OAuthLevel } from "../common/models";
 import IAuthenticator from "./authentication/IAuthenticator";
 import createStorageBlobContextMiddleware from "./middlewares/blobStorageContext.middleware";
+import IEventsManager from "../events/IEventsManager";
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -50,6 +51,7 @@ export default class BlobRequestListenerFactory
     private readonly metadataStore: IBlobMetadataStore,
     private readonly extentStore: IExtentStore,
     private readonly accountDataStore: IAccountDataStore,
+    private readonly eventsManager: IEventsManager,
     private readonly enableAccessLog: boolean,
     private readonly accessLogWriteStream?: NodeJS.WritableStream,
     private readonly loose?: boolean,
@@ -218,7 +220,7 @@ export default class BlobRequestListenerFactory
     app.use(middlewareFactory.createErrorMiddleware());
 
     // Generated, will end and return HTTP response immediately
-    app.use(middlewareFactory.createEndMiddleware());
+    app.use(middlewareFactory.createEndMiddleware(this.eventsManager));
 
     return app;
   }

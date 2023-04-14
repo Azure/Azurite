@@ -1,6 +1,7 @@
 import { join } from "path";
 
 import { DEFAULT_SQL_OPTIONS } from "../common/utils/constants";
+import IEventsManager from "../events/IEventsManager";
 import BlobConfiguration from "./BlobConfiguration";
 import BlobEnvironment from "./BlobEnvironment";
 import BlobServer from "./BlobServer";
@@ -16,7 +17,8 @@ import {
 
 export class BlobServerFactory {
   public async createServer(
-    blobEnvironment?: IBlobEnvironment
+    blobEnvironment?: IBlobEnvironment,
+    eventsManager?: IEventsManager
   ): Promise<BlobServer | SqlBlobServer> {
     // TODO: Check it's in Visual Studio Code environment or not
     const isVSC = false;
@@ -61,7 +63,7 @@ export class BlobServerFactory {
           env.disableProductStyleUrl()
         );
 
-        return new SqlBlobServer(config);
+        return new SqlBlobServer(config, eventsManager);
       } else {
         const config = new BlobConfiguration(
           env.blobHost(),
@@ -81,7 +83,7 @@ export class BlobServerFactory {
           env.oauth(),
           env.disableProductStyleUrl()
         );
-        return new BlobServer(config);
+        return new BlobServer(config, eventsManager);
       }
     } else {
       // TODO: Add BlobServer construction in VSC
