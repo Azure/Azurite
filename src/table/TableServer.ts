@@ -51,7 +51,7 @@ export default class TableServer extends ServerBase {
     }
 
     if(eventsManager == undefined) {
-      eventsManager = new EventsManager();
+      eventsManager = new EventsManager(false);
     }
 
     // Create **dataStore with Loki.js

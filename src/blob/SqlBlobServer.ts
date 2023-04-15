@@ -52,7 +52,7 @@ export default class SqlBlobServer extends ServerBase {
    */
   constructor(configuration: SqlBlobConfiguration, eventsManager?: IEventsManager) {
     if(eventsManager == undefined) {
-      eventsManager = new EventsManager();
+      eventsManager = new EventsManager(false);
     }
 
 

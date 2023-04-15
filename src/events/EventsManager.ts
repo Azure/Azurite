@@ -18,35 +18,52 @@ import { DEFAULT_EVENTS_TABLE_LOKI_DB_PATH } from "./utils/constants";
  * @class Server
  */
 export default class EventsManager implements IEventsManager {
-  private readonly dataStore: IEventsMetadataStore;
+  private dataStore: IEventsMetadataStore | undefined;
+  private fileLocation: string = ".";
   private readonly account: string = "testingAccount";
   private readonly table: string = "eventsData";
 
-  constructor(dbPath?: string) {
-    if (dbPath === undefined) {
-      dbPath = DEFAULT_EVENTS_TABLE_LOKI_DB_PATH;
+  constructor(debugEnabled: boolean, debugPath?: string) {
+    if(!debugEnabled || !debugPath) {
+      return;
     }
 
-    // Create **dataStore with Loki.js
-    this.dataStore = new LokiEventsMetadataStore(dbPath);
+    const path = debugPath.split("/");
+    if(path.length !== 1) {
+      this.fileLocation = path.slice(0, path.length-1).join("/");
+    }
+
+    
+    this.dataStore = new LokiEventsMetadataStore(this.fileLocation + "/" + DEFAULT_EVENTS_TABLE_LOKI_DB_PATH);
+
     this.start();
   }
 
   public addEvent(event: any): void {
-      this.dataStore.insertTableEntity(this.table, this.account, event as Entity);
+    if (this.dataStore === undefined) {
+      return;
+    }
+
+    this.dataStore.insertTableEntity(this.table, this.account, event as Entity);
   }
 
   protected async start(): Promise<void> {
     const msg = `Events Manager is starting`;
     logger.info(msg);
 
-    if (this.dataStore !== undefined) {
-      await this.dataStore.init();
+    if (this.dataStore === undefined) {
+      return;
     }
+
+    await this.dataStore.init();
     this.dataStore.createTable({account: this.account, table: this.table});
   }
 
   public async close(): Promise<void> {
+    if(this.dataStore === undefined) {
+      return;
+    }
+    
     const events = (await this.dataStore.queryTableEntities(this.account, this.table)) as Entity[];
     const groupedByOp = this.groupEventsByParameter(events, 'operation');
     const groupedByDB = this.groupEventsByParameter(events, 'dbType');

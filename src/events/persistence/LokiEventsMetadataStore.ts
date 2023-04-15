@@ -14,9 +14,7 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
   public constructor(public readonly lokiDBPath: string) {
     this.db = new Loki(lokiDBPath, {
       autosave: true,
-      autosaveInterval: 5000,
     });
-    /*
     setInterval(() => {
       this.db.saveDatabase(function(err) {
         if (err) {
@@ -24,7 +22,6 @@ export default class LokiEventsMetadataStore implements IEventsMetadataStore {
         }
       });
     }, 5000);
-    */
   }
 
   /**

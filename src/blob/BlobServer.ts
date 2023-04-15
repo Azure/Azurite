@@ -57,7 +57,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
     }
 
     if(eventsManager == undefined) {
-      eventsManager = new EventsManager();
+      eventsManager = new EventsManager(false);
     }
 
     const host = configuration.host;

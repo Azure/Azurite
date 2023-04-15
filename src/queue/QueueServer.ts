@@ -72,7 +72,7 @@ export default class QueueServer extends ServerBase {
     }
 
     if(eventsManager == undefined) {
-      eventsManager = new EventsManager();
+      eventsManager = new EventsManager(false);
     }
 
     // We can change the persistency layer implementation by
