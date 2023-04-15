@@ -1,3 +1,5 @@
+import { writeFile } from "fs";
+
 import logger from "../common/Logger";
 import IEventsManager from "./IEventsManager";
 import IEventsMetadataStore, { Entity } from "./persistence/IEventsMetadataStore";
@@ -5,17 +7,11 @@ import LokiEventsMetadataStore from "./persistence/LokiEventsMetadataStore";
 import { DEFAULT_EVENTS_TABLE_LOKI_DB_PATH } from "./utils/constants";
 
 /**
- * Default implementation of Azurite Table HTTP server.
- * This implementation provides a HTTP service based on express framework and LokiJS in memory database.
- *
- * We can create other table servers by extending abstract Server class and initialize different httpServer,
- * dataStore or requestListenerFactory fields.
- *
- * For example, creating a HTTPS server to accept HTTPS requests, or using other
- * Node.js HTTP frameworks like Koa, or just using another SQL database.
+ * Implementation for Events Manager.
+ * This implementation is based on express framework and LokiJS in memory database.
  *
  * @export
- * @class Server
+ * @class IEventsManager
  */
 export default class EventsManager implements IEventsManager {
   private dataStore: IEventsMetadataStore | undefined;
@@ -33,7 +29,6 @@ export default class EventsManager implements IEventsManager {
       this.fileLocation = path.slice(0, path.length-1).join("/");
     }
 
-    
     this.dataStore = new LokiEventsMetadataStore(this.fileLocation + "/" + DEFAULT_EVENTS_TABLE_LOKI_DB_PATH);
 
     this.start();
@@ -65,16 +60,14 @@ export default class EventsManager implements IEventsManager {
     }
     
     const events = (await this.dataStore.queryTableEntities(this.account, this.table)) as Entity[];
-    const groupedByOp = this.groupEventsByParameter(events, 'operation');
-    const groupedByDB = this.groupEventsByParameter(events, 'dbType');
-    console.log('Operations grouped by Op is: ', groupedByOp);
-    console.log('Operations grouped by DB is: ', groupedByDB);
+    await this.writeStatsByParameter(events, 'operation');
+    await this.writeStatsByParameter(events, 'dbType');
     
     this.dataStore.close();
   }
 
-  private groupEventsByParameter(events: Entity[], param: string) {
-    const groupedByOp = events.reduce((acc, event: Entity) => {
+  private async writeStatsByParameter(events: Entity[], param: string) {
+    const groupedByParam = events.reduce((acc, event: Entity) => {
       const paramValue = event[param];
       if(!acc[paramValue]) {
         acc[paramValue] = {input: 0, output: 0, counts: 0};
@@ -87,6 +80,16 @@ export default class EventsManager implements IEventsManager {
       return acc;
     }, {} as {[key: string]: any});
 
-    return groupedByOp;
+    await new Promise(
+      (res, rej) => writeFile(this.fileLocation + `/${param}_stats.json`, JSON.stringify(groupedByParam), err => {
+        if(err) {
+          rej(`Error writing ${param} stats`);
+        } else {
+          res(null);
+        }
+      }
+    ));
+
+    return groupedByParam;
   }
 }
