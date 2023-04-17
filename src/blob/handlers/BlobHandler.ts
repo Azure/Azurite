@@ -325,6 +325,16 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const metadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders()
     );
+    
+    if (metadata != undefined)
+    {
+      Object.entries(metadata).forEach(([key, value]) => {
+        if (key.includes("-"))
+        {
+          throw StorageErrorFactory.getInvalidMetadata(context.contextId!);
+        }
+      });
+    }
 
     const res = await this.metadataStore.setBlobMetadata(
       context,
