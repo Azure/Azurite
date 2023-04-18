@@ -470,6 +470,27 @@ describe("BlobAPIs", () => {
     );
   });
 
+  it("should fail when setMetadata with invalid metadata name with hyphen @loki @sql", async () => {
+    const metadata = {
+      "Content-SHA256": "a"
+    };
+    
+    // set metadata should fail
+    let hasError = false;   
+    try {
+      await blobClient.setMetadata(metadata);
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 400);
+      assert.strictEqual(error.code, 'InvalidMetadata');
+      hasError = true;
+    }
+    if (!hasError)
+    {
+      assert.fail();
+    }
+
+  });
+
   it("acquireLease_available_proposedLeaseId_fixed @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 30;

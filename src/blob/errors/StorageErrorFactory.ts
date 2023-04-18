@@ -762,4 +762,14 @@ export default class StorageErrorFactory {
       { ReceivedCopyStatus: copyStatus }
     );
   }
+  
+
+  public static getInvalidMetadata(contextID: string): StorageError {
+    return new StorageError(
+      400,
+      "InvalidMetadata",
+      "The metadata specified is invalid. It has characters that are not permitted.",
+      contextID
+    );
+  }
 }
