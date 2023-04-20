@@ -1168,4 +1168,53 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
 
     await tableClient.deleteTable();
   });
+
+  it("18. should work when null query, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("emptystringfieldneq")
+    );
+
+    await tableClient.createTable();
+
+    const partitionKey = createUniquePartitionKey("");
+
+    // This should get picked up by the query
+    const result1 = await tableClient.createEntity({
+      partitionKey: partitionKey,
+      rowKey: `1`,
+      foo: "TestFoo",
+    });
+    assert.notStrictEqual(result1.etag, undefined);
+
+    // These next two entities should not
+    const result2 = await tableClient.createEntity({
+      partitionKey: partitionKey,
+      rowKey: `2`,
+      foo: "",
+    });
+    assert.notStrictEqual(result2.etag, undefined);
+
+    const result3 = await tableClient.createEntity({
+      partitionKey: partitionKey,
+      rowKey: `3`
+    });
+    assert.notStrictEqual(result3.etag, undefined);
+
+    const maxPageSize = 5;
+    const entities = tableClient.listEntities<TableEntity<{ foo: string }>>({
+      queryOptions: {
+        filter: `PartitionKey eq '${partitionKey}' and foo ne ''`
+      }
+    });
+    let all: TableEntity<{ foo: string }>[] = [];
+    for await (const entity of entities.byPage({
+      maxPageSize
+    })) {
+      all = [...all, ...entity];
+    }
+    assert.strictEqual(all.length, 1);
+
+    await tableClient.deleteTable();
+  });
 });
