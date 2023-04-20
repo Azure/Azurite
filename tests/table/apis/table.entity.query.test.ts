@@ -1169,7 +1169,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("18. should work when null query, @loki", async () => {
+  it("18. should work when empty field is queried, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("emptystringfieldneq")

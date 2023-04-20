@@ -89,7 +89,7 @@ export default class GuidPredicate implements IPredicate {
       newTokens.push(new TaggedToken("(", new ParensOpenToken()));
     }
     taggedPredicate.tokens.forEach((taggedToken) => {
-      this.pushIdentifier(taggedToken, newTokens, this.isBackWardsCompatiblePredicate(taggedPredicate));
+      this.pushIdentifier(taggedToken, newTokens);
       this.pushOperator(taggedToken, newTokens);
       this.pushBase64Guid(taggedToken, newTokens);
     });
@@ -134,7 +134,7 @@ export default class GuidPredicate implements IPredicate {
     newTokens.push(new TaggedToken("(", new ParensOpenToken()));
     taggedPredicate.tokens.forEach((taggedToken) => {
       this.pushStringGuid(taggedToken, newTokens);
-      this.pushIdentifier(taggedToken, newTokens, false);
+      this.pushIdentifier(taggedToken, newTokens);
       this.pushOperator(taggedToken, newTokens);
     });
     newTokens.push(new TaggedToken(")", new ParensCloseToken()));
@@ -163,7 +163,7 @@ export default class GuidPredicate implements IPredicate {
    * @param {TaggedToken[]} newTokens
    * @memberof GuidPredicate
    */
-  private pushIdentifier(taggedToken: TaggedToken, newTokens: TaggedToken[], backwardCompatibleGuid : boolean) {
+  private pushIdentifier(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isIdentifier()) {
       const newToken = new TaggedToken(`item.properties.${taggedToken.token}`, new IdentifierToken());
       // When querying storage and you give it a field comparison, it eliminates anything with doesn't have that field
