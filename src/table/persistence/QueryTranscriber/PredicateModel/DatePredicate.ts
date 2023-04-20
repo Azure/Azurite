@@ -65,16 +65,12 @@ export default class DatePredicate implements IPredicate {
       // Finish the predicate if it is already started, otherwise add this before the predicate starts
       if (newTokens.length > 1 && newTokens[newTokens.length - 1].type.isOperator() && newTokens[newTokens.length - 2].type.isValue()) {
         newTokens.push(newToken);
-        if (taggedToken.token.toLocaleLowerCase() !== "**blena**"){
-          this.pushOperator(new TaggedToken("&&", new OperatorToken()), newTokens);
-          newTokens.push((new TaggedToken(`item.properties.hasOwnProperty("${taggedToken.token}")`, new IdentifierToken())));
-        }
+        this.pushOperator(new TaggedToken("&&", new OperatorToken()), newTokens);
+        newTokens.push((new TaggedToken(`item.properties.hasOwnProperty("${taggedToken.token}")`, new IdentifierToken())));
       }
       else {
-        if (taggedToken.token.toLocaleLowerCase() !== "**blena**"){
-          newTokens.push((new TaggedToken(`item.properties.hasOwnProperty("${taggedToken.token}")`, new IdentifierToken())));
-          this.pushOperator(new TaggedToken("&&", new OperatorToken()), newTokens);
-        }
+        newTokens.push((new TaggedToken(`item.properties.hasOwnProperty("${taggedToken.token}")`, new IdentifierToken())));
+        this.pushOperator(new TaggedToken("&&", new OperatorToken()), newTokens);
         newTokens.push(newToken);
       }
     }
