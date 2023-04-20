@@ -3307,6 +3307,7 @@ export default class LokiBlobMetadataStore
    * @param {string} account
    * @param {string} container
    * @param {string} blob
+   * @param {(string | undefined)} snapshot
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @param {(Models.BlobTags | undefined)} tags
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
@@ -3318,6 +3319,7 @@ export default class LokiBlobMetadataStore
     account: string,
     container: string,
     blob: string,
+    snapshot: string | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     tags: Models.BlobTags | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
@@ -3327,7 +3329,7 @@ export default class LokiBlobMetadataStore
       account,
       container,
       blob,
-      undefined,
+      snapshot,
       context,
       false,
       true

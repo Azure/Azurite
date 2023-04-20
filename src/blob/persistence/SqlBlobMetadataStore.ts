@@ -3314,6 +3314,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     account: string,
     container: string,
     blob: string,
+    snapshot: string | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     tags: Models.BlobTags | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
@@ -3326,7 +3327,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           accountName: account,
           containerName: container,
           blobName: blob,
-          snapshot: "",
+          snapshot: snapshot === undefined ? "" : snapshot,
           deleting: 0,
           isCommitted: true
         },
@@ -3366,7 +3367,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
             accountName: account,
             containerName: container,
             blobName: blob,
-            snapshot: "",
+            snapshot: snapshot === undefined ? "" : snapshot,
             deleting: 0
           },
           transaction: t

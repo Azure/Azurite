@@ -1334,17 +1334,30 @@ describe("BlobAPIs", () => {
       tag1: "val1",
       tag2: "val2",
     };
+    const tags2 = {
+      tag1: "val1",
+      tag2: "val22",
+      tag3: "val3",
+    };
 
+    // Set/get tags on base blob
     await blobClient.setTags(tags);
+    let outputTags1 = (await blobClient.getTags()).tags;
+    assert.deepStrictEqual(outputTags1, tags);
 
-    let tags1 = (await blobClient.getTags()).tags;
-    assert.deepStrictEqual(tags1, tags);
-
+    // create snapshot, the tags should be same as base blob
     const snapshotResponse = await blobClient.createSnapshot();
     const blobClientSnapshot = blobClient.withSnapshot(snapshotResponse.snapshot!);
+    let outputTags2 = (await blobClientSnapshot.getTags()).tags;
+    assert.deepStrictEqual(outputTags2, tags);
+    
+    // Set/get  tags on snapshot, base blob tags should not be impacted.
+    await blobClientSnapshot.setTags(tags2);
+    outputTags2 = (await blobClientSnapshot.getTags()).tags;
+    assert.deepStrictEqual(outputTags2, tags2);    
 
-    let tags2 = (await blobClientSnapshot.getTags()).tags;
-    assert.deepStrictEqual(tags2, tags);
+    outputTags1 = (await blobClient.getTags()).tags;
+    assert.deepStrictEqual(outputTags1, tags);
 
     blobClientSnapshot.delete();
   });

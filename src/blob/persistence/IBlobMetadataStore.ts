@@ -1087,6 +1087,7 @@ export interface IBlobMetadataStore
    * @param {string} account
    * @param {string} container
    * @param {string} blob
+   * @param {(string | undefined)} snapshot
    * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
    * @param {(Models.BlobMetadata | undefined)} metadata
    * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
@@ -1098,6 +1099,7 @@ export interface IBlobMetadataStore
     account: string,
     container: string,
     blob: string,
+    snapshot: string | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     tags: Models.BlobTags | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions

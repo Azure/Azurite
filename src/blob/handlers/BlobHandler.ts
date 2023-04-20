@@ -1280,14 +1280,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
 
-    // Preserve metadata key case
+    // Blob Tags need to set
     const tags = options.tags;
+
+    // Get snapshot (swagger not defined snapshot as parameter, but server support set tag on blob snapshot)
+    let snapshot = context.request!.getQuery("snapshot");
 
     await this.metadataStore.setBlobTag(
       context,
       account,
       container,
       blob,
+      snapshot,
       options.leaseAccessConditions,
       tags,
       options.modifiedAccessConditions
