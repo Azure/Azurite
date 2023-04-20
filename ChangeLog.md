@@ -9,6 +9,10 @@ Blob:
 - Fixed issue of: blob batch subresponse is slightly different from the on from Azure serivce, which causes exception in CPP SDK.
 - Fixed issue of: setMetadata API allows invalid metadata name with hyphen.
 
+Table:
+
+- Fixed issue of : entities with empty fields were not being correctly queried and were being included in queries whey should not have
+
 ## 2023.03 Version 3.23.0
 
 General:
