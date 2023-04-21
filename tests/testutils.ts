@@ -1,3 +1,10 @@
+import { isTokenCredential } from "@azure/core-auth";
+import {
+  CpkInfo,
+  DataLakeFileClient,
+  DataLakeFileSystemClient
+} from "@azure/storage-file-datalake";
+import assert from "assert";
 import { StorageServiceClient } from "azure-storage";
 import { randomBytes } from "crypto";
 import { createWriteStream, readFileSync } from "fs";
@@ -81,6 +88,10 @@ export async function bodyToString(
     return "";
   }
 
+  if (length === undefined) {
+    length = response.contentLength;
+  }
+
   return new Promise<string>((resolve, reject) => {
     response.readableStreamBody!.on("readable", () => {
       let chunk;
@@ -145,7 +156,7 @@ export async function createRandomLocalFile(
 
     ws.on("open", () => {
       // tslint:disable-next-line:no-empty
-      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) {}
+      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) { /**/ }
       if (offsetInMB >= blockNumber) {
         ws.end();
       }
@@ -153,7 +164,7 @@ export async function createRandomLocalFile(
 
     ws.on("drain", () => {
       // tslint:disable-next-line:no-empty
-      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) {}
+      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) { /**/ }
       if (offsetInMB >= blockNumber) {
         ws.end();
       }
@@ -250,4 +261,44 @@ export function overrideRequest(
       }
     );
   };
+}
+
+export function getEncryptionScope(): string {
+  // return "ENCRYPTION_SCOPE";
+  throw new Error("encryption scope not implemented yet.");
+}
+
+export function getYieldedValue<YT, RT>(
+  iteratorResult: IteratorResult<YT, RT>
+): YT {
+  if (iteratorResult.done) {
+    assert.fail(`Expected an item but did not get any`);
+  }
+  return iteratorResult.value;
+}
+
+export const Test_CPK_INFO: CpkInfo = {
+  encryptionKey: "MDEyMzQ1NjcwMTIzNDU2NzAxMjM0NTY3MDEyMzQ1Njc=", // [SuppressMessage("Microsoft.Security", "CS001:SecretInline", Justification="This is a fake secret")]
+  encryptionKeySha256: "3QFFFpRA5+XANHqwwbT4yXDmrT/2JaLt/FKHjzhOdoE=" // [SuppressMessage("Microsoft.Security", "CS001:SecretInline", Justification="This is a fake secret")]
+};
+
+export function assertClientUsesTokenCredential(
+  client: DataLakeFileSystemClient
+): void {
+  assert.ok(isTokenCredential(client.credential));
+}
+
+export async function upload(
+  fileClient: DataLakeFileClient,
+  data: string,
+  metadata: any = undefined
+) {
+  let uploadResult = await (metadata
+    ? fileClient.create(metadata)
+    : fileClient.create());
+  assert.ok(uploadResult.requestId);
+  uploadResult = await fileClient.append(data, 0, data.length);
+  assert.ok(uploadResult.requestId);
+  uploadResult = await fileClient.flush(data.length);
+  assert.ok(uploadResult.requestId);
 }

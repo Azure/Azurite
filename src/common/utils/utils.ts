@@ -164,3 +164,11 @@ export async function getMD5FromStream(
       });
   });
 }
+
+export function getUniqueName(prefix: string): string {
+  return `${prefix}${new Date().getTime()}${
+    Math.floor(Math.random() * 10000).toString().padStart(
+    5,
+    "00000"
+  )}`;
+}

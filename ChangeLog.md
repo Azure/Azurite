@@ -10,6 +10,10 @@ Blob:
 - Fixed issue of: setMetadata API allows invalid metadata name with hyphen.
 - Support Same features in SQL Metadata Store as Loki Metadata Store (support Blob Copy & Page Blob)
 
+DataLake:
+
+- Introduced dfs endpoint with the following features see readme for more details on what is supported and what is not
+
 ## 2023.03 Version 3.23.0
 
 General:

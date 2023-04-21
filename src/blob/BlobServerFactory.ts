@@ -29,7 +29,9 @@ export class BlobServerFactory {
       DEFAULT_BLOB_LOKI_DB_PATH,
       DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
       SqlBlobServer,
-      BlobServer
+      BlobServer,
+      "blobHost",
+      "blobPort"
     );
   }
 
@@ -44,6 +46,8 @@ export class BlobServerFactory {
     defaultExtentLokiDBPath: string,
     sqlSeverClass: any,
     blobServerClass: any,
+    hostProperty: string,
+    portProerty: string,
   ): Promise<BlobServer | SqlBlobServer> {
     // TODO: Check it's in Visual Studio Code environment or not
     const isVSC = false;
@@ -70,8 +74,8 @@ export class BlobServerFactory {
 
       if (isSQL) {
         const config = new SqlBlobConfiguration(
-          env.blobHost() || defaultHost,
-          env.blobPort() || defaultPort,
+          (env as any)[hostProperty]() || defaultHost,
+          (env as any)[portProerty]()  || defaultPort,
           databaseConnectionString!,
           DEFAULT_SQL_OPTIONS,
           persistenceArray,
@@ -91,8 +95,8 @@ export class BlobServerFactory {
         return new sqlSeverClass(config);
       } else {
         const config = new BlobConfiguration(
-          env.blobHost() || defaultHost,
-          env.blobPort() || defaultPort,
+          (env as any)[hostProperty]() || defaultHost,
+          (env as any)[portProerty]()  || defaultPort,
           join(location, defaultLokiDBPath),
           join(location, defaultExtentLokiDBPath),
           persistenceArray,

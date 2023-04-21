@@ -154,6 +154,149 @@ jobs:
         displayName: "npm run test:blob"
         env: {}
 
+  - job: dfstestubuntu20_04
+    displayName: Dfs Test Linux Ubuntu 20.04 LTS
+    pool:
+      vmImage: "ubuntu-20.04"
+    strategy:
+      matrix:
+        node_12_x:
+          node_version: 12.x
+        node_14_x:
+          node_version: 14.x
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(node_version)"
+        displayName: "Install Node.js"
+
+      - script: |
+          npm ci --legacy-peer-deps
+        workingDirectory: "./"
+        displayName: "npm ci --legacy-peer-deps"
+
+      - script: |
+          npm run test:dfs
+        workingDirectory: "./"
+        displayName: "npm run test:dfs"
+        env: {}
+
+  - job: dfstestubuntu22_04
+    displayName: Dfs Test Linux Ubuntu 22.04
+    pool:
+      vmImage: "ubuntu-latest"
+    strategy:
+      matrix:
+        node_16_x:
+          node_version: 16.x
+        node_18_x:
+          node_version: 18.x
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(node_version)"
+        displayName: "Install Node.js"
+
+      - script: |
+          npm ci --legacy-peer-deps
+        workingDirectory: "./"
+        displayName: "npm ci --legacy-peer-deps"
+
+      - script: |
+          npm run test:dfs
+        workingDirectory: "./"
+        displayName: "npm run test:dfs"
+        env: {}
+
+  - job: dfstestwin
+    displayName: Dfs Test Windows
+    pool:
+      vmImage: "windows-latest"
+    strategy:
+      matrix:
+        node_14_x:
+          node_version: 14.x
+        node_16_x:
+          node_version: 16.x
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(node_version)"
+        displayName: "Install Node.js"
+
+      - script: |
+          npm ci --legacy-peer-deps
+        workingDirectory: "./"
+        displayName: "npm ci --legacy-peer-deps"
+
+      - script: |
+          npm run test:dfs
+        workingDirectory: "./"
+        displayName: "npm run test:dfs"
+        env: {}
+
+  - job: dfstestmac
+    displayName: Dfs Test Mac
+    pool:
+      vmImage: "macOS-latest"
+    strategy:
+      matrix:
+        node_14_x:
+          node_version: 14.x
+        node_16_x:
+          node_version: 16.x
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(node_version)"
+        displayName: "Install Node.js"
+
+      - script: |
+          npm ci --legacy-peer-deps
+        workingDirectory: "./"
+        displayName: "npm ci --legacy-peer-deps"
+
+      - script: |
+          npm run test:dfs
+        workingDirectory: "./"
+        displayName: "npm run test:dfs"
+        env: {}
+
+  - job: dfstestmysql
+    displayName: Dfs Test Mysql
+    pool:
+      vmImage: "ubuntu-latest"
+    strategy:
+      matrix:
+        node_14_x:
+          node_version: 14.x
+        node_16_x:
+          node_version: 16.x
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: "$(node_version)"
+        displayName: "Install Node.js"
+
+      - script: |
+          npm ci --legacy-peer-deps
+        workingDirectory: "./"
+        displayName: "npm ci --legacy-peer-deps"
+
+      - script: |
+          docker run --name mysql -p 13306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql
+          sleep 60
+          docker exec mysql mysql -u root -pmy-secret-pw -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+          docker exec mysql mysql -u root -pmy-secret-pw -e "create database azurite_blob_test;"
+        workingDirectory: "./"
+        displayName: "Setup mysql docker instance"
+
+      - script: |
+          npm run test:dfs:sql:ci
+        workingDirectory: "./"
+        displayName: "npm run test:dfs:sql:ci"
+        env: {}
+
   - job: queuetestlinux
     displayName: Queue Test Linux
     pool:
@@ -366,6 +509,7 @@ jobs:
           azurite-blob -v
           azurite-queue -v
           azurite-table -v
+          azurite-datalake -v
         workingDirectory: "./"
         displayName: "Validate npm global installation from GitHub code base"
 
@@ -414,6 +558,7 @@ jobs:
           azurite-blob -v
           azurite-queue -v
           azurite-table -v
+          azurite-datalake -v
         workingDirectory: "./"
         displayName: "Validate npm global installation from GitHub code base"
 
@@ -462,6 +607,7 @@ jobs:
           azurite-blob -v
           azurite-queue -v
           azurite-table -v
+          azurite-datalake -v
         workingDirectory: "./"
         displayName: "Validate npm global installation from GitHub code base"
 
@@ -485,6 +631,7 @@ jobs:
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-blob -v
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-queue -v
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-table -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-datalake -v
         workingDirectory: "./"
         displayName: "Validate docker image"
 

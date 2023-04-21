@@ -1,0 +1,628 @@
+import Operation from "../generated/artifacts/operation";
+import BlobOperation from "../../blob/generated/artifacts/operation";
+
+export function operationBlobToDfs(
+  operation: BlobOperation
+): Operation | undefined {
+  return blobOperationToDfsOpeation.get(operation);
+}
+
+export function operationDfsToBlob(
+  operation: Operation
+): BlobOperation | undefined {
+  return DfsOperationToBlobOpeation.get(operation);
+}
+
+const blobOperationToDfsOpeation = new Map<BlobOperation, Operation>();
+
+//Service
+blobOperationToDfsOpeation.set(
+  BlobOperation.Service_SetProperties,
+  Operation.Service_SetProperties
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Service_GetProperties,
+  Operation.Service_GetProperties
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Service_GetStatistics,
+  Operation.Service_GetStatistics
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Service_ListContainersSegment,
+  Operation.Service_ListContainersSegment
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Service_GetUserDelegationKey,
+  Operation.Service_GetUserDelegationKey
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Service_GetAccountInfo,
+  Operation.Service_GetAccountInfo
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Service_GetAccountInfoWithHead,
+  Operation.Service_GetAccountInfoWithHead
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Service_SubmitBatch,
+  Operation.Service_SubmitBatch
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Service_FilterBlobs,
+  Operation.Service_FilterBlobs
+);
+//Container
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_Create,
+  Operation.Container_Create
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_GetProperties,
+  Operation.Container_GetProperties
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_GetPropertiesWithHead,
+  Operation.Container_GetPropertiesWithHead
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_Delete,
+  Operation.Container_Delete
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_SetMetadata,
+  Operation.Container_SetMetadata
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_GetAccessPolicy,
+  Operation.Container_GetAccessPolicy
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_SetAccessPolicy,
+  Operation.Container_SetAccessPolicy
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_Restore,
+  Operation.Container_Restore
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_SubmitBatch,
+  Operation.Container_SubmitBatch
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_FilterBlobs,
+  Operation.Container_FilterBlobs
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_AcquireLease,
+  Operation.Container_AcquireLease
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_ReleaseLease,
+  Operation.Container_ReleaseLease
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_RenewLease,
+  Operation.Container_RenewLease
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_BreakLease,
+  Operation.Container_BreakLease
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_ChangeLease,
+  Operation.Container_ChangeLease
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_ListBlobFlatSegment,
+  Operation.FileSystem_ListBlobFlatSegment
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_ListBlobHierarchySegment,
+  Operation.FileSystem_ListBlobHierarchySegment
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_GetAccountInfo,
+  Operation.Container_GetAccountInfo
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Container_GetAccountInfoWithHead,
+  Operation.Container_GetAccountInfoWithHead
+);
+//Blob
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_Download,
+  Operation.Path_Read
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_GetProperties,
+  Operation.Path_GetProperties
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_Delete,
+  Operation.Path_Delete
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_Undelete,
+  Operation.Blob_Undelete
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_SetExpiry,
+  Operation.Blob_SetExpiry
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_SetHTTPHeaders,
+  Operation.Blob_SetHTTPHeaders
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_SetImmutabilityPolicy,
+  Operation.Blob_SetImmutabilityPolicy
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_DeleteImmutabilityPolicy,
+  Operation.Blob_DeleteImmutabilityPolicy
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_SetLegalHold,
+  Operation.Blob_SetLegalHold
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_SetMetadata,
+  Operation.Blob_SetMetadata
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_AcquireLease,
+  Operation.Blob_AcquireLease
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_ReleaseLease,
+  Operation.Blob_ReleaseLease
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_RenewLease,
+  Operation.Blob_RenewLease
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_ChangeLease,
+  Operation.Blob_ChangeLease
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_BreakLease,
+  Operation.Blob_BreakLease
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_CreateSnapshot,
+  Operation.Blob_CreateSnapshot
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_StartCopyFromURL,
+  Operation.Blob_StartCopyFromURL
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_CopyFromURL,
+  Operation.Blob_CopyFromURL
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_AbortCopyFromURL,
+  Operation.Blob_AbortCopyFromURL
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_SetTier,
+  Operation.Blob_SetTier
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_GetAccountInfo,
+  Operation.Blob_GetAccountInfo
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_GetAccountInfoWithHead,
+  Operation.Blob_GetAccountInfoWithHead
+);
+blobOperationToDfsOpeation.set(BlobOperation.Blob_Query, Operation.Blob_Query);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_GetTags,
+  Operation.Blob_GetTags
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.Blob_SetTags,
+  Operation.Blob_SetTags
+);
+//PageBlob
+blobOperationToDfsOpeation.set(
+  BlobOperation.PageBlob_Create,
+  Operation.PageBlob_Create
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.PageBlob_UploadPages,
+  Operation.PageBlob_UploadPages
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.PageBlob_ClearPages,
+  Operation.PageBlob_ClearPages
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.PageBlob_UploadPagesFromURL,
+  Operation.PageBlob_UploadPagesFromURL
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.PageBlob_GetPageRanges,
+  Operation.PageBlob_GetPageRanges
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.PageBlob_GetPageRangesDiff,
+  Operation.PageBlob_GetPageRangesDiff
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.PageBlob_Resize,
+  Operation.PageBlob_Resize
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.PageBlob_UpdateSequenceNumber,
+  Operation.PageBlob_UpdateSequenceNumber
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.PageBlob_CopyIncremental,
+  Operation.PageBlob_CopyIncremental
+);
+//AppendBlob
+blobOperationToDfsOpeation.set(
+  BlobOperation.AppendBlob_Create,
+  Operation.AppendBlob_Create
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.AppendBlob_AppendBlock,
+  Operation.AppendBlob_AppendBlock
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.AppendBlob_AppendBlockFromUrl,
+  Operation.AppendBlob_AppendBlockFromUrl
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.AppendBlob_Seal,
+  Operation.AppendBlob_Seal
+);
+//BlokcBlob
+blobOperationToDfsOpeation.set(
+  BlobOperation.BlockBlob_Upload,
+  Operation.BlockBlob_Upload
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.BlockBlob_PutBlobFromUrl,
+  Operation.BlockBlob_PutBlobFromUrl
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.BlockBlob_StageBlock,
+  Operation.BlockBlob_StageBlock
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.BlockBlob_StageBlockFromURL,
+  Operation.BlockBlob_StageBlockFromURL
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.BlockBlob_CommitBlockList,
+  Operation.BlockBlob_CommitBlockList
+);
+blobOperationToDfsOpeation.set(
+  BlobOperation.BlockBlob_GetBlockList,
+  Operation.BlockBlob_GetBlockList
+);
+
+const DfsOperationToBlobOpeation = new Map<
+  Operation,
+  BlobOperation | undefined
+>();
+
+//Service
+DfsOperationToBlobOpeation.set(Operation.Service_ListFileSystems, undefined);
+DfsOperationToBlobOpeation.set(
+  Operation.Service_SetProperties,
+  BlobOperation.Service_SetProperties
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Service_GetProperties,
+  BlobOperation.Service_GetProperties
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Service_GetStatistics,
+  BlobOperation.Service_GetStatistics
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Service_ListContainersSegment,
+  BlobOperation.Service_ListContainersSegment
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Service_GetUserDelegationKey,
+  BlobOperation.Service_GetUserDelegationKey
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Service_GetAccountInfo,
+  BlobOperation.Service_GetAccountInfo
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Service_GetAccountInfoWithHead,
+  BlobOperation.Service_GetAccountInfoWithHead
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Service_SubmitBatch,
+  BlobOperation.Service_SubmitBatch
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Service_FilterBlobs,
+  BlobOperation.Service_FilterBlobs
+);
+//Filesystem
+DfsOperationToBlobOpeation.set(Operation.FileSystem_Create, undefined);
+DfsOperationToBlobOpeation.set(Operation.FileSystem_SetProperties, undefined);
+DfsOperationToBlobOpeation.set(Operation.FileSystem_GetProperties, undefined);
+DfsOperationToBlobOpeation.set(Operation.FileSystem_Delete, undefined);
+DfsOperationToBlobOpeation.set(Operation.FileSystem_ListPaths, undefined);
+DfsOperationToBlobOpeation.set(
+  Operation.FileSystem_ListBlobFlatSegment,
+  BlobOperation.Container_ListBlobFlatSegment
+);
+DfsOperationToBlobOpeation.set(
+  Operation.FileSystem_ListBlobHierarchySegment,
+  BlobOperation.Container_ListBlobHierarchySegment
+);
+//Path
+DfsOperationToBlobOpeation.set(Operation.Path_Create, undefined);
+DfsOperationToBlobOpeation.set(Operation.Path_Update, undefined);
+DfsOperationToBlobOpeation.set(Operation.Path_Lease, undefined);
+DfsOperationToBlobOpeation.set(
+  Operation.Path_Read,
+  BlobOperation.Blob_Download
+);
+DfsOperationToBlobOpeation.set(Operation.Path_GetProperties, undefined);
+DfsOperationToBlobOpeation.set(
+  Operation.Path_Delete,
+  BlobOperation.Blob_Delete
+);
+DfsOperationToBlobOpeation.set(Operation.Path_SetAccessControl, undefined);
+DfsOperationToBlobOpeation.set(
+  Operation.Path_SetAccessControlRecursive,
+  undefined
+);
+DfsOperationToBlobOpeation.set(Operation.Path_SetProperties, undefined);
+DfsOperationToBlobOpeation.set(Operation.Path_FlushData, undefined);
+DfsOperationToBlobOpeation.set(Operation.Path_AppendData, undefined);
+DfsOperationToBlobOpeation.set(
+  Operation.Path_SetExpiry,
+  BlobOperation.Blob_SetExpiry
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Path_Undelete,
+  BlobOperation.Blob_Undelete
+);
+//Container
+DfsOperationToBlobOpeation.set(
+  Operation.Container_Create,
+  BlobOperation.Container_Create
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Container_GetProperties,
+  BlobOperation.Container_GetProperties
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Container_GetPropertiesWithHead,
+  BlobOperation.Container_GetPropertiesWithHead
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Container_Delete,
+  BlobOperation.Container_Delete
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Container_SetMetadata,
+  BlobOperation.Container_SetMetadata
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Container_GetAccessPolicy,
+  BlobOperation.Container_GetAccessPolicy
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Container_SetAccessPolicy,
+  BlobOperation.Container_SetAccessPolicy
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Container_Restore,
+  BlobOperation.Container_Restore
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Container_SubmitBatch,
+  BlobOperation.Container_SubmitBatch
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Container_FilterBlobs,
+  BlobOperation.Container_FilterBlobs
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Container_AcquireLease,
+  BlobOperation.Container_AcquireLease
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Container_ReleaseLease,
+  BlobOperation.Container_ReleaseLease
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Container_RenewLease,
+  BlobOperation.Container_RenewLease
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Container_BreakLease,
+  BlobOperation.Container_BreakLease
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Container_ChangeLease,
+  BlobOperation.Container_ChangeLease
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Container_GetAccountInfo,
+  BlobOperation.Container_GetAccountInfo
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Container_GetAccountInfoWithHead,
+  BlobOperation.Container_GetAccountInfoWithHead
+);
+//PageBlob
+DfsOperationToBlobOpeation.set(
+  Operation.PageBlob_Create,
+  BlobOperation.PageBlob_Create
+);
+DfsOperationToBlobOpeation.set(
+  Operation.PageBlob_UploadPages,
+  BlobOperation.PageBlob_UploadPages
+);
+DfsOperationToBlobOpeation.set(
+  Operation.PageBlob_ClearPages,
+  BlobOperation.PageBlob_ClearPages
+);
+DfsOperationToBlobOpeation.set(
+  Operation.PageBlob_UploadPagesFromURL,
+  BlobOperation.PageBlob_UploadPagesFromURL
+);
+DfsOperationToBlobOpeation.set(
+  Operation.PageBlob_GetPageRanges,
+  BlobOperation.PageBlob_GetPageRanges
+);
+DfsOperationToBlobOpeation.set(
+  Operation.PageBlob_GetPageRangesDiff,
+  BlobOperation.PageBlob_GetPageRangesDiff
+);
+DfsOperationToBlobOpeation.set(
+  Operation.PageBlob_Resize,
+  BlobOperation.PageBlob_Resize
+);
+DfsOperationToBlobOpeation.set(
+  Operation.PageBlob_UpdateSequenceNumber,
+  BlobOperation.PageBlob_UpdateSequenceNumber
+);
+DfsOperationToBlobOpeation.set(
+  Operation.PageBlob_CopyIncremental,
+  BlobOperation.PageBlob_CopyIncremental
+);
+//AppendBlob
+DfsOperationToBlobOpeation.set(
+  Operation.AppendBlob_Create,
+  BlobOperation.AppendBlob_Create
+);
+DfsOperationToBlobOpeation.set(
+  Operation.AppendBlob_AppendBlock,
+  BlobOperation.AppendBlob_AppendBlock
+);
+DfsOperationToBlobOpeation.set(
+  Operation.AppendBlob_AppendBlockFromUrl,
+  BlobOperation.AppendBlob_AppendBlockFromUrl
+);
+DfsOperationToBlobOpeation.set(
+  Operation.AppendBlob_Seal,
+  BlobOperation.AppendBlob_Seal
+);
+//BlockBlob
+DfsOperationToBlobOpeation.set(
+  Operation.BlockBlob_Upload,
+  BlobOperation.BlockBlob_Upload
+);
+DfsOperationToBlobOpeation.set(
+  Operation.BlockBlob_PutBlobFromUrl,
+  BlobOperation.BlockBlob_PutBlobFromUrl
+);
+DfsOperationToBlobOpeation.set(
+  Operation.BlockBlob_StageBlock,
+  BlobOperation.BlockBlob_StageBlock
+);
+DfsOperationToBlobOpeation.set(
+  Operation.BlockBlob_StageBlockFromURL,
+  BlobOperation.BlockBlob_StageBlockFromURL
+);
+DfsOperationToBlobOpeation.set(
+  Operation.BlockBlob_CommitBlockList,
+  BlobOperation.BlockBlob_CommitBlockList
+);
+DfsOperationToBlobOpeation.set(
+  Operation.BlockBlob_GetBlockList,
+  BlobOperation.BlockBlob_GetBlockList
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_Undelete,
+  BlobOperation.Blob_Undelete
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_SetExpiry,
+  BlobOperation.Blob_SetExpiry
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_SetHTTPHeaders,
+  BlobOperation.Blob_SetHTTPHeaders
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_SetImmutabilityPolicy,
+  BlobOperation.Blob_SetImmutabilityPolicy
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_DeleteImmutabilityPolicy,
+  BlobOperation.Blob_DeleteImmutabilityPolicy
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_SetLegalHold,
+  BlobOperation.Blob_SetLegalHold
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_SetMetadata,
+  BlobOperation.Blob_SetMetadata
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_AcquireLease,
+  BlobOperation.Blob_AcquireLease
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_ReleaseLease,
+  BlobOperation.Blob_ReleaseLease
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_RenewLease,
+  BlobOperation.Blob_RenewLease
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_ChangeLease,
+  BlobOperation.Blob_ChangeLease
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_BreakLease,
+  BlobOperation.Blob_BreakLease
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_CreateSnapshot,
+  BlobOperation.Blob_CreateSnapshot
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_StartCopyFromURL,
+  BlobOperation.Blob_StartCopyFromURL
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_CopyFromURL,
+  BlobOperation.Blob_CopyFromURL
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_AbortCopyFromURL,
+  BlobOperation.Blob_AbortCopyFromURL
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_SetTier,
+  BlobOperation.Blob_SetTier
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_GetAccountInfo,
+  BlobOperation.Blob_GetAccountInfo
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_GetAccountInfoWithHead,
+  BlobOperation.Blob_GetAccountInfoWithHead
+);
+DfsOperationToBlobOpeation.set(Operation.Blob_Query, BlobOperation.Blob_Query);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_GetTags,
+  BlobOperation.Blob_GetTags
+);
+DfsOperationToBlobOpeation.set(
+  Operation.Blob_SetTags,
+  BlobOperation.Blob_SetTags
+);

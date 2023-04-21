@@ -23,16 +23,22 @@ import TableConfiguration from "./table/TableConfiguration";
 import TableServer from "./table/TableServer";
 
 import { DEFAULT_TABLE_LOKI_DB_PATH } from "./table/utils/constants";
+import { DataLakeServerFactory } from "./dfs/DataLakeServerFactory";
+import DataLakeServer from "./dfs/DataLakeServer";
+import SqlDataLakeServer from "./dfs/SqlDataLakeServer";
 
 // tslint:disable:no-console
 
 function shutdown(
   blobServer: BlobServer | SqlBlobServer,
   queueServer: QueueServer,
-  tableServer: TableServer
+  tableServer: TableServer,
+  dfsServer: DataLakeServer | SqlDataLakeServer
 ) {
   const blobBeforeCloseMessage = `Azurite Blob service is closing...`;
   const blobAfterCloseMessage = `Azurite Blob service successfully closed`;
+  const dfsBeforeCloseMessage = `Azurite DataLake service is closing...`;
+  const dfsAfterCloseMessage = `Azurite DataLake service successfully closed`;
   const queueBeforeCloseMessage = `Azurite Queue service is closing...`;
   const queueAfterCloseMessage = `Azurite Queue service successfully closed`;
   const tableBeforeCloseMessage = `Azurite Table service is closing...`;
@@ -51,6 +57,11 @@ function shutdown(
   console.log(tableBeforeCloseMessage);
   tableServer.close().then(() => {
     console.log(tableAfterCloseMessage);
+  });
+
+  console.log(dfsBeforeCloseMessage);
+  dfsServer.close().then(() => {
+    console.log(dfsAfterCloseMessage);
   });
 }
 
@@ -74,6 +85,10 @@ async function main() {
   const blobServerFactory = new BlobServerFactory();
   const blobServer = await blobServerFactory.createServer(env);
   const blobConfig = blobServer.config;
+
+  const dfsServerFactory = new DataLakeServerFactory();
+  const dfsServer = await dfsServerFactory.createServer(env);
+  const dfsConfig = dfsServer.config;
 
   // TODO: Align with blob DEFAULT_BLOB_PERSISTENCE_ARRAY
   // TODO: Join for all paths in the array
@@ -157,15 +172,28 @@ async function main() {
     `Azurite Table service is successfully listening at ${tableServer.getHttpServerAddress()}`
   );
 
+  // Start server
+  console.log(
+    `Azurite DataLake service is starting at ${dfsConfig.getHttpServerAddress()}`
+  );
+  await dfsServer.start();
+  console.log(
+    `Azurite DataLake service is successfully listening at ${dfsConfig.getHttpServerAddress()}`
+  );
+
   // Handle close event
   process
     .once("message", (msg) => {
       if (msg === "shutdown") {
-        shutdown(blobServer, queueServer, tableServer);
+        shutdown(blobServer, queueServer, tableServer, dfsServer);
       }
     })
-    .once("SIGINT", () => shutdown(blobServer, queueServer, tableServer))
-    .once("SIGTERM", () => shutdown(blobServer, queueServer, tableServer));
+    .once("SIGINT", () =>
+      shutdown(blobServer, queueServer, tableServer, dfsServer)
+    )
+    .once("SIGTERM", () =>
+      shutdown(blobServer, queueServer, tableServer, dfsServer)
+    );
 }
 
 main().catch((err) => {
