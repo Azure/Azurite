@@ -92,15 +92,15 @@ import PageWithDelimiter from "./PageWithDelimiter";
  */
 export default class LokiBlobMetadataStore
   implements IBlobMetadataStore, IGCExtentProvider {
-  private readonly db: Loki;
+  protected readonly db: Loki;
 
   private initialized: boolean = false;
   private closed: boolean = true;
 
   private readonly SERVICES_COLLECTION = "$SERVICES_COLLECTION$";
-  private readonly CONTAINERS_COLLECTION = "$CONTAINERS_COLLECTION$";
-  private readonly BLOBS_COLLECTION = "$BLOBS_COLLECTION$";
-  private readonly BLOCKS_COLLECTION = "$BLOCKS_COLLECTION$";
+  protected readonly CONTAINERS_COLLECTION = "$CONTAINERS_COLLECTION$";
+  protected readonly BLOBS_COLLECTION = "$BLOBS_COLLECTION$";
+  protected readonly BLOCKS_COLLECTION = "$BLOCKS_COLLECTION$";
 
   private readonly pageBlobRangesManager = new PageBlobRangesManager();
 
@@ -418,7 +418,8 @@ export default class LokiBlobMetadataStore
     const res: GetContainerPropertiesResponse = {
       name: container,
       properties: doc.properties,
-      metadata: doc.metadata
+      metadata: doc.metadata,
+      fileSystemProperties: doc.fileSystemProperties,
     };
 
     return res;
@@ -1049,7 +1050,12 @@ export default class LokiBlobMetadataStore
           ? undefined
           : doc.committedBlocksInOrder.slice(),
       persistency:
-        doc.persistency === undefined ? undefined : { ...doc.persistency }
+        doc.persistency === undefined ? undefined : { ...doc.persistency },
+      isDirectory: doc.isDirectory,
+      permissions: doc.permissions,
+      acl: doc.acl,
+      owner: doc.owner,
+      group: doc.group
     };
 
     new BlobLeaseSyncer(snapshotBlob).sync({
@@ -1912,7 +1918,12 @@ export default class LokiBlobMetadataStore
       leaseBreakTime:
         destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
       committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
-      persistency: sourceBlob.persistency
+      persistency: sourceBlob.persistency,
+      isDirectory: sourceBlob.isDirectory,
+      permissions: sourceBlob.permissions,
+      acl: sourceBlob.acl,
+      owner: sourceBlob.owner,
+      group: sourceBlob.group
     };
 
     if (
@@ -2098,7 +2109,12 @@ export default class LokiBlobMetadataStore
       leaseBreakTime:
         destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
       committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
-      persistency: sourceBlob.persistency
+      persistency: sourceBlob.persistency,
+      isDirectory: sourceBlob.isDirectory,
+      permissions: sourceBlob.permissions,
+      acl: sourceBlob.acl,
+      owner: sourceBlob.owner,
+      group: sourceBlob.group
     };
 
     if (
@@ -3000,12 +3016,12 @@ export default class LokiBlobMetadataStore
    * LokiJS will persist Uint8Array into Object.
    * This method will restore object to Uint8Array.
    *
-   * @private
+   * @protected
    * @param {*} obj
    * @returns {(Uint8Array | undefined)}
    * @memberof LokiBlobMetadataStore
    */
-  private restoreUint8Array(obj: any): Uint8Array | undefined {
+  protected restoreUint8Array(obj: any): Uint8Array | undefined {
     if (typeof obj !== "object") {
       return undefined;
     }
@@ -3037,12 +3053,12 @@ export default class LokiBlobMetadataStore
   /**
    * Escape a string to be used as a regex.
    *
-   * @private
+   * @protected
    * @param {string} regex
    * @returns {string}
    * @memberof LokiBlobMetadataStore
    */
-  private escapeRegex(regex: string): string {
+  protected escapeRegex(regex: string): string {
     return regex.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
   }
 
@@ -3063,14 +3079,14 @@ export default class LokiBlobMetadataStore
    * Updated lease related properties according to current time.
    * Will throw ContainerNotFound storage error if container doesn't exist.
    *
-   * @private
+   * @protected
    * @param {string} account
    * @param {string} container
    * @param {Context} context
    * @returns {Promise<ContainerModel>}
    * @memberof LokiBlobMetadataStore
    */
-  private async getContainerWithLeaseUpdated(
+  protected async getContainerWithLeaseUpdated(
     account: string,
     container: string,
     context: Context,
@@ -3082,7 +3098,7 @@ export default class LokiBlobMetadataStore
    * Updated lease related properties according to current time.
    * Will NOT throw ContainerNotFound storage error if container doesn't exist.
    *
-   * @private
+   * @protected
    * @param {string} account
    * @param {string} container
    * @param {Context} context
@@ -3090,14 +3106,14 @@ export default class LokiBlobMetadataStore
    * @returns {(Promise<ContainerModel | undefined>)}
    * @memberof LokiBlobMetadataStore
    */
-  private async getContainerWithLeaseUpdated(
+  protected async getContainerWithLeaseUpdated(
     account: string,
     container: string,
     context: Context,
     forceExist: false
   ): Promise<ContainerModel | undefined>;
 
-  private async getContainerWithLeaseUpdated(
+  protected async getContainerWithLeaseUpdated(
     account: string,
     container: string,
     context: Context,
@@ -3185,7 +3201,7 @@ export default class LokiBlobMetadataStore
    * Get a blob document model from Loki collection.
    * Will throw BlobNotFound storage error if blob doesn't exist.
    *
-   * @private
+   * @protected
    * @param {string} account
    * @param {string} container
    * @param {string} blob
@@ -3196,7 +3212,7 @@ export default class LokiBlobMetadataStore
    * @returns {Promise<BlobModel>}
    * @memberof LokiBlobMetadataStore
    */
-  private async getBlobWithLeaseUpdated(
+  protected async getBlobWithLeaseUpdated(
     account: string,
     container: string,
     blob: string,
@@ -3210,7 +3226,7 @@ export default class LokiBlobMetadataStore
    * Get a blob document model from Loki collection.
    * Will NOT throw BlobNotFound storage error if blob doesn't exist.
    *
-   * @private
+   * @protected
    * @param {string} account
    * @param {string} container
    * @param {string} blob
@@ -3221,7 +3237,7 @@ export default class LokiBlobMetadataStore
    * @returns {(Promise<BlobModel | undefined>)}
    * @memberof LokiBlobMetadataStore
    */
-  private async getBlobWithLeaseUpdated(
+  protected async getBlobWithLeaseUpdated(
     account: string,
     container: string,
     blob: string,
@@ -3231,7 +3247,7 @@ export default class LokiBlobMetadataStore
     forceCommitted?: boolean
   ): Promise<BlobModel | undefined>;
 
-  private async getBlobWithLeaseUpdated(
+  protected async getBlobWithLeaseUpdated(
     account: string,
     container: string,
     blob: string,

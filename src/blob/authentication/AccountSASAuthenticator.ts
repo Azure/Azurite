@@ -2,7 +2,6 @@ import IAccountDataStore from "../../common/IAccountDataStore";
 import ILogger from "../../common/ILogger";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import { BlobType } from "../generated/artifacts/models";
-import Operation from "../generated/artifacts/operation";
 import Context from "../generated/Context";
 import IRequest from "../generated/IRequest";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
@@ -11,12 +10,13 @@ import {
   generateAccountSASSignature,
   IAccountSASSignatureValues
 } from "../../common/authentication/IAccountSASSignatureValues";
-import IAuthenticator from "./IAuthenticator";
-import OPERATION_ACCOUNT_SAS_PERMISSIONS from "./OperationAccountSASPermission";
 import StrictModelNotSupportedError from "../errors/StrictModelNotSupportedError";
 import { AUTHENTICATION_BEARERTOKEN_REQUIRED } from "../utils/constants";
+import Operation from "../generated/artifacts/operation";
+import OPERATION_ACCOUNT_SAS_PERMISSIONS, { OperationAccountSASPermission } from "./OperationAccountSASPermission";
+import IAuthenticator from "./IAuthenticator";
 
-export default class AccountSASAuthenticator implements IAuthenticator {
+export default class AccountSASAuthenticator implements IAuthenticator  {
   public constructor(
     private readonly accountDataStore: IAccountDataStore,
     private readonly blobMetadataStore: IBlobMetadataStore,
@@ -198,14 +198,7 @@ export default class AccountSASAuthenticator implements IAuthenticator {
       );
     }
 
-    const operation = context.operation;
-    if (operation === undefined) {
-      throw new Error(
-        // tslint:disable-next-line:max-line-length
-        `AccountSASAuthenticator:validate() operation shouldn't be undefined. Please make sure DispatchMiddleware is hooked before authentication related middleware.`
-      );
-    }
-    else if (operation === Operation.Service_GetUserDelegationKey) {
+    if (context.operation === Operation.Service_GetUserDelegationKey) {
       this.logger.info(
         `AccountSASAuthenticator:validate() Service_GetUserDelegationKey requires OAuth credentials"
         }.`,
@@ -215,19 +208,17 @@ export default class AccountSASAuthenticator implements IAuthenticator {
         AUTHENTICATION_BEARERTOKEN_REQUIRED);
     }
 
-    const accountSASPermission = OPERATION_ACCOUNT_SAS_PERMISSIONS.get(
-      operation
-    );
+    const accountSASPermission = this.getOperationAccountSASPermission(context);
     this.logger.debug(
       `AccountSASAuthenticator:validate() Got permission requirements for operation ${
-        Operation[operation]
+        this.getOperationString(context)
       } - ${JSON.stringify(accountSASPermission)}`,
       context.contextId
     );
     if (accountSASPermission === undefined) {
       throw new Error(
         // tslint:disable-next-line:max-line-length
-        `AccountSASAuthenticator:validate() OPERATION_ACCOUNT_SAS_PERMISSIONS doesn't have configuration for operation ${Operation[operation]}'s account SAS permission.`
+        `AccountSASAuthenticator:validate() OPERATION_ACCOUNT_SAS_PERMISSIONS doesn't have configuration for operation ${this.getOperationString(context)}'s account SAS permission.`
       );
     }
 
@@ -254,15 +245,9 @@ export default class AccountSASAuthenticator implements IAuthenticator {
     // If page blob exists, then permission must be Write only
     // If append blob exists, then permission must be Write only
     // If copy destination blob exists, then permission must be Write only
-    if (
-      operation === Operation.BlockBlob_Upload ||
-      operation === Operation.PageBlob_Create ||
-      operation === Operation.AppendBlob_Create ||
-      operation === Operation.Blob_StartCopyFromURL ||
-      operation === Operation.Blob_CopyFromURL
-    ) {
+    if (this.isSpecialPermissions(context)) {
       this.logger.info(
-        `AccountSASAuthenticator:validate() For ${Operation[operation]}, if blob exists, the permission must be Write.`,
+        `AccountSASAuthenticator:validate() For ${this.getOperationString(context)}, if blob exists, the permission must be Write.`,
         context.contextId
       );
 
@@ -389,4 +374,26 @@ export default class AccountSASAuthenticator implements IAuthenticator {
 
     return true;
   }
+
+  protected isSpecialPermissions(context: Context): boolean {
+    const operation: Operation = context.operation!;
+    return operation === Operation.BlockBlob_Upload ||
+    operation === Operation.PageBlob_Create ||
+    operation === Operation.AppendBlob_Create ||
+    operation === Operation.Blob_StartCopyFromURL ||
+    operation === Operation.Blob_CopyFromURL
+  }
+  
+  protected getOperationAccountSASPermission(
+    context: Context
+  ): OperationAccountSASPermission | undefined {
+    return OPERATION_ACCOUNT_SAS_PERMISSIONS.get(context.operation!);
+  }
+
+  protected getOperationString(context: Context): string {
+    return Operation[context.operation!]
+  }
 }
+
+
+

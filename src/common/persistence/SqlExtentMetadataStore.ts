@@ -34,7 +34,8 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
    */
   public constructor(
     connectionURI: string,
-    sequelizeOptions?: SequelizeOptions
+    sequelizeOptions?: SequelizeOptions,
+    private readonly clearDB: boolean = false,
   ) {
     // Enable encrypt connection for SQL Server
     if (connectionURI.startsWith("mssql") && sequelizeOptions) {
@@ -74,8 +75,12 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
       { sequelize: this.sequelize, modelName: "Extents", timestamps: false }
     );
 
-    // TODO: Remove this part which only for test.
-    this.sequelize.sync();
+    if (this.clearDB) {
+      await this.sequelize.sync({ force: true });
+    } else {
+      // TODO: sync() is only for development purpose, use migration for production
+      await this.sequelize.sync();
+    }
 
     this.initialized = true;
   }

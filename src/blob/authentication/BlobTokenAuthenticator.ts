@@ -217,14 +217,13 @@ export default class BlobTokenAuthenticator implements IAuthenticator {
       );
     }
 
-    const blobContext = context as BlobStorageContext;
     let audMatch = false;
     let m;
-    for (const regex of VALID_BLOB_AUDIENCES) {
+    for (const regex of this.getValidAudiences()) {
       m = regex.exec(aud);
       if (m !== null) {
         if (m[0] === aud) {
-          if (m[1] !== undefined && m[1] !== blobContext.account) {
+          if (m[1] !== undefined && m[1] !== context.context.account) {
             // If account name doesn't match for fine grained audiance
             break;
           }
@@ -246,8 +245,12 @@ export default class BlobTokenAuthenticator implements IAuthenticator {
 
     this.logger.info(
       `BlobTokenAuthenticator:authenticateBasic() Validation against token authentication successfully.`,
-      blobContext.contextId
+      context.contextId
     );
     return true;
+  }
+
+  protected getValidAudiences(): RegExp[] {
+    return VALID_BLOB_AUDIENCES;
   }
 }

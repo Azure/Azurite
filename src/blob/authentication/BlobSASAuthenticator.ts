@@ -20,7 +20,8 @@ import {
 } from "./IBlobSASSignatureValues";
 import {
   OPERATION_BLOB_SAS_BLOB_PERMISSIONS,
-  OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS
+  OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS,
+  OperationBlobSASPermission
 } from "./OperationBlobSASPermission";
 
 export default class BlobSASAuthenticator implements IAuthenticator {
@@ -363,15 +364,8 @@ export default class BlobSASAuthenticator implements IAuthenticator {
         context.contextId!
       );
     }
-
-    const operation = context.operation;
-    if (operation === undefined) {
-      throw new Error(
-        // tslint:disable-next-line:max-line-length
-        `BlobSASAuthenticator:validate() Operation shouldn't be undefined. Please make sure DispatchMiddleware is hooked before authentication related middleware.`
-      );
-    }
-    else if (operation === Operation.Service_GetUserDelegationKey) {
+    
+    else if (context.operation === Operation.Service_GetUserDelegationKey) {
       this.logger.info(
         `BlobSASAuthenticator:validate() Service_GetUserDelegationKey requires OAuth credentials"
         }.`,
@@ -381,14 +375,10 @@ export default class BlobSASAuthenticator implements IAuthenticator {
         AUTHENTICATION_BEARERTOKEN_REQUIRED);
     }
 
-    const blobSASPermission =
-      resource === BlobSASResourceType.Blob
-        ? OPERATION_BLOB_SAS_BLOB_PERMISSIONS.get(operation)
-        : OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.get(operation);
-
+    const blobSASPermission = this.getOperationBlobSASPermission(resource, context);
     this.logger.debug(
       `BlobSASAuthenticator:validate() Got permission requirements for operation ${
-        Operation[operation]
+        this.getOperationString(context)
       } - ${JSON.stringify(blobSASPermission)}`,
       context.contextId
     );
@@ -400,7 +390,7 @@ export default class BlobSASAuthenticator implements IAuthenticator {
             ? "OPERATION_BLOB_SAS_BLOB_PERMISSIONS"
             : "OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS"
         } doesn't have configuration for operation ${
-          Operation[operation]
+          this.getOperationString(context)
         }'s blob service SAS permission.`
       );
     }
@@ -416,15 +406,9 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     // If page blob exists, then permission must be Write only
     // If append blob exists, then permission must be Write only
     // If copy destination blob exists, then permission must be Write only
-    if (
-      operation === Operation.BlockBlob_Upload ||
-      operation === Operation.PageBlob_Create ||
-      operation === Operation.AppendBlob_Create ||
-      operation === Operation.Blob_StartCopyFromURL ||
-      operation === Operation.Blob_CopyFromURL
-    ) {
+    if (this.isSpecialPermissions(context)) {
       this.logger.info(
-        `BlobSASAuthenticator:validate() For ${Operation[operation]}, if blob exists, the permission must be Write.`,
+        `BlobSASAuthenticator:validate() For ${this.getOperationString(context)}, if blob exists, the permission must be Write.`,
         context.contextId
       );
 
@@ -623,5 +607,27 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     }
 
     return true;
+  }
+
+  protected isSpecialPermissions(context: Context): boolean {
+    const operation: Operation = context.operation!;
+    return operation === Operation.BlockBlob_Upload ||
+    operation === Operation.PageBlob_Create ||
+    operation === Operation.AppendBlob_Create ||
+    operation === Operation.Blob_StartCopyFromURL ||
+    operation === Operation.Blob_CopyFromURL
+  }
+
+  protected getOperationBlobSASPermission(
+    resource: BlobSASResourceType, 
+    context: Context
+  ):  OperationBlobSASPermission | undefined {
+    return resource === BlobSASResourceType.Blob
+        ? OPERATION_BLOB_SAS_BLOB_PERMISSIONS.get(context.operation!)
+        : OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.get(context.operation!);
+  }
+
+  protected getOperationString(context: Context): string {
+    return Operation[context.operation!]
   }
 }

@@ -210,7 +210,12 @@ export default class BlobGCManager implements IGCManager {
   private async markSweep(): Promise<void> {
     // mark
     this.logger.info(`BlobGCManager:markSweep() Get all extents.`);
-    const allExtents = await this.getAllExtents();
+    let allExtents: Set<string>;
+    try {
+      allExtents = await this.getAllExtents();
+    } catch (err) {
+      return;
+    }
     this.logger.info(
       `BlobGCManager:markSweep() Got ${allExtents.size} extents.`
     );

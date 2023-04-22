@@ -18,10 +18,7 @@ import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
 import BlobGCManager from "./gc/BlobGCManager";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import LokiBlobMetadataStore from "./persistence/LokiBlobMetadataStore";
-
-const BEFORE_CLOSE_MESSAGE = `Azurite Blob service is closing...`;
-const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Blob service is closing... Critical error happens during GC.`;
-const AFTER_CLOSE_MESSAGE = `Azurite Blob service successfully closed`;
+import { DEFAULT_BLOB_LISTENING_PORT, DEFAULT_BLOB_SERVER_HOST_NAME } from "./utils/constants";
 
 /**
  * Default implementation of Azurite Blob HTTP server.
@@ -42,6 +39,9 @@ export default class BlobServer extends ServerBase implements ICleaner {
   private readonly extentStore: IExtentStore;
   private readonly accountDataStore: IAccountDataStore;
   private readonly gcManager: IGCManager;
+  private readonly BEFORE_CLOSE_MESSAGE;
+  private readonly BEFORE_CLOSE_MESSAGE_GC_ERROR;
+  private readonly AFTER_CLOSE_MESSAGE;
 
   /**
    * Creates an instance of Server.
@@ -49,9 +49,17 @@ export default class BlobServer extends ServerBase implements ICleaner {
    * @param {BlobConfiguration} configuration
    * @memberof Server
    */
-  constructor(configuration?: BlobConfiguration) {
+  constructor(
+    configuration?: BlobConfiguration, 
+    metadataStoreClass: any = LokiBlobMetadataStore,
+    requestListnerFactory: any = BlobRequestListenerFactory,
+    private readonly serviceName: string = "Blob"
+  ) {
     if (configuration === undefined) {
-      configuration = new BlobConfiguration();
+      configuration = new BlobConfiguration(
+        DEFAULT_BLOB_SERVER_HOST_NAME, 
+        DEFAULT_BLOB_LISTENING_PORT
+      )
     }
 
     const host = configuration.host;
@@ -72,7 +80,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
     // We can change the persistency layer implementation by
     // creating a new XXXDataStore class implementing IBlobMetadataStore interface
     // and replace the default LokiBlobMetadataStore
-    const metadataStore: IBlobMetadataStore = new LokiBlobMetadataStore(
+    const metadataStore: IBlobMetadataStore = new metadataStoreClass(
       configuration.metadataDBPath
       // logger
     );
@@ -92,7 +100,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
     // We can also change the HTTP framework here by
     // creating a new XXXListenerFactory implementing IRequestListenerFactory interface
     // and replace the default Express based request listener
-    const requestListenerFactory: IRequestListenerFactory = new BlobRequestListenerFactory(
+    const requestListenerFactory: IRequestListenerFactory = new requestListnerFactory(
       metadataStore,
       extentStore,
       accountDataStore,
@@ -114,17 +122,20 @@ export default class BlobServer extends ServerBase implements ICleaner {
       extentStore,
       () => {
         // tslint:disable-next-line:no-console
-        console.log(BEFORE_CLOSE_MESSAGE_GC_ERROR);
-        logger.info(BEFORE_CLOSE_MESSAGE_GC_ERROR);
+        console.log(this.BEFORE_CLOSE_MESSAGE_GC_ERROR);
+        logger.info(this.BEFORE_CLOSE_MESSAGE_GC_ERROR);
         this.close().then(() => {
           // tslint:disable-next-line:no-console
-          console.log(AFTER_CLOSE_MESSAGE);
-          logger.info(AFTER_CLOSE_MESSAGE);
+          console.log(this.AFTER_CLOSE_MESSAGE);
+          logger.info(this.AFTER_CLOSE_MESSAGE);
         });
       },
       logger
     );
 
+    this.BEFORE_CLOSE_MESSAGE = `Azurite ${serviceName} service is closing...`;
+    this.BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite ${serviceName} service is closing... Critical error happens during GC.`;
+    this.AFTER_CLOSE_MESSAGE = `Azurite ${serviceName} service successfully closed`;
     this.metadataStore = metadataStore;
     this.extentMetadataStore = extentMetadataStore;
     this.extentStore = extentStore;
@@ -158,11 +169,11 @@ export default class BlobServer extends ServerBase implements ICleaner {
       }
       return;
     }
-    throw Error(`Cannot clean up blob server in status ${this.getStatus()}.`);
+    throw Error(`Cannot clean up ${this.serviceName} server in status ${this.getStatus()}.`);
   }
 
   protected async beforeStart(): Promise<void> {
-    const msg = `Azurite Blob service is starting on ${this.host}:${this.port}`;
+    const msg = `Azurite ${this.serviceName} service is starting on ${this.host}:${this.port}`;
     logger.info(msg);
 
     if (this.accountDataStore !== undefined) {
@@ -187,12 +198,12 @@ export default class BlobServer extends ServerBase implements ICleaner {
   }
 
   protected async afterStart(): Promise<void> {
-    const msg = `Azurite Blob service successfully listens on ${this.getHttpServerAddress()}`;
+    const msg = `Azurite ${this.serviceName} service successfully listens on ${this.getHttpServerAddress()}`;
     logger.info(msg);
   }
 
   protected async beforeClose(): Promise<void> {
-    logger.info(BEFORE_CLOSE_MESSAGE);
+    logger.info(this.BEFORE_CLOSE_MESSAGE);
   }
 
   protected async afterClose(): Promise<void> {
@@ -216,6 +227,6 @@ export default class BlobServer extends ServerBase implements ICleaner {
       await this.accountDataStore.close();
     }
 
-    logger.info(AFTER_CLOSE_MESSAGE);
+    logger.info(this.AFTER_CLOSE_MESSAGE);
   }
 }
