@@ -22,6 +22,7 @@ export default abstract class ConfigurationBase {
     public readonly pwd: string = "",
     public readonly oauth?: string,
     public readonly disableProductStyleUrl: boolean = false,
+    public readonly clearDB: boolean = false,
   ) {}
 
   public hasCert() {

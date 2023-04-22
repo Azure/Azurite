@@ -4,9 +4,11 @@ import BlobConfiguration from "../blob/BlobConfiguration";
 import BlobServer from "../blob/BlobServer";
 import {
   DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
+  DEFAULT_BLOB_LISTENING_PORT,
   DEFAULT_BLOB_LOKI_DB_PATH,
   DEFAULT_BLOB_PERSISTENCE_ARRAY,
-  DEFAULT_BLOB_PERSISTENCE_PATH
+  DEFAULT_BLOB_PERSISTENCE_PATH,
+  DEFAULT_BLOB_SERVER_HOST_NAME
 } from "../blob/utils/constants";
 import * as Logger from "./Logger";
 import NoLoggerStrategy from "./NoLoggerStrategy";
@@ -72,8 +74,8 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
 
     // Initialize server configuration
     const config = new BlobConfiguration(
-      env.blobHost(),
-      env.blobPort(),
+      env.blobHost() || DEFAULT_BLOB_SERVER_HOST_NAME,
+      env.blobPort() || DEFAULT_BLOB_LISTENING_PORT,
       join(location, DEFAULT_BLOB_LOKI_DB_PATH),
       join(location, DEFAULT_BLOB_EXTENT_LOKI_DB_PATH),
       DEFAULT_BLOB_PERSISTENCE_ARRAY,

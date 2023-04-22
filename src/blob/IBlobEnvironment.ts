@@ -1,6 +1,11 @@
 export default interface IBlobEnvironment {
+  //dfs
+  datalakeHost(): string | undefined;
+  datalakePort(): number | undefined;
+  //blob
   blobHost(): string | undefined;
   blobPort(): number | undefined;
+  //common
   location(): Promise<string>;
   silent(): boolean;
   loose(): boolean;

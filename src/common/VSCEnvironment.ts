@@ -15,6 +15,14 @@ export default class VSCEnvironment implements IEnvironment {
     return this.workspaceConfiguration.get<number>("blobPort");
   }
 
+  public datalakeHost(): string | undefined {
+    return this.workspaceConfiguration.get<string>("datalakeHost");
+  }
+
+  public datalakePort(): number | undefined {
+    return this.workspaceConfiguration.get<number>("datalakePort");
+  }
+
   public queueHost(): string | undefined {
     return this.workspaceConfiguration.get<string>("queueHost");
   }

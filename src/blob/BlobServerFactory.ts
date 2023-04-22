@@ -7,16 +7,43 @@ import BlobServer from "./BlobServer";
 import IBlobEnvironment from "./IBlobEnvironment";
 import SqlBlobConfiguration from "./SqlBlobConfiguration";
 import SqlBlobServer from "./SqlBlobServer";
-import { DEFAULT_BLOB_PERSISTENCE_PATH } from "./utils/constants";
+import { DEFAULT_BLOB_LISTENING_PORT, DEFAULT_BLOB_PERSISTENCE_PATH, DEFAULT_BLOB_SERVER_HOST_NAME } from "./utils/constants";
 import {
   DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
   DEFAULT_BLOB_LOKI_DB_PATH,
   DEFAULT_BLOB_PERSISTENCE_ARRAY
 } from "./utils/constants";
+import { StoreDestinationArray } from "../common/persistence/IExtentStore";
 
 export class BlobServerFactory {
   public async createServer(
     blobEnvironment?: IBlobEnvironment
+  ): Promise<BlobServer | SqlBlobServer> {
+    return this.createActualServer(
+      blobEnvironment, 
+      DEFAULT_BLOB_PERSISTENCE_ARRAY, 
+      DEFAULT_BLOB_PERSISTENCE_PATH,
+      "AZURITE_DB",
+      DEFAULT_BLOB_SERVER_HOST_NAME,
+      DEFAULT_BLOB_LISTENING_PORT,
+      DEFAULT_BLOB_LOKI_DB_PATH,
+      DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
+      SqlBlobServer,
+      BlobServer
+    );
+  }
+
+  protected async createActualServer(
+    blobEnvironment: IBlobEnvironment | undefined,
+    persistenceArray: StoreDestinationArray,
+    persistencePath: string,
+    dbKey: string,
+    defaultHost: string,
+    defaultPort: number,
+    defaultLokiDBPath: string,
+    defaultExtentLokiDBPath: string,
+    sqlSeverClass: any,
+    blobServerClass: any,
   ): Promise<BlobServer | SqlBlobServer> {
     // TODO: Check it's in Visual Studio Code environment or not
     const isVSC = false;
@@ -32,22 +59,22 @@ export class BlobServerFactory {
         );
       }
 
-      DEFAULT_BLOB_PERSISTENCE_ARRAY[0].locationPath = join(
+      persistenceArray[0].locationPath = join(
         location,
-        DEFAULT_BLOB_PERSISTENCE_PATH
+        persistencePath
       );
 
       // TODO: Check we need to create blob server against SQL or Loki
-      const databaseConnectionString = process.env.AZURITE_DB;
+      const databaseConnectionString = process.env[dbKey];
       const isSQL = databaseConnectionString !== undefined;
 
       if (isSQL) {
         const config = new SqlBlobConfiguration(
-          env.blobHost(),
-          env.blobPort(),
+          env.blobHost() || defaultHost,
+          env.blobPort() || defaultPort,
           databaseConnectionString!,
           DEFAULT_SQL_OPTIONS,
-          DEFAULT_BLOB_PERSISTENCE_ARRAY,
+          persistenceArray,
           !env.silent(),
           undefined,
           debugFilePath !== undefined,
@@ -61,14 +88,14 @@ export class BlobServerFactory {
           env.disableProductStyleUrl()
         );
 
-        return new SqlBlobServer(config);
+        return new sqlSeverClass(config);
       } else {
         const config = new BlobConfiguration(
-          env.blobHost(),
-          env.blobPort(),
-          join(location, DEFAULT_BLOB_LOKI_DB_PATH),
-          join(location, DEFAULT_BLOB_EXTENT_LOKI_DB_PATH),
-          DEFAULT_BLOB_PERSISTENCE_ARRAY,
+          env.blobHost() || defaultHost,
+          env.blobPort() || defaultPort,
+          join(location, defaultLokiDBPath),
+          join(location, defaultExtentLokiDBPath),
+          persistenceArray,
           !env.silent(),
           undefined,
           debugFilePath !== undefined,
@@ -81,7 +108,7 @@ export class BlobServerFactory {
           env.oauth(),
           env.disableProductStyleUrl()
         );
-        return new BlobServer(config);
+        return new blobServerClass(config);
       }
     } else {
       // TODO: Add BlobServer construction in VSC

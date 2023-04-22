@@ -1,3 +1,5 @@
+import { Options as SequelizeOptions } from "sequelize";
+
 export const AZURITE_ACCOUNTS_ENV = "AZURITE_ACCOUNTS"; // Customize account name and keys by env
 export const DEFAULT_ACCOUNTS_REFRESH_INTERVAL = 60 * 1000; // 60s
 export const DEFAULT_FD_CACHE_NUMBER = 100;
@@ -21,19 +23,18 @@ export const NO_ACCOUNT_HOST_NAMES = new Set().add("host.docker.internal");
 // Use utf8mb4_bin instead of utf8mb4_general_ci to honor case sensitive
 // https://dev.mysql.com/doc/refman/8.0/en/case-sensitivity.html
 export const DEFAULT_SQL_COLLATE = "utf8mb4_bin";
-export const DEFAULT_SQL_OPTIONS = {
+export const DEFAULT_SQL_OPTIONS: SequelizeOptions = {
   logging: false,
   pool: {
-    max: 20,
+    max: 50,
     min: 0,
-    acquire: 30000,
-    idle: 10000
+    acquire: 100*1000,
+    idle: 10000,
   },
-  charset: DEFAULT_SQL_CHARSET,
-  collate: DEFAULT_SQL_COLLATE,
   dialectOptions: {
-    timezone: "+00:00"
-  }
+    timezone: "+00:00",
+    charset: DEFAULT_SQL_CHARSET,
+  },
 };
 
 export const BEARER_TOKEN_PREFIX = "Bearer";
