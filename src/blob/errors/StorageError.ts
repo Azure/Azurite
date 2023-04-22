@@ -12,6 +12,7 @@ export default class StorageError extends MiddlewareError {
   public readonly storageErrorCode: string;
   public readonly storageErrorMessage: string;
   public readonly storageRequestID: string;
+  public readonly storageAdditionalErrorMessages: { [key: string]: string };
 
   /**
    * Creates an instance of StorageError.
@@ -61,5 +62,6 @@ export default class StorageError extends MiddlewareError {
     this.storageErrorCode = storageErrorCode;
     this.storageErrorMessage = storageErrorMessage;
     this.storageRequestID = storageRequestID;
+    this.storageAdditionalErrorMessages = storageAdditionalErrorMessages;
   }
 }

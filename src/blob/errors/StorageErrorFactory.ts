@@ -736,7 +736,7 @@ export default class StorageErrorFactory {
     return new StorageError(
       400,
       "InvalidResourceName",
-      `The specifed resource name contains invalid characters.`,
+      `The specified resource name contains invalid characters.`,
       contextID
     );
   }

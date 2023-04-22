@@ -72,6 +72,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
 
   it("Should work with special container and blob names with unicode @loki @sql", async () => {
@@ -108,6 +109,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
 
   it("Should work with special container and blob names with / @loki @sql", async () => {
@@ -125,6 +127,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
 
   it("Should work with special container and blob names with / in URL string @loki @sql", async () => {
@@ -145,6 +148,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
 
   it("Should work with special container and blob names uppercase @loki @sql", async () => {
@@ -162,6 +166,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
 
   it("Should work with special container and blob names uppercase in URL string @loki @sql", async () => {
@@ -182,6 +187,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
 
   it("Should work with special blob names Chinese characters @loki @sql", async () => {
@@ -201,6 +207,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
 
   it("Should work with special blob names Chinese characters in URL string @loki @sql", async () => {
@@ -223,6 +230,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
 
   it("Should work with special blob name characters @loki @sql", async () => {
@@ -246,6 +254,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName.replace(/\\/g, "/"));
   });
 
   it("Should work with special blob name characters in URL string @loki @sql", async () => {
@@ -278,6 +287,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName.replace(/\\/g, "/"));
   });
 
   it("Should work with special blob name Russian URI encoded @loki @sql", async () => {
@@ -296,6 +306,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobNameEncoded);
   });
 
   it("Should work with special blob name Russian @loki @sql", async () => {
@@ -313,6 +324,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
 
   it("Should work with special blob name Russian in URL string @loki @sql", async () => {
@@ -333,6 +345,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
 
   it("Should work with special blob name Arabic URI encoded @loki @sql", async () => {
@@ -351,6 +364,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobNameEncoded);
   });
 
   it("Should work with special blob name Arabic @loki @sql", async () => {
@@ -368,6 +382,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
 
   it("Should work with special blob name Arabic in URL string @loki @sql", async () => {
@@ -388,6 +403,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
 
   it("Should work with special blob name Japanese URI encoded @loki @sql", async () => {
@@ -406,6 +422,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobNameEncoded);
   });
 
   it("Should work with special blob name Japanese @loki @sql", async () => {
@@ -423,6 +440,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
 
   it("Should work with special blob name Japanese in URL string @loki @sql", async () => {
@@ -443,6 +461,7 @@ describe("SpecialNaming", () => {
         .next()
     ).value;
     assert.notDeepEqual(response.segment.blobItems.length, 0);
+    assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
   });
 
   it(`Should work with production style URL when ${productionStyleHostName} is resolvable`, async () => {
@@ -482,6 +501,7 @@ describe("SpecialNaming", () => {
             .next()
         ).value;
         assert.notDeepEqual(response.segment.blobItems.length, 0);
+        assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
       },
       () => {
         // Cannot perform this test. We need devstoreaccount1.localhost to resolve to 127.0.0.1.
@@ -527,6 +547,7 @@ describe("SpecialNaming", () => {
             .next()
         ).value;
         assert.notDeepEqual(response.segment.blobItems.length, 0);
+        assert.deepStrictEqual(response.segment.blobItems[0].name, blobName);
       },
       () => {
         // Cannot perform this test. We need host.docker.internal to resolve to 127.0.0.1.
