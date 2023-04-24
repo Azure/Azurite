@@ -179,7 +179,7 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) {}
+    } catch (err) { /**/ }
     assert.ok(eventTriggered);
   }).timeout(timeoutForLargeFileUploadingTest);
 
@@ -198,7 +198,7 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) {}
+    } catch (err) { /**/ }
     assert.ok(eventTriggered);
   });
 
@@ -314,7 +314,7 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) {}
+    } catch (err) { /**/ }
     assert.ok(eventTriggered);
   }).timeout(timeoutForLargeFileUploadingTest);
 

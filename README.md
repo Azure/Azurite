@@ -82,6 +82,14 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
   - Create/List/Delete Containers
   - Create/Read/List/Update/Delete Block Blobs
   - Create/Read/List/Update/Delete Page Blobs
+- DataLake storage features align with Azure Storage API version 2022-11-02 (Refer to support matrix section below)
+
+   - SharedKey/Account SAS/Service SAS/Public Access Authentications/OAuth
+   - Get/Set FileSystem(Container) Properties
+   - Create/List/Delete FileSystems(analogous to containers)
+   - Create/Read/List/Update/Delete Paths(Files/Directories)
+   - Get/Set Paths Properties
+   - lease actions on Paths
 - Queue storage features align with Azure Storage API version 2022-11-02 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/OAuth
   - Get/Set Queue Service Properties
@@ -147,6 +155,12 @@ For example, to start blob service only:
 $ azurite-blob -l path/to/azurite/workspace
 ```
 
+start Data Lake service only:
+
+```bash
+$ azurite-datalake -l path/to/azurite/workspace
+```
+
 Start queue service only:
 
 ```bash
@@ -179,6 +193,9 @@ Extension supports following Visual Studio Code commands:
 - `Azurite: Start Table Service` Start table service
 - `Azurite: Close Table Service` Close table service
 - `Azurite: Clean Table Service` Clean table service
+- `Azurite: Start DataLake Service` Start DataLake service
+- `Azurite: Close DataLake Service` Close DataLake service
+- `Azurite: Clean DataLake Service` Clean DataLake service
 
 Following extension configurations are supported:
 
@@ -188,6 +205,8 @@ Following extension configurations are supported:
 - `azurite.queuePort` Queue service listening port, by default 10001
 - `azurite.tableHost` Table service listening endpoint, by default 127.0.0.1
 - `azurite.tablePort` Table service listening port, by default 10002
+- `azurite.datalakeHost` DataLake service listening endpoint, by default 127.0.0.1
+- `azurite.datalakePort` DataLake service listening port, by default 10003
 - `azurite.location` Workspace location folder path (can be relative or absolute). By default, in the VS Code extension, the currently opened folder is used. If launched from the command line, the current process working directory is the default. Relative paths are resolved relative to the default folder.
 - `azurite.silent` Silent mode to disable access log in Visual Studio channel, by default false
 - `azurite.debug` Output debug log into Azurite channel, by default false
@@ -206,12 +225,13 @@ Following extension configurations are supported:
 > Note. Find more docker images tags in https://mcr.microsoft.com/v2/azure-storage/azurite/tags/list
 
 ```bash
-docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite
+docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 -p 10003:10003 mcr.microsoft.com/azure-storage/azurite
 ```
 
 `-p 10000:10000` will expose blob service's default listening port.
 `-p 10001:10001` will expose queue service's default listening port.
 `-p 10002:10002` will expose table service's default listening port.
+`-p 10003:10003` will expose datalake service's default listening port.
 
 Or just run blob service:
 
@@ -230,7 +250,7 @@ docker run -p 10000:10000 -p 10001:10001 -v c:/azurite:/data mcr.microsoft.com/a
 #### Customize all Azurite V3 supported parameters for docker image
 
 ```bash
-docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0 --loose --skipApiVersionCheck --disableProductStyleUrl
+docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -p 6666:6666 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0 --datalakePort 6666 --datalakeHost 0.0.0.0 --loose --skipApiVersionCheck --disableProductStyleUrl
 ```
 
 Above command will try to start Azurite image with configurations:
@@ -251,13 +271,17 @@ Above command will try to start Azurite image with configurations:
 
 `--tableHost 0.0.0.0` defines table service listening endpoint to accept requests from host machine.
 
+`--datalakePort 6666` makes Azurite table service listen to port 6666, while `-p 6666:6666` redirects requests from host machine's port 6666 to docker instance.
+
+`--datalakeHost 0.0.0.0` defines table service listening endpoint to accept requests from host machine.
+
 `--loose` enables loose mode which ignore unsupported headers and parameters.
 
 `--skipApiVersionCheck` skip the request API version check.
 
 `--disableProductStyleUrl` force parsing storage account name from request Uri path, instead of from request Uri host.
 
-> If you use customized azurite paramters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
+> If you use customized azurite paramters for docker image, `--blobHost 0.0.0.0`, `--datalakeHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 
 > In above sample, you need to use **double first forward slash** for location and debug path parameters to avoid a [known issue](https://stackoverflow.com/questions/48427366/docker-build-command-add-c-program-files-git-to-the-path-passed-as-build-argu) for Git on Windows.
 
@@ -280,6 +304,7 @@ services:
       - "10000:10000"
       - "10001:10001"
       - "10002:10002"
+      - "10003:10003"
 ```
 
 ### NuGet
@@ -303,6 +328,7 @@ You can customize the listening address per your requirements.
 --blobHost 127.0.0.1
 --queueHost 127.0.0.1
 --tableHost 127.0.0.1
+--datalakeHost 127.0.0.1
 ```
 
 #### Allow Accepting Requests from Remote (potentially unsafe)
@@ -311,6 +337,7 @@ You can customize the listening address per your requirements.
 --blobHost 0.0.0.0
 --queueHost 0.0.0.0
 --tableHost 0.0.0.0
+--datalakeHost 0.0.0.0
 ```
 
 ### Listening Port Configuration
@@ -327,6 +354,7 @@ You can customize the listening port per your requirements.
 --blobPort 8888
 --queuePort 9999
 --tablePort 11111
+--datalakePort 2222
 ```
 
 #### Let System Auto Select an Available Port
@@ -335,6 +363,7 @@ You can customize the listening port per your requirements.
 --blobPort 0
 --queuePort 0
 --tablePort 0
+--datalakePort 0
 ```
 
 > Note: The port in use is displayed on Azurite startup.
@@ -473,21 +502,24 @@ Azurite will refresh customized account name and key from environment variable e
 
 By default, Azurite leverages [loki](https://github.com/techfort/LokiJS) as metadata database.
 However, as an in-memory database, loki limits Azurite's scalability and data persistency.
-Set environment variable `AZURITE_DB=dialect://[username][:password][@]host:port/database` to make Azurite blob service switch to a SQL database based metadata storage, like MySql, SqlServer.
+Set environment variable `AZURITE_DB=dialect://[username][:password][@]host:port/database` to make Azurite blob service switch to a SQL database based metadata storage, like MySql, SqlServer, PostgreSQL.
+Set environment variable `AZURITE_DATALAKE_DB=dialect://[username][:password][@]host:port/database` to make Azurite datalake service switch to a SQL database based metadata storage, like MySql, SqlServer, PostgreSQL.
 
 For example, connect to MySql or SqlServer by set environment variables:
 
 ```bash
 set AZURITE_DB=mysql://username:password@localhost:3306/azurite_blob
 set AZURITE_DB=mssql://username:password@localhost:1024/azurite_blob
+set AZURITE_DB=postgres://username:password@localhost:5432/azurite_blob
+set AZURITE_DATALAKE_DB=mysql://username:password@localhost:3306/azurite_datalake
+set AZURITE_DATALAKE_DB=mssql://username:password@localhost:1024/azurite_datalake
+set AZURITE_DATALAKE_DB=postgres://username:password@localhost:5432/azurite_datalake
 ```
 
 When Azurite starts with above environment variable, it connects to the configured database, and creates tables if not exist.
 This feature is in preview, when Azurite changes database table schema, you need to drop existing tables and let Azurite regenerate database tables.
 
 > Note. Need to manually create database before starting Azurite instance.
-
-> Note. Blob Copy & Page Blob are not supported by SQL based metadata implementation.
 
 > Tips. Create database instance quickly with docker, for example `docker run --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql:latest`. Grant external access and create database `azurite_blob` using `docker exec mysql mysql -u root -pmy-secret-pw -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES; create database azurite_blob;"`. Notice that, above commands are examples, you need to carefully define the access permissions in your production environment.
 
@@ -529,7 +561,7 @@ If you start Azurite with docker, you need to map the folder contains the cert a
 In following example, the local folder c:/azurite contains the cert and key files, and map it to /workspace on docker.
 
 ```bash
-docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 -v c:/azurite:/workspace  mcr.microsoft.com/azure-storage/azurite azurite --blobHost 0.0.0.0  --queueHost 0.0.0.0 --tableHost 0.0.0.0 --cert /workspace/127.0.0.1.pem --key /workspace/127.0.0.1-key.pem
+docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 -p 10003:10003 -v c:/azurite:/workspace  mcr.microsoft.com/azure-storage/azurite azurite --blobHost 0.0.0.0  --queueHost 0.0.0.0 --tableHost 0.0.0.0 --datalakeHost 0.0.0.0  --cert /workspace/127.0.0.1.pem --key /workspace/127.0.0.1-key.pem
 ```
 
 ##### OpenSSL
@@ -709,6 +741,21 @@ var client = new QueueClient("DefaultEndpointsProtocol=https;AccountName=devstor
 var client = new QueueClient(new Uri("https://127.0.0.1:10001/devstoreaccount1/queue-name"), new StorageSharedKeyCredential("devstoreaccount1", "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="));
 ```
 
+#### Azure DataLake
+
+You can also instantiate DataLakeFileSystemClient, DataLakeServiceClient, or DatalakeFileClient
+
+```csharp
+// With container url and DefaultAzureCredential
+var client = new DataLakeFileSystemClient(new Uri("https://127.0.0.1:10003/devstoreaccount1/filesystem-name"), new DefaultAzureCredential());
+
+// With connection string
+var client = new DataLakeFileSystemClient("DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=https://127.0.0.1:10003/devstoreaccount1;QueueEndpoint=https://127.0.0.1:10001/devstoreaccount1;", "filesystem-name");
+
+// With account name and key
+var client = new DataLakeFileSystemClient(new Uri("https://127.0.0.1:10003/devstoreaccount1/filesystem-name"), new StorageSharedKeyCredential("devstoreaccount1", "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="));
+```
+
 ### Storage Explorer
 
 #### Storage Explorer with Azurite HTTP
@@ -757,6 +804,9 @@ Following files or folders may be created when initializing Azurite in selected 
 - `azurite_db_blob.json` Metadata file used by Azurite blob service. (No when starting Azurite against external database)
 - `azurite_db_blob_extent.json` Extent metadata file used by Azurite blob service. (No when starting Azurite against external database)
 - `blobstorage` Persisted bindary data by Azurite blob service.
+- `azurite_db_datalake.json` Metadata file used by Azurite DataLake service. (No when starting Azurite against external database)
+- `azurite_db_datalake_extent.json` Extent metadata file used by Azurite DataLake service. (No when starting Azurite against external database)
+- `datalakestorage` Persisted bindary data by Azurite DataLake service.
 - `azurite_db_queue.json` Metadata file used by Azurite queue service. (No when starting Azurite against external database)
 - `azurite_db_queue_extent.json` Extent metadata file used by Azurite queue service. (No when starting Azurite against external database)
 - `queuestorage` Persisted bindary data by Azurite queue service.
@@ -810,6 +860,12 @@ The service endpoints for Azurite blob service:
 http://127.0.0.1:10000/<account-name>/<resource-path>
 ```
 
+The service endpoints for Azurite datalake service:
+
+```
+http://127.0.0.1:10003/<account-name>/<resource-path>
+```
+
 #### Production-style URL
 
 Optionally, you could modify your hosts file, to access an account with production-style URL.
@@ -820,6 +876,7 @@ First, add line(s) to your hosts file, like:
 127.0.0.1 account1.blob.localhost
 127.0.0.1 account1.queue.localhost
 127.0.0.1 account1.table.localhost
+127.0.0.1 account1.dfs.localhost
 ```
 
 Secondly, set environment variables to enable customized storage accounts & keys:
@@ -836,6 +893,10 @@ In the connection string below, it is assumed default ports are used.
 
 ```
 DefaultEndpointsProtocol=http;AccountName=account1;AccountKey=key1;BlobEndpoint=http://account1.blob.localhost:10000;QueueEndpoint=http://account1.queue.localhost:10001;TableEndpoint=http://account1.table.localhost:10002;
+```
+For dfs
+```
+DefaultEndpointsProtocol=http;AccountName=account1;AccountKey=key1;BlobEndpoint=http://account1.blob.localhost:10003;QueueEndpoint=http://account1.queue.localhost:10001;TableEndpoint=http://account1.table.localhost:10002;
 ```
 
 > Note. Do not access default account in this way with Azure Storage Explorer. There is a bug that Storage Explorer is always adding account name in URL path, causing failures.
@@ -978,6 +1039,55 @@ Detailed support matrix:
   - Encryption Scope
   - Get Page Ranges Continuation Token
   - Cold Tier
+
+Latest ersion supports for **2022-11-02** API version **datalake** service.
+
+- Supported Vertical Features
+
+   - CORS and Preflight
+   - SharedKey Authentication
+   - OAuth authentication
+   - Shared Access Signature Account Level
+   - Shared Access Signature Service Level (Not support response header override in service SAS)
+   - Container Public Access
+
+- Supported REST APIs
+
+   - FileSystem:
+      - Create FileSystem
+      - Delete FileSystem
+      - Get FileSystem Properties
+      - List FileSystems
+      - Set FileSystem Properties
+   - Path:
+      - Create Path
+      - Delete Path
+      - Get Path Properties
+      - Lease Opertaions on Path
+      - List paths
+      - Read Operation
+      - Update Path
+         - Append Data
+         - Flush Data
+         - Set Path Properties
+   - Blob:
+      - see above section for details
+
+- Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
+
+   - Path:
+      - Update Path
+         -  Parallel append/flush
+         -  Set Access Control (partially supported)
+         -  Set Access Control Recurisve ("set" only supported, "modify" and "remove" not supported)
+      - UnDelete Path
+      - expiry is partially supported
+   - Blob:
+      - see above section for details
+   - Other:
+      - content-crc64
+      - cpk info
+      - encryption scope
 
 Latest version supports for **2022-11-02** API version **queue** service.
 Detailed support matrix:

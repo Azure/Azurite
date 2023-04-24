@@ -85,26 +85,18 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
       context.contextId
     );
 
-    const operation = context.operation;
-    if (operation === undefined) {
-      throw new Error(
-        // tslint:disable-next-line:max-line-length
-        `PublicAccessAuthenticator:validate() Operation shouldn't be undefined. Please make sure DispatchMiddleware is hooked before authentication related middleware.`
-      );
-    }
-
     if (containerPublicAccessType === PublicAccessType.Container) {
-      if (CONTAINER_PUBLIC_READ_OPERATIONS.has(operation)) {
+      if (this.isContainerPublicReadOperation(context)) {
         this.logger.debug(
-          `PublicAccessAuthenticator:validate() Operation ${Operation[operation]} is in container level public access list. Validation passed.`,
+          `PublicAccessAuthenticator:validate() Operation ${this.getOperationString(context)} is in container level public access list. Validation passed.`,
           context.contextId
         );
         return true;
       }
     } else if (containerPublicAccessType === PublicAccessType.Blob) {
-      if (BLOB_PUBLIC_READ_OPERATIONS.has(operation)) {
+      if (this.isBlobPublicReadOperation(context)) {
         this.logger.debug(
-          `PublicAccessAuthenticator:validate() Operation ${Operation[operation]} is in blob level public access list. Validation passed.`,
+          `PublicAccessAuthenticator:validate() Operation ${this.getOperationString(context)} is in blob level public access list. Validation passed.`,
           context.contextId
         );
         return true;
@@ -116,7 +108,7 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
     }
 
     this.logger.debug(
-      `PublicAccessAuthenticator:validate() Operation ${Operation[operation]} is not in container neither blob level public access list. Validation failed.`,
+      `PublicAccessAuthenticator:validate() Operation ${this.getOperationString(context)} is not in container neither blob level public access list. Validation failed.`,
       context.contextId
     );
 
@@ -145,5 +137,17 @@ export default class PublicAccessAuthenticator implements IAuthenticator {
     } catch (err) {
       return undefined;
     }
+  }
+
+  protected isContainerPublicReadOperation(context: Context): boolean {
+    return CONTAINER_PUBLIC_READ_OPERATIONS.has(context.operation!)
+  }
+
+  protected isBlobPublicReadOperation(context: Context): boolean {
+    return BLOB_PUBLIC_READ_OPERATIONS.has(context.operation!);
+  }
+
+  protected getOperationString(context: Context): string {
+    return Operation[context.operation!]
   }
 }

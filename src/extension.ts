@@ -4,6 +4,7 @@ import VSCAccessLog from "./common/VSCAccessLog";
 import VSCNotification from "./common/VSCNotification";
 import VSCProgress from "./common/VSCProgress";
 import VSCServerManagerBlob from "./common/VSCServerManagerBlob";
+import VSCServerManagerDataLake from "./common/VSCServerManagerDataLake";
 import VSCServerManagerQueue from "./common/VSCServerManagerQueue";
 import VSCServerManagerTable from "./common/VSCServerManagerTable";
 import VSCStatusBarItem from "./common/VSCStatusBarItem";
@@ -11,6 +12,7 @@ import VSCStatusBarItem from "./common/VSCStatusBarItem";
 export function activate(context: ExtensionContext) {
   // Initialize server managers
   const blobServerManager = new VSCServerManagerBlob();
+  const dataLakeServerManager = new VSCServerManagerDataLake();
   const queueServerManager = new VSCServerManagerQueue();
   const tableServerManager = new VSCServerManagerTable();
 
@@ -27,21 +29,28 @@ export function activate(context: ExtensionContext) {
     tableServerManager,
     window.createStatusBarItem(StatusBarAlignment.Right, 1002)
   );
+  const vscDataLakeStatusBar = new VSCStatusBarItem(
+    dataLakeServerManager,
+    window.createStatusBarItem(StatusBarAlignment.Right, 1003)
+  );
 
   blobServerManager.addEventListener(vscBlobStatusBar);
   queueServerManager.addEventListener(vscQueueStatusBar);
   tableServerManager.addEventListener(vscTableStatusBar);
+  dataLakeServerManager.addEventListener(vscDataLakeStatusBar);
 
   // Hook up notification handlers
   const notification = new VSCNotification();
   blobServerManager.addEventListener(notification);
   queueServerManager.addEventListener(notification);
   tableServerManager.addEventListener(notification);
+  dataLakeServerManager.addEventListener(notification);
 
   // Hook up progress handlers
   blobServerManager.addEventListener(new VSCProgress());
   queueServerManager.addEventListener(new VSCProgress());
   tableServerManager.addEventListener(new VSCProgress());
+  dataLakeServerManager.addEventListener(new VSCProgress());
 
   // Hook up access log handlers
   blobServerManager.addEventListener(
@@ -53,22 +62,28 @@ export function activate(context: ExtensionContext) {
   tableServerManager.addEventListener(
     new VSCAccessLog(tableServerManager.accessChannelStream)
   );
+  dataLakeServerManager.addEventListener(
+    new VSCAccessLog(dataLakeServerManager.accessChannelStream)
+  );
 
   context.subscriptions.push(
     commands.registerCommand("azurite.start", () => {
       blobServerManager.start();
       queueServerManager.start();
       tableServerManager.start();
+      dataLakeServerManager.start();
     }),
     commands.registerCommand("azurite.close", () => {
       blobServerManager.close();
       queueServerManager.close();
       tableServerManager.close();
+      dataLakeServerManager.close();
     }),
     commands.registerCommand("azurite.clean", () => {
       blobServerManager.clean();
       queueServerManager.clean();
       tableServerManager.clean();
+      dataLakeServerManager.clean();
     }),
 
     commands.registerCommand(blobServerManager.getStartCommand(), async () => {
@@ -101,9 +116,23 @@ export function activate(context: ExtensionContext) {
       tableServerManager.clean();
     }),
 
+    commands.registerCommand(
+      dataLakeServerManager.getStartCommand(),
+      async () => {
+        await dataLakeServerManager.start();
+      }
+    ),
+    commands.registerCommand(dataLakeServerManager.getCloseCommand(), () => {
+      dataLakeServerManager.close();
+    }),
+    commands.registerCommand(dataLakeServerManager.getCleanCommand(), () => {
+      dataLakeServerManager.clean();
+    }),
+
     vscBlobStatusBar.statusBarItem,
     vscQueueStatusBar.statusBarItem,
-    vscTableStatusBar.statusBarItem
+    vscTableStatusBar.statusBarItem,
+    vscDataLakeStatusBar.statusBarItem
   );
 }
 
