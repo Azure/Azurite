@@ -99,8 +99,8 @@ export default class ServiceHandler
     const body = tableCtx.request!.getBody();
     const parsedBody = await parseXML(body || "");
     if (
-      !parsedBody.hasOwnProperty("cors") &&
-      !parsedBody.hasOwnProperty("Cors")
+      !Object.hasOwnProperty.bind(parsedBody)('cors')&&
+      !Object.hasOwnProperty.bind(parsedBody)('Cors')
     ) {
       tableServiceProperties.cors = undefined;
     }

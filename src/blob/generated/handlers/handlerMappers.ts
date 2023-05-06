@@ -8,7 +8,7 @@ export interface IHandlerPath {
   arguments: string[];
 }
 
-const operationHandlerMapping: {[key: number]: IHandlerPath} = {};
+const operationHandlerMapping: { [key: number]: IHandlerPath } = {};
 
 operationHandlerMapping[Operation.Service_SetProperties] = {
   arguments: [
@@ -55,7 +55,7 @@ operationHandlerMapping[Operation.Service_GetAccountInfo] = {
 operationHandlerMapping[Operation.Service_GetAccountInfoWithHead] = {
   arguments: [],
   handler: "serviceHandler",
-  method: "getAccountInfoWithHead"
+  method: "getAccountInfo"
 };
 operationHandlerMapping[Operation.Service_SubmitBatch] = {
   arguments: [
@@ -66,6 +66,13 @@ operationHandlerMapping[Operation.Service_SubmitBatch] = {
   ],
   handler: "serviceHandler",
   method: "submitBatch"
+};
+operationHandlerMapping[Operation.Service_FilterBlobs] = {
+  arguments: [
+    "options"
+  ],
+  handler: "serviceHandler",
+  method: "filterBlobs"
 };
 operationHandlerMapping[Operation.Container_Create] = {
   arguments: [
@@ -86,7 +93,7 @@ operationHandlerMapping[Operation.Container_GetPropertiesWithHead] = {
     "options"
   ],
   handler: "containerHandler",
-  method: "getPropertiesWithHead"
+  method: "getProperties"
 };
 operationHandlerMapping[Operation.Container_Delete] = {
   arguments: [
@@ -116,16 +123,29 @@ operationHandlerMapping[Operation.Container_SetAccessPolicy] = {
   handler: "containerHandler",
   method: "setAccessPolicy"
 };
+operationHandlerMapping[Operation.Container_Restore] = {
+  arguments: [
+    "options"
+  ],
+  handler: "containerHandler",
+  method: "restore"
+};
 operationHandlerMapping[Operation.Container_SubmitBatch] = {
   arguments: [
     "body",
     "contentLength",
     "multipartContentType",
-    "containerName",
     "options"
   ],
   handler: "containerHandler",
   method: "submitBatch"
+};
+operationHandlerMapping[Operation.Container_FilterBlobs] = {
+  arguments: [
+    "options"
+  ],
+  handler: "containerHandler",
+  method: "filterBlobs"
 };
 operationHandlerMapping[Operation.Container_AcquireLease] = {
   arguments: [
@@ -182,51 +202,16 @@ operationHandlerMapping[Operation.Container_ListBlobHierarchySegment] = {
   method: "listBlobHierarchySegment"
 };
 operationHandlerMapping[Operation.Container_GetAccountInfo] = {
-  arguments: [],
+  arguments: [
+  ],
   handler: "containerHandler",
   method: "getAccountInfo"
 };
 operationHandlerMapping[Operation.Container_GetAccountInfoWithHead] = {
-  arguments: [],
+  arguments: [
+  ],
   handler: "containerHandler",
-  method: "getAccountInfoWithHead"
-};
-operationHandlerMapping[Operation.Directory_Create] = {
-  arguments: [
-    "options"
-  ],
-  handler: "directoryHandler",
-  method: "create"
-};
-operationHandlerMapping[Operation.Directory_Rename] = {
-  arguments: [
-    "renameSource",
-    "options"
-  ],
-  handler: "directoryHandler",
-  method: "rename"
-};
-operationHandlerMapping[Operation.Directory_Delete] = {
-  arguments: [
-    "recursiveDirectoryDelete",
-    "options"
-  ],
-  handler: "directoryHandler",
-  method: "delete"
-};
-operationHandlerMapping[Operation.Directory_SetAccessControl] = {
-  arguments: [
-    "options"
-  ],
-  handler: "directoryHandler",
-  method: "setAccessControl"
-};
-operationHandlerMapping[Operation.Directory_GetAccessControl] = {
-  arguments: [
-    "options"
-  ],
-  handler: "directoryHandler",
-  method: "getAccessControl"
+  method: "getAccountInfo"
 };
 operationHandlerMapping[Operation.Blob_Download] = {
   arguments: [
@@ -249,28 +234,6 @@ operationHandlerMapping[Operation.Blob_Delete] = {
   handler: "blobHandler",
   method: "delete"
 };
-operationHandlerMapping[Operation.Blob_SetAccessControl] = {
-  arguments: [
-    "options"
-  ],
-  handler: "blobHandler",
-  method: "setAccessControl"
-};
-operationHandlerMapping[Operation.Blob_GetAccessControl] = {
-  arguments: [
-    "options"
-  ],
-  handler: "blobHandler",
-  method: "getAccessControl"
-};
-operationHandlerMapping[Operation.Blob_Rename] = {
-  arguments: [
-    "renameSource",
-    "options"
-  ],
-  handler: "blobHandler",
-  method: "rename"
-};
 operationHandlerMapping[Operation.Blob_Undelete] = {
   arguments: [
     "options"
@@ -278,12 +241,42 @@ operationHandlerMapping[Operation.Blob_Undelete] = {
   handler: "blobHandler",
   method: "undelete"
 };
+operationHandlerMapping[Operation.Blob_SetExpiry] = {
+  arguments: [
+    "expiryOptions",
+    "options"
+  ],
+  handler: "blobHandler",
+  method: "setExpiry"
+};
 operationHandlerMapping[Operation.Blob_SetHTTPHeaders] = {
   arguments: [
     "options"
   ],
   handler: "blobHandler",
   method: "setHTTPHeaders"
+};
+operationHandlerMapping[Operation.Blob_SetImmutabilityPolicy] = {
+  arguments: [
+    "options"
+  ],
+  handler: "blobHandler",
+  method: "setImmutabilityPolicy"
+};
+operationHandlerMapping[Operation.Blob_DeleteImmutabilityPolicy] = {
+  arguments: [
+    "options"
+  ],
+  handler: "blobHandler",
+  method: "deleteImmutabilityPolicy"
+};
+operationHandlerMapping[Operation.Blob_SetLegalHold] = {
+  arguments: [
+    "legalHold",
+    "options"
+  ],
+  handler: "blobHandler",
+  method: "setLegalHold"
 };
 operationHandlerMapping[Operation.Blob_SetMetadata] = {
   arguments: [
@@ -371,14 +364,37 @@ operationHandlerMapping[Operation.Blob_SetTier] = {
   method: "setTier"
 };
 operationHandlerMapping[Operation.Blob_GetAccountInfo] = {
-  arguments: [],
+  arguments: [
+  ],
   handler: "blobHandler",
   method: "getAccountInfo"
 };
 operationHandlerMapping[Operation.Blob_GetAccountInfoWithHead] = {
-  arguments: [],
+  arguments: [
+  ],
   handler: "blobHandler",
-  method: "getAccountInfoWithHead"
+  method: "getAccountInfo"
+};
+operationHandlerMapping[Operation.Blob_Query] = {
+  arguments: [
+    "options"
+  ],
+  handler: "blobHandler",
+  method: "query"
+};
+operationHandlerMapping[Operation.Blob_GetTags] = {
+  arguments: [
+    "options"
+  ],
+  handler: "blobHandler",
+  method: "getTags"
+};
+operationHandlerMapping[Operation.Blob_SetTags] = {
+  arguments: [
+    "options"
+  ],
+  handler: "blobHandler",
+  method: "setTags"
 };
 operationHandlerMapping[Operation.PageBlob_Create] = {
   arguments: [
@@ -426,7 +442,6 @@ operationHandlerMapping[Operation.PageBlob_GetPageRanges] = {
 };
 operationHandlerMapping[Operation.PageBlob_GetPageRangesDiff] = {
   arguments: [
-    "prevsnapshot",
     "options"
   ],
   handler: "pageBlobHandler",
@@ -482,6 +497,13 @@ operationHandlerMapping[Operation.AppendBlob_AppendBlockFromUrl] = {
   handler: "appendBlobHandler",
   method: "appendBlockFromUrl"
 };
+operationHandlerMapping[Operation.AppendBlob_Seal] = {
+  arguments: [
+    "options"
+  ],
+  handler: "appendBlobHandler",
+  method: "seal"
+};
 operationHandlerMapping[Operation.BlockBlob_Upload] = {
   arguments: [
     "body",
@@ -490,6 +512,15 @@ operationHandlerMapping[Operation.BlockBlob_Upload] = {
   ],
   handler: "blockBlobHandler",
   method: "upload"
+};
+operationHandlerMapping[Operation.BlockBlob_PutBlobFromUrl] = {
+  arguments: [
+    "contentLength",
+    "copySource",
+    "options"
+  ],
+  handler: "blockBlobHandler",
+  method: "putBlobFromUrl"
 };
 operationHandlerMapping[Operation.BlockBlob_StageBlock] = {
   arguments: [

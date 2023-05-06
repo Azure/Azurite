@@ -22,6 +22,7 @@ import { OAuthLevel } from "../../common/models";
 import { BEARER_TOKEN_PREFIX } from "../../common/utils/constants";
 import { decode } from "jsonwebtoken";
 import { getUserDelegationKeyValue } from "../utils/utils";
+import NotImplementedError from "../errors/NotImplementedError";
 
 /**
  * ServiceHandler handles Azure Storage Blob service related requests.
@@ -171,8 +172,8 @@ export default class ServiceHandler extends BaseHandler
     const body = blobCtx.request!.getBody();
     const parsedBody = await parseXML(body || "");
     if (
-      !parsedBody.hasOwnProperty("cors") &&
-      !parsedBody.hasOwnProperty("Cors")
+      !Object.hasOwnProperty.bind(parsedBody)('cors')&&
+      !Object.hasOwnProperty.bind(parsedBody)('Cors')
     ) {
       storageServiceProperties.cors = undefined;
     }
@@ -350,5 +351,12 @@ export default class ServiceHandler extends BaseHandler
     context: Context
   ): Promise<Models.ServiceGetAccountInfoResponse> {
     return this.getAccountInfo(context);
+  }
+
+  public filterBlobs(
+    options: Models.ServiceFilterBlobsOptionalParams,
+    context: Context
+    ): Promise<Models.ServiceFilterBlobsResponse> {
+      throw new NotImplementedError(context.contextId);
   }
 }

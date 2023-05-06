@@ -40,9 +40,7 @@ export default class StatePredicateStarted extends QPState implements IQPState {
     } else if (token === ")") {
       context.stateQueue.push(QueryStateName.ProcessParensClose);
     } else if (this.isPredicateOperator(token)) {
-      context.stateQueue.push(QueryStateName.PredicateFinished);
-
-      // will need to end current predicate and create a new predicate
+      this.presdicateStartingOperator(context);
     } else if (this.isOperand(token)) {
       // match operand (specific set)
       throw new Error(
@@ -71,4 +69,32 @@ export default class StatePredicateStarted extends QPState implements IQPState {
   onExit = (context: QueryContext) => {
     return context;
   };
+
+  /**
+   * There are 2 cases that will get us here:
+   * 1. a filter without parens
+   * - we will have processed a predicate
+   * - we should finish the predicate
+   * 2. a not operator on it's own
+   * - we will not have processed a value or identifier
+   * - we must process the operator
+   * - will need to end current predicate and create a new predicate
+   *
+   * @private
+   * @param {QueryContext} context
+   * @memberof StatePredicateStarted
+   */
+  private presdicateStartingOperator(context: QueryContext) {
+    if (
+      context.currentPos === 0 ||
+      context.taggedPredicates[context.currentPredicate].tokenMap.tokens ===
+        undefined ||
+      context.taggedPredicates[context.currentPredicate].tokenMap.tokens
+        .length === 0
+    ) {
+      context.stateQueue.push(QueryStateName.ProcessOperator);
+    } else {
+      context.stateQueue.push(QueryStateName.PredicateFinished);
+    }
+  }
 }

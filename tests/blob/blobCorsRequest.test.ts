@@ -1,13 +1,13 @@
 import {
   newPipeline,
   BlobServiceClient,
-  StorageSharedKeyCredential
+  StorageSharedKeyCredential,
+  RestError
 } from "@azure/storage-blob";
 import * as assert from "assert";
 
 import { configLogger } from "../../src/common/Logger";
 import BlobTestServerFactory from "../BlobTestServerFactory";
-import { RestError } from "@azure/core-http";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,

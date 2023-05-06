@@ -1,4 +1,4 @@
-import MiddlewareError from "./MiddlewareError";
+import MiddlewareError from './MiddlewareError';
 
 export default class DeserializationError extends MiddlewareError {
   public constructor(message: string) {

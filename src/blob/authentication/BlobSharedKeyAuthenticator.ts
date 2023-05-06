@@ -52,9 +52,8 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
         `BlobSharedKeyAuthenticator:validate() Invalid storage account ${account}.`,
         blobContext.contextId
       );
-      throw StorageErrorFactory.getInvalidOperation(
-        blobContext.contextId!,
-        "Invalid storage account."
+      throw StorageErrorFactory.ResourceNotFound(
+        blobContext.contextId!
       );
     }
 

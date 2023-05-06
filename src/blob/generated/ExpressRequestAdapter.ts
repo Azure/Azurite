@@ -1,6 +1,6 @@
-import { Request } from "express";
+import { Request } from 'express';
 
-import IRequest, { HttpMethod } from "./IRequest";
+import IRequest, { HttpMethod } from './IRequest';
 
 export default class ExpressRequestAdapter implements IRequest {
   public constructor(private readonly req: Request) {}

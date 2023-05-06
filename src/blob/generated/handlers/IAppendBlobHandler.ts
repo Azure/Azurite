@@ -16,4 +16,5 @@ export default interface IAppendBlobHandler {
   create(contentLength: number, options: Models.AppendBlobCreateOptionalParams, context: Context): Promise<Models.AppendBlobCreateResponse>;
   appendBlock(body: NodeJS.ReadableStream, contentLength: number, options: Models.AppendBlobAppendBlockOptionalParams, context: Context): Promise<Models.AppendBlobAppendBlockResponse>;
   appendBlockFromUrl(sourceUrl: string, contentLength: number, options: Models.AppendBlobAppendBlockFromUrlOptionalParams, context: Context): Promise<Models.AppendBlobAppendBlockFromUrlResponse>;
+  seal(options: Models.AppendBlobSealOptionalParams, context: Context): Promise<Models.AppendBlobSealResponse>;
 }

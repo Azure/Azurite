@@ -1,6 +1,6 @@
-import Context from "../Context";
-import IResponse from "../IResponse";
-import ILogger from "../utils/ILogger";
+import Context from '../Context';
+import IResponse from '../IResponse';
+import ILogger from '../utils/ILogger';
 
 /**
  * End middleware is used to send out final HTTP response.

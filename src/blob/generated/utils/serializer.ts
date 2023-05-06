@@ -1,11 +1,11 @@
-import * as msRest from "@azure/ms-rest-js";
+import * as msRest from '@azure/ms-rest-js';
 
-import * as Mappers from "../artifacts/mappers";
-import Context, { IHandlerParameters } from "../Context";
-import IRequest from "../IRequest";
-import IResponse from "../IResponse";
-import ILogger from "./ILogger";
-import { parseXML, stringifyXML } from "./xml";
+import * as Mappers from '../artifacts/mappers';
+import Context, { IHandlerParameters } from '../Context';
+import IRequest from '../IRequest';
+import IResponse from '../IResponse';
+import ILogger from './ILogger';
+import { parseXML, stringifyXML } from './xml';
 
 export declare type ParameterPath =
   | string

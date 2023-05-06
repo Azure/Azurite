@@ -51,28 +51,6 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     super(metadataStore, extentStore, logger, loose);
   }
 
-  public setAccessControl(
-    options: Models.BlobSetAccessControlOptionalParams,
-    context: Context
-  ): Promise<Models.BlobSetAccessControlResponse> {
-    throw new NotImplementedError(context.contextId);
-  }
-
-  public getAccessControl(
-    options: Models.BlobGetAccessControlOptionalParams,
-    context: Context
-  ): Promise<Models.BlobGetAccessControlResponse> {
-    throw new NotImplementedError(context.contextId);
-  }
-
-  public rename(
-    renameSource: string,
-    options: Models.BlobRenameOptionalParams,
-    context: Context
-  ): Promise<Models.BlobRenameResponse> {
-    throw new NotImplementedError(context.contextId);
-  }
-
   /**
    * Download blob.
    *
@@ -228,6 +206,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     throw new NotImplementedError(context.contextId);
   }
 
+  public async setExpiry(
+    expiryOptions: Models.BlobExpiryOptions,
+    options: Models.BlobSetExpiryOptionalParams,
+    context: Context
+  ): Promise<Models.BlobSetExpiryResponse> {
+    throw new NotImplementedError(context.contextId);
+  }
+
   /**
    * Set HTTP Headers.
    * see also https://docs.microsoft.com/en-us/rest/api/storageservices/set-blob-properties
@@ -296,6 +282,28 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
+  public async setImmutabilityPolicy(
+    options: Models.BlobSetImmutabilityPolicyOptionalParams,
+    context: Context
+  ): Promise<Models.BlobSetImmutabilityPolicyResponse> {
+    throw new NotImplementedError(context.contextId);
+  }
+
+  public async deleteImmutabilityPolicy(
+    options: Models.BlobDeleteImmutabilityPolicyOptionalParams,
+    context: Context
+  ): Promise<Models.BlobDeleteImmutabilityPolicyResponse> {
+    throw new NotImplementedError(context.contextId);
+  }
+
+  public async setLegalHold(
+    legalHold: boolean,
+    options: Models.BlobSetLegalHoldOptionalParams,
+    context: Context
+  ): Promise<Models.BlobSetLegalHoldResponse> {
+    throw new NotImplementedError(context.contextId);
+  }
+
   /**
    * Set Metadata.
    *
@@ -317,6 +325,16 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const metadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders()
     );
+    
+    if (metadata != undefined)
+    {
+      Object.entries(metadata).forEach(([key, value]) => {
+        if (key.includes("-"))
+        {
+          throw StorageErrorFactory.getInvalidMetadata(context.contextId!);
+        }
+      });
+    }
 
     const res = await this.metadataStore.setBlobMetadata(
       context,
@@ -1214,5 +1232,26 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     };
 
     return response;
+  }
+
+  public async query(
+    options: Models.BlobQueryOptionalParams,
+    context: Context
+  ): Promise<Models.BlobQueryResponse>{
+    throw new NotImplementedError(context.contextId);
+  }
+
+  public async getTags(
+    options: Models.BlobGetTagsOptionalParams,
+    context: Context
+  ): Promise<Models.BlobGetTagsResponse> {
+    throw new NotImplementedError(context.contextId);
+  }
+
+  public async setTags(
+    options: Models.BlobSetTagsOptionalParams,
+    context: Context
+  ): Promise<Models.BlobSetTagsResponse> {
+    throw new NotImplementedError(context.contextId);
   }
 }

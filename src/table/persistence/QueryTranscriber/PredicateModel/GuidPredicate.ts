@@ -25,11 +25,52 @@ export default class GuidPredicate implements IPredicate {
    */
   public convertPredicateForLokiJS() {
     const newTokens: TaggedToken[] = [];
-    this.pushStringGuidPredicate(newTokens, this.tokenMap);
-    newTokens.push(new TaggedToken("||", new OperatorToken()));
     this.pushBase64GuidPredicate(newTokens, this.tokenMap);
+    this.backWardCompatibleGuidMatch(newTokens, this.tokenMap);
     this.tokenMap.tokens = newTokens;
     return this;
+  }
+
+  /**
+   * GUIDs were originally stored as plain strings, but this diverged from the
+   * service, so we changed the storage format to base64 encoded strings.
+   * To allow for transition between schemas, we update "equals / not equals"
+   * queries to search for both plain string and base64 encoded.
+   *
+   * @param {TaggedToken[]} newTokens
+   * @param {TokenMap} tokenMap
+   * @memberof GuidPredicate
+   */
+  backWardCompatibleGuidMatch(newTokens: TaggedToken[], tokenMap: TokenMap) {
+    if (this.isBackWardsCompatiblePredicate(tokenMap)) {
+      this.pushPredicate(newTokens, this.tokenMap);
+      this.pushStringGuidPredicate(newTokens, this.tokenMap);
+    }
+  }
+
+  private isBackWardsCompatiblePredicate(tokenMap: TokenMap) {
+    return (
+      tokenMap.tokens[1].token === "===" || tokenMap.tokens[1].token === "!=="
+    );
+  }
+
+  /**
+   * adds an OR operator to allow query to return both base64 and string GUIDs
+   * or an AND operator to retun GUIDs not matching either base64 or string rep
+   * other operators cannot support backwards compatibility and require the
+   * persistent storage (database) to be recreated
+   *
+   * @private
+   * @param {TaggedToken[]} newTokens
+   * @param {TokenMap} taggedPredicate
+   * @memberof GuidPredicate
+   */
+  private pushPredicate(newTokens: TaggedToken[], tokenMap: TokenMap) {
+    if (tokenMap.tokens[1].token === "===") {
+      newTokens.push(new TaggedToken("||", new OperatorToken()));
+    } else {
+      newTokens.push(new TaggedToken("&&", new OperatorToken()));
+    }
   }
 
   /**
@@ -44,13 +85,17 @@ export default class GuidPredicate implements IPredicate {
     newTokens: TaggedToken[],
     taggedPredicate: TokenMap
   ) {
-    newTokens.push(new TaggedToken("(", new ParensOpenToken()));
+    if (this.isBackWardsCompatiblePredicate(taggedPredicate)) {
+      newTokens.push(new TaggedToken("(", new ParensOpenToken()));
+    }
     taggedPredicate.tokens.forEach((taggedToken) => {
       this.pushIdentifier(taggedToken, newTokens);
       this.pushOperator(taggedToken, newTokens);
       this.pushBase64Guid(taggedToken, newTokens);
     });
-    newTokens.push(new TaggedToken(")", new ParensCloseToken()));
+    if (this.isBackWardsCompatiblePredicate(taggedPredicate)) {
+      newTokens.push(new TaggedToken(")", new ParensCloseToken()));
+    }
   }
 
   /**

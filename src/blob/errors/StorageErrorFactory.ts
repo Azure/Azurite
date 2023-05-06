@@ -73,6 +73,15 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static ResourceNotFound(contextID: string = DefaultID): StorageError {
+    return new StorageError(
+      404,
+      "ResourceNotFound",
+      "The specified resource does not exist.",
+      contextID
+    );
+  }
+
   public static getInvalidQueryParameterValue(
     contextID: string = DefaultID,
     parameterName?: string,
@@ -751,6 +760,16 @@ export default class StorageErrorFactory {
       'Expected copyStatus to be "success" but got different status.',
       contextID,
       { ReceivedCopyStatus: copyStatus }
+    );
+  }
+  
+
+  public static getInvalidMetadata(contextID: string): StorageError {
+    return new StorageError(
+      400,
+      "InvalidMetadata",
+      "The metadata specified is invalid. It has characters that are not permitted.",
+      contextID
     );
   }
 }

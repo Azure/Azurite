@@ -299,8 +299,8 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
       const queueMeta = queue.metadata;
 
       // Check if both metadata is empty.
-      if (queueMeta === undefined || queueMeta === {}) {
-        if (docMeta !== undefined && docMeta.length !== {}) {
+      if (queueMeta === undefined) {
+        if (docMeta !== undefined) {
           throw StorageErrorFactory.getQueueAlreadyExists(
             context ? context.contextID : undefined
           );
@@ -309,7 +309,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
         }
       }
 
-      if (docMeta === undefined || docMeta.length === {}) {
+      if (docMeta === undefined) {
         throw StorageErrorFactory.getQueueAlreadyExists(
           context ? context.contextID : undefined
         );

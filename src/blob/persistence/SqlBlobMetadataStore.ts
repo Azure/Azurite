@@ -1992,7 +1992,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     blobHTTPHeaders: Models.BlobHTTPHeaders | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobProperties> {
+  ): Promise<Models.BlobPropertiesInternal> {
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -2068,7 +2068,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     metadata: Models.BlobMetadata | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobProperties> {
+  ): Promise<Models.BlobPropertiesInternal> {
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
 
@@ -2124,7 +2124,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         }
       );
 
-      const ret: Models.BlobProperties = {
+      const ret: Models.BlobPropertiesInternal = {
         lastModified,
         etag,
         leaseStatus: blobModel.properties.leaseStatus,
@@ -2490,7 +2490,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     metadata: Models.BlobMetadata | undefined,
     tier: Models.AccessTier | undefined,
     options: Models.BlobStartCopyFromURLOptionalParams = {}
-  ): Promise<Models.BlobProperties> {
+  ): Promise<Models.BlobPropertiesInternal> {
     return this.sequelize.transaction(async (t) => {
       const sourceBlob = await this.getBlobWithLeaseUpdated(
         source.account,
@@ -2512,7 +2512,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
             options.sourceModifiedAccessConditions.sourceIfModifiedSince,
           ifUnmodifiedSince:
             options.sourceModifiedAccessConditions.sourceIfUnmodifiedSince,
-          ifMatch: options.sourceModifiedAccessConditions.sourceIfMatches,
+          ifMatch: options.sourceModifiedAccessConditions.sourceIfMatch,
           ifNoneMatch: options.sourceModifiedAccessConditions.sourceIfNoneMatch
         },
         sourceBlob
@@ -2655,7 +2655,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     destination: BlobId,
     copySource: string,
     metadata: Models.BlobMetadata | undefined
-  ): Promise<Models.BlobProperties> {
+  ): Promise<Models.BlobPropertiesInternal> {
     throw new Error("Method not implemented.");
   }
 
@@ -2764,7 +2764,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     persistency: IExtentChunk,
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobProperties> {
+  ): Promise<Models.BlobPropertiesInternal> {
     throw new Error("Method not implemented.");
   }
 
@@ -2775,7 +2775,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     end: number,
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobProperties> {
+  ): Promise<Models.BlobPropertiesInternal> {
     throw new Error("Method not implemented.");
   }
 
@@ -2799,7 +2799,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blobContentLength: number,
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<Models.BlobProperties> {
+  ): Promise<Models.BlobPropertiesInternal> {
     throw new Error("Method not implemented.");
   }
 
@@ -2810,7 +2810,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: string,
     sequenceNumberAction: Models.SequenceNumberActionType,
     blobSequenceNumber: number | undefined
-  ): Promise<Models.BlobProperties> {
+  ): Promise<Models.BlobPropertiesInternal> {
     throw new Error("Method not implemented.");
   }
 
@@ -2822,7 +2822,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     appendPositionAccessConditions?:
       | Models.AppendPositionAccessConditions
       | undefined
-  ): Promise<Models.BlobProperties> {
+  ): Promise<Models.BlobPropertiesInternal> {
     throw new Error("Method not implemented.");
   }
 
@@ -3048,7 +3048,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     return ret;
   }
 
-  private convertContainerModelToDbModel(container: ContainerModel): object {
+  private convertContainerModelToDbModel(container: ContainerModel): any {
     const lease = new ContainerLeaseAdapter(container).toString();
     return {
       accountName: container.accountName,
@@ -3136,7 +3136,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     };
   }
 
-  private convertBlobModelToDbModel(blob: BlobModel): object {
+  private convertBlobModelToDbModel(blob: BlobModel): any {
     const contentProperties = this.convertBlobContentPropertiesToDbModel(
       blob.properties
     );

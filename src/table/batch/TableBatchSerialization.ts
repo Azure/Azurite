@@ -58,8 +58,7 @@ export class TableBatchSerialization extends BatchSerialization {
     // of the request by deserializing it into a BatchOperation Type
     const batchOperations: TableBatchOperation[] = subRequests.map(
       (subRequest) => {
-        let requestType: RegExpMatchArray | null = [];
-        requestType = subRequest.match(
+        let requestType: RegExpMatchArray | null = subRequest.match(
           "(GET|PATCH|POST|PUT|MERGE|INSERT|DELETE)"
         );
         if (requestType === null || requestType.length < 2) {

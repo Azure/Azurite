@@ -179,8 +179,7 @@ export class BlobBatchHandler {
         this.extentStore,
         this.logger,
         this.loose
-      ),
-      directoryHandler: {} as any
+      )
     };
 
     const handlerMiddlewareFactory = new HandlerMiddlewareFactory(
@@ -450,6 +449,7 @@ private serializeSubResponse(
     if (bodyContent !== "") {
       responseBody += HTTP_LINE_ENDING + bodyContent + HTTP_LINE_ENDING;
     }
+    responseBody += HTTP_LINE_ENDING;
   });
 
   responseBody += responseEnding;
