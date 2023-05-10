@@ -1168,4 +1168,77 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
 
     await tableClient.deleteTable();
   });
+
+  it("18. should return the correct number of results querying with a boolean field regardless of capitalization, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("bool")
+    );
+    const partitionKeyForQueryTest = createUniquePartitionKey("bool");
+    const totalItems = 10;
+    await tableClient.createTable();
+    const timestamp = new Date();
+    timestamp.setDate(timestamp.getDate() + 1);
+    for (let i = 0; i < totalItems; i++) {
+      const myBool: boolean = i % 2 !== 0 ? true : false;
+      const result = await tableClient.createEntity({
+        partitionKey: partitionKeyForQueryTest,
+        rowKey: `${i}`,
+        number: i,
+        myBool
+      });
+      assert.notStrictEqual(result.etag, undefined);
+    }
+    const maxPageSize = 10;
+    let testsCompleted = 0;
+    // take note of the different whitespacing and query formatting:
+    const queriesAndExpectedResult = [
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and(myBool eq True )`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myBool eq truE)`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myBool eq FALSE)`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and (myBool eq faLsE)`
+        },
+        expectedResult: 5
+      }
+    ];
+
+    for (const queryTest of queriesAndExpectedResult) {
+      const entities = tableClient.listEntities<
+        TableEntity<{ number: number }>
+      >({
+        queryOptions: queryTest.queryOptions
+      });
+      let all: TableEntity<{ number: number }>[] = [];
+      for await (const entity of entities.byPage({
+        maxPageSize
+      })) {
+        all = [...all, ...entity];
+      }
+      assert.strictEqual(
+        all.length,
+        queryTest.expectedResult,
+        `Failed with query ${queryTest.queryOptions.filter}`
+      );
+      testsCompleted++;
+    }
+    assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
+    await tableClient.deleteTable();
+  });
 });
