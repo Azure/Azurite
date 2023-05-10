@@ -627,10 +627,9 @@ describe("batch deserialization unit tests, these are not the API integration te
       "",
       "wrong jsonBody parsed"
     );
-    // BatchOperation constructor splits headers by \n resulting in the last Etag having an extra \r
     assert.strictEqual(
       batchOperationArray[1].rawHeaders[4],
-      "If-Match: W/\"datetime'2022-07-19T15%3A36%3A46.297103Z'\"\r",
+      "If-Match: W/\"datetime'2022-07-19T15%3A36%3A46.297103Z'\"",
       "wrong Etag parsed"
     );
     done();
