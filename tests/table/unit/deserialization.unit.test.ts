@@ -507,7 +507,7 @@ describe("batch deserialization unit tests, these are not the API integration te
     done();
   });
 
-  it("deserializes, mock table batch request containing 4 deletes correctly", (done) => {
+  it("deserializes, mock table batch request containing 4 \\n\\n deletes correctly", (done) => {
     const requestString =
       SerializationRequestMockStrings.BatchFuncToolsDeleteString;
     const serializer = new TableBatchSerialization();
@@ -542,7 +542,7 @@ describe("batch deserialization unit tests, these are not the API integration te
       "wrong Etag parsed"
     );
     // Third Batch Operation is a Delete
-    assert.strictEqual(batchOperationArray[1].batchType, BatchType.table);
+    assert.strictEqual(batchOperationArray[2].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[2].httpMethod,
       "DELETE",
@@ -566,6 +566,71 @@ describe("batch deserialization unit tests, these are not the API integration te
     assert.strictEqual(
       batchOperationArray[2].rawHeaders[4],
       "If-Match: W/\"datetime'2023-03-17T15%3A06%3A18.3075737Z'\"",
+      "wrong Etag parsed"
+    );
+    done();
+  });
+
+  it("deserializes, mock table batch request containing 2 \\r\\n\\r\\n deletes correctly", (done) => {
+    const requestString =
+      SerializationRequestMockStrings.BatchCloudNetDeleteString;
+    const serializer = new TableBatchSerialization();
+    const batchOperationArray =
+      serializer.deserializeBatchRequest(requestString);
+
+    // First Batch Operation is a Delete.
+    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
+    assert.strictEqual(
+      batchOperationArray[0].httpMethod,
+      "DELETE",
+      "wrong HTTP Method parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[0].path,
+      "GatewayManagerInventoryTable",
+      "wrong path parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[0].uri,
+      "http://127.0.0.1:10002/devstoreaccount1/GatewayManagerInventoryTable(PartitionKey='0',RowKey='device_0_device1')",
+      "wrong url parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[0].jsonRequestBody,
+      "",
+      "wrong jsonBody parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[0].rawHeaders[4],
+      "If-Match: W/\"datetime'2022-07-19T15%3A36%3A46.297987Z'\"",
+      "wrong Etag parsed"
+    );
+    // Second Batch Operation is a Delete
+    assert.strictEqual(batchOperationArray[1].batchType, BatchType.table);
+    assert.strictEqual(
+      batchOperationArray[1].httpMethod,
+      "DELETE",
+      "wrong HTTP Method parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[1].path,
+      "GatewayManagerInventoryTable",
+      "wrong path parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[1].uri,
+      "http://127.0.0.1:10002/devstoreaccount1/GatewayManagerInventoryTable(PartitionKey='0',RowKey='devicelocationmap_0_sanjose_0_device1')",
+      "wrong url parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[1].jsonRequestBody,
+      "",
+      "wrong jsonBody parsed"
+    );
+    // BatchOperation constructor splits headers by \n resulting in the last Etag having an extra \r
+    assert.strictEqual(
+      batchOperationArray[1].rawHeaders[4],
+      "If-Match: W/\"datetime'2022-07-19T15%3A36%3A46.297103Z'\"\r",
       "wrong Etag parsed"
     );
     done();
