@@ -506,4 +506,68 @@ describe("batch deserialization unit tests, these are not the API integration te
     );
     done();
   });
+
+  it("deserializes, mock table batch request containing 4 deletes correctly", (done) => {
+    const requestString =
+      SerializationRequestMockStrings.BatchFuncToolsDeleteString;
+    const serializer = new TableBatchSerialization();
+    const batchOperationArray =
+      serializer.deserializeBatchRequest(requestString);
+
+    // First Batch Operation is a Delete.
+    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
+    assert.strictEqual(
+      batchOperationArray[0].httpMethod,
+      "DELETE",
+      "wrong HTTP Method parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[0].path,
+      "TestHubNameHistory",
+      "wrong path parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[0].uri,
+      "http://127.0.0.1:10002/devstoreaccount1/TestHubNameHistory(PartitionKey='00000000EDGC5674',RowKey='0000000000000000')",
+      "wrong url parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[0].jsonRequestBody,
+      "",
+      "wrong jsonBody parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[0].rawHeaders[4],
+      "If-Match: W/\"datetime'2023-03-17T15%3A06%3A18.3075721Z'\"",
+      "wrong Etag parsed"
+    );
+    // Third Batch Operation is a Delete
+    assert.strictEqual(batchOperationArray[1].batchType, BatchType.table);
+    assert.strictEqual(
+      batchOperationArray[2].httpMethod,
+      "DELETE",
+      "wrong HTTP Method parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[2].path,
+      "TestHubNameHistory",
+      "wrong path parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[2].uri,
+      "http://127.0.0.1:10002/devstoreaccount1/TestHubNameHistory(PartitionKey='00000000EDGC5674',RowKey='0000000000000002')",
+      "wrong url parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[2].jsonRequestBody,
+      "",
+      "wrong jsonBody parsed"
+    );
+    assert.strictEqual(
+      batchOperationArray[2].rawHeaders[4],
+      "If-Match: W/\"datetime'2023-03-17T15%3A06%3A18.3075737Z'\"",
+      "wrong Etag parsed"
+    );
+    done();
+  });
 });

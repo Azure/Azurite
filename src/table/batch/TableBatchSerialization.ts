@@ -110,7 +110,7 @@ export class TableBatchSerialization extends BatchSerialization {
           jsonBody = jsonOperationBody[0];
         } else {
           // remove 1 \r\n
-          subStringEnd = subRequest.length - 4;
+          subStringEnd = subRequest.length - (HTTP_LINE_ENDING.length * 2);
           jsonBody = "";
         }
 
