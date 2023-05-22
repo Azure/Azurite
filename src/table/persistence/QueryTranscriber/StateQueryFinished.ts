@@ -26,6 +26,13 @@ export default class StateQueryFinished implements IQPState {
     for (const taggedPredicate of context.taggedPredicates) {
       let predicate = "";
       if (taggedPredicate !== undefined) {
+        const requiredIdentifiers = taggedPredicate.tokenMap.tokens.filter(token => token.type.isIdentifier() && token.token !== "**blena**");
+
+        for (const identifierToken of requiredIdentifiers) {
+          predicate += " ";
+          predicate += `item.properties.hasOwnProperty("${identifierToken.token.replace(/\\/g, "\\\\")}") &&`;
+        }
+        
         const convertedPredicate = taggedPredicate.convertPredicateForLokiJS();
         for (const taggedPredicateToken of convertedPredicate.tokenMap.tokens) {
           predicate += " ";

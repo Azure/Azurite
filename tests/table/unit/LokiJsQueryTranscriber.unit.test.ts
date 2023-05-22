@@ -19,11 +19,11 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
       },
       {
         originalQuery: "('test' eq partitionKey)",
-        expectedQuery: "return ( ( `test` === item.properties.partitionKey && item.properties.hasOwnProperty(\"partitionKey\") ) )"
+        expectedQuery: "return ( ( item.properties.hasOwnProperty(\"partitionKey\") && `test` === item.properties.partitionKey ) )"
       },
       {
         originalQuery: "( 'test' eq partitionKey )",
-        expectedQuery: "return ( ( `test` === item.properties.partitionKey && item.properties.hasOwnProperty(\"partitionKey\") ) )"
+        expectedQuery: "return ( ( item.properties.hasOwnProperty(\"partitionKey\") && `test` === item.properties.partitionKey ) )"
       }
     ];
 
@@ -54,7 +54,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
       },
       {
         originalQuery: "( true eq myBoolean )",
-        expectedQuery: "return ( ( true === item.properties.myBoolean && item.properties.hasOwnProperty(\"myBoolean\") ) )"
+        expectedQuery: "return ( ( item.properties.hasOwnProperty(\"myBoolean\") && true === item.properties.myBoolean ) )"
       }
     ];
 
@@ -85,7 +85,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
       },
       {
         originalQuery: "( 123.01 gt myDouble )",
-        expectedQuery: "return ( ( 123.01 > item.properties.myDouble && item.properties.hasOwnProperty(\"myDouble\") ) )"
+        expectedQuery: "return ( ( item.properties.hasOwnProperty(\"myDouble\") && 123.01 > item.properties.myDouble ) )"
       }
     ];
 
@@ -116,7 +116,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
         originalQuery:
           "(myGuid eq guid'12345678-1234-1234-1234-1234567890ab' )",
         expectedQuery:
-          "return ( ( ( item.properties.hasOwnProperty(\"myGuid\") && item.properties.myGuid === 'MTIzNDU2NzgtMTIzNC0xMjM0LTEyMzQtMTIzNDU2Nzg5MGFi' ) || ( item.properties.hasOwnProperty(\"myGuid\") && item.properties.myGuid === '12345678-1234-1234-1234-1234567890ab' ) ) )"
+          "return ( ( item.properties.hasOwnProperty(\"myGuid\") && ( item.properties.myGuid === 'MTIzNDU2NzgtMTIzNC0xMjM0LTEyMzQtMTIzNDU2Nzg5MGFi' ) || ( item.properties.myGuid === '12345678-1234-1234-1234-1234567890ab' ) ) )"
       }
     ];
 
@@ -147,12 +147,12 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
       },
       {
         originalQuery: "( '123.01L' eq myString )",
-        expectedQuery: "return ( ( `123.01L` === item.properties.myString && item.properties.hasOwnProperty(\"myString\") ) )"
+        expectedQuery: "return ( ( item.properties.hasOwnProperty(\"myString\") && `123.01L` === item.properties.myString ) )"
       },
       {
         originalQuery: "( 'I am a string' eq myString )",
         expectedQuery:
-          "return ( ( `I am a string` === item.properties.myString && item.properties.hasOwnProperty(\"myString\") ) )"
+          "return ( ( item.properties.hasOwnProperty(\"myString\") && `I am a string` === item.properties.myString ) )"
       }
     ];
 
@@ -183,7 +183,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
       },
       {
         originalQuery: "( -123 lt myInt )",
-        expectedQuery: "return ( ( -123 < item.properties.myInt && item.properties.hasOwnProperty(\"myInt\") ) )"
+        expectedQuery: "return ( ( item.properties.hasOwnProperty(\"myInt\") && -123 < item.properties.myInt ) )"
       }
     ];
 
@@ -214,7 +214,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
       },
       {
         originalQuery: "( 123.01L eq myLong )",
-        expectedQuery: "return ( ( '123.01' === item.properties.myLong && item.properties.hasOwnProperty(\"myLong\") ) )"
+        expectedQuery: "return ( ( item.properties.hasOwnProperty(\"myLong\") && '123.01' === item.properties.myLong ) )"
       },
       {
         originalQuery: "PartitionKey eq 'partition1' and int64Field eq 12345L",
@@ -253,7 +253,7 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
       },
       {
         originalQuery: `( datetime'${newTimeStamp}' eq myDate )`,
-        expectedQuery: `return ( ( new Date('${newTimeStamp}').getTime() === new Date(item.properties.myDate).getTime() && item.properties.hasOwnProperty(\"myDate\") ) )`
+        expectedQuery: `return ( ( item.properties.hasOwnProperty(\"myDate\") && new Date('${newTimeStamp}').getTime() === new Date(item.properties.myDate).getTime() ) )`
       },
       {
         originalQuery: `PartitionKey eq 'partition1' and number gt 11 and Timestamp lt datetime'${newTimeStamp}'`,
@@ -356,6 +356,34 @@ describe("LokiJs Query Transcribing unit tests, also ensures backward compatabil
         expectedQuery:
           "return ( ( item.properties.hasOwnProperty(\"PartitionKey\") && item.properties.PartitionKey === `part1` ) && ( item.properties.hasOwnProperty(\"binaryField\") && item.properties.binaryField === 'YmluYXJ5RGF0YQ==' ) )"
       }
+    ];
+
+    for (const test of testArray) {
+      const queryTranscriber =
+        LokiJsQueryTranscriberFactory.createEntityQueryTranscriber(
+          test.originalQuery,
+          "stateMachineTest"
+        );
+
+      queryTranscriber.transcribe();
+      assert.strictEqual(
+        queryTranscriber.getTranscribedQuery(),
+        test.expectedQuery,
+        `Transcribed query "${queryTranscriber.getTranscribedQuery()}" did not match expected ${
+          test.expectedQuery
+        }`
+      );
+    }
+  });
+
+  it("correctly transcribes queries with special characters", async () => {
+    // use the expected response string to compare the reult to.
+    const testArray = [
+      {
+        originalQuery: `category eq 'C & E /$top=1/&$apiversion=not-exists+Växjö o''clock { { ''category'': ''Compute'' } }'`,
+        expectedQuery:
+          "return ( item.properties.hasOwnProperty(\"category\") && item.properties.category === `C & E /$top=1/&$apiversion=not-exists+Växjö o'clock { { 'category': 'Compute' } }` )"
+      },
     ];
 
     for (const test of testArray) {

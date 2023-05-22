@@ -3,7 +3,6 @@ import IPredicate from "./IPredicate";
 import IdentifierToken from "../TokenModel/IdentifierToken";
 import TaggedToken from "../TokenModel/TaggedToken";
 import ValueToken from "../TokenModel/ValueToken";
-import OperatorToken from "../TokenModel/OperatorToken";
 
 export default class BinaryPredicate implements IPredicate {
   tokenMap: TokenMap;
@@ -76,20 +75,12 @@ export default class BinaryPredicate implements IPredicate {
    */
   pushIdentifier(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isIdentifier()) {
-      const newToken = new TaggedToken(`item.properties.${taggedToken.token}`, new IdentifierToken());
-      // When querying storage and you give it a field comparison, it eliminates anything with doesn't have that field
-      // Add a hasOwnProperty check to mimic that behavior for any identifier that we get and remove entities without that field
-      // Finish the predicate if it is already started, otherwise add this before the predicate starts
-      if (newTokens.length > 1 && newTokens[newTokens.length - 1].type.isOperator() && newTokens[newTokens.length - 2].type.isValue()) {
-        newTokens.push(newToken);
-        this.pushOperator(new TaggedToken("&&", new OperatorToken()), newTokens);
-        newTokens.push((new TaggedToken(`item.properties.hasOwnProperty("${taggedToken.token}")`, new IdentifierToken())));
-      }
-      else {
-        newTokens.push((new TaggedToken(`item.properties.hasOwnProperty("${taggedToken.token}")`, new IdentifierToken())));
-        this.pushOperator(new TaggedToken("&&", new OperatorToken()), newTokens);
-        newTokens.push(newToken);
-      }
+      newTokens.push(
+        new TaggedToken(
+          `item.properties.${taggedToken.token}`,
+          new IdentifierToken()
+        )
+      );
     }
   }
 
