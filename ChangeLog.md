@@ -11,6 +11,7 @@ Blob:
 
 Table:
 
+- Fixed issue with headers length when deserializing batch deletes.
 - Fixed issue of : entities with empty fields were not being correctly queried and were being included in queries whey should not have
 
 ## 2023.03 Version 3.23.0
@@ -34,6 +35,7 @@ Table:
 - Corrected query parsing logic for single boolean terms.
 - Fixed issue for querying GUIDs using operators other than eq and ne
 - GUID queries only support persistent storage on legacy (string) format GUIDs for eq and ne operators, other operators will only evaluate newly stored entities.
+- Fixed issue with boolean values not being recognized in query if using different cased characters.
 
 Queue:
 

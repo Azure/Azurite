@@ -3048,7 +3048,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     return ret;
   }
 
-  private convertContainerModelToDbModel(container: ContainerModel): object {
+  private convertContainerModelToDbModel(container: ContainerModel): any {
     const lease = new ContainerLeaseAdapter(container).toString();
     return {
       accountName: container.accountName,
@@ -3136,7 +3136,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     };
   }
 
-  private convertBlobModelToDbModel(blob: BlobModel): object {
+  private convertBlobModelToDbModel(blob: BlobModel): any {
     const contentProperties = this.convertBlobContentPropertiesToDbModel(
       blob.properties
     );

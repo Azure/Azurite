@@ -38,7 +38,9 @@ export default class BooleanPredicate implements IPredicate {
    */
   pushValue(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isValue()) {
-      newTokens.push(new TaggedToken(taggedToken.token, new ValueToken()));
+      newTokens.push(
+        new TaggedToken(taggedToken.token.toLowerCase(), new ValueToken())
+      );
     }
   }
 

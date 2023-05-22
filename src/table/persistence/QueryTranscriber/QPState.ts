@@ -169,8 +169,9 @@ export default class QPState implements IQPState {
    * @memberof QPState
    */
   isValue(token: string): boolean {
+    // Is the syntax for other EDM types case sensitive?
     const match = token.match(
-      /^true$|^false$|^-?\d+|^guid'|^'|^"|^X'|^binary'|^datetime'/
+      /^true$|^false$|^-?\d+|^guid'|^'|^"|^X'|^binary'|^datetime'/i
     );
     if (match !== null && match!.length > 0) {
       return true;
@@ -293,7 +294,7 @@ export default class QPState implements IQPState {
    * @memberof QPState
    */
   isBooleanValue(token: string): boolean {
-    const match = token.match(/^true$|^false$/);
+    const match = token.match(/^true$|^false$/i);
     if (match !== null && match!.length > 0) {
       return true;
     }
@@ -309,7 +310,7 @@ export default class QPState implements IQPState {
    */
   isIdentifier(token: string): boolean {
     const match = token.match(
-      /^(?!true$)(?!false$)(?!guid')(?!binary')(?!X')(?!datetime')[_a-zA-Z]/
+      /^(?!true$)(?!false$)(?!guid')(?!binary')(?!X')(?!datetime')[_a-zA-Z]/i
     );
     if (match !== null && match!.length > 0) {
       return true;
