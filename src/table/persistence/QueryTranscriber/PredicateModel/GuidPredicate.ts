@@ -163,7 +163,7 @@ export default class GuidPredicate implements IPredicate {
    * @param {TaggedToken[]} newTokens
    * @memberof GuidPredicate
    */
-  pushIdentifier(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
+  private pushIdentifier(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isIdentifier()) {
       newTokens.push(
         new TaggedToken(
