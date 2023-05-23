@@ -2,7 +2,8 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import { Entity, Table } from "./ITableMetadataStore";
 import Context from "../generated/Context";
 import * as Models from "../generated/artifacts/models";
-import LokiJsQueryTranscriberFactory from "./QueryTranscriber/LokiJsQueryTranscriberFactory";
+import parseQuery from "./QueryInterpreter/QueryParser";
+import executeQuery, { validateQueryTree } from "./QueryInterpreter/QueryInterpreter";
 
 /**
  * Handles Query Logic For LokiJs Table Implementation
@@ -49,10 +50,9 @@ export default class LokiTableStoreQueryGenerator {
       return () => true;
     }
 
-    const transformedQuery =
-      LokiTableStoreQueryGenerator.transformTableQuery(query);
-
-    return new Function("item", transformedQuery) as any;
+    const queryTree = parseQuery(query);
+    validateQueryTree(queryTree);
+    return (entity) => executeQuery(entity, queryTree);
   }
 
   /**
@@ -64,15 +64,8 @@ export default class LokiTableStoreQueryGenerator {
    * @memberof LokiTableStoreQueryGenerator
    */
   public static transformTableQuery(query: string): string {
-    const queryTranscriber =
-      LokiJsQueryTranscriberFactory.createTableQueryTranscriber(
-        query,
-        "lokiJsTableQueryTranscriber"
-      );
-
-    queryTranscriber.transcribe();
-
-    return queryTranscriber.getTranscribedQuery();
+    const queryTree = parseQuery(query);
+    return queryTree.toString();
   }
 
   /**
@@ -90,14 +83,8 @@ export default class LokiTableStoreQueryGenerator {
       return () => true;
     }
 
-    const queryTranscriber =
-      LokiJsQueryTranscriberFactory.createEntityQueryTranscriber(
-        query,
-        "lokiJsQueryTranscriber"
-      );
-
-    queryTranscriber.transcribe();
-
-    return new Function("item", queryTranscriber.getTranscribedQuery()) as any;
+    const queryTree = parseQuery(query);
+    validateQueryTree(queryTree);
+    return (entity) => executeQuery(entity, queryTree);
   }
 }

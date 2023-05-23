@@ -663,16 +663,12 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
         }
         // we should not hit this assert if the exception is generated.
         // it helps catch the cases which slip through filter validation
-        assert.strictEqual(
-          all.length,
-          -1,
-          `Failed on number of results with query ${queryTest.queryOptions.filter}.`
-        );
+        assert.fail(`Query '${queryTest.queryOptions.filter}' did not generate the expected validation exception.`)
       } catch (filterException: any) {
         assert.strictEqual(
           [400, 501].includes(filterException.statusCode),
           true,
-          `Filter "${queryTest.queryOptions.filter}". Unexpected error. We got : ${filterException.message}`
+          `Filter "${queryTest.queryOptions.filter}" returned status code ${filterException.statusCode} instead of [400/501]. Unexpected error. We got : ${filterException.message}`
         );
       }
       testsCompleted++;
@@ -1078,41 +1074,45 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     ];
 
     for (const queryTest of queriesAndExpectedResult) {
-      const entities = tableClient.listEntities<TableTestEntity>({
-        queryOptions: queryTest.queryOptions
-      });
-      let all: TableTestEntity[] = [];
-      for await (const entity of entities.byPage({
-        maxPageSize
-      })) {
-        all = [...all, ...entity];
-      }
-      assert.strictEqual(
-        all.length,
-        queryTest.expectedResult,
-        `Failed with query ${queryTest.queryOptions.filter}`
-      );
-      if (all[0] !== undefined) {
-        all.sort((a, b) => {
-          return (
-            parseInt(a.guidField.value[1], 10) -
-            parseInt(b.guidField.value[1], 10)
-          );
+      try {
+        const entities = tableClient.listEntities<TableTestEntity>({
+          queryOptions: queryTest.queryOptions
         });
+        let all: TableTestEntity[] = [];
+        for await (const entity of entities.byPage({
+          maxPageSize
+        })) {
+          all = [...all, ...entity];
+        }
         assert.strictEqual(
-          all[0].guidField.value,
-          queryTest.expectedValue,
-          `Test ${queryTest.index}: Guid value ${all[0].guidField.value} was not equal to ${queryTest.expectedValue} with query ${queryTest.queryOptions.filter}`
+          all.length,
+          queryTest.expectedResult,
+          `Failed with query ${queryTest.queryOptions.filter}`
         );
-      } else {
-        assert.strictEqual(
-          all[0],
-          queryTest.expectedValue,
-          `Value ${all[0]} was not equal to ${queryTest.expectedValue} with query ${queryTest.queryOptions.filter}`
-        );
-      }
+        if (all[0] !== undefined) {
+          all.sort((a, b) => {
+            return (
+              parseInt(a.guidField.value[1], 10) -
+              parseInt(b.guidField.value[1], 10)
+            );
+          });
+          assert.strictEqual(
+            all[0].guidField.value,
+            queryTest.expectedValue,
+            `Test ${queryTest.index}: Guid value ${all[0].guidField.value} was not equal to ${queryTest.expectedValue} with query ${queryTest.queryOptions.filter}`
+          );
+        } else {
+          assert.strictEqual(
+            all[0],
+            queryTest.expectedValue,
+            `Value ${all[0]} was not equal to ${queryTest.expectedValue} with query ${queryTest.queryOptions.filter}`
+          );
+        }
 
-      testsCompleted++;
+        testsCompleted++;
+      } catch (err) {
+        assert.fail(`Query '${queryTest.queryOptions.filter}' failed unexpectedly: ${err}`)
+      }
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
     await tableClient.deleteTable();
@@ -1220,23 +1220,27 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     ];
 
     for (const queryTest of queriesAndExpectedResult) {
-      const entities = tableClient.listEntities<
-        TableEntity<{ number: number }>
-      >({
-        queryOptions: queryTest.queryOptions
-      });
-      let all: TableEntity<{ number: number }>[] = [];
-      for await (const entity of entities.byPage({
-        maxPageSize
-      })) {
-        all = [...all, ...entity];
+      try {
+        const entities = tableClient.listEntities<
+          TableEntity<{ number: number }>
+        >({
+          queryOptions: queryTest.queryOptions
+        });
+        let all: TableEntity<{ number: number }>[] = [];
+        for await (const entity of entities.byPage({
+          maxPageSize
+        })) {
+          all = [...all, ...entity];
+        }
+        assert.strictEqual(
+          all.length,
+          queryTest.expectedResult,
+          `Failed with query ${queryTest.queryOptions.filter}`
+        );
+        testsCompleted++;
+      } catch (err) {
+        assert.fail(`Query '${queryTest.queryOptions.filter}' failed unexpectedly: ${err}`)
       }
-      assert.strictEqual(
-        all.length,
-        queryTest.expectedResult,
-        `Failed with query ${queryTest.queryOptions.filter}`
-      );
-      testsCompleted++;
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
     await tableClient.deleteTable();
