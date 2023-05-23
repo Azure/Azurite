@@ -973,9 +973,9 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     all.forEach((entity) => {
       assert.ok(
         entity.partitionKey === `${partitionKeyForQueryTest}3` ||
-          ((entity.partitionKey === `${partitionKeyForQueryTest}1` ||
-            entity.partitionKey === `${partitionKeyForQueryTest}2`) &&
-            entity.rowKey === "1")
+        ((entity.partitionKey === `${partitionKeyForQueryTest}1` ||
+          entity.partitionKey === `${partitionKeyForQueryTest}2`) &&
+          entity.rowKey === "1")
       );
     });
     await tableClient.deleteTable();
@@ -1239,6 +1239,41 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       testsCompleted++;
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
+    await tableClient.deleteTable();
+  });
+
+  it("20. should work when getting special characters, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("specialcharactercheck")
+    );
+
+    await tableClient.createTable();
+
+    const partitionKey = createUniquePartitionKey("");
+
+    // Foo has some special characters
+    const result1 = await tableClient.createEntity({
+      partitionKey: partitionKey,
+      rowKey: `1`,
+      foo: "TestVal`",
+    });
+    assert.notStrictEqual(result1.etag, undefined);
+
+    const maxPageSize = 5;
+    const entities = tableClient.listEntities<TableEntity<{ foo: string }>>({
+      queryOptions: {
+        filter: `PartitionKey eq '${partitionKey}' and foo eq 'TestVal\`'`
+      }
+    });
+    let all: TableEntity<{ foo: string }>[] = [];
+    for await (const entity of entities.byPage({
+      maxPageSize
+    })) {
+      all = [...all, ...entity];
+    }
+    assert.strictEqual(all.length, 1);
+
     await tableClient.deleteTable();
   });
 });

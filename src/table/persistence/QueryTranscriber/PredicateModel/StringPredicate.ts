@@ -40,18 +40,39 @@ export default class StringPredicate implements IPredicate {
   private pushValue(taggedToken: TaggedToken, newTokens: TaggedToken[]) {
     if (taggedToken.type.isValue()) {
       taggedToken.token =
-        "`" +
-        // need to convert double apostrope to single
+        "'" +
+        // We also need to convert any double apostrophes into their corresponding backslash-escaped variant
         this.replaceDoubleApostrophes(
-          taggedToken.token.substring(1, taggedToken.token.length - 1)
-        ) +
-        "`";
+          // Let's ensure that backslashes (which are valid characters in the OData space) are escaped correctly.
+          this.escapeReservedCharacters(
+            taggedToken.token.substring(1, taggedToken.token.length - 1)
+          )) +
+        "'";
+
       newTokens.push(new TaggedToken(taggedToken.token, new ValueToken()));
     }
   }
 
+  /**
+   * Ensure that the presence of a '' in the string is converted into the explicit ' (apostrophe) character.
+   * 
+   * @param {string} token 
+   * @memberof StringPredicate
+   * @returns {string}
+   */
   private replaceDoubleApostrophes(token: string) {
-    return token.replace(/(\'\')/g, "'");
+    return token.replace(/(\'\')/g, "\\'");
+  }
+
+  /**
+   * Ensures that backticks (which are used to encode the string)
+   * 
+   * @param {string} token
+   * @memberof StringPredicate
+   * @returns {string}
+   */
+  private escapeReservedCharacters(token: string) {
+    return token.replace(/\\/g, "\\\\");
   }
 
   /**
