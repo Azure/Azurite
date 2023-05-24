@@ -4,11 +4,15 @@ import IQueryNode from "./IQueryNode";
 export default class NotNode implements IQueryNode {
   constructor(public right: IQueryNode) { }
 
+  get name(): string {
+    return "not"
+  }
+
   evaluate(context: IQueryContext): any {
     return !this.right.evaluate(context)
   }
 
   toString(): string {
-    return `(not ${this.right.toString()})`
+    return `(${this.name} ${this.right.toString()})`
   }
 }

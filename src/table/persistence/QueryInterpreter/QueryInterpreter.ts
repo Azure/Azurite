@@ -6,7 +6,7 @@ import IdentifierNode from "./QueryNodes/IdentifierNode";
 import NotNode from "./QueryNodes/NotNode";
 import PartitionKeyNode from "./QueryNodes/PartitionKeyNode";
 import RowKeyNode from "./QueryNodes/RowKeyNode";
-import TableNode from "./QueryNodes/TableNode";
+import TableNameNode from "./QueryNodes/TableNode";
 
 export default function executeQuery(context: IQueryContext, queryTree: IQueryNode): boolean {
   return !!queryTree.evaluate(context)
@@ -34,7 +34,7 @@ function countIdentifierReferences(queryTree: IQueryNode): number {
     return 1
   }
 
-  if (queryTree instanceof TableNode) {
+  if (queryTree instanceof TableNameNode) {
     return 1
   }
 

@@ -4,6 +4,10 @@ import IQueryNode from "./IQueryNode";
 export default class IdentifierNode implements IQueryNode {
   constructor(private identifier: string) { }
 
+  get name(): string {
+    return "id"
+  }
+
   evaluate(context: IQueryContext): any {
     if (isEntity(context)) {
       if (this.identifier === "PartitionKey") {
@@ -17,6 +21,6 @@ export default class IdentifierNode implements IQueryNode {
   }
 
   toString(): string {
-    return `(id ${this.identifier})`
+    return `(${this.name} ${this.identifier})`
   }
 }

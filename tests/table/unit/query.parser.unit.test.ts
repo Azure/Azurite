@@ -1,7 +1,28 @@
 import * as assert from "assert";
-import parseQuery from "../../../src/table/persistence/QueryInterpreter/QueryParser";
+import parseQuery, { ParserContext } from "../../../src/table/persistence/QueryInterpreter/QueryParser";
 
 describe("Query Parser", () => {
+  describe("Context", () => {
+    describe("peek", () => {
+      it("should return the next character in the sequence", () => {
+        const context = new ParserContext("test");
+        assert.strictEqual(context.peek(), "t");
+        assert.strictEqual(context.peek(), "t", "it should not advance the sequence");
+        assert.ok(context.consume("test"));
+        context.assertEndOfQuery();
+      })
+    })
+
+    describe("skipWhitespace", () => {
+      it("should not advance the parser when no whitespace is present", () => {
+        const context = new ParserContext("test");
+        context.skipWhitespace();
+        assert.ok(context.consume("test"));
+        context.assertEndOfQuery();
+      })
+    })
+  })
+
   function runTestCases(name: string, testCases: {
     name: string
     originalQuery: string
@@ -49,12 +70,17 @@ describe("Query Parser", () => {
         name: "Wrapping another condition",
         originalQuery: "not (PartitionKey eq 'test')",
         expectedQuery: "(not ((eq PartitionKey \"test\")))"
+      },
+      {
+        name: "Wrapping an expresssion group",
+        originalQuery: "not (PartitionKey lt 'Part2')",
+        expectedQuery: "(not ((lt PartitionKey \"Part2\")))"
       }
     ])
   })
 
   describe("Binary Operators", () => {
-    runTestCases("and", [
+    runTestCases("AND", [
       // Operator Precedence: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-odata/f3380585-3f87-41d9-a2dc-ff46cc38e7a6
       {
         name: "AND takes precedence over NOT",
@@ -65,53 +91,123 @@ describe("Query Parser", () => {
         name: "Precedence works with complex queries",
         originalQuery: "(true and RowKey eq '1') and ((false or PartitionKey eq 'partition1') or PartitionKey eq 'partition2') or PartitionKey eq 'partition3'",
         expectedQuery: '(or (and ((and true (eq RowKey "1"))) ((or ((or false (eq PartitionKey "partition1"))) (eq PartitionKey "partition2")))) (eq PartitionKey "partition3"))'
+      },
+      {
+        name: "Basic AND",
+        originalQuery: "PartitionKey eq 'test' and RowKey eq 'test2'",
+        expectedQuery: "(and (eq PartitionKey \"test\") (eq RowKey \"test2\"))"
       }
     ])
 
-    runTestCases("or", [
+    runTestCases("OR", [
       // Operator Precedence: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-odata/f3380585-3f87-41d9-a2dc-ff46cc38e7a6
       {
         name: "OR takes precedence over AND",
         originalQuery: "PartitionKey eq 'test' or PartitionKey eq 'test2' and RowKey eq 'test3'",
         expectedQuery: "(or (eq PartitionKey \"test\") (and (eq PartitionKey \"test2\") (eq RowKey \"test3\")))"
       },
+      {
+        name: "Basic OR",
+        originalQuery: "PartitionKey eq 'test' or RowKey eq 'test2'",
+        expectedQuery: "(or (eq PartitionKey \"test\") (eq RowKey \"test2\"))"
+      }
     ])
 
-    runTestCases("comparisons", [
+    runTestCases("Comparisons", [
       {
         name: "Are order invariant for constants and fields",
         originalQuery: "'test' eq PartitionKey",
         expectedQuery: '(eq "test" PartitionKey)'
       },
       {
-        name: "Supports equals",
+        name: "Supports PartitionKey equals",
         originalQuery: "PartitionKey eq 'test'",
         expectedQuery: '(eq PartitionKey "test")'
       },
       {
-        name: "Supports not equals",
+        name: "Supports PartitionKey not equals",
         originalQuery: "PartitionKey ne 'test'",
         expectedQuery: '(ne PartitionKey "test")'
       },
       {
-        name: "Supports greater than",
+        name: "Supports PartitionKey greater than",
         originalQuery: "PartitionKey gt 'test'",
         expectedQuery: '(gt PartitionKey "test")'
       },
       {
-        name: "Supports greater than or equal to",
+        name: "Supports PartitionKey greater than or equal to",
         originalQuery: "PartitionKey ge 'test'",
         expectedQuery: '(gte PartitionKey "test")'
       },
       {
-        name: "Supports less than",
+        name: "Supports PartitionKey less than",
         originalQuery: "PartitionKey lt 'test'",
         expectedQuery: '(lt PartitionKey "test")'
       },
       {
-        name: "Supports less than or equal to",
+        name: "Supports PartitionKey less than or equal to",
         originalQuery: "PartitionKey le 'test'",
         expectedQuery: '(lte PartitionKey "test")'
+      },
+      {
+        name: "Supports RowKey equals",
+        originalQuery: "RowKey eq 'test'",
+        expectedQuery: '(eq RowKey "test")'
+      },
+      {
+        name: "Supports RowKey not equals",
+        originalQuery: "RowKey ne 'test'",
+        expectedQuery: '(ne RowKey "test")'
+      },
+      {
+        name: "Supports RowKey greater than",
+        originalQuery: "RowKey gt 'test'",
+        expectedQuery: '(gt RowKey "test")'
+      },
+      {
+        name: "Supports RowKey greater than or equal to",
+        originalQuery: "RowKey ge 'test'",
+        expectedQuery: '(gte RowKey "test")'
+      },
+      {
+        name: "Supports RowKey less than",
+        originalQuery: "RowKey lt 'test'",
+        expectedQuery: '(lt RowKey "test")'
+      },
+      {
+        name: "Supports RowKey less than or equal to",
+        originalQuery: "RowKey le 'test'",
+        expectedQuery: '(lte RowKey "test")'
+      },
+      {
+        name: "Supports TableName equals",
+        originalQuery: "TableName eq 'test'",
+        expectedQuery: '(eq TableName "test")'
+      },
+      {
+        name: "Supports TableName not equals",
+        originalQuery: "TableName ne 'test'",
+        expectedQuery: '(ne TableName "test")'
+      },
+      {
+        name: "Supports TableName greater than",
+        originalQuery: "TableName gt 'test'",
+        expectedQuery: '(gt TableName "test")'
+      },
+      {
+        name: "Supports TableName greater than or equal to",
+        originalQuery: "TableName ge 'test'",
+        expectedQuery: '(gte TableName "test")'
+      },
+      {
+        name: "Supports TableName less than",
+        originalQuery: "TableName lt 'test'",
+        expectedQuery: '(lt TableName "test")'
+      },
+      {
+        name: "Supports TableName less than or equal to",
+        originalQuery: "TableName le 'test'",
+        expectedQuery: '(lte TableName "test")'
       }
     ])
   })
@@ -132,6 +228,14 @@ describe("Query Parser", () => {
         name: "Normalizes RowKey field",
         originalQuery: "'test' eq rowKEY",
         expectedQuery: '(eq "test" RowKey)'
+      }
+    ])
+
+    runTestCases("Properties", [
+      {
+        name: "Handles identifiers with leading underscores",
+        originalQuery: "_myProperty eq 'test'",
+        expectedQuery: '(eq (id _myProperty) "test")'
       }
     ])
   })
@@ -183,6 +287,11 @@ describe("Query Parser", () => {
         name: "Correctly handles integers with a negative sign",
         originalQuery: "myInt gt -123",
         expectedQuery: "(gt (id myInt) -123)"
+      },
+      {
+        name: "Correctly parses integer equality",
+        originalQuery: "1 eq 1",
+        expectedQuery: "(eq 1 1)"
       }
     ])
 
@@ -219,6 +328,101 @@ describe("Query Parser", () => {
         name: "Correctly handles strings that look like integer values",
         originalQuery: "myString eq '123'",
         expectedQuery: "(eq (id myString) \"123\")"
+      },
+      {
+        name: "Correctly handles strings which are empty",
+        originalQuery: "myString eq ''",
+        expectedQuery: "(eq (id myString) \"\")"
+      },
+      {
+        name: "Correctly handles strings which are empty with double quotes",
+        originalQuery: "myString eq \"\"",
+        expectedQuery: "(eq (id myString) \"\")"
+      },
+      {
+        name: "Correctly handles strings which are single-characters long",
+        originalQuery: "myString eq 'a'",
+        expectedQuery: "(eq (id myString) \"a\")"
+      },
+      {
+        name: "Correctly handles strings which are single-characters long with double quotes",
+        originalQuery: "myString eq \"a\"",
+        expectedQuery: "(eq (id myString) \"a\")"
+      },
+      {
+        name: "Correctly handles whitespace only strings",
+        originalQuery: "myString eq ' '",
+        expectedQuery: "(eq (id myString) \" \")"
+      },
+      {
+        name: "Correctly handles whitespace only strings with double quotes",
+        originalQuery: "myString eq \" \"",
+        expectedQuery: "(eq (id myString) \" \")"
+      },
+      {
+        name: "Handle escaped single-quotes",
+        originalQuery: "myString eq 'Foo '' Bar'",
+        expectedQuery: "(eq (id myString) \"Foo ' Bar\")"
+      },
+      {
+        name: "Handle multiple escaped single-quotes",
+        originalQuery: "myString eq 'Foo '''' Bar'",
+        expectedQuery: "(eq (id myString) \"Foo '' Bar\")"
+      },
+      {
+        name: "Handles escaped single-quotes at the end of the string",
+        originalQuery: "myString eq 'Foo Bar'''",
+        expectedQuery: "(eq (id myString) \"Foo Bar'\")"
+      },
+      {
+        name: "Handles escaped single-quotes at the start of the string",
+        originalQuery: "myString eq '''Foo Bar'",
+        expectedQuery: "(eq (id myString) \"'Foo Bar\")"
+      },
+      {
+        name: "Handles escaped single-quotes when they are the entirety of the string (1)",
+        originalQuery: "myString eq ''''",
+        expectedQuery: "(eq (id myString) \"'\")"
+      },
+      {
+        name: "Handles escaped single-quotes when they are the entirety of the string (2)",
+        originalQuery: "myString eq ''''''",
+        expectedQuery: "(eq (id myString) \"''\")"
+      },
+      {
+        name: "Handles escaped single-quotes when they are the entirety of the string (3)",
+        originalQuery: "myString eq ''''''''",
+        expectedQuery: "(eq (id myString) \"'''\")"
+      },
+      {
+        name: "Handles escaped single-quotes when they are the entirety of the string (4)",
+        originalQuery: "myString eq ''''''''''",
+        expectedQuery: "(eq (id myString) \"''''\")"
+      },
+      {
+        name: "Handle escaped double-quotes",
+        originalQuery: "myString eq \"Foo \"\" Bar\"",
+        expectedQuery: "(eq (id myString) \"Foo \\\" Bar\")"
+      },
+      {
+        name: "Handle multiple escaped double-quotes",
+        originalQuery: "myString eq \"Foo \"\"\"\" Bar\"",
+        expectedQuery: "(eq (id myString) \"Foo \\\"\\\" Bar\")"
+      },
+      {
+        name: "Handle escaped single-quotes without spaces (1)",
+        originalQuery: "PartitionKey eq 'Iam''good''atTypeScript'",
+        expectedQuery: "(eq PartitionKey \"Iam'good'atTypeScript\")"
+      },
+      {
+        name: "Handle escaped single-quotes without spaces (2)",
+        originalQuery: "PartitionKey eq 'Isn''tThisANastyPK'",
+        expectedQuery: "(eq PartitionKey \"Isn'tThisANastyPK\")"
+      },
+      {
+        name: "Handle strings which contain backticks",
+        originalQuery: "myString eq 'Foo ` Bar'",
+        expectedQuery: "(eq (id myString) \"Foo ` Bar\")"
       }
     ])
 
@@ -276,6 +480,14 @@ describe("Query Parser", () => {
       },
     ])
   })
+
+  runTestCases("Nasty Queries", [
+    {
+      name: "Handles horrible attempts to encode queries into strings",
+      originalQuery: "please eq 'never query ''this'' eq this or suchandsuch eq ''worse'''",
+      expectedQuery: "(eq (id please) \"never query 'this' eq this or suchandsuch eq 'worse'\")"
+    }
+  ])
 
   describe("Invalid Queries", () => {
     const testCases = [

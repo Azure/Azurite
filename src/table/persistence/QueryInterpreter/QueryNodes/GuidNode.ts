@@ -4,6 +4,10 @@ import IQueryNode from "./IQueryNode";
 export default class GuidNode<T> implements IQueryNode {
   constructor(private value: string) { }
 
+  get name(): string {
+    return "guid"
+  }
+
   evaluate(_context: IQueryContext): any {
     return Buffer.from(this.value).toString("base64")
   }
@@ -13,6 +17,6 @@ export default class GuidNode<T> implements IQueryNode {
   }
 
   toString(): string {
-    return `(guid ${this.value})`
+    return `(${this.name} ${this.value})`
   }
 }
