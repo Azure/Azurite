@@ -8,6 +8,7 @@ Blob:
 
 - Fixed issue of: blob batch subresponse is slightly different from the on from Azure serivce, which causes exception in CPP SDK.
 - Fixed issue of: setMetadata API allows invalid metadata name with hyphen.
+- Fixed issue of: error code not matching Azure blob storage is returned when overwriting existing blobs with incorrect permissions
 
 Table:
 

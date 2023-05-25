@@ -529,6 +529,17 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getUnauthorizedBlobOverwrite(
+    contextID: string
+  ): StorageError {
+    return new StorageError(
+      403,
+      "UnauthorizedBlobOverwrite",
+      "This request is not authorized to perform blob overwrites.",
+      contextID
+    );
+  }
+
   public static getAuthorizationServiceMismatch(
     contextID: string
   ): StorageError {
