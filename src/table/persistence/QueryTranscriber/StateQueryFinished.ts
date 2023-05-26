@@ -29,7 +29,7 @@ export default class StateQueryFinished implements IQPState {
         const convertedPredicate = taggedPredicate.convertPredicateForLokiJS();
         for (const taggedPredicateToken of convertedPredicate.tokenMap.tokens) {
           predicate += " ";
-          predicate += taggedPredicateToken.token.replace(/\\/g, "\\\\");
+          predicate += taggedPredicateToken.token;
         }
       }
 

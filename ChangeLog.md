@@ -12,6 +12,7 @@ Blob:
 Table:
 
 - Fixed issue with headers length when deserializing batch deletes.
+- Fixed issues with the use of backticks in string query predicates.
 
 ## 2023.03 Version 3.23.0
 
