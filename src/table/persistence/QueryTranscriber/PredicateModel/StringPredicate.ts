@@ -55,7 +55,7 @@ export default class StringPredicate implements IPredicate {
 
   /**
    * Ensure that the presence of a '' in the string is converted into the explicit ' (apostrophe) character.
-   * 
+   *
    * @param {string} token 
    * @memberof StringPredicate
    * @returns {string}
@@ -66,7 +66,7 @@ export default class StringPredicate implements IPredicate {
 
   /**
    * Ensures that backticks (which are used to encode the string)
-   * 
+   *
    * @param {string} token
    * @memberof StringPredicate
    * @returns {string}
