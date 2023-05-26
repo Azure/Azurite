@@ -62,6 +62,7 @@ import IBlobMetadataStore, {
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
+import { getBlobTagsCount, getTagsFromString } from "../utils/utils";
 
 /**
  * This is a metadata source implementation for blob based on loki DB.
@@ -1199,6 +1200,8 @@ export default class LokiBlobMetadataStore
       context
     );
 
+    doc.properties.tagCount = getBlobTagsCount(doc.blobTags);
+
     return {
       properties: doc.properties,
       metadata: doc.metadata,
@@ -1913,7 +1916,8 @@ export default class LokiBlobMetadataStore
       leaseBreakTime:
         destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
       committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
-      persistency: sourceBlob.persistency
+      persistency: sourceBlob.persistency,      
+      blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!)
     };
 
     if (
@@ -2099,7 +2103,8 @@ export default class LokiBlobMetadataStore
       leaseBreakTime:
         destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
       committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
-      persistency: sourceBlob.persistency
+      persistency: sourceBlob.persistency,      
+      blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!)
     };
 
     if (
@@ -2506,6 +2511,7 @@ export default class LokiBlobMetadataStore
       doc.properties.contentEncoding = blob.properties.contentEncoding;
       doc.properties.contentLanguage = blob.properties.contentLanguage;
       doc.properties.contentDisposition = blob.properties.contentDisposition;
+      doc.blobTags = blob.blobTags;
       doc.properties.contentLength = selectedBlockList
         .map((block) => block.size)
         .reduce((total, val) => {

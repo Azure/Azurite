@@ -67,6 +67,7 @@ import IBlobMetadataStore, {
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
+import { getBlobTagsCount, getTagsFromString } from "../utils/utils";
 
 // tslint:disable: max-classes-per-file
 class ServicesModel extends Model {}
@@ -1728,12 +1729,19 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
       // TODO: Return blobCommittedBlockCount for append blob
 
-      return LeaseFactory.createLeaseState(
+      let responds =  LeaseFactory.createLeaseState(
         new BlobLeaseAdapter(blobModel),
         context
       )
         .validate(new BlobReadLeaseValidator(leaseAccessConditions))
         .sync(new BlobLeaseSyncer(blobModel));
+      return {
+        ...responds,
+        properties : {
+          ...responds.properties,
+          tagCount: getBlobTagsCount(blobModel.blobTags),
+        },
+      }
     });
   }
 
@@ -2620,7 +2628,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         leaseBreakTime:
           destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
         committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
-        persistency: sourceBlob.persistency
+        persistency: sourceBlob.persistency,
+        blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!)
       };
 
       if (

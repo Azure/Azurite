@@ -13,6 +13,7 @@ import {
   MAX_APPEND_BLOB_BLOCK_COUNT,
   MAX_APPEND_BLOB_BLOCK_SIZE
 } from "../utils/constants";
+import { getTagsFromString } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 export default class AppendBlobHandler extends BaseHandler
@@ -71,7 +72,8 @@ export default class AppendBlobHandler extends BaseHandler
       },
       snapshot: "",
       isCommitted: true,
-      committedBlocksInOrder: []
+      committedBlocksInOrder: [],
+      blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!),
     };
 
     await this.metadataStore.createBlob(

@@ -27,7 +27,9 @@ import {
 } from "../utils/constants";
 import {
   deserializePageBlobRangeHeader,
-  deserializeRangeHeader
+  deserializeRangeHeader,
+  getBlobTagsCount,
+  validateBlobTag
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -151,6 +153,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           contentEncoding: context.request!.getQuery("rsce") ?? res.properties.contentEncoding,
           contentLanguage: context.request!.getQuery("rscl") ?? res.properties.contentLanguage,
           contentType: context.request!.getQuery("rsct") ?? res.properties.contentType,
+          tagCount: res.properties.tagCount,
         };
 
     return response;
@@ -1096,6 +1099,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentLength,
       contentRange,
       contentMD5,
+      tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
       clientRequestId: options.requestId,
       creationTime:blob.properties.creationTime,
@@ -1226,6 +1230,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentRange,
       contentMD5,
       blobContentMD5: blob.properties.contentMD5,
+      tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
       creationTime:blob.properties.creationTime,
       clientRequestId: options.requestId
@@ -1282,6 +1287,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Blob Tags need to set
     const tags = options.tags;
+    validateBlobTag(tags!, context.contextId!);
 
     // Get snapshot (swagger not defined snapshot as parameter, but server support set tag on blob snapshot)
     let snapshot = context.request!.getQuery("snapshot");

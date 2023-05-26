@@ -14,6 +14,7 @@ import { parseXML } from "../generated/utils/xml";
 import { BlobModel, BlockModel } from "../persistence/IBlobMetadataStore";
 import { BLOB_API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
+import { getTagsFromString } from "../utils/utils";
 
 /**
  * BlobHandler handles Azure Storage BlockBlob related requests.
@@ -121,7 +122,8 @@ export default class BlockBlobHandler
       },
       snapshot: "",
       isCommitted: true,
-      persistency
+      persistency,
+      blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!),
     };
 
     if (options.tier !== undefined) {
@@ -322,7 +324,8 @@ export default class BlockBlobHandler
       accountName,
       containerName,
       name: blobName,
-      snapshot: "",
+      snapshot: "",      
+      blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!),
       properties: {
         lastModified: context.startTime!,
         creationTime: context.startTime!,
