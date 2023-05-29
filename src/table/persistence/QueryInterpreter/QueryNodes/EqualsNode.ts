@@ -5,6 +5,13 @@ import GuidNode from "./GuidNode";
 /**
  * Represents a logical equality operation between two nodes (the `eq` query operator).
  * 
+ * This is used in queries which resemble the following:
+ * 
+ *  PartitionKey eq 'foo'
+ * 
+ * In this case, the `EqualsNode` would be the root node, with the left and right nodes
+ * corresponding to the identifier `PartitionKey` and the constant `foo`, respectively.
+ * 
  * NOTE: This operation includes backwards compatibility for the `guid` type hint, since
  *       earlier versions of Azurite stored guid values in their raw string format.
  */
