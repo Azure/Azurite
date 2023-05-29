@@ -3,7 +3,8 @@ import { Entity, Table } from "./ITableMetadataStore";
 import Context from "../generated/Context";
 import * as Models from "../generated/artifacts/models";
 import parseQuery from "./QueryInterpreter/QueryParser";
-import executeQuery, { validateQueryTree } from "./QueryInterpreter/QueryInterpreter";
+import executeQuery from "./QueryInterpreter/QueryInterpreter";
+import { validateQueryTree } from "./QueryInterpreter/QueryValidator";
 
 /**
  * Handles Query Logic For LokiJs Table Implementation

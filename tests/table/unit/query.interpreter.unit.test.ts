@@ -2,6 +2,7 @@ import * as assert from "assert";
 import parseQuery from "../../../src/table/persistence/QueryInterpreter/QueryParser";
 import { IQueryContext } from "../../../src/table/persistence/QueryInterpreter/IQueryContext";
 import executeQuery from "../../../src/table/persistence/QueryInterpreter/QueryInterpreter";
+import { Entity, Table } from "../../../src/table/persistence/ITableMetadataStore";
 
 describe("Query Interpreter", () => {
   function runTestCases(name: string, context: IQueryContext, testCases: {
@@ -19,11 +20,11 @@ describe("Query Interpreter", () => {
     })
   }
 
-  const referenceEntity = {
+  const referenceEntity: Entity = {
     PartitionKey: "testPartition",
     RowKey: "testRow",
-    account: "testAccount",
-    table: "testTable",
+    eTag: "testETag",
+    lastModifiedTime: "2023-05-29T15:30:00Z",
     properties: {
       test: "test",
       int32: 123,
@@ -34,7 +35,13 @@ describe("Query Interpreter", () => {
       guid: Buffer.from("00000000-0000-0000-0000-000000000000").toString("base64"),
       guidLegacy: "00000000-0000-0000-0000-000000000000",
       binary: Buffer.from("binaryData").toString("base64"),
+      emptyString: "",
     }
+  };
+
+  const referenceTable: Table = {
+    table: "testTable",
+    account: "testAccount",
   };
 
   describe("Built-in Identifiers", () => {
@@ -74,7 +81,7 @@ describe("Query Interpreter", () => {
       }
     ])
 
-    runTestCases("TableName", referenceEntity, [
+    runTestCases("TableName", referenceTable, [
       {
         name: "TableName equality",
         originalQuery: "TableName eq 'testTable'",
@@ -233,6 +240,31 @@ describe("Query Interpreter", () => {
         name: "GUID inequality (legacy)",
         originalQuery: "guidLegacy ne guid'22222222-2222-2222-2222-222222222222'",
         expectedResult: true
+      }
+    ])
+  })
+
+  describe("Regression Tests", () => {
+    runTestCases("Issue #1929: Querying non-existent fields", referenceEntity, [
+      {
+        name: "Empty string fields should be queryable",
+        originalQuery: "emptyString eq ''",
+        expectedResult: true
+      },
+      {
+        name: "Empty string fields should be queryable (doesn't match)",
+        originalQuery: "emptyString ne ''",
+        expectedResult: false
+      },
+      {
+        name: "Empty string queries using ne should not match fields with a value",
+        originalQuery: "test ne ''",
+        expectedResult: true
+      },
+      {
+        name: "Non-existent fields should not be queryable",
+        originalQuery: "nonExistent ne ''",
+        expectedResult: false
       }
     ])
   })

@@ -1,9 +1,12 @@
 import { IQueryContext } from "../IQueryContext";
 import BinaryOperatorNode from "./BinaryOperatorNode";
 
+/**
+ * Represents a logical less than or equal operation between two nodes (the `le` query operator).
+ */
 export default class LessThanEqualNode extends BinaryOperatorNode {
   get name(): string {
-    return `lte`
+    return `le`
   }
 
   evaluate(context: IQueryContext): any {

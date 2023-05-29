@@ -1,62 +1,16 @@
 import { IQueryContext } from "./IQueryContext";
-import BinaryOperatorNode from "./QueryNodes/BinaryOperatorNode";
-import ExpressionNode from "./QueryNodes/ExpressionNode";
 import IQueryNode from "./QueryNodes/IQueryNode";
-import IdentifierNode from "./QueryNodes/IdentifierNode";
-import NotNode from "./QueryNodes/NotNode";
-import PartitionKeyNode from "./QueryNodes/PartitionKeyNode";
-import RowKeyNode from "./QueryNodes/RowKeyNode";
-import TableNameNode from "./QueryNodes/TableNode";
-
-export default function executeQuery(context: IQueryContext, queryTree: IQueryNode): boolean {
-  return !!queryTree.evaluate(context)
-}
 
 /**
- * Validates that the provided query tree represents a valid query.
+ * Executes a given query tree against a given context.
  * 
- * That is, a query containing at least one conditional expression,
- * where every conditional expression operates on at least
- * one column or built-in identifier (i.e. comparison between two constants is not allowed).
+ * This method is effectively a wrapper around IQueryNode.evaluate,
+ * ensuring that the result is a boolean value.
  * 
- * @param {IQueryNode} queryTree
+ * @param {IQueryContext} context The query context to execute the query against. This may be either a table or an entity.
+ * @param {IQueryNode} queryTree The query tree to execute.
+ * @returns {boolean} The result of the query in this context.
  */
-export function validateQueryTree(queryTree: IQueryNode) {
-  const identifierReferences = countIdentifierReferences(queryTree);
-
-  if (!identifierReferences) {
-    throw new Error("Invalid Query, no identifier references found.")
-  }
-}
-
-function countIdentifierReferences(queryTree: IQueryNode): number {
-  if (queryTree instanceof IdentifierNode) {
-    return 1
-  }
-
-  if (queryTree instanceof TableNameNode) {
-    return 1
-  }
-
-  if (queryTree instanceof PartitionKeyNode) {
-    return 1
-  }
-
-  if (queryTree instanceof RowKeyNode) {
-    return 1
-  }
-
-  if (queryTree instanceof BinaryOperatorNode) {
-    return countIdentifierReferences(queryTree.left) + countIdentifierReferences(queryTree.right)
-  }
-
-  if (queryTree instanceof ExpressionNode) {
-    return countIdentifierReferences(queryTree.child)
-  }
-
-  if (queryTree instanceof NotNode) {
-    return countIdentifierReferences(queryTree.right)
-  }
-
-  return 0
+export default function executeQuery(context: IQueryContext, queryTree: IQueryNode): boolean {
+  return !!queryTree.evaluate(context);
 }

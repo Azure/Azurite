@@ -1,28 +1,7 @@
 import * as assert from "assert";
-import parseQuery, { ParserContext } from "../../../src/table/persistence/QueryInterpreter/QueryParser";
+import parseQuery from "../../../src/table/persistence/QueryInterpreter/QueryParser";
 
 describe("Query Parser", () => {
-  describe("Context", () => {
-    describe("peek", () => {
-      it("should return the next character in the sequence", () => {
-        const context = new ParserContext("test");
-        assert.strictEqual(context.peek(), "t");
-        assert.strictEqual(context.peek(), "t", "it should not advance the sequence");
-        assert.ok(context.consume("test"));
-        context.assertEndOfQuery();
-      })
-    })
-
-    describe("skipWhitespace", () => {
-      it("should not advance the parser when no whitespace is present", () => {
-        const context = new ParserContext("test");
-        context.skipWhitespace();
-        assert.ok(context.consume("test"));
-        context.assertEndOfQuery();
-      })
-    })
-  })
-
   function runTestCases(name: string, testCases: {
     name: string
     originalQuery: string
@@ -42,7 +21,7 @@ describe("Query Parser", () => {
     {
       name: "Normalizes irregular whitespace",
       originalQuery: "  PartitionKey   eq    'test1'  ",
-      expectedQuery: '(eq PartitionKey "test1")'
+      expectedQuery: '(eq (id PartitionKey) "test1")'
     }
   ])
 
@@ -51,7 +30,7 @@ describe("Query Parser", () => {
       {
         name: "Parses basic expression groups",
         originalQuery: "(PartitionKey eq 'test')",
-        expectedQuery: '((eq PartitionKey "test"))'
+        expectedQuery: '(eq (id PartitionKey) "test")'
       }
     ])
 
@@ -59,22 +38,22 @@ describe("Query Parser", () => {
       {
         name: "Parses NOT expressions",
         originalQuery: "not PartitionKey eq 'test'",
-        expectedQuery: '(not (eq PartitionKey "test"))'
+        expectedQuery: '(not (eq (id PartitionKey) "test"))'
       },
       {
         name: "NOT takes precedence over EQ",
         originalQuery: "not PartitionKey eq 'test'",
-        expectedQuery: "(not (eq PartitionKey \"test\"))"
+        expectedQuery: "(not (eq (id PartitionKey) \"test\"))"
       },
       {
         name: "Wrapping another condition",
         originalQuery: "not (PartitionKey eq 'test')",
-        expectedQuery: "(not ((eq PartitionKey \"test\")))"
+        expectedQuery: "(not (eq (id PartitionKey) \"test\"))"
       },
       {
         name: "Wrapping an expresssion group",
         originalQuery: "not (PartitionKey lt 'Part2')",
-        expectedQuery: "(not ((lt PartitionKey \"Part2\")))"
+        expectedQuery: "(not (lt (id PartitionKey) \"Part2\"))"
       }
     ])
   })
@@ -85,17 +64,17 @@ describe("Query Parser", () => {
       {
         name: "AND takes precedence over NOT",
         originalQuery: "not PartitionKey eq 'test' and PartitionKey eq 'test2'",
-        expectedQuery: "(and (not (eq PartitionKey \"test\")) (eq PartitionKey \"test2\"))"
+        expectedQuery: "(and (not (eq (id PartitionKey) \"test\")) (eq (id PartitionKey) \"test2\"))"
       },
       {
         name: "Precedence works with complex queries",
         originalQuery: "(true and RowKey eq '1') and ((false or PartitionKey eq 'partition1') or PartitionKey eq 'partition2') or PartitionKey eq 'partition3'",
-        expectedQuery: '(or (and ((and true (eq RowKey "1"))) ((or ((or false (eq PartitionKey "partition1"))) (eq PartitionKey "partition2")))) (eq PartitionKey "partition3"))'
+        expectedQuery: '(or (and (and true (eq (id RowKey) "1")) (or (or false (eq (id PartitionKey) "partition1")) (eq (id PartitionKey) "partition2"))) (eq (id PartitionKey) "partition3"))'
       },
       {
         name: "Basic AND",
         originalQuery: "PartitionKey eq 'test' and RowKey eq 'test2'",
-        expectedQuery: "(and (eq PartitionKey \"test\") (eq RowKey \"test2\"))"
+        expectedQuery: "(and (eq (id PartitionKey) \"test\") (eq (id RowKey) \"test2\"))"
       }
     ])
 
@@ -104,12 +83,12 @@ describe("Query Parser", () => {
       {
         name: "OR takes precedence over AND",
         originalQuery: "PartitionKey eq 'test' or PartitionKey eq 'test2' and RowKey eq 'test3'",
-        expectedQuery: "(or (eq PartitionKey \"test\") (and (eq PartitionKey \"test2\") (eq RowKey \"test3\")))"
+        expectedQuery: "(or (eq (id PartitionKey) \"test\") (and (eq (id PartitionKey) \"test2\") (eq (id RowKey) \"test3\")))"
       },
       {
         name: "Basic OR",
         originalQuery: "PartitionKey eq 'test' or RowKey eq 'test2'",
-        expectedQuery: "(or (eq PartitionKey \"test\") (eq RowKey \"test2\"))"
+        expectedQuery: "(or (eq (id PartitionKey) \"test\") (eq (id RowKey) \"test2\"))"
       }
     ])
 
@@ -117,120 +96,102 @@ describe("Query Parser", () => {
       {
         name: "Are order invariant for constants and fields",
         originalQuery: "'test' eq PartitionKey",
-        expectedQuery: '(eq "test" PartitionKey)'
+        expectedQuery: '(eq "test" (id PartitionKey))'
       },
       {
         name: "Supports PartitionKey equals",
         originalQuery: "PartitionKey eq 'test'",
-        expectedQuery: '(eq PartitionKey "test")'
+        expectedQuery: '(eq (id PartitionKey) "test")'
       },
       {
         name: "Supports PartitionKey not equals",
         originalQuery: "PartitionKey ne 'test'",
-        expectedQuery: '(ne PartitionKey "test")'
+        expectedQuery: '(ne (id PartitionKey) "test")'
       },
       {
         name: "Supports PartitionKey greater than",
         originalQuery: "PartitionKey gt 'test'",
-        expectedQuery: '(gt PartitionKey "test")'
+        expectedQuery: '(gt (id PartitionKey) "test")'
       },
       {
         name: "Supports PartitionKey greater than or equal to",
         originalQuery: "PartitionKey ge 'test'",
-        expectedQuery: '(gte PartitionKey "test")'
+        expectedQuery: '(ge (id PartitionKey) "test")'
       },
       {
         name: "Supports PartitionKey less than",
         originalQuery: "PartitionKey lt 'test'",
-        expectedQuery: '(lt PartitionKey "test")'
+        expectedQuery: '(lt (id PartitionKey) "test")'
       },
       {
         name: "Supports PartitionKey less than or equal to",
         originalQuery: "PartitionKey le 'test'",
-        expectedQuery: '(lte PartitionKey "test")'
+        expectedQuery: '(le (id PartitionKey) "test")'
       },
       {
         name: "Supports RowKey equals",
         originalQuery: "RowKey eq 'test'",
-        expectedQuery: '(eq RowKey "test")'
+        expectedQuery: '(eq (id RowKey) "test")'
       },
       {
         name: "Supports RowKey not equals",
         originalQuery: "RowKey ne 'test'",
-        expectedQuery: '(ne RowKey "test")'
+        expectedQuery: '(ne (id RowKey) "test")'
       },
       {
         name: "Supports RowKey greater than",
         originalQuery: "RowKey gt 'test'",
-        expectedQuery: '(gt RowKey "test")'
+        expectedQuery: '(gt (id RowKey) "test")'
       },
       {
         name: "Supports RowKey greater than or equal to",
         originalQuery: "RowKey ge 'test'",
-        expectedQuery: '(gte RowKey "test")'
+        expectedQuery: '(ge (id RowKey) "test")'
       },
       {
         name: "Supports RowKey less than",
         originalQuery: "RowKey lt 'test'",
-        expectedQuery: '(lt RowKey "test")'
+        expectedQuery: '(lt (id RowKey) "test")'
       },
       {
         name: "Supports RowKey less than or equal to",
         originalQuery: "RowKey le 'test'",
-        expectedQuery: '(lte RowKey "test")'
+        expectedQuery: '(le (id RowKey) "test")'
       },
       {
         name: "Supports TableName equals",
         originalQuery: "TableName eq 'test'",
-        expectedQuery: '(eq TableName "test")'
+        expectedQuery: '(eq (id TableName) "test")'
       },
       {
         name: "Supports TableName not equals",
         originalQuery: "TableName ne 'test'",
-        expectedQuery: '(ne TableName "test")'
+        expectedQuery: '(ne (id TableName) "test")'
       },
       {
         name: "Supports TableName greater than",
         originalQuery: "TableName gt 'test'",
-        expectedQuery: '(gt TableName "test")'
+        expectedQuery: '(gt (id TableName) "test")'
       },
       {
         name: "Supports TableName greater than or equal to",
         originalQuery: "TableName ge 'test'",
-        expectedQuery: '(gte TableName "test")'
+        expectedQuery: '(ge (id TableName) "test")'
       },
       {
         name: "Supports TableName less than",
         originalQuery: "TableName lt 'test'",
-        expectedQuery: '(lt TableName "test")'
+        expectedQuery: '(lt (id TableName) "test")'
       },
       {
         name: "Supports TableName less than or equal to",
         originalQuery: "TableName le 'test'",
-        expectedQuery: '(lte TableName "test")'
+        expectedQuery: '(le (id TableName) "test")'
       }
     ])
   })
 
   describe("Identifiers", () => {
-    runTestCases("Built-in Identifiers", [
-      {
-        name: "Normalizes TableName field",
-        originalQuery: "'test' eq tablename",
-        expectedQuery: '(eq "test" TableName)'
-      },
-      {
-        name: "Normalizes PartitionKey field",
-        originalQuery: "'test' eq partitionKEY",
-        expectedQuery: '(eq "test" PartitionKey)'
-      },
-      {
-        name: "Normalizes RowKey field",
-        originalQuery: "'test' eq rowKEY",
-        expectedQuery: '(eq "test" RowKey)'
-      }
-    ])
-
     runTestCases("Properties", [
       {
         name: "Handles identifiers with leading underscores",
@@ -412,12 +373,12 @@ describe("Query Parser", () => {
       {
         name: "Handle escaped single-quotes without spaces (1)",
         originalQuery: "PartitionKey eq 'Iam''good''atTypeScript'",
-        expectedQuery: "(eq PartitionKey \"Iam'good'atTypeScript\")"
+        expectedQuery: "(eq (id PartitionKey) \"Iam'good'atTypeScript\")"
       },
       {
         name: "Handle escaped single-quotes without spaces (2)",
         originalQuery: "PartitionKey eq 'Isn''tThisANastyPK'",
-        expectedQuery: "(eq PartitionKey \"Isn'tThisANastyPK\")"
+        expectedQuery: "(eq (id PartitionKey) \"Isn'tThisANastyPK\")"
       },
       {
         name: "Handle strings which contain backticks",
@@ -440,7 +401,7 @@ describe("Query Parser", () => {
       {
         name: "Correctly handles GUIDs in complex queries",
         originalQuery: "(PartitionKey eq '1168485761365502459') and (guidField ge guid'22222222-2222-2222-2222-222222222222')",
-        expectedQuery: "(and ((eq PartitionKey \"1168485761365502459\")) ((gte (id guidField) (guid 22222222-2222-2222-2222-222222222222))))"
+        expectedQuery: "(and (eq (id PartitionKey) \"1168485761365502459\") (ge (id guidField) (guid 22222222-2222-2222-2222-222222222222)))"
       }
     ])
 
@@ -458,7 +419,7 @@ describe("Query Parser", () => {
       {
         name: "Correctly handles DateTimes in a complex query",
         originalQuery: "myDateTime lt datetime'2020-01-01T00:00:00.000Z' and number gt 11 and PartitionKey eq 'partition1'",
-        expectedQuery: "(and (lt (id myDateTime) (datetime 2020-01-01T00:00:00.000Z)) (and (gt (id number) 11) (eq PartitionKey \"partition1\")))"
+        expectedQuery: "(and (lt (id myDateTime) (datetime 2020-01-01T00:00:00.000Z)) (and (gt (id number) 11) (eq (id PartitionKey) \"partition1\")))"
       }
     ])
 
