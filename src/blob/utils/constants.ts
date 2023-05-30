@@ -4,9 +4,11 @@ import * as Models from "../generated/artifacts/models";
 export const VERSION = "3.23.0";
 export const BLOB_API_VERSION = "2022-11-02";
 export const DEFAULT_BLOB_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
+export const DEFAULT_DATA_LAKE_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_LIST_BLOBS_MAX_RESULTS = 5000;
 export const DEFAULT_LIST_CONTAINERS_MAX_RESULTS = 5000;
 export const DEFAULT_BLOB_LISTENING_PORT = 10000;
+export const DEFAULT_DATA_LAKE_LISTENING_PORT = 10003;
 export const IS_PRODUCTION = process.env.NODE_ENV === "production";
 export const DEFAULT_BLOB_LOKI_DB_PATH = "__azurite_db_blob__.json";
 export const DEFAULT_BLOB_EXTENT_LOKI_DB_PATH =

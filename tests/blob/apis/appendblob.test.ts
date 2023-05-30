@@ -68,7 +68,7 @@ describe("AppendBlobAPIs", () => {
     await containerClient.delete();
   });
 
-  it("Create append blob should work @loki", async () => {
+  it("Create append blob should work @loki @sql", async () => {
     await appendBlobClient.create();
     const properties = await appendBlobClient.getProperties();
     assert.deepStrictEqual(properties.blobType, "AppendBlob");
@@ -85,7 +85,7 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(properties.blobCommittedBlockCount, 0);
   });
 
-  it("Create append blob override existing pageblob @loki", async () => {
+  it("Create append blob override existing pageblob @loki @sql", async () => {
     const pageBlobClient = blobClient.getPageBlobClient();
     await pageBlobClient.create(512);
 
@@ -133,12 +133,12 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(properties.blobCommittedBlockCount, 0);
   });
 
-  it("Delete append blob should work @loki", async () => {
+  it("Delete append blob should work @loki @sql", async () => {
     await appendBlobClient.create();
     await appendBlobClient.delete();
   });
 
-  it("Create append blob snapshot should work @loki", async () => {
+  it("Create append blob snapshot should work @loki @sql", async () => {
     await appendBlobClient.create();
     const response = await appendBlobClient.createSnapshot();
     const appendBlobSnapshotClient = appendBlobClient.withSnapshot(
@@ -176,7 +176,7 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(properties.blobCommittedBlockCount, 0);
   });
 
-  it("Copy append blob snapshot should work @loki", async () => {
+  it("Copy append blob snapshot should work @loki @sql", async () => {
     await appendBlobClient.create();
     await appendBlobClient.appendBlock("hello", 5);
 
@@ -212,7 +212,7 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(properties.copyStatus, "success");
   });
 
-  it("Synchronized copy append blob snapshot should work @loki", async () => {
+  it("Synchronized copy append blob snapshot should work @loki @sql", async () => {
     await appendBlobClient.create();
     await appendBlobClient.appendBlock("hello", 5);
 
@@ -247,7 +247,7 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(properties.copySource, appendBlobSnapshotClient.url);
   });
 
-  it("Set append blob metadata should work @loki", async () => {
+  it("Set append blob metadata should work @loki @sql", async () => {
     await appendBlobClient.create();
 
     const metadata = {
@@ -260,7 +260,7 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(properties.metadata, metadata);
   });
 
-  it("Set append blob HTTP headers should work @loki", async () => {
+  it("Set append blob HTTP headers should work @loki @sql", async () => {
     await appendBlobClient.create();
 
     const md5 = new Uint8Array([1, 2, 3, 4, 5]);
@@ -292,7 +292,7 @@ describe("AppendBlobAPIs", () => {
     );
   });
 
-  it("Set tier should not work for append blob @loki", async function () {
+  it("Set tier should not work for append blob @loki @sql", async function () {
     await appendBlobClient.create();
     try {
       await blobClient.setAccessTier("hot");
@@ -302,7 +302,7 @@ describe("AppendBlobAPIs", () => {
     assert.fail();
   });
 
-  it("Append block should work @loki", async () => {
+  it("Append block should work @loki @sql", async () => {
     await appendBlobClient.create();
     let appendBlockResponse = await appendBlobClient.appendBlock("abcdef", 6);
     assert.deepStrictEqual(appendBlockResponse.blobAppendOffset, "0");
@@ -357,7 +357,7 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(string, "abcdef123456T@");
   });
 
-  it("Download append blob should work @loki", async () => {
+  it("Download append blob should work @loki @sql", async () => {
     await appendBlobClient.create();
     await appendBlobClient.appendBlock("abcdef", 6);
     await appendBlobClient.appendBlock("123456", 6);
@@ -374,7 +374,7 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(response.contentRange, "bytes 5-12/14");
   });
 
-  it("Download append blob should work for snapshot @loki", async () => {
+  it("Download append blob should work for snapshot @loki @sql", async () => {
     await appendBlobClient.create();
     await appendBlobClient.appendBlock("abcdef", 6);
 
@@ -393,7 +393,7 @@ describe("AppendBlobAPIs", () => {
     assert.deepEqual(response.contentMD5, await getMD5FromString("def"));
   });
 
-  it("Download append blob should work for copied blob @loki", async () => {
+  it("Download append blob should work for copied blob @loki @sql", async () => {
     await appendBlobClient.create();
     await appendBlobClient.appendBlock("abcdef", 6);
 
@@ -410,7 +410,7 @@ describe("AppendBlobAPIs", () => {
     assert.deepEqual(response.contentMD5, await getMD5FromString("def"));
   });
 
-  it("Append block with invalid blob type should not work @loki", async () => {
+  it("Append block with invalid blob type should not work @loki @sql", async () => {
     const pageBlobClient = appendBlobClient.getPageBlobClient();
     await pageBlobClient.create(512);
 
@@ -423,7 +423,7 @@ describe("AppendBlobAPIs", () => {
     assert.fail();
   });
 
-  it("Append block with content length 0 should not work @loki", async () => {
+  it("Append block with content length 0 should not work @loki @sql", async () => {
     await appendBlobClient.create();
 
     try {
@@ -435,7 +435,7 @@ describe("AppendBlobAPIs", () => {
     assert.fail();
   });
 
-  it("Append block append position access condition should work @loki", async () => {
+  it("Append block append position access condition should work @loki @sql", async () => {
     await appendBlobClient.create();
     await appendBlobClient.appendBlock("a", 1, {
       conditions: {
@@ -480,7 +480,7 @@ describe("AppendBlobAPIs", () => {
     assert.fail();
   });
 
-  it("Append block md5 validation should work @loki", async () => {
+  it("Append block md5 validation should work @loki @sql", async () => {
     await appendBlobClient.create();
     await appendBlobClient.appendBlock("aEf", 1, {
       transactionalContentMD5: await getMD5FromString("aEf")
@@ -498,7 +498,7 @@ describe("AppendBlobAPIs", () => {
     assert.fail();
   });
 
-  it("Append block access condition should work @loki", async () => {
+  it("Append block access condition should work @loki @sql", async () => {
     let response = await appendBlobClient.create();
     response = await appendBlobClient.appendBlock("a", 1, {
       conditions: {
@@ -538,7 +538,7 @@ describe("AppendBlobAPIs", () => {
     assert.fail();
   });
 
-  it("Append block lease condition should work @loki", async () => {
+  it("Append block lease condition should work @loki @sql", async () => {
     await appendBlobClient.create();
 
     const leaseId = "abcdefg";

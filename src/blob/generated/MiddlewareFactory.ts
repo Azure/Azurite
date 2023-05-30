@@ -1,4 +1,3 @@
-import IHandlers from './handlers/IHandlers';
 import ILogger from './utils/ILogger';
 
 export type Callback = (...args: any[]) => any;
@@ -63,7 +62,7 @@ export default abstract class MiddlewareFactory {
    * @returns {MiddlewareTypes}
    * @memberof MiddlewareFactory
    */
-  public abstract createHandlerMiddleware(handlers: IHandlers): MiddlewareTypes;
+  public abstract createHandlerMiddleware(handlers: any): MiddlewareTypes;
 
   /**
    * SerializerMiddleware is the 4st middleware should be used among other generated middleware.

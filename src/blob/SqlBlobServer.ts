@@ -18,10 +18,6 @@ import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import SqlBlobMetadataStore from "./persistence/SqlBlobMetadataStore";
 import SqlBlobConfiguration from "./SqlBlobConfiguration";
 
-const BEFORE_CLOSE_MESSAGE = `Azurite Blob service is closing...`;
-const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Blob service is closing... Critical error happens during GC.`;
-const AFTER_CLOSE_MESSAGE = `Azurite Blob service successfully closed`;
-
 /**
  * Default implementation of Azurite Blob HTTP server.
  * This implementation provides a HTTP service based on express framework and LokiJS in memory database.
@@ -41,6 +37,9 @@ export default class SqlBlobServer extends ServerBase {
   private readonly extentStore: IExtentStore;
   private readonly accountDataStore: IAccountDataStore;
   private readonly gcManager: IGCManager;
+  private readonly BEFORE_CLOSE_MESSAGE;
+  private readonly BEFORE_CLOSE_MESSAGE_GC_ERROR;
+  private readonly AFTER_CLOSE_MESSAGE;
 
   /**
    * Creates an instance of Server.
@@ -48,7 +47,12 @@ export default class SqlBlobServer extends ServerBase {
    * @param {BlobConfiguration} configuration
    * @memberof Server
    */
-  constructor(configuration: SqlBlobConfiguration) {
+  constructor(
+    configuration: SqlBlobConfiguration,
+    metadataStoreClass: any = SqlBlobMetadataStore,
+    requestListnerFactory: any = BlobRequestListenerFactory,
+    private readonly serviceName: string = "Blob"
+  ) {
     const host = configuration.host;
     const port = configuration.port;
 
@@ -64,16 +68,19 @@ export default class SqlBlobServer extends ServerBase {
         httpServer = http.createServer();
     }
 
-    const metadataStore: IBlobMetadataStore = new SqlBlobMetadataStore(
+    const metadataStore: IBlobMetadataStore = new metadataStoreClass(
       configuration.sqlURL,
-      configuration.sequelizeOptions
+      configuration.sequelizeOptions,
+      configuration.clearDB,
+      process.env.IS_DATALAKE !== "true",
     );
 
     const extentMetadataStore: IExtentMetadataStore = new SqlExtentMetadataStore(
       // Currently, extent metadata and blob metadata share same database
       // But they can use separate databases per future requirements
       configuration.sqlURL,
-      configuration.sequelizeOptions
+      configuration.sequelizeOptions,
+      configuration.clearDB,
     );
 
     const extentStore: IExtentStore = new FSExtentStore(
@@ -87,7 +94,7 @@ export default class SqlBlobServer extends ServerBase {
     // We can also change the HTTP framework here by
     // creating a new XXXListenerFactory implementing IRequestListenerFactory interface
     // and replace the default Express based request listener
-    const requestListenerFactory: IRequestListenerFactory = new BlobRequestListenerFactory(
+    const requestListenerFactory: IRequestListenerFactory = new requestListnerFactory(
       metadataStore,
       extentStore,
       accountDataStore,
@@ -109,19 +116,22 @@ export default class SqlBlobServer extends ServerBase {
       extentStore,
       error => {
         // tslint:disable-next-line:no-console
-        console.log(BEFORE_CLOSE_MESSAGE_GC_ERROR, error);
-        logger.info(BEFORE_CLOSE_MESSAGE_GC_ERROR + JSON.stringify(error));
+        console.log(this.BEFORE_CLOSE_MESSAGE_GC_ERROR, error);
+        logger.info(this.BEFORE_CLOSE_MESSAGE_GC_ERROR + JSON.stringify(error));
 
         // TODO: Bring this back when GC based on SQL implemented
         this.close().then(() => {
           // tslint:disable-next-line:no-console
-          console.log(AFTER_CLOSE_MESSAGE);
-          logger.info(AFTER_CLOSE_MESSAGE);
+          console.log(this.AFTER_CLOSE_MESSAGE);
+          logger.info(this.AFTER_CLOSE_MESSAGE);
         });
       },
       logger
     );
 
+    this.BEFORE_CLOSE_MESSAGE = `Azurite ${serviceName} service is closing...`;
+    this.BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite ${serviceName} service is closing... Critical error happens during GC.`;
+    this.AFTER_CLOSE_MESSAGE = `Azurite ${serviceName} service successfully closed`;
     this.metadataStore = metadataStore;
     this.extentMetadataStore = extentMetadataStore;
     this.extentStore = extentStore;
@@ -154,11 +164,11 @@ export default class SqlBlobServer extends ServerBase {
       }
       return;
     }
-    throw Error(`Cannot clean up blob server in status ${this.getStatus()}.`);
+    throw Error(`Cannot clean up ${this.serviceName} server in status ${this.getStatus()}.`);
   }
 
   protected async beforeStart(): Promise<void> {
-    const msg = `Azurite Blob service is starting on ${this.host}:${this.port}`;
+    const msg = `Azurite ${this.serviceName} service is starting on ${this.host}:${this.port}`;
     logger.info(msg);
 
     if (this.accountDataStore !== undefined) {
@@ -183,12 +193,12 @@ export default class SqlBlobServer extends ServerBase {
   }
 
   protected async afterStart(): Promise<void> {
-    const msg = `Azurite Blob service successfully listens on ${this.getHttpServerAddress()}`;
+    const msg = `Azurite ${this.serviceName} service successfully listens on ${this.getHttpServerAddress()}`;
     logger.info(msg);
   }
 
   protected async beforeClose(): Promise<void> {
-    logger.info(BEFORE_CLOSE_MESSAGE);
+    logger.info(this.BEFORE_CLOSE_MESSAGE);
   }
 
   protected async afterClose(): Promise<void> {
@@ -212,6 +222,6 @@ export default class SqlBlobServer extends ServerBase {
       await this.accountDataStore.close();
     }
 
-    logger.info(AFTER_CLOSE_MESSAGE);
+    logger.info(this.AFTER_CLOSE_MESSAGE);
   }
 }

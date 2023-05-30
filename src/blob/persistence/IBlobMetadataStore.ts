@@ -35,24 +35,32 @@ interface IContainerAdditionalProperties {
   leaseExpireTime?: Date;
   leaseBreakTime?: Date;
   containerAcl?: Models.SignedIdentifier[];
+  fileSystemProperties?: string;
+}
+
+interface IFileSystemAdditionalProperties {
+  fileSystemProperties?: string;
 }
 
 export type ContainerModel = Models.ContainerItem &
-  IContainerAdditionalProperties;
+  IContainerAdditionalProperties &
+  IFileSystemAdditionalProperties;
 
 export interface IContainerMetadata {
   [propertyName: string]: string;
 }
 
 // The response model for getContainerProperties.
-export type GetContainerPropertiesResponse = Models.ContainerItem;
+export type GetContainerPropertiesResponse = Models.ContainerItem &
+  IFileSystemAdditionalProperties;
 
 // The response for getContainerAccessPolicy.
 interface IGetContainerAccessPolicyResponse {
   properties: Models.ContainerProperties;
   containerAcl?: Models.SignedIdentifier[];
 }
-export type GetContainerAccessPolicyResponse = IGetContainerAccessPolicyResponse;
+export type GetContainerAccessPolicyResponse =
+  IGetContainerAccessPolicyResponse;
 
 // The params for setContainerAccessPolicy.
 interface ISetContainerAccessPolicyOptions {
@@ -133,6 +141,12 @@ interface IBlobAdditionalProperties {
   leaseId?: string;
   leaseExpireTime?: Date;
   leaseBreakTime?: Date;
+  //Dfs properties
+  isDirectory?: boolean;
+  permissions?: string;
+  owner?: string;
+  group?: string;
+  acl?: string;
 }
 
 export type BlobModel = IBlobAdditionalProperties &

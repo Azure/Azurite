@@ -57,14 +57,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
       );
     }
 
-    const operation = context.operation;
-    if (operation === undefined) {
-      throw new Error(
-        // tslint:disable-next-line:max-line-length
-        `BlobSharedKeyAuthenticator:validate() Operation shouldn't be undefined. Please make sure DispatchMiddleware is hooked before authentication related middleware.`
-      );
-    }
-    else if (operation === Operation.Service_GetUserDelegationKey) {
+    if (context.operation === Operation.Service_GetUserDelegationKey) {
       this.logger.info(
         `BlobSharedKeyAuthenticator:validate() Service_GetUserDelegationKey requires OAuth credentials"
         }.`,

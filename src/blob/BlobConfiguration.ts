@@ -2,10 +2,8 @@ import ConfigurationBase from "../common/ConfigurationBase";
 import { StoreDestinationArray } from "../common/persistence/IExtentStore";
 import {
   DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
-  DEFAULT_BLOB_LISTENING_PORT,
   DEFAULT_BLOB_LOKI_DB_PATH,
   DEFAULT_BLOB_PERSISTENCE_ARRAY,
-  DEFAULT_BLOB_SERVER_HOST_NAME,
   DEFAULT_ENABLE_ACCESS_LOG,
   DEFAULT_ENABLE_DEBUG_LOG
 } from "./utils/constants";
@@ -24,8 +22,8 @@ import {
  */
 export default class BlobConfiguration extends ConfigurationBase {
   public constructor(
-    host: string = DEFAULT_BLOB_SERVER_HOST_NAME,
-    port: number = DEFAULT_BLOB_LISTENING_PORT,
+    host: string,
+    port: number,
     public readonly metadataDBPath: string = DEFAULT_BLOB_LOKI_DB_PATH,
     public readonly extentDBPath: string = DEFAULT_BLOB_EXTENT_LOKI_DB_PATH,
     public readonly persistencePathArray: StoreDestinationArray = DEFAULT_BLOB_PERSISTENCE_ARRAY,
