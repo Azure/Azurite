@@ -292,7 +292,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           type: "VARCHAR(2047)"
         },
         blobTags: {
-          type: "VARCHAR(2047)"
+          type: "VARCHAR(4096)"
         }
       },
       {
@@ -3343,14 +3343,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      validateWriteConditions(
-        context,
-        modifiedAccessConditions,
-        blobFindResult
-          ? this.convertDbModelToBlobModel(blobFindResult) // TODO: Reduce double convert
-          : undefined
-      );
-
       if (blobFindResult === null || blobFindResult === undefined) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
       }
@@ -3408,14 +3400,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
-
-      validateReadConditions(
-        context,
-        modifiedAccessConditions,
-        blobFindResult
-          ? this.convertDbModelToBlobModel(blobFindResult)
-          : undefined
-      );
 
       if (blobFindResult === null || blobFindResult === undefined) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);

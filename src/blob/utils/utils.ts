@@ -182,8 +182,10 @@ export function getTagsFromString(blobTagsString: string, contextID: string): Bl
   rawTags.forEach((rawTag)=>{
     const tagpair = rawTag.split("=");
     blobTags.push({
-      key: decodeURIComponent(tagpair[0]),
-      value: decodeURIComponent(tagpair[1]),
+      // When the Blob tag is input with header, it's encoded, sometimes space will be encoded to "+" ("+" will be encoded to "%2B")
+      // But in decodeURIComponent(), "+" won't be decode to space, so we need first replace "+" to "%20", then decode the tag.
+      key: decodeURIComponent(tagpair[0].replace(/\+/g, '%20')),
+      value: decodeURIComponent(tagpair[1].replace(/\+/g, '%20')),
     });
   })
   validateBlobTag(

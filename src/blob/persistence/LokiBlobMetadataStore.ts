@@ -3341,8 +3341,6 @@ export default class LokiBlobMetadataStore
       true
     );
 
-    validateWriteConditions(context, modifiedAccessConditions, doc);
-
     if (!doc) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId);
     }
@@ -3387,8 +3385,6 @@ export default class LokiBlobMetadataStore
       false,
       true
     );
-
-    validateReadConditions(context, modifiedAccessConditions, doc);
 
     // When block blob don't have commited block, should return 404
     if (!doc) {
