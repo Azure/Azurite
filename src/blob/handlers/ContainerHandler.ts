@@ -16,7 +16,7 @@ import {
   EMULATOR_ACCOUNT_SKUNAME
 } from "../utils/constants";
 import { DEFAULT_LIST_BLOBS_MAX_RESULTS } from "../utils/constants";
-import { removeQuotationFromListBlobEtag } from "../utils/utils";
+import { getBlobTagsCount, removeQuotationFromListBlobEtag } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import { BlobBatchHandler } from "./BlobBatchHandler";
 
@@ -601,6 +601,7 @@ export default class ContainerHandler extends BaseHandler
     options.marker = options.marker || "";
     let includeSnapshots: boolean = false;
     let includeUncommittedBlobs: boolean = false;
+    let includeTags: boolean = false;
     if (options.include !== undefined) {
       options.include.forEach(element => {
         if (Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase()) {
@@ -609,8 +610,10 @@ export default class ContainerHandler extends BaseHandler
         if (Models.ListBlobsIncludeItem.Uncommittedblobs.toLowerCase() === element.toLowerCase()) {
           includeUncommittedBlobs = true;
         }
-      }
-      )
+        if (Models.ListBlobsIncludeItem.Tags.toLowerCase() === element.toLowerCase()) {
+          includeTags = true;
+        }
+      })
     }
     if (
       options.maxresults === undefined ||
@@ -650,9 +653,11 @@ export default class ContainerHandler extends BaseHandler
             ...item,
             deleted: item.deleted !== true ? undefined : true,
             snapshot: item.snapshot || undefined,
+            blobTags: includeTags? item.blobTags: undefined,
             properties: {
               ...item.properties,
               etag: removeQuotationFromListBlobEtag(item.properties.etag),
+              tagCount: getBlobTagsCount(item.blobTags),
               accessTierInferred:
                 item.properties.accessTierInferred === true ? true : undefined
             }
@@ -696,6 +701,7 @@ export default class ContainerHandler extends BaseHandler
     options.marker = options.marker || "";
     let includeSnapshots: boolean = false;
     let includeUncommittedBlobs: boolean = false;
+    let includeTags: boolean = false;
     if (options.include !== undefined) {
       options.include.forEach(element => {
         if (Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase()) {
@@ -703,6 +709,9 @@ export default class ContainerHandler extends BaseHandler
         }
         if (Models.ListBlobsIncludeItem.Uncommittedblobs.toLowerCase() === element.toLowerCase()) {
           includeUncommittedBlobs = true;
+        }
+        if (Models.ListBlobsIncludeItem.Tags.toLowerCase() === element.toLowerCase()) {
+          includeTags = true;
         }
       }
       )
@@ -746,10 +755,12 @@ export default class ContainerHandler extends BaseHandler
           item.deleted = item.deleted !== true ? undefined : true;
           return {
             ...item,
-            snapshot: item.snapshot || undefined,
+            snapshot: item.snapshot || undefined,            
+            blobTags: includeTags? item.blobTags: undefined,
             properties: {
               ...item.properties,
               etag: removeQuotationFromListBlobEtag(item.properties.etag),
+              tagCount: getBlobTagsCount(item.blobTags),
               accessTierInferred:
                 item.properties.accessTierInferred === true ? true : undefined
             }
