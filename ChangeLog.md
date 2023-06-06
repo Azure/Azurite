@@ -4,6 +4,12 @@
 
 ## Upcoming Release
 
+## 2023.06 Version 3.24.0
+
+General:
+
+- Bump up service API version to 2023-01-03
+
 Blob:
 
 - Fixed issue of: blob batch subresponse is slightly different from the on from Azure serivce, which causes exception in CPP SDK.
@@ -11,6 +17,7 @@ Blob:
 - Supported rest API GetBlobTag, SetBlobTag.
 - Supported set Blob Tags in upload blob, copy blob.
 - Supported get Blob Tags (count) in download blob, get blob properties, list blobs.
+- Added support for large append blob with bumping block size limitation to 100MB.
 
 Table:
 
