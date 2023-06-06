@@ -47,7 +47,6 @@ import IBlobMetadataStore, {
   ChangeContainerLeaseResponse,
   ContainerModel,
   CreateSnapshotResponse,
-  FilterBlobModel,
   GetBlobPropertiesRes,
   GetContainerAccessPolicyResponse,
   GetContainerPropertiesResponse,
@@ -63,8 +62,7 @@ import IBlobMetadataStore, {
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
-import FilterBlobPage from "./FilterBlobPage";
-import { analysis } from "./QueryInterpreter/AnyName";
+import { getBlobTagsCount, getTagsFromString } from "../utils/utils";
 
 /**
  * This is a metadata source implementation for blob based on loki DB.
@@ -107,11 +105,8 @@ export default class LokiBlobMetadataStore
 
   private readonly pageBlobRangesManager = new PageBlobRangesManager();
 
-  public constructor(public readonly lokiDBPath: string, inMemory: boolean) {
-    this.db = new Loki(lokiDBPath, inMemory ? {
-      persistenceMethod: "memory"
-    } : {
-      persistenceMethod: "fs",
+  public constructor(public readonly lokiDBPath: string) {
+    this.db = new Loki(lokiDBPath, {
       autosave: true,
       autosaveInterval: 5000
     });
@@ -328,9 +323,9 @@ export default class LokiBlobMetadataStore
       prefix === ""
         ? { name: { $gt: marker }, accountName: account }
         : {
-          name: { $regex: `^${this.escapeRegex(prefix)}`, $gt: marker },
-          accountName: account
-        };
+            name: { $regex: `^${this.escapeRegex(prefix)}`, $gt: marker },
+            accountName: account
+          };
 
     // Workaround for loki which will ignore $gt when providing $regex
     const query2 = { name: { $gt: marker } };
@@ -752,10 +747,10 @@ export default class LokiBlobMetadataStore
 
     const leaseTimeSeconds: number =
       doc.properties.leaseState === Models.LeaseStateType.Breaking &&
-        doc.leaseBreakTime
+      doc.leaseBreakTime
         ? Math.round(
-          (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
-        )
+            (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
+          )
         : 0;
 
     coll.update(doc);
@@ -821,66 +816,6 @@ export default class LokiBlobMetadataStore
       const requestId = context ? context.contextId : undefined;
       throw StorageErrorFactory.getContainerNotFound(requestId);
     }
-  }
-
-  public async filterBlobs(
-    context: Context,
-    account: string,
-    container: string,
-    where?: string,
-    maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
-    marker: string = "",
-  ): Promise<[FilterBlobModel[], string | undefined]> {
-    const query: any = {};
-    if (account !== undefined) {
-      query.accountName = account;
-    }
-    if (container !== undefined) {
-      query.containerName = container;
-    }
-
-    const filterFunction = analysis(where!);
-
-    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
-    const page = new FilterBlobPage<FilterBlobModel>(maxResults);
-    const readPage = async (offset: number): Promise<FilterBlobModel[]> => {
-      const doc = await coll
-        .chain()
-        .find(query)
-        .where((obj) => {
-          return obj.name > marker!;
-        })
-        .where((obj) => {
-          return filterFunction(obj);
-        })
-        .sort((obj1, obj2) => {
-          if (obj1.name === obj2.name) return 0;
-          if (obj1.name > obj2.name) return 1;
-          return -1;
-        })
-        .offset(offset)
-        .limit(maxResults)
-        .data();
-      return doc.map((item) => {
-        let blobItem: FilterBlobModel;
-        blobItem = {
-          name: item.name,
-          containerName: container,
-        };
-        return blobItem;
-      });
-    };
-
-    const nameItem = (item: FilterBlobModel) => {
-      return item.name;
-    };
-
-    const [blobItems, nextMarker] = await page.fill(readPage, nameItem);
-
-    return [
-      blobItems,
-      nextMarker
-    ];
   }
 
   public async listBlobs(
@@ -1751,10 +1686,10 @@ export default class LokiBlobMetadataStore
 
     const leaseTimeSeconds: number =
       doc.properties.leaseState === Models.LeaseStateType.Breaking &&
-        doc.leaseBreakTime
+      doc.leaseBreakTime
         ? Math.round(
-          (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
-        )
+            (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
+          )
         : 0;
 
     coll.update(doc);
@@ -1981,7 +1916,7 @@ export default class LokiBlobMetadataStore
       leaseBreakTime:
         destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
       committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
-      persistency: sourceBlob.persistency,
+      persistency: sourceBlob.persistency,      
       blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!)
     };
 
@@ -2168,7 +2103,7 @@ export default class LokiBlobMetadataStore
       leaseBreakTime:
         destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
       committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
-      persistency: sourceBlob.persistency,
+      persistency: sourceBlob.persistency,      
       blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!)
     };
 
@@ -2249,8 +2184,7 @@ export default class LokiBlobMetadataStore
     if (
       (tier === Models.AccessTier.Archive ||
         tier === Models.AccessTier.Cool ||
-        tier === Models.AccessTier.Hot ||
-        tier === Models.AccessTier.Cold) &&
+        tier === Models.AccessTier.Hot) &&
       doc.properties.blobType === Models.BlobType.BlockBlob
     ) {
       // Block blob
@@ -2260,7 +2194,7 @@ export default class LokiBlobMetadataStore
       // Archive -> Coo/Hot will return 202
       if (
         doc.properties.accessTier === Models.AccessTier.Archive &&
-        (tier === Models.AccessTier.Cool || tier === Models.AccessTier.Hot || tier === Models.AccessTier.Cold)
+        (tier === Models.AccessTier.Cool || tier === Models.AccessTier.Hot)
       ) {
         responseCode = 202;
       }
@@ -3483,9 +3417,6 @@ export default class LokiBlobMetadataStore
     }
     if (tier === Models.AccessTier.Archive.toLowerCase()) {
       return Models.AccessTier.Archive;
-    }
-    if (tier === Models.AccessTier.Cold.toLowerCase()) {
-      return Models.AccessTier.Cold;
     }
     return undefined;
   }
