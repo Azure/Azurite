@@ -53,7 +53,6 @@ import IBlobMetadataStore, {
   ChangeContainerLeaseResponse,
   ContainerModel,
   CreateSnapshotResponse,
-  FilterBlobModel,
   GetBlobPropertiesRes,
   GetContainerAccessPolicyResponse,
   GetContainerPropertiesResponse,
@@ -68,15 +67,13 @@ import IBlobMetadataStore, {
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
-import FilterBlobPage from "./FilterBlobPage";
-import { getBlobTagsCount, getTagsFromString, toBlobTags } from "../utils/utils";
-import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
+import { getBlobTagsCount, getTagsFromString } from "../utils/utils";
 
 // tslint:disable: max-classes-per-file
-class ServicesModel extends Model { }
-class ContainersModel extends Model { }
-class BlobsModel extends Model { }
-class BlocksModel extends Model { }
+class ServicesModel extends Model {}
+class ContainersModel extends Model {}
+class BlobsModel extends Model {}
+class BlocksModel extends Model {}
 // class PagesModel extends Model {}
 
 interface IBlobContentProperties {
@@ -1040,10 +1037,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         containerModel.properties.leaseState ===
           Models.LeaseStateType.Breaking && containerModel.leaseBreakTime
           ? Math.round(
-            (containerModel.leaseBreakTime.getTime() -
-              context.startTime!.getTime()) /
-            1000
-          )
+              (containerModel.leaseBreakTime.getTime() -
+                context.startTime!.getTime()) /
+                1000
+            )
           : 0;
 
       return {
@@ -1227,78 +1224,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       )
         .validate(new BlobReadLeaseValidator(leaseAccessConditions))
         .sync(new BlobLeaseSyncer(blobModel));
-    });
-  }
-
-  public async filterBlobs(
-    context: Context,
-    account: string,
-    container?: string,
-    where?: string,
-    maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
-    marker?: string,
-  ): Promise<[FilterBlobModel[], string | undefined]> {
-    return this.sequelize.transaction(async (t) => {
-      if (container) {
-        await this.assertContainerExists(context, account, container, t);
-      }
-
-      let whereQuery: any;
-      if (container) {
-        whereQuery = {
-          accountName: account,
-          containerName: container
-        }
-      }
-      else {
-        whereQuery = {
-          accountName: account
-        };
-      };
-
-      if (marker !== undefined) {
-        if (whereQuery.blobName !== undefined) {
-          whereQuery.blobName[Op.gt] = marker;
-        } else {
-          whereQuery.blobName = {
-            [Op.gt]: marker
-          };
-        }
-      }
-      whereQuery.deleting = 0;
-
-      // fill the page by possibly querying multiple times
-      const page = new FilterBlobPage<BlobsModel>(maxResults);
-
-      const nameItem = (item: BlobsModel): string => {
-        return this.getModelValue<string>(item, "blobName", true);
-      };
-      const filterFunction = generateQueryBlobWithTagsWhereFunction(where!);
-
-      const readPage = async (off: number): Promise<BlobsModel[]> => {
-        return (await BlobsModel.findAll({
-          where: whereQuery as any,
-          order: [["blobName", "ASC"]],
-          transaction: t,
-          limit: maxResults,
-          offset: off
-        }));
-      };
-
-      const [blobItems, nextMarker] = await page.fill(readPage, nameItem);
-
-      const filterBlobModelMapper = (model: BlobsModel) => {
-        return this.convertDbModelToFilterBlobModel(model);
-      };
-
-      return [blobItems.map(filterBlobModelMapper).filter((blobItem) => {
-        const tagsMeetConditions = filterFunction(blobItem);
-        if (tagsMeetConditions.length !== 0) {
-          blobItem.tags = { blobTagSet: toBlobTags(tagsMeetConditions) };
-          return true;
-        }
-        return false;
-      }), nextMarker];
     });
   }
 
@@ -1804,7 +1729,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
       // TODO: Return blobCommittedBlockCount for append blob
 
-      let responds = LeaseFactory.createLeaseState(
+      let responds =  LeaseFactory.createLeaseState(
         new BlobLeaseAdapter(blobModel),
         context
       )
@@ -1812,7 +1737,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         .sync(new BlobLeaseSyncer(blobModel));
       return {
         ...responds,
-        properties: {
+        properties : {
           ...responds.properties,
           tagCount: getBlobTagsCount(blobModel.blobTags),
         },
@@ -2493,11 +2418,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
       const leaseTimeSeconds: number =
         lease.leaseState === Models.LeaseStateType.Breaking &&
-          lease.leaseBreakTime
+        lease.leaseBreakTime
           ? Math.round(
-            (lease.leaseBreakTime.getTime() - context.startTime!.getTime()) /
-            1000
-          )
+              (lease.leaseBreakTime.getTime() - context.startTime!.getTime()) /
+                1000
+            )
           : 0;
 
       await BlobsModel.update(this.convertLeaseToDbModel(lease), {
@@ -2801,8 +2726,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       if (
         (tier === Models.AccessTier.Archive ||
           tier === Models.AccessTier.Cool ||
-          tier === Models.AccessTier.Hot ||
-          tier === Models.AccessTier.Cold) &&
+          tier === Models.AccessTier.Hot) &&
         blobType === Models.BlobType.BlockBlob
       ) {
         // Block blob
@@ -2812,7 +2736,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         // Archive -> Coo/Hot will return 202
         if (
           accessTier === Models.AccessTier.Archive &&
-          (tier === Models.AccessTier.Cool || tier === Models.AccessTier.Hot || tier === Models.AccessTier.Cold)
+          (tier === Models.AccessTier.Cool || tier === Models.AccessTier.Hot)
         ) {
           responseCode = 202;
         }
@@ -3153,14 +3077,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     };
   }
 
-  private convertDbModelToFilterBlobModel(dbModel: BlobsModel): FilterBlobModel {
-    return {
-      containerName: this.getModelValue<string>(dbModel, "containerName", true),
-      name: this.getModelValue<string>(dbModel, "blobName", true),
-      tags: this.deserializeModelValue(dbModel, "blobTags")
-    };
-  }
-
   private convertDbModelToBlobModel(dbModel: BlobsModel): BlobModel {
     const contentProperties: IBlobContentProperties = this.convertDbModelToBlobContentProperties(
       dbModel
@@ -3437,9 +3353,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
         .sync(new BlobWriteLeaseSyncer(blobModel));
 
+      const lastModified = context.startTime! || new Date();
+      const etag = newEtag();
+
       await BlobsModel.update(
         {
           blobTags: this.serializeModelValue(tags) || null,
+          lastModified,
+          etag,
           ...this.convertLeaseToDbModel(new BlobLeaseAdapter(blobModel))
         },
         {
@@ -3490,19 +3411,13 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
       if (!blobModel.isCommitted) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
-      }
-
+      }      
+      
       LeaseFactory.createLeaseState(
         new BlobLeaseAdapter(blobModel),
         context
       ).validate(new BlobReadLeaseValidator(leaseAccessConditions));
 
-      if (modifiedAccessConditions?.ifTags) {
-        const validateFunction = generateQueryBlobWithTagsWhereFunction(modifiedAccessConditions?.ifTags, true);
-        if (!validateFunction(blobModel)) {
-          throw new Error("412");
-        }
-      }
       return blobModel.blobTags;
     });
   }
@@ -3525,9 +3440,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     }
     if (tier === Models.AccessTier.Archive.toLowerCase()) {
       return Models.AccessTier.Archive;
-    }
-    if (tier === Models.AccessTier.Cold.toLowerCase()) {
-      return Models.AccessTier.Cold;
     }
     return undefined;
   }

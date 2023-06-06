@@ -9,12 +9,22 @@
       "request": "launch",
       "name": "Azurite Service - Loki",
       "cwd": "${workspaceFolder}",
-      "runtimeArgs": ["-r", "ts-node/register"],
-      "args": ["${workspaceFolder}/src/azurite.ts", "-d", "debug.log"],
+      "runtimeArgs": [
+        "-r",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/azurite.ts",
+        "-d",
+        "debug.log"
+      ],
       "env": {
         "AZURITE_ACCOUNTS": ""
       },
-      "skipFiles": ["node_modules/*/**", "<node_internals>/*/**"],
+      "skipFiles": [
+        "node_modules/*/**",
+        "<node_internals>/*/**"
+      ],
       "outputCapture": "std"
     },
     {
@@ -35,8 +45,16 @@
       "request": "launch",
       "name": "Azurite Service - Loki, Loose",
       "cwd": "${workspaceFolder}",
-      "runtimeArgs": ["-r", "ts-node/register"],
-      "args": ["${workspaceFolder}/src/azurite.ts", "-d", "debug.log", "-L"],
+      "runtimeArgs": [
+        "-r",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/azurite.ts",
+        "-d",
+        "debug.log",
+        "-L"
+      ],
       "env": {
         "AZURITE_ACCOUNTS": ""
       },
@@ -47,7 +65,10 @@
       "request": "launch",
       "name": "Azurite Service - Loki, Loose, HTTPS, OAuth",
       "cwd": "${workspaceFolder}",
-      "runtimeArgs": ["-r", "ts-node/register"],
+      "runtimeArgs": [
+        "-r",
+        "ts-node/register"
+      ],
       "args": [
         "${workspaceFolder}/src/azurite.ts",
         "-L",
@@ -70,7 +91,10 @@
       "request": "launch",
       "name": "Azurite Queue Service - Loki, HTTPS, OAuth",
       "cwd": "${workspaceFolder}",
-      "runtimeArgs": ["-r", "ts-node/register"],
+      "runtimeArgs": [
+        "-r",
+        "ts-node/register"
+      ],
       "args": [
         "${workspaceFolder}/src/queue/main.ts",
         "-d",
@@ -92,7 +116,10 @@
       "request": "launch",
       "name": "Azurite Blob Service - Loki, HTTPS, OAuth",
       "cwd": "${workspaceFolder}",
-      "runtimeArgs": ["-r", "ts-node/register"],
+      "runtimeArgs": [
+        "-r",
+        "ts-node/register"
+      ],
       "args": [
         "${workspaceFolder}/src/blob/main.ts",
         "-d",
@@ -114,8 +141,15 @@
       "request": "launch",
       "name": "Azurite Blob Service - SQL",
       "cwd": "${workspaceFolder}",
-      "runtimeArgs": ["-r", "ts-node/register"],
-      "args": ["${workspaceFolder}/src/blob/main.ts", "-d", "debug.log"],
+      "runtimeArgs": [
+        "-r",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/blob/main.ts",
+        "-d",
+        "debug.log"
+      ],
       "env": {
         "AZURITE_DB": "mysql://root:my-secret-pw@127.0.0.1:3306/azurite_blob",
         "AZURITE_ACCOUNTS": ""
@@ -127,8 +161,15 @@
       "request": "launch",
       "name": "Azurite Table Service - Loki",
       "cwd": "${workspaceFolder}",
-      "runtimeArgs": ["-r", "ts-node/register"],
-      "args": ["${workspaceFolder}/src/table/main.ts", "-d", "debug.log"],
+      "runtimeArgs": [
+        "-r",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/src/table/main.ts",
+        "-d",
+        "debug.log"
+      ],
       "env": {
         "AZURITE_ACCOUNTS": ""
       },
@@ -139,8 +180,13 @@
       "request": "launch",
       "name": "Current TS File",
       "cwd": "${workspaceFolder}",
-      "runtimeArgs": ["-r", "ts-node/register"],
-      "args": ["${workspaceFolder}/${relativeFile}"],
+      "runtimeArgs": [
+        "-r",
+        "ts-node/register"
+      ],
+      "args": [
+        "${workspaceFolder}/${relativeFile}"
+      ],
       "outputCapture": "std"
     },
     {
@@ -148,7 +194,10 @@
       "request": "launch",
       "name": "Current Mocha TS File - Loki",
       "cwd": "${workspaceFolder}",
-      "runtimeArgs": ["-r", "ts-node/register"],
+      "runtimeArgs": [
+        "-r",
+        "ts-node/register"
+      ],
       "args": [
         "${workspaceFolder}/node_modules/mocha/bin/_mocha",
         "-u",
@@ -162,7 +211,7 @@
         "AZURITE_ACCOUNTS": "",
         "AZURE_TABLE_STORAGE": "",
         "DATATABLES_ACCOUNT_NAME": "<name of your storage account>",
-        "DATATABLES_ACCOUNT_KEY" : "<account key for your storage account>",
+        "DATATABLES_ACCOUNT_KEY": "<account key for your storage account>",
         "AZURE_DATATABLES_STORAGE_STRING": "https://<your account name>.table.core.windows.net",
         "AZURE_DATATABLES_SAS": "?<sas query string>",
         "NODE_TLS_REJECT_UNAUTHORIZED": "0"
@@ -175,7 +224,10 @@
       "request": "launch",
       "name": "EXE Mocha TS File - Loki",
       "cwd": "${workspaceFolder}",
-      "runtimeArgs": ["-r", "ts-node/register"],
+      "runtimeArgs": [
+        "-r",
+        "ts-node/register"
+      ],
       "args": [
         "${workspaceFolder}/node_modules/mocha/bin/_mocha",
         "-u",
@@ -183,7 +235,7 @@
         "--timeout",
         "999999",
         "--colors",
-        "${workspaceFolder}/tests/exe.test.ts", 
+        "${workspaceFolder}/tests/exe.test.ts",
         "--exit"
       ],
       "env": {
@@ -199,7 +251,10 @@
       "request": "launch",
       "name": "Current Mocha TS File - SQL",
       "cwd": "${workspaceFolder}",
-      "runtimeArgs": ["-r", "ts-node/register"],
+      "runtimeArgs": [
+        "-r",
+        "ts-node/register"
+      ],
       "args": [
         "${workspaceFolder}/node_modules/mocha/bin/_mocha",
         "-u",
@@ -211,7 +266,7 @@
       ],
       "env": {
         "AZURITE_ACCOUNTS": "",
-        "AZURITE_TEST_DB": "mysql://root:my-secret-pw@127.0.0.1:3306/azurite_blob_test",
+        "AZURITE_TEST_DB": "mysql://root:!!123abc@127.0.0.1:3306/azurite_blob",
         "NODE_TLS_REJECT_UNAUTHORIZED": "0"
       },
       "internalConsoleOptions": "openOnSessionStart",
@@ -250,8 +305,12 @@
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
-      "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
-      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
       "preLaunchTask": "npm: watch"
     }
   ]

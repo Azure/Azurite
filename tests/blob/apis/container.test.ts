@@ -6,7 +6,8 @@ import {
   BlobServiceClient,
   generateAccountSASQueryParameters,
   newPipeline,
-  StorageSharedKeyCredential
+  StorageSharedKeyCredential,
+  Tags
 } from "@azure/storage-blob";
 import assert = require("assert");
 import StorageErrorFactory from "../../../src/blob/errors/StorageErrorFactory";
@@ -674,7 +675,7 @@ describe("ContainerAPIs", () => {
     const inputmarker = undefined;
     let result = (
       await containerClient
-        .listBlobsByHierarchy("/",{
+        .listBlobsByHierarchy("/", {
           prefix: ""
         })
         .byPage({
@@ -1151,6 +1152,65 @@ describe("ContainerAPIs", () => {
     assert.equal(result.segment.blobItems.length, 4);
   });
 
+  it("filter blob by tags should work on container @loki @sql", async () => {
+
+    const key1 = getUniqueName("key");
+    const key2 = getUniqueName("key2");
+
+    const blobName1 = getUniqueName("blobname1");
+    const appendBlobClient1 = containerClient.getAppendBlobClient(blobName1);
+    const tags1: Tags = {};
+    tags1[key1] = getUniqueName("val1");
+    tags1[key2] = "default";
+    await appendBlobClient1.create({ tags: tags1 });
+
+    const blobName2 = getUniqueName("blobname2");
+    const appendBlobClient2 = containerClient.getAppendBlobClient(blobName2);
+    const tags2: Tags = {};
+    tags2[key1] = getUniqueName("val2");
+    tags2[key2] = "default";
+    await appendBlobClient2.create({ tags: tags2 });
+
+    const blobName3 = getUniqueName("blobname3");
+    const appendBlobClient3 = containerClient.getAppendBlobClient(blobName3);
+    const tags3: Tags = {};
+    tags3[key1] = getUniqueName("val3");
+    tags3[key2] = "default";
+    await appendBlobClient3.create({ tags: tags3 });
+
+    const expectedTags1: Tags = {};
+    expectedTags1[key1] = tags1[key1];
+    for await (const blob of containerClient.findBlobsByTags(`${key1}='${tags1[key1]}'`)) {
+      assert.deepStrictEqual(blob.containerName, containerName);
+      assert.deepStrictEqual(blob.name, blobName1);
+      assert.deepStrictEqual(blob.tags, expectedTags1);
+      assert.deepStrictEqual(blob.tagValue, tags1[key1]);
+    }
+
+    const expectedTags2: Tags = {};
+    expectedTags2[key1] = tags2[key1];
+    const blobs = [];
+    for await (const blob of containerClient.findBlobsByTags(`${key1}='${tags2[key1]}'`)) {
+      blobs.push(blob);
+    }
+    assert.deepStrictEqual(blobs.length, 1);
+    assert.deepStrictEqual(blobs[0].containerName, containerName);
+    assert.deepStrictEqual(blobs[0].name, blobName2);
+    assert.deepStrictEqual(blobs[0].tags, expectedTags2);
+    assert.deepStrictEqual(blobs[0].tagValue, tags2[key1]);
+
+    const blobsWithTag2 = [];
+    for await (const segment of containerClient.findBlobsByTags(`${key2}='default'`).byPage({
+      maxPageSize: 1,
+    })) {
+      assert.ok(segment.blobs.length <= 1);
+      for (const blob of segment.blobs) {
+        blobsWithTag2.push(blob);
+      }
+    }
+    assert.deepStrictEqual(blobsWithTag2.length, 3);
+  });
+
   // Skip the case currently since js sdk caculate the stringToSign with "+" in prefix instead of decode to space
   it.skip("List blob should success with '+' in query @loki @sql", async () => {
     const blobClients = [];
@@ -1165,7 +1225,7 @@ describe("ContainerAPIs", () => {
       await blockBlobClient.upload("", 0);
       blobClients.push(blobClient);
     }
-    
+
     // list with prefix has "+" instead of "%20" for space
     // create service client 
     let pipeline = newPipeline(
@@ -1205,7 +1265,7 @@ describe("ContainerAPIs", () => {
       gotNames.push(item.name);
     }
     assert.deepStrictEqual(gotNames, blobNames);
-    
+
     // clean up
     for (const blob of blobClients) {
       await blob.delete();
