@@ -12,6 +12,7 @@ Blob:
 Table:
 
 - Fixed issue with headers length when deserializing batch deletes.
+- Fixed issues with the use of backticks in string query predicates.
 - Fixed issue of : entities with empty fields were not being correctly queried and were being included in queries whey should not have
 
 ## 2023.03 Version 3.23.0
