@@ -50,7 +50,7 @@ export class QueryLexer {
   private logicOperators: string[] = [
     "and",
     "or",
-  ]
+  ];
 
   /**
    * The list of type hints which are supported by the query syntax.

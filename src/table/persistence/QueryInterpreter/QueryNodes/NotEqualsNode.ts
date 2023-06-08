@@ -30,9 +30,9 @@ export default class NotEqualsNode extends BinaryOperatorNode {
   }
 
   private backwardsCompatibleGuidEvaluate(context: IQueryContext): boolean {
-    const left = this.left instanceof GuidNode ? this.left.legacyStorageFormat() : this.left.evaluate(context)
-    const right = this.right instanceof GuidNode ? this.right.legacyStorageFormat() : this.right.evaluate(context)
+    const left = this.left instanceof GuidNode ? this.left.legacyStorageFormat() : this.left.evaluate(context);
+    const right = this.right instanceof GuidNode ? this.right.legacyStorageFormat() : this.right.evaluate(context);
 
-    return left !== right
+    return left !== right;
   }
 }

@@ -13,10 +13,10 @@ import BinaryOperatorNode from "./BinaryOperatorNode";
  */
 export default class LessThanEqualNode extends BinaryOperatorNode {
   get name(): string {
-    return `le`
+    return `le`;
   }
 
   evaluate(context: IQueryContext): any {
-    return this.left.evaluate(context) <= this.right.evaluate(context)
+    return this.left.evaluate(context) <= this.right.evaluate(context);
   }
 }

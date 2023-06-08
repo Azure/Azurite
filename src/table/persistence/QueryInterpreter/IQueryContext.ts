@@ -9,7 +9,7 @@ export type IQueryContext = Entity | Table;
  * @returns {boolean}
  */
 export function isEntity(context: IQueryContext): context is Entity {
-  return !!(<Entity>context).PartitionKey
+  return !!(<Entity>context).PartitionKey;
 }
 
 /**
@@ -19,5 +19,5 @@ export function isEntity(context: IQueryContext): context is Entity {
  * @returns {boolean}
  */
 export function isTable(context: IQueryContext): context is Table {
-  return !!(<Table>context).table
+  return !!(<Table>context).table;
 }

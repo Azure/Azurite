@@ -17,7 +17,7 @@ import OrNode from "./QueryNodes/OrNode";
 
 
 export default function parseQuery(query: string): IQueryNode {
-  return new QueryParser(query).visit()
+  return new QueryParser(query).visit();
 }
 
 /**
@@ -164,7 +164,7 @@ class QueryParser {
    * @returns {IQueryNode}
    */
   private visitBinary(): IQueryNode {
-    const left = this.visitIdentifierOrConstant()
+    const left = this.visitIdentifierOrConstant();
 
     const operator = this.tokens.next(t => t.kind === "comparison-operator");
     if (!operator) {
