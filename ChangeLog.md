@@ -23,6 +23,7 @@ Table:
 
 - Fixed issue with headers length when deserializing batch deletes.
 - Fixed issues with the use of backticks in string query predicates.
+- Replaced the query filter implementation with a custom interpreter which mitigates the risk of JS-query injection.
 
 ## 2023.03 Version 3.23.0
 
