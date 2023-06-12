@@ -75,7 +75,7 @@ export default class SqlExtentMetadataStore implements IExtentMetadataStore {
     );
 
     // TODO: Remove this part which only for test.
-    this.sequelize.sync();
+    await this.sequelize.sync();
 
     this.initialized = true;
   }
