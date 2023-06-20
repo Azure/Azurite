@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Fixed issue with query table fail with filter condition as string.Empty. (issue #1880)
+
 ## 2023.06 Version 3.24.0
 
 General:
