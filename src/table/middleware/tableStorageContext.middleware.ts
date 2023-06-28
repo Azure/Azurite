@@ -134,18 +134,11 @@ export function tableStorageContextMiddleware(
       0,
       tableSection.indexOf("(")
     );
-    const firstQuoteIndex = tableSection.indexOf("'");
-    const secondQuoteIndex = tableSection.indexOf("'", firstQuoteIndex + 1);
-    const thridQuoteIndex = tableSection.indexOf("'", secondQuoteIndex + 1);
-    const fourthQuoteIndex = tableSection.indexOf("'", thridQuoteIndex + 1);
-    tableContext.partitionKey = tableSection.substring(
-      firstQuoteIndex + 1,
-      secondQuoteIndex
-    );
-    tableContext.rowKey = tableSection.substring(
-      thridQuoteIndex + 1,
-      fourthQuoteIndex
-    );
+    
+    const regex = /'([^']|'')*'/g;
+    const matches = tableSection?.match(regex);
+    tableContext.partitionKey = matches? matches[0].replace(/^'|'$/g, '').replace(/''/g, "'"): undefined;
+    tableContext.rowKey = matches? matches[1].replace(/^'|'$/g, '').replace(/''/g, "'"): undefined;
 
     tableSection = `${tableContext.tableName}(PartitionKey='PLACEHOLDER',RowKey='PLACEHOLDER')`;
   } else if (
