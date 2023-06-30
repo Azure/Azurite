@@ -7,6 +7,7 @@
 Table:
 
 - Fixed issue with query table fail with filter condition as string.Empty. (issue #1880)
+- Fixed merge table entity fail with single quota in PK/RK. (issue #2009)
 
 ## 2023.06 Version 3.24.0
 
