@@ -447,13 +447,13 @@ Azurite V3 allows customizing storage account names and keys by providing enviro
 For example, customize one storage account which has only one key:
 
 ```cmd
-set AZURITE_ACCOUNTS="account1:key1"
+set AZURITE_ACCOUNTS=account1:key1
 ```
 
 Or customize multi storage accounts and each has 2 keys:
 
 ```cmd
-set AZURITE_ACCOUNTS="account1:key1:key2;account2:key1:key2"
+set AZURITE_ACCOUNTS=account1:key1:key2;account2:key1:key2
 ```
 
 Azurite will refresh customized account name and key from environment variable every minute by default. With this feature, we can dynamically rotate account key, or add new storage accounts on the air without restarting Azurite instance.

@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Updated examples of setting Customized Storage Accounts & Keys in enviroment varialbe.
+
 Table:
 
 - Fixed issue with query table fail with filter condition as string.Empty. (issue #1880)
