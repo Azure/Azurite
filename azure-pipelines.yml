@@ -17,8 +17,8 @@ jobs:
       vmImage: "ubuntu-20.04"
     strategy:
       matrix:
-        node_12_x:
-          node_version: 12.x
+        node_18_x:
+          node_version: 18.x
         node_14_x:
           node_version: 14.x
     steps:
@@ -548,8 +548,8 @@ jobs:
         # our .exe build program is currently incompatible with node 10
         # node_10_x:
         #   node_version: 10.x
-        node_12_x:
-          node_version: 12.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:
