@@ -61,7 +61,7 @@
     "@types/mocha": "^9.0.0",
     "@types/morgan": "^1.7.35",
     "@types/multistream": "^2.1.1",
-    "@types/node": "^14.14.24",
+    "@types/node": "^20.4.2",
     "@types/rimraf": "^3.0.0",
     "@types/stoppable": "^1.1.1",
     "@types/uri-templates": "^0.1.29",
