@@ -394,7 +394,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     }
     if (options?.ifMatch && options.ifMatch !== "*") {
       if (isEtagValid(options.ifMatch)) {
-        throw StorageErrorFactory.getInvalidInput(context, "Bad Request");
+        throw StorageErrorFactory.getInvalidInput(context);
       }
     }
     // check that key properties are valid
@@ -466,7 +466,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     }
     if (options?.ifMatch && options.ifMatch !== "*" && options.ifMatch !== "") {
       if (isEtagValid(options.ifMatch)) {
-        throw StorageErrorFactory.getInvalidInput(context, "Bad Request");
+        throw StorageErrorFactory.getInvalidInput(context);
       }
     }
 
@@ -544,7 +544,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       throw StorageErrorFactory.getPreconditionFailed(context);
     }
     if (ifMatch !== "*" && isEtagValid(ifMatch)) {
-      throw StorageErrorFactory.getInvalidInput(context, "Bad Request");
+      throw StorageErrorFactory.getInvalidInput(context);
     }
     // currently the props are not coming through as args, so we take them from the table context
     await this.metadataStore.deleteTableEntity(
