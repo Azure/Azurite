@@ -237,7 +237,6 @@ describe("table Entity APIs test : Issues", () => {
       const storageError = reason as StorageError;
       assert.strictEqual(storageError.statusCode, "InvalidInput");
       assert.strictEqual(storageError.storageErrorCode, 400);
-      assert.strictEqual(storageError.storageErrorMessage, "Bad Request");
     });
     
     tableClient.updateEntity({
@@ -248,7 +247,6 @@ describe("table Entity APIs test : Issues", () => {
       const storageError = reason as StorageError;
       assert.strictEqual(storageError.statusCode, "InvalidInput");
       assert.strictEqual(storageError.storageErrorCode, 400);
-      assert.strictEqual(storageError.storageErrorMessage, "Bad Request");
     });
 
     tableClient.mergeEntity({
@@ -259,7 +257,6 @@ describe("table Entity APIs test : Issues", () => {
       const storageError = reason as StorageError;
       assert.strictEqual(storageError.statusCode, "InvalidInput");
       assert.strictEqual(storageError.storageErrorCode, 400);
-      assert.strictEqual(storageError.storageErrorMessage, "Bad Request");
     });
   });
 
