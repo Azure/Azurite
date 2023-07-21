@@ -7,6 +7,7 @@ import {
   TableEntityResult
 } from "@azure/data-tables";
 import { configLogger } from "../../../src/common/Logger";
+import StorageError from "../../../src/table/errors/StorageError";
 import TableServer from "../../../src/table/TableServer";
 import { getUniqueName } from "../../testutils";
 import {
@@ -210,6 +211,56 @@ describe("table Entity APIs test : Issues", () => {
     assert.strictEqual(all.length, totalItems);
 
     await tableClient.deleteTable();
+  });
+
+  //from issue #2013
+  it("Malformed Etag when sent as input throws InvalidInput for table operations, ", async() => {
+    const partitionKey = createUniquePartitionKey("𤭢PK1");
+    const malformedEtag = "MalformedEtag";
+    const rowKey: "𐐷RK1"
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      tableName
+    );
+
+    await tableClient.createTable();
+    await tableClient.createEntity({
+      partitionKey: partitionKey,
+      rowKey: "𐐷RK1"
+    });
+
+    tableClient.deleteEntity({
+      partitionKey: partitionKey,
+      rowKey: rowKey,
+      ifMatch: malformedEtag
+    }).catch((reason) => {
+      const storageError = reason as StorageError;
+      assert.strictEqual(storageError.statusCode, "InvalidInput");
+      assert.strictEqual(storageError.storageErrorCode, 400);
+      assert.strictEqual(storageError.storageErrorMessage, "Bad Request");
+    });
+    
+    tableClient.updateEntity({
+      partitionKey: partitionKey,
+      rowKey: rowKey,
+      ifMatch: malformedEtag
+    }).catch((reason) => {
+      const storageError = reason as StorageError;
+      assert.strictEqual(storageError.statusCode, "InvalidInput");
+      assert.strictEqual(storageError.storageErrorCode, 400);
+      assert.strictEqual(storageError.storageErrorMessage, "Bad Request");
+    });
+
+    tableClient.mergeEntity({
+      partitionKey: partitionKey,
+      rowKey: rowKey,
+      ifMatch: malformedEtag
+    }).catch((reason) => {
+      const storageError = reason as StorageError;
+      assert.strictEqual(storageError.statusCode, "InvalidInput");
+      assert.strictEqual(storageError.storageErrorCode, 400);
+      assert.strictEqual(storageError.storageErrorMessage, "Bad Request");
+    });
   });
 
   // from issue #1214
