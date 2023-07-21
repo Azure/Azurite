@@ -4,8 +4,11 @@
 
 ## Upcoming Release
 
+## 2023.07 Version 3.25.0
+
 Table:
 
+- Refactor table query code
 - Fixed issue with query table fail with filter condition as string.Empty. (issue #1880)
 - Fixed merge table entity fail with single quota in PK/RK. (issue #2009)
 
