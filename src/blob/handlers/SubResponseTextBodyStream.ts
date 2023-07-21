@@ -8,7 +8,7 @@ export class SubResponseTextBodyStream extends Writable
     private readonly subResponse: BlobBatchSubResponse) {
     super();
     this.bodyText = "";
-  };
+  }
 
   public _write(chunk: any, encoding: BufferEncoding, callback: (error?: Error | null | undefined) => void): void {
     this.bodyText += chunk.toString();

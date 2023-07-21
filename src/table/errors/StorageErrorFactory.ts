@@ -58,6 +58,20 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getInvalidEtag(
+    context: Context,
+    eTagValue?: string
+  ): StorageError {
+    return new StorageError(
+      400,
+      "InvalidInput",
+      `The etag value '${eTagValue}' specified in one of the request headers is not valid. Please make sure only one etag value is specified and is valid.`,
+      context.contextID || defaultID,
+      undefined,
+      context
+    );
+  }
+
   public static getTableAlreadyExists(context: Context): StorageError {
     return new StorageError(
       409,
