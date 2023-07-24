@@ -217,7 +217,7 @@ describe("table Entity APIs test : Issues", () => {
   it("Malformed Etag when sent as input throws InvalidInput for table operations, ", async() => {
     const partitionKey = createUniquePartitionKey("𤭢PK1");
     const malformedEtag = "MalformedEtag";
-    const rowKey: "𐐷RK1"
+    const rowKey = "𐐷RK1"
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       tableName
@@ -229,16 +229,17 @@ describe("table Entity APIs test : Issues", () => {
       rowKey: "𐐷RK1"
     });
 
-    tableClient.deleteEntity({
-      partitionKey: partitionKey,
-      rowKey: rowKey,
-      ifMatch: malformedEtag
-    }).catch((reason) => {
-      const storageError = reason as StorageError;
-      assert.strictEqual(storageError.statusCode, "InvalidInput");
-      assert.strictEqual(storageError.storageErrorCode, 400);
+    tableClient.deleteEntity(
+      partitionKey,
+      rowKey,
+      {
+        etag: malformedEtag
+      }
+    ).catch((reason) => {
+      assert.strictEqual(reason.details.errorCode, "InvalidInput");
+      assert.strictEqual(reason.statusCode, 400);
     });
-    
+
     tableClient.updateEntity({
       partitionKey: partitionKey,
       rowKey: rowKey,
@@ -257,6 +258,7 @@ describe("table Entity APIs test : Issues", () => {
       const storageError = reason as StorageError;
       assert.strictEqual(storageError.statusCode, "InvalidInput");
       assert.strictEqual(storageError.storageErrorCode, 400);
+      assert.strictEqual(storageError.storageErrorMessage, "Bad Request");
     });
   });
 
