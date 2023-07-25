@@ -4,7 +4,6 @@ import TableStorageContext from "../context/TableStorageContext";
 import Context from "../generated/Context";
 import TableHandler from "../handlers/TableHandler";
 import { TableBatchSerialization } from "./TableBatchSerialization";
-import TableBatchOperation from "./TableBatchOperation";
 import BatchTableDeleteEntityOptionalParams from "./BatchTableDeleteEntityOptionalParams";
 import BatchTableUpdateEntityOptionalParams from "./BatchTableUpdateEntityOptionalParams";
 import BatchTableMergeEntityOptionalParams from "./BatchTableMergeEntityOptionalParams";
@@ -14,6 +13,8 @@ import ITableMetadataStore from "../persistence/ITableMetadataStore";
 import { v4 as uuidv4 } from "uuid";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import TableBatchRepository from "./TableBatchRepository";
+import BatchStringConstants from "./BatchStringConstants";
+import BatchErrorConstants from "./BatchErrorConstants";
 
 /**
  * Currently there is a single distinct and concrete implementation of batch /
@@ -28,7 +29,6 @@ import TableBatchRepository from "./TableBatchRepository";
  * @class TableBatchOrchestrator
  */
 export default class TableBatchOrchestrator {
-  private batchOperations: TableBatchOperation[] = [];
   private serialization = new TableBatchSerialization();
   private context: TableStorageContext;
   private parentHandler: TableHandler;
@@ -54,10 +54,10 @@ export default class TableBatchOrchestrator {
     batchRequestBody: string
   ): Promise<string> {
     const batchOperations = this.serialization.deserializeBatchRequest(batchRequestBody);
-    if (this.batchOperations.length > 100) {
+    if (batchOperations.length > 100) {
       this.wasError = true;
       this.errorResponse = this.serialization.serializeGeneralRequestError(
-        "0:The batch request operation exceeds the maximum 100 changes per change set.",
+        BatchErrorConstants.TOO_MANY_OPERATIONS,
         this.context.xMsRequestID
       );
     } else {
@@ -138,7 +138,7 @@ export default class TableBatchOrchestrator {
     if (requestPartitionKey === undefined) {
       this.wasError = true;
       this.errorResponse = this.serialization.serializeGeneralRequestError(
-        "Partition key not found in request",
+        BatchErrorConstants.NO_PARTITION_KEY,
         this.context.xMsRequestID
       );
     }
@@ -171,41 +171,46 @@ export default class TableBatchOrchestrator {
     // based on research, a stringbuilder is only worth doing with 1000s of string ops
     // this can be optimized later if we get reports of slow batch operations
     const batchBoundary = this.serialization.batchBoundary.replace(
-      "batch",
-      "batchresponse"
+      BatchStringConstants.BATCH_REQ_BOUNDARY,
+      BatchStringConstants.BATCH_RES_BOUNDARY
     );
 
     let changesetBoundary = this.serialization.changesetBoundary.replace(
-      "changeset",
-      "changesetresponse"
+      BatchStringConstants.CHANGESET_REQ_BOUNDARY,
+      BatchStringConstants.CHANGESET_RES_BOUNDARY
     );
 
-    responseString += batchBoundary + "\r\n";
+    responseString += batchBoundary + BatchStringConstants.CRLF;
     // (currently static header) ToDo: Validate if we need to correct headers via tests
-    responseString +=
-      "Content-Type: multipart/mixed; boundary=" +
-      changesetBoundary +
-      "\r\n\r\n";
-    const changesetBoundaryClose: string = "--" + changesetBoundary + "--\r\n";
-    changesetBoundary = "--" + changesetBoundary;
+    responseString = this.serializeContentTypeAndBoundary(responseString, changesetBoundary);
+    const changesetBoundaryClose: string = BatchStringConstants.BOUNDARY_PREFIX + changesetBoundary + BatchStringConstants.BOUNDARY_CLOSE_SUFFIX;
+    changesetBoundary = BatchStringConstants.BOUNDARY_PREFIX + changesetBoundary;
     if (this.wasError === false) {
       this.repository.getBatchRequests().forEach((request) => {
         responseString += changesetBoundary;
         responseString += request.response;
-        responseString += "\r\n\r\n";
+        responseString += BatchStringConstants.DoubleCRLF;
       });
     } else {
       // serialize the error
-      responseString += changesetBoundary + "\r\n";
+      responseString += changesetBoundary + BatchStringConstants.CRLF;
       // then headers
-      responseString += "Content-Type: application/http\r\n";
-      responseString += "Content-Transfer-Encoding: binary\r\n";
-      responseString += "\r\n";
+      responseString += BatchStringConstants.CONTENT_TYPE_HTTP;
+      responseString += BatchStringConstants.TRANSFER_ENCODING_BINARY;
+      responseString += BatchStringConstants.CRLF;
       // then HTTP/1.1 404 etc
       responseString += this.errorResponse;
     }
     responseString += changesetBoundaryClose;
-    responseString += batchBoundary + "--\r\n";
+    responseString += batchBoundary + BatchStringConstants.BOUNDARY_CLOSE_SUFFIX;
+    return responseString;
+  }
+
+  private serializeContentTypeAndBoundary(responseString: string, changesetBoundary: string) {
+    responseString +=
+      BatchStringConstants.CONTENT_TYPE_MULTIPART_AND_BOUNDARY +
+      changesetBoundary +
+      BatchStringConstants.DoubleCRLF;
     return responseString;
   }
 
@@ -233,7 +238,7 @@ export default class TableBatchOrchestrator {
     // we only use 5 HTTP Verbs to determine the table operation type
     try {
       switch (request.getMethod()) {
-        case "POST":
+        case BatchStringConstants.VERB_POST:
           // INSERT: we are inserting an entity
           // POST	https://myaccount.table.core.windows.net/mytable
           ({ __return, response } = await this.handleBatchInsert(
@@ -244,7 +249,7 @@ export default class TableBatchOrchestrator {
             batchId
           ));
           break;
-        case "PUT":
+        case BatchStringConstants.VERB_PUT:
           // UPDATE: we are updating an entity
           // PUT http://127.0.0.1:10002/devstoreaccount1/mytable(PartitionKey='myPartitionKey', RowKey='myRowKey')
           // INSERT OR REPLACE:
@@ -257,7 +262,7 @@ export default class TableBatchOrchestrator {
             batchId
           ));
           break;
-        case "DELETE":
+        case BatchStringConstants.VERB_DELETE:
           // DELETE: we are deleting an entity
           // DELETE	https://myaccount.table.core.windows.net/mytable(PartitionKey='myPartitionKey', RowKey='myRowKey')
           ({ __return, response } = await this.handleBatchDelete(
@@ -268,7 +273,7 @@ export default class TableBatchOrchestrator {
             batchId
           ));
           break;
-        case "GET":
+        case BatchStringConstants.VERB_GET:
           // QUERY : we are querying / retrieving an entity
           // GET	https://myaccount.table.core.windows.net/mytable(PartitionKey='<partition-key>',RowKey='<row-key>')?$select=<comma-separated-property-names>
           ({ __return, response } = await this.handleBatchQuery(
@@ -279,19 +284,19 @@ export default class TableBatchOrchestrator {
             batchId
           ));
           break;
-        case "CONNECT":
+        case BatchStringConstants.VERB_CONNECT:
           throw new Error("Connect Method unsupported in batch.");
           break;
-        case "HEAD":
+        case BatchStringConstants.VERB_HEAD:
           throw new Error("Head Method unsupported in batch.");
           break;
-        case "OPTIONS":
+        case BatchStringConstants.VERB_OPTIONS:
           throw new Error("Options Method unsupported in batch.");
           break;
-        case "TRACE":
+        case BatchStringConstants.VERB_TRACE:
           throw new Error("Trace Method unsupported in batch.");
           break;
-        case "PATCH":
+        case BatchStringConstants.VERB_PATCH:
           // this is using the PATCH verb to merge
           ({ __return, response } = await this.handleBatchMerge(
             request,
@@ -407,7 +412,7 @@ export default class TableBatchOrchestrator {
     response: any;
   }> {
     request.ingestOptionalParams(new BatchTableDeleteEntityOptionalParams());
-    const ifmatch: string = request.getHeader("if-match") || "*";
+    const ifmatch: string = request.getHeader(BatchStringConstants.IF_MATCH_HEADER_STRING) || BatchStringConstants.ASTERISK;
 
     const partitionKey = this.extractRequestPartitionKey(request);
     const rowKey = this.extractRequestRowKey(request);
@@ -456,7 +461,7 @@ export default class TableBatchOrchestrator {
     request.ingestOptionalParams(new BatchTableUpdateEntityOptionalParams());
     const partitionKey = this.extractRequestPartitionKey(request);
     const rowKey = this.extractRequestRowKey(request);
-    const ifMatch = request.getHeader("if-match");
+    const ifMatch = request.getHeader(BatchStringConstants.IF_MATCH_HEADER_STRING);
 
     response = await this.parentHandler.updateEntity(
       request.getPath(),
@@ -574,7 +579,7 @@ export default class TableBatchOrchestrator {
       this.extractRequestPartitionKey(request),
       this.extractRequestRowKey(request),
       {
-        "ifMatch" : request.getHeader("if-match"),
+        "ifMatch" : request.getHeader(BatchStringConstants.IF_MATCH_HEADER_STRING),
         ...request.params
       } as BatchTableMergeEntityOptionalParams,
       batchContextClone
