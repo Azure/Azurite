@@ -313,7 +313,7 @@ describe("table Entity APIs REST tests", () => {
     assert.strictEqual(weMerged, 1);
   });
 
-  it("Should not be able to use query enties in a batch request, @loki", async () => {
+  it("Should be able to use query enties in a batch request, @loki", async () => {
     const body = JSON.stringify({
       TableName: reproFlowsTableName
     });
@@ -328,7 +328,7 @@ describe("table Entity APIs REST tests", () => {
     );
     assert.strictEqual(createTableResult.status, 201);
 
-    const batchWithQueryRequestString = `--batch_f351702c-c8c8-48c6-af2c-91b809c651ce\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nGET http://127.0.0.1:10002/devstoreaccount1/${reproFlowsTableName}()? HTTP/1.1\r\nAccept: application/json;odata=minimalmetadata\r\n--batch_f351702c-c8c8-48c6-af2c-91b809c651ce--\r\n`;
+    const batchWithQueryRequestString = `--batch_f351702c-c8c8-48c6-af2c-91b809c651ce\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nGET http://127.0.0.1:10002/devstoreaccount1/${reproFlowsTableName}(PartitionKey='Channel_19',RowKey='2')? HTTP/1.1\r\nAccept: application/json;odata=minimalmetadata\r\n--batch_f351702c-c8c8-48c6-af2c-91b809c651ce--\r\n`;
 
     const queryRequestResult = await postToAzurite(
       `$batch`,
@@ -346,13 +346,13 @@ describe("table Entity APIs REST tests", () => {
 
     assert.strictEqual(queryRequestResult.status, 202);
     // we expect this to fail, as we are using query entities inside the batch
-    const notImplemented = queryRequestResult.data.match(
-      "The requested operation is not implemented"
+    const notExist = queryRequestResult.data.match(
+      "0:The specified resource does not exist."
     ).length;
     assert.strictEqual(
-      notImplemented,
+      notExist,
       1,
-      "We did not get the expected NotImplemented error."
+      "We did not get the expected non-existent error."
     );
   });
 
