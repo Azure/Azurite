@@ -1,3 +1,4 @@
+import { BlobTags } from "@azure/storage-blob";
 import ICleaner from "../../common/ICleaner";
 import IDataStore from "../../common/IDataStore";
 import IGCExtentProvider from "../../common/IGCExtentProvider";
@@ -1077,7 +1078,55 @@ export interface IBlobMetadataStore
   listUncommittedBlockPersistencyChunks(
     marker?: string,
     maxResults?: number
-  ): Promise<[IExtentChunk[], string | undefined]>;
+  ): Promise<[IExtentChunk[], string | undefined]>;  
+
+  /**
+   * Set blob tags.
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} blob
+   * @param {(string | undefined)} snapshot
+   * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
+   * @param {(Models.BlobMetadata | undefined)} metadata
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @returns {Promise<Models.BlobProperties>}
+   * @memberof IBlobMetadataStore
+   */
+  setBlobTag(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string,
+    snapshot: string | undefined,
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
+    tags: Models.BlobTags | undefined,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
+  ): Promise<void>;  
+
+  /**
+   * Get blob tags.
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} blob
+   * @param {(string | undefined)} snapshot
+   * @param {(Models.LeaseAccessConditions | undefined)} leaseAccessConditions
+   * @param {Models.ModifiedAccessConditions} [modifiedAccessConditions]
+   * @returns {Promise<BlobTags | undefined>}
+   * @memberof IBlobMetadataStore
+   */
+  getBlobTag(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string,
+    snapshot: string | undefined,
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
+  ): Promise<BlobTags | undefined>;
 }
 
 export default IBlobMetadataStore;

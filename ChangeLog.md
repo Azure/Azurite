@@ -4,10 +4,34 @@
 
 ## Upcoming Release
 
+## 2023.07 Version 3.25.0
+
+Table:
+
+- Refactor table query code
+- Fixed issue with query table fail with filter condition as string.Empty. (issue #1880)
+- Fixed merge table entity fail with single quota in PK/RK. (issue #2009)
+
+## 2023.06 Version 3.24.0
+
+General:
+
+- Bump up service API version to 2023-01-03
+
 Blob:
 
 - Fixed issue of: blob batch subresponse is slightly different from the on from Azure serivce, which causes exception in CPP SDK.
 - Fixed issue of: setMetadata API allows invalid metadata name with hyphen.
+- Supported rest API GetBlobTag, SetBlobTag.
+- Supported set Blob Tags in upload blob, copy blob.
+- Supported get Blob Tags (count) in download blob, get blob properties, list blobs.
+- Added support for large append blob with bumping block size limitation to 100MB.
+
+Table:
+
+- Fixed issue with headers length when deserializing batch deletes.
+- Fixed issues with the use of backticks in string query predicates.
+- Replaced the query filter implementation with a custom interpreter which mitigates the risk of JS-query injection.
 
 ## 2023.03 Version 3.23.0
 
@@ -30,6 +54,7 @@ Table:
 - Corrected query parsing logic for single boolean terms.
 - Fixed issue for querying GUIDs using operators other than eq and ne
 - GUID queries only support persistent storage on legacy (string) format GUIDs for eq and ne operators, other operators will only evaluate newly stored entities.
+- Fixed issue with boolean values not being recognized in query if using different cased characters.
 
 Queue:
 

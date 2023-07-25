@@ -621,4 +621,40 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   )
 );
 
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.Blob_SetTags,
+  new OperationAccountSASPermission(
+    AccountSASService.Blob,
+    AccountSASResourceType.Object,
+    AccountSASPermission.Tag
+  )
+);
+
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.Blob_GetTags,
+  new OperationAccountSASPermission(
+    AccountSASService.Blob,
+    AccountSASResourceType.Object,
+    AccountSASPermission.Tag
+  )
+);
+
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.Service_FilterBlobs,
+  new OperationAccountSASPermission(
+    AccountSASService.Blob,
+    AccountSASResourceType.Object,
+    AccountSASPermission.Filter
+  )
+);
+
+OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
+  Operation.Container_FilterBlobs,
+  new OperationAccountSASPermission(
+    AccountSASService.Blob,
+    AccountSASResourceType.Container,
+    AccountSASPermission.Filter
+  )
+);
+
 export default OPERATION_ACCOUNT_SAS_PERMISSIONS;
