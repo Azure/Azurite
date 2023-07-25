@@ -903,7 +903,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const contentTypeResponse = tableCtx.request
       ?.getHeader("content-type")
       ?.replace("batch", "batchresponse");
-    const tableBatchManager = new TableBatchOrchestrator(tableCtx, this);
+    const tableBatchManager = new TableBatchOrchestrator(tableCtx, this, this.metadataStore);
 
     const requestBody = await TableBatchUtils.StreamToString(body);
     this.logger.debug(
@@ -915,8 +915,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
 
     const response =
       await tableBatchManager.processBatchRequestAndSerializeResponse(
-        requestBody,
-        this.metadataStore
+        requestBody
       );
 
     this.logger.debug(
