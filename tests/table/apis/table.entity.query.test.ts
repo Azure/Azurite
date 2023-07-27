@@ -1361,4 +1361,38 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     assert.strictEqual(all.length, 5);
     await tableClient.deleteTable();
   });
+
+  it("22. should work correctly when partition key is empty, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("emptypartitionkey")
+    );
+    await tableClient.createTable();
+
+    const partitionKey = "";
+
+    // Foo has some special characters
+    const result1 = await tableClient.createEntity({
+      partitionKey: partitionKey,
+      rowKey: `1`,
+      foo: "TestVal`",
+    });
+    assert.notStrictEqual(result1.etag, undefined);
+
+    const maxPageSize = 5;
+    const entities = tableClient.listEntities<TableEntity<{ foo: string }>>({
+      queryOptions: {
+        filter: `PartitionKey eq '' and foo eq 'TestVal\`'`
+      }
+    });
+    let all: TableEntity<{ foo: string }>[] = [];
+    for await (const entity of entities.byPage({
+      maxPageSize
+    })) {
+      all = [...all, ...entity];
+    }
+    assert.strictEqual(all.length, 1);
+
+    await tableClient.deleteTable();
+  });
 });

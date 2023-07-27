@@ -9,7 +9,7 @@ export type IQueryContext = Entity | Table;
  * @returns {boolean}
  */
 export function isEntity(context: IQueryContext): context is Entity {
-  return !!(<Entity>context).PartitionKey;
+  return !!(<Entity>context).hasOwnProperty('PartitionKey');
 }
 
 /**
