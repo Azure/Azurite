@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Fixed issue with queries on empty string partition keys failing
+
 ## 2023.07 Version 3.25.0
 
 Table:
