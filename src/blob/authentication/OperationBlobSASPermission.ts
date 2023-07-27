@@ -274,6 +274,14 @@ OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
   Operation.BlockBlob_GetBlockList,
   new OperationBlobSASPermission(BlobSASPermission.Read)
 );
+OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
+  Operation.Blob_SetTags,
+  new OperationBlobSASPermission(BlobSASPermission.Tag)
+);
+OPERATION_BLOB_SAS_BLOB_PERMISSIONS.set(
+  Operation.Blob_GetTags,
+  new OperationBlobSASPermission(BlobSASPermission.Tag)
+);
 
 // Blob Service SAS Permissions for container level
 export const OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS = new Map<
@@ -525,4 +533,12 @@ OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.BlockBlob_GetBlockList,
   new OperationBlobSASPermission(BlobSASPermission.Read)
+);
+OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
+  Operation.Blob_SetTags,
+  new OperationBlobSASPermission(BlobSASPermission.Tag)
+);
+OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
+  Operation.Blob_GetTags,
+  new OperationBlobSASPermission(BlobSASPermission.Tag)
 );

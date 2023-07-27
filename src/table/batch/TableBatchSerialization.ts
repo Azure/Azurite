@@ -109,8 +109,8 @@ export class TableBatchSerialization extends BatchSerialization {
           subStringEnd = subRequest.indexOf(jsonOperationBody[0]);
           jsonBody = jsonOperationBody[0];
         } else {
-          // remove 1 \r\n
-          subStringEnd = subRequest.length - 4;
+          // trim "\r\n\r\n" or "\n\n" from subRequest
+          subStringEnd = subRequest.length - (HTTP_LINE_ENDING.length * 2);
           jsonBody = "";
         }
 

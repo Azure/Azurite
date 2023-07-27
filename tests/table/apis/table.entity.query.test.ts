@@ -663,16 +663,12 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
         }
         // we should not hit this assert if the exception is generated.
         // it helps catch the cases which slip through filter validation
-        assert.strictEqual(
-          all.length,
-          -1,
-          `Failed on number of results with query ${queryTest.queryOptions.filter}.`
-        );
+        assert.fail(`Query '${queryTest.queryOptions.filter}' did not generate the expected validation exception.`)
       } catch (filterException: any) {
         assert.strictEqual(
           [400, 501].includes(filterException.statusCode),
           true,
-          `Filter "${queryTest.queryOptions.filter}". Unexpected error. We got : ${filterException.message}`
+          `Filter "${queryTest.queryOptions.filter}" returned status code ${filterException.statusCode} instead of [400/501]. Unexpected error. We got : ${filterException.message}`
         );
       }
       testsCompleted++;
@@ -973,9 +969,9 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     all.forEach((entity) => {
       assert.ok(
         entity.partitionKey === `${partitionKeyForQueryTest}3` ||
-          ((entity.partitionKey === `${partitionKeyForQueryTest}1` ||
-            entity.partitionKey === `${partitionKeyForQueryTest}2`) &&
-            entity.rowKey === "1")
+        ((entity.partitionKey === `${partitionKeyForQueryTest}1` ||
+          entity.partitionKey === `${partitionKeyForQueryTest}2`) &&
+          entity.rowKey === "1")
       );
     });
     await tableClient.deleteTable();
@@ -1078,41 +1074,45 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     ];
 
     for (const queryTest of queriesAndExpectedResult) {
-      const entities = tableClient.listEntities<TableTestEntity>({
-        queryOptions: queryTest.queryOptions
-      });
-      let all: TableTestEntity[] = [];
-      for await (const entity of entities.byPage({
-        maxPageSize
-      })) {
-        all = [...all, ...entity];
-      }
-      assert.strictEqual(
-        all.length,
-        queryTest.expectedResult,
-        `Failed with query ${queryTest.queryOptions.filter}`
-      );
-      if (all[0] !== undefined) {
-        all.sort((a, b) => {
-          return (
-            parseInt(a.guidField.value[1], 10) -
-            parseInt(b.guidField.value[1], 10)
-          );
+      try {
+        const entities = tableClient.listEntities<TableTestEntity>({
+          queryOptions: queryTest.queryOptions
         });
+        let all: TableTestEntity[] = [];
+        for await (const entity of entities.byPage({
+          maxPageSize
+        })) {
+          all = [...all, ...entity];
+        }
         assert.strictEqual(
-          all[0].guidField.value,
-          queryTest.expectedValue,
-          `Test ${queryTest.index}: Guid value ${all[0].guidField.value} was not equal to ${queryTest.expectedValue} with query ${queryTest.queryOptions.filter}`
+          all.length,
+          queryTest.expectedResult,
+          `Failed with query ${queryTest.queryOptions.filter}`
         );
-      } else {
-        assert.strictEqual(
-          all[0],
-          queryTest.expectedValue,
-          `Value ${all[0]} was not equal to ${queryTest.expectedValue} with query ${queryTest.queryOptions.filter}`
-        );
-      }
+        if (all[0] !== undefined) {
+          all.sort((a, b) => {
+            return (
+              parseInt(a.guidField.value[1], 10) -
+              parseInt(b.guidField.value[1], 10)
+            );
+          });
+          assert.strictEqual(
+            all[0].guidField.value,
+            queryTest.expectedValue,
+            `Test ${queryTest.index}: Guid value ${all[0].guidField.value} was not equal to ${queryTest.expectedValue} with query ${queryTest.queryOptions.filter}`
+          );
+        } else {
+          assert.strictEqual(
+            all[0],
+            queryTest.expectedValue,
+            `Value ${all[0]} was not equal to ${queryTest.expectedValue} with query ${queryTest.queryOptions.filter}`
+          );
+        }
 
-      testsCompleted++;
+        testsCompleted++;
+      } catch (err) {
+        assert.fail(`Query '${queryTest.queryOptions.filter}' failed unexpectedly: ${err}`)
+      }
     }
     assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
     await tableClient.deleteTable();
@@ -1169,7 +1169,84 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("18. should work when null query, @loki", async () => {
+  it("18. should return the correct number of results querying with a boolean field regardless of capitalization, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("bool")
+    );
+    const partitionKeyForQueryTest = createUniquePartitionKey("bool");
+    const totalItems = 10;
+    await tableClient.createTable();
+    const timestamp = new Date();
+    timestamp.setDate(timestamp.getDate() + 1);
+    for (let i = 0; i < totalItems; i++) {
+      const myBool: boolean = i % 2 !== 0 ? true : false;
+      const result = await tableClient.createEntity({
+        partitionKey: partitionKeyForQueryTest,
+        rowKey: `${i}`,
+        number: i,
+        myBool
+      });
+      assert.notStrictEqual(result.etag, undefined);
+    }
+    const maxPageSize = 10;
+    let testsCompleted = 0;
+    // take note of the different whitespacing and query formatting:
+    const queriesAndExpectedResult = [
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and(myBool eq True )`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myBool eq truE)`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest}) and (myBool eq FALSE)`
+        },
+        expectedResult: 5
+      },
+      {
+        queryOptions: {
+          filter: odata`(PartitionKey eq ${partitionKeyForQueryTest})and (myBool eq faLsE)`
+        },
+        expectedResult: 5
+      }
+    ];
+
+    for (const queryTest of queriesAndExpectedResult) {
+      try {
+        const entities = tableClient.listEntities<
+          TableEntity<{ number: number }>
+        >({
+          queryOptions: queryTest.queryOptions
+        });
+        let all: TableEntity<{ number: number }>[] = [];
+        for await (const entity of entities.byPage({
+          maxPageSize
+        })) {
+          all = [...all, ...entity];
+        }
+        assert.strictEqual(
+          all.length,
+          queryTest.expectedResult,
+          `Failed with query ${queryTest.queryOptions.filter}`
+        );
+        testsCompleted++;
+      } catch (err) {
+        assert.fail(`Query '${queryTest.queryOptions.filter}' failed unexpectedly: ${err}`)
+      }
+    }
+    assert.strictEqual(testsCompleted, queriesAndExpectedResult.length);
+    await tableClient.deleteTable();
+  });
+
+  it("19. should work when empty field is queried, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("emptystringfieldneq")
@@ -1214,7 +1291,74 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       all = [...all, ...entity];
     }
     assert.strictEqual(all.length, 1);
+  });
 
+  it("20. should work when getting special characters, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("specialcharactercheck")
+    );
+
+    await tableClient.createTable();
+
+    const partitionKey = createUniquePartitionKey("");
+
+    // Foo has some special characters
+    const result1 = await tableClient.createEntity({
+      partitionKey: partitionKey,
+      rowKey: `1`,
+      foo: "TestVal`",
+    });
+    assert.notStrictEqual(result1.etag, undefined);
+
+    const maxPageSize = 5;
+    const entities = tableClient.listEntities<TableEntity<{ foo: string }>>({
+      queryOptions: {
+        filter: `PartitionKey eq '${partitionKey}' and foo eq 'TestVal\`'`
+      }
+    });
+    let all: TableEntity<{ foo: string }>[] = [];
+    for await (const entity of entities.byPage({
+      maxPageSize
+    })) {
+      all = [...all, ...entity];
+    }
+    assert.strictEqual(all.length, 1);
+
+    await tableClient.deleteTable();
+  });  
+
+  it("21. should work correctly when query filter is empty string, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("querywithbool")
+    );
+    const partitionKeyForQueryTest = createUniquePartitionKey("");
+    const totalItems = 5;
+    await tableClient.createTable();
+
+    for (let i = 0; i < totalItems; i++) {
+      const result = await tableClient.createEntity({
+        partitionKey: `${partitionKeyForQueryTest}${i}`,
+        rowKey: `${i}`,
+        foo: "testEntity"
+      });
+      assert.notStrictEqual(result.etag, undefined);
+    }
+
+    const maxPageSize = 20;
+    const entities = tableClient.listEntities<TableEntity<{ foo: string }>>({
+      queryOptions: {
+        filter: ""
+      }
+    });
+    let all: TableEntity<{ foo: string }>[] = [];
+    for await (const entity of entities.byPage({
+      maxPageSize
+    })) {
+      all = [...all, ...entity];
+    }
+    assert.strictEqual(all.length, 5);
     await tableClient.deleteTable();
   });
 });

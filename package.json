@@ -3,7 +3,7 @@
   "displayName": "Azurite",
   "description": "An open source Azure Storage API compatible server",
   "icon": "icon.png",
-  "version": "3.23.0",
+  "version": "3.25.0",
   "publisher": "Azurite",
   "categories": [
     "Other"
@@ -33,7 +33,7 @@
     "multistream": "^2.1.1",
     "mysql2": "^3.2.0",
     "rimraf": "^3.0.2",
-    "sequelize": "^6.3.0",
+    "sequelize": "^6.31.0",
     "stoppable": "^1.1.0",
     "tedious": "^16.0.0",
     "to-readable-stream": "^2.1.0",
@@ -41,7 +41,7 @@
     "uri-templates": "^0.2.0",
     "uuid": "^3.3.2",
     "winston": "^3.1.0",
-    "xml2js": "^0.5.0"
+    "xml2js": "^0.6.0"
   },
   "devDependencies": {
     "@azure/core-auth": "^1.3.2",
@@ -81,7 +81,7 @@
     "lint-staged": "^13.0.0",
     "mocha": "^5.2.0",
     "pkg": "^5.3.0",
-    "prettier": "^2.2.1",
+    "prettier": "^3.0.0",
     "rcedit": "^3.0.1",
     "ts-mockito": "^2.6.1",
     "ts-node": "^10.0.0",

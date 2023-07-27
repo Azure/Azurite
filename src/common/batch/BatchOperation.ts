@@ -22,10 +22,10 @@ export default class BatchOperation {
   public jsonRequestBody?: string; // maybe we want the entity operation to be stored in a parsed format?
   public constructor(_batchType: BatchType, headers: string) {
     this.batchType = _batchType;
-    const dirtyHeaderArray = headers.split("\n");
+    const dirtyHeaderArray = headers.split("\n").map(line => line.trim());
     // filter out the blanks
     this.rawHeaders = dirtyHeaderArray.filter(
-      (candidate) => candidate.search(/\S/) < 1
+      candidate => candidate
     );
   }
 }

@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace AzuriteTableTest
 {
-    internal static class TestForIssue1880
+    internal static class TestForIssue1929
     {
         internal static async Task RunTest()
         {
@@ -22,7 +22,7 @@ namespace AzuriteTableTest
             var pk = Guid.NewGuid().ToString();
 
             // Only this value should be returned
-            var nonNullValue = new TestTableEntityObject
+            var nonNullValue = new TestTableEntityString
             {
                 PartitionKey = pk,
                 RowKey = "a",
@@ -30,14 +30,14 @@ namespace AzuriteTableTest
             };
             await table.ExecuteAsync(TableOperation.InsertOrReplace(nonNullValue));
 
-            var nullValue = new TestTableEntityObject
+            var nullValue = new TestTableEntityString
             {
                 PartitionKey = pk,
                 RowKey = "b"
             };
             await table.ExecuteAsync(TableOperation.InsertOrReplace(nullValue));
 
-            var emptyString = new TestTableEntityObject
+            var emptyString = new TestTableEntityString
             {
                 PartitionKey = pk,
                 RowKey = "c"
@@ -46,8 +46,8 @@ namespace AzuriteTableTest
 
             try
             {
-                var queryResult = await table.ExecuteQuerySegmentedAsync<TestTableEntityObject>(
-                    new TableQuery<TestTableEntityObject>().Where($"PartitionKey eq '{pk}' and Value ne ''"),
+                var queryResult = await table.ExecuteQuerySegmentedAsync<TestTableEntityString>(
+                    new TableQuery<TestTableEntityString>().Where($"PartitionKey eq '{pk}' and Value ne ''"),
                     null);
 
                 if (queryResult.Results.Count > 0)
