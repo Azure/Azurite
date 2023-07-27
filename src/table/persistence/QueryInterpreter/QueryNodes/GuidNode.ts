@@ -1,5 +1,6 @@
 import { IQueryContext } from "../IQueryContext";
 import IQueryNode from "./IQueryNode";
+import ValueNode from "./ValueNode";
 
 /**
  * Represents a constant value of type GUID which can be compared against the base64 representation of the GUID
@@ -12,9 +13,7 @@ import IQueryNode from "./IQueryNode";
  * NOTE: This node type also exposes a `legacyStorageFormat()` method which returns the GUID in its string representation
  *       for backwards compatibility with the legacy table storage format.
  */
-export default class GuidNode<T> implements IQueryNode {
-  constructor(private value: string) { }
-
+export default class GuidNode<T> extends ValueNode {
   get name(): string {
     return "guid";
   }
@@ -23,11 +22,21 @@ export default class GuidNode<T> implements IQueryNode {
     return Buffer.from(this.value).toString("base64");
   }
 
-  legacyStorageFormat(): string {
-    return this.value;
-  }
+  compare(context: IQueryContext, other: IQueryNode): number {
+    const otherValue = other.evaluate(context);
+    let thisValue = this.value;
 
-  toString(): string {
-    return `(${this.name} ${this.value})`;
+    // If the other value is not in its raw GUID format, then let's convert this value to its base64 representation
+    if (!/[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}/i.test(otherValue)) {
+      thisValue = Buffer.from(this.value).toString("base64");
+    }
+
+    if (thisValue < otherValue) {
+      return -1;
+    } else if (thisValue > otherValue) {
+      return 1;
+    } else {
+      return 0;
+    }
   }
 }
