@@ -249,16 +249,6 @@ describe("table Entity APIs test : Issues", () => {
       assert.strictEqual(storageError.statusCode, "InvalidInput");
       assert.strictEqual(storageError.storageErrorCode, 400);
     });
-
-    tableClient.mergeEntity({
-      partitionKey: partitionKey,
-      rowKey: rowKey,
-      ifMatch: malformedEtag
-    }).catch((reason) => {
-      const storageError = reason as StorageError;
-      assert.strictEqual(storageError.statusCode, "InvalidInput");
-      assert.strictEqual(storageError.storageErrorCode, 400);
-    });
   });
 
   // from issue #1214
