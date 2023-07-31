@@ -466,7 +466,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     }
     if (options?.ifMatch && options.ifMatch !== "*" && options.ifMatch !== "") {
       if (isEtagValid(options.ifMatch)) {
-        throw StorageErrorFactory.getInvalidInput(context);
+        throw StorageErrorFactory.getInvalidOperation(context);
       }
     }
 
