@@ -213,44 +213,6 @@ describe("table Entity APIs test : Issues", () => {
     await tableClient.deleteTable();
   });
 
-  //from issue #2013
-  it("Malformed Etag when sent as input throws InvalidInput for table operations, ", async() => {
-    const partitionKey = createUniquePartitionKey("𤭢PK1");
-    const malformedEtag = "MalformedEtag";
-    const rowKey = "𐐷RK1"
-    const tableClient = createAzureDataTablesClient(
-      testLocalAzuriteInstance,
-      tableName
-    );
-
-    await tableClient.createTable();
-    await tableClient.createEntity({
-      partitionKey: partitionKey,
-      rowKey: "𐐷RK1"
-    });
-
-    tableClient.deleteEntity(
-      partitionKey,
-      rowKey,
-      {
-        etag: malformedEtag
-      }
-    ).catch((reason) => {
-      assert.strictEqual(reason.details.errorCode, "InvalidInput");
-      assert.strictEqual(reason.statusCode, 400);
-    });
-
-    tableClient.updateEntity({
-      partitionKey: partitionKey,
-      rowKey: rowKey,
-      ifMatch: malformedEtag
-    }).catch((reason) => {
-      const storageError = reason as StorageError;
-      assert.strictEqual(storageError.statusCode, "InvalidInput");
-      assert.strictEqual(storageError.storageErrorCode, 400);
-    });
-  });
-
   // from issue #1214
   it("should allow continuation tokens with non-ASCII characters, @loki", async () => {
     const partitionKey1 = createUniquePartitionKey("𤭢PK1");
@@ -454,5 +416,43 @@ describe("table Entity APIs test : Issues", () => {
     }
 
     await tableClient.deleteTable();
+  });
+
+  //from issue #2013
+  it("Malformed Etag when sent as input throws InvalidInput for table operations, ", async() => {
+    const partitionKey = createUniquePartitionKey("𤭢PK1");
+    const malformedEtag = "MalformedEtag";
+    const rowKey = "𐐷RK1"
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      tableName
+    );
+
+    await tableClient.createTable();
+    await tableClient.createEntity({
+      partitionKey: partitionKey,
+      rowKey: "𐐷RK1"
+    });
+
+    tableClient.deleteEntity(
+      partitionKey,
+      rowKey,
+      {
+        etag: malformedEtag
+      }
+    ).catch((reason) => {
+      assert.strictEqual(reason.details.errorCode, "InvalidInput");
+      assert.strictEqual(reason.statusCode, 400);
+    });
+
+    tableClient.updateEntity({
+      partitionKey: partitionKey,
+      rowKey: rowKey,
+      ifMatch: malformedEtag
+    }).catch((reason) => {
+      const storageError = reason as StorageError;
+      assert.strictEqual(storageError.statusCode, "InvalidInput");
+      assert.strictEqual(storageError.storageErrorCode, 400);
+    });
   });
 });
