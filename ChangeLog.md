@@ -8,6 +8,10 @@ Table:
 
 - Fixed issue with queries on empty string partition keys failing
 
+Blob:
+
+- Fixed issue of: Append block not returning requestId in response.
+
 ## 2023.07 Version 3.25.0
 
 Table:
