@@ -27,7 +27,7 @@ export default class GuidNode<T> extends ValueNode {
     let thisValue = this.value;
 
     // If the other value is not in its raw GUID format, then let's convert this value to its base64 representation
-    if (!/[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}/i.test(otherValue)) {
+    if (!/^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(otherValue)) {
       thisValue = Buffer.from(this.value).toString("base64");
     }
 
