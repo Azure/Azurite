@@ -201,6 +201,7 @@ export default class AppendBlobHandler extends BaseHandler
 
     const response: Models.AppendBlobAppendBlockResponse = {
       statusCode: 201,
+      requestId: context.contextId,
       eTag: properties.etag,
       lastModified: properties.lastModified,
       contentMD5: contentMD5Buffer,

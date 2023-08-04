@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Fixed issue of: Append block not returning requestId in response.
+
 ## 2023.07 Version 3.25.0
 
 Table:
