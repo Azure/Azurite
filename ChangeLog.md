@@ -8,6 +8,10 @@ Blob:
 
 - Fixed issue of: Append block not returning requestId in response.
 
+Table:
+ - Fixed an issue when querying datetimes with microsecond precision which resulted in match failures. (issue #2069)
+
+
 ## 2023.07 Version 3.25.0
 
 Table:
