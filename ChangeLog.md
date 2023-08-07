@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Table:
+
+- Fixed issue with queries on empty string partition keys failing
+
 Blob:
 
 - Fixed issue of: Append block not returning requestId in response.
