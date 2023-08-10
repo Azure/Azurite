@@ -73,7 +73,7 @@
     "@typescript-eslint/parser": "^5.54.1",
     "autorest": "^3.6.0",
     "azure-storage": "^2.10.3",
-    "cross-env": "^6.0.3",
+    "cross-env": "^7.0.3",
     "cross-var": "^1.1.0",
     "eslint": "^8.35.0",
     "find-process": "^1.4.4",
