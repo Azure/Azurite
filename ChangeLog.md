@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Updated examples of setting Customized Storage Accounts & Keys in enviroment varialbe.
+
 Blob:
 
 - Added "x-ms-delete-type-permanent" header in delete blob API responds (issue #2061)
