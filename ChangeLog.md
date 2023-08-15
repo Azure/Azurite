@@ -8,6 +8,15 @@ General:
 
 - Updated examples of setting Customized Storage Accounts & Keys in enviroment varialbe.
 
+Blob:
+
+- Added "x-ms-delete-type-permanent" header in delete blob API responds (issue #2061)
+
+Queue:
+
+- Fixed error code when dequeue message with invalid visibilitytimeout (issue #2083)
+- Fixed error code when sas request authentication failed (issue #2064)
+
 ## 2023.08 Version 3.25.1
 
 Blob:
