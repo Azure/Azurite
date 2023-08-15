@@ -8,8 +8,22 @@ General:
 
 - Updated examples of setting Customized Storage Accounts & Keys in enviroment varialbe.
 
+## 2023.08 Version 3.25.1
+
+Blob:
+
+- Fixed issue of: Append block not returning requestId in response.
+
 Table:
 
+- Fixed issue with queries on empty string partition keys failing
+- Fixed an issue when querying datetimes with microsecond precision which resulted in match failures. (issue #2069)
+
+## 2023.07 Version 3.25.0
+
+Table:
+
+- Refactor table query code
 - Fixed issue with query table fail with filter condition as string.Empty. (issue #1880)
 - Fixed merge table entity fail with single quota in PK/RK. (issue #2009)
 
