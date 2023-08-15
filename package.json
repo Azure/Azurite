@@ -69,7 +69,7 @@
     "@types/validator": "^13.1.4",
     "@types/vscode": "^1.39.0",
     "@types/xml2js": "^0.4.3",
-    "@typescript-eslint/eslint-plugin": "^5.54.1",
+    "@typescript-eslint/eslint-plugin": "^6.4.0",
     "@typescript-eslint/parser": "^5.54.1",
     "autorest": "^3.6.0",
     "azure-storage": "^2.10.3",
