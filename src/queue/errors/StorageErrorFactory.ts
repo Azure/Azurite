@@ -135,7 +135,7 @@ export default class StorageErrorFactory {
   ): StorageError {
     return new StorageError(
       403,
-      "AuthorizationFailure",
+      "AuthenticationFailed",
       "Server failed to authenticate the request." +
         "Make sure the value of the Authorization header is formed correctly including the signature.",
       contextID

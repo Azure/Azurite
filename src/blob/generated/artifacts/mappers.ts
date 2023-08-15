@@ -4553,6 +4553,12 @@ export const BlobDeleteHeaders: msRest.CompositeMapper = {
           name: "DateTimeRfc1123"
         }
       },
+      deleteTypePermanent: {
+        serializedName: "x-ms-delete-type-permanent",
+        type: {
+          name: "Boolean"
+        }
+      },
       errorCode: {
         serializedName: "x-ms-error-code",
         type: {
