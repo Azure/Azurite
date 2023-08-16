@@ -4,9 +4,12 @@
 
 ## Upcoming Release
 
+## 2023.08 Version 3.26.0
+
 General:
 
 - Updated examples of setting Customized Storage Accounts & Keys in enviroment varialbe.
+- Bump up service API version to 2023-08-03
 
 Blob:
 
