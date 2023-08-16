@@ -30,6 +30,8 @@ const EMULATOR_ACCOUNT2_NAME = "devstoreaccount2";
 const EMULATOR_ACCOUNT2_KEY_STR =
   "MTAwCjE2NQoyMjUKMTAzCjIxOAoyNDEKNDAKNzgKMTkxCjE3OAoyMTQKMTY5CjIxMwo2MQoyNTIKMTQxCg==";
 
+const EMULATOR_ACCOUNT_KEY2_STR = "testing_key";
+
 // Set true to enable debug log
 configLogger(false);
 
@@ -37,7 +39,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
   // Setup two accounts for validating cross-account copy operations
   process.env[
     "AZURITE_ACCOUNTS"
-  ] = `${EMULATOR_ACCOUNT_NAME}:${EMULATOR_ACCOUNT_KEY_STR};${EMULATOR_ACCOUNT2_NAME}:${EMULATOR_ACCOUNT2_KEY_STR}`;
+  ] = `${EMULATOR_ACCOUNT_NAME}:${EMULATOR_ACCOUNT_KEY_STR}:${EMULATOR_ACCOUNT_KEY2_STR};${EMULATOR_ACCOUNT2_NAME}:${EMULATOR_ACCOUNT2_KEY_STR}`;
 
   const factory = new BlobTestServerFactory();
   const server = factory.createServer();
@@ -49,6 +51,36 @@ describe("Shared Access Signature (SAS) authentication", () => {
       new StorageSharedKeyCredential(
         EMULATOR_ACCOUNT_NAME,
         EMULATOR_ACCOUNT_KEY_STR
+      ),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    )
+  );
+
+  const serviceClient1 = new BlobServiceClient(
+    baseURL,
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY2_STR
+      ),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    )
+  );
+
+  const serviceClientInvalid = new BlobServiceClient(
+    baseURL,
+    newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        "invalidKey"
       ),
       {
         retryOptions: { maxTries: 1 },
@@ -673,6 +705,94 @@ describe("Shared Access Signature (SAS) authentication", () => {
     );
 
     await await containerClientWithSAS.listBlobsFlat().byPage();
+    await containerClient.delete();
+  });
+
+  it("generateBlobSASQueryParameters should NOT work for blob using unknown key when the account has second key provided in AZURITE_ACCOUNTS @loki @sql", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClientInvalid as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const containerSAS = generateBlobSASQueryParameters(
+      {
+        containerName,
+        expiresOn: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: ContainerSASPermissions.parse("racwdl"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
+        version: "2016-05-31"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    );
+
+    const sasURL = `${containerClient.url}?${containerSAS}`;
+    const containerClientWithSAS = new ContainerClient(
+      sasURL,
+      newPipeline(new AnonymousCredential())
+    );
+
+    let error;
+    try {
+      await containerClientWithSAS.getBlobClient('blob').deleteIfExists();
+    } catch (err) {
+      error = err;
+    } finally {
+      try {
+        await containerClient.delete();
+      } catch (error2) {
+        /* Noop */
+      }
+    }
+
+    assert.ok(error);
+  });
+
+  it("generateBlobSASQueryParameters should work for blob using the second key provided in AZURITE_ACCOUNTS @loki @sql", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient1 as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const containerSAS = generateBlobSASQueryParameters(
+      {
+        containerName,
+        expiresOn: tmr,
+        ipRange: { start: "0.0.0.0", end: "255.255.255.255" },
+        permissions: ContainerSASPermissions.parse("racwdl"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now,
+        version: "2016-05-31"
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    );
+
+    const sasURL = `${containerClient.url}?${containerSAS}`;
+    const containerClientWithSAS = new ContainerClient(
+      sasURL,
+      newPipeline(new AnonymousCredential())
+    );
+
+    await containerClientWithSAS.getBlobClient('blob').deleteIfExists();
     await containerClient.delete();
   });
 
