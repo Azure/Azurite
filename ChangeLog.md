@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Fix validation of Blob SAS token when using the second key for an account in `AZURITE_ACCOUNTS`
+
 ## 2023.08 Version 3.26.0
 
 General:
