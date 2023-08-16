@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Support blob new access tier Cold
+
 ## 2023.08 Version 3.26.0
 
 General:

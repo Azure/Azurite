@@ -2184,7 +2184,8 @@ export default class LokiBlobMetadataStore
     if (
       (tier === Models.AccessTier.Archive ||
         tier === Models.AccessTier.Cool ||
-        tier === Models.AccessTier.Hot) &&
+        tier === Models.AccessTier.Hot ||
+        tier === Models.AccessTier.Cold) &&
       doc.properties.blobType === Models.BlobType.BlockBlob
     ) {
       // Block blob
@@ -2194,7 +2195,7 @@ export default class LokiBlobMetadataStore
       // Archive -> Coo/Hot will return 202
       if (
         doc.properties.accessTier === Models.AccessTier.Archive &&
-        (tier === Models.AccessTier.Cool || tier === Models.AccessTier.Hot)
+        (tier === Models.AccessTier.Cool || tier === Models.AccessTier.Hot || tier === Models.AccessTier.Cold)
       ) {
         responseCode = 202;
       }
@@ -3417,6 +3418,9 @@ export default class LokiBlobMetadataStore
     }
     if (tier === Models.AccessTier.Archive.toLowerCase()) {
       return Models.AccessTier.Archive;
+    }
+    if (tier === Models.AccessTier.Cold.toLowerCase()) {
+      return Models.AccessTier.Cold;
     }
     return undefined;
   }

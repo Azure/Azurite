@@ -10004,7 +10004,8 @@
         "Hot",
         "Cool",
         "Archive",
-        "Premium"
+        "Premium",
+        "Cold"
       ],
       "x-ms-enum": {
         "name": "AccessTier",
@@ -10015,7 +10016,8 @@
       "type": "string",
       "enum": [
         "rehydrate-pending-to-hot",
-        "rehydrate-pending-to-cool"
+        "rehydrate-pending-to-cool",
+        "rehydrate-pending-to-cold"
       ],
       "x-ms-enum": {
         "name": "ArchiveStatus",
@@ -11514,7 +11516,8 @@
         "Hot",
         "Cool",
         "Archive",
-        "Premium"
+        "Premium",
+        "Cold"
       ],
       "x-ms-enum": {
         "name": "AccessTier",
@@ -11544,7 +11547,8 @@
         "Hot",
         "Cool",
         "Archive",
-        "Premium"
+        "Premium",
+        "Cold"
       ],
       "x-ms-enum": {
         "name": "AccessTier",
