@@ -6,13 +6,63 @@
 
 Blob:
 
+- Fixed issue of: error code not matching Azure blob storage is returned when overwriting existing blobs with incorrect permissions
+
+## 2023.08 Version 3.26.0
+
+General:
+
+- Updated examples of setting Customized Storage Accounts & Keys in enviroment varialbe.
+- Bump up service API version to 2023-08-03
+
+Blob:
+
+- Added "x-ms-delete-type-permanent" header in delete blob API responds (issue #2061)
+
+Queue:
+
+- Fixed error code when dequeue message with invalid visibilitytimeout (issue #2083)
+- Fixed error code when sas request authentication failed (issue #2064)
+
+## 2023.08 Version 3.25.1
+
+Blob:
+
+- Fixed issue of: Append block not returning requestId in response.
+
+Table:
+
+- Fixed issue with queries on empty string partition keys failing
+- Fixed an issue when querying datetimes with microsecond precision which resulted in match failures. (issue #2069)
+
+## 2023.07 Version 3.25.0
+
+Table:
+
+- Refactor table query code
+- Fixed issue with query table fail with filter condition as string.Empty. (issue #1880)
+- Fixed merge table entity fail with single quota in PK/RK. (issue #2009)
+
+## 2023.06 Version 3.24.0
+
+General:
+
+- Bump up service API version to 2023-01-03
+
+Blob:
+
 - Fixed issue of: blob batch subresponse is slightly different from the on from Azure serivce, which causes exception in CPP SDK.
 - Fixed issue of: setMetadata API allows invalid metadata name with hyphen.
-- Fixed issue of: error code not matching Azure blob storage is returned when overwriting existing blobs with incorrect permissions
+- Supported rest API GetBlobTag, SetBlobTag.
+- Supported set Blob Tags in upload blob, copy blob.
+- Supported get Blob Tags (count) in download blob, get blob properties, list blobs.
+- Added support for large append blob with bumping block size limitation to 100MB.
 
 Table:
 
 - Fixed issue with headers length when deserializing batch deletes.
+- Fixed issues with the use of backticks in string query predicates.
+- Replaced the query filter implementation with a custom interpreter which mitigates the risk of JS-query injection.
 
 ## 2023.03 Version 3.23.0
 

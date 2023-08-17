@@ -27,7 +27,9 @@ import {
 } from "../utils/constants";
 import {
   deserializePageBlobRangeHeader,
-  deserializeRangeHeader
+  deserializeRangeHeader,
+  getBlobTagsCount,
+  validateBlobTag
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -151,6 +153,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
           contentEncoding: context.request!.getQuery("rsce") ?? res.properties.contentEncoding,
           contentLanguage: context.request!.getQuery("rscl") ?? res.properties.contentLanguage,
           contentType: context.request!.getQuery("rsct") ?? res.properties.contentType,
+          tagCount: res.properties.tagCount,
         };
 
     return response;
@@ -185,7 +188,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       requestId: context.contextId,
       date: context.startTime,
       version: BLOB_API_VERSION,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      deleteTypePermanent: true
     };
 
     return response;
@@ -1096,6 +1100,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentLength,
       contentRange,
       contentMD5,
+      tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
       clientRequestId: options.requestId,
       creationTime:blob.properties.creationTime,
@@ -1226,6 +1231,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentRange,
       contentMD5,
       blobContentMD5: blob.properties.contentMD5,
+      tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
       creationTime:blob.properties.creationTime,
       clientRequestId: options.requestId
@@ -1245,13 +1251,67 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobGetTagsOptionalParams,
     context: Context
   ): Promise<Models.BlobGetTagsResponse> {
-    throw new NotImplementedError(context.contextId);
+    const blobCtx = new BlobStorageContext(context);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+    const tags = await this.metadataStore.getBlobTag(
+      context,
+      account,
+      container,
+      blob,
+      options.snapshot,
+      options.leaseAccessConditions,
+      options.modifiedAccessConditions
+    );
+
+    const response: Models.BlobGetTagsResponse = {
+          statusCode: 200,
+          blobTagSet: tags === undefined ? []: tags.blobTagSet,
+          requestId: context.contextId,
+          version: BLOB_API_VERSION,
+          date: context.startTime,         
+          clientRequestId: options.requestId,
+        };
+
+    return response;
   }
 
   public async setTags(
     options: Models.BlobSetTagsOptionalParams,
     context: Context
   ): Promise<Models.BlobSetTagsResponse> {
-    throw new NotImplementedError(context.contextId);
+    const blobCtx = new BlobStorageContext(context);
+    const account = blobCtx.account!;
+    const container = blobCtx.container!;
+    const blob = blobCtx.blob!;
+
+    // Blob Tags need to set
+    const tags = options.tags;
+    validateBlobTag(tags!, context.contextId!);
+
+    // Get snapshot (swagger not defined snapshot as parameter, but server support set tag on blob snapshot)
+    let snapshot = context.request!.getQuery("snapshot");
+
+    await this.metadataStore.setBlobTag(
+      context,
+      account,
+      container,
+      blob,
+      snapshot,
+      options.leaseAccessConditions,
+      tags,
+      options.modifiedAccessConditions
+    );
+
+    const response: Models.BlobSetTagsResponse = {
+      statusCode: 204,
+      requestId: context.contextId,
+      date: context.startTime,
+      version: BLOB_API_VERSION,
+      clientRequestId: options.requestId
+    };
+
+    return response;
   }
 }

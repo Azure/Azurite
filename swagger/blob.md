@@ -60,3 +60,5 @@ enum-types: true
 14. Change "AllowedHeaders" and "ExposedHeaders" to from required to optional.
 
 15. Remove "Container_Rename" section.
+
+16. Add "x-ms-delete-type-permanent" to "Blob_Delete" API response.

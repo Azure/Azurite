@@ -783,4 +783,40 @@ export default class StorageErrorFactory {
       contextID
     );
   }
+
+  public static getEmptyTagName(contextID: string): StorageError {
+    return new StorageError(
+      400,
+      "EmptyTagName",
+      "The name of one of the tag key-value pairs is empty.",
+      contextID
+    );
+  }
+
+  public static getDuplicateTagNames(contextID: string): StorageError {
+    return new StorageError(
+      400,
+      "DuplicateTagNames",
+      "The tags specified contain duplicate names.",
+      contextID
+    );
+  }
+
+  public static getTagsTooLarge(contextID: string): StorageError {
+    return new StorageError(
+      400,
+      "TagsTooLarge",
+      "The tags specified exceed the maximum permissible limit.",
+      contextID
+    );
+  }
+
+  public static getInvalidTag(contextID: string): StorageError {
+    return new StorageError(
+      400,
+      "DuplicateTagNames",
+      "The tags specified are invalid. It contains characters that are not permitted.",
+      contextID
+    );
+  }
 }
