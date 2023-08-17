@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Fixed issue of: error code not matching Azure blob storage is returned when overwriting existing blobs with incorrect permissions
+
 ## 2023.08 Version 3.26.0
 
 General:

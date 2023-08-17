@@ -436,7 +436,7 @@ export default class BlobSASAuthenticator implements IAuthenticator {
           `BlobSASAuthenticator:validate() Account SAS validation failed for special requirement.`,
           context.contextId
         );
-        throw StorageErrorFactory.getAuthorizationPermissionMismatch(
+        throw StorageErrorFactory.getUnauthorizedBlobOverwrite(
           context.contextId!
         );
       }
