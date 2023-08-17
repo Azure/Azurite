@@ -60,7 +60,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     )
   );
 
-  const serviceClient1 = new BlobServiceClient(
+  const serviceClientSecondKey = new BlobServiceClient(
     baseURL,
     newPipeline(
       new StorageSharedKeyCredential(
@@ -766,7 +766,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     tmr.setDate(tmr.getDate() + 1);
 
     // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient1 as any).pipeline.factories;
+    const factories = (serviceClientSecondKey as any).pipeline.factories;
     const storageSharedKeyCredential = factories[factories.length - 1];
 
     const containerName = getUniqueName("container");
