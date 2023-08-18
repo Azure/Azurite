@@ -4,6 +4,9 @@
 
 ## Upcoming Release
 
+Table:
+- Fixed the errorCode returned, when malformed Etag is provided for table Update/Delete calls. (issue #2013)
+
 ## 2023.08 Version 3.26.0
 
 General:
@@ -19,9 +22,6 @@ Queue:
 
 - Fixed error code when dequeue message with invalid visibilitytimeout (issue #2083)
 - Fixed error code when sas request authentication failed (issue #2064)
-
-Table:
-- Fixed the errorCode returned, when malformed Etag is provided for table Update/Delete calls. (issue #2013)
 
 ## 2023.08 Version 3.25.1
 
