@@ -20,6 +20,9 @@ Queue:
 - Fixed error code when dequeue message with invalid visibilitytimeout (issue #2083)
 - Fixed error code when sas request authentication failed (issue #2064)
 
+Table:
+- Fixed the errorCode returned, when malformed Etag is provided for table Update/Delete calls. (issue #2013)
+
 ## 2023.08 Version 3.25.1
 
 Blob:
@@ -38,7 +41,6 @@ Table:
 - Refactor table query code
 - Fixed issue with query table fail with filter condition as string.Empty. (issue #1880)
 - Fixed merge table entity fail with single quota in PK/RK. (issue #2009)
-- Fixed the errorCode returned, when malformed Etag is provided for table Update/Delete calls. (issue #2013)
 
 ## 2023.06 Version 3.24.0
 
