@@ -62,3 +62,15 @@ enum-types: true
 15. Remove "Container_Rename" section.
 
 16. Add "x-ms-delete-type-permanent" to "Blob_Delete" API response.
+17. Remove 
+      "
+        {
+          "$ref": "#/parameters/ContainerName"
+        },
+      " and 
+      "
+        {
+          "$ref": "#/parameters/Blob"
+        }
+      " 
+    from parameters of each container/blob operation.

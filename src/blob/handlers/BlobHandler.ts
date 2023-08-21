@@ -122,16 +122,16 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     const response: Models.BlobGetPropertiesResponse = againstMetadata
       ? {
-          statusCode: 200,
-          metadata: res.metadata,
-          eTag: res.properties.etag,
-          requestId: context.contextId,
-          version: BLOB_API_VERSION,
-          date: context.startTime,
-          clientRequestId: options.requestId,
-          contentLength: res.properties.contentLength,
-          lastModified: res.properties.lastModified
-        }
+        statusCode: 200,
+        metadata: res.metadata,
+        eTag: res.properties.etag,
+        requestId: context.contextId,
+        version: BLOB_API_VERSION,
+        date: context.startTime,
+        clientRequestId: options.requestId,
+        contentLength: res.properties.contentLength,
+        lastModified: res.properties.lastModified
+      }
       : {
           statusCode: 200,
           metadata: res.metadata,
@@ -1103,7 +1103,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
       clientRequestId: options.requestId,
-      creationTime:blob.properties.creationTime,
+      creationTime: blob.properties.creationTime,
       blobCommittedBlockCount:
         blob.properties.blobType === Models.BlobType.AppendBlob
           ? (blob.committedBlocksInOrder || []).length
@@ -1176,9 +1176,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentLength <= 0
         ? []
         : this.rangesManager.fillZeroRanges(blob.pageRangesInOrder, {
-            start: rangeStart,
-            end: rangeEnd
-          });
+          start: rangeStart,
+          end: rangeEnd
+        });
 
     const bodyGetter = async () => {
       return this.extentStore.readExtents(
@@ -1233,7 +1233,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blobContentMD5: blob.properties.contentMD5,
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
-      creationTime:blob.properties.creationTime,
+      creationTime: blob.properties.creationTime,
       clientRequestId: options.requestId
     };
 
@@ -1243,7 +1243,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   public async query(
     options: Models.BlobQueryOptionalParams,
     context: Context
-  ): Promise<Models.BlobQueryResponse>{
+  ): Promise<Models.BlobQueryResponse> {
     throw new NotImplementedError(context.contextId);
   }
 
