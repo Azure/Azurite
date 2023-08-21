@@ -1280,4 +1280,145 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
 
     await tableClient.deleteTable();
   });
+
+  // https://github.com/Azure/Azurite/issues/1481
+  it("29. Should create, get and delete entities using RowKey containing apostrophe, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("apostrophe")
+    );
+    await tableClient.createTable();
+    const percentPartition = "percentRowBatch";
+    const testEntity: TableTestEntity =
+      entityFactory.createBasicEntityForTest(percentPartition);
+
+    testEntity.rowKey = testEntity.rowKey.replace("row", "O'");
+
+    try {
+      const result = await tableClient.createEntity(testEntity);
+      assert.ok(result.etag);
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to create with ${err}`);
+    }
+
+    // validate that we successfully created each entity,
+    // and that the format of the row key was not changed by serialization
+    try {
+      const entity0 = await tableClient.getEntity<TableTestEntity>(
+        testEntity.partitionKey,
+        testEntity.rowKey
+      );
+
+      assert.strictEqual(entity0.rowKey, testEntity.rowKey);
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to retrieve with ${err}`);
+    }
+
+    // now delete the entity and ensure that delete path is valid
+    try {
+      const result = await tableClient.deleteEntity(
+        testEntity.partitionKey,
+        testEntity.rowKey
+      );
+      assert.notStrictEqual(result, undefined);
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to delete with ${err}`);
+    }
+
+    // check that deleted entity is gone
+    try {
+      const entity1 = await tableClient.getEntity<TableTestEntity>(
+        testEntity.partitionKey,
+        testEntity.rowKey
+      );
+      assert.strictEqual(entity1, undefined);
+    } catch (err: any) {
+      assert.strictEqual(
+        err.statusCode,
+        404,
+        `We should failed to retrieve with ResourceNotFound, but got ${err}`
+      );
+    }
+
+    await tableClient.deleteTable();
+  });
+
+  it("30. Should create, get and delete entities using batch and RowKey containing apostrophe, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("percentBatch")
+    );
+    await tableClient.createTable();
+    const percentPartition = "percentRowBatch";
+    const testEntities: TableTestEntity[] = [
+      entityFactory.createBasicEntityForTest(percentPartition),
+      entityFactory.createBasicEntityForTest(percentPartition),
+      entityFactory.createBasicEntityForTest(percentPartition)
+    ];
+    testEntities[0].rowKey = testEntities[0].rowKey.replace("row", "O'");
+    testEntities[1].rowKey = testEntities[1].rowKey.replace("row", "O'");
+    testEntities[2].rowKey = testEntities[2].rowKey.replace("row", "O'");
+    const transaction = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction.createEntity(testEntity);
+    }
+
+    try {
+      const result = await tableClient.submitTransaction(transaction.actions);
+      assert.ok(result.subResponses[0].rowKey);
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to create with ${err}`);
+    }
+
+    // validate that we successfully created each entity,
+    // and that the format of the row key was not changed by serialization
+    try {
+      const entity0 = await tableClient.getEntity<TableTestEntity>(
+        testEntities[0].partitionKey,
+        testEntities[0].rowKey
+      );
+      const entity1 = await tableClient.getEntity<TableTestEntity>(
+        testEntities[1].partitionKey,
+        testEntities[1].rowKey
+      );
+      const entity2 = await tableClient.getEntity<TableTestEntity>(
+        testEntities[2].partitionKey,
+        testEntities[2].rowKey
+      );
+      assert.strictEqual(entity0.rowKey, testEntities[0].rowKey);
+      assert.strictEqual(entity1.rowKey, testEntities[1].rowKey);
+      assert.strictEqual(entity2.rowKey, testEntities[2].rowKey);
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to retrieve with ${err}`);
+    }
+
+    // now delete the entities and ensure that delete path is valid
+    const transaction2 = new TableTransaction();
+    transaction2.deleteEntity(
+      testEntities[0].partitionKey,
+      testEntities[0].rowKey
+    );
+    transaction2.deleteEntity(
+      testEntities[1].partitionKey,
+      testEntities[1].rowKey
+    );
+    transaction2.deleteEntity(
+      testEntities[2].partitionKey,
+      testEntities[2].rowKey
+    );
+
+    try {
+      const result = await tableClient.submitTransaction(transaction2.actions);
+      assert.notStrictEqual(result, undefined);
+      assert.strictEqual(
+        result.status,
+        202,
+        "We did not get a 202 on batch delete"
+      );
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to delete with ${err}`);
+    }
+
+    await tableClient.deleteTable();
+  });
 });
