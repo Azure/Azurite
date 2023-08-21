@@ -864,7 +864,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   });
 
   // https://github.com/Azure/Azurite/issues/754
-  it("21. Should create entities using batch and RowKey starting with %, @loki", async () => {
+  it("21. Should create and delete entities using batch and RowKey starting with %, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("percentBatch")
@@ -889,6 +889,21 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       assert.ok(result.subResponses[0].rowKey);
     } catch (err: any) {
       assert.strictEqual(err, undefined, `We failed with ${err}`);
+    }
+
+    const transaction2 = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction2.deleteEntity(testEntity.partitionKey, testEntity.rowKey);
+    }
+    try {
+      const result2 = await tableClient.submitTransaction(transaction2.actions);
+      assert.strictEqual(
+        result2.subResponses[0].status,
+        204,
+        "We did not get status 204 on delete"
+      );
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to delete with ${err}`);
     }
 
     await tableClient.deleteTable();
