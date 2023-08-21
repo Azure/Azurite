@@ -659,7 +659,7 @@ export default class TableBatchOrchestrator {
       // we decode above.
       partitionKey = partKeyMatch[0];
       // Url should use double ticks and we need to remove them
-      partitionKey = partitionKey.replaceAll("''", "'");
+      partitionKey = this.replaceDoubleTicks(partitionKey);
     }
     return partitionKey;
   }
@@ -682,7 +682,7 @@ export default class TableBatchOrchestrator {
     const rowKeyMatch = url.match(/(?<=RowKey=')(.+)(?='\))/gi);
     rowKey = rowKeyMatch ? rowKeyMatch[0] : "";
     // Url should use double ticks and we need to remove them
-    rowKey = rowKey.replaceAll("''", "'");
+    rowKey = this.replaceDoubleTicks(rowKey);
     if (rowKeyMatch === null) {
       // row key not in URL, must be in body
       const body = request.getBody();
@@ -693,6 +693,17 @@ export default class TableBatchOrchestrator {
     }
 
     return rowKey;
+  }
+
+  /**
+   * Replace Double ticks for single ticks without replaceAll string prototype
+   * function, becuase node 14 does not support it.
+   * @param key
+   * @returns
+   */
+  private replaceDoubleTicks(key: string): string {
+    const result = key.replace(/''/g, "'");
+    return result;
   }
 
   /**
