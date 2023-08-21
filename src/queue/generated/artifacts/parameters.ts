@@ -270,10 +270,6 @@ export const visibilitytimeout0: msRest.OperationQueryParameter = {
   ],
   mapper: {
     serializedName: "visibilitytimeout",
-    constraints: {
-      InclusiveMaximum: 604800,
-      InclusiveMinimum: 0
-    },
     type: {
       name: "Number"
     }
@@ -284,10 +280,6 @@ export const visibilitytimeout1: msRest.OperationQueryParameter = {
   mapper: {
     required: true,
     serializedName: "visibilitytimeout",
-    constraints: {
-      InclusiveMaximum: 604800,
-      InclusiveMinimum: 0
-    },
     type: {
       name: "Number"
     }

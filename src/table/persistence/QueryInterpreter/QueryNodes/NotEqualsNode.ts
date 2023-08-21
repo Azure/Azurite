@@ -1,6 +1,6 @@
 import { IQueryContext } from "../IQueryContext";
 import BinaryOperatorNode from "./BinaryOperatorNode";
-import GuidNode from "./GuidNode";
+import ValueNode from "./ValueNode";
 
 /**
  * Represents a logical not equal operation between two nodes (the `ne` query operator).
@@ -21,18 +21,17 @@ export default class NotEqualsNode extends BinaryOperatorNode {
   }
 
   evaluate(context: IQueryContext): any {
+    if (this.left instanceof ValueNode) {
+      return this.left.compare(context, this.right) !== 0;
+    }
+
+    if (this.right instanceof ValueNode) {
+      return this.right.compare(context, this.left) !== 0;
+    }
+
     const left = this.left.evaluate(context);
     const right = this.right.evaluate(context);
 
-    // If either side is undefined, we should not match - this only occurs in scenarios where
-    // the field itself doesn't exist on the entity.
-    return left !== right && left !== undefined && right !== undefined && this.backwardsCompatibleGuidEvaluate(context);
-  }
-
-  private backwardsCompatibleGuidEvaluate(context: IQueryContext): boolean {
-    const left = this.left instanceof GuidNode ? this.left.legacyStorageFormat() : this.left.evaluate(context);
-    const right = this.right instanceof GuidNode ? this.right.legacyStorageFormat() : this.right.evaluate(context);
-
-    return left !== right;
+    return left !== right && left !== undefined && right !== undefined;
   }
 }
