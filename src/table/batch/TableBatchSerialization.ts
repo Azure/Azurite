@@ -1,11 +1,11 @@
 // import BatchOperation from "../../common/BatchOperation";
 // import { BatchOperationType } from "../../common/BatchOperation";
-import { BatchType } from "../../common/batch/BatchOperation";
-import BatchRequest from "../../common/batch/BatchRequest";
+import "./BatchOperation";
+import BatchRequest from "./BatchRequest";
 // import BatchSubResponse from "../../common/BatchSubResponse";
 
 import { HttpMethod } from "../../table/generated/IRequest";
-import { BatchSerialization } from "../../common/batch/BatchSerialization";
+import { BatchSerialization } from "./BatchSerialization";
 import TableBatchOperation from "../batch/TableBatchOperation";
 import * as Models from "../generated/artifacts/models";
 import TableBatchUtils from "./TableBatchUtils";
@@ -116,7 +116,7 @@ export class TableBatchSerialization extends BatchSerialization {
 
         headers = subRequest.substring(subStringStart, subStringEnd);
 
-        const operation = new TableBatchOperation(BatchType.table, headers);
+        const operation = new TableBatchOperation(headers);
         if (null !== requestType) {
           operation.httpMethod = requestType[0] as HttpMethod;
         }

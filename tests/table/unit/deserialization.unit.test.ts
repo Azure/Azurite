@@ -1,8 +1,7 @@
 // Unit Tests for serialization
 import * as assert from "assert";
-import { BatchType } from "../../../src/common/batch/BatchOperation";
-import BatchRequestHeaders from "../../../src/common/batch/BatchRequestHeaders";
-import { BatchSerialization } from "../../../src/common/batch/BatchSerialization";
+import BatchRequestHeaders from "../../../src/table/batch/BatchRequestHeaders";
+import { BatchSerialization } from "../../../src/table/batch/BatchSerialization";
 import { TableBatchSerialization } from "../../../src/table/batch/TableBatchSerialization";
 import SerializationRequestMockStrings from "./mock.request.serialization.strings";
 
@@ -19,7 +18,6 @@ describe("batch deserialization unit tests, these are not the API integration te
       3,
       "failed to deserialize correct number of operations"
     );
-    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[0].httpMethod,
       "POST",
@@ -41,7 +39,6 @@ describe("batch deserialization unit tests, these are not the API integration te
       "wrong jsonBody parsed"
     );
     // Second Batch Operation
-    assert.strictEqual(batchOperationArray[1].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[1].httpMethod,
       "POST",
@@ -63,7 +60,6 @@ describe("batch deserialization unit tests, these are not the API integration te
       "wrong jsonBody parsed"
     );
     // Third Batch Operation
-    assert.strictEqual(batchOperationArray[2].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[2].httpMethod,
       "POST",
@@ -95,7 +91,6 @@ describe("batch deserialization unit tests, these are not the API integration te
 
     // this first test is currently a stupid test, as I control the type within the code
     // we want to test that we have deserialized the operation.
-    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[0].httpMethod,
       "GET",
@@ -127,7 +122,6 @@ describe("batch deserialization unit tests, these are not the API integration te
       serializer.deserializeBatchRequest(requestString);
 
     // First Batch Operation is an insert.
-    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[0].httpMethod,
       "POST",
@@ -149,7 +143,6 @@ describe("batch deserialization unit tests, these are not the API integration te
       "wrong jsonBody parsed"
     );
     // Second Batch Operation is a merge
-    assert.strictEqual(batchOperationArray[1].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[1].httpMethod,
       "MERGE",
@@ -181,7 +174,6 @@ describe("batch deserialization unit tests, these are not the API integration te
       serializer.deserializeBatchRequest(requestString);
 
     // First Batch Operation is an insert.
-    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[0].httpMethod,
       "DELETE",
@@ -203,7 +195,6 @@ describe("batch deserialization unit tests, these are not the API integration te
       "wrong jsonBody parsed"
     );
     // Second Batch Operation is a Delete
-    assert.strictEqual(batchOperationArray[1].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[1].httpMethod,
       "DELETE",
@@ -236,9 +227,6 @@ describe("batch deserialization unit tests, these are not the API integration te
 
     // There are 5 operations in the batch
     assert.strictEqual(batchOperationArray.length, 5);
-    // First Batch Operation is an insert.
-    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
-
     done();
   });
 
@@ -394,8 +382,6 @@ describe("batch deserialization unit tests, these are not the API integration te
       "We did not deserialize all operations!"
     );
     // First Batch Operation is an insert.
-    // {\"PartitionKey\":\"uuid\",\"RowKey\":\"rkey1\",\"price\":5,\"product\":\"product1\"}
-    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[0].httpMethod,
       "POST",
@@ -418,8 +404,6 @@ describe("batch deserialization unit tests, these are not the API integration te
       "wrong jsonBody parsed"
     );
     // Second Batch Operation is an insert
-    // {\"PartitionKey\":\"uuid\",\"RowKey\":\"rkey2\",\"price\":10,\"product\":\"product2\"
-    assert.strictEqual(batchOperationArray[1].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[1].httpMethod,
       "POST",
@@ -457,8 +441,6 @@ describe("batch deserialization unit tests, these are not the API integration te
       "We did not deserialize all operations!"
     );
     // First Batch Operation is an insert.
-    // {\"PartitionKey\":\"uuid\",\"RowKey\":\"rkey1\",\"price\":5,\"product\":\"product1\"}
-    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[0].httpMethod,
       "POST",
@@ -481,8 +463,6 @@ describe("batch deserialization unit tests, these are not the API integration te
       "wrong jsonBody parsed"
     );
     // Second Batch Operation is an insert
-    // {\"PartitionKey\":\"uuid\",\"RowKey\":\"rkey2\",\"price\":10,\"product\":\"product2\"
-    assert.strictEqual(batchOperationArray[1].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[1].httpMethod,
       "POST",
@@ -515,7 +495,6 @@ describe("batch deserialization unit tests, these are not the API integration te
       serializer.deserializeBatchRequest(requestString);
 
     // First Batch Operation is a Delete.
-    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[0].httpMethod,
       "DELETE",
@@ -542,7 +521,6 @@ describe("batch deserialization unit tests, these are not the API integration te
       "wrong Etag parsed"
     );
     // Third Batch Operation is a Delete
-    assert.strictEqual(batchOperationArray[2].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[2].httpMethod,
       "DELETE",
@@ -579,7 +557,6 @@ describe("batch deserialization unit tests, these are not the API integration te
       serializer.deserializeBatchRequest(requestString);
 
     // First Batch Operation is a Delete.
-    assert.strictEqual(batchOperationArray[0].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[0].httpMethod,
       "DELETE",
@@ -606,7 +583,6 @@ describe("batch deserialization unit tests, these are not the API integration te
       "wrong Etag parsed"
     );
     // Second Batch Operation is a Delete
-    assert.strictEqual(batchOperationArray[1].batchType, BatchType.table);
     assert.strictEqual(
       batchOperationArray[1].httpMethod,
       "DELETE",

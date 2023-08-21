@@ -1,4 +1,4 @@
-import BatchRequest from "../../common/batch/BatchRequest";
+import BatchRequest from "./BatchRequest";
 import BatchTableInsertEntityOptionalParams from "./BatchTableInsertEntityOptionalParams";
 import TableStorageContext from "../context/TableStorageContext";
 import Context from "../generated/Context";
@@ -35,6 +35,10 @@ export default class TableBatchOrchestrator {
   private wasError: boolean = false;
   private errorResponse: string = "";
   private readonly repository: TableBatchRepository;
+  // add a private member which will is a map of row keys to partition keys
+  // this will be used to check for duplicate row keys in a batch request
+  private partitionKeyMap: Map<string, string> = new Map<string, string>();
+
 
   public constructor(context: TableStorageContext, handler: TableHandler, metadataStore: ITableMetadataStore) {
     this.context = context;
@@ -373,6 +377,8 @@ export default class TableBatchOrchestrator {
     response: any;
   }> {
     request.ingestOptionalParams(new BatchTableInsertEntityOptionalParams());
+    const { partitionKey, rowKey } = this.extractKeys(request);
+    this.validateBatchRequest(partitionKey, rowKey, batchContextClone);
     response = await this.parentHandler.insertEntity(
       request.getPath(),
       request.params as BatchTableInsertEntityOptionalParams,
@@ -414,8 +420,8 @@ export default class TableBatchOrchestrator {
     request.ingestOptionalParams(new BatchTableDeleteEntityOptionalParams());
     const ifmatch: string = request.getHeader(BatchStringConstants.IF_MATCH_HEADER_STRING) || BatchStringConstants.ASTERISK;
 
-    const partitionKey = this.extractRequestPartitionKey(request);
-    const rowKey = this.extractRequestRowKey(request);
+    const { partitionKey, rowKey } = this.extractKeys(request);
+    this.validateBatchRequest(partitionKey, rowKey, batchContextClone);
     response = await this.parentHandler.deleteEntity(
       request.getPath(),
       partitionKey,
@@ -432,6 +438,12 @@ export default class TableBatchOrchestrator {
       ),
       response
     };
+  }
+
+  private extractKeys(request: BatchRequest) {
+    const partitionKey = this.extractRequestPartitionKey(request);
+    const rowKey = this.extractRequestRowKey(request);
+    return { partitionKey, rowKey };
   }
 
   /**
@@ -459,8 +471,8 @@ export default class TableBatchOrchestrator {
     response: any;
   }> {
     request.ingestOptionalParams(new BatchTableUpdateEntityOptionalParams());
-    const partitionKey = this.extractRequestPartitionKey(request);
-    const rowKey = this.extractRequestRowKey(request);
+    const { partitionKey, rowKey } = this.extractKeys(request);
+    this.validateBatchRequest(partitionKey, rowKey, batchContextClone);
     const ifMatch = request.getHeader(BatchStringConstants.IF_MATCH_HEADER_STRING);
 
     response = await this.parentHandler.updateEntity(
@@ -509,8 +521,7 @@ export default class TableBatchOrchestrator {
     response: any;
   }> {
     // need to validate that query is the only request in the batch!
-    const partitionKey = this.extractRequestPartitionKey(request);
-    const rowKey = this.extractRequestRowKey(request);
+    const { partitionKey, rowKey } = this.extractKeys(request);
 
     if (
       null !== partitionKey &&
@@ -573,11 +584,12 @@ export default class TableBatchOrchestrator {
     response: any;
   }> {
     request.ingestOptionalParams(new BatchTableMergeEntityOptionalParams());
-
+    const { partitionKey, rowKey } = this.extractKeys(request);
+    this.validateBatchRequest(partitionKey, rowKey, batchContextClone);
     response = await this.parentHandler.mergeEntity(
       request.getPath(),
-      this.extractRequestPartitionKey(request),
-      this.extractRequestRowKey(request),
+      partitionKey,
+      rowKey,
       {
         "ifMatch" : request.getHeader(BatchStringConstants.IF_MATCH_HEADER_STRING),
         ...request.params
@@ -651,6 +663,45 @@ export default class TableBatchOrchestrator {
       }
     }
     return rowKey;
+  }
+
+  
+
+  /**
+   * Helper function to validate batch requests.
+   * Additional validation functions should be added here.
+   *
+   * @private
+   * @param {string} partitionKey
+   * @param {string} rowKey
+   * @param {*} batchContextClone
+   * @memberof TableBatchOrchestrator
+  */
+  private validateBatchRequest(partitionKey: string | undefined, rowKey: string, batchContextClone: any) {
+    if(partitionKey === undefined){
+      throw StorageErrorFactory.getInvalidInput(batchContextClone);
+    }
+    this.checkForDuplicateRowKey(partitionKey, rowKey, batchContextClone);
+  }
+
+
+  /**
+   *
+   * 
+   *
+   * @private
+   * @param {string} partitionKey
+   * @param {string} rowKey
+   * @param {*} batchContextClone
+   * @memberof TableBatchOrchestrator
+   */
+  private checkForDuplicateRowKey(partitionKey: string, rowKey: string, batchContextClone: any) {
+    const key = partitionKey + rowKey;
+    if (this.partitionKeyMap.has(key)) {
+      throw StorageErrorFactory.getBatchDuplicateRowKey(batchContextClone,  rowKey);
+    } else {
+      this.partitionKeyMap.set(key, partitionKey);
+    }
   }
 }
 

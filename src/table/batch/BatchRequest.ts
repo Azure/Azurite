@@ -1,13 +1,13 @@
 import { Stream } from "stream";
-import IRequest, { HttpMethod } from "../../table/generated/IRequest";
+import IRequest, { HttpMethod } from "../generated/IRequest";
 import BatchOperation from "./BatchOperation";
 import BatchRequestHeaders from "./BatchRequestHeaders";
-import * as Models from "../../table/generated/artifacts/models";
-import BatchTableUpdateEntityOptionalParams from "../../table/batch/BatchTableUpdateEntityOptionalParams";
-import BatchTableDeleteEntityOptionalParams from "../../table/batch/BatchTableDeleteEntityOptionalParams";
-import IOptionalParams from "../../table/batch/IOptionalParams";
-import BatchStringConstants from "../../table/batch/BatchStringConstants";
-import BatchErrorConstants from "../../table/batch/BatchErrorConstants";
+import * as Models from "../generated/artifacts/models";
+import BatchTableUpdateEntityOptionalParams from "./BatchTableUpdateEntityOptionalParams";
+import BatchTableDeleteEntityOptionalParams from "./BatchTableDeleteEntityOptionalParams";
+import IOptionalParams from "./IOptionalParams";
+import BatchStringConstants from "./BatchStringConstants";
+import BatchErrorConstants from "./BatchErrorConstants";
 
 /*
  * Represents a request in the context of batch operations.

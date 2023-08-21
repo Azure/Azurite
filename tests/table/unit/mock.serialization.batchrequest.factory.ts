@@ -1,4 +1,4 @@
-import BatchRequest from "../../../src/common/batch/BatchRequest";
+import BatchRequest from "../../../src/table/batch/BatchRequest";
 import SerializationResponseMockStrings from "./mock.response.serialization.strings";
 import SerializationBatchOperationFactory from "./mock.serialization.batchoperation.factory";
 import * as Models from "../../../src/table/generated/artifacts/models";

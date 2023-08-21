@@ -1,4 +1,4 @@
-import BatchRequest from "../../common/batch/BatchRequest";
+import BatchRequest from "./BatchRequest";
 import TableStorageContext from "../context/TableStorageContext";
 import ITableMetadataStore from "../persistence/ITableMetadataStore";
 
