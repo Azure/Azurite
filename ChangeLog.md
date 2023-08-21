@@ -4,6 +4,9 @@
 
 ## Upcoming Release
 
+Table:
+- Fixed the errorCode returned, when malformed Etag is provided for table Update/Delete calls. (issue #2013)
+
 ## 2023.08 Version 3.26.0
 
 General:
