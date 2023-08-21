@@ -260,6 +260,10 @@ describe("BlobAPIs", () => {
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
     );
+    assert.equal(
+      'true',
+      result._response.headers.get("x-ms-delete-type-permanent")
+    );
   });
 
   it("delete should work for * ifMatch @loki @sql", async () => {

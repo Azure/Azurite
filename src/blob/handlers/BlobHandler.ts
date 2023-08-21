@@ -188,7 +188,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       requestId: context.contextId,
       date: context.startTime,
       version: BLOB_API_VERSION,
-      clientRequestId: options.requestId
+      clientRequestId: options.requestId,
+      deleteTypePermanent: true
     };
 
     return response;

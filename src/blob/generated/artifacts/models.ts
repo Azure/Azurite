@@ -4866,6 +4866,11 @@ export interface BlobDeleteHeaders {
    * initiated
    */
   date?: Date;
+  /**
+   * For version 2017-07-29 and later, Blob Storage returns true if the blob has been permanently
+   * deleted, and false if the blob has been soft-deleted.
+   */
+  deleteTypePermanent?: boolean;
   errorCode?: string;
 }
 

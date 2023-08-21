@@ -16,3 +16,6 @@ optional-response-headers: true
 enum-types: true
 ```
 
+## Changes Made to Client Swagger
+
+1. Remove minimum/maximum limitation for "VisibilityTimeout" and "VisibilityTimeoutRequired".

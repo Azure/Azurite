@@ -1,5 +1,6 @@
 import { IQueryContext } from "../IQueryContext";
 import BinaryOperatorNode from "./BinaryOperatorNode";
+import ValueNode from "./ValueNode";
 
 /**
  * Represents a logical greater than operation between two nodes (the `gt` query operator).
@@ -17,6 +18,14 @@ export default class GreaterThanNode extends BinaryOperatorNode {
   }
 
   evaluate(context: IQueryContext): any {
+    if (this.left instanceof ValueNode) {
+      return this.left.compare(context, this.right) > 0;
+    }
+
+    if (this.right instanceof ValueNode) {
+      return this.right.compare(context, this.left) < 0;
+    }
+
     return this.left.evaluate(context) > this.right.evaluate(context);
   }
 }
