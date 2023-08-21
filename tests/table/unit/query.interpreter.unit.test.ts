@@ -2,22 +2,33 @@ import * as assert from "assert";
 import parseQuery from "../../../src/table/persistence/QueryInterpreter/QueryParser";
 import { IQueryContext } from "../../../src/table/persistence/QueryInterpreter/IQueryContext";
 import executeQuery from "../../../src/table/persistence/QueryInterpreter/QueryInterpreter";
-import { Entity, Table } from "../../../src/table/persistence/ITableMetadataStore";
+import {
+  Entity,
+  Table
+} from "../../../src/table/persistence/ITableMetadataStore";
 
 describe("Query Interpreter", () => {
-  function runTestCases(name: string, context: IQueryContext, testCases: {
-    name: string
-    originalQuery: string
-    expectedResult: any
-  }[]) {
+  function runTestCases(
+    name: string,
+    context: IQueryContext,
+    testCases: {
+      name: string;
+      originalQuery: string;
+      expectedResult: any;
+    }[]
+  ) {
     describe(name, () => {
       for (const test of testCases) {
         it(test.name, () => {
-          const queryTree = parseQuery(test.originalQuery)
-          assert.strictEqual(executeQuery(context, queryTree), test.expectedResult, "it should execute the query tree correctly")
-        })
+          const queryTree = parseQuery(test.originalQuery);
+          assert.strictEqual(
+            executeQuery(context, queryTree),
+            test.expectedResult,
+            "it should execute the query tree correctly"
+          );
+        });
       }
-    })
+    });
   }
 
   const referenceEntity: Entity = {
@@ -32,16 +43,18 @@ describe("Query Interpreter", () => {
       double: -123.01,
       bool: true,
       date: "2020-01-01T00:00:00.000Z",
-      guid: Buffer.from("00000000-0000-0000-0000-000000000000").toString("base64"),
+      guid: Buffer.from("00000000-0000-0000-0000-000000000000").toString(
+        "base64"
+      ),
       guidLegacy: "00000000-0000-0000-0000-000000000000",
       binary: Buffer.from("binaryData").toString("base64"),
-      emptyString: "",
+      emptyString: ""
     }
   };
 
   const referenceTable: Table = {
     table: "testTable",
-    account: "testAccount",
+    account: "testAccount"
   };
 
   describe("Built-in Identifiers", () => {
@@ -52,11 +65,16 @@ describe("Query Interpreter", () => {
         expectedResult: true
       },
       {
+        name: "PartitionKey equality reversed order",
+        originalQuery: "'testPartition' eq PartitionKey",
+        expectedResult: true
+      },
+      {
         name: "PartitionKey equality (doesn't match)",
         originalQuery: "PartitionKey eq 'testPartition2'",
         expectedResult: false
       }
-    ])
+    ]);
 
     runTestCases("RowKey", referenceEntity, [
       {
@@ -71,15 +89,17 @@ describe("Query Interpreter", () => {
       },
       {
         name: "PartitionKey equality and RowKey range",
-        originalQuery: "PartitionKey eq 'testPartition' and RowKey gt 'testRoom' and RowKey lt 'testRoxy'",
+        originalQuery:
+          "PartitionKey eq 'testPartition' and RowKey gt 'testRoom' and RowKey lt 'testRoxy'",
         expectedResult: true
       },
       {
         name: "PartitionKey equality and RowKey range (doesn't match)",
-        originalQuery: "PartitionKey eq 'testPartition' and RowKey gt 'testAnt' and RowKey lt 'testMoose'",
+        originalQuery:
+          "PartitionKey eq 'testPartition' and RowKey gt 'testAnt' and RowKey lt 'testMoose'",
         expectedResult: false
       }
-    ])
+    ]);
 
     runTestCases("TableName", referenceTable, [
       {
@@ -91,36 +111,40 @@ describe("Query Interpreter", () => {
         name: "TableName equality (doesn't match)",
         originalQuery: "TableName eq 'testTable2'",
         expectedResult: false
-      },
-    ])
-  })
+      }
+    ]);
+  });
 
   describe("Logical Operators", () => {
     runTestCases("and", referenceEntity, [
       {
         name: "PartitionKey equality and RowKey range",
-        originalQuery: "PartitionKey eq 'testPartition' and RowKey gt 'testRoom' and RowKey lt 'testRoxy'",
+        originalQuery:
+          "PartitionKey eq 'testPartition' and RowKey gt 'testRoom' and RowKey lt 'testRoxy'",
         expectedResult: true
       },
       {
         name: "PartitionKey equality and RowKey range (doesn't match)",
-        originalQuery: "PartitionKey eq 'testPartition' and RowKey gt 'testAnt' and RowKey lt 'testMoose'",
+        originalQuery:
+          "PartitionKey eq 'testPartition' and RowKey gt 'testAnt' and RowKey lt 'testMoose'",
         expectedResult: false
       }
-    ])
+    ]);
 
     runTestCases("or", referenceEntity, [
       {
         name: "PartitionKey set",
-        originalQuery: "PartitionKey eq 'testPartition' or PartitionKey eq 'testPartition2'",
+        originalQuery:
+          "PartitionKey eq 'testPartition' or PartitionKey eq 'testPartition2'",
         expectedResult: true
       },
       {
         name: "PartitionKey set (doesn't match)",
-        originalQuery: "PartitionKey eq 'testPartition2' or PartitionKey eq 'testPartition3'",
+        originalQuery:
+          "PartitionKey eq 'testPartition2' or PartitionKey eq 'testPartition3'",
         expectedResult: false
       }
-    ])
+    ]);
 
     runTestCases("not", referenceEntity, [
       {
@@ -133,8 +157,8 @@ describe("Query Interpreter", () => {
         originalQuery: "not PartitionKey eq 'testPartition2'",
         expectedResult: true
       }
-    ])
-  })
+    ]);
+  });
 
   describe("Comparison Operators", () => {
     runTestCases("eq", referenceEntity, [
@@ -170,12 +194,14 @@ describe("Query Interpreter", () => {
       },
       {
         name: "GUID equality (legacy)",
-        originalQuery: "guidLegacy eq guid'00000000-0000-0000-0000-000000000000'",
+        originalQuery:
+          "guidLegacy eq guid'00000000-0000-0000-0000-000000000000'",
         expectedResult: true
       },
       {
         name: "GUID equality (legacy) (doesn't match)",
-        originalQuery: "guidLegacy eq guid'00000000-0000-0000-0000-000000000001'",
+        originalQuery:
+          "guidLegacy eq guid'00000000-0000-0000-0000-000000000001'",
         expectedResult: false
       },
       {
@@ -188,8 +214,8 @@ describe("Query Interpreter", () => {
         originalQuery: "binary eq binary'000000000000'",
         expectedResult: false
       }
-    ])
-  })
+    ]);
+  });
 
   describe("Values", () => {
     runTestCases("Booleans", referenceEntity, [
@@ -205,10 +231,11 @@ describe("Query Interpreter", () => {
       },
       {
         name: "Compound queries using booleans",
-        originalQuery: "(true and RowKey eq 'testRow') and (false or PartitionKey eq 'testPartition')",
+        originalQuery:
+          "(true and RowKey eq 'testRow') and (false or PartitionKey eq 'testPartition')",
         expectedResult: true
       }
-    ])
+    ]);
 
     runTestCases("GUIDs", referenceEntity, [
       {
@@ -223,12 +250,14 @@ describe("Query Interpreter", () => {
       },
       {
         name: "GUID equality (legacy)",
-        originalQuery: "guidLegacy eq guid'00000000-0000-0000-0000-000000000000'",
+        originalQuery:
+          "guidLegacy eq guid'00000000-0000-0000-0000-000000000000'",
         expectedResult: true
       },
       {
         name: "GUID equality (legacy) (doesn't match)",
-        originalQuery: "guidLegacy eq guid'00000000-0000-0000-0000-000000000001'",
+        originalQuery:
+          "guidLegacy eq guid'00000000-0000-0000-0000-000000000001'",
         expectedResult: false
       },
       {
@@ -238,11 +267,12 @@ describe("Query Interpreter", () => {
       },
       {
         name: "GUID inequality (legacy)",
-        originalQuery: "guidLegacy ne guid'22222222-2222-2222-2222-222222222222'",
+        originalQuery:
+          "guidLegacy ne guid'22222222-2222-2222-2222-222222222222'",
         expectedResult: true
       }
-    ])
-  })
+    ]);
+  });
 
   describe("Regression Tests", () => {
     runTestCases("Issue #1929: Querying non-existent fields", referenceEntity, [
@@ -266,6 +296,6 @@ describe("Query Interpreter", () => {
         originalQuery: "nonExistent ne ''",
         expectedResult: false
       }
-    ])
-  })
-})
+    ]);
+  });
+});
