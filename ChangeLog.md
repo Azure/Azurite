@@ -7,6 +7,7 @@
 Blob:
 
 - Fix validation of Blob SAS token when using the second key for an account in `AZURITE_ACCOUNTS`
+- Support blob new access tier Cold
 
 Table:
 
