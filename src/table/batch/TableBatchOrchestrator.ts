@@ -21,9 +21,9 @@ import BatchErrorConstants from "./BatchErrorConstants";
  * entity group operations for the table api.
  * The orchestrator manages the deserialization, submission and serialization of
  * entity group transactions.
- * ToDo: it might be possible to share code between this and the blob batch api, but this
- * has not yet been validated.
- * Will need refactoring when we address batch transactions for blob.
+ * ToDo: it might be possible to share code between this and the blob batch api, but there
+ * is relatively little commonality, due to the different ACL models and the fact that
+ * Azure Tables is owned by a different group to the Azure Blob Storage team.
  *
  * @export
  * @class TableBatchOrchestrator

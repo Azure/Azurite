@@ -84,10 +84,13 @@ export class TableBatchSerialization extends BatchSerialization {
 
         const jsonOperationBody = subRequest.match(/{+.+}+/);
 
+        // Delete does not use a JSON body, but the COSMOS Table client also
+        // submits requests without a JSON body for merge
         if (
           subRequests.length > 1 &&
           null !== requestType &&
           requestType[0] !== "DELETE" &&
+          requestType[0] !== "MERGE" &&
           (jsonOperationBody === null || jsonOperationBody.length < 1)
         ) {
           throw new Error(
@@ -110,7 +113,7 @@ export class TableBatchSerialization extends BatchSerialization {
           jsonBody = jsonOperationBody[0];
         } else {
           // trim "\r\n\r\n" or "\n\n" from subRequest
-          subStringEnd = subRequest.length - (HTTP_LINE_ENDING.length * 2);
+          subStringEnd = subRequest.length - HTTP_LINE_ENDING.length * 2;
           jsonBody = "";
         }
 

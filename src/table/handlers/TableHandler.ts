@@ -461,28 +461,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
       context
     );
 
-    if (!options.tableEntityProperties) {
-      throw StorageErrorFactory.getPropertiesNeedValue(context);
-    }
-    if (options?.ifMatch && options.ifMatch !== "*" && options.ifMatch !== "") {
-      if (isEtagValid(options.ifMatch)) {
-        throw StorageErrorFactory.getInvalidOperation(context);
-      }
-    }
+    this.checkMergeRequest(options, context, partitionKey, rowKey);
 
-    if (
-      options.tableEntityProperties.PartitionKey !== partitionKey ||
-      options.tableEntityProperties.RowKey !== rowKey
-    ) {
-      this.logger.warn(
-        `TableHandler:mergeEntity() Incoming PartitionKey:${partitionKey} RowKey:${rowKey} in URL parameters don't align with entity body PartitionKey:${options.tableEntityProperties.PartitionKey} RowKey:${options.tableEntityProperties.RowKey}.`
-      );
-    }
-    // check that key properties are valid
-    this.validateKey(context, partitionKey);
-    this.validateKey(context, rowKey);
-
-    this.checkProperties(context, options.tableEntityProperties);
     const entity: Entity = this.createPersistedEntity(
       context,
       options,
@@ -520,6 +500,64 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     };
 
     return response;
+  }
+
+  /**
+   * Check that the properties are valid on merge request
+   *
+   * @private
+   * @param {Models.TableMergeEntityOptionalParams} options
+   * @param {Context} context
+   * @param {string} partitionKey
+   * @param {string} rowKey
+   * @memberof TableHandler
+   */
+  private checkMergeRequest(
+    options: Models.TableMergeEntityOptionalParams,
+    context: Context,
+    partitionKey: string,
+    rowKey: string
+  ) {
+    // some SDKs, like Azure Cosmos Table do not always send properties
+    // and we might merge just row and partition keys like upsert
+    // this caused issues and has been removed for now.
+    // if (!options.tableEntityProperties) {
+    //   throw StorageErrorFactory.getPropertiesNeedValue(context);
+    // }
+    if (options.tableEntityProperties !== undefined) {
+      if (
+        options.tableEntityProperties.PartitionKey !== partitionKey ||
+        options.tableEntityProperties.RowKey !== rowKey
+      ) {
+        this.logger.warn(
+          `TableHandler:mergeEntity() Incoming PartitionKey:${partitionKey} RowKey:${rowKey} in URL parameters don't align with entity body PartitionKey:${options.tableEntityProperties.PartitionKey} RowKey:${options.tableEntityProperties.RowKey}.`
+        );
+      }
+      this.checkProperties(context, options.tableEntityProperties);
+    }
+    this.checkMergeIfMatch(options, context);
+    // check that key properties are valid
+    this.validateKey(context, partitionKey);
+    this.validateKey(context, rowKey);
+  }
+
+  /**
+   * Check that the ifMatch header is valid on merge request
+   *
+   * @private
+   * @param {Models.TableMergeEntityOptionalParams} options
+   * @param {Context} context
+   * @memberof TableHandler
+   */
+  private checkMergeIfMatch(
+    options: Models.TableMergeEntityOptionalParams,
+    context: Context
+  ) {
+    if (options?.ifMatch && options.ifMatch !== "*" && options.ifMatch !== "") {
+      if (isEtagValid(options.ifMatch)) {
+        throw StorageErrorFactory.getInvalidOperation(context);
+      }
+    }
   }
 
   public async deleteEntity(
@@ -903,7 +941,11 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const contentTypeResponse = tableCtx.request
       ?.getHeader("content-type")
       ?.replace("batch", "batchresponse");
-    const tableBatchManager = new TableBatchOrchestrator(tableCtx, this, this.metadataStore);
+    const tableBatchManager = new TableBatchOrchestrator(
+      tableCtx,
+      this,
+      this.metadataStore
+    );
 
     const requestBody = await TableBatchUtils.StreamToString(body);
     this.logger.debug(

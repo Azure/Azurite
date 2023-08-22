@@ -1436,4 +1436,91 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
 
     await tableClient.deleteTable();
   });
+
+  // https://github.com/Azure/Azurite/issues/1958
+  it("31. Should create, get and delete entities using Azure Data Tables SDK batch merge operation, @loki", async () => {
+    const tableClient = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      getUniqueName("issue1958")
+    );
+    try {
+      await tableClient.createTable();
+    } catch (createErr) {
+      assert.strictEqual(
+        createErr,
+        undefined,
+        `We failed to create with ${createErr}`
+      );
+    }
+    const issue1958 = "issue1958";
+    const testEntities: { partitionKey: string; rowKey: string }[] = [
+      {
+        partitionKey: issue1958,
+        rowKey: "c8b06c47-c755-4b53-b3da-73949ebbb24f"
+      },
+      {
+        partitionKey: issue1958,
+        rowKey: "c8b06c47-c755-4b53-b3da-73949ebbb24e"
+      }
+    ];
+    const transaction = new TableTransaction();
+    for (const testEntity of testEntities) {
+      // Upsert will use Batch Merge like the issue reported
+      // however the root cause in this case was that the .Net SDK
+      // does not add the properties to the request body
+      transaction.upsertEntity(testEntity);
+    }
+
+    try {
+      const result = await tableClient.submitTransaction(transaction.actions);
+      assert.strictEqual(result.status, 202);
+      assert.strictEqual(result.subResponses.length, 2);
+      assert.strictEqual(result.subResponses[0].status, 204);
+      assert.strictEqual(result.subResponses[1].status, 204);
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to create with ${err}`);
+    }
+
+    // validate that we successfully created each entity,
+    // and that the format of the row key was not changed by serialization
+    try {
+      const entity0 = await tableClient.getEntity<TableTestEntity>(
+        testEntities[0].partitionKey,
+        testEntities[0].rowKey
+      );
+      const entity1 = await tableClient.getEntity<TableTestEntity>(
+        testEntities[1].partitionKey,
+        testEntities[1].rowKey
+      );
+      assert.strictEqual(entity0.rowKey, testEntities[0].rowKey);
+      assert.strictEqual(entity1.rowKey, testEntities[1].rowKey);
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to retrieve with ${err}`);
+    }
+
+    // now delete the entities and ensure that delete path is valid
+    const transaction2 = new TableTransaction();
+    transaction2.deleteEntity(
+      testEntities[0].partitionKey,
+      testEntities[0].rowKey
+    );
+    transaction2.deleteEntity(
+      testEntities[1].partitionKey,
+      testEntities[1].rowKey
+    );
+
+    try {
+      const result = await tableClient.submitTransaction(transaction2.actions);
+      assert.notStrictEqual(result, undefined);
+      assert.strictEqual(
+        result.status,
+        202,
+        "We did not get a 202 on batch delete"
+      );
+    } catch (err: any) {
+      assert.strictEqual(err, undefined, `We failed to delete with ${err}`);
+    }
+
+    await tableClient.deleteTable();
+  });
 });
