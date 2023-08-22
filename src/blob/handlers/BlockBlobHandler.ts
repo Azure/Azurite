@@ -466,6 +466,9 @@ export default class BlockBlobHandler
     if (tier === Models.AccessTier.Archive.toLowerCase()) {
       return Models.AccessTier.Archive;
     }
+    if (tier === Models.AccessTier.Cold.toLowerCase()) {
+      return Models.AccessTier.Cold;
+    }
     return undefined;
   }
 

@@ -744,6 +744,51 @@ describe("BlobAPIs", () => {
     );
   });
 
+  it("setTier set default to cold @loki @sql", async () => {
+    // Created Blob should have accessTierInferred as true in Get/list
+    let properties = await blockBlobClient.getProperties();
+    assert.equal(properties.accessTier!.toLowerCase(), "hot");
+    assert.equal(true, properties.accessTierInferred);
+
+    let listResult = (
+      await containerClient
+        .listBlobsFlat({
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
+    assert.equal(
+      true,
+      (await listResult).segment.blobItems[0].properties.accessTierInferred
+    );
+
+    const result = await blockBlobClient.setAccessTier("Cold");
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+
+    // After setTier, Blob should have accessTierInferred as false in Get
+    properties = await blockBlobClient.getProperties();
+    assert.equal(properties.accessTier!.toLowerCase(), "cold");
+    assert.equal(false, properties.accessTierInferred);
+
+    // After setTier, Blob should have accessTierInferred as undefined in list
+    listResult = (
+      await containerClient
+        .listBlobsFlat({
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
+    assert.equal(
+      undefined,
+      (await listResult).segment.blobItems[0].properties.accessTierInferred
+    );
+  });
+
   it("setTier set archive to hot @loki @sql", async () => {
     await blockBlobClient.setAccessTier("Archive");
     let properties = await blockBlobClient.getProperties();
