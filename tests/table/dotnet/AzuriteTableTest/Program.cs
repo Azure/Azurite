@@ -1,23 +1,22 @@
-﻿using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+
+
 
 namespace AzuriteTableTest
 {
-    
-
 
     class Program
     {
         static async Task Main(string[] args)
         {
             // delete batch with cosmos
-            await TestForIssue1439.RunTest();
+            //await TestForIssue1439.RunTest();
 
             // delete batch with data Tables
-            await TestForDataTablesDeleteBatch.RunTest();
+            //await TestForDataTablesDeleteBatch.RunTest();
+
+            // convert double values with cosmos
+            await TestForIssue1796.RunTest();
         }
     }
 }
