@@ -1609,9 +1609,9 @@ describe("table Entity APIs test - using Azure-Storage", () => {
     });
   });
 
-  it("36. Merge on an Entity with single quota in PartitionKey and RowKey, @loki", (done) => {
+  it("36. Merge on an Entity with single quote in PartitionKey and RowKey, @loki", (done) => {
     const partitionKey = "pk single'quota string";
-    const rowKey=  "rk single'quota string";
+    const rowKey = "rk single'quota string";
 
     // Insert entity with the specific pk,rk
     const entityInsert = new TestEntity(partitionKey, rowKey, "value1");
@@ -1622,9 +1622,7 @@ describe("table Entity APIs test - using Azure-Storage", () => {
         if (insertError) {
           assert.fail(insertError.message);
           done();
-        }
-        else
-        {
+        } else {
           // merge entity with the specific pk,rk, to a different value
           const entityMerge = new TestEntity(partitionKey, rowKey, "value2");
           tableService.mergeEntity(
@@ -1643,24 +1641,22 @@ describe("table Entity APIs test - using Azure-Storage", () => {
                     if (error) {
                       assert.fail(error.message);
                       done();
-                    }
-                    else
-                    {          
+                    } else {
                       assert.strictEqual(result.PartitionKey._, partitionKey);
                       assert.strictEqual(result.RowKey._, rowKey);
                       assert.strictEqual(result.myValue._, "value2");
                       done();
                     }
                   }
-                ); 
+                );
               } else {
                 assert.fail(mergeError.message);
                 done();
               }
             }
-          ); 
+          );
         }
       }
-    );       
+    );
   });
 });
