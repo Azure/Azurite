@@ -313,6 +313,7 @@ describe("table Entity APIs REST tests", () => {
     assert.strictEqual(weMerged, 1);
   });
 
+  // the logic tests that we pass from batch to the query handler which was added as functionality later
   it("Should be able to use query enties in a batch request, @loki", async () => {
     const body = JSON.stringify({
       TableName: reproFlowsTableName
@@ -345,7 +346,7 @@ describe("table Entity APIs REST tests", () => {
     );
 
     assert.strictEqual(queryRequestResult.status, 202);
-    // we expect this to fail, as we are using query entities inside the batch
+    // we expect this to fail, as we do not create the entities first
     const notExist = queryRequestResult.data.match(
       "0:The specified resource does not exist."
     ).length;
