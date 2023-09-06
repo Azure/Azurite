@@ -1,4 +1,3 @@
-import { BatchType } from "../../../src/common/batch/BatchOperation";
 import TableBatchOperation from "../../../src/table/batch/TableBatchOperation";
 
 export default class SerializationBatchOperationFactory {
@@ -6,7 +5,7 @@ export default class SerializationBatchOperationFactory {
   public static GetBatchOperationMockForQueryEntityWithPartitionKeyAndRowKey(
     headers: string
   ): TableBatchOperation {
-    const operation = new TableBatchOperation(BatchType.table, headers);
+    const operation = new TableBatchOperation(headers);
     operation.httpMethod = "GET";
     operation.jsonRequestBody = "";
     operation.parameters = "";
@@ -27,7 +26,7 @@ export default class SerializationBatchOperationFactory {
   public static GetBatchOperationMockForInsertSingleEntity(
     headers: string
   ): TableBatchOperation {
-    const operation = new TableBatchOperation(BatchType.table, headers);
+    const operation = new TableBatchOperation(headers);
     operation.httpMethod = "PUT";
     operation.jsonRequestBody = "";
     operation.parameters = "";
@@ -52,7 +51,7 @@ export default class SerializationBatchOperationFactory {
   public static GetBatchOperationMockForDeleteSingleEntity(
     headers: string
   ): TableBatchOperation {
-    const operation = new TableBatchOperation(BatchType.table, headers);
+    const operation = new TableBatchOperation(headers);
     operation.httpMethod = "DELETE";
     operation.jsonRequestBody = "";
     operation.parameters = "";
