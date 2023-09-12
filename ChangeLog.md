@@ -9,6 +9,10 @@ Blob:
 - Fix validation of Blob SAS token when using the second key for an account in `AZURITE_ACCOUNTS`
 - Support blob new access tier Cold
 
+Queue:
+
+- Fixed set Queue ACL failure when Start is missing (issue #2065)
+
 Table:
 
 - Fixed the errorCode returned, when malformed Etag is provided for table Update/Delete calls. (issue #2013)

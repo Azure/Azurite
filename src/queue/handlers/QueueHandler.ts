@@ -259,9 +259,12 @@ export default class QueueHandler extends BaseHandler implements IQueueHandler {
 
       for (const acl of options.queueAcl) {
         const permission = acl.accessPolicy.permission;
-        for (const item of permission) {
-          if (!QUEUE_SERVICE_PERMISSION.includes(item)) {
-            throw StorageErrorFactory.getInvalidXmlDocument(context.contextID);
+        if (permission !== undefined)
+        {
+          for (const item of permission) {
+            if (!QUEUE_SERVICE_PERMISSION.includes(item)) {
+              throw StorageErrorFactory.getInvalidXmlDocument(context.contextID);
+            }
           }
         }
       }
