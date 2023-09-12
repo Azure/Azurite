@@ -839,6 +839,19 @@ describe("BlobAPIs", () => {
       );
     }
   });
+  
+  it("Upload blob with accesstier should get accessTierInferred as false @loki", async () => {
+    const blobName = getUniqueName("blob");
+
+    const blobClient = containerClient.getBlockBlobClient(blobName);
+
+    await blobClient.upload("hello", 5, { tier: "Hot" });
+
+    const properties = await blobClient.getProperties();
+    assert.equal(false, properties.accessTierInferred);
+  
+    blobClient.delete();
+  });
 
   it("setHTTPHeaders with default parameters @loki @sql", async () => {
     await blobClient.setHTTPHeaders({});

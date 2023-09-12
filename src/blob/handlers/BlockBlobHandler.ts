@@ -134,6 +134,7 @@ export default class BlockBlobHandler
           HeaderValue: `${options.tier}`
         });
       }
+      blob.properties.accessTierInferred = false;
     }
     // TODO: Need a lock for multi keys including containerName and blobName
     // TODO: Provide a specified function.
