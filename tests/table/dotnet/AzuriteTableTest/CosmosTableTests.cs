@@ -11,10 +11,13 @@ namespace AzuriteTableTest
     [TestFixture]
     public class CosmosTableTests
     {
+        private CloudTableClient cloudTableClient;
 
         [SetUp]
         public void Setup()
         {
+            var account = CloudStorageAccount.DevelopmentStorageAccount;
+            this.cloudTableClient = new CloudTableClient(account.TableStorageUri, account.Credentials);
         }
 
         [Test]
@@ -22,10 +25,6 @@ namespace AzuriteTableTest
         {
             try
             {
-
-                var account = CloudStorageAccount.DevelopmentStorageAccount;
-
-                var cloudTableClient = new Microsoft.Azure.Cosmos.Table.CloudTableClient(account.TableStorageUri, account.Credentials);
                 var cloudTable = cloudTableClient.GetTableReference("test5");
                 cloudTable.CreateIfNotExists();
 
@@ -59,7 +58,7 @@ namespace AzuriteTableTest
                     var batchResult = await cloudTable.ExecuteBatchAsync(batch); // <- error thrown here
                     if (batchResult.Count == 0)
                     {
-                        throw new Exception("Batch failed");
+                        Assert.Fail("Batch failed");
                     }
                 }
 
@@ -67,8 +66,8 @@ namespace AzuriteTableTest
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                Assert.Fail(ex.ToString());
             }
         }
-        }
+    }
 }
