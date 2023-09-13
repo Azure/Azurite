@@ -1,10 +1,9 @@
-import BatchRequest from "../../common/batch/BatchRequest";
+import BatchRequest from "./BatchRequest";
 import BatchTableInsertEntityOptionalParams from "./BatchTableInsertEntityOptionalParams";
 import TableStorageContext from "../context/TableStorageContext";
 import Context from "../generated/Context";
 import TableHandler from "../handlers/TableHandler";
 import { TableBatchSerialization } from "./TableBatchSerialization";
-import TableBatchOperation from "./TableBatchOperation";
 import BatchTableDeleteEntityOptionalParams from "./BatchTableDeleteEntityOptionalParams";
 import BatchTableUpdateEntityOptionalParams from "./BatchTableUpdateEntityOptionalParams";
 import BatchTableMergeEntityOptionalParams from "./BatchTableMergeEntityOptionalParams";
@@ -13,31 +12,41 @@ import { TableQueryEntitiesWithPartitionAndRowKeyOptionalParams } from "../gener
 import ITableMetadataStore from "../persistence/ITableMetadataStore";
 import { v4 as uuidv4 } from "uuid";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
+import TableBatchRepository from "./TableBatchRepository";
+import BatchStringConstants from "./BatchStringConstants";
+import BatchErrorConstants from "./BatchErrorConstants";
 
 /**
  * Currently there is a single distinct and concrete implementation of batch /
  * entity group operations for the table api.
  * The orchestrator manages the deserialization, submission and serialization of
  * entity group transactions.
- * ToDo: it might be possible to share code between this and the blob batch api, but this
- * has not yet been validated.
- * Will need refactoring when we address batch transactions for blob.
+ * ToDo: it might be possible to share code between this and the blob batch api, but there
+ * is relatively little commonality, due to the different ACL models and the fact that
+ * Azure Tables is owned by a different group to the Azure Blob Storage team.
  *
  * @export
  * @class TableBatchOrchestrator
  */
 export default class TableBatchOrchestrator {
-  private batchOperations: TableBatchOperation[] = [];
-  private requests: BatchRequest[] = [];
   private serialization = new TableBatchSerialization();
   private context: TableStorageContext;
   private parentHandler: TableHandler;
   private wasError: boolean = false;
   private errorResponse: string = "";
+  private readonly repository: TableBatchRepository;
+  // add a private member which will is a map of row keys to partition keys
+  // this will be used to check for duplicate row keys in a batch request
+  private partitionKeyMap: Map<string, string> = new Map<string, string>();
 
-  public constructor(context: TableStorageContext, handler: TableHandler) {
+  public constructor(
+    context: TableStorageContext,
+    handler: TableHandler,
+    metadataStore: ITableMetadataStore
+  ) {
     this.context = context;
     this.parentHandler = handler;
+    this.repository = new TableBatchRepository(metadataStore);
   }
 
   /**
@@ -49,19 +58,22 @@ export default class TableBatchOrchestrator {
    * @memberof TableBatchManager
    */
   public async processBatchRequestAndSerializeResponse(
-    batchRequestBody: string,
-    metadataStore: ITableMetadataStore
+    batchRequestBody: string
   ): Promise<string> {
-    this.batchOperations =
+    const batchOperations =
       this.serialization.deserializeBatchRequest(batchRequestBody);
-    if (this.batchOperations.length > 100) {
+    if (batchOperations.length > 100) {
       this.wasError = true;
       this.errorResponse = this.serialization.serializeGeneralRequestError(
-        "0:The batch request operation exceeds the maximum 100 changes per change set.",
+        BatchErrorConstants.TOO_MANY_OPERATIONS,
         this.context.xMsRequestID
       );
     } else {
-      await this.submitRequestsToHandlers(metadataStore);
+      batchOperations.forEach((operation) => {
+        const request: BatchRequest = new BatchRequest(operation);
+        this.repository.addBatchRequest(request);
+      });
+      await this.submitRequestsToHandlers();
     }
     return this.serializeResponses();
   }
@@ -74,38 +86,20 @@ export default class TableBatchOrchestrator {
    * @return {*}  {Promise<void>}
    * @memberof TableBatchManager
    */
-  private async submitRequestsToHandlers(
-    metadataStore: ITableMetadataStore
-  ): Promise<void> {
-    this.batchOperations.forEach((operation) => {
-      const request: BatchRequest = new BatchRequest(operation);
-      this.requests.push(request);
-    });
-
+  private async submitRequestsToHandlers(): Promise<void> {
     let contentID = 1;
-    if (this.requests.length > 0) {
+    if (this.repository.getBatchRequests().length > 0) {
       const accountName = (this.context.account ??= "");
-      const tableName = this.requests[0].getPath();
+      const tableName = this.repository.getBatchRequests()[0].getPath();
       const batchId = uuidv4();
 
-      // get partition key from the request body or uri to copy that specific partition of database
-      const requestPartitionKey = this.extractRequestPartitionKey(
-        this.requests[0]
-      );
+      this.checkForPartitionKey();
 
-      if (requestPartitionKey === undefined) {
-        this.wasError = true;
-        this.errorResponse = this.serialization.serializeGeneralRequestError(
-          "Partition key not found in request",
-          this.context.xMsRequestID
-        );
-      } else {
-        // initialize transaction rollback capability
-        await metadataStore.beginBatchTransaction(batchId);
-      }
+      // initialize transaction rollback capability
+      await this.initTransaction(batchId);
 
       let batchSuccess = true;
-      for (const singleReq of this.requests) {
+      for (const singleReq of this.repository.getBatchRequests()) {
         try {
           singleReq.response = await this.routeAndDispatchBatchRequest(
             singleReq,
@@ -126,13 +120,45 @@ export default class TableBatchOrchestrator {
         contentID++;
       }
 
-      await metadataStore.endBatchTransaction(
+      await this.repository.endBatchTransaction(
         accountName,
         tableName,
         batchId,
         this.context,
         batchSuccess
       );
+    }
+  }
+
+  /**
+   * Ensures that we have a partition key for the batch request
+   *
+   * @private
+   * @memberof TableBatchOrchestrator
+   */
+  private checkForPartitionKey() {
+    const requestPartitionKey = this.extractRequestPartitionKey(
+      this.repository.getBatchRequests()[0]
+    );
+
+    if (requestPartitionKey === undefined) {
+      this.wasError = true;
+      this.errorResponse = this.serialization.serializeGeneralRequestError(
+        BatchErrorConstants.NO_PARTITION_KEY,
+        this.context.xMsRequestID
+      );
+    }
+  }
+
+  /**
+   * Initializes the transaction for the batch request in the metadata store
+   *
+   * @param {string} batchId
+   * @memberof TableBatchOrchestrator
+   */
+  async initTransaction(batchId: string) {
+    if (this.wasError == false) {
+      await this.repository.beginBatchTransaction(batchId);
     }
   }
 
@@ -151,41 +177,57 @@ export default class TableBatchOrchestrator {
     // based on research, a stringbuilder is only worth doing with 1000s of string ops
     // this can be optimized later if we get reports of slow batch operations
     const batchBoundary = this.serialization.batchBoundary.replace(
-      "batch",
-      "batchresponse"
+      BatchStringConstants.BATCH_REQ_BOUNDARY,
+      BatchStringConstants.BATCH_RES_BOUNDARY
     );
 
     let changesetBoundary = this.serialization.changesetBoundary.replace(
-      "changeset",
-      "changesetresponse"
+      BatchStringConstants.CHANGESET_REQ_BOUNDARY,
+      BatchStringConstants.CHANGESET_RES_BOUNDARY
     );
 
-    responseString += batchBoundary + "\r\n";
+    responseString += batchBoundary + BatchStringConstants.CRLF;
     // (currently static header) ToDo: Validate if we need to correct headers via tests
-    responseString +=
-      "Content-Type: multipart/mixed; boundary=" +
+    responseString = this.serializeContentTypeAndBoundary(
+      responseString,
+      changesetBoundary
+    );
+    const changesetBoundaryClose: string =
+      BatchStringConstants.BOUNDARY_PREFIX +
       changesetBoundary +
-      "\r\n\r\n";
-    const changesetBoundaryClose: string = "--" + changesetBoundary + "--\r\n";
-    changesetBoundary = "--" + changesetBoundary;
+      BatchStringConstants.BOUNDARY_CLOSE_SUFFIX;
+    changesetBoundary =
+      BatchStringConstants.BOUNDARY_PREFIX + changesetBoundary;
     if (this.wasError === false) {
-      this.requests.forEach((request) => {
+      this.repository.getBatchRequests().forEach((request) => {
         responseString += changesetBoundary;
         responseString += request.response;
-        responseString += "\r\n\r\n";
+        responseString += BatchStringConstants.DoubleCRLF;
       });
     } else {
       // serialize the error
-      responseString += changesetBoundary + "\r\n";
+      responseString += changesetBoundary + BatchStringConstants.CRLF;
       // then headers
-      responseString += "Content-Type: application/http\r\n";
-      responseString += "Content-Transfer-Encoding: binary\r\n";
-      responseString += "\r\n";
+      responseString += BatchStringConstants.CONTENT_TYPE_HTTP;
+      responseString += BatchStringConstants.TRANSFER_ENCODING_BINARY;
+      responseString += BatchStringConstants.CRLF;
       // then HTTP/1.1 404 etc
       responseString += this.errorResponse;
     }
     responseString += changesetBoundaryClose;
-    responseString += batchBoundary + "--\r\n";
+    responseString +=
+      batchBoundary + BatchStringConstants.BOUNDARY_CLOSE_SUFFIX;
+    return responseString;
+  }
+
+  private serializeContentTypeAndBoundary(
+    responseString: string,
+    changesetBoundary: string
+  ) {
+    responseString +=
+      BatchStringConstants.CONTENT_TYPE_MULTIPART_AND_BOUNDARY +
+      changesetBoundary +
+      BatchStringConstants.DoubleCRLF;
     return responseString;
   }
 
@@ -206,17 +248,18 @@ export default class TableBatchOrchestrator {
     contentID: number,
     batchId: string
   ): Promise<any> {
-    // the context that we have will not work with the calls and needs updating for
-    // batch operations, need a suitable deep clone, as each request needs to be treated seaprately
-    const batchContextClone = Object.create(context);
-    batchContextClone.tableName = request.getPath();
-    batchContextClone.path = request.getPath();
+    const batchContextClone = this.createBatchContextClone(
+      context,
+      request,
+      batchId
+    );
+
     let response: any;
     let __return: any;
     // we only use 5 HTTP Verbs to determine the table operation type
     try {
       switch (request.getMethod()) {
-        case "POST":
+        case BatchStringConstants.VERB_POST:
           // INSERT: we are inserting an entity
           // POST	https://myaccount.table.core.windows.net/mytable
           ({ __return, response } = await this.handleBatchInsert(
@@ -227,7 +270,7 @@ export default class TableBatchOrchestrator {
             batchId
           ));
           break;
-        case "PUT":
+        case BatchStringConstants.VERB_PUT:
           // UPDATE: we are updating an entity
           // PUT http://127.0.0.1:10002/devstoreaccount1/mytable(PartitionKey='myPartitionKey', RowKey='myRowKey')
           // INSERT OR REPLACE:
@@ -240,7 +283,7 @@ export default class TableBatchOrchestrator {
             batchId
           ));
           break;
-        case "DELETE":
+        case BatchStringConstants.VERB_DELETE:
           // DELETE: we are deleting an entity
           // DELETE	https://myaccount.table.core.windows.net/mytable(PartitionKey='myPartitionKey', RowKey='myRowKey')
           ({ __return, response } = await this.handleBatchDelete(
@@ -251,7 +294,7 @@ export default class TableBatchOrchestrator {
             batchId
           ));
           break;
-        case "GET":
+        case BatchStringConstants.VERB_GET:
           // QUERY : we are querying / retrieving an entity
           // GET	https://myaccount.table.core.windows.net/mytable(PartitionKey='<partition-key>',RowKey='<row-key>')?$select=<comma-separated-property-names>
           ({ __return, response } = await this.handleBatchQuery(
@@ -262,19 +305,19 @@ export default class TableBatchOrchestrator {
             batchId
           ));
           break;
-        case "CONNECT":
+        case BatchStringConstants.VERB_CONNECT:
           throw new Error("Connect Method unsupported in batch.");
           break;
-        case "HEAD":
+        case BatchStringConstants.VERB_HEAD:
           throw new Error("Head Method unsupported in batch.");
           break;
-        case "OPTIONS":
+        case BatchStringConstants.VERB_OPTIONS:
           throw new Error("Options Method unsupported in batch.");
           break;
-        case "TRACE":
+        case BatchStringConstants.VERB_TRACE:
           throw new Error("Trace Method unsupported in batch.");
           break;
-        case "PATCH":
+        case BatchStringConstants.VERB_PATCH:
           // this is using the PATCH verb to merge
           ({ __return, response } = await this.handleBatchMerge(
             request,
@@ -305,6 +348,32 @@ export default class TableBatchOrchestrator {
   }
 
   /**
+   * Creates a clone of the context for the batch operation.
+   * Becuase the context that we have will not work with the calls and needs
+   * updating for batch operations.
+   * We use a deep clone, as each request needs to be treated seaprately.
+   *
+   * @private
+   * @param {Context} context
+   * @param {BatchRequest} request
+   * @return {*}
+   * @memberof TableBatchOrchestrator
+   */
+  private createBatchContextClone(
+    context: Context,
+    request: BatchRequest,
+    batchId: string
+  ) {
+    const batchContextClone = Object.create(context);
+    batchContextClone.tableName = request.getPath();
+    batchContextClone.path = request.getPath();
+    const updatedContext = new TableStorageContext(batchContextClone);
+    updatedContext.request = request;
+    updatedContext.batchId = batchId;
+    return updatedContext;
+  }
+
+  /**
    * Handles an insert operation inside a batch
    *
    * @private
@@ -329,13 +398,12 @@ export default class TableBatchOrchestrator {
     response: any;
   }> {
     request.ingestOptionalParams(new BatchTableInsertEntityOptionalParams());
-    const updatedContext = new TableStorageContext(batchContextClone);
-    updatedContext.request = request;
-    updatedContext.batchId = batchId;
+    const { partitionKey, rowKey } = this.extractKeys(request);
+    this.validateBatchRequest(partitionKey, rowKey, batchContextClone);
     response = await this.parentHandler.insertEntity(
       request.getPath(),
       request.params as BatchTableInsertEntityOptionalParams,
-      updatedContext
+      batchContextClone
     );
     return {
       __return: this.serialization.serializeTableInsertEntityBatchResponse(
@@ -371,20 +439,19 @@ export default class TableBatchOrchestrator {
     response: any;
   }> {
     request.ingestOptionalParams(new BatchTableDeleteEntityOptionalParams());
-    const updatedContext = batchContextClone as TableStorageContext;
-    updatedContext.request = request;
-    updatedContext.batchId = batchId;
-    const ifmatch: string = request.getHeader("if-match") || "*";
+    const ifmatch: string =
+      request.getHeader(BatchStringConstants.IF_MATCH_HEADER_STRING) ||
+      BatchStringConstants.ASTERISK;
 
-    const partitionKey = this.extractRequestPartitionKey(request);
-    const rowKey = this.extractRequestRowKey(request);
+    const { partitionKey, rowKey } = this.extractKeys(request);
+    this.validateBatchRequest(partitionKey, rowKey, batchContextClone);
     response = await this.parentHandler.deleteEntity(
       request.getPath(),
       partitionKey,
       rowKey,
       ifmatch,
       request.params as BatchTableDeleteEntityOptionalParams,
-      updatedContext
+      batchContextClone
     );
 
     return {
@@ -394,6 +461,12 @@ export default class TableBatchOrchestrator {
       ),
       response
     };
+  }
+
+  private extractKeys(request: BatchRequest) {
+    const partitionKey = this.extractRequestPartitionKey(request);
+    const rowKey = this.extractRequestRowKey(request);
+    return { partitionKey, rowKey };
   }
 
   /**
@@ -421,12 +494,11 @@ export default class TableBatchOrchestrator {
     response: any;
   }> {
     request.ingestOptionalParams(new BatchTableUpdateEntityOptionalParams());
-    const updatedContext = batchContextClone as TableStorageContext;
-    updatedContext.request = request;
-    updatedContext.batchId = batchId;
-    const partitionKey = this.extractRequestPartitionKey(request);
-    const rowKey = this.extractRequestRowKey(request);
-    const ifMatch = request.getHeader("if-match");
+    const { partitionKey, rowKey } = this.extractKeys(request);
+    this.validateBatchRequest(partitionKey, rowKey, batchContextClone);
+    const ifMatch = request.getHeader(
+      BatchStringConstants.IF_MATCH_HEADER_STRING
+    );
 
     response = await this.parentHandler.updateEntity(
       request.getPath(),
@@ -436,7 +508,7 @@ export default class TableBatchOrchestrator {
         ifMatch,
         ...request.params
       } as BatchTableUpdateEntityOptionalParams,
-      updatedContext
+      batchContextClone
     );
 
     return {
@@ -474,11 +546,7 @@ export default class TableBatchOrchestrator {
     response: any;
   }> {
     // need to validate that query is the only request in the batch!
-    const partitionKey = this.extractRequestPartitionKey(request);
-    const rowKey = this.extractRequestRowKey(request);
-
-    const updatedContext = batchContextClone as TableStorageContext;
-    updatedContext.batchId = batchId;
+    const { partitionKey, rowKey } = this.extractKeys(request);
 
     if (
       null !== partitionKey &&
@@ -496,13 +564,12 @@ export default class TableBatchOrchestrator {
         new BatchTableQueryEntitiesWithPartitionAndRowKeyOptionalParams()
       );
 
-      updatedContext.request = request;
       response = await this.parentHandler.queryEntitiesWithPartitionAndRowKey(
         request.getPath(),
         partitionKey,
         rowKey,
         request.params as TableQueryEntitiesWithPartitionAndRowKeyOptionalParams,
-        updatedContext
+        batchContextClone
       );
       return {
         __return:
@@ -542,23 +609,17 @@ export default class TableBatchOrchestrator {
     response: any;
   }> {
     request.ingestOptionalParams(new BatchTableMergeEntityOptionalParams());
-    const updatedContext = batchContextClone as TableStorageContext;
-    updatedContext.request = request;
-    updatedContext.batchId = batchId;
-
-    const partitionKey = this.extractRequestPartitionKey(request);
-    const rowKey = this.extractRequestRowKey(request);
-    const ifMatch = request.getHeader("if-match");
-
+    const { partitionKey, rowKey } = this.extractKeys(request);
+    this.validateBatchRequest(partitionKey, rowKey, batchContextClone);
     response = await this.parentHandler.mergeEntity(
       request.getPath(),
       partitionKey,
       rowKey,
       {
-        ifMatch,
+        ifMatch: request.getHeader(BatchStringConstants.IF_MATCH_HEADER_STRING),
         ...request.params
       } as BatchTableMergeEntityOptionalParams,
-      updatedContext
+      batchContextClone
     );
 
     return {
@@ -597,6 +658,8 @@ export default class TableBatchOrchestrator {
       // keys can have more complex values which are URI encoded if they come from the URL
       // we decode above.
       partitionKey = partKeyMatch[0];
+      // Url should use double ticks and we need to remove them
+      partitionKey = this.replaceDoubleTicks(partitionKey);
     }
     return partitionKey;
   }
@@ -610,14 +673,16 @@ export default class TableBatchOrchestrator {
    * @memberof TableBatchManager
    */
   private extractRequestRowKey(request: BatchRequest): string {
-    let rowKey: string;
+    let rowKey: any;
     // problem: sometimes the ticks are encoded, sometimes not!
     // this is a difference between Azure Data-Tables and the deprecated
-    // Azure Storage SDK
+    // Azure Storage SDK decode URI component will not remove double ticks
     const url = decodeURIComponent(request.getUrl());
+
     const rowKeyMatch = url.match(/(?<=RowKey=')(.+)(?='\))/gi);
     rowKey = rowKeyMatch ? rowKeyMatch[0] : "";
-
+    // Url should use double ticks and we need to remove them
+    rowKey = this.replaceDoubleTicks(rowKey);
     if (rowKeyMatch === null) {
       // row key not in URL, must be in body
       const body = request.getBody();
@@ -626,6 +691,65 @@ export default class TableBatchOrchestrator {
         rowKey = jsonBody.RowKey;
       }
     }
+
     return rowKey;
+  }
+
+  /**
+   * Replace Double ticks for single ticks without replaceAll string prototype
+   * function, becuase node 14 does not support it.
+   * @param key
+   * @returns
+   */
+  private replaceDoubleTicks(key: string): string {
+    const result = key.replace(/''/g, "'");
+    return result;
+  }
+
+  /**
+   * Helper function to validate batch requests.
+   * Additional validation functions should be added here.
+   *
+   * @private
+   * @param {string} partitionKey
+   * @param {string} rowKey
+   * @param {*} batchContextClone
+   * @memberof TableBatchOrchestrator
+   */
+  private validateBatchRequest(
+    partitionKey: string | undefined,
+    rowKey: string,
+    batchContextClone: any
+  ) {
+    if (partitionKey === undefined) {
+      throw StorageErrorFactory.getInvalidInput(batchContextClone);
+    }
+    this.checkForDuplicateRowKey(partitionKey, rowKey, batchContextClone);
+  }
+
+  /**
+   *
+   *
+   *
+   * @private
+   * @param {string} partitionKey
+   * @param {string} rowKey
+   * @param {*} batchContextClone
+   * @memberof TableBatchOrchestrator
+   */
+  private checkForDuplicateRowKey(
+    partitionKey: string,
+    rowKey: string,
+    batchContextClone: any
+  ) {
+    const key = partitionKey + rowKey;
+    if (this.partitionKeyMap.has(key)) {
+      throw StorageErrorFactory.getBatchDuplicateRowKey(
+        batchContextClone,
+        rowKey
+      );
+    } else {
+      this.partitionKeyMap.set(key, partitionKey);
+    }
   }
 }

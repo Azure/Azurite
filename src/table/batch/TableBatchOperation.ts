@@ -1,7 +1,7 @@
-import BatchOperation, { BatchType } from "../../common/batch/BatchOperation";
+import BatchOperation from "./BatchOperation";
 
 export default class TableBatchOperation extends BatchOperation {
-  public constructor(_batchType: BatchType, headers: string) {
-    super(_batchType, headers);
+  public constructor(headers: string) {
+    super(headers);
   }
 }

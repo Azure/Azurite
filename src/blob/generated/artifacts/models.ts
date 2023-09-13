@@ -141,12 +141,13 @@ export interface BlobPropertiesInternal {
   remainingRetentionDays?: number;
   /**
    * Possible values include: 'P4', 'P6', 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70',
-   * 'P80', 'Hot', 'Cool', 'Archive', 'Premium'
+   * 'P80', 'Hot', 'Cool', 'Archive', 'Premium', 'Cold'
    */
   accessTier?: AccessTier;
   accessTierInferred?: boolean;
   /**
-   * Possible values include: 'rehydrate-pending-to-hot', 'rehydrate-pending-to-cool'
+   * Possible values include: 'rehydrate-pending-to-hot', 'rehydrate-pending-to-cool',
+   * 'rehydrate-pending-to-cold'
    */
   archiveStatus?: ArchiveStatus;
   customerProvidedKeySha256?: string;
@@ -2049,7 +2050,7 @@ export interface BlobStartCopyFromURLOptionalParams {
   /**
    * Optional. Indicates the tier to be set on the blob. Possible values include: 'P4', 'P6',
    * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive',
-   * 'Premium'
+   * 'Premium', 'Cold'
    */
   tier?: AccessTier;
   /**
@@ -2120,7 +2121,7 @@ export interface BlobCopyFromURLOptionalParams {
   /**
    * Optional. Indicates the tier to be set on the blob. Possible values include: 'P4', 'P6',
    * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive',
-   * 'Premium'
+   * 'Premium', 'Cold'
    */
   tier?: AccessTier;
   /**
@@ -3011,7 +3012,7 @@ export interface BlockBlobUploadOptionalParams {
   /**
    * Optional. Indicates the tier to be set on the blob. Possible values include: 'P4', 'P6',
    * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive',
-   * 'Premium'
+   * 'Premium', 'Cold'
    */
   tier?: AccessTier;
   /**
@@ -3089,7 +3090,7 @@ export interface BlockBlobPutBlobFromUrlOptionalParams {
   /**
    * Optional. Indicates the tier to be set on the blob. Possible values include: 'P4', 'P6',
    * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive',
-   * 'Premium'
+   * 'Premium', 'Cold'
    */
   tier?: AccessTier;
   /**
@@ -3263,7 +3264,7 @@ export interface BlockBlobCommitBlockListOptionalParams {
   /**
    * Optional. Indicates the tier to be set on the blob. Possible values include: 'P4', 'P6',
    * 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70', 'P80', 'Hot', 'Cool', 'Archive',
-   * 'Premium'
+   * 'Premium', 'Cold'
    */
   tier?: AccessTier;
   /**
@@ -4866,6 +4867,11 @@ export interface BlobDeleteHeaders {
    * initiated
    */
   date?: Date;
+  /**
+   * For version 2017-07-29 and later, Blob Storage returns true if the blob has been permanently
+   * deleted, and false if the blob has been soft-deleted.
+   */
+  deleteTypePermanent?: boolean;
   errorCode?: string;
 }
 
@@ -7015,7 +7021,7 @@ export enum LeaseStatusType {
 /**
  * Defines values for AccessTier.
  * Possible values include: 'P4', 'P6', 'P10', 'P15', 'P20', 'P30', 'P40', 'P50', 'P60', 'P70',
- * 'P80', 'Hot', 'Cool', 'Archive', 'Premium'
+ * 'P80', 'Hot', 'Cool', 'Archive', 'Premium', 'Cold'
  * @readonly
  * @enum {string}
  */
@@ -7035,17 +7041,20 @@ export enum AccessTier {
   Cool = 'Cool',
   Archive = 'Archive',
   Premium = 'Premium',
+  Cold = 'Cold',
 }
 
 /**
  * Defines values for ArchiveStatus.
- * Possible values include: 'rehydrate-pending-to-hot', 'rehydrate-pending-to-cool'
+ * Possible values include: 'rehydrate-pending-to-hot', 'rehydrate-pending-to-cool'，
+ * 'rehydrate-pending-to-cold'
  * @readonly
  * @enum {string}
  */
 export enum ArchiveStatus {
   RehydratePendingToHot = 'rehydrate-pending-to-hot',
   RehydratePendingToCool = 'rehydrate-pending-to-cool',
+  RehydratePendingToCold = 'rehydrate-pending-to-cold',
 }
 
 /**

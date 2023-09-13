@@ -4,6 +4,42 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Fix validation of Blob SAS token when using the second key for an account in `AZURITE_ACCOUNTS`
+- Support blob new access tier Cold
+
+Table:
+
+- Fixed the errorCode returned, when malformed Etag is provided for table Update/Delete calls. (issue #2013)
+
+## 2023.08 Version 3.26.0
+
+General:
+
+- Updated examples of setting Customized Storage Accounts & Keys in enviroment varialbe.
+- Bump up service API version to 2023-08-03
+
+Blob:
+
+- Added "x-ms-delete-type-permanent" header in delete blob API responds (issue #2061)
+
+Queue:
+
+- Fixed error code when dequeue message with invalid visibilitytimeout (issue #2083)
+- Fixed error code when sas request authentication failed (issue #2064)
+
+## 2023.08 Version 3.25.1
+
+Blob:
+
+- Fixed issue of: Append block not returning requestId in response.
+
+Table:
+
+- Fixed issue with queries on empty string partition keys failing
+- Fixed an issue when querying datetimes with microsecond precision which resulted in match failures. (issue #2069)
+
 ## 2023.07 Version 3.25.0
 
 Table:

@@ -1,11 +1,13 @@
 import { Stream } from "stream";
-import IRequest, { HttpMethod } from "../../table/generated/IRequest";
+import IRequest, { HttpMethod } from "../generated/IRequest";
 import BatchOperation from "./BatchOperation";
 import BatchRequestHeaders from "./BatchRequestHeaders";
-import * as Models from "../../table/generated/artifacts/models";
-import BatchTableUpdateEntityOptionalParams from "../../table/batch/BatchTableUpdateEntityOptionalParams";
-import BatchTableDeleteEntityOptionalParams from "../../table/batch/BatchTableDeleteEntityOptionalParams";
-import IOptionalParams from "../../table/batch/IOptionalParams";
+import * as Models from "../generated/artifacts/models";
+import BatchTableUpdateEntityOptionalParams from "./BatchTableUpdateEntityOptionalParams";
+import BatchTableDeleteEntityOptionalParams from "./BatchTableDeleteEntityOptionalParams";
+import IOptionalParams from "./IOptionalParams";
+import BatchStringConstants from "./BatchStringConstants";
+import BatchErrorConstants from "./BatchErrorConstants";
 
 /*
  * Represents a request in the context of batch operations.
@@ -43,15 +45,15 @@ export default class BatchRequest implements IRequest {
   public ingestOptionalParams(params: IOptionalParams) {
     this.params = params;
     // need to compare headers to option params and set accordingly
-    if (this.getHeader("x-ms-client-request-id") !== undefined) {
-      this.params.requestId = this.getHeader("x-ms-client-request-id");
+    if (this.getHeader(BatchStringConstants.MS_CLIENT_REQ_ID) !== undefined) {
+      this.params.requestId = this.getHeader(BatchStringConstants.MS_CLIENT_REQ_ID);
     }
 
     // Theoretically, this Enum is redundant, and used across all table
     // optional param models, thinking that we only need to use the 1,
     // the code generator is however differentiating across all of them
     // as distinct
-    if (this.getHeader("maxdataserviceversion")?.includes("3.0")) {
+    if (this.getHeader(BatchStringConstants.DATASERVICEVERSION)?.includes("3.0")) {
       this.params.dataServiceVersion =
         Models.DataServiceVersion4.ThreeFullStopZero;
     }
@@ -77,10 +79,10 @@ export default class BatchRequest implements IRequest {
     const options: Models.QueryOptions = new Object() as Models.QueryOptions;
     // format
     // set payload options
-    if (this.getHeader("accept")?.includes("minimalmeta")) {
+    if (this.getHeader(BatchStringConstants.ACCEPT)?.includes(BatchStringConstants.MINIMAL_META)) {
       options.format =
         Models.OdataMetadataFormat.Applicationjsonodataminimalmetadata;
-    } else if (this.getHeader("accept")?.includes("fullmeta")) {
+    } else if (this.getHeader(BatchStringConstants.ACCEPT)?.includes(BatchStringConstants.FULL_META)) {
       options.format =
         Models.OdataMetadataFormat.Applicationjsonodatafullmetadata;
     } else {
@@ -97,7 +99,7 @@ export default class BatchRequest implements IRequest {
     if (this.batchOperation.httpMethod != null) {
       return this.batchOperation.httpMethod;
     } else {
-      throw new Error("httpMethod invalid on batch operation");
+      throw new Error(BatchErrorConstants.METHOD_INVALID);
     }
   }
 
@@ -109,25 +111,20 @@ export default class BatchRequest implements IRequest {
     // in delete, it seems that we actuall expect the full uri
     if (this.batchOperation.uri != null && this.batchOperation.path != null) {
       return this.batchOperation.uri;
-      // this substring is not needed.
-      // .substring(
-      //   0,
-      //   this.batchOperation.uri.length - this.batchOperation.path.length
-      // );
     } else {
-      throw new Error("uri or path null when calling getUrl on BatchRequest");
+      throw new Error(BatchErrorConstants.URI_NULL);
     }
   }
 
   public getEndpoint(): string {
-    throw new Error("Method not implemented.");
+    throw new Error(BatchErrorConstants.METHOD_NOT_IMPLEMENTED);
   }
 
   public getPath(): string {
     if (this.batchOperation.path != null) {
       return this.batchOperation.path;
     } else {
-      throw new Error("path null  when calling getPath on BatchRequest");
+      throw new Error(BatchErrorConstants.PATH_NULL);
     }
   }
 
@@ -135,19 +132,19 @@ export default class BatchRequest implements IRequest {
     if (this.batchOperation.jsonRequestBody != null) {
       return Stream.Readable.from(this.batchOperation.jsonRequestBody);
     } else {
-      throw new Error("body null  when calling getBodyStream on BatchRequest");
+      throw new Error(BatchErrorConstants.BODY_NULL);
     }
   }
 
   public setBody(body: string | undefined): IRequest {
-    throw new Error("Method not implemented.");
+    throw new Error(BatchErrorConstants.METHOD_NOT_IMPLEMENTED);
   }
 
   public getBody(): string | undefined {
     if (this.batchOperation.jsonRequestBody != null) {
       return this.batchOperation.jsonRequestBody;
     } else {
-      throw new Error("body null  when calling getBody on BatchRequest");
+      throw new Error(BatchErrorConstants.BODY_NULL);
     }
   }
 
@@ -156,7 +153,7 @@ export default class BatchRequest implements IRequest {
   }
 
   public getHeaders(): { [header: string]: string | string[] | undefined } {
-    throw new Error("Method not implemented.");
+    throw new Error(BatchErrorConstants.METHOD_NOT_IMPLEMENTED);
   }
 
   public getRawHeaders(): string[] {
@@ -165,18 +162,18 @@ export default class BatchRequest implements IRequest {
 
   public getQuery(key: string): string | undefined {
     switch (key) {
-      case "$format":
+      case BatchStringConstants.FORMAT:
         return this.params.queryOptions?.format;
-      case "$top":
+      case BatchStringConstants.TOP:
         return this.params.queryOptions?.top?.toLocaleString();
-      case "$select":
+      case BatchStringConstants.SELECT:
         return this.params.queryOptions?.select;
-      case "$filter":
+      case BatchStringConstants.FILTER:
         return this.params.queryOptions?.filter;
       default:
         break;
     }
-    throw new Error("unknown query options type.");
+    throw new Error(BatchErrorConstants.UNKNOWN_QUERYOPTION);
   }
 
   public getProtocol(): string {
@@ -192,7 +189,7 @@ export default class BatchRequest implements IRequest {
         this.batchOperation.protocol = protocolMatch[0];
         return this.batchOperation.protocol;
       }
-      throw new Error("protocol null when calling getProtocol on BatchRequest");
+      throw new Error(BatchErrorConstants.PROTOCOL_NULL);
     }
   }
 }

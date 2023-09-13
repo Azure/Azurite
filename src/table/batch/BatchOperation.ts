@@ -1,9 +1,4 @@
-import { HttpMethod } from "../../blob/generated/IRequest";
-
-export enum BatchType {
-  blob = "blob",
-  table = "table"
-}
+import { HttpMethod } from "../../table/generated/IRequest";
 
 /**
  * A container for batch operations
@@ -13,15 +8,14 @@ export enum BatchType {
  */
 export default class BatchOperation {
   public rawHeaders: string[];
+  public headers: { [header: string]: string | string[] | undefined } = {};
   public protocol?: string;
-  public batchType: BatchType;
   public httpMethod?: HttpMethod;
   public parameters?: string;
   public uri?: string;
   public path?: string;
   public jsonRequestBody?: string; // maybe we want the entity operation to be stored in a parsed format?
-  public constructor(_batchType: BatchType, headers: string) {
-    this.batchType = _batchType;
+  public constructor(headers: string) {
     const dirtyHeaderArray = headers.split("\n").map(line => line.trim());
     // filter out the blanks
     this.rawHeaders = dirtyHeaderArray.filter(

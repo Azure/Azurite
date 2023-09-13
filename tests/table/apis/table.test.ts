@@ -436,4 +436,90 @@ describe("table APIs test", () => {
       );
     });
   });
+
+  // https://github.com/Azure/Azurite/issues/1726
+  it("should not accidentally delete the wrong similarly named table, @loki", (done) => {
+    const testTablePrefix = "deleteTest";
+    const tableName = getUniqueName(testTablePrefix);
+    tableService.createTable(tableName, (createError) => {
+      if (createError) {
+        assert.ifError(createError);
+      }
+      tableService.listTablesSegmentedWithPrefix(
+        testTablePrefix,
+        null as any,
+        { maxResults: 250 },
+        (error: any, result: any, response: any) => {
+          assert.strictEqual(error, null);
+          let validResult: boolean = false;
+          // look for tableName in the result.entries[]
+          for (const entry of result.entries) {
+            if (entry === tableName) {
+              validResult = true;
+            }
+          }
+
+          assert.strictEqual(
+            validResult,
+            true,
+            "We did not find the expected table!"
+          );
+          assert.notStrictEqual(response, null);
+
+          // now create a second table with a similar name
+          const tableName2 = getUniqueName(testTablePrefix);
+          tableService.createTable(tableName2, (createError) => {
+            if (createError) {
+              assert.ifError(createError);
+            }
+            tableService.listTablesSegmentedWithPrefix(
+              testTablePrefix,
+              null as any,
+              { maxResults: 250 },
+              (error: any, result: any, response: any) => {
+                assert.strictEqual(error, null);
+                validResult = false;
+                for (const entry of result.entries) {
+                  if (entry === tableName2) {
+                    validResult = true;
+                  }
+                }
+                assert.strictEqual(
+                  validResult,
+                  true,
+                  "We did not find the expected table!"
+                );
+                assert.notStrictEqual(response, null);
+                // now delete the first table and check that the correct table was deleted
+                tableService.deleteTable(tableName, (deleteError) => {
+                  assert.ifError(deleteError);
+                  tableService.listTablesSegmentedWithPrefix(
+                    testTablePrefix,
+                    null as any,
+                    { maxResults: 250 },
+                    (error: any, result: any, response: any) => {
+                      assert.strictEqual(error, null);
+                      validResult = false;
+                      for (const entry of result.entries) {
+                        if (entry === tableName) {
+                          validResult = true;
+                        }
+                      }
+                      assert.strictEqual(
+                        validResult,
+                        false,
+                        "We found the table that should have been deleted!"
+                      );
+                      assert.notStrictEqual(response, null);
+                      done();
+                    }
+                  );
+                });
+              }
+            );
+          });
+        }
+      );
+    });
+  });
 });

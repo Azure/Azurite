@@ -223,7 +223,7 @@ class QueryParser {
 
     switch (typeHint.value?.toLowerCase()) {
       case "datetime":
-        return new DateTimeNode(new Date(value.value!));
+        return new DateTimeNode(value.value!);
       case "guid":
         return new GuidNode(value.value!);
       case "binary":

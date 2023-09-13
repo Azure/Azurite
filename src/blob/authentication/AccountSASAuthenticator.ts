@@ -134,7 +134,7 @@ export default class AccountSASAuthenticator implements IAuthenticator {
         context.contextId!
       );
 
-      const sig2Pass = sig2 !== signature;
+      const sig2Pass = sig2 === signature;
       this.logger.info(
         `AccountSASAuthenticator:validate() Signature based on key2 validation ${
           sig2Pass ? "passed" : "failed"

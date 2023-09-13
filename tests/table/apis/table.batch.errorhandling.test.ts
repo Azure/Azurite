@@ -565,4 +565,43 @@ describe("table Entity APIs test", () => {
     }
     await tableClientrollback.deleteTable();
   });
+
+  it("09. Batch API should fail to insert duplicate Entity with correct 400 Status and InvalidDuplicateRow error, @loki", async () => {
+    const partitionKey = createUniquePartitionKey("");
+    const tableNameBatchError: string = getUniqueName("datatables");
+    const myDupTestEntity = entityFactory.createBasicEntityForTest(partitionKey);
+    const testEntities: TableTestEntity[] = [
+      entityFactory.createBasicEntityForTest(partitionKey),
+      myDupTestEntity,
+      myDupTestEntity
+    ];
+
+    const tableClientrollback = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      tableNameBatchError
+    );
+
+    await tableClientrollback.createTable();
+
+    const transaction = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction.createEntity(testEntity);
+    }
+
+    try {
+      const result = await tableClientrollback.submitTransaction(
+        transaction.actions
+      );
+      assert.ok(result.subResponses[0].rowKey);
+    } catch (err: any) {
+      const restErr = err as RestError;
+      assert.strictEqual(
+        restErr.statusCode,
+        400,
+        "Did not get expected 409 (InvalidDuplicateRow) error."
+      );
+    }
+
+    await tableClientrollback.deleteTable();
+  });
 });

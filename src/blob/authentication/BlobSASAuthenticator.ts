@@ -276,7 +276,7 @@ export default class BlobSASAuthenticator implements IAuthenticator {
           context.contextId!
         );
 
-        const sig2Pass = sig2 !== signature;
+        const sig2Pass = sig2 === signature;
         this.logger.info(
           `BlobSASAuthenticator:validate() Signature based on key2 validation ${
             sig2Pass ? "passed" : "failed"
