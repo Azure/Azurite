@@ -5,22 +5,26 @@ using NUnit.Framework;
 using System.Threading.Tasks;
 using Azure.Data.Tables;
 using System.Collections;
+using Azure;
+
 namespace AzuriteTableTest
 {
     [TestFixture]
     public class DataTablesTests
     {
+        TableServiceClient client;
+
         [SetUp]
         public void Setup()
         {
+            this.client = new TableServiceClient("UseDevelopmentStorage=true");
         }
 
         // from issue 793
         [Test]
         public async Task CheckForPreconditionFailedError()
         {
-            var client = new TableServiceClient("UseDevelopmentStorage=true");
-            var table = client.GetTableClient("test");
+            var table = client.GetTableClient("PreconditionFailed");
             await table.CreateIfNotExistsAsync();
 
             var pk = Guid.NewGuid().ToString();
@@ -47,13 +51,15 @@ namespace AzuriteTableTest
                 Assert.Pass();
             }
             // we did not land in the try catch so should fail
+            // We use this pattern for the rest of the tests.
             Assert.Fail();
         }
+
+        // Issue 791
         [Test]
-        public async Task TestForIssue791()
+        public async Task ExpectStatus409WhenAddingExistingEntityInBatch()
         {
-            var client = new TableServiceClient("UseDevelopmentStorage=true");
-            var table = client.GetTableClient("test");
+            var table = client.GetTableClient("AddInBatch");
             await table.CreateIfNotExistsAsync();
             var pk = Guid.NewGuid().ToString();
             await table.AddEntityAsync(new TableEntity(pk, "a"));
@@ -67,25 +73,30 @@ namespace AzuriteTableTest
             }
             catch (TableTransactionFailedException ex)
             {
-                Assert.Fail(ex.ToString());
+                Assert.AreEqual(ex.Status, 409);
+                Assert.Pass();
             }
-            Assert.Pass();
+            Assert.Fail();
         }
 
+        // Issue 1286
         [Test]
-        public async Task TestForIssue1286()
+        public async Task EtagGranularityTests()
         {
-            var client = new TableServiceClient("UseDevelopmentStorage=true");
-            var table = client.GetTableClient("test");
+            var table = client.GetTableClient("etagGranularity");
             await table.CreateIfNotExistsAsync();
 
             var pk = Guid.NewGuid().ToString();
-            var rA = await table.AddEntityAsync(new TableEntity(pk, "a"));
-            await table.UpsertEntityAsync(new TableEntity(pk, "a"));
+            var e1 = await table.UpsertEntityAsync(new TableEntity(pk, "e1"));
+            var e2 = await table.UpsertEntityAsync(new TableEntity(pk, "e1"));
+            var e3 = await table.UpsertEntityAsync(new TableEntity(pk, "e1"));
+
+            Assert.AreNotEqual(e1.Headers.ETag, e2.Headers.ETag);
+            Assert.AreNotEqual(e2.Headers.ETag, e3.Headers.ETag);
 
             var actions = new[]
             {
-                new TableTransactionAction(TableTransactionActionType.UpdateReplace, new TableEntity(pk, "a"), rA.Headers.ETag.Value),
+                new TableTransactionAction(TableTransactionActionType.UpdateReplace, new TableEntity(pk, "e1"), e2.Headers.ETag.Value),
             };
 
             try
@@ -94,25 +105,34 @@ namespace AzuriteTableTest
             }
             catch (TableTransactionFailedException ex)
             {
-                Assert.Fail(ex.ToString());
+                Assert.AreEqual(ex.Status, 412);
+                Assert.Pass();
             }
 
-            Assert.Pass();
+            Assert.Fail("We should have had a precondition failed, 412 status.");
         }
 
-        // Issue 1286
+        // Issue 1493
         [Test]
-        public async Task TestEtagGranularity()
+        public async Task UpsertNonExistantEntityShouldFailWith404()
         {
-            var client = new TableServiceClient("UseDevelopmentStorage=true");
-
-            var table = client.GetTableClient("etagGranularity");
+            var table = client.GetTableClient("upsertTests");
             await table.CreateIfNotExistsAsync();
 
             var pk = Guid.NewGuid().ToString();
-            var e1 = await table.UpsertEntityAsync(new TableEntity(pk, "e1"));
-            var e2 = await table.UpsertEntityAsync(new TableEntity(pk, "e1"));
-            Assert.AreNotEqual(e1.Headers.ETag, e2.Headers.ETag, "Etag should not be equal!");
+
+            try
+            {
+                var rA = await table.UpdateEntityAsync(new TableEntity(pk, "a"), new Azure.ETag("*"), TableUpdateMode.Merge);
+                Console.WriteLine("Status : " + rA.Status);
+            }
+            catch (RequestFailedException ex)
+            {
+                Assert.AreEqual(ex.Status, 404);
+                Assert.Pass();
+            }
+
+            Assert.Fail();
         }
     }
 }
