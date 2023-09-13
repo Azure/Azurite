@@ -15,8 +15,9 @@ namespace AzuriteTableTest
     {
     }
 
+    // from issue 793
     [Test]
-    public async Task TestForIssue793()
+    public async Task CheckForPreconditionFailedError()
     {
       var client = new TableServiceClient("UseDevelopmentStorage=true");
       var table = client.GetTableClient("test");
@@ -31,19 +32,22 @@ namespace AzuriteTableTest
                 new TableTransactionAction(TableTransactionActionType.UpdateReplace, new TableEntity(pk, "a"), rA.Headers.ETag.Value),
             };
 
-      try
-      {
-        await table.SubmitTransactionAsync(actions);
-      }
-      catch (TableTransactionFailedException ex)
+            try
+            {
+                await table.SubmitTransactionAsync(actions);
+            }
+            catch (TableTransactionFailedException ex)
             {
                 // When replacing an entity with an etag condition, the Azurite table emulator should not
                 // accept the entity replace if the etag is wrong.
                 // (i.e.does not match the current entity state).
                 // Azure and the legacy emulator return HTTP 412 Precondition failed.
                 Assert.AreEqual(ex.Status, 412);
+                // we got the expected error so should pass the test
+                Assert.Pass();
             }
-            Assert.Pass();
+            // we did not land in the try catch so should fail
+            Assert.Fail();
         }
         [Test]
         public async Task TestForIssue791()
