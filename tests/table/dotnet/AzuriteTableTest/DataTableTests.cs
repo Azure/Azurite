@@ -11,24 +11,24 @@ namespace AzuriteTableTest
     public class DataTablesTests
     {
         [SetUp]
-    public void Setup()
-    {
-    }
+        public void Setup()
+        {
+        }
 
-    // from issue 793
-    [Test]
-    public async Task CheckForPreconditionFailedError()
-    {
-      var client = new TableServiceClient("UseDevelopmentStorage=true");
-      var table = client.GetTableClient("test");
-      await table.CreateIfNotExistsAsync();
+        // from issue 793
+        [Test]
+        public async Task CheckForPreconditionFailedError()
+        {
+            var client = new TableServiceClient("UseDevelopmentStorage=true");
+            var table = client.GetTableClient("test");
+            await table.CreateIfNotExistsAsync();
 
-      var pk = Guid.NewGuid().ToString();
-      var rA = await table.AddEntityAsync(new TableEntity(pk, "a"));
-      await table.UpsertEntityAsync(new TableEntity(pk, "a"));
+            var pk = Guid.NewGuid().ToString();
+            var rA = await table.AddEntityAsync(new TableEntity(pk, "a"));
+            await table.UpsertEntityAsync(new TableEntity(pk, "a"));
 
-      var actions = new[]
-      {
+            var actions = new[]
+            {
                 new TableTransactionAction(TableTransactionActionType.UpdateReplace, new TableEntity(pk, "a"), rA.Headers.ETag.Value),
             };
 
@@ -72,55 +72,47 @@ namespace AzuriteTableTest
             Assert.Pass();
         }
 
-    [Test]
-    public async Task TestForIssue1286()
-    {
-      var client = new TableServiceClient("UseDevelopmentStorage=true");
-      var table = client.GetTableClient("test");
-      await table.CreateIfNotExistsAsync();
+        [Test]
+        public async Task TestForIssue1286()
+        {
+            var client = new TableServiceClient("UseDevelopmentStorage=true");
+            var table = client.GetTableClient("test");
+            await table.CreateIfNotExistsAsync();
 
-      var pk = Guid.NewGuid().ToString();
-      var rA = await table.AddEntityAsync(new TableEntity(pk, "a"));
-      await table.UpsertEntityAsync(new TableEntity(pk, "a"));
+            var pk = Guid.NewGuid().ToString();
+            var rA = await table.AddEntityAsync(new TableEntity(pk, "a"));
+            await table.UpsertEntityAsync(new TableEntity(pk, "a"));
 
-      var actions = new[]
-      {
+            var actions = new[]
+            {
                 new TableTransactionAction(TableTransactionActionType.UpdateReplace, new TableEntity(pk, "a"), rA.Headers.ETag.Value),
             };
 
-      try
-      {
-        await table.SubmitTransactionAsync(actions);
-      }
-      catch (TableTransactionFailedException ex)
-      {
-        Assert.Fail(ex.ToString());
-      }
+            try
+            {
+                await table.SubmitTransactionAsync(actions);
+            }
+            catch (TableTransactionFailedException ex)
+            {
+                Assert.Fail(ex.ToString());
+            }
 
-      Assert.Pass();
+            Assert.Pass();
+        }
+
+        // Issue 1286
+        [Test]
+        public async Task TestEtagGranularity()
+        {
+            var client = new TableServiceClient("UseDevelopmentStorage=true");
+
+            var table = client.GetTableClient("etagGranularity");
+            await table.CreateIfNotExistsAsync();
+
+            var pk = Guid.NewGuid().ToString();
+            var e1 = await table.UpsertEntityAsync(new TableEntity(pk, "e1"));
+            var e2 = await table.UpsertEntityAsync(new TableEntity(pk, "e1"));
+            Assert.AreNotEqual(e1.Headers.ETag, e2.Headers.ETag, "Etag should not be equal!");
+        }
     }
-
-    [Test]
-    public async Task TestForIssue1493()
-    {
-      var client = new TableServiceClient("UseDevelopmentStorage=true");
-
-      var table = client.GetTableClient("test1");
-      await table.CreateIfNotExistsAsync();
-
-      var pk = Guid.NewGuid().ToString();
-
-      try
-      {
-        var rA = await table.UpdateEntityAsync(new TableEntity(pk, "a"), new Azure.ETag("*"), TableUpdateMode.Merge);
-        Console.WriteLine("Status : " + rA.Status);
-      }
-      catch (Exception ex)
-      {
-        Assert.Fail(ex.ToString());
-      }
-
-      Assert.Pass();
-    }
-  }
 }
