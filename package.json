@@ -39,7 +39,7 @@
     "to-readable-stream": "^2.1.0",
     "tslib": "^2.3.0",
     "uri-templates": "^0.2.0",
-    "uuid": "^3.3.2",
+    "uuid": "^9.0.1",
     "winston": "^3.1.0",
     "xml2js": "^0.6.0"
   },
@@ -65,7 +65,7 @@
     "@types/rimraf": "^3.0.0",
     "@types/stoppable": "^1.1.1",
     "@types/uri-templates": "^0.1.29",
-    "@types/uuid": "^3.4.4",
+    "@types/uuid": "^9.0.4",
     "@types/validator": "^13.1.4",
     "@types/vscode": "^1.39.0",
     "@types/xml2js": "^0.4.3",
