@@ -17,7 +17,6 @@ export const AccessPolicy: msRest.CompositeMapper = {
     modelProperties: {
       start: {
         xmlName: "Start",
-        required: true,
         serializedName: "Start",
         type: {
           name: "String"
@@ -25,7 +24,6 @@ export const AccessPolicy: msRest.CompositeMapper = {
       },
       expiry: {
         xmlName: "Expiry",
-        required: true,
         serializedName: "Expiry",
         type: {
           name: "String"
@@ -33,7 +31,6 @@ export const AccessPolicy: msRest.CompositeMapper = {
       },
       permission: {
         xmlName: "Permission",
-        required: true,
         serializedName: "Permission",
         type: {
           name: "String"

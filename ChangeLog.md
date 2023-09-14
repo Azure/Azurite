@@ -10,6 +10,10 @@ Blob:
 - Set accessTierInferred to false after upload blob with accessTier (issue #2038)
 - Support blob new access tier Cold
 
+Queue:
+
+- Fixed set Queue ACL failure when Start is missing (issue #2065)
+
 Table:
 
 - Fixed the errorCode returned, when malformed Etag is provided for table Update/Delete calls. (issue #2013)
