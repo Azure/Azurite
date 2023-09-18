@@ -11,6 +11,7 @@ import {
 import * as assert from "assert";
 
 import {
+  EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED,
   EMULATOR_ACCOUNT_KIND,
   EMULATOR_ACCOUNT_SKUNAME
 } from "../../../src/blob/utils/constants";
@@ -415,6 +416,7 @@ describe("ServiceAPIs", () => {
     const result = await serviceClient.getAccountInfo();
     assert.equal(result.accountKind, EMULATOR_ACCOUNT_KIND);
     assert.equal(result.skuName, EMULATOR_ACCOUNT_SKUNAME);
+    assert.equal(result.isHierarchicalNamespaceEnabled, EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED);
     assert.equal(
       result._response.request.headers.get("x-ms-client-request-id"),
       result.clientRequestId
