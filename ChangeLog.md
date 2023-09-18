@@ -17,6 +17,7 @@ Queue:
 Table:
 
 - Fixed the errorCode returned, when malformed Etag is provided for table Update/Delete calls. (issue #2013)
+- Fixed an issue when comparing `'' eq guid'00000000-0000-0000-0000-000000000000'` which would erroneously report these as equal. (issue #2169)
 
 ## 2023.08 Version 3.26.0
 
