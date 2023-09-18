@@ -25,7 +25,9 @@ export default class DateTimeNode<T> extends ValueNode {
     const thisValue = new Date(this.value);
     const otherValue = new Date(other.evaluate(context));
 
-    if (thisValue.valueOf() < otherValue.valueOf()) {
+    if (isNaN(thisValue.valueOf()) || isNaN(otherValue.valueOf())) {
+      return NaN;
+    } else if (thisValue.valueOf() < otherValue.valueOf()) {
       return -1;
     } else if (thisValue.valueOf() > otherValue.valueOf()) {
       return 1;

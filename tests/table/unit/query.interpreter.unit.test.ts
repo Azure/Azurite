@@ -47,7 +47,8 @@ describe("Query Interpreter", () => {
       guid: Buffer.from("00000000-0000-0000-0000-000000000000").toString("base64"),
       guidLegacy: "00000000-0000-0000-0000-000000000000",
       binary: Buffer.from("binaryData").toString("base64"),
-      emptyString: ""
+      emptyString: "",
+      nullValue: null
     }
   };
 
@@ -269,6 +270,21 @@ describe("Query Interpreter", () => {
         originalQuery:
           "guidLegacy ne guid'22222222-2222-2222-2222-222222222222'",
         expectedResult: true
+      },
+      {
+        name: "GUID compare against missing property",
+        originalQuery: "missingProperty eq guid'00000000-0000-0000-0000-000000000000'",
+        expectedResult: false
+      },
+      {
+        name: " GUID compare against null property",
+        originalQuery: "nullValue eq guid'00000000-0000-0000-0000-000000000000'",
+        expectedResult: false
+      },
+      {
+        name: "GUID compare against empty string",
+        originalQuery: "emptyString eq guid'00000000-0000-0000-0000-000000000000'",
+        expectedResult: false
       }
     ])
 
@@ -391,6 +407,21 @@ describe("Query Interpreter", () => {
       {
         name: "DateTime less than or equal (microseconds) (doesn't match)",
         originalQuery: "microsecondDate le datetime'2022-12-31T23:59:59.999999Z'",
+        expectedResult: false
+      },
+      {
+        name: "DateTime compare against null value",
+        originalQuery: "nullValue eq datetime'2020-01-01T00:00:00.000000Z'",
+        expectedResult: false
+      },
+      {
+        name: "DateTime compare against empty string",
+        originalQuery: "emptyString eq datetime'2020-01-01T00:00:00.000000Z'",
+        expectedResult: false
+      },
+      {
+        name: "DateTime compare against missing property",
+        originalQuery: "missingProperty eq datetime'2020-01-01T00:00:00.000000Z'",
         expectedResult: false
       }
     ])

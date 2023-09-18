@@ -31,7 +31,9 @@ export default class GuidNode<T> extends ValueNode {
       thisValue = Buffer.from(this.value).toString("base64");
     }
 
-    if (thisValue < otherValue) {
+    if (!thisValue || !otherValue) {
+      return NaN;
+    } else if (thisValue < otherValue) {
       return -1;
     } else if (thisValue > otherValue) {
       return 1;

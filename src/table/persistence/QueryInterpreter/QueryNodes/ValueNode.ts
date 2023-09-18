@@ -15,7 +15,9 @@ export default abstract class ValueNode implements IQueryNode {
 
   compare(context: IQueryContext, other: IQueryNode): number {
     const otherValue = other.evaluate(context);
-    if (this.value < otherValue) {
+    if (this.value === undefined || otherValue === undefined) {
+      return NaN;
+    } else if (this.value < otherValue) {
       return -1;
     } else if (this.value > otherValue) {
       return 1;
