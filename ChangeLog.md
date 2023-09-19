@@ -9,6 +9,7 @@ Blob:
 - Fix validation of Blob SAS token when using the second key for an account in `AZURITE_ACCOUNTS`
 - Set accessTierInferred to false after upload blob with accessTier (issue #2038)
 - Support blob new access tier Cold
+- Added "x-ms-is-hns-enabled" header in x-ms-is-hns-enabled API responds (issue #1810)
 
 Queue:
 

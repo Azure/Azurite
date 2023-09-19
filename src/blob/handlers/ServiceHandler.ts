@@ -7,6 +7,7 @@ import { parseXML } from "../generated/utils/xml";
 import {
   BLOB_API_VERSION,
   DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
+  EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED,
   EMULATOR_ACCOUNT_KIND,
   EMULATOR_ACCOUNT_SKUNAME,
   HeaderConstants,
@@ -335,13 +336,14 @@ export default class ServiceHandler extends BaseHandler
   public async getAccountInfo(
     context: Context
   ): Promise<Models.ServiceGetAccountInfoResponse> {
-    const response: Models.ContainerGetAccountInfoResponse = {
+    const response: Models.ServiceGetAccountInfoResponse = {
       statusCode: 200,
       requestId: context.contextId,
       clientRequestId: context.request!.getHeader("x-ms-client-request-id"),
       skuName: EMULATOR_ACCOUNT_SKUNAME,
       accountKind: EMULATOR_ACCOUNT_KIND,
       date: context.startTime!,
+      isHierarchicalNamespaceEnabled: EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED,
       version: BLOB_API_VERSION
     };
     return response;
