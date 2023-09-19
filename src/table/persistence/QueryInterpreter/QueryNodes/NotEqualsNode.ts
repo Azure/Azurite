@@ -22,11 +22,13 @@ export default class NotEqualsNode extends BinaryOperatorNode {
 
   evaluate(context: IQueryContext): any {
     if (this.left instanceof ValueNode) {
-      return this.left.compare(context, this.right) !== 0;
+      const compareResult = this.left.compare(context, this.right);
+      return compareResult !== 0 && !isNaN(compareResult);
     }
 
     if (this.right instanceof ValueNode) {
-      return this.right.compare(context, this.left) !== 0;
+      const compareResult = this.right.compare(context, this.left);
+      return compareResult !== 0 && !isNaN(compareResult);
     }
 
     const left = this.left.evaluate(context);

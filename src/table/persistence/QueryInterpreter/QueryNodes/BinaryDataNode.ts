@@ -1,5 +1,5 @@
 import { IQueryContext } from "../IQueryContext";
-import IQueryNode from "./IQueryNode";
+import ValueNode from "./ValueNode";
 
 /**
  * Represents a constant value which should be decoded from its `hex` representation
@@ -9,18 +9,12 @@ import IQueryNode from "./IQueryNode";
  * and is used to ensure that these values are evaluated against their normalized base64 format. For
  * example, the query `PartitionKey eq binary'0011'` would contain a `BinaryNode` with the value `0x0011`.
  */
-export default class BinaryNode<T> implements IQueryNode {
-  constructor(private value: string) { }
-
+export default class BinaryNode extends ValueNode {
   get name(): string {
     return "binary";
   }
 
   evaluate(_context: IQueryContext): any {
     return Buffer.from(this.value, "hex").toString("base64");
-  }
-
-  toString(): string {
-    return `(${this.name} ${this.value})`;
   }
 }

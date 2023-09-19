@@ -450,5 +450,23 @@ describe("Query Interpreter", () => {
         expectedResult: false
       }
     ]);
+
+    describe("Issue #2169: Querying null/missing properties with type annotations", () => {
+      // NOTE(notheotherben): This generates a dynamic set of test to validate that all of our query operators return `false` for
+      //                      comparisons between values of the given type and the list of appropriate properties (null/missing/empty values).
+      const testCases: { [key: string]: string[] } = {
+        "datetime'2023-01-01T00:00:00.000000Z'": ["nullValue", "missingProperty", "emptyString"],
+        "binary'000000000000'": ["nullValue", "missingProperty"],
+        "guid'00000000-0000-0000-0000-000000000000'": ["nullValue", "missingProperty", "emptyString"],
+      };
+
+      for (const referenceValue of Object.keys(testCases)) {
+        runTestCases(referenceValue, referenceEntity, Array.prototype.concat.apply([], ["eq", "ne", "lt", "le", "gt", "ge"].map((operator) => testCases[referenceValue].map(property => ({
+          name: `Should not match ${property} with ${operator}`,
+          originalQuery: `${property} ${operator} ${referenceValue}`,
+          expectedResult: false
+        })))));
+      }
+    });
   });
 });

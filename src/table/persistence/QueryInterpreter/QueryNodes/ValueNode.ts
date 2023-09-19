@@ -14,12 +14,14 @@ export default abstract class ValueNode implements IQueryNode {
   }
 
   compare(context: IQueryContext, other: IQueryNode): number {
+    const thisValue = this.evaluate(context);
     const otherValue = other.evaluate(context);
-    if (this.value === undefined || otherValue === undefined) {
+
+    if (thisValue === undefined || otherValue === undefined || otherValue === null) {
       return NaN;
-    } else if (this.value < otherValue) {
+    } else if (thisValue < otherValue) {
       return -1;
-    } else if (this.value > otherValue) {
+    } else if (thisValue > otherValue) {
       return 1;
     } else {
       return 0;
