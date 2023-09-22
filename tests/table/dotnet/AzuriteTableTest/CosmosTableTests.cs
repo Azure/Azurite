@@ -1,21 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using NUnit.Framework;
 using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos.Table;
+using System.Collections;
 
 namespace AzuriteTableTest
 {
-    internal static class TestForIssue1439
+    [TestFixture]
+    public class CosmosTableTests
     {
-        internal static async Task RunTest()
+        private CloudTableClient cloudTableClient;
+
+        [SetUp]
+        public void Setup()
+        {
+            var account = CloudStorageAccount.DevelopmentStorageAccount;
+            this.cloudTableClient = new CloudTableClient(account.TableStorageUri, account.Credentials);
+        }
+
+        // Issue 1439
+        [Test]
+        public async Task ShouldDeleteMultipleRowsInCosmosBatch()
         {
             try
             {
-
-                var account = CloudStorageAccount.DevelopmentStorageAccount;
-                
-                var cloudTableClient = new Microsoft.Azure.Cosmos.Table.CloudTableClient(account.TableStorageUri, account.Credentials);
                 var cloudTable = cloudTableClient.GetTableReference("test5");
                 cloudTable.CreateIfNotExists();
 
@@ -49,7 +59,7 @@ namespace AzuriteTableTest
                     var batchResult = await cloudTable.ExecuteBatchAsync(batch); // <- error thrown here
                     if (batchResult.Count == 0)
                     {
-                        throw new Exception("Batch failed");
+                        Assert.Fail("Batch failed");
                     }
                 }
 
@@ -57,8 +67,34 @@ namespace AzuriteTableTest
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                Assert.Fail(ex.ToString());
             }
+        }
+
+        // Issue 1958
+        [Test]
+        public async Task ValidateCosmosInsertOrMergeInBatch()
+        {
+            var storageAccount = CloudStorageAccount.Parse("UseDevelopmentStorage=true");
+            var tableClient = storageAccount.CreateCloudTableClient();
+
+            var client = tableClient.GetTableReference("foo");
+            client.CreateIfNotExists();
+
+            var batch = new TableBatchOperation
+            {
+                TableOperation.InsertOrMerge(new DynamicTableEntity("foo", "c8b06c47-c755-4b53-b3da-73949ebbb24f")),
+                TableOperation.InsertOrMerge(new DynamicTableEntity("foo", "08667dfd-d2e0-4e20-a51e-7bc13d01c89c"))
+            };
+
+            // This used to error with a 500 response
+            var result = await client.ExecuteBatchAsync(batch);
+            if (result[0].HttpStatusCode != 204 || result[1].HttpStatusCode != 204)
+            {
+                Assert.Fail("Expected 204 response");
+            }
+            // clean up
+            client.DeleteIfExists();
         }
     }
 }
