@@ -1146,6 +1146,23 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(err.statusCode, 400);
   });
 
+  it("Copy blob should fail with 400 when copy source is invalid @loki", async () => {
+    const destBlob = getUniqueName("blob");
+
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    try {
+      await destBlobClient.beginCopyFromURL('/devstoreaccount1/container78/blob125')
+    } 
+    catch (error) 
+    {
+      assert.deepStrictEqual(error.statusCode, 400);
+      assert.deepStrictEqual(error.code, 'InvalidHeaderValue');      
+      return;
+    }
+    assert.fail();
+  });
+
   it("Copy blob should not work with  ifNoneMatch * when dest exist @loki", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");

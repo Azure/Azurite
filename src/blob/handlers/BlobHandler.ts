@@ -648,7 +648,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const blob = blobCtx.blob!;
 
     // TODO: Check dest Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
-    const url = new URL(copySource);
+    const url = this.NewUriFromCopySource(copySource, context);
     const [
       sourceAccount,
       sourceContainer,
@@ -709,7 +709,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const blobCtx = new BlobStorageContext(context);
 
     const currentServer = blobCtx.request!.getHeader("Host") || "";
-    const url = new URL(copySource)
+    const url = this.NewUriFromCopySource(copySource, context);
     if (currentServer !== url.host) {
       this.logger.error(
         `BlobHandler:startCopyFromURL() Source account ${url} is not on the same Azurite instance as target account ${blobCtx.account}`,
@@ -846,7 +846,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const blob = blobCtx.blob!;
 
     // TODO: Check dest Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
-    const url = new URL(copySource);
+    const url = this.NewUriFromCopySource(copySource, context);
     const [
       sourceAccount,
       sourceContainer,
@@ -1313,5 +1313,20 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     };
 
     return response;
+  }
+
+  private NewUriFromCopySource(copySource: string, context: Context): URL{
+      try{
+        return new URL(copySource)
+      }
+      catch
+      {
+        throw StorageErrorFactory.getInvalidHeaderValue(
+          context.contextId,
+          {
+            HeaderName: "x-ms-copy-source",
+            HeaderValue: copySource
+          })
+      }
   }
 }
