@@ -26,7 +26,7 @@ enum-types: true
 
 4. Change "Name" definition in "BlobItemInternal" from:
    "Name": {
-      "$ref": "#/definitions/BlobName"
+   "$ref": "#/definitions/BlobName"
    }
    to
    "Name": {
@@ -46,23 +46,24 @@ enum-types: true
    "type": "string"
    }
 
-9. Make `ApiVersionParameter` parameter from required to optional.
+8. Make `ApiVersionParameter` parameter from required to optional.
 
-10. Add `x-ms-creation-time` to Blob_Download API response.
+9. Add `x-ms-creation-time` to Blob_Download API response.
 
-11. Add "Premium" to "AccessTierRequired" enum and "AccessTierOptional" enum.
+10. Add "Premium" to "AccessTierRequired" enum and "AccessTierOptional" enum.
     Add "Mutable" to "ImmutabilityPolicyMode" at around line #11994
 
-12. Add spec for: Blob_GetAccountInfoWithHead, Container_GetAccountInfoWithHead and Service_GetAccountInfoWithHead.
+11. Add spec for: Blob_GetAccountInfoWithHead, Container_GetAccountInfoWithHead and Service_GetAccountInfoWithHead.
 
-13. Change return code from '200' to '202' for service_submitbatch.
+12. Change return code from '200' to '202' for service_submitbatch.
 
-14. Change "AllowedHeaders" and "ExposedHeaders" to from required to optional.
+13. Change "AllowedHeaders" and "ExposedHeaders" to from required to optional.
 
-15. Remove "Container_Rename" section.
+14. Remove "Container_Rename" section.
 
-16. Add "x-ms-delete-type-permanent" to "Blob_Delete" API response.
-17. Remove 
+15. Add "x-ms-delete-type-permanent" to "Blob_Delete" API response.
+
+16. Remove 
       "
         {
           "$ref": "#/parameters/ContainerName"
@@ -74,3 +75,6 @@ enum-types: true
         }
       " 
     from parameters of each container/blob operation.
+
+17. Add "Cold" to "AccessTier", "AccessTierRequired", "AccessTierOptional"; and add "rehydrate-pending-to-cold" to "ArchiveStatus". (can be removed when upgrade to new API version.)
+

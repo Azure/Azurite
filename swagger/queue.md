@@ -19,3 +19,5 @@ enum-types: true
 ## Changes Made to Client Swagger
 
 1. Remove minimum/maximum limitation for "VisibilityTimeout" and "VisibilityTimeoutRequired".
+
+2. Remove "required" section from defination "AccessPolicy" to align with server behavior.

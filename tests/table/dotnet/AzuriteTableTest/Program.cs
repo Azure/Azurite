@@ -14,10 +14,10 @@ namespace AzuriteTableTest
         static async Task Main(string[] args)
         {
             // delete batch with cosmos
-            await TestForIssue1439.RunTest();
+            await TestForIssue1958.RunTest();
 
-            // delete batch with data Tables
-            await TestForDataTablesDeleteBatch.RunTest();
+            // // delete batch with data Tables
+            // await TestForDataTablesDeleteBatch.RunTest();
         }
     }
 }

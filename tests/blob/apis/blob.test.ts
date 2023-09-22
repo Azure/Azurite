@@ -744,6 +744,51 @@ describe("BlobAPIs", () => {
     );
   });
 
+  it("setTier set default to cold @loki @sql", async () => {
+    // Created Blob should have accessTierInferred as true in Get/list
+    let properties = await blockBlobClient.getProperties();
+    assert.equal(properties.accessTier!.toLowerCase(), "hot");
+    assert.equal(true, properties.accessTierInferred);
+
+    let listResult = (
+      await containerClient
+        .listBlobsFlat({
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
+    assert.equal(
+      true,
+      (await listResult).segment.blobItems[0].properties.accessTierInferred
+    );
+
+    const result = await blockBlobClient.setAccessTier("Cold");
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+
+    // After setTier, Blob should have accessTierInferred as false in Get
+    properties = await blockBlobClient.getProperties();
+    assert.equal(properties.accessTier!.toLowerCase(), "cold");
+    assert.equal(false, properties.accessTierInferred);
+
+    // After setTier, Blob should have accessTierInferred as undefined in list
+    listResult = (
+      await containerClient
+        .listBlobsFlat({
+          prefix: blobName
+        })
+        .byPage()
+        .next()
+    ).value;
+    assert.equal(
+      undefined,
+      (await listResult).segment.blobItems[0].properties.accessTierInferred
+    );
+  });
+
   it("setTier set archive to hot @loki @sql", async () => {
     await blockBlobClient.setAccessTier("Archive");
     let properties = await blockBlobClient.getProperties();
@@ -793,6 +838,19 @@ describe("BlobAPIs", () => {
         "rehydrate-pending-to-hot"
       );
     }
+  });
+  
+  it("Upload blob with accesstier should get accessTierInferred as false @loki", async () => {
+    const blobName = getUniqueName("blob");
+
+    const blobClient = containerClient.getBlockBlobClient(blobName);
+
+    await blobClient.upload("hello", 5, { tier: "Hot" });
+
+    const properties = await blobClient.getProperties();
+    assert.equal(false, properties.accessTierInferred);
+  
+    blobClient.delete();
   });
 
   it("setHTTPHeaders with default parameters @loki @sql", async () => {
@@ -1086,6 +1144,23 @@ describe("BlobAPIs", () => {
     }
 
     assert.deepStrictEqual(err.statusCode, 400);
+  });
+
+  it("Copy blob should fail with 400 when copy source is invalid @loki", async () => {
+    const destBlob = getUniqueName("blob");
+
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    try {
+      await destBlobClient.beginCopyFromURL('/devstoreaccount1/container78/blob125')
+    } 
+    catch (error) 
+    {
+      assert.deepStrictEqual(error.statusCode, 400);
+      assert.deepStrictEqual(error.code, 'InvalidHeaderValue');      
+      return;
+    }
+    assert.fail();
   });
 
   it("Copy blob should not work with  ifNoneMatch * when dest exist @loki", async () => {

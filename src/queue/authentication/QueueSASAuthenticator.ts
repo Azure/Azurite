@@ -154,7 +154,7 @@ export default class QueueSASAuthenticator implements IAuthenticator {
         context.contextID!
       );
 
-      const sig2Pass = sig2 !== signature;
+      const sig2Pass = sig2 === signature;
       this.logger.info(
         `QueueSASAuthenticator:validate() Signature based on key2 validation ${
           sig2Pass ? "passed" : "failed"

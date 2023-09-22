@@ -155,7 +155,7 @@ export default class TableSASAuthenticator implements IAuthenticator {
         context.contextID!
       );
 
-      const sig2Pass = sig2 !== signature;
+      const sig2Pass = sig2 === signature;
       this.logger.info(
         `TableSASAuthenticator:validate() Signature based on key2 validation ${
           sig2Pass ? "passed" : "failed"
