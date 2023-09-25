@@ -16,20 +16,31 @@ export default class DateTimeNode<T> extends ValueNode {
   }
 
   compare(context: IQueryContext, other: IQueryNode): number {
+    const otherValue = other.evaluate(context);
+
+    // NOTE(notheotherben): This is a special case for the `null` value, which is not a valid datetime value in Azure Storage
+    //                      but is considered a valid input for "epoch" in the JS Date constructor. We're explicitly handling
+    //                      returning NaN here to ensure that null doesn't match dates in the table.
+    if (this.value === null || otherValue === null) {
+      return NaN;
+    }
+
     // NOTE(notheotherben): This approach leverages the fact that the `Date` constructor will parse ISO8601 strings
     //                 however it runs into a limitation of the accuracy of JS dates (which are limited to millisecond
     //                 resolution). As a result, we're effectively truncating the value to millisecond precision by doing
     //                 this. This is fundamentally a trade-off between enforcing valid datetime values and providing perfect
     //                 accuracy, and we've opted to enforce valid datetime values as those are more likely to cause problems
     //                 when moving to production.
-    const thisValue = new Date(this.value);
-    const otherValue = new Date(other.evaluate(context));
+    const thisDate = new Date(this.value);
+    const otherDate = new Date(otherValue);
 
-    if (thisValue.valueOf() < otherValue.valueOf()) {
+    if (isNaN(thisDate.valueOf()) || isNaN(otherDate.valueOf())) {
+      return NaN;
+    } else if (thisDate.valueOf() < otherDate.valueOf()) {
       return -1;
-    } else if (thisValue.valueOf() > otherValue.valueOf()) {
+    } else if (thisDate.valueOf() > otherDate.valueOf()) {
       return 1;
-    } else if (thisValue.valueOf() === otherValue.valueOf()) {
+    } else if (thisDate.valueOf() === otherDate.valueOf()) {
       return 0;
     } else {
       return NaN;

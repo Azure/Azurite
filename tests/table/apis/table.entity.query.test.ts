@@ -1087,7 +1087,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
         assert.strictEqual(
           all.length,
           queryTest.expectedResult,
-          `Failed with query ${queryTest.queryOptions.filter}`
+          `Failed with query ${queryTest.queryOptions.filter} (got ${all.length} entries, expected ${queryTest.expectedResult})`
         );
         if (all[0] !== undefined) {
           all.sort((a, b) => {
@@ -1326,7 +1326,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     assert.strictEqual(all.length, 1);
 
     await tableClient.deleteTable();
-  });  
+  });
 
   it("21. should work correctly when query filter is empty string, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
