@@ -32,7 +32,7 @@
     "morgan": "^1.9.1",
     "multistream": "^2.1.1",
     "mysql2": "^3.2.0",
-    "rimraf": "^3.0.2",
+    "rimraf": "^5.0.4",
     "sequelize": "^6.31.0",
     "stoppable": "^1.1.0",
     "tedious": "^16.0.0",
