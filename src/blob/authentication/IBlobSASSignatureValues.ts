@@ -340,7 +340,8 @@ function generateBlobSASSignature20201206(
       accountName,
       blobSASSignatureValues.containerName,
       resource === BlobSASResourceType.Blob ||
-        resource === BlobSASResourceType.BlobSnapshot
+        resource === BlobSASResourceType.BlobSnapshot ||
+        resource === BlobSASResourceType.Directory
         ? blobSASSignatureValues.blobName
         : ""
     ),
@@ -673,7 +674,8 @@ function generateBlobSASBlobSASSignatureWithUDK20201206(
     getCanonicalName(
       accountName,
       blobSASSignatureValues.containerName,
-      resource === BlobSASResourceType.Blob
+      resource === BlobSASResourceType.Blob ||
+        resource === BlobSASResourceType.Directory
         ? blobSASSignatureValues.blobName
         : ""
     ),

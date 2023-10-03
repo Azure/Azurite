@@ -98,7 +98,8 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     if (
       resource !== BlobSASResourceType.Container &&
       resource !== BlobSASResourceType.Blob &&
-      resource !== BlobSASResourceType.BlobSnapshot
+      resource !== BlobSASResourceType.BlobSnapshot &&
+      resource !== BlobSASResourceType.Directory
     ) {
       this.logger.debug(
         // tslint:disable-next-line:max-line-length
@@ -479,6 +480,16 @@ export default class BlobSASAuthenticator implements IAuthenticator {
     const signedExpiresOn = this.decodeIfExist(req.getQuery("ske"));
     const signedVersion = this.decodeIfExist(req.getQuery("skv"));
     const signedService = this.decodeIfExist(req.getQuery("sks"));
+
+    if (signedResource === BlobSASResourceType.Directory) {
+      const signedDirectoryDepth = this.decodeIfExist(req.getQuery("sdd"));
+      if (signedDirectoryDepth !== undefined) {
+        const depth = parseInt(signedDirectoryDepth);
+        if (!isNaN(depth)) {
+          blobName = blobName?.split("/").slice(0, depth).join("/");
+        }
+      }
+    }
 
     if (!identifier && (!permissions || !expiryTime)) {
       this.logger.warn(
