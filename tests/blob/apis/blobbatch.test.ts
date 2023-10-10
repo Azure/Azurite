@@ -70,9 +70,9 @@ describe("Blob batch API", () => {
     await containerClient.delete();
   });
 
-  it("SubmitBatch batch deleting @loki @sql", async () => {    
+  it("SubmitBatch batch deleting @loki @sql", async () => {
     const blobBatchClient = serviceClient.getBlobBatchClient();
-    
+
     // By default, credential is always the last element of pipeline factories
     const factories = (serviceClient as any).pipeline.factories;
     const sharedKeyCredential = factories[factories.length - 1];
@@ -104,9 +104,9 @@ describe("Blob batch API", () => {
     assert.equal(resp2.segment.blobItems.length, 0);
   });
 
-  it("SubmitBatch within container scope - batch set tier @loki @sql", async () => {    
+  it("SubmitBatch within container scope - batch set tier @loki @sql", async () => {
     const blobBatchClient = containerClient.getBlobBatchClient();
-    
+
     // By default, credential is always the last element of pipeline factories
     const factories = (serviceClient as any).pipeline.factories;
     const sharedKeyCredential = factories[factories.length - 1];
@@ -133,9 +133,9 @@ describe("Blob batch API", () => {
     }
   });
 
-  it("SubmitBatch batch set tier @loki @sql", async () => {    
+  it("SubmitBatch batch set tier @loki @sql", async () => {
     const blobBatchClient = serviceClient.getBlobBatchClient();
-    
+
     // By default, credential is always the last element of pipeline factories
     const factories = (serviceClient as any).pipeline.factories;
     const sharedKeyCredential = factories[factories.length - 1];
@@ -162,7 +162,7 @@ describe("Blob batch API", () => {
     }
   });
 
-  it("SubmitBatch within container scope - batch deleting blob in different container  @loki @sql", async () => {   
+  it("SubmitBatch within container scope - batch deleting blob in different container  @loki @sql", async () => {
     const blobBatchClient = containerClient.getBlobBatchClient();
 
     const containerClientNew = serviceClient.getContainerClient(getUniqueName("containernew"));
@@ -172,7 +172,7 @@ describe("Blob batch API", () => {
     blockBlobClientNew.upload(content, content.length);
     const blobclientsNew: BlobClient[] = [];
     blobclientsNew.push(blockBlobClientNew);
-    
+
     // By default, credential is always the last element of pipeline factories
     const factories = (serviceClient as any).pipeline.factories;
     const sharedKeyCredential = factories[factories.length - 1];
@@ -184,7 +184,7 @@ describe("Blob batch API", () => {
     assert.equal(resp.subResponsesSucceededCount, 0);
     assert.equal(resp.subResponsesFailedCount, 1);
   });
-  
+
   it("SubmitBatch with SAS token - batch deleting @loki @sql", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
@@ -201,11 +201,11 @@ describe("Blob batch API", () => {
           // Make sure socket is closed once the operation is done.
           keepAliveOptions: { enable: false }
         }
-    ));
+      ));
     const blobBatchClient = sasServiceClient.getBlobBatchClient();
     const sasBlobClients: BlobClient[] = [];
 
-    for (const blobClient of blobClients){
+    for (const blobClient of blobClients) {
       const sasBlobClient = sasServiceClient.getContainerClient(containerName).getBlobClient(blobClient.name);
       sasBlobClients.push(sasBlobClient);
     }
@@ -237,7 +237,7 @@ describe("Blob batch API", () => {
     assert.equal(resp2.segment.blobItems.length, 0);
   });
 
-  it("SubmitBatch batch with SAS token set tier @loki @sql", async () => {   
+  it("SubmitBatch batch with SAS token set tier @loki @sql", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -253,14 +253,14 @@ describe("Blob batch API", () => {
           // Make sure socket is closed once the operation is done.
           keepAliveOptions: { enable: false }
         }
-    ));
+      ));
     const blobBatchClient = sasServiceClient.getBlobBatchClient();
     const sasBlobClients: BlobClient[] = [];
 
-    for (const blobClient of blobClients){
+    for (const blobClient of blobClients) {
       const sasBlobClient = sasServiceClient.getContainerClient(containerName).getBlobClient(blobClient.name);
       sasBlobClients.push(sasBlobClient);
-    } 
+    }
 
     // Submit batch request and verify response.
     const urls = sasBlobClients.map((b) => b.url);
@@ -283,7 +283,7 @@ describe("Blob batch API", () => {
       assert.equal(resp2.accessTier, "Archive");
     }
   });
-  
+
   it("SubmitBatch within containerScope - with SAS token - batch deleting @loki @sql", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
@@ -297,7 +297,7 @@ describe("Blob batch API", () => {
     const blobBatchClient = sasContainerClient.getBlobBatchClient();
     const sasBlobClients: BlobClient[] = [];
 
-    for (const blobClient of blobClients){
+    for (const blobClient of blobClients) {
       const sasBlobClient = sasContainerClient.getBlobClient(blobClient.name);
       sasBlobClients.push(sasBlobClient);
     }
@@ -327,11 +327,11 @@ describe("Blob batch API", () => {
         .next()
     ).value;
     assert.equal(resp2.segment.blobItems.length, 0);
-  });  
+  });
 
-  it("SubmitBatch batch with different operations @loki @sql", async () => {    
+  it("SubmitBatch batch with different operations @loki @sql", async () => {
     const blobBatchClient = serviceClient.getBlobBatchClient();
-    
+
     // By default, credential is always the last element of pipeline factories
     const factories = (serviceClient as any).pipeline.factories;
     const sharedKeyCredential = factories[factories.length - 1];

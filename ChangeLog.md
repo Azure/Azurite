@@ -13,6 +13,7 @@ Blob:
 - Fixed CommitBlockList API to return 400 (InvalidXmlDocument) when the request is sent with JSON body. (issue #1955)
 - Added "x-ms-is-hns-enabled" header in x-ms-is-hns-enabled API responds (issue #1810)
 - Fixed authentication error in production style URL for secondary location (issue #2208)
+- Fixed issue of failures for blob batch requests in product style.
 
 Queue:
 
