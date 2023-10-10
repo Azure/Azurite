@@ -1,4 +1,4 @@
-import uuid = require("uuid");
+import { v4 as uuidv4 } from 'uuid';
 
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import {
@@ -146,7 +146,7 @@ export default class LeaseBrokenState extends LeaseStateBase {
     if (duration === -1) {
       return new LeaseLeasedState(
         {
-          leaseId: proposedLeaseId || uuid(),
+          leaseId: proposedLeaseId || uuidv4(),
           leaseState: LeaseStateType.Leased,
           leaseStatus: LeaseStatusType.Locked,
           leaseDurationType: LeaseDurationType.Infinite,
@@ -159,7 +159,7 @@ export default class LeaseBrokenState extends LeaseStateBase {
     } else {
       return new LeaseLeasedState(
         {
-          leaseId: proposedLeaseId || uuid(),
+          leaseId: proposedLeaseId || uuidv4(),
           leaseState: LeaseStateType.Leased,
           leaseStatus: LeaseStatusType.Locked,
           leaseDurationType: LeaseDurationType.Fixed,

@@ -1,4 +1,4 @@
-import uuid from "uuid/v4";
+import { v4 as uuidv4 } from 'uuid';
 
 import QueueStorageContext from "../context/QueueStorageContext";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -215,7 +215,7 @@ export default class MessagesHandler extends BaseHandler
     const message: MessageModel = {
       accountName,
       queueName,
-      messageId: uuid(),
+      messageId: uuidv4(),
       insertionTime: new Date(context.startTime!),
       expirationTime: new Date(
         context.startTime!.getTime() + DEFUALT_MESSAGETTL * 1000

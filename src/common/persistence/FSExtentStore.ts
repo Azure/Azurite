@@ -12,7 +12,7 @@ import multistream = require("multistream");
 import { join } from "path";
 import { Writable } from "stream";
 import { promisify } from "util";
-import uuid = require("uuid");
+import { v4 as uuidv4 } from 'uuid';
 
 import { ZERO_EXTENT_ID } from "../../blob/persistence/IBlobMetadataStore";
 import ILogger from "../ILogger";
@@ -333,10 +333,8 @@ export default class FSExtentStore implements IExtentStore {
     const op = () =>
       new Promise<NodeJS.ReadableStream>((resolve, reject) => {
         this.logger.verbose(
-          `FSExtentStore:readExtent() Creating read stream. LocationId:${persistencyId} extentId:${
-            extentChunk.id
-          } path:${path} offset:${extentChunk.offset} count:${
-            extentChunk.count
+          `FSExtentStore:readExtent() Creating read stream. LocationId:${persistencyId} extentId:${extentChunk.id
+          } path:${path} offset:${extentChunk.offset} count:${extentChunk.count
           } end:${extentChunk.offset + extentChunk.count - 1}`,
           contextId
         );
@@ -345,10 +343,8 @@ export default class FSExtentStore implements IExtentStore {
           end: extentChunk.offset + extentChunk.count - 1
         }).on("close", () => {
           this.logger.verbose(
-            `FSExtentStore:readExtent() Read stream closed. LocationId:${persistencyId} extentId:${
-              extentChunk.id
-            } path:${path} offset:${extentChunk.offset} count:${
-              extentChunk.count
+            `FSExtentStore:readExtent() Read stream closed. LocationId:${persistencyId} extentId:${extentChunk.id
+            } path:${path} offset:${extentChunk.offset} count:${extentChunk.count
             } end:${extentChunk.offset + extentChunk.count - 1}`,
             contextId
           );
@@ -621,7 +617,7 @@ export default class FSExtentStore implements IExtentStore {
    */
   private createAppendExtent(persistencyId: string): IAppendExtent {
     return {
-      id: uuid(),
+      id: uuidv4(),
       offset: 0,
       appendStatus: AppendStatusCode.Idle,
       locationId: persistencyId
@@ -636,7 +632,7 @@ export default class FSExtentStore implements IExtentStore {
    * @memberof FSExtentStore
    */
   private getNewExtent(appendExtent: IAppendExtent) {
-    appendExtent.id = uuid();
+    appendExtent.id = uuidv4();
     appendExtent.offset = 0;
     appendExtent.fd = undefined;
   }

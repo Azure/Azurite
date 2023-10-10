@@ -1,6 +1,6 @@
 import { stat } from "fs";
 import Loki from "lokijs";
-import uuid from "uuid/v4";
+import { v4 as uuidv4 } from 'uuid';
 
 import IGCExtentProvider from "../../common/IGCExtentProvider";
 import {
@@ -323,9 +323,9 @@ export default class LokiBlobMetadataStore
       prefix === ""
         ? { name: { $gt: marker }, accountName: account }
         : {
-            name: { $regex: `^${this.escapeRegex(prefix)}`, $gt: marker },
-            accountName: account
-          };
+          name: { $regex: `^${this.escapeRegex(prefix)}`, $gt: marker },
+          accountName: account
+        };
 
     // Workaround for loki which will ignore $gt when providing $regex
     const query2 = { name: { $gt: marker } };
@@ -747,10 +747,10 @@ export default class LokiBlobMetadataStore
 
     const leaseTimeSeconds: number =
       doc.properties.leaseState === Models.LeaseStateType.Breaking &&
-      doc.leaseBreakTime
+        doc.leaseBreakTime
         ? Math.round(
-            (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
-          )
+          (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
+        )
         : 0;
 
     coll.update(doc);
@@ -1686,10 +1686,10 @@ export default class LokiBlobMetadataStore
 
     const leaseTimeSeconds: number =
       doc.properties.leaseState === Models.LeaseStateType.Breaking &&
-      doc.leaseBreakTime
+        doc.leaseBreakTime
         ? Math.round(
-            (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
-          )
+          (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
+        )
         : 0;
 
     coll.update(doc);
@@ -1885,7 +1885,7 @@ export default class LokiBlobMetadataStore
           destBlob !== undefined
             ? destBlob.properties.leaseDuration
             : undefined,
-        copyId: uuid(),
+        copyId: uuidv4(),
         copyStatus: Models.CopyStatusType.Success,
         copySource,
         copyProgress: sourceBlob.properties.contentLength
@@ -1916,7 +1916,7 @@ export default class LokiBlobMetadataStore
       leaseBreakTime:
         destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
       committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
-      persistency: sourceBlob.persistency,      
+      persistency: sourceBlob.persistency,
       blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!)
     };
 
@@ -2072,7 +2072,7 @@ export default class LokiBlobMetadataStore
           destBlob !== undefined
             ? destBlob.properties.leaseDuration
             : undefined,
-        copyId: uuid(),
+        copyId: uuidv4(),
         copyStatus: Models.CopyStatusType.Success,
         copySource,
         copyProgress: sourceBlob.properties.contentLength
@@ -2103,7 +2103,7 @@ export default class LokiBlobMetadataStore
       leaseBreakTime:
         destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
       committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
-      persistency: sourceBlob.persistency,      
+      persistency: sourceBlob.persistency,
       blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!)
     };
 
