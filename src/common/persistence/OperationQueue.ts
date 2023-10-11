@@ -3,7 +3,7 @@ import { EventEmitter } from "events";
 import ILogger from "../ILogger";
 import IOperationQueue from "./IOperationQueue";
 
-import uuid = require("uuid");
+import { v4 as uuidv4 } from 'uuid';
 interface IOperation {
   id: string;
   op: () => Promise<any>;
@@ -35,7 +35,7 @@ export default class OperationQueue implements IOperationQueue {
     op: () => Promise<T>,
     contextId?: string
   ): Promise<T> {
-    const id = uuid();
+    const id = uuidv4();
     this.operations.push({ id, op });
     this.logger.debug(
       `OperationQueue.operate() Schedule incoming job ${id}`,

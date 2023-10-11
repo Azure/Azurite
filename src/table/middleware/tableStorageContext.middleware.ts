@@ -1,5 +1,5 @@
 import { NextFunction, Request, RequestHandler, Response } from "express";
-import uuid from "uuid/v4";
+import { v4 as uuidv4 } from 'uuid';
 
 import logger from "../../common/Logger";
 import { IP_REGEX } from "../../common/utils/constants";
@@ -47,7 +47,7 @@ export function tableStorageContextMiddleware(
   // Set server header in every Azurite response
   res.setHeader(HeaderConstants.SERVER, `Azurite-Table/${VERSION}`);
 
-  const requestID = uuid();
+  const requestID = uuidv4();
 
   const tableContext = new TableStorageContext(
     res.locals,
@@ -66,12 +66,10 @@ export function tableStorageContextMiddleware(
   }
 
   logger.info(
-    `TableStorageContextMiddleware: RequestMethod=${req.method} RequestURL=${
-      req.protocol
+    `TableStorageContextMiddleware: RequestMethod=${req.method} RequestURL=${req.protocol
     }://${req.hostname}${req.url} RequestHeaders:${JSON.stringify(
       req.headers
-    )} ClientIP=${req.ip} Protocol=${req.protocol} HTTPVersion=${
-      req.httpVersion
+    )} ClientIP=${req.ip} Protocol=${req.protocol} HTTPVersion=${req.httpVersion
     }`,
     requestID
   );
@@ -134,11 +132,11 @@ export function tableStorageContextMiddleware(
       0,
       tableSection.indexOf("(")
     );
-    
+
     const regex = /'([^']|'')*'/g;
     const matches = tableSection?.match(regex);
-    tableContext.partitionKey = matches? matches[0].replace(/^'|'$/g, '').replace(/''/g, "'"): undefined;
-    tableContext.rowKey = matches? matches[1].replace(/^'|'$/g, '').replace(/''/g, "'"): undefined;
+    tableContext.partitionKey = matches ? matches[0].replace(/^'|'$/g, '').replace(/''/g, "'") : undefined;
+    tableContext.rowKey = matches ? matches[1].replace(/^'|'$/g, '').replace(/''/g, "'") : undefined;
 
     tableSection = `${tableContext.tableName}(PartitionKey='PLACEHOLDER',RowKey='PLACEHOLDER')`;
   } else if (

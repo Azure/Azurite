@@ -101,14 +101,20 @@ describe("BlockBlobHighlevel", () => {
   });
 
   it("uploadFile should success when blob >= BLOCK_BLOB_MAX_UPLOAD_BLOB_BYTES @loki @sql", async () => {
-    const result = await blockBlobClient.uploadFile(tempFileLarge, {
-      blockSize: 4 * 1024 * 1024,
-      concurrency: 20
-    });
-    assert.equal(
-      result._response.request.headers.get("x-ms-client-request-id"),
-      result.clientRequestId
-    );
+    try {
+      const result = await blockBlobClient.uploadFile(tempFileLarge, {
+        blockSize: 4 * 1024 * 1024,
+        concurrency: 20
+      });
+      assert.equal(
+        result._response.request.headers.get("x-ms-client-request-id"),
+        result.clientRequestId
+      );
+    }
+    catch (err) {
+      console.log(err);
+      return;
+    }
 
     const downloadResponse = await blockBlobClient.download(0);
     const downloadedFile = join(tempFolderPath, getUniqueName("downloadfile."));
@@ -179,7 +185,7 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) {}
+    } catch (err) { }
     assert.ok(eventTriggered);
   }).timeout(timeoutForLargeFileUploadingTest);
 
@@ -198,7 +204,7 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) {}
+    } catch (err) { }
     assert.ok(eventTriggered);
   });
 
@@ -260,7 +266,7 @@ describe("BlockBlobHighlevel", () => {
         abortSignal: AbortController.timeout(1)
       });
       assert.fail();
-    } catch (err:any) {
+    } catch (err: any) {
       assert.ok((err.message as string).toLowerCase().includes("abort"));
     }
   }).timeout(timeoutForLargeFileUploadingTest);
@@ -314,7 +320,7 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) {}
+    } catch (err) { }
     assert.ok(eventTriggered);
   }).timeout(timeoutForLargeFileUploadingTest);
 

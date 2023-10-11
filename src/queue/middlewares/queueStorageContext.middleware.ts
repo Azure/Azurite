@@ -1,5 +1,5 @@
 import { NextFunction, Request, RequestHandler, Response } from "express";
-import uuid from "uuid/v4";
+import { v4 as uuidv4 } from 'uuid';
 
 import logger from "../../common/Logger";
 import { IP_REGEX } from "../../common/utils/constants";
@@ -42,7 +42,7 @@ export function queueStorageContextMiddleware(
   // Set server header in every Azurite response
   res.setHeader(HeaderConstants.SERVER, `Azurite-Queue/${VERSION}`);
 
-  const requestID = uuid();
+  const requestID = uuidv4();
 
   if (!skipApiVersionCheck) {
     const apiVersion = req.header(HeaderConstants.X_MS_VERSION);
@@ -60,12 +60,10 @@ export function queueStorageContextMiddleware(
   queueContext.xMsRequestID = requestID;
 
   logger.info(
-    `QueueStorageContextMiddleware: RequestMethod=${req.method} RequestURL=${
-      req.protocol
+    `QueueStorageContextMiddleware: RequestMethod=${req.method} RequestURL=${req.protocol
     }://${req.hostname}${req.url} RequestHeaders:${JSON.stringify(
       req.headers
-    )} ClientIP=${req.ip} Protocol=${req.protocol} HTTPVersion=${
-      req.httpVersion
+    )} ClientIP=${req.ip} Protocol=${req.protocol} HTTPVersion=${req.httpVersion
     }`,
     requestID
   );
@@ -168,12 +166,12 @@ export function extractStoragePartsFromPath(
   path: string,
   disableProductStyleUrl?: boolean
 ): [
-  string | undefined,
-  string | undefined,
-  string | undefined,
-  string | undefined,
-  boolean | undefined
-] {
+    string | undefined,
+    string | undefined,
+    string | undefined,
+    string | undefined,
+    boolean | undefined
+  ] {
   let account;
   let queue;
   let message;

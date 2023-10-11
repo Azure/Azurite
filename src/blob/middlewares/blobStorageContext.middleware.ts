@@ -1,5 +1,5 @@
 import { NextFunction, Request, RequestHandler, Response } from "express";
-import uuid from "uuid/v4";
+import { v4 as uuidv4 } from 'uuid';
 
 import logger from "../../common/Logger";
 import { IP_REGEX } from "../../common/utils/constants";
@@ -54,7 +54,7 @@ export function internnalBlobStorageContextMiddleware(
 ): void {
   // Set server header in every Azurite response
   res.setHeader(HeaderConstants.SERVER, `Azurite-Blob/${VERSION}`);
-  const requestID = uuid();
+  const requestID = uuidv4();
 
   if (!skipApiVersionCheck) {
     const apiVersion = req.getHeader(HeaderConstants.X_MS_VERSION);
@@ -149,7 +149,7 @@ export function blobStorageContextMiddleware(
 ): void {
   // Set server header in every Azurite response
   res.setHeader(HeaderConstants.SERVER, `Azurite-Blob/${VERSION}`);
-  const requestID = uuid();
+  const requestID = uuidv4();
 
   if (!skipApiVersionCheck) {
     const apiVersion = req.header(HeaderConstants.X_MS_VERSION);
@@ -166,12 +166,10 @@ export function blobStorageContextMiddleware(
   blobContext.xMsRequestID = requestID;
 
   logger.info(
-    `BlobStorageContextMiddleware: RequestMethod=${req.method} RequestURL=${
-      req.protocol
+    `BlobStorageContextMiddleware: RequestMethod=${req.method} RequestURL=${req.protocol
     }://${req.hostname}${req.url} RequestHeaders:${JSON.stringify(
       req.headers
-    )} ClientIP=${req.ip} Protocol=${req.protocol} HTTPVersion=${
-      req.httpVersion
+    )} ClientIP=${req.ip} Protocol=${req.protocol} HTTPVersion=${req.httpVersion
     }`,
     requestID
   );
@@ -242,11 +240,11 @@ export function extractStoragePartsFromPath(
   path: string,
   disableProductStyleUrl?: boolean,
 ): [
-  string | undefined,
-  string | undefined,
-  string | undefined,
-  boolean | undefined
-] {
+    string | undefined,
+    string | undefined,
+    string | undefined,
+    boolean | undefined
+  ] {
   let account;
   let container;
   let blob;
@@ -265,7 +263,7 @@ export function extractStoragePartsFromPath(
   const firstDotIndex = hostname.indexOf(".");
   // If hostname is not an IP address or a known host name, and has a dot inside,
   // we assume user wants to access emulator with a production-like URL.
-  if (!disableProductStyleUrl &&!isIPAddress && !isNoAccountHostName && firstDotIndex > 0) {
+  if (!disableProductStyleUrl && !isIPAddress && !isNoAccountHostName && firstDotIndex > 0) {
     account = hostname.substring(
       0,
       firstDotIndex

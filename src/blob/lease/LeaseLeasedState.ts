@@ -1,4 +1,4 @@
-import uuid = require("uuid");
+import { v4 as uuidv4 } from 'uuid';
 
 import { minDate } from "../../common/utils/utils";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
@@ -100,7 +100,7 @@ export default class LeaseLeasedState extends LeaseStateBase {
     if (duration === -1) {
       return new LeaseLeasedState(
         {
-          leaseId: proposedLeaseId || uuid(),
+          leaseId: proposedLeaseId || uuidv4(),
           leaseState: LeaseStateType.Leased,
           leaseStatus: LeaseStatusType.Locked,
           leaseDurationType: LeaseDurationType.Infinite,
@@ -113,7 +113,7 @@ export default class LeaseLeasedState extends LeaseStateBase {
     } else {
       return new LeaseLeasedState(
         {
-          leaseId: proposedLeaseId || uuid(),
+          leaseId: proposedLeaseId || uuidv4(),
           leaseState: LeaseStateType.Leased,
           leaseStatus: LeaseStatusType.Locked,
           leaseDurationType: LeaseDurationType.Fixed,
@@ -240,7 +240,7 @@ export default class LeaseLeasedState extends LeaseStateBase {
         leaseDurationSeconds: this.lease.leaseDurationSeconds,
         leaseExpireTime: new Date(
           this.context.startTime!.getTime() +
-            this.lease.leaseDurationSeconds! * 1000
+          this.lease.leaseDurationSeconds! * 1000
         ),
         leaseBreakTime: undefined
       },
