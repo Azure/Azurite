@@ -12,15 +12,18 @@ Blob:
 - Fixed startCopyFromURL, copyFromURL API to return 400 (InvalidHeaderValue) when copy source has invalid format. (issue #1954)
 - Fixed CommitBlockList API to return 400 (InvalidXmlDocument) when the request is sent with JSON body. (issue #1955)
 - Added "x-ms-is-hns-enabled" header in x-ms-is-hns-enabled API responds (issue #1810)
+- Fixed authentication error in production style URL (issue #2208)
 
 Queue:
 
 - Fixed set Queue ACL failure when Start is missing (issue #2065)
+- Fixed authentication error in production style URL (issue #2208)
 
 Table:
 
 - Fixed the errorCode returned, when malformed Etag is provided for table Update/Delete calls. (issue #2013)
 - Fixed an issue when comparing `'' eq guid'00000000-0000-0000-0000-000000000000'` which would erroneously report these as equal. (issue #2169)
+- Fixed authentication error in production style URL (issue #2208)
 
 ## 2023.08 Version 3.26.0
 
