@@ -14,6 +14,7 @@ import Server from "../../src/queue/QueueServer";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
+  getUniqueName,
   rmRecursive
 } from "../testutils";
 
@@ -47,8 +48,8 @@ describe("Queue SpecialNaming", () => {
 
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
   const baseSecondaryURL = `http://${host}:${port}/devstoreaccount1-secondary`;
-  const productionStyleHostName = "devstoreaccount1.localhost"; // Use hosts file to make this resolve
-  const productionStyleHostNameForSecondary = "devstoreaccount1-secondary.localhost";
+  const productionStyleHostName = "devstoreaccount1.queue.localhost"; // Use hosts file to make this resolve
+  const productionStyleHostNameForSecondary = "devstoreaccount1-secondary.queue.localhost";
 
   const serviceClient = new QueueServiceClient(
     baseURL,
@@ -194,7 +195,7 @@ describe("Queue SpecialNaming", () => {
   });
 
   it(`Should work with production style URL when ${productionStyleHostName} is resolvable`, async () => {
-    let queueName = "queue";
+    let queueName = getUniqueName("queue");
     await dns.promises.lookup(productionStyleHostName).then(
       async (lookupAddress) => {
         const baseURLProductionStyle = `http://${productionStyleHostName}:${port}`;
@@ -217,7 +218,7 @@ describe("Queue SpecialNaming", () => {
         );
         
         const response = await queueProductionStyle.create();
-        assert.deepStrictEqual(response._response.status, 200);
+        assert.deepStrictEqual(response._response.status, 201);
         await queueProductionStyle.delete();
       },
       () => {
@@ -235,7 +236,7 @@ describe("Queue SpecialNaming", () => {
   });
 
   it(`Should work with production style URL when ${productionStyleHostNameForSecondary} is resolvable`, async () => {
-    let queueName = "queue";
+    let queueName = getUniqueName("queue");
     await dns.promises.lookup(productionStyleHostNameForSecondary).then(
       async (lookupAddress) => {
         const baseURLProductionStyle = `http://${productionStyleHostNameForSecondary}:${port}`;
@@ -258,7 +259,7 @@ describe("Queue SpecialNaming", () => {
         );
         
         const response = await queueProductionStyle.create();
-        assert.deepStrictEqual(response._response.status, 200);
+        assert.deepStrictEqual(response._response.status, 201);
         await queueProductionStyle.delete();
       },
       () => {
@@ -290,7 +291,7 @@ describe("Queue SpecialNaming", () => {
         }
       )
     );
-    let queueName = "queue";
+    let queueName = getUniqueName("queue");
     const queueClientSecondary = secondaryServiceClient.getQueueClient(queueName);
     const response = await queueClientSecondary.create();
     assert.deepStrictEqual(response._response.status, 201);

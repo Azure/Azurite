@@ -26,8 +26,8 @@ describe("SpecialNaming", () => {
 
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
   const baseSecondaryURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1-secondary`;
-  const productionStyleHostName = "devstoreaccount1.localhost"; // Use hosts file to make this resolve
-  const productionStyleHostNameForSecondary = "devstoreaccount1-secondary.localhost";
+  const productionStyleHostName = "devstoreaccount1.blob.localhost"; // Use hosts file to make this resolve
+  const productionStyleHostNameForSecondary = "devstoreaccount1-secondary.blob.localhost";
   const noAccountHostName = "host.docker.internal";
   const noAccountHostNameConnectionString = `DefaultEndpointsProtocol=http;AccountName=${EMULATOR_ACCOUNT_NAME};AccountKey=${EMULATOR_ACCOUNT_KEY};BlobEndpoint=http://${noAccountHostName}:${server.config.port}/${EMULATOR_ACCOUNT_NAME};`;
 
@@ -600,10 +600,10 @@ describe("SpecialNaming", () => {
       )
     );
     const containerClientSecondary = secondaryServiceClient.getContainerClient(
-      containerName
+      getUniqueName("container")
     );
-
-    const response = await containerClientSecondary.create();
+    
+    const response = await containerClientSecondary.createIfNotExists();
     assert.deepStrictEqual(response._response.status, 201);
   });
 });

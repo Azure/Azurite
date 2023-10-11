@@ -38,8 +38,8 @@ describe("table name validation tests", () => {
     false,
     true
   );
-  const productionStyleHostName = "devstoreaccount1.localhost"; // Use hosts file to make this resolve
-  const productionStyleHostNameForSecondary = "devstoreaccount1-secondary.localhost";
+  const productionStyleHostName = "devstoreaccount1.table.localhost"; // Use hosts file to make this resolve
+  const productionStyleHostNameForSecondary = "devstoreaccount1-secondary.table.localhost";
 
   let server: TableServer;
 
