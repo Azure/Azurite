@@ -14,7 +14,6 @@ import {   EMULATOR_ACCOUNT_KEY,
 import {
   deleteToAzurite,
   getToAzurite,
-  getToAzuriteProductionUrl,
   postToAzurite,
   postToAzuriteProductionUrl
 } from "../utils/table.entity.tests.rest.submitter";

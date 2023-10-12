@@ -85,30 +85,6 @@ export async function getToAzurite(
 }
 
 /**
- * Submits GET request to Azurite table service on the path given
- *
- * @export
- * @param {string} hostName
- * @param {string} path
- * @param {*} headers
- * @return {Promise<string>}
- */
-export async function getToAzuriteProductionUrl(
-  hostName: string,
-  path: string,
-  headers: any,
-  queryString?: string
-): Promise<AxiosResponse<any, any>> {
-  if (undefined === queryString) {
-    queryString = "";
-  }
-  const url = `${TableEntityTestConfig.protocol}://${hostName}:${TableEntityTestConfig.port}/${path}${queryString}`;
-  const requestConfig = axiosRequestConfig(url, path, headers);
-  const result = await axios.get(url, requestConfig);
-  return result;
-}
-
-/**
  * Generates the account SAS signature to allow raw REST to connect to storage
  * without using an SDK connection.
  * This needs to be appended to the URL.
