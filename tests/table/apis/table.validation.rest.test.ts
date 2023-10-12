@@ -3,20 +3,17 @@
 // using the SDKs, can be used as a test rig for repros which provide a debug log.
 // later we can automate the parsing of repro logs to automatically play these into the tester
 // special care is needed to replace etags and folders when used
-import * as Azure from "azure-storage";
 import * as assert from "assert";
 import { configLogger } from "../../../src/common/Logger";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
-import {   EMULATOR_ACCOUNT_KEY,
-  EMULATOR_ACCOUNT_NAME,
-  getUniqueName,
-  overrideRequest } from "../../testutils";
+import {  getUniqueName } from "../../testutils";
 import {
   deleteToAzurite,
   getToAzurite,
   postToAzurite,
-  postToAzuriteProductionUrl
+  postToAzuriteProductionUrl,
+  getToAzuriteProductionUrl
 } from "../utils/table.entity.tests.rest.submitter";
 import dns = require("dns");
 
@@ -420,6 +417,7 @@ describe("table name validation tests", () => {
           let response = await postToAzuriteProductionUrl(productionStyleHostName,"Tables", body, createTableHeaders);
           assert.strictEqual(response.status, 201);
         } catch (err: any) {
+          console.log(err);
           assert.fail();
         }
       },
@@ -440,24 +438,24 @@ describe("table name validation tests", () => {
   it(`Should work with production style URL when ${productionStyleHostNameForSecondary} is resolvable`, async () => {
     await dns.promises.lookup(productionStyleHostNameForSecondary).then(
       async (lookupAddress) => {
-        const PROTOCOL = "http";
-        const HOST = "devstoreaccount1-secondary.table.localhost";
-        const PORT = 11002;
-        const secondaryConnectionString = `DefaultEndpointsProtocol=${PROTOCOL};AccountName=${EMULATOR_ACCOUNT_NAME};` +
-                                          `AccountKey=${EMULATOR_ACCOUNT_KEY};TableEndpoint=${PROTOCOL}://${HOST}:${PORT}/;`;
-        const tableService = Azure.createTableService(secondaryConnectionString);
-        const requestOverride = { headers: {} };
-        overrideRequest(requestOverride, tableService);
-        tableService.enableGlobalHttpAgent = true;
-
-        tableService.getServiceProperties((error, result, getResponse) => {
-          if (error) {
-            console.log(error);
-            assert.fail();
-          }
-          console.log(result);
-          assert.ok(getResponse.isSuccessful);
+        let tableName = getUniqueName("table");
+        const body = JSON.stringify({
+          TableName: tableName
         });
+        const createTableHeaders = {
+          "Content-Type": "application/json",
+          Accept: "application/json;odata=nometadata"
+        };
+        try {
+          let response = await postToAzuriteProductionUrl(productionStyleHostName,"Tables", body, createTableHeaders);
+          assert.strictEqual(response.status, 201);
+          let tablesList = await getToAzuriteProductionUrl(productionStyleHostNameForSecondary,"Tables", createTableHeaders);
+          console.log(tablesList);
+          assert.strictEqual(tablesList.status, 200);
+        } catch (err: any) {
+          console.log(err);
+          assert.fail();
+        }
       },
       () => {
         // Cannot perform this test. We need devstoreaccount1-secondary.blob.localhost to resolve to 127.0.0.1.
