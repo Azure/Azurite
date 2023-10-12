@@ -10,7 +10,8 @@ import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
 import {   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
-  getUniqueName } from "../../testutils";
+  getUniqueName,
+  overrideRequest } from "../../testutils";
 import {
   deleteToAzurite,
   getToAzurite,
@@ -35,9 +36,7 @@ describe("table name validation tests", () => {
     enableDebugLog,
     false,
     undefined,
-    debugLogPath,
-    false,
-    true
+    debugLogPath
   );
   const productionStyleHostName = "devstoreaccount1.table.localhost"; // Use hosts file to make this resolve
   const productionStyleHostNameForSecondary = "devstoreaccount1-secondary.table.localhost";
@@ -441,28 +440,22 @@ describe("table name validation tests", () => {
   it(`Should work with production style URL when ${productionStyleHostNameForSecondary} is resolvable`, async () => {
     await dns.promises.lookup(productionStyleHostNameForSecondary).then(
       async (lookupAddress) => {
-        let tableName = getUniqueName("table");
-        const body = JSON.stringify({
-          TableName: tableName
-        });
-        const createTableHeaders = {
-          "Content-Type": "application/json",
-          Accept: "application/json;odata=nometadata"
-        };
-        
-        let response = await postToAzuriteProductionUrl(productionStyleHostName,"Tables", body, createTableHeaders);
-        assert.strictEqual(response.status, 201);
         const PROTOCOL = "http";
         const HOST = "devstoreaccount1-secondary.table.localhost";
         const PORT = 11002;
         const secondaryConnectionString = `DefaultEndpointsProtocol=${PROTOCOL};AccountName=${EMULATOR_ACCOUNT_NAME};` +
                                           `AccountKey=${EMULATOR_ACCOUNT_KEY};TableEndpoint=${PROTOCOL}://${HOST}:${PORT}/;`;
         const tableService = Azure.createTableService(secondaryConnectionString);
+        const requestOverride = { headers: {} };
+        overrideRequest(requestOverride, tableService);
         tableService.enableGlobalHttpAgent = true;
+
         tableService.getServiceProperties((error, result, getResponse) => {
           if (error) {
+            console.log(error);
             assert.fail();
           }
+          console.log(result);
           assert.ok(getResponse.isSuccessful);
         });
       },
