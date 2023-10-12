@@ -7,11 +7,20 @@
 Blob:
 
 - Fix validation of Blob SAS token when using the second key for an account in `AZURITE_ACCOUNTS`
+- Set accessTierInferred to false after upload blob with accessTier (issue #2038)
 - Support blob new access tier Cold
+- Fixed startCopyFromURL, copyFromURL API to return 400 (InvalidHeaderValue) when copy source has invalid format. (issue #1954)
+- Fixed CommitBlockList API to return 400 (InvalidXmlDocument) when the request is sent with JSON body. (issue #1955)
+- Added "x-ms-is-hns-enabled" header in x-ms-is-hns-enabled API responds (issue #1810)
+
+Queue:
+
+- Fixed set Queue ACL failure when Start is missing (issue #2065)
 
 Table:
 
 - Fixed the errorCode returned, when malformed Etag is provided for table Update/Delete calls. (issue #2013)
+- Fixed an issue when comparing `'' eq guid'00000000-0000-0000-0000-000000000000'` which would erroneously report these as equal. (issue #2169)
 
 ## 2023.08 Version 3.26.0
 

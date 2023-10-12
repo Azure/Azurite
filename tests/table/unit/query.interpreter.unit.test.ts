@@ -47,7 +47,8 @@ describe("Query Interpreter", () => {
       guid: Buffer.from("00000000-0000-0000-0000-000000000000").toString("base64"),
       guidLegacy: "00000000-0000-0000-0000-000000000000",
       binary: Buffer.from("binaryData").toString("base64"),
-      emptyString: ""
+      emptyString: "",
+      nullValue: null
     }
   };
 
@@ -269,6 +270,21 @@ describe("Query Interpreter", () => {
         originalQuery:
           "guidLegacy ne guid'22222222-2222-2222-2222-222222222222'",
         expectedResult: true
+      },
+      {
+        name: "GUID compare against missing property",
+        originalQuery: "missingProperty eq guid'00000000-0000-0000-0000-000000000000'",
+        expectedResult: false
+      },
+      {
+        name: " GUID compare against null property",
+        originalQuery: "nullValue eq guid'00000000-0000-0000-0000-000000000000'",
+        expectedResult: false
+      },
+      {
+        name: "GUID compare against empty string",
+        originalQuery: "emptyString eq guid'00000000-0000-0000-0000-000000000000'",
+        expectedResult: false
       }
     ])
 
@@ -392,6 +408,21 @@ describe("Query Interpreter", () => {
         name: "DateTime less than or equal (microseconds) (doesn't match)",
         originalQuery: "microsecondDate le datetime'2022-12-31T23:59:59.999999Z'",
         expectedResult: false
+      },
+      {
+        name: "DateTime compare against null value",
+        originalQuery: "nullValue eq datetime'2020-01-01T00:00:00.000000Z'",
+        expectedResult: false
+      },
+      {
+        name: "DateTime compare against empty string",
+        originalQuery: "emptyString eq datetime'2020-01-01T00:00:00.000000Z'",
+        expectedResult: false
+      },
+      {
+        name: "DateTime compare against missing property",
+        originalQuery: "missingProperty eq datetime'2020-01-01T00:00:00.000000Z'",
+        expectedResult: false
       }
     ])
   })
@@ -419,5 +450,23 @@ describe("Query Interpreter", () => {
         expectedResult: false
       }
     ]);
+
+    describe("Issue #2169: Querying null/missing properties with type annotations", () => {
+      // NOTE(notheotherben): This generates a dynamic set of test to validate that all of our query operators return `false` for
+      //                      comparisons between values of the given type and the list of appropriate properties (null/missing/empty values).
+      const testCases: { [key: string]: string[] } = {
+        "datetime'2023-01-01T00:00:00.000000Z'": ["nullValue", "missingProperty", "emptyString"],
+        "binary'000000000000'": ["nullValue", "missingProperty"],
+        "guid'00000000-0000-0000-0000-000000000000'": ["nullValue", "missingProperty", "emptyString"],
+      };
+
+      for (const referenceValue of Object.keys(testCases)) {
+        runTestCases(referenceValue, referenceEntity, Array.prototype.concat.apply([], ["eq", "ne", "lt", "le", "gt", "ge"].map((operator) => testCases[referenceValue].map(property => ({
+          name: `Should not match ${property} with ${operator}`,
+          originalQuery: `${property} ${operator} ${referenceValue}`,
+          expectedResult: false
+        })))));
+      }
+    });
   });
 });

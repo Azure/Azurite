@@ -807,5 +807,16 @@ export default class StorageErrorFactory {
       "The tags specified are invalid. It contains characters that are not permitted.",
       contextID
     );
+  }  
+
+  public static getInvaidXmlDocument(
+    contextID: string = ""
+  ): StorageError {
+    return new StorageError(
+      400,
+      "InvaidXmlDocument",
+      `XML specified is not syntactically valid.`,
+      contextID
+    );
   }
 }

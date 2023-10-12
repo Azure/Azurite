@@ -134,6 +134,7 @@ export default class BlockBlobHandler
           HeaderValue: `${options.tier}`
         });
       }
+      blob.properties.accessTierInferred = false;
     }
     // TODO: Need a lock for multi keys including containerName and blobName
     // TODO: Provide a specified function.
@@ -297,7 +298,14 @@ export default class BlockBlobHandler
     if (rawBody === undefined) {
       throw badRequestError;
     }
-    const parsed = await parseXML(rawBody, true);
+
+    let parsed;
+    try {
+      parsed = await parseXML(rawBody, true);
+    } catch (err) {
+      // return the 400(InvalidXmlDocument) error for issue 1955
+      throw StorageErrorFactory.getInvaidXmlDocument(context.contextId);
+    }
 
     // Validate selected block list
     const commitBlockList = [];
