@@ -3,12 +3,14 @@
 // using the SDKs, can be used as a test rig for repros which provide a debug log.
 // later we can automate the parsing of repro logs to automatically play these into the tester
 // special care is needed to replace etags and folders when used
-
+import * as Azure from "azure-storage";
 import * as assert from "assert";
 import { configLogger } from "../../../src/common/Logger";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
-import { getUniqueName } from "../../testutils";
+import {   EMULATOR_ACCOUNT_KEY,
+  EMULATOR_ACCOUNT_NAME,
+  getUniqueName } from "../../testutils";
 import {
   deleteToAzurite,
   getToAzurite,
@@ -449,9 +451,21 @@ describe("table name validation tests", () => {
           Accept: "application/json;odata=nometadata"
         };
         
-          let response = await postToAzuriteProductionUrl(productionStyleHostName,"Tables", body, createTableHeaders);
-          assert.strictEqual(response.status, 201);
-          await getToAzuriteProductionUrl(productionStyleHostNameForSecondary, "Tables", createTableHeaders);
+        let response = await postToAzuriteProductionUrl(productionStyleHostName,"Tables", body, createTableHeaders);
+        assert.strictEqual(response.status, 201);
+        const PROTOCOL = "http";
+        const HOST = "devstoreaccount1-secondary.table.localhost";
+        const PORT = 11002;
+        const secondaryConnectionString = `DefaultEndpointsProtocol=${PROTOCOL};AccountName=${EMULATOR_ACCOUNT_NAME};` +
+                                          `AccountKey=${EMULATOR_ACCOUNT_KEY};TableEndpoint=${PROTOCOL}://${HOST}:${PORT}/;`;
+        const tableService = Azure.createTableService(secondaryConnectionString);
+        tableService.enableGlobalHttpAgent = true;
+        tableService.getServiceProperties((error, result, getResponse) => {
+          if (error) {
+            assert.fail();
+          }
+          assert.ok(getResponse.isSuccessful);
+        });
       },
       () => {
         // Cannot perform this test. We need devstoreaccount1-secondary.blob.localhost to resolve to 127.0.0.1.
