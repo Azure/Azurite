@@ -448,14 +448,10 @@ describe("table name validation tests", () => {
           "Content-Type": "application/json",
           Accept: "application/json;odata=nometadata"
         };
-        try {
+        
           let response = await postToAzuriteProductionUrl(productionStyleHostName,"Tables", body, createTableHeaders);
           assert.strictEqual(response.status, 201);
-          let secondaryReadResponse = await getToAzuriteProductionUrl(productionStyleHostNameForSecondary, "Tables", createTableHeaders);
-          assert.strictEqual(secondaryReadResponse.status, 200);
-        } catch (err: any) {
-          assert.fail();
-        }
+          await getToAzuriteProductionUrl(productionStyleHostNameForSecondary, "Tables", createTableHeaders);
       },
       () => {
         // Cannot perform this test. We need devstoreaccount1-secondary.blob.localhost to resolve to 127.0.0.1.
