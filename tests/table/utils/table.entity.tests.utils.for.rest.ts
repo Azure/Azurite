@@ -103,7 +103,7 @@ export function getCanonicalizedResourceString(
 
   // For secondary account, we use account name (without "-secondary") for the path
   if (authenticationPath !== undefined) {
-    path = authenticationPath;
+    path = getPath(authenticationPath);
   }
 
   let canonicalizedResourceString: string = "";
@@ -143,5 +143,8 @@ export function getCanonicalizedResourceString(
  * @returns {string}
  */
 function getPath(url: string): string {
+  if (url.indexOf("-secondary") !== -1){
+    return url.replace('-secondary', '');
+  }
   return url;
 }
