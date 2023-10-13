@@ -96,7 +96,7 @@ describe("AppendBlobHandler", () => {
   ).thenResolve(extent);
 
   describe("create", () => {
-    it("accepts requests withContent-Length == 0 @loki", async () => {
+    it("accepts requests withContent-Length == 0 @loki @sql", async () => {
       const handler = new AppendBlobHandler(
         instance(metadataStore),
         instance(extentStore),
@@ -108,7 +108,7 @@ describe("AppendBlobHandler", () => {
       });
     });
 
-    it("accepts requests with Content-Length != 0 in loose mode @loki", async () => {
+    it("accepts requests with Content-Length != 0 in loose mode @loki @sql", async () => {
       const handler = new AppendBlobHandler(
         instance(metadataStore),
         instance(extentStore),
@@ -120,7 +120,7 @@ describe("AppendBlobHandler", () => {
       });
     });
 
-    it("rejects requests with Content-Length != 0 @loki", async () => {
+    it("rejects requests with Content-Length != 0 @loki @sql", async () => {
       const handler = new AppendBlobHandler(
         instance(metadataStore),
         instance(extentStore),
@@ -146,7 +146,7 @@ describe("AppendBlobHandler", () => {
       bufferStream.end(buffer);
     });
 
-    it("accepts requests with Content-Length != 0 @loki", async () => {
+    it("accepts requests with Content-Length != 0 @loki @sql", async () => {
       const handler = new AppendBlobHandler(
         instance(metadataStore),
         instance(extentStore),
@@ -158,7 +158,7 @@ describe("AppendBlobHandler", () => {
       });
     });
 
-    it("rejects requests with Content-Length == 0 @loki", async () => {
+    it("rejects requests with Content-Length == 0 @loki @sql", async () => {
       const handler = new AppendBlobHandler(
         instance(metadataStore),
         instance(extentStore),
@@ -176,7 +176,7 @@ describe("AppendBlobHandler", () => {
       );
     });
 
-    it("accepts requests with valid MD5 checksum @loki", async () => {
+    it("accepts requests with valid MD5 checksum @loki @sql", async () => {
       when(request.getHeader(HeaderConstants.CONTENT_MD5)).thenReturn(
         "T0EkOEfaaTpPNWwEhhFLxg=="
       );
@@ -195,7 +195,7 @@ describe("AppendBlobHandler", () => {
       });
     });
 
-    it("rejects requests with invalid MD5 checksum @loki", async () => {
+    it("rejects requests with invalid MD5 checksum @loki @sql", async () => {
       when(request.getHeader(HeaderConstants.CONTENT_MD5)).thenReturn(
         "d3JvbmdfTUQ1X2NoZWNrc3VtCg=="
       );
