@@ -66,14 +66,17 @@ export default class SqlBlobServer extends ServerBase {
 
     const metadataStore: IBlobMetadataStore = new SqlBlobMetadataStore(
       configuration.sqlURL,
-      configuration.sequelizeOptions
+      configuration.sequelizeOptions,
+      configuration.clearDB,
+      configuration.softDelete
     );
 
     const extentMetadataStore: IExtentMetadataStore = new SqlExtentMetadataStore(
       // Currently, extent metadata and blob metadata share same database
       // But they can use separate databases per future requirements
       configuration.sqlURL,
-      configuration.sequelizeOptions
+      configuration.sequelizeOptions,
+      configuration.clearDB
     );
 
     const extentStore: IExtentStore = new FSExtentStore(

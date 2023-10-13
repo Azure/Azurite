@@ -43,7 +43,8 @@ export default class BlobTestServerFactory {
         cert,
         key,
         undefined,
-        oauth
+        oauth,
+        true
       );
 
       return new SqlBlobServer(config);
@@ -65,7 +66,8 @@ export default class BlobTestServerFactory {
         cert,
         key,
         undefined,
-        oauth
+        oauth,
+        true
       );
       return new BlobServer(config);
     }

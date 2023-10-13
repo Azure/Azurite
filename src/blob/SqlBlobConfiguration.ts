@@ -35,7 +35,9 @@ export default class SqlBlobConfiguration extends ConfigurationBase {
     key: string = "",
     pwd: string = "",
     oauth?: string,
-    disableProductStyleUrl: boolean = false
+    disableProductStyleUrl: boolean = false,
+    clearDB: boolean = false,
+    softDelete: boolean = true
   ) {
     super(
       host,
@@ -50,7 +52,9 @@ export default class SqlBlobConfiguration extends ConfigurationBase {
       key,
       pwd,
       oauth,
-      disableProductStyleUrl
+      disableProductStyleUrl,
+      clearDB,
+      softDelete
     );
   }
 }
