@@ -57,7 +57,7 @@ export async function postToAzuriteProductionUrl(
   const url = `${TableEntityTestConfig.protocol}://${
     hostName
   }:${TableEntityTestConfig.port}/${path}/?${generateSas()}`;
-  const requestConfig = axiosRequestConfig(url, path, headers);
+  const requestConfig = axiosRequestConfig(url, path, headers, true);
   const result = await axios.post(url, body, requestConfig);
   return result;
 }
@@ -103,7 +103,7 @@ export async function getToAzuriteProductionUrl(
     queryString = "";
   }
   const url = `${TableEntityTestConfig.protocol}://${hostName}:${TableEntityTestConfig.port}/${path}${queryString}`;
-  const requestConfig = axiosRequestConfig(url, path, headers);
+  const requestConfig = axiosRequestConfig(url, path, headers, true);
   const result = await axios.get(url, requestConfig);
   return result;
 }

@@ -20,9 +20,10 @@ const key1 = Buffer.from(TableEntityTestConfig.sharedKey, "base64");
 export function axiosRequestConfig(
   url: string,
   path: string,
-  headersIn: any
+  headersIn: any,
+  productionStyle: boolean = false
 ): any {
-  const stringToSign = createStringToSignForSharedKeyLite(url, path, headersIn);
+  const stringToSign = createStringToSignForSharedKeyLite(url, path, headersIn, productionStyle);
   const signature1 = computeHMACSHA256(stringToSign, key1);
   const authValue = `SharedKeyLite ${TableEntityTestConfig.accountName}:${signature1}`;
   const headers = Object.assign(headersIn, { Authorization: authValue });
@@ -44,7 +45,8 @@ export function axiosRequestConfig(
 export function createStringToSignForSharedKeyLite(
   url: string,
   path: string,
-  headers: any
+  headers: any,
+  productionStyle: boolean
 ): string {
   const stringToSign: string =
     [
@@ -55,7 +57,7 @@ export function createStringToSignForSharedKeyLite(
     getCanonicalizedResourceString(
       url,
       TableEntityTestConfig.accountName,
-      `/${path.replace(/'/g, "%27")}`
+      productionStyle ? `/${path.replace(/'/g, "%27")}`: `/${TableEntityTestConfig.accountName}/${path.replace(/'/g, "%27")}`
     );
 
   return stringToSign;
@@ -105,10 +107,9 @@ export function getCanonicalizedResourceString(
   if (authenticationPath !== undefined) {
     path = getPath(authenticationPath);
   }
-  console.log("GetCanonicalizedResourceString: " + path);
+
   let canonicalizedResourceString: string = "";
   canonicalizedResourceString += `/${account}${path}`;
-
   const queries = getURLQueries(url);
   const lowercaseQueries: { [key: string]: string } = {};
   if (queries) {
