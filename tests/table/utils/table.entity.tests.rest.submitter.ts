@@ -88,6 +88,7 @@ export async function getToAzurite(
  * Submits GET request to Azurite table service on the path given
  *
  * @export
+ * @param {string} hostName
  * @param {string} path
  * @param {*} headers
  * @return {Promise<string>}

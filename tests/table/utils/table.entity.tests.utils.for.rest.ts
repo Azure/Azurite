@@ -55,7 +55,7 @@ export function createStringToSignForSharedKeyLite(
     getCanonicalizedResourceString(
       url,
       TableEntityTestConfig.accountName,
-      `/${TableEntityTestConfig.accountName}/${path.replace(/'/g, "%27")}`
+      `/${path.replace(/'/g, "%27")}`
     );
 
   return stringToSign;
@@ -105,7 +105,7 @@ export function getCanonicalizedResourceString(
   if (authenticationPath !== undefined) {
     path = getPath(authenticationPath);
   }
-
+  console.log("GetCanonicalizedResourceString: " + path);
   let canonicalizedResourceString: string = "";
   canonicalizedResourceString += `/${account}${path}`;
 
