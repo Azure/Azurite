@@ -1894,7 +1894,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const sourceBlob = sourceContainerClient.getBlockBlobClient(blobName);
     await sourceBlob.upload("hello", 5);
-    sourceBlob.setAccessTier("Archive");
+    await sourceBlob.setAccessTier("Archive");
 
     const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
 
