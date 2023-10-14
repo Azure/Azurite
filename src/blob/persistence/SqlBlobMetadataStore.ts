@@ -1698,8 +1698,6 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
       }
 
-      // TODO: Return blobCommittedBlockCount for append blob
-
       let responds =  LeaseFactory.createLeaseState(
         new BlobLeaseAdapter(blobModel),
         context
@@ -1711,6 +1709,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         properties : {
           ...responds.properties,
           tagCount: getBlobTagsCount(blobModel.blobTags),
+          blobCommittedBlockCount:
+            responds.properties.blobType === Models.BlobType.AppendBlob
+              ? (responds.committedBlocksInOrder || []).length
+              : undefined
         },
       }
     });
