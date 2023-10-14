@@ -417,7 +417,6 @@ describe("table name validation tests", () => {
           let response = await postToAzuriteProductionUrl(productionStyleHostName,"Tables", body, createTableHeaders);
           assert.strictEqual(response.status, 201);
         } catch (err: any) {
-          console.log(err);
           assert.fail();
         }
       },

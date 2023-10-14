@@ -15,6 +15,7 @@ const key1 = Buffer.from(TableEntityTestConfig.sharedKey, "base64");
  * @param {string} url
  * @param {string} path
  * @param {*} headers
+ * @param {boolean} productionStyle
  * @return {*}  axios request options
  */
 export function axiosRequestConfig(
@@ -40,6 +41,7 @@ export function axiosRequestConfig(
  * @param {string} url
  * @param {string} path
  * @param {any} headers
+ * @param {boolean} productionStyle
  * @returns {string}
  */
 export function createStringToSignForSharedKeyLite(
