@@ -20,7 +20,7 @@ import {
 import { convertDateTimeStringMsTo7Digital } from "../../common/utils/utils";
 import { newEtag } from "../../common/utils/utils";
 import { validateReadConditions } from "../conditions/ReadConditionalHeadersValidator";
-import { validateWriteConditions } from "../conditions/WriteConditionalHeadersValidator";
+import { validateSequenceNumberWriteConditions, validateWriteConditions } from "../conditions/WriteConditionalHeadersValidator";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
@@ -68,6 +68,7 @@ import IBlobMetadataStore, {
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
+import PageBlobRangesManager from "../handlers/PageBlobRangesManager";
 import { getBlobTagsCount, getTagsFromString } from "../utils/utils";
 
 // tslint:disable: max-classes-per-file
@@ -89,6 +90,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   private initialized: boolean = false;
   private closed: boolean = false;
   private readonly sequelize: Sequelize;
+  private readonly pageBlobRangesManager = new PageBlobRangesManager();
 
   /**
    * Creates an instance of SqlBlobMetadataStore.
@@ -2916,16 +2918,62 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
-  public uploadPages(
+  public async uploadPages(
     context: Context,
     blob: BlobModel,
     start: number,
     end: number,
     persistency: IExtentChunk,
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    sequenceNumberAccessConditions?: Models.SequenceNumberAccessConditions
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    return await this.sequelize.transaction(async (t) => {
+      const doc = await this.getBlobWithLeaseUpdated(
+        blob.accountName,
+        blob.containerName,
+        blob.name,
+        blob.snapshot,
+        context!,
+        false,
+        true,
+        t
+      );
+
+      validateWriteConditions(context, modifiedAccessConditions, doc);
+
+      validateSequenceNumberWriteConditions(
+        context,
+        sequenceNumberAccessConditions,
+        doc
+      );
+
+      if (!doc) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
+
+      if (doc.properties.blobType !== Models.BlobType.PageBlob) {
+        throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId);
+      }
+
+      const lease = new BlobLeaseAdapter(doc);
+      new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
+
+      this.pageBlobRangesManager.mergeRange(doc.pageRangesInOrder || [], {
+        start,
+        end,
+        persistency
+      });
+
+      // set lease state to available if it's expired
+      new BlobWriteLeaseSyncer(doc).sync(lease);
+
+      doc.properties.etag = newEtag();
+      doc.properties.lastModified = context.startTime || new Date();
+
+      await BlobsModel.upsert(this.convertBlobModelToDbModel(doc), { transaction: t });
+      return doc.properties;
+    });
   }
 
   public clearRange(
