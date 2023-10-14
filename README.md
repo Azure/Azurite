@@ -488,8 +488,6 @@ This feature is in preview, when Azurite changes database table schema, you need
 
 > Note. Need to manually create database before starting Azurite instance.
 
-> Note. Blob Copy & Page Blob are not supported by SQL based metadata implementation.
-
 > Tips. Create database instance quickly with docker, for example `docker run --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql:latest`. Grant external access and create database `azurite_blob` using `docker exec mysql mysql -u root -pmy-secret-pw -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES; create database azurite_blob;"`. Notice that, above commands are examples, you need to carefully define the access permissions in your production environment.
 
 ## HTTPS Setup

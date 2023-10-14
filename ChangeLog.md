@@ -12,6 +12,7 @@ Blob:
 - Fixed startCopyFromURL, copyFromURL API to return 400 (InvalidHeaderValue) when copy source has invalid format. (issue #1954)
 - Fixed CommitBlockList API to return 400 (InvalidXmlDocument) when the request is sent with JSON body. (issue #1955)
 - Added "x-ms-is-hns-enabled" header in x-ms-is-hns-enabled API responds (issue #1810)
+- Blob Copy & Page Blob are now supported by SQL based metadata implementation. This making the SQL based metadata implementation in sync with File based one. (issue #2224)
 
 Queue:
 
