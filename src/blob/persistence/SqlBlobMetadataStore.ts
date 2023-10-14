@@ -2632,14 +2632,190 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
-  public copyFromURL(
+  public async copyFromURL(
     context: Context,
     source: BlobId,
     destination: BlobId,
     copySource: string,
-    metadata: Models.BlobMetadata | undefined
+    metadata: Models.BlobMetadata | undefined,
+    tier: Models.AccessTier | undefined,
+    options: Models.BlobCopyFromURLOptionalParams = {}
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    return await this.sequelize.transaction(async (t) => {
+      const sourceBlob = await this.getBlobWithLeaseUpdated(
+        source.account,
+        source.container,
+        source.blob,
+        source.snapshot,
+        context,
+        true,
+        true
+      );
+
+      options.sourceModifiedAccessConditions =
+        options.sourceModifiedAccessConditions || {};
+      validateReadConditions(
+        context,
+        {
+          ifModifiedSince:
+            options.sourceModifiedAccessConditions.sourceIfModifiedSince,
+          ifUnmodifiedSince:
+            options.sourceModifiedAccessConditions.sourceIfUnmodifiedSince,
+          ifMatch: options.sourceModifiedAccessConditions.sourceIfMatch,
+          ifNoneMatch: options.sourceModifiedAccessConditions.sourceIfNoneMatch
+        },
+        sourceBlob
+      );
+
+      const destBlob = await this.getBlobWithLeaseUpdated(
+        destination.account,
+        destination.container,
+        destination.blob,
+        undefined,
+        context,
+        false
+      );
+
+      validateWriteConditions(
+        context,
+        options.modifiedAccessConditions,
+        destBlob
+      );
+
+      // Copy if not exists
+      if (
+        options.modifiedAccessConditions &&
+        options.modifiedAccessConditions.ifNoneMatch === "*" &&
+        destBlob
+      ) {
+        throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+      }
+
+      if (destBlob) {
+        const lease = new BlobLeaseAdapter(destBlob);
+        new BlobWriteLeaseSyncer(destBlob).sync(lease);
+        new BlobWriteLeaseValidator(options.leaseAccessConditions).validate(
+          lease,
+          context
+        );
+      }
+
+      // If source is uncommitted or deleted
+      if (
+        sourceBlob === undefined ||
+        sourceBlob.deleted ||
+        !sourceBlob.isCommitted
+      ) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
+
+      if (sourceBlob.properties.accessTier === Models.AccessTier.Archive) {
+        throw StorageErrorFactory.getBlobArchived(context.contextId);
+      }
+
+      await this.checkContainerExist(
+        context,
+        destination.account,
+        destination.container
+      );
+
+      // Deep clone a copied blob
+      const copiedBlob: BlobModel = {
+        name: destination.blob,
+        deleted: false,
+        snapshot: "",
+        properties: {
+          ...sourceBlob.properties,
+          creationTime: context.startTime!,
+          lastModified: context.startTime!,
+          etag: newEtag(),
+          leaseStatus:
+            destBlob !== undefined
+              ? destBlob.properties.leaseStatus
+              : Models.LeaseStatusType.Unlocked,
+          leaseState:
+            destBlob !== undefined
+              ? destBlob.properties.leaseState
+              : Models.LeaseStateType.Available,
+          leaseDuration:
+            destBlob !== undefined
+              ? destBlob.properties.leaseDuration
+              : undefined,
+          copyId: uuid(),
+          copyStatus: Models.CopyStatusType.Success,
+          copySource,
+          copyProgress: sourceBlob.properties.contentLength
+            ? `${sourceBlob.properties.contentLength}/${sourceBlob.properties.contentLength}`
+            : undefined,
+          copyCompletionTime: context.startTime,
+          copyStatusDescription: undefined,
+          incrementalCopy: false,
+          destinationSnapshot: undefined,
+          deletedTime: undefined,
+          remainingRetentionDays: undefined,
+          archiveStatus: undefined,
+          accessTierChangeTime: undefined
+        },
+        metadata:
+          metadata === undefined || Object.keys(metadata).length === 0
+            ? { ...sourceBlob.metadata }
+            : metadata,
+        accountName: destination.account,
+        containerName: destination.container,
+        pageRangesInOrder: sourceBlob.pageRangesInOrder,
+        isCommitted: sourceBlob.isCommitted,
+        leaseDurationSeconds:
+          destBlob !== undefined ? destBlob.leaseDurationSeconds : undefined,
+        leaseId: destBlob !== undefined ? destBlob.leaseId : undefined,
+        leaseExpireTime:
+          destBlob !== undefined ? destBlob.leaseExpireTime : undefined,
+        leaseBreakTime:
+          destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
+        committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
+        persistency: sourceBlob.persistency,
+        blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!)
+      };
+
+      if (
+        copiedBlob.properties.blobType === Models.BlobType.BlockBlob &&
+        tier !== undefined
+      ) {
+        copiedBlob.properties.accessTier = this.parseTier(tier);
+        if (copiedBlob.properties.accessTier === undefined) {
+          throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+            HeaderName: "x-ms-access-tier",
+            HeaderValue: `${tier}`
+          });
+        }
+      }
+
+      if (
+        copiedBlob.properties.blobType === Models.BlobType.PageBlob &&
+        tier !== undefined
+      ) {
+        throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+          HeaderName: "x-ms-access-tier",
+          HeaderValue: `${tier}`
+        });
+      }
+
+      if (destBlob) {
+        await BlobsModel.destroy({
+          where: {
+            accountName: destBlob.accountName,
+            containerName: destBlob.containerName,
+            blobName: destBlob.name
+          },
+          transaction: t
+        });
+      }
+
+      await BlobsModel.upsert(this.convertBlobModelToDbModel(copiedBlob), {
+        transaction: t
+      });
+
+      return copiedBlob.properties;
+    });
   }
 
   public async setTier(
