@@ -37,7 +37,8 @@ import { ILease } from "../lease/ILeaseState";
 import LeaseFactory from "../lease/LeaseFactory";
 import {
   DEFAULT_LIST_BLOBS_MAX_RESULTS,
-  DEFAULT_LIST_CONTAINERS_MAX_RESULTS
+  DEFAULT_LIST_CONTAINERS_MAX_RESULTS,
+  MAX_APPEND_BLOB_BLOCK_COUNT
 } from "../utils/constants";
 import BlobReferredExtentsAsyncIterator from "./BlobReferredExtentsAsyncIterator";
 import IBlobMetadataStore, {
@@ -2973,7 +2974,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     throw new Error("Method not implemented.");
   }
 
-  public appendBlock(
+  public async appendBlock(
     context: Context,
     block: BlockModel,
     leaseAccessConditions?: Models.LeaseAccessConditions | undefined,
@@ -2982,7 +2983,78 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       | Models.AppendPositionAccessConditions
       | undefined
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    return await this.sequelize.transaction(async (t) => {
+      const doc = await this.getBlobWithLeaseUpdated(
+        block.accountName,
+        block.containerName,
+        block.blobName,
+        undefined,
+        context,
+        false,
+        true
+      );
+
+      validateWriteConditions(context, modifiedAccessConditions, doc);
+
+      if (!doc) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
+
+      new BlobWriteLeaseValidator(leaseAccessConditions).validate(
+        new BlobLeaseAdapter(doc),
+        context
+      );
+
+      if (doc.properties.blobType !== Models.BlobType.AppendBlob) {
+        throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId);
+      }
+
+      if (
+        (doc.committedBlocksInOrder || []).length >= MAX_APPEND_BLOB_BLOCK_COUNT
+      ) {
+        throw StorageErrorFactory.getBlockCountExceedsLimit(context.contextId);
+      }
+
+      if (
+        appendPositionAccessConditions !== undefined &&
+        appendPositionAccessConditions.appendPosition !== undefined
+      ) {
+        if (
+          (doc.properties.contentLength || 0) !==
+          appendPositionAccessConditions.appendPosition
+        ) {
+          throw StorageErrorFactory.getAppendPositionConditionNotMet(
+            context.contextId
+          );
+        }
+      }
+
+      if (
+        appendPositionAccessConditions !== undefined &&
+        appendPositionAccessConditions.maxSize !== undefined
+      ) {
+        if (
+          (doc.properties.contentLength || 0) + block.size >
+          appendPositionAccessConditions.maxSize
+        ) {
+          throw StorageErrorFactory.getMaxBlobSizeConditionNotMet(
+            context.contextId
+          );
+        }
+      }
+
+      doc.committedBlocksInOrder = doc.committedBlocksInOrder || [];
+      doc.committedBlocksInOrder.push(block);
+      doc.properties.etag = newEtag();
+      doc.properties.lastModified = context.startTime || new Date();
+      doc.properties.contentLength =
+        (doc.properties.contentLength || 0) + block.size;
+
+      await BlobsModel.upsert(this.convertBlobModelToDbModel(doc), {
+        transaction: t
+      });
+      return doc.properties;
+    });
   }
 
   public async listUncommittedBlockPersistencyChunks(
