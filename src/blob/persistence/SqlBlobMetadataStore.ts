@@ -3029,7 +3029,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
-  public getPageRanges(
+  public async getPageRanges(
     context: Context,
     account: string,
     container: string,
@@ -3038,7 +3038,35 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<GetPageRangeResponse> {
-    throw new Error("Method not implemented.");
+    const doc = await this.getBlobWithLeaseUpdated(
+      account,
+      container,
+      blob,
+      snapshot,
+      context,
+      false,
+      true
+    );
+  
+    validateReadConditions(context, modifiedAccessConditions, doc);
+
+    if (!doc) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }
+
+    if (doc.properties.blobType !== Models.BlobType.PageBlob) {
+      throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId);
+    }
+
+    new BlobReadLeaseValidator(leaseAccessConditions).validate(
+      new BlobLeaseAdapter(doc),
+      context
+    );
+
+    return {
+      properties: doc.properties,
+      pageRangesInOrder: doc.pageRangesInOrder
+    };
   }
 
   public resizePageBlob(
