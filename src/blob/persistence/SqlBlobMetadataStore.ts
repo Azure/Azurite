@@ -2976,15 +2976,57 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
-  public clearRange(
+  public async clearRange(
     context: Context,
     blob: BlobModel,
     start: number,
     end: number,
     leaseAccessConditions?: Models.LeaseAccessConditions,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
+    sequenceNumberAccessConditions?: Models.SequenceNumberAccessConditions
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    return await this.sequelize.transaction(async (t) => {
+      const doc = await this.getBlobWithLeaseUpdated(
+        blob.accountName,
+        blob.containerName,
+        blob.name,
+        blob.snapshot,
+        context!,
+        false,
+        true,
+        t
+      );
+  
+      validateWriteConditions(context, modifiedAccessConditions, doc);
+  
+      validateSequenceNumberWriteConditions(
+        context,
+        sequenceNumberAccessConditions,
+        doc
+      );
+  
+      if (!doc) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
+  
+      const lease = new BlobLeaseAdapter(doc);
+      new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
+  
+      this.pageBlobRangesManager.clearRange(doc.pageRangesInOrder || [], {
+        start,
+        end
+      });
+  
+      // TODO: Check other blob update operations need lease reset or not
+      // set lease state to available if it's expired
+      new BlobWriteLeaseSyncer(doc).sync(lease);
+  
+      doc.properties.etag = newEtag();
+      doc.properties.lastModified = context.startTime || new Date();
+
+      await BlobsModel.upsert(this.convertBlobModelToDbModel(doc), { transaction: t });
+      return doc.properties;
+    });
   }
 
   public getPageRanges(
