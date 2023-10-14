@@ -3069,7 +3069,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     };
   }
 
-  public resizePageBlob(
+  public async resizePageBlob(
     context: Context,
     account: string,
     container: string,
@@ -3078,7 +3078,53 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    return await this.sequelize.transaction(async (t) => {
+      const doc = await this.getBlobWithLeaseUpdated(
+        account,
+        container,
+        blob,
+        undefined,
+        context,
+        false,
+        true,
+        t
+      );
+
+      validateWriteConditions(context, modifiedAccessConditions, doc);
+
+      if (!doc) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
+
+      if (doc.properties.blobType !== Models.BlobType.PageBlob) {
+        throw StorageErrorFactory.getInvalidOperation(
+          context.contextId,
+          "Resize could only be against a page blob."
+        );
+      }
+
+      const lease = new BlobLeaseAdapter(doc);
+      new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
+
+      doc.pageRangesInOrder = doc.pageRangesInOrder || [];
+      if (doc.properties.contentLength! > blobContentLength) {
+        const start = blobContentLength;
+        const end = doc.properties.contentLength! - 1;
+        this.pageBlobRangesManager.clearRange(doc.pageRangesInOrder || [], {
+          start,
+          end
+        });
+      }
+
+      doc.properties.contentLength = blobContentLength;
+      doc.properties.lastModified = context.startTime || new Date();
+      doc.properties.etag = newEtag();
+
+      new BlobWriteLeaseSyncer(doc).sync(lease);
+
+      await BlobsModel.upsert(this.convertBlobModelToDbModel(doc), { transaction: t });
+      return doc.properties;
+    });
   }
 
   public updateSequenceNumber(
