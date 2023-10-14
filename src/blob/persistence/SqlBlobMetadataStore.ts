@@ -2522,6 +2522,15 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         destBlob
       );
 
+      // Copy if not exists
+      if (
+        options.modifiedAccessConditions &&
+        options.modifiedAccessConditions.ifNoneMatch === "*" &&
+        destBlob
+      ) {
+        throw StorageErrorFactory.getBlobAlreadyExists(context.contextId);
+      }
+
       if (destBlob) {
         new BlobWriteLeaseValidator(options.leaseAccessConditions).validate(
           new BlobLeaseAdapter(destBlob),
