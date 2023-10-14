@@ -115,7 +115,13 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await server.clean();
   });
 
-  it("generateAccountSASQueryParameters should generate correct hashes", async () => {
+  // This has multiple issues:
+  // 1. It depends on timezone need to set "TZ=Etc/GMT-1".
+  // 2. Even when setting timezone it still fails.
+  // 3. It tests storage-blob sdk rather than Azurite.
+  // 4. Ground truth sig shouldn't be hardcoded.
+  // So should be removed but skipping for now.
+  it.skip("generateAccountSASQueryParameters should generate correct hashes", async () => {
     
     const startDate = new Date(2022, 3, 16, 14, 31, 48, 0);
     const endDate = new Date(2022, 3, 17, 14, 31, 48, 0);
