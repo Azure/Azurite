@@ -11,4 +11,5 @@ export default interface IBlobEnvironment {
   debug(): Promise<string | boolean | undefined>;
   oauth(): string | undefined;
   disableProductStyleUrl(): boolean;
+  inMemoryPersistence(): boolean;
 }

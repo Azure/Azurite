@@ -20,4 +20,6 @@ export default interface ITableEnvironment {
   disableProductStyleUrl(): boolean;
   /** Optional. Enable debug log by providing a valid local file, path as log destination path as log destination */
   debug(): Promise<string | boolean | undefined>;
+  /** Optional. Disable persisting any data to disk. If the Azurite process is terminated, all data is lost */
+  inMemoryPersistence(): boolean;
 }

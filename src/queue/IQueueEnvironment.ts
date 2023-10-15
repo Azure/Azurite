@@ -10,4 +10,5 @@ export default interface IQueueEnvironment {
   key(): string | undefined;
   pwd(): string | undefined;
   debug(): Promise<string | boolean | undefined>;
+  inMemoryPersistence(): boolean;
 }

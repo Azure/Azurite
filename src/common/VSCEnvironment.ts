@@ -109,4 +109,8 @@ export default class VSCEnvironment implements IEnvironment {
       this.workspaceConfiguration.get<boolean>("disableProductStyleUrl") || false
     );
   }
+
+  public inMemoryPersistence(): boolean {
+    return this.workspaceConfiguration.get<boolean>("inMemoryPersistence") || false;
+  }
 }

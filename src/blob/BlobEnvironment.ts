@@ -118,6 +118,13 @@ export default class BlobEnvironment implements IBlobEnvironment {
     return false;
   }
 
+  public inMemoryPersistence(): boolean {
+    if (this.flags.inMemoryPersistence !== undefined) {
+      return true;
+    }
+    return false;
+  }
+
   public async debug(): Promise<string | undefined> {
     if (typeof this.flags.debug === "string") {
       // Enable debug log to file
