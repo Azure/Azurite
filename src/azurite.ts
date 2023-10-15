@@ -98,7 +98,8 @@ async function main() {
     env.key(),
     env.pwd(),
     env.oauth(),
-    env.disableProductStyleUrl()
+    env.disableProductStyleUrl(),
+    env.inMemoryPersistence(),
   );
 
   const tableConfig = new TableConfiguration(
@@ -115,7 +116,8 @@ async function main() {
     env.key(),
     env.pwd(),
     env.oauth(),
-    env.disableProductStyleUrl()
+    env.disableProductStyleUrl(),
+    env.inMemoryPersistence(),
   );
 
   // We use logger singleton as global debugger logger to track detailed outputs cross layers
