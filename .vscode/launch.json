@@ -20,6 +20,19 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "Azurite Service - Loki, in-memory",
+      "cwd": "${workspaceFolder}",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "args": ["${workspaceFolder}/src/azurite.ts", "-d", "debug.log", "--inMemoryPersistence"],
+      "env": {
+        "AZURITE_ACCOUNTS": ""
+      },
+      "skipFiles": ["node_modules/*/**", "<node_internals>/*/**"],
+      "outputCapture": "std"
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "Azurite Service - Loki, Loose",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],

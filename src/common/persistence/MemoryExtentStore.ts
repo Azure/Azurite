@@ -4,7 +4,7 @@ import ZeroBytesStream from "../ZeroBytesStream";
 import IExtentMetadataStore, { IExtentModel } from "./IExtentMetadataStore";
 import IExtentStore, { IExtentChunk } from "./IExtentStore";
 import uuid = require("uuid");
-import MemoryStream from 'memorystream'
+import { ReadableStreamBuffer } from 'stream-buffers'
 import multistream = require("multistream");
 
 export interface IMemoryExtentChunk extends IExtentChunk {
@@ -110,7 +110,11 @@ export default class MemoryExtentStore implements IExtentStore {
       throw new Error(`Extend ${extentChunk.id} does not exist.`);
     }
 
-    return new MemoryStream(match.chunks);
+    const buffer = new ReadableStreamBuffer();
+    match.chunks.forEach(chunk => buffer.put(chunk))
+    buffer.stop();
+
+    return buffer;
   }
 
   async readExtents(extentChunkArray: IExtentChunk[], offset: number, count: number, contextId?: string | undefined): Promise<NodeJS.ReadableStream> {

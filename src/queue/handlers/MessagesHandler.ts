@@ -116,7 +116,6 @@ export default class MessagesHandler extends BaseHandler
       statusCode: 200;
     };
 
-    // Read the message text from file system.
     for (const message of messages) {
       const textStream = await this.extentStore.readExtent(
         message.persistency,
