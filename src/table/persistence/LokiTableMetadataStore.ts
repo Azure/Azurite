@@ -32,8 +32,11 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   private transactionRollbackTheseEntities: Entity[] = []; // can maybe use Entity instead of any
   private transactionDeleteTheseEntities: Entity[] = []; // can maybe use Entity instead of any
 
-  public constructor(public readonly lokiDBPath: string) {
-    this.db = new Loki(lokiDBPath, {
+  public constructor(public readonly lokiDBPath: string, inMemory: boolean) {
+    this.db = new Loki(lokiDBPath, inMemory ? {
+      persistenceMethod: "memory"
+    } : {
+      persistenceMethod: "fs",
       autosave: true,
       autosaveInterval: 5000
     });

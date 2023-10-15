@@ -8,6 +8,7 @@ import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
 import FSExtentStore from "../common/persistence/FSExtentStore";
+import MemoryExtentStore from "../common/persistence/MemoryExtentStore";
 import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
@@ -72,15 +73,19 @@ export default class QueueServer extends ServerBase {
     // creating a new XXXDataStore class implementing IBlobDataStore interface
     // and replace the default LokiBlobDataStore
     const metadataStore: IQueueMetadataStore = new LokiQueueMetadataStore(
-      configuration.metadataDBPath
-      // logger
+      configuration.metadataDBPath,
+      configuration.isMemoryPersistence
     );
 
     const extentMetadataStore = new LokiExtentMetadataStore(
-      configuration.extentDBPath
+      configuration.extentDBPath,
+      configuration.isMemoryPersistence
     );
 
-    const extentStore: IExtentStore = new FSExtentStore(
+    const extentStore: IExtentStore = configuration.isMemoryPersistence ? new MemoryExtentStore(
+      extentMetadataStore,
+      logger
+    ) : new FSExtentStore(
       extentMetadataStore,
       configuration.persistencePathArray,
       logger

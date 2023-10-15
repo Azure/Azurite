@@ -50,7 +50,8 @@ export default class TableServer extends ServerBase {
 
     // Create **dataStore with Loki.js
     const metadataStore: ITableMetadataStore = new LokiTableMetadataStore(
-      configuration.metadataDBPath
+      configuration.metadataDBPath,
+      configuration.isMemoryPersistence
     );
     const accountDataStore: IAccountDataStore = new AccountDataStore(logger);
 

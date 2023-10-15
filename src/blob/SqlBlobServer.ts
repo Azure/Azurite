@@ -8,6 +8,7 @@ import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
 import FSExtentStore from "../common/persistence/FSExtentStore";
+import MemoryExtentStore from "../common/persistence/MemoryExtentStore";
 import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import SqlExtentMetadataStore from "../common/persistence/SqlExtentMetadataStore";
@@ -76,7 +77,10 @@ export default class SqlBlobServer extends ServerBase {
       configuration.sequelizeOptions
     );
 
-    const extentStore: IExtentStore = new FSExtentStore(
+    const extentStore: IExtentStore = configuration.isMemoryPersistence ? new MemoryExtentStore(
+      extentMetadataStore,
+      logger
+    ) : new FSExtentStore(
       extentMetadataStore,
       configuration.persistenceArray,
       logger

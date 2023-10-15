@@ -50,8 +50,11 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
   private readonly QUEUES_COLLECTION = "$QUEUES_COLLECTION$";
   private readonly MESSAGES_COLLECTION = "$MESSAGES_COLLECTION$";
 
-  public constructor(public readonly lokiDBPath: string) {
-    this.db = new Loki(lokiDBPath, {
+  public constructor(public readonly lokiDBPath: string, inMemory: boolean) {
+    this.db = new Loki(lokiDBPath, inMemory ? {
+      persistenceMethod: "memory"
+    } : {
+      persistenceMethod: "fs",
       autosave: true,
       autosaveInterval: 5000
     });
