@@ -10,7 +10,8 @@ export default class BlobTestServerFactory {
     loose: boolean = false,
     skipApiVersionCheck: boolean = false,
     https: boolean = false,
-    oauth?: string
+    oauth?: string,
+    inMemoryPersistence: boolean = false
   ): BlobServer | SqlBlobServer {
     const databaseConnectionString = process.env.AZURITE_TEST_DB;
     const isSQL = databaseConnectionString !== undefined;
@@ -43,7 +44,9 @@ export default class BlobTestServerFactory {
         cert,
         key,
         undefined,
-        oauth
+        oauth,
+        undefined,
+        inMemoryPersistence
       );
 
       return new SqlBlobServer(config);
@@ -65,7 +68,9 @@ export default class BlobTestServerFactory {
         cert,
         key,
         undefined,
-        oauth
+        oauth,
+        undefined,
+        inMemoryPersistence
       );
       return new BlobServer(config);
     }

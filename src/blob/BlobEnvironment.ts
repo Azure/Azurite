@@ -41,6 +41,10 @@ if (!(args as any).config.name) {
     .option(["", "cert"], "Optional. Path to certificate file")
     .option(["", "key"], "Optional. Path to certificate key .pem file")
     .option(
+      ["", "inMemoryPersistence"],
+      "Optional. Disable persisting any data to disk. If the Azurite process is terminated, all data is lost."
+    )
+    .option(
       ["d", "debug"],
       "Optional. Enable debug log by providing a valid local file path as log destination"
     )

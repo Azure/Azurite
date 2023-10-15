@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Add `--inMemoryStorage` option and related configs to persist all data in-memory without disk persistence. (issue #2227)
+
 Blob:
 
 - Fix validation of Blob SAS token when using the second key for an account in `AZURITE_ACCOUNTS`
