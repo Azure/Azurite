@@ -115,7 +115,13 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await server.clean();
   });
 
-  it("generateAccountSASQueryParameters should generate correct hashes", async () => {
+  // This has multiple issues:
+  // 1. It depends on timezone need to set "TZ=Etc/GMT-1".
+  // 2. Even when setting timezone it still fails.
+  // 3. It tests storage-blob sdk rather than Azurite.
+  // 4. Ground truth sig shouldn't be hardcoded.
+  // So should be removed but skipping for now.
+  it.skip("generateAccountSASQueryParameters should generate correct hashes", async () => {
     
     const startDate = new Date(2022, 3, 16, 14, 31, 48, 0);
     const endDate = new Date(2022, 3, 17, 14, 31, 48, 0);
@@ -370,7 +376,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.ok(error);
   });
 
-  it("Synchronized copy blob should work with write permission in account SAS to override an existing blob @loki", async () => {
+  it("Synchronized copy blob should work with write permission in account SAS to override an existing blob @loki @sql", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -418,7 +424,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await blob2.syncCopyFromURL(blob1.url);
   });
 
-  it("Synchronized copy blob shouldn't work without write permission in account SAS to override an existing blob @loki", async () => {
+  it("Synchronized copy blob shouldn't work without write permission in account SAS to override an existing blob @loki @sql", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -473,7 +479,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.ok(error !== undefined);
   });
 
-  it("Synchronized copy blob should work without write permission in account SAS to an nonexisting blob @loki", async () => {
+  it("Synchronized copy blob should work without write permission in account SAS to an nonexisting blob @loki @sql", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -520,7 +526,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await blob2.syncCopyFromURL(blob1.url);
   });
 
-  it("Copy blob should work with write permission in account SAS to override an existing blob @loki", async () => {
+  it("Copy blob should work with write permission in account SAS to override an existing blob @loki @sql", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -568,7 +574,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await blob2.beginCopyFromURL(blob1.url);
   });
 
-  it("Copy blob shouldn't work without write permission in account SAS to override an existing blob @loki", async () => {
+  it("Copy blob shouldn't work without write permission in account SAS to override an existing blob @loki @sql", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -623,7 +629,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.ok(error !== undefined);
   });
 
-  it("Copy blob should work without write permission in account SAS to an nonexisting blob @loki", async () => {
+  it("Copy blob should work without write permission in account SAS to an nonexisting blob @loki @sql", async () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
@@ -1255,7 +1261,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await containerClient.delete();
   });
 
-  it("Synchronized copy blob should work with write permission in blob SAS to override an existing blob @loki", async () => {
+  it("Synchronized copy blob should work with write permission in blob SAS to override an existing blob @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -1302,7 +1308,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await blob2SAS.syncCopyFromURL(blob1.url);
   });
 
-  it("Synchronized copy blob shouldn't work without write permission in blob SAS to override an existing blob @loki", async () => {
+  it("Synchronized copy blob shouldn't work without write permission in blob SAS to override an existing blob @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -1356,7 +1362,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.ok(error !== undefined);
   });
 
-  it("Synchronized copy blob should work without write permission in account SAS to an nonexisting blob @loki", async () => {
+  it("Synchronized copy blob should work without write permission in account SAS to an nonexisting blob @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 
@@ -1888,7 +1894,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
 
     const sourceBlob = sourceContainerClient.getBlockBlobClient(blobName);
     await sourceBlob.upload("hello", 5);
-    sourceBlob.setAccessTier("Archive");
+    await sourceBlob.setAccessTier("Archive");
 
     const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
 
@@ -1903,7 +1909,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.equal(error.details.code, "BlobArchived");
   });
 
-  it("Sync Copy blob across accounts should work and honor metadata when provided @loki", async () => {
+  it("Sync Copy blob across accounts should work and honor metadata when provided @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
 

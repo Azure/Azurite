@@ -563,8 +563,7 @@ describe("ContainerAPIs", () => {
     }
   });
 
-  // TODO: azure/storage-blob 12.9.0 will fail on  list uncimmited blob from container, will skip the case until this is fix in SDK or Azurite
-  it.skip("should only show uncommitted blobs in listBlobFlatSegment with uncommittedblobs option @loki @sql", async () => {
+  it("should only show uncommitted blobs in listBlobFlatSegment with uncommittedblobs option @loki @sql", async () => {
     const blobClient = containerClient.getBlobClient(
       getUniqueName("uncommittedblob")
     );
@@ -1043,7 +1042,7 @@ describe("ContainerAPIs", () => {
       await blockBlobClient.upload("", 0);
       blobClients.push(blobClient);
     }
-    blobClients[0].createSnapshot();
+    await blobClients[0].createSnapshot();
 
     // create account sas
     const storageSharedKeyCredential = new StorageSharedKeyCredential(

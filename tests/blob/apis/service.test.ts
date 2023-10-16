@@ -459,7 +459,7 @@ describe("ServiceAPIs", () => {
     );
   });
 
-  it("Get Blob service stats negative @loki", async () => {
+  it("Get Blob service stats negative @loki @sql", async () => {
     await serviceClient.getStatistics()
       .catch((err) => {
         assert.strictEqual(err.statusCode, 400);
@@ -498,7 +498,7 @@ describe("ServiceAPIs - secondary location endpoint", () => {
     await server.clean();
   });
 
-  it("Get Blob service stats @loki", async () => {
+  it("Get Blob service stats @loki @sql", async () => {
 
     await serviceClient.getStatistics()
       .then((result) => {

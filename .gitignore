@@ -16,3 +16,4 @@ azurite.exe
 .pkg-cache
 release
 querydb*.json
+.idea

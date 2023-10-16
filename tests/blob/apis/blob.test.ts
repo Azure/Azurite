@@ -840,7 +840,7 @@ describe("BlobAPIs", () => {
     }
   });
   
-  it("Upload blob with accesstier should get accessTierInferred as false @loki", async () => {
+  it("Upload blob with accesstier should get accessTierInferred as false @loki @sql", async () => {
     const blobName = getUniqueName("blob");
 
     const blobClient = containerClient.getBlockBlobClient(blobName);
@@ -896,7 +896,7 @@ describe("BlobAPIs", () => {
     );
   });
 
-  it("Copy blob should work @loki", async () => {
+  it("Copy blob should work @loki @sql", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
@@ -955,7 +955,7 @@ describe("BlobAPIs", () => {
     );
   });
 
-  it("Copy blob should work to override metadata @loki", async () => {
+  it("Copy blob should work to override metadata @loki @sql", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
@@ -979,7 +979,7 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(result.metadata, metadata2);
   });
 
-  it("Copy blob should work with source archive blob and accesstier header @loki, @sql", async () => {
+  it("Copy blob should work with source archive blob and accesstier header @loki @sql", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
@@ -1014,7 +1014,7 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(result.accessTier, "Hot");
   });
 
-  it("Copy blob should not override destination Lease status @loki", async () => {
+  it("Copy blob should not override destination Lease status @loki @sql", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
@@ -1049,7 +1049,7 @@ describe("BlobAPIs", () => {
     await destLeaseClient.releaseLease();
   });
 
-  it("Copy blob should work for page blob @loki", async () => {
+  it("Copy blob should work for page blob @loki @sql", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
@@ -1108,7 +1108,7 @@ describe("BlobAPIs", () => {
     );
   });
 
-  it("Copy blob should not work for page blob and set tier @loki", async () => {
+  it("Copy blob should not work for page blob and set tier @loki @sql", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
@@ -1146,7 +1146,7 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(err.statusCode, 400);
   });
 
-  it("Copy blob should fail with 400 when copy source is invalid @loki", async () => {
+  it("Copy blob should fail with 400 when copy source is invalid @loki @sql", async () => {
     const destBlob = getUniqueName("blob");
 
     const destBlobClient = containerClient.getBlockBlobClient(destBlob);
@@ -1163,7 +1163,7 @@ describe("BlobAPIs", () => {
     assert.fail();
   });
 
-  it("Copy blob should not work with  ifNoneMatch * when dest exist @loki", async () => {
+  it("Copy blob should not work with  ifNoneMatch * when dest exist @loki @sql", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
@@ -1234,7 +1234,7 @@ describe("BlobAPIs", () => {
     assert.fail();
   });
 
-  it("Synchronized copy blob should work @loki", async () => {
+  it("Synchronized copy blob should work @loki @sql", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
@@ -1292,7 +1292,7 @@ describe("BlobAPIs", () => {
     );
   });
 
-  it("Synchronized copy blob should work to override metadata @loki", async () => {
+  it("Synchronized copy blob should work to override metadata @loki @sql", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
@@ -1316,7 +1316,7 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(result.metadata, metadata2);
   });
 
-  it("Synchronized copy blob should not override destination Lease status @loki", async () => {
+  it("Synchronized copy blob should not override destination Lease status @loki @sql", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
@@ -1351,7 +1351,7 @@ describe("BlobAPIs", () => {
     await destLeaseClient.releaseLease();
   });
 
-  it("Synchronized copy blob should work for page blob @loki", async () => {
+  it("Synchronized copy blob should work for page blob @loki @sql", async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
@@ -1590,7 +1590,7 @@ describe("BlobAPIs", () => {
     blockBlobClient2.delete();
   });
 
-  it("set blob tag should work in create page/append blob, copyFromURL. @loki", async () => {
+  it("set blob tag should work in create page/append blob, copyFromURL. @loki @sql", async () => {
     const tags = {
       tag1: "val1",
       tag2: "val2",
