@@ -4,8 +4,8 @@ import ZeroBytesStream from "../ZeroBytesStream";
 import IExtentMetadataStore, { IExtentModel } from "./IExtentMetadataStore";
 import IExtentStore, { IExtentChunk } from "./IExtentStore";
 import uuid = require("uuid");
-import { ReadableStreamBuffer } from 'stream-buffers'
 import multistream = require("multistream");
+import { Readable } from "stream";
 
 export interface IMemoryExtentChunk extends IExtentChunk {
   chunks: (Buffer | string)[]
@@ -110,9 +110,9 @@ export default class MemoryExtentStore implements IExtentStore {
       throw new Error(`Extend ${extentChunk.id} does not exist.`);
     }
 
-    const buffer = new ReadableStreamBuffer();
-    match.chunks.forEach(chunk => buffer.put(chunk))
-    buffer.stop();
+    const buffer = new Readable()
+    match.chunks.forEach(chunk => buffer.push(chunk))
+    buffer.push(null)
 
     return buffer;
   }

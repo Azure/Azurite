@@ -35,7 +35,6 @@
     "rimraf": "^3.0.2",
     "sequelize": "^6.31.0",
     "stoppable": "^1.1.0",
-    "stream-buffers": "^3.0.2",
     "tedious": "^16.0.0",
     "to-readable-stream": "^2.1.0",
     "tslib": "^2.3.0",
@@ -65,7 +64,6 @@
     "@types/node": "^14.14.24",
     "@types/rimraf": "^3.0.0",
     "@types/stoppable": "^1.1.1",
-    "@types/stream-buffers": "^3.0.5",
     "@types/uri-templates": "^0.1.29",
     "@types/uuid": "^3.4.4",
     "@types/validator": "^13.1.4",
@@ -250,11 +248,6 @@
             "type": "boolean",
             "default": false,
             "description": "Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri."
-          },
-          "azurite.inMemoryStorage": {
-            "type": "boolean",
-            "default": false,
-            "description": "Disable persisting any data to disk. If the Azurite process is terminated, all data is lost."
           }
         }
       }
