@@ -140,7 +140,7 @@ export async function createRandomLocalFile(
     function randomValueHex(len = blockSize) {
       return randomBytes(Math.ceil(len / 2))
         .toString("hex") // convert to hexadecimal format
-        .slice(0, len); // return required number of characters
+        .slice(0, len - (len > 1 ? 1 : 0)) + (len > 1 ? "\n" : ""); // append newlines to make debugging easier
     }
 
     ws.on("open", () => {
