@@ -15,6 +15,7 @@ export default class MemoryExtentStore implements IExtentStore {
   private readonly metadataStore: IExtentMetadataStore;
   private readonly logger: ILogger;
   private readonly chunks: Map<string, IMemoryExtentChunk> = new Map<string, IMemoryExtentChunk>();
+  private totalSize: number = 0;
 
   private initialized: boolean = false;
   private closed: boolean = true;
@@ -76,7 +77,6 @@ export default class MemoryExtentStore implements IExtentStore {
         }
       }
     }
-
     const extentChunk: IMemoryExtentChunk = {
       count,
       offset: 0,
@@ -84,7 +84,18 @@ export default class MemoryExtentStore implements IExtentStore {
       chunks
     }
 
+    this.logger.info(
+      `MemoryExtentStore:appendExtent() Add chunks to in-memory map. id:${extentChunk.id} count:${count} chunks.length:${chunks.length}`,
+      contextId
+    );
+
     this.chunks.set(extentChunk.id, extentChunk);
+    this.totalSize += count
+
+    this.logger.debug(
+      `MemoryExtentStore:appendExtent() Added chunks to in-memory map. id:${extentChunk.id} `,
+      contextId
+    );
 
     const extent: IExtentModel = {
       id: extentChunk.id,
@@ -95,6 +106,11 @@ export default class MemoryExtentStore implements IExtentStore {
     };
 
     await this.metadataStore.updateExtent(extent);
+
+    this.logger.debug(
+      `MemoryExtentStore:appendExtent() Added new extent to metadata store. id:${extentChunk.id}`,
+      contextId
+    );
 
     return extentChunk
   }
@@ -109,19 +125,37 @@ export default class MemoryExtentStore implements IExtentStore {
       return new ZeroBytesStream(subRangeCount);
     }
 
+    this.logger.info(
+      `MemoryExtentStore:readExtent() Fetch chunks from in-memory map. id:${extentChunk.id}`,
+      contextId
+    );
+
     const match = this.chunks.get(extentChunk.id);
     if (!match) {
       throw new Error(`Extend ${extentChunk.id} does not exist.`);
     }
 
+    this.logger.debug(
+      `MemoryExtentStore:readExtent() Fetched chunks from in-memory map. id:${match.id} count:${match.count} chunks.length:${match.chunks.length} totalSize:${this.totalSize}`,
+      contextId
+    );
+
     const buffer = new Readable()
     let skip = extentChunk.offset;
     let take = extentChunk.count;
+    let skippedChunks = 0;
+    let partialChunks = 0;
+    let readChunks = 0;
     for (const chunk of match.chunks) {
+      if (take === 0) {
+        break
+      }
+
       if (skip > 0) {
         if (chunk.length <= skip) {
           // this chunk is entirely skipped
           skip -= chunk.length
+          skippedChunks++
         } else {
           // part of the chunk is included
           const end = skip + Math.min(take, chunk.length - skip)
@@ -129,6 +163,7 @@ export default class MemoryExtentStore implements IExtentStore {
           buffer.push(chunk.slice(skip, end))
           skip = 0
           take -= slice.length
+          partialChunks++
         }
       } else {
         if (chunk.length > take) {
@@ -136,20 +171,27 @@ export default class MemoryExtentStore implements IExtentStore {
           const slice = chunk.slice(0, take);
           buffer.push(slice)
           take -= slice.length
+          partialChunks++
         } else {
           // all of the chunk is included
           buffer.push(chunk)
           take -= chunk.length
+          readChunks++
         }
       }
     }
     buffer.push(null)
 
+    this.logger.debug(
+      `MemoryExtentStore:readExtent() Pushed in-memory chunks to Readable stream. id:${match.id} chunks:${readChunks} skipped:${skippedChunks} partial:${partialChunks}`,
+      contextId
+    );
+
     return buffer;
   }
 
   async readExtents(extentChunkArray: IExtentChunk[], offset: number, count: number, contextId?: string | undefined): Promise<NodeJS.ReadableStream> {
-    this.logger.verbose(
+    this.logger.info(
       `MemoryExtentStore:readExtents() Start read from multi extents...`,
       contextId
     );
@@ -212,8 +254,18 @@ export default class MemoryExtentStore implements IExtentStore {
   async deleteExtents(extents: Iterable<string>): Promise<number> {
     let count = 0;
     for (const id of extents) {
-      this.chunks.delete(id)
+      this.logger.info(
+        `MemoryExtentStore:deleteExtents() Delete extent:${id}`
+      );
+      const extent = this.chunks.get(id)
+      if (extent) {
+        this.chunks.delete(id)
+        this.totalSize -= extent.count
+      }
       await this.metadataStore.deleteExtent(id);
+      this.logger.debug(
+        `MemoryExtentStore:deleteExtents() Deleted extent:${id} totalSize:${this.totalSize}`
+      );
       count++;
     }
     return count;
