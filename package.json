@@ -252,7 +252,7 @@
           "azurite.inMemoryPersistence": {
             "type": "boolean",
             "default": false,
-            "description": "Disable persisting any data to disk. If the Azurite process is terminated, all data is lost."
+            "description": "Disable persisting any data to disk. All data is stored in memory. If the Azurite (node) process is terminated or VS Code is closed, all data is lost."
           }
         }
       }
