@@ -248,6 +248,11 @@
             "type": "boolean",
             "default": false,
             "description": "Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri."
+          },
+          "azurite.inMemoryPersistence": {
+            "type": "boolean",
+            "default": false,
+            "description": "Disable persisting any data to disk. If the Azurite process is terminated, all data is lost."
           }
         }
       }
