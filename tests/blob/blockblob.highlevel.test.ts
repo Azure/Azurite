@@ -306,7 +306,7 @@ describe("BlockBlobHighlevel", () => {
     const aborter = new AbortController();
     try {
       await blockBlobClient.downloadToBuffer(buf, 0, undefined, {
-        blockSize: 1 * 1024,
+        blockSize: 32 * 1024, // if too small, the test is very slow
         maxRetryRequestsPerBlock: 5,
         concurrency: 1,
         onProgress: () => {
