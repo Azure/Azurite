@@ -10,11 +10,11 @@ export default class BlobTestServerFactory {
     loose: boolean = false,
     skipApiVersionCheck: boolean = false,
     https: boolean = false,
-    oauth?: string,
-    inMemoryPersistence: boolean = false
+    oauth?: string
   ): BlobServer | SqlBlobServer {
     const databaseConnectionString = process.env.AZURITE_TEST_DB;
     const isSQL = databaseConnectionString !== undefined;
+    const inMemoryPersistence = process.env.AZURITE_TEST_INMEMORYPERSISTENCE !== undefined;
 
     const port = 11000;
     const host = "127.0.0.1";
