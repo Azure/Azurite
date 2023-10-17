@@ -188,8 +188,12 @@ describe("table name validation tests", () => {
   });
 
   it("should create a table with a name which is a substring of an existing table, @loki", async () => {
-    tableName = getUniqueName("table");
-    const body = JSON.stringify({
+    // this will be used for 3 table names
+    // [ a + b ], [ a ], [ b ]
+    const a = getUniqueName("t")
+    const b = getUniqueName("t")
+    tableName = a + b;
+    const body1 = JSON.stringify({
       TableName: tableName
     });
     const createTableHeaders = {
@@ -197,7 +201,7 @@ describe("table name validation tests", () => {
       Accept: "application/json;odata=nometadata"
     };
     try {
-      await postToAzurite("Tables", body, createTableHeaders);
+      await postToAzurite("Tables", body1, createTableHeaders);
     } catch (err: any) {
       assert.strictEqual(
         err.response.status,
@@ -205,9 +209,8 @@ describe("table name validation tests", () => {
         `unexpected status code : ${err.response.status}`
       );
     }
-    const tableName2 = tableName.substring(0, tableName.length - 4);
     const body2 = JSON.stringify({
-      TableName: tableName2
+      TableName: a
     });
     try {
       await postToAzurite("Tables", body2, createTableHeaders);
@@ -218,9 +221,8 @@ describe("table name validation tests", () => {
         `unexpected exception with end trimmed! : ${err}`
       );
     }
-    const tableName3 = tableName.substring(4);
     const body3 = JSON.stringify({
-      TableName: tableName3
+      TableName: b
     });
     try {
       await postToAzurite("Tables", body3, createTableHeaders);
@@ -234,10 +236,14 @@ describe("table name validation tests", () => {
   });
 
   it("should delete a table with a name which is a substring of an existing table, @loki", async () => {
-    tableName = getUniqueName("table");
-    const shortName = tableName.substring(0, 6);
-    const basicBody = JSON.stringify({
-      TableName: shortName
+    // this will be used for 4 table names
+    // [ a ], [ a + b + c ], [ a + b ], [ b + c ]
+    const a = getUniqueName("t")
+    const b = getUniqueName("t")
+    const c = getUniqueName("t")
+
+    const body1 = JSON.stringify({
+      TableName: a
     });
     const createTableHeaders = {
       "Content-Type": "application/json",
@@ -251,7 +257,7 @@ describe("table name validation tests", () => {
     try {
       const createTable1 = await postToAzurite(
         "Tables",
-        basicBody,
+        body1,
         createTableHeaders
       );
       assert.strictEqual(
@@ -266,14 +272,14 @@ describe("table name validation tests", () => {
         `unexpected status code creating first table : ${err.response.status}`
       );
     }
-    const body = JSON.stringify({
-      TableName: tableName
+    const body2 = JSON.stringify({
+      TableName: a + b + c
     });
     // create table 2
     try {
       const createTable2 = await postToAzurite(
         "Tables",
-        body,
+        body2,
         createTableHeaders
       );
       assert.strictEqual(
@@ -288,15 +294,14 @@ describe("table name validation tests", () => {
         `unexpected status code : ${err.response.status}`
       );
     }
-    const tableName2 = tableName.substring(0, tableName.length - 4);
-    const body2 = JSON.stringify({
-      TableName: tableName2
+    const body3 = JSON.stringify({
+      TableName: a + b
     });
     // create table 3
     try {
       const createTable3 = await postToAzurite(
         "Tables",
-        body2,
+        body3,
         createTableHeaders
       );
       assert.strictEqual(
@@ -311,15 +316,14 @@ describe("table name validation tests", () => {
         `unexpected exception with end trimmed! : ${err}`
       );
     }
-    const tableName3 = tableName.substring(4);
-    const body3 = JSON.stringify({
-      TableName: tableName3
+    const body4 = JSON.stringify({
+      TableName: b + c
     });
     // create table 4
     try {
       const createTable4 = await postToAzurite(
         "Tables",
-        body3,
+        body4,
         createTableHeaders
       );
       assert.strictEqual(
@@ -334,7 +338,7 @@ describe("table name validation tests", () => {
         `unexpected exception with start trimmed! : ${err}`
       );
     }
-    // now list tables after deletion...
+    // now list tables before deletion...
     try {
       const listTableResult1 = await getToAzurite("Tables", createTableHeaders);
       // we count all tables created in the tests before this one as well
@@ -353,7 +357,7 @@ describe("table name validation tests", () => {
     // now delete "table"
     try {
       const deleteResult = await deleteToAzurite(
-        `Tables('${shortName}')`,
+        `Tables('${a}')`,
         "",
         createTableHeaders
       );
@@ -380,7 +384,7 @@ describe("table name validation tests", () => {
       for (const table of listTableResult2.data.value) {
         assert.notStrictEqual(
           table.TableName,
-          shortName,
+          a,
           "We still list the table we should have deleted."
         );
       }
