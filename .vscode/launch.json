@@ -218,6 +218,34 @@
       "outputCapture": "std"
     },
     {
+      "type": "node",
+      "request": "launch",
+      "name": "Current Mocha TS File - Loki, in-memory",
+      "cwd": "${workspaceFolder}",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "args": [
+        "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+        "-u",
+        "tdd",
+        "--timeout",
+        "999999",
+        "--colors",
+        "${workspaceFolder}/${relativeFile}"
+      ],
+      "env": {
+        "AZURITE_ACCOUNTS": "",
+        "AZURE_TABLE_STORAGE": "",
+        "DATATABLES_ACCOUNT_NAME": "<name of your storage account>",
+        "DATATABLES_ACCOUNT_KEY" : "<account key for your storage account>",
+        "AZURE_DATATABLES_STORAGE_STRING": "https://<your account name>.table.core.windows.net",
+        "AZURE_DATATABLES_SAS": "?<sas query string>",
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0",
+        "AZURITE_TEST_INMEMORYPERSISTENCE": "true"
+      },
+      "internalConsoleOptions": "openOnSessionStart",
+      "outputCapture": "std"
+    },
+    {
       "name": "VSC Extension",
       "type": "extensionHost",
       "request": "launch",

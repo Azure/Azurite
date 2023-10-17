@@ -64,12 +64,16 @@ export default class MemoryExtentStore implements IExtentStore {
     const chunks: (Buffer | string)[] = []
     let count = 0;
     if (data instanceof Buffer) {
-      chunks.push(data)
-      count = data.length
+      if (data.length > 0) {
+        chunks.push(data)
+        count = data.length
+      }
     } else {
       for await (let chunk of data) {
-        chunks.push(chunk)
-        count += chunk.length
+        if (chunk.length > 0) {
+          chunks.push(chunk)
+          count += chunk.length
+        }
       }
     }
 
@@ -111,7 +115,34 @@ export default class MemoryExtentStore implements IExtentStore {
     }
 
     const buffer = new Readable()
-    match.chunks.forEach(chunk => buffer.push(chunk))
+    let skip = extentChunk.offset;
+    let take = extentChunk.count;
+    for (const chunk of match.chunks) {
+      if (skip > 0) {
+        if (chunk.length <= skip) {
+          // this chunk is entirely skipped
+          skip -= chunk.length
+        } else {
+          // part of the chunk is included
+          const end = skip + Math.min(take, chunk.length - skip)
+          const slice = chunk.slice(skip, end);
+          buffer.push(chunk.slice(skip, end))
+          skip = 0
+          take -= slice.length
+        }
+      } else {
+        if (chunk.length > take) {
+          // all of the chunk is included, up to the count limit
+          const slice = chunk.slice(0, take);
+          buffer.push(slice)
+          take -= slice.length
+        } else {
+          // all of the chunk is included
+          buffer.push(chunk)
+          take -= chunk.length
+        }
+      }
+    }
     buffer.push(null)
 
     return buffer;

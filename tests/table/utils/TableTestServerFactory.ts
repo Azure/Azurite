@@ -12,8 +12,12 @@ export interface ITableTestServerFactoryParams {
 }
 
 export default class TableTestServerFactory {
+  public static inMemoryPersistence() {
+    return process.env.AZURITE_TEST_INMEMORYPERSISTENCE !== undefined;
+  }
+
   public createServer(params: ITableTestServerFactoryParams): TableServer {
-    const inMemoryPersistence = process.env.AZURITE_TEST_INMEMORYPERSISTENCE !== undefined;
+    const inMemoryPersistence = TableTestServerFactory.inMemoryPersistence()
 
     const port = 11002;
     const host = "127.0.0.1";
