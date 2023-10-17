@@ -5,13 +5,13 @@ import {
 } from "../../testutils";
 
 import TableServer from "../../../src/table/TableServer";
-import TableConfiguration from "../../../src/table/TableConfiguration";
 import {
   AzureNamedKeyCredential,
   AzureSASCredential,
   TableClient
 } from "@azure/data-tables";
 import { copyFile } from "fs";
+import TableTestServerFactory, { ITableTestServerFactoryParams } from "./TableTestServerFactory";
 
 export const PROTOCOL = "http";
 export const HOST = "127.0.0.1";
@@ -32,30 +32,6 @@ const AZURITE_TABLE_BASE_URL = "AZURITE_TABLE_BASE_URL";
 // Azure Pipelines need a unique name per test instance
 // const REPRO_DB_PATH = "./querydb.json";
 
-const config = new TableConfiguration(
-  HOST,
-  PORT,
-  metadataDbPath,
-  enableDebugLog,
-  false,
-  undefined,
-  debugLogPath
-);
-
-const httpsConfig = new TableConfiguration(
-  HOST,
-  PORT,
-  metadataDbPath,
-  enableDebugLog,
-  false,
-  undefined,
-  debugLogPath,
-  false,
-  true,
-  "tests/server.cert",
-  "tests/server.key"
-);
-
 /**
  * Creates the Azurite TableServer used in Table API tests
  *
@@ -63,11 +39,25 @@ const httpsConfig = new TableConfiguration(
  * @return {*}  {TableServer}
  */
 export function createTableServerForTest(): TableServer {
-  return new TableServer(config);
+  return new TableTestServerFactory().createServer({
+    metadataDBPath: metadataDbPath,
+    enableDebugLog: enableDebugLog,
+    debugLogFilePath: debugLogPath,
+    loose: false,
+    skipApiVersionCheck: false,
+    https: false
+  });
 }
 
 export function createTableServerForTestHttps(): TableServer {
-  return new TableServer(httpsConfig);
+  return new TableTestServerFactory().createServer({
+    metadataDBPath: metadataDbPath,
+    enableDebugLog: enableDebugLog,
+    debugLogFilePath: debugLogPath,
+    loose: false,
+    skipApiVersionCheck: true,
+    https: true
+  });
 }
 
 /**
@@ -84,26 +74,19 @@ export function createTableServerForQueryTestHttps(): TableServer {
   const uniqueDBpath = "./" + uniqueDbName + ".json";
   duplicateReproDBForTest(uniqueDBpath);
   const queryConfig = createQueryConfig(uniqueDBpath);
-  return new TableServer(queryConfig);
+  return new TableTestServerFactory().createServer(queryConfig);
 }
 
 export function createTableServerForTestOAuth(oauth?: string): TableServer {
-  const oAuthConfig = new TableConfiguration(
-    HOST,
-    PORT,
-    metadataDbPath,
-    enableDebugLog,
-    false,
-    undefined,
-    debugLogPath,
-    false,
-    true,
-    undefined,
-    undefined,
-    undefined,
-    oauth
-  );
-  return new TableServer(oAuthConfig);
+  return new TableTestServerFactory().createServer({
+    metadataDBPath: metadataDbPath,
+    enableDebugLog: enableDebugLog,
+    debugLogFilePath: debugLogPath,
+    loose: false,
+    skipApiVersionCheck: true,
+    https: false,
+    oauth: oauth
+  });
 }
 
 /**
@@ -219,19 +202,13 @@ function duplicateReproDBForTest(uniqueDBpath: string) {
   );
 }
 
-function createQueryConfig(uniqueDBpath: string): TableConfiguration {
-  const queryConfig = new TableConfiguration(
-    HOST,
-    PORT,
-    uniqueDBpath, // contains guid and binProp object from legacy schema DB
-    enableDebugLog,
-    false,
-    undefined,
-    debugLogPath,
-    false,
-    true,
-    "tests/server.cert",
-    "tests/server.key"
-  );
-  return queryConfig;
+function createQueryConfig(uniqueDBpath: string): ITableTestServerFactoryParams {
+  return {
+    metadataDBPath: uniqueDBpath, // contains guid and binProp object from legacy schema DB
+    enableDebugLog: enableDebugLog,
+    debugLogFilePath: debugLogPath,
+    loose: false,
+    skipApiVersionCheck: true,
+    https: true
+  };
 }

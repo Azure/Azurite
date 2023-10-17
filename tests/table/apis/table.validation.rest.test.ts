@@ -6,7 +6,6 @@
 
 import * as assert from "assert";
 import { configLogger } from "../../../src/common/Logger";
-import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
 import { getUniqueName } from "../../testutils";
 import {
@@ -14,34 +13,29 @@ import {
   getToAzurite,
   postToAzurite
 } from "../utils/table.entity.tests.rest.submitter";
+import TableTestServerFactory from "../utils/TableTestServerFactory";
 
 // Set true to enable debug log
 configLogger(false);
 
 describe("table name validation tests", () => {
-  const host = "127.0.0.1";
-  const port = 11002;
   const metadataDbPath = getUniqueName("__tableTestsStorage__");
   const enableDebugLog: boolean = true;
   const debugLogPath: string = "g:/debug.log";
-  const config = new TableConfiguration(
-    host,
-    port,
-    metadataDbPath,
-    enableDebugLog,
-    false,
-    undefined,
-    debugLogPath,
-    false,
-    true
-  );
 
   let server: TableServer;
 
   let tableName: string = getUniqueName("flows");
 
   before(async () => {
-    server = new TableServer(config);
+    server = new TableTestServerFactory().createServer({
+      metadataDBPath: metadataDbPath,
+      enableDebugLog: enableDebugLog,
+      debugLogFilePath: debugLogPath,
+      loose: false,
+      skipApiVersionCheck: true,
+      https: false
+    });
     await server.start();
   });
 
