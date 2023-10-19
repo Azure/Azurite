@@ -37,7 +37,7 @@
     "stoppable": "^1.1.0",
     "tedious": "^16.0.0",
     "to-readable-stream": "^2.1.0",
-    "tslib": "^2.3.0",
+    "tslib": "^2.6.2",
     "uri-templates": "^0.2.0",
     "uuid": "^3.3.2",
     "winston": "^3.1.0",
@@ -248,6 +248,20 @@
             "type": "boolean",
             "default": false,
             "description": "Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri."
+          }
+        }
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "azurite",
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Action to perform. Should be one of: start_blob, stop_blob, clean_blob"
           }
         }
       }

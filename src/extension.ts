@@ -1,4 +1,10 @@
-import { commands, ExtensionContext, StatusBarAlignment, window } from "vscode";
+import {
+  commands,
+  ExtensionContext,
+  StatusBarAlignment,
+  tasks,
+  window
+} from "vscode";
 
 import VSCAccessLog from "./common/VSCAccessLog";
 import VSCNotification from "./common/VSCNotification";
@@ -7,6 +13,7 @@ import VSCServerManagerBlob from "./common/VSCServerManagerBlob";
 import VSCServerManagerQueue from "./common/VSCServerManagerQueue";
 import VSCServerManagerTable from "./common/VSCServerManagerTable";
 import VSCStatusBarItem from "./common/VSCStatusBarItem";
+import { AzuriteTaskProvider } from "./tasks";
 
 export function activate(context: ExtensionContext) {
   // Initialize server managers
@@ -52,6 +59,15 @@ export function activate(context: ExtensionContext) {
   );
   tableServerManager.addEventListener(
     new VSCAccessLog(tableServerManager.accessChannelStream)
+  );
+
+  tasks.registerTaskProvider(
+    AzuriteTaskProvider.AzuriteTaskType,
+    new AzuriteTaskProvider(
+      blobServerManager,
+      queueServerManager,
+      tableServerManager
+    )
   );
 
   context.subscriptions.push(

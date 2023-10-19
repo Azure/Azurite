@@ -16,13 +16,25 @@
     "declarationMap": true,
     "importHelpers": true,
     "declarationDir": "./typings",
-    "lib": ["es5", "es6", "es7", "esnext", "dom"],
+    "lib": [
+      "es5",
+      "es6",
+      "es7",
+      "esnext",
+      "dom"
+    ],
     "esModuleInterop": true,
     "downlevelIteration": true,
     "useUnknownInCatchVariables": false,
     "skipLibCheck": true,
   },
   "compileOnSave": true,
-  "exclude": ["node_modules"],
-  "include": ["./src/**/*.ts", "./tests/**/*.ts"]
+  "exclude": [
+    "node_modules"
+  ],
+  "include": [
+    "./src/**/*.ts",
+    "./tests/**/*.ts",
+    "src/tasks.ts.tmp"
+  ]
 }
