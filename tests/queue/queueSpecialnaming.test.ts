@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import dns = require("dns");
 
 import {
   newPipeline,
@@ -13,6 +14,7 @@ import Server from "../../src/queue/QueueServer";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
+  getUniqueName,
   rmRecursive
 } from "../testutils";
 
@@ -45,6 +47,10 @@ describe("Queue SpecialNaming", () => {
   );
 
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
+  const baseSecondaryURL = `http://${host}:${port}/devstoreaccount1-secondary`;
+  const productionStyleHostName = "devstoreaccount1.queue.localhost"; // Use hosts file to make this resolve
+  const productionStyleHostNameForSecondary = "devstoreaccount1-secondary.queue.localhost";
+
   const serviceClient = new QueueServiceClient(
     baseURL,
     newPipeline(
@@ -186,5 +192,109 @@ describe("Queue SpecialNaming", () => {
         "The specifed resource name contains invalid characters."
       )
     );
+  });
+
+  it(`Should work with production style URL when ${productionStyleHostName} is resolvable`, async () => {
+    let queueName = getUniqueName("queue");
+    await dns.promises.lookup(productionStyleHostName).then(
+      async (lookupAddress) => {
+        const baseURLProductionStyle = `http://${productionStyleHostName}:${port}`;
+        const serviceClientProductionStyle = new QueueServiceClient(
+          baseURLProductionStyle,
+          newPipeline(
+            new StorageSharedKeyCredential(
+              EMULATOR_ACCOUNT_NAME,
+              EMULATOR_ACCOUNT_KEY
+            ),
+            {
+              retryOptions: { maxTries: 1 },
+              // Make sure socket is closed once the operation is done.
+              keepAliveOptions: { enable: false }
+            }
+          )
+        );
+        const queueProductionStyle = serviceClientProductionStyle.getQueueClient(
+          queueName
+        );
+        
+        const response = await queueProductionStyle.create();
+        assert.deepStrictEqual(response._response.status, 201);
+        await queueProductionStyle.delete();
+      },
+      () => {
+        // Cannot perform this test. We need devstoreaccount1-secondary.blob.localhost to resolve to 127.0.0.1.
+        // On Linux, this should just work,
+        // On Windows, we can't spoof DNS record for specific process.
+        // So we have options of running our own DNS server (overkill),
+        // or editing hosts files (machine global operation; and requires running as admin).
+        // So skip the test case.
+        assert.ok(
+          `Skipping test case - it needs ${productionStyleHostNameForSecondary} to be resolvable`
+        );
+      }
+    );
+  });
+
+  it(`Should work with production style URL when ${productionStyleHostNameForSecondary} is resolvable`, async () => {
+    let queueName = getUniqueName("queue");
+    await dns.promises.lookup(productionStyleHostNameForSecondary).then(
+      async (lookupAddress) => {
+        const baseURLProductionStyle = `http://${productionStyleHostNameForSecondary}:${port}`;
+        const serviceClientProductionStyle = new QueueServiceClient(
+          baseURLProductionStyle,
+          newPipeline(
+            new StorageSharedKeyCredential(
+              EMULATOR_ACCOUNT_NAME,
+              EMULATOR_ACCOUNT_KEY
+            ),
+            {
+              retryOptions: { maxTries: 1 },
+              // Make sure socket is closed once the operation is done.
+              keepAliveOptions: { enable: false }
+            }
+          )
+        );
+        const queueProductionStyle = serviceClientProductionStyle.getQueueClient(
+          queueName
+        );
+        
+        const response = await queueProductionStyle.create();
+        assert.deepStrictEqual(response._response.status, 201);
+        await queueProductionStyle.delete();
+      },
+      () => {
+        // Cannot perform this test. We need devstoreaccount1-secondary.blob.localhost to resolve to 127.0.0.1.
+        // On Linux, this should just work,
+        // On Windows, we can't spoof DNS record for specific process.
+        // So we have options of running our own DNS server (overkill),
+        // or editing hosts files (machine global operation; and requires running as admin).
+        // So skip the test case.
+        assert.ok(
+          `Skipping test case - it needs ${productionStyleHostNameForSecondary} to be resolvable`
+        );
+      }
+    );
+  });
+
+  it(`Should work with non-production secondary url when ${baseSecondaryURL} is resolvable`, async () => {
+    const secondaryServiceClient = new QueueServiceClient(
+      baseSecondaryURL,
+      newPipeline(
+        new StorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        ),
+        {
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
+        }
+      )
+    );
+    let queueName = getUniqueName("queue");
+    const queueClientSecondary = secondaryServiceClient.getQueueClient(queueName);
+    const response = await queueClientSecondary.create();
+    assert.deepStrictEqual(response._response.status, 201);
+    await queueClientSecondary.delete();
   });
 });

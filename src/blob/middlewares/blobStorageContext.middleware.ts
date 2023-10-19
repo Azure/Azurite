@@ -100,9 +100,12 @@ export function internnalBlobStorageContextMiddleware(
   blobContext.authenticationPath = reqPath;
   if (isSecondary) {
     const pos = blobContext.authenticationPath!.search(SECONDARY_SUFFIX);
-    blobContext.authenticationPath =
+    if (pos !== -1)
+    {
+      blobContext.authenticationPath =
       blobContext.authenticationPath!.substr(0, pos) +
       blobContext.authenticationPath!.substr(pos + SECONDARY_SUFFIX.length);
+    }
   }
 
   if (!account) {
@@ -200,9 +203,12 @@ export function blobStorageContextMiddleware(
   blobContext.authenticationPath = req.path;
   if (isSecondary) {
     const pos = blobContext.authenticationPath.search(SECONDARY_SUFFIX);
-    blobContext.authenticationPath =
+    if (pos !== -1)
+    {
+      blobContext.authenticationPath =
       blobContext.authenticationPath.substr(0, pos) +
       blobContext.authenticationPath.substr(pos + SECONDARY_SUFFIX.length);
+    }
   }
 
   if (!account) {

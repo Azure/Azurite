@@ -3,17 +3,19 @@
 // using the SDKs, can be used as a test rig for repros which provide a debug log.
 // later we can automate the parsing of repro logs to automatically play these into the tester
 // special care is needed to replace etags and folders when used
-
 import * as assert from "assert";
 import { configLogger } from "../../../src/common/Logger";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
-import { getUniqueName } from "../../testutils";
+import {  getUniqueName } from "../../testutils";
 import {
   deleteToAzurite,
   getToAzurite,
-  postToAzurite
+  postToAzurite,
+  postToAzuriteProductionUrl,
+  getToAzuriteProductionUrl
 } from "../utils/table.entity.tests.rest.submitter";
+import dns = require("dns");
 
 // Set true to enable debug log
 configLogger(false);
@@ -31,10 +33,10 @@ describe("table name validation tests", () => {
     enableDebugLog,
     false,
     undefined,
-    debugLogPath,
-    false,
-    true
+    debugLogPath
   );
+  const productionStyleHostName = "devstoreaccount1.table.localhost"; // Use hosts file to make this resolve
+  const productionStyleHostNameForSecondary = "devstoreaccount1-secondary.table.localhost";
 
   let server: TableServer;
 
@@ -397,5 +399,72 @@ describe("table name validation tests", () => {
         `unexpected exception with start trimmed! : ${err}`
       );
     }
+  });
+
+  
+  it(`Should work with production style URL when ${productionStyleHostName} is resolvable`, async () => {
+    await dns.promises.lookup(productionStyleHostName).then(
+      async (lookupAddress) => {
+        let tableName = getUniqueName("table");
+        const body = JSON.stringify({
+          TableName: tableName
+        });
+        const createTableHeaders = {
+          "Content-Type": "application/json",
+          Accept: "application/json;odata=nometadata"
+        };
+        try {
+          let response = await postToAzuriteProductionUrl(productionStyleHostName,"Tables", body, createTableHeaders);
+          assert.strictEqual(response.status, 201);
+        } catch (err: any) {
+          assert.fail();
+        }
+      },
+      () => {
+        // Cannot perform this test. We need devstoreaccount1-secondary.blob.localhost to resolve to 127.0.0.1.
+        // On Linux, this should just work,
+        // On Windows, we can't spoof DNS record for specific process.
+        // So we have options of running our own DNS server (overkill),
+        // or editing hosts files (machine global operation; and requires running as admin).
+        // So skip the test case.
+        assert.ok(
+          `Skipping test case - it needs ${productionStyleHostName} to be resolvable`
+        );
+      }
+    );
+  });
+
+  it(`Should work with production style URL when ${productionStyleHostNameForSecondary} is resolvable`, async () => {
+    await dns.promises.lookup(productionStyleHostNameForSecondary).then(
+      async (lookupAddress) => {
+        let tableName = getUniqueName("table");
+        const body = JSON.stringify({
+          TableName: tableName
+        });
+        const createTableHeaders = {
+          "Content-Type": "application/json",
+          Accept: "application/json;odata=nometadata"
+        };
+        try {
+          let response = await postToAzuriteProductionUrl(productionStyleHostName,"Tables", body, createTableHeaders);
+          assert.strictEqual(response.status, 201);
+          let tablesList = await getToAzuriteProductionUrl(productionStyleHostNameForSecondary,"Tables", createTableHeaders);
+          assert.strictEqual(tablesList.status, 200);
+        } catch (err: any) {
+          assert.fail();
+        }
+      },
+      () => {
+        // Cannot perform this test. We need devstoreaccount1-secondary.blob.localhost to resolve to 127.0.0.1.
+        // On Linux, this should just work,
+        // On Windows, we can't spoof DNS record for specific process.
+        // So we have options of running our own DNS server (overkill),
+        // or editing hosts files (machine global operation; and requires running as admin).
+        // So skip the test case.
+        assert.ok(
+          `Skipping test case - it needs ${productionStyleHostNameForSecondary} to be resolvable`
+        );
+      }
+    );
   });
 });
