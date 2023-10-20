@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Expose start/stop/clean commands as tasks in VS Code extension.
+
 Blob:
 
 - Fix validation of Blob SAS token when using the second key for an account in `AZURITE_ACCOUNTS`
