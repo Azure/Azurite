@@ -42,6 +42,10 @@ export class BlobServerFactory {
       const isSQL = databaseConnectionString !== undefined;
 
       if (isSQL) {
+        if (env.inMemoryPersistence()) {
+          throw new Error(`The in-memory persistence settings is not supported when using SQL-based metadata.`)
+        }
+
         const config = new SqlBlobConfiguration(
           env.blobHost(),
           env.blobPort(),
@@ -59,7 +63,6 @@ export class BlobServerFactory {
           env.pwd(),
           env.oauth(),
           env.disableProductStyleUrl(),
-          env.inMemoryPersistence(),
         );
 
         return new SqlBlobServer(config);

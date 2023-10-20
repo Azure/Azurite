@@ -40,7 +40,7 @@ export default class QueueConfiguration extends ConfigurationBase {
     pwd: string = "",
     oauth?: string,
     disableProductStyleUrl: boolean = false,
-    isMemoryPersistence: boolean = false,
+    public readonly isMemoryPersistence: boolean = false,
   ) {
     super(
       host,
@@ -56,7 +56,6 @@ export default class QueueConfiguration extends ConfigurationBase {
       pwd,
       oauth,
       disableProductStyleUrl,
-      isMemoryPersistence,
     );
   }
 }

@@ -437,7 +437,8 @@ Optional. When using FQDN instead of IP in request Uri host, by default Azurite 
 
 Optional. Disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
 By default, LokiJS persists blob and queue metadata to disk and content to extent files. Table storage
-persists all data to disk. This behavior can be disabled using this option.
+persists all data to disk. This behavior can be disabled using this option. This setting is rejected when
+the SQL based metadata implementation is enabled.
 
 ```cmd
 --inMemoryStorage

@@ -29,6 +29,10 @@ export default class BlobTestServerFactory {
     const key = https ? "tests/server.key" : undefined;
 
     if (isSQL) {
+      if (inMemoryPersistence) {
+        throw new Error(`The in-memory persistence settings is not supported when using SQL-based metadata.`)
+      }
+
       const config = new SqlBlobConfiguration(
         host,
         port,
@@ -46,7 +50,6 @@ export default class BlobTestServerFactory {
         undefined,
         oauth,
         undefined,
-        inMemoryPersistence
       );
 
       return new SqlBlobServer(config);

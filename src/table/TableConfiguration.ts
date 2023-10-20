@@ -36,7 +36,7 @@ export default class TableConfiguration extends ConfigurationBase {
     pwd: string = "",
     oauth?: string,
     disableProductStyleUrl: boolean = false,
-    isMemoryPersistence: boolean = false,
+    public readonly isMemoryPersistence: boolean = false,
   ) {
     super(
       host,
@@ -52,7 +52,6 @@ export default class TableConfiguration extends ConfigurationBase {
       pwd,
       oauth,
       disableProductStyleUrl,
-      isMemoryPersistence,
     );
   }
 }
