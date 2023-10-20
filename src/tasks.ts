@@ -185,6 +185,7 @@ class AzuriteTaskTerminal implements vscode.Pseudoterminal {
   open(initialDimensions: vscode.TerminalDimensions | undefined): void {
     this.start();
   }
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   close(): void {}
 
   private async start(): Promise<void> {
