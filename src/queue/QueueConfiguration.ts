@@ -1,5 +1,6 @@
 import ConfigurationBase from "../common/ConfigurationBase";
 import { StoreDestinationArray } from "../common/persistence/IExtentStore";
+import { MemoryExtentChunkStore } from "../common/persistence/MemoryExtentStore";
 import {
   DEFAULT_ENABLE_ACCESS_LOG,
   DEFAULT_ENABLE_DEBUG_LOG,
@@ -41,6 +42,7 @@ export default class QueueConfiguration extends ConfigurationBase {
     oauth?: string,
     disableProductStyleUrl: boolean = false,
     public readonly isMemoryPersistence: boolean = false,
+    public readonly memoryStore?: MemoryExtentChunkStore,
   ) {
     super(
       host,

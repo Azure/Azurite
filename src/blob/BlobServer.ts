@@ -9,7 +9,7 @@ import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
 import FSExtentStore from "../common/persistence/FSExtentStore";
-import MemoryExtentStore from "../common/persistence/MemoryExtentStore";
+import MemoryExtentStore, { SharedChunkStore } from "../common/persistence/MemoryExtentStore";
 import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
@@ -84,6 +84,7 @@ export default class BlobServer extends ServerBase implements ICleaner {
     );
 
     const extentStore: IExtentStore = configuration.isMemoryPersistence ? new MemoryExtentStore(
+      configuration.memoryStore ?? SharedChunkStore,
       extentMetadataStore,
       logger
     ) : new FSExtentStore(

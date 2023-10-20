@@ -6,17 +6,18 @@ import IExtentStore, { IExtentChunk } from "./IExtentStore";
 import uuid = require("uuid");
 import multistream = require("multistream");
 import { Readable } from "stream";
+import { totalmem } from "os";
 
 export interface IMemoryExtentChunk extends IExtentChunk {
   chunks: (Buffer | string)[]
 }
 
 export class MemoryExtentChunkStore {
-  private readonly _sizeLimit: number;
+  private _sizeLimit?: number;
   private readonly _chunks: Map<string, IMemoryExtentChunk> = new Map<string, IMemoryExtentChunk>();
   private _totalSize: number = 0;
 
-  public constructor(sizeLimit: number) {
+  public constructor(sizeLimit?: number) {
     this._sizeLimit = sizeLimit;
   }
 
@@ -32,7 +33,7 @@ export class MemoryExtentChunkStore {
       delta -= existing.count
     }
 
-    if (this._totalSize + delta > this._sizeLimit) {
+    if (this._sizeLimit != undefined && this._totalSize + delta > this._sizeLimit) {
       throw new Error(`Cannot add an extent chunk to the in-memory store. Size limit of ${this._sizeLimit} bytes will be exceeded.`)
     }
 
@@ -59,10 +60,25 @@ export class MemoryExtentChunkStore {
     return this._totalSize
   }
 
-  public sizeLimit(): number {
+  public setSizeLimit(sizeLimit?: number) {
+    if (sizeLimit && sizeLimit < this._totalSize) {
+      return false;
+    }
+
+    this._sizeLimit = sizeLimit
+    return true;
+  }
+
+  public sizeLimit(): number | undefined {
     return this._sizeLimit
   }
 }
+
+// By default, allow up to half of the total memory to be used for in-memory
+// extents. We don't use freemem (free memory instead of total memory) since
+// that would lead to a decent amount of unpredictability.
+const defaultSize = Math.trunc(totalmem() * 0.5)
+export const SharedChunkStore: MemoryExtentChunkStore = new MemoryExtentChunkStore(defaultSize);
 
 export default class MemoryExtentStore implements IExtentStore {
   private readonly chunks: MemoryExtentChunkStore;

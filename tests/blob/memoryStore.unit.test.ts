@@ -1,5 +1,6 @@
 import assert = require("assert");
-import { IMemoryExtentChunk, MemoryExtentChunkStore } from "../../src/common/persistence/MemoryExtentStore";
+import { IMemoryExtentChunk, MemoryExtentChunkStore, SharedChunkStore } from "../../src/common/persistence/MemoryExtentStore";
+import { totalmem } from "os";
 
 function chunk(id: string, count: number, fill?: string): IMemoryExtentChunk {
   return {
@@ -55,6 +56,25 @@ describe("MemoryExtentChunkStore", () => {
     assert.strictEqual(678, store.totalSize())
   });
 
+  it("allows size limit to be updated", () => {
+    const store = new MemoryExtentChunkStore(1000);
+    store.set(chunk("a", 20))
+
+    store.setSizeLimit(50)
+
+    assert.throws(
+      () => store.set(chunk("b", 31)),
+      /Cannot add an extent chunk to the in-memory store. Size limit of 50 bytes will be exceeded./)
+  });
+
+  it("prevents size limit from being set lower than the current size", () => {
+    const store = new MemoryExtentChunkStore(1000);
+    store.set(chunk("a", 20))
+
+    assert.strictEqual(false, store.setSizeLimit(19))
+    assert.strictEqual(1000, store.sizeLimit())
+  });
+
   it("updates current size with delta when ID is replaced", () => {
     const store = new MemoryExtentChunkStore(1000);
     store.set(chunk("a", 555))
@@ -95,5 +115,11 @@ describe("MemoryExtentChunkStore", () => {
 
     const existing = store.get('a')
     assert.strictEqual(undefined, existing)
+  });
+
+  it("should have a shared instance defaulting to close to 50% of the total bytes", () => {
+    assert.ok(SharedChunkStore.sizeLimit(), "The default store's size limit should be set.")
+    assert.ok(SharedChunkStore.sizeLimit()! > 0.4 * totalmem())
+    assert.ok(SharedChunkStore.sizeLimit()! < 0.6 * totalmem())
   });
 });
