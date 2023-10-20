@@ -15,14 +15,16 @@ const key1 = Buffer.from(TableEntityTestConfig.sharedKey, "base64");
  * @param {string} url
  * @param {string} path
  * @param {*} headers
+ * @param {boolean} productionStyle
  * @return {*}  axios request options
  */
 export function axiosRequestConfig(
   url: string,
   path: string,
-  headersIn: any
+  headersIn: any,
+  productionStyle: boolean = false
 ): any {
-  const stringToSign = createStringToSignForSharedKeyLite(url, path, headersIn);
+  const stringToSign = createStringToSignForSharedKeyLite(url, path, headersIn, productionStyle);
   const signature1 = computeHMACSHA256(stringToSign, key1);
   const authValue = `SharedKeyLite ${TableEntityTestConfig.accountName}:${signature1}`;
   const headers = Object.assign(headersIn, { Authorization: authValue });
@@ -39,12 +41,14 @@ export function axiosRequestConfig(
  * @param {string} url
  * @param {string} path
  * @param {any} headers
+ * @param {boolean} productionStyle
  * @returns {string}
  */
 export function createStringToSignForSharedKeyLite(
   url: string,
   path: string,
-  headers: any
+  headers: any,
+  productionStyle: boolean
 ): string {
   const stringToSign: string =
     [
@@ -55,7 +59,7 @@ export function createStringToSignForSharedKeyLite(
     getCanonicalizedResourceString(
       url,
       TableEntityTestConfig.accountName,
-      `/${TableEntityTestConfig.accountName}/${path.replace(/'/g, "%27")}`
+      productionStyle ? `/${path.replace(/'/g, "%27")}`: `/${TableEntityTestConfig.accountName}/${path.replace(/'/g, "%27")}`
     );
 
   return stringToSign;
@@ -103,12 +107,11 @@ export function getCanonicalizedResourceString(
 
   // For secondary account, we use account name (without "-secondary") for the path
   if (authenticationPath !== undefined) {
-    path = authenticationPath;
+    path = getPath(authenticationPath);
   }
 
   let canonicalizedResourceString: string = "";
   canonicalizedResourceString += `/${account}${path}`;
-
   const queries = getURLQueries(url);
   const lowercaseQueries: { [key: string]: string } = {};
   if (queries) {
@@ -143,5 +146,8 @@ export function getCanonicalizedResourceString(
  * @returns {string}
  */
 function getPath(url: string): string {
+  if (url.indexOf("-secondary") !== -1){
+    return url.replace('-secondary', '');
+  }
   return url;
 }
