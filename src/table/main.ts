@@ -29,7 +29,7 @@ async function main() {
     await access(dirname(debugFilePath));
   }
 
-  // Store table configuation
+  // Store table configuration
   const config = new TableConfiguration(
     env.tableHost(),
     env.tablePort(),
@@ -78,7 +78,7 @@ async function main() {
     })
     .once("SIGINT", () => {
       console.log(beforeCloseMessage);
-      server.clean().then(() => {
+      server.close().then(() => {
         console.log(afterCloseMessage);
       });
     });

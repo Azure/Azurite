@@ -19,6 +19,7 @@ import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
 import BlobGCManager from "./gc/BlobGCManager";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import LokiBlobMetadataStore from "./persistence/LokiBlobMetadataStore";
+import StorageError from "./errors/StorageError";
 
 const BEFORE_CLOSE_MESSAGE = `Azurite Blob service is closing...`;
 const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Blob service is closing... Critical error happens during GC.`;
@@ -84,9 +85,11 @@ export default class BlobServer extends ServerBase implements ICleaner {
     );
 
     const extentStore: IExtentStore = configuration.isMemoryPersistence ? new MemoryExtentStore(
+      "blob",
       configuration.memoryStore ?? SharedChunkStore,
       extentMetadataStore,
-      logger
+      logger,
+      (sc, er, em, ri) => new StorageError(sc, er, em, ri)
     ) : new FSExtentStore(
       extentMetadataStore,
       configuration.persistencePathArray,

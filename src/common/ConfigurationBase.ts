@@ -1,10 +1,43 @@
 import * as fs from "fs";
 import { OAuthLevel } from "./models";
+import IBlobEnvironment from "../blob/IBlobEnvironment";
+import IQueueEnvironment from "../queue/IQueueEnvironment";
+import { SharedChunkStore } from "./persistence/MemoryExtentStore";
+import { totalmem } from "os";
 
 export enum CertOptions {
   Default,
   PEM,
   PFX
+}
+
+export function setExtentMemoryLimit(env: IBlobEnvironment | IQueueEnvironment) {
+  if (env.inMemoryPersistence()) {
+    let limit = env.extentMemoryLimit() ?? SharedChunkStore.sizeLimit();
+    if (limit && limit >= 0) {
+      const kb = limit / 1024;
+      const mb = kb / 1024;
+      const gb = mb / 1024;
+      let display;
+      if (gb >= 1) {
+        display = `${gb.toFixed(2)} GB`
+      } else if (mb >= 1) {
+        display = `${mb.toFixed(2)} MB`
+      } else {
+        display = `${kb.toFixed(2)} KB`
+      }
+
+      const totalPct = Math.round(100 * limit / totalmem())
+      console.log(`In-memory extent storage is enabled with a limit of ${display} (${limit} bytes, ${totalPct}% of total memory).`);
+      SharedChunkStore.setSizeLimit(limit);
+    } else {
+      console.log(`In-memory storage is enabled with no limit on memory used.`);
+    }
+  } else {
+    if (env.extentMemoryLimit() !== undefined) {
+      throw new Error(`The --extentMemoryLimit option is only supported when the --inMemoryPersistence option is set.`)
+    }
+  }
 }
 
 export default abstract class ConfigurationBase {
@@ -22,7 +55,7 @@ export default abstract class ConfigurationBase {
     public readonly pwd: string = "",
     public readonly oauth?: string,
     public readonly disableProductStyleUrl: boolean = false,
-  ) {}
+  ) { }
 
   public hasCert() {
     if (this.cert.length > 0 && this.key.length > 0) {
@@ -63,8 +96,7 @@ export default abstract class ConfigurationBase {
   }
 
   public getHttpServerAddress(): string {
-    return `http${this.hasCert() === CertOptions.Default ? "" : "s"}://${
-      this.host
-    }:${this.port}`;
+    return `http${this.hasCert() === CertOptions.Default ? "" : "s"}://${this.host
+      }:${this.port}`;
   }
 }

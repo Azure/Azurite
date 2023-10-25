@@ -435,14 +435,34 @@ Optional. When using FQDN instead of IP in request Uri host, by default Azurite 
 
 ### Use in-memory storage
 
-Optional. Disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
-By default, LokiJS persists blob and queue metadata to disk and content to extent files. Table storage
-persists all data to disk. This behavior can be disabled using this option. This setting is rejected when
-the SQL based metadata implementation is enabled.
+Optional. Disable persisting any data to disk. If the Azurite process is terminated, all data is lost. By default,
+LokiJS persists blob and queue metadata to disk and content to extent files. Table storage persists all data to disk.
+This behavior can be disabled using this option. This setting is rejected when the SQL based metadata implementation is
+enabled.
 
 ```cmd
 --inMemoryStorage
 ```
+
+By default, the in-memory extent store (for blob and queue content) is limited to 50% of the total memory on the host
+machine. This is evaluated to using [`os.totalmem()`](https://nodejs.org/api/os.html#ostotalmem). This limit can be
+overridden using the `--extentMemoryLimit <bytes>` option. There is no restriction on the value specified for this
+option but virtual memory may be used if the limit exceeds the amount of available physical memory as provided by the
+operating system. A high limit may eventually lead to out of memory errors or reduced performance.
+
+The queue and blob extent storage count towards the same limit. The `--extentMemoryLimit` setting is rejected when
+`--inMemoryStorage` is not specified. LokiJS storage (blob and queue metadata and table metadata and content) do not
+contribute to this limit and are unbounded which is the same as without the `--inMemoryStorage` option.
+
+```cmd
+--extentMemoryLimit <bytes>
+```
+
+When the limit is reached, write operations to the blob or queue endpoints which carry content will fail with an `HTTP
+409` status code, a custom storage error code of `MemoryExtentStoreAtSizeLimit`, and a helpful error message.
+Well-behaved storage SDKs and tools will not a retry on this failure and will return a related error message. If this
+error is met, consider deleting some in-memory content (blobs or queues), raising the limit, or restarting the Azurite
+server thus resetting the storage completely.
 
 ### Command Line Options Differences between Azurite V2
 

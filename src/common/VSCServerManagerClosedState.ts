@@ -1,6 +1,8 @@
 import IVSCServerManagerState from "./IVSCServerManagerState";
+import VSCEnvironment from "./VSCEnvironment";
 import VSCServerManagerBase from "./VSCServerManagerBase";
 import { VSCServerManagerRunningState } from "./VSCServerManagerRunningState";
+import { SharedChunkStore } from "./persistence/MemoryExtentStore";
 
 export default class VSCServerManagerClosedState
   implements IVSCServerManagerState {
@@ -9,6 +11,12 @@ export default class VSCServerManagerClosedState
   ): Promise<IVSCServerManagerState> {
     await serverManager.createImpl();
     await serverManager.startImpl();
+
+    const limit = new VSCEnvironment().extentMemoryLimit()
+    if (limit) {
+      SharedChunkStore.setSizeLimit(limit)
+    }
+
     return new VSCServerManagerRunningState();
   }
 

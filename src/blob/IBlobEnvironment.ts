@@ -12,4 +12,5 @@ export default interface IBlobEnvironment {
   oauth(): string | undefined;
   disableProductStyleUrl(): boolean;
   inMemoryPersistence(): boolean;
+  extentMemoryLimit(): number | undefined;
 }

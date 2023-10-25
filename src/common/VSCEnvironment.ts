@@ -113,4 +113,8 @@ export default class VSCEnvironment implements IEnvironment {
   public inMemoryPersistence(): boolean {
     return this.workspaceConfiguration.get<boolean>("inMemoryPersistence") || false;
   }
+
+  public extentMemoryLimit(): number | undefined {
+    return this.workspaceConfiguration.get<number>("extentMemoryLimit");
+  }
 }

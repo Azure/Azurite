@@ -12,48 +12,87 @@ export interface IMemoryExtentChunk extends IExtentChunk {
   chunks: (Buffer | string)[]
 }
 
+interface IExtentCategoryChunks {
+  chunks: Map<string, IMemoryExtentChunk>,
+  totalSize: number,
+}
+
 export class MemoryExtentChunkStore {
   private _sizeLimit?: number;
-  private readonly _chunks: Map<string, IMemoryExtentChunk> = new Map<string, IMemoryExtentChunk>();
+
+  private readonly _chunks: Map<string, IExtentCategoryChunks> = new Map<string, IExtentCategoryChunks>();
   private _totalSize: number = 0;
 
   public constructor(sizeLimit?: number) {
     this._sizeLimit = sizeLimit;
   }
 
-  public clear(): void {
-    this._chunks.clear()
-    this._totalSize = 0
+  public clear(categoryName: string): void {
+    let category = this._chunks.get(categoryName)
+    if (!category) {
+      return
+    }
+
+    this._totalSize -= category.totalSize
+    this._chunks.delete(categoryName)
   }
 
-  public set(chunk: IMemoryExtentChunk): void {
+  public set(categoryName: string, chunk: IMemoryExtentChunk) {
+    if (!this.trySet(categoryName, chunk)) {
+      throw new Error(`Cannot add an extent chunk to the in-memory store. Size limit of ${this._sizeLimit} bytes will be exceeded.`)
+    }
+  }
+
+  public trySet(categoryName: string, chunk: IMemoryExtentChunk): boolean {
+    let category = this._chunks.get(categoryName)
+    if (!category) {
+      category = {
+        chunks: new Map<string, IMemoryExtentChunk>(),
+        totalSize: 0
+      }
+      this._chunks.set(categoryName, category)
+    }
+
     let delta = chunk.count
-    const existing = this._chunks.get(chunk.id)
+    const existing = category.chunks.get(chunk.id)
     if (existing) {
       delta -= existing.count
     }
 
     if (this._sizeLimit != undefined && this._totalSize + delta > this._sizeLimit) {
-      throw new Error(`Cannot add an extent chunk to the in-memory store. Size limit of ${this._sizeLimit} bytes will be exceeded.`)
+      return false
     }
 
-    this._chunks.set(chunk.id, chunk)
+    category.chunks.set(chunk.id, chunk)
+    category.totalSize += delta
     this._totalSize += delta
+    return true
   }
 
-  public get(id: string): IMemoryExtentChunk | undefined {
-    return this._chunks.get(id)
+  public get(categoryName: string, id: string): IMemoryExtentChunk | undefined {
+    return this._chunks.get(categoryName)?.chunks.get(id)
   }
 
-  public delete(id: string): boolean {
-    const existing = this._chunks.get(id);
-    if (existing) {
-      this._chunks.delete(id)
-      this._totalSize -= existing.count
-      return true
+  public delete(categoryName: string, id: string): boolean {
+    const category = this._chunks.get(categoryName);
+    if (!category) {
+      return false
     }
 
-    return false
+    const existing = category.chunks.get(id);
+    if (!existing) {
+      return false
+    }
+
+    category.chunks.delete(id)
+    category.totalSize -= existing.count
+    this._totalSize -= existing.count
+
+    if (category.chunks.size === 0) {
+      this._chunks.delete(categoryName)
+    }
+
+    return true
   }
 
   public totalSize(): number {
@@ -81,21 +120,26 @@ const defaultSize = Math.trunc(totalmem() * 0.5)
 export const SharedChunkStore: MemoryExtentChunkStore = new MemoryExtentChunkStore(defaultSize);
 
 export default class MemoryExtentStore implements IExtentStore {
+  private readonly categoryName: string;
   private readonly chunks: MemoryExtentChunkStore;
   private readonly metadataStore: IExtentMetadataStore;
   private readonly logger: ILogger;
+  private readonly makeError: (statusCode: number, storageErrorCode: string, storageErrorMessage: string, storageRequestID: string) => Error;
 
   private initialized: boolean = false;
   private closed: boolean = true;
-
   public constructor(
+    categoryName: string,
     chunks: MemoryExtentChunkStore,
     metadata: IExtentMetadataStore,
-    logger: ILogger
+    logger: ILogger,
+    makeError: (statusCode: number, storageErrorCode: string, storageErrorMessage: string, storageRequestID: string) => Error,
   ) {
+    this.categoryName = categoryName;
     this.chunks = chunks;
     this.metadataStore = metadata;
     this.logger = logger;
+    this.makeError = makeError;
   }
 
   public isInitialized(): boolean {
@@ -125,7 +169,7 @@ export default class MemoryExtentStore implements IExtentStore {
 
   public async clean(): Promise<void> {
     if (this.isClosed()) {
-      this.chunks.clear();
+      this.chunks.clear(this.categoryName);
       return;
     }
     throw new Error(`Cannot clean MemoryExtentStore, it's not closed.`);
@@ -159,7 +203,13 @@ export default class MemoryExtentStore implements IExtentStore {
       contextId
     );
 
-    this.chunks.set(extentChunk);
+    if (!this.chunks.trySet(this.categoryName, extentChunk)) {
+      throw this.makeError(
+        409,
+        "MemoryExtentStoreAtSizeLimit",
+        `Cannot add an extent chunk to the in-memory store. Size limit of ${this.chunks.sizeLimit()} bytes will be exceeded`,
+        contextId ?? "");
+    }
 
     this.logger.debug(
       `MemoryExtentStore:appendExtent() Added chunks to in-memory map. id:${extentChunk.id} `,
@@ -199,7 +249,7 @@ export default class MemoryExtentStore implements IExtentStore {
       contextId
     );
 
-    const match = this.chunks.get(extentChunk.id);
+    const match = this.chunks.get(this.categoryName, extentChunk.id);
     if (!match) {
       throw new Error(`Extend ${extentChunk.id} does not exist.`);
     }
@@ -326,9 +376,9 @@ export default class MemoryExtentStore implements IExtentStore {
       this.logger.info(
         `MemoryExtentStore:deleteExtents() Delete extent:${id}`
       );
-      const extent = this.chunks.get(id)
+      const extent = this.chunks.get(this.categoryName, id)
       if (extent) {
-        this.chunks.delete(id)
+        this.chunks.delete(this.categoryName, id)
       }
       await this.metadataStore.deleteExtent(id);
       this.logger.debug(

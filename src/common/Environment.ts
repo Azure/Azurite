@@ -64,7 +64,7 @@ args
   )
   .option(
     ["", "disableProductStyleUrl"],
-    "Optional. Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri."
+    "Optional. Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri"
   )
   .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic"')
   .option(["", "cert"], "Optional. Path to certificate file")
@@ -72,7 +72,11 @@ args
   .option(["", "pwd"], "Optional. Password for .pfx file")
   .option(
     ["", "inMemoryPersistence"],
-    "Optional. Disable persisting any data to disk. If the Azurite process is terminated, all data is lost."
+    "Optional. Disable persisting any data to disk. If the Azurite process is terminated, all data is lost"
+  )
+  .option(
+    ["", "extentMemoryLimit"],
+    "Optional. The number of bytes to limit in-memory extent storage to. Only used with the --inMemoryPersistence option. Defaults to 50% of total memory",
   )
   .option(
     ["d", "debug"],
@@ -164,6 +168,10 @@ export default class Environment implements IEnvironment {
       return true;
     }
     return false;
+  }
+
+  public extentMemoryLimit(): number | undefined {
+    return this.flags.extentMemoryLimit;
   }
 
   public async debug(): Promise<string | undefined> {

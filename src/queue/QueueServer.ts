@@ -18,6 +18,7 @@ import IQueueMetadataStore from "./persistence/IQueueMetadataStore";
 import LokiQueueMetadataStore from "./persistence/LokiQueueMetadataStore";
 import QueueConfiguration from "./QueueConfiguration";
 import QueueRequestListenerFactory from "./QueueRequestListenerFactory";
+import StorageError from "./errors/StorageError";
 
 const BEFORE_CLOSE_MESSAGE = `Azurite Queue service is closing...`;
 const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Queue service is closing... Critical error happens during GC.`;
@@ -83,9 +84,11 @@ export default class QueueServer extends ServerBase {
     );
 
     const extentStore: IExtentStore = configuration.isMemoryPersistence ? new MemoryExtentStore(
+      "queue",
       configuration.memoryStore ?? SharedChunkStore,
       extentMetadataStore,
-      logger
+      logger,
+      (sc, er, em, ri) => new StorageError(sc, er, em, ri)
     ) : new FSExtentStore(
       extentMetadataStore,
       configuration.persistencePathArray,

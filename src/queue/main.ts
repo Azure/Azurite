@@ -12,6 +12,7 @@ import {
   DEFAULT_QUEUE_PERSISTENCE_ARRAY,
   DEFAULT_QUEUE_PERSISTENCE_PATH
 } from "./utils/constants";
+import { setExtentMemoryLimit } from "../common/ConfigurationBase";
 
 // tslint:disable:no-console
 
@@ -76,6 +77,8 @@ async function main() {
 
   // Create server instance
   const server = new QueueServer(config);
+
+  setExtentMemoryLimit(env);
 
   // Start server
   console.log(

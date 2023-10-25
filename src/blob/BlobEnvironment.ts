@@ -45,6 +45,10 @@ if (!(args as any).config.name) {
       "Optional. Disable persisting any data to disk. If the Azurite process is terminated, all data is lost."
     )
     .option(
+      ["", "extentMemoryLimit"],
+      "Optional. The number of bytes to limit in-memory extent storage to. Only used with the --inMemoryPersistence option. Defaults to 50% of total memory",
+    )
+    .option(
       ["d", "debug"],
       "Optional. Enable debug log by providing a valid local file path as log destination"
     )
@@ -127,6 +131,10 @@ export default class BlobEnvironment implements IBlobEnvironment {
       return true;
     }
     return false;
+  }
+
+  public extentMemoryLimit(): number | undefined {
+    return this.flags.extentMemoryLimit;
   }
 
   public async debug(): Promise<string | undefined> {
