@@ -12,7 +12,7 @@ import MemoryExtentStore, { SharedChunkStore } from "../common/persistence/Memor
 import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
-import ServerBase from "../common/ServerBase";
+import ServerBase, { ServerStatus } from "../common/ServerBase";
 import QueueGCManager from "./gc/QueueGCManager";
 import IQueueMetadataStore from "./persistence/IQueueMetadataStore";
 import LokiQueueMetadataStore from "./persistence/LokiQueueMetadataStore";
@@ -132,6 +132,35 @@ export default class QueueServer extends ServerBase {
     this.extentStore = extentStore;
     this.accountDataStore = accountDataStore;
     this.gcManager = gcManager;
+  }
+
+  /**
+   * Clean up server persisted data, including Loki metadata database file,
+   * Loki extent database file and extent data.
+   *
+   * @returns {Promise<void>}
+   * @memberof BlobServer
+   */
+  public async clean(): Promise<void> {
+    if (this.getStatus() === ServerStatus.Closed) {
+      if (this.extentStore !== undefined) {
+        await this.extentStore.clean();
+      }
+
+      if (this.extentMetadataStore !== undefined) {
+        await this.extentMetadataStore.clean();
+      }
+
+      if (this.metadataStore !== undefined) {
+        await this.metadataStore.clean();
+      }
+
+      if (this.accountDataStore !== undefined) {
+        await this.accountDataStore.clean();
+      }
+      return;
+    }
+    throw Error(`Cannot clean up queue server in status ${this.getStatus()}.`);
   }
 
   protected async beforeStart(): Promise<void> {

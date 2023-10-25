@@ -1,3 +1,4 @@
+import ICleaner from "../../common/ICleaner";
 import IDataStore from "../../common/IDataStore";
 import IGCExtentProvider from "../../common/IGCExtentProvider";
 import * as Models from "../generated/artifacts/models";
@@ -71,7 +72,7 @@ export interface IExtentChunk {
  * @interface IQueueMetadataStore
  * @extends {IDataStore}
  */
-export interface IQueueMetadataStore extends IGCExtentProvider, IDataStore {
+export interface IQueueMetadataStore extends IGCExtentProvider, IDataStore, ICleaner {
   /**
    * Update queue service properties. Create service properties document if not exists in persistency layer.
    * Assume service properties collection has been created during start method.

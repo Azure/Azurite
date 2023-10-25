@@ -14,6 +14,7 @@ import {
   ServicePropertiesModel
 } from "./IQueueMetadataStore";
 import QueueReferredExtentsAsyncIterator from "./QueueReferredExtentsAsyncIterator";
+import { rimrafAsync } from "../../common/utils/utils";
 
 /**
  * This is a metadata source implementation for queue based on loki DB.
@@ -147,6 +148,21 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
   }
 
   /**
+   * Clean LokiQueueMetadataStore.
+   *
+   * @returns {Promise<void>}
+   * @memberof LokiQueueMetadataStore
+   */
+  public async clean(): Promise<void> {
+    if (this.isClosed()) {
+      await rimrafAsync(this.lokiDBPath);
+
+      return;
+    }
+    throw new Error(`Cannot clean LokiQueueMetadataStore, it's not closed.`);
+  }
+
+  /**
    * Update queue service properties. Create service properties document if not exists in persistency layer.
    * Assume service properties collection has been created during start method.
    *
@@ -220,10 +236,10 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
       prefix === ""
         ? { $loki: { $gt: marker }, accountName: account }
         : {
-            name: { $regex: `^${this.escapeRegex(prefix)}` },
-            $loki: { $gt: marker },
-            accountName: account
-          };
+          name: { $regex: `^${this.escapeRegex(prefix)}` },
+          $loki: { $gt: marker },
+          accountName: account
+        };
 
     // Get one more item to help check if the query reach the tail of the collection.
     const docs = coll

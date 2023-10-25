@@ -9,6 +9,7 @@ import { Entity, Table } from "../persistence/ITableMetadataStore";
 import { ODATA_TYPE, QUERY_RESULT_MAX_NUM } from "../utils/constants";
 import ITableMetadataStore, { TableACL } from "./ITableMetadataStore";
 import LokiTableStoreQueryGenerator from "./LokiTableStoreQueryGenerator";
+import { rimrafAsync } from "../../common/utils/utils";
 
 /** MODELS FOR SERVICE */
 interface IServiceAdditionalProperties {
@@ -74,6 +75,21 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     });
 
     this.closed = true;
+  }
+
+  /**
+   * Clean LokiTableMetadataStore.
+   *
+   * @returns {Promise<void>}
+   * @memberof LokiTableMetadataStore
+   */
+  public async clean(): Promise<void> {
+    if (this.isClosed()) {
+      await rimrafAsync(this.lokiDBPath);
+
+      return;
+    }
+    throw new Error(`Cannot clean LokiTableMetadataStore, it's not closed.`);
   }
 
   public isInitialized(): boolean {

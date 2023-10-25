@@ -1,3 +1,4 @@
+import ICleaner from "../../common/ICleaner";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
 /** MODELS FOR SERVICE */
@@ -45,7 +46,7 @@ export interface IEntity {
 
 export type Entity = IEntity & IOdataAnnotationsOptional;
 
-export default interface ITableMetadataStore {
+export default interface ITableMetadataStore extends ICleaner {
   createTable(context: Context, tableModel: Table): Promise<void>;
   queryTable(
     context: Context,
