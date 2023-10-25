@@ -4,6 +4,12 @@
 
 ## Upcoming Release
 
+## 2023.10 Version 3.27.0
+
+General:
+
+- Bump up service API version to 2023-11-03
+
 Blob:
 
 - Fix validation of Blob SAS token when using the second key for an account in `AZURITE_ACCOUNTS`
@@ -11,7 +17,7 @@ Blob:
 - Support blob new access tier Cold
 - Fixed startCopyFromURL, copyFromURL API to return 400 (InvalidHeaderValue) when copy source has invalid format. (issue #1954)
 - Fixed CommitBlockList API to return 400 (InvalidXmlDocument) when the request is sent with JSON body. (issue #1955)
-- Added "x-ms-is-hns-enabled" header in x-ms-is-hns-enabled API responds (issue #1810)
+- Added "x-ms-is-hns-enabled" header in GetAccountInfo API responds (issue #1810)
 - Fixed authentication error in production style URL for secondary location (issue #2208)
 - Fixed issue of failures for blob batch requests in product style.
 
