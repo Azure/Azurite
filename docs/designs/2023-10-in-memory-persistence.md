@@ -65,8 +65,8 @@ they need the disk storage. For other users where ephemeral storage is acceptabl
 those problems. Example issues:
 
 - [Azure/Azurite#1687](https://github.com/Azure/Azurite/issues/1687), [Azure/Azurite#804
-  (comment)](https://github.com/Azure/Azurite/issues/803#issuecomment-1244987098),  - additional permissions may be
-  needed for disk persistence, depending on the configured path
+  (comment)](https://github.com/Azure/Azurite/issues/803#issuecomment-1244987098) - additional permissions may be needed
+  for disk persistence, depending on the configured path
 - [Azure/Azurite#1967](https://github.com/Azure/Azurite/issues/1967) - there are OS limits for file handles
 
 ## Explanation
@@ -78,9 +78,16 @@ A ``--inMemoryPersistence`` command line option will be introduced which will do
 1. Switch all LokiJS instances from the default `fs` (file system) persistence model to `memory`.
 1. Use a `MemoryExtentStore` for blob and queue extent storage instead of `FSExtentStore`.
 
-The SQL-based persistence model will support the ``--inMemoryPersistence`` option however this particular use-case is
-already strange because some storage for Azurite is on a potentially remote SQL instance and other storage is on the
-Azurite local file system. This would simply allow the extent storage to instead be on the Azurite local memory.
+By default, the `MemoryExtentStore` will limit itself to 50% of the total physical memory on the machine as returned by
+[`os.totalmem()`](https://nodejs.org/api/os.html#ostotalmem). This can be overridden using a new `--extentMemoryLimit
+<bytes>` option. If this option is specified without `--inMemoryPersistence`, the CLI will error out. The `os.freemem()`
+will not be queried because this will lead to unpredictable behavior for the user where an extent write operation (blob
+content write or enqueue message) will fail intermittently based on the free memory. It is better to simple us a defined
+amount of memory per physical machine and potential exceed the free memory available, thus leveraging virtual memory
+available to the node process.
+
+The SQL-based persistence model will not support the in-memory persistence options and will error out if both the
+`AZURITE_DB` environment variable is set and the either of the in-memory persistence options are specified.
 
 Similar options will be added to the various related configuration types, configuration providers, and the VS Code
 options.
@@ -114,6 +121,13 @@ This will allow extent write operations to be stored in-memory (a list of buffer
 the list of chunks on demand. The implementation will be simpler than the `FSExtentStore` in that all extent chunks will
 have their own extent ID instead of sometimes being appended to existing extent chunks.
 
+To support the implementation of `MemoryExtentStore` and to allow a shared memory limit between blob and queue extents,
+a `MemoryExtentChunkStore` will be added which is the actual store of the `IMemoryExtentChunk` map mentioned above. Both
+the blob and queue instances of `MemoryExtentStore` will share an instance of `MemoryExtentChunkStore` which allows the
+proper bookkeeping of total bytes used. The `MemoryExtentChunkStore` will operate on two keys, `category: string` and
+`id: string`. The category will either be `"blob"` or `"queue"` (allowing clean operations to clean only blob extents or
+only queue extents) and the ID being the extent GUID mentioned before.
+
 All unit tests will be run on both the existing disk-based persistence model and the in-memory model. There is one
 exception which is the `13. should find both old and new guids (backward compatible) when using guid type, @loki` test
 case. This operates on a legacy LokiJS disk-based DB which is a scenario that is not applicable to an in-memory model
@@ -122,17 +136,42 @@ since old legacy DBs cannot be used.
 The test cases will use the in-memory-based persistence when the `AZURITE_TEST_INMEMORYPERSISTENCE` environment variable
 is set to a truthy value.
 
+When a write operation will exceed the default 50% total memory limit or the limit specified by `--extentMemoryLimit`,
+an HTTP 409 error will be returned to the called allowing tools and SDKs to avoid retries and notify the end user of the
+problem. The error response message will look something like this:
+
+```http
+HTTP/1.1 409 Cannot add an extent chunk to the in-memory store. Size limit of 4096 bytes will be exceeded
+Server: Azurite-Blob/3.27.0
+x-ms-error-code: MemoryExtentStoreAtSizeLimit
+x-ms-request-id: 9a7967f2-578f-47a4-8006-5ede890f89ff
+Date: Wed, 25 Oct 2023 23:07:43 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Transfer-Encoding: chunked
+Content-Type: application/xml
+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Error>
+  <Code>MemoryExtentStoreAtSizeLimit</Code>
+  <Message>Cannot add an extent chunk to the in-memory store. Size limit of 4096 bytes will be exceeded
+RequestId:9a7967f2-578f-47a4-8006-5ede890f89ff
+Time:2023-10-25T23:07:43.658Z</Message>
+</Error>
+```
+
 ## Drawbacks
 
 Because extents are no longer stored on disk, the limit on the amount of data Azurite can store in this mode is no
 longer bounded by the available disk space but is instead bounded by the amount of memory available to the node process.
+To mitigate this risk, the `--extentMemoryLimit` is defaulted to 50% of total memory.
 
 As a side note, the limit on the memory available to the node process is only loosely related to the physical memory of
 the host machine. Windows, Linux, and macOS all support virtual memory which allows blocks of memory to be paged onto
 disk.
 
-As you can see, a load test of the in-memory implementation allows uploads exceeding 64 GiB (which was the amount of
-physical memory available on the test machine). There will be a noticeable performance drop when this happens but it
+As you can see below, a load test of the in-memory implementation allows uploads exceeding 64 GiB (which was the amount
+of physical memory available on the test machine). There will be a noticeable performance drop when this happens but it
 illustrates how the storage available to `--inMemoryPersistence` can be quite large. 
 
 ![high memory](meta/resources/2023-10-in-memory-persistence/high-memory.png)
@@ -146,7 +185,12 @@ disk-based persistence.
 
 ## Rationale and alternatives
 
-N/A
+The in-memory extent store will not compact, concatenate or otherwise manipulate the byte arrays (`Buffer` instances)
+that are provided by write operations. For large blobs, this can lead to a large array of chunks (based on the buffering
+behavior provided by the web application and transport layer). This decision was made to reduce the number of bytes
+copied during and upload operation and to avoid the need for a huge amount of contiguous memory. If needed, we can
+evaluate concatenating some or all of the buffered chunks for performance or memory reasons.
+
 
 ## Prior Art
 
@@ -169,3 +213,8 @@ individually in all of these places:
 
 The current proposal allows only two options: allow these places to use disk-persistence (when `--inMemoryPersistence`
 is not specified) or none of these places to use disk-persistence (when ``--inMemoryPersistence`` is specified).
+
+Another future possibility would be to limit the memory used by LokiJS, but this would require support from the LokiJS
+library and would likely be much more complex in nature because measuring the memory consumption of a heterogenous
+object structure that LokiJS allows is very different that simply measuring the total number of bytes used in extents as
+currently designed with `--extentMemoryLimit`.

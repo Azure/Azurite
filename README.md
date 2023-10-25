@@ -258,8 +258,6 @@ Above command will try to start Azurite image with configurations:
 
 `--disableProductStyleUrl` force parsing storage account name from request Uri path, instead of from request Uri host.
 
-`--inMemoryPersistence` disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
-
 > If you use customized azurite paramters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 
 > In above sample, you need to use **double first forward slash** for location and debug path parameters to avoid a [known issue](https://stackoverflow.com/questions/48427366/docker-build-command-add-c-program-files-git-to-the-path-passed-as-build-argu) for Git on Windows.
@@ -441,7 +439,7 @@ This behavior can be disabled using this option. This setting is rejected when t
 enabled.
 
 ```cmd
---inMemoryStorage
+--inMemoryPersistence
 ```
 
 By default, the in-memory extent store (for blob and queue content) is limited to 50% of the total memory on the host
@@ -451,8 +449,8 @@ option but virtual memory may be used if the limit exceeds the amount of availab
 operating system. A high limit may eventually lead to out of memory errors or reduced performance.
 
 The queue and blob extent storage count towards the same limit. The `--extentMemoryLimit` setting is rejected when
-`--inMemoryStorage` is not specified. LokiJS storage (blob and queue metadata and table metadata and content) do not
-contribute to this limit and are unbounded which is the same as without the `--inMemoryStorage` option.
+`--inMemoryPersistence` is not specified. LokiJS storage (blob and queue metadata and table metadata and content) do not
+contribute to this limit and are unbounded which is the same as without the `--inMemoryPersistence` option.
 
 ```cmd
 --extentMemoryLimit <bytes>
@@ -463,6 +461,9 @@ When the limit is reached, write operations to the blob or queue endpoints which
 Well-behaved storage SDKs and tools will not a retry on this failure and will return a related error message. If this
 error is met, consider deleting some in-memory content (blobs or queues), raising the limit, or restarting the Azurite
 server thus resetting the storage completely.
+
+Note that if many hundreds of megabytes of content (queue message or blob content) are stored in-memory, it can take
+noticeably longer than usual for the process to terminate since all the consumed memory needs to be released.
 
 ### Command Line Options Differences between Azurite V2
 

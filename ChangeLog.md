@@ -6,7 +6,7 @@
 
 General:
 
-- Add `--inMemoryStorage` option and related configs to persist all data in-memory without disk persistence. (issue #2227)
+- Add `--inMemoryPersistence` option and related configs to persist all data in-memory without disk persistence. (issue #2227)
 
 ## 2023.10 Version 3.27.0
 
