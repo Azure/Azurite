@@ -13,14 +13,14 @@ function chunk(id: string, count: number, fill?: string): IMemoryExtentChunk {
 
 describe("MemoryExtentChunkStore", () => {
 
-  it("should limit max size with try set", () => {
+  it("should limit max size with try set @loki", () => {
     const store = new MemoryExtentChunkStore(1000);
     store.set("blob", chunk("a", 1000))
 
     assert.strictEqual(false, store.trySet("blob", chunk("b", 1)))
   });
 
-  it("updates current size for add", () => {
+  it("updates current size for add @loki", () => {
     const store = new MemoryExtentChunkStore(1000);
 
     store.set("blob", chunk("a", 555))
@@ -30,7 +30,7 @@ describe("MemoryExtentChunkStore", () => {
     assert.strictEqual(679, store.totalSize())
   });
 
-  it("updates current size based on count property", () => {
+  it("updates current size based on count property @loki", () => {
     const store = new MemoryExtentChunkStore(1000);
 
     store.set("blob", {
@@ -43,7 +43,7 @@ describe("MemoryExtentChunkStore", () => {
     assert.strictEqual(15, store.totalSize())
   });
 
-  it("updates current size for delete", () => {
+  it("updates current size for delete @loki", () => {
     const store = new MemoryExtentChunkStore(1000);
     store.set("blob", chunk("a", 555))
     store.set("blob", chunk("b", 1))
@@ -54,7 +54,7 @@ describe("MemoryExtentChunkStore", () => {
     assert.strictEqual(678, store.totalSize())
   });
 
-  it("allows size limit to be updated", () => {
+  it("allows size limit to be updated @loki", () => {
     const store = new MemoryExtentChunkStore(1000);
     store.set("blob", chunk("a", 20))
 
@@ -65,7 +65,7 @@ describe("MemoryExtentChunkStore", () => {
       /Cannot add an extent chunk to the in-memory store. Size limit of 50 bytes will be exceeded./)
   });
 
-  it("prevents size limit from being set lower than the current size", () => {
+  it("prevents size limit from being set lower than the current size @loki", () => {
     const store = new MemoryExtentChunkStore(1000);
     store.set("blob", chunk("a", 20))
 
@@ -73,7 +73,7 @@ describe("MemoryExtentChunkStore", () => {
     assert.strictEqual(1000, store.sizeLimit())
   });
 
-  it("updates current size with delta when ID is replaced", () => {
+  it("updates current size with delta when ID is replaced @loki", () => {
     const store = new MemoryExtentChunkStore(1000);
     store.set("blob", chunk("a", 555))
     store.set("blob", chunk("b", 1))
@@ -83,7 +83,7 @@ describe("MemoryExtentChunkStore", () => {
     assert.strictEqual(124, store.totalSize())
   });
 
-  it("resets current size for clear", () => {
+  it("resets current size for clear @loki", () => {
     const store = new MemoryExtentChunkStore(1000);
     store.set("blob", chunk("a", 555))
     store.set("blob", chunk("b", 1))
@@ -94,7 +94,7 @@ describe("MemoryExtentChunkStore", () => {
     assert.strictEqual(0, store.totalSize())
   });
 
-  it("replaces buffers if ID is existing", () => {
+  it("replaces buffers if ID is existing @loki", () => {
     const store = new MemoryExtentChunkStore(1000);
     store.set("blob", chunk("a", 11, "0"))
 
@@ -105,7 +105,7 @@ describe("MemoryExtentChunkStore", () => {
     assert.deepStrictEqual(Buffer.alloc(12, "1"), existing?.chunks[0])
   });
 
-  it("keeps categories separate for set and delete", () => {
+  it("keeps categories separate for set and delete @loki", () => {
     const store = new MemoryExtentChunkStore(1000);
     store.set("queue", chunk("a", 12, "0"))
     store.set("blob", chunk("a", 11, "1"))
@@ -117,7 +117,7 @@ describe("MemoryExtentChunkStore", () => {
     assert.strictEqual(12, store.totalSize())
   });
 
-  it("only clears a single category at a time", () => {
+  it("only clears a single category at a time @loki", () => {
     const store = new MemoryExtentChunkStore(1000);
     store.set("queue", chunk("a", 12, "0"))
     store.set("blob", chunk("a", 11, "1"))
@@ -127,7 +127,7 @@ describe("MemoryExtentChunkStore", () => {
     assert.strictEqual(11, store.totalSize())
   });
 
-  it("can clear all categories clears a single category at a time", () => {
+  it("can clear all categories clears a single category at a time @loki", () => {
     const store = new MemoryExtentChunkStore(1000);
     store.set("queue", chunk("a", 12, "0"))
     store.set("blob", chunk("a", 11, "1"))
@@ -140,8 +140,7 @@ describe("MemoryExtentChunkStore", () => {
     assert.strictEqual(undefined, store.get("blob", "a"))
   });
 
-
-  it("all categories contribute to the same limit", () => {
+  it("all categories contribute to the same limit @loki", () => {
     const store = new MemoryExtentChunkStore(1000);
     store.set("queue", chunk("a", 50, "0"))
     store.set("blob", chunk("a", 50, "1"))
@@ -152,7 +151,7 @@ describe("MemoryExtentChunkStore", () => {
     assert.strictEqual(100, store.totalSize())
   });
 
-  it("allows deletion by ID", () => {
+  it("allows deletion by ID @loki", () => {
     const store = new MemoryExtentChunkStore(1000);
     store.set("blob", chunk("a", 11, "0"))
 
@@ -162,9 +161,9 @@ describe("MemoryExtentChunkStore", () => {
     assert.strictEqual(undefined, existing)
   });
 
-  it("should have a shared instance defaulting to close to 50% of the total bytes", () => {
+  it("should have a shared instance defaulting to close to 50% of the total bytes @loki", () => {
     assert.ok(SharedChunkStore.sizeLimit(), "The default store's size limit should be set.")
-    assert.ok(SharedChunkStore.sizeLimit()! > 0.4 * totalmem())
-    assert.ok(SharedChunkStore.sizeLimit()! < 0.6 * totalmem())
+    assert.ok(SharedChunkStore.sizeLimit()! > 0.49 * totalmem())
+    assert.ok(SharedChunkStore.sizeLimit()! < 0.51 * totalmem())
   });
 });
