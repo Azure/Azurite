@@ -23,7 +23,8 @@ if (!(args as any).config.name) {
     .option(
       ["l", "location"],
       "Optional. Use an existing folder as workspace path, default is current working directory",
-      process.cwd()
+      "<cwd>",
+      s => s == "<cwd>" ? undefined : s
     )
     .option(
       ["s", "silent"],
@@ -42,11 +43,13 @@ if (!(args as any).config.name) {
     .option(["", "key"], "Optional. Path to certificate key .pem file")
     .option(
       ["", "inMemoryPersistence"],
-      "Optional. Disable persisting any data to disk. If the Azurite process is terminated, all data is lost."
+      "Optional. Disable persisting any data to disk. If the Azurite process is terminated, all data is lost"
     )
     .option(
       ["", "extentMemoryLimit"],
       "Optional. The number of bytes to limit in-memory extent storage to. Only used with the --inMemoryPersistence option. Defaults to 50% of total memory",
+      -1,
+      s => s == -1 ? undefined : parseInt(s)
     )
     .option(
       ["d", "debug"],
@@ -128,7 +131,14 @@ export default class BlobEnvironment implements IBlobEnvironment {
 
   public inMemoryPersistence(): boolean {
     if (this.flags.inMemoryPersistence !== undefined) {
+      if (this.flags.location) {
+        throw new RangeError(`The --inMemoryPersistence option is not supported when the --location option is set.`)
+      }
       return true;
+    } else {
+      if (this.extentMemoryLimit() !== undefined) {
+        throw new RangeError(`The --extentMemoryLimit option is only supported when the --inMemoryPersistence option is set.`)
+      }
     }
     return false;
   }

@@ -31,11 +31,7 @@ export function setExtentMemoryLimit(env: IBlobEnvironment | IQueueEnvironment) 
       console.log(`In-memory extent storage is enabled with a limit of ${display} (${limit} bytes, ${totalPct}% of total memory).`);
       SharedChunkStore.setSizeLimit(limit);
     } else {
-      console.log(`In-memory storage is enabled with no limit on memory used.`);
-    }
-  } else {
-    if (env.extentMemoryLimit() !== undefined) {
-      throw new Error(`The --extentMemoryLimit option is only supported when the --inMemoryPersistence option is set.`)
+      console.log(`In-memory extent storage is enabled with no limit on memory used.`);
     }
   }
 }

@@ -23,7 +23,8 @@ args
   .option(
     ["l", "location"],
     "Optional. Use an existing folder as workspace path, default is current working directory",
-    process.cwd()
+    "<cwd>",
+    s => s == "<cwd>" ? undefined : s
   )
   .option(["s", "silent"], "Optional. Disable access log displayed in console")
   .option(
@@ -40,7 +41,7 @@ args
   )
   .option(
     ["", "inMemoryPersistence"],
-    "Optional. Disable persisting any data to disk. If the Azurite process is terminated, all data is lost."
+    "Optional. Disable persisting any data to disk. If the Azurite process is terminated, all data is lost"
   )
   .option(
     ["d", "debug"],
@@ -106,6 +107,9 @@ export default class TableEnvironment implements ITableEnvironment {
 
   public inMemoryPersistence(): boolean {
     if (this.flags.inMemoryPersistence !== undefined) {
+      if (this.flags.location) {
+        throw new RangeError(`The --inMemoryPersistence option is not supported when the --location option is set.`)
+      }
       return true;
     }
     return false;

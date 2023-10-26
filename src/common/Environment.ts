@@ -51,7 +51,8 @@ args
   .option(
     ["l", "location"],
     "Optional. Use an existing folder as workspace path, default is current working directory",
-    process.cwd()
+    "<cwd>",
+    s => s == "<cwd>" ? undefined : s
   )
   .option(["s", "silent"], "Optional. Disable access log displayed in console")
   .option(
@@ -77,6 +78,8 @@ args
   .option(
     ["", "extentMemoryLimit"],
     "Optional. The number of bytes to limit in-memory extent storage to. Only used with the --inMemoryPersistence option. Defaults to 50% of total memory",
+    -1,
+    s => s == -1 ? undefined : parseInt(s)
   )
   .option(
     ["d", "debug"],
@@ -165,7 +168,14 @@ export default class Environment implements IEnvironment {
 
   public inMemoryPersistence(): boolean {
     if (this.flags.inMemoryPersistence !== undefined) {
+      if (this.flags.location) {
+        throw new RangeError(`The --inMemoryPersistence option is not supported when the --location option is set.`)
+      }
       return true;
+    } else {
+      if (this.extentMemoryLimit() !== undefined) {
+        throw new RangeError(`The --extentMemoryLimit option is only supported when the --inMemoryPersistence option is set.`)
+      }
     }
     return false;
   }
