@@ -74,8 +74,6 @@ Above command will try to start Azurite image with configurations:
 
 `--disableProductStyleUrl` force parsing storage account name from request Uri path, instead of from request Uri host.
 
-`--inMemoryPersistence` disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
-
 > If you use customized azurite paramters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 
 > In above sample, you need to use **double first forward slash** for location and debug path parameters to avoid a [known issue](https://stackoverflow.com/questions/48427366/docker-build-command-add-c-program-files-git-to-the-path-passed-as-build-argu) for Git on Windows.

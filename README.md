@@ -14,12 +14,15 @@
 
 - [Azurite V3](#azurite-v3)
   - [Introduction](#introduction)
-  - [Features & Key Changes in Azurite V3](#features--key-changes-in-azurite-v3)
+  - [Features \& Key Changes in Azurite V3](#features--key-changes-in-azurite-v3)
   - [Getting Started](#getting-started)
     - [GitHub](#github)
     - [NPM](#npm)
     - [Visual Studio Code Extension](#visual-studio-code-extension)
     - [DockerHub](#dockerhub)
+      - [Run Azurite V3 docker image](#run-azurite-v3-docker-image)
+      - [Run Azurite V3 docker image with customized persisted data location](#run-azurite-v3-docker-image-with-customized-persisted-data-location)
+      - [Customize all Azurite V3 supported parameters for docker image](#customize-all-azurite-v3-supported-parameters-for-docker-image)
       - [Docker Compose](#docker-compose)
     - [NuGet](#nuget)
     - [Visual Studio](#visual-studio)
@@ -33,24 +36,26 @@
     - [Certificate Configuration (HTTPS)](#certificate-configuration-https)
     - [OAuth Configuration](#oauth-configuration)
     - [Skip API Version Check](#skip-api-version-check)
+    - [Disable Product Style Url](#disable-product-style-url)
+    - [Use in-memory storage](#use-in-memory-storage)
     - [Command Line Options Differences between Azurite V2](#command-line-options-differences-between-azurite-v2)
   - [Supported Environment Variable Options](#supported-environment-variable-options)
-    - [Customized Storage Accounts & Keys](#customized-storage-accounts--keys)
+    - [Customized Storage Accounts \& Keys](#customized-storage-accounts--keys)
     - [Customized Metadata Storage by External Database (Preview)](#customized-metadata-storage-by-external-database-preview)
   - [HTTPS Setup](#https-setup)
     - [PEM](#pem)
     - [PFX](#pfx)
   - [Usage with Azure Storage SDKs or Tools](#usage-with-azure-storage-sdks-or-tools)
     - [Default Storage Account](#default-storage-account)
-    - [Customized Storage Accounts & Keys](#customized-storage-accounts--keys-1)
+    - [Customized Storage Accounts \& Keys](#customized-storage-accounts--keys-1)
     - [Connection Strings](#connection-strings)
     - [Azure SDKs](#azure-sdks)
     - [Storage Explorer](#storage-explorer)
   - [Workspace Structure](#workspace-structure)
   - [Differences between Azurite and Azure Storage](#differences-between-azurite-and-azure-storage)
     - [Storage Accounts](#storage-accounts)
-    - [Endpoint & Connection URL](#endpoint--connection-url)
-    - [Scalability & Performance](#scalability--performance)
+    - [Endpoint \& Connection URL](#endpoint--connection-url)
+    - [Scalability \& Performance](#scalability--performance)
     - [Error Handling](#error-handling)
     - [API Version Compatible Strategy](#api-version-compatible-strategy)
     - [RA-GRS](#ra-grs)
@@ -199,6 +204,7 @@ Following extension configurations are supported:
 - `azurite.skipApiVersionCheck` Skip the request API version check, by default false.
 - `azurite.disableProductStyleUrl` Force parsing storage account name from request Uri path, instead of from request Uri host.
 - `azurite.inMemoryPersistence` Disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
+- `azurite.memoryExtentLimit` When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of bytes. Defaults to 50% of total memory.
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
@@ -433,10 +439,10 @@ Optional. When using FQDN instead of IP in request Uri host, by default Azurite 
 
 ### Use in-memory storage
 
-Optional. Disable persisting any data to disk. If the Azurite process is terminated, all data is lost. By default,
-LokiJS persists blob and queue metadata to disk and content to extent files. Table storage persists all data to disk.
-This behavior can be disabled using this option. This setting is rejected when the SQL based metadata implementation is
-enabled.
+Optional. Disable persisting any data to disk and only store data in-memory. If the Azurite process is terminated, all
+data is lost. By default, LokiJS persists blob and queue metadata to disk and content to extent files. Table storage
+persists all data to disk. This behavior can be disabled using this option. This setting is rejected when the SQL based
+metadata implementation is enabled.
 
 ```cmd
 --inMemoryPersistence
@@ -449,8 +455,8 @@ option but virtual memory may be used if the limit exceeds the amount of availab
 operating system. A high limit may eventually lead to out of memory errors or reduced performance.
 
 The queue and blob extent storage count towards the same limit. The `--extentMemoryLimit` setting is rejected when
-`--inMemoryPersistence` is not specified. LokiJS storage (blob and queue metadata and table metadata and content) do not
-contribute to this limit and are unbounded which is the same as without the `--inMemoryPersistence` option.
+`--inMemoryPersistence` is not specified. LokiJS storage (blob and queue metadata and table metadata and content) does
+not contribute to this limit and is unbounded which is the same as without the `--inMemoryPersistence` option.
 
 ```cmd
 --extentMemoryLimit <bytes>
