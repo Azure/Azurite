@@ -23,6 +23,7 @@ import {
   bodyToString, EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName, overrideRequest,
   restoreBuildRequestOptions
 } from './testutils';
+import { existsSync } from 'fs';
 
 // server address used for testing. Note that Azuritelinux has 
 // server address of http://127.0.0.1:10000 and so on by default 
@@ -40,6 +41,14 @@ configLogger(false);
 // Azure Storage Connection String (using SAS or Key).
 const testLocalAzuriteInstance = true;
 
+const binaryPath = "./release/azuritelinux"
+
+function throwOnMissingBinary() {
+  if (!existsSync(binaryPath)) {
+    throw new Error("The Linux binary does not exist. You must build it first using 'npm run build:linux'.")
+  }
+}
+
 describe("linux binary test", () => {
 
   const tableService = Azure.createTableService(
@@ -53,10 +62,14 @@ describe("linux binary test", () => {
 
   let childPid: number;
 
+  beforeEach(() => throwOnMissingBinary())
+
   before(async () => {
+    throwOnMissingBinary()
+
     overrideRequest(requestOverride, tableService);
     tableName = getUniqueName("table");
-    const child = execFile("./release/azuritelinux", ["--blobPort 11000", "--queuePort 11001", "--tablePort 11002"], { cwd: process.cwd(), shell: true, env: {} });
+    const child = execFile(binaryPath, ["--blobPort 11000", "--queuePort 11001", "--tablePort 11002"], { cwd: process.cwd(), shell: true, env: {} });
 
     childPid = child.pid;
 
@@ -89,10 +102,14 @@ describe("linux binary test", () => {
     tableService.removeAllListeners();
 
     await find('name', 'azuritelinux', true).then((list: any) => {
-      process.kill(list[0].pid);
+      if (list.length > 0) {
+        process.kill(list[0].pid);
+      }
     });
 
-    process.kill(childPid);
+    if (childPid) {
+      process.kill(childPid);
+    }
   });
 
   describe("table test", () => {
