@@ -12,7 +12,7 @@ export default class QueueSharedKeyAuthenticator implements IAuthenticator {
   public constructor(
     private readonly dataStore: IAccountDataStore,
     private readonly logger: ILogger
-  ) {}
+  ) { }
 
   public async validate(
     req: IRequest,
