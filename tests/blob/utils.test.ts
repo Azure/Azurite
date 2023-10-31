@@ -2,7 +2,7 @@ import assert = require("assert");
 import { convertRawHeadersToMetadata } from "../../src/common/utils/utils";
 
 describe("Utils", () => {
-  it("convertRawHeadersToMetadata should work", () => {
+  it("convertRawHeadersToMetadata should work @loki @sql", () => {
     // upper case, lower case keys/values
     const metadata = convertRawHeadersToMetadata([
       "x-ms-meta-Name1",
@@ -22,7 +22,7 @@ describe("Utils", () => {
     });
   });
 
-  it("convertRawHeadersToMetadata should work with duplicated metadata", () => {
+  it("convertRawHeadersToMetadata should work with duplicated metadata @loki @sql", () => {
     const metadata = convertRawHeadersToMetadata([
       "x-ms-meta-name1",
       "Value",
@@ -34,7 +34,7 @@ describe("Utils", () => {
     });
   });
 
-  it("convertRawHeadersToMetadata should work with empty metadata", () => {
+  it("convertRawHeadersToMetadata should work with empty metadata @loki @sql", () => {
     const metadata = convertRawHeadersToMetadata([
       "x-ms-meta-Name1",
       "",
@@ -47,12 +47,12 @@ describe("Utils", () => {
     });
   });
 
-  it("convertRawHeadersToMetadata should work with empty raw headers", () => {
+  it("convertRawHeadersToMetadata should work with empty raw headers @loki @sql", () => {
     const metadata = convertRawHeadersToMetadata();
     assert.deepStrictEqual(metadata, undefined);
   });
 
-  it("convertRawHeadersToMetadata should work with empty raw headers array", () => {
+  it("convertRawHeadersToMetadata should work with empty raw headers array @loki @sql", () => {
     const metadata = convertRawHeadersToMetadata([]);
     assert.deepStrictEqual(metadata, undefined);
   });
