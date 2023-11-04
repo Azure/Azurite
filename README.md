@@ -20,10 +20,6 @@
     - [NPM](#npm)
     - [Visual Studio Code Extension](#visual-studio-code-extension)
     - [DockerHub](#dockerhub)
-      - [Run Azurite V3 docker image](#run-azurite-v3-docker-image)
-      - [Run Azurite V3 docker image with customized persisted data location](#run-azurite-v3-docker-image-with-customized-persisted-data-location)
-      - [Customize all Azurite V3 supported parameters for docker image](#customize-all-azurite-v3-supported-parameters-for-docker-image)
-      - [Docker Compose](#docker-compose)
     - [NuGet](#nuget)
     - [Visual Studio](#visual-studio)
   - [Supported Command Line Options](#supported-command-line-options)
@@ -204,7 +200,7 @@ Following extension configurations are supported:
 - `azurite.skipApiVersionCheck` Skip the request API version check, by default false.
 - `azurite.disableProductStyleUrl` Force parsing storage account name from request Uri path, instead of from request Uri host.
 - `azurite.inMemoryPersistence` Disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
-- `azurite.memoryExtentLimit` When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of bytes. Defaults to 50% of total memory.
+- `azurite.extentMemoryLimit` When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of bytes. This does not limit blob, queue, or table metadata. Defaults to 50% of total memory.
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
@@ -442,7 +438,8 @@ Optional. When using FQDN instead of IP in request Uri host, by default Azurite 
 Optional. Disable persisting any data to disk and only store data in-memory. If the Azurite process is terminated, all
 data is lost. By default, LokiJS persists blob and queue metadata to disk and content to extent files. Table storage
 persists all data to disk. This behavior can be disabled using this option. This setting is rejected when the SQL based
-metadata implementation is enabled.
+metadata implementation is enabled (via `AZURITE_DB`). This setting is rejected when the `--location` option is
+specified.
 
 ```cmd
 --inMemoryPersistence
@@ -461,6 +458,8 @@ not contribute to this limit and is unbounded which is the same as without the `
 ```cmd
 --extentMemoryLimit <bytes>
 ```
+
+This option is rejected when `--inMemoryPersistence` is not specified.
 
 When the limit is reached, write operations to the blob or queue endpoints which carry content will fail with an `HTTP
 409` status code, a custom storage error code of `MemoryExtentStoreAtSizeLimit`, and a helpful error message.

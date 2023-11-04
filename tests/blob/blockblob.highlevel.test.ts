@@ -179,7 +179,7 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) {}
+    } catch (err) { }
     assert.ok(eventTriggered);
   }).timeout(timeoutForLargeFileUploadingTest);
 
@@ -198,7 +198,7 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) {}
+    } catch (err) { }
     assert.ok(eventTriggered);
   });
 
@@ -260,7 +260,7 @@ describe("BlockBlobHighlevel", () => {
         abortSignal: AbortController.timeout(1)
       });
       assert.fail();
-    } catch (err:any) {
+    } catch (err: any) {
       assert.ok((err.message as string).toLowerCase().includes("abort"));
     }
   }).timeout(timeoutForLargeFileUploadingTest);
@@ -306,7 +306,7 @@ describe("BlockBlobHighlevel", () => {
     const aborter = new AbortController();
     try {
       await blockBlobClient.downloadToBuffer(buf, 0, undefined, {
-        blockSize: 32 * 1024, // if too small, the test is very slow
+        blockSize: 1 * 1024,
         maxRetryRequestsPerBlock: 5,
         concurrency: 1,
         onProgress: () => {
@@ -314,7 +314,7 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) {}
+    } catch (err) { }
     assert.ok(eventTriggered);
   }).timeout(timeoutForLargeFileUploadingTest);
 
