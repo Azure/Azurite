@@ -51,7 +51,7 @@ export default class TableConfiguration extends ConfigurationBase {
       key,
       pwd,
       oauth,
-      disableProductStyleUrl,
+      disableProductStyleUrl
     );
   }
 }

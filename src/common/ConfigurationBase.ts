@@ -51,7 +51,7 @@ export default abstract class ConfigurationBase {
     public readonly pwd: string = "",
     public readonly oauth?: string,
     public readonly disableProductStyleUrl: boolean = false,
-  ) { }
+  ) {}
 
   public hasCert() {
     if (this.cert.length > 0 && this.key.length > 0) {
@@ -92,7 +92,8 @@ export default abstract class ConfigurationBase {
   }
 
   public getHttpServerAddress(): string {
-    return `http${this.hasCert() === CertOptions.Default ? "" : "s"}://${this.host
-      }:${this.port}`;
+    return `http${this.hasCert() === CertOptions.Default ? "" : "s"}://${
+      this.host
+    }:${this.port}`;
   }
 }

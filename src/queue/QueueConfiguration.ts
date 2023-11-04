@@ -57,7 +57,7 @@ export default class QueueConfiguration extends ConfigurationBase {
       key,
       pwd,
       oauth,
-      disableProductStyleUrl,
+      disableProductStyleUrl
     );
   }
 }

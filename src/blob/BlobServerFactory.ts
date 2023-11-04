@@ -66,7 +66,7 @@ export class BlobServerFactory {
           env.key(),
           env.pwd(),
           env.oauth(),
-          env.disableProductStyleUrl(),
+          env.disableProductStyleUrl()
         );
 
         return new SqlBlobServer(config);

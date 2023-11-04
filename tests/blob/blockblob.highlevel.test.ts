@@ -179,7 +179,7 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) { }
+    } catch (err) {}
     assert.ok(eventTriggered);
   }).timeout(timeoutForLargeFileUploadingTest);
 
@@ -198,7 +198,7 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) { }
+    } catch (err) {}
     assert.ok(eventTriggered);
   });
 
@@ -260,7 +260,7 @@ describe("BlockBlobHighlevel", () => {
         abortSignal: AbortController.timeout(1)
       });
       assert.fail();
-    } catch (err: any) {
+    } catch (err:any) {
       assert.ok((err.message as string).toLowerCase().includes("abort"));
     }
   }).timeout(timeoutForLargeFileUploadingTest);
@@ -314,7 +314,7 @@ describe("BlockBlobHighlevel", () => {
           aborter.abort();
         }
       });
-    } catch (err) { }
+    } catch (err) {}
     assert.ok(eventTriggered);
   }).timeout(timeoutForLargeFileUploadingTest);
 

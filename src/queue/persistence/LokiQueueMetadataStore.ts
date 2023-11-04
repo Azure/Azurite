@@ -236,10 +236,10 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
       prefix === ""
         ? { $loki: { $gt: marker }, accountName: account }
         : {
-          name: { $regex: `^${this.escapeRegex(prefix)}` },
-          $loki: { $gt: marker },
-          accountName: account
-        };
+            name: { $regex: `^${this.escapeRegex(prefix)}` },
+            $loki: { $gt: marker },
+            accountName: account
+          };
 
     // Get one more item to help check if the query reach the tail of the collection.
     const docs = coll

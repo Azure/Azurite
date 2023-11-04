@@ -145,18 +145,18 @@ export default class QueueGCManager implements IGCManager {
   private async markSweepLoop(): Promise<void> {
     while (this._status === Status.Running) {
       this.logger.info(
-        `QueueGCManager:markSweepLoop() Start next mark and sweep.`
+        `QueueGCManager:markSweepLoop() Start new mark and sweep.`
       );
       const start = Date.now();
       await this.markSweep();
-      const period = Date.now() - start;
+      const duration = Date.now() - start;
       this.logger.info(
-        `QueueGCManager:markSweepLoop() Mark and sweep finished, taken ${period}ms.`
+        `QueueGCManager:markSweepLoop() Mark and sweep finished, take ${duration}ms.`
       );
 
       if (this._status === Status.Running) {
         this.logger.info(
-          `QueueGCManager:markSweepLoop() Sleep for ${this.gcIntervalInMS}ms.`
+          `QueueGCManager:markSweepLoop() Sleep for ${this.gcIntervalInMS}`
         );
         await this.sleep(this.gcIntervalInMS);
       }

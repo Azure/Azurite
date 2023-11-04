@@ -6,7 +6,7 @@
 import * as assert from "assert";
 import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
-import { getUniqueName } from "../../testutils";
+import {  getUniqueName } from "../../testutils";
 import {
   deleteToAzurite,
   getToAzurite,
@@ -401,7 +401,7 @@ describe("table name validation tests", () => {
     }
   });
 
-
+  
   it(`Should work with production style URL when ${productionStyleHostName} is resolvable`, async () => {
     await dns.promises.lookup(productionStyleHostName).then(
       async (lookupAddress) => {
@@ -414,7 +414,7 @@ describe("table name validation tests", () => {
           Accept: "application/json;odata=nometadata"
         };
         try {
-          let response = await postToAzuriteProductionUrl(productionStyleHostName, "Tables", body, createTableHeaders);
+          let response = await postToAzuriteProductionUrl(productionStyleHostName,"Tables", body, createTableHeaders);
           assert.strictEqual(response.status, 201);
         } catch (err: any) {
           assert.fail();
@@ -446,9 +446,9 @@ describe("table name validation tests", () => {
           Accept: "application/json;odata=nometadata"
         };
         try {
-          let response = await postToAzuriteProductionUrl(productionStyleHostName, "Tables", body, createTableHeaders);
+          let response = await postToAzuriteProductionUrl(productionStyleHostName,"Tables", body, createTableHeaders);
           assert.strictEqual(response.status, 201);
-          let tablesList = await getToAzuriteProductionUrl(productionStyleHostNameForSecondary, "Tables", createTableHeaders);
+          let tablesList = await getToAzuriteProductionUrl(productionStyleHostNameForSecondary,"Tables", createTableHeaders);
           assert.strictEqual(tablesList.status, 200);
         } catch (err: any) {
           assert.fail();
