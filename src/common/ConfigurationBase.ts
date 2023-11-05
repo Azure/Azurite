@@ -13,23 +13,12 @@ export enum CertOptions {
 
 export function setExtentMemoryLimit(env: IBlobEnvironment | IQueueEnvironment) {
   if (env.inMemoryPersistence()) {
-    let limit = env.extentMemoryLimit() ?? SharedChunkStore.sizeLimit();
-    if (limit && limit >= 0) {
-      const kb = limit / 1024;
-      const mb = kb / 1024;
-      const gb = mb / 1024;
-      let display;
-      if (gb >= 1) {
-        display = `${gb.toFixed(2)} GB`
-      } else if (mb >= 1) {
-        display = `${mb.toFixed(2)} MB`
-      } else {
-        display = `${kb.toFixed(2)} KB`
-      }
-
-      const totalPct = Math.round(100 * limit / totalmem())
-      console.log(`In-memory extent storage is enabled with a limit of ${display} (${limit} bytes, ${totalPct}% of total memory).`);
-      SharedChunkStore.setSizeLimit(limit);
+    let mb = env.extentMemoryLimit() ?? SharedChunkStore.sizeLimit();
+    if (mb && mb >= 0) {
+      const bytes = Math.round(mb * 1024 * 1024);
+      const totalPct = Math.round(100 * bytes / totalmem())
+      console.log(`In-memory extent storage is enabled with a limit of ${mb.toFixed(2)} MB (${bytes} bytes, ${totalPct}% of total memory).`);
+      SharedChunkStore.setSizeLimit(bytes);
     } else {
       console.log(`In-memory extent storage is enabled with no limit on memory used.`);
     }
@@ -51,7 +40,7 @@ export default abstract class ConfigurationBase {
     public readonly pwd: string = "",
     public readonly oauth?: string,
     public readonly disableProductStyleUrl: boolean = false,
-  ) {}
+  ) { }
 
   public hasCert() {
     if (this.cert.length > 0 && this.key.length > 0) {
@@ -92,8 +81,7 @@ export default abstract class ConfigurationBase {
   }
 
   public getHttpServerAddress(): string {
-    return `http${this.hasCert() === CertOptions.Default ? "" : "s"}://${
-      this.host
-    }:${this.port}`;
+    return `http${this.hasCert() === CertOptions.Default ? "" : "s"}://${this.host
+      }:${this.port}`;
   }
 }

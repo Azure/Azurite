@@ -116,8 +116,8 @@ export class MemoryExtentChunkStore {
 // By default, allow up to half of the total memory to be used for in-memory
 // extents. We don't use freemem (free memory instead of total memory) since
 // that would lead to a decent amount of unpredictability.
-const defaultSize = Math.trunc(totalmem() * 0.5)
-export const SharedChunkStore: MemoryExtentChunkStore = new MemoryExtentChunkStore(defaultSize);
+export const DEFAULT_EXTENT_MEMORY_LIMIT = Math.trunc(totalmem() * 0.5)
+export const SharedChunkStore: MemoryExtentChunkStore = new MemoryExtentChunkStore(DEFAULT_EXTENT_MEMORY_LIMIT);
 
 export default class MemoryExtentStore implements IExtentStore {
   private readonly categoryName: string;

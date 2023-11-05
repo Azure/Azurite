@@ -80,7 +80,7 @@ A ``--inMemoryPersistence`` command line option will be introduced which will do
 
 By default, the `MemoryExtentStore` will limit itself to 50% of the total physical memory on the machine as returned by
 [`os.totalmem()`](https://nodejs.org/api/os.html#ostotalmem). This can be overridden using a new `--extentMemoryLimit
-<bytes>` option. If this option is specified without `--inMemoryPersistence`, the CLI will error out. The `os.freemem()`
+<megabytes>` option. If this option is specified without `--inMemoryPersistence`, the CLI will error out. The `os.freemem()`
 will not be queried because this will lead to unpredictable behavior for the user where an extent write operation (blob
 content write or enqueue message) will fail intermittently based on the free memory. It is better to simple us a defined
 amount of memory per physical machine and potential exceed the free memory available, thus leveraging virtual memory

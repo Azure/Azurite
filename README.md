@@ -201,7 +201,7 @@ Following extension configurations are supported:
 - `azurite.skipApiVersionCheck` Skip the request API version check, by default false.
 - `azurite.disableProductStyleUrl` Force parsing storage account name from request Uri path, instead of from request Uri host.
 - `azurite.inMemoryPersistence` Disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
-- `azurite.extentMemoryLimit` When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of bytes. This does not limit blob, queue, or table metadata. Defaults to 50% of total memory.
+- `azurite.extentMemoryLimit` When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of megabytes. This does not limit blob, queue, or table metadata. Defaults to 50% of total memory.
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
@@ -448,16 +448,16 @@ specified.
 
 By default, the in-memory extent store (for blob and queue content) is limited to 50% of the total memory on the host
 machine. This is evaluated to using [`os.totalmem()`](https://nodejs.org/api/os.html#ostotalmem). This limit can be
-overridden using the `--extentMemoryLimit <bytes>` option. There is no restriction on the value specified for this
+overridden using the `--extentMemoryLimit <megabytes>` option. There is no restriction on the value specified for this
 option but virtual memory may be used if the limit exceeds the amount of available physical memory as provided by the
 operating system. A high limit may eventually lead to out of memory errors or reduced performance.
 
 The queue and blob extent storage count towards the same limit. The `--extentMemoryLimit` setting is rejected when
-`--inMemoryPersistence` is not specified. LokiJS storage (blob and queue metadata and table metadata and content) does
+`--inMemoryPersistence` is not specified. LokiJS storage (blob and queue metadata and table data) does
 not contribute to this limit and is unbounded which is the same as without the `--inMemoryPersistence` option.
 
 ```cmd
---extentMemoryLimit <bytes>
+--extentMemoryLimit <megabytes>
 ```
 
 This option is rejected when `--inMemoryPersistence` is not specified.

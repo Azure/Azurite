@@ -47,9 +47,9 @@ if (!(args as any).config.name) {
     )
     .option(
       ["", "extentMemoryLimit"],
-      "Optional. The number of bytes to limit in-memory extent storage to. Only used with the --inMemoryPersistence option. Defaults to 50% of total memory",
+      "Optional. The number of megabytes to limit in-memory extent storage to. Only used with the --inMemoryPersistence option. Defaults to 50% of total memory",
       -1,
-      s => s == -1 ? undefined : parseInt(s)
+      s => s == -1 ? undefined : parseFloat(s)
     )
     .option(
       ["d", "debug"],

@@ -260,7 +260,7 @@
               "null"
             ],
             "default": null,
-            "description": "When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of bytes. Defaults to 50% of total memory."
+            "description": "When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of megabytes. Defaults to 50% of total memory."
           }
         }
       }
