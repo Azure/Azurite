@@ -2,8 +2,10 @@ import * as fs from "fs";
 import { OAuthLevel } from "./models";
 import IBlobEnvironment from "../blob/IBlobEnvironment";
 import IQueueEnvironment from "../queue/IQueueEnvironment";
-import { SharedChunkStore } from "./persistence/MemoryExtentStore";
+import { DEFAULT_EXTENT_MEMORY_LIMIT, SharedChunkStore } from "./persistence/MemoryExtentStore";
 import { totalmem } from "os";
+import logger from "./Logger";
+import IEnvironment from "./IEnvironment";
 
 export enum CertOptions {
   Default,
@@ -11,16 +13,33 @@ export enum CertOptions {
   PFX
 }
 
-export function setExtentMemoryLimit(env: IBlobEnvironment | IQueueEnvironment) {
+export function setExtentMemoryLimit(env: IBlobEnvironment | IQueueEnvironment | IEnvironment, logToConsole: boolean) {
   if (env.inMemoryPersistence()) {
-    let mb = env.extentMemoryLimit() ?? SharedChunkStore.sizeLimit();
-    if (mb && mb >= 0) {
+    let mb = env.extentMemoryLimit()
+    if (mb === undefined || typeof mb !== 'number') {
+      mb = DEFAULT_EXTENT_MEMORY_LIMIT / (1024 * 1024)
+    }
+
+    if (mb < 0) {
+      throw new Error(`A negative value of '${mb}' is not allowed for the extent memory limit.`)
+    }
+
+    if (mb >= 0) {
       const bytes = Math.round(mb * 1024 * 1024);
       const totalPct = Math.round(100 * bytes / totalmem())
-      console.log(`In-memory extent storage is enabled with a limit of ${mb.toFixed(2)} MB (${bytes} bytes, ${totalPct}% of total memory).`);
+      const message = `In-memory extent storage is enabled with a limit of ${mb.toFixed(2)} MB (${bytes} bytes, ${totalPct}% of total memory).`
+      if (logToConsole) {
+        console.log(message)
+      }
+      logger.info(message)
       SharedChunkStore.setSizeLimit(bytes);
     } else {
-      console.log(`In-memory extent storage is enabled with no limit on memory used.`);
+      const message = `In-memory extent storage is enabled with no limit on memory used.`
+      if (logToConsole) {
+        console.log(message)
+      }
+      logger.info(message)
+      SharedChunkStore.setSizeLimit();
     }
   }
 }

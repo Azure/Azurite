@@ -13,7 +13,6 @@ import {
   DEFAULT_BLOB_LOKI_DB_PATH,
   DEFAULT_BLOB_PERSISTENCE_ARRAY
 } from "./utils/constants";
-import { setExtentMemoryLimit } from "../common/ConfigurationBase";
 
 export class BlobServerFactory {
   public async createServer(
@@ -90,8 +89,6 @@ export class BlobServerFactory {
           env.disableProductStyleUrl(),
           env.inMemoryPersistence(),
         );
-
-        setExtentMemoryLimit(env);
 
         return new BlobServer(config);
       }

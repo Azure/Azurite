@@ -78,7 +78,7 @@ async function main() {
   // Create server instance
   const server = new QueueServer(config);
 
-  setExtentMemoryLimit(env);
+  setExtentMemoryLimit(env, true);
 
   // Start server
   console.log(
