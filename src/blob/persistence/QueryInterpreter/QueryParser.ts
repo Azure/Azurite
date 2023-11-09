@@ -1,30 +1,42 @@
 import AndNode from "./QueryNodes/AndNode";
-import BinaryDataNode from "./QueryNodes/BinaryDataNode";
 import ConstantNode from "./QueryNodes/ConstantNode";
-import DateTimeNode from "./QueryNodes/DateTimeNode";
 import EqualsNode from "./QueryNodes/EqualsNode";
 import ExpressionNode from "./QueryNodes/ExpressionNode";
 import GreaterThanEqualNode from "./QueryNodes/GreaterThanEqualNode";
 import GreaterThanNode from "./QueryNodes/GreaterThanNode";
-import GuidNode from "./QueryNodes/GuidNode";
 import IQueryNode from "./QueryNodes/IQueryNode";
-import IdentifierNode from "./QueryNodes/IdentifierNode";
+import KeyNode from "./QueryNodes/KeyNode";
 import LessThanEqualNode from "./QueryNodes/LessThanEqualNode";
 import LessThanNode from "./QueryNodes/LessThanNode";
 import NotEqualsNode from "./QueryNodes/NotEqualsNode";
-import NotNode from "./QueryNodes/NotNode";
 import OrNode from "./QueryNodes/OrNode";
-import PartitionKeyNode from "./QueryNodes/PartitionKeyNode";
-import RowKeyNode from "./QueryNodes/RowKeyNode";
-import TableNameNode from "./QueryNodes/TableNode";
 
+/**
+ * This file is used to parse query string for Azure Blob filter by tags and x-ms-if-tags conditions.
+ * https://learn.microsoft.com/en-us/azure/storage/blobs/storage-manage-find-blobs?tabs=azure-portal
+ * https://learn.microsoft.com/en-us/rest/api/storageservices/specifying-conditional-headers-for-blob-service-operations
+ */
 
-export default function parseQuery(query: string): IQueryNode {
+enum ComparisonType {
+  Equal,
+  Greater,
+  Less,
+  NotEqual
+}
+
+interface ComparisonNode {
+  key: string;
+  existedComparison: ComparisonType[];
+}
+
+export default function parseQuery(
+  query: string,
+  conditions: boolean = false): IQueryNode {
   return new QueryParser(query).visit()
 }
 
 /**
- * A recursive descent parser for the Azure Table Storage $filter query syntax.
+ * A recursive descent parser for Azure Blob filter by tags query syntax.
  * 
  * This parser is implemented using a recursive descent strategy, which composes
  * layers of syntax hierarchy, roughly corresponding to the structure of an EBNF
@@ -40,15 +52,67 @@ export default function parseQuery(query: string): IQueryNode {
  *  - EXPRESSION_GROUP := ("(" EXPRESSION ")") | BINARY
  *  - BINARY := IDENTIFIER_OR_CONSTANT (OPERATOR IDENTIFIER_OR_CONSTANT)?
  *  - IDENTIFIER_OR_CONSTANT := CONSTANT | IDENTIFIER
- *  - CONSTANT := NUMBER | STRING | BOOLEAN | DATETIME | GUID | BINARY
- *  - NUMBER := ("-" | "+")? [0-9]+ ("." [0-9]+)? ("L")?
+ *  - CONSTANT := STRING
  */
 class QueryParser {
-  constructor(query: string) {
-    this.query = new ParserContext(query)
+  constructor(query: string,
+    conditions: boolean = false) {
+    this.query = new ParserContext(query);
+    this.forConditions = conditions;
   }
 
-  private query: ParserContext
+  private query: ParserContext;
+  private comparisonNodes: Record<string, ComparisonNode> = {};
+  private comparisonCount: number = 0;
+  private forConditions: boolean;
+
+  validateWithPreviousComparison(key: string, currentComparison: ComparisonType) {
+    if (this.forConditions) return;
+    if (currentComparison === ComparisonType.NotEqual) {
+      return;
+    }
+
+    if (this.comparisonNodes[key]) {
+      for (let i = 0; i < this.comparisonNodes[key].existedComparison.length; ++i) {
+        if (currentComparison === ComparisonType.Equal) {
+          throw new Error("can't have multiple conditions for a single tag unless they define a range");
+        }
+
+        if (currentComparison === ComparisonType.Greater &&
+          (this.comparisonNodes[key].existedComparison[i] === ComparisonType.Less
+            || this.comparisonNodes[key].existedComparison[i] === ComparisonType.Equal)) {
+          throw new Error("can't have multiple conditions for a single tag unless they define a range");
+        }
+
+
+        if (currentComparison === ComparisonType.Less &&
+          (this.comparisonNodes[key].existedComparison[i] === ComparisonType.Greater
+            || this.comparisonNodes[key].existedComparison[i] === ComparisonType.Equal)) {
+          throw new Error("can't have multiple conditions for a single tag unless they define a range");
+        }
+      }
+    }
+
+    return;
+  }
+
+  appendComparionNode(key: string, currentComparison: ComparisonType) {
+    ++this.comparisonCount;
+    if (this.comparisonCount > 10) {
+      throw new Error("there can be at most 10 unique tags in a query");
+    }
+
+    if (this.forConditions) return;
+    if (this.comparisonNodes[key]) {
+      this.comparisonNodes[key].existedComparison.push(currentComparison);
+    }
+    else {
+      this.comparisonNodes[key] = {
+        key: key,
+        existedComparison: [currentComparison]
+      }
+    }
+  }
 
   /**
    * Visits the root of the query syntax tree, returning the corresponding root node.
@@ -96,8 +160,10 @@ class QueryParser {
 
     this.query.skipWhitespace();
     if (this.query.consume("or")) {
+      if (!this.forConditions) {
+        throw new Error("Or not allowed");
+      }
       const right = this.visitOr();
-
       return new OrNode(left, right);
     } else {
       return left;
@@ -133,15 +199,8 @@ class QueryParser {
    */
   private visitUnary(): IQueryNode {
     this.query.skipWhitespace();
-    const hasNot = this.query.consume("not")
-
     const right = this.visitExpressionGroup()
-
-    if (hasNot) {
-      return new NotNode(right);
-    } else {
-      return right;
-    }
+    return right;
   }
 
   /**
@@ -173,25 +232,40 @@ class QueryParser {
    * @returns {IQueryNode}
    */
   private visitBinary(): IQueryNode {
-    const left = this.visitIdentifierOrConstant()
+    const left = this.visitKey();
 
     this.query.skipWhitespace();
-    const operator = this.query.consumeOneOf(true, "eq", "ne", "ge", "gt", "le", "lt")
+    const operator = this.query.consumeOneOf(true, "=", ">=", "<=", ">", "<", "<>")
     if (operator) {
-      const right = this.visitIdentifierOrConstant()
+      const right = this.visitValue()
 
       switch (operator) {
-        case "eq":
+        case "=":
+          this.validateWithPreviousComparison(left.toString(), ComparisonType.Equal);
+          this.appendComparionNode(left.toString(), ComparisonType.Equal);
           return new EqualsNode(left, right);
-        case "ne":
+        case "<>":
+          if (!this.forConditions) {
+            throw new Error("<> not allowed");
+          }
+          this.validateWithPreviousComparison(left.toString(), ComparisonType.NotEqual);
+          this.appendComparionNode(left.toString(), ComparisonType.NotEqual);
           return new NotEqualsNode(left, right);
-        case "ge":
+        case ">=":
+          this.validateWithPreviousComparison(left.toString(), ComparisonType.Greater);
+          this.appendComparionNode(left.toString(), ComparisonType.Greater);
           return new GreaterThanEqualNode(left, right);
-        case "gt":
+        case ">":
+          this.validateWithPreviousComparison(left.toString(), ComparisonType.Greater);
+          this.appendComparionNode(left.toString(), ComparisonType.Greater);
           return new GreaterThanNode(left, right);
-        case "lt":
+        case "<":
+          this.validateWithPreviousComparison(left.toString(), ComparisonType.Less);
+          this.appendComparionNode(left.toString(), ComparisonType.Less);
           return new LessThanNode(left, right);
-        case "le":
+        case "<=":
+          this.validateWithPreviousComparison(left.toString(), ComparisonType.Less);
+          this.appendComparionNode(left.toString(), ComparisonType.Less);
           return new LessThanEqualNode(left, right);
       }
     }
@@ -206,63 +280,24 @@ class QueryParser {
    * 
    * @returns {IQueryNode}
    */
-  private visitIdentifierOrConstant(): IQueryNode {
+  private visitValue(): IQueryNode {
     this.query.skipWhitespace();
 
-    const typedConstantIdentifier = this.query.consumeOneOf(true, "true", "false", "TableName", "PartitionKey", "RowKey", "guid'", "X'", "binary'", "datetime'")
-    if (typedConstantIdentifier) {
-      switch (typedConstantIdentifier) {
-        case "true":
-          return new ConstantNode(true);
-        case "false":
-          return new ConstantNode(false);
-        case "TableName":
-          return new TableNameNode();
-        case "PartitionKey":
-          return new PartitionKeyNode();
-        case "RowKey":
-          return new RowKeyNode();
-        case "guid'":
-          return new GuidNode(this.query.takeWithTerminator("", c => c !== "'", "'")!);
-        case "X'":
-          return new BinaryDataNode(this.query.takeWithTerminator("", c => c !== "'", "'")!);
-        case "binary'":
-          return new BinaryDataNode(this.query.takeWithTerminator("", c => c !== "'", "'")!);
-        case "datetime'":
-          return new DateTimeNode(new Date(this.query.takeWithTerminator("", c => c !== "'", "'")!));
-        default:
-          this.query.throw(`Encountered unrecognized value type '${typedConstantIdentifier}' (this should never occur and indicates that the parser is missing a match arm).`);
-      }
-    }
-
-    if ("-0123456789".includes(this.query.peek())) {
-      return this.visitNumber();
-    }
-
-    if (`'"`.includes(this.query.peek())) {
+    if (`'`.includes(this.query.peek())) {
       return this.visitString();
     }
-
-    return this.visitIdentifier();
+    throw new Error("Expecting value");
   }
 
-  /**
-   * Visits the NUMBER layer of the query syntax tree, returning the appropriate node.
-   * 
-   * NUMBER := ("-" | "+")? [0-9]+ ("." [0-9]+)? ("L")?
-   * 
-   * @returns {IQueryNode}
-   */
-  private visitNumber(): IQueryNode {
-    const isNegative = this.query.consume("-");
-    const numerals = this.query.take(c => "0123456789.".includes(c));
-    const isLong = this.query.consume("L");
+  private validateKey(key: string) {
+    if (key.startsWith("@")) {
+      if (this.forConditions) {
+        throw new Error("x-ms-if-tags not support container");
+      }
 
-    if (isLong) {
-      // Longs are represented in their string form.
-      return new ConstantNode(`${isNegative ? '-' : ''}${numerals}`)
-    } else {
-      return new ConstantNode((isNegative ? -1 : 1) * parseFloat(numerals))
+      if (key !== "@container") {
+        throw new Error("Only container name allowed");
+      }
     }
   }
 
@@ -272,7 +307,7 @@ class QueryParser {
    * Strings are wrapped in either single quotes (') or double quotes (") and may contain
    * doubled-up quotes to introduce a literal.
    */
-  private visitString(): IQueryNode {
+  private visitString(isAKey: boolean = false): IQueryNode {
     const openCharacter = this.query.take()
 
     /**
@@ -304,7 +339,14 @@ class QueryParser {
 
     this.query.consume(openCharacter) || this.query.throw(`Expected a \`${openCharacter}\` to close the string, but found ${this.query.peek()} instead.`);
 
-    return new ConstantNode(content.replace(new RegExp(`${openCharacter}${openCharacter}`, 'g'), openCharacter))
+    if (isAKey) {
+      const keyName = content.replace(new RegExp(`${openCharacter}${openCharacter}`, 'g'), openCharacter);
+      this.validateKey(keyName);
+      return new KeyNode(keyName);
+    }
+    else {
+      return new ConstantNode(content.replace(new RegExp(`${openCharacter}${openCharacter}`, 'g'), openCharacter));
+    }
   }
 
   /**
@@ -314,9 +356,18 @@ class QueryParser {
    * 
    * @returns {IQueryNode}
    */
-  private visitIdentifier(): IQueryNode {
-    const identifier = this.query.take(c => !!c.trim()) || this.query.throw(`Expected a valid identifier, but found '${this.query.peek()}' instead.`);
-    return new IdentifierNode(identifier)
+  private visitKey(): IQueryNode {
+    // A key name can be surrounded by double quotes.
+    if (`"`.includes(this.query.peek())) {
+      return this.visitString(true);
+    }
+    else {
+      const identifier = this.query.take(
+        c => !!c.trim() && c !== '=' && c != '>' && c !== '<'
+      ) || this.query.throw(`Expected a valid identifier, but found '${this.query.peek()}' instead.`);
+      this.validateKey(identifier);
+      return new KeyNode(identifier)
+    }
   }
 }
 
@@ -326,9 +377,9 @@ class QueryParser {
  * specific sequence of characters, and skipping whitespace.
  */
 export class ParserContext {
-  constructor(private query: string) { }
-
-  private tokenPosition: number = 0
+  constructor(private query: string) {
+  }
+  private tokenPosition: number = 0;
 
   /**
    * Asserts that the query has been fully consumed.

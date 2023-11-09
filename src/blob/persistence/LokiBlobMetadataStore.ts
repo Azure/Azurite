@@ -64,7 +64,8 @@ import IBlobMetadataStore, {
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
 import FilterBlobPage from "./FilterBlobPage";
-import { analysis } from "./QueryInterpreter/AnyName";
+import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
+import { getBlobTagsCount, getTagsFromString } from "../utils/utils";
 
 /**
  * This is a metadata source implementation for blob based on loki DB.
@@ -826,7 +827,7 @@ export default class LokiBlobMetadataStore
   public async filterBlobs(
     context: Context,
     account: string,
-    container: string,
+    container?: string,
     where?: string,
     maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
     marker: string = "",
@@ -837,9 +838,14 @@ export default class LokiBlobMetadataStore
     }
     if (container !== undefined) {
       query.containerName = container;
+      await this.checkContainerExist(
+        context,
+        account,
+        container
+      );
     }
 
-    const filterFunction = analysis(where!);
+    const filterFunction = generateQueryBlobWithTagsWhereFunction(where!);
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
     const page = new FilterBlobPage<FilterBlobModel>(maxResults);
@@ -865,7 +871,8 @@ export default class LokiBlobMetadataStore
         let blobItem: FilterBlobModel;
         blobItem = {
           name: item.name,
-          containerName: container,
+          containerName: item.containerName,
+          tags: item.blobTags
         };
         return blobItem;
       });
@@ -3461,6 +3468,13 @@ export default class LokiBlobMetadataStore
       new BlobLeaseAdapter(doc),
       context
     );
+
+    if (modifiedAccessConditions?.ifTags) {
+      const validateFunction = generateQueryBlobWithTagsWhereFunction(modifiedAccessConditions?.ifTags, true);
+      if (!validateFunction(doc)) {
+        throw new Error("412");
+      }
+    }
 
     return doc.blobTags;
   }

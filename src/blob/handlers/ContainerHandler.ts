@@ -404,11 +404,7 @@ export default class ContainerHandler extends BaseHandler
       date: context.startTime,
       serviceEndpoint,
       where: options.where!,
-      blobs: blobs.map(item => {
-        return {
-          ...item
-        };
-      }),
+      blobs: blobs,
       clientRequestId: options.requestId,
       nextMarker: `${nextMarker || ""}`
     };

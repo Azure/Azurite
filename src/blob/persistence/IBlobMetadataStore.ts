@@ -215,8 +215,8 @@ export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
  */
 export interface IBlobMetadataStore
   extends IGCExtentProvider,
-    IDataStore,
-    ICleaner {
+  IDataStore,
+  ICleaner {
   /**
    * Update blob service properties. Create service properties if not exists in persistency layer.
    *
@@ -503,12 +503,12 @@ export interface IBlobMetadataStore
     marker?: string,
     includeSnapshots?: boolean,
     includeUncommittedBlobs?: boolean
-  ): Promise<[BlobModel[], string | undefined]>;  
+  ): Promise<[BlobModel[], string | undefined]>;
 
   filterBlobs(
     context: Context,
     account: string,
-    container: string,
+    container?: string,
     where?: string,
     maxResults?: number,
     marker?: string,
@@ -1090,7 +1090,7 @@ export interface IBlobMetadataStore
   listUncommittedBlockPersistencyChunks(
     marker?: string,
     maxResults?: number
-  ): Promise<[IExtentChunk[], string | undefined]>;  
+  ): Promise<[IExtentChunk[], string | undefined]>;
 
   /**
    * Set blob tags.
@@ -1115,7 +1115,7 @@ export interface IBlobMetadataStore
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     tags: Models.BlobTags | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<void>;  
+  ): Promise<void>;
 
   /**
    * Get blob tags.
@@ -1137,7 +1137,7 @@ export interface IBlobMetadataStore
     blob: string,
     snapshot: string | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
   ): Promise<BlobTags | undefined>;
 }
 

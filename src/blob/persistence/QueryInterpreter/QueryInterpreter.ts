@@ -1,15 +1,28 @@
-import { IQueryContext } from "./IQueryContext";
+import { BlobTags } from "../../generated/artifacts/models";
+import { BlobModel } from "../IBlobMetadataStore";
 import BinaryOperatorNode from "./QueryNodes/BinaryOperatorNode";
 import ExpressionNode from "./QueryNodes/ExpressionNode";
 import IQueryNode from "./QueryNodes/IQueryNode";
-import IdentifierNode from "./QueryNodes/IdentifierNode";
-import NotNode from "./QueryNodes/NotNode";
-import PartitionKeyNode from "./QueryNodes/PartitionKeyNode";
-import RowKeyNode from "./QueryNodes/RowKeyNode";
-import TableNameNode from "./QueryNodes/TableNode";
+import KeyNode from "./QueryNodes/KeyNode";
+import parseQuery from "./QueryParser";
 
-export default function executeQuery(context: IQueryContext, queryTree: IQueryNode): boolean {
-  return !!queryTree.evaluate(context)
+export default function executeQuery(context: BlobModel, queryTree: IQueryNode): boolean {
+  let tags: any = {};
+  const blobTags = context.blobTags;
+  if (blobTags) {
+    let blobTagsValue: BlobTags;
+    if (typeof (blobTags) === 'string') {
+      blobTagsValue = JSON.parse(blobTags as any);
+    }
+    else {
+      blobTagsValue = blobTags;
+    }
+    blobTagsValue.blobTagSet.forEach((aTag) => {
+      tags[aTag.key] = aTag.value;
+    })
+  }
+  tags["@container"] = context.containerName;
+  return !!queryTree.evaluate(tags)
 }
 
 /**
@@ -30,20 +43,8 @@ export function validateQueryTree(queryTree: IQueryNode) {
 }
 
 function countIdentifierReferences(queryTree: IQueryNode): number {
-  if (queryTree instanceof IdentifierNode) {
-    return 1
-  }
-
-  if (queryTree instanceof TableNameNode) {
-    return 1
-  }
-
-  if (queryTree instanceof PartitionKeyNode) {
-    return 1
-  }
-
-  if (queryTree instanceof RowKeyNode) {
-    return 1
+  if (queryTree instanceof KeyNode) {
+    return 1;
   }
 
   if (queryTree instanceof BinaryOperatorNode) {
@@ -54,9 +55,19 @@ function countIdentifierReferences(queryTree: IQueryNode): number {
     return countIdentifierReferences(queryTree.child)
   }
 
-  if (queryTree instanceof NotNode) {
-    return countIdentifierReferences(queryTree.right)
+  return 0
+}
+
+
+export function generateQueryBlobWithTagsWhereFunction(
+  query: string | undefined,
+  conditions: boolean = false
+): (entity: any) => boolean {
+  if (query === undefined) {
+    return () => true;
   }
 
-  return 0
+  const queryTree = parseQuery(query);
+  validateQueryTree(queryTree);
+  return (entity) => executeQuery(entity, queryTree);
 }
