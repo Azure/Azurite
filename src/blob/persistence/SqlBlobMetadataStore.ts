@@ -108,7 +108,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
    */
   public constructor(
     connectionURI: string,
-    sequelizeOptions?: SequelizeOptions
+    sequelizeOptions?: SequelizeOptions,
+    private readonly clearDB: boolean = false,
+    private readonly softDelete: boolean = true
   ) {
     // Enable encrypt connection for SQL Server
     if (connectionURI.startsWith("mssql") && sequelizeOptions) {
@@ -365,8 +367,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       }
     );
 
-    // TODO: sync() is only for development purpose, use migration for production
-    await this.sequelize.sync();
+    if (this.clearDB) {
+      await this.sequelize.sync({ force: true });
+    } else {
+      // TODO: sync() is only for development purpose, use migration for production
+      await this.sequelize.sync();
+    }
 
     this.initialized = true;
   }
@@ -642,33 +648,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      // TODO: GC blobs under deleting status
-      await BlobsModel.update(
-        {
-          deleting: literal("deleting + 1")
-        },
-        {
-          where: {
-            accountName: account,
-            containerName: container
-          },
-          transaction: t
-        }
-      );
-
-      // TODO: GC blocks under deleting status
-      await BlocksModel.update(
-        {
-          deleting: literal("deleting + 1")
-        },
-        {
-          where: {
-            accountName: account,
-            containerName: container
-          },
-          transaction: t
-        }
-      );
+      await this.destroyBlob(account, container, undefined, undefined, t);
+      await this.destroyBlock(account, container, undefined, undefined, t);
       /* Transaction ends */
     });
   }
@@ -1439,7 +1420,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
-  public getBlockList(
+  public async getBlockList(
     context: Context,
     account: string,
     container: string,
@@ -1667,18 +1648,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         transaction: t
       });
 
-      await BlocksModel.update(
-        {
-          deleting: literal("deleting + 1")
-        },
-        {
-          where: {
-            accountName: blob.accountName,
-            containerName: blob.containerName,
-            blobName: blob.name
-          },
-          transaction: t
-        }
+      await this.destroyBlock(
+        blob.accountName,
+        blob.containerName,
+        blob.name,
+        undefined,
+        t
       );
     });
   }
@@ -1891,52 +1866,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         if (count > 1) {
           throw StorageErrorFactory.getSnapshotsPresent(context.contextId!);
         } else {
-          await BlobsModel.update(
-            {
-              deleting: literal("deleting + 1")
-            },
-            {
-              where: {
-                accountName: account,
-                containerName: container,
-                blobName: blob
-              },
-              transaction: t
-            }
-          );
-
-          await BlocksModel.update(
-            {
-              deleting: literal("deleting + 1")
-            },
-            {
-              where: {
-                accountName: account,
-                containerName: container,
-                blobName: blob
-              },
-              transaction: t
-            }
-          );
+          await this.destroyBlob(account, container, blob, undefined, t);
+          await this.destroyBlock(account, container, blob, undefined, t);
         }
       }
 
       // Scenario: Delete one snapshot only
       if (!againstBaseBlob) {
-        await BlobsModel.update(
-          {
-            deleting: literal("deleting + 1")
-          },
-          {
-            where: {
-              accountName: account,
-              containerName: container,
-              blobName: blob,
-              snapshot: blobModel.snapshot
-            },
-            transaction: t
-          }
-        );
+        await this.destroyBlob(account, container, blob, blobModel.snapshot, t);
       }
 
       // Scenario: Delete base blob and snapshots
@@ -1944,33 +1881,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         againstBaseBlob &&
         options.deleteSnapshots === Models.DeleteSnapshotsOptionType.Include
       ) {
-        await BlobsModel.update(
-          {
-            deleting: literal("deleting + 1")
-          },
-          {
-            where: {
-              accountName: account,
-              containerName: container,
-              blobName: blob
-            },
-            transaction: t
-          }
-        );
-
-        await BlocksModel.update(
-          {
-            deleting: literal("deleting + 1")
-          },
-          {
-            where: {
-              accountName: account,
-              containerName: container,
-              blobName: blob
-            },
-            transaction: t
-          }
-        );
+        await this.destroyBlob(account, container, blob, undefined, t);
+        await this.destroyBlock(account, container, blob, undefined, t);
       }
 
       // Scenario: Delete all snapshots only
@@ -1978,20 +1890,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         againstBaseBlob &&
         options.deleteSnapshots === Models.DeleteSnapshotsOptionType.Only
       ) {
-        await BlobsModel.update(
-          {
-            deleting: literal("deleting + 1")
-          },
-          {
-            where: {
-              accountName: account,
-              containerName: container,
-              blobName: blob,
-              snapshot: { [Op.gt]: "" }
-            },
-            transaction: t
-          }
-        );
+        await this.destroyBlob(account, container, blob, { [Op.gt]: "" }, t);
       }
     });
   }
@@ -2072,7 +1971,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
-  public setBlobMetadata(
+  public async setBlobMetadata(
     context: Context,
     account: string,
     container: string,
@@ -3446,5 +3345,71 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       return Models.AccessTier.Cold;
     }
     return undefined;
+  }
+
+  private async destroyBlob(
+    account: string,
+    container: string,
+    blob: string | undefined,
+    snapshot: any,
+    t: Transaction
+  ): Promise<void> {
+    const where: any = {
+      accountName: account,
+      containerName: container
+    };
+
+    if (blob !== undefined) where.blobName = blob;
+    if (snapshot !== undefined) where.snapshot = snapshot;
+
+    if (this.softDelete) {
+      await BlobsModel.update(
+        {
+          deleting: literal("deleting + 1")
+        },
+        {
+          where,
+          transaction: t
+        }
+      );
+    } else {
+      await BlobsModel.destroy({
+        where,
+        transaction: t
+      });
+    }
+  }
+
+  private async destroyBlock(
+    account: string,
+    container: string,
+    blob: string | undefined,
+    snapshot: any,
+    t: Transaction
+  ): Promise<void> {
+    const where: any = {
+      accountName: account,
+      containerName: container
+    };
+
+    if (blob !== undefined) where.blobName = blob;
+    if (snapshot !== undefined) where.snapshot = snapshot;
+
+    if (this.softDelete) {
+      await BlocksModel.update(
+        {
+          deleting: literal("deleting + 1")
+        },
+        {
+          where,
+          transaction: t
+        }
+      );
+    } else {
+      await BlocksModel.destroy({
+        where,
+        transaction: t
+      });
+    }
   }
 }
