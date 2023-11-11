@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Expose start/stop/clean commands as tasks in VS Code extension.
+
 ## 2023.10 Version 3.27.0
 
 General:

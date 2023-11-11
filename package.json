@@ -251,6 +251,20 @@
           }
         }
       }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "azurite",
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Action to perform. Should be one of: start_blob, stop_blob, clean_blob"
+          }
+        }
+      }
     ]
   },
   "scripts": {

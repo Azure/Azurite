@@ -199,6 +199,40 @@ Following extension configurations are supported:
 - `azurite.skipApiVersionCheck` Skip the request API version check, by default false.
 - `azurite.disableProductStyleUrl` Force parsing storage account name from request Uri path, instead of from request Uri host.
 
+The following custom tasks are provided and can be used in `tasks.json` (e.g. to automatically start Azurite when launching a debug session or opening a workspace):
+
+- `azurite: start` Start all Azurite services
+- `azurite: close` Close all Azurite services
+- `azurite: clean` Reset all Azurite services persistency data
+- `azurite: blob.start` Start blob service
+- `azurite: blob.close` Close blob service
+- `azurite: blob.clean` Clean blob service
+- `azurite: queue.start` Start queue service
+- `azurite: queue.close` Close queue service
+- `azurite: queue.clean` Clean queue service
+- `azurite: table.start` Start table service
+- `azurite: table.close` Close table service
+- `azurite: table.clean` Clean table service
+
+To ensure that all services are started before launching a debug configuration, add `"preLaunchTask": "azurite: start"` to the configuration in `launch.json` (see [the docs](https://code.visualstudio.com/Docs/editor/debugging#_launchjson-attributes) for more details).
+
+To auto-start the blob service when opening a workspace, use the `runOptions` in `task.json` as shown in the example below:
+
+```json
+{
+  "tasks" : [
+    {
+      "type": "azurite",
+      "action": "blob.start",
+      "problemMatcher": [],
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    }
+  ]
+}
+```
+
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
 #### Run Azurite V3 docker image
