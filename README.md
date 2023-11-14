@@ -452,6 +452,15 @@ overridden using the `--extentMemoryLimit <megabytes>` option. There is no restr
 option but virtual memory may be used if the limit exceeds the amount of available physical memory as provided by the
 operating system. A high limit may eventually lead to out of memory errors or reduced performance.
 
+As blob or queue content (i.e. bytes in the in-memory extent store) is deleted, the memory is not freed immediately.
+Similar to the default file-system based extent store, both the blob and queue service have an extent garbage collection
+(GC) process. This process is in addition to the standard Node.js runtime GC. The extent GC periodically detects unused
+extents and deletes them from the extent store. This happens on a regular time period rather than immediately after
+the blob or queue REST API operation the caused some content to be deleted. This means that process memory consumed by
+the deleted blob or queue content will only be released after both the extent GC and the runtime GC have run. The extent
+GC will remove the reference to the in-memory byte storage and the runtime GC will free the unreferenced memory some
+time after that. The blob extent GC runs every 10 minutes and the queue extent GC runs every 1 minute.
+
 The queue and blob extent storage count towards the same limit. The `--extentMemoryLimit` setting is rejected when
 `--inMemoryPersistence` is not specified. LokiJS storage (blob and queue metadata and table data) does
 not contribute to this limit and is unbounded which is the same as without the `--inMemoryPersistence` option.
