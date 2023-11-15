@@ -23,6 +23,7 @@ import TableConfiguration from "./table/TableConfiguration";
 import TableServer from "./table/TableServer";
 
 import { DEFAULT_TABLE_LOKI_DB_PATH } from "./table/utils/constants";
+import { setExtentMemoryLimit } from "./common/ConfigurationBase";
 
 // tslint:disable:no-console
 
@@ -98,7 +99,8 @@ async function main() {
     env.key(),
     env.pwd(),
     env.oauth(),
-    env.disableProductStyleUrl()
+    env.disableProductStyleUrl(),
+    env.inMemoryPersistence(),
   );
 
   const tableConfig = new TableConfiguration(
@@ -115,7 +117,8 @@ async function main() {
     env.key(),
     env.pwd(),
     env.oauth(),
-    env.disableProductStyleUrl()
+    env.disableProductStyleUrl(),
+    env.inMemoryPersistence(),
   );
 
   // We use logger singleton as global debugger logger to track detailed outputs cross layers
@@ -129,6 +132,8 @@ async function main() {
 
   // Create table server instance
   const tableServer = new TableServer(tableConfig);
+
+  setExtentMemoryLimit(env, true);
 
   // Start server
   console.log(

@@ -7,7 +7,6 @@ import * as assert from "assert";
 
 import { configLogger } from "../../../src/common/Logger";
 import { StoreDestinationArray } from "../../../src/common/persistence/IExtentStore";
-import QueueConfiguration from "../../../src/queue/QueueConfiguration";
 import Server from "../../../src/queue/QueueServer";
 import {
   EMULATOR_ACCOUNT_KEY,
@@ -16,6 +15,7 @@ import {
   rmRecursive,
   sleep
 } from "../../testutils";
+import QueueTestServerFactory from "../utils/QueueTestServerFactory";
 
 // Set true to enable debug log
 configLogger(false);
@@ -28,22 +28,13 @@ describe("QueueServiceAPIs", () => {
   const extentDbPath = "__extentTestsStorage__";
   const persistencePath = "__queueTestsPersistence__";
 
-  const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
+  const DEFAULT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
     {
       locationId: "queueTest",
       locationPath: persistencePath,
       maxConcurrency: 10
     }
   ];
-
-  const config = new QueueConfiguration(
-    host,
-    port,
-    metadataDbPath,
-    extentDbPath,
-    DEFUALT_QUEUE_PERSISTENCE_ARRAY,
-    false
-  );
 
   const baseURL = `http://${host}:${port}/devstoreaccount1`;
   const serviceClient = new QueueServiceClient(
@@ -62,7 +53,11 @@ describe("QueueServiceAPIs", () => {
   let server: Server;
 
   before(async () => {
-    server = new Server(config);
+    server = new QueueTestServerFactory().createServer({
+      metadataDBPath: metadataDbPath,
+      extentDBPath: extentDbPath,
+      persistencePathArray: DEFAULT_QUEUE_PERSISTENCE_ARRAY
+    })
     await server.start();
   });
 
@@ -270,22 +265,13 @@ describe("QueueServiceAPIs - secondary location endpoint", () => {
   const extentDbPath = "__extentTestsStorage__";
   const persistencePath = "__queueTestsPersistence__";
 
-  const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
+  const DEFAULT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
     {
       locationId: "queueTest",
       locationPath: persistencePath,
       maxConcurrency: 10
     }
   ];
-
-  const config = new QueueConfiguration(
-    host,
-    port,
-    metadataDbPath,
-    extentDbPath,
-    DEFUALT_QUEUE_PERSISTENCE_ARRAY,
-    false
-  );
 
   const baseURL = `http://${host}:${port}/devstoreaccount1-secondary`;
   const serviceClient = new QueueServiceClient(
@@ -304,7 +290,11 @@ describe("QueueServiceAPIs - secondary location endpoint", () => {
   let server: Server;
 
   before(async () => {
-    server = new Server(config);
+    server = new QueueTestServerFactory().createServer({
+      metadataDBPath: metadataDbPath,
+      extentDBPath: extentDbPath,
+      persistencePathArray: DEFAULT_QUEUE_PERSISTENCE_ARRAY
+    });
     await server.start();
   });
 

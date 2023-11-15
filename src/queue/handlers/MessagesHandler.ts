@@ -7,8 +7,8 @@ import Context from "../generated/Context";
 import IMessagesHandler from "../generated/handlers/IMessagesHandler";
 import { MessageModel } from "../persistence/IQueueMetadataStore";
 import {
-  DEFUALT_DEQUEUE_VISIBILITYTIMEOUT,
-  DEFUALT_MESSAGETTL,
+  DEFAULT_DEQUEUE_VISIBILITYTIMEOUT,
+  DEFAULT_MESSAGETTL,
   DEQUEUE_NUMOFMESSAGES_MAX,
   DEQUEUE_NUMOFMESSAGES_MIN,
   DEQUEUE_VISIBILITYTIMEOUT_MAX,
@@ -58,7 +58,7 @@ export default class MessagesHandler extends BaseHandler
 
     // Validate the query parameters.
     const timeNextVisible = new Date(
-      context.startTime!.getTime() + DEFUALT_DEQUEUE_VISIBILITYTIMEOUT * 1000 // 30s as default, convert to ms
+      context.startTime!.getTime() + DEFAULT_DEQUEUE_VISIBILITYTIMEOUT * 1000 // 30s as default, convert to ms
     );
     if (options.visibilitytimeout !== undefined) {
       if (
@@ -116,7 +116,6 @@ export default class MessagesHandler extends BaseHandler
       statusCode: 200;
     };
 
-    // Read the message text from file system.
     for (const message of messages) {
       const textStream = await this.extentStore.readExtent(
         message.persistency,
@@ -218,7 +217,7 @@ export default class MessagesHandler extends BaseHandler
       messageId: uuid(),
       insertionTime: new Date(context.startTime!),
       expirationTime: new Date(
-        context.startTime!.getTime() + DEFUALT_MESSAGETTL * 1000
+        context.startTime!.getTime() + DEFAULT_MESSAGETTL * 1000
       ), // Default ttl is 7 days.
       dequeueCount: 0,
       timeNextVisible: new Date(context.startTime!),

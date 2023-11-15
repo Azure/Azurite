@@ -15,6 +15,7 @@ import {
   createUniquePartitionKey
 } from "../utils/table.entity.test.utils";
 import uuid from "uuid";
+import TableTestServerFactory from "../utils/TableTestServerFactory";
 // import uuid from "uuid";
 // Set true to enable debug log
 configLogger(false);
@@ -798,7 +799,8 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
     await tableClient.deleteTable();
   });
 
-  it("13. should find both old and new guids (backwards compatible) when using guid type, @loki", async () => {
+  // Skip the case when running in-memory. Backwards compatibility with old DBs does not apply.
+  (TableTestServerFactory.inMemoryPersistence() ? it.skip : it)("13. should find both old and new guids (backwards compatible) when using guid type, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       "reproTable"

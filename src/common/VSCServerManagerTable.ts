@@ -77,7 +77,8 @@ export default class VSCServerManagerTable extends VSCServerManagerBase {
       env.key(),
       env.pwd(),
       env.oauth(),
-      env.disableProductStyleUrl()
+      env.disableProductStyleUrl(),
+      env.inMemoryPersistence(),
     );
     return config;
   }

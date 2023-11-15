@@ -20,7 +20,8 @@ args
   .option(
     ["l", "location"],
     "Optional. Use an existing folder as workspace path, default is current working directory",
-    process.cwd()
+    "<cwd>",
+    s => s == "<cwd>" ? undefined : s
   )
   .option(["s", "silent"], "Optional. Disable access log displayed in console")
   .option(
@@ -39,6 +40,16 @@ args
   .option(["", "cert"], "Optional. Path to certificate file")
   .option(["", "key"], "Optional. Path to certificate key .pem file")
   .option(["", "pwd"], "Optional. Password for .pfx file")
+  .option(
+    ["", "inMemoryPersistence"],
+    "Optional. Disable persisting any data to disk. If the Azurite process is terminated, all data is lost"
+  )
+  .option(
+    ["", "extentMemoryLimit"],
+    "Optional. The number of megabytes to limit in-memory extent storage to. Only used with the --inMemoryPersistence option. Defaults to 50% of total memory",
+    -1,
+    s => s == -1 ? undefined : parseFloat(s)
+  )
   .option(
     ["d", "debug"],
     "Optional. Enable debug log by providing a valid local file path as log destination"
@@ -106,6 +117,24 @@ export default class QueueEnvironment implements IQueueEnvironment {
     }
     // default is false which will try to get account name from request Uri hostname
     return false;
+  }
+
+  public inMemoryPersistence(): boolean {
+    if (this.flags.inMemoryPersistence !== undefined) {
+      if (this.flags.location) {
+        throw new RangeError(`The --inMemoryPersistence option is not supported when the --location option is set.`)
+      }
+      return true;
+    } else {
+      if (this.extentMemoryLimit() !== undefined) {
+        throw new RangeError(`The --extentMemoryLimit option is only supported when the --inMemoryPersistence option is set.`)
+      }
+    }
+    return false;
+  }
+
+  public extentMemoryLimit(): number | undefined {
+    return this.flags.extentMemoryLimit;
   }
 
   public async debug(): Promise<string | undefined> {

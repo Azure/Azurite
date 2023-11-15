@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Add `--inMemoryPersistence`  and `--extentMemoryLimit` options and related configs to store all data in-memory without disk persistence. (issue #2227)
+
 ## 2023.10 Version 3.27.0
 
 General:

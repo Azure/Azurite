@@ -14,6 +14,7 @@ import {
   ServicePropertiesModel
 } from "./IQueueMetadataStore";
 import QueueReferredExtentsAsyncIterator from "./QueueReferredExtentsAsyncIterator";
+import { rimrafAsync } from "../../common/utils/utils";
 
 /**
  * This is a metadata source implementation for queue based on loki DB.
@@ -50,8 +51,11 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
   private readonly QUEUES_COLLECTION = "$QUEUES_COLLECTION$";
   private readonly MESSAGES_COLLECTION = "$MESSAGES_COLLECTION$";
 
-  public constructor(public readonly lokiDBPath: string) {
-    this.db = new Loki(lokiDBPath, {
+  public constructor(public readonly lokiDBPath: string, inMemory: boolean) {
+    this.db = new Loki(lokiDBPath, inMemory ? {
+      persistenceMethod: "memory"
+    } : {
+      persistenceMethod: "fs",
       autosave: true,
       autosaveInterval: 5000
     });
@@ -141,6 +145,21 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
     });
 
     this.closed = true;
+  }
+
+  /**
+   * Clean LokiQueueMetadataStore.
+   *
+   * @returns {Promise<void>}
+   * @memberof LokiQueueMetadataStore
+   */
+  public async clean(): Promise<void> {
+    if (this.isClosed()) {
+      await rimrafAsync(this.lokiDBPath);
+
+      return;
+    }
+    throw new Error(`Cannot clean LokiQueueMetadataStore, it's not closed.`);
   }
 
   /**

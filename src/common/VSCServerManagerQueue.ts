@@ -1,6 +1,5 @@
 import { access, ensureDir } from "fs-extra";
 import { join } from "path";
-import { promisify } from "util";
 
 import QueueConfiguration from "../queue/QueueConfiguration";
 import QueueServer from "../queue/QueueServer";
@@ -17,9 +16,6 @@ import VSCChannelWriteStream from "./VSCChannelWriteStream";
 import VSCEnvironment from "./VSCEnvironment";
 import VSCServerManagerBase from "./VSCServerManagerBase";
 import VSCServerManagerClosedState from "./VSCServerManagerClosedState";
-
-import rimraf = require("rimraf");
-const rimrafAsync = promisify(rimraf);
 
 export default class VSCServerManagerBlob extends VSCServerManagerBase {
   public readonly accessChannelStream = new VSCChannelWriteStream(
@@ -62,12 +58,8 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
   }
 
   public async cleanImpl(): Promise<void> {
-    const config = await this.getConfiguration();
-    await rimrafAsync(config.extentDBPath);
-    await rimrafAsync(config.metadataDBPath);
-    for (const path of config.persistencePathArray) {
-      await rimrafAsync(path.locationPath);
-    }
+    await this.createImpl();
+    await this.server!.clean();
   }
 
   private async getConfiguration(): Promise<QueueConfiguration> {
@@ -98,7 +90,8 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       env.key(),
       env.pwd(),
       env.oauth(),
-      env.disableProductStyleUrl()
+      env.disableProductStyleUrl(),
+      env.inMemoryPersistence(),
     );
     return config;
   }

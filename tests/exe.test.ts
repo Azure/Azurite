@@ -36,6 +36,7 @@ import {
   overrideRequest,
   restoreBuildRequestOptions
 } from "./testutils";
+import { existsSync } from "fs";
 
 // server address used for testing. Note that Azurite.exe has
 // server address of http://127.0.0.1:10000 and so on by default
@@ -53,6 +54,14 @@ configLogger(false);
 // Azure Storage Connection String (using SAS or Key).
 const testLocalAzuriteInstance = true;
 
+const binaryPath = ".\\release\\azurite.exe"
+
+function throwOnMissingBinary() {
+  if (!existsSync(binaryPath)) {
+    throw new Error("The Windows binary does not exist. You must build it first using 'npm run build:exe'.")
+  }
+}
+
 describe("exe test", () => {
   const tableService = Azure.createTableService(
     createConnectionStringForTest(testLocalAzuriteInstance)
@@ -65,11 +74,15 @@ describe("exe test", () => {
 
   let childPid: number;
 
+  beforeEach(() => throwOnMissingBinary())
+
   before(async () => {
+    throwOnMissingBinary()
+
     overrideRequest(requestOverride, tableService);
     tableName = getUniqueName("table");
     const child = execFile(
-      ".\\release\\azurite.exe",
+      binaryPath,
       ["--blobPort 11000", "--queuePort 11001", "--tablePort 11002"],
       { cwd: process.cwd(), shell: true, env: {} }
     );
@@ -116,10 +129,14 @@ describe("exe test", () => {
     tableService.removeAllListeners();
 
     await find("name", "azurite.exe", true).then((list: any) => {
-      process.kill(list[0].pid);
+      if (list.length > 0) {
+        process.kill(list[0].pid);
+      }
     });
 
-    process.kill(childPid);
+    if (childPid) {
+      process.kill(childPid);
+    }
   });
 
   describe("table test", () => {

@@ -5,7 +5,7 @@ import Context from "../generated/Context";
 import IMessageIdHandler from "../generated/handlers/IMessageIdHandler";
 import { MessageUpdateProperties } from "../persistence/IQueueMetadataStore";
 import {
-  DEFUALT_UPDATE_VISIBILITYTIMEOUT,
+  DEFAULT_UPDATE_VISIBILITYTIMEOUT,
   MESSAGETEXT_LENGTH_MAX,
   QUEUE_API_VERSION,
   UPDATE_VISIBILITYTIMEOUT_MAX,
@@ -80,7 +80,7 @@ export default class MessageIdHandler extends BaseHandler
 
     // Validate the query parameters.
     const timeNextVisible = new Date(
-      context.startTime!.getTime() + DEFUALT_UPDATE_VISIBILITYTIMEOUT * 1000 // 30s as default
+      context.startTime!.getTime() + DEFAULT_UPDATE_VISIBILITYTIMEOUT * 1000 // 30s as default
     );
     if (visibilitytimeout !== undefined) {
       if (

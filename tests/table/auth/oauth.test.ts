@@ -13,7 +13,15 @@ configLogger(false);
 
 describe("Table OAuth Basic", () => {
   const factory = new TableTestServerFactory();
-  let server = factory.createServer(false, false, true, "basic");
+  let server = factory.createServer({
+    metadataDBPath: "__test_db_table__.json",
+    enableDebugLog: false,
+    debugLogFilePath: "debug-test-table.log",
+    loose: false,
+    skipApiVersionCheck: false,
+    https: true,
+    oauth: "basic"
+  });
   const baseURL = `https://${server.config.host}:${server.config.port}/devstoreaccount1`;
 
   before(async () => {
@@ -386,7 +394,15 @@ describe("Table OAuth Basic", () => {
     await server.close();
     await server.clean();
 
-    server = factory.createServer(false, false, false, "basic");
+    server = factory.createServer({
+      metadataDBPath: "__test_db_table__.json",
+      enableDebugLog: false,
+      debugLogFilePath: "debug-test-table.log",
+      loose: false,
+      skipApiVersionCheck: false,
+      https: false,
+      oauth: "basic"
+    });
     await server.start();
 
     const httpBaseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
