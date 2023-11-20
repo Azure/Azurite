@@ -245,5 +245,5 @@ function generateTableSASSignature20150405(
 }
 
 function getCanonicalName(accountName: string, tableName: string): string {
-  return `/table/${accountName}/${tableName}`;
+  return `/table/${accountName}/${tableName.toLowerCase()}`;
 }
