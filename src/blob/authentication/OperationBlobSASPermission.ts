@@ -3,24 +3,24 @@ import { BlobSASPermission } from "./BlobSASPermissions";
 import { ContainerSASPermission } from "./ContainerSASPermissions";
 
 export class OperationBlobSASPermission {
-  constructor(public readonly permission: string = "") {}
+  constructor(public readonly permission: string = "") { }
 
   public validate(permissions: string): boolean {
     return this.validatePermissions(permissions);
   }
 
   public validatePermissions(permissions: string): boolean {
-    if (this.permission !== "") {
-      for (const p of this.permission) {
-        if (permissions.toString().includes(p)) {
-          return true;
-        }
-      }
-      return false;
-    }
-    else {
+    // Only blob batch operation allows Any permissions.
+    if (this.permission === ContainerSASPermission.Any) {
       return permissions.toString() !== "";
     }
+
+    for (const p of this.permission) {
+      if (permissions.toString().includes(p)) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 
@@ -335,7 +335,7 @@ OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Container_SubmitBatch,
-  new OperationBlobSASPermission()
+  new OperationBlobSASPermission(ContainerSASPermission.Any)
 );
 OPERATION_BLOB_SAS_CONTAINER_PERMISSIONS.set(
   Operation.Container_GetAccessPolicy,

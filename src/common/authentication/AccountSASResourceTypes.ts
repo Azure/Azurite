@@ -1,7 +1,8 @@
 export enum AccountSASResourceType {
   Service = "s",
   Container = "c",
-  Object = "o"
+  Object = "o",
+  Any = "AnyResourceType" // This is only used for blob batch operation.
 }
 
 /**
