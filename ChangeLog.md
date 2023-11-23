@@ -4,6 +4,8 @@
 
 ## Upcoming Release
 
+## 2023.11 Version 3.28.0
+
 General:
 
 - Add `--inMemoryPersistence`  and `--extentMemoryLimit` options and related configs to store all data in-memory without disk persistence. (issue #2227)
@@ -13,6 +15,7 @@ Blob:
 - Fixed issue of not requiring SAS permission for some specific operations. (issue #2299)
 
 Table:
+
 - Fixed table sas request failure with table name include upper case letter (Issue #1359)
 
 ## 2023.10 Version 3.27.0
