@@ -12,9 +12,9 @@ import { AccountSASService } from "../../common/authentication/AccountSASService
 export class OperationAccountSASPermission {
   constructor(
     public readonly service: string,
-    public readonly resourceType?: string,
-    public readonly permission?: string
-  ) {}
+    public readonly resourceType: string,
+    public readonly permission: string
+  ) { }
 
   public validate(
     services: AccountSASServices | string,
@@ -35,33 +35,33 @@ export class OperationAccountSASPermission {
   public validateResourceTypes(
     resourceTypes: AccountSASResourceTypes | string
   ): boolean {
-    if (this.resourceType) {
-      for (const p of this.resourceType) {
-        if (resourceTypes.toString().includes(p)) {
-          return true;
-        }
-      }
-      return false;
-    }
-    else {
+    // Only blob batch operation allows Any resource types.
+    if (this.resourceType === AccountSASResourceType.Any) {
       return resourceTypes.toString() !== "";
     }
+
+    for (const p of this.resourceType) {
+      if (resourceTypes.toString().includes(p)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public validatePermissions(
     permissions: AccountSASPermissions | string
   ): boolean {
-    if (this.permission) {
-      for (const p of this.permission) {
-        if (permissions.toString().includes(p)) {
-          return true;
-        }
-      }
-      return false;
-    }
-    else {
+    // Only blob batch operation allows Any permissions.
+    if (this.permission === AccountSASPermission.Any) {
       return permissions.toString() !== "";
     }
+
+    for (const p of this.permission) {
+      if (permissions.toString().includes(p)) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 
@@ -77,16 +77,16 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   new OperationAccountSASPermission(
     AccountSASService.Blob,
     AccountSASResourceType.Service +
-      AccountSASResourceType.Container +
-      AccountSASResourceType.Object,
+    AccountSASResourceType.Container +
+    AccountSASResourceType.Object,
     AccountSASPermission.Read +
-      AccountSASPermission.Create +
-      AccountSASPermission.Delete +
-      AccountSASPermission.List +
-      AccountSASPermission.Process +
-      AccountSASPermission.Read +
-      AccountSASPermission.Update +
-      AccountSASPermission.Write
+    AccountSASPermission.Create +
+    AccountSASPermission.Delete +
+    AccountSASPermission.List +
+    AccountSASPermission.Process +
+    AccountSASPermission.Read +
+    AccountSASPermission.Update +
+    AccountSASPermission.Write
   )
 );
 
@@ -95,16 +95,16 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   new OperationAccountSASPermission(
     AccountSASService.Blob,
     AccountSASResourceType.Service +
-      AccountSASResourceType.Container +
-      AccountSASResourceType.Object,
+    AccountSASResourceType.Container +
+    AccountSASResourceType.Object,
     AccountSASPermission.Read +
-      AccountSASPermission.Create +
-      AccountSASPermission.Delete +
-      AccountSASPermission.List +
-      AccountSASPermission.Process +
-      AccountSASPermission.Read +
-      AccountSASPermission.Update +
-      AccountSASPermission.Write
+    AccountSASPermission.Create +
+    AccountSASPermission.Delete +
+    AccountSASPermission.List +
+    AccountSASPermission.Process +
+    AccountSASPermission.Read +
+    AccountSASPermission.Update +
+    AccountSASPermission.Write
   )
 );
 
@@ -113,16 +113,16 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   new OperationAccountSASPermission(
     AccountSASService.Blob,
     AccountSASResourceType.Service +
-      AccountSASResourceType.Container +
-      AccountSASResourceType.Object,
+    AccountSASResourceType.Container +
+    AccountSASResourceType.Object,
     AccountSASPermission.Read +
-      AccountSASPermission.Create +
-      AccountSASPermission.Delete +
-      AccountSASPermission.List +
-      AccountSASPermission.Process +
-      AccountSASPermission.Read +
-      AccountSASPermission.Update +
-      AccountSASPermission.Write
+    AccountSASPermission.Create +
+    AccountSASPermission.Delete +
+    AccountSASPermission.List +
+    AccountSASPermission.Process +
+    AccountSASPermission.Read +
+    AccountSASPermission.Update +
+    AccountSASPermission.Write
   )
 );
 
@@ -131,16 +131,16 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   new OperationAccountSASPermission(
     AccountSASService.Blob,
     AccountSASResourceType.Service +
-      AccountSASResourceType.Container +
-      AccountSASResourceType.Object,
+    AccountSASResourceType.Container +
+    AccountSASResourceType.Object,
     AccountSASPermission.Read +
-      AccountSASPermission.Create +
-      AccountSASPermission.Delete +
-      AccountSASPermission.List +
-      AccountSASPermission.Process +
-      AccountSASPermission.Read +
-      AccountSASPermission.Update +
-      AccountSASPermission.Write
+    AccountSASPermission.Create +
+    AccountSASPermission.Delete +
+    AccountSASPermission.List +
+    AccountSASPermission.Process +
+    AccountSASPermission.Read +
+    AccountSASPermission.Update +
+    AccountSASPermission.Write
   )
 );
 
@@ -149,16 +149,16 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   new OperationAccountSASPermission(
     AccountSASService.Blob,
     AccountSASResourceType.Service +
-      AccountSASResourceType.Container +
-      AccountSASResourceType.Object,
+    AccountSASResourceType.Container +
+    AccountSASResourceType.Object,
     AccountSASPermission.Read +
-      AccountSASPermission.Create +
-      AccountSASPermission.Delete +
-      AccountSASPermission.List +
-      AccountSASPermission.Process +
-      AccountSASPermission.Read +
-      AccountSASPermission.Update +
-      AccountSASPermission.Write
+    AccountSASPermission.Create +
+    AccountSASPermission.Delete +
+    AccountSASPermission.List +
+    AccountSASPermission.Process +
+    AccountSASPermission.Read +
+    AccountSASPermission.Update +
+    AccountSASPermission.Write
   )
 );
 
@@ -167,16 +167,16 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   new OperationAccountSASPermission(
     AccountSASService.Blob,
     AccountSASResourceType.Service +
-      AccountSASResourceType.Container +
-      AccountSASResourceType.Object,
+    AccountSASResourceType.Container +
+    AccountSASResourceType.Object,
     AccountSASPermission.Read +
-      AccountSASPermission.Create +
-      AccountSASPermission.Delete +
-      AccountSASPermission.List +
-      AccountSASPermission.Process +
-      AccountSASPermission.Read +
-      AccountSASPermission.Update +
-      AccountSASPermission.Write
+    AccountSASPermission.Create +
+    AccountSASPermission.Delete +
+    AccountSASPermission.List +
+    AccountSASPermission.Process +
+    AccountSASPermission.Read +
+    AccountSASPermission.Update +
+    AccountSASPermission.Write
   )
 );
 
@@ -211,8 +211,8 @@ OPERATION_ACCOUNT_SAS_PERMISSIONS.set(
   Operation.Service_SubmitBatch,
   new OperationAccountSASPermission(
     AccountSASService.Blob,
-    "",
-    "" // NOT ALLOWED
+    AccountSASResourceType.Any,
+    AccountSASPermission.Any
   )
 );
 

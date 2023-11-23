@@ -6,7 +6,7 @@ import { configLogger } from "../../src/common/Logger";
 import BlobTestServerFactory from "../BlobTestServerFactory";
 import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, generateJWTToken, getUniqueName } from "../testutils";
 import { SimpleTokenCredential } from "../simpleTokenCredential";
-import { BlobClient, StorageSharedKeyCredential, BlobBatch} from "@azure/storage-blob";
+import { BlobClient, StorageSharedKeyCredential, BlobBatch } from "@azure/storage-blob";
 
 // Set true to enable debug log
 configLogger(false);
@@ -52,7 +52,7 @@ describe("Blob OAuth Basic", () => {
     await containerClient.create();
     await containerClient.delete();
   });
-  
+
   it(`Should work with blob batch deleting @loki @sql`, async () => {
     const token = generateJWTToken(
       new Date("2019/01/01"),
@@ -123,7 +123,7 @@ describe("Blob OAuth Basic", () => {
     ).value;
     assert.equal(resp2.segment.blobItems.length, 0);
   });
-  
+
   it(`Should work with blob batch set tier @loki @sql`, async () => {
     const token = generateJWTToken(
       new Date("2019/01/01"),
@@ -182,7 +182,7 @@ describe("Blob OAuth Basic", () => {
       assert.ok(resp.subResponses[i].headers.contains("x-ms-request-id"));
       assert.equal(resp.subResponses[i]._request.url, blobClients[i].url);
     }
-    
+
     for (const blobClient of blobClients) {
       // Check blob tier set properly.
       const resp2 = await blobClient.getProperties();
@@ -211,14 +211,16 @@ describe("Blob OAuth Basic", () => {
       })
     );
 
+    const containerName: string = getUniqueName("1container-with-dash");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
     const startTime = new Date();
     startTime.setHours(startTime.getHours() - 1);
     const expiryTime = new Date();
     expiryTime.setDate(expiryTime.getDate() + 1);
-    
-    const userDelegationKey = await serviceClient.getUserDelegationKey(startTime, expiryTime);
 
-    const containerName: string = getUniqueName("1container-with-dash")
+    const userDelegationKey = await serviceClient.getUserDelegationKey(startTime, expiryTime);
 
     const sasExpirytime = new Date();
     sasExpirytime.setHours(sasExpirytime.getHours() + 1);
@@ -233,11 +235,12 @@ describe("Blob OAuth Basic", () => {
       "devstoreaccount1"
     );
 
-    const containerClient = new ContainerClient(
+    const containerClientWithSAS = new ContainerClient(
       `${serviceClient.url}/${containerName}?${containerSAS}`,
       newPipeline(new AnonymousCredential())
     );
-    await containerClient.create();
+    const result = (await containerClientWithSAS.listBlobsFlat().byPage().next()).value;
+    assert.ok(result.serviceEndpoint.length > 0);
     await containerClient.delete();
   });
 
@@ -262,14 +265,16 @@ describe("Blob OAuth Basic", () => {
       })
     );
 
+    const containerName: string = getUniqueName("1container-with-dash");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
     const startTime = new Date();
     startTime.setHours(startTime.getHours() - 1);
     const expiryTime = new Date();
     expiryTime.setDate(expiryTime.getDate() + 1);
-    
-    const userDelegationKey = await serviceClient.getUserDelegationKey(startTime, expiryTime);
 
-    const containerName: string = getUniqueName("1container-with-dash")
+    const userDelegationKey = await serviceClient.getUserDelegationKey(startTime, expiryTime);
 
     const sasExpirytime = new Date();
     sasExpirytime.setHours(sasExpirytime.getHours() + 1);
@@ -284,12 +289,11 @@ describe("Blob OAuth Basic", () => {
       "devstoreaccount1"
     );
 
-    const containerClient = new ContainerClient(
+    const containerClientWithSAS = new ContainerClient(
       `${serviceClient.url}/${containerName}?${containerSAS}`,
       newPipeline(new AnonymousCredential())
     );
-    await containerClient.create();
-    const blobClient = await containerClient.getBlockBlobClient("test");
+    const blobClient = await containerClientWithSAS.getBlockBlobClient("test");
     const data = "Test Data";
     await blobClient.upload(data, data.length);
     await containerClient.delete();
@@ -348,7 +352,7 @@ describe("Blob OAuth Basic", () => {
     catch (err) {
       failed = true;
       assert.equal(err.statusCode, 403);
-    }    
+    }
     assert.ok(failed);
 
     // Eearlier user delegation key expirty time
@@ -375,7 +379,7 @@ describe("Blob OAuth Basic", () => {
       `${serviceClient.url}/${containerName}?${containerSAS}`,
       newPipeline(new AnonymousCredential())
     );
-    
+
     failed = false;
     try {
       await containerClient.create();
@@ -383,11 +387,11 @@ describe("Blob OAuth Basic", () => {
     catch (err) {
       failed = true;
       assert.equal(err.statusCode, 403);
-    }    
+    }
     assert.ok(failed);
   });
 
-  
+
   it(`Should fail with delegation SAS with access policy @loki @sql`, async () => {
     const token = generateJWTToken(
       new Date("2019/01/01"),
@@ -432,7 +436,7 @@ describe("Blob OAuth Basic", () => {
     const containerName: string = getUniqueName("1container-with-dash");
     const containerClientWithKey = serviceClientWithAccountKey.getContainerClient(containerName);
     await containerClientWithKey.create();
-    await containerClientWithKey.setAccessPolicy(undefined, 
+    await containerClientWithKey.setAccessPolicy(undefined,
       [
         {
           accessPolicy: {
@@ -448,7 +452,7 @@ describe("Blob OAuth Basic", () => {
     const containerSAS = generateBlobSASQueryParameters(
       {
         containerName: containerName,
-        expiresOn: sasExpirytime,        
+        expiresOn: sasExpirytime,
         permissions: ContainerSASPermissions.parse("racwdl"),
         identifier: "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI="
       },
@@ -460,7 +464,7 @@ describe("Blob OAuth Basic", () => {
       `${serviceClient.url}/${containerName}?${containerSAS}`,
       newPipeline(new AnonymousCredential())
     );
-    
+
     let failed = false;
     try {
       await containerClient.getProperties();
@@ -468,7 +472,7 @@ describe("Blob OAuth Basic", () => {
     catch (err) {
       failed = true;
       assert.equal(err.statusCode, 403);
-    }    
+    }
     assert.ok(failed);
   });
 
@@ -834,8 +838,8 @@ describe("Blob OAuth Basic", () => {
     try {
       await containerClientNotExist.create();
     } catch (err) {
-      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound'){
-        assert.fail( "Create queue with shared key not fail as expected." + err.toString()); 
+      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound') {
+        assert.fail("Create queue with shared key not fail as expected." + err.toString());
       }
     }
 
@@ -863,13 +867,13 @@ describe("Blob OAuth Basic", () => {
     try {
       await containerClientNotExist.create();
     } catch (err) {
-      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound'){
-        assert.fail( "Create queue with oauth not fail as expected." + err.toString()); 
+      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound') {
+        assert.fail("Create queue with oauth not fail as expected." + err.toString());
       }
     }
     // Account SAS
     const now = new Date();
-    now.setMinutes(now.getMinutes() - 5); 
+    now.setMinutes(now.getMinutes() - 5);
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
     const sas = generateAccountSASQueryParameters(
@@ -893,12 +897,12 @@ describe("Blob OAuth Basic", () => {
         keepAliveOptions: { enable: false }
       })
     );
-    containerClientNotExist = serviceClient.getContainerClient(containerName); 
+    containerClientNotExist = serviceClient.getContainerClient(containerName);
     try {
       await containerClientNotExist.create();
     } catch (err) {
-      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound'){
-        assert.fail( "Create queue with account sas not fail as expected." + err.toString()); 
+      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound') {
+        assert.fail("Create queue with account sas not fail as expected." + err.toString());
       }
     }
 
@@ -927,11 +931,11 @@ describe("Blob OAuth Basic", () => {
     try {
       await containerClientNotExist.create();
     } catch (err) {
-      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound'){
-        assert.fail( "Create queue with service sas not fail as expected." + err.toString()); 
+      if (err.statusCode !== 404 && err.code !== 'ResourceNotFound') {
+        assert.fail("Create queue with service sas not fail as expected." + err.toString());
       }
     }
-  });  
+  });
 
   it(`Should not work with HTTP @loki @sql`, async () => {
     await server.close();
