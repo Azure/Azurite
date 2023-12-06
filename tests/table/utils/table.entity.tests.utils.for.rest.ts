@@ -52,8 +52,8 @@ export function createStringToSignForSharedKeyLite(
 ): string {
   const stringToSign: string =
     [
-      getHeaderValueToSign(HeaderConstants.DATE, headers) ||
-        getHeaderValueToSign(HeaderConstants.X_MS_DATE, headers)
+      getHeaderValueToSign(HeaderConstants.X_MS_DATE, headers) ||
+        getHeaderValueToSign(HeaderConstants.DATE, headers)
     ].join("\n") +
     "\n" +
     getCanonicalizedResourceString(

@@ -53,8 +53,8 @@ export default class TableSharedKeyAuthenticator implements IAuthenticator {
         req.getMethod().toUpperCase(),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
-        this.getHeaderValueToSign(req, HeaderConstants.DATE) ||
-          this.getHeaderValueToSign(req, HeaderConstants.X_MS_DATE)
+        this.getHeaderValueToSign(req, HeaderConstants.X_MS_DATE) ||
+          this.getHeaderValueToSign(req, HeaderConstants.DATE)
       ].join("\n") +
       "\n" +
       this.getCanonicalizedResourceString(
@@ -111,8 +111,8 @@ export default class TableSharedKeyAuthenticator implements IAuthenticator {
         req.getMethod().toUpperCase(),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_MD5),
         this.getHeaderValueToSign(req, HeaderConstants.CONTENT_TYPE),
-        this.getHeaderValueToSign(req, HeaderConstants.DATE) ||
-          this.getHeaderValueToSign(req, HeaderConstants.X_MS_DATE)
+        this.getHeaderValueToSign(req, HeaderConstants.X_MS_DATE) ||
+          this.getHeaderValueToSign(req, HeaderConstants.DATE)
       ].join("\n") +
       "\n" +
       this.getCanonicalizedResourceString(

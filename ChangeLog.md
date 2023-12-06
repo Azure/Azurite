@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Fixed shared key authentication signature generation when x-ms-date header is present.
+
 ## 2023.11 Version 3.28.0
 
 General:
