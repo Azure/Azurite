@@ -1091,7 +1091,7 @@ Detailed support matrix:
 
 This project is licensed under MIT.
 
-## We Welcome Contributions
+## We Welcome Contributions!
 
 > Go to [GitHub project](https://github.com/Azure/Azurite/projects) page or [GitHub issues](https://github.com/Azure/Azurite/issues) for the milestone and TODO items we are used for tracking upcoming features and bug fixes.
 
