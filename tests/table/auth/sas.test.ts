@@ -68,7 +68,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
   });
 
   it("1. insertEntity with Query permission should not work @loki", (done) => {
-    const tableName: string = getUniqueName("sas1");
+    // Use table name include upper case letter to validate SAS signature should calculate from lower case table name (Issue #1359)
+    const tableName: string = getUniqueName("Sas1");
     tableService.createTable(tableName, (error, result, response) => {
       // created table for tests
       const expiry = new Date();

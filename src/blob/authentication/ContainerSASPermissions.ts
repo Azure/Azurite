@@ -4,5 +4,6 @@ export enum ContainerSASPermission {
   Create = "c",
   Write = "w",
   Delete = "d",
-  List = "l"
+  List = "l",
+  Any = "AnyPermission" // This is only for blob batch operation.
 }

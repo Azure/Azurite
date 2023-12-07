@@ -29,6 +29,7 @@ import { BlobBatchHandler } from "./BlobBatchHandler";
  */
 export default class ContainerHandler extends BaseHandler
   implements IContainerHandler {
+  protected disableProductStyle?: boolean;
 
   constructor(
     private readonly accountDataStore: IAccountDataStore,
@@ -36,9 +37,11 @@ export default class ContainerHandler extends BaseHandler
     metadataStore: IBlobMetadataStore,
     extentStore: IExtentStore,
     logger: ILogger,
-    loose: boolean
+    loose: boolean,
+    disableProductStyle?: boolean
   ) {
     super(metadataStore, extentStore, logger, loose);
+    this.disableProductStyle = disableProductStyle;
   }
 
   /**
@@ -338,7 +341,7 @@ export default class ContainerHandler extends BaseHandler
     const requestBatchBoundary = blobServiceCtx.request!.getHeader("content-type")!.split("=")[1];
 
     const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
-      this.metadataStore, this.extentStore, this.logger, this.loose);
+      this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle);
 
     const responseBodyString = await blobBatchHandler.submitBatch(body,
       requestBatchBoundary,
@@ -653,7 +656,7 @@ export default class ContainerHandler extends BaseHandler
             ...item,
             deleted: item.deleted !== true ? undefined : true,
             snapshot: item.snapshot || undefined,
-            blobTags: includeTags? item.blobTags: undefined,
+            blobTags: includeTags ? item.blobTags : undefined,
             properties: {
               ...item.properties,
               etag: removeQuotationFromListBlobEtag(item.properties.etag),
@@ -755,8 +758,8 @@ export default class ContainerHandler extends BaseHandler
           item.deleted = item.deleted !== true ? undefined : true;
           return {
             ...item,
-            snapshot: item.snapshot || undefined,            
-            blobTags: includeTags? item.blobTags: undefined,
+            snapshot: item.snapshot || undefined,
+            blobTags: includeTags ? item.blobTags : undefined,
             properties: {
               ...item.properties,
               etag: removeQuotationFromListBlobEtag(item.properties.etag),

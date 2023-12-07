@@ -8,15 +8,17 @@ import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
 import FSExtentStore from "../common/persistence/FSExtentStore";
+import MemoryExtentStore, { SharedChunkStore } from "../common/persistence/MemoryExtentStore";
 import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
-import ServerBase from "../common/ServerBase";
+import ServerBase, { ServerStatus } from "../common/ServerBase";
 import QueueGCManager from "./gc/QueueGCManager";
 import IQueueMetadataStore from "./persistence/IQueueMetadataStore";
 import LokiQueueMetadataStore from "./persistence/LokiQueueMetadataStore";
 import QueueConfiguration from "./QueueConfiguration";
 import QueueRequestListenerFactory from "./QueueRequestListenerFactory";
+import StorageError from "./errors/StorageError";
 
 const BEFORE_CLOSE_MESSAGE = `Azurite Queue service is closing...`;
 const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Queue service is closing... Critical error happens during GC.`;
@@ -72,15 +74,22 @@ export default class QueueServer extends ServerBase {
     // creating a new XXXDataStore class implementing IBlobDataStore interface
     // and replace the default LokiBlobDataStore
     const metadataStore: IQueueMetadataStore = new LokiQueueMetadataStore(
-      configuration.metadataDBPath
-      // logger
+      configuration.metadataDBPath,
+      configuration.isMemoryPersistence
     );
 
     const extentMetadataStore = new LokiExtentMetadataStore(
-      configuration.extentDBPath
+      configuration.extentDBPath,
+      configuration.isMemoryPersistence
     );
 
-    const extentStore: IExtentStore = new FSExtentStore(
+    const extentStore: IExtentStore = configuration.isMemoryPersistence ? new MemoryExtentStore(
+      "queue",
+      configuration.memoryStore ?? SharedChunkStore,
+      extentMetadataStore,
+      logger,
+      (sc, er, em, ri) => new StorageError(sc, er, em, ri)
+    ) : new FSExtentStore(
       extentMetadataStore,
       configuration.persistencePathArray,
       logger
@@ -126,6 +135,35 @@ export default class QueueServer extends ServerBase {
     this.extentStore = extentStore;
     this.accountDataStore = accountDataStore;
     this.gcManager = gcManager;
+  }
+
+  /**
+   * Clean up server persisted data, including Loki metadata database file,
+   * Loki extent database file and extent data.
+   *
+   * @returns {Promise<void>}
+   * @memberof BlobServer
+   */
+  public async clean(): Promise<void> {
+    if (this.getStatus() === ServerStatus.Closed) {
+      if (this.extentStore !== undefined) {
+        await this.extentStore.clean();
+      }
+
+      if (this.extentMetadataStore !== undefined) {
+        await this.extentMetadataStore.clean();
+      }
+
+      if (this.metadataStore !== undefined) {
+        await this.metadataStore.clean();
+      }
+
+      if (this.accountDataStore !== undefined) {
+        await this.accountDataStore.clean();
+      }
+      return;
+    }
+    throw Error(`Cannot clean up queue server in status ${this.getStatus()}.`);
   }
 
   protected async beforeStart(): Promise<void> {

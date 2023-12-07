@@ -9,6 +9,7 @@ import IGCManager from "../common/IGCManager";
 import IRequestListenerFactory from "../common/IRequestListenerFactory";
 import logger from "../common/Logger";
 import FSExtentStore from "../common/persistence/FSExtentStore";
+import MemoryExtentStore, { SharedChunkStore } from "../common/persistence/MemoryExtentStore";
 import IExtentMetadataStore from "../common/persistence/IExtentMetadataStore";
 import IExtentStore from "../common/persistence/IExtentStore";
 import LokiExtentMetadataStore from "../common/persistence/LokiExtentMetadataStore";
@@ -18,6 +19,7 @@ import BlobRequestListenerFactory from "./BlobRequestListenerFactory";
 import BlobGCManager from "./gc/BlobGCManager";
 import IBlobMetadataStore from "./persistence/IBlobMetadataStore";
 import LokiBlobMetadataStore from "./persistence/LokiBlobMetadataStore";
+import StorageError from "./errors/StorageError";
 
 const BEFORE_CLOSE_MESSAGE = `Azurite Blob service is closing...`;
 const BEFORE_CLOSE_MESSAGE_GC_ERROR = `Azurite Blob service is closing... Critical error happens during GC.`;
@@ -73,15 +75,22 @@ export default class BlobServer extends ServerBase implements ICleaner {
     // creating a new XXXDataStore class implementing IBlobMetadataStore interface
     // and replace the default LokiBlobMetadataStore
     const metadataStore: IBlobMetadataStore = new LokiBlobMetadataStore(
-      configuration.metadataDBPath
-      // logger
+      configuration.metadataDBPath,
+      configuration.isMemoryPersistence
     );
 
     const extentMetadataStore: IExtentMetadataStore = new LokiExtentMetadataStore(
-      configuration.extentDBPath
+      configuration.extentDBPath,
+      configuration.isMemoryPersistence
     );
 
-    const extentStore: IExtentStore = new FSExtentStore(
+    const extentStore: IExtentStore = configuration.isMemoryPersistence ? new MemoryExtentStore(
+      "blob",
+      configuration.memoryStore ?? SharedChunkStore,
+      extentMetadataStore,
+      logger,
+      (sc, er, em, ri) => new StorageError(sc, er, em, ri)
+    ) : new FSExtentStore(
       extentMetadataStore,
       configuration.persistencePathArray,
       logger

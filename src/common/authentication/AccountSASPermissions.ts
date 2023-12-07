@@ -10,8 +10,9 @@ export enum AccountSASPermission {
   Process = "p",
   Tag = "t",
   Filter = "f",
-  SetImmutabilityPolicy  = "i",
-  PermanentDelete = "y"
+  SetImmutabilityPolicy = "i",
+  PermanentDelete = "y",
+  Any = "AnyPermission"  // This is only used for blob batch operation.
 }
 
 /**

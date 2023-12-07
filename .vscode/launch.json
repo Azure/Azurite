@@ -20,6 +20,19 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "Azurite Service - Loki, in-memory",
+      "cwd": "${workspaceFolder}",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "args": ["${workspaceFolder}/src/azurite.ts", "-d", "debug.log", "--inMemoryPersistence"],
+      "env": {
+        "AZURITE_ACCOUNTS": ""
+      },
+      "skipFiles": ["node_modules/*/**", "<node_internals>/*/**"],
+      "outputCapture": "std"
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "Azurite Service - Loki, Loose",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
@@ -200,6 +213,34 @@
         "AZURITE_ACCOUNTS": "",
         "AZURITE_TEST_DB": "mysql://root:my-secret-pw@127.0.0.1:3306/azurite_blob_test",
         "NODE_TLS_REJECT_UNAUTHORIZED": "0"
+      },
+      "internalConsoleOptions": "openOnSessionStart",
+      "outputCapture": "std"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Current Mocha TS File - Loki, in-memory",
+      "cwd": "${workspaceFolder}",
+      "runtimeArgs": ["-r", "ts-node/register"],
+      "args": [
+        "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+        "-u",
+        "tdd",
+        "--timeout",
+        "999999",
+        "--colors",
+        "${workspaceFolder}/${relativeFile}"
+      ],
+      "env": {
+        "AZURITE_ACCOUNTS": "",
+        "AZURE_TABLE_STORAGE": "",
+        "DATATABLES_ACCOUNT_NAME": "<name of your storage account>",
+        "DATATABLES_ACCOUNT_KEY" : "<account key for your storage account>",
+        "AZURE_DATATABLES_STORAGE_STRING": "https://<your account name>.table.core.windows.net",
+        "AZURE_DATATABLES_SAS": "?<sas query string>",
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0",
+        "AZURITE_TEST_INMEMORYPERSISTENCE": "true"
       },
       "internalConsoleOptions": "openOnSessionStart",
       "outputCapture": "std"

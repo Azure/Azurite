@@ -56,20 +56,22 @@ export class BlobBatchHandler {
     private readonly metadataStore: IBlobMetadataStore,
     private readonly extentStore: IExtentStore,
     private readonly logger: ILogger,
-    private readonly loose: boolean
-  ){
+    private readonly loose: boolean,
+    private readonly disableProductStyle?: boolean
+  ) {
     const subRequestContextMiddleware = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
       const urlbuilder = URLBuilder.parse(req.getUrl());
       internnalBlobStorageContextMiddleware(
-          new BlobStorageContext(locals, DEFAULT_CONTEXT_PATH),
-          req,
-          res,
-          urlbuilder.getHost()!,
-          urlbuilder.getPath()!,
-          next,
-          true, true,
-          this.loose
-        );
+        new BlobStorageContext(locals, DEFAULT_CONTEXT_PATH),
+        req,
+        res,
+        urlbuilder.getHost()!,
+        urlbuilder.getPath()!,
+        next,
+        true,
+        this.disableProductStyle,
+        this.loose
+      );
     };
 
     const subRequestDispatchMiddleware = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
@@ -124,8 +126,8 @@ export class BlobBatchHandler {
           );
         }
       })
-      .catch(errorInfo =>
-        next(errorInfo));
+        .catch(errorInfo =>
+          next(errorInfo));
     };
 
     const subRequestDeserializeMiddleware = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
@@ -189,9 +191,9 @@ export class BlobBatchHandler {
 
     const subRequestHandlerMiddleware = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
       handlerMiddlewareFactory.createHandlerMiddleware()(
-          new Context(locals, DEFAULT_CONTEXT_PATH, req, res),
-          next
-        );
+        new Context(locals, DEFAULT_CONTEXT_PATH, req, res),
+        next
+      );
     };
 
     const subRequestSerializeMiddleWare = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
@@ -276,8 +278,7 @@ export class BlobBatchHandler {
     });
   }
 
-  private async requestBodyToString(body: NodeJS.ReadableStream): Promise<string>
-  {
+  private async requestBodyToString(body: NodeJS.ReadableStream): Promise<string> {
     let buffer = Buffer.alloc(4 * 1024 * 1024);
 
     const responseLength = await this.streamToBuffer2(
@@ -291,179 +292,170 @@ export class BlobBatchHandler {
     return buffer.toString();
   }
 
-private async getSubRequestOperation(request: IRequest) : Promise<Operation>
-{
+  private async getSubRequestOperation(request: IRequest): Promise<Operation> {
     const subRequestHandlePipeline = this.operationFinder;
     const fakeResponse = new BlobBatchSubResponse(0, "HTTP/1.1");
     return new Promise((resolve, reject) => {
       const locals: any = {};
       let i = 0;
-      const next = (error: any) =>
-        {
-          if (error) {
-            reject(error);
+      const next = (error: any) => {
+        if (error) {
+          reject(error);
+        }
+        else {
+          ++i;
+          if (i < subRequestHandlePipeline.length) {
+            subRequestHandlePipeline[i](request, fakeResponse, locals, next);
           }
           else {
-            ++i;
-            if (i < subRequestHandlePipeline.length) {
-              subRequestHandlePipeline[i](request, fakeResponse, locals, next);
-            }
-            else {
-              resolve((new Context(locals, DEFAULT_CONTEXT_PATH, request, fakeResponse)).operation!);
-            }
+            resolve((new Context(locals, DEFAULT_CONTEXT_PATH, request, fakeResponse)).operation!);
           }
-        };
+        }
+      };
 
       subRequestHandlePipeline[i](
-          request,
-          fakeResponse,
-          locals,
-          next
-        );
-    });
-}
-
-private async parseSubRequests(
-  commonRequestId: string,
-  perRequestPrefix: string,
-  batchRequestEnding: string,
-  subRequestPathPrefix: string,
-  request: IRequest,
-  body: string) : Promise<BlobBatchSubRequest[]>
-{
-  const requestAll = body.split(batchRequestEnding);
-  const response1 = requestAll[0]; // string after ending is useless
-  const response2 = response1.split(perRequestPrefix);
-  const subRequests = response2.slice(1);
-
-  const blobBatchSubRequests: BlobBatchSubRequest[] =[];
-
-  let previousOperation : Operation | undefined;
-
-  for (const subRequest of subRequests)
-  {
-    const requestLines = subRequest.split(`${HTTP_LINE_ENDING}`);
-
-    // Content-Encoding
-    // Content-Type
-    // Content-ID
-    // empty line
-    // Operation infos
-    if (requestLines.length < 5) throw new Error("Bad request");
-
-    // Get Content_ID
-    let lineIndex = 0;
-    let content_id: number | undefined;
-
-    while (lineIndex < requestLines.length)
-    {
-      if (requestLines[lineIndex] === '') break;
-      const header = requestLines[lineIndex].split(HTTP_HEADER_DELIMITER);
-
-      if (header.length !== 2) throw new Error("Bad Request");
-
-      if (header[0].toLocaleLowerCase() === "content-id") {
-        content_id = parseInt(header[1], 10);
-      }
-      ++lineIndex;
-    }
-
-    if (content_id === undefined) throw new Error("Bad request");
-
-    // "DELETE /container166063791875402779/blob0 HTTP/1.1"
-    ++lineIndex;
-    const operationInfos = requestLines[lineIndex].split(" ");
-    if (operationInfos.length < 3) throw new Error("Bad request");
-
-    const requestPath = operationInfos[1].startsWith("/") ? operationInfos[1] : "/" + operationInfos[1];
-
-    if (!requestPath.startsWith(subRequestPathPrefix)) {
-      throw new Error("Request from a different container");
-    }
-
-    const url = `${request.getEndpoint()}${requestPath}`;
-    const method = operationInfos[0] as HttpMethod;
-    const blobBatchSubRequest = new BlobBatchSubRequest(content_id!, url, method, operationInfos[2], {});
-
-    ++lineIndex;
-    while (lineIndex < requestLines.length)
-    {
-      if (requestLines[lineIndex] === '') break; // Last line
-      const header = requestLines[lineIndex].split(HTTP_HEADER_DELIMITER);
-
-      if (header.length !== 2) throw new Error("Bad Request");
-      blobBatchSubRequest.setHeader(header[0], header[1]);
-      ++lineIndex;
-    }
-    const operation = await this.getSubRequestOperation(blobBatchSubRequest);
-    if (operation !== Operation.Blob_Delete && operation !== Operation.Blob_SetTier) {
-      throw new Error("Not supported operation");
-    }
-
-    if (previousOperation === undefined) {
-      previousOperation = operation;
-    }
-    else if (operation !== previousOperation!) {
-      throw new StorageError(
-        400,
-        "AllBatchSubRequestsShouldBeSameApi",
-        "All batch subrequests should be the same api.",
-        commonRequestId
+        request,
+        fakeResponse,
+        locals,
+        next
       );
-    }
-
-    blobBatchSubRequests.push(blobBatchSubRequest);
+    });
   }
 
-  if (blobBatchSubRequests.length === 0)
-  {
-    throw new Error("Bad Request");
+  private async parseSubRequests(
+    commonRequestId: string,
+    perRequestPrefix: string,
+    batchRequestEnding: string,
+    subRequestPathPrefix: string,
+    request: IRequest,
+    body: string): Promise<BlobBatchSubRequest[]> {
+    const requestAll = body.split(batchRequestEnding);
+    const response1 = requestAll[0]; // string after ending is useless
+    const response2 = response1.split(perRequestPrefix);
+    const subRequests = response2.slice(1);
+
+    const blobBatchSubRequests: BlobBatchSubRequest[] = [];
+
+    let previousOperation: Operation | undefined;
+
+    for (const subRequest of subRequests) {
+      const requestLines = subRequest.split(`${HTTP_LINE_ENDING}`);
+
+      // Content-Encoding
+      // Content-Type
+      // Content-ID
+      // empty line
+      // Operation infos
+      if (requestLines.length < 5) throw new Error("Bad request");
+
+      // Get Content_ID
+      let lineIndex = 0;
+      let content_id: number | undefined;
+
+      while (lineIndex < requestLines.length) {
+        if (requestLines[lineIndex] === '') break;
+        const header = requestLines[lineIndex].split(HTTP_HEADER_DELIMITER);
+
+        if (header.length !== 2) throw new Error("Bad Request");
+
+        if (header[0].toLocaleLowerCase() === "content-id") {
+          content_id = parseInt(header[1], 10);
+        }
+        ++lineIndex;
+      }
+
+      if (content_id === undefined) throw new Error("Bad request");
+
+      // "DELETE /container166063791875402779/blob0 HTTP/1.1"
+      ++lineIndex;
+      const operationInfos = requestLines[lineIndex].split(" ");
+      if (operationInfos.length < 3) throw new Error("Bad request");
+
+      const requestPath = operationInfos[1].startsWith("/") ? operationInfos[1] : "/" + operationInfos[1];
+
+      if (!requestPath.startsWith(subRequestPathPrefix)) {
+        throw new Error("Request from a different container");
+      }
+
+      const url = `${request.getEndpoint()}${requestPath}`;
+      const method = operationInfos[0] as HttpMethod;
+      const blobBatchSubRequest = new BlobBatchSubRequest(content_id!, url, method, operationInfos[2], {});
+
+      ++lineIndex;
+      while (lineIndex < requestLines.length) {
+        if (requestLines[lineIndex] === '') break; // Last line
+        const header = requestLines[lineIndex].split(HTTP_HEADER_DELIMITER);
+
+        if (header.length !== 2) throw new Error("Bad Request");
+        blobBatchSubRequest.setHeader(header[0], header[1]);
+        ++lineIndex;
+      }
+      const operation = await this.getSubRequestOperation(blobBatchSubRequest);
+      if (operation !== Operation.Blob_Delete && operation !== Operation.Blob_SetTier) {
+        throw new Error("Not supported operation");
+      }
+
+      if (previousOperation === undefined) {
+        previousOperation = operation;
+      }
+      else if (operation !== previousOperation!) {
+        throw new StorageError(
+          400,
+          "AllBatchSubRequestsShouldBeSameApi",
+          "All batch subrequests should be the same api.",
+          commonRequestId
+        );
+      }
+
+      blobBatchSubRequests.push(blobBatchSubRequest);
+    }
+
+    if (blobBatchSubRequests.length === 0) {
+      throw new Error("Bad Request");
+    }
+
+    return blobBatchSubRequests;
   }
 
-  return blobBatchSubRequests;
-}
+  private serializeSubResponse(
+    subResponsePrefix: string,
+    responseEnding: string,
+    subResponses: BlobBatchSubResponse[]): string {
+    let responseBody = "";
+    subResponses.forEach(subResponse => {
+      responseBody += subResponsePrefix,
+        responseBody += "Content-Type: application/http" + HTTP_LINE_ENDING;
+      if (subResponse.content_id !== undefined) {
+        responseBody += "Content-ID" + HTTP_HEADER_DELIMITER + subResponse.content_id.toString() + HTTP_LINE_ENDING;
+      }
+      responseBody += HTTP_LINE_ENDING;
 
-private serializeSubResponse(
-  subResponsePrefix: string,
-  responseEnding: string,
-  subResponses: BlobBatchSubResponse[]) : string
-{
-  let responseBody = "";
-  subResponses.forEach(subResponse => {
-    responseBody += subResponsePrefix,
-    responseBody += "Content-Type: application/http" + HTTP_LINE_ENDING;
-    if (subResponse.content_id !== undefined) {
-      responseBody += "Content-ID" + HTTP_HEADER_DELIMITER + subResponse.content_id.toString() + HTTP_LINE_ENDING;
-    }
-    responseBody += HTTP_LINE_ENDING;
+      responseBody += subResponse.protocolWithVersion + " " + subResponse.getStatusCode().toString() + " "
+        + subResponse.getStatusMessage() + HTTP_LINE_ENDING;
 
-    responseBody += subResponse.protocolWithVersion + " " + subResponse.getStatusCode().toString() + " "
-      + subResponse.getStatusMessage() + HTTP_LINE_ENDING;
+      const headers = subResponse.getHeaders();
+      for (const key of Object.keys(headers)) {
+        responseBody += key + HTTP_HEADER_DELIMITER + headers[key] + HTTP_LINE_ENDING;
+      }
 
-    const headers = subResponse.getHeaders();
-    for (const key of Object.keys(headers)) {
-      responseBody += key + HTTP_HEADER_DELIMITER + headers[key] + HTTP_LINE_ENDING;
-    }
+      const bodyContent = subResponse.getBodyContent();
+      if (bodyContent !== "") {
+        responseBody += HTTP_LINE_ENDING + bodyContent + HTTP_LINE_ENDING;
+      }
+      responseBody += HTTP_LINE_ENDING;
+    });
 
-    const bodyContent = subResponse.getBodyContent();
-    if (bodyContent !== "") {
-      responseBody += HTTP_LINE_ENDING + bodyContent + HTTP_LINE_ENDING;
-    }
-    responseBody += HTTP_LINE_ENDING;
-  });
+    responseBody += responseEnding;
+    return responseBody;
+  }
 
-  responseBody += responseEnding;
-  return responseBody;
-}
-
-public async submitBatch(
-  body: NodeJS.ReadableStream,
-  requestBatchBoundary: string,
-  subRequestPathPrefix: string,
-  batchRequest: IRequest,
-  context: Context
-  ): Promise<string>
-  {
+  public async submitBatch(
+    body: NodeJS.ReadableStream,
+    requestBatchBoundary: string,
+    subRequestPathPrefix: string,
+    batchRequest: IRequest,
+    context: Context
+  ): Promise<string> {
     const perRequestPrefix = `--${requestBatchBoundary}${HTTP_LINE_ENDING}`;
     const batchRequestEnding = `--${requestBatchBoundary}--`
 
@@ -480,9 +472,9 @@ public async submitBatch(
         requestBody);
     } catch (err) {
       if ((err instanceof MiddlewareError)
-      && err.hasOwnProperty("storageErrorCode")
-      && err.hasOwnProperty("storageErrorMessage")
-      && err.hasOwnProperty("storageRequestID")) {
+        && err.hasOwnProperty("storageErrorCode")
+        && err.hasOwnProperty("storageErrorMessage")
+        && err.hasOwnProperty("storageRequestID")) {
         error = err;
       }
       else {
@@ -496,8 +488,7 @@ public async submitBatch(
     }
 
     const subResponses: BlobBatchSubResponse[] = [];
-    if (subRequests && subRequests.length > 256)
-    {
+    if (subRequests && subRequests.length > 256) {
       error = new StorageError(
         400,
         "ExceedsMaxBatchRequestCount",
@@ -536,42 +527,40 @@ public async submitBatch(
   }
 
   private HandleOneSubRequest(request: IRequest,
-    response: IResponse) : Promise<void>
-  {
+    response: IResponse): Promise<void> {
     const subRequestHandlePipeline = this.handlePipeline;
     const subRequestErrorHandler = this.errorHandler;
     let completed: boolean = false;
     return new Promise((resolve, reject) => {
       const locals: any = {};
       let i = 0;
-      const next = (error: any) =>
-        {
-          if (completed) {
-            resolve();
-            return;
-          }
+      const next = (error: any) => {
+        if (completed) {
+          resolve();
+          return;
+        }
 
-          if (error) {
-            subRequestErrorHandler(error, request, response, locals, next);
-            completed = true;
+        if (error) {
+          subRequestErrorHandler(error, request, response, locals, next);
+          completed = true;
+        }
+        else {
+          ++i;
+          if (i < subRequestHandlePipeline.length) {
+            subRequestHandlePipeline[i](request, response, locals, next);
           }
           else {
-            ++i;
-            if (i < subRequestHandlePipeline.length) {
-              subRequestHandlePipeline[i](request, response, locals, next);
-            }
-            else {
-              resolve();
-            }
+            resolve();
           }
-        };
+        }
+      };
 
-        subRequestHandlePipeline[i](
-          request,
-          response,
-          locals,
-          next
-        );
+      subRequestHandlePipeline[i](
+        request,
+        response,
+        locals,
+        next
+      );
     });
   }
 
@@ -579,11 +568,10 @@ public async submitBatch(
     err: any,
     request: IRequest,
     response: IResponse
-  ): Promise<void>
-  {
+  ): Promise<void> {
     const subRequestErrorHandler = this.errorHandler;
     return new Promise((resolve, reject) => {
-        subRequestErrorHandler(err, request, response, {}, resolve);
+      subRequestErrorHandler(err, request, response, {}, resolve);
     });
   }
 }

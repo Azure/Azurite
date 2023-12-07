@@ -6,7 +6,6 @@ import {
 
 import { configLogger } from "../../src/common/Logger";
 import { StoreDestinationArray } from "../../src/common/persistence/IExtentStore";
-import QueueConfiguration from "../../src/queue/QueueConfiguration";
 import Server from "../../src/queue/QueueServer";
 import {
   EMULATOR_ACCOUNT_KEY,
@@ -14,6 +13,7 @@ import {
   getUniqueName,
   rmRecursive
 } from "../testutils";
+import QueueTestServerFactory from "./utils/QueueTestServerFactory";
 
 // Set true to enable debug log
 configLogger(false);
@@ -26,7 +26,7 @@ describe("Queue HTTPS", () => {
   const extentDbPath = "__extentTestsStorage__";
   const persistencePath = "__queueTestsPersistence__";
 
-  const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
+  const DEFAULT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
     {
       locationId: "queueTest",
       locationPath: persistencePath,
@@ -34,26 +34,15 @@ describe("Queue HTTPS", () => {
     }
   ];
 
-  const config = new QueueConfiguration(
-    host,
-    port,
-    metadataDbPath,
-    extentDbPath,
-    DEFUALT_QUEUE_PERSISTENCE_ARRAY,
-    false,
-    undefined,
-    undefined,
-    undefined,
-    false,
-    false,
-    "tests/server.cert",
-    "tests/server.key"
-  );
-
   let server: Server;
 
   before(async () => {
-    server = new Server(config);
+    server = new QueueTestServerFactory().createServer({
+      metadataDBPath: metadataDbPath,
+      extentDBPath: extentDbPath,
+      persistencePathArray: DEFAULT_QUEUE_PERSISTENCE_ARRAY,
+      https: true
+    });
     await server.start();
   });
 

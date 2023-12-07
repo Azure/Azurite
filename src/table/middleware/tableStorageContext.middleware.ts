@@ -166,9 +166,12 @@ export function tableStorageContextMiddleware(
 
   if (isSecondary) {
     const pos = tableContext.authenticationPath.search(SECONDARY_SUFFIX);
-    tableContext.authenticationPath =
+    if (pos !== -1)
+    {
+      tableContext.authenticationPath =
       tableContext.authenticationPath.substr(0, pos) +
       tableContext.authenticationPath.substr(pos + SECONDARY_SUFFIX.length);
+    }
   }
 
   // Emulator's URL pattern is like http://hostname[:port]/account/table

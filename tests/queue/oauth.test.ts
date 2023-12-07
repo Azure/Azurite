@@ -5,9 +5,9 @@ import Server from "../../src/queue/QueueServer";
 
 import { configLogger } from "../../src/common/Logger";
 import { StoreDestinationArray } from "../../src/common/persistence/IExtentStore";
-import QueueConfiguration from "../../src/queue/QueueConfiguration";
 import { EMULATOR_ACCOUNT_KEY, generateJWTToken, getUniqueName } from "../testutils";
 import { SimpleTokenCredential } from "../simpleTokenCredential";
+import QueueTestServerFactory from "./utils/QueueTestServerFactory";
 
 // Set true to enable debug log
 configLogger(false);
@@ -20,7 +20,7 @@ describe("Queue OAuth Basic", () => {
   const extentDbPath = "__extentTestsStorage__";
   const persistencePath = "__queueTestsPersistence__";
 
-  const DEFUALT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
+  const DEFAULT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
     {
       locationId: "queueTest",
       locationPath: persistencePath,
@@ -28,30 +28,18 @@ describe("Queue OAuth Basic", () => {
     }
   ];
 
-  const config = new QueueConfiguration(
-    host,
-    port,
-    metadataDbPath,
-    extentDbPath,
-    DEFUALT_QUEUE_PERSISTENCE_ARRAY,
-    false,
-    undefined,
-    undefined,
-    undefined,
-    false,
-    false,
-    "tests/server.cert",
-    "tests/server.key",
-    undefined,
-    "basic"
-  );
-
   let server: Server;
 
   const baseURL = `https://${host}:${port}/devstoreaccount1`;
 
   before(async () => {
-    server = new Server(config);
+    server = new QueueTestServerFactory().createServer({
+      metadataDBPath: metadataDbPath,
+      extentDBPath: extentDbPath,
+      persistencePathArray: DEFAULT_QUEUE_PERSISTENCE_ARRAY,
+      https: true,
+      oauth: "basic"
+    })
     await server.start();
   });
 
@@ -534,25 +522,12 @@ describe("Queue OAuth Basic", () => {
     await server.close();
     await server.clean();
 
-    server = new Server(
-      new QueueConfiguration(
-        host,
-        port,
-        metadataDbPath,
-        extentDbPath,
-        DEFUALT_QUEUE_PERSISTENCE_ARRAY,
-        false,
-        undefined,
-        undefined,
-        undefined,
-        false,
-        false,
-        undefined,
-        undefined,
-        undefined,
-        "basic"
-      )
-    );
+    server = new QueueTestServerFactory().createServer({
+      metadataDBPath: metadataDbPath,
+      extentDBPath: extentDbPath,
+      persistencePathArray: DEFAULT_QUEUE_PERSISTENCE_ARRAY,
+      oauth: "basic"
+    })
     await server.start();
 
     const httpBaseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;

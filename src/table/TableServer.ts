@@ -9,7 +9,7 @@ import logger from "../common/Logger";
 import ITableMetadataStore from "../table/persistence/ITableMetadataStore";
 import LokiTableMetadataStore from "../table/persistence/LokiTableMetadataStore";
 
-import ServerBase from "../common/ServerBase";
+import ServerBase, { ServerStatus } from "../common/ServerBase";
 import TableConfiguration from "./TableConfiguration";
 import TableRequestListenerFactory from "./TableRequestListenerFactory";
 
@@ -50,7 +50,8 @@ export default class TableServer extends ServerBase {
 
     // Create **dataStore with Loki.js
     const metadataStore: ITableMetadataStore = new LokiTableMetadataStore(
-      configuration.metadataDBPath
+      configuration.metadataDBPath,
+      configuration.isMemoryPersistence
     );
     const accountDataStore: IAccountDataStore = new AccountDataStore(logger);
 
@@ -71,6 +72,20 @@ export default class TableServer extends ServerBase {
 
     this.metadataStore = metadataStore;
     this.accountDataStore = accountDataStore;
+  }
+
+  public async clean(): Promise<void> {
+    if (this.getStatus() === ServerStatus.Closed) {
+      if (this.metadataStore !== undefined) {
+        await this.metadataStore.clean();
+      }
+
+      if (this.accountDataStore !== undefined) {
+        await this.accountDataStore.clean();
+      }
+      return;
+    }
+    throw Error(`Cannot clean up table server in status ${this.getStatus()}.`);
   }
 
   protected async beforeStart(): Promise<void> {

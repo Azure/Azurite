@@ -25,7 +25,9 @@ describe("SpecialNaming", () => {
   const server = factory.createServer();
 
   const baseURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1`;
-  const productionStyleHostName = "devstoreaccount1.localhost"; // Use hosts file to make this resolve
+  const baseSecondaryURL = `http://${server.config.host}:${server.config.port}/devstoreaccount1-secondary`;
+  const productionStyleHostName = "devstoreaccount1.blob.localhost"; // Use hosts file to make this resolve
+  const productionStyleHostNameForSecondary = "devstoreaccount1-secondary.blob.localhost";
   const noAccountHostName = "host.docker.internal";
   const noAccountHostNameConnectionString = `DefaultEndpointsProtocol=http;AccountName=${EMULATOR_ACCOUNT_NAME};AccountKey=${EMULATOR_ACCOUNT_KEY};BlobEndpoint=http://${noAccountHostName}:${server.config.port}/${EMULATOR_ACCOUNT_NAME};`;
 
@@ -539,5 +541,69 @@ describe("SpecialNaming", () => {
         );
       }
     );
+  });
+
+  it(`Should work with production style URL when ${productionStyleHostNameForSecondary} is resolvable`, async () => {
+    await dns.promises.lookup(productionStyleHostNameForSecondary).then(
+      async (lookupAddress) => {
+        const baseURLProductionStyle = `http://${productionStyleHostNameForSecondary}:${server.config.port}`;
+        const serviceClientProductionStyle = new BlobServiceClient(
+          baseURLProductionStyle,
+          newPipeline(
+            new StorageSharedKeyCredential(
+              EMULATOR_ACCOUNT_NAME,
+              EMULATOR_ACCOUNT_KEY
+            ),
+            {
+              retryOptions: { maxTries: 1 },
+              // Make sure socket is closed once the operation is done.
+              keepAliveOptions: { enable: false }
+            }
+          )
+        );
+        const containerClientProductionStyle = serviceClientProductionStyle.getContainerClient(
+          containerName
+        );
+
+        const response =
+          await containerClientProductionStyle.getProperties();
+
+        assert.deepStrictEqual(response._response.status, 200);
+      },
+      () => {
+        // Cannot perform this test. We need devstoreaccount1-secondary.blob.localhost to resolve to 127.0.0.1.
+        // On Linux, this should just work,
+        // On Windows, we can't spoof DNS record for specific process.
+        // So we have options of running our own DNS server (overkill),
+        // or editing hosts files (machine global operation; and requires running as admin).
+        // So skip the test case.
+        assert.ok(
+          `Skipping test case - it needs ${productionStyleHostNameForSecondary} to be resolvable`
+        );
+      }
+    );
+  });
+
+  it(`Should work with non-production secondary url when ${baseSecondaryURL} is resolvable`, async () => {
+    const secondaryServiceClient = new BlobServiceClient(
+      baseSecondaryURL,
+      newPipeline(
+        new StorageSharedKeyCredential(
+          EMULATOR_ACCOUNT_NAME,
+          EMULATOR_ACCOUNT_KEY
+        ),
+        {
+          retryOptions: { maxTries: 1 },
+          // Make sure socket is closed once the operation is done.
+          keepAliveOptions: { enable: false }
+        }
+      )
+    );
+    const containerClientSecondary = secondaryServiceClient.getContainerClient(
+      getUniqueName("container")
+    );
+    
+    const response = await containerClientSecondary.createIfNotExists();
+    assert.deepStrictEqual(response._response.status, 201);
   });
 });

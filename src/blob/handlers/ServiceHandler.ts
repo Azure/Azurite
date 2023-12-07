@@ -34,17 +34,20 @@ import NotImplementedError from "../errors/NotImplementedError";
  */
 export default class ServiceHandler extends BaseHandler
   implements IServiceHandler {
+  protected disableProductStyle?: boolean;
 
   constructor(
-      private readonly accountDataStore: IAccountDataStore,
-      private readonly oauth: OAuthLevel | undefined,
-      metadataStore: IBlobMetadataStore,
-      extentStore: IExtentStore,
-      logger: ILogger,
-      loose: boolean
-    ) {
-      super(metadataStore, extentStore, logger, loose);
-    }
+    private readonly accountDataStore: IAccountDataStore,
+    private readonly oauth: OAuthLevel | undefined,
+    metadataStore: IBlobMetadataStore,
+    extentStore: IExtentStore,
+    logger: ILogger,
+    loose: boolean,
+    disableProductStyle?: boolean
+  ) {
+    super(metadataStore, extentStore, logger, loose);
+    this.disableProductStyle = disableProductStyle;
+  }
   /**
    * Default service properties.
    *
@@ -126,7 +129,7 @@ export default class ServiceHandler extends BaseHandler
     const requestBatchBoundary = blobServiceCtx.request!.getHeader("content-type")!.split("=")[1];
 
     const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
-       this.metadataStore, this.extentStore, this.logger, this.loose);
+      this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle);
 
     const responseBodyString = await blobBatchHandler.submitBatch(body,
       requestBatchBoundary,
@@ -173,7 +176,7 @@ export default class ServiceHandler extends BaseHandler
     const body = blobCtx.request!.getBody();
     const parsedBody = await parseXML(body || "");
     if (
-      !Object.hasOwnProperty.bind(parsedBody)('cors')&&
+      !Object.hasOwnProperty.bind(parsedBody)('cors') &&
       !Object.hasOwnProperty.bind(parsedBody)('Cors')
     ) {
       storageServiceProperties.cors = undefined;
@@ -358,7 +361,7 @@ export default class ServiceHandler extends BaseHandler
   public filterBlobs(
     options: Models.ServiceFilterBlobsOptionalParams,
     context: Context
-    ): Promise<Models.ServiceFilterBlobsResponse> {
-      throw new NotImplementedError(context.contextId);
+  ): Promise<Models.ServiceFilterBlobsResponse> {
+    throw new NotImplementedError(context.contextId);
   }
 }

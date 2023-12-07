@@ -108,9 +108,12 @@ export function queueStorageContextMiddleware(
   queueContext.authenticationPath = req.path;
   if (isSecondary) {
     const pos = queueContext.authenticationPath.search(SECONDARY_SUFFIX);
-    queueContext.authenticationPath =
+    if (pos !== -1)
+    {
+      queueContext.authenticationPath =
       queueContext.authenticationPath.substr(0, pos) +
       queueContext.authenticationPath.substr(pos + SECONDARY_SUFFIX.length);
+    }
   }
 
   if (account === undefined) {

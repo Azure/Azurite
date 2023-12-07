@@ -1,7 +1,7 @@
 import { StoreDestinationArray } from "../../common/persistence/IExtentStore";
 
-export const VERSION = "3.26.0";
-export const QUEUE_API_VERSION = "2023-08-03";
+export const VERSION = "3.28.0";
+export const QUEUE_API_VERSION = "2023-11-03";
 export const DEFAULT_QUEUE_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_QUEUE_LISTENING_PORT = 10001;
 export const IS_PRODUCTION = process.env.NODE_ENV === "production";
@@ -20,17 +20,17 @@ export const NEVER_EXPIRE_DATE = new Date("9999-12-31T23:59:59.999Z");
 export const QUEUE_SERVICE_PERMISSION = "raup";
 export const LIST_QUEUE_MAXRESSULTS_MIN = 1;
 export const LIST_QUEUE_MAXRESSULTS_MAX = 2147483647;
-export const DEFUALT_DEQUEUE_VISIBILITYTIMEOUT = 30; // 30s as default.
+export const DEFAULT_DEQUEUE_VISIBILITYTIMEOUT = 30; // 30s as default.
 export const DEQUEUE_VISIBILITYTIMEOUT_MIN = 1;
 export const DEQUEUE_VISIBILITYTIMEOUT_MAX = 604800;
 export const DEQUEUE_NUMOFMESSAGES_MIN = 1;
 export const DEQUEUE_NUMOFMESSAGES_MAX = 32;
 export const MESSAGETEXT_LENGTH_MAX = 65536;
-export const DEFUALT_MESSAGETTL = 604800; // 604800s (7 day) as default.
+export const DEFAULT_MESSAGETTL = 604800; // 604800s (7 day) as default.
 export const ENQUEUE_VISIBILITYTIMEOUT_MIN = 0;
 export const ENQUEUE_VISIBILITYTIMEOUT_MAX = 604800;
 export const MESSAGETTL_MIN = 1;
-export const DEFUALT_UPDATE_VISIBILITYTIMEOUT = 30; // 30s as default.
+export const DEFAULT_UPDATE_VISIBILITYTIMEOUT = 30; // 30s as default.
 export const UPDATE_VISIBILITYTIMEOUT_MIN = 0;
 export const UPDATE_VISIBILITYTIMEOUT_MAX = 604800;
 
@@ -90,6 +90,7 @@ export const DEFAULT_QUEUE_PERSISTENCE_ARRAY: StoreDestinationArray = [
 ];
 
 export const ValidAPIVersions = [
+  "2023-11-03",
   "2023-08-03",
   "2023-01-03",
   "2022-11-02",

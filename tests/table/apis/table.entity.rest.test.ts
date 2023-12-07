@@ -7,7 +7,6 @@
 import * as assert from "assert";
 import { AxiosResponse } from "axios";
 import { configLogger } from "../../../src/common/Logger";
-import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
 import { getUniqueName } from "../../testutils";
 import { createUniquePartitionKey } from "../utils/table.entity.test.utils";
@@ -19,35 +18,26 @@ import {
   postToAzurite,
   putToAzurite
 } from "../utils/table.entity.tests.rest.submitter";
+import TableTestServerFactory from "../utils/TableTestServerFactory";
 
 // Set true to enable debug log
 configLogger(false);
 
 describe("table Entity APIs REST tests", () => {
-  // TODO: Create a server factory as tests utils
-  const host = "127.0.0.1";
-  const port = 11002;
-  const metadataDbPath = "__tableTestsStorage__";
-  const enableDebugLog: boolean = true;
-  const debugLogPath: string = "";
-  const config = new TableConfiguration(
-    host,
-    port,
-    metadataDbPath,
-    enableDebugLog,
-    false,
-    undefined,
-    debugLogPath,
-    false,
-    true
-  );
 
   let server: TableServer;
 
   let reproFlowsTableName: string = getUniqueName("flows");
 
   before(async () => {
-    server = new TableServer(config);
+    server = new TableTestServerFactory().createServer({
+      metadataDBPath: "__tableTestsStorage__",
+      enableDebugLog: true,
+      debugLogFilePath: "",
+      loose: false,
+      skipApiVersionCheck: true,
+      https: false
+    });
     await server.start();
   });
 

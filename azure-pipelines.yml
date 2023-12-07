@@ -38,6 +38,12 @@ jobs:
         displayName: "npm run test:blob"
         env: {}
         
+      - script: |
+          npm run test:blob:in-memory
+        workingDirectory: "./"
+        displayName: "npm run test:blob:in-memory"
+        env: {}
+
   - job: blobtestubuntu22_04
     displayName: Blob Test Linux Ubuntu 22.04
     pool:
@@ -63,6 +69,12 @@ jobs:
           npm run test:blob
         workingDirectory: "./"
         displayName: "npm run test:blob"
+        env: {}
+
+      - script: |
+          npm run test:blob:in-memory
+        workingDirectory: "./"
+        displayName: "npm run test:blob:in-memory"
         env: {}
 
   - job: blobtestwin
@@ -92,6 +104,12 @@ jobs:
         displayName: "npm run test:blob"
         env: {}
 
+      - script: |
+          npm run test:blob:in-memory
+        workingDirectory: "./"
+        displayName: "npm run test:blob:in-memory"
+        env: {}
+
   - job: blobtestmac
     displayName: Blob Test Mac
     pool:
@@ -117,6 +135,12 @@ jobs:
           npm run test:blob
         workingDirectory: "./"
         displayName: "npm run test:blob"
+        env: {}
+
+      - script: |
+          npm run test:blob:in-memory
+        workingDirectory: "./"
+        displayName: "npm run test:blob:in-memory"
         env: {}
 
   - job: blobtestmysql
@@ -181,6 +205,12 @@ jobs:
         displayName: "npm run test:queue"
         env: {}
 
+      - script: |
+          npm run test:queue:in-memory
+        workingDirectory: "./"
+        displayName: "npm run test:queue:in-memory"
+        env: {}
+
   - job: queuetestwin
     displayName: Queue Test Windows
     pool:
@@ -208,6 +238,12 @@ jobs:
         displayName: "npm run test:queue"
         env: {}
 
+      - script: |
+          npm run test:queue:in-memory
+        workingDirectory: "./"
+        displayName: "npm run test:queue:in-memory"
+        env: {}
+
   - job: queuetestmac
     displayName: Queue Test Mac
     pool:
@@ -233,6 +269,12 @@ jobs:
           npm run test:queue
         workingDirectory: "./"
         displayName: "npm run test:queue"
+        env: {}
+
+      - script: |
+          npm run test:queue:in-memory
+        workingDirectory: "./"
+        displayName: "npm run test:queue:in-memory"
         env: {}
 
   - job: tabletestlinux
@@ -263,6 +305,12 @@ jobs:
         displayName: "npm run test:table"
         env: {}
 
+      - script: |
+          npm run test:table:in-memory
+        workingDirectory: "./"
+        displayName: "npm run test:table:in-memory"
+        env: {}
+
   - job: tabletestwin
     displayName: Table Test Windows
     pool:
@@ -291,6 +339,12 @@ jobs:
         displayName: "npm run test:table"
         env: {}
 
+      - script: |
+          npm run test:table:in-memory
+        workingDirectory: "./"
+        displayName: "npm run test:table:in-memory"
+        env: {}
+
   - job: tabletestmac
     displayName: Table Test Mac
     pool:
@@ -317,6 +371,12 @@ jobs:
           npm run test:table
         workingDirectory: "./"
         displayName: "npm run test:table"
+        env: {}
+
+      - script: |
+          npm run test:table:in-memory
+        workingDirectory: "./"
+        displayName: "npm run test:table:in-memory"
         env: {}
 
   - job: azuritenodejslinux

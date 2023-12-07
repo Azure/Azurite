@@ -9,7 +9,7 @@
 
 | Version                                                            | Azure Storage API Version | Service Support                | Description                                       | Reference Links                                                                                                                                                                                                         |
 | ------------------------------------------------------------------ | ------------------------- | ------------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.26.0                                                             | 2023-08-03                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| 3.28.0                                                             | 2023-11-03                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
 | [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table          | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
 - [Azurite V3](#azurite-v3)
@@ -33,6 +33,8 @@
     - [Certificate Configuration (HTTPS)](#certificate-configuration-https)
     - [OAuth Configuration](#oauth-configuration)
     - [Skip API Version Check](#skip-api-version-check)
+    - [Disable Product Style Url](#disable-product-style-url)
+    - [Use in-memory storage](#use-in-memory-storage)
     - [Command Line Options Differences between Azurite V2](#command-line-options-differences-between-azurite-v2)
   - [Supported Environment Variable Options](#supported-environment-variable-options)
     - [Customized Storage Accounts & Keys](#customized-storage-accounts--keys)
@@ -76,19 +78,19 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
 
 ## Features & Key Changes in Azurite V3
 
-- Blob storage features align with Azure Storage API version 2023-08-03 (Refer to support matrix section below)
+- Blob storage features align with Azure Storage API version 2023-11-03 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/Public Access Authentications/OAuth
   - Get/Set Blob Service Properties
   - Create/List/Delete Containers
   - Create/Read/List/Update/Delete Block Blobs
   - Create/Read/List/Update/Delete Page Blobs
-- Queue storage features align with Azure Storage API version 2023-08-03 (Refer to support matrix section below)
+- Queue storage features align with Azure Storage API version 2023-11-03 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/OAuth
   - Get/Set Queue Service Properties
   - Preflight Request
   - Create/List/Delete Queues
   - Put/Get/Peek/Updata/Deleta/Clear Messages
-- Table storage features align with Azure Storage API version 2023-08-03 (Refer to support matrix section below)
+- Table storage features align with Azure Storage API version 2023-11-03 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/OAuth
   - Create/List/Delete Tables
   - Insert/Update/Query/Delete Table Entities
@@ -198,6 +200,8 @@ Following extension configurations are supported:
 - `azurite.oauth` OAuth oauthentication level. Candidate level values: `basic`.
 - `azurite.skipApiVersionCheck` Skip the request API version check, by default false.
 - `azurite.disableProductStyleUrl` Force parsing storage account name from request Uri path, instead of from request Uri host.
+- `azurite.inMemoryPersistence` Disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
+- `azurite.extentMemoryLimit` When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of megabytes. This does not limit blob, queue, or table metadata. Defaults to 50% of total memory.
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
@@ -429,6 +433,52 @@ Optional. When using FQDN instead of IP in request Uri host, by default Azurite 
 ```cmd
 --disableProductStyleUrl
 ```
+
+### Use in-memory storage
+
+Optional. Disable persisting any data to disk and only store data in-memory. If the Azurite process is terminated, all
+data is lost. By default, LokiJS persists blob and queue metadata to disk and content to extent files. Table storage
+persists all data to disk. This behavior can be disabled using this option. This setting is rejected when the SQL based
+metadata implementation is enabled (via `AZURITE_DB`). This setting is rejected when the `--location` option is
+specified.
+
+```cmd
+--inMemoryPersistence
+```
+
+By default, the in-memory extent store (for blob and queue content) is limited to 50% of the total memory on the host
+machine. This is evaluated to using [`os.totalmem()`](https://nodejs.org/api/os.html#ostotalmem). This limit can be
+overridden using the `--extentMemoryLimit <megabytes>` option. There is no restriction on the value specified for this
+option but virtual memory may be used if the limit exceeds the amount of available physical memory as provided by the
+operating system. A high limit may eventually lead to out of memory errors or reduced performance.
+
+As blob or queue content (i.e. bytes in the in-memory extent store) is deleted, the memory is not freed immediately.
+Similar to the default file-system based extent store, both the blob and queue service have an extent garbage collection
+(GC) process. This process is in addition to the standard Node.js runtime GC. The extent GC periodically detects unused
+extents and deletes them from the extent store. This happens on a regular time period rather than immediately after
+the blob or queue REST API operation that caused some content to be deleted. This means that process memory consumed by
+the deleted blob or queue content will only be released after both the extent GC and the runtime GC have run. The extent
+GC will remove the reference to the in-memory byte storage and the runtime GC will free the unreferenced memory some
+time after that. The blob extent GC runs every 10 minutes and the queue extent GC runs every 1 minute.
+
+The queue and blob extent storage count towards the same limit. The `--extentMemoryLimit` setting is rejected when
+`--inMemoryPersistence` is not specified. LokiJS storage (blob and queue metadata and table data) does
+not contribute to this limit and is unbounded which is the same as without the `--inMemoryPersistence` option.
+
+```cmd
+--extentMemoryLimit <megabytes>
+```
+
+This option is rejected when `--inMemoryPersistence` is not specified.
+
+When the limit is reached, write operations to the blob or queue endpoints which carry content will fail with an `HTTP
+409` status code, a custom storage error code of `MemoryExtentStoreAtSizeLimit`, and a helpful error message.
+Well-behaved storage SDKs and tools will not a retry on this failure and will return a related error message. If this
+error is met, consider deleting some in-memory content (blobs or queues), raising the limit, or restarting the Azurite
+server thus resetting the storage completely.
+
+Note that if many hundreds of megabytes of content (queue message or blob content) are stored in-memory, it can take
+noticeably longer than usual for the process to terminate since all the consumed memory needs to be released.
 
 ### Command Line Options Differences between Azurite V2
 
@@ -921,7 +971,7 @@ All the generated code is kept in `generated` folder, including the generated mi
 
 ## Support Matrix
 
-Latest release targets **2023-08-03** API version **blob** service.
+Latest release targets **2023-11-03** API version **blob** service.
 
 Detailed support matrix:
 
@@ -979,7 +1029,7 @@ Detailed support matrix:
   - Encryption Scope
   - Get Page Ranges Continuation Token
 
-Latest version supports for **2023-08-03** API version **queue** service.
+Latest version supports for **2023-11-03** API version **queue** service.
 Detailed support matrix:
 
 - Supported Vertical Features
@@ -1008,7 +1058,7 @@ Detailed support matrix:
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
   - SharedKey Lite
 
-Latest version supports for **2023-08-03** API version **table** service (preview).
+Latest version supports for **2023-11-03** API version **table** service (preview).
 Detailed support matrix:
 
 - Supported Vertical Features

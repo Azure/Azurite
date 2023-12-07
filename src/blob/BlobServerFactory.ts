@@ -42,6 +42,13 @@ export class BlobServerFactory {
       const isSQL = databaseConnectionString !== undefined;
 
       if (isSQL) {
+        if (env.inMemoryPersistence()) {
+          throw new Error(`The --inMemoryPersistence option is not supported when using SQL-based metadata storage.`)
+        }
+        if (env.extentMemoryLimit() !== undefined) {
+          throw new Error(`The --extentMemoryLimit option is not supported when using SQL-based metadata storage.`)
+        }
+
         const config = new SqlBlobConfiguration(
           env.blobHost(),
           env.blobPort(),
@@ -79,8 +86,10 @@ export class BlobServerFactory {
           env.key(),
           env.pwd(),
           env.oauth(),
-          env.disableProductStyleUrl()
+          env.disableProductStyleUrl(),
+          env.inMemoryPersistence(),
         );
+
         return new BlobServer(config);
       }
     } else {

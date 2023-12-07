@@ -1,34 +1,46 @@
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
 
+export interface ITableTestServerFactoryParams {
+  metadataDBPath: string
+  enableDebugLog: boolean
+  debugLogFilePath: string
+  loose: boolean
+  skipApiVersionCheck: boolean
+  https: boolean
+  oauth?: string
+}
+
 export default class TableTestServerFactory {
-  public createServer(
-    loose: boolean = false,
-    skipApiVersionCheck: boolean = false,
-    https: boolean = false,
-    oauth?: string
-  ): TableServer {
+  public static inMemoryPersistence() {
+    return process.env.AZURITE_TEST_INMEMORYPERSISTENCE !== undefined;
+  }
+
+  public createServer(params: ITableTestServerFactoryParams): TableServer {
+    const inMemoryPersistence = TableTestServerFactory.inMemoryPersistence()
+
     const port = 11002;
     const host = "127.0.0.1";
 
-    const cert = https ? "tests/server.cert" : undefined;
-    const key = https ? "tests/server.key" : undefined;
+    const cert = params.https ? "tests/server.cert" : undefined;
+    const key = params.https ? "tests/server.key" : undefined;
 
-    const lokiMetadataDBPath = "__test_db_table__.json";
     const config = new TableConfiguration(
       host,
       port,
-      lokiMetadataDBPath,
-      false,
+      params.metadataDBPath,
+      params.enableDebugLog,
       false,
       undefined,
-      "debug-test-table.log",
-      loose,
-      skipApiVersionCheck,
+      params.debugLogFilePath,
+      params.loose,
+      params.skipApiVersionCheck,
       cert,
       key,
       undefined,
-      oauth
+      params.oauth,
+      undefined,
+      inMemoryPersistence
     );
     return new TableServer(config);
   }

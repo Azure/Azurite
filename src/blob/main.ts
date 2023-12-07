@@ -3,6 +3,8 @@ import * as Logger from "../common/Logger";
 import { BlobServerFactory } from "./BlobServerFactory";
 import SqlBlobServer from "./SqlBlobServer";
 import BlobServer from "./BlobServer";
+import { setExtentMemoryLimit } from "../common/ConfigurationBase";
+import BlobEnvironment from "./BlobEnvironment";
 
 // tslint:disable:no-console
 
@@ -29,6 +31,8 @@ async function main() {
   // track every request. Access log is not singleton, and initialized in specific RequestHandlerFactory implementations
   // Enable debug log by default before first release for debugging purpose
   Logger.configLogger(config.enableDebugLog, config.debugLogFilePath);
+
+  setExtentMemoryLimit(new BlobEnvironment(), true);
 
   // Start server
   console.log(

@@ -78,14 +78,14 @@ describe("BlockBlobHighlevel", () => {
     }
     tempFileLarge = await createRandomLocalFile(
       tempFolderPath,
-      257,
-      1024 * 1024
+      8224,
+      1024 * 32
     );
     tempFileLargeLength = 257 * 1024 * 1024;
     tempFileSmall = await createRandomLocalFile(
       tempFolderPath,
-      15,
-      1024 * 1024
+      480,
+      1024 * 32
     );
     tempFileSmallLength = 15 * 1024 * 1024;
   });

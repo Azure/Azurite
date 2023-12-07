@@ -13,7 +13,8 @@ import {
   StorageSharedKeyCredential,
   ContainerClient,
   PageBlobClient,
-  AppendBlobClient
+  AppendBlobClient,
+  BlobBatch
 } from "@azure/storage-blob";
 import * as assert from "assert";
 
@@ -116,13 +117,13 @@ describe("Shared Access Signature (SAS) authentication", () => {
   });
 
   it("generateAccountSASQueryParameters should generate correct hashes", async () => {
-    
+
     const startDate = new Date(2022, 3, 16, 14, 31, 48, 0);
     const endDate = new Date(2022, 3, 17, 14, 31, 48, 0);
 
     const factories = (serviceClient as any).pipeline.factories;
     const storageSharedKeyCredential = factories[factories.length - 1];
-    
+
     const sas = generateAccountSASQueryParameters(
       {
         expiresOn: endDate,
@@ -136,7 +137,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
       },
       storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
-    
+
     assert.equal(sas, "sv=2016-05-31&ss=btqf&srt=sco&spr=https%2Chttp&st=2022-04-16T13%3A31%3A48Z&se=2022-04-17T13%3A31%3A48Z&sip=0.0.0.0-255.255.255.255&sp=rwdlacup&sig=3tOzYrzhkaX48zalU5WlyEJg%2B7Tj4RzY4jBo9mCi8AM%3D");
 
     const sas2 = generateAccountSASQueryParameters(
@@ -152,7 +153,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
       },
       storageSharedKeyCredential as StorageSharedKeyCredential
     ).toString();
-    
+
     assert.equal(sas2, "sv=2018-11-09&ss=btqf&srt=sco&spr=https%2Chttp&st=2022-04-16T13%3A31%3A48Z&se=2022-04-17T13%3A31%3A48Z&sip=0.0.0.0-255.255.255.255&sp=rwdlacup&sig=o23T5PzZn4Daklb%2F8Ef25%2FUprkIIeq4zI4QxT57iim8%3D");
 
     const sas3 = generateAccountSASQueryParameters(
@@ -708,6 +709,225 @@ describe("Shared Access Signature (SAS) authentication", () => {
     await containerClient.delete();
   });
 
+  it("Container operations on container should fail with container SAS @loki @sql", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const containerSAS = generateBlobSASQueryParameters(
+      {
+        containerName,
+        expiresOn: tmr,
+        permissions: ContainerSASPermissions.parse("racwdl"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    );
+
+    const sasURL = `${containerClient.url}?${containerSAS}`;
+    const containerClientWithSAS = new ContainerClient(
+      sasURL,
+      newPipeline(new AnonymousCredential())
+    );
+
+    try {
+      await containerClientWithSAS.getProperties();
+      assert.fail("getProperties should fail");
+    } catch (err) {
+      assert.deepStrictEqual(err.statusCode, 403);
+    }
+
+    try {
+      await containerClientWithSAS.create();
+      assert.fail("container create should fail");
+    } catch (err) {
+      assert.deepStrictEqual(err.statusCode, 403);
+    }
+
+    const serviceClientWithSAS = new BlobServiceClient(`${serviceClient.url}?${containerSAS}`);
+
+    try {
+      await serviceClientWithSAS.getAccountInfo();
+      assert.fail("service operation should fail");
+    } catch (err) {
+      assert.deepStrictEqual(err.statusCode, 403);
+    }
+
+    await containerClient.delete();
+  });
+
+  it("Container operations on container should fail with Blob SAS @loki @sql", async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const blobName = getUniqueName("blobName");
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+    await blockBlobClient.upload("Hello", 5);
+
+    const blobSAS = generateBlobSASQueryParameters(
+      {
+        containerName,
+        blobName: blobName,
+        expiresOn: tmr,
+        permissions: BlobSASPermissions.parse("racwd"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    );
+
+    const sasURL = `${containerClient.url}?${blobSAS}`;
+    const containerClientWithSAS = new ContainerClient(
+      sasURL,
+      newPipeline(new AnonymousCredential())
+    );
+
+    try {
+      await containerClientWithSAS.getProperties();
+      assert.fail("getProperties should fail");
+    } catch (err) {
+      assert.deepStrictEqual(err.statusCode, 403);
+    }
+
+    try {
+      await containerClientWithSAS.create();
+      assert.fail("container create should fail");
+    } catch (err) {
+      assert.deepStrictEqual(err.statusCode, 403);
+    }
+
+    const serviceClientWithSAS = new BlobServiceClient(`${serviceClient.url}?${blobSAS}`,
+      newPipeline(new AnonymousCredential())
+    );
+
+    try {
+      await serviceClientWithSAS.getAccountInfo();
+      assert.fail("service operation should fail");
+    } catch (err) {
+      assert.deepStrictEqual(err.statusCode, 403);
+    }
+
+    await containerClient.delete();
+  });
+
+  it(`Blob batch operation on service should fail with blob SAS`, async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const blobName = getUniqueName("blobName");
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+    await blockBlobClient.upload("Hello", 5);
+
+    const blobSAS = generateBlobSASQueryParameters(
+      {
+        containerName,
+        blobName: blobName,
+        expiresOn: tmr,
+        permissions: BlobSASPermissions.parse("racwd"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    );
+
+    const serviceClientWithSAS = new BlobServiceClient(`${serviceClient.url}?${blobSAS}`,
+      new AnonymousCredential());
+
+    const blobBatchClient = serviceClientWithSAS.getBlobBatchClient();
+    // Assemble batch delete request.
+    const batchDeleteRequest = new BlobBatch();
+    await batchDeleteRequest.deleteBlob(blockBlobClient);
+
+    // Submit batch request and verify response.
+    try {
+      await blobBatchClient.submitBatch(batchDeleteRequest, {});
+      assert.fail("batch operation should fail for blob SAS");
+    } catch (err) {
+      assert.deepStrictEqual(err.statusCode, 403);
+    }
+  });
+
+  it(`Blob batch operation on container should fail with blob SAS`, async () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
+
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const storageSharedKeyCredential = factories[factories.length - 1];
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const blobName = getUniqueName("blobName");
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+    await blockBlobClient.upload("Hello", 5);
+
+    const blobSAS = generateBlobSASQueryParameters(
+      {
+        containerName,
+        blobName: blobName,
+        expiresOn: tmr,
+        permissions: BlobSASPermissions.parse("racwd"),
+        protocol: SASProtocol.HttpsAndHttp,
+        startsOn: now
+      },
+      storageSharedKeyCredential as StorageSharedKeyCredential
+    );
+
+    const containerClientWithSAS = new ContainerClient(`${serviceClient.url}?${blobSAS}`,
+      new AnonymousCredential());
+
+    const blobBatchClient = containerClientWithSAS.getBlobBatchClient();
+    // Assemble batch delete request.
+    const batchDeleteRequest = new BlobBatch();
+    await batchDeleteRequest.deleteBlob(blockBlobClient);
+
+    // Submit batch request and verify response.
+    try {
+      await blobBatchClient.submitBatch(batchDeleteRequest, {});
+      assert.fail("batch operation should fail for blob SAS");
+    } catch (err) {
+      assert.deepStrictEqual(err.statusCode, 403);
+    }
+  });
+
   it("generateBlobSASQueryParameters should NOT work for blob using unknown key when the account has second key provided in AZURITE_ACCOUNTS @loki @sql", async () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - 5); // Skip clock skew with server
@@ -889,7 +1109,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
       }
     });
 
-    const escapedblobName = encodeURIComponent(blobName); 
+    const escapedblobName = encodeURIComponent(blobName);
     const blobSAS = generateBlobSASQueryParameters(
       {
         blobName,
@@ -1590,9 +1810,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
       storageSharedKeyCredential as StorageSharedKeyCredential
     );
 
-    const sasURL = `${
-      blobClient.withSnapshot(response.snapshot!).url
-    }&${blobSAS}`;
+    const sasURL = `${blobClient.withSnapshot(response.snapshot!).url
+      }&${blobSAS}`;
     const blobClientWithSAS = new PageBlobClient(
       sasURL,
       newPipeline(new AnonymousCredential())
@@ -1960,7 +2179,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const properties3 = await targetBlob.getProperties();
     assert.equal(properties3.metadata!["foo"], "1");
     assert.equal(properties3.metadata!["bar"], "2");
-    
+
     const copyResponse4 = await targetBlobWithProps.syncCopyFromURL(
       `${sourceBlob.url}?${sas}`,
       {
