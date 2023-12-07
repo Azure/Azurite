@@ -1,6 +1,5 @@
 import * as assert from "assert";
 import * as Azure from "azure-storage";
-
 import { configLogger } from "../../../src/common/Logger";
 import StorageError from "../../../src/table/errors/StorageError";
 
@@ -1640,7 +1639,6 @@ describe("table Entity APIs test - using Azure-Storage", () => {
                   (error, result) => {
                     if (error) {
                       assert.fail(error.message);
-                      done();
                     } else {
                       assert.strictEqual(result.PartitionKey._, partitionKey);
                       assert.strictEqual(result.RowKey._, rowKey);
@@ -1651,10 +1649,79 @@ describe("table Entity APIs test - using Azure-Storage", () => {
                 );
               } else {
                 assert.fail(mergeError.message);
-                done();
               }
             }
           );
+        }
+      }
+    );
+  });
+
+  // for github issue #1536
+  it("37. Should drop etag property when inserting entity, @loki", (done) => {
+    const dropEtagPKey = getUniqueName("drop");
+    const rowKey1 = getUniqueName("rk1");
+    const entityInsert = new TestEntity(dropEtagPKey, rowKey1, "value");
+    tableService.insertEntity(
+      tableName,
+      entityInsert,
+      (insertError, insertResult, insertResponse) => {
+        if (!insertError) {
+          tableService.retrieveEntity<TestEntity>(
+            tableName,
+            entityInsert.PartitionKey._,
+            entityInsert.RowKey._,
+            (queryError, queryResult, queryResponse) => {
+              if (!queryError) {
+                assert.strictEqual(queryResponse.statusCode, 200);
+                assert.strictEqual(
+                  queryResult.myValue._,
+                  entityInsert.myValue._
+                );
+                // now add odata etag property to the entity
+                const entityWithEtag = queryResult;
+                const rowKey2 = getUniqueName("rk2");
+                entityWithEtag.RowKey._ = rowKey2;
+                (entityWithEtag as any)["odata.etag"] =
+                  "W/\"datetime'2021-06-30T00%3A00%3A00.0000000Z'\"";
+                tableService.insertEntity(
+                  tableName,
+                  entityWithEtag,
+                  (insert2Error, insert2Result, insert2Response) => {
+                    if (!insert2Error) {
+                      assert.strictEqual(insert2Response.statusCode, 201);
+                      tableService.retrieveEntity<TestEntity>(
+                        tableName,
+                        entityWithEtag.PartitionKey._,
+                        entityWithEtag.RowKey._,
+                        (query2Error, query2Result, query2Response) => {
+                          if (!query2Error && query2Result && query2Response) {
+                            assert.strictEqual(query2Response.statusCode, 200);
+                            assert.strictEqual(
+                              query2Result.myValue._,
+                              entityInsert.myValue._
+                            );
+                            assert.notDeepStrictEqual(
+                              (query2Response as any).body["odata.etag"],
+                              "W/\"datetime'2021-06-30T00%3A00%3A00.0000000Z'\"",
+                              "Etag value is not writable and should be dropped."
+                            );
+                            done();
+                          } else {
+                            assert.fail(query2Error.message);
+                          }
+                        }
+                      );
+                    }
+                  }
+                );
+              } else {
+                assert.fail(queryError.message);
+              }
+            }
+          );
+        } else {
+          assert.fail(insertError.message);
         }
       }
     );
