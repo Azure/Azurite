@@ -8,7 +8,7 @@
 
 General:
 
-- Add `--inMemoryPersistence`  and `--extentMemoryLimit` options and related configs to store all data in-memory without disk persistence. (issue #2227)
+- Add `--inMemoryPersistence` and `--extentMemoryLimit` options and related configs to store all data in-memory without disk persistence. (issue #2227)
 
 Blob:
 
@@ -17,6 +17,7 @@ Blob:
 Table:
 
 - Fixed table sas request failure with table name include upper case letter (Issue #1359)
+- Filters etag from entity writes - seen when some tools clone tables (issue #1536)
 
 ## 2023.10 Version 3.27.0
 
