@@ -783,17 +783,6 @@ To connect Storage Explorer to Azurite over HTTPS:
 6. Click "Next" and review the connection settings.
 7. Finally click "Connect".
 
-##### Add Azurite via HTTPS Connection String
-
-Follow these steps to add Azurite HTTPS to Storage Explorer:
-
-1. Right click on Local & Attached -> Storage Accounts and select "Connect to Azure Storage...".
-2. Select "Use a connection string" and click Next.
-3. Enter a name, i.e Azurite.
-4. Enter the [HTTPS connection string](#https-connection-strings) from the previous section of this document and click Next.
-
-You can now explore the Azurite HTTPS endpoints with Storage Explorer.
-
 ## Workspace Structure
 
 Following files or folders may be created when initializing Azurite in selected workspace location.
