@@ -764,31 +764,22 @@ var client = new QueueClient(new Uri("https://127.0.0.1:10001/devstoreaccount1/q
 
 #### Storage Explorer with Azurite HTTP
 
-Connect to Azurite by click "Add Account" icon, then select "Attach to a local emulator" and click "Connect".
+To connect Storage Explorer to Azurite over HTTP:
+1. Open the connect dialog, via the plug icon in the vertial toolbar. 
+2. Select "Local storage emulator" and change values as needed. You can also select 'Storage account or service" on the first page, and enter in your own connection string.
+3. Click "Next" and review the connection settings.
+4. Finally click "Connect".
 
 #### Storage Explorer with Azurite HTTPS
 
-By default Storage Explorer will not open an HTTPS endpoint that uses a self-signed certificate. If you are running Azurite with HTTPS, then you are likely using a self-signed certificate. Fortunately, Storage Explorer allows you to import SSL certificates via the Edit -> SSL Certificates -> Import Certificates dialog.
-
-##### Import Certificate to Storage Explorer
-
-1. Find the certificate on your local machine.
-   - **OpenSSL**: You can find the PEM file at the location you created in the [HTTPS Setup](#https-setup) section above.
-   - **mkcert**: You need to import the RootCA.pem file, which can be found by executing this command in the terminal: `mkcert -CAROOT`. For mkcert, you want to import the RootCA.pem file, not the certificate file you created.
-   - **dotnet dev-certs**: Storage Explorer doesn't currently work with certs produced by `dotnet dev-certs`. We are tracking this issue on GitHub here: <https://github.com/microsoft/AzureStorageExplorer/issues/2859>
-2. Open Storage Explorer -> Edit -> SSL Certificates -> Import Certificates and import your certificate.
-
-If you do not set this, then you will get the following error:
-
-```
-unable to verify the first certificate
-```
-
-or
-
-```
-self signed certificate in chain
-```
+To connect Storage Explorer to Azurite over HTTPS:
+1. Open Settings, via the gear icon in the vertical toolbar.
+2. Enter "system proxy" in the search box at the top of the settings page.
+3. Under the "Proxy Configuration" setting, click the dropdown and choose "Use system proxy".
+4. Open the connect dialog, via the plug icon in the vertial toolbar. 
+5. Select "Local storage emulator", change values as needed, and check the "Use HTTPS" checkbox. You can also select "Storage account or service" on the first page, and enter in your own connection string.
+6. Click "Next" and review the connection settings.
+7. Finally click "Connect".
 
 ##### Add Azurite via HTTPS Connection String
 
