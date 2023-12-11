@@ -772,6 +772,8 @@ To connect Storage Explorer to Azurite over HTTP:
 
 #### Storage Explorer with Azurite HTTPS
 
+> Storage Explorer does not currently work with certificates produced by `dotnet dev-certs`. While you can use them for Azurite and Azure SDKs, you won't be able to access the Azurite endpoints with Storage Explorer if you are using the certs created with dotnet dev-certs. We are tracking this issue on GitHub here: <https://github.com/microsoft/AzureStorageExplorer/issues/2859>
+
 To connect Storage Explorer to Azurite over HTTPS:
 1. Open Settings, via the gear icon in the vertical toolbar.
 2. Enter "system proxy" in the search box at the top of the settings page.
