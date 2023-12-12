@@ -4,6 +4,16 @@
 
 ## Upcoming Release
 
+## 2023.12 Version 3.29.0
+
+General:
+
+- Bump up service API version to 2024-02-04
+
+Table:
+
+- Filters etag from entity writes - seen when some tools clone tables (issue #1536)
+
 ## 2023.11 Version 3.28.0
 
 General:
