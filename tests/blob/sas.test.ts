@@ -655,7 +655,8 @@ describe("Shared Access Signature (SAS) authentication", () => {
     );
 
     const containerName = getUniqueName("con");
-    const containerClient = serviceClientWithSAS.getContainerClient(
+    const containerClient = serviceClient.getContainerClient(containerName);
+    const containerClientWithSAS = serviceClientWithSAS.getContainerClient(
       containerName
     );
     await containerClient.create();
@@ -663,7 +664,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const blobName1 = getUniqueName("blob");
     const blobName2 = getUniqueName("blob");
     const blob1 = containerClient.getBlockBlobClient(blobName1);
-    const blob2 = containerClient.getBlockBlobClient(blobName2);
+    const blob2 = containerClientWithSAS.getBlockBlobClient(blobName2);
 
     await blob1.upload("hello", 5);
 

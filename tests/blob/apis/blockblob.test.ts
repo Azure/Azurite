@@ -1,7 +1,8 @@
 import {
   StorageSharedKeyCredential,
   BlobServiceClient,
-  newPipeline
+  newPipeline,
+  BlobSASPermissions
 } from "@azure/storage-blob";
 import assert = require("assert");
 import crypto = require("crypto");
@@ -548,4 +549,45 @@ describe("BlockBlobAPIs", () => {
       body
     );
   });
+
+  it("Start copy without required permission should fail @loki @sql", async () => {
+    const body: string = getUniqueName("randomstring");
+    const expiryTime = new Date();
+    expiryTime.setDate(expiryTime.getDate() + 1);
+    await blockBlobClient.upload(body, Buffer.byteLength(body));
+
+    const sourceURLWithoutPermission = await blockBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("w"),
+      expiresOn: expiryTime
+    });
+
+    const destBlobName: string = getUniqueName("destBlobName");
+    const destBlobClient = containerClient.getBlockBlobClient(destBlobName);
+
+    try {
+      await destBlobClient.beginCopyFromURL(sourceURLWithoutPermission);
+      assert.fail("Copy without required permision should fail");
+    }
+    catch (ex) {
+      assert.deepStrictEqual(ex.statusCode, 403);
+      assert.ok(ex.message.startsWith("This request is not authorized to perform this operation using this permission."));
+      assert.deepStrictEqual(ex.code, "CannotVerifyCopySource");
+    }
+
+    // Copy within the same account without SAS token should succeed.
+    const result = await (await destBlobClient.beginCopyFromURL(blockBlobClient.url)).pollUntilDone();
+    assert.ok(result.copyId);
+    assert.strictEqual(result.errorCode, undefined);
+
+    // Copy with 'r' permission should succeed.
+    const sourceURL = await blockBlobClient.generateSasUrl({
+      permissions: BlobSASPermissions.parse("r"),
+      expiresOn: expiryTime
+    });
+
+    const resultWithPermission = await (await destBlobClient.beginCopyFromURL(sourceURL)).pollUntilDone();
+    assert.ok(resultWithPermission.copyId);
+    assert.strictEqual(resultWithPermission.errorCode, undefined);
+  });
+
 });

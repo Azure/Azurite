@@ -122,39 +122,39 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     const response: Models.BlobGetPropertiesResponse = againstMetadata
       ? {
-          statusCode: 200,
-          metadata: res.metadata,
-          eTag: res.properties.etag,
-          requestId: context.contextId,
-          version: BLOB_API_VERSION,
-          date: context.startTime,
-          clientRequestId: options.requestId,
-          contentLength: res.properties.contentLength,
-          lastModified: res.properties.lastModified
-        }
+        statusCode: 200,
+        metadata: res.metadata,
+        eTag: res.properties.etag,
+        requestId: context.contextId,
+        version: BLOB_API_VERSION,
+        date: context.startTime,
+        clientRequestId: options.requestId,
+        contentLength: res.properties.contentLength,
+        lastModified: res.properties.lastModified
+      }
       : {
-          statusCode: 200,
-          metadata: res.metadata,
-          isIncrementalCopy: res.properties.incrementalCopy,
-          eTag: res.properties.etag,
-          requestId: context.contextId,
-          version: BLOB_API_VERSION,
-          date: context.startTime,
-          acceptRanges: "bytes",
-          blobCommittedBlockCount:
-            res.properties.blobType === Models.BlobType.AppendBlob
-              ? res.blobCommittedBlockCount
-              : undefined,
-          isServerEncrypted: true,
-          clientRequestId: options.requestId,
-          ...res.properties,
-          cacheControl: context.request!.getQuery("rscc") ?? res.properties.cacheControl,
-          contentDisposition: context.request!.getQuery("rscd") ?? res.properties.contentDisposition,
-          contentEncoding: context.request!.getQuery("rsce") ?? res.properties.contentEncoding,
-          contentLanguage: context.request!.getQuery("rscl") ?? res.properties.contentLanguage,
-          contentType: context.request!.getQuery("rsct") ?? res.properties.contentType,
-          tagCount: res.properties.tagCount,
-        };
+        statusCode: 200,
+        metadata: res.metadata,
+        isIncrementalCopy: res.properties.incrementalCopy,
+        eTag: res.properties.etag,
+        requestId: context.contextId,
+        version: BLOB_API_VERSION,
+        date: context.startTime,
+        acceptRanges: "bytes",
+        blobCommittedBlockCount:
+          res.properties.blobType === Models.BlobType.AppendBlob
+            ? res.blobCommittedBlockCount
+            : undefined,
+        isServerEncrypted: true,
+        clientRequestId: options.requestId,
+        ...res.properties,
+        cacheControl: context.request!.getQuery("rscc") ?? res.properties.cacheControl,
+        contentDisposition: context.request!.getQuery("rscd") ?? res.properties.contentDisposition,
+        contentEncoding: context.request!.getQuery("rsce") ?? res.properties.contentEncoding,
+        contentLanguage: context.request!.getQuery("rscl") ?? res.properties.contentLanguage,
+        contentType: context.request!.getQuery("rsct") ?? res.properties.contentType,
+        tagCount: res.properties.tagCount,
+      };
 
     return response;
   }
@@ -329,12 +329,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const metadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders()
     );
-    
-    if (metadata != undefined)
-    {
+
+    if (metadata != undefined) {
       Object.entries(metadata).forEach(([key, value]) => {
-        if (key.includes("-"))
-        {
+        if (key.includes("-")) {
           throw StorageErrorFactory.getInvalidMetadata(context.contextId!);
         }
       });
@@ -664,7 +662,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getBlobNotFound(context.contextId!);
     }
 
-    if (sourceAccount !== blobCtx.account) {
+    const sig = url.searchParams.get("sig");
+    if ((sourceAccount !== blobCtx.account) || (sig !== null)) {
       await this.validateCopySource(copySource, sourceAccount, context);
     }
 
@@ -1103,7 +1102,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
       clientRequestId: options.requestId,
-      creationTime:blob.properties.creationTime,
+      creationTime: blob.properties.creationTime,
       blobCommittedBlockCount:
         blob.properties.blobType === Models.BlobType.AppendBlob
           ? (blob.committedBlocksInOrder || []).length
@@ -1176,9 +1175,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentLength <= 0
         ? []
         : this.rangesManager.fillZeroRanges(blob.pageRangesInOrder, {
-            start: rangeStart,
-            end: rangeEnd
-          });
+          start: rangeStart,
+          end: rangeEnd
+        });
 
     const bodyGetter = async () => {
       return this.extentStore.readExtents(
@@ -1233,7 +1232,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blobContentMD5: blob.properties.contentMD5,
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
-      creationTime:blob.properties.creationTime,
+      creationTime: blob.properties.creationTime,
       clientRequestId: options.requestId
     };
 
@@ -1243,7 +1242,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
   public async query(
     options: Models.BlobQueryOptionalParams,
     context: Context
-  ): Promise<Models.BlobQueryResponse>{
+  ): Promise<Models.BlobQueryResponse> {
     throw new NotImplementedError(context.contextId);
   }
 
@@ -1266,13 +1265,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     );
 
     const response: Models.BlobGetTagsResponse = {
-          statusCode: 200,
-          blobTagSet: tags === undefined ? []: tags.blobTagSet,
-          requestId: context.contextId,
-          version: BLOB_API_VERSION,
-          date: context.startTime,         
-          clientRequestId: options.requestId,
-        };
+      statusCode: 200,
+      blobTagSet: tags === undefined ? [] : tags.blobTagSet,
+      requestId: context.contextId,
+      version: BLOB_API_VERSION,
+      date: context.startTime,
+      clientRequestId: options.requestId,
+    };
 
     return response;
   }
@@ -1315,18 +1314,18 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
-  private NewUriFromCopySource(copySource: string, context: Context): URL{
-      try{
-        return new URL(copySource)
-      }
-      catch
-      {
-        throw StorageErrorFactory.getInvalidHeaderValue(
-          context.contextId,
-          {
-            HeaderName: "x-ms-copy-source",
-            HeaderValue: copySource
-          })
-      }
+  private NewUriFromCopySource(copySource: string, context: Context): URL {
+    try {
+      return new URL(copySource)
+    }
+    catch
+    {
+      throw StorageErrorFactory.getInvalidHeaderValue(
+        context.contextId,
+        {
+          HeaderName: "x-ms-copy-source",
+          HeaderValue: copySource
+        })
+    }
   }
 }
