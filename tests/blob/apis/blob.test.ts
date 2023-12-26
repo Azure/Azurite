@@ -1439,7 +1439,7 @@ describe("BlobAPIs", () => {
     var properties1 = await blobClientSnapshot.getProperties();
     await blobClientSnapshot.setTags(tags2);
     outputTags2 = (await blobClientSnapshot.getTags()).tags;
-    assert.deepStrictEqual(outputTags2, tags2);   
+    assert.deepStrictEqual(outputTags2, tags2);
     var properties2 = await blobClientSnapshot.getProperties(); 
     assert.deepStrictEqual(properties1.etag, properties2.etag);
     assert.deepStrictEqual(properties1.lastModified, properties2.lastModified);
