@@ -354,7 +354,7 @@ export class BlobBatchHandler {
 
       while (lineIndex < requestLines.length) {
         if (requestLines[lineIndex] === '') break;
-        const header = requestLines[lineIndex].split(HTTP_HEADER_DELIMITER);
+        const header = requestLines[lineIndex].split(HTTP_HEADER_DELIMITER, 2);
 
         if (header.length !== 2) throw new Error("Bad Request");
 
@@ -384,7 +384,7 @@ export class BlobBatchHandler {
       ++lineIndex;
       while (lineIndex < requestLines.length) {
         if (requestLines[lineIndex] === '') break; // Last line
-        const header = requestLines[lineIndex].split(HTTP_HEADER_DELIMITER);
+        const header = requestLines[lineIndex].split(HTTP_HEADER_DELIMITER, 2);
 
         if (header.length !== 2) throw new Error("Bad Request");
         blobBatchSubRequest.setHeader(header[0], header[1]);

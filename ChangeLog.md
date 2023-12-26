@@ -23,6 +23,7 @@ General:
 Blob:
 
 - Fixed issue of not requiring SAS permission for some specific operations. (issue #2299)
+- Fix HTTP header parsing of `SubmitBatch()`. If a HTTP header has HTTP header delimiter (`:`) in its value, `SubmitBatch()` returns "400 One of the request inputs is not valid". For example, if `user-agent` header is `azsdk-cpp-storage-blobs/12.10.0-beta.1 (Darwin 23.1.0 arm64 Darwin Kernel Version 23.1.0: Mon Oct  9 21:28:12 PDT 2023; root:xnu-10002.41.9~6/RELEASE_ARM64_T8103)`, all `SubmitBatch()` requests are failed.
 
 Table:
 
