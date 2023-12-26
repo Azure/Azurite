@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Fixed issue of setting blob tag should not update Blob Etag and LastModified. (issue #2327)
+
 ## 2023.12 Version 3.29.0
 
 General:

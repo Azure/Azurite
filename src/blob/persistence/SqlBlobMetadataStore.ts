@@ -3354,14 +3354,9 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
         .sync(new BlobWriteLeaseSyncer(blobModel));
 
-      const lastModified = context.startTime! || new Date();
-      const etag = newEtag();
-
       await BlobsModel.update(
         {
           blobTags: this.serializeModelValue(tags) || null,
-          lastModified,
-          etag,
           ...this.convertLeaseToDbModel(new BlobLeaseAdapter(blobModel))
         },
         {
