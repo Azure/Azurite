@@ -563,10 +563,10 @@ jobs:
         displayName: "Build docker image"
 
       - script: |
-          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite -v
-          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-blob -v
-          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-queue -v
-          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-table -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest "cmd /s /c azurite" -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest "cmd /s /c azurite-blob" -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest "cmd /s /c azurite-queue" -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest "cmd /s /c azurite-table" -v
         workingDirectory: "./"
         displayName: "Validate docker image"
 
