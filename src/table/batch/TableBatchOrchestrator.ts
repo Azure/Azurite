@@ -94,7 +94,6 @@ export default class TableBatchOrchestrator {
       const batchId = uuidv4();
 
       this.checkForPartitionKey();
-
       // initialize transaction rollback capability
       await this.initTransaction(batchId);
 
@@ -722,9 +721,34 @@ export default class TableBatchOrchestrator {
     batchContextClone: any
   ) {
     if (partitionKey === undefined) {
+
       throw StorageErrorFactory.getInvalidInput(batchContextClone);
+
     }
+    this.checkForDifferingPartitionKeys(partitionKey, batchContextClone);
     this.checkForDuplicateRowKey(partitionKey, rowKey, batchContextClone);
+
+  }
+
+
+  /**
+   * Checks that the partition key is the same for all requests in the batch
+   * @param {string} partitionKey
+   * @param {*} batchContextClone
+   * @memberof TableBatchOrchestrator
+   */
+  private checkForDifferingPartitionKeys(
+    partitionKey: string,
+    batchContextClone: any
+  ) {
+    if (this.partitionKeyMap.size > 0) {
+      console.log("checking for differing partition keys");
+      if (this.partitionKeyMap.values().next().value !== partitionKey) {
+        throw StorageErrorFactory.getBatchPartitionKeyMismatch(
+          batchContextClone
+        );
+      }
+    }
   }
 
   /**
