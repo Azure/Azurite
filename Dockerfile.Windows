@@ -1,18 +1,21 @@
 #
 # Base-Node
 #
-FROM mcr.microsoft.com/windows/nanoserver:ltsc2022-amd64 AS Node-Windows
+FROM mcr.microsoft.com/windows/nanoserver:ltsc2022-amd64 AS nodewindows
 # Install dependencies first
 RUN mkdir c:\node
+WORKDIR c:\\node
+
 RUN curl.exe -o Node.zip https://nodejs.org/dist/v14.21.3/node-v14.21.3-win-x64.zip
 RUN tar -xf Node.zip -C c:\node
+RUN del Node.zip
 
 ENV PATH="$PATH;C:\Node\node-v14.21.3-win-x64"
 
 #
 # Builder
 #
-FROM Node-Windows AS builder
+FROM nodewindows AS builder
 
 RUN mkdir c:\azurite
 WORKDIR c:\\azurite
@@ -31,7 +34,7 @@ RUN npm run build && \
 #
 # Production image
 #
-FROM Node-Windows
+FROM nodewindows
 
 ENV NODE_ENV=productions
 
