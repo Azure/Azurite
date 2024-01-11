@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Added support for docker image based on Windows Base Image.
+
 Blob:
 
 - Fixed issue of setting blob tag should not update Blob Etag and LastModified. (issue #2327)
