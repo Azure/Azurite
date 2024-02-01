@@ -326,9 +326,9 @@ export default class LokiBlobMetadataStore
       prefix === ""
         ? { name: { $gt: marker }, accountName: account }
         : {
-            name: { $regex: `^${this.escapeRegex(prefix)}`, $gt: marker },
-            accountName: account
-          };
+          name: { $regex: `^${this.escapeRegex(prefix)}`, $gt: marker },
+          accountName: account
+        };
 
     // Workaround for loki which will ignore $gt when providing $regex
     const query2 = { name: { $gt: marker } };
@@ -750,10 +750,10 @@ export default class LokiBlobMetadataStore
 
     const leaseTimeSeconds: number =
       doc.properties.leaseState === Models.LeaseStateType.Breaking &&
-      doc.leaseBreakTime
+        doc.leaseBreakTime
         ? Math.round(
-            (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
-          )
+          (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
+        )
         : 0;
 
     coll.update(doc);
@@ -975,7 +975,7 @@ export default class LokiBlobMetadataStore
     if (blobDoc) {
       LeaseFactory.createLeaseState(new BlobLeaseAdapter(blobDoc), context)
         .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
-        .sync(new BlobLeaseSyncer(blob)); // Keep original blob lease
+        .sync(new BlobWriteLeaseSyncer(blob)); // Keep original blob lease
 
       if (
         blobDoc.properties !== undefined &&
@@ -1689,10 +1689,10 @@ export default class LokiBlobMetadataStore
 
     const leaseTimeSeconds: number =
       doc.properties.leaseState === Models.LeaseStateType.Breaking &&
-      doc.leaseBreakTime
+        doc.leaseBreakTime
         ? Math.round(
-            (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
-          )
+          (doc.leaseBreakTime.getTime() - context.startTime!.getTime()) / 1000
+        )
         : 0;
 
     coll.update(doc);
@@ -1919,7 +1919,7 @@ export default class LokiBlobMetadataStore
       leaseBreakTime:
         destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
       committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
-      persistency: sourceBlob.persistency,      
+      persistency: sourceBlob.persistency,
       blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!)
     };
 
@@ -2106,7 +2106,7 @@ export default class LokiBlobMetadataStore
       leaseBreakTime:
         destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
       committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
-      persistency: sourceBlob.persistency,      
+      persistency: sourceBlob.persistency,
       blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!)
     };
 
@@ -2334,8 +2334,9 @@ export default class LokiBlobMetadataStore
       throw StorageErrorFactory.getBlobNotFound(context.contextId);
     }
 
+    const lease = new BlobLeaseAdapter(doc);
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(
-      new BlobLeaseAdapter(doc),
+      lease,
       context
     );
 
@@ -2372,6 +2373,7 @@ export default class LokiBlobMetadataStore
     }
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    new BlobWriteLeaseSyncer(doc).sync(lease);
     doc.committedBlocksInOrder = doc.committedBlocksInOrder || [];
     doc.committedBlocksInOrder.push(block);
     doc.properties.etag = newEtag();
