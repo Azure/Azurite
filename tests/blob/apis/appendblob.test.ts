@@ -452,7 +452,7 @@ describe("AppendBlobAPIs", () => {
       });
     } catch (err) {
       assert.deepStrictEqual(
-        err.code, 
+        err.code,
         "MaxBlobSizeConditionNotMet");
       assert.deepStrictEqual(err.statusCode, 412);
 
@@ -470,7 +470,7 @@ describe("AppendBlobAPIs", () => {
         });
       } catch (err) {
         assert.deepStrictEqual(
-          err.code, 
+          err.code,
           "AppendPositionConditionNotMet");
         assert.deepStrictEqual(err.statusCode, 412);
         return;
@@ -564,5 +564,26 @@ describe("AppendBlobAPIs", () => {
       return;
     }
     assert.fail();
+  });
+
+  it("Append block should refresh lease state  @loki", async () => {
+    await appendBlobClient.create();
+
+    const leaseId = "abcdefg";
+    const blobLeaseClient = await appendBlobClient.getBlobLeaseClient(leaseId);
+    await blobLeaseClient.acquireLease(20);
+
+    await sleep(20000);
+
+    await appendBlobClient.appendBlock("a", 1);
+
+    try {
+      await blobLeaseClient.renewLease();
+      assert.fail();
+    } catch (err) {
+      assert.deepStrictEqual(err.code, "LeaseIdMismatchWithLeaseOperation");
+      assert.deepStrictEqual(err.statusCode, 409);
+      return;
+    }
   });
 });
