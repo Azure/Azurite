@@ -70,10 +70,10 @@ import PageWithDelimiter from "./PageWithDelimiter";
 import { getBlobTagsCount, getTagsFromString } from "../utils/utils";
 
 // tslint:disable: max-classes-per-file
-class ServicesModel extends Model {}
-class ContainersModel extends Model {}
-class BlobsModel extends Model {}
-class BlocksModel extends Model {}
+class ServicesModel extends Model { }
+class ContainersModel extends Model { }
+class BlobsModel extends Model { }
+class BlocksModel extends Model { }
 // class PagesModel extends Model {}
 
 interface IBlobContentProperties {
@@ -1037,10 +1037,10 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         containerModel.properties.leaseState ===
           Models.LeaseStateType.Breaking && containerModel.leaseBreakTime
           ? Math.round(
-              (containerModel.leaseBreakTime.getTime() -
-                context.startTime!.getTime()) /
-                1000
-            )
+            (containerModel.leaseBreakTime.getTime() -
+              context.startTime!.getTime()) /
+            1000
+          )
           : 0;
 
       return {
@@ -1162,7 +1162,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
         LeaseFactory.createLeaseState(new BlobLeaseAdapter(blobModel), context)
           .validate(new BlobWriteLeaseValidator(leaseAccessConditions))
-          .sync(new BlobLeaseSyncer(blob)); // Keep original blob lease;
+          .sync(new BlobWriteLeaseSyncer(blob)); // Keep original blob lease;
 
         if (
           blobModel.properties !== undefined &&
@@ -1729,7 +1729,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
       // TODO: Return blobCommittedBlockCount for append blob
 
-      let responds =  LeaseFactory.createLeaseState(
+      let responds = LeaseFactory.createLeaseState(
         new BlobLeaseAdapter(blobModel),
         context
       )
@@ -1737,7 +1737,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         .sync(new BlobLeaseSyncer(blobModel));
       return {
         ...responds,
-        properties : {
+        properties: {
           ...responds.properties,
           tagCount: getBlobTagsCount(blobModel.blobTags),
         },
@@ -2418,11 +2418,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
       const leaseTimeSeconds: number =
         lease.leaseState === Models.LeaseStateType.Breaking &&
-        lease.leaseBreakTime
+          lease.leaseBreakTime
           ? Math.round(
-              (lease.leaseBreakTime.getTime() - context.startTime!.getTime()) /
-                1000
-            )
+            (lease.leaseBreakTime.getTime() - context.startTime!.getTime()) /
+            1000
+          )
           : 0;
 
       await BlobsModel.update(this.convertLeaseToDbModel(lease), {
@@ -3407,8 +3407,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
 
       if (!blobModel.isCommitted) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
-      }      
-      
+      }
+
       LeaseFactory.createLeaseState(
         new BlobLeaseAdapter(blobModel),
         context

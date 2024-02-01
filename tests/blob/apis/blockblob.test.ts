@@ -14,7 +14,8 @@ import {
   bodyToString,
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
-  getUniqueName
+  getUniqueName,
+  sleep
 } from "../../testutils";
 
 // Set true to enable debug log
@@ -66,6 +67,28 @@ describe("BlockBlobAPIs", () => {
 
   afterEach(async () => {
     await containerClient.delete();
+  });
+
+  it("Block blob upload should refresh lease state @loki @sql", async () => {
+    await blockBlobClient.upload('a', 1);
+
+    const leaseId = "abcdefg";
+    const blobLeaseClient = await blockBlobClient.getBlobLeaseClient(leaseId);
+    await blobLeaseClient.acquireLease(20);
+
+    // Waiting for 20 seconds for lease to expire
+    await sleep(20000);
+
+    await blockBlobClient.upload('b', 1);
+
+    try {
+      await blobLeaseClient.renewLease();
+      assert.fail();
+    }
+    catch (error) {
+      assert.deepStrictEqual(error.code, "LeaseIdMismatchWithLeaseOperation");
+      assert.deepStrictEqual(error.statusCode, 409);
+    }
   });
 
   it("upload with string body and default parameters @loki @sql", async () => {
