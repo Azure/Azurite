@@ -35,7 +35,7 @@
     "rimraf": "^3.0.2",
     "sequelize": "^6.31.0",
     "stoppable": "^1.1.0",
-    "tedious": "^16.0.0",
+    "tedious": "^16.7.0",
     "to-readable-stream": "^2.1.0",
     "tslib": "^2.3.0",
     "uri-templates": "^0.2.0",
