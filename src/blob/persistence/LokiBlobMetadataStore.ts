@@ -3424,8 +3424,6 @@ export default class LokiBlobMetadataStore
     new BlobWriteLeaseValidator(leaseAccessConditions).validate(lease, context);
     new BlobWriteLeaseSyncer(doc).sync(lease);
     doc.blobTags = tags;
-    doc.properties.etag = newEtag();
-    doc.properties.lastModified = context.startTime || new Date();
     coll.update(doc);
   }
 

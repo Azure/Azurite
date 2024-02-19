@@ -192,10 +192,13 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     // const partitionKey = this.getAndCheckPartitionKey(tableContext);
     // const rowKey = this.getAndCheckRowKey(tableContext);
     if (
+      options.tableEntityProperties == undefined ||
       !options.tableEntityProperties ||
       // rowKey and partitionKey may be empty string
       options.tableEntityProperties.PartitionKey === null ||
-      options.tableEntityProperties.RowKey === null
+      options.tableEntityProperties.PartitionKey == undefined ||
+      options.tableEntityProperties.RowKey === null ||
+      options.tableEntityProperties.RowKey === undefined
     ) {
       throw StorageErrorFactory.getPropertiesNeedValue(context);
     }
@@ -205,11 +208,18 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     this.validateKey(context, options.tableEntityProperties.RowKey);
 
     this.checkProperties(context, options.tableEntityProperties);
+
+    // need to remove the etags from the properties to avoid errors
+    // https://docs.microsoft.com/en-us/rest/api/storageservices/insert-entity
+    options.tableEntityProperties = this.removeEtagProperty(
+      options.tableEntityProperties
+    );
+
     const entity: Entity = this.createPersistedEntity(
       context,
       options,
-      options.tableEntityProperties.PartitionKey,
-      options.tableEntityProperties.RowKey
+      options.tableEntityProperties?.PartitionKey,
+      options.tableEntityProperties?.RowKey
     );
     let normalizedEntity;
     try {
@@ -246,8 +256,8 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
         account,
         table,
         this.getOdataAnnotationUrlPrefix(tableContext, account),
-        options.tableEntityProperties.PartitionKey,
-        options.tableEntityProperties.RowKey,
+        options.tableEntityProperties?.PartitionKey,
+        options.tableEntityProperties?.RowKey,
         accept
       );
 
@@ -400,6 +410,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     // check that key properties are valid
     this.validateKey(context, partitionKey);
     this.validateKey(context, rowKey);
+    options.tableEntityProperties = this.removeEtagProperty(
+      options.tableEntityProperties
+    );
 
     const entity: Entity = this.createPersistedEntity(
       context,
@@ -462,6 +475,9 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     );
 
     this.checkMergeRequest(options, context, partitionKey, rowKey);
+    options.tableEntityProperties = this.removeEtagProperty(
+      options.tableEntityProperties
+    );
 
     const entity: Entity = this.createPersistedEntity(
       context,
@@ -1145,5 +1161,28 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     if (undefined !== body && getUTF8ByteSize(body) > ENTITY_SIZE_MAX) {
       throw StorageErrorFactory.getEntityTooLarge(context);
     }
+  }
+
+  /**
+   * remove the etag property to avoid duplicate odata.etag error
+   *
+   * @private
+   * @param {{
+   *       [propertyName: string]: any;
+   *     }} tableEntityProperties
+   * @return {*}  {({ [propertyName: string]: any } | undefined)}
+   * @memberof TableHandler
+   */
+  private removeEtagProperty(
+    tableEntityProperties:
+      | {
+          [propertyName: string]: any;
+        }
+      | undefined
+  ): { [propertyName: string]: any } | undefined {
+    if (tableEntityProperties) {
+      delete tableEntityProperties["odata.etag"];
+    }
+    return tableEntityProperties;
   }
 }

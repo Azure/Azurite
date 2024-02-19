@@ -1581,23 +1581,29 @@ describe("BlobAPIs", () => {
       tag3: "val3"
     };
 
-    // Set/get tags on base blob
+    // Set/get tags on base blob, etag, lastModified should not change
+    var properties1 = await blobClient.getProperties();
     await blobClient.setTags(tags);
     let outputTags1 = (await blobClient.getTags()).tags;
     assert.deepStrictEqual(outputTags1, tags);
+    var properties2 = await blobClient.getProperties();
+    assert.deepStrictEqual(properties1.etag, properties2.etag);
+    assert.deepStrictEqual(properties1.lastModified, properties2.lastModified);
 
     // create snapshot, the tags should be same as base blob
     const snapshotResponse = await blobClient.createSnapshot();
-    const blobClientSnapshot = blobClient.withSnapshot(
-      snapshotResponse.snapshot!
-    );
+    const blobClientSnapshot = blobClient.withSnapshot(snapshotResponse.snapshot!);
     let outputTags2 = (await blobClientSnapshot.getTags()).tags;
     assert.deepStrictEqual(outputTags2, tags);
-
-    // Set/get  tags on snapshot, base blob tags should not be impacted.
+    
+    // Set/get  tags on snapshot, base blob tags should not be impacted, etag, lastModified should not change
+    var properties1 = await blobClientSnapshot.getProperties();
     await blobClientSnapshot.setTags(tags2);
     outputTags2 = (await blobClientSnapshot.getTags()).tags;
     assert.deepStrictEqual(outputTags2, tags2);
+    var properties2 = await blobClientSnapshot.getProperties();
+    assert.deepStrictEqual(properties1.etag, properties2.etag);
+    assert.deepStrictEqual(properties1.lastModified, properties2.lastModified);
 
     outputTags1 = (await blobClient.getTags()).tags;
     assert.deepStrictEqual(outputTags1, tags);
@@ -1890,8 +1896,7 @@ describe("BlobAPIs", () => {
     }
     assert.deepStrictEqual(statusCode, 400);
     const tooLongKeyTags = {
-      key123401234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890:
-        "val1"
+      "key123401234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890": "val1",
     };
     statusCode = 0;
     try {
@@ -1901,9 +1906,8 @@ describe("BlobAPIs", () => {
     }
     assert.deepStrictEqual(statusCode, 400);
     let tags2 = {
-      key12301234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890:
-        "val1"
-    };
+      "key12301234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890": "val1",
+    };  
     await blockBlobClient1.setTags(tags2);
     outputTags = (await blockBlobClient1.getTags()).tags;
     assert.deepStrictEqual(outputTags, tags2);

@@ -662,7 +662,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getBlobNotFound(context.contextId!);
     }
 
-    if (sourceAccount !== blobCtx.account) {
+    const sig = url.searchParams.get("sig");
+    if ((sourceAccount !== blobCtx.account) || (sig !== null)) {
       await this.validateCopySource(copySource, sourceAccount, context);
     }
 

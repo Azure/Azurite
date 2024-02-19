@@ -9,7 +9,7 @@
 
 | Version                                                            | Azure Storage API Version | Service Support                | Description                                       | Reference Links                                                                                                                                                                                                         |
 | ------------------------------------------------------------------ | ------------------------- | ------------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3.28.0                                                             | 2023-11-03                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
+| 3.29.0                                                             | 2024-02-04                | Blob, Queue and Table(preview) | Azurite V3 based on TypeScript & New Architecture | [NPM](https://www.npmjs.com/package/azurite) - [Docker](https://hub.docker.com/_/microsoft-azure-storage-azurite) - [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Azurite.azurite) |
 | [Legacy (v2)](https://github.com/Azure/Azurite/tree/legacy-master) | 2016-05-31                | Blob, Queue and Table          | Legacy Azurite V2                                 | [NPM](https://www.npmjs.com/package/azurite)                                                                                                                                                                            |
 
 - [Azurite V3](#azurite-v3)
@@ -78,19 +78,19 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
 
 ## Features & Key Changes in Azurite V3
 
-- Blob storage features align with Azure Storage API version 2023-11-03 (Refer to support matrix section below)
+- Blob storage features align with Azure Storage API version 2024-02-04 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/Public Access Authentications/OAuth
   - Get/Set Blob Service Properties
   - Create/List/Delete Containers
   - Create/Read/List/Update/Delete Block Blobs
   - Create/Read/List/Update/Delete Page Blobs
-- Queue storage features align with Azure Storage API version 2023-11-03 (Refer to support matrix section below)
+- Queue storage features align with Azure Storage API version 2024-02-04 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/OAuth
   - Get/Set Queue Service Properties
   - Preflight Request
   - Create/List/Delete Queues
   - Put/Get/Peek/Updata/Deleta/Clear Messages
-- Table storage features align with Azure Storage API version 2023-11-03 (Refer to support matrix section below)
+- Table storage features align with Azure Storage API version 2024-02-04 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/OAuth
   - Create/List/Delete Tables
   - Insert/Update/Query/Delete Table Entities
@@ -146,19 +146,19 @@ This tells Azurite to store all data in a particular directory `c:\azurite`. If 
 For example, to start blob service only:
 
 ```bash
-$ azurite-blob -l path/to/azurite/workspace
+azurite-blob -l path/to/azurite/workspace
 ```
 
 Start queue service only:
 
 ```bash
-$ azurite-queue -l path/to/azurite/workspace
+azurite-queue -l path/to/azurite/workspace
 ```
 
 Start table service only:
 
 ```bash
-$ azurite-table -l path/to/azurite/workspace
+azurite-table -l path/to/azurite/workspace
 ```
 
 ### Visual Studio Code Extension
@@ -207,7 +207,7 @@ Following extension configurations are supported:
 
 #### Run Azurite V3 docker image
 
-> Note. Find more docker images tags in https://mcr.microsoft.com/v2/azure-storage/azurite/tags/list
+> Note. Find more docker images tags in <https://mcr.microsoft.com/v2/azure-storage/azurite/tags/list>
 
 ```bash
 docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite
@@ -558,7 +558,7 @@ You have a few options to generate PEM certificate and key files. We'll show you
 
 ###### Generate Certificate and Key with mkcert
 
-1. Install mkcert: https://github.com/FiloSottile/mkcert#installation. We like to use choco `choco install mkcert`, but you can install with any mechanism you'd like.
+1. Install mkcert: <https://github.com/FiloSottile/mkcert#installation>. We like to use choco `choco install mkcert`, but you can install with any mechanism you'd like.
 2. Run the following commands to install the Root CA and generate a cert for Azurite.
 
 ```bash
@@ -589,7 +589,7 @@ docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 -v c:/azurite:/workspace
 
 ###### Install OpenSSL on Windows
 
-1. Download and install the OpenSSL v1.1.1a+ EXE from http://slproweb.com/products/Win32OpenSSL.html
+1. Download and install the OpenSSL v1.1.1a+ EXE from <http://slproweb.com/products/Win32OpenSSL.html>
 2. Set the following environment variables
 
 ```bash
@@ -639,14 +639,14 @@ You can use the following command to generate a PFX file with `dotnet dev-certs`
 dotnet dev-certs https --trust -ep cert.pfx -p <password>
 ```
 
-> Storage Explorer does not currently work with certificates produced by `dotnet dev-certs`. While you can use them for Azurite and Azure SDKs, you won't be able to access the Azurite endpoints with Storage Explorer if you are using the certs created with dotnet dev-certs. We are tracking this issue on GitHub here: https://github.com/microsoft/AzureStorageExplorer/issues/2859
+> Storage Explorer does not currently work with certificates produced by `dotnet dev-certs`. While you can use them for Azurite and Azure SDKs, you won't be able to access the Azurite endpoints with Storage Explorer if you are using the certs created with dotnet dev-certs. We are tracking this issue on GitHub here: <https://github.com/microsoft/AzureStorageExplorer/issues/2859>
 
 #### Start Azurite with HTTPS and PFX
 
-Then you start Azurite with that cert and key.
+Then you start Azurite with that cert and password.
 
 ```bash
-azurite --cert cert.pem --key key.pem
+azurite --cert cert.pfx --pwd pfxpassword
 ```
 
 NOTE: If you are using the Azure SDKs, then you will also need to pass the `--oauth basic` option.
@@ -775,7 +775,7 @@ By default Storage Explorer will not open an HTTPS endpoint that uses a self-sig
 1. Find the certificate on your local machine.
    - **OpenSSL**: You can find the PEM file at the location you created in the [HTTPS Setup](#https-setup) section above.
    - **mkcert**: You need to import the RootCA.pem file, which can be found by executing this command in the terminal: `mkcert -CAROOT`. For mkcert, you want to import the RootCA.pem file, not the certificate file you created.
-   - **dotnet dev-certs**: Storage Explorer doesn't currently work with certs produced by `dotnet dev-certs`. We are tracking this issue on GitHub here: https://github.com/microsoft/AzureStorageExplorer/issues/2859
+   - **dotnet dev-certs**: Storage Explorer doesn't currently work with certs produced by `dotnet dev-certs`. We are tracking this issue on GitHub here: <https://github.com/microsoft/AzureStorageExplorer/issues/2859>
 2. Open Storage Explorer -> Edit -> SSL Certificates -> Import Certificates and import your certificate.
 
 If you do not set this, then you will get the following error:
@@ -891,9 +891,9 @@ DefaultEndpointsProtocol=http;AccountName=account1;AccountKey=key1;BlobEndpoint=
 
 > Note. Do not access default account in this way with Azure Storage Explorer. There is a bug that Storage Explorer is always adding account name in URL path, causing failures.
 
-> Note. When use Production-style URL to access Azurite, by default the account name should be the host name in FQDN, like "http://devstoreaccount1.blob.localhost:10000/container". To use Production-style URL with account name in URL path, like "http://foo.bar.com:10000/devstoreaccount1/container", please start Azurite with `--disableProductStyleUrl`.
+> Note. When use Production-style URL to access Azurite, by default the account name should be the host name in FQDN, like "<http://devstoreaccount1.blob.localhost:10000/container>". To use Production-style URL with account name in URL path, like "<http://foo.bar.com:10000/devstoreaccount1/container>", please start Azurite with `--disableProductStyleUrl`.
 
-> Note. If use "host.docker.internal" as request Uri host, like "http://host.docker.internal:10000/devstoreaccount1/container", Azurite will always get account name from request Uri path, not matter Azurite start with `--disableProductStyleUrl` or not.
+> Note. If use "host.docker.internal" as request Uri host, like "<http://host.docker.internal:10000/devstoreaccount1/container>", Azurite will always get account name from request Uri path, not matter Azurite start with `--disableProductStyleUrl` or not.
 
 ### Scalability & Performance
 
@@ -971,7 +971,7 @@ All the generated code is kept in `generated` folder, including the generated mi
 
 ## Support Matrix
 
-Latest release targets **2023-11-03** API version **blob** service.
+Latest release targets **2024-02-04** API version **blob** service.
 
 Detailed support matrix:
 
@@ -1014,6 +1014,7 @@ Detailed support matrix:
 
   - SharedKey Lite
   - Static Website
+  - Soft delete & Undelete Container
   - Soft delete & Undelete Blob
   - Incremental Copy Blob
   - Blob Tags
@@ -1029,7 +1030,7 @@ Detailed support matrix:
   - Encryption Scope
   - Get Page Ranges Continuation Token
 
-Latest version supports for **2023-11-03** API version **queue** service.
+Latest version supports for **2024-02-04** API version **queue** service.
 Detailed support matrix:
 
 - Supported Vertical Features
@@ -1058,7 +1059,7 @@ Detailed support matrix:
 - Following features or REST APIs are NOT supported or limited supported in this release (will support more features per customers feedback in future releases)
   - SharedKey Lite
 
-Latest version supports for **2023-11-03** API version **table** service (preview).
+Latest version supports for **2024-02-04** API version **table** service (preview).
 Detailed support matrix:
 
 - Supported Vertical Features
