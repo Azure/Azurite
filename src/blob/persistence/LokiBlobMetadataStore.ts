@@ -1879,7 +1879,8 @@ export default class LokiBlobMetadataStore
         ifUnmodifiedSince:
           options.sourceModifiedAccessConditions.sourceIfUnmodifiedSince,
         ifMatch: options.sourceModifiedAccessConditions.sourceIfMatch,
-        ifNoneMatch: options.sourceModifiedAccessConditions.sourceIfNoneMatch
+        ifNoneMatch: options.sourceModifiedAccessConditions.sourceIfNoneMatch,
+        ifTags: options.sourceModifiedAccessConditions.sourceIfTags
       },
       sourceBlob
     );
@@ -2065,7 +2066,8 @@ export default class LokiBlobMetadataStore
         ifUnmodifiedSince:
           options.sourceModifiedAccessConditions.sourceIfUnmodifiedSince,
         ifMatch: options.sourceModifiedAccessConditions.sourceIfMatch,
-        ifNoneMatch: options.sourceModifiedAccessConditions.sourceIfNoneMatch
+        ifNoneMatch: options.sourceModifiedAccessConditions.sourceIfNoneMatch,
+        ifTags: options.sourceModifiedAccessConditions.sourceIfTags
       },
       sourceBlob
     );

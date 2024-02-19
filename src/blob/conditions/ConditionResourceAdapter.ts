@@ -1,10 +1,12 @@
 import { BlobModel, ContainerModel } from "../persistence/IBlobMetadataStore";
 import IConditionResource from "./IConditionResource";
+import { BlobTags } from "../generated/artifacts/models";
 
 export default class ConditionResourceAdapter implements IConditionResource {
   public exist: boolean;
   public etag: string;
   public lastModified: Date;
+  public blobTags?: BlobTags;
 
   public constructor(resource: BlobModel | ContainerModel | undefined | null) {
     if (
@@ -20,6 +22,7 @@ export default class ConditionResourceAdapter implements IConditionResource {
 
     this.exist = true;
     this.etag = resource.properties.etag;
+    this.blobTags = (resource as BlobModel)?.blobTags;
 
     if (this.etag.length < 3) {
       throw new Error(

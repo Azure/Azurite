@@ -7,6 +7,7 @@ import ConditionResourceAdapter from "./ConditionResourceAdapter";
 import { IConditionalHeaders } from "./IConditionalHeaders";
 import { IConditionalHeadersValidator } from "./IConditionalHeadersValidator";
 import IConditionResource from "./IConditionResource";
+import { validateIfTagsHeader } from "./IfTagsHeaderValidator";
 
 export function validateReadConditions(
   context: Context,
@@ -22,7 +23,8 @@ export function validateReadConditions(
 
 // tslint:disable: max-line-length
 export default class ReadConditionalHeadersValidator
-  implements IConditionalHeadersValidator {
+  implements IConditionalHeadersValidator
+{
   /**
    * Validate Conditional Headers for Blob Service Read Operations in Version 2013-08-15 or Later.
    * @link https://docs.microsoft.com/en-us/rest/api/storageservices/specifying-conditional-headers-for-blob-service-operations#specifying-conditional-headers-for-blob-service-read-operations-in-version-2013-08-15-or-later
@@ -36,6 +38,9 @@ export default class ReadConditionalHeadersValidator
     conditionalHeaders: IConditionalHeaders,
     resource: IConditionResource
   ): void {
+    if (conditionalHeaders?.ifTags) {
+      validateIfTagsHeader(context, conditionalHeaders, resource);
+    }
     // If-Match && If-Unmodified-Since && (If-None-Match || If-Modified-Since)
 
     // Read against a non exist resource

@@ -11,4 +11,5 @@ export interface IConditionalHeaders {
    * If-None-Match etag list without quotes.
    */
   ifNoneMatch?: string[];
+  ifTags?: string;
 }

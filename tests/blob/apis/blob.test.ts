@@ -3,7 +3,8 @@ import {
   StorageSharedKeyCredential,
   newPipeline,
   BlobServiceClient,
-  BlobItem
+  BlobItem,
+  Tags
 } from "@azure/storage-blob";
 import assert = require("assert");
 
@@ -48,6 +49,23 @@ describe("BlobAPIs", () => {
   let blockBlobClient = blobClient.getBlockBlobClient();
   let blobLeaseClient = blobClient.getBlobLeaseClient();
   const content = "Hello World";
+  const initialTags: Tags = { tag1: "value1" };
+
+  function toBlobTagsString(tags?: Tags): string | undefined {
+    if (tags === undefined) {
+      return undefined;
+    }
+    const tagPairs = [];
+    for (const key in tags) {
+      if (Object.prototype.hasOwnProperty.call(tags, key)) {
+        const value = tags[key];
+        tagPairs.push(
+          `\"${encodeURIComponent(key)}\"=\'${encodeURIComponent(value)}\'`
+        );
+      }
+    }
+    return tagPairs.join("&");
+  }
 
   before(async () => {
     await server.start();
@@ -66,7 +84,9 @@ describe("BlobAPIs", () => {
     blobClient = containerClient.getBlobClient(blobName);
     blockBlobClient = blobClient.getBlockBlobClient();
     blobLeaseClient = blobClient.getBlobLeaseClient();
-    await blockBlobClient.upload(content, content.length);
+    await blockBlobClient.upload(content, content.length, {
+      tags: initialTags
+    });
   });
 
   afterEach(async () => {
@@ -90,7 +110,8 @@ describe("BlobAPIs", () => {
         ifMatch: properties.etag,
         ifNoneMatch: "invalidetag",
         ifModifiedSince: new Date("2018/01/01"),
-        ifUnmodifiedSince: new Date("2188/01/01")
+        ifUnmodifiedSince: new Date("2188/01/01"),
+        tagConditions: toBlobTagsString(initialTags)
       }
     });
     assert.deepStrictEqual(await bodyToString(result, content.length), content);
@@ -190,6 +211,20 @@ describe("BlobAPIs", () => {
     assert.fail();
   });
 
+  it("download should not work with not matching Tags header @loki @sql", async () => {
+    try {
+      await blobClient.download(0, undefined, {
+        conditions: {
+          tagConditions: "\"tag\"='notMatch'"
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      return;
+    }
+    assert.fail();
+  });
+
   it("download all parameters set @loki @sql", async () => {
     const result = await blobClient.download(0, 1, {
       rangeGetContentMD5: true
@@ -261,7 +296,7 @@ describe("BlobAPIs", () => {
       result.clientRequestId
     );
     assert.equal(
-      'true',
+      "true",
       result._response.headers.get("x-ms-delete-type-permanent")
     );
   });
@@ -283,6 +318,36 @@ describe("BlobAPIs", () => {
       await blobClient.delete({
         conditions: {
           ifMatch: "invalid"
+        }
+      });
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("delete should work for valid tagConditions @loki @sql", async () => {
+    const result = await blobClient.delete({
+      conditions: {
+        tagConditions: toBlobTagsString(initialTags)
+      }
+    });
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+    assert.equal(
+      "true",
+      result._response.headers.get("x-ms-delete-type-permanent")
+    );
+  });
+
+  it("delete should not work for invalid tagConditions @loki @sql", async () => {
+    try {
+      await blobClient.delete({
+        conditions: {
+          tagConditions: "\"tag\"='notMatch'"
         }
       });
     } catch (error) {
@@ -398,6 +463,21 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(result2.metadata, metadata);
   });
 
+  it("should create a snapshot from a blob when tagConditions matches @loki @sql", async () => {
+    const result = await blobClient.createSnapshot({
+      conditions: {
+        tagConditions: toBlobTagsString(initialTags)
+      }
+    });
+    assert.ok(result.snapshot);
+    assert.strictEqual(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+    const result2 = await blobClient.getProperties();
+    assert.strictEqual(result2.tagCount, 1);
+  });
+
   it("should not delete base blob without include snapshot header @loki @sql", async () => {
     const result = await blobClient.createSnapshot();
     assert.ok(result.snapshot);
@@ -479,21 +559,19 @@ describe("BlobAPIs", () => {
     const metadata = {
       "Content-SHA256": "a"
     };
-    
+
     // set metadata should fail
-    let hasError = false;   
+    let hasError = false;
     try {
       await blobClient.setMetadata(metadata);
     } catch (error) {
       assert.deepStrictEqual(error.statusCode, 400);
-      assert.strictEqual(error.code, 'InvalidMetadata');
+      assert.strictEqual(error.code, "InvalidMetadata");
       hasError = true;
     }
-    if (!hasError)
-    {
+    if (!hasError) {
       assert.fail();
     }
-
   });
 
   it("acquireLease_available_proposedLeaseId_fixed @loki @sql", async () => {
@@ -839,7 +917,7 @@ describe("BlobAPIs", () => {
       );
     }
   });
-  
+
   it("Upload blob with accesstier should get accessTierInferred as false @loki", async () => {
     const blobName = getUniqueName("blob");
 
@@ -849,7 +927,7 @@ describe("BlobAPIs", () => {
 
     const properties = await blobClient.getProperties();
     assert.equal(false, properties.accessTierInferred);
-  
+
     blobClient.delete();
   });
 
@@ -989,16 +1067,15 @@ describe("BlobAPIs", () => {
     await sourceBlobClient.upload("hello", 5);
     await sourceBlobClient.setAccessTier("Archive");
 
-    // Copy from Archive blob without accesstier will fail 
-    let hasError = false;   
+    // Copy from Archive blob without accesstier will fail
+    let hasError = false;
     try {
       await destBlobClient.beginCopyFromURL(sourceBlobClient.url);
     } catch (error) {
       assert.deepStrictEqual(error.statusCode, 409);
       hasError = true;
     }
-    if (!hasError)
-    {
+    if (!hasError) {
       assert.fail();
     }
 
@@ -1152,86 +1229,164 @@ describe("BlobAPIs", () => {
     const destBlobClient = containerClient.getBlockBlobClient(destBlob);
 
     try {
-      await destBlobClient.beginCopyFromURL('/devstoreaccount1/container78/blob125')
-    } 
-    catch (error) 
-    {
+      await destBlobClient.beginCopyFromURL(
+        "/devstoreaccount1/container78/blob125"
+      );
+    } catch (error) {
       assert.deepStrictEqual(error.statusCode, 400);
-      assert.deepStrictEqual(error.code, 'InvalidHeaderValue');      
+      assert.deepStrictEqual(error.code, "InvalidHeaderValue");
       return;
     }
     assert.fail();
   });
 
-  it("Copy blob should not work with  ifNoneMatch * when dest exist @loki", async () => {
+  [true, false].forEach((sync) => {
+    it(`Copy blob ${
+      sync ? "sync" : "async"
+    } should not work with  ifNoneMatch * when dest exist @loki`, async () => {
+      const sourceBlob = getUniqueName("blob");
+      const destBlob = getUniqueName("blob");
+
+      const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+      const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+      const metadata = { key: "value" };
+      const blobHTTPHeaders = {
+        blobCacheControl: "blobCacheControl",
+        blobContentDisposition: "blobContentDisposition",
+        blobContentEncoding: "blobContentEncoding",
+        blobContentLanguage: "blobContentLanguage",
+        blobContentType: "blobContentType"
+      };
+
+      // upload source
+      const result_uploadsrc = await sourceBlobClient.upload("hello", 5, {
+        metadata,
+        blobHTTPHeaders
+      });
+      assert.equal(
+        result_uploadsrc._response.request.headers.get(
+          "x-ms-client-request-id"
+        ),
+        result_uploadsrc.clientRequestId
+      );
+
+      // upload destination
+      const result_uploaddest = await destBlobClient.upload("hello", 5, {
+        metadata,
+        blobHTTPHeaders
+      });
+      assert.equal(
+        result_uploaddest._response.request.headers.get(
+          "x-ms-client-request-id"
+        ),
+        result_uploaddest.clientRequestId
+      );
+
+      // async copy
+      try {
+        const copyFunction = sync
+          ? destBlobClient.syncCopyFromURL
+          : destBlobClient.beginCopyFromURL;
+        await copyFunction.bind(destBlobClient)(sourceBlobClient.url, {
+          conditions: {
+            ifNoneMatch: "*"
+          }
+        });
+      } catch (error) {
+        assert.deepStrictEqual(error.statusCode, 409);
+        return;
+      }
+      assert.fail();
+    });
+  });
+
+  it(`Copy blob async should not work with not matching Tags on source blob @loki`, async () => {
     const sourceBlob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
 
     const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
     const destBlobClient = containerClient.getBlockBlobClient(destBlob);
 
-    const metadata = { key: "value" };
-    const blobHTTPHeaders = {
-      blobCacheControl: "blobCacheControl",
-      blobContentDisposition: "blobContentDisposition",
-      blobContentEncoding: "blobContentEncoding",
-      blobContentLanguage: "blobContentLanguage",
-      blobContentType: "blobContentType"
-    };
+    const srcTags = { key: "notSetOnDest" };
 
     // upload source
-    const result_uploadsrc = await sourceBlobClient.upload("hello", 5, {
-      metadata,
-      blobHTTPHeaders
-    });
-    assert.equal(
+    const result_uploadsrc = await sourceBlobClient.upload("hello", 5);
+    assert.strictEqual(
       result_uploadsrc._response.request.headers.get("x-ms-client-request-id"),
       result_uploadsrc.clientRequestId
     );
 
     // upload destination
-    const result_uploaddest = await destBlobClient.upload("hello", 5, {
-      metadata,
-      blobHTTPHeaders
-    });
-    assert.equal(
+    const result_uploaddest = await destBlobClient.upload("hello", 5);
+    assert.strictEqual(
       result_uploaddest._response.request.headers.get("x-ms-client-request-id"),
       result_uploaddest.clientRequestId
     );
 
     // async copy
     try {
-      await destBlobClient.beginCopyFromURL(
-      sourceBlobClient.url,       
-      {
-        conditions: 
-        {
-          ifNoneMatch: "*"
+      await destBlobClient.beginCopyFromURL(sourceBlobClient.url, {
+        sourceConditions: {
+          tagConditions: toBlobTagsString(srcTags)
         }
       });
-    } 
-    catch (error) {
-      assert.deepStrictEqual(error.statusCode, 409);
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 412);
       return;
     }
     assert.fail();
+  });
 
-    // Sync copy
-    try {
-      await destBlobClient.syncCopyFromURL(
-      sourceBlobClient.url,       
-      {
-        conditions: 
-        {
-          ifNoneMatch: "*"
-        }
-      });
-    } 
-    catch (error) {
-      assert.deepStrictEqual(error.statusCode, 409);
-      return;
-    }
-    assert.fail();
+  it(`Copy blob sync should not work with not matching Tags on source blob @loki`, async () => {
+    //TODO: @azure/storage-blob 12.16.0 (also 12.17.0) doesn't support sourceConditions.tagConditions in syncCopyFromURL
+  });
+
+  [true, false].forEach((sync) => {
+    it(`Copy blob ${
+      sync ? "sync" : "async"
+    } should not work with not matching Tags on destination blob @loki`, async () => {
+      const sourceBlob = getUniqueName("blob");
+      const destBlob = getUniqueName("blob");
+
+      const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+      const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+      const destTags = { key: "notSetOnDest" };
+
+      // upload source
+      const result_uploadsrc = await sourceBlobClient.upload("hello", 5);
+      assert.strictEqual(
+        result_uploadsrc._response.request.headers.get(
+          "x-ms-client-request-id"
+        ),
+        result_uploadsrc.clientRequestId
+      );
+
+      // upload destination
+      const result_uploaddest = await destBlobClient.upload("hello", 5);
+      assert.strictEqual(
+        result_uploaddest._response.request.headers.get(
+          "x-ms-client-request-id"
+        ),
+        result_uploaddest.clientRequestId
+      );
+
+      try {
+        const copyFunction = sync
+          ? destBlobClient.syncCopyFromURL
+          : destBlobClient.beginCopyFromURL;
+        await copyFunction.bind(destBlobClient)(sourceBlobClient.url, {
+          conditions: {
+            tagConditions: toBlobTagsString(destTags)
+          }
+        });
+      } catch (error) {
+        assert.deepStrictEqual(error.statusCode, 412);
+        return;
+      }
+      assert.fail();
+    });
   });
 
   it("Synchronized copy blob should work @loki", async () => {
@@ -1252,7 +1407,8 @@ describe("BlobAPIs", () => {
 
     const result_upload = await sourceBlobClient.upload("hello", 5, {
       metadata,
-      blobHTTPHeaders
+      blobHTTPHeaders,
+      tags: initialTags
     });
     assert.equal(
       result_upload._response.request.headers.get("x-ms-client-request-id"),
@@ -1260,7 +1416,12 @@ describe("BlobAPIs", () => {
     );
 
     const result_copy = await destBlobClient.syncCopyFromURL(
-      sourceBlobClient.url
+      sourceBlobClient.url,
+      {
+        conditions: {
+          tagConditions: toBlobTagsString(initialTags)
+        }
+      }
     );
     assert.equal(
       result_copy._response.request.headers.get("x-ms-client-request-id"),
@@ -1407,17 +1568,17 @@ describe("BlobAPIs", () => {
       result.contentDisposition,
       blobHTTPHeaders.blobContentDisposition
     );
-  });  
+  });
 
   it("set/get blob tag should work, with base blob or snapshot @loki @sql", async () => {
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
     const tags2 = {
       tag1: "val1",
       tag2: "val22",
-      tag3: "val3",
+      tag3: "val3"
     };
 
     // Set/get tags on base blob
@@ -1427,14 +1588,16 @@ describe("BlobAPIs", () => {
 
     // create snapshot, the tags should be same as base blob
     const snapshotResponse = await blobClient.createSnapshot();
-    const blobClientSnapshot = blobClient.withSnapshot(snapshotResponse.snapshot!);
+    const blobClientSnapshot = blobClient.withSnapshot(
+      snapshotResponse.snapshot!
+    );
     let outputTags2 = (await blobClientSnapshot.getTags()).tags;
     assert.deepStrictEqual(outputTags2, tags);
-    
+
     // Set/get  tags on snapshot, base blob tags should not be impacted.
     await blobClientSnapshot.setTags(tags2);
     outputTags2 = (await blobClientSnapshot.getTags()).tags;
-    assert.deepStrictEqual(outputTags2, tags2);    
+    assert.deepStrictEqual(outputTags2, tags2);
 
     outputTags1 = (await blobClient.getTags()).tags;
     assert.deepStrictEqual(outputTags1, tags);
@@ -1445,35 +1608,34 @@ describe("BlobAPIs", () => {
   it("set blob tag should work in put block blob, pubBlockList, and startCopyFromURL on block blob, and getBlobProperties, Download Blob, list blob can get blob tags. @loki @sql", async () => {
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
     const tags2 = {
       tag1: "val1",
       tag2: "val22",
-      tag3: "val3",
+      tag3: "val3"
     };
 
     const blockBlobName1 = "block1";
     const blockBlobName2 = "block2";
-    
+
     let blockBlobClient1 = containerClient.getBlockBlobClient(blockBlobName1);
     let blockBlobClient2 = containerClient.getBlockBlobClient(blockBlobName2);
-    
+
     // Upload block blob with tags
-    await blockBlobClient1.upload(content, content.length, 
-      {
-        tags: tags
-      });
+    await blockBlobClient1.upload(content, content.length, {
+      tags: tags
+    });
 
     // Get tags, can get detail tags
     let outputTags = (await blockBlobClient1.getTags()).tags;
     assert.deepStrictEqual(outputTags, tags);
 
     // Get blob properties, can get tag count
-    let blobProperties =  await blockBlobClient1.getProperties();
+    let blobProperties = await blockBlobClient1.getProperties();
     assert.deepStrictEqual(blobProperties._response.parsedHeaders.tagCount, 2);
 
-    // download blob, can get tag count    
+    // download blob, can get tag count
     const downloadResult = await blockBlobClient1.download(0);
     assert.deepStrictEqual(downloadResult._response.parsedHeaders.tagCount, 2);
 
@@ -1485,105 +1647,83 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(outputTags, tags2);
 
     // listBlobsFlat can get tag count
-    let listResult = (
-      await containerClient
-        .listBlobsFlat()
-        .byPage()
-        .next()
-    ).value;
+    let listResult = (await containerClient.listBlobsFlat().byPage().next())
+      .value;
     let blobs = (await listResult).segment.blobItems;
     let blobNotChecked = blobs!.length;
-    blobs.forEach((blobItem: BlobItem) =>
-    {
-      if (blobItem.name === blockBlobName1)
-      {
+    blobs.forEach((blobItem: BlobItem) => {
+      if (blobItem.name === blockBlobName1) {
         assert.deepStrictEqual(blobItem.properties.tagCount, 2);
         blobNotChecked--;
       }
-      if (blobItem.name === blockBlobName2)
-      {
+      if (blobItem.name === blockBlobName2) {
         assert.deepStrictEqual(blobItem.properties.tagCount, 3);
         blobNotChecked--;
       }
     });
-    assert.deepStrictEqual(blobs!.length-2, blobNotChecked);
+    assert.deepStrictEqual(blobs!.length - 2, blobNotChecked);
 
-    // listBlobsFlat with include tags can get tag 
+    // listBlobsFlat with include tags can get tag
     listResult = (
-      await containerClient
-        .listBlobsFlat({includeTags: true})
-        .byPage()
-        .next()
+      await containerClient.listBlobsFlat({ includeTags: true }).byPage().next()
     ).value;
     blobs = (await listResult).segment.blobItems;
     blobNotChecked = blobs!.length;
-    blobs.forEach((blobItem: BlobItem) =>
-    {
-      if (blobItem.name === blockBlobName1)
-      {
+    blobs.forEach((blobItem: BlobItem) => {
+      if (blobItem.name === blockBlobName1) {
         assert.deepStrictEqual(blobItem.properties.tagCount, 2);
         assert.deepStrictEqual(blobItem.tags, tags);
         blobNotChecked--;
       }
-      if (blobItem.name === blockBlobName2)
-      {
+      if (blobItem.name === blockBlobName2) {
         assert.deepStrictEqual(blobItem.properties.tagCount, 3);
         assert.deepStrictEqual(blobItem.tags, tags2);
         blobNotChecked--;
       }
-    });    
-    assert.deepStrictEqual(blobs!.length-2, blobNotChecked);
+    });
+    assert.deepStrictEqual(blobs!.length - 2, blobNotChecked);
 
     // listBlobsByHierarchy can get tag count
     const delimiter = "/";
     listResult = (
-      await containerClient
-        .listBlobsByHierarchy(delimiter)
-        .byPage()
-        .next()
+      await containerClient.listBlobsByHierarchy(delimiter).byPage().next()
     ).value;
     blobs = (await listResult).segment.blobItems;
     blobNotChecked = blobs!.length;
-    blobs.forEach((blobItem: BlobItem) =>
-    {
-      if (blobItem.name === blockBlobName1)
-      {
+    blobs.forEach((blobItem: BlobItem) => {
+      if (blobItem.name === blockBlobName1) {
         assert.deepStrictEqual(blobItem.properties.tagCount, 2);
         blobNotChecked--;
       }
-      if (blobItem.name === blockBlobName2)
-      {
+      if (blobItem.name === blockBlobName2) {
         assert.deepStrictEqual(blobItem.properties.tagCount, 3);
         blobNotChecked--;
       }
     });
-    assert.deepStrictEqual(blobs!.length-2, blobNotChecked);
+    assert.deepStrictEqual(blobs!.length - 2, blobNotChecked);
 
-    // listBlobsByHierarchy include tags can get tag 
+    // listBlobsByHierarchy include tags can get tag
     listResult = (
       await containerClient
-        .listBlobsByHierarchy(delimiter, {includeTags: true})
+        .listBlobsByHierarchy(delimiter, { includeTags: true })
         .byPage()
         .next()
     ).value;
     blobs = (await listResult).segment.blobItems;
     blobNotChecked = blobs!.length;
-    blobs.forEach((blobItem: BlobItem) =>
-    {
-      if (blobItem.name === blockBlobName1)
-      {
+    blobs.forEach((blobItem: BlobItem) => {
+      if (blobItem.name === blockBlobName1) {
         assert.deepStrictEqual(blobItem.properties.tagCount, 2);
         assert.deepStrictEqual(blobItem.tags, tags);
         blobNotChecked--;
       }
-      if (blobItem.name === blockBlobName2)
-      {
+      if (blobItem.name === blockBlobName2) {
         assert.deepStrictEqual(blobItem.properties.tagCount, 3);
         assert.deepStrictEqual(blobItem.tags, tags2);
         blobNotChecked--;
       }
     });
-    assert.deepStrictEqual(blobs!.length-2, blobNotChecked);
+    assert.deepStrictEqual(blobs!.length - 2, blobNotChecked);
 
     // clean up
     blockBlobClient1.delete();
@@ -1593,12 +1733,12 @@ describe("BlobAPIs", () => {
   it("set blob tag should work in create page/append blob, copyFromURL. @loki", async () => {
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
     const tags2 = {
       tag1: "val1",
       tag2: "val22",
-      tag3: "val3",
+      tag3: "val3"
     };
 
     const blockBlobName1 = "block1";
@@ -1607,27 +1747,24 @@ describe("BlobAPIs", () => {
     const pageBlobName2 = "page2";
     const appendBlobName1 = "append1";
     const appendBlobName2 = "append2";
-    
+
     let blockBlobClient1 = containerClient.getBlockBlobClient(blockBlobName1);
     let blockBlobClient2 = containerClient.getBlockBlobClient(blockBlobName2);
     let pageBlobClient1 = containerClient.getBlockBlobClient(pageBlobName1);
     let pageBlobClient2 = containerClient.getBlockBlobClient(pageBlobName2);
     let appendBlobClient1 = containerClient.getBlockBlobClient(appendBlobName1);
     let appendBlobClient2 = containerClient.getBlockBlobClient(appendBlobName2);
-    
+
     // Upload blob with tags
-    await blockBlobClient1.upload(content, content.length, 
-      {
-        tags: tags
-      });
-    await pageBlobClient1.upload(content, content.length, 
-      {
-        tags: tags
-      });
-    await appendBlobClient1.upload(content, content.length, 
-      {
-        tags: tags
-      });
+    await blockBlobClient1.upload(content, content.length, {
+      tags: tags
+    });
+    await pageBlobClient1.upload(content, content.length, {
+      tags: tags
+    });
+    await appendBlobClient1.upload(content, content.length, {
+      tags: tags
+    });
 
     // Get tags, can get detail tags
     let outputTags = (await blockBlobClient1.getTags()).tags;
@@ -1637,7 +1774,7 @@ describe("BlobAPIs", () => {
     outputTags = (await appendBlobClient1.getTags()).tags;
     assert.deepStrictEqual(outputTags, tags);
 
-    // download blob, can get tag count    
+    // download blob, can get tag count
     let downloadResult = await blockBlobClient1.download(0);
     assert.deepStrictEqual(downloadResult._response.parsedHeaders.tagCount, 2);
     downloadResult = await pageBlobClient1.download(0);
@@ -1662,31 +1799,33 @@ describe("BlobAPIs", () => {
     outputTags = (await appendBlobClient2.getTags()).tags;
     assert.deepStrictEqual(outputTags, tags2);
 
-    // listBlobsFlat with include tags can get tag 
+    // listBlobsFlat with include tags can get tag
     let listResult = (
-      await containerClient
-        .listBlobsFlat({includeTags: true})
-        .byPage()
-        .next()
+      await containerClient.listBlobsFlat({ includeTags: true }).byPage().next()
     ).value;
     let blobs = (await listResult).segment.blobItems;
     let blobNotChecked = blobs!.length;
-    blobs.forEach((blobItem: BlobItem) =>
-    {
-      if (blobItem.name === blockBlobName1 || blobItem.name === pageBlobName1 || blobItem.name === appendBlobName1 )
-      {
+    blobs.forEach((blobItem: BlobItem) => {
+      if (
+        blobItem.name === blockBlobName1 ||
+        blobItem.name === pageBlobName1 ||
+        blobItem.name === appendBlobName1
+      ) {
         assert.deepStrictEqual(blobItem.properties.tagCount, 2);
         assert.deepStrictEqual(blobItem.tags, tags);
         blobNotChecked--;
       }
-      if (blobItem.name === blockBlobName2 || blobItem.name === pageBlobName2 || blobItem.name === appendBlobName2 )
-      {
+      if (
+        blobItem.name === blockBlobName2 ||
+        blobItem.name === pageBlobName2 ||
+        blobItem.name === appendBlobName2
+      ) {
         assert.deepStrictEqual(blobItem.properties.tagCount, 3);
         assert.deepStrictEqual(blobItem.tags, tags2);
         blobNotChecked--;
       }
-    });    
-    assert.deepStrictEqual(blobs!.length-6, blobNotChecked);
+    });
+    assert.deepStrictEqual(blobs!.length - 6, blobNotChecked);
 
     // clean up
     blockBlobClient1.delete();
@@ -1697,12 +1836,11 @@ describe("BlobAPIs", () => {
     appendBlobClient2.delete();
   });
 
-  it("set blob tag fail with invalid tag. @loki @sql", async () => {  
-
-    const blockBlobName1 = "block1";    
+  it("set blob tag fail with invalid tag. @loki @sql", async () => {
+    const blockBlobName1 = "block1";
     let blockBlobClient1 = containerClient.getBlockBlobClient(blockBlobName1);
     await blockBlobClient1.upload(content, content.length);
-    
+
     // tag acount should <= 10
     const tooManyTags = {
       tag1: "val1",
@@ -1715,11 +1853,11 @@ describe("BlobAPIs", () => {
       tag8: "val2",
       tag9: "val2",
       tag10: "val2",
-      tag11: "val2",
-    };  
+      tag11: "val2"
+    };
     let statusCode = 0;
     try {
-      await await blockBlobClient1.setTags(tooManyTags);;
+      await await blockBlobClient1.setTags(tooManyTags);
     } catch (error) {
       statusCode = error.statusCode;
     }
@@ -1734,124 +1872,123 @@ describe("BlobAPIs", () => {
       tag7: "val2",
       tag8: "val2",
       tag9: "val2",
-      tag10: "val2",
-    };  
+      tag10: "val2"
+    };
     await blockBlobClient1.setTags(tags1);
     let outputTags = (await blockBlobClient1.getTags()).tags;
     assert.deepStrictEqual(outputTags, tags1);
 
     // key length should >0 and <= 128
     const emptyKeyTags = {
-      "": "123123123",
-    };  
+      "": "123123123"
+    };
     statusCode = 0;
     try {
-      await await blockBlobClient1.setTags(emptyKeyTags);;
+      await await blockBlobClient1.setTags(emptyKeyTags);
     } catch (error) {
       statusCode = error.statusCode;
     }
     assert.deepStrictEqual(statusCode, 400);
     const tooLongKeyTags = {
-      "key123401234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890": "val1",
-    };  
+      key123401234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890:
+        "val1"
+    };
     statusCode = 0;
     try {
-      await await blockBlobClient1.setTags(tooLongKeyTags);;
+      await await blockBlobClient1.setTags(tooLongKeyTags);
     } catch (error) {
       statusCode = error.statusCode;
     }
     assert.deepStrictEqual(statusCode, 400);
     let tags2 = {
-      "key12301234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890": "val1",
-    };  
+      key12301234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890:
+        "val1"
+    };
     await blockBlobClient1.setTags(tags2);
     outputTags = (await blockBlobClient1.getTags()).tags;
     assert.deepStrictEqual(outputTags, tags2);
 
     // value length should <= 256
     const tooLongvalueTags = {
-      tag1: "val12345678900123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789001234567890123456789001234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890",
-    };  
+      tag1: "val12345678900123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789001234567890123456789001234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890"
+    };
     statusCode = 0;
     try {
-      await blockBlobClient1.upload(content, content.length, 
-        {
-          tags: tooLongvalueTags
-        });
+      await blockBlobClient1.upload(content, content.length, {
+        tags: tooLongvalueTags
+      });
     } catch (error) {
       statusCode = error.statusCode;
     }
     assert.deepStrictEqual(statusCode, 400);
     let tags3 = {
-      tag1: "va12345678900123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789001234567890123456789001234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890",
-    };  
-    await blockBlobClient1.upload(content, content.length, 
-      {
-        tags: tags3
-      });
+      tag1: "va12345678900123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789001234567890123456789001234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890012345678901234567890"
+    };
+    await blockBlobClient1.upload(content, content.length, {
+      tags: tags3
+    });
     outputTags = (await blockBlobClient1.getTags()).tags;
     assert.deepStrictEqual(outputTags, tags3);
 
     // invalid char in key
     let invalidTags = {
-      tag1: "abc%abc",
-    };  
+      tag1: "abc%abc"
+    };
     statusCode = 0;
     try {
-      await blockBlobClient1.upload(content, content.length, 
-        {
-          tags: invalidTags
-        });
+      await blockBlobClient1.upload(content, content.length, {
+        tags: invalidTags
+      });
     } catch (error) {
       statusCode = error.statusCode;
     }
     assert.deepStrictEqual(statusCode, 400);
 
     let invalidTags1 = {
-      "abc#ew": "abc",
-    };  
+      "abc#ew": "abc"
+    };
     statusCode = 0;
     try {
-      await blockBlobClient1.upload(content, content.length, 
-        {
-          tags: invalidTags1
-        });
+      await blockBlobClient1.upload(content, content.length, {
+        tags: invalidTags1
+      });
     } catch (error) {
       statusCode = error.statusCode;
     }
     assert.deepStrictEqual(statusCode, 400);
 
     let tags4 = {
-      "azAz09 +-./:=_": "azAz09 +-./:=_",
-    };  
-    await blockBlobClient1.upload(content, content.length, 
-      {
-        tags: tags4
-      });
+      "azAz09 +-./:=_": "azAz09 +-./:=_"
+    };
+    await blockBlobClient1.upload(content, content.length, {
+      tags: tags4
+    });
     outputTags = (await blockBlobClient1.getTags()).tags;
     assert.deepStrictEqual(outputTags, tags4);
 
     // clean up
     blockBlobClient1.delete();
   });
-  
-  it("Set and get blob tags should work with lease condition @loki @sql", async () => {    
+
+  it("Set and get blob tags should work with lease condition @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const leaseClient = blockBlobClient.getBlobLeaseClient(guid);
     await leaseClient.acquireLease(-1);
 
     const tags = {
       tag1: "val1",
-      tag2: "val2",
+      tag2: "val2"
     };
-    await blockBlobClient.setTags(tags, { conditions: { leaseId: leaseClient.leaseId } });
+    await blockBlobClient.setTags(tags, {
+      conditions: { leaseId: leaseClient.leaseId }
+    });
     const response = await blockBlobClient.getTags({
-      conditions: { leaseId: leaseClient.leaseId },
+      conditions: { leaseId: leaseClient.leaseId }
     });
     assert.deepStrictEqual(response.tags, tags);
 
     const tags1 = {
-      tag1: "val",
+      tag1: "val"
     };
     try {
       await blockBlobClient.setTags(tags1);

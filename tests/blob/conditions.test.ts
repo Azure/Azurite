@@ -10,6 +10,7 @@ import {
   BlobModel,
   ContainerModel
 } from "../../src/blob/persistence/IBlobMetadataStore";
+import { validateIfTagsHeader } from "../../src/blob/conditions/IfTagsHeaderValidator";
 
 const context = { contextId: "" } as Context;
 
@@ -20,6 +21,7 @@ describe("ConditionalHeadersAdapter", () => {
     assert.deepStrictEqual(validator.ifUnmodifiedSince, undefined);
     assert.deepStrictEqual(validator.ifMatch, undefined);
     assert.deepStrictEqual(validator.ifNoneMatch, undefined);
+    assert.deepStrictEqual(validator.ifTags, undefined);
   });
 
   it("Should work with single etags @loki @sql", () => {
@@ -97,6 +99,18 @@ describe("ConditionalHeadersAdapter", () => {
     assert.deepStrictEqual(validator.ifMatch, ["etag1", "etag2"]);
     assert.deepStrictEqual(validator.ifNoneMatch, ["etag3", "etag4", "etag5"]);
   });
+
+  it("Should work with ifTags @loki @sql", () => {
+    const modifiedAccessConditions = {
+      ifTags: "\"tag3\"='three'"
+    };
+
+    const validator = new ConditionalHeadersAdapter(
+        context,
+        modifiedAccessConditions
+    );
+    assert.deepStrictEqual(validator.ifTags, modifiedAccessConditions.ifTags);
+  });
 });
 
 describe("ConditionResourceAdapter", () => {
@@ -115,7 +129,8 @@ describe("ConditionResourceAdapter", () => {
       properties: {
         etag: "etag1",
         lastModified: new Date("2018/01/01")
-      }
+      },
+      blobTags: { blobTagSet: [{ key: "key", value: "value" }] }
     } as BlobModel;
 
     const conditionResourceAdapter = new ConditionResourceAdapter(blobModel);
@@ -124,6 +139,10 @@ describe("ConditionResourceAdapter", () => {
     assert.deepStrictEqual(
       conditionResourceAdapter.lastModified,
       blobModel.properties.lastModified
+    );
+    assert.deepStrictEqual(
+      conditionResourceAdapter.blobTags,
+      blobModel.blobTags
     );
   });
 
@@ -167,7 +186,7 @@ describe("ConditionResourceAdapter", () => {
 });
 
 describe("ReadConditionalHeadersValidator for exist resource", () => {
-  it("Should return 412 preconditoin failed for failed if-match results @loki @sql", () => {
+  it("Should return 412 precondition failed for failed if-match results @loki @sql", () => {
     const validator = new ReadConditionalHeadersValidator();
     const modifiedAccessConditions = { ifMatch: "etag1" };
     const blobModel = {
@@ -202,7 +221,7 @@ describe("ReadConditionalHeadersValidator for exist resource", () => {
     assert.fail();
   });
 
-  it("Should not return 412 preconditoin failed for successful if-match results @loki @sql", () => {
+  it("Should not return 412 precondition failed for successful if-match results @loki @sql", () => {
     const validator = new ReadConditionalHeadersValidator();
     const modifiedAccessConditions = { ifMatch: "etag1" };
     const blobModel = {
@@ -364,7 +383,7 @@ describe("ReadConditionalHeadersValidator for exist resource", () => {
     );
   });
 
-  it("Should return 412 preconditoin failed for failed if-unmodified-since results @loki @sql", () => {
+  it("Should return 412 precondition failed for failed if-unmodified-since results @loki @sql", () => {
     const validator = new ReadConditionalHeadersValidator();
     const modifiedAccessConditions = {
       ifUnmodifiedSince: new Date("2019/01/01")
@@ -401,7 +420,7 @@ describe("ReadConditionalHeadersValidator for exist resource", () => {
     assert.fail();
   });
 
-  it("Should not return 412 preconditoin failed when if-unmodified-since same with lastModified @loki @sql", () => {
+  it("Should not return 412 precondition failed when if-unmodified-since same with lastModified @loki @sql", () => {
     const validator = new ReadConditionalHeadersValidator();
     const modifiedAccessConditions = {
       ifUnmodifiedSince: new Date("2019/01/01")
@@ -420,7 +439,7 @@ describe("ReadConditionalHeadersValidator for exist resource", () => {
     );
   });
 
-  it("Should not return 412 preconditoin failed for successful if-unmodified-since results @loki @sql", () => {
+  it("Should not return 412 precondition failed for successful if-unmodified-since results @loki @sql", () => {
     const validator = new ReadConditionalHeadersValidator();
     const modifiedAccessConditions = {
       ifUnmodifiedSince: new Date("2019/01/01")
@@ -445,13 +464,15 @@ describe("ReadConditionalHeadersValidator for exist resource", () => {
       ifMatch: "etag1",
       ifNoneMatch: "etag3",
       ifModifiedSince: new Date("2018/01/01"),
-      ifUnmodifiedSince: new Date("2020/01/01")
+      ifUnmodifiedSince: new Date("2020/01/01"),
+      blobTags: { blobTagSet: [{ key: "tag3", value: "three" }] }
     };
     const blobModel = {
       properties: {
         etag: "etag1",
         lastModified: new Date("2019/01/01")
-      }
+      },
+      blobTags: { blobTagSet: [{ key: "tag3", value: "three" }] }
     } as BlobModel;
 
     validator.validate(
@@ -703,9 +724,10 @@ describe("WriteConditionalHeadersValidator for unexist resource", () => {
       ifUnmodifiedSince: new Date("2020/01/01")
     };
 
-    const expectedError = StorageErrorFactory.getMultipleConditionHeadersNotSupported(
-      context.contextId!
-    );
+    const expectedError =
+      StorageErrorFactory.getMultipleConditionHeadersNotSupported(
+        context.contextId!
+      );
 
     try {
       validator.validate(
@@ -738,9 +760,10 @@ describe("WriteConditionalHeadersValidator for unexist resource", () => {
       ifUnmodifiedSince: new Date("2020/01/01")
     };
 
-    const expectedError = StorageErrorFactory.getMultipleConditionHeadersNotSupported(
-      context.contextId!
-    );
+    const expectedError =
+      StorageErrorFactory.getMultipleConditionHeadersNotSupported(
+        context.contextId!
+      );
 
     try {
       validator.validate(
@@ -773,9 +796,10 @@ describe("WriteConditionalHeadersValidator for unexist resource", () => {
       ifUnmodifiedSince: new Date("2020/01/01")
     };
 
-    const expectedError = StorageErrorFactory.getMultipleConditionHeadersNotSupported(
-      context.contextId!
-    );
+    const expectedError =
+      StorageErrorFactory.getMultipleConditionHeadersNotSupported(
+        context.contextId!
+      );
 
     try {
       validator.validate(
@@ -1004,5 +1028,142 @@ describe("WriteConditionalHeadersValidator for exist resource", () => {
     }
 
     assert.fail();
+  });
+});
+
+describe("IfTagsValidator for existent resource", () => {
+  it("Should throw 400 Bad Request for non valid if-tags", () => {
+    const modifiedAccessConditions = {
+      ifTags: "something can't parse"
+    };
+    const blobModel = {
+      properties: {
+        etag: "etag2",
+        lastModified: new Date()
+      }
+    } as BlobModel;
+
+    const expectedError = StorageErrorFactory.getInvalidHeaderValue(
+      context.contextId!
+    );
+
+    try {
+      validateIfTagsHeader(
+        context,
+        new ConditionalHeadersAdapter(context, modifiedAccessConditions),
+        new ConditionResourceAdapter(blobModel)
+      );
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, expectedError.statusCode);
+      assert.deepStrictEqual(
+        error.storageErrorCode,
+        expectedError.storageErrorCode
+      );
+      assert.deepStrictEqual(
+          error.storageErrorMessage,
+          expectedError.storageErrorMessage
+      );
+      assert.ok(error.body.includes("x-ms-if-tags"));
+      assert.ok(error.body.includes(modifiedAccessConditions.ifTags));
+      return;
+    }
+
+    assert.fail();
+  });
+
+  it("Should return 412 precondition failed for failed if-tags results @loki @sql", () => {
+    const modifiedAccessConditions = { ifTags: "\"tag3\"='three'" };
+    const blobModel = {
+      properties: {
+        etag: "etag2",
+        lastModified: new Date()
+      }
+    } as BlobModel;
+
+    const expectedError = StorageErrorFactory.getConditionNotMet(
+      context.contextId!
+    );
+    try {
+      validateIfTagsHeader(
+        context,
+        new ConditionalHeadersAdapter(context, modifiedAccessConditions),
+        new ConditionResourceAdapter(blobModel)
+      );
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, expectedError.statusCode);
+      assert.deepStrictEqual(
+        error.storageErrorCode,
+        expectedError.storageErrorCode
+      );
+      assert.deepStrictEqual(
+        error.storageErrorMessage,
+        expectedError.storageErrorMessage
+      );
+      return;
+    }
+
+    assert.fail();
+  });
+
+  it("Should not return any error for successful if-tags results @loki @sql", () => {
+    const modifiedAccessConditions = { ifTags: "\"tag3\"='three'" };
+    const blobModel = {
+      properties: {
+        etag: "etag1",
+        lastModified: new Date()
+      },
+      blobTags: { blobTagSet: [{ key: "tag3", value: "three" }] }
+    } as BlobModel;
+
+    validateIfTagsHeader(
+      context,
+      new ConditionalHeadersAdapter(context, modifiedAccessConditions),
+      new ConditionResourceAdapter(blobModel)
+    );
+  });
+});
+
+describe("IfTagsValidator for not existent resource", () => {
+  it("Should throw 400 Bad Request for non valid if-tags", () => {
+    const modifiedAccessConditions = {
+      ifTags: "something can't parse"
+    };
+
+    const expectedError = StorageErrorFactory.getInvalidHeaderValue(
+      context.contextId!
+    );
+
+    try {
+      validateIfTagsHeader(
+        context,
+        new ConditionalHeadersAdapter(context, modifiedAccessConditions),
+        new ConditionResourceAdapter(undefined)
+      );
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, expectedError.statusCode);
+      assert.deepStrictEqual(
+        error.storageErrorCode,
+        expectedError.storageErrorCode
+      );
+      assert.deepStrictEqual(
+        error.storageErrorMessage,
+        expectedError.storageErrorMessage
+      );
+      assert.ok(error.body.includes("x-ms-if-tags"));
+      assert.ok(error.body.includes(modifiedAccessConditions.ifTags));
+      return;
+    }
+
+    assert.fail();
+  });
+
+  it("Should not return any error for valid if-tags headers results @loki @sql", () => {
+    const modifiedAccessConditions = { ifTags: "\"tag3\"='three'" };
+
+    validateIfTagsHeader(
+      context,
+      new ConditionalHeadersAdapter(context, modifiedAccessConditions),
+      new ConditionResourceAdapter(undefined)
+    );
   });
 });

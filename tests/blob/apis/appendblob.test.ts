@@ -500,19 +500,19 @@ describe("AppendBlobAPIs", () => {
 
   it("Append block access condition should work @loki", async () => {
     let response = await appendBlobClient.create();
-    response = await appendBlobClient.appendBlock("a", 1, {
+    await appendBlobClient.appendBlock("a", 1, {
       conditions: {
         ifMatch: response.etag
       }
     });
 
-    response = await appendBlobClient.appendBlock("a", 1, {
+    await appendBlobClient.appendBlock("a", 1, {
       conditions: {
         ifNoneMatch: "xxxx"
       }
     });
 
-    response = await appendBlobClient.appendBlock("a", 1, {
+    await appendBlobClient.appendBlock("a", 1, {
       conditions: {
         ifModifiedSince: new Date("2000/01/01")
       }
@@ -536,6 +536,41 @@ describe("AppendBlobAPIs", () => {
       return;
     }
     assert.fail();
+  });
+
+  it("Append block tagConditions evaluated as false should work @loki", async () => {
+    await appendBlobClient.create();
+    await appendBlobClient.appendBlock("a", 1);
+
+    const existingAppendBlobClient = blobClient.getAppendBlobClient();
+    try {
+      await existingAppendBlobClient.appendBlock("a", 1, {
+        conditions: {
+          tagConditions: "\"tag\"='value'"
+        }
+      });
+    } catch (err) {
+      assert.deepStrictEqual(err.code, "ConditionNotMet");
+      assert.deepStrictEqual(err.statusCode, 412);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("Append block tagConditions evaluated as true should work @loki", async () => {
+    await appendBlobClient.create({
+      tags: {
+        tag: "value"
+      }
+    });
+    await appendBlobClient.appendBlock("a", 1);
+
+    const existingAppendBlobClient = blobClient.getAppendBlobClient();
+    await existingAppendBlobClient.appendBlock("a", 1, {
+      conditions: {
+        tagConditions: "\"tag\"='value'"
+      }
+    });
   });
 
   it("Append block lease condition should work @loki", async () => {

@@ -1151,7 +1151,7 @@ describe("ContainerAPIs", () => {
     assert.equal(result.segment.blobItems.length, 4);
   });
 
-  it.only("set/get blob tag should work, with base blob or snapshot @loki @sql", async () => {
+  it("set/get blob tag should work, with base blob or snapshot @loki @sql", async () => {
     const blobName = getUniqueName("blob")
     const blobClient = containerClient.getPageBlobClient(blobName);
     await blobClient.create(1024);

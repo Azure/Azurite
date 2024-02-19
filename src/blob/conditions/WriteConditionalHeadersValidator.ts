@@ -10,6 +10,7 @@ import ConditionResourceAdapter from "./ConditionResourceAdapter";
 import { IConditionalHeaders } from "./IConditionalHeaders";
 import { IConditionalHeadersValidator } from "./IConditionalHeadersValidator";
 import IConditionResource from "./IConditionResource";
+import { validateIfTagsHeader } from "./IfTagsHeaderValidator";
 
 export function validateSequenceNumberWriteConditions(
   context: Context,
@@ -71,7 +72,8 @@ export function validateWriteConditions(
 
 // tslint:disable: max-line-length
 export default class WriteConditionalHeadersValidator
-  implements IConditionalHeadersValidator {
+  implements IConditionalHeadersValidator
+{
   /**
    * Validate conditional Headers for Read Operations in Versions Prior to 2013-08-15,
    * and for Write Operations (All Versions).
@@ -87,6 +89,9 @@ export default class WriteConditionalHeadersValidator
     resource: IConditionResource
   ): void {
     this.validateCombinations(context, conditionalHeaders);
+    if (conditionalHeaders?.ifTags) {
+      validateIfTagsHeader(context, conditionalHeaders, resource);
+    }
     if (!resource.exist) {
       if (
         conditionalHeaders.ifNoneMatch &&
