@@ -24,6 +24,7 @@ import TableServer from "./table/TableServer";
 
 import { DEFAULT_TABLE_LOKI_DB_PATH } from "./table/utils/constants";
 import { setExtentMemoryLimit } from "./common/ConfigurationBase";
+import { AzuriteTelemetryClient } from "./common/Telemetry";
 
 // tslint:disable:no-console
 
@@ -59,6 +60,10 @@ function shutdown(
  * Entry for Azurite services.
  */
 async function main() {
+
+  AzuriteTelemetryClient.init(true);
+  AzuriteTelemetryClient.TraceStartEvent();
+
   // Initialize and validate environment values from command line parameters
   const env = new Environment();
 
@@ -173,6 +178,8 @@ async function main() {
     })
     .once("SIGINT", () => shutdown(blobServer, queueServer, tableServer))
     .once("SIGTERM", () => shutdown(blobServer, queueServer, tableServer));
+
+    AzuriteTelemetryClient.TraceStopEvent();
 }
 
 main().catch((err) => {
