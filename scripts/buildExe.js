@@ -12,13 +12,13 @@ const pkgFetch = require('pkg-fetch');
 build();
 
 async function build() {
-  const pkgTarget = 'node14-win-x64';
+  const pkgTarget = 'node18-win-x64';
   const cacheExe = await downloadCache(pkgTarget);
   await rcedit(cacheExe, {
     "version-string": {
-      "CompanyName": "Microsoft", 
-      "ProductName": "Azurite", 
-      "FileDescription": "Azurite", 
+      "CompanyName": "Microsoft",
+      "ProductName": "Azurite",
+      "FileDescription": "Azurite",
       "ProductVersion": pjson.version,
       "OriginalFilename": "",
       "InternalName": "node",
@@ -27,7 +27,7 @@ async function build() {
     // file-version is kept as the node version used by the .exe for debugging purposes
     "icon": path.resolve('.\\icon.ico')
   });
-  
+
   // rename the cache file to skip hash check by pkg-fetch since hash check reverts our change of properties
   const newName = cacheExe.replace("fetched", "built");
 
@@ -38,14 +38,14 @@ async function build() {
   }
 
   await asyncRename(cacheExe, newName);
-  
+
   const outputExe = path.resolve('.\\release\\azurite.exe');
   await pkg.exec([path.resolve('.'), ...['--target', pkgTarget], ...['--output', outputExe], ...['-C', 'Brotli']]);
 }
 
 async function downloadCache(pkgTarget) {
   const [nodeRange, platform, arch] = pkgTarget.split('-');
-  
+
   await pkgFetch.need({ nodeRange, platform, arch });
   const cacheExe = glob.sync(process.env.PKG_CACHE_PATH + "\\**\\fetched*");
   if (cacheExe.length < 1) {
