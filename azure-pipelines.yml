@@ -571,8 +571,8 @@ jobs:
         # our .exe build program is currently incompatible with node 10
         # node_10_x:
         #   node_version: 10.x
-        node_14_x:
-          node_version: 14.x
+        node_18_x:
+          node_version: 18.x
     steps:
       - task: NodeTool@0
         inputs:

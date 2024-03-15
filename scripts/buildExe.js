@@ -12,7 +12,7 @@ const pkgFetch = require('pkg-fetch');
 build();
 
 async function build() {
-  const pkgTarget = 'node20-win-x64';
+  const pkgTarget = 'node18-win-x64';
   const cacheExe = await downloadCache(pkgTarget);
   await rcedit(cacheExe, {
     "version-string": {
