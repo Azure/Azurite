@@ -1,7 +1,7 @@
 #
 # Builder
 #
-FROM node:14-alpine3.17 AS builder
+FROM node:20-alpine3.19 AS builder
 
 WORKDIR /opt/azurite
 
@@ -11,8 +11,7 @@ COPY *.json LICENSE NOTICE.txt ./
 # Copy the source code and build the app
 COPY src ./src
 COPY tests ./tests
-RUN npm config set unsafe-perm=true && \
-  npm ci
+RUN npm ci
 RUN npm run build && \
   npm install -g --loglevel verbose
 
@@ -20,7 +19,9 @@ RUN npm run build && \
 #
 # Production image
 #
-FROM node:14-alpine3.17
+FROM node:20-alpine3.19
+
+RUN apk update && apk upgrade --no-cache
 
 ENV NODE_ENV=production
 
@@ -33,8 +34,9 @@ COPY package*.json LICENSE NOTICE.txt ./
 
 COPY --from=builder /opt/azurite/dist/ dist/
 
-RUN npm config set unsafe-perm=true && \
-  npm install -g --loglevel verbose
+RUN npm update -g
+RUN npm install --ignore-scripts --loglevel verbose
+RUN npm install -g --ignore-scripts --loglevel verbose
 
 # Blob Storage Port
 EXPOSE 10000
