@@ -15,6 +15,10 @@ Table:
 
 - Fail the insert entity request with double property whose value is greater than MAX_VALUE (Issue #2387)
 
+Table:
+
+- Fixed issue of returning incorrect entities when querying table with int64 values. (issue #2385)
+
 ## 2023.12 Version 3.29.0
 
 General:
