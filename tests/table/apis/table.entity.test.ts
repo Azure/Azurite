@@ -1726,4 +1726,37 @@ describe("table Entity APIs test - using Azure-Storage", () => {
       }
     );
   });
+
+  
+  // For github issue 2387
+  // Insert entity property with type "Edm.Double" and value greater than MAX_VALUE, server will fail the request
+  it("38. Insert entity with Edm.Double type property whose value is greater than MAX_VALUE, server will fail the request, @loki", (done) => {
+    const entity = {
+      PartitionKey: "part1",
+      RowKey: "utctest",
+      myValue: "13e7705",
+      "myValue@odata.type": "Edm.Double"
+    };
+
+    tableService.insertEntity(
+      tableName,
+      entity,
+      (insertError, insertResult, insertResponse) => {
+        if (!insertError) {
+          assert.fail(
+            "Insert should fail with Edm.Double type property whose value is greater than MAX_VALUE.");
+        } else {
+          assert.strictEqual(
+            true,
+            insertError.message.startsWith(
+              "An error occurred while processing this request."
+            )
+          );
+          done();
+        };
+        assert.strictEqual("InvalidInput", (insertError as any).code);
+      }
+    );
+    
+  });
 });

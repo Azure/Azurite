@@ -12,6 +12,10 @@ export class EdmDouble implements IEdmType {
       // TODO: Support convert from string. parseFloat doesn't strictly checks non number chars
       const val = Number.parseFloat(value);
       if (!Number.isNaN(val)) {
+        if (val === Number.POSITIVE_INFINITY || val === Number.POSITIVE_INFINITY)
+        {
+          throw TypeError(`InvalidInput`);
+        }
         return val;
       }
     }
