@@ -411,6 +411,31 @@ describe("ServiceAPIs", () => {
     await containerClient1.delete();
     await containerClient2.delete();
   });
+  
+  // fix issue 2382
+  it("ListContainers without include metadata should not return contaienr metadata. @loki @sql", async () => {
+    const containerNamePrefix = getUniqueName("container");
+    const containerName1 = `${containerNamePrefix}x1`;
+    const containerName2 = `${containerNamePrefix}x2`;
+    const containerClient1 = serviceClient.getContainerClient(containerName1);
+    const containerClient2 = serviceClient.getContainerClient(containerName2);
+    await containerClient1.create({ metadata: { key: "val" } });
+    await containerClient2.create({ metadata: { key: "val" } });
+
+    const result1 = (
+      await serviceClient
+        .listContainers({
+        })
+        .byPage()
+        .next()
+    ).value;
+    
+    assert.equal(result1.containerItems!.length, 2);
+    assert.ok(result1.containerItems![0].name.startsWith(containerNamePrefix));
+    assert.ok(result1.containerItems![1].name.startsWith(containerNamePrefix));
+    assert.equal(result1.containerItems![0].metadata, undefined);
+    assert.equal(result1.containerItems![1].metadata, undefined);
+  });
 
   it("get Account info @loki @sql", async () => {
     const result = await serviceClient.getAccountInfo();
