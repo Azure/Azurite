@@ -235,7 +235,7 @@ export default class ServiceHandler extends BaseHandler
     let includeMetadata = false;
     if (options.include) {
       for (const item of options.include) {
-        if (item === "metadata") {
+        if (item.toLowerCase() === "metadata") {
           includeMetadata = true;
           break;
         }
