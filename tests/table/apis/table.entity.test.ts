@@ -1726,4 +1726,68 @@ describe("table Entity APIs test - using Azure-Storage", () => {
       }
     );
   });
+
+  
+  // For github issue 2387
+  // Insert entity property with type "Edm.Double" and value bigger than MAX_VALUE, server will fail the request
+  it("38. Insert entity with Edm.Double type property whose value is bigger than MAX_VALUE, server will fail the request, @loki", (done) => {
+    // Double value bigger than MAX_VALUE will fail
+    const entity1 = {
+      PartitionKey: "partDouble",
+      RowKey: "utctestDouble",
+      myValue: "1.797693134862316e308",
+      "myValue@odata.type": "Edm.Double"
+    };
+
+    tableService.insertEntity(
+      tableName,
+      entity1,
+      (insertError, insertResult, insertResponse) => {
+        if (!insertError) {
+          assert.fail(
+            "Insert should fail with Edm.Double type property whose value is greater than MAX_VALUE.");
+        } else {
+          assert.strictEqual(
+            true,
+            insertError.message.startsWith(
+              "An error occurred while processing this request."
+            )
+          );
+        };
+        assert.strictEqual("InvalidInput", (insertError as any).code);
+      }
+    );
+
+    // Double value smaller than MAX_VALUE will success
+    const entity2 = {
+      PartitionKey: "partDouble",
+      RowKey: "utctestDouble",
+      myValue: "1.797693134862315e308",
+      "myValue@odata.type": "Edm.Double"
+    };
+
+    tableService.insertEntity(
+      tableName,
+      entity2,
+      (insertError, insertResult, insertResponse) => {
+        if (!insertError) {
+          tableService.retrieveEntity<TestEntity>(
+            tableName,
+            "partDouble",
+            "utctestDouble",
+            (error, result) => {
+              const insertedEntity: TestEntity = result;
+              assert.strictEqual(
+                insertedEntity.myValue._.toString(),
+                "1.797693134862315e+308"
+              );
+              done();
+            }
+          );
+        } else {
+          assert.fail(
+            "Insert should NOT fail with Edm.Double type property whose value is less than MAX_VALUE.");
+      }
+    });    
+  });
 });
