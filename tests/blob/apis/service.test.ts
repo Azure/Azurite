@@ -425,6 +425,7 @@ describe("ServiceAPIs", () => {
     const result1 = (
       await serviceClient
         .listContainers({
+          prefix: containerNamePrefix
         })
         .byPage()
         .next()
