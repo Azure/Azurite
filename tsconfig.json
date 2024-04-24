@@ -5,7 +5,7 @@
     "preserveConstEnums": true,
     "sourceMap": true,
     "newLine": "LF",
-    "target": "es2017",
+    "target": "ES2020",
     "moduleResolution": "node",
     "noUnusedLocals": true,
     "noUnusedParameters": false,
@@ -16,13 +16,24 @@
     "declarationMap": true,
     "importHelpers": true,
     "declarationDir": "./typings",
-    "lib": ["es5", "es6", "es7", "esnext", "dom"],
+    "lib": [
+      "es5",
+      "es6",
+      "es7",
+      "esnext",
+      "dom"
+    ],
     "esModuleInterop": true,
     "downlevelIteration": true,
     "useUnknownInCatchVariables": false,
     "skipLibCheck": true,
   },
   "compileOnSave": true,
-  "exclude": ["node_modules"],
-  "include": ["./src/**/*.ts", "./tests/**/*.ts"]
+  "exclude": [
+    "node_modules"
+  ],
+  "include": [
+    "./src/**/*.ts",
+    "./tests/**/*.ts"
+  ]
 }
