@@ -4,6 +4,13 @@
 
 ## Upcoming Release
 
+## 2024.04 Version 3.30.0
+
+General:
+
+- Bump up service API version to 2024-05-04
+- Fixed issue of failure when connecting to mssql with docker image or exe.
+
 Blob:
 
 - Fixed issue of setting blob tag should not update Blob Etag and LastModified. (issue #2327)
