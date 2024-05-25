@@ -1,6 +1,5 @@
 import {
   close,
-  createReadStream,
   createWriteStream,
   fdatasync,
   mkdir,
@@ -30,6 +29,7 @@ import IExtentStore, {
 } from "./IExtentStore";
 import IOperationQueue from "./IOperationQueue";
 import OperationQueue from "./OperationQueue";
+import FileLazyReadStream from "./FileLazyReadStream";
 
 const statAsync = promisify(stat);
 const mkdirAsync = promisify(mkdir);
@@ -76,6 +76,10 @@ export default class FSExtentStore implements IExtentStore {
 
   private persistencyPath: Map<string, string>;
 
+  private circularStreamsBuffer: FileLazyReadStream[];
+
+  private maxStreams = 100000;
+
   public constructor(
     metadata: IExtentMetadataStore,
     private readonly persistencyConfiguration: StoreDestinationArray,
@@ -104,6 +108,8 @@ export default class FSExtentStore implements IExtentStore {
       logger
     );
     this.readQueue = new OperationQueue(DEFAULT_READ_CONCURRENCY, logger);
+
+    this.circularStreamsBuffer = [];
   }
 
   public isInitialized(): boolean {
@@ -340,19 +346,23 @@ export default class FSExtentStore implements IExtentStore {
           } end:${extentChunk.offset + extentChunk.count - 1}`,
           contextId
         );
-        const stream = createReadStream(path, {
-          start: extentChunk.offset,
-          end: extentChunk.offset + extentChunk.count - 1
-        }).on("close", () => {
-          this.logger.verbose(
-            `FSExtentStore:readExtent() Read stream closed. LocationId:${persistencyId} extentId:${
-              extentChunk.id
-            } path:${path} offset:${extentChunk.offset} count:${
-              extentChunk.count
-            } end:${extentChunk.offset + extentChunk.count - 1}`,
-            contextId
-          );
-        });
+
+        if(this.circularStreamsBuffer.length >= this.maxStreams){
+            let streamToDestroy = this.circularStreamsBuffer.shift();    
+            streamToDestroy?.destroy();
+        }
+
+        const stream = new FileLazyReadStream(
+          path,
+          extentChunk.offset,
+          extentChunk.offset + extentChunk.count - 1,
+          this.logger,
+          persistencyId,
+          extentChunk.id,
+          contextId);
+
+        this.circularStreamsBuffer.push(stream);
+
         resolve(stream);
       });
 
