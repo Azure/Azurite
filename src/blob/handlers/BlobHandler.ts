@@ -1018,7 +1018,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
-      rangeEnd = blob.properties.contentLength! - 1;
+      // report error is blob size is 0, and rangeEnd is specified but not 0 
+      if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
+        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!);
+      }
+      else {
+        rangeEnd = blob.properties.contentLength! - 1;
+      }
     }
 
     const contentLength = rangeEnd - rangeStart + 1;
@@ -1098,7 +1104,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       acceptRanges: "bytes",
       contentLength,
       contentRange,
-      contentMD5,
+      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5: undefined) : contentMD5,
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
       clientRequestId: options.requestId,
@@ -1143,7 +1149,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
-      rangeEnd = blob.properties.contentLength! - 1;
+      // report error is blob size is 0, and rangeEnd is specified but not 0 
+      if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
+        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!);
+      }
+      else {
+        rangeEnd = blob.properties.contentLength! - 1;
+      }
     }
 
     const contentLength = rangeEnd - rangeStart + 1;
@@ -1228,7 +1240,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentType: context.request!.getQuery("rsct") ?? blob.properties.contentType,
       contentLength,
       contentRange,
-      contentMD5,
+      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5: undefined) : contentMD5,
       blobContentMD5: blob.properties.contentMD5,
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
