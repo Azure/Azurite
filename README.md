@@ -89,7 +89,7 @@ Compared to V2, Azurite V3 implements a new architecture leveraging code generat
   - Get/Set Queue Service Properties
   - Preflight Request
   - Create/List/Delete Queues
-  - Put/Get/Peek/Updata/Deleta/Clear Messages
+  - Put/Get/Peek/Update/Delete/Clear Messages
 - Table storage features align with Azure Storage API version 2024-05-04 (Refer to support matrix section below)
   - SharedKey/Account SAS/Service SAS/OAuth
   - Create/List/Delete Tables
@@ -261,7 +261,7 @@ Above command will try to start Azurite image with configurations:
 
 `--disableProductStyleUrl` force parsing storage account name from request Uri path, instead of from request Uri host.
 
-> If you use customized azurite paramters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
+> If you use customized azurite parameters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 
 > In above sample, you need to use **double first forward slash** for location and debug path parameters to avoid a [known issue](https://stackoverflow.com/questions/48427366/docker-build-command-add-c-program-files-git-to-the-path-passed-as-build-argu) for Git on Windows.
 
