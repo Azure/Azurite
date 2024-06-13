@@ -33,6 +33,7 @@ import morgan = require("morgan");
 import { OAuthLevel } from "../common/models";
 import IAuthenticator from "./authentication/IAuthenticator";
 import createStorageBlobContextMiddleware from "./middlewares/blobStorageContext.middleware";
+import FaultInjectionMiddlewareFactory from "./middlewares/FaultInjectionMiddlewareFactory";
 
 /**
  * Default RequestListenerFactory based on express framework.
@@ -127,6 +128,8 @@ export default class BlobRequestListenerFactory
       [UnsupportedHeadersBlocker, UnsupportedParametersBlocker]
     );
 
+    const faultInjectionFactory = new FaultInjectionMiddlewareFactory(logger);
+
     /*
      * Generated middleware should follow strict orders
      * Manually created middleware can be injected into any points
@@ -180,6 +183,10 @@ export default class BlobRequestListenerFactory
     // Generated, will do basic validation defined in swagger
     app.use(middlewareFactory.createDeserializerMiddleware());
 
+    app.use(
+      faultInjectionFactory.createFaultInjectionMiddleware("beforeHandler")
+    );
+
     // Generated, inject handlers to create a handler middleware
     app.use(middlewareFactory.createHandlerMiddleware(handlers));
 
@@ -197,8 +204,14 @@ export default class BlobRequestListenerFactory
       )
     );
 
+    app.use(
+      faultInjectionFactory.createFaultInjectionMiddleware("beforeSerializer")
+    );
     // Generated, will serialize response models into HTTP response
     app.use(middlewareFactory.createSerializerMiddleware());
+    app.use(
+      faultInjectionFactory.createFaultInjectionMiddleware("afterSerializer")
+    );
 
     // Preflight
     app.use(
