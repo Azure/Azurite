@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Fix issue of not refreshing lease state within block blob/append blob upload operation. (issue #2352)
+
 ## 2024.04 Version 3.30.0
 
 General:
