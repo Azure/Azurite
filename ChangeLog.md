@@ -4,6 +4,12 @@
 
 ## Upcoming Release
 
+## 2024.06 Version 3.31.0
+
+General:
+
+- Bump up service API version to 2024-08-04
+
 Blob:
 
 - Fix issue of not refreshing lease state within block blob/append blob upload operation. (issue #2352)
