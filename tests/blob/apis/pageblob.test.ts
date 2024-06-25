@@ -269,7 +269,7 @@ describe("PageBlobAPIs", () => {
     );
   });
 
-  it("download a 0 size page blob with range > 0 will get error @loki @sql", async () => {  
+  it("download a 0 size page blob with range > 0 will get error @loki", async () => {  
     pageBlobClient.deleteIfExists();      
     await pageBlobClient.create(0);
 
@@ -282,7 +282,7 @@ describe("PageBlobAPIs", () => {
     assert.fail();
   });
 
-  it("Download a blob range should only return ContentMD5 when has request header x-ms-range-get-content-md5  @loki @sql", async () => {
+  it("Download a blob range should only return ContentMD5 when has request header x-ms-range-get-content-md5  @loki", async () => {
     pageBlobClient.deleteIfExists();    
     
     await pageBlobClient.create(512, {blobHTTPHeaders: {blobContentMD5: await getMD5FromString("a".repeat(512))}});    
