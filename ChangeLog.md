@@ -6,7 +6,7 @@
 
 General:
 
-- Bump mysql2 to resolve to 3.10.0 for security patches
+- Bump mysql2 to resolve to 3.10.1 for security patches
 
 ## 2024.06 Version 3.31.0
 
