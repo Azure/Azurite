@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Bump mysql2 to resolve to 3.10.0 for security patches
+
 ## 2024.06 Version 3.31.0
 
 General:
