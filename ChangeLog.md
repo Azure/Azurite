@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Added support for docker image based on Windows Base Image.
+
 Blob:
 
 - Fixed issue of download 0 size blob with range > 0 should report error. (issue #2410)
