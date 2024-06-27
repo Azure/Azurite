@@ -17,6 +17,7 @@ import {
   getUniqueName,
   sleep
 } from "../../testutils";
+import { getMD5FromString } from "../../../src/common/utils/utils";
 
 // Set true to enable debug log
 configLogger(false);
@@ -333,6 +334,48 @@ describe("BlockBlobAPIs", () => {
     const result = await blobClient.download(0);
     assert.deepStrictEqual(await bodyToString(result, 0), "");
     assert.equal(true, result._response.headers.contains("x-ms-creation-time"));
+  });
+
+  it("download a 0 size block blob with range > 0 will get error @loki @sql", async () => {
+    await blockBlobClient.commitBlockList([]);
+
+    const listResponse = await blockBlobClient.getBlockList("committed");
+    assert.equal(listResponse.committedBlocks!.length, 0);
+
+    try {
+      await blockBlobClient.download(0, 3);
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 416);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("Download a blob range should only return ContentMD5 when has request header x-ms-range-get-content-md5  @loki @sql", async () => {
+    blockBlobClient.deleteIfExists();
+    
+    await blockBlobClient.upload("abc", 0);
+
+    const properties1 = await blockBlobClient.getProperties();
+    assert.deepEqual(properties1.contentMD5, await getMD5FromString("abc"));
+    
+    let result = await blockBlobClient.download(0, 6);
+    assert.deepStrictEqual(await bodyToString(result, 3), "abc");
+    assert.deepStrictEqual(result.contentLength, 3);
+    assert.deepEqual(result.contentMD5, undefined);
+    assert.deepEqual(result.blobContentMD5, await getMD5FromString("abc"));
+
+    result = await blockBlobClient.download();
+    assert.deepStrictEqual(await bodyToString(result, 3), "abc");
+    assert.deepStrictEqual(result.contentLength, 3);
+    assert.deepEqual(result.contentMD5, await getMD5FromString("abc"));
+    assert.deepEqual(result.blobContentMD5, await getMD5FromString("abc"));
+
+    result = await blockBlobClient.download(0, 1, {rangeGetContentMD5: true});
+    assert.deepStrictEqual(await bodyToString(result, 1), "a");
+    assert.deepStrictEqual(result.contentLength, 1);
+    assert.deepEqual(result.contentMD5, await getMD5FromString("a"));
+    assert.deepEqual(result.blobContentMD5, await getMD5FromString("abc"));
   });
 
   it("commitBlockList with empty list should not work with ifNoneMatch=* for existing blob @loki @sql", async () => {

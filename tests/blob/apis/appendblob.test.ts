@@ -387,7 +387,7 @@ describe("AppendBlobAPIs", () => {
     await appendBlobClient.appendBlock("T", 1);
     await appendBlobClient.appendBlock("@", 2);
 
-    const response = await snapshotAppendBlobURL.download(3);
+    const response = await snapshotAppendBlobURL.download(3, undefined, {rangeGetContentMD5: true});
     const string = await bodyToString(response);
     assert.deepStrictEqual(string, "def");
     assert.deepEqual(response.contentMD5, await getMD5FromString("def"));
@@ -404,7 +404,7 @@ describe("AppendBlobAPIs", () => {
 
     await appendBlobClient.delete();
 
-    const response = await copiedAppendBlobClient.download(3);
+    const response = await copiedAppendBlobClient.download(3, undefined, {rangeGetContentMD5: true});
     const string = await bodyToString(response);
     assert.deepStrictEqual(string, "def");
     assert.deepEqual(response.contentMD5, await getMD5FromString("def"));
