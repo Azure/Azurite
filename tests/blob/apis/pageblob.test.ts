@@ -14,6 +14,7 @@ import {
   EMULATOR_ACCOUNT_NAME,
   getUniqueName
 } from "../../testutils";
+import { getMD5FromString } from "../../../src/common/utils/utils";
 
 // Set true to enable debug log
 configLogger(false);
@@ -266,6 +267,47 @@ describe("PageBlobAPIs", () => {
       await bodyToString(result, length),
       "\u0000".repeat(length)
     );
+  });
+
+  it("download a 0 size page blob with range > 0 will get error @loki", async () => {  
+    pageBlobClient.deleteIfExists();      
+    await pageBlobClient.create(0);
+
+    try {
+      await pageBlobClient.download(0, 3);
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 416);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("Download a blob range should only return ContentMD5 when has request header x-ms-range-get-content-md5  @loki", async () => {
+    pageBlobClient.deleteIfExists();    
+    
+    await pageBlobClient.create(512, {blobHTTPHeaders: {blobContentMD5: await getMD5FromString("a".repeat(512))}});    
+    await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
+
+    const properties1 = await pageBlobClient.getProperties();
+    assert.deepEqual(properties1.contentMD5, await getMD5FromString("a".repeat(512)));
+    
+    let result = await pageBlobClient.download(0, 1024);
+    assert.deepStrictEqual(await bodyToString(result, 512), "a".repeat(512));
+    assert.deepStrictEqual(result.contentLength, 512);
+    assert.deepEqual(result.contentMD5, undefined);
+    assert.deepEqual(result.blobContentMD5, await getMD5FromString("a".repeat(512)));
+
+    result = await pageBlobClient.download();
+    assert.deepStrictEqual(await bodyToString(result, 512), "a".repeat(512));
+    assert.deepStrictEqual(result.contentLength, 512);
+    assert.deepEqual(properties1.contentMD5, await getMD5FromString("a".repeat(512)));
+    assert.deepEqual(result.blobContentMD5, await getMD5FromString("a".repeat(512)));
+
+    result = await pageBlobClient.download(0, 3, {rangeGetContentMD5: true});
+    assert.deepStrictEqual(await bodyToString(result, 3), "aaa");
+    assert.deepStrictEqual(result.contentLength, 3);
+    assert.deepEqual(result.contentMD5, await getMD5FromString("aaa"));
+    assert.deepEqual(result.blobContentMD5, await getMD5FromString("a".repeat(512)));
   });
 
   it("uploadPages @loki", async () => {
