@@ -578,6 +578,15 @@ export default class StorageErrorFactory {
     );
   }
 
+  public static getBothUserTagsAndSourceTagsCopyPresentException(contextID: string): StorageError {
+    return new StorageError(
+      400,
+      "BothUserTagsAndSourceTagsCopyPresentException",
+      "x-ms-tags header must not be present with x-ms-copy-source-tag-option as COPY.",
+      contextID
+    );
+  }
+
   public static getNoPendingCopyOperation(contextID: string): StorageError {
     return new StorageError(
       409,
