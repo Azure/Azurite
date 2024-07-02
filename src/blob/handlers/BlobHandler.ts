@@ -865,6 +865,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       await this.validateCopySource(copySource, sourceAccount, context);
     }
 
+    // Specifying x-ms-copy-source-tag-option as COPY and x-ms-tags will result in error
+    if (options.copySourceTags === Models.BlobCopySourceTags.COPY && options.blobTagsString !== undefined) {
+      throw StorageErrorFactory.getBothUserTagsAndSourceTagsCopyPresentException(context.contextId!);
+    }
+
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
       blobCtx.request!.getRawHeaders()

@@ -2107,7 +2107,9 @@ export default class LokiBlobMetadataStore
         destBlob !== undefined ? destBlob.leaseBreakTime : undefined,
       committedBlocksInOrder: sourceBlob.committedBlocksInOrder,
       persistency: sourceBlob.persistency,
-      blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!)
+      blobTags: options.copySourceTags === Models.BlobCopySourceTags.COPY ?
+        sourceBlob.blobTags
+        : options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!)
     };
 
     if (

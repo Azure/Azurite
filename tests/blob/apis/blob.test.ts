@@ -7,7 +7,7 @@ import {
 } from "@azure/storage-blob";
 import assert = require("assert");
 
-import { BlobHTTPHeaders } from "../../../src/blob/generated/artifacts/models";
+import { BlobCopySourceTags, BlobHTTPHeaders } from "../../../src/blob/generated/artifacts/models";
 import { configLogger } from "../../../src/common/Logger";
 import BlobTestServerFactory from "../../BlobTestServerFactory";
 import {
@@ -1349,6 +1349,57 @@ describe("BlobAPIs", () => {
     assert.equal(getResult.leaseStatus, "locked");
 
     await destLeaseClient.releaseLease();
+  }); 
+  
+  it("Synchronized copy blob should work to override tag @loki", async () => {
+    const tags = {
+      tag1: "val1"
+    };
+    const tags2 = {
+      tag2: "val22"
+    };
+
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getBlockBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    await sourceBlobClient.upload("hello", 5, {
+      tags: tags
+    });
+
+    // with default x-ms-copy-source-tag-option (REPLACE), if copy request has tags, will overwrite with the tags in copy request
+    await destBlobClient.syncCopyFromURL(sourceBlobClient.url, {
+      tags: tags2
+    });
+    let result = await destBlobClient.getTags();
+    assert.deepStrictEqual(result.tags, tags2);
+
+    // with default x-ms-copy-source-tag-option (REPLACE), if copy request has no tags, dest blob will have no tags
+    await destBlobClient.syncCopyFromURL(sourceBlobClient.url);
+    result = await destBlobClient.getTags()
+    assert.deepStrictEqual(result.tags.tag1, undefined);
+    assert.deepStrictEqual(result.tags.tag2, undefined);
+
+    // with x-ms-copy-source-tag-option as COPY, will use source tags
+    await destBlobClient.syncCopyFromURL(sourceBlobClient.url, {
+      copySourceTags: BlobCopySourceTags.COPY
+    });
+    result = await destBlobClient.getTags();
+    assert.deepStrictEqual(result.tags, tags);
+
+    // with x-ms-copy-source-tag-option as COPY, and copy request has tags, will report error    
+    let statusCode
+    try {
+      await destBlobClient.syncCopyFromURL(sourceBlobClient.url, {
+        copySourceTags: BlobCopySourceTags.COPY,
+        tags: tags2
+      });
+    } catch (error) {
+      statusCode = error.statusCode;
+    }
+    assert.deepStrictEqual(statusCode, 400);
   });
 
   it("Synchronized copy blob should work for page blob @loki", async () => {
