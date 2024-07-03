@@ -37,10 +37,16 @@ import ContainerHandler from "./ContainerHandler";
 import PageBlobHandler from "./PageBlobHandler";
 import PageBlobRangesManager from "./PageBlobRangesManager";
 import ServiceHandler from "./ServiceHandler";
+import uuid from "uuid";
 
 type SubRequestNextFunction = (err?: any) => void;
 type SubRequestHandler = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => any;
 type SubRequestErrorHandler = (err: any, req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => any;
+
+export interface BatchResponse {
+  contentType: string;
+  reponseBody: string;
+}
 
 export class BlobBatchHandler {
   private handlers: IHandlers;
@@ -451,50 +457,93 @@ export class BlobBatchHandler {
 
   public async submitBatch(
     body: NodeJS.ReadableStream,
-    requestBatchBoundary: string,
     subRequestPathPrefix: string,
     batchRequest: IRequest,
     context: Context
-  ): Promise<string> {
-    const perRequestPrefix = `--${requestBatchBoundary}${HTTP_LINE_ENDING}`;
-    const batchRequestEnding = `--${requestBatchBoundary}--`
-
-    const requestBody = await this.requestBodyToString(body);
-    let subRequests: BlobBatchSubRequest[] | undefined;
+  ): Promise<BatchResponse> {
     let error: any | undefined;
-    try {
-      subRequests = await this.parseSubRequests(
+    const subResponses: BlobBatchSubResponse[] = [];
+    let subRequests: BlobBatchSubRequest[] | undefined;
+
+    const responseBatchBoundary = `batchresponse_${uuid()}`;
+    const perResponsePrefix = `--${responseBatchBoundary}${HTTP_LINE_ENDING}`;
+    const batchResponseEnding = `--${responseBatchBoundary}--`
+
+    let requestBatchBoundary = undefined;
+
+    // Parse content type for sub request boundary
+    const contentType = context.request!.getHeader("content-type");
+    if (contentType === undefined || contentType === '') {
+      error = new StorageError(
+        400,
+        "MissingRequiredHeader",
+        "An HTTP header that's mandatory for this request is not specified.",
         context.contextId!,
-        perRequestPrefix,
-        batchRequestEnding,
-        subRequestPathPrefix,
-        batchRequest,
-        requestBody);
-    } catch (err) {
-      if ((err instanceof MiddlewareError)
-        && err.hasOwnProperty("storageErrorCode")
-        && err.hasOwnProperty("storageErrorMessage")
-        && err.hasOwnProperty("storageRequestID")) {
-        error = err;
+        {
+          HeaderName: "Content-Type"
+        }
+      );
+    }
+    else {
+      const contentTypeValues = contentType!.split(";");
+
+      contentTypeValues.forEach(contentTypeValue => {
+        contentTypeValue = contentTypeValue.trim();
+        if (contentTypeValue.startsWith("boundary=")) {
+          requestBatchBoundary = contentTypeValue.substring(9);
+        }
+      });
+    }
+
+    if (requestBatchBoundary === undefined) {
+      error = new StorageError(
+        400,
+        "InvalidHeaderValue",
+        "The value for one of the HTTP headers is not in the correct format.",
+        context.contextId!,
+        {
+          HeaderName: "Content-Type",
+          HeaderValue: contentType!
+        }
+      );
+    }
+    else {
+      const requestBody = await this.requestBodyToString(body);
+      const perRequestPrefix = `--${requestBatchBoundary}${HTTP_LINE_ENDING}`;
+      const batchRequestEnding = `--${requestBatchBoundary}--`
+      try {
+        subRequests = await this.parseSubRequests(
+          context.contextId!,
+          perRequestPrefix,
+          batchRequestEnding,
+          subRequestPathPrefix,
+          batchRequest,
+          requestBody);
+      } catch (err) {
+        if ((err instanceof MiddlewareError)
+          && err.hasOwnProperty("storageErrorCode")
+          && err.hasOwnProperty("storageErrorMessage")
+          && err.hasOwnProperty("storageRequestID")) {
+          error = err;
+        }
+        else {
+          error = new StorageError(
+            400,
+            "InvalidInput",
+            "One of the request inputs is not valid.",
+            context.contextId!
+          );
+        }
       }
-      else {
+
+      if (subRequests && subRequests.length > 256) {
         error = new StorageError(
           400,
-          "InvalidInput",
-          "One of the request inputs is not valid.",
+          "ExceedsMaxBatchRequestCount",
+          "The batch operation exceeds maximum number of allowed subrequests.",
           context.contextId!
         );
       }
-    }
-
-    const subResponses: BlobBatchSubResponse[] = [];
-    if (subRequests && subRequests.length > 256) {
-      error = new StorageError(
-        400,
-        "ExceedsMaxBatchRequestCount",
-        "The batch operation exceeds maximum number of allowed subrequests.",
-        context.contextId!
-      );
     }
 
     if (error) {
@@ -523,7 +572,10 @@ export class BlobBatchHandler {
       }
     }
 
-    return this.serializeSubResponse(perRequestPrefix, batchRequestEnding, subResponses);
+    return {
+      contentType: "multipart/mixed; boundary=" + responseBatchBoundary,
+      reponseBody: this.serializeSubResponse(perResponsePrefix, batchResponseEnding, subResponses)
+    };
   }
 
   private HandleOneSubRequest(request: IRequest,

@@ -125,20 +125,16 @@ export default class ServiceHandler extends BaseHandler
     options: Models.ServiceSubmitBatchOptionalParams,
     context: Context
   ): Promise<Models.ServiceSubmitBatchResponse> {
-    const blobServiceCtx = new BlobStorageContext(context);
-    const requestBatchBoundary = blobServiceCtx.request!.getHeader("content-type")!.split("=")[1];
-
     const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
       this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle);
 
-    const responseBodyString = await blobBatchHandler.submitBatch(body,
-      requestBatchBoundary,
+    const batchResponse = await blobBatchHandler.submitBatch(body,
       "",
       context.request!,
       context);
 
     const responseBody = new Readable();
-    responseBody.push(responseBodyString);
+    responseBody.push(batchResponse.reponseBody);
     responseBody.push(null);
 
     // No client request id defined in batch response, should refine swagger and regenerate from it.
@@ -147,7 +143,7 @@ export default class ServiceHandler extends BaseHandler
       statusCode: 202,
       requestId: context.contextId,
       version: BLOB_API_VERSION,
-      contentType: "multipart/mixed; boundary=" + requestBatchBoundary,
+      contentType: batchResponse.contentType,
       body: responseBody
     };
 
