@@ -338,19 +338,16 @@ export default class ContainerHandler extends BaseHandler
     options: Models.ContainerSubmitBatchOptionalParams,
     context: Context): Promise<Models.ContainerSubmitBatchResponse> {
     const blobServiceCtx = new BlobStorageContext(context);
-    const requestBatchBoundary = blobServiceCtx.request!.getHeader("content-type")!.split("=")[1];
-
     const blobBatchHandler = new BlobBatchHandler(this.accountDataStore, this.oauth,
       this.metadataStore, this.extentStore, this.logger, this.loose, this.disableProductStyle);
 
-    const responseBodyString = await blobBatchHandler.submitBatch(body,
-      requestBatchBoundary,
+    const batchResponse = await blobBatchHandler.submitBatch(body,
       blobServiceCtx.request!.getPath(),
       context.request!,
       context);
 
     const responseBody = new Readable();
-    responseBody.push(responseBodyString);
+    responseBody.push(batchResponse.reponseBody);
     responseBody.push(null);
 
     // No client request id defined in batch response, should refine swagger and regenerate from it.
@@ -359,7 +356,7 @@ export default class ContainerHandler extends BaseHandler
       statusCode: 202,
       requestId: context.contextId,
       version: BLOB_API_VERSION,
-      contentType: "multipart/mixed; boundary=" + requestBatchBoundary,
+      contentType: batchResponse.contentType,
       body: responseBody
     };
 
