@@ -807,10 +807,10 @@ Following files or folders may be created when initializing Azurite in selected 
 
 - `azurite_db_blob.json` Metadata file used by Azurite blob service. (No when starting Azurite against external database)
 - `azurite_db_blob_extent.json` Extent metadata file used by Azurite blob service. (No when starting Azurite against external database)
-- `blobstorage` Persisted bindary data by Azurite blob service.
+- `blobstorage` Persisted binary data by Azurite blob service.
 - `azurite_db_queue.json` Metadata file used by Azurite queue service. (No when starting Azurite against external database)
 - `azurite_db_queue_extent.json` Extent metadata file used by Azurite queue service. (No when starting Azurite against external database)
-- `queuestorage` Persisted bindary data by Azurite queue service.
+- `queuestorage` Persisted binary data by Azurite queue service.
 - `azurite_db_table.json` Metadata file used by Azurite table service.
 
 > Note. Delete above files and folders and restart Azurite to clean up Azurite. It will remove all data stored in Azurite!!
