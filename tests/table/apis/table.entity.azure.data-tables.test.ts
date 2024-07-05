@@ -224,7 +224,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       assert.notStrictEqual(
         result1259a.etag,
         undefined,
-        "Did not create entity correctly, etag weas null"
+        "Did not create entity correctly, etag was null"
       );
 
       const check1259a = await tableClient.getEntity<TestBooleanPropEntity>(
@@ -284,7 +284,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
       assert.notStrictEqual(
         result1259a.etag,
         undefined,
-        "Did not create entity correctly, etag weas null"
+        "Did not create entity correctly, etag was null"
       );
 
       const check1259a = await tableClient.getEntity<TestBooleanPropEntity>(
