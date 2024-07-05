@@ -295,7 +295,7 @@ describe("BlobAPIs", () => {
   it("delete should work for valid ifNoneMatch @loki @sql", async () => {
     const result = await blobClient.delete({
       conditions: {
-        ifNoneMatch: "unmatchetag"
+        ifNoneMatch: "unmatchedetag"
       }
     });
     assert.equal(
