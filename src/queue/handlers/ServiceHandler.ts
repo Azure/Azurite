@@ -82,7 +82,7 @@ export default class ServiceHandler extends BaseHandler
     const queueCtx = new QueueStorageContext(context);
     const accountName = queueCtx.account!;
 
-    // TODO: deserializor has a bug that when cors is undefined,
+    // TODO: deserializer has a bug that when cors is undefined,
     // it will serialize it to empty array instead of undefined
     const body = queueCtx.request!.getBody();
     const parsedBody = await parseXML(body || "");
