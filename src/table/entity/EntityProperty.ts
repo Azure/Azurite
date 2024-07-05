@@ -30,7 +30,7 @@ export function toAnnotationLevel(level: string): AnnotationLevel {
     case NO_METADATA_ACCEPT:
       return AnnotationLevel.NO;
     default:
-      throw TypeError(`Invalid OData annonation level ${level}.`);
+      throw TypeError(`Invalid OData annotation level ${level}.`);
   }
 }
 
