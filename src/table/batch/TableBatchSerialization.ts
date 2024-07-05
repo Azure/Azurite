@@ -286,7 +286,7 @@ export class TableBatchSerialization extends BatchSerialization {
    * @return {*}  {string}
    * @memberof TableBatchSerialization
    */
-  public serializeTablMergeEntityBatchResponse(
+  public serializeTableMergeEntityBatchResponse(
     request: BatchRequest,
     response: Models.TableMergeEntityResponse
   ): string {

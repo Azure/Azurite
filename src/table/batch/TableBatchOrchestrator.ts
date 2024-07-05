@@ -623,7 +623,7 @@ export default class TableBatchOrchestrator {
     );
 
     return {
-      __return: this.serialization.serializeTablMergeEntityBatchResponse(
+      __return: this.serialization.serializeTableMergeEntityBatchResponse(
         request,
         response
       ),
