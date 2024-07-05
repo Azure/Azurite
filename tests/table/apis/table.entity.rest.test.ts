@@ -699,7 +699,7 @@ describe("table Entity APIs REST tests", () => {
         restFunction: putToAzurite,
         expectedStatus: 204,
         expectSuccess: true,
-        errorMessage: "We should not fail PUT with with * If-Match"
+        errorMessage: "We should not fail PUT with * If-Match"
       },
       {
         name: "case 2 : Update Entity : PUT with old etag in If-Match.",
