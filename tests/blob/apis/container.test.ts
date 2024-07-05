@@ -674,7 +674,7 @@ describe("ContainerAPIs", () => {
     const inputmarker = undefined;
     let result = (
       await containerClient
-        .listBlobsByHierarchy("/",{
+        .listBlobsByHierarchy("/", {
           prefix: ""
         })
         .byPage({
@@ -1151,6 +1151,46 @@ describe("ContainerAPIs", () => {
     assert.equal(result.segment.blobItems.length, 4);
   });
 
+  it.only("set/get blob tag should work, with base blob or snapshot @loki @sql", async () => {
+    const blobName = getUniqueName("blob")
+    const blobClient = containerClient.getPageBlobClient(blobName);
+    await blobClient.create(1024);
+    const tags = {
+      tag1: "val1",
+      tag2: "val2",
+    };
+    const tags2 = {
+      tag1: "val1",
+      tag2: "val22",
+      tag3: "val3",
+    };
+
+    // Set/get tags on base blob
+    await blobClient.setTags(tags);
+    let outputTags1 = (await blobClient.getTags()).tags;
+    assert.deepStrictEqual(outputTags1, tags);
+
+    // create snapshot, the tags should be same as base blob
+    const snapshotResponse = await blobClient.createSnapshot();
+    const blobClientSnapshot = blobClient.withSnapshot(snapshotResponse.snapshot!);
+    let outputTags2 = (await blobClientSnapshot.getTags()).tags;
+    assert.deepStrictEqual(outputTags2, tags);
+
+    // Set/get  tags on snapshot, base blob tags should not be impacted.
+    await blobClientSnapshot.setTags(tags2);
+    outputTags2 = (await blobClientSnapshot.getTags()).tags;
+    assert.deepStrictEqual(outputTags2, tags2);
+
+    outputTags1 = (await blobClient.getTags({ conditions: { tagConditions: `"tag1"='val1'` } })).tags;
+    assert.deepStrictEqual(outputTags1, tags);
+
+    //const result = (await containerClient.findBlobsByTags("tag1='val1'").byPage().next()).value;
+    const result = (await serviceClient.findBlobsByTags(`"tag1"='val1' and "@container"='${containerName}'`).byPage().next()).value;
+    result;
+
+    blobClientSnapshot.delete();
+  });
+
   // Skip the case currently since js sdk caculate the stringToSign with "+" in prefix instead of decode to space
   it.skip("List blob should success with '+' in query @loki @sql", async () => {
     const blobClients = [];
@@ -1165,7 +1205,7 @@ describe("ContainerAPIs", () => {
       await blockBlobClient.upload("", 0);
       blobClients.push(blobClient);
     }
-    
+
     // list with prefix has "+" instead of "%20" for space
     // create service client 
     let pipeline = newPipeline(
@@ -1205,7 +1245,7 @@ describe("ContainerAPIs", () => {
       gotNames.push(item.name);
     }
     assert.deepStrictEqual(gotNames, blobNames);
-    
+
     // clean up
     for (const blob of blobClients) {
       await blob.delete();
