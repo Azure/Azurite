@@ -367,7 +367,7 @@ Queue:
 
 Table:
 
-- Supported basic level of OAuth autentication on Table service.
+- Supported basic level of OAuth authentication on Table service.
 - Removed extra CRLF from batch transaction response which caused issues for Microsoft.Azure.Cosmos.Table NuGet package.
 
 Table:
@@ -515,7 +515,7 @@ Blob:
 ## 2020.04 Version 3.7.0
 
 - Supported HTTPS endpoint. Specific parameter `azurite --cert server.cert --key server.key` to enable HTTPS mode.
-- Supported basic level of OAuth autentication. Specific parameter `azurite --oauth basic` to enable OAuth autentication.
+- Supported basic level of OAuth authentication. Specific parameter `azurite --oauth basic` to enable OAuth authentication.
 
 Blob:
 
