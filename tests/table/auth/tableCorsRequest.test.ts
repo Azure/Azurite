@@ -405,7 +405,7 @@ describe("table Entity APIs test", () => {
     await serviceClientForOPTIONS.getProperties();
   });
 
-  it("OPTIONS request should work with matching rule containing Origion * @loki", async () => {
+  it("OPTIONS request should work with matching rule containing Origin * @loki", async () => {
     const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {

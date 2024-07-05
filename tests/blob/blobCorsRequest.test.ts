@@ -492,7 +492,7 @@ describe("Blob Cors requests test", () => {
     assert.ok(res._response.status === 200);
   });
 
-  it("OPTIONS request should work with matching rule containing Origion * @loki @sql", async () => {
+  it("OPTIONS request should work with matching rule containing Origin * @loki @sql", async () => {
     const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
