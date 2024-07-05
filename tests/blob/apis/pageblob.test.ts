@@ -68,10 +68,10 @@ describe("PageBlobAPIs", () => {
   });
 
   it("create with default parameters @loki", async () => {
-    const reuslt_create = await pageBlobClient.create(512);
+    const result_create = await pageBlobClient.create(512);
     assert.equal(
-      reuslt_create._response.request.headers.get("x-ms-client-request-id"),
-      reuslt_create.clientRequestId
+      result_create._response.request.headers.get("x-ms-client-request-id"),
+      result_create.clientRequestId
     );
 
     const result = await blobClient.download(0);
