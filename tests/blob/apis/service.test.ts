@@ -413,7 +413,7 @@ describe("ServiceAPIs", () => {
   });
   
   // fix issue 2382
-  it("ListContainers without include metadata should not return contaienr metadata. @loki @sql", async () => {
+  it("ListContainers without include metadata should not return container metadata. @loki @sql", async () => {
     const containerNamePrefix = getUniqueName("container");
     const containerName1 = `${containerNamePrefix}x1`;
     const containerName2 = `${containerNamePrefix}x2`;
