@@ -12,7 +12,7 @@ import BatchErrorConstants from "./BatchErrorConstants";
 /*
  * Represents a request in the context of batch operations.
  * ToDo: Requires validation against all operation types
- * Currently several funcitons of the interface are not implemented
+ * Currently several functions of the interface are not implemented
  * @export
  * @class BatchRequest
  * @implements {IRequest}
