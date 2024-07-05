@@ -51,7 +51,7 @@ Select and start Visual Studio Code debug configuration "Run Extension".
 
 For every newly implemented REST API and handler, there should be at least coverage from 1 unit / integration test case.
 
-We also provide a predefined Visual Studio Code debug configuration "Current Mocha", allowing you to execute mocha tests within the currently opended file.
+We also provide a predefined Visual Studio Code debug configuration "Current Mocha", allowing you to execute mocha tests within the currently opened file.
 
 Or manually execute all test cases:
 
