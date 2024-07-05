@@ -58,7 +58,7 @@ if (!(args as any).config.name) {
     .option(["", "pwd"], "Optional. Password for .pfx file")
     .option(
       ["", "disableProductStyleUrl"],
-      "Optional. Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri."
+      "Optional. Disable getting account name from the host of request URI, always get account name from the first path segment of request URI."
     );
 
   (args as any).config.name = "azurite-blob";
@@ -125,7 +125,7 @@ export default class BlobEnvironment implements IBlobEnvironment {
     if (this.flags.disableProductStyleUrl !== undefined) {
       return true;
     }
-    // default is false which will try to get account name from request Uri hostname
+    // default is false which will try to get account name from request URI hostname
     return false;
   }
 

@@ -199,7 +199,7 @@ Following extension configurations are supported:
 - `azurite.pwd` PFX cert password. Required when `azurite.cert` points to a PFX file.
 - `azurite.oauth` OAuth oauthentication level. Candidate level values: `basic`.
 - `azurite.skipApiVersionCheck` Skip the request API version check, by default false.
-- `azurite.disableProductStyleUrl` Force parsing storage account name from request Uri path, instead of from request Uri host.
+- `azurite.disableProductStyleUrl` Force parsing storage account name from request URI path, instead of from request URI host.
 - `azurite.inMemoryPersistence` Disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
 - `azurite.extentMemoryLimit` When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of megabytes. This does not limit blob, queue, or table metadata. Defaults to 50% of total memory.
 
@@ -259,7 +259,7 @@ Above command will try to start Azurite image with configurations:
 
 `--skipApiVersionCheck` skip the request API version check.
 
-`--disableProductStyleUrl` force parsing storage account name from request Uri path, instead of from request Uri host.
+`--disableProductStyleUrl` force parsing storage account name from request URI path, instead of from request URI host.
 
 > If you use customized azurite parameters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 
@@ -428,7 +428,7 @@ Optional. By default Azurite will check the request API version is valid API ver
 
 ### Disable Product Style Url
 
-Optional. When using FQDN instead of IP in request Uri host, by default Azurite will parse storage account name from request Uri host. Force parsing storage account name from request Uri path by:
+Optional. When using FQDN instead of IP in request URI host, by default Azurite will parse storage account name from request URI host. Force parsing storage account name from request URI path by:
 
 ```cmd
 --disableProductStyleUrl
@@ -893,7 +893,7 @@ DefaultEndpointsProtocol=http;AccountName=account1;AccountKey=key1;BlobEndpoint=
 
 > Note. When use Production-style URL to access Azurite, by default the account name should be the host name in FQDN, like "<http://devstoreaccount1.blob.localhost:10000/container>". To use Production-style URL with account name in URL path, like "<http://foo.bar.com:10000/devstoreaccount1/container>", please start Azurite with `--disableProductStyleUrl`.
 
-> Note. If use "host.docker.internal" as request Uri host, like "<http://host.docker.internal:10000/devstoreaccount1/container>", Azurite will always get account name from request Uri path, not matter Azurite start with `--disableProductStyleUrl` or not.
+> Note. If use "host.docker.internal" as request URI host, like "<http://host.docker.internal:10000/devstoreaccount1/container>", Azurite will always get account name from request URI path, not matter Azurite start with `--disableProductStyleUrl` or not.
 
 ### Scalability & Performance
 

@@ -72,7 +72,7 @@ Above command will try to start Azurite image with configurations:
 
 `--skipApiVersionCheck` skip the request API version check.
 
-`--disableProductStyleUrl` force parsing storage account name from request Uri path, instead of from request Uri host.
+`--disableProductStyleUrl` force parsing storage account name from request URI path, instead of from request URI host.
 
 > If you use customized azurite parameters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 

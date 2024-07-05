@@ -105,7 +105,7 @@ export default class QueueSharedKeyAuthenticator implements IAuthenticator {
 
     if (context.context.isSecondary && queueContext.authenticationPath?.indexOf(account) === 1)
     {
-      // JS/.net Track2 SDK will generate stringToSign from IP style Uri with "-secondary" in authenticationPath, so will also compare signature with this kind stringToSign
+      // JS/.net Track2 SDK will generate stringToSign from IP style URI with "-secondary" in authenticationPath, so will also compare signature with this kind stringToSign
       const stringToSign_secondary: string =
       headersToSign +
       this.getCanonicalizedResourceString(

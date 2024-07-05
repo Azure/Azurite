@@ -449,7 +449,7 @@ describe("ServiceAPIs", () => {
     );
   });
 
-  it("Get Account/Service Properties with Uri has suffix '/' after account name @loki @sql", async () => {
+  it("Get Account/Service Properties with URI has suffix '/' after account name @loki @sql", async () => {
     const baseURL1 = `http://${server.config.host}:${server.config.port}/devstoreaccount1/`;
     const serviceClient1 = new BlobServiceClient(
       baseURL1,

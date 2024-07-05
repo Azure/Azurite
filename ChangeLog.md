@@ -310,7 +310,7 @@ General:
 
 Blob:
 
-- Fixed issue that startCopyFromURL and copyFromURL API not respect `--disableProductStyleUrl` parameter in parse source Uri.
+- Fixed issue that startCopyFromURL and copyFromURL API not respect `--disableProductStyleUrl` parameter in parse source URI.
 
 Queue:
 
@@ -338,7 +338,7 @@ Table:
 General:
 
 - Bump up service API version to 2021-02-12
-- Fixed access to secondary location with IP style Uri from JS/.net SDK failure.
+- Fixed access to secondary location with IP style URI from JS/.net SDK failure.
 - Fixed an issue in Visual Studio Code extension, by changing the Location with relative path, from base on Visual Studio Code installation path, to base on the current opened workspace folder.
 
 Blob:
@@ -349,7 +349,7 @@ Blob:
 
 General:
 
-- Added new parameter `--disableProductStyleUrl`, to force parsing storage account from request Uri path, instead of from request Uri host.
+- Added new parameter `--disableProductStyleUrl`, to force parsing storage account from request URI path, instead of from request URI host.
 - Restored ability to connect to host.docker.internal.
 
 Blob:
@@ -359,7 +359,7 @@ Blob:
 - Added more allowed value to list blob request "include" query parameter:'tags', 'versions', 'deletedwithversions', 'immutabilitypolicy', 'legalhold', 'permissions'.
 - Added more allowed value to list container request "include" query parameter: 'deleted'.
 - Raised 416 when start range is bigger than blob length.
-- Fixed issue that duplicated decode rscd, rsce, rscl and rsct of SAS token in input request Uri.
+- Fixed issue that duplicated decode rscd, rsce, rscl and rsct of SAS token in input request URI.
 
 Queue:
 
@@ -426,7 +426,7 @@ Table:
 
 Blob:
 
-- Fixed list containers, get service properties or account properties API failure, when request Uri has a suffix '/' after account name.
+- Fixed list containers, get service properties or account properties API failure, when request URI has a suffix '/' after account name.
 - Fixed get system container failure.
 
 ## 2021.6 Version 3.13.0
