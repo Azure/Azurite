@@ -1903,7 +1903,7 @@ describe("BlobAPIs", () => {
     // TODO: implement the case later
   });
 
-  it("Break Lease on Infinite Lease, if give valid breakPeriod, should be broken after breadperiod @loki @sql", async () => {
+  it("Break Lease on Infinite Lease, if give valid breakPeriod, should be broken after breakperiod @loki @sql", async () => {
     // TODO: implement the case later
   });
 
