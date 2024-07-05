@@ -54,7 +54,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     this.createTablesCollection();
     this.createServicePropsCollection();
     await this.saveDBState();
-    this.finalizeInitializionState();
+    this.finalizeInitializationState();
   }
 
   /**
@@ -651,7 +651,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
    * @private
    * @memberof LokiTableMetadataStore
    */
-  private finalizeInitializionState() {
+  private finalizeInitializationState() {
     this.initialized = true;
     this.closed = false;
   }
