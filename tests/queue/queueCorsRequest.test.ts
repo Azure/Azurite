@@ -700,7 +700,7 @@ describe("Queue Cors requests test", () => {
     const serviceClientWithOrigin = new QueueServiceClient(baseURL, pipeline);
 
     const queueClientWithOrigin = serviceClientWithOrigin.getQueueClient(
-      "notexistcontainer"
+      "nonexistentcontainer"
     );
 
     try {

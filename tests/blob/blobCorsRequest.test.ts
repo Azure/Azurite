@@ -787,7 +787,7 @@ describe("Blob Cors requests test", () => {
     const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
     const containerClientWithOrigin =
-      serviceClientWithOrigin.getContainerClient("notexistcontainer");
+      serviceClientWithOrigin.getContainerClient("nonexistentcontainer");
 
     try {
       await containerClientWithOrigin.getProperties();
