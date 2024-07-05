@@ -952,7 +952,7 @@ Azurite V3 leverages a TypeScript server code generator based on Azure Storage R
 
 ### TypeScript
 
-Azurite V3 selected TypeScript as its' programming language, as this facilitates broad collaboration, whilst also ensuring quality.
+Azurite V3 selected TypeScript as its programming language, as this facilitates broad collaboration, whilst also ensuring quality.
 
 ### Features Scope
 
