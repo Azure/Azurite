@@ -51,7 +51,7 @@ describe("Query Parser", () => {
         expectedQuery: "(not (eq (id PartitionKey) \"test\"))"
       },
       {
-        name: "Wrapping an expresssion group",
+        name: "Wrapping an expression group",
         originalQuery: "not (PartitionKey lt 'Part2')",
         expectedQuery: "(not (lt (id PartitionKey) \"Part2\"))"
       }
