@@ -291,7 +291,7 @@ General:
 Table:
 
 - Fixed empty partition key and row key handling in batch write operations.
-- Fixed batch reponse for Go SDK, includes additional CRLF on closure of changesetresponse section.
+- Fixed batch response for Go SDK, includes additional CRLF on closure of changesetresponse section.
 - Removed query strings from Location and DataServiceId batch response headers.
 - Modified the deserialization of batch request for case that a raw / not url encoded % is present in the body.
 - Added additional tests and checks for table names on creation.
