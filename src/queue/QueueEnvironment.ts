@@ -30,7 +30,7 @@ args
   )
   .option(
     ["", "disableProductStyleUrl"],
-    "Optional. DDisable getting account name from the host of request Uri, always get account name from the first path segment of request Uri."
+    "Optional. Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri."
   )
   .option(
     ["", "skipApiVersionCheck"],
