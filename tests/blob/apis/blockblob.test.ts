@@ -164,7 +164,7 @@ describe("BlockBlobAPIs", () => {
     );
     await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
 
-    // TODO: azure/storage-blob 12.9.0 will fail on  list uncimmited blob from container, will skip following code until this is fix in SDK or Azurite
+    // TODO: azure/storage-blob 12.9.0 will fail on  list uncommitted blob from container, will skip following code until this is fix in SDK or Azurite
     // const listBlobResponse = await (
     //   await containerClient
     //     .listBlobsFlat({ includeUncommitedBlobs: true })
@@ -196,7 +196,7 @@ describe("BlockBlobAPIs", () => {
 
     await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
 
-    // TODO: azure/storage-blob 12.9.0 will fail on  list uncimmited blob from container, will skip following code until this is fix in SDK or Azurite
+    // TODO: azure/storage-blob 12.9.0 will fail on  list uncommitted blob from container, will skip following code until this is fix in SDK or Azurite
     // const listBlobResponse = (
     //   await containerClient
     //     .listBlobsFlat({ includeUncommitedBlobs: true })
