@@ -299,7 +299,7 @@ describe("table Entity APIs test : Issues", () => {
   });
 
   // from issue #1201
-  it("should allow the deletion of entities using empty string as the parition key, @loki", async () => {
+  it("should allow the deletion of entities using empty string as the partition key, @loki", async () => {
     const emptyPartitionKey = "";
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,

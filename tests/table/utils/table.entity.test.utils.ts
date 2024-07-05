@@ -134,7 +134,7 @@ export function createSecondaryConnectionStringForTest(dev: boolean): string {
 }
 
 /**
- * return a unique parition key for data-tables tests
+ * return a unique partition key for data-tables tests
  *
  * @export
  * @return {*}  {string}
