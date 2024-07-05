@@ -990,7 +990,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       encodedIfMatch === "*" ||
       (encodedIfMatch !== undefined && encodedEtag === encodedIfMatch)
     ) {
-      const mergedDEntity: Entity = {
+      const mergedEntity: Entity = {
         ...doc,
         ...entity,
         properties: {
@@ -1007,14 +1007,14 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           }
 
           const value = entity.properties[key];
-          mergedDEntity.properties[key] = value;
+          mergedEntity.properties[key] = value;
 
-          this.filterOdataMetaData(entity, key, mergedDEntity);
+          this.filterOdataMetaData(entity, key, mergedEntity);
         }
       }
 
-      tableEntityCollection.update(mergedDEntity);
-      return mergedDEntity;
+      tableEntityCollection.update(mergedEntity);
+      return mergedEntity;
     }
     throw StorageErrorFactory.getPreconditionFailed(context);
   }
@@ -1022,13 +1022,13 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   private filterOdataMetaData(
     entity: Entity,
     key: string,
-    mergedDEntity: Entity
+    mergedEntity: Entity
   ) {
     if (entity.properties[`${key}${ODATA_TYPE}`] !== undefined) {
-      mergedDEntity.properties[`${key}${ODATA_TYPE}`] =
+      mergedEntity.properties[`${key}${ODATA_TYPE}`] =
         entity.properties[`${key}${ODATA_TYPE}`];
     } else {
-      delete mergedDEntity.properties[`${key}${ODATA_TYPE}`];
+      delete mergedEntity.properties[`${key}${ODATA_TYPE}`];
     }
   }
 
