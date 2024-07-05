@@ -311,7 +311,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
       name: queue.name
     });
 
-    // Check whether a conflication exists if there exist a queue with the given name.
+    // Check whether a conflict exists if there exist a queue with the given name.
     // If the exist queue has the same metadata as the given queue, then return 204, else throw 409 error.
     if (doc) {
       const docMeta = doc.metadata;
