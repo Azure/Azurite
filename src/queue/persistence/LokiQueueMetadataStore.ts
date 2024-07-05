@@ -348,7 +348,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
         }
       }
 
-      // Check if all the matadata of exist queue is the same as another.
+      // Check if all the metadata of exist queue is the same as another.
       for (const item in docMeta) {
         if (docMeta.hasOwnProperty(item)) {
           const queueMetaName = nameMap.get(item.toLowerCase());
