@@ -827,7 +827,7 @@ Optionally, you could modify your hosts file, to access accounts with production
 
 ### Endpoint & Connection URL
 
-The service endpoints for Azurite are different from those of an Azure storage account. The difference is because Azuite runs on local computer, and normally, no DNS resolves address to local.
+The service endpoints for Azurite are different from those of an Azure storage account. The difference is because Azurite runs on local computer, and normally, no DNS resolves address to local.
 
 When you address a resource in an Azure storage account, use the following scheme. The account name is part of the URI host name, and the resource being addressed is part of the URI path:
 
@@ -843,7 +843,7 @@ https://myaccount.blob.core.windows.net/mycontainer/myblob.txt
 
 #### IP-style URL
 
-However, because Azuite runs on local computer, it use IP-style URI by default, and the account name is part of the URI path instead of the host name. Use the following URI format for a resource in Azurite:
+However, because Azurite runs on local computer, it use IP-style URI by default, and the account name is part of the URI path instead of the host name. Use the following URI format for a resource in Azurite:
 
 ```
 http://<local-machine-address>:<port>/<account-name>/<resource-path>
