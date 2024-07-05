@@ -41,7 +41,7 @@ export default function createStorageBlobContextMiddleware(
  * @param {Response} res An express compatible Response object
  * @param {NextFunction} next An express middleware next callback
  */
-export function internnalBlobStorageContextMiddleware(
+export function internalBlobStorageContextMiddleware(
   blobContext: BlobStorageContext,
   req: IRequest,
   res: IResponse,

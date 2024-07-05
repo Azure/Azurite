@@ -25,7 +25,7 @@ import HandlerMiddlewareFactory from "../generated/middleware/HandlerMiddlewareF
 import serializerMiddleware from "../generated/middleware/serializer.middleware";
 import ILogger from "../generated/utils/ILogger";
 import AuthenticationMiddlewareFactory from "../middlewares/AuthenticationMiddlewareFactory";
-import { internnalBlobStorageContextMiddleware } from "../middlewares/blobStorageContext.middleware";
+import { internalBlobStorageContextMiddleware } from "../middlewares/blobStorageContext.middleware";
 import IBlobMetadataStore from "../persistence/IBlobMetadataStore";
 import { DEFAULT_CONTEXT_PATH, HTTP_HEADER_DELIMITER, HTTP_LINE_ENDING } from "../utils/constants";
 import AppendBlobHandler from "./AppendBlobHandler";
@@ -61,7 +61,7 @@ export class BlobBatchHandler {
   ) {
     const subRequestContextMiddleware = (req: IRequest, res: IResponse, locals: any, next: SubRequestNextFunction) => {
       const urlbuilder = URLBuilder.parse(req.getUrl());
-      internnalBlobStorageContextMiddleware(
+      internalBlobStorageContextMiddleware(
         new BlobStorageContext(locals, DEFAULT_CONTEXT_PATH),
         req,
         res,
