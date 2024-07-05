@@ -111,7 +111,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   public async createTable(context: Context, tableModel: Table): Promise<void> {
     // Check for table entry in the table registry collection
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
-    // Azure Storage Service is case insensitive
+    // Azure Storage Service is case-insensitive
     tableModel.table = tableModel.table;
     this.checkIfTableExists(coll, tableModel, context);
 
@@ -136,7 +136,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   ): Promise<void> {
     // remove table reference from collection registry
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
-    // Azure Storage Service is case insensitive
+    // Azure Storage Service is case-insensitive
     const tableLower = table.toLocaleLowerCase();
     const doc = coll.findOne({
       account,
@@ -165,7 +165,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     tableACL?: TableACL
   ): Promise<void> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
-    // Azure Storage Service is case insensitive
+    // Azure Storage Service is case-insensitive
     const tableLower = table.toLocaleLowerCase();
     const persistedTable = coll.findOne({
       account,
@@ -195,7 +195,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     context: Context
   ): Promise<Table> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
-    // Azure Storage Service is case insensitive
+    // Azure Storage Service is case-insensitive
     const doc = coll.findOne({
       account,
       table: { $regex: [`^${table}$`, "i"] }
@@ -806,7 +806,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
 
   /**
    * Gets the collection of entites for a specific table.
-   * Ensures that table name is case insensitive.
+   * Ensures that table name is case-insensitive.
    *
    * @private
    * @param {string} account

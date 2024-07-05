@@ -354,7 +354,7 @@ General:
 
 Blob:
 
-- Fixed list blob API "include" query parameter not work when not lower case, by make it case insensitive.
+- Fixed list blob API "include" query parameter not work when not lower case, by make it case-insensitive.
 - Supported list container/blob with "include" query parameter as empty string.
 - Added more allowed value to list blob request "include" query parameter:'tags', 'versions', 'deletedwithversions', 'immutabilitypolicy', 'legalhold', 'permissions'.
 - Added more allowed value to list container request "include" query parameter: 'deleted'.
