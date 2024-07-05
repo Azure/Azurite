@@ -4,14 +4,14 @@ import { SendRequest, PipelineRequest, PipelineResponse } from "@azure/core-rest
 export default class OPTIONSRequestPolicy {
   // Constructor to accept parameters
   private origin: string | undefined;
-  private requstMethod: string | undefined;
+  private requestMethod: string | undefined;
   private requestHeaders: string | undefined;
   name: string;
 
-  constructor(name: string, origin?: string, requstMethod?: string, requestHeaders?: string) {
+  constructor(name: string, origin?: string, requestMethod?: string, requestHeaders?: string) {
     this.name = name;
     this.origin = origin;
-    this.requstMethod = requstMethod;
+    this.requestMethod = requestMethod;
     this.requestHeaders = requestHeaders;
   }
 
@@ -21,10 +21,10 @@ export default class OPTIONSRequestPolicy {
     if (this.origin !== undefined) {
       request.headers.set("Origin", `${this.origin}`);
     }
-    if (this.requstMethod !== undefined) {
+    if (this.requestMethod !== undefined) {
       request.headers.set(
         "Access-Control-Request-Method",
-        `${this.requstMethod}`
+        `${this.requestMethod}`
       );
     }
     if (this.requestHeaders !== undefined) {

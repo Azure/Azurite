@@ -352,7 +352,7 @@ describe("Blob Cors requests test", () => {
     // No match
     let origin = "test";
     let requestMethod = "GET";
-    let reqestHeaders = "head";
+    let requestHeaders = "head";
 
     let pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -366,7 +366,7 @@ describe("Blob Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     let serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
@@ -387,7 +387,7 @@ describe("Blob Cors requests test", () => {
     // Match first cors.
     origin = "test";
     requestMethod = "GET";
-    reqestHeaders = "header";
+    requestHeaders = "header";
 
     pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -401,7 +401,7 @@ describe("Blob Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
@@ -411,7 +411,7 @@ describe("Blob Cors requests test", () => {
     // Match second cors.
     origin = "test";
     requestMethod = "PUT";
-    reqestHeaders = "head";
+    requestHeaders = "head";
 
     pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -425,7 +425,7 @@ describe("Blob Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
@@ -435,7 +435,7 @@ describe("Blob Cors requests test", () => {
     // No match.
     origin = "test";
     requestMethod = "POST";
-    reqestHeaders = "hea";
+    requestHeaders = "hea";
 
     pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -449,7 +449,7 @@ describe("Blob Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 
@@ -470,7 +470,7 @@ describe("Blob Cors requests test", () => {
     // Match third cors.
     origin = "test";
     requestMethod = "POST";
-    reqestHeaders = "headerheader";
+    requestHeaders = "headerheader";
 
     pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -484,7 +484,7 @@ describe("Blob Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     serviceClientForOptions = new BlobServiceClient(baseURL, pipeline);
 

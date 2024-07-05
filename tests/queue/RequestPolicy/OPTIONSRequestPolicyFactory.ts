@@ -5,12 +5,12 @@ import { BaseRequestPolicy, WebResource } from "@azure/storage-queue";
 export default class OPTIONSRequestPolicyFactory {
   // Constructor to accept parameters
   private origin: string | undefined;
-  private requstMethod: string | undefined;
+  private requestMethod: string | undefined;
   private requestHeaders: string | undefined;
 
-  constructor(origin?: string, requstMethod?: string, requestHeaders?: string) {
+  constructor(origin?: string, requestMethod?: string, requestHeaders?: string) {
     this.origin = origin;
-    this.requstMethod = requstMethod;
+    this.requestMethod = requestMethod;
     this.requestHeaders = requestHeaders;
   }
 
@@ -20,7 +20,7 @@ export default class OPTIONSRequestPolicyFactory {
       nextPolicy,
       options,
       this.origin,
-      this.requstMethod,
+      this.requestMethod,
       this.requestHeaders
     );
   }
@@ -30,18 +30,18 @@ export default class OPTIONSRequestPolicyFactory {
 // tslint:disable-next-line: max-classes-per-file
 class OPTIONSRequestPolicy extends BaseRequestPolicy {
   private origin: string | undefined;
-  private requstMethod: string | undefined;
+  private requestMethod: string | undefined;
   private requestHeaders: string | undefined;
   constructor(
     nextPolicy: any,
     options: any,
     origin?: string,
-    requstMethod?: string,
+    requestMethod?: string,
     requestHeaders?: string
   ) {
     super(nextPolicy, options);
     this.origin = origin;
-    this.requstMethod = requstMethod;
+    this.requestMethod = requestMethod;
     this.requestHeaders = requestHeaders;
   }
 
@@ -53,10 +53,10 @@ class OPTIONSRequestPolicy extends BaseRequestPolicy {
     if (this.origin !== undefined) {
       request.headers.set("Origin", `${this.origin}`);
     }
-    if (this.requstMethod !== undefined) {
+    if (this.requestMethod !== undefined) {
       request.headers.set(
         "Access-Control-Request-Method",
-        `${this.requstMethod}`
+        `${this.requestMethod}`
       );
     }
     if (this.requestHeaders !== undefined) {
