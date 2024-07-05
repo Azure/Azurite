@@ -54,7 +54,7 @@ export class TableBatchSerialization extends BatchSerialization {
       subRequests = splitBody;
     }
 
-    // This goes through each operation in the the request and maps the content
+    // This goes through each operation in the request and maps the content
     // of the request by deserializing it into a BatchOperation Type
     const batchOperations: TableBatchOperation[] = subRequests.map(
       (subRequest) => {
