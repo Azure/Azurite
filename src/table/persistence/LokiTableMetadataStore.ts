@@ -805,7 +805,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   }
 
   /**
-   * Gets the collection of entites for a specific table.
+   * Gets the collection of entities for a specific table.
    * Ensures that table name is case-insensitive.
    *
    * @private
