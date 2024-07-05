@@ -351,7 +351,7 @@ export default class TableBatchOrchestrator {
    * Creates a clone of the context for the batch operation.
    * Because the context that we have will not work with the calls and needs
    * updating for batch operations.
-   * We use a deep clone, as each request needs to be treated seaprately.
+   * We use a deep clone, as each request needs to be treated separately.
    *
    * @private
    * @param {Context} context
