@@ -304,7 +304,7 @@ export default class BlockBlobHandler
       parsed = await parseXML(rawBody, true);
     } catch (err) {
       // return the 400(InvalidXmlDocument) error for issue 1955
-      throw StorageErrorFactory.getInvaidXmlDocument(context.contextId);
+      throw StorageErrorFactory.getInvalidXmlDocument(context.contextId);
     }
 
     // Validate selected block list

@@ -55,17 +55,6 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getInvaidXmlDocument(
-    contextID: string = defaultID
-  ): StorageError {
-    return new StorageError(
-      400,
-      "InvaidXmlDocument",
-      `XML specified is not syntactically valid.`,
-      contextID
-    );
-  }
-
   public static corsPreflightFailure(
     contextID: string = defaultID,
     additionalMessages?: { [key: string]: string }

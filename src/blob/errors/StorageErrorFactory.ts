@@ -818,12 +818,12 @@ export default class StorageErrorFactory {
     );
   }  
 
-  public static getInvaidXmlDocument(
+  public static getInvalidXmlDocument(
     contextID: string = ""
   ): StorageError {
     return new StorageError(
       400,
-      "InvaidXmlDocument",
+      "InvalidXmlDocument",
       `XML specified is not syntactically valid.`,
       contextID
     );
