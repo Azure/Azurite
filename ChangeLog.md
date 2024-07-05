@@ -248,7 +248,7 @@ General:
 
 Table:
 
-- Correctly responds with status 202 on merge with non-existent entity.
+- Correctly responds with status 202 on merge with nonexistent entity.
 - Properly differentiate between upsert and update in batch merge and replace.
 - Added additional tests via raw REST tests.
 - Correctly deletes a table that is a substring of another table.
@@ -458,7 +458,7 @@ Table:
 - Preview of Table Service in npm package and docker image. (Visual Studio Code extension doesn't support Table Service in this release)
 - Allow empty RowKey in an entity.
 - Fix etag format to be aligned with Azure server.
-- Fix delete none exist table error code and error message, to be aligned with Azure server.
+- Fix delete nonexistent table error code and error message, to be aligned with Azure server.
 - Convert entity properties with type "Edm.DateTime" to UTC time, to be aligned with Azure server.
 - Support Batch API.
 - Allow complex RowKey and PartitionKey in batch API.
@@ -502,7 +502,7 @@ Blob:
 - Add support for async copy blobs on sql metadata store.
 - Add support for blob syncCopyFromURL within same Azurite instance on loki metadata store.
 - Allow mixed case characters for blob metadata prefix.
-- Fix SqlBlobMetadataStore.getBlockList, to make it fail for non-existent blobs.
+- Fix SqlBlobMetadataStore.getBlockList, to make it fail for nonexistent blobs.
 
 ## 2020.07 Version 3.8.0
 

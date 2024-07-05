@@ -343,7 +343,7 @@ describe("table Entity APIs REST tests", () => {
     assert.strictEqual(
       notExist,
       1,
-      "We did not get the expected non-existent error."
+      "We did not get the expected nonexistent error."
     );
   });
 

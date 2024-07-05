@@ -529,7 +529,7 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
   });
 
-  it("getBlockList for non-existent blob @loki @sql", async () => {
+  it("getBlockList for nonexistent blob @loki @sql", async () => {
     try {
       await blockBlobClient.getBlockList("committed");
     } catch (error) {
@@ -539,7 +539,7 @@ describe("BlockBlobAPIs", () => {
     assert.fail();
   });
 
-  it("getBlockList for non-existent container @loki @sql", async () => {
+  it("getBlockList for nonexistent container @loki @sql", async () => {
     const fakeContainer = getUniqueName("container");
     const fakeContainerClient = serviceClient.getContainerClient(fakeContainer);
     const fakeBlobClient = fakeContainerClient.getBlobClient(blobName);

@@ -1468,7 +1468,7 @@ export default class LokiBlobMetadataStore
       undefined,
       context,
       false
-    ); // This may return an uncommitted blob, or undefined for an unexist blob
+    ); // This may return an uncommitted blob, or undefined for an nonexistent blob
 
     validateWriteConditions(context, options.modifiedAccessConditions, doc);
 
@@ -1518,7 +1518,7 @@ export default class LokiBlobMetadataStore
       undefined,
       context,
       false
-    ); // This may return an uncommitted blob, or undefined for an unexist blob
+    ); // This may return an uncommitted blob, or undefined for an nonexistent blob
 
     validateWriteConditions(context, options.modifiedAccessConditions, doc);
 
@@ -1568,7 +1568,7 @@ export default class LokiBlobMetadataStore
       undefined,
       context,
       false
-    ); // This may return an uncommitted blob, or undefined for an unexist blob
+    ); // This may return an uncommitted blob, or undefined for an nonexistent blob
 
     validateWriteConditions(context, options.modifiedAccessConditions, doc);
 
@@ -1620,7 +1620,7 @@ export default class LokiBlobMetadataStore
       undefined,
       context,
       false
-    ); // This may return an uncommitted blob, or undefined for an unexist blob
+    ); // This may return an uncommitted blob, or undefined for an nonexistent blob
 
     validateWriteConditions(context, options.modifiedAccessConditions, doc);
 
@@ -1670,7 +1670,7 @@ export default class LokiBlobMetadataStore
       undefined,
       context,
       false
-    ); // This may return an uncommitted blob, or undefined for an unexist blob
+    ); // This may return an uncommitted blob, or undefined for an nonexistent blob
 
     validateWriteConditions(context, options.modifiedAccessConditions, doc);
 

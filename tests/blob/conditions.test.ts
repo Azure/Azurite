@@ -627,7 +627,7 @@ describe("ReadConditionalHeadersValidator for exist resource", () => {
   });
 });
 
-describe("ReadConditionalHeadersValidator for unexist resource", () => {
+describe("ReadConditionalHeadersValidator for nonexistent resource", () => {
   it("Should return 412 Precondition Failed for any ifMatch @loki @sql", () => {
     const validator = new ReadConditionalHeadersValidator();
     const modifiedAccessConditions = {
@@ -693,7 +693,7 @@ describe("ReadConditionalHeadersValidator for unexist resource", () => {
   });
 });
 
-describe("WriteConditionalHeadersValidator for unexist resource", () => {
+describe("WriteConditionalHeadersValidator for nonexistent resource", () => {
   it("Should throw 400 Bad Request for invalid combinations conditional headers @loki @sql", () => {
     const validator = new WriteConditionalHeadersValidator();
     const modifiedAccessConditions = {
