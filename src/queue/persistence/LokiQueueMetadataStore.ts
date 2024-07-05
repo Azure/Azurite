@@ -293,7 +293,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
 
   /**
    * Create a queue in persistency layer.
-   * Return 201 if create a new one, 204 if a same one exist, 409 error if a conflit one exist.
+   * Return 201 if create a new one, 204 if a same one exist, 409 error if a conflicting one exist.
    * @see https://docs.microsoft.com/en-us/rest/api/storageservices/create-queue4
    *
    * @param {QueueModel} queue
