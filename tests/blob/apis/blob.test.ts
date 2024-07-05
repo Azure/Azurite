@@ -1711,7 +1711,7 @@ describe("BlobAPIs", () => {
     let blockBlobClient1 = containerClient.getBlockBlobClient(blockBlobName1);
     await blockBlobClient1.upload(content, content.length);
     
-    // tag acount should <= 10
+    // tag count should <= 10
     const tooManyTags = {
       tag1: "val1",
       tag2: "val2",
