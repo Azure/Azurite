@@ -390,13 +390,13 @@ Optional. By default Azurite will listen on HTTP protocol. Provide a PEM or PFX 
 --cert path/server.pem
 ```
 
-When `--cert` is provided for a PEM file, must provide coresponding `--key`.
+When `--cert` is provided for a PEM file, must provide corresponding `--key`.
 
 ```cmd
 --key path/key.pem
 ```
 
-When `--cert` is provided for a PFX file, must provide coresponding `--pwd`
+When `--cert` is provided for a PFX file, must provide corresponding `--pwd`
 
 ```cmd
 --pwd pfxpassword
