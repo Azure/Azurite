@@ -5,8 +5,8 @@ import Context from "../generated/Context";
 import IServiceHandler from "../generated/handlers/IServiceHandler";
 import { parseXML } from "../generated/utils/xml";
 import {
-  LIST_QUEUE_MAXRESSULTS_MAX,
-  LIST_QUEUE_MAXRESSULTS_MIN,
+  LIST_QUEUE_MAXRESULTS_MAX,
+  LIST_QUEUE_MAXRESULTS_MIN,
   QUEUE_API_VERSION
 } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
@@ -204,16 +204,16 @@ export default class ServiceHandler extends BaseHandler
     let maxresults = this.LIST_QUEUES_MAX_RESULTS_DEFAULT;
     if (options.maxresults !== undefined) {
       if (
-        options.maxresults < LIST_QUEUE_MAXRESSULTS_MIN ||
-        options.maxresults > LIST_QUEUE_MAXRESSULTS_MAX
+        options.maxresults < LIST_QUEUE_MAXRESULTS_MIN ||
+        options.maxresults > LIST_QUEUE_MAXRESULTS_MAX
       ) {
         throw StorageErrorFactory.getOutOfRangeQueryParameterValue(
           context.contextID,
           {
             QueryParameterName: "maxresults",
             QueryParameterValue: `${options.maxresults}`,
-            MinimumAllowed: `${LIST_QUEUE_MAXRESSULTS_MIN}`,
-            MaximumAllowed: `${LIST_QUEUE_MAXRESSULTS_MAX}`
+            MinimumAllowed: `${LIST_QUEUE_MAXRESULTS_MIN}`,
+            MaximumAllowed: `${LIST_QUEUE_MAXRESULTS_MAX}`
           }
         );
       }
