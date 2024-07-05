@@ -1151,7 +1151,7 @@ describe("ContainerAPIs", () => {
     assert.equal(result.segment.blobItems.length, 4);
   });
 
-  // Skip the case currently since js sdk caculate the stringToSign with "+" in prefix instead of decode to space
+  // Skip the case currently since js sdk calculate the stringToSign with "+" in prefix instead of decode to space
   it.skip("List blob should success with '+' in query @loki @sql", async () => {
     const blobClients = [];
     let blobNames: Array<string> = [
