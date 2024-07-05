@@ -138,7 +138,7 @@ export default class Environment implements IEnvironment {
     if (this.flags.skipApiVersionCheck !== undefined) {
       return true;
     }
-    // default is false which will check API veresion
+    // default is false which will check API version
     return false;
   }
 

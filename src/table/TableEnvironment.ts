@@ -93,7 +93,7 @@ export default class TableEnvironment implements ITableEnvironment {
     if (this.flags.skipApiVersionCheck !== undefined) {
       return true;
     }
-    // default is false which will check API veresion
+    // default is false which will check API version
     return false;
   }
 
