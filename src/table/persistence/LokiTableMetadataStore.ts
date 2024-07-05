@@ -607,7 +607,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       this.transactionRollbackTheseEntities.length > 0 ||
       this.transactionDeleteTheseEntities.length > 0
     ) {
-      throw new Error("Transaction Overlapp!");
+      throw new Error("Transaction Overlap!");
     }
   }
 
