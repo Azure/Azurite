@@ -458,7 +458,7 @@ Table:
 - Preview of Table Service in npm package and docker image. (Visual Studio Code extension doesn't support Table Service in this release)
 - Allow empty RowKey in an entity.
 - Fix etag format to be aligned with Azure server.
-- Fix delet none exist table error code and error message, to be aligned with Azure server.
+- Fix delete none exist table error code and error message, to be aligned with Azure server.
 - Convert entity properties with type "Edm.DateTime" to UTC time, to be aligned with Azure server.
 - Support Batch API.
 - Allow complex RowKey and PartitionKey in batch API.

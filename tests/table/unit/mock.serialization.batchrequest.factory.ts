@@ -23,7 +23,7 @@ export default class SerializationObjectForBatchRequestFactory {
     return mockRequest;
   }
 
-  public static GetBatchRequestForSingleDeletetResponseMock(): BatchRequest {
+  public static GetBatchRequestForSingleDeleteResponseMock(): BatchRequest {
     const mockRequest = new BatchRequest(
       SerializationBatchOperationFactory.GetBatchOperationMockForDeleteSingleEntity(
         SerializationResponseMockStrings.EmptyHeaderMock
