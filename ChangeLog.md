@@ -104,7 +104,7 @@ Table:
 
 General:
 
-- Updated examples of setting Customized Storage Accounts & Keys in enviroment varialbe.
+- Updated examples of setting Customized Storage Accounts & Keys in enviroment variable.
 - Bump up service API version to 2023-08-03
 
 Blob:
