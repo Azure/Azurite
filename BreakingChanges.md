@@ -10,8 +10,8 @@
 
 ## 2021.9 Version 3.14.2
 
-- [Breaking] Remove the support of DNS name with mutiple blocks but without account name, like "http://foo.bar.com:10000/devstoreaccount1/container".
-  - When use DNS name with mutiple blocks, storage account name must be in the first block, like "http://devstoreaccount1.blob.localhost:10000/container"
+- [Breaking] Remove the support of DNS name with multiple blocks but without account name, like "http://foo.bar.com:10000/devstoreaccount1/container".
+  - When use DNS name with multiple blocks, storage account name must be in the first block, like "http://devstoreaccount1.blob.localhost:10000/container"
 
 ## 2019.12 Version 3.4.0
 

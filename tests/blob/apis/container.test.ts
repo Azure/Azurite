@@ -1121,7 +1121,7 @@ describe("ContainerAPIs", () => {
     assert.ok(result);
     assert.equal(result.segment.blobItems.length, 4);
 
-    // list with  mutiple include
+    // list with multiple include
     // create container client for 
     pipeline = newPipeline(
       new AnonymousCredential(),
@@ -1138,7 +1138,7 @@ describe("ContainerAPIs", () => {
 
     ContainerClientForOptions = serviceClientForOptions.getContainerClient(containerName);
 
-    // list blob with  mutiple include
+    // list blob with  multiple include
     result = (
       await ContainerClientForOptions
         .listBlobsFlat({
