@@ -632,7 +632,7 @@ describe("BlockBlobAPIs", () => {
 
     try {
       await destBlobClient.beginCopyFromURL(sourceURLWithoutPermission);
-      assert.fail("Copy without required permision should fail");
+      assert.fail("Copy without required permission should fail");
     }
     catch (ex) {
       assert.deepStrictEqual(ex.statusCode, 403);
