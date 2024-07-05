@@ -68,7 +68,7 @@ export function createTableServerForTestHttps(): TableServer {
  * @return {*}  {TableServer}
  */
 export function createTableServerForQueryTestHttps(): TableServer {
-  // we need a unique name for the pipieline tests which
+  // we need a unique name for the pipeline tests which
   // all run on the same VM.
   const uniqueDbName = getUniqueName("querydb");
   const uniqueDBpath = "./" + uniqueDbName + ".json";
