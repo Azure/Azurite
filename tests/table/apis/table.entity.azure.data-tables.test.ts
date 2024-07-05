@@ -384,7 +384,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   });
 
   // https://github.com/Azure/Azurite/issues/1286
-  it("08. Should update Etags with sufficient granualrity, @loki", async () => {
+  it("08. Should update Etags with sufficient granularity, @loki", async () => {
     const tableClient = createAzureDataTablesClient(
       testLocalAzuriteInstance,
       getUniqueName("etags")
