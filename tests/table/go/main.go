@@ -18,7 +18,7 @@ insert some entities as a batch, and query the table for those entities.
 This is to reproduce and ensure that we have not introduced any MIME Serialization bugs for
 the Azure Go SDK.  
 I use the modified samples from the SDK and the Go SDK team to create this test and validate
-the behvaior of Azurite:
+the behavior of Azurite:
 https://github.com/Azure/azure-sdk-for-go/tree/sdk/data/aztables/v1.0.1/sdk/data/aztables/
 */
 func main() {
