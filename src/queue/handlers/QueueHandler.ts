@@ -289,7 +289,7 @@ export default class QueueHandler extends BaseHandler implements IQueueHandler {
   }
 
   /**
-   * Parse and retrive the original metadata name headers array to preserve its case.
+   * Parse and retrieve the original metadata name headers array to preserve its case.
    *
    * @private
    * @param {({ [propertyName: string]: string } | undefined)} reqMetadata

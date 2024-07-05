@@ -179,7 +179,7 @@ export function getUTF8ByteSize(text: string): number {
 }
 
 /**
- * Retrive the value from XML body without ignoring the empty characters.
+ * Retrieve the value from XML body without ignoring the empty characters.
  *
  * @export
  * @param {string} param
