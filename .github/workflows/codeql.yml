@@ -1,5 +1,9 @@
 name: "Code scanning - action"
 
+permissions:
+  contents: read
+  security-events: write
+
 on:
   pull_request:
   schedule:
