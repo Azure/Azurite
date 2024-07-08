@@ -1383,7 +1383,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           ).validate(new BlobWriteLeaseValidator(leaseAccessConditions));
         }
 
-        // If the new block ID does not have same length with before uncommited block ID, return failure.
+        // If the new block ID does not have same length with before uncommitted block ID, return failure.
         const existBlock = await BlocksModel.findOne({
           attributes: ["blockName"],
           where: {

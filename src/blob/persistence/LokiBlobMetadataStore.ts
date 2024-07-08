@@ -1193,7 +1193,7 @@ export default class LokiBlobMetadataStore
 
     validateReadConditions(context, modifiedAccessConditions, doc);
 
-    // When block blob don't have commited block, should return 404
+    // When block blob don't have committed block, should return 404
     if (!doc) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId);
     }
@@ -2278,7 +2278,7 @@ export default class LokiBlobMetadataStore
 
     const coll = this.db.getCollection(this.BLOCKS_COLLECTION);
 
-    // If the new block ID does not have same length with before uncommited block ID, return failure.
+    // If the new block ID does not have same length with before uncommitted block ID, return failure.
     if (blobExist) {
       const existBlockDoc = coll.findOne({
         accountName: block.accountName,
@@ -3390,7 +3390,7 @@ export default class LokiBlobMetadataStore
       true
     );
 
-    // When block blob don't have commited block, should return 404
+    // When block blob don't have committed block, should return 404
     if (!doc) {
       throw StorageErrorFactory.getBlobNotFound(context.contextId);
     }

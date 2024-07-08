@@ -480,7 +480,7 @@ describe("BlockBlobAPIs", () => {
     await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
     await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
 
-    // Getproperties on a block blob without commited block will return 404
+    // Getproperties on a block blob without committed block will return 404
     let err;
     try {
       await blockBlobClient.getProperties();
@@ -489,7 +489,7 @@ describe("BlockBlobAPIs", () => {
     }
     assert.deepStrictEqual(err.statusCode, 404);
 
-    // Stage block with block Id length different than the exist uncommited blocks will fail with 400
+    // Stage block with block Id length different than the exist uncommitted blocks will fail with 400
     try {
       await blockBlobClient.stageBlock(base64encode("123"), body, body.length);
     } catch (error) {
