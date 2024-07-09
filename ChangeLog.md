@@ -13,6 +13,7 @@ Blob:
 - Fixed issue of download 0 size blob with range > 0 should report error. (issue #2410)
 - Fixed issue of download a blob range without header x-ms-range-get-content-md5, should not return content-md5. (issue #2409)
 - Fixed issue of list container without include=metadata should not clear container metadata on server. (issue #2416)
+- Supported x-ms-copy-source-tag-option in copy blob from Uri. (issue #2398)
 
 ## 2024.06 Version 3.31.0
 
