@@ -329,15 +329,15 @@ export default class ServiceHandler extends BaseHandler
         }
       }
     }
-    if (!includeMetadata) {
-      for (const container of containers[0]) {
-        container.metadata = undefined;
-      }
-    }
     // TODO: Need update list out container lease properties with ContainerHandler.updateLeaseAttributes()
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const res: Models.ServiceListContainersSegmentResponse = {
-      containerItems: containers[0],
+      containerItems: containers[0].map(item => {
+        return {
+          ...item,
+          metadata: includeMetadata ? item.metadata : undefined
+        };
+      }),
       maxResults: options.maxresults,
       nextMarker: `${containers[1] || ""}`,
       prefix: options.prefix,
