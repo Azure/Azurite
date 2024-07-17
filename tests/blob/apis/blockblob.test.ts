@@ -164,7 +164,7 @@ describe("BlockBlobAPIs", () => {
     );
     await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
 
-    // TODO: azure/storage-blob 12.9.0 will fail on  list uncimmited blob from container, will skip following code until this is fix in SDK or Azurite
+    // TODO: azure/storage-blob 12.9.0 will fail on  list uncommitted blob from container, will skip following code until this is fix in SDK or Azurite
     // const listBlobResponse = await (
     //   await containerClient
     //     .listBlobsFlat({ includeUncommitedBlobs: true })
@@ -196,7 +196,7 @@ describe("BlockBlobAPIs", () => {
 
     await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
 
-    // TODO: azure/storage-blob 12.9.0 will fail on  list uncimmited blob from container, will skip following code until this is fix in SDK or Azurite
+    // TODO: azure/storage-blob 12.9.0 will fail on  list uncommitted blob from container, will skip following code until this is fix in SDK or Azurite
     // const listBlobResponse = (
     //   await containerClient
     //     .listBlobsFlat({ includeUncommitedBlobs: true })
@@ -480,7 +480,7 @@ describe("BlockBlobAPIs", () => {
     await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
     await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
 
-    // Getproperties on a block blob without commited block will return 404
+    // Getproperties on a block blob without committed block will return 404
     let err;
     try {
       await blockBlobClient.getProperties();
@@ -489,7 +489,7 @@ describe("BlockBlobAPIs", () => {
     }
     assert.deepStrictEqual(err.statusCode, 404);
 
-    // Stage block with block Id length different than the exist uncommited blocks will fail with 400
+    // Stage block with block Id length different than the exist uncommitted blocks will fail with 400
     try {
       await blockBlobClient.stageBlock(base64encode("123"), body, body.length);
     } catch (error) {
@@ -529,7 +529,7 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.uncommittedBlocks![0].size, body.length);
   });
 
-  it("getBlockList for non-existent blob @loki @sql", async () => {
+  it("getBlockList for nonexistent blob @loki @sql", async () => {
     try {
       await blockBlobClient.getBlockList("committed");
     } catch (error) {
@@ -539,7 +539,7 @@ describe("BlockBlobAPIs", () => {
     assert.fail();
   });
 
-  it("getBlockList for non-existent container @loki @sql", async () => {
+  it("getBlockList for nonexistent container @loki @sql", async () => {
     const fakeContainer = getUniqueName("container");
     const fakeContainerClient = serviceClient.getContainerClient(fakeContainer);
     const fakeBlobClient = fakeContainerClient.getBlobClient(blobName);
@@ -632,7 +632,7 @@ describe("BlockBlobAPIs", () => {
 
     try {
       await destBlobClient.beginCopyFromURL(sourceURLWithoutPermission);
-      assert.fail("Copy without required permision should fail");
+      assert.fail("Copy without required permission should fail");
     }
     catch (ex) {
       assert.deepStrictEqual(ex.statusCode, 403);

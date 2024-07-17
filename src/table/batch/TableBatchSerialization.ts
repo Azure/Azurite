@@ -54,7 +54,7 @@ export class TableBatchSerialization extends BatchSerialization {
       subRequests = splitBody;
     }
 
-    // This goes through each operation in the the request and maps the content
+    // This goes through each operation in the request and maps the content
     // of the request by deserializing it into a BatchOperation Type
     const batchOperations: TableBatchOperation[] = subRequests.map(
       (subRequest) => {
@@ -286,7 +286,7 @@ export class TableBatchSerialization extends BatchSerialization {
    * @return {*}  {string}
    * @memberof TableBatchSerialization
    */
-  public serializeTablMergeEntityBatchResponse(
+  public serializeTableMergeEntityBatchResponse(
     request: BatchRequest,
     response: Models.TableMergeEntityResponse
   ): string {
@@ -597,24 +597,24 @@ export class TableBatchSerialization extends BatchSerialization {
     contentID: number,
     request: BatchRequest
   ): string {
-    let errorReponse = "";
+    let errorResponse = "";
     const odataError = err as StorageError;
     // Errors in batch processing generate Bad Request error
-    errorReponse = this.serializeHttpStatusCode(errorReponse, err.statusCode);
-    errorReponse += "Content-ID: " + contentID + "\r\n";
-    errorReponse = this.serializeDataServiceVersion(errorReponse, request);
+    errorResponse = this.serializeHttpStatusCode(errorResponse, err.statusCode);
+    errorResponse += "Content-ID: " + contentID + "\r\n";
+    errorResponse = this.serializeDataServiceVersion(errorResponse, request);
     // ToDo: Check if we need to observe other odata formats for errors
-    errorReponse +=
+    errorResponse +=
       "Content-Type: application/json;odata=minimalmetadata;charset=utf-8\r\n";
-    errorReponse += "\r\n";
+    errorResponse += "\r\n";
     // the odata error needs to include the index of the operation that fails
     // see sample from:
     // https://docs.microsoft.com/en-us/rest/api/storageservices/performing-entity-group-transactions#sample-error-response
     // In this case, we need to use a 0 based index for the failing operation
-    errorReponse +=
+    errorResponse +=
       odataError.body?.replace('"value":"', `\"value\":\"${contentID - 1}:`) +
       "\r\n";
-    return errorReponse;
+    return errorResponse;
   }
 
   /**
@@ -633,24 +633,24 @@ export class TableBatchSerialization extends BatchSerialization {
       "changeset",
       "changesetresponse"
     );
-    let errorReponse = "";
+    let errorResponse = "";
 
-    errorReponse += changesetBoundary + "\r\n";
+    errorResponse += changesetBoundary + "\r\n";
     // Errors in batch processing generate Bad Request error
-    errorReponse = this.serializeHttpStatusCode(errorReponse, 400);
-    errorReponse = this.SerializeXContentTypeOptions(errorReponse);
-    errorReponse = this.serializeDataServiceVersion(errorReponse, undefined);
+    errorResponse = this.serializeHttpStatusCode(errorResponse, 400);
+    errorResponse = this.SerializeXContentTypeOptions(errorResponse);
+    errorResponse = this.serializeDataServiceVersion(errorResponse, undefined);
     // ToDo: Serialize Content type etc
-    errorReponse +=
+    errorResponse +=
       "Content-Type: application/json;odata=minimalmetadata;charset=utf-8\r\n";
-    errorReponse += "\r\n";
+    errorResponse += "\r\n";
     let requestIdResponseString = "";
     if (requestId !== undefined) {
       requestIdResponseString = `RequestId:${requestId}\\n`;
     }
     // 2021-04-23T12:40:31.4944778
     const date = truncatedISO8061Date(new Date(), true);
-    errorReponse += `{\"odata.error\":{\"code\":\"InvalidInput\",\"message\":{\"lang\":\"en-US\",\"value\":\"${odataErrorString}\\n${requestIdResponseString}Time:${date}\"}}}\r\n`;
-    return errorReponse;
+    errorResponse += `{\"odata.error\":{\"code\":\"InvalidInput\",\"message\":{\"lang\":\"en-US\",\"value\":\"${odataErrorString}\\n${requestIdResponseString}Time:${date}\"}}}\r\n`;
+    return errorResponse;
   }
 }

@@ -98,7 +98,7 @@ describe("batch serialization unit tests, these are not the API integration test
     );
 
     const request =
-      SerializationObjectForBatchRequestFactory.GetBatchRequestForSingleDeletetResponseMock();
+      SerializationObjectForBatchRequestFactory.GetBatchRequestForSingleDeleteResponseMock();
     request.ingestOptionalParams(new BatchTableDeleteEntityOptionalParams());
 
     const serializedBatchOperationResponse =

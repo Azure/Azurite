@@ -30,7 +30,7 @@ args
   )
   .option(
     ["", "disableProductStyleUrl"],
-    "Optional. DDisable getting account name from the host of request Uri, always get account name from the first path segment of request Uri."
+    "Optional. Disable getting account name from the host of request URI, always get account name from the first path segment of request URI."
   )
   .option(
     ["", "skipApiVersionCheck"],
@@ -91,7 +91,7 @@ export default class QueueEnvironment implements IQueueEnvironment {
     if (this.flags.skipApiVersionCheck !== undefined) {
       return true;
     }
-    // default is false which will check API veresion
+    // default is false which will check API version
     return false;
   }
 
@@ -115,7 +115,7 @@ export default class QueueEnvironment implements IQueueEnvironment {
     if (this.flags.disableProductStyleUrl !== undefined) {
       return true;
     }
-    // default is false which will try to get account name from request Uri hostname
+    // default is false which will try to get account name from request URI hostname
     return false;
   }
 

@@ -41,7 +41,7 @@ export default function createStorageBlobContextMiddleware(
  * @param {Response} res An express compatible Response object
  * @param {NextFunction} next An express middleware next callback
  */
-export function internnalBlobStorageContextMiddleware(
+export function internalBlobStorageContextMiddleware(
   blobContext: BlobStorageContext,
   req: IRequest,
   res: IResponse,
@@ -121,7 +121,7 @@ export function internnalBlobStorageContextMiddleware(
     return next(handlerError);
   }
 
-  // validate conatainer name, when container name has value (not undefined or empty string)
+  // validate container name, when container name has value (not undefined or empty string)
   // skip validate system container
   if (container && !container.startsWith("$")) {
     validateContainerName(requestID, container);
@@ -224,7 +224,7 @@ export function blobStorageContextMiddleware(
     return next(handlerError);
   }
 
-  // validate conatainer name, when container name has value (not undefined or empty string)
+  // validate container name, when container name has value (not undefined or empty string)
   // skip validate system container
   if (container && !container.startsWith("$")) {
     validateContainerName(requestID, container);

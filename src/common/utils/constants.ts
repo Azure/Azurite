@@ -18,7 +18,7 @@ export const IP_REGEX = new RegExp("^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$");
 // Otherwise, try to extract string before first dot, as account name.
 export const NO_ACCOUNT_HOST_NAMES = new Set().add("host.docker.internal");
 
-// Use utf8mb4_bin instead of utf8mb4_general_ci to honor case sensitive
+// Use utf8mb4_bin instead of utf8mb4_general_ci to honor case-sensitive
 // https://dev.mysql.com/doc/refman/8.0/en/case-sensitivity.html
 export const DEFAULT_SQL_COLLATE = "utf8mb4_bin";
 export const DEFAULT_SQL_OPTIONS = {

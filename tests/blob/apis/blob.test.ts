@@ -73,7 +73,7 @@ describe("BlobAPIs", () => {
     await containerClient.delete();
   });
 
-  it("download with with default parameters @loki @sql", async () => {
+  it("download with default parameters @loki @sql", async () => {
     const result = await blobClient.download(0);
     assert.deepStrictEqual(await bodyToString(result, content.length), content);
     assert.equal(result.contentRange, undefined);
@@ -295,7 +295,7 @@ describe("BlobAPIs", () => {
   it("delete should work for valid ifNoneMatch @loki @sql", async () => {
     const result = await blobClient.delete({
       conditions: {
-        ifNoneMatch: "unmatchetag"
+        ifNoneMatch: "unmatchedetag"
       }
     });
     assert.equal(
@@ -1762,7 +1762,7 @@ describe("BlobAPIs", () => {
     let blockBlobClient1 = containerClient.getBlockBlobClient(blockBlobName1);
     await blockBlobClient1.upload(content, content.length);
     
-    // tag acount should <= 10
+    // tag count should <= 10
     const tooManyTags = {
       tag1: "val1",
       tag2: "val2",
@@ -1954,11 +1954,11 @@ describe("BlobAPIs", () => {
     // TODO: implement the case later
   });
 
-  it("Break Lease on Infinite Lease, if give valid breakPeriod, should be broken after breadperiod @loki @sql", async () => {
+  it("Break Lease on Infinite Lease, if give valid breakPeriod, should be broken after breakperiod @loki @sql", async () => {
     // TODO: implement the case later
   });
 
-  it("Break Lease on Infinite Lease, if not give breakPeriod, should be broken immidiately @loki @sql", async () => {
+  it("Break Lease on Infinite Lease, if not give breakPeriod, should be broken immediately @loki @sql", async () => {
     // TODO: implement the case later
   });
 

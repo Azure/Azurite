@@ -199,7 +199,7 @@ Following extension configurations are supported:
 - `azurite.pwd` PFX cert password. Required when `azurite.cert` points to a PFX file.
 - `azurite.oauth` OAuth oauthentication level. Candidate level values: `basic`.
 - `azurite.skipApiVersionCheck` Skip the request API version check, by default false.
-- `azurite.disableProductStyleUrl` Force parsing storage account name from request Uri path, instead of from request Uri host.
+- `azurite.disableProductStyleUrl` Force parsing storage account name from request URI path, instead of from request URI host.
 - `azurite.inMemoryPersistence` Disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
 - `azurite.extentMemoryLimit` When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of megabytes. This does not limit blob, queue, or table metadata. Defaults to 50% of total memory.
 
@@ -259,7 +259,7 @@ Above command will try to start Azurite image with configurations:
 
 `--skipApiVersionCheck` skip the request API version check.
 
-`--disableProductStyleUrl` force parsing storage account name from request Uri path, instead of from request Uri host.
+`--disableProductStyleUrl` force parsing storage account name from request URI path, instead of from request URI host.
 
 > If you use customized azurite parameters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 
@@ -390,13 +390,13 @@ Optional. By default Azurite will listen on HTTP protocol. Provide a PEM or PFX 
 --cert path/server.pem
 ```
 
-When `--cert` is provided for a PEM file, must provide coresponding `--key`.
+When `--cert` is provided for a PEM file, must provide corresponding `--key`.
 
 ```cmd
 --key path/key.pem
 ```
 
-When `--cert` is provided for a PFX file, must provide coresponding `--pwd`
+When `--cert` is provided for a PFX file, must provide corresponding `--pwd`
 
 ```cmd
 --pwd pfxpassword
@@ -428,7 +428,7 @@ Optional. By default Azurite will check the request API version is valid API ver
 
 ### Disable Product Style Url
 
-Optional. When using FQDN instead of IP in request Uri host, by default Azurite will parse storage account name from request Uri host. Force parsing storage account name from request Uri path by:
+Optional. When using FQDN instead of IP in request URI host, by default Azurite will parse storage account name from request URI host. Force parsing storage account name from request URI path by:
 
 ```cmd
 --disableProductStyleUrl
@@ -807,10 +807,10 @@ Following files or folders may be created when initializing Azurite in selected 
 
 - `azurite_db_blob.json` Metadata file used by Azurite blob service. (No when starting Azurite against external database)
 - `azurite_db_blob_extent.json` Extent metadata file used by Azurite blob service. (No when starting Azurite against external database)
-- `blobstorage` Persisted bindary data by Azurite blob service.
+- `blobstorage` Persisted binary data by Azurite blob service.
 - `azurite_db_queue.json` Metadata file used by Azurite queue service. (No when starting Azurite against external database)
 - `azurite_db_queue_extent.json` Extent metadata file used by Azurite queue service. (No when starting Azurite against external database)
-- `queuestorage` Persisted bindary data by Azurite queue service.
+- `queuestorage` Persisted binary data by Azurite queue service.
 - `azurite_db_table.json` Metadata file used by Azurite table service.
 
 > Note. Delete above files and folders and restart Azurite to clean up Azurite. It will remove all data stored in Azurite!!
@@ -827,7 +827,7 @@ Optionally, you could modify your hosts file, to access accounts with production
 
 ### Endpoint & Connection URL
 
-The service endpoints for Azurite are different from those of an Azure storage account. The difference is because Azuite runs on local computer, and normally, no DNS resolves address to local.
+The service endpoints for Azurite are different from those of an Azure storage account. The difference is because Azurite runs on local computer, and normally, no DNS resolves address to local.
 
 When you address a resource in an Azure storage account, use the following scheme. The account name is part of the URI host name, and the resource being addressed is part of the URI path:
 
@@ -843,7 +843,7 @@ https://myaccount.blob.core.windows.net/mycontainer/myblob.txt
 
 #### IP-style URL
 
-However, because Azuite runs on local computer, it use IP-style URI by default, and the account name is part of the URI path instead of the host name. Use the following URI format for a resource in Azurite:
+However, because Azurite runs on local computer, it use IP-style URI by default, and the account name is part of the URI path instead of the host name. Use the following URI format for a resource in Azurite:
 
 ```
 http://<local-machine-address>:<port>/<account-name>/<resource-path>
@@ -893,7 +893,7 @@ DefaultEndpointsProtocol=http;AccountName=account1;AccountKey=key1;BlobEndpoint=
 
 > Note. When use Production-style URL to access Azurite, by default the account name should be the host name in FQDN, like "<http://devstoreaccount1.blob.localhost:10000/container>". To use Production-style URL with account name in URL path, like "<http://foo.bar.com:10000/devstoreaccount1/container>", please start Azurite with `--disableProductStyleUrl`.
 
-> Note. If use "host.docker.internal" as request Uri host, like "<http://host.docker.internal:10000/devstoreaccount1/container>", Azurite will always get account name from request Uri path, not matter Azurite start with `--disableProductStyleUrl` or not.
+> Note. If use "host.docker.internal" as request URI host, like "<http://host.docker.internal:10000/devstoreaccount1/container>", Azurite will always get account name from request URI path, not matter Azurite start with `--disableProductStyleUrl` or not.
 
 ### Scalability & Performance
 
@@ -952,7 +952,7 @@ Azurite V3 leverages a TypeScript server code generator based on Azure Storage R
 
 ### TypeScript
 
-Azurite V3 selected TypeScript as its' programming language, as this facilitates broad collaboration, whilst also ensuring quality.
+Azurite V3 selected TypeScript as its programming language, as this facilitates broad collaboration, whilst also ensuring quality.
 
 ### Features Scope
 

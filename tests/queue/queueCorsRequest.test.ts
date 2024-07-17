@@ -358,7 +358,7 @@ describe("Queue Cors requests test", () => {
     // No match
     let origin = "test";
     let requestMethod = "GET";
-    let reqestHeaders = "head";
+    let requestHeaders = "head";
 
     let pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -370,7 +370,7 @@ describe("Queue Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     let serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
@@ -391,7 +391,7 @@ describe("Queue Cors requests test", () => {
     // Match first cors.
     origin = "test";
     requestMethod = "GET";
-    reqestHeaders = "header";
+    requestHeaders = "header";
 
     pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -403,7 +403,7 @@ describe("Queue Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
@@ -413,7 +413,7 @@ describe("Queue Cors requests test", () => {
     // Match second cors.
     origin = "test";
     requestMethod = "PUT";
-    reqestHeaders = "head";
+    requestHeaders = "head";
 
     pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -425,7 +425,7 @@ describe("Queue Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
@@ -435,7 +435,7 @@ describe("Queue Cors requests test", () => {
     // No match.
     origin = "test";
     requestMethod = "POST";
-    reqestHeaders = "hea";
+    requestHeaders = "hea";
 
     pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -447,7 +447,7 @@ describe("Queue Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
@@ -468,7 +468,7 @@ describe("Queue Cors requests test", () => {
     // Match third cors.
     origin = "test";
     requestMethod = "POST";
-    reqestHeaders = "headerheader";
+    requestHeaders = "headerheader";
 
     pipeline = newPipeline(
       new StorageSharedKeyCredential(
@@ -480,7 +480,7 @@ describe("Queue Cors requests test", () => {
       }
     );
     pipeline.factories.unshift(
-      new OPTIONSRequestPolicyFactory(origin, requestMethod, reqestHeaders)
+      new OPTIONSRequestPolicyFactory(origin, requestMethod, requestHeaders)
     );
     serviceClientForOPTIONS = new QueueServiceClient(baseURL, pipeline);
 
@@ -488,7 +488,7 @@ describe("Queue Cors requests test", () => {
     assert.ok(res._response.status === 200);
   });
 
-  it("OPTIONS request should work with matching rule containing Origion * @loki", async () => {
+  it("OPTIONS request should work with matching rule containing Origin * @loki", async () => {
     const serviceProperties = await serviceClient.getProperties();
 
     const newCORS = {
@@ -700,7 +700,7 @@ describe("Queue Cors requests test", () => {
     const serviceClientWithOrigin = new QueueServiceClient(baseURL, pipeline);
 
     const queueClientWithOrigin = serviceClientWithOrigin.getQueueClient(
-      "notexistcontainer"
+      "nonexistentcontainer"
     );
 
     try {

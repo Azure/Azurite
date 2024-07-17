@@ -30,7 +30,7 @@ Just run blob service:
 docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite azurite-blob --blobHost 0.0.0.0
 ```
 
-Run the image as a service (`-d` = deamon) named `azurite` and restart unless specifically stopped (this is useful when re-starting your development machine for example)
+Run the image as a service (`-d` = daemon) named `azurite` and restart unless specifically stopped (this is useful when re-starting your development machine for example)
 
 ```bash
 docker run --name azurite -d --restart unless-stopped -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite
@@ -72,9 +72,9 @@ Above command will try to start Azurite image with configurations:
 
 `--skipApiVersionCheck` skip the request API version check.
 
-`--disableProductStyleUrl` force parsing storage account name from request Uri path, instead of from request Uri host.
+`--disableProductStyleUrl` force parsing storage account name from request URI path, instead of from request URI host.
 
-> If you use customized azurite paramters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
+> If you use customized azurite parameters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 
 > In above sample, you need to use **double first forward slash** for location and debug path parameters to avoid a [known issue](https://stackoverflow.com/questions/48427366/docker-build-command-add-c-program-files-git-to-the-path-passed-as-build-argu) for Git on Windows.
 

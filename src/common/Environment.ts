@@ -65,7 +65,7 @@ args
   )
   .option(
     ["", "disableProductStyleUrl"],
-    "Optional. Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri"
+    "Optional. Disable getting account name from the host of request URI, always get account name from the first path segment of request URI"
   )
   .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic"')
   .option(["", "cert"], "Optional. Path to certificate file")
@@ -138,7 +138,7 @@ export default class Environment implements IEnvironment {
     if (this.flags.skipApiVersionCheck !== undefined) {
       return true;
     }
-    // default is false which will check API veresion
+    // default is false which will check API version
     return false;
   }
 
@@ -146,7 +146,7 @@ export default class Environment implements IEnvironment {
     if (this.flags.disableProductStyleUrl !== undefined) {
       return true;
     }
-    // default is false which will try to get account name from request Uri hostname
+    // default is false which will try to get account name from request URI hostname
     return false;
   }
 

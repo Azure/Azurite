@@ -139,7 +139,7 @@ export default class BlobSharedKeyAuthenticator implements IAuthenticator {
 
     if (context.context.isSecondary && blobContext.authenticationPath?.indexOf(account) === 1)
     {
-        // JS/.net Track2 SDK will generate stringToSign from IP style Uri with "-secondary" in authenticationPath, so will also compare signature with this kind stringToSign
+        // JS/.net Track2 SDK will generate stringToSign from IP style URI with "-secondary" in authenticationPath, so will also compare signature with this kind stringToSign
         const stringToSign_secondary: string =
         [
           req.getMethod().toUpperCase(),

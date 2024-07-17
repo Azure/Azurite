@@ -2168,7 +2168,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
       }
     });
 
-    // Copy From Uri
+    // Copy From URI
     const targetBlob = targetContainerClient.getBlockBlobClient(blobName);
     const targetBlobWithProps = targetContainerClient.getBlockBlobClient(
       blobName2

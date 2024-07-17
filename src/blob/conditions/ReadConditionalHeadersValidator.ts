@@ -46,7 +46,7 @@ export default class ReadConditionalHeadersValidator
       }
 
       // If If-Unmodified-Since
-      // Skip for unexist resource
+      // Skip for nonexistent resource
 
       // If-None-Match
       if (
@@ -58,7 +58,7 @@ export default class ReadConditionalHeadersValidator
       }
 
       // If-Modified-Since
-      // Skip for unexist resource
+      // Skip for nonexistent resource
     } else {
       // Read against an existing resource
       // If-Match && If-Unmodified-Since && (If-None-Match || If-Modified-Since)

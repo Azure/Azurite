@@ -10,10 +10,10 @@ export default class ConditionResourceAdapter implements IConditionResource {
     if (
       resource === undefined ||
       resource === null ||
-      (resource as BlobModel).isCommitted === false // Treat uncommitted blob as unexist resource
+      (resource as BlobModel).isCommitted === false // Treat uncommitted blob as nonexistent resource
     ) {
       this.exist = false;
-      this.etag = "UNEXIST_RESOURCE_ETAG";
+      this.etag = "NONEXISTENT_RESOURCE_ETAG";
       this.lastModified = undefined as any;
       return;
     }

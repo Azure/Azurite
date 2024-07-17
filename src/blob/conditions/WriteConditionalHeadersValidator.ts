@@ -124,9 +124,9 @@ export default class WriteConditionalHeadersValidator
         if (conditionalHeaders.ifNoneMatch[0] === "*") {
           // According to restful doc, specify the wildcard character (*) to perform the operation
           // only if the resource does not exist, and fail the operation if it does exist.
-          // However, Azure Storage Set Blob Properties Operation for an existing blob doesn't reuturn 412 with *
+          // However, Azure Storage Set Blob Properties Operation for an existing blob doesn't return 412 with *
           // TODO: Check accurate behavior for different write operations
-          // Put Blob, Commit Block List has special logic for ifNoneMatch equals *, will return 409 conflict for existing blob, will handled in createBlob metatdata store.
+          // Put Blob, Commit Block List has special logic for ifNoneMatch equals *, will return 409 conflict for existing blob, will handled in createBlob metadata store.
           // throw StorageErrorFactory.getConditionNotMet(context.contextId!);
           return;
         }

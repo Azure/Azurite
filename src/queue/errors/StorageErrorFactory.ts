@@ -55,17 +55,6 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getInvaidXmlDocument(
-    contextID: string = defaultID
-  ): StorageError {
-    return new StorageError(
-      400,
-      "InvaidXmlDocument",
-      `XML specified is not syntactically valid.`,
-      contextID
-    );
-  }
-
   public static corsPreflightFailure(
     contextID: string = defaultID,
     additionalMessages?: { [key: string]: string }
@@ -86,7 +75,7 @@ export default class StorageErrorFactory {
     return new StorageError(
       400,
       "InvalidUri",
-      "The specifed resource name contains invalid characters.",
+      "The specified resource name contains invalid characters.",
       contextID
     );
   }
@@ -315,7 +304,7 @@ export default class StorageErrorFactory {
     return new StorageError(
       400,
       "InvalidResourceName",
-      `The specifed resource name contains invalid characters.`,
+      `The specified resource name contains invalid characters.`,
       contextID
     );
   }

@@ -405,7 +405,7 @@ function testMergeBatch(
           reject(batchError);
         } else {
           assert.strictEqual(batchResponse.statusCode, 202);
-          // the checks below deliverately do not follow the ordering
+          // the checks below deliberately do not follow the ordering
           // of the entity array
           tableService.retrieveEntity<TestEntity>(
             tableName,

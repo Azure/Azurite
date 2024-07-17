@@ -356,7 +356,7 @@ describe("batch deserialization unit tests, these are not the API integration te
         assert.strictEqual(
           extractedPath[0],
           value.path,
-          "Uri path did not parse correctly!"
+          "URI path did not parse correctly!"
         );
       } else {
         assert.notStrictEqual(

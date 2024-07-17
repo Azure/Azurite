@@ -293,7 +293,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
 
   /**
    * Create a queue in persistency layer.
-   * Return 201 if create a new one, 204 if a same one exist, 409 error if a conflit one exist.
+   * Return 201 if create a new one, 204 if a same one exist, 409 error if a conflicting one exist.
    * @see https://docs.microsoft.com/en-us/rest/api/storageservices/create-queue4
    *
    * @param {QueueModel} queue
@@ -311,7 +311,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
       name: queue.name
     });
 
-    // Check whether a conflication exists if there exist a queue with the given name.
+    // Check whether a conflict exists if there exist a queue with the given name.
     // If the exist queue has the same metadata as the given queue, then return 204, else throw 409 error.
     if (doc) {
       const docMeta = doc.metadata;
@@ -348,7 +348,7 @@ export default class LokiQueueMetadataStore implements IQueueMetadataStore {
         }
       }
 
-      // Check if all the matadata of exist queue is the same as another.
+      // Check if all the metadata of exist queue is the same as another.
       for (const item in docMeta) {
         if (docMeta.hasOwnProperty(item)) {
           const queueMetaName = nameMap.get(item.toLowerCase());

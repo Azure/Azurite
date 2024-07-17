@@ -187,7 +187,7 @@ export default class TableHandler extends BaseHandler implements ITableHandler {
     const prefer = this.getAndCheckPreferHeader(tableContext);
     this.checkBodyLimit(context, context.request?.getBody());
 
-    // curently unable to use checking functions as the partitionKey
+    // currently unable to use checking functions as the partitionKey
     // and rowKey are not coming through the context.
     // const partitionKey = this.getAndCheckPartitionKey(tableContext);
     // const rowKey = this.getAndCheckRowKey(tableContext);

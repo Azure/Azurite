@@ -54,7 +54,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     this.createTablesCollection();
     this.createServicePropsCollection();
     await this.saveDBState();
-    this.finalizeInitializionState();
+    this.finalizeInitializationState();
   }
 
   /**
@@ -111,7 +111,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   public async createTable(context: Context, tableModel: Table): Promise<void> {
     // Check for table entry in the table registry collection
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
-    // Azure Storage Service is case insensitive
+    // Azure Storage Service is case-insensitive
     tableModel.table = tableModel.table;
     this.checkIfTableExists(coll, tableModel, context);
 
@@ -136,7 +136,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   ): Promise<void> {
     // remove table reference from collection registry
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
-    // Azure Storage Service is case insensitive
+    // Azure Storage Service is case-insensitive
     const tableLower = table.toLocaleLowerCase();
     const doc = coll.findOne({
       account,
@@ -165,7 +165,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     tableACL?: TableACL
   ): Promise<void> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
-    // Azure Storage Service is case insensitive
+    // Azure Storage Service is case-insensitive
     const tableLower = table.toLocaleLowerCase();
     const persistedTable = coll.findOne({
       account,
@@ -195,7 +195,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
     context: Context
   ): Promise<Table> {
     const coll = this.db.getCollection(this.TABLES_COLLECTION);
-    // Azure Storage Service is case insensitive
+    // Azure Storage Service is case-insensitive
     const doc = coll.findOne({
       account,
       table: { $regex: [`^${table}$`, "i"] }
@@ -607,7 +607,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       this.transactionRollbackTheseEntities.length > 0 ||
       this.transactionDeleteTheseEntities.length > 0
     ) {
-      throw new Error("Transaction Overlapp!");
+      throw new Error("Transaction Overlap!");
     }
   }
 
@@ -651,7 +651,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
    * @private
    * @memberof LokiTableMetadataStore
    */
-  private finalizeInitializionState() {
+  private finalizeInitializationState() {
     this.initialized = true;
     this.closed = false;
   }
@@ -805,8 +805,8 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   }
 
   /**
-   * Gets the collection of entites for a specific table.
-   * Ensures that table name is case insensitive.
+   * Gets the collection of entities for a specific table.
+   * Ensures that table name is case-insensitive.
    *
    * @private
    * @param {string} account
@@ -990,7 +990,7 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
       encodedIfMatch === "*" ||
       (encodedIfMatch !== undefined && encodedEtag === encodedIfMatch)
     ) {
-      const mergedDEntity: Entity = {
+      const mergedEntity: Entity = {
         ...doc,
         ...entity,
         properties: {
@@ -1007,14 +1007,14 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
           }
 
           const value = entity.properties[key];
-          mergedDEntity.properties[key] = value;
+          mergedEntity.properties[key] = value;
 
-          this.filterOdataMetaData(entity, key, mergedDEntity);
+          this.filterOdataMetaData(entity, key, mergedEntity);
         }
       }
 
-      tableEntityCollection.update(mergedDEntity);
-      return mergedDEntity;
+      tableEntityCollection.update(mergedEntity);
+      return mergedEntity;
     }
     throw StorageErrorFactory.getPreconditionFailed(context);
   }
@@ -1022,13 +1022,13 @@ export default class LokiTableMetadataStore implements ITableMetadataStore {
   private filterOdataMetaData(
     entity: Entity,
     key: string,
-    mergedDEntity: Entity
+    mergedEntity: Entity
   ) {
     if (entity.properties[`${key}${ODATA_TYPE}`] !== undefined) {
-      mergedDEntity.properties[`${key}${ODATA_TYPE}`] =
+      mergedEntity.properties[`${key}${ODATA_TYPE}`] =
         entity.properties[`${key}${ODATA_TYPE}`];
     } else {
-      delete mergedDEntity.properties[`${key}${ODATA_TYPE}`];
+      delete mergedEntity.properties[`${key}${ODATA_TYPE}`];
     }
   }
 

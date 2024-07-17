@@ -13,7 +13,7 @@ export function minDate(date1: Date, date2: Date): Date {
   return date1 > date2 ? date2 : date1;
 }
 
-// Blob Snapshot is has 7 digital for Milliseconds, but Datatime has Milliseconds with 3 digital. So need convert.
+// Blob Snapshot is has 7 digital for Milliseconds, but Datetime has Milliseconds with 3 digital. So need convert.
 export function convertDateTimeStringMsTo7Digital(
   dateTimeString: string
 ): string {

@@ -41,11 +41,11 @@ export default class StorageError extends MiddlewareError {
     storageAdditionalErrorMessages: { [key: string]: string } = {},
     context: Context
   ) {
-    const pyaload = getPayloadFormat(context);
+    const payload = getPayloadFormat(context);
     const isJSON =
-      pyaload === NO_METADATA_ACCEPT ||
-      pyaload === MINIMAL_METADATA_ACCEPT ||
-      pyaload === FULL_METADATA_ACCEPT;
+      payload === NO_METADATA_ACCEPT ||
+      payload === MINIMAL_METADATA_ACCEPT ||
+      payload === FULL_METADATA_ACCEPT;
 
     const bodyInJSON: any = isJSON
       ? {
@@ -81,7 +81,7 @@ export default class StorageError extends MiddlewareError {
         "x-ms-version": TABLE_API_VERSION
       },
       body,
-      isJSON ? `${pyaload};streaming=true;charset=utf-8` : "application/xml"
+      isJSON ? `${payload};streaming=true;charset=utf-8` : "application/xml"
     );
 
     this.name = "StorageError";

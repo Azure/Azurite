@@ -349,9 +349,9 @@ export default class TableBatchOrchestrator {
 
   /**
    * Creates a clone of the context for the batch operation.
-   * Becuase the context that we have will not work with the calls and needs
+   * Because the context that we have will not work with the calls and needs
    * updating for batch operations.
-   * We use a deep clone, as each request needs to be treated seaprately.
+   * We use a deep clone, as each request needs to be treated separately.
    *
    * @private
    * @param {Context} context
@@ -623,7 +623,7 @@ export default class TableBatchOrchestrator {
     );
 
     return {
-      __return: this.serialization.serializeTablMergeEntityBatchResponse(
+      __return: this.serialization.serializeTableMergeEntityBatchResponse(
         request,
         response
       ),
@@ -697,7 +697,7 @@ export default class TableBatchOrchestrator {
 
   /**
    * Replace Double ticks for single ticks without replaceAll string prototype
-   * function, becuase node 14 does not support it.
+   * function, because node 14 does not support it.
    * @param key
    * @returns
    */

@@ -343,7 +343,7 @@ describe("table Entity APIs REST tests", () => {
     assert.strictEqual(
       notExist,
       1,
-      "We did not get the expected non-existent error."
+      "We did not get the expected nonexistent error."
     );
   });
 
@@ -631,7 +631,7 @@ describe("table Entity APIs REST tests", () => {
    * Check that ifmatch * update works...
    * if etag == *, then tableClient.updateEntity is calling "Merge" via PATCH with merge option.
    * Same if etag is omitted. Patch usage is not documented.
-   * if Replace option, calling "Update" in the table handler, which is caling insertOrUpdate in metadata
+   * if Replace option, calling "Update" in the table handler, which is calling insertOrUpdate in metadata
    *
    * Test If-Match cases
    * https://docs.microsoft.com/en-us/rest/api/storageservices/update-entity2
@@ -699,7 +699,7 @@ describe("table Entity APIs REST tests", () => {
         restFunction: putToAzurite,
         expectedStatus: 204,
         expectSuccess: true,
-        errorMessage: "We should not fail PUT with with * If-Match"
+        errorMessage: "We should not fail PUT with * If-Match"
       },
       {
         name: "case 2 : Update Entity : PUT with old etag in If-Match.",

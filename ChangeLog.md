@@ -104,7 +104,7 @@ Table:
 
 General:
 
-- Updated examples of setting Customized Storage Accounts & Keys in enviroment varialbe.
+- Updated examples of setting Customized Storage Accounts & Keys in enviroment variable.
 - Bump up service API version to 2023-08-03
 
 Blob:
@@ -143,7 +143,7 @@ General:
 
 Blob:
 
-- Fixed issue of: blob batch subresponse is slightly different from the on from Azure serivce, which causes exception in CPP SDK.
+- Fixed issue of: blob batch subresponse is slightly different from the on from Azure service, which causes exception in CPP SDK.
 - Fixed issue of: setMetadata API allows invalid metadata name with hyphen.
 - Supported rest API GetBlobTag, SetBlobTag.
 - Supported set Blob Tags in upload blob, copy blob.
@@ -162,7 +162,7 @@ General:
 
 - Return 404 StatusCode when Storage account not exist
 - Migrated tslint to eslint.
-- Typescript upgraded from 4.2.4 to 4.9.5.
+- TypeScript upgraded from 4.2.4 to 4.9.5.
 - Migrated test pipeline from Node.js 10/12 to Node.js 14/16/18.
 - Bump up service API version to 2022-11-02
 
@@ -248,7 +248,7 @@ General:
 
 Table:
 
-- Correctly responds with status 202 on merge with non-existent entity.
+- Correctly responds with status 202 on merge with nonexistent entity.
 - Properly differentiate between upsert and update in batch merge and replace.
 - Added additional tests via raw REST tests.
 - Correctly deletes a table that is a substring of another table.
@@ -260,7 +260,7 @@ Table:
 General:
 
 - Bump up service API version to 2021-08-06
-- Modified the error messge for invalid API version to make it more actionable.
+- Modified the error message for invalid API version to make it more actionable.
 
 Blob:
 
@@ -291,7 +291,7 @@ General:
 Table:
 
 - Fixed empty partition key and row key handling in batch write operations.
-- Fixed batch reponse for Go SDK, includes additional CRLF on closure of changesetresponse section.
+- Fixed batch response for Go SDK, includes additional CRLF on closure of changesetresponse section.
 - Removed query strings from Location and DataServiceId batch response headers.
 - Modified the deserialization of batch request for case that a raw / not url encoded % is present in the body.
 - Added additional tests and checks for table names on creation.
@@ -310,7 +310,7 @@ General:
 
 Blob:
 
-- Fixed issue that startCopyFromURL and copyFromURL API not respect `--disableProductStyleUrl` parameter in parse source Uri.
+- Fixed issue that startCopyFromURL and copyFromURL API not respect `--disableProductStyleUrl` parameter in parse source URI.
 
 Queue:
 
@@ -338,7 +338,7 @@ Table:
 General:
 
 - Bump up service API version to 2021-02-12
-- Fixed access to secondary location with IP style Uri from JS/.net SDK failure.
+- Fixed access to secondary location with IP style URI from JS/.net SDK failure.
 - Fixed an issue in Visual Studio Code extension, by changing the Location with relative path, from base on Visual Studio Code installation path, to base on the current opened workspace folder.
 
 Blob:
@@ -349,17 +349,17 @@ Blob:
 
 General:
 
-- Added new parameter `--disableProductStyleUrl`, to force parsing storage account from request Uri path, instead of from request Uri host.
+- Added new parameter `--disableProductStyleUrl`, to force parsing storage account from request URI path, instead of from request URI host.
 - Restored ability to connect to host.docker.internal.
 
 Blob:
 
-- Fixed list blob API "include" query parameter not work when not lower case, by make it case insensitive.
+- Fixed list blob API "include" query parameter not work when not lower case, by make it case-insensitive.
 - Supported list container/blob with "include" query parameter as empty string.
 - Added more allowed value to list blob request "include" query parameter:'tags', 'versions', 'deletedwithversions', 'immutabilitypolicy', 'legalhold', 'permissions'.
 - Added more allowed value to list container request "include" query parameter: 'deleted'.
 - Raised 416 when start range is bigger than blob length.
-- Fixed issue that duplicated decode rscd, rsce, rscl and rsct of SAS token in input request Uri.
+- Fixed issue that duplicated decode rscd, rsce, rscl and rsct of SAS token in input request URI.
 
 Queue:
 
@@ -367,7 +367,7 @@ Queue:
 
 Table:
 
-- Supported basic level of OAuth autentication on Table service.
+- Supported basic level of OAuth authentication on Table service.
 - Removed extra CRLF from batch transaction response which caused issues for Microsoft.Azure.Cosmos.Table NuGet package.
 
 Table:
@@ -426,7 +426,7 @@ Table:
 
 Blob:
 
-- Fixed list containers, get service properties or account properties API failure, when request Uri has a suffix '/' after account name.
+- Fixed list containers, get service properties or account properties API failure, when request URI has a suffix '/' after account name.
 - Fixed get system container failure.
 
 ## 2021.6 Version 3.13.0
@@ -458,7 +458,7 @@ Table:
 - Preview of Table Service in npm package and docker image. (Visual Studio Code extension doesn't support Table Service in this release)
 - Allow empty RowKey in an entity.
 - Fix etag format to be aligned with Azure server.
-- Fix delet none exist table error code and error message, to be aligned with Azure server.
+- Fix delete nonexistent table error code and error message, to be aligned with Azure server.
 - Convert entity properties with type "Edm.DateTime" to UTC time, to be aligned with Azure server.
 - Support Batch API.
 - Allow complex RowKey and PartitionKey in batch API.
@@ -502,7 +502,7 @@ Blob:
 - Add support for async copy blobs on sql metadata store.
 - Add support for blob syncCopyFromURL within same Azurite instance on loki metadata store.
 - Allow mixed case characters for blob metadata prefix.
-- Fix SqlBlobMetadataStore.getBlockList, to make it fail for non-existent blobs.
+- Fix SqlBlobMetadataStore.getBlockList, to make it fail for nonexistent blobs.
 
 ## 2020.07 Version 3.8.0
 
@@ -515,7 +515,7 @@ Blob:
 ## 2020.04 Version 3.7.0
 
 - Supported HTTPS endpoint. Specific parameter `azurite --cert server.cert --key server.key` to enable HTTPS mode.
-- Supported basic level of OAuth autentication. Specific parameter `azurite --oauth basic` to enable OAuth autentication.
+- Supported basic level of OAuth authentication. Specific parameter `azurite --oauth basic` to enable OAuth authentication.
 
 Blob:
 

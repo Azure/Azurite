@@ -287,7 +287,7 @@ describe("exe test", () => {
     afterEach(async () => {
       await containerClient.delete();
     });
-    it("download with with default parameters @loki @sql", async () => {
+    it("download with default parameters @loki @sql", async () => {
       const result = await blobClient.download(0);
       assert.deepStrictEqual(
         await bodyToString(result, content.length),

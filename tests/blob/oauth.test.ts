@@ -355,7 +355,7 @@ describe("Blob OAuth Basic", () => {
     }
     assert.ok(failed);
 
-    // Eearlier user delegation key expirty time
+    // Earlier user delegation key expiry time
     startTime = new Date();
     startTime.setDate(startTime.getDate() - 1);
     expiryTime = new Date();

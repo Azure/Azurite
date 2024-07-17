@@ -37,12 +37,12 @@ export default class SerializationResponseMockStrings {
   // ####################
   // "--batchresponse_5920f66b-704c-4f0d-a1ba-a024f44e4754\r\nContent-Type: multipart/mixed; boundary=changesetresponse_a3dab894-5e6c-4f3d-877e-dc918125467e\r\n\r\n--changesetresponse_a3dab894-5e6c-4f3d-877e-dc918125467e\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 204 No Content\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-cache\r\nDataServiceVersion: 1.0;\r\n\r\n\r\n--changesetresponse_a3dab894-5e6c-4f3d-877e-dc918125467e--\r\n--batchresponse_5920f66b-704c-4f0d-a1ba-a024f44e4754--\r\n"
   public static FullBatchSingleDeleteResponseString: string =
-    // pretier-ignore
+    // prettier-ignore
     "--batchresponse_5920f66b-704c-4f0d-a1ba-a024f44e4754\r\nContent-Type: multipart/mixed; boundary=changesetresponse_a3dab894-5e6c-4f3d-877e-dc918125467e\r\n\r\n--changesetresponse_a3dab894-5e6c-4f3d-877e-dc918125467e\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 204 No Content\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-cache\r\nDataServiceVersion: 1.0;\r\n\r\n\r\n--changesetresponse_a3dab894-5e6c-4f3d-877e-dc918125467e--\r\n--batchresponse_5920f66b-704c-4f0d-a1ba-a024f44e4754--\r\n";
 
   // manually set dataserviceversion to 3.0, service responds with 1.0
   public static PartialBatchSingleDeleteResponseString: string =
-    // pretier-ignore
+    // prettier-ignore
     "Content-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 204 No Content\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-cache\r\nDataServiceVersion: 3.0;\r\n";
 
   // ####################
