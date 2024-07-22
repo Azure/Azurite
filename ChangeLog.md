@@ -7,6 +7,7 @@
 General:
 
 - Bump mysql2 to resolve to 3.10.1 for security patches
+- Fixed an issue where premature client disconnections led to all following requests failing with a 500 error. (issue #1346) 
 
 Blob:
 
