@@ -604,4 +604,46 @@ describe("table Entity APIs test", () => {
 
     await tableClientrollback.deleteTable();
   });
+
+  //Skips this test because it requires modifying the Azure Data Tables client so that it does not perform a check for partition key consistency before submitting the batch.
+  it.skip("10. Batch API should fail when attempting to insert elements with different partitionkeys in same batch, @loki", async () => {
+    const partitionKey = createUniquePartitionKey("1");
+    const partitionKey2 = createUniquePartitionKey("2");
+    console.log(`PartitionKey: ${partitionKey} partitionKey2: ${partitionKey2}`);
+    const tableNameBatchError: string = getUniqueName("datatables");
+    const testEntities: TableTestEntity[] = [
+      entityFactory.createBasicEntityForTest(partitionKey),
+      entityFactory.createBasicEntityForTest(partitionKey2)
+    ];
+
+    const tableClientrollback = createAzureDataTablesClient(
+      testLocalAzuriteInstance,
+      tableNameBatchError
+    );
+
+    await tableClientrollback.createTable();
+
+    const transaction = new TableTransaction();
+    for (const testEntity of testEntities) {
+      transaction.createEntity(testEntity);
+    }
+    try {
+      await tableClientrollback.submitTransaction(
+        transaction.actions
+      );
+      assert.fail("Did not get expected 400 (InvalidInput) error.");
+    } catch (err: any) {
+      if (err.code === "ERR_ASSERTION") {
+        throw err;
+      }
+      const restErr = err as RestError;
+      assert.strictEqual(
+        restErr.statusCode,
+        400,
+        "Did not get expected 400 (InvalidInput) error."
+      );
+    }
+
+    await tableClientrollback.deleteTable();
+  });
 });
