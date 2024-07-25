@@ -91,6 +91,15 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
   }
 
+    /**
+   * Clean up file handles for blob to prevent leak.
+   *
+   * @memberof BlobHandler
+   */
+    public async cleanUpBlob(context: Context): Promise<void> {
+        this.extentStore.cleanStreams(context.contextId);
+    }
+
   /**
    * Get blob properties.
    *
