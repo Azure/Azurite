@@ -70,6 +70,83 @@ describe("BlockBlobAPIs", () => {
     await containerClient.delete();
   });
 
+  it("Blob should be staged from URL and committed @loki @sql", async () => {
+    const source1Blob = getUniqueName("blob");
+    const source2Blob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const source1BlobClient = containerClient.getBlockBlobClient(source1Blob);
+    const source2BlobClient = containerClient.getBlockBlobClient(source2Blob);
+    const destBlobClient = containerClient.getBlockBlobClient(destBlob);
+
+    const metadata = { key: "value" };
+    const blobHTTPHeaders = {
+      blobCacheControl: "blobCacheControl",
+      blobContentDisposition: "blobContentDisposition",
+      blobContentEncoding: "blobContentEncoding",
+      blobContentLanguage: "blobContentLanguage",
+      blobContentType: "blobContentType"
+    };
+
+    const payload1 = "Blob should be staged "
+    const payload2 = "from URL and committed."
+
+    // Upload first object:
+    const result_upload1 = await source1BlobClient.upload(payload1, payload1.length, {
+      metadata,
+      blobHTTPHeaders
+    });
+    assert.strictEqual(
+      result_upload1._response.request.headers.get("x-ms-client-request-id"),
+      result_upload1.clientRequestId
+    );
+
+    // Upload second object object:
+    const result_upload2 = await source2BlobClient.upload(payload2, payload2.length, {
+      metadata,
+      blobHTTPHeaders
+    });
+    assert.strictEqual(
+      result_upload2._response.request.headers.get("x-ms-client-request-id"),
+      result_upload2.clientRequestId
+    );
+
+    // Stage blocks from URL
+    const result_stage1 = await destBlobClient.stageBlockFromURL(
+      base64encode("1"),
+      source1BlobClient.url
+    );
+    assert.strictEqual(
+      result_stage1._response.request.headers.get("x-ms-client-request-id"),
+      result_stage1._response.request.requestId
+    );
+
+    const result_stage2 = await destBlobClient.stageBlockFromURL(
+      base64encode("2"),
+      source2BlobClient.url
+    );
+    assert.strictEqual(
+      result_stage2._response.request.headers.get("x-ms-client-request-id"),
+      result_stage2._response.request.requestId
+    );
+
+    const result_commit = await destBlobClient.commitBlockList(
+      [base64encode("1"), base64encode("2")],
+    );
+    assert.strictEqual(
+      result_commit._response.request.headers.get("x-ms-client-request-id"),
+      result_commit._response.request.requestId
+    );
+
+    const destContentLength = (await destBlobClient.getProperties()).contentLength
+
+    assert.strictEqual(destContentLength, (payload1 + payload2).length);
+
+    const buffer = await destBlobClient.downloadToBuffer(0, destContentLength);
+    assert.strictEqual(buffer.toString(), payload1 + payload2);
+
+  });
+
   it("Block blob upload should refresh lease state @loki @sql", async () => {
     await blockBlobClient.upload('a', 1);
 
