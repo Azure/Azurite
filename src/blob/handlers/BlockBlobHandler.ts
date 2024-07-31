@@ -1,28 +1,22 @@
-import { URLBuilder } from "@azure/ms-rest-js";
-import axios, { AxiosResponse } from "axios";
+import axios, { AxiosResponse } from 'axios';
 
-import { convertRawHeadersToMetadata } from "../../common/utils/utils";
+import { URLBuilder } from '@azure/ms-rest-js';
+
 import {
-  getMD5FromStream,
-  getMD5FromString,
-  newEtag
-} from "../../common/utils/utils";
-import BlobStorageContext from "../context/BlobStorageContext";
-import NotImplementedError from "../errors/NotImplementedError";
-import StorageErrorFactory from "../errors/StorageErrorFactory";
-import * as Models from "../generated/artifacts/models";
-import Context from "../generated/Context";
-import IBlockBlobHandler from "../generated/handlers/IBlockBlobHandler";
-import { parseXML } from "../generated/utils/xml";
-import { extractStoragePartsFromPath } from "../middlewares/blobStorageContext.middleware";
-import { BlobModel, BlockModel } from "../persistence/IBlobMetadataStore";
-import { BLOB_API_VERSION, HeaderConstants } from "../utils/constants";
-import BaseHandler from "./BaseHandler";
-import {
-  getTagsFromString,
-  deserializeRangeHeader,
-  getBlobTagsCount,
-} from "../utils/utils";
+    convertRawHeadersToMetadata, getMD5FromStream, getMD5FromString, newEtag
+} from '../../common/utils/utils';
+import BlobStorageContext from '../context/BlobStorageContext';
+import NotImplementedError from '../errors/NotImplementedError';
+import StorageErrorFactory from '../errors/StorageErrorFactory';
+import * as Models from '../generated/artifacts/models';
+import Context from '../generated/Context';
+import IBlockBlobHandler from '../generated/handlers/IBlockBlobHandler';
+import { parseXML } from '../generated/utils/xml';
+import { extractStoragePartsFromPath } from '../middlewares/blobStorageContext.middleware';
+import { BlobModel, BlockModel } from '../persistence/IBlobMetadataStore';
+import { BLOB_API_VERSION, HeaderConstants } from '../utils/constants';
+import { deserializeRangeHeader, getBlobTagsCount, getTagsFromString } from '../utils/utils';
+import BaseHandler from './BaseHandler';
 
 /**
  * BlobHandler handles Azure Storage BlockBlob related requests.
