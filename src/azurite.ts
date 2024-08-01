@@ -86,6 +86,7 @@ async function main() {
   const queueConfig = new QueueConfiguration(
     env.queueHost(),
     env.queuePort(),
+    env.queueKeepAliveTimeout(),
     join(location, DEFAULT_QUEUE_LOKI_DB_PATH),
     join(location, DEFAULT_QUEUE_EXTENT_LOKI_DB_PATH),
     DEFAULT_QUEUE_PERSISTENCE_ARRAY,
@@ -106,6 +107,7 @@ async function main() {
   const tableConfig = new TableConfiguration(
     env.tableHost(),
     env.tablePort(),
+    env.tableKeepAliveTimeout(),
     join(location, DEFAULT_TABLE_LOKI_DB_PATH),
     env.debug() !== undefined,
     !env.silent(),

@@ -15,6 +15,10 @@ export default class VSCEnvironment implements IEnvironment {
     return this.workspaceConfiguration.get<number>("blobPort");
   }
 
+  public blobKeepAliveTimeout(): number | undefined {
+    return this.workspaceConfiguration.get<number>("blobKeepAliveTimeout");
+  }
+
   public queueHost(): string | undefined {
     return this.workspaceConfiguration.get<string>("queueHost");
   }
@@ -23,12 +27,20 @@ export default class VSCEnvironment implements IEnvironment {
     return this.workspaceConfiguration.get<number>("queuePort");
   }
 
+  public queueKeepAliveTimeout(): number | undefined {
+    return this.workspaceConfiguration.get<number>("queueKeepAliveTimeout");
+  }
+
   public tableHost(): string | undefined {
     return this.workspaceConfiguration.get<string>("tableHost");
   }
 
   public tablePort(): number | undefined {
     return this.workspaceConfiguration.get<number>("tablePort");
+  }
+
+  public tableKeepAliveTimeout(): number | undefined {
+    return this.workspaceConfiguration.get<number>("tableKeepAliveTimeout");
   }
 
   public async location(): Promise<string> {
