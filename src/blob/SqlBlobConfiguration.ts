@@ -8,7 +8,8 @@ import {
   DEFAULT_BLOB_PERSISTENCE_ARRAY,
   DEFAULT_BLOB_SERVER_HOST_NAME,
   DEFAULT_ENABLE_ACCESS_LOG,
-  DEFAULT_ENABLE_DEBUG_LOG
+  DEFAULT_ENABLE_DEBUG_LOG,
+  DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT
 } from "./utils/constants";
 
 /**
@@ -22,6 +23,7 @@ export default class SqlBlobConfiguration extends ConfigurationBase {
   public constructor(
     host: string = DEFAULT_BLOB_SERVER_HOST_NAME,
     port: number = DEFAULT_BLOB_LISTENING_PORT,
+    keepAliveTimeout: number = DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
     public readonly sqlURL: string,
     public readonly sequelizeOptions: SequelizeOptions = DEFAULT_SQL_OPTIONS,
     public readonly persistenceArray: StoreDestinationArray = DEFAULT_BLOB_PERSISTENCE_ARRAY,
@@ -40,6 +42,7 @@ export default class SqlBlobConfiguration extends ConfigurationBase {
     super(
       host,
       port,
+      keepAliveTimeout,
       enableAccessLog,
       accessLogWriteStream,
       enableDebugLog,

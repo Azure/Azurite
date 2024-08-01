@@ -6,6 +6,7 @@ export const DEFAULT_TABLE_LOKI_DB_PATH = "__azurite_db_table__.json";
 
 export const DEFAULT_TABLE_SERVER_HOST_NAME = "127.0.0.1"; // Change to 0.0.0.0 when needs external access
 export const DEFAULT_TABLE_LISTENING_PORT = 10002;
+export const DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT = 5;
 export const DEFAULT_ENABLE_ACCESS_LOG = true;
 export const DEFAULT_ENABLE_DEBUG_LOG = true;
 export const DEFAULT_TABLE_PERSISTENCE_PATH = "__tablestorage__";

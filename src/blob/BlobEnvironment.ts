@@ -5,7 +5,7 @@ import { dirname } from "path";
 import IBlobEnvironment from "./IBlobEnvironment";
 import {
   DEFAULT_BLOB_LISTENING_PORT,
-  DEFAULT_BLOB_SERVER_HOST_NAME
+  DEFAULT_BLOB_SERVER_HOST_NAME, DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT
 } from "./utils/constants";
 
 if (!(args as any).config.name) {
@@ -19,6 +19,11 @@ if (!(args as any).config.name) {
       ["", "blobPort"],
       "Optional. Customize listening port for blob",
       DEFAULT_BLOB_LISTENING_PORT
+    )
+    .option(
+      ["", "blobKeepAliveTimeout"],
+      "Optional. Customize http keep alive timeout for blob",
+      DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
     )
     .option(
       ["l", "location"],
@@ -73,6 +78,10 @@ export default class BlobEnvironment implements IBlobEnvironment {
 
   public blobPort(): number | undefined {
     return this.flags.blobPort;
+  }
+
+  public blobKeepAliveTimeout(): number | undefined {
+    return this.flags.keepAliveTimeout;
   }
 
   public async location(): Promise<string> {

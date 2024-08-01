@@ -74,6 +74,7 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
     const config = new BlobConfiguration(
       env.blobHost(),
       env.blobPort(),
+      env.blobKeepAliveTimeout(),
       join(location, DEFAULT_BLOB_LOKI_DB_PATH),
       join(location, DEFAULT_BLOB_EXTENT_LOKI_DB_PATH),
       DEFAULT_BLOB_PERSISTENCE_ARRAY,

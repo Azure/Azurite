@@ -186,10 +186,13 @@ Following extension configurations are supported:
 
 - `azurite.blobHost` Blob service listening endpoint, by default 127.0.0.1
 - `azurite.blobPort` Blob service listening port, by default 10000
+- `azurite.blobKeepAliveTimeout` Blob service keep alive timeout, by default 5
 - `azurite.queueHost` Queue service listening endpoint, by default 127.0.0.1
 - `azurite.queuePort` Queue service listening port, by default 10001
+- `azurite.queueKeepAliveTimeout` Queue service keep alive timeout, by default 5
 - `azurite.tableHost` Table service listening endpoint, by default 127.0.0.1
 - `azurite.tablePort` Table service listening port, by default 10002
+- `azurite.tableKeepAliveTimeout` Queue service keep alive timeout, by default 5
 - `azurite.location` Workspace location folder path (can be relative or absolute). By default, in the VS Code extension, the currently opened folder is used. If launched from the command line, the current process working directory is the default. Relative paths are resolved relative to the default folder.
 - `azurite.silent` Silent mode to disable access log in Visual Studio channel, by default false
 - `azurite.debug` Output debug log into Azurite channel, by default false

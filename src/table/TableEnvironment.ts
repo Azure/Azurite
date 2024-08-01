@@ -6,7 +6,8 @@ import args from "args";
 import ITableEnvironment from "./ITableEnvironment";
 import {
   DEFAULT_TABLE_LISTENING_PORT,
-  DEFAULT_TABLE_SERVER_HOST_NAME
+  DEFAULT_TABLE_SERVER_HOST_NAME,
+  DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT
 } from "./utils/constants";
 
 args
@@ -19,6 +20,11 @@ args
     ["", "tablePort"],
     "Optional. Customize listening port for table",
     DEFAULT_TABLE_LISTENING_PORT
+  )
+  .option(
+    ["", "tableKeepAliveTimeout"],
+    "Optional. Customize http keep alive timeout for table",
+    DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT,
   )
   .option(
     ["l", "location"],
@@ -68,6 +74,10 @@ export default class TableEnvironment implements ITableEnvironment {
 
   public tablePort(): number | undefined {
     return this.flags.tablePort;
+  }
+
+  public tableKeepAliveTimeout(): number | undefined {
+    return this.flags.tableKeepAvlieTimeout;
   }
 
   public async location(): Promise<string> {
