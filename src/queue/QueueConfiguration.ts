@@ -8,7 +8,8 @@ import {
   DEFAULT_QUEUE_LISTENING_PORT,
   DEFAULT_QUEUE_LOKI_DB_PATH,
   DEFAULT_QUEUE_PERSISTENCE_ARRAY,
-  DEFAULT_QUEUE_SERVER_HOST_NAME
+  DEFAULT_QUEUE_SERVER_HOST_NAME,
+  DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT,
 } from "./utils/constants";
 
 /**
@@ -27,6 +28,7 @@ export default class QueueConfiguration extends ConfigurationBase {
   public constructor(
     host: string = DEFAULT_QUEUE_SERVER_HOST_NAME,
     port: number = DEFAULT_QUEUE_LISTENING_PORT,
+    keepAliveTimeout: number = DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT,
     public readonly metadataDBPath: string = DEFAULT_QUEUE_LOKI_DB_PATH,
     public readonly extentDBPath: string = DEFAULT_QUEUE_EXTENT_LOKI_DB_PATH,
     public readonly persistencePathArray: StoreDestinationArray = DEFAULT_QUEUE_PERSISTENCE_ARRAY,
@@ -47,6 +49,7 @@ export default class QueueConfiguration extends ConfigurationBase {
     super(
       host,
       port,
+      keepAliveTimeout,
       enableAccessLog,
       accessLogWriteStream,
       enableDebugLog,

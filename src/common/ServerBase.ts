@@ -36,6 +36,7 @@ export default abstract class ServerBase implements ICleaner {
    * @param {number} port Server port, for example, 10000
    * @param {http.Server | https.Server} httpServer A HTTP or HTTPS server instance without request listener bound
    * @param {IRequestListenerFactory} requestListenerFactory A request listener factory
+   * @param config ConfigurationBase configuration
    * @memberof ServerBase
    */
   public constructor(
@@ -45,6 +46,9 @@ export default abstract class ServerBase implements ICleaner {
     requestListenerFactory: IRequestListenerFactory,
     public readonly config: ConfigurationBase
   ) {
+    if (this.config.keepAliveTimeout > 0) {
+      httpServer.keepAliveTimeout = this.config.keepAliveTimeout;
+    }
     // Remove predefined request listeners to avoid double request handling
     this.httpServer = stoppable(httpServer);
     this.httpServer.removeAllListeners("request");

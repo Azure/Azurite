@@ -66,6 +66,7 @@ export default class VSCServerManagerTable extends VSCServerManagerBase {
     const config = new TableConfiguration(
       env.tableHost(),
       env.tablePort(),
+      env.tableKeepAliveTimeout(),
       join(location, DEFAULT_TABLE_LOKI_DB_PATH),
       (await env.debug()) === true,
       !env.silent(),

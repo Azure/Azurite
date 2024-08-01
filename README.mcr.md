@@ -80,6 +80,12 @@ Above command will try to start Azurite image with configurations:
 
 Please refer to this [document](https://github.com/Azure/Azurite/blob/master/README.md) for **More supported parameters** like HTTPS or OAuth.
 
+**Customize HTTP Keep-Alive behavior**
+
+```bash
+docker run azurite --blobHost 0.0.0.0 --blobKeepAliveTimeout 300 --queueHost 0.0.0.0 --queueKeepAliveTimeout 300  --tableHost 0.0.0.0 --tableKeepAliveTimeout 300
+```
+
 ## Documentation
 
 Please refer to this [document](https://github.com/Azure/Azurite/blob/master/README.md).

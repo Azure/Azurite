@@ -1,16 +1,19 @@
 import args from "args";
 
 import {
+  DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
   DEFAULT_BLOB_LISTENING_PORT,
   DEFAULT_BLOB_SERVER_HOST_NAME
 } from "../blob/utils/constants";
 
 import {
+  DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT,
   DEFAULT_QUEUE_LISTENING_PORT,
   DEFAULT_QUEUE_SERVER_HOST_NAME
 } from "../queue/utils/constants";
 
 import {
+  DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT,
   DEFAULT_TABLE_LISTENING_PORT,
   DEFAULT_TABLE_SERVER_HOST_NAME
 } from "../table/utils/constants";
@@ -29,6 +32,11 @@ args
     DEFAULT_BLOB_LISTENING_PORT
   )
   .option(
+    ["", "blobKeepAliveTimeout"],
+    "Optional. Customize http keep alive timeout for blob",
+    DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT,
+  )
+  .option(
     ["", "queueHost"],
     "Optional. Customize listening address for queue",
     DEFAULT_QUEUE_SERVER_HOST_NAME
@@ -39,6 +47,11 @@ args
     DEFAULT_QUEUE_LISTENING_PORT
   )
   .option(
+    ["", "queueKeepAliveTimeout"],
+    "Optional. Customize http keep alive timeout for queue",
+    DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT,
+  )
+  .option(
     ["", "tableHost"],
     "Optional. Customize listening address for table",
     DEFAULT_TABLE_SERVER_HOST_NAME
@@ -47,6 +60,11 @@ args
     ["", "tablePort"],
     "Optional. Customize listening port for table",
     DEFAULT_TABLE_LISTENING_PORT
+  )
+  .option(
+    ["", "tableKeepAliveTimeout"],
+    "Optional. Customize http keep alive timeout for table",
+    DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT,
   )
   .option(
     ["l", "location"],
@@ -99,6 +117,10 @@ export default class Environment implements IEnvironment {
     return this.flags.blobPort;
   }
 
+  public blobKeepAliveTimeout(): number | undefined {
+    return this.flags.blobKeepAliveTimeout;
+  }
+
   public queueHost(): string | undefined {
     return this.flags.queueHost;
   }
@@ -107,12 +129,20 @@ export default class Environment implements IEnvironment {
     return this.flags.queuePort;
   }
 
+  public queueKeepAliveTimeout(): number | undefined {
+    return this.flags.queueKeepAliveTimeout;
+  }
+
   public tableHost(): string | undefined {
     return this.flags.tableHost;
   }
 
   public tablePort(): number | undefined {
     return this.flags.tablePort;
+  }
+
+  public tableKeepAliveTimeout(): number | undefined {
+    return this.flags.tableKeepAliveTimeout;
   }
 
   public async location(): Promise<string> {

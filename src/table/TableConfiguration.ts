@@ -4,7 +4,8 @@ import {
   DEFAULT_ENABLE_DEBUG_LOG,
   DEFAULT_TABLE_LISTENING_PORT,
   DEFAULT_TABLE_LOKI_DB_PATH,
-  DEFAULT_TABLE_SERVER_HOST_NAME
+  DEFAULT_TABLE_SERVER_HOST_NAME,
+  DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT
 } from "./utils/constants";
 
 /**
@@ -24,6 +25,7 @@ export default class TableConfiguration extends ConfigurationBase {
   public constructor(
     host: string = DEFAULT_TABLE_SERVER_HOST_NAME,
     port: number = DEFAULT_TABLE_LISTENING_PORT,
+    keepAliveTimeout: number = DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT,
     public readonly /* Store metadata */ metadataDBPath: string = DEFAULT_TABLE_LOKI_DB_PATH,
     enableDebugLog: boolean = DEFAULT_ENABLE_DEBUG_LOG,
     enableAccessLog: boolean = DEFAULT_ENABLE_ACCESS_LOG,
@@ -41,6 +43,7 @@ export default class TableConfiguration extends ConfigurationBase {
     super(
       host,
       port,
+      keepAliveTimeout,
       enableAccessLog,
       accessLogWriteStream,
       enableDebugLog,
