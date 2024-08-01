@@ -3,6 +3,7 @@ import {
   createReadStream,
   createWriteStream,
   fdatasync,
+  ftruncate,
   mkdir,
   open,
   stat,
@@ -34,6 +35,7 @@ import OperationQueue from "./OperationQueue";
 const statAsync = promisify(stat);
 const mkdirAsync = promisify(mkdir);
 const unlinkAsync = promisify(unlink);
+const ftruncateAsync = promisify(ftruncate);
 
 // The max size of an extent.
 const MAX_EXTENT_SIZE = DEFAULT_MAX_EXTENT_SIZE;
@@ -293,6 +295,17 @@ export default class FSExtentStore implements IExtentStore {
               count
             };
           } catch (err) {
+            // Reset cursor position to the current offset.
+            try {
+              await ftruncateAsync(fd, appendExtent.offset);
+            } catch (truncate_err) {
+              this.logger.error(
+                `FSExtentStore:appendExtent() Truncate fd:${fd} len: ${appendExtent.offset} error:${JSON.stringify(
+                  truncate_err
+                )}.`,
+                contextId
+              );
+            }
             appendExtent.appendStatus = AppendStatusCode.Idle;
             throw err;
           }
@@ -541,10 +554,11 @@ export default class FSExtentStore implements IExtentStore {
           this.logger.debug(
             `FSExtentStore:streamPipe() Readable stream triggers error event, error:${JSON.stringify(
               err
-            )}, after ${count} bytes piped. Invoke write stream destroy() method.`,
+            )}, after ${count} bytes piped. Reject streamPipe().`,
             contextId
           );
-          ws.destroy(err);
+          
+          reject(err);
         });
 
       ws.on("drain", () => {
