@@ -31,6 +31,8 @@ export const EMULATOR_ACCOUNT_KEY = Buffer.from(
 export const EMULATOR_ACCOUNT_SKUNAME = Models.SkuName.StandardRAGRS;
 export const EMULATOR_ACCOUNT_KIND = Models.AccountKind.StorageV2;
 export const EMULATOR_ACCOUNT_ISHIERARCHICALNAMESPACEENABLED = false;
+export const DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT = 5;
+
 
 export const HeaderConstants = {
   AUTHORIZATION: "authorization",
