@@ -185,13 +185,13 @@ Following extension configurations are supported:
 
 - `azurite.blobHost` Blob service listening endpoint, by default 127.0.0.1
 - `azurite.blobPort` Blob service listening port, by default 10000
-- `azurite.blobKeepAliveTimeout` Blob service keep alive timeout, by default 5000
+- `azurite.blobKeepAliveTimeout` Blob service keep alive timeout in ms, by default 5000
 - `azurite.queueHost` Queue service listening endpoint, by default 127.0.0.1
 - `azurite.queuePort` Queue service listening port, by default 10001
-- `azurite.queueKeepAliveTimeout` Queue service keep alive timeout, by default 5000
+- `azurite.queueKeepAliveTimeout` Queue service keep alive timeout in ms, by default 5000
 - `azurite.tableHost` Table service listening endpoint, by default 127.0.0.1
 - `azurite.tablePort` Table service listening port, by default 10002
-- `azurite.tableKeepAliveTimeout` Queue service keep alive timeout, by default 5000
+- `azurite.tableKeepAliveTimeout` Queue service keep alive timeout in ms, by default 5000
 - `azurite.location` Workspace location folder path (can be relative or absolute). By default, in the VS Code extension, the currently opened folder is used. If launched from the command line, the current process working directory is the default. Relative paths are resolved relative to the default folder.
 - `azurite.silent` Silent mode to disable access log in Visual Studio channel, by default false
 - `azurite.debug` Output debug log into Azurite channel, by default false
@@ -249,19 +249,19 @@ Above command will try to start Azurite image with configurations:
 
 `--blobHost 0.0.0.0` defines blob service listening endpoint to accept requests from host machine.
 
-`--blobKeepAliveTimeout 5000` blob service keep alive timeout
+`--blobKeepAliveTimeout 5000` blob service keep alive timeout in ms
 
 `--queuePort 8888` makes Azurite queue service listen to port 8888, while `-p 8888:8888` redirects requests from host machine's port 8888 to docker instance.
 
 `--queueHost 0.0.0.0` defines queue service listening endpoint to accept requests from host machine.
 
-`--queueKeepAliveTimeout 5000` queue service keep alive timeout
+`--queueKeepAliveTimeout 5000` queue service keep alive timeout in ms
 
 `--tablePort 9999` makes Azurite table service listen to port 9999, while `-p 9999:9999` redirects requests from host machine's port 9999 to docker instance.
 
 `--tableHost 0.0.0.0` defines table service listening endpoint to accept requests from host machine.
 
-`--tableKeepAliveTimeout 5000` table service keep alive timeout
+`--tableKeepAliveTimeout 5000` table service keep alive timeout in ms
 
 `--loose` enables loose mode which ignore unsupported headers and parameters.
 
