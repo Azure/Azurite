@@ -68,6 +68,10 @@ export default class QueueEnvironment implements IQueueEnvironment {
     return this.flags.queuePort;
   }
 
+  public queueKeepAliveTimeout(): number | undefined {
+    return this.flags.keepAliveTimeout;
+  }
+
   public async location(): Promise<string> {
     return this.flags.location || process.cwd();
   }

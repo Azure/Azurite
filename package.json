@@ -207,6 +207,11 @@
             "default": 10000,
             "description": "Blob service listening port, by default 10000"
           },
+          "azurite.blobKeepAliveTimeout": {
+            "type": "number",
+            "default": 5,
+            "description": "Blob service keep alive timeout, by default 5"
+          },
           "azurite.queueHost": {
             "type": "string",
             "default": "127.0.0.1",
@@ -217,6 +222,11 @@
             "default": 10001,
             "description": "Queue service listening port, by default 10001"
           },
+          "azurite.queueKeepAliveTimeout": {
+            "type": "number",
+            "default": 5,
+            "description": "Queue service keep alive timeout, by default 5"
+          },
           "azurite.tableHost": {
             "type": "string",
             "default": "127.0.0.1",
@@ -226,6 +236,11 @@
             "type": "number",
             "default": 10002,
             "description": "Table service listening port, by default 10002"
+          },
+          "azurite.tableKeepAliveTimeout": {
+            "type": "number",
+            "default": 5,
+            "description": "Table service keep alive timeout, by default 5"
           },
           "azurite.skipApiVersionCheck": {
             "type": "boolean",
