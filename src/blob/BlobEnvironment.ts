@@ -5,7 +5,8 @@ import { dirname } from "path";
 import IBlobEnvironment from "./IBlobEnvironment";
 import {
   DEFAULT_BLOB_LISTENING_PORT,
-  DEFAULT_BLOB_SERVER_HOST_NAME, DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT
+  DEFAULT_BLOB_SERVER_HOST_NAME,
+  DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT
 } from "./utils/constants";
 
 if (!(args as any).config.name) {
