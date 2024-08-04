@@ -1,23 +1,16 @@
 import {
-  StorageSharedKeyCredential,
-  BlobServiceClient,
-  newPipeline,
-  BlobSASPermissions
-} from "@azure/storage-blob";
+    BlobSASPermissions, BlobServiceClient, newPipeline, StorageSharedKeyCredential
+} from '@azure/storage-blob';
+
+import { configLogger } from '../../../src/common/Logger';
+import { getMD5FromString } from '../../../src/common/utils/utils';
+import BlobTestServerFactory from '../../BlobTestServerFactory';
+import {
+    base64encode, bodyToString, EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME, getUniqueName, sleep
+} from '../../testutils';
+
 import assert = require("assert");
 import crypto = require("crypto");
-
-import { configLogger } from "../../../src/common/Logger";
-import BlobTestServerFactory from "../../BlobTestServerFactory";
-import {
-  base64encode,
-  bodyToString,
-  EMULATOR_ACCOUNT_KEY,
-  EMULATOR_ACCOUNT_NAME,
-  getUniqueName,
-  sleep
-} from "../../testutils";
-import { getMD5FromString } from "../../../src/common/utils/utils";
 
 // Set true to enable debug log
 configLogger(false);
@@ -70,7 +63,7 @@ describe("BlockBlobAPIs", () => {
     await containerClient.delete();
   });
 
-  it("Blob should be staged from URL and committed @loki @sql", async () => {
+  it("Blob should be staged from URL and committed @loki", async () => {
     const source1Blob = getUniqueName("blob");
     const source2Blob = getUniqueName("blob");
     const destBlob = getUniqueName("blob");
