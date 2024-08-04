@@ -1,8 +1,8 @@
-import { createHash, createHmac } from "crypto";
-import rimraf = require("rimraf");
-import { parse } from "url";
-import { promisify } from "util";
+import { createHash, createHmac } from 'crypto';
+import { parse } from 'url';
+import { promisify } from 'util';
 
+import rimraf = require("rimraf");
 // LokiFsStructuredAdapter
 // tslint:disable-next-line:no-var-requires
 export const lfsa = require("lokijs/src/loki-fs-structured-adapter.js");
