@@ -1,0 +1,448 @@
+name: Azurite PR check
+run-name: ${{ github.actor }}'s PR is being checked.
+
+on:
+  pull_request:
+  schedule:
+    - cron: '0 19 * * 0'
+    
+jobs:
+  BlobTest_Ubuntu_Node16:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:blob
+      - run: npm run test:blob:in-memory
+      
+  BlobTest_Ubuntu_Node18:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:blob
+      - run: npm run test:blob:in-memory
+      
+  BlobTest_Ubuntu_Node20:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:blob
+      - run: npm run test:blob:in-memory
+      
+  BlobTest_Ubuntu_Node22:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:blob
+      - run: npm run test:blob:in-memory
+      
+  BlobTest_Win_Node20:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:blob
+      - run: npm run test:blob:in-memory
+      
+  BlobTest_Win_Node18:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:blob
+      - run: npm run test:blob:in-memory
+      
+  BlobTest_MacOS_Node16:
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:blob
+      - run: npm run test:blob:in-memory
+      
+  BlobTest_MacOS_Node22:
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:blob
+      - run: npm run test:blob:in-memory
+      
+  BlobTest_MySQL_Ubuntu_Node22:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps
+      - name: Setup mysql docker instance
+        run: |
+            docker run --name mysql -p 13306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql
+            sleep 60
+            docker exec mysql mysql -u root -pmy-secret-pw -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+            docker exec mysql mysql -u root -pmy-secret-pw -e "create database azurite_blob_test;"
+      - run: npm run test:blob:sql:ci
+      
+  BlobTest_MySQL_Ubuntu_Node16:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+      - run: npm ci --legacy-peer-deps
+      - name: Setup mysql docker instance
+        run: |
+            docker run --name mysql -p 13306:3306 -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql
+            sleep 60
+            docker exec mysql mysql -u root -pmy-secret-pw -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+            docker exec mysql mysql -u root -pmy-secret-pw -e "create database azurite_blob_test;"
+      - run: npm run test:blob:sql:ci
+      
+  QueueTest_Ubuntu_Node22:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:queue
+      - run: npm run test:queue:in-memory
+      
+  QueueTest_Ubuntu_Node20:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:queue
+      - run: npm run test:queue:in-memory
+      
+  QueueTest_Win_Node16:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:queue
+      - run: npm run test:queue:in-memory
+      
+  QueueTest_Win_Node18:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:queue
+      - run: npm run test:queue:in-memory
+      
+  QueueTest_MacOS_Node20:
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:queue
+      - run: npm run test:queue:in-memory
+      
+  QueueTest_MacOS_Node18:
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:queue
+      - run: npm run test:queue:in-memory
+      
+  TableTest_Ubuntu_Node22:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:table
+      - run: npm run test:table:in-memory
+      
+  TableTest_Ubuntu_Node16:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:table
+      - run: npm run test:table:in-memory
+      
+  TableTest_Win_Node20:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:table
+      - run: npm run test:table:in-memory
+      
+  TableTest_Win_Node16:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:table
+      - run: npm run test:table:in-memory
+      
+  TableTest_MacOS_Node20:
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:table
+      - run: npm run test:table:in-memory
+      
+  TableTest_MacOS_Node18:
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test:table
+      - run: npm run test:table:in-memory
+      
+  Azurite_Linux_Node18:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm ci --legacy-peer-deps
+      - name: tslint
+        run: npm run lint
+      - name: Validate npm package installation
+        run: npm run validate:npmpack:linux_mac
+      - name: Validate Visual Studio Code extension package generation
+        run: npm run vscode:pack
+      - name: Validate npm global installation from GitHub code base
+        run: |
+            sudo npm uninstall -g azurite
+            npm run build
+            npm install --location=global
+            azurite -v
+            azurite-blob -v
+            azurite-queue -v
+            azurite-table -v
+      
+  Azurite_Linux_Node16:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+      - run: npm ci --legacy-peer-deps
+      - name: tslint
+        run: npm run lint
+      - name: Validate npm package installation
+        run: npm run validate:npmpack:linux_mac
+      - name: Validate Visual Studio Code extension package generation
+        run: npm run vscode:pack
+      - name: Validate npm global installation from GitHub code base
+        run: |
+            sudo npm uninstall -g azurite
+            npm run build
+            npm install --location=global
+            azurite -v
+            azurite-blob -v
+            azurite-queue -v
+            azurite-table -v
+      
+  Azurite_Win_Node22:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --legacy-peer-deps
+      - name: tslint
+        run: npm run lint
+      - name: Validate npm package installation
+        run: npm run validate:npmpack:win
+      - name: Validate Visual Studio Code extension package generation
+        run: npm run vscode:pack
+      - name: Validate npm global installation from GitHub code base
+        run: |
+            npm uninstall -g azurite
+            npm run build
+            npm install -g
+            azurite -v
+            azurite-blob -v
+            azurite-queue -v
+            azurite-table -v
+      
+  Azurite_Win_Node20:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci --legacy-peer-deps
+      - name: tslint
+        run: npm run lint
+      - name: Validate npm package installation
+        run: npm run validate:npmpack:win
+      - name: Validate Visual Studio Code extension package generation
+        run: npm run vscode:pack
+      - name: Validate npm global installation from GitHub code base
+        run: |
+            npm uninstall -g azurite
+            npm run build
+            npm install -g
+            azurite -v
+            azurite-blob -v
+            azurite-queue -v
+            azurite-table -v
+      
+  Azurite_Mac_Node20:
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci --legacy-peer-deps
+      - name: tslint
+        run: npm run lint
+      - name: Validate npm package installation
+        run: npm run validate:npmpack:linux_mac
+      - name: Validate Visual Studio Code extension package generation
+        run: npm run vscode:pack
+      - name: Validate npm global installation from GitHub code base
+        run: |
+            sudo npm uninstall -g azurite
+            npm run build
+            sudo npm install -g
+            azurite -v
+            azurite-blob -v
+            azurite-queue -v
+            azurite-table -v
+      
+  Azurite_Mac_Node16:
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run lint
+      - run: npm run validate:npmpack:linux_mac
+      - run: npm run vscode:pack
+      - name: Validate npm global installation from GitHub code base
+        run: |
+            sudo npm uninstall -g azurite
+            npm run build
+            sudo npm install -g
+            azurite -v
+            azurite-blob -v
+            azurite-queue -v
+            azurite-table -v
+      
+  Azurite_Docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci --legacy-peer-deps
+      - run: npm run docker:build
+      - name: Validate docker image
+        run: |
+            docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite -v
+            docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-blob -v
+            docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-queue -v
+            docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-table -v
+      
+  Azurite_ExeTest:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run build:exe
+      - run: npm run test:exe
+      
+  Azurite_LinuxBinaryTest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci --legacy-peer-deps
+      - run: npm run build:linux
+      - run: npm run test:linux
+      
+## TODO: the following job in Azure pipeline is still not added to github action
+#  Azurite_Governance_Origin:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#      - name: Component detection 
+#        uses: ComponentGovernanceComponentDetection@0
+#        inputs:
+#          scanType: "Register"
+#          verbosity: "Verbose"
+#          alertWarningLevel: "High"    
