@@ -3,7 +3,7 @@ import {
   createReadStream,
   createWriteStream,
   fdatasync,
-  ftruncate,
+  truncate,
   mkdir,
   open,
   stat,
@@ -35,7 +35,7 @@ import OperationQueue from "./OperationQueue";
 const statAsync = promisify(stat);
 const mkdirAsync = promisify(mkdir);
 const unlinkAsync = promisify(unlink);
-const ftruncateAsync = promisify(ftruncate);
+const truncateAsync = promisify(truncate);
 
 // The max size of an extent.
 const MAX_EXTENT_SIZE = DEFAULT_MAX_EXTENT_SIZE;
@@ -295,18 +295,22 @@ export default class FSExtentStore implements IExtentStore {
               count
             };
           } catch (err) {
-            // Reset cursor position to the current offset.
+            // Reset cursor position to the current offset. On Windows, truncating a file open in append mode doesn't
+            // work, so we need to close the file descriptor first.
             try {
-              await ftruncateAsync(fd, appendExtent.offset);
+              appendExtent.fd = undefined;
+              await closeAsync(fd);
+              await truncateAsync(path, appendExtent.offset);
+              // Indicate that the extent is ready for the next append operation.
+              appendExtent.appendStatus = AppendStatusCode.Idle;
             } catch (truncate_err) {
               this.logger.error(
-                `FSExtentStore:appendExtent() Truncate fd:${fd} len: ${appendExtent.offset} error:${JSON.stringify(
+                `FSExtentStore:appendExtent() Truncate path:${path} len: ${appendExtent.offset} error:${JSON.stringify(
                   truncate_err
                 )}.`,
                 contextId
               );
             }
-            appendExtent.appendStatus = AppendStatusCode.Idle;
             throw err;
           }
         })()
