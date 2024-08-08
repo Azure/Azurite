@@ -1,20 +1,20 @@
-import { convertRawHeadersToMetadata } from "../../common/utils/utils";
 import {
-  getMD5FromStream,
-  getMD5FromString,
-  newEtag
-} from "../../common/utils/utils";
-import BlobStorageContext from "../context/BlobStorageContext";
-import NotImplementedError from "../errors/NotImplementedError";
-import StorageErrorFactory from "../errors/StorageErrorFactory";
-import * as Models from "../generated/artifacts/models";
-import Context from "../generated/Context";
-import IBlockBlobHandler from "../generated/handlers/IBlockBlobHandler";
-import { parseXML } from "../generated/utils/xml";
-import { BlobModel, BlockModel } from "../persistence/IBlobMetadataStore";
-import { BLOB_API_VERSION } from "../utils/constants";
-import BaseHandler from "./BaseHandler";
-import { getTagsFromString } from "../utils/utils";
+    convertRawHeadersToMetadata, getMD5FromStream, getMD5FromString, newEtag
+} from '../../common/utils/utils';
+import BlobStorageContext from '../context/BlobStorageContext';
+import NotImplementedError from '../errors/NotImplementedError';
+import StorageErrorFactory from '../errors/StorageErrorFactory';
+import * as Models from '../generated/artifacts/models';
+import Context from '../generated/Context';
+import IBlockBlobHandler from '../generated/handlers/IBlockBlobHandler';
+import { parseXML } from '../generated/utils/xml';
+import { extractStoragePartsFromPath } from '../middlewares/blobStorageContext.middleware';
+import { BlobModel, BlockModel } from '../persistence/IBlobMetadataStore';
+import { BLOB_API_VERSION } from '../utils/constants';
+import {
+    downloadBlockBlobOrAppendBlob, getTagsFromString, NewUriFromCopySource, validateCopySource
+} from '../utils/utils';
+import BaseHandler from './BaseHandler';
 
 /**
  * BlobHandler handles Azure Storage BlockBlob related requests.
@@ -270,7 +270,78 @@ export default class BlockBlobHandler
     options: Models.BlockBlobStageBlockFromURLOptionalParams,
     context: Context
   ): Promise<Models.BlockBlobStageBlockFromURLResponse> {
-    throw new NotImplementedError(context.contextId);
+
+    const blobCtx = new BlobStorageContext(context);
+
+    // TODO: Check dest Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
+    const url = NewUriFromCopySource(sourceUrl, context);
+    const [
+      sourceAccount,
+      sourceContainer,
+      sourceBlob
+    ] = extractStoragePartsFromPath(url.hostname, url.pathname, blobCtx.disableProductStyleUrl);
+    const snapshot = url.searchParams.get("snapshot") || "";
+
+    if (
+      sourceAccount === undefined ||
+      sourceContainer === undefined ||
+      sourceBlob === undefined
+    ) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId!);
+    }
+
+    const sig = url.searchParams.get("sig");
+    if ((sourceAccount !== blobCtx.account) || (sig !== null)) {
+      await validateCopySource(this.logger, "BlockBlobHandler", sourceUrl, sourceAccount, context);
+    }
+
+    const downloadBlobRes = await this.metadataStore.downloadBlob(
+      context,
+      sourceAccount,
+      sourceContainer,
+      sourceBlob,
+      snapshot,
+      options.leaseAccessConditions,
+    );
+
+    if (downloadBlobRes.properties.contentLength === undefined) {
+      throw StorageErrorFactory.getConditionNotMet(context.contextId!);
+    }
+
+    const downloadBlockBlobRes = await downloadBlockBlobOrAppendBlob(
+      this.logger,
+      "BlockBlobHandler",
+      this.extentStore,
+      { snapshot: snapshot, leaseAccessConditions: options.leaseAccessConditions },
+      context,
+      downloadBlobRes,
+    );
+
+    if (downloadBlockBlobRes.body === undefined) {
+      throw StorageErrorFactory.getConditionNotMet(context.contextId!);
+    }
+
+    const stageBlockRes = await this.stageBlock(blockId,
+      downloadBlobRes.properties.contentLength,
+      downloadBlockBlobRes.body,
+      { leaseAccessConditions: options.leaseAccessConditions },
+      context
+    );
+
+    const response: Models.BlockBlobStageBlockFromURLResponse = {
+      statusCode: stageBlockRes.statusCode,
+      contentMD5: stageBlockRes.contentMD5,
+      date: stageBlockRes.date,
+      encryptionKeySha256: stageBlockRes.encryptionKeySha256,
+      encryptionScope: stageBlockRes.encryptionScope,
+      errorCode: stageBlockRes.errorCode,
+      isServerEncrypted: stageBlockRes.isServerEncrypted,
+      requestId: stageBlockRes.requestId,
+      version: stageBlockRes.version,
+      xMsContentCrc64: stageBlockRes.xMsContentCrc64,
+    };
+
+    return response
   }
 
   public async commitBlockList(
@@ -501,4 +572,5 @@ export default class BlockBlobHandler
       );
     }
   }
+
 }
