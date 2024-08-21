@@ -4,10 +4,13 @@
 
 ## Upcoming Release
 
+## 2024.08 Version 3.32.0
+
 General:
 
 - Bump mysql2 to resolve to 3.10.1 for security patches
 - Fixed an issue where premature client disconnections led to all following requests failing with a 500 error. (issue #1346) 
+- Bump up service API version to 2024-11-04
 
 Blob:
 
