@@ -327,16 +327,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
-
-    if (metadata != undefined) {
-      Object.entries(metadata).forEach(([key, value]) => {
-        if (key.includes("-")) {
-          throw StorageErrorFactory.getInvalidMetadata(context.contextId!);
-        }
-      });
-    }
 
     const res = await this.metadataStore.setBlobMetadata(
       context,
@@ -597,7 +589,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     const res = await this.metadataStore.createSnapshot(
@@ -669,7 +661,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     const res = await this.metadataStore.startCopyFromURL(
@@ -872,7 +864,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     const res = await this.metadataStore.copyFromURL(

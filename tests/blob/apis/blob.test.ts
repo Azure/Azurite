@@ -496,6 +496,31 @@ describe("BlobAPIs", () => {
 
   });
 
+  it("should fail when upload has metadata names that are invalid C# identifiers @loki @sql", async () => {
+    let invalidNames = [
+      "1invalid",
+      "invalid.name",
+      "invalid-name",
+    ]
+    for (let i = 0; i < invalidNames.length; i++) {
+      const metadata = {
+        [invalidNames[i]]: "value"
+      };
+      let hasError = false;
+      try {
+        await blockBlobClient.upload(content, content.length, { metadata });
+      } catch (error) {
+        assert.deepStrictEqual(error.statusCode, 400);
+        assert.strictEqual(error.code, 'InvalidHeaderValue');
+        hasError = true;
+      }
+      if (!hasError)
+      {
+        assert.fail();
+      }
+    }
+  });
+
   it("acquireLease_available_proposedLeaseId_fixed @loki @sql", async () => {
     const guid = "ca761232ed4211cebacd00aa0057b223";
     const duration = 30;

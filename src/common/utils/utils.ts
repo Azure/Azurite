@@ -2,6 +2,8 @@ import { createHash, createHmac } from "crypto";
 import rimraf = require("rimraf");
 import { parse } from "url";
 import { promisify } from "util";
+import StorageErrorFactory from "../../blob/errors/StorageErrorFactory";
+import { VALID_CSHARP_IDENTIFIER_REGEX } from "./constants";
 
 // LokiFsStructuredAdapter
 // tslint:disable-next-line:no-var-requires
@@ -21,7 +23,7 @@ export function convertDateTimeStringMsTo7Digital(
 }
 
 export function convertRawHeadersToMetadata(
-  rawHeaders: string[] = []
+  rawHeaders: string[] = [], contextId: string = ""
 ): { [propertyName: string]: string } | undefined {
   const metadataPrefix = "x-ms-meta-";
   const res: { [propertyName: string]: string } = {};
@@ -34,6 +36,9 @@ export function convertRawHeadersToMetadata(
       header.length > metadataPrefix.length
     ) {
       const key = header.substr(metadataPrefix.length);
+      if (!key.match(VALID_CSHARP_IDENTIFIER_REGEX)) {
+        throw StorageErrorFactory.getInvalidMetadata(contextId);
+      }
       let value = rawHeaders[i + 1] || "";
       if (res[key] !== undefined) {
         value = `${res[key]},${value}`;

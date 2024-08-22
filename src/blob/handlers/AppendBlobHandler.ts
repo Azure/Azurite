@@ -45,7 +45,7 @@ export default class AppendBlobHandler extends BaseHandler
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     const blob: BlobModel = {
