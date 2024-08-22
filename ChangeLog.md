@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Fixed an issue where all blob APIs allowed metadata names which were not valid C# identifiers.
+
 ## 2024.08 Version 3.32.0
 
 General:
