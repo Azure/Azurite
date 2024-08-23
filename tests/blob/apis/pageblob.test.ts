@@ -145,6 +145,32 @@ describe("PageBlobAPIs", () => {
     );
   });
 
+  it("create should fail when metadata names are invalid C# identifiers @loki @sql", async () => {
+    let invalidNames = [
+      "1invalid",
+      "invalid.name",
+      "invalid-name",
+    ]
+    for (let i = 0; i < invalidNames.length; i++) {
+      const metadata = {
+        [invalidNames[i]]: "value"
+      };
+      let hasError = false;
+      try {
+        await pageBlobClient.create(512, {
+          metadata: metadata
+        });
+      } catch (error) {
+        assert.deepStrictEqual(error.statusCode, 400);
+        assert.strictEqual(error.code, 'InvalidMetadata');
+        hasError = true;
+      }
+      if (!hasError) {
+        assert.fail();
+      }
+    }
+  });
+
   it("download page blob with partial ranges @loki", async () => {
     const length = 512 * 10;
     await pageBlobClient.create(length);

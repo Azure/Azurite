@@ -511,7 +511,7 @@ describe("BlobAPIs", () => {
         await blockBlobClient.upload(content, content.length, { metadata });
       } catch (error) {
         assert.deepStrictEqual(error.statusCode, 400);
-        assert.strictEqual(error.code, 'InvalidHeaderValue');
+        assert.strictEqual(error.code, 'InvalidMetadata');
         hasError = true;
       }
       if (!hasError)

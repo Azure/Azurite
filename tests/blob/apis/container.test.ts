@@ -239,6 +239,32 @@ describe("ContainerAPIs", () => {
     done();
   });
 
+  it("create should fail when metadata names are invalid C# identifiers @loki @sql", async () => {
+    let invalidNames = [
+      "1invalid",
+      "invalid.name",
+      "invalid-name",
+    ]
+    for (let i = 0; i < invalidNames.length; i++) {
+      const metadata = {
+        [invalidNames[i]]: "value"
+      };
+      let hasError = false;
+      try {
+        const cURL = serviceClient.getContainerClient(getUniqueName(containerName));
+        const access = "container";
+        await cURL.create({ metadata, access });
+      } catch (error) {
+        assert.deepStrictEqual(error.statusCode, 400);
+        assert.strictEqual(error.code, 'InvalidMetadata');
+        hasError = true;
+      }
+      if (!hasError) {
+        assert.fail();
+      }
+    }
+  });
+
   it("listBlobHierarchySegment with default parameters @loki @sql", async () => {
     const blobClients = [];
     for (let i = 0; i < 3; i++) {
