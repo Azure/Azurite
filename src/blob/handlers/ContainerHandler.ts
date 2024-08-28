@@ -64,7 +64,7 @@ export default class ContainerHandler extends BaseHandler
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     await this.metadataStore.createContainer(context, {
@@ -205,7 +205,7 @@ export default class ContainerHandler extends BaseHandler
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     await this.metadataStore.setContainerMetadata(

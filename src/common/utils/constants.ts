@@ -58,3 +58,5 @@ export const EMULATOR_ACCOUNT_KEY = Buffer.from(
   "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
   "base64"
 );
+
+export const VALID_CSHARP_IDENTIFIER_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*$/;

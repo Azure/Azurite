@@ -97,7 +97,7 @@ export default class BlockBlobHandler
     const blob: BlobModel = {
       deleted: false,
       // Preserve metadata key case
-      metadata: convertRawHeadersToMetadata(blobCtx.request!.getRawHeaders()),
+      metadata: convertRawHeadersToMetadata(blobCtx.request!.getRawHeaders(), context.contextId!),
       accountName,
       containerName,
       name: blobName,
@@ -345,7 +345,7 @@ export default class BlockBlobHandler
     blob.properties.blobType = Models.BlobType.BlockBlob;
     blob.metadata = convertRawHeadersToMetadata(
       // Preserve metadata key case
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
     blob.properties.accessTier = Models.AccessTier.Hot;
     blob.properties.cacheControl = options.blobHTTPHeaders.blobCacheControl;

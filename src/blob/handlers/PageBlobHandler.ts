@@ -100,7 +100,7 @@ export default class PageBlobHandler extends BaseHandler
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders()
+      blobCtx.request!.getRawHeaders(), context.contextId!
     );
 
     const etag = newEtag();

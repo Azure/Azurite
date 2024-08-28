@@ -133,6 +133,32 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(properties.blobCommittedBlockCount, 0);
   });
 
+  it("Create append blob should fail when metadata names are invalid C# identifiers @loki @sql", async () => {
+    let invalidNames = [
+      "1invalid",
+      "invalid.name",
+      "invalid-name",
+    ]
+    for (let i = 0; i < invalidNames.length; i++) {
+      const metadata = {
+        [invalidNames[i]]: "value"
+      };
+      let hasError = false;
+      try {
+        await appendBlobClient.create({
+          metadata: metadata
+        });
+      } catch (error) {
+        assert.deepStrictEqual(error.statusCode, 400);
+        assert.strictEqual(error.code, 'InvalidMetadata');
+        hasError = true;
+      }
+      if (!hasError) {
+        assert.fail();
+      }
+    }
+  });
+
   it("Delete append blob should work @loki", async () => {
     await appendBlobClient.create();
     await appendBlobClient.delete();
