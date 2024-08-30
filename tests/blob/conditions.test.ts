@@ -141,7 +141,7 @@ describe("ConditionResourceAdapter", () => {
       blobModel.properties.lastModified
     );
     assert.deepStrictEqual(
-      conditionResourceAdapter.blobTags,
+      conditionResourceAdapter.tags,
       blobModel.blobTags
     );
   });

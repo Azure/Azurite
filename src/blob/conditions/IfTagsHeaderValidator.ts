@@ -14,7 +14,8 @@ export function validateIfTagsHeader(
     conditionalHeaders
   );
   if (resource.exist) {
-    if (!resource?.blobTags || !evaluateBlobWithTagsFunction(resource)) {
+    const tagsMeetConditions = evaluateBlobWithTagsFunction(resource);
+    if (!resource?.tags || tagsMeetConditions.length === 0) {
       throw StorageErrorFactory.getConditionNotMet(context.contextId!);
     }
   }

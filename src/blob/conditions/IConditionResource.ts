@@ -19,5 +19,5 @@ export default interface IConditionResource {
   /**
    * optional resource blog tags.
    */
-  blobTags?: BlobTags;
+  tags?: BlobTags;
 }
