@@ -1,5 +1,6 @@
 import { QueryLexer, QueryTokenKind } from "./QueryLexer";
 import AndNode from "./QueryNodes/AndNode";
+import BigNumberNode from "./QueryNodes/BigNumberNode";
 import BinaryDataNode from "./QueryNodes/BinaryDataNode";
 import ConstantNode from "./QueryNodes/ConstantNode";
 import DateTimeNode from "./QueryNodes/DateTimeNode";
@@ -246,7 +247,7 @@ class QueryParser {
 
     if (token.value!.endsWith("L")) {
       // This is a "long" number, which should be represented by its string equivalent
-      return new ConstantNode(token.value!.substring(0, token.value!.length - 1));
+      return new BigNumberNode(token.value!.substring(0, token.value!.length - 1));
     } else {
       return new ConstantNode(parseFloat(token.value!));
     }

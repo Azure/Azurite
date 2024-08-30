@@ -1,5 +1,5 @@
 import { IQueryContext } from "../IQueryContext";
-import IQueryNode from "./IQueryNode";
+import IQueryNode, { TagContent } from "./IQueryNode";
 
 export default class KeyNode implements IQueryNode {
   constructor(private identifier: string) { }
@@ -8,8 +8,11 @@ export default class KeyNode implements IQueryNode {
     return "id"
   }
 
-  evaluate(context: IQueryContext): any {
-    return context[this.identifier]
+  evaluate(context: IQueryContext): TagContent[] {
+    return [{
+      key: this.identifier,
+      value: context[this.identifier]
+    }];
   }
 
   toString(): string {

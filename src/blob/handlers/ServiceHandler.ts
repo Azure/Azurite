@@ -319,6 +319,21 @@ export default class ServiceHandler extends BaseHandler
       marker
     );
 
+    // Only the query parameter "include" contains the value "metadata" can the result present the metadata.
+    let includeMetadata = false;
+    if (options.include) {
+      for (const item of options.include) {
+        if (item.toLowerCase() === "metadata") {
+          includeMetadata = true;
+          break;
+        }
+      }
+    }
+    if (!includeMetadata) {
+      for (const container of containers[0]) {
+        container.metadata = undefined;
+      }
+    }
     // TODO: Need update list out container lease properties with ContainerHandler.updateLeaseAttributes()
     const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
     const res: Models.ServiceListContainersSegmentResponse = {

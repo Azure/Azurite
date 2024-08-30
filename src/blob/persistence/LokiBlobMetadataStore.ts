@@ -65,7 +65,7 @@ import IBlobMetadataStore, {
 import PageWithDelimiter from "./PageWithDelimiter";
 import FilterBlobPage from "./FilterBlobPage";
 import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
-import { getBlobTagsCount, getTagsFromString } from "../utils/utils";
+import { getBlobTagsCount, getTagsFromString, toBlobTags } from "../utils/utils";
 
 /**
  * This is a metadata source implementation for blob based on loki DB.
@@ -856,9 +856,6 @@ export default class LokiBlobMetadataStore
         .where((obj) => {
           return obj.name > marker!;
         })
-        .where((obj) => {
-          return filterFunction(obj);
-        })
         .sort((obj1, obj2) => {
           if (obj1.name === obj2.name) return 0;
           if (obj1.name > obj2.name) return 1;
@@ -867,6 +864,7 @@ export default class LokiBlobMetadataStore
         .offset(offset)
         .limit(maxResults)
         .data();
+
       return doc.map((item) => {
         let blobItem: FilterBlobModel;
         blobItem = {
@@ -875,6 +873,13 @@ export default class LokiBlobMetadataStore
           tags: item.blobTags
         };
         return blobItem;
+      }).filter((blobItem) => {
+        const tagsMeetConditions = filterFunction(blobItem);
+        if (tagsMeetConditions.length !== 0) {
+          blobItem.tags = { blobTagSet: toBlobTags(tagsMeetConditions) };
+          return true;
+        }
+        return false;
       });
     };
 
@@ -3471,7 +3476,8 @@ export default class LokiBlobMetadataStore
 
     if (modifiedAccessConditions?.ifTags) {
       const validateFunction = generateQueryBlobWithTagsWhereFunction(modifiedAccessConditions?.ifTags, true);
-      if (!validateFunction(doc)) {
+      if (modifiedAccessConditions?.ifTags !== undefined
+        && validateFunction(doc).length === 0) {
         throw new Error("412");
       }
     }

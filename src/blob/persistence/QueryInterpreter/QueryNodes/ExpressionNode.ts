@@ -1,5 +1,5 @@
 import { IQueryContext } from "../IQueryContext";
-import IQueryNode from "./IQueryNode";
+import IQueryNode, { TagContent } from "./IQueryNode";
 
 export default class ExpressionNode implements IQueryNode {
   constructor(public child: IQueryNode) { }
@@ -8,7 +8,7 @@ export default class ExpressionNode implements IQueryNode {
     return "expression"
   }
 
-  evaluate(context: IQueryContext): any {
+  evaluate(context: IQueryContext): TagContent[] {
     return this.child.evaluate(context)
   }
 

@@ -6,7 +6,8 @@ import {
   BlobServiceClient,
   generateAccountSASQueryParameters,
   newPipeline,
-  StorageSharedKeyCredential
+  StorageSharedKeyCredential,
+  Tags
 } from "@azure/storage-blob";
 import assert = require("assert");
 import StorageErrorFactory from "../../../src/blob/errors/StorageErrorFactory";
@@ -1151,44 +1152,63 @@ describe("ContainerAPIs", () => {
     assert.equal(result.segment.blobItems.length, 4);
   });
 
-  it("set/get blob tag should work, with base blob or snapshot @loki @sql", async () => {
-    const blobName = getUniqueName("blob")
-    const blobClient = containerClient.getPageBlobClient(blobName);
-    await blobClient.create(1024);
-    const tags = {
-      tag1: "val1",
-      tag2: "val2",
-    };
-    const tags2 = {
-      tag1: "val1",
-      tag2: "val22",
-      tag3: "val3",
-    };
+  it("filter blob by tags should work on container @loki @sql", async () => {
 
-    // Set/get tags on base blob
-    await blobClient.setTags(tags);
-    let outputTags1 = (await blobClient.getTags()).tags;
-    assert.deepStrictEqual(outputTags1, tags);
+    const key1 = getUniqueName("key");
+    const key2 = getUniqueName("key2");
 
-    // create snapshot, the tags should be same as base blob
-    const snapshotResponse = await blobClient.createSnapshot();
-    const blobClientSnapshot = blobClient.withSnapshot(snapshotResponse.snapshot!);
-    let outputTags2 = (await blobClientSnapshot.getTags()).tags;
-    assert.deepStrictEqual(outputTags2, tags);
+    const blobName1 = getUniqueName("blobname1");
+    const appendBlobClient1 = containerClient.getAppendBlobClient(blobName1);
+    const tags1: Tags = {};
+    tags1[key1] = getUniqueName("val1");
+    tags1[key2] = "default";
+    await appendBlobClient1.create({ tags: tags1 });
 
-    // Set/get  tags on snapshot, base blob tags should not be impacted.
-    await blobClientSnapshot.setTags(tags2);
-    outputTags2 = (await blobClientSnapshot.getTags()).tags;
-    assert.deepStrictEqual(outputTags2, tags2);
+    const blobName2 = getUniqueName("blobname2");
+    const appendBlobClient2 = containerClient.getAppendBlobClient(blobName2);
+    const tags2: Tags = {};
+    tags2[key1] = getUniqueName("val2");
+    tags2[key2] = "default";
+    await appendBlobClient2.create({ tags: tags2 });
 
-    outputTags1 = (await blobClient.getTags({ conditions: { tagConditions: `"tag1"='val1'` } })).tags;
-    assert.deepStrictEqual(outputTags1, tags);
+    const blobName3 = getUniqueName("blobname3");
+    const appendBlobClient3 = containerClient.getAppendBlobClient(blobName3);
+    const tags3: Tags = {};
+    tags3[key1] = getUniqueName("val3");
+    tags3[key2] = "default";
+    await appendBlobClient3.create({ tags: tags3 });
 
-    //const result = (await containerClient.findBlobsByTags("tag1='val1'").byPage().next()).value;
-    const result = (await serviceClient.findBlobsByTags(`"tag1"='val1' and "@container"='${containerName}'`).byPage().next()).value;
-    result;
+    const expectedTags1: Tags = {};
+    expectedTags1[key1] = tags1[key1];
+    for await (const blob of containerClient.findBlobsByTags(`${key1}='${tags1[key1]}'`)) {
+      assert.deepStrictEqual(blob.containerName, containerName);
+      assert.deepStrictEqual(blob.name, blobName1);
+      assert.deepStrictEqual(blob.tags, expectedTags1);
+      assert.deepStrictEqual(blob.tagValue, tags1[key1]);
+    }
 
-    blobClientSnapshot.delete();
+    const expectedTags2: Tags = {};
+    expectedTags2[key1] = tags2[key1];
+    const blobs = [];
+    for await (const blob of containerClient.findBlobsByTags(`${key1}='${tags2[key1]}'`)) {
+      blobs.push(blob);
+    }
+    assert.deepStrictEqual(blobs.length, 1);
+    assert.deepStrictEqual(blobs[0].containerName, containerName);
+    assert.deepStrictEqual(blobs[0].name, blobName2);
+    assert.deepStrictEqual(blobs[0].tags, expectedTags2);
+    assert.deepStrictEqual(blobs[0].tagValue, tags2[key1]);
+
+    const blobsWithTag2 = [];
+    for await (const segment of containerClient.findBlobsByTags(`${key2}='default'`).byPage({
+      maxPageSize: 1,
+    })) {
+      assert.ok(segment.blobs.length <= 1);
+      for (const blob of segment.blobs) {
+        blobsWithTag2.push(blob);
+      }
+    }
+    assert.deepStrictEqual(blobsWithTag2.length, 3);
   });
 
   // Skip the case currently since js sdk caculate the stringToSign with "+" in prefix instead of decode to space

@@ -159,7 +159,7 @@ class QueryParser {
     const left = this.visitAnd();
 
     this.query.skipWhitespace();
-    if (this.query.consume("or")) {
+    if (this.query.consume("or", true)) {
       if (!this.forConditions) {
         throw new Error("Or not allowed");
       }
@@ -181,7 +181,7 @@ class QueryParser {
     const left = this.visitUnary();
 
     this.query.skipWhitespace();
-    if (this.query.consume("and")) {
+    if (this.query.consume("and", true)) {
       const right = this.visitAnd();
 
       return new AndNode(left, right);

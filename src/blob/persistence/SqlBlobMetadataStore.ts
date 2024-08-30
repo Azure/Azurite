@@ -69,7 +69,7 @@ import IBlobMetadataStore, {
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
 import FilterBlobPage from "./FilterBlobPage";
-import { getBlobTagsCount, getTagsFromString } from "../utils/utils";
+import { getBlobTagsCount, getTagsFromString, toBlobTags } from "../utils/utils";
 import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
 
 // tslint:disable: max-classes-per-file
@@ -1282,8 +1282,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           transaction: t,
           limit: maxResults,
           offset: off
-        })).filter(
-          filterFunction);
+        }));
       };
 
       const [blobItems, nextMarker] = await page.fill(readPage, nameItem);
@@ -1292,7 +1291,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         return this.convertDbModelToFilterBlobModel(model);
       };
 
-      return [blobItems.map(filterBlobModelMapper), nextMarker];
+      return [blobItems.map(filterBlobModelMapper).filter((blobItem) => {
+        const tagsMeetConditions = filterFunction(blobItem);
+        if (tagsMeetConditions.length !== 0) {
+          blobItem.tags = { blobTagSet: toBlobTags(tagsMeetConditions) };
+          return true;
+        }
+        return false;
+      }), nextMarker];
     });
   }
 

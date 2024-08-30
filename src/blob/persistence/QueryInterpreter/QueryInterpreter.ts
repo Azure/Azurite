@@ -1,14 +1,14 @@
 import { BlobTags } from "../../generated/artifacts/models";
-import { BlobModel } from "../IBlobMetadataStore";
+import { FilterBlobModel } from "../IBlobMetadataStore";
 import BinaryOperatorNode from "./QueryNodes/BinaryOperatorNode";
 import ExpressionNode from "./QueryNodes/ExpressionNode";
-import IQueryNode from "./QueryNodes/IQueryNode";
+import IQueryNode, { TagContent } from "./QueryNodes/IQueryNode";
 import KeyNode from "./QueryNodes/KeyNode";
 import parseQuery from "./QueryParser";
 
-export default function executeQuery(context: BlobModel, queryTree: IQueryNode): boolean {
+export default function executeQuery(context: FilterBlobModel, queryTree: IQueryNode): TagContent[] {
   let tags: any = {};
-  const blobTags = context.blobTags;
+  const blobTags = context.tags;
   if (blobTags) {
     let blobTagsValue: BlobTags;
     if (typeof (blobTags) === 'string') {
@@ -22,7 +22,7 @@ export default function executeQuery(context: BlobModel, queryTree: IQueryNode):
     })
   }
   tags["@container"] = context.containerName;
-  return !!queryTree.evaluate(tags)
+  return queryTree.evaluate(tags)
 }
 
 /**
@@ -62,9 +62,11 @@ function countIdentifierReferences(queryTree: IQueryNode): number {
 export function generateQueryBlobWithTagsWhereFunction(
   query: string | undefined,
   conditions: boolean = false
-): (entity: any) => boolean {
+): (entity: any) => TagContent[] {
   if (query === undefined) {
-    return () => true;
+    return () => {
+      return [];
+    }
   }
 
   const queryTree = parseQuery(query);

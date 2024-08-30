@@ -1,15 +1,17 @@
 import { IQueryContext } from "../IQueryContext";
-import IQueryNode from "./IQueryNode";
+import IQueryNode, { TagContent } from "./IQueryNode";
 
-export default class ConstantNode<T> implements IQueryNode {
-  constructor(private value: T) { }
+export default class ConstantNode implements IQueryNode {
+  constructor(private value: string) { }
 
   get name(): string {
     return "constant"
   }
 
-  evaluate(_context: IQueryContext): T {
-    return this.value
+  evaluate(_context: IQueryContext): TagContent[] {
+    return [{
+      value: this.value
+    }];
   }
 
   toString(): string {

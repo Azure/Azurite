@@ -1,24 +1,26 @@
 import { IQueryContext } from "../IQueryContext";
 import BinaryOperatorNode from "./BinaryOperatorNode";
-//import GuidNode from "./GuidNode";
+import { TagContent } from "./IQueryNode";
 
 export default class EqualsNode extends BinaryOperatorNode {
   get name(): string {
     return `eq`
   }
 
-  evaluate(context: IQueryContext): any {
-    // if (this.backwardsCompatibleGuidEvaluate(context)) {
-    //   return true
-    // }
+  evaluate(context: IQueryContext): TagContent[] {
+    const leftContent = this.left.evaluate(context);
+    const rightContent = this.right.evaluate(context);
 
-    return this.left.evaluate(context) === this.right.evaluate(context)
+    if (leftContent[0].value === rightContent[0].value) {
+      if (leftContent[0].key !== undefined) {
+        return leftContent;
+      }
+      else {
+        return rightContent;
+      }
+    }
+    else {
+      return [];
+    }
   }
-
-  // private backwardsCompatibleGuidEvaluate(context: IQueryContext): boolean {
-  //   const left = this.left instanceof GuidNode ? this.left.stringGuid() : this.left.evaluate(context)
-  //   const right = this.right instanceof GuidNode ? this.right.stringGuid() : this.right.evaluate(context)
-
-  //   return left === right
-  // }
 }
