@@ -221,7 +221,7 @@
           },
           "azurite.blobKeepAliveTimeout": {
             "type": "number",
-            "default": 5,
+            "default": 5000,
             "description": "Blob service keep alive timeout, by default 5000"
           },
           "azurite.queueHost": {
@@ -236,7 +236,7 @@
           },
           "azurite.queueKeepAliveTimeout": {
             "type": "number",
-            "default": 5,
+            "default": 5000,
             "description": "Queue service keep alive timeout, by default 5000"
           },
           "azurite.tableHost": {
@@ -251,7 +251,7 @@
           },
           "azurite.tableKeepAliveTimeout": {
             "type": "number",
-            "default": 5,
+            "default": 5000,
             "description": "Table service keep alive timeout, by default 5000"
           },
           "azurite.skipApiVersionCheck": {
