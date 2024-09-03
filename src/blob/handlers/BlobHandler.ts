@@ -1010,14 +1010,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
-      throw StorageErrorFactory.getInvalidPageRange(context.contextId!);
+      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
     }
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
       // report error is blob size is 0, and rangeEnd is specified but not 0 
       if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
-        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!);
+        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
       }
       else {
         rangeEnd = blob.properties.contentLength! - 1;
@@ -1141,14 +1141,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
-      throw StorageErrorFactory.getInvalidPageRange(context.contextId!);
+      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
     }
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
       // report error is blob size is 0, and rangeEnd is specified but not 0 
       if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
-        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!);
+        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
       }
       else {
         rangeEnd = blob.properties.contentLength! - 1;
