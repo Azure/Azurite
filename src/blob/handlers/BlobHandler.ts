@@ -1000,13 +1000,22 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       throw StorageErrorFactory.getBlobNotFound(context.contextId!);
     }
 
-    // Deserializer doesn't handle range header currently, manually parse range headers here
-    const rangesParts = deserializeRangeHeader(
-      context.request!.getHeader("range"),
-      context.request!.getHeader("x-ms-range")
-    );
-    const rangeStart = rangesParts[0];
-    let rangeEnd = rangesParts[1];
+    let rangesParts = undefined;
+    try {
+      // Deserializer doesn't handle range header currently, manually parse range headers here
+      rangesParts = deserializeRangeHeader(
+        context.request!.getHeader("range"),
+        context.request!.getHeader("x-ms-range")
+      );
+    } catch (err) {
+      this.logger.info(
+        `BlobHandler:downloadBlockBlobOrAppendBlob() Ignoring range request due to invalid content range: ${err.message}`,
+        context.contextId
+      );
+      // Ignoring range request as per RFC 9110, section 14.2
+    }
+    const rangeStart = rangesParts ? rangesParts[0] : 0;
+    let rangeEnd = rangesParts ? rangesParts[1] : Infinity;
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
@@ -1061,10 +1070,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     let contentRange: string | undefined;
-    if (
-      context.request!.getHeader("range") ||
-      context.request!.getHeader("x-ms-range")
-    ) {
+    if (rangesParts) {
       contentRange = `bytes ${rangeStart}-${rangeEnd}/${blob.properties
         .contentLength!}`;
     }
