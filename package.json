@@ -89,7 +89,9 @@
     "vsce": "^2.7.0"
   },
   "activationEvents": [
-    "*",
+    "workspaceContains:__azurite*.json",
+    "workspaceContains:__blobstorage__",
+    "workspaceContains:__queuestroage__",
     "onCommand:azurite.start",
     "onCommand:azurite.close",
     "onCommand:azurite.clean",
