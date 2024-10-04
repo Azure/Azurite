@@ -605,6 +605,7 @@ export default class ContainerHandler extends BaseHandler
     let includeSnapshots: boolean = false;
     let includeUncommittedBlobs: boolean = false;
     let includeTags: boolean = false;
+    let includeMetadata: boolean = false;
     if (options.include !== undefined) {
       options.include.forEach(element => {
         if (Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase()) {
@@ -615,6 +616,9 @@ export default class ContainerHandler extends BaseHandler
         }
         if (Models.ListBlobsIncludeItem.Tags.toLowerCase() === element.toLowerCase()) {
           includeTags = true;
+        }
+        if (Models.ListBlobsIncludeItem.Metadata.toLowerCase() === element.toLowerCase()) {
+          includeMetadata = true;
         }
       })
     }
@@ -657,6 +661,7 @@ export default class ContainerHandler extends BaseHandler
             deleted: item.deleted !== true ? undefined : true,
             snapshot: item.snapshot || undefined,
             blobTags: includeTags ? item.blobTags : undefined,
+            metadata: includeMetadata ? item.metadata : undefined,
             properties: {
               ...item.properties,
               etag: removeQuotationFromListBlobEtag(item.properties.etag),
@@ -705,6 +710,7 @@ export default class ContainerHandler extends BaseHandler
     let includeSnapshots: boolean = false;
     let includeUncommittedBlobs: boolean = false;
     let includeTags: boolean = false;
+    let includeMetadata: boolean = false;
     if (options.include !== undefined) {
       options.include.forEach(element => {
         if (Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase()) {
@@ -715,6 +721,9 @@ export default class ContainerHandler extends BaseHandler
         }
         if (Models.ListBlobsIncludeItem.Tags.toLowerCase() === element.toLowerCase()) {
           includeTags = true;
+        }
+        if (Models.ListBlobsIncludeItem.Metadata.toLowerCase() === element.toLowerCase()) {
+          includeMetadata = true;
         }
       }
       )
@@ -760,6 +769,7 @@ export default class ContainerHandler extends BaseHandler
             ...item,
             snapshot: item.snapshot || undefined,
             blobTags: includeTags ? item.blobTags : undefined,
+            metadata: includeMetadata ? item.metadata : undefined,
             properties: {
               ...item.properties,
               etag: removeQuotationFromListBlobEtag(item.properties.etag),

@@ -548,12 +548,18 @@ describe("ContainerAPIs", () => {
 
   it("should correctly list all blobs in the container using listBlobFlatSegment with default parameters @loki @sql", async () => {
     const blobClients = [];
+    const metadata = {
+      keya: "a",
+      keyb: "c"
+    };
     for (let i = 0; i < 3; i++) {
       const blobClient = containerClient.getBlobClient(
         getUniqueName(`blockblob${i}/${i}`)
       );
       const blockBlobClient = blobClient.getBlockBlobClient();
-      await blockBlobClient.upload("", 0);
+      await blockBlobClient.upload("", 0, {
+        metadata
+      });
       blobClients.push(blobClient);
     }
 
@@ -581,6 +587,7 @@ describe("ContainerAPIs", () => {
         '"' + result.segment.blobItems![i].properties.etag + '"'
       );
       assert.deepStrictEqual(result.segment.blobItems![i].snapshot, undefined);
+      assert.deepStrictEqual(result.segment.blobItems![i].metadata, undefined);
       i++;
     }
 
