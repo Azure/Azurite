@@ -396,6 +396,32 @@ describe("PageBlobAPIs", () => {
     assert.equal(await bodyToString(page2, 512), "b".repeat(512));
   });
 
+  it("uploadPages with ifTags should work @loki @sql", async () => {
+    await pageBlobClient.create(1024);
+
+    const tags: Tags = {
+      tag1: 'val1',
+      tag2: 'val2'
+    }
+
+    await pageBlobClient.setTags(tags);
+
+    try {
+      await pageBlobClient.uploadPages("a".repeat(512), 0, 512, {
+        conditions: {
+          tagConditions: `tag1<>'val1'`
+        }
+      });
+      assert.fail("Should not reach here");
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 412);
+      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
+      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
+      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+    }
+  });
+
   it("uploadPages should not work if ifSequenceNumberEqualTo doesn't match @loki", async () => {
     await pageBlobClient.create(1024);
 
@@ -839,6 +865,38 @@ describe("PageBlobAPIs", () => {
       offset: 512 * 3,
       count: 512 * 2 - 1
     });
+  });
+
+  it("getPageRanges with ifTags should work @loki", async () => {
+    const length = 512 * 5;
+    await pageBlobClient.create(length);
+    await pageBlobClient.uploadPages(
+      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
+      512,
+      512 * 3
+    );
+
+    const tags: Tags = {
+      tag1: 'val1',
+      tag2: 'val2'
+    }
+
+    await pageBlobClient.setTags(tags);
+
+    try {
+      await pageBlobClient.getPageRanges(0, length, {
+        conditions: {
+          tagConditions: `tag1<>'val1'`
+        }
+      });
+      assert.fail("Should not reach here");
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 412);
+      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
+      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
+      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+    }
   });
 
   it("resize override a sequential range @loki", async () => {

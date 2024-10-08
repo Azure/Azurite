@@ -1,10 +1,11 @@
+import StorageError from "../../errors/StorageError";
+import StorageErrorFactory from "../../errors/StorageErrorFactory";
 import { BlobTags } from "../../generated/artifacts/models";
 import Context from "../../generated/Context";
 import { FilterBlobModel } from "../IBlobMetadataStore";
 import BinaryOperatorNode from "./QueryNodes/BinaryOperatorNode";
 import ExpressionNode from "./QueryNodes/ExpressionNode";
 import IQueryNode, { TagContent } from "./QueryNodes/IQueryNode";
-import KeyNode from "./QueryNodes/KeyNode";
 import parseQuery from "./QueryParser";
 
 export default function executeQuery(context: FilterBlobModel, queryTree: IQueryNode): TagContent[] {
@@ -26,30 +27,9 @@ export default function executeQuery(context: FilterBlobModel, queryTree: IQuery
   return queryTree.evaluate(tags)
 }
 
-/**
- * Validates that the provided query tree represents a valid query.
- * 
- * That is, a query containing at least one conditional expression,
- * where every conditional expression operates on at least
- * one column or built-in identifier (i.e. comparison between two constants is not allowed).
- * 
- * @param {IQueryNode} queryTree
- */
-export function validateQueryTree(queryTree: IQueryNode) {
-  const identifierReferences = countIdentifierReferences(queryTree);
-
-  if (!identifierReferences) {
-    throw new Error("Invalid Query, no identifier references found.")
-  }
-}
-
 function countIdentifierReferences(queryTree: IQueryNode): number {
-  if (queryTree instanceof KeyNode) {
-    return 1;
-  }
-
   if (queryTree instanceof BinaryOperatorNode) {
-    return countIdentifierReferences(queryTree.left) + countIdentifierReferences(queryTree.right)
+    return 1;
   }
 
   if (queryTree instanceof ExpressionNode) {
@@ -72,6 +52,32 @@ export function generateQueryBlobWithTagsWhereFunction(
   }
 
   const queryTree = parseQuery(requestContext, query, conditionHeader);
-  validateQueryTree(queryTree);
+
+  // Validates that the provided query tree represents a valid query.
+  // That is, a query containing at least one conditional expression,
+  // where every conditional expression operates on at least
+  // one column or built -in identifier(i.e.comparison between two constants is not allowed).
+  const identifierReferencesCount = countIdentifierReferences(queryTree);
+  if (identifierReferencesCount == 0) {
+    if (conditionHeader === undefined) {
+      throw new StorageError(
+        400,
+        `InvalidQueryParameterValue`,
+        `Error parsing query at or near character position 1: expected an operator`,
+        requestContext.contextId!,
+        {
+          QueryParameterName: `where`,
+          QueryParameterValue: query
+        });
+    }
+    else {
+      throw StorageErrorFactory.getInvalidHeaderValue(
+        requestContext.contextId!, {
+        HeaderName: conditionHeader,
+        HeaderValue: query
+      });
+    }
+  }
+
   return (entity) => executeQuery(entity, queryTree);
 }

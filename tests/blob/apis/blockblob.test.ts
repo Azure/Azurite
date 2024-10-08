@@ -314,6 +314,63 @@ describe("BlockBlobAPIs", () => {
     );
   });
 
+  it("commitBlockList with ifTags @loki @sql", async () => {
+    const body = "HelloWorld";
+    await blockBlobClient.upload(body, 10);
+    const tags: Tags = {
+      key1: 'value1'
+    };
+    await blockBlobClient.setTags(tags);
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
+    try {
+      await blockBlobClient.commitBlockList([
+        base64encode("1"),
+        base64encode("2")
+      ], {
+        conditions: {
+          tagConditions: `key1<>'value1'`
+        }
+      });
+      assert.fail("Should not reach here.");
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 412);
+      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
+      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
+      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+    }
+  });
+
+  it.only("getBlockList with ifTags @loki @sql", async () => {
+    const body = "HelloWorld";
+    const tags: Tags = {
+      key1: 'value1'
+    };
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
+    await blockBlobClient.commitBlockList([
+      base64encode("1"),
+      base64encode("2")
+    ]);
+    await blockBlobClient.setTags(tags);
+
+    try {
+      await blockBlobClient.getBlockList("all", {
+        conditions: {
+          tagConditions: `key1<>'value1'`
+        }
+      });
+      assert.fail("Should not reach here.");
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 412);
+      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
+      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
+      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+    }
+  });
+
   it("commitBlockList with previous committed blocks @loki @sql", async () => {
     const body = "HelloWorld";
     await blockBlobClient.stageBlock(base64encode("1"), body, body.length);

@@ -186,7 +186,7 @@ class QueryParser {
     this.query.skipWhitespace();
     if (this.query.consume("or", true)) {
       if (!this.conditionHeader) {
-        throw new Error("Or not allowed");
+        this.query.throw(`unexpected or`);
       }
       const right = this.visitOr();
       return new OrNode(left, right);
@@ -271,7 +271,7 @@ class QueryParser {
           return new EqualsNode(left, right);
         case "<>":
           if (!this.conditionHeader) {
-            throw new Error("<> not allowed");
+            this.query.throw(`unexpected <>`);
           }
           this.validateWithPreviousComparison(left.toString(), ComparisonType.NotEqual);
           this.appendComparionNode(left.toString(), ComparisonType.NotEqual);
@@ -328,8 +328,8 @@ class QueryParser {
 
   private validateKey(key: string) {
     if (key.startsWith("@")) {
-      if (this.conditionHeader) { //Comments: IfTags may report different error for @something
-        this.query.throw("x-ms-if-tags not support container");
+      if (this.conditionHeader) {
+        this.query.throw("");
       }
 
       if (key !== "@container") {
