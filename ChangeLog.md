@@ -7,13 +7,15 @@
 Blob:
 
 - Fixed an issue where all blob APIs allowed metadata names which were not valid C# identifiers.
+- Fixed issue of download 0 size blob with range > 0 should have header "Content-Range: bytes \*/0" in returned error. (issue #2458)
+- Aligned behavior with Azure to ignore invalid range requests for blob downloads. (issue #2458)
 
 ## 2024.08 Version 3.32.0
 
 General:
 
 - Bump mysql2 to resolve to 3.10.1 for security patches
-- Fixed an issue where premature client disconnections led to all following requests failing with a 500 error. (issue #1346) 
+- Fixed an issue where premature client disconnections led to all following requests failing with a 500 error. (issue #1346)
 - Bump up service API version to 2024-11-04
 
 Blob:
