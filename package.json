@@ -89,19 +89,7 @@
     "vsce": "^2.7.0"
   },
   "activationEvents": [
-    "*",
-    "onCommand:azurite.start",
-    "onCommand:azurite.close",
-    "onCommand:azurite.clean",
-    "onCommand:azurite.start_blob",
-    "onCommand:azurite.close_blob",
-    "onCommand:azurite.clean_blob",
-    "onCommand:azurite.start_queue",
-    "onCommand:azurite.close_queue",
-    "onCommand:azurite.clean_queue",
-    "onCommand:azurite.start_table",
-    "onCommand:azurite.close_table",
-    "onCommand:azurite.clean_table"
+    "onStartupFinished"
   ],
   "contributes": {
     "commands": [
