@@ -267,12 +267,18 @@ describe("ContainerAPIs", () => {
 
   it("listBlobHierarchySegment with default parameters @loki @sql", async () => {
     const blobClients = [];
+    const metadata = {
+      keya: "a",
+      keyb: "c"
+    };
     for (let i = 0; i < 3; i++) {
       const blobClient = containerClient.getBlobClient(
         getUniqueName(`blockblob${i}/${i}`)
       );
       const blockBlobClient = blobClient.getBlockBlobClient();
-      await blockBlobClient.upload("", 0);
+      await blockBlobClient.upload("", 0, {
+        metadata
+      });
       blobClients.push(blobClient);
     }
 
@@ -296,6 +302,15 @@ describe("ContainerAPIs", () => {
     for (const blob of blobClients) {
       let i = 0;
       assert.ok(blob.url.indexOf(result.segment.blobPrefixes![i++].name));
+    }
+
+    for (const prefix of result.segment.blobPrefixes) {
+      const prefixResult = (
+        await containerClient.listBlobsByHierarchy(delimiter, { prefix: prefix.name }).byPage().next()
+      ).value;
+
+      assert.deepStrictEqual(prefixResult.segment.blobItems!.length, 1);
+      assert.deepStrictEqual(prefixResult.segment.blobItems![0].metadata, undefined);
     }
 
     for (const blob of blobClients) {
