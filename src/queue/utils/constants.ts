@@ -33,7 +33,7 @@ export const MESSAGETTL_MIN = 1;
 export const DEFAULT_UPDATE_VISIBILITYTIMEOUT = 30; // 30s as default.
 export const UPDATE_VISIBILITYTIMEOUT_MIN = 0;
 export const UPDATE_VISIBILITYTIMEOUT_MAX = 604800;
-export const DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT = 5000;
+export const DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT = 5;
 
 export const EMPTY_EXTENT_CHUNK = { id: "", offset: 0, count: 0 };
 

@@ -47,7 +47,7 @@ export default abstract class ServerBase implements ICleaner {
     public readonly config: ConfigurationBase
   ) {
     if (this.config.keepAliveTimeout > 0) {
-      httpServer.keepAliveTimeout = this.config.keepAliveTimeout;
+      httpServer.keepAliveTimeout = this.config.keepAliveTimeout * 1000;
     }
     // Remove predefined request listeners to avoid double request handling
     this.httpServer = stoppable(httpServer);
