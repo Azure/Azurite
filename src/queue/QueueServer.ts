@@ -71,7 +71,7 @@ export default class QueueServer extends ServerBase {
     }
 
     if (configuration.keepAliveTimeout > 0) {
-      httpServer.keepAliveTimeout = configuration.keepAliveTimeout
+      httpServer.keepAliveTimeout = configuration.keepAliveTimeout * 1000
     }
 
     // We can change the persistency layer implementation by
