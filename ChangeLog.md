@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Added support for docker image based on Windows Base Image.
+
 Blob:
 
 - Fixed an issue where all blob APIs allowed metadata names which were not valid C# identifiers.
