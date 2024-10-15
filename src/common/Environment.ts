@@ -102,6 +102,10 @@ args
   .option(
     ["d", "debug"],
     "Optional. Enable debug log by providing a valid local file path as log destination"
+  )
+  .option(
+    ["", "disableProductStyleUrl"],
+    "Optional. Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri"
   );
 
 (args as any).config.name = "azurite";
@@ -212,6 +216,14 @@ export default class Environment implements IEnvironment {
 
   public extentMemoryLimit(): number | undefined {
     return this.flags.extentMemoryLimit;
+  }
+
+  public disableTelemetry(): boolean {
+    if (this.flags.disableTelemetry !== undefined) {
+      return true;
+    }
+    // default is false which will collect telemetry data
+    return false;
   }
 
   public async debug(): Promise<string | undefined> {

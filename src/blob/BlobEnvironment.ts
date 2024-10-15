@@ -65,6 +65,10 @@ if (!(args as any).config.name) {
     .option(
       ["", "disableProductStyleUrl"],
       "Optional. Disable getting account name from the host of request URI, always get account name from the first path segment of request URI."
+    )
+    .option(
+      ["", "disableTelemetry"],
+      "Optional. Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product."
     );
 
   (args as any).config.name = "azurite-blob";
@@ -136,6 +140,14 @@ export default class BlobEnvironment implements IBlobEnvironment {
       return true;
     }
     // default is false which will try to get account name from request URI hostname
+    return false;
+  }
+
+  public disableTelemetry(): boolean {
+    if (this.flags.disableTelemetry !== undefined) {
+      return true;
+    }
+    // default is false which will not collect telemetry data
     return false;
   }
 
