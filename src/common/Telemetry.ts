@@ -3,6 +3,9 @@ import Context from "../blob/generated/Context";
 import {Operation as BlobOperation} from "../blob/generated/artifacts/operation";
 import { Contracts } from "applicationinsights";
 import { createHash } from "crypto";
+import * as fs from "fs";
+import uuid from "uuid";
+import { join } from "path";
 //import {Operation as QueueOperation} from "../queue/generated/artifacts/operation";
 //import {Operation as TableOperation} from "../table/generated/artifacts/operation";
 
@@ -11,13 +14,27 @@ export class AzuriteTelemetryClient {
   private static requestClient : TelemetryClient | undefined;
 
   private static enableTelemetry: boolean = true;
+  private static location: string;
+  private static configFileName = "AzuriteConfig";
   //private _totalSize: number = 0;
+  private _totalBlobRequestCount: number = 0;
+  private _totalQueueRequestCount: number = 0;
+  private _totalTableRequestCount: number = 0;
 
-  public static init(enableTelemetry?: boolean) {
-    
-   
-    if (enableTelemetry !== undefined)
+  private static sessionID = uuid();
+  private static instanceID = "";
+
+  public static init(location: string, enableTelemetry: boolean) {
+   //TODO: check in VSCODE extension
+    AzuriteTelemetryClient.enableTelemetry = enableTelemetry;
+
+    if (enableTelemetry !== false)
     {
+      //Get instaceID and sessionID
+      //TODO: need check if this works on VScode extension
+      AzuriteTelemetryClient.location = location;
+      AzuriteTelemetryClient.instanceID = AzuriteTelemetryClient.GetInstanceID();
+
       AzuriteTelemetryClient.enableTelemetry = enableTelemetry;
       if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.eventClient === undefined)
       {
@@ -36,13 +53,16 @@ export class AzuriteTelemetryClient {
     // envelope.tags["ai.cloud.role"] = "";
     envelope.tags["ai.cloud.roleInstance"] = createHash('sha256').update(envelope.tags["ai.cloud.roleInstance"]).digest('hex');
 
+    // per privacy review, we will not collect operation name as it contains request path
+    envelope.tags["ai.operation.name"] = "";
+
     return true;
   }
     
 
   public static createAppInsigntClient(cloudRole:string, samplingPercentage:number|undefined) : TelemetryClient 
   {
-    const ConnectionString = 'InstrumentationKey=28f7cfab-c2b3-44bf-b880-8af2d41f1783;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/';
+    const ConnectionString = 'InstrumentationKey=feb4ae36-1db7-4808-abaa-e0b94996d665;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/;ApplicationId=9af871a3-75b5-417c-8a2f-7f2eb1ba6a6c';
     let appInsights = require('applicationinsights');
 
     // disable default logging
@@ -82,6 +102,8 @@ export class AzuriteTelemetryClient {
       AzuriteTelemetryClient.requestClient.trackRequest(
         {
           name:BlobOperation[context.operation??0], 
+          // From privacy review, we will not collect url
+          // url:"", 
           url:AzuriteTelemetryClient.GetRequestUri(context), 
           duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
           resultCode:context.response?.getStatusCode()??0, 
@@ -89,16 +111,20 @@ export class AzuriteTelemetryClient {
           id: context.contextId,
           source: context.request?.getHeader("user-agent"),
           properties: 
-            {
-              //userAgent: context.request?.getHeader("user-agent"),
-              apiVersion: "v"+context.request?.getHeader("x-ms-version"),
-              authorization: AzuriteTelemetryClient.GetRequestAuthentication(context),
-            },
+          {
+            //userAgent: context.request?.getHeader("user-agent"),
+            apiVersion: "v"+context.request?.getHeader("x-ms-version"),
+            authorization: AzuriteTelemetryClient.GetRequestAuthentication(context),
+            requestContentSize: context.request?.getBody.length,
+            instanceID: AzuriteTelemetryClient.instanceID,
+            sessionID: AzuriteTelemetryClient.sessionID,
+          },
           contextObjects:
           {
             operationId: "",
             operationParentId: "",
             operationName: "test",
+            operation_Name: "test",
             appName: ""
           }
         });
@@ -123,32 +149,103 @@ export class AzuriteTelemetryClient {
     if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.eventClient !== undefined)
     {
       // TODO: record Azurite instance ID (GUID) in customProperty, to get how many Azurite instance are installed.
-      AzuriteTelemetryClient.eventClient.trackEvent({name: "Azurite Start event", properties: {customProperty: "custom property value"}});
+      AzuriteTelemetryClient.eventClient.trackEvent({name: "Azurite Start event", 
+        properties: 
+        {
+          instanceID: AzuriteTelemetryClient.instanceID,
+          sessionID: AzuriteTelemetryClient.sessionID,
+        }
+      });
     }
   }
 
   public static TraceStopEvent() {
     if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.eventClient !== undefined)
     {
-      AzuriteTelemetryClient.eventClient.trackEvent({name: "Azurite Stop event", properties: {customProperty: "custom property value"}});
+      AzuriteTelemetryClient.eventClient.trackEvent({name: `Azurite Stop event`, 
+      properties: 
+      {
+        instanceID: AzuriteTelemetryClient.instanceID,
+        sessionID: AzuriteTelemetryClient.sessionID,
+      }
+    });
     }
   }
 
   private static GetRequestUri(context: Context): string {
     if (context.request !== undefined)
     {
-      let request = context.request;
-      let requestUri = request.getUrl();
-      let sig = request.getQuery("sig");
-      if (sig!=undefined)
-      {
-        requestUri = requestUri.replace(encodeURIComponent(sig), "[hidden]");
-      }
-    return `${request.getEndpoint()}${requestUri}`;
+      let uri = new URL(context.request.getEndpoint());
+      if(uri.hostname != "127.0.0.1" && uri.hostname != "localhost")
+        {
+          return context.request.getEndpoint().replace(uri.hostname, "[hidden]");
+        }
+        else
+        {
+          return context.request.getEndpoint();
+        }
+
+      // let request = context.request;
+      // let requestUri = request.getUrl();
+      // let sig = request.getQuery("sig");
+      // if (sig!=undefined)
+      // {
+      //   requestUri = requestUri.replace(encodeURIComponent(sig), "[hidden]");
+      // }
+      // return `${request.getEndpoint()}${requestUri}`;
     }
     return "";
   }
 
+
+  private static GetInstanceID(): string {
+    const configFilePath = join(
+      AzuriteTelemetryClient.location,
+      AzuriteTelemetryClient.configFileName
+    );
+
+    //const fs = require('fs');
+    let instaceID = "";
+    try {
+      if(!fs.existsSync(configFilePath))
+        {
+          instaceID = uuid();
+          fs.writeFile(configFilePath, instaceID, (err) => {
+            //TODO: write warning for write file failed.
+          });
+        }
+        else{
+
+          var data = fs.readFileSync(configFilePath, 'utf8');
+          instaceID = data.toString();
+          if(instaceID === "")
+          {
+            instaceID = uuid();
+            fs.writeFile(configFilePath, instaceID, (err) => {
+              //TODO: write warning for write file failed.
+            });
+          }
+
+          // fs.readFile(configFilePath, function (err, data) {
+          //   if (!err)
+          //   {
+          //     instaceID = data.toString();
+          //   }
+          //   else
+          //   {
+          //     instaceID = uuid();
+          //     fs.writeFile(configFilePath, instaceID, (err) => {
+          //       //TODO: write warning for write file failed.
+          //     });
+          //   }
+          // });
+        }
+      return instaceID;
+    } catch {
+      // TODO: Add warning log for instanceID is empty
+      return instaceID;
+    }
+  }
   private static GetRequestAuthentication(context: Context): string {
     let auth = context.request?.getHeader("authorization")?.split(" ")[0];
     if (auth === undefined)

@@ -129,4 +129,10 @@ export default class VSCEnvironment implements IEnvironment {
   public extentMemoryLimit(): number | undefined {
     return this.workspaceConfiguration.get<number>("extentMemoryLimit");
   }
+
+  public disableTelemetry(): boolean {
+    return (
+      this.workspaceConfiguration.get<boolean>("disableTelemetry") || false
+    );
+  }
 }
