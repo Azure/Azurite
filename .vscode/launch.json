@@ -11,6 +11,7 @@
       "cwd": "${workspaceFolder}",
       "runtimeArgs": ["-r", "ts-node/register"],
       "args": ["${workspaceFolder}/src/azurite.ts", "-d", "debug.log"],//,"--DisableTelemetry"],
+      //"args": ["${workspaceFolder}/src/azurite.ts", "-d", "debug.log","--DisableTelemetry"],
       "env": {
         "AZURITE_ACCOUNTS": ""
       },

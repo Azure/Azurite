@@ -147,7 +147,7 @@ export default class BlobEnvironment implements IBlobEnvironment {
     if (this.flags.disableTelemetry !== undefined) {
       return true;
     }
-    // default is false which will not collect telemetry data
+    // default is false which will collect telemetry data
     return false;
   }
 

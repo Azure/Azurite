@@ -106,6 +106,10 @@ args
   .option(
     ["", "disableProductStyleUrl"],
     "Optional. Disable getting account name from the host of request Uri, always get account name from the first path segment of request Uri"
+  )
+  .option(
+    ["", "disableTelemetry"],
+    "Optional. Disable telemtry collection of Azurite. If not specify this parameter Azurite will collect telemetry data by default."
   );
 
 (args as any).config.name = "azurite";
