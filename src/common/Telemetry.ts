@@ -1,13 +1,16 @@
 import TelemetryClient from "applicationinsights/out/Library/TelemetryClient";
-import Context from "../blob/generated/Context";
+import {default as BlobContext}  from "../blob/generated/Context";
+import {default as QueueContext}  from "../queue/generated/Context";
+import {default as TableContext}  from "../table/generated/Context";
 import {Operation as BlobOperation} from "../blob/generated/artifacts/operation";
+import {Operation as QueueOperation} from "../queue/generated/artifacts/operation";
+import {Operation as TableOperation} from "../table/generated/artifacts/operation";
 import { Contracts } from "applicationinsights";
 import { createHash } from "crypto";
 import * as fs from "fs";
 import uuid from "uuid";
 import { join } from "path";
-//import {Operation as QueueOperation} from "../queue/generated/artifacts/operation";
-//import {Operation as TableOperation} from "../table/generated/artifacts/operation";
+import logger from "./Logger";
 
 export class AzuriteTelemetryClient {
   private static eventClient : TelemetryClient | undefined;
@@ -16,35 +19,50 @@ export class AzuriteTelemetryClient {
   private static enableTelemetry: boolean = true;
   private static location: string;
   private static configFileName = "AzuriteConfig";
-  //private _totalSize: number = 0;
-  private _totalBlobRequestCount: number = 0;
-  private _totalQueueRequestCount: number = 0;
-  private _totalTableRequestCount: number = 0;
+  //private static _totalSize: number = 0;
+  private static _totalBlobRequestCount: number = 0;
+  //private static _totalQueueRequestCount: number = 0;
+  //private static _totalTableRequestCount: number = 0;
 
   private static sessionID = uuid();
   private static instanceID = "";
+  private static initialized = false;
 
   public static init(location: string, enableTelemetry: boolean) {
-   //TODO: check in VSCODE extension
-    AzuriteTelemetryClient.enableTelemetry = enableTelemetry;
-
-    if (enableTelemetry !== false)
-    {
-      //Get instaceID and sessionID
-      //TODO: need check if this works on VScode extension
-      AzuriteTelemetryClient.location = location;
-      AzuriteTelemetryClient.instanceID = AzuriteTelemetryClient.GetInstanceID();
-
+    try{
+      //TODO: check in VSCODE extension
       AzuriteTelemetryClient.enableTelemetry = enableTelemetry;
-      if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.eventClient === undefined)
+
+      if (enableTelemetry !== false && AzuriteTelemetryClient.initialized != true)
       {
-        this.eventClient = AzuriteTelemetryClient.createAppInsigntClient("AzuriteTest", 100);
+        //Get instaceID and sessionID
+        //TODO: need check if this works on VScode extension
+        AzuriteTelemetryClient.location = location;
+        AzuriteTelemetryClient.instanceID = AzuriteTelemetryClient.GetInstanceID();
+
+        AzuriteTelemetryClient.enableTelemetry = enableTelemetry;
+        if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.eventClient === undefined)
+        {
+          this.eventClient = AzuriteTelemetryClient.createAppInsigntClient("AzuriteTest", 100);
+        }
+        if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient === undefined)
+        {
+          //TODO: change to 1% in product
+          this.requestClient = AzuriteTelemetryClient.createAppInsigntClient("AzuriteTest", 100);
+        }
+        
+        AzuriteTelemetryClient.initialized = true;
+        logger.info('Telemetry initialize successfully.');
       }
-      if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient === undefined)
+      else
       {
-        //TODO: change to 1% in product
-        this.requestClient = AzuriteTelemetryClient.createAppInsigntClient("AzuriteTest", 100);
+        logger.info('Don\'t need initialize Telemetry. enableTelemetry: ' + enableTelemetry + ", initialized: " + AzuriteTelemetryClient.initialized);
+
       }
+    }
+    catch (e)
+    {
+      logger.warn('Fail to init telemetry, error: ' + e.message);
     }
   }
 
@@ -96,105 +114,187 @@ export class AzuriteTelemetryClient {
     return appInsights.defaultClient;
   }
 
-  public static TraceRequest(context: Context) {
-    if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient !== undefined)
+  public static TraceBlobRequest(context: BlobContext) {
+    try{
+      if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient !== undefined)
+      {
+        AzuriteTelemetryClient._totalBlobRequestCount++;
+        AzuriteTelemetryClient.requestClient.trackRequest(
+          {
+            name:"B_" + BlobOperation[context.operation??0], 
+            url:context.request !== undefined ? AzuriteTelemetryClient.GetRequestUri(context.request.getEndpoint()) : "",  
+            duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
+            resultCode:context.response?.getStatusCode()??0, 
+            success:true, 
+            id: context.contextId,
+            source: context.request?.getHeader("user-agent"),
+            properties: 
+            {
+              apiVersion: "v"+context.request?.getHeader("x-ms-version"),
+              authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
+              requestContentSize: context.request?.getBody.length,
+              instanceID: AzuriteTelemetryClient.instanceID,
+              sessionID: AzuriteTelemetryClient.sessionID,
+              totalReqs:AzuriteTelemetryClient._totalBlobRequestCount,
+            },
+            contextObjects:
+            {
+              operationId: "",
+              operationParentId: "",
+              operationName: "test",
+              operation_Name: "test",
+              appName: ""
+            }
+          });
+      }
+      logger.verbose('Send blob telemetry: ' + BlobOperation[context.operation??0], context.contextId);
+    }
+    catch (e)
     {
-      AzuriteTelemetryClient.requestClient.trackRequest(
-        {
-          name:BlobOperation[context.operation??0], 
-          // From privacy review, we will not collect url
-          // url:"", 
-          url:AzuriteTelemetryClient.GetRequestUri(context), 
-          duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
-          resultCode:context.response?.getStatusCode()??0, 
-          success:true, 
-          id: context.contextId,
-          source: context.request?.getHeader("user-agent"),
+      logger.warn('Fail to telemetry a blob request, error: ' + e.message);
+    }
+  }
+
+  public static TraceQueueRequest(context: QueueContext) {
+    try{
+      if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient !== undefined)
+      {
+        AzuriteTelemetryClient.requestClient.trackRequest(
+          {
+            name:"Q_" + QueueOperation[context.operation??0], 
+            url:context.request !== undefined ? AzuriteTelemetryClient.GetRequestUri(context.request.getEndpoint()) : "", 
+            duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
+            resultCode:context.response?.getStatusCode()??0, 
+            success:true, 
+            id: context.contextID,
+            source: context.request?.getHeader("user-agent"),
+            properties: 
+            {
+              apiVersion: "v"+context.request?.getHeader("x-ms-version"),
+              authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
+              requestContentSize: context.request?.getBody.length,
+              instanceID: AzuriteTelemetryClient.instanceID,
+              sessionID: AzuriteTelemetryClient.sessionID,
+            },
+            contextObjects:
+            {
+              operationId: "",
+              operationParentId: "",
+              operationName: "test",
+              operation_Name: "test",
+              appName: ""
+            }
+          });
+      }
+      logger.verbose('Send queue telemetry: ' + QueueOperation[context.operation??0], context.contextID);
+    }
+    catch (e)
+    {
+      logger.warn('Fail to telemetry a queue request, error: ' + e.message);
+    }
+  }
+
+  public static TraceTableRequest(context: TableContext) {
+    try{
+      if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient !== undefined)
+      {
+        AzuriteTelemetryClient.requestClient.trackRequest(
+          {
+            name:"T_" + TableOperation[context.operation??0], 
+            url:context.request !== undefined ? AzuriteTelemetryClient.GetRequestUri(context.request.getEndpoint()) : "", 
+            duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
+            resultCode:context.response?.getStatusCode()??0, 
+            success:true, 
+            id: context.contextID,
+            source: context.request?.getHeader("user-agent"),
+            properties: 
+            {
+              apiVersion: "v"+context.request?.getHeader("x-ms-version"),
+              authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
+              requestContentSize: context.request?.getBody.length,
+              instanceID: AzuriteTelemetryClient.instanceID,
+              sessionID: AzuriteTelemetryClient.sessionID,
+            },
+            contextObjects:
+            {
+              operationId: "",
+              operationParentId: "",
+              operationName: "test",
+              operation_Name: "test",
+              appName: ""
+            }
+          });
+      }
+      logger.verbose('Send table telemetry: ' + TableOperation[context.operation??0], context.contextID);
+    }
+    catch (e)
+    {
+      logger.warn('Fail to telemetry a table request, error: ' + e.message);
+    }
+  }
+
+  public static TraceStartEvent(serviceType: string = "") {
+    try{
+      if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.eventClient !== undefined)
+      {
+        AzuriteTelemetryClient.eventClient.trackEvent({name: 'Azurite Start' + (serviceType === "" ? "" : ": " + serviceType), 
           properties: 
           {
-            //userAgent: context.request?.getHeader("user-agent"),
-            apiVersion: "v"+context.request?.getHeader("x-ms-version"),
-            authorization: AzuriteTelemetryClient.GetRequestAuthentication(context),
-            requestContentSize: context.request?.getBody.length,
             instanceID: AzuriteTelemetryClient.instanceID,
             sessionID: AzuriteTelemetryClient.sessionID,
-          },
-          contextObjects:
-          {
-            operationId: "",
-            operationParentId: "",
-            operationName: "test",
-            operation_Name: "test",
-            appName: ""
+            // TODO: Add start Parameters
           }
         });
-        /*
-        AzuriteTelemetryClient.requestClient.trackPageView(
-          {
-            name:BlobOperation[context.operation??0], 
-            duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
-            properties: 
-              {
-                //userAgent: context.request?.getHeader("user-agent"),
-                apiVersion: "v"+context.request?.getHeader("x-ms-version"),
-                authorization: AzuriteTelemetryClient.GetRequestAuthentication(context),
-              }            
-          }
-        )
-        */
-    }
-  }
-
-  public static TraceStartEvent() {
-    if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.eventClient !== undefined)
-    {
-      // TODO: record Azurite instance ID (GUID) in customProperty, to get how many Azurite instance are installed.
-      AzuriteTelemetryClient.eventClient.trackEvent({name: "Azurite Start event", 
-        properties: 
-        {
-          instanceID: AzuriteTelemetryClient.instanceID,
-          sessionID: AzuriteTelemetryClient.sessionID,
-        }
-      });
-    }
-  }
-
-  public static TraceStopEvent() {
-    if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.eventClient !== undefined)
-    {
-      AzuriteTelemetryClient.eventClient.trackEvent({name: `Azurite Stop event`, 
-      properties: 
-      {
-        instanceID: AzuriteTelemetryClient.instanceID,
-        sessionID: AzuriteTelemetryClient.sessionID,
       }
-    });
+      logger.info('Send start telemetry');
+    }
+    catch (e)
+    {
+      logger.warn('Fail to send start telemetry, error: ' + e.message);
     }
   }
 
-  private static GetRequestUri(context: Context): string {
-    if (context.request !== undefined)
-    {
-      let uri = new URL(context.request.getEndpoint());
-      if(uri.hostname != "127.0.0.1" && uri.hostname != "localhost")
-        {
-          return context.request.getEndpoint().replace(uri.hostname, "[hidden]");
-        }
-        else
-        {
-          return context.request.getEndpoint();
-        }
-
-      // let request = context.request;
-      // let requestUri = request.getUrl();
-      // let sig = request.getQuery("sig");
-      // if (sig!=undefined)
-      // {
-      //   requestUri = requestUri.replace(encodeURIComponent(sig), "[hidden]");
-      // }
-      // return `${request.getEndpoint()}${requestUri}`;
+  public static TraceStopEvent(serviceType: string = "") {
+    try{
+      if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.eventClient !== undefined)
+      {
+        AzuriteTelemetryClient.eventClient.trackEvent({name: 'Azurite Stop' + (serviceType === "" ? "" : ": " + serviceType), 
+          properties: 
+          {
+            instanceID: AzuriteTelemetryClient.instanceID,
+            sessionID: AzuriteTelemetryClient.sessionID,
+          }
+        });
+      }
+      logger.info('Send stop telemetry');
     }
-    return "";
+    catch (e)
+    {
+      logger.warn('Fail to send stop telemetry, error: ' + e.message);
+    }
+  }
+
+  private static GetRequestUri(endpoint: string): string {
+    //From privacy review, won't return the whole Uri
+    let uri = new URL(endpoint);
+    let knownHosts = ["127.0.0.1","localhost","host.docker.internal"];
+    if(uri.hostname.toLowerCase() in knownHosts)
+    {
+      return endpoint.replace(uri.hostname, "[hidden]");
+    }
+    else
+    {
+      return endpoint;
+    }
+
+    // let request = context.request;
+    // let requestUri = request.getUrl();
+    // let sig = request.getQuery("sig");
+    // if (sig!=undefined)
+    // {
+    //   requestUri = requestUri.replace(encodeURIComponent(sig), "[hidden]");
+    // }
+    // return `${request.getEndpoint()}${requestUri}`;
   }
 
 
@@ -246,11 +346,12 @@ export class AzuriteTelemetryClient {
       return instaceID;
     }
   }
-  private static GetRequestAuthentication(context: Context): string {
-    let auth = context.request?.getHeader("authorization")?.split(" ")[0];
+  
+  private static GetRequestAuthentication(authorizationHeader: string|undefined, sigQuery: string|undefined): string {
+    let auth = authorizationHeader?.split(" ")[0];
     if (auth === undefined)
     {
-      if (context.request!.getQuery("sig") !== undefined)
+      if (sigQuery !== undefined)
       {
         auth = "Sas";
       }
