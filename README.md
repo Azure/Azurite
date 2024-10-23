@@ -981,7 +981,8 @@ Detailed support matrix:
   - OAuth authentication
   - Shared Access Signature Account Level
   - Shared Access Signature Service Level (Not support response header override in service SAS)
-  - Container Public Access
+  - Container Public Access  
+  - Blob Tags (preview)
 - Supported REST APIs
   - List Containers
   - Set Service Properties
@@ -1017,7 +1018,6 @@ Detailed support matrix:
   - Soft delete & Undelete Container
   - Soft delete & Undelete Blob
   - Incremental Copy Blob
-  - Blob Tags
   - Blob Query
   - Blob Versions
   - Blob Last Access Time

@@ -14,7 +14,9 @@ import {
   ContainerClient,
   PageBlobClient,
   AppendBlobClient,
-  BlobBatch
+  BlobBatch,
+  Tags,
+  BlobClient
 } from "@azure/storage-blob";
 import * as assert from "assert";
 
@@ -2195,5 +2197,202 @@ describe("Shared Access Signature (SAS) authentication", () => {
     assert.equal(properties4.metadata!["foo"], undefined);
     assert.equal(properties4.metadata!["bar"], undefined);
     assert.equal(properties4.metadata!["baz"], "3");
+  });
+
+  it("ContainerClient.generateSasUrl should work with filtertag permission", async () => {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const tags = {
+      tag1: "val1",
+      tag2: "val2",
+    };
+
+    const blockBlockName = getUniqueName("blockblob");
+    const blockBlobClient = containerClient.getBlockBlobClient(blockBlockName);
+    await blockBlobClient.upload("Hello, world", 12, { tags: tags });
+
+    const sasURL = await containerClient.generateSasUrl({
+      expiresOn: tmr,
+      permissions: ContainerSASPermissions.parse("f"),
+      protocol: SASProtocol.HttpsAndHttp,
+    });
+
+    const containerClientWithSAS = new ContainerClient(sasURL);
+
+    const expectedTags1: Tags = {
+      tag1: "val1",
+    };
+
+    for await (const blob of containerClientWithSAS.findBlobsByTags(`tag1='val1'`)) {
+      assert.deepStrictEqual(blob.name, blockBlockName);
+      assert.deepStrictEqual(blob.tags, expectedTags1);
+      assert.deepStrictEqual(blob.tagValue, "val1");
+    }
+
+    await containerClient.delete();
+  });
+
+  it("generateAccountSASQueryParameters should work with filtertag permission against service", async function () {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const tags = {
+      tag1: "val1",
+      tag2: "val2",
+    };
+
+    const blockBlobName = getUniqueName("blockblob");
+    const blockBlobClient = containerClient.getBlockBlobClient(blockBlobName);
+    await blockBlobClient.upload("Hello, world", 12, { tags: tags });
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+
+    const sasURL = generateAccountSASQueryParameters({
+      expiresOn: tmr,
+      services: 'b',
+      resourceTypes: 'so',
+      permissions: AccountSASPermissions.parse("f"),
+      protocol: SASProtocol.HttpsAndHttp,
+    },
+      sourceStorageSharedKeyCredential).toString();
+
+    const serviceClientWithSAS = new BlobServiceClient(`${serviceClient.url}?${sasURL}`);
+
+    const expectedTags1: Tags = {
+      tag1: "val1",
+    };
+
+    for await (const blob of serviceClientWithSAS.findBlobsByTags(`tag1='val1'`)) {
+      assert.deepStrictEqual(blob.tags, expectedTags1);
+      assert.deepStrictEqual(blob.tagValue, "val1");
+    }
+
+    await containerClient.delete();
+  });
+
+  it("generateAccountSASQueryParameters should work with filtertag permission against container", async function () {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const tags = {
+      tag1: "val1",
+      tag2: "val2",
+    };
+
+    const blockBlobName = getUniqueName("blockblob");
+    const blockBlobClient = containerClient.getBlockBlobClient(blockBlobName);
+    await blockBlobClient.upload("Hello, world", 12, { tags: tags });
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+
+    const sasURL = generateAccountSASQueryParameters({
+      expiresOn: tmr,
+      services: 'b',
+      resourceTypes: 'c',
+      permissions: AccountSASPermissions.parse("f"),
+      protocol: SASProtocol.HttpsAndHttp,
+    },
+      sourceStorageSharedKeyCredential).toString();
+
+    const containerClientWithSas = new ContainerClient(`${containerClient.url}?${sasURL}`);
+
+    const expectedTags1: Tags = {
+      tag1: "val1",
+    };
+
+    for await (const blob of containerClientWithSas.findBlobsByTags(`tag1='val1'`)) {
+      assert.deepStrictEqual(blob.tags, expectedTags1);
+      assert.deepStrictEqual(blob.tagValue, "val1");
+    }
+
+    await containerClient.delete();
+  });
+
+  it("BlobClient.generateSasUrl should work with get/set tags permission", async () => {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const tags = {
+      tag1: "val1",
+      tag2: "val2",
+    };
+
+    const blockBlobName = getUniqueName("blockblob");
+    const blockBlobClient = containerClient.getBlockBlobClient(blockBlobName);
+    await blockBlobClient.upload("Hello, world", 12);
+
+    const sasURL = await blockBlobClient.generateSasUrl({
+      expiresOn: tmr,
+      permissions: BlobSASPermissions.parse("t"),
+      protocol: SASProtocol.HttpsAndHttp,
+    });
+
+    const blobClientWithSAS = new BlobClient(sasURL);
+
+    await blobClientWithSAS.setTags(tags);
+    const getTagsResult = await blobClientWithSAS.getTags();
+    assert.deepStrictEqual(getTagsResult.tags, tags);
+
+    await containerClient.delete();
+  });
+
+  it("generateAccountSASQueryParameters should work with should work with get/set tags permission", async function () {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+
+    const containerName = getUniqueName("container");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const tags = {
+      tag1: "val1",
+      tag2: "val2",
+    };
+
+    const blockBlobName = getUniqueName("blockblob");
+    const blockBlobClient = containerClient.getBlockBlobClient(blockBlobName);
+    await blockBlobClient.upload("Hello, world", 12);
+
+    // By default, credential is always the last element of pipeline factories
+    const factories = (serviceClient as any).pipeline.factories;
+    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+
+    const sasURL = generateAccountSASQueryParameters({
+      expiresOn: tmr,
+      services: 'b',
+      resourceTypes: 'o',
+      permissions: AccountSASPermissions.parse("t"),
+      protocol: SASProtocol.HttpsAndHttp,
+    },
+      sourceStorageSharedKeyCredential).toString();
+
+    const blobClientWithSAS = new BlobClient(`${blockBlobClient.url}?${sasURL}`);
+
+    await blobClientWithSAS.setTags(tags);
+    const getTagsResult = await blobClientWithSAS.getTags();
+    assert.deepStrictEqual(getTagsResult.tags, tags);
+
+    await containerClient.delete();
   });
 });
