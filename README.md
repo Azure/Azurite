@@ -1029,6 +1029,7 @@ Detailed support matrix:
   - Sync copy blob by access source with oauth
   - Encryption Scope
   - Get Page Ranges Continuation Token
+  - Blob Immutability Policy and Legal Hold
 
 Latest version supports for **2025-01-05** API version **queue** service.
 Detailed support matrix:
