@@ -169,6 +169,9 @@ describe("PageBlobAPIs", () => {
       if (!hasError) {
         assert.fail();
       }
+    }
+  });
+
   it("Create page blob with ifTags should work @loki @sql", async () => {
     await pageBlobClient.create(512);
 
