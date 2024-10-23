@@ -47,6 +47,7 @@ import IBlobMetadataStore, {
   ChangeContainerLeaseResponse,
   ContainerModel,
   CreateSnapshotResponse,
+  FilterBlobModel,
   GetBlobPropertiesRes,
   GetContainerAccessPolicyResponse,
   GetContainerPropertiesResponse,
@@ -62,7 +63,9 @@ import IBlobMetadataStore, {
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
-import { getBlobTagsCount, getTagsFromString } from "../utils/utils";
+import FilterBlobPage from "./FilterBlobPage";
+import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
+import { getBlobTagsCount, getTagsFromString, toBlobTags } from "../utils/utils";
 
 /**
  * This is a metadata source implementation for blob based on loki DB.
@@ -819,6 +822,80 @@ export default class LokiBlobMetadataStore
       const requestId = context ? context.contextId : undefined;
       throw StorageErrorFactory.getContainerNotFound(requestId);
     }
+  }
+
+  public async filterBlobs(
+    context: Context,
+    account: string,
+    container?: string,
+    where?: string,
+    maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
+    marker: string = "",
+  ): Promise<[FilterBlobModel[], string | undefined]> {
+    const query: any = {};
+    if (account !== undefined) {
+      query.accountName = account;
+    }
+    if (container !== undefined) {
+      query.containerName = container;
+      await this.checkContainerExist(
+        context,
+        account,
+        container
+      );
+    }
+
+    const filterFunction = generateQueryBlobWithTagsWhereFunction(context, where!);
+
+    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    const page = new FilterBlobPage<FilterBlobModel>(maxResults);
+    const readPage = async (offset: number): Promise<FilterBlobModel[]> => {
+      const doc = await coll
+        .chain()
+        .find(query)
+        .where((obj) => {
+          return obj.name > marker!;
+        })
+        .where((obj) => {
+          return obj.snapshot === undefined || obj.snapshot === '';
+        })
+        .sort((obj1, obj2) => {
+          if (obj1.name === obj2.name) return 0;
+          if (obj1.name > obj2.name) return 1;
+          return -1;
+        })
+        .offset(offset)
+        .limit(maxResults)
+        .data();
+
+      return doc.map((item) => {
+        let blobItem: FilterBlobModel;
+        blobItem = {
+          name: item.name,
+          containerName: item.containerName,
+          tags: item.blobTags
+        };
+        return blobItem;
+      }).filter((blobItem) => {
+        const tagsMeetConditions = filterFunction(blobItem);
+        if (tagsMeetConditions.length !== 0) {
+          blobItem.tags = { blobTagSet: toBlobTags(tagsMeetConditions) };
+          return true;
+        }
+        return false;
+      });
+    };
+
+    const nameItem = (item: FilterBlobModel) => {
+      return item.name;
+    };
+
+    const [blobItems, nextMarker] = await page.fill(readPage, nameItem);
+
+    return [
+      blobItems,
+      nextMarker
+    ];
   }
 
   public async listBlobs(
@@ -1810,9 +1887,11 @@ export default class LokiBlobMetadataStore
         ifUnmodifiedSince:
           options.sourceModifiedAccessConditions.sourceIfUnmodifiedSince,
         ifMatch: options.sourceModifiedAccessConditions.sourceIfMatch,
-        ifNoneMatch: options.sourceModifiedAccessConditions.sourceIfNoneMatch
+        ifNoneMatch: options.sourceModifiedAccessConditions.sourceIfNoneMatch,
+        ifTags: options.sourceModifiedAccessConditions.sourceIfTags
       },
-      sourceBlob
+      sourceBlob,
+      true
     );
 
     const destBlob = await this.getBlobWithLeaseUpdated(
@@ -1996,7 +2075,8 @@ export default class LokiBlobMetadataStore
         ifUnmodifiedSince:
           options.sourceModifiedAccessConditions.sourceIfUnmodifiedSince,
         ifMatch: options.sourceModifiedAccessConditions.sourceIfMatch,
-        ifNoneMatch: options.sourceModifiedAccessConditions.sourceIfNoneMatch
+        ifNoneMatch: options.sourceModifiedAccessConditions.sourceIfNoneMatch,
+        // Storage service will ignore x-ms-source-if-tags header for copyFromUrl
       },
       sourceBlob
     );
@@ -2572,7 +2652,8 @@ export default class LokiBlobMetadataStore
     blob: string,
     snapshot: string | undefined,
     isCommitted: boolean | undefined,
-    leaseAccessConditions: Models.LeaseAccessConditions | undefined
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
+    modifiedAccessConditions: Models.ModifiedAccessConditions | undefined
   ): Promise<{
     properties: Models.BlobPropertiesInternal;
     uncommittedBlocks: Models.Block[];
@@ -2585,6 +2666,8 @@ export default class LokiBlobMetadataStore
       snapshot,
       context
     );
+
+    validateReadConditions(context, modifiedAccessConditions, doc);
 
     new BlobReadLeaseValidator(leaseAccessConditions).validate(
       new BlobLeaseAdapter(doc),
@@ -3391,6 +3474,8 @@ export default class LokiBlobMetadataStore
       false,
       true
     );
+
+    validateReadConditions(context, modifiedAccessConditions, doc);
 
     // When block blob don't have committed block, should return 404
     if (!doc) {

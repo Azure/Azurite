@@ -4,6 +4,7 @@ import IDataStore from "../../common/IDataStore";
 import IGCExtentProvider from "../../common/IGCExtentProvider";
 import * as Models from "../generated/artifacts/models";
 import Context from "../generated/Context";
+import { FilterBlobItem } from "../generated/artifacts/models";
 
 /**
  * This model describes a chunk inside a persistency extent for a given extent ID.
@@ -153,6 +154,8 @@ interface IGetBlobPropertiesRes {
 }
 export type GetBlobPropertiesRes = IGetBlobPropertiesRes;
 
+export type FilterBlobModel = FilterBlobItem;
+
 // The response model for each lease-related request.
 interface IBlobLeaseResponse {
   properties: Models.BlobPropertiesInternal;
@@ -212,8 +215,8 @@ export type BlockModel = IBlockAdditionalProperties & PersistencyBlockModel;
  */
 export interface IBlobMetadataStore
   extends IGCExtentProvider,
-    IDataStore,
-    ICleaner {
+  IDataStore,
+  ICleaner {
   /**
    * Update blob service properties. Create service properties if not exists in persistency layer.
    *
@@ -501,6 +504,15 @@ export interface IBlobMetadataStore
     includeSnapshots?: boolean,
     includeUncommittedBlobs?: boolean
   ): Promise<[BlobModel[], string | undefined]>;
+
+  filterBlobs(
+    context: Context,
+    account: string,
+    container?: string,
+    where?: string,
+    maxResults?: number,
+    marker?: string,
+  ): Promise<[FilterBlobModel[], string | undefined]>;
 
   /**
    * Create blob item in persistency layer. Will replace if blob exists.
@@ -946,7 +958,8 @@ export interface IBlobMetadataStore
     blob: string,
     snapshot: string | undefined,
     isCommitted: boolean | undefined,
-    leaseAccessConditions: Models.LeaseAccessConditions | undefined
+    leaseAccessConditions: Models.LeaseAccessConditions | undefined,
+    modifiedAccessConditions: Models.ModifiedAccessConditions | undefined
   ): Promise<{
     properties: Models.BlobPropertiesInternal;
     uncommittedBlocks: Models.Block[];
@@ -1078,7 +1091,7 @@ export interface IBlobMetadataStore
   listUncommittedBlockPersistencyChunks(
     marker?: string,
     maxResults?: number
-  ): Promise<[IExtentChunk[], string | undefined]>;  
+  ): Promise<[IExtentChunk[], string | undefined]>;
 
   /**
    * Set blob tags.
@@ -1103,7 +1116,7 @@ export interface IBlobMetadataStore
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     tags: Models.BlobTags | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
-  ): Promise<void>;  
+  ): Promise<void>;
 
   /**
    * Get blob tags.
@@ -1125,7 +1138,7 @@ export interface IBlobMetadataStore
     blob: string,
     snapshot: string | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
-    modifiedAccessConditions?: Models.ModifiedAccessConditions
+    modifiedAccessConditions?: Models.ModifiedAccessConditions,
   ): Promise<BlobTags | undefined>;
 }
 

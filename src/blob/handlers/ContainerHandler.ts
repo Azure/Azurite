@@ -368,7 +368,48 @@ export default class ContainerHandler extends BaseHandler
 
   public async filterBlobs(options: Models.ContainerFilterBlobsOptionalParams, context: Context
   ): Promise<Models.ContainerFilterBlobsResponse> {
-    throw new NotImplementedError(context.contextId!);
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    await this.metadataStore.checkContainerExist(
+      context,
+      accountName,
+      containerName
+    );
+
+    const request = context.request!;
+    const marker = options.marker;
+    options.marker = options.marker || "";
+    if (
+      options.maxresults === undefined ||
+      options.maxresults > DEFAULT_LIST_BLOBS_MAX_RESULTS
+    ) {
+      options.maxresults = DEFAULT_LIST_BLOBS_MAX_RESULTS;
+    }
+
+    const [blobs, nextMarker] = await this.metadataStore.filterBlobs(
+      context,
+      accountName,
+      containerName,
+      options.where,
+      options.maxresults,
+      marker,
+    );
+
+    const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
+    const response: Models.ContainerFilterBlobsResponse = {
+      statusCode: 200,
+      requestId: context.contextId,
+      version: BLOB_API_VERSION,
+      date: context.startTime,
+      serviceEndpoint,
+      where: options.where!,
+      blobs: blobs,
+      clientRequestId: options.requestId,
+      nextMarker: `${nextMarker || ""}`
+    };
+
+    return response;
   }
 
   /**
