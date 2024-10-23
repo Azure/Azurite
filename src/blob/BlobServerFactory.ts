@@ -52,6 +52,7 @@ export class BlobServerFactory {
         const config = new SqlBlobConfiguration(
           env.blobHost(),
           env.blobPort(),
+          env.blobKeepAliveTimeout(),
           databaseConnectionString!,
           DEFAULT_SQL_OPTIONS,
           DEFAULT_BLOB_PERSISTENCE_ARRAY,
@@ -73,6 +74,7 @@ export class BlobServerFactory {
         const config = new BlobConfiguration(
           env.blobHost(),
           env.blobPort(),
+          env.blobKeepAliveTimeout(),
           join(location, DEFAULT_BLOB_LOKI_DB_PATH),
           join(location, DEFAULT_BLOB_EXTENT_LOKI_DB_PATH),
           DEFAULT_BLOB_PERSISTENCE_ARRAY,

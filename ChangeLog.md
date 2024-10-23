@@ -30,6 +30,15 @@ Blob:
 - Fixed issue of download a blob range without header x-ms-range-get-content-md5, should not return content-md5. (issue #2409)
 - Fixed issue of list container without include=metadata should not clear container metadata on server. (issue #2416)
 - Supported x-ms-copy-source-tag-option in copy blob from Uri. (issue #2398)
+- Added blobKeepAliveTimeout option (issue #2053)
+
+Table:
+
+- Added tableKeepAliveTimeout option (issue #2053)
+
+Queue:
+
+- Added queueKeepAliveTimeout option (issue #2053)
 
 ## 2024.06 Version 3.31.0
 
