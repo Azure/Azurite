@@ -92,7 +92,7 @@ async function main() {
     `Azurite Queue service successfully listens on ${server.getHttpServerAddress()}`
   );
   
-  AzuriteTelemetryClient.init(location, !env.disableTelemetry());
+  AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
   AzuriteTelemetryClient.TraceStartEvent("Queue");
 
   // Handle close event
@@ -108,6 +108,5 @@ async function main() {
 
 main().catch((err) => {
   console.error(`Exit due to unhandled error: ${err.message}`);
-  AzuriteTelemetryClient.TraceStopEvent("Queue1");
   process.exit(1);
 });

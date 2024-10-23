@@ -40,7 +40,7 @@ function shutdown(
   const tableBeforeCloseMessage = `Azurite Table service is closing...`;
   const tableAfterCloseMessage = `Azurite Table service successfully closed`;
 
-  AzuriteTelemetryClient.TraceStopEvent("0");
+  AzuriteTelemetryClient.TraceStopEvent();
 
   console.log(blobBeforeCloseMessage);
   blobServer.close().then(() => {
@@ -65,7 +65,7 @@ async function main() {
 
   // Initialize and validate environment values from command line parameters
   const env = new Environment();
-
+  
   const location = await env.location();
   await ensureDir(location);
   await access(location);
@@ -168,8 +168,8 @@ async function main() {
     `Azurite Table service is successfully listening at ${tableServer.getHttpServerAddress()}`
   );
   
-  AzuriteTelemetryClient.init(location, !env.disableTelemetry());
-  AzuriteTelemetryClient.TraceStartEvent("Blob");
+  AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
+  AzuriteTelemetryClient.TraceStartEvent();
 
   // Handle close event
   process
@@ -184,6 +184,5 @@ async function main() {
 
 main().catch((err) => {
   console.error(`Exit due to unhandled error: ${err.message}`);
-  AzuriteTelemetryClient.TraceStopEvent("1");
   process.exit(1);
 });

@@ -47,7 +47,7 @@ async function main() {
   );
   
   const location = await env.location();
-  AzuriteTelemetryClient.init(location, !env.disableTelemetry());
+  AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
   AzuriteTelemetryClient.TraceStartEvent("Blob");
 
   // Handle close event
@@ -63,6 +63,5 @@ async function main() {
 
 main().catch((err) => {
   console.error(`Exit due to unhandled error: ${err.message}`);
-  AzuriteTelemetryClient.TraceStopEvent("Blob1");
   process.exit(1);
 });
