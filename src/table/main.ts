@@ -69,7 +69,7 @@ async function main() {
   await server.start();
   console.log(afterStartMessage);
   
-  AzuriteTelemetryClient.init(location, !env.disableTelemetry());
+  AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
   AzuriteTelemetryClient.TraceStartEvent("Table");
 
   // Handle close event

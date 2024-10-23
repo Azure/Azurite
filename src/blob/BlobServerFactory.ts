@@ -13,6 +13,7 @@ import {
   DEFAULT_BLOB_LOKI_DB_PATH,
   DEFAULT_BLOB_PERSISTENCE_ARRAY
 } from "./utils/constants";
+import { AzuriteTelemetryClient } from "../common/Telemetry";
 
 export class BlobServerFactory {
   public async createServer(
@@ -42,6 +43,7 @@ export class BlobServerFactory {
       const isSQL = databaseConnectionString !== undefined;
 
       if (isSQL) {
+        AzuriteTelemetryClient.envDBIsSet = true;
         if (env.inMemoryPersistence()) {
           throw new Error(`The --inMemoryPersistence option is not supported when using SQL-based metadata storage.`)
         }

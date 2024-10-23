@@ -4,6 +4,7 @@ import {
 } from "../common/utils/constants";
 import ILogger from "../queue/generated/utils/ILogger";
 import IAccountDataStore, { IAccountProperties } from "./IAccountDataStore";
+import { AzuriteTelemetryClient } from "./Telemetry";
 import {
   AZURITE_ACCOUNTS_ENV,
   DEFAULT_ACCOUNTS_REFRESH_INTERVAL
@@ -80,6 +81,7 @@ export default class AccountDataStore implements IAccountDataStore {
     if (env) {
       try {
         this.accounts = this.parserAccountsEnvironmentString(env);
+        AzuriteTelemetryClient.envAccountIsSet = true;
       } catch (err) {
         this.logger.error(
           `AccountDataStore:init() Fallback to default emulator account ${EMULATOR_ACCOUNT_NAME}. Refresh accounts from environment variable ${AZURITE_ACCOUNTS_ENV} failed. ${JSON.stringify(

@@ -24,4 +24,6 @@ export default interface ITableEnvironment {
   debug(): Promise<string | boolean | undefined>;
   /** Optional. Disable persisting any data to disk. If the Azurite process is terminated, all data is lost */
   inMemoryPersistence(): boolean;
+  /** Optional. Disable telemtry collection of Azurite. If not specify this parameter Azurite will collect telemetry data by default. */
+  disableTelemetry(): boolean;
 }
