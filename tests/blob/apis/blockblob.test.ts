@@ -2,7 +2,8 @@ import {
   StorageSharedKeyCredential,
   BlobServiceClient,
   newPipeline,
-  BlobSASPermissions
+  BlobSASPermissions,
+  Tags
 } from "@azure/storage-blob";
 import assert = require("assert");
 import crypto = require("crypto");
@@ -89,6 +90,32 @@ describe("BlockBlobAPIs", () => {
     catch (error) {
       assert.deepStrictEqual(error.code, "LeaseIdMismatchWithLeaseOperation");
       assert.deepStrictEqual(error.statusCode, 409);
+    }
+  });
+
+  it("Block blob upload with ifTags should work @loki @sql", async () => {
+    await blockBlobClient.upload('a', 1);
+
+    const tags: Tags = {
+      tag1: 'val1',
+      tag2: 'val2'
+    }
+
+    await blockBlobClient.setTags(tags);
+
+    try {
+      await blockBlobClient.upload('b', 1, {
+        conditions: {
+          tagConditions: `tag1<>'val1'`
+        }
+      });
+      assert.fail();
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 412);
+      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
+      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
+      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
     }
   });
 
@@ -313,6 +340,34 @@ describe("BlockBlobAPIs", () => {
     );
   });
 
+  it("commitBlockList with ifTags @loki @sql", async () => {
+    const body = "HelloWorld";
+    await blockBlobClient.upload(body, 10);
+    const tags: Tags = {
+      key1: 'value1'
+    };
+    await blockBlobClient.setTags(tags);
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
+    try {
+      await blockBlobClient.commitBlockList([
+        base64encode("1"),
+        base64encode("2")
+      ], {
+        conditions: {
+          tagConditions: `key1<>'value1'`
+        }
+      });
+      assert.fail("Should not reach here.");
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 412);
+      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
+      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
+      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+    }
+  });
+
   it("commitBlockList with previous committed blocks @loki @sql", async () => {
     const body = "HelloWorld";
     await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
@@ -379,12 +434,12 @@ describe("BlockBlobAPIs", () => {
 
   it("Download a blob range should only return ContentMD5 when has request header x-ms-range-get-content-md5  @loki @sql", async () => {
     blockBlobClient.deleteIfExists();
-    
+
     await blockBlobClient.upload("abc", 0);
 
     const properties1 = await blockBlobClient.getProperties();
     assert.deepEqual(properties1.contentMD5, await getMD5FromString("abc"));
-    
+
     let result = await blockBlobClient.download(0, 6);
     assert.deepStrictEqual(await bodyToString(result, 3), "abc");
     assert.deepStrictEqual(result.contentLength, 3);
@@ -397,7 +452,7 @@ describe("BlockBlobAPIs", () => {
     assert.deepEqual(result.contentMD5, await getMD5FromString("abc"));
     assert.deepEqual(result.blobContentMD5, await getMD5FromString("abc"));
 
-    result = await blockBlobClient.download(0, 1, {rangeGetContentMD5: true});
+    result = await blockBlobClient.download(0, 1, { rangeGetContentMD5: true });
     assert.deepStrictEqual(await bodyToString(result, 1), "a");
     assert.deepStrictEqual(result.contentLength, 1);
     assert.deepEqual(result.contentMD5, await getMD5FromString("a"));
@@ -499,6 +554,36 @@ describe("BlockBlobAPIs", () => {
     assert.equal(listResponse.uncommittedBlocks!.length, 0);
     assert.equal(listResponse.committedBlocks![0].name, base64encode("2"));
     assert.equal(listResponse.committedBlocks![0].size, body.length);
+  });
+
+  it("getBlockList with ifTags @loki @sql", async () => {
+    const body = "HelloWorld";
+    await blockBlobClient.upload(body, 10);
+    const tags: Tags = {
+      key1: 'value1'
+    };
+    await blockBlobClient.setTags(tags);
+    await blockBlobClient.stageBlock(base64encode("1"), body, body.length);
+    await blockBlobClient.stageBlock(base64encode("2"), body, body.length);
+    await blockBlobClient.commitBlockList([
+      base64encode("1"),
+      base64encode("2")
+    ]);
+
+    try {
+      await blockBlobClient.getBlockList("all", {
+        conditions: {
+          tagConditions: `key1<>'value1'`
+        }
+      });
+      assert.fail("Should not reach here.");
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 412);
+      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
+      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
+      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+    }
   });
 
   it("getBlockList_BlockListingFilter @loki @sql", async () => {

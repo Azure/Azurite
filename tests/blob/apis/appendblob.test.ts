@@ -1,7 +1,8 @@
 import {
   StorageSharedKeyCredential,
   BlobServiceClient,
-  newPipeline
+  newPipeline,
+  Tags
 } from "@azure/storage-blob";
 import assert = require("assert");
 
@@ -83,6 +84,32 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(properties.cacheControl, undefined);
     assert.deepStrictEqual(properties.blobSequenceNumber, undefined);
     assert.deepStrictEqual(properties.blobCommittedBlockCount, 0);
+  });
+
+  it("Create append blob with ifTags should work @loki", async () => {
+    await appendBlobClient.create();
+
+    const tags: Tags = {
+      tag1: 'val1',
+      tag2: 'val2'
+    }
+
+    await appendBlobClient.setTags(tags);
+
+    try {
+      await appendBlobClient.create({
+        conditions: {
+          tagConditions: `tag1<>'val1'`
+        }
+      });
+      assert.fail();
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 412);
+      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
+      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
+      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+    }
   });
 
   it("Create append blob override existing pageblob @loki", async () => {
@@ -383,6 +410,46 @@ describe("AppendBlobAPIs", () => {
     assert.deepStrictEqual(string, "abcdef123456T@");
   });
 
+  it("AppendBlock with ifTags should work @loki", async () => {
+    await appendBlobClient.create();
+
+    const tags: Tags = {
+      tag1: 'val1',
+      tag2: 'val2'
+    }
+
+    await appendBlobClient.setTags(tags);
+
+    try {
+      await appendBlobClient.appendBlock("123456", 6, {
+        conditions: {
+          tagConditions: `tag1<>'val1'`
+        }
+      });
+      assert.fail("Should not reach here");
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 412);
+      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
+      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
+      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+    }
+    await appendBlobClient.appendBlock("123456", 6, {
+      conditions: {
+        tagConditions: `tag1='val1'`
+      }
+    });
+
+    const response = await appendBlobClient.download(0, undefined, {
+      conditions: {
+        tagConditions: `tag1='val1'`
+      }
+    });
+    const string = await bodyToString(response, response.contentLength);
+
+    assert.deepStrictEqual(string, "123456");
+  });
+
   it("Download append blob should work @loki", async () => {
     await appendBlobClient.create();
     await appendBlobClient.appendBlock("abcdef", 6);
@@ -413,7 +480,7 @@ describe("AppendBlobAPIs", () => {
     await appendBlobClient.appendBlock("T", 1);
     await appendBlobClient.appendBlock("@", 2);
 
-    const response = await snapshotAppendBlobURL.download(3, undefined, {rangeGetContentMD5: true});
+    const response = await snapshotAppendBlobURL.download(3, undefined, { rangeGetContentMD5: true });
     const string = await bodyToString(response);
     assert.deepStrictEqual(string, "def");
     assert.deepEqual(response.contentMD5, await getMD5FromString("def"));
@@ -430,7 +497,7 @@ describe("AppendBlobAPIs", () => {
 
     await appendBlobClient.delete();
 
-    const response = await copiedAppendBlobClient.download(3, undefined, {rangeGetContentMD5: true});
+    const response = await copiedAppendBlobClient.download(3, undefined, { rangeGetContentMD5: true });
     const string = await bodyToString(response);
     assert.deepStrictEqual(string, "def");
     assert.deepEqual(response.contentMD5, await getMD5FromString("def"));

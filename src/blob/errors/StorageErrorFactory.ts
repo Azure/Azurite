@@ -780,7 +780,6 @@ export default class StorageErrorFactory {
       { ReceivedCopyStatus: copyStatus }
     );
   }
-  
 
   public static getInvalidMetadata(contextID: string): StorageError {
     return new StorageError(
@@ -825,7 +824,7 @@ export default class StorageErrorFactory {
       "The tags specified are invalid. It contains characters that are not permitted.",
       contextID
     );
-  }  
+  }
 
   public static getInvalidXmlDocument(
     contextID: string = ""
