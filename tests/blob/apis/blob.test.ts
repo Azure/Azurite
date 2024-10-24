@@ -253,6 +253,22 @@ describe("BlobAPIs", () => {
     assert.fail();
   });
 
+  it("download should not work when blob in Archive tier", async () => {
+    try {
+
+      const result = await blobClient.setAccessTier("Archive");
+      assert.equal(
+          result._response.request.headers.get("x-ms-client-request-id"),
+          result.clientRequestId
+      );
+      await blobClient.download(0);
+    } catch (error) {
+      assert.deepStrictEqual(error.statusCode, 409);
+      return;
+    }
+    assert.fail();
+  });
+
   it("download should not work with conditional header ifUnmodifiedSince @loki @sql", async () => {
     try {
       await blobClient.download(0, undefined, {
