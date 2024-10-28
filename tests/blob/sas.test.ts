@@ -2122,7 +2122,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     }
     assert.ok(error !== undefined);
     assert.equal(error.statusCode, 409);
-    assert.equal(error.details.code, "BlobArchived");
+    assert.equal(error.details.code, "CannotVerifyCopySource");
   });
 
   it("Sync Copy blob across accounts should work and honor metadata when provided @loki", async () => {
