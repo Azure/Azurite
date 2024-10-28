@@ -1237,9 +1237,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
           "name": "restype",
           "description": "restype",
           "in": "query",
@@ -1328,9 +1325,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
         {
           "name": "restype",
           "description": "restype",
@@ -1522,9 +1516,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
           "name": "restype",
           "description": "restype",
           "in": "query",
@@ -1611,9 +1602,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
         {
           "name": "restype",
           "description": "restype",
@@ -1702,9 +1690,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
         {
           "name": "restype",
           "description": "restype",
@@ -1801,9 +1786,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
         {
           "name": "restype",
           "description": "restype",
@@ -1911,9 +1893,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -2029,9 +2008,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -2153,9 +2129,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
           "name": "comp",
           "description": "comp",
           "in": "query",
@@ -2275,9 +2248,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -2402,9 +2372,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
           "name": "comp",
           "description": "comp",
           "in": "query",
@@ -2524,9 +2491,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
           "name": "restype",
           "description": "restype",
           "in": "query",
@@ -2632,9 +2596,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
         {
           "name": "restype",
           "description": "restype",
@@ -2825,9 +2786,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
         {
           "name": "restype",
           "description": "restype",
@@ -3938,14 +3896,7 @@
           }
         }
       },
-      "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        }
-      ]
+      "parameters": []
     },
     "/{containerName}/{blob}?PageBlob": {
       "put": {
@@ -4118,12 +4069,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "x-ms-blob-type",
           "x-ms-client-name": "blobType",
@@ -4304,12 +4249,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "x-ms-blob-type",
           "x-ms-client-name": "blobType",
@@ -4502,12 +4441,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "x-ms-blob-type",
           "x-ms-client-name": "blobType",
@@ -4716,12 +4649,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
-        {
           "name": "x-ms-blob-type",
           "x-ms-client-name": "blobType",
           "in": "header",
@@ -4798,12 +4725,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -4890,12 +4811,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -5018,12 +4933,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -5182,12 +5091,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
-        {
           "name": "comp",
           "description": "comp",
           "in": "query",
@@ -5266,12 +5169,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -5406,12 +5303,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
-        {
           "name": "comp",
           "description": "comp",
           "in": "query",
@@ -5517,12 +5408,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -5637,12 +5522,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -5762,12 +5641,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -5891,12 +5764,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
-        {
           "name": "comp",
           "description": "comp",
           "in": "query",
@@ -6015,12 +5882,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -6165,12 +6026,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -6335,14 +6190,7 @@
           }
         }
       },
-      "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        }
-      ]
+      "parameters": []
     },
     "/{containerName}/{blob}?comp=copy&sync": {
       "put": {
@@ -6513,12 +6361,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
-        {
           "name": "x-ms-requires-sync",
           "description": "This header indicates that this is a synchronous Copy Blob From URL instead of a Asynchronous Copy Blob.",
           "in": "header",
@@ -6595,12 +6437,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -6717,12 +6553,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -6904,12 +6734,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
-        {
           "name": "restype",
           "description": "restype",
           "in": "query",
@@ -7048,12 +6872,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -7198,12 +7016,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -7487,12 +7299,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
-        {
           "name": "comp",
           "description": "comp",
           "in": "query",
@@ -7661,12 +7467,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
-        {
           "name": "comp",
           "description": "comp",
           "in": "query",
@@ -7826,12 +7626,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -8030,12 +7824,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
-        {
           "name": "comp",
           "description": "comp",
           "in": "query",
@@ -8174,12 +7962,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
-        {
           "name": "comp",
           "description": "comp",
           "in": "query",
@@ -8308,12 +8090,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
-        {
           "name": "comp",
           "description": "comp",
           "in": "query",
@@ -8433,12 +8209,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
-        {
           "name": "comp",
           "description": "comp",
           "in": "query",
@@ -8548,12 +8318,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -8672,12 +8436,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -8844,12 +8602,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -9030,12 +8782,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
-        {
           "name": "comp",
           "description": "comp",
           "in": "query",
@@ -9138,12 +8884,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
@@ -9650,12 +9390,6 @@
       },
       "parameters": [
         {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
-        {
           "name": "comp",
           "description": "comp",
           "in": "query",
@@ -9816,12 +9550,6 @@
         }
       },
       "parameters": [
-        {
-          "$ref": "#/parameters/ContainerName"
-        },
-        {
-          "$ref": "#/parameters/Blob"
-        },
         {
           "name": "comp",
           "description": "comp",
