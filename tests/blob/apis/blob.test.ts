@@ -253,7 +253,7 @@ describe("BlobAPIs", () => {
     assert.fail();
   });
 
-  it("download should not work when blob in Archive tier", async () => {
+  it("download should not work when blob in Archive tier @loki @sql", async () => {
     try {
 
       const result = await blobClient.setAccessTier("Archive");
