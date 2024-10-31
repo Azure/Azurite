@@ -47,7 +47,7 @@ export default class BlockBlobHandler
       "application/octet-stream";
     const contentMD5 = context.request!.getHeader("content-md5")
       ? options.blobHTTPHeaders.blobContentMD5 ||
-        context.request!.getHeader("content-md5")
+      context.request!.getHeader("content-md5")
       : undefined;
 
     await this.metadataStore.checkContainerExist(
@@ -161,9 +161,9 @@ export default class BlockBlobHandler
   }
 
   public async putBlobFromUrl(contentLength: number, copySource: string, options: Models.BlockBlobPutBlobFromUrlOptionalParams, context: Context
-    ): Promise<Models.BlockBlobPutBlobFromUrlResponse> {
+  ): Promise<Models.BlockBlobPutBlobFromUrlResponse> {
     throw new NotImplementedError(context.contextId);
-    }
+  }
 
   public async stageBlock(
     blockId: string,
@@ -183,7 +183,7 @@ export default class BlockBlobHandler
     // options.blobHTTPHeaders = options.blobHTTPHeaders || {};
     const contentMD5 = context.request!.getHeader("content-md5")
       ? options.transactionalContentMD5 ||
-        context.request!.getHeader("content-md5")
+      context.request!.getHeader("content-md5")
       : undefined;
 
     this.validateBlockId(blockId, blobCtx);
@@ -332,7 +332,7 @@ export default class BlockBlobHandler
       accountName,
       containerName,
       name: blobName,
-      snapshot: "",      
+      snapshot: "",
       blobTags: options.blobTagsString === undefined ? undefined : getTagsFromString(options.blobTagsString, context.contextId!),
       properties: {
         lastModified: context.startTime!,
@@ -412,7 +412,8 @@ export default class BlockBlobHandler
       blobName,
       options.snapshot,
       undefined,
-      options.leaseAccessConditions
+      options.leaseAccessConditions,
+      options.modifiedAccessConditions
     );
 
     // TODO: Create uncommitted blockblob when stage block
@@ -437,16 +438,16 @@ export default class BlockBlobHandler
       (options.listType.toLowerCase() ===
         Models.BlockListType.All.toLowerCase() ||
         options.listType.toLowerCase() ===
-          Models.BlockListType.Uncommitted.toLowerCase())
+        Models.BlockListType.Uncommitted.toLowerCase())
     ) {
       response.uncommittedBlocks = res.uncommittedBlocks;
     }
     if (
       options.listType === undefined ||
       options.listType.toLowerCase() ===
-        Models.BlockListType.All.toLowerCase() ||
+      Models.BlockListType.All.toLowerCase() ||
       options.listType.toLowerCase() ===
-        Models.BlockListType.Committed.toLowerCase()
+      Models.BlockListType.Committed.toLowerCase()
     ) {
       response.committedBlocks = res.committedBlocks;
     }

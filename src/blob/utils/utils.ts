@@ -3,6 +3,7 @@ import { createWriteStream, PathLike } from "fs";
 import StorageErrorFactory from "../errors/StorageErrorFactory";
 import { USERDELEGATIONKEY_BASIC_KEY } from "./constants";
 import { BlobTag, BlobTags } from "@azure/storage-blob";
+import { TagContent } from "../persistence/QueryInterpreter/QueryNodes/IQueryNode";
 
 export function checkApiVersion(
   inputApiVersion: string,
@@ -153,7 +154,7 @@ export function getUserDelegationKeyValue(
   signedStartsOn: string,
   signedExpiresOn: string,
   signedVersion: string,
-) : string {
+): string {
   const stringToSign = [
     signedObjectid,
     signedTenantid,
@@ -167,19 +168,18 @@ export function getUserDelegationKeyValue(
 }
 
 export function getBlobTagsCount(
-  blobTags: BlobTags | undefined 
-) : number | undefined {
+  blobTags: BlobTags | undefined
+): number | undefined {
   return (blobTags === undefined || blobTags?.blobTagSet.length === 0) ? undefined : blobTags?.blobTagSet.length
 }
 
 export function getTagsFromString(blobTagsString: string, contextID: string): BlobTags | undefined {
-  if (blobTagsString === '' || blobTagsString === undefined)
-  {
+  if (blobTagsString === '' || blobTagsString === undefined) {
     return undefined;
   }
-  let blobTags:BlobTag[] = [];
+  let blobTags: BlobTag[] = [];
   const rawTags = blobTagsString.split("&");
-  rawTags.forEach((rawTag)=>{
+  rawTags.forEach((rawTag) => {
     const tagpair = rawTag.split("=");
     blobTags.push({
       // When the Blob tag is input with header, it's encoded, sometimes space will be encoded to "+" ("+" will be encoded to "%2B")
@@ -190,28 +190,28 @@ export function getTagsFromString(blobTagsString: string, contextID: string): Bl
   })
   validateBlobTag(
     {
-      blobTagSet:blobTags,
+      blobTagSet: blobTags,
     },
     contextID
   );
   return {
-    blobTagSet:blobTags,
+    blobTagSet: blobTags,
   };
 }
 
 // validate as the limitation from https://learn.microsoft.com/en-us/rest/api/storageservices/set-blob-tags?tabs=azure-ad#request-body
 export function validateBlobTag(tags: BlobTags, contextID: string): void {
-  if (tags.blobTagSet.length > 10){
+  if (tags.blobTagSet.length > 10) {
     throw StorageErrorFactory.getTagsTooLarge(contextID);
   }
-  tags.blobTagSet.forEach((tag)=>{
-    if (tag.key.length == 0){
+  tags.blobTagSet.forEach((tag) => {
+    if (tag.key.length == 0) {
       throw StorageErrorFactory.getEmptyTagName(contextID);
     }
-    if (tag.key.length > 128){
+    if (tag.key.length > 128) {
       throw StorageErrorFactory.getTagsTooLarge(contextID);
     }
-    if (tag.value.length > 256){
+    if (tag.value.length > 256) {
       throw StorageErrorFactory.getTagsTooLarge(contextID);
     }
     if (ContainsInvalidTagCharacter(tag.key)) {
@@ -223,23 +223,37 @@ export function validateBlobTag(tags: BlobTags, contextID: string): void {
   });
 }
 
-function ContainsInvalidTagCharacter(s: string): boolean{
-  for (let c of s)
-  {
+function ContainsInvalidTagCharacter(s: string): boolean {
+  for (let c of s) {
     if (!(c >= 'a' && c <= 'z' ||
-          c >= 'A' && c <= 'Z' ||
-          c >= '0' && c <= '9' ||
-          c == ' ' ||
-          c == '+' ||
-          c == '-' ||
-          c == '.' ||
-          c == '/' ||
-          c == ':' ||
-          c == '=' ||
-          c == '_'))
-    {
-        return true;
+      c >= 'A' && c <= 'Z' ||
+      c >= '0' && c <= '9' ||
+      c == ' ' ||
+      c == '+' ||
+      c == '-' ||
+      c == '.' ||
+      c == '/' ||
+      c == ':' ||
+      c == '=' ||
+      c == '_')) {
+      return true;
     }
   }
-    return false;
+  return false;
+}
+
+export function toBlobTags(input: TagContent[]): BlobTag[] {
+  const tags: Record<string, string> = {};
+  input.forEach(element => {
+    if (element.key !== '@container') {
+      tags[element.key!] = element.value!;
+    }
+  });
+
+  return Object.entries(tags).map(([key, value]) => {
+    return {
+      key: key,
+      value: value
+    }
+  });
 }

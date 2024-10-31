@@ -2,6 +2,7 @@ import StorageErrorFactory from "../errors/StorageErrorFactory";
 import { ModifiedAccessConditions } from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { BlobModel, ContainerModel } from "../persistence/IBlobMetadataStore";
+import { generateQueryBlobWithTagsWhereFunction } from "../persistence/QueryInterpreter/QueryInterpreter";
 import ConditionalHeadersAdapter from "./ConditionalHeadersAdapter";
 import ConditionResourceAdapter from "./ConditionResourceAdapter";
 import { IConditionalHeaders } from "./IConditionalHeaders";
@@ -11,12 +12,14 @@ import IConditionResource from "./IConditionResource";
 export function validateReadConditions(
   context: Context,
   conditionalHeaders?: ModifiedAccessConditions,
-  model?: BlobModel | ContainerModel | null
+  model?: BlobModel | ContainerModel | null,
+  isSourceBlob?: boolean
 ) {
   new ReadConditionalHeadersValidator().validate(
     context,
     new ConditionalHeadersAdapter(context, conditionalHeaders),
-    new ConditionResourceAdapter(model)
+    new ConditionResourceAdapter(model),
+    isSourceBlob
   );
 }
 
@@ -30,11 +33,13 @@ export default class ReadConditionalHeadersValidator
    * @param context
    * @param conditionalHeaders
    * @param resource
+   * @param isSourceBlob 
    */
   public validate(
     context: Context,
     conditionalHeaders: IConditionalHeaders,
-    resource: IConditionResource
+    resource: IConditionResource,
+    isSourceBlob?: boolean
   ): void {
     // If-Match && If-Unmodified-Since && (If-None-Match || If-Modified-Since)
 
@@ -66,7 +71,7 @@ export default class ReadConditionalHeadersValidator
       // If-Match
       const ifMatchPass = conditionalHeaders.ifMatch
         ? conditionalHeaders.ifMatch.includes(resource.etag) ||
-          conditionalHeaders.ifMatch[0] === "*"
+        conditionalHeaders.ifMatch[0] === "*"
         : undefined;
 
       // If-Unmodified-Since
@@ -106,6 +111,16 @@ export default class ReadConditionalHeadersValidator
 
       if (isModifiedSincePass === false && ifNoneMatchPass !== true) {
         throw StorageErrorFactory.getNotModified(context.contextId!);
+      }
+
+      if (conditionalHeaders.ifTags) {
+        const againstSourceBlob = isSourceBlob === undefined ? false : isSourceBlob;
+        const validateFunction = generateQueryBlobWithTagsWhereFunction(context, conditionalHeaders.ifTags, againstSourceBlob ? 'x-ms-source-if-tags' : 'x-ms-if-tags');
+
+        if (conditionalHeaders?.ifTags !== undefined
+          && validateFunction(resource.blobItemWithTags).length === 0) {
+          throw StorageErrorFactory.getConditionNotMet(context.contextId!);
+        }
       }
     }
   }
