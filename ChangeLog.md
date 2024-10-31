@@ -4,6 +4,11 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Fixed issue of download 0 size blob with range > 0 should have header "Content-Range: bytes \*/0" in returned error. (issue #2458)
+- Aligned behavior with Azure to ignore invalid range requests for blob downloads. (issue #2458)
+
 ## 2024.10 Version 3.33.0
 
 General:
