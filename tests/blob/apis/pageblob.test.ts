@@ -1,7 +1,8 @@
 import {
   newPipeline,
   BlobServiceClient,
-  StorageSharedKeyCredential
+  StorageSharedKeyCredential,
+  Tags
 } from "@azure/storage-blob";
 import assert = require("assert");
 
@@ -171,6 +172,32 @@ describe("PageBlobAPIs", () => {
     }
   });
 
+  it("Create page blob with ifTags should work @loki @sql", async () => {
+    await pageBlobClient.create(512);
+
+    const tags: Tags = {
+      tag1: 'val1',
+      tag2: 'val2'
+    }
+
+    await pageBlobClient.setTags(tags);
+
+    try {
+      await pageBlobClient.create(512, {
+        conditions: {
+          tagConditions: `tag1<>'val1'`
+        }
+      });
+      assert.fail();
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 412);
+      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
+      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
+      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+    }
+  });
+
   it("download page blob with partial ranges @loki", async () => {
     const length = 512 * 10;
     await pageBlobClient.create(length);
@@ -295,8 +322,8 @@ describe("PageBlobAPIs", () => {
     );
   });
 
-  it("download a 0 size page blob with range > 0 will get error @loki", async () => {  
-    pageBlobClient.deleteIfExists();      
+  it("download a 0 size page blob with range > 0 will get error @loki", async () => {
+    pageBlobClient.deleteIfExists();
     await pageBlobClient.create(0);
 
     try {
@@ -310,14 +337,14 @@ describe("PageBlobAPIs", () => {
   });
 
   it("Download a blob range should only return ContentMD5 when has request header x-ms-range-get-content-md5  @loki", async () => {
-    pageBlobClient.deleteIfExists();    
-    
-    await pageBlobClient.create(512, {blobHTTPHeaders: {blobContentMD5: await getMD5FromString("a".repeat(512))}});    
+    pageBlobClient.deleteIfExists();
+
+    await pageBlobClient.create(512, { blobHTTPHeaders: { blobContentMD5: await getMD5FromString("a".repeat(512)) } });
     await pageBlobClient.uploadPages("a".repeat(512), 0, 512);
 
     const properties1 = await pageBlobClient.getProperties();
     assert.deepEqual(properties1.contentMD5, await getMD5FromString("a".repeat(512)));
-    
+
     let result = await pageBlobClient.download(0, 1024);
     assert.deepStrictEqual(await bodyToString(result, 512), "a".repeat(512));
     assert.deepStrictEqual(result.contentLength, 512);
@@ -330,7 +357,7 @@ describe("PageBlobAPIs", () => {
     assert.deepEqual(properties1.contentMD5, await getMD5FromString("a".repeat(512)));
     assert.deepEqual(result.blobContentMD5, await getMD5FromString("a".repeat(512)));
 
-    result = await pageBlobClient.download(0, 3, {rangeGetContentMD5: true});
+    result = await pageBlobClient.download(0, 3, { rangeGetContentMD5: true });
     assert.deepStrictEqual(await bodyToString(result, 3), "aaa");
     assert.deepStrictEqual(result.contentLength, 3);
     assert.deepEqual(result.contentMD5, await getMD5FromString("aaa"));
@@ -394,6 +421,32 @@ describe("PageBlobAPIs", () => {
 
     assert.equal(await bodyToString(page1, 512), "a".repeat(512));
     assert.equal(await bodyToString(page2, 512), "b".repeat(512));
+  });
+
+  it("uploadPages with ifTags should work @loki", async () => {
+    await pageBlobClient.create(1024);
+
+    const tags: Tags = {
+      tag1: 'val1',
+      tag2: 'val2'
+    }
+
+    await pageBlobClient.setTags(tags);
+
+    try {
+      await pageBlobClient.uploadPages("a".repeat(512), 0, 512, {
+        conditions: {
+          tagConditions: `tag1<>'val1'`
+        }
+      });
+      assert.fail("Should not reach here");
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 412);
+      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
+      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
+      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+    }
   });
 
   it("uploadPages should not work if ifSequenceNumberEqualTo doesn't match @loki", async () => {
@@ -559,10 +612,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
-        "a".repeat(512) +
-        "\u0000".repeat(512) +
-        "c".repeat(512) +
-        "\u0000".repeat(512)
+      "a".repeat(512) +
+      "\u0000".repeat(512) +
+      "c".repeat(512) +
+      "\u0000".repeat(512)
     );
 
     const page1 = await pageBlobClient.download(0, 512);
@@ -722,10 +775,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
-        "a".repeat(512) +
-        "b".repeat(512) +
-        "c".repeat(512) +
-        "\u0000".repeat(512)
+      "a".repeat(512) +
+      "b".repeat(512) +
+      "c".repeat(512) +
+      "\u0000".repeat(512)
     );
 
     let ranges = await pageBlobClient.getPageRanges(0, length);
@@ -778,10 +831,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "d".repeat(512) +
-        "d".repeat(512) +
-        "b".repeat(512) +
-        "c".repeat(512) +
-        "\u0000".repeat(512)
+      "d".repeat(512) +
+      "b".repeat(512) +
+      "c".repeat(512) +
+      "\u0000".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
@@ -822,10 +875,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
-        "a".repeat(512) +
-        "b".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512)
+      "a".repeat(512) +
+      "b".repeat(512) +
+      "d".repeat(512) +
+      "d".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
@@ -839,6 +892,38 @@ describe("PageBlobAPIs", () => {
       offset: 512 * 3,
       count: 512 * 2 - 1
     });
+  });
+
+  it("getPageRanges with ifTags should work @loki", async () => {
+    const length = 512 * 5;
+    await pageBlobClient.create(length);
+    await pageBlobClient.uploadPages(
+      "a".repeat(512) + "b".repeat(512) + "c".repeat(512),
+      512,
+      512 * 3
+    );
+
+    const tags: Tags = {
+      tag1: 'val1',
+      tag2: 'val2'
+    }
+
+    await pageBlobClient.setTags(tags);
+
+    try {
+      await pageBlobClient.getPageRanges(0, length, {
+        conditions: {
+          tagConditions: `tag1<>'val1'`
+        }
+      });
+      assert.fail("Should not reach here");
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 412);
+      assert.deepStrictEqual((err as any).code, 'ConditionNotMet');
+      assert.deepStrictEqual((err as any).details.errorCode, 'ConditionNotMet');
+      assert.ok((err as any).details.message.startsWith('The condition specified using HTTP conditional header(s) is not met.'));
+    }
   });
 
   it("resize override a sequential range @loki", async () => {
@@ -913,10 +998,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "a".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512) +
-        "b".repeat(512)
+      "d".repeat(512) +
+      "d".repeat(512) +
+      "d".repeat(512) +
+      "b".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
@@ -965,10 +1050,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "a".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512) +
-        "b".repeat(512)
+      "d".repeat(512) +
+      "d".repeat(512) +
+      "d".repeat(512) +
+      "b".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
@@ -1017,10 +1102,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512) +
-        "\u0000".repeat(512)
+      "d".repeat(512) +
+      "d".repeat(512) +
+      "d".repeat(512) +
+      "\u0000".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
@@ -1061,10 +1146,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512) +
-        "b".repeat(512) +
-        "\u0000".repeat(512)
+      "d".repeat(512) +
+      "d".repeat(512) +
+      "b".repeat(512) +
+      "\u0000".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
@@ -1109,10 +1194,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
-        "a".repeat(512) +
-        "d".repeat(512) +
-        "b".repeat(512) +
-        "\u0000".repeat(512)
+      "a".repeat(512) +
+      "d".repeat(512) +
+      "b".repeat(512) +
+      "\u0000".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
@@ -1161,10 +1246,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
-        "a".repeat(512) +
-        "d".repeat(512) +
-        "d".repeat(512) +
-        "\u0000".repeat(512)
+      "a".repeat(512) +
+      "d".repeat(512) +
+      "d".repeat(512) +
+      "\u0000".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
@@ -1311,10 +1396,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
-        "a".repeat(512) +
-        "\u0000".repeat(512) +
-        "c".repeat(512) +
-        "\u0000".repeat(512)
+      "a".repeat(512) +
+      "\u0000".repeat(512) +
+      "c".repeat(512) +
+      "\u0000".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
@@ -1361,10 +1446,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512)
+      "\u0000".repeat(512) +
+      "\u0000".repeat(512) +
+      "\u0000".repeat(512) +
+      "\u0000".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
@@ -1403,10 +1488,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
-        "a".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512)
+      "a".repeat(512) +
+      "\u0000".repeat(512) +
+      "\u0000".repeat(512) +
+      "\u0000".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
@@ -1449,10 +1534,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "c".repeat(512) +
-        "\u0000".repeat(512)
+      "\u0000".repeat(512) +
+      "\u0000".repeat(512) +
+      "c".repeat(512) +
+      "\u0000".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
@@ -1493,10 +1578,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "a".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "c".repeat(512)
+      "\u0000".repeat(512) +
+      "\u0000".repeat(512) +
+      "\u0000".repeat(512) +
+      "c".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
@@ -1541,10 +1626,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "a".repeat(512) +
-        "\u0000".repeat(512) +
-        "b".repeat(512) +
-        "\u0000".repeat(512) +
-        "c".repeat(512)
+      "\u0000".repeat(512) +
+      "b".repeat(512) +
+      "\u0000".repeat(512) +
+      "c".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
@@ -1652,10 +1737,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512)
+      "\u0000".repeat(512) +
+      "\u0000".repeat(512) +
+      "\u0000".repeat(512) +
+      "\u0000".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
@@ -1691,10 +1776,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "a".repeat(512) +
-        "\u0000".repeat(512) +
-        "b".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512)
+      "\u0000".repeat(512) +
+      "b".repeat(512) +
+      "\u0000".repeat(512) +
+      "\u0000".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);
@@ -1738,10 +1823,10 @@ describe("PageBlobAPIs", () => {
     assert.equal(
       await bodyToString(full, length),
       "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "\u0000".repeat(512) +
-        "b".repeat(512)
+      "\u0000".repeat(512) +
+      "\u0000".repeat(512) +
+      "\u0000".repeat(512) +
+      "b".repeat(512)
     );
 
     const ranges = await pageBlobClient.getPageRanges(0, length);

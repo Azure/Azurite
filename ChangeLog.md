@@ -6,8 +6,19 @@
 
 Blob:
 
-- Fixed an issue where all blob APIs allowed metadata names which were not valid C# identifiers.
 - Fixed issue of download 0 size blob with range > 0 should has header "Content-Range: bytes \*/0" in returned error. (issue #2458)
+
+## 2024.10 Version 3.33.0
+
+General:
+
+- Bump up service API version to 2025-01-05
+
+Blob:
+
+- Added support for filtering blob by tags.
+- Fixed an issue where all blob APIs allowed metadata names which were not valid C# identifiers.
+- Fixed always including metadata on blob list even when not requested
 
 ## 2024.08 Version 3.32.0
 

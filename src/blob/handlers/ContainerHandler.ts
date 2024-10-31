@@ -368,7 +368,48 @@ export default class ContainerHandler extends BaseHandler
 
   public async filterBlobs(options: Models.ContainerFilterBlobsOptionalParams, context: Context
   ): Promise<Models.ContainerFilterBlobsResponse> {
-    throw new NotImplementedError(context.contextId!);
+    const blobCtx = new BlobStorageContext(context);
+    const accountName = blobCtx.account!;
+    const containerName = blobCtx.container!;
+    await this.metadataStore.checkContainerExist(
+      context,
+      accountName,
+      containerName
+    );
+
+    const request = context.request!;
+    const marker = options.marker;
+    options.marker = options.marker || "";
+    if (
+      options.maxresults === undefined ||
+      options.maxresults > DEFAULT_LIST_BLOBS_MAX_RESULTS
+    ) {
+      options.maxresults = DEFAULT_LIST_BLOBS_MAX_RESULTS;
+    }
+
+    const [blobs, nextMarker] = await this.metadataStore.filterBlobs(
+      context,
+      accountName,
+      containerName,
+      options.where,
+      options.maxresults,
+      marker,
+    );
+
+    const serviceEndpoint = `${request.getEndpoint()}/${accountName}`;
+    const response: Models.ContainerFilterBlobsResponse = {
+      statusCode: 200,
+      requestId: context.contextId,
+      version: BLOB_API_VERSION,
+      date: context.startTime,
+      serviceEndpoint,
+      where: options.where!,
+      blobs: blobs,
+      clientRequestId: options.requestId,
+      nextMarker: `${nextMarker || ""}`
+    };
+
+    return response;
   }
 
   /**
@@ -605,6 +646,7 @@ export default class ContainerHandler extends BaseHandler
     let includeSnapshots: boolean = false;
     let includeUncommittedBlobs: boolean = false;
     let includeTags: boolean = false;
+    let includeMetadata: boolean = false;
     if (options.include !== undefined) {
       options.include.forEach(element => {
         if (Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase()) {
@@ -615,6 +657,9 @@ export default class ContainerHandler extends BaseHandler
         }
         if (Models.ListBlobsIncludeItem.Tags.toLowerCase() === element.toLowerCase()) {
           includeTags = true;
+        }
+        if (Models.ListBlobsIncludeItem.Metadata.toLowerCase() === element.toLowerCase()) {
+          includeMetadata = true;
         }
       })
     }
@@ -657,6 +702,7 @@ export default class ContainerHandler extends BaseHandler
             deleted: item.deleted !== true ? undefined : true,
             snapshot: item.snapshot || undefined,
             blobTags: includeTags ? item.blobTags : undefined,
+            metadata: includeMetadata ? item.metadata : undefined,
             properties: {
               ...item.properties,
               etag: removeQuotationFromListBlobEtag(item.properties.etag),
@@ -705,6 +751,7 @@ export default class ContainerHandler extends BaseHandler
     let includeSnapshots: boolean = false;
     let includeUncommittedBlobs: boolean = false;
     let includeTags: boolean = false;
+    let includeMetadata: boolean = false;
     if (options.include !== undefined) {
       options.include.forEach(element => {
         if (Models.ListBlobsIncludeItem.Snapshots.toLowerCase() === element.toLowerCase()) {
@@ -715,6 +762,9 @@ export default class ContainerHandler extends BaseHandler
         }
         if (Models.ListBlobsIncludeItem.Tags.toLowerCase() === element.toLowerCase()) {
           includeTags = true;
+        }
+        if (Models.ListBlobsIncludeItem.Metadata.toLowerCase() === element.toLowerCase()) {
+          includeMetadata = true;
         }
       }
       )
@@ -760,6 +810,7 @@ export default class ContainerHandler extends BaseHandler
             ...item,
             snapshot: item.snapshot || undefined,
             blobTags: includeTags ? item.blobTags : undefined,
+            metadata: includeMetadata ? item.metadata : undefined,
             properties: {
               ...item.properties,
               etag: removeQuotationFromListBlobEtag(item.properties.etag),

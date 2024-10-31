@@ -6,7 +6,8 @@ import {
   BlobServiceClient,
   generateAccountSASQueryParameters,
   newPipeline,
-  StorageSharedKeyCredential
+  StorageSharedKeyCredential,
+  Tags
 } from "@azure/storage-blob";
 import assert = require("assert");
 import StorageErrorFactory from "../../../src/blob/errors/StorageErrorFactory";
@@ -267,12 +268,18 @@ describe("ContainerAPIs", () => {
 
   it("listBlobHierarchySegment with default parameters @loki @sql", async () => {
     const blobClients = [];
+    const metadata = {
+      keya: "a",
+      keyb: "c"
+    };
     for (let i = 0; i < 3; i++) {
       const blobClient = containerClient.getBlobClient(
         getUniqueName(`blockblob${i}/${i}`)
       );
       const blockBlobClient = blobClient.getBlockBlobClient();
-      await blockBlobClient.upload("", 0);
+      await blockBlobClient.upload("", 0, {
+        metadata
+      });
       blobClients.push(blobClient);
     }
 
@@ -296,6 +303,15 @@ describe("ContainerAPIs", () => {
     for (const blob of blobClients) {
       let i = 0;
       assert.ok(blob.url.indexOf(result.segment.blobPrefixes![i++].name));
+    }
+
+    for (const prefix of result.segment.blobPrefixes) {
+      const prefixResult = (
+        await containerClient.listBlobsByHierarchy(delimiter, { prefix: prefix.name }).byPage().next()
+      ).value;
+
+      assert.deepStrictEqual(prefixResult.segment.blobItems!.length, 1);
+      assert.deepStrictEqual(prefixResult.segment.blobItems![0].metadata, undefined);
     }
 
     for (const blob of blobClients) {
@@ -548,12 +564,18 @@ describe("ContainerAPIs", () => {
 
   it("should correctly list all blobs in the container using listBlobFlatSegment with default parameters @loki @sql", async () => {
     const blobClients = [];
+    const metadata = {
+      keya: "a",
+      keyb: "c"
+    };
     for (let i = 0; i < 3; i++) {
       const blobClient = containerClient.getBlobClient(
         getUniqueName(`blockblob${i}/${i}`)
       );
       const blockBlobClient = blobClient.getBlockBlobClient();
-      await blockBlobClient.upload("", 0);
+      await blockBlobClient.upload("", 0, {
+        metadata
+      });
       blobClients.push(blobClient);
     }
 
@@ -581,6 +603,7 @@ describe("ContainerAPIs", () => {
         '"' + result.segment.blobItems![i].properties.etag + '"'
       );
       assert.deepStrictEqual(result.segment.blobItems![i].snapshot, undefined);
+      assert.deepStrictEqual(result.segment.blobItems![i].metadata, undefined);
       i++;
     }
 
@@ -700,7 +723,7 @@ describe("ContainerAPIs", () => {
     const inputmarker = undefined;
     let result = (
       await containerClient
-        .listBlobsByHierarchy("/",{
+        .listBlobsByHierarchy("/", {
           prefix: ""
         })
         .byPage({
@@ -1177,7 +1200,384 @@ describe("ContainerAPIs", () => {
     assert.equal(result.segment.blobItems.length, 4);
   });
 
-  // Skip the case currently since js sdk calculate the stringToSign with "+" in prefix instead of decode to space
+  it("filter blob by tags should work on container @loki @sql", async () => {
+    const blobName1 = getUniqueName("blobname1");
+    const appendBlobClient1 = containerClient.getAppendBlobClient(blobName1);
+    const tags1 = {
+      key1: "value1",
+      key2: "default"
+    }
+    await appendBlobClient1.create({ tags: tags1 });
+
+    const blobName2 = getUniqueName("blobname2");
+    const appendBlobClient2 = containerClient.getAppendBlobClient(blobName2);
+    const tags2: Tags = {
+      key1: "value2",
+      key2: "default"
+    }
+    await appendBlobClient2.create({ tags: tags2 });
+
+    const blobName3 = getUniqueName("blobname3");
+    const appendBlobClient3 = containerClient.getAppendBlobClient(blobName3);
+    const tags3 = {
+      key1: "value3",
+      key3: "default"
+    }
+    await appendBlobClient3.create({ tags: tags3 });
+
+    const expectedTags1: Tags = {};
+    expectedTags1['key1'] = tags1['key1'];
+    for await (const blob of containerClient.findBlobsByTags(`key1='${tags1["key1"]}'`)) {
+      assert.deepStrictEqual(blob.containerName, containerName);
+      assert.deepStrictEqual(blob.name, blobName1);
+      assert.deepStrictEqual(blob.tags, expectedTags1);
+      assert.deepStrictEqual(blob.tagValue, tags1["key1"]);
+    }
+
+    const blobsWithTag2 = [];
+    for await (const segment of containerClient.findBlobsByTags(`key2='default'`).byPage({
+      maxPageSize: 1,
+    })) {
+      assert.ok(segment.blobs.length <= 1);
+      for (const blob of segment.blobs) {
+        blobsWithTag2.push(blob);
+      }
+    }
+    assert.deepStrictEqual(blobsWithTag2.length, 2);
+  });
+
+  it("filter blob by tags with greater or less should work on container @loki @sql", async () => {
+    const blobName1 = getUniqueName("blobname1");
+    const appendBlobClient1 = containerClient.getAppendBlobClient(blobName1);
+    const tags1 = {
+      key1: "a1",
+      key2: "1a"
+    }
+    await appendBlobClient1.create({ tags: tags1 });
+
+    const expectedTags1 = {
+      key1: "a1"
+    }
+
+    const expectedTags2 = {
+      key2: "1a"
+    }
+
+    let blobCountCount = 0;
+    for await (const blob of containerClient.findBlobsByTags(`key1>'a 1'`)) {
+      ++blobCountCount;
+      assert.deepStrictEqual(blob.containerName, containerName);
+      assert.deepStrictEqual(blob.name, blobName1);
+      assert.deepStrictEqual(blob.tags, expectedTags1);
+      assert.deepStrictEqual(blob.tagValue, tags1["key1"]);
+    }
+    assert.deepStrictEqual(blobCountCount, 1, "Blob should be returned.");
+
+    blobCountCount = 0;
+    for await (const blob of containerClient.findBlobsByTags(`key2>'1 a'`)) {
+      ++blobCountCount;
+      assert.deepStrictEqual(blob.containerName, containerName);
+      assert.deepStrictEqual(blob.name, blobName1);
+      assert.deepStrictEqual(blob.tags, expectedTags2);
+      assert.deepStrictEqual(blob.tagValue, tags1["key2"]);
+    }
+    assert.deepStrictEqual(blobCountCount, 1, "Blob should be returned.");
+
+    blobCountCount = 0;
+    for await (const blob of containerClient.findBlobsByTags(`key1<='a11'`)) {
+      ++blobCountCount;
+      assert.deepStrictEqual(blob.containerName, containerName);
+      assert.deepStrictEqual(blob.name, blobName1);
+      assert.deepStrictEqual(blob.tags, expectedTags1);
+      assert.deepStrictEqual(blob.tagValue, tags1["key1"]);
+    }
+    assert.deepStrictEqual(blobCountCount, 1, "Blob should be returned.");
+
+    blobCountCount = 0;
+    for await (const blob of containerClient.findBlobsByTags(`key2<='1aa'`)) {
+      ++blobCountCount;
+      assert.deepStrictEqual(blob.containerName, containerName);
+      assert.deepStrictEqual(blob.name, blobName1);
+      assert.deepStrictEqual(blob.tags, expectedTags2);
+      assert.deepStrictEqual(blob.tagValue, tags1["key2"]);
+    }
+    assert.deepStrictEqual(blobCountCount, 1, "Blob should be returned.");
+  });
+
+  it("filter blob by tags with more than limited conditions on container @loki @sql", async () => {
+    const tags: Tags = {};
+    const tagsLength = 10;
+
+    let queryString = '';
+    for (let i = 0; i < tagsLength; ++i) {
+      const key = getUniqueName("key" + i);
+      const value = getUniqueName("val" + i);
+      tags[key] = value;
+      queryString += `${key}='${value}' and `;
+    }
+
+    queryString += `anotherkey='anotherValue'`;
+
+    const blobName1 = getUniqueName("blobname1");
+    const appendBlobClient1 = containerClient.getAppendBlobClient(blobName1);
+    await appendBlobClient1.create({ tags: tags });
+
+    await appendBlobClient1.createSnapshot();
+
+    try {
+      (await containerClient.findBlobsByTags(queryString).byPage().next()).value;
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 400);
+      assert.deepStrictEqual((err as any).code, 'InvalidQueryParameterValue');
+      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidQueryParameterValue');
+      assert.ok((err as any).details.message.startsWith('Error parsing query: there can be at most 10 unique tags in a query'));
+    }
+  });
+
+  it("filter blob by tags with conditions number equal to limitation on container @loki @sql", async function () {
+    const containerName = getUniqueName("container1");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const tags: Tags = {};
+    const tagsLength = 10;
+
+    let queryString = '';
+    for (let i = 0; i < tagsLength; ++i) {
+      const key = getUniqueName("key" + i);
+      const value = getUniqueName("val" + i);
+      tags[key] = value;
+      queryString += `${key}='${value}'`;
+      queryString += ` and `;
+    }
+
+    queryString = queryString.substring(0, queryString.length - 5);
+
+    const blobName1 = getUniqueName("blobname1");
+    const appendBlobClient1 = containerClient.getAppendBlobClient(blobName1);
+    await appendBlobClient1.create({ tags: tags });
+
+    await appendBlobClient1.createSnapshot();
+
+    let blobCountCount = 0;
+    for await (const blob of containerClient.findBlobsByTags(queryString)) {
+      ++blobCountCount;
+      assert.deepStrictEqual(blob.containerName, containerName);
+      assert.deepStrictEqual(blob.name, blobName1);
+      assert.deepStrictEqual(blob.tags, tags);
+    }
+    assert.deepStrictEqual(blobCountCount, 1, "Blob with snapshot should not be returned.");
+
+    await containerClient.delete();
+  });
+
+  it("filter blob by tags with invalid key chars on container @loki @sql", async function () {
+    const containerName = getUniqueName("container1");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+    let queryString = `'key 1'='valffffff'`;
+
+    try {
+      (await containerClient.findBlobsByTags(queryString).byPage().next()).value;
+      assert.fail('Should not reach here');
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 400);
+      assert.deepStrictEqual((err as any).code, 'InvalidQueryParameterValue');
+      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidQueryParameterValue');
+      assert.ok((err as any).details.message.startsWith('Error parsing query at or near character position'));
+    }
+
+    queryString = `'key-1'='valffffff'`;
+
+    try {
+      (await containerClient.findBlobsByTags(queryString).byPage().next()).value;
+      assert.fail('Should not reach here');
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 400);
+      assert.deepStrictEqual((err as any).code, 'InvalidQueryParameterValue');
+      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidQueryParameterValue');
+      assert.ok((err as any).details.message.startsWith('Error parsing query at or near character position'));
+    }
+
+    containerClient.delete();
+  });
+
+  it("filter blob by tags with valid special key chars on container @loki @sql", async function () {
+    const containerName = getUniqueName("container1");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const tags: Tags = {
+      key_1: 'value_1'
+    };
+    const queryString = `key_1='value_1'`;
+
+    const blobName1 = getUniqueName("blobname1");
+    const appendBlobClient1 = containerClient.getAppendBlobClient(blobName1);
+    await appendBlobClient1.create({ tags: tags });
+
+    await appendBlobClient1.createSnapshot();
+
+    let blobCountCount = 0;
+    for await (const blob of containerClient.findBlobsByTags(queryString)) {
+      ++blobCountCount;
+      assert.deepStrictEqual(blob.containerName, containerName);
+      assert.deepStrictEqual(blob.name, blobName1);
+      assert.deepStrictEqual(blob.tags, tags);
+    }
+    assert.deepStrictEqual(blobCountCount, 1, "Blob with snapshot should not be returned.");
+
+    await containerClient.delete();
+  });
+
+  it("filter blob by tags with long key on container @loki @sql", async function () {
+    const queryString = `key12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890='value'`;
+    try {
+      (await containerClient.findBlobsByTags(queryString).byPage().next()).value;
+      assert.fail('Should not reach here');
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 400);
+      assert.deepStrictEqual((err as any).code, 'InvalidQueryParameterValue');
+      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidQueryParameterValue');
+      assert.ok((err as any).details.message.startsWith('Error parsing query at or near character position')
+        && (err as any).details.message.includes('tag must be between 1 and 128 characters in length'));
+    }
+  });
+
+  it("filter blob by tags with invalid value chars on container @loki @sql", async function () {
+    const queryString = `key1='valffffff @'`;
+
+    try {
+      (await containerClient.findBlobsByTags(queryString).byPage().next()).value;
+      assert.fail('Should not reach here');
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 400);
+      assert.deepStrictEqual((err as any).code, 'InvalidQueryParameterValue');
+      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidQueryParameterValue');
+      assert.ok((err as any).details.message.startsWith('Error parsing query at or near character position')
+        && (err as any).details.message.includes('not permitted in tag name or value'));
+    }
+  });
+
+  it("filter blob by tags with valid special value chars on container @loki @sql", async function () {
+    const containerName = getUniqueName("container1");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const tags: Tags = {
+      key_1: 'value +-.:=_/'
+    };
+    const queryString = `key_1='value +-.:=_/' and @container='${containerName}'`;
+
+    const blobName1 = getUniqueName("blobname1");
+    const appendBlobClient1 = containerClient.getAppendBlobClient(blobName1);
+    await appendBlobClient1.create({ tags: tags });
+
+    await appendBlobClient1.createSnapshot();
+
+    let blobCountCount = 0;
+    for await (const blob of containerClient.findBlobsByTags(queryString)) {
+      ++blobCountCount;
+      assert.deepStrictEqual(blob.containerName, containerName);
+      assert.deepStrictEqual(blob.name, blobName1);
+      assert.deepStrictEqual(blob.tags, tags);
+    }
+    assert.deepStrictEqual(blobCountCount, 1, "Blob with snapshot should not be returned.");
+
+    await containerClient.delete();
+  });
+
+  it("filter blob by tags with long value on container @loki @sql", async function () {
+    const containerName = getUniqueName("container1");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const queryString = `key_1='value12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890'`;
+    try {
+      (await containerClient.findBlobsByTags(queryString).byPage().next()).value;
+      assert.fail('Should not reach here');
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 400);
+      assert.deepStrictEqual((err as any).code, 'InvalidQueryParameterValue');
+      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidQueryParameterValue');
+      assert.ok((err as any).details.message.startsWith('Error parsing query at or near character position')
+        && (err as any).details.message.includes('tag value must be between 0 and 256 characters in length'));
+    }
+    containerClient.delete();
+  });
+
+  it("filter blob by tags with invalid query string @loki @sql", async function () {
+    const containerName = getUniqueName("container1");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    let queryString = `astring`;
+    try {
+      (await containerClient.findBlobsByTags(queryString).byPage().next()).value;
+      assert.fail('Should not reach here');
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 400);
+      assert.deepStrictEqual((err as any).code, 'InvalidQueryParameterValue');
+      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidQueryParameterValue');
+      assert.ok((err as any).details.message.startsWith('Error parsing query at or near character position'));
+    }
+
+    queryString = `key1<>'ab'`;
+    try {
+      (await containerClient.findBlobsByTags(queryString).byPage().next()).value;
+      assert.fail('Should not reach here');
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 400);
+      assert.deepStrictEqual((err as any).code, 'InvalidQueryParameterValue');
+      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidQueryParameterValue');
+      assert.ok((err as any).details.message.startsWith('Error parsing query at or near character position'));
+    }
+
+    queryString = `key1='ab' or key2='cd'`;
+    try {
+      (await containerClient.findBlobsByTags(queryString).byPage().next()).value;
+      assert.fail('Should not reach here');
+    }
+    catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 400);
+      assert.deepStrictEqual((err as any).code, 'InvalidQueryParameterValue');
+      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidQueryParameterValue');
+      assert.ok((err as any).details.message.startsWith('Error parsing query at or near character position'));
+    }
+    containerClient.delete();
+  });
+
+  it("filter blob by tags with continuationToken on container @loki @sql", async function () {
+    const containerName = getUniqueName("container1");
+    const containerClient = serviceClient.getContainerClient(containerName);
+    await containerClient.create();
+
+    const tags: Tags = {
+      key_1: 'value_1'
+    };
+    const queryString = `key_1='value_1'`;
+
+    for (let index = 0; index < 5002; ++index) {
+      const blobName1 = getUniqueName("blobname" + index);
+      const appendBlobClient1 = containerClient.getAppendBlobClient(blobName1);
+      await appendBlobClient1.create({ tags: tags });
+    }
+
+    let result = (await containerClient.findBlobsByTags(queryString).byPage().next()).value;
+    assert.ok(result.continuationToken !== undefined);
+
+    await containerClient.delete();
+  });
+
+  // Skip the case currently since js sdk caculate the stringToSign with "+" in prefix instead of decode to space
   it.skip("List blob should success with '+' in query @loki @sql", async () => {
     const blobClients = [];
     let blobNames: Array<string> = [
@@ -1191,7 +1591,7 @@ describe("ContainerAPIs", () => {
       await blockBlobClient.upload("", 0);
       blobClients.push(blobClient);
     }
-    
+
     // list with prefix has "+" instead of "%20" for space
     // create service client 
     let pipeline = newPipeline(
@@ -1231,7 +1631,7 @@ describe("ContainerAPIs", () => {
       gotNames.push(item.name);
     }
     assert.deepStrictEqual(gotNames, blobNames);
-    
+
     // clean up
     for (const blob of blobClients) {
       await blob.delete();

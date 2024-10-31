@@ -5,6 +5,7 @@ import {
 } from "../generated/artifacts/models";
 import Context from "../generated/Context";
 import { BlobModel, ContainerModel } from "../persistence/IBlobMetadataStore";
+import { generateQueryBlobWithTagsWhereFunction } from "../persistence/QueryInterpreter/QueryInterpreter";
 import ConditionalHeadersAdapter from "./ConditionalHeadersAdapter";
 import ConditionResourceAdapter from "./ConditionResourceAdapter";
 import { IConditionalHeaders } from "./IConditionalHeaders";
@@ -29,7 +30,7 @@ export function validateSequenceNumberWriteConditions(
   if (
     conditionalHeaders.ifSequenceNumberLessThanOrEqualTo !== undefined &&
     conditionalHeaders.ifSequenceNumberLessThanOrEqualTo <
-      model.properties.blobSequenceNumber
+    model.properties.blobSequenceNumber
   ) {
     throw StorageErrorFactory.getSequenceNumberConditionNotMet(
       context.contextId!
@@ -39,7 +40,7 @@ export function validateSequenceNumberWriteConditions(
   if (
     conditionalHeaders.ifSequenceNumberLessThan !== undefined &&
     conditionalHeaders.ifSequenceNumberLessThan <=
-      model.properties.blobSequenceNumber
+    model.properties.blobSequenceNumber
   ) {
     throw StorageErrorFactory.getSequenceNumberConditionNotMet(
       context.contextId!
@@ -49,7 +50,7 @@ export function validateSequenceNumberWriteConditions(
   if (
     conditionalHeaders.ifSequenceNumberEqualTo !== undefined &&
     conditionalHeaders.ifSequenceNumberEqualTo !==
-      model.properties.blobSequenceNumber
+    model.properties.blobSequenceNumber
   ) {
     throw StorageErrorFactory.getSequenceNumberConditionNotMet(
       context.contextId!
@@ -166,6 +167,15 @@ export default class WriteConditionalHeadersValidator
           throw StorageErrorFactory.getConditionNotMet(context.contextId!);
         }
         return;
+      }
+
+      if (conditionalHeaders.ifTags) {
+        const validateFunction = generateQueryBlobWithTagsWhereFunction(context, conditionalHeaders.ifTags, 'x-ms-if-tags');
+
+        if (conditionalHeaders?.ifTags !== undefined
+          && validateFunction(resource.blobItemWithTags).length === 0) {
+          throw StorageErrorFactory.getConditionNotMet(context.contextId!);
+        }
       }
     }
   }

@@ -53,6 +53,7 @@ import IBlobMetadataStore, {
   ChangeContainerLeaseResponse,
   ContainerModel,
   CreateSnapshotResponse,
+  FilterBlobModel,
   GetBlobPropertiesRes,
   GetContainerAccessPolicyResponse,
   GetContainerPropertiesResponse,
@@ -67,7 +68,9 @@ import IBlobMetadataStore, {
   SetContainerAccessPolicyOptions
 } from "./IBlobMetadataStore";
 import PageWithDelimiter from "./PageWithDelimiter";
-import { getBlobTagsCount, getTagsFromString } from "../utils/utils";
+import FilterBlobPage from "./FilterBlobPage";
+import { getBlobTagsCount, getTagsFromString, toBlobTags } from "../utils/utils";
+import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
 
 // tslint:disable: max-classes-per-file
 class ServicesModel extends Model { }
@@ -1227,6 +1230,79 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     });
   }
 
+  public async filterBlobs(
+    context: Context,
+    account: string,
+    container?: string,
+    where?: string,
+    maxResults: number = DEFAULT_LIST_BLOBS_MAX_RESULTS,
+    marker?: string,
+  ): Promise<[FilterBlobModel[], string | undefined]> {
+    return this.sequelize.transaction(async (t) => {
+      if (container) {
+        await this.assertContainerExists(context, account, container, t);
+      }
+
+      let whereQuery: any;
+      if (container) {
+        whereQuery = {
+          accountName: account,
+          containerName: container
+        }
+      }
+      else {
+        whereQuery = {
+          accountName: account
+        };
+      };
+
+      if (marker !== undefined) {
+        if (whereQuery.blobName !== undefined) {
+          whereQuery.blobName[Op.gt] = marker;
+        } else {
+          whereQuery.blobName = {
+            [Op.gt]: marker
+          };
+        }
+      }
+      whereQuery.snapshot = "";
+      whereQuery.deleting = 0;
+
+      // fill the page by possibly querying multiple times
+      const page = new FilterBlobPage<BlobsModel>(maxResults);
+
+      const nameItem = (item: BlobsModel): string => {
+        return this.getModelValue<string>(item, "blobName", true);
+      };
+      const filterFunction = generateQueryBlobWithTagsWhereFunction(context, where!);
+
+      const readPage = async (off: number): Promise<BlobsModel[]> => {
+        return (await BlobsModel.findAll({
+          where: whereQuery as any,
+          order: [["blobName", "ASC"]],
+          transaction: t,
+          limit: maxResults,
+          offset: off
+        }));
+      };
+
+      const [blobItems, nextMarker] = await page.fill(readPage, nameItem);
+
+      const filterBlobModelMapper = (model: BlobsModel) => {
+        return this.convertDbModelToFilterBlobModel(model);
+      };
+
+      return [blobItems.map(filterBlobModelMapper).filter((blobItem) => {
+        const tagsMeetConditions = filterFunction(blobItem);
+        if (tagsMeetConditions.length !== 0) {
+          blobItem.tags = { blobTagSet: toBlobTags(tagsMeetConditions) };
+          return true;
+        }
+        return false;
+      }), nextMarker];
+    });
+  }
+
   public async listBlobs(
     context: Context,
     account: string,
@@ -1446,7 +1522,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     blob: string,
     snapshot: string = "",
     isCommitted?: boolean,
-    leaseAccessConditions?: Models.LeaseAccessConditions
+    leaseAccessConditions?: Models.LeaseAccessConditions,
+    modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<any> {
     return this.sequelize.transaction(async (t) => {
       await this.assertContainerExists(context, account, container, t);
@@ -1461,6 +1538,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         },
         transaction: t
       });
+
+      validateReadConditions(
+        context,
+        modifiedAccessConditions,
+        blobFindResult
+          ? this.convertDbModelToBlobModel(blobFindResult)
+          : undefined
+      );
 
       if (blobFindResult === null || blobFindResult === undefined) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
@@ -2525,9 +2610,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
           ifUnmodifiedSince:
             options.sourceModifiedAccessConditions.sourceIfUnmodifiedSince,
           ifMatch: options.sourceModifiedAccessConditions.sourceIfMatch,
-          ifNoneMatch: options.sourceModifiedAccessConditions.sourceIfNoneMatch
+          ifNoneMatch: options.sourceModifiedAccessConditions.sourceIfNoneMatch,
+          ifTags: options.sourceModifiedAccessConditions.sourceIfTags,
         },
-        sourceBlob
+        sourceBlob,
+        true
       );
 
       const destBlob = await this.getBlobWithLeaseUpdated(
@@ -3078,6 +3165,14 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     };
   }
 
+  private convertDbModelToFilterBlobModel(dbModel: BlobsModel): FilterBlobModel {
+    return {
+      containerName: this.getModelValue<string>(dbModel, "containerName", true),
+      name: this.getModelValue<string>(dbModel, "blobName", true),
+      tags: this.deserializeModelValue(dbModel, "blobTags")
+    };
+  }
+
   private convertDbModelToBlobModel(dbModel: BlobsModel): BlobModel {
     const contentProperties: IBlobContentProperties = this.convertDbModelToBlobContentProperties(
       dbModel
@@ -3405,6 +3500,8 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         blobFindResult
       );
 
+      validateReadConditions(context, modifiedAccessConditions, blobModel);
+
       if (!blobModel.isCommitted) {
         throw StorageErrorFactory.getBlobNotFound(context.contextId);
       }
@@ -3414,6 +3511,12 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
         context
       ).validate(new BlobReadLeaseValidator(leaseAccessConditions));
 
+      if (modifiedAccessConditions?.ifTags) {
+        const validateFunction = generateQueryBlobWithTagsWhereFunction(context, modifiedAccessConditions?.ifTags, 'x-ms-if-tags');
+        if (!validateFunction(blobModel)) {
+          throw new Error("412");
+        }
+      }
       return blobModel.blobTags;
     });
   }
