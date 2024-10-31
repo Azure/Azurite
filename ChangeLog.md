@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Blob:
+
+- GetBlob on Archive tier blobs now fails as expected.
+
 ## 2024.10 Version 3.33.0
 
 General:
