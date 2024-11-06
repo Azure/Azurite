@@ -169,7 +169,7 @@ async function main() {
   );
   
   AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
-  AzuriteTelemetryClient.TraceStartEvent();
+  await AzuriteTelemetryClient.TraceStartEvent();
 
   // Handle close event
   process
