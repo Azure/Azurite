@@ -33,6 +33,8 @@ export class AzuriteTelemetryClient {
   public static envAccountIsSet = false;
   public static envDBIsSet = false;
 
+  private static appInsights = require('applicationinsights');
+
   public static init(location: string, enableTelemetry: boolean, env: any) {
     try{
       //TODO: check in VSCODE extension
@@ -49,14 +51,15 @@ export class AzuriteTelemetryClient {
         AzuriteTelemetryClient.env = env;
         if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.eventClient === undefined)
         {
-          this.eventClient = AzuriteTelemetryClient.createAppInsigntClient("AzuriteTest", 100);
+          this.eventClient = AzuriteTelemetryClient.createAppInsigntClient("AzuriteTest", 100, 0);
         }
         if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient === undefined)
         {
           //TODO: change to 1% in product
-          this.requestClient = AzuriteTelemetryClient.createAppInsigntClient("AzuriteTest", 100);
+          this.requestClient = AzuriteTelemetryClient.createAppInsigntClient("AzuriteTest", 1, 0);
         }
-        
+  
+        AzuriteTelemetryClient.appInsights.start();        
         AzuriteTelemetryClient.initialized = true;
         logger.info('Telemetry initialize successfully.');
       }
@@ -84,14 +87,13 @@ export class AzuriteTelemetryClient {
   }
     
 
-  public static createAppInsigntClient(cloudRole:string, samplingPercentage:number|undefined) : TelemetryClient 
+  public static createAppInsigntClient(cloudRole:string, samplingPercentage:number|undefined, maxBatchSize:number|undefined) : TelemetryClient 
   {
     const ConnectionString = 'InstrumentationKey=feb4ae36-1db7-4808-abaa-e0b94996d665;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/;ApplicationId=9af871a3-75b5-417c-8a2f-7f2eb1ba6a6c';
-    let appInsights = require('applicationinsights');
 
     // disable default logging
-    var appConfig = appInsights.setup(ConnectionString)
-      .setAutoCollectRequests(false)
+    var appConfig = AzuriteTelemetryClient.appInsights.setup(ConnectionString);
+    appConfig.setAutoCollectRequests(false)
       .setAutoCollectPerformance(false)
       .setAutoCollectExceptions(false)
       .setAutoCollectDependencies(false)
@@ -100,24 +102,23 @@ export class AzuriteTelemetryClient {
       .setAutoCollectConsole(false);
 
     // Remove some default telemetry item in the telemetry envelope 
-    appInsights.defaultClient.addTelemetryProcessor(AzuriteTelemetryClient.removeRoleInstance);
-    appInsights.start();
+    var telemetryClient = new AzuriteTelemetryClient.appInsights.TelemetryClient(ConnectionString);
+    telemetryClient.addTelemetryProcessor(AzuriteTelemetryClient.removeRoleInstance);
+    //appInsights.start();
 
 
-    if (appInsights.defaultClient !== undefined)
+    if (telemetryClient !== undefined)
     {
-      appInsights.defaultClient.context.tags[appInsights.defaultClient.context.keys.cloudRole] = "AzuriteTest";
+      telemetryClient.context.tags[telemetryClient.context.keys.cloudRole] = "AzuriteTest";
     }
     
-    appInsights.defaultClient.config.samplingPercentage = samplingPercentage??100;
+    telemetryClient.config.samplingPercentage = samplingPercentage??100;
   
     // For development only, make  your telemetry to be sent as soon as it's collected.
     appConfig.setInternalLogging(true, true);
-    appInsights.defaultClient.config.maxBatchSize = 0;
-  
-    appInsights.start();
+    //telemetryClient.config.maxBatchSize = maxBatchSize??0;
 
-    return appInsights.defaultClient;
+    return telemetryClient;
   }
 
   public static TraceBlobRequest(context: BlobContext) {
@@ -241,7 +242,7 @@ export class AzuriteTelemetryClient {
     }
   }
 
-  public static TraceStartEvent(serviceType: string = "") {
+  public static async TraceStartEvent(serviceType: string = "") {
     try{
       if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.eventClient !== undefined)
       {        
@@ -250,7 +251,7 @@ export class AzuriteTelemetryClient {
           {
             instanceID: AzuriteTelemetryClient.instanceID,
             sessionID: AzuriteTelemetryClient.sessionID,
-            parameters: AzuriteTelemetryClient.GetAllParameterString()
+            parameters: await AzuriteTelemetryClient.GetAllParameterString()
             // TODO: Add start Parameters
           }
         });
@@ -375,7 +376,7 @@ export class AzuriteTelemetryClient {
     return auth;
   }
 
-  private static GetAllParameterString(): string {
+  private static async GetAllParameterString(): Promise<string> {
     let parameters = "";
     if (this.envAccountIsSet)
     {
@@ -414,7 +415,7 @@ export class AzuriteTelemetryClient {
     {
       parameters += "tablePort,";
     }
-    if (typeof AzuriteTelemetryClient.env?.location === "function" && AzuriteTelemetryClient.env?.location() !== undefined)
+    if (typeof AzuriteTelemetryClient.env?.location === "function" && (await AzuriteTelemetryClient.env?.location()) !== undefined)
     {
       parameters += "location,";
     }
@@ -462,7 +463,7 @@ export class AzuriteTelemetryClient {
     {
       parameters += "disableTelemetry,";
     }
-    if (typeof AzuriteTelemetryClient.env?.debug === "function" && AzuriteTelemetryClient.env?.debug() !== undefined)
+    if (typeof AzuriteTelemetryClient.env?.debug === "function" && (await AzuriteTelemetryClient.env?.debug()) !== undefined)
     {
       parameters += "debug,";
     }

@@ -51,7 +51,7 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
 
   public async startImpl(): Promise<void> {
     await this.server!.start();
-    AzuriteTelemetryClient.TraceStartEvent("Blob-VSC");
+    await AzuriteTelemetryClient.TraceStartEvent("Blob-VSC");
   }
 
   public async closeImpl(): Promise<void> {

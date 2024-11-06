@@ -47,8 +47,8 @@ async function main() {
   );
   
   const location = await env.location();
-  AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
-  AzuriteTelemetryClient.TraceStartEvent("Blob");
+  AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);  
+  await AzuriteTelemetryClient.TraceStartEvent("Blob");
 
   // Handle close event
   process
