@@ -1017,7 +1017,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
       // report error is blob size is 0, and rangeEnd is specified but not 0 
       if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
-        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!);
+        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!, { "content-range": "bytes * /0" });
+      }
+      else if (blob.properties.contentLength == 0 && rangeEnd <= 0) {
+        rangeEnd = 0;
       }
       else {
         rangeEnd = blob.properties.contentLength! - 1;
@@ -1084,7 +1087,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     const response: Models.BlobDownloadResponse = {
-      statusCode: contentRange ? 206 : 200,
+      statusCode: (rangeStart != 0 && rangeEnd != 0 && contentRange) ? 206 : 200,
       body,
       metadata: blob.metadata,
       eTag: blob.properties.etag,
@@ -1148,7 +1151,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
       // report error is blob size is 0, and rangeEnd is specified but not 0 
       if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
-        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!);
+        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!, { "content-range": "bytes * /0" });
       }
       else {
         rangeEnd = blob.properties.contentLength! - 1;
