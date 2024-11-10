@@ -15,6 +15,7 @@ Blob:
 - Added support for filtering blob by tags.
 - Fixed an issue where all blob APIs allowed metadata names which were not valid C# identifiers.
 - Fixed always including metadata on blob list even when not requested
+- Consider both Content-MD5 and x-ms-blob-content-md5 when creating a blob.
 
 ## 2024.08 Version 3.32.0
 
