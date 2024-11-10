@@ -46,6 +46,7 @@ export default class BlockBlobHandler
       context.request!.getHeader("content-type") ||
       "application/octet-stream";
     const contentMD5 = context.request!.getHeader("content-md5")
+      || context.request!.getHeader("x-ms-blob-content-md5")
       ? options.blobHTTPHeaders.blobContentMD5 ||
       context.request!.getHeader("content-md5")
       : undefined;
@@ -182,6 +183,7 @@ export default class BlockBlobHandler
     // https://learn.microsoft.com/en-us/rest/api/storageservices/put-block
     // options.blobHTTPHeaders = options.blobHTTPHeaders || {};
     const contentMD5 = context.request!.getHeader("content-md5")
+      || context.request!.getHeader("x-ms-blob-content-md5")
       ? options.transactionalContentMD5 ||
       context.request!.getHeader("content-md5")
       : undefined;
