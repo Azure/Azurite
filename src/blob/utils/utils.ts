@@ -54,7 +54,7 @@ export function deserializeRangeHeader(
     );
   }
 
-  parts = parts[1].split("-");
+  parts = parts[1].split("-", 2);
   if (parts === undefined || parts.length < 1 || parts.length > 2) {
     throw new RangeError(
       `deserializeRangeHeader: raw range value ${range} is wrong.`

@@ -29,7 +29,8 @@ export default class StorageError extends MiddlewareError {
     storageErrorCode: string,
     storageErrorMessage: string,
     storageRequestID: string,
-    storageAdditionalErrorMessages: { [key: string]: string } = {}
+    storageAdditionalErrorMessages: { [key: string]: string } = {},
+    additionalHeaders: { [key: string]: string } = {}
   ) {
     const bodyInJSON: any = {
       Code: storageErrorCode,
@@ -51,7 +52,8 @@ export default class StorageError extends MiddlewareError {
       storageErrorMessage,
       {
         "x-ms-error-code": storageErrorCode,
-        "x-ms-request-id": storageRequestID
+        "x-ms-request-id": storageRequestID,
+        ...additionalHeaders
       },
       bodyInXML,
       "application/xml"
