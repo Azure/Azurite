@@ -92,7 +92,7 @@ export class AzuriteTelemetryClient {
     const ConnectionString = 'InstrumentationKey=feb4ae36-1db7-4808-abaa-e0b94996d665;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/;ApplicationId=9af871a3-75b5-417c-8a2f-7f2eb1ba6a6c';
 
     // disable default logging
-    var appConfig = AzuriteTelemetryClient.appInsights.setup(ConnectionString);
+    let appConfig = AzuriteTelemetryClient.appInsights.setup(ConnectionString);
     appConfig.setAutoCollectRequests(false)
       .setAutoCollectPerformance(false)
       .setAutoCollectExceptions(false)
@@ -102,7 +102,7 @@ export class AzuriteTelemetryClient {
       .setAutoCollectConsole(false);
 
     // Remove some default telemetry item in the telemetry envelope 
-    var telemetryClient = new AzuriteTelemetryClient.appInsights.TelemetryClient(ConnectionString);
+    let telemetryClient = new AzuriteTelemetryClient.appInsights.TelemetryClient(ConnectionString);
     telemetryClient.addTelemetryProcessor(AzuriteTelemetryClient.removeRoleInstance);
     //appInsights.start();
 
@@ -115,8 +115,12 @@ export class AzuriteTelemetryClient {
     telemetryClient.config.samplingPercentage = samplingPercentage??100;
   
     // For development only, make  your telemetry to be sent as soon as it's collected.
-    appConfig.setInternalLogging(true, true);
-    //telemetryClient.config.maxBatchSize = maxBatchSize??0;
+    // Enable AppInsight log, should enable in develoipment only
+    // appConfig.setInternalLogging(true, true);
+    if (maxBatchSize !== undefined)
+    {
+      telemetryClient.config.maxBatchSize = maxBatchSize??0;
+    }
 
     return telemetryClient;
   }
@@ -273,9 +277,9 @@ export class AzuriteTelemetryClient {
           {
             instanceID: AzuriteTelemetryClient.instanceID,
             sessionID: AzuriteTelemetryClient.sessionID,
-            blobRegCount: AzuriteTelemetryClient._totalBlobRequestCount,
-            queueRegCount: AzuriteTelemetryClient._totalQueueRequestCount,
-            tableRegCount: AzuriteTelemetryClient._totalTableRequestCount,
+            blobRequest: AzuriteTelemetryClient._totalBlobRequestCount,
+            queueRequest: AzuriteTelemetryClient._totalQueueRequestCount,
+            tableRequest: AzuriteTelemetryClient._totalTableRequestCount,
           }
         });
       }
@@ -329,7 +333,7 @@ export class AzuriteTelemetryClient {
         }
         else{
 
-          var data = fs.readFileSync(configFilePath, 'utf8');
+          let data = fs.readFileSync(configFilePath, 'utf8');
           instaceID = data.toString();
           if(instaceID === "")
           {
