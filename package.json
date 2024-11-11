@@ -79,7 +79,7 @@
     "find-process": "^1.4.4",
     "husky": "^8.0.1",
     "lint-staged": "^15.0.1",
-    "mocha": "^5.2.0",
+    "mocha": "^10.8.2",
     "pkg": "^5.3.0",
     "prettier": "^3.0.0",
     "rcedit": "^4.0.0",
