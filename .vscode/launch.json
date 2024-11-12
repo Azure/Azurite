@@ -152,7 +152,7 @@
       "args": [
         "${workspaceFolder}/node_modules/mocha/bin/_mocha",
         "-u",
-        "tdd",
+        "bdd",
         "--timeout",
         "999999",
         "--colors",
@@ -179,7 +179,7 @@
       "args": [
         "${workspaceFolder}/node_modules/mocha/bin/_mocha",
         "-u",
-        "tdd",
+        "bdd",
         "--timeout",
         "999999",
         "--colors",
@@ -203,7 +203,7 @@
       "args": [
         "${workspaceFolder}/node_modules/mocha/bin/_mocha",
         "-u",
-        "tdd",
+        "bdd",
         "--timeout",
         "999999",
         "--colors",
@@ -226,7 +226,7 @@
       "args": [
         "${workspaceFolder}/node_modules/mocha/bin/_mocha",
         "-u",
-        "tdd",
+        "bdd",
         "--timeout",
         "999999",
         "--colors",
