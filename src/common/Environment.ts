@@ -16,6 +16,7 @@ import {
 } from "../table/utils/constants";
 
 import IEnvironment from "./IEnvironment";
+import { join } from "path";
 
 args
   .option(
@@ -116,7 +117,7 @@ export default class Environment implements IEnvironment {
   }
 
   public async location(): Promise<string> {
-    return this.flags.location || process.cwd();
+    return this.flags.location || join(process.cwd(), ".azurite");
   }
 
   public silent(): boolean {
