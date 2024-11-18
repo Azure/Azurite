@@ -11,7 +11,6 @@ import * as fs from "fs";
 import uuid from "uuid";
 import { join } from "path";
 import logger from "./Logger";
-//import IEnvironment from "../common/IEnvironment";
 
 export class AzuriteTelemetryClient {
   private static eventClient : TelemetryClient | undefined;
@@ -20,7 +19,7 @@ export class AzuriteTelemetryClient {
   private static enableTelemetry: boolean = true;
   private static location: string;
   private static configFileName = "AzuriteConfig";
-  //private static _totalIngressSize: number = 0;
+  private static _totalIngressSize: number = 0;
   //private static _totalEgressSize: number = 0;
   private static _totalBlobRequestCount: number = 0;
   private static _totalQueueRequestCount: number = 0;
@@ -45,7 +44,7 @@ export class AzuriteTelemetryClient {
         //Get instaceID and sessionID
         //TODO: need check if this works on VScode extension
         AzuriteTelemetryClient.location = location;
-        AzuriteTelemetryClient.instanceID = AzuriteTelemetryClient.GetInstanceID();
+        AzuriteTelemetryClient.instanceID = AzuriteTelemetryClient.GetInstanceID(typeof env?.inMemoryPersistence === "function" && env?.inMemoryPersistence());
 
         AzuriteTelemetryClient.enableTelemetry = enableTelemetry;
         AzuriteTelemetryClient.env = env;
@@ -56,7 +55,7 @@ export class AzuriteTelemetryClient {
         if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient === undefined)
         {
           //TODO: change to 1% in product
-          this.requestClient = AzuriteTelemetryClient.createAppInsigntClient("AzuriteTest", 1, 0);
+          this.requestClient = AzuriteTelemetryClient.createAppInsigntClient("AzuriteTest", 100, 0);
         }
   
         AzuriteTelemetryClient.appInsights.start();        
@@ -89,8 +88,12 @@ export class AzuriteTelemetryClient {
 
   public static createAppInsigntClient(cloudRole:string, samplingPercentage:number|undefined, maxBatchSize:number|undefined) : TelemetryClient 
   {
-    const ConnectionString = 'InstrumentationKey=feb4ae36-1db7-4808-abaa-e0b94996d665;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/;ApplicationId=9af871a3-75b5-417c-8a2f-7f2eb1ba6a6c';
-
+    // Xclient APP
+    //const ConnectionString = 'InstrumentationKey=feb4ae36-1db7-4808-abaa-e0b94996d665;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/;ApplicationId=9af871a3-75b5-417c-8a2f-7f2eb1ba6a6c';
+    
+    //weiapp
+    const ConnectionString = 'InstrumentationKey=40e81e8c-36af-4cf3-b46e-a7d67ecb5628;IngestionEndpoint=https://westus-0.in.applicationinsights.azure.com/;LiveEndpoint=https://westus.livediagnostics.monitor.azure.com/;ApplicationId=edbe156f-ede6-4c39-b948-0c0c638c7004'
+    
     // disable default logging
     let appConfig = AzuriteTelemetryClient.appInsights.setup(ConnectionString);
     appConfig.setAutoCollectRequests(false)
@@ -130,6 +133,23 @@ export class AzuriteTelemetryClient {
       if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient !== undefined)
       {
         AzuriteTelemetryClient._totalBlobRequestCount++;
+        let requestProperties: { [key: string]: any } = {
+          apiVersion: "v"+context.request?.getHeader("x-ms-version"),
+          authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
+          instanceID: AzuriteTelemetryClient.instanceID,
+          sessionID: AzuriteTelemetryClient.sessionID,
+          //totalReqs:AzuriteTelemetryClient._totalBlobRequestCount,
+        };
+        if (context.request?.getHeader("content-length") !== undefined)
+        {
+          const contentLength = context.request?.getHeader("content-length");
+          if (contentLength && parseInt(contentLength)) {
+            requestProperties["requestContentSize"] = contentLength;
+            this._totalIngressSize += parseInt(contentLength);
+          }
+        }
+        // Responds "content-length" Not work, as responds normally don't have "content-length" header even has body.
+
         AzuriteTelemetryClient.requestClient.trackRequest(
           {
             name:"B_" + BlobOperation[context.operation??0], 
@@ -137,17 +157,10 @@ export class AzuriteTelemetryClient {
             duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
             resultCode:context.response?.getStatusCode()??0, 
             success:true, 
-            id: context.contextId,
-            source: context.request?.getHeader("user-agent"),
-            properties: 
-            {
-              apiVersion: "v"+context.request?.getHeader("x-ms-version"),
-              authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
-              requestContentSize: context.request?.getBody.length,
-              instanceID: AzuriteTelemetryClient.instanceID,
-              sessionID: AzuriteTelemetryClient.sessionID,
-              totalReqs:AzuriteTelemetryClient._totalBlobRequestCount,
-            },
+            // Question: should we move InstanceID and SessionID to telemetry properties id & source, and move requestID and useragent to properties (customDimensions)?
+            id: context.contextId, // Request ID
+            source: context.request?.getHeader("user-agent"), // User Agent
+            properties: requestProperties,
             contextObjects:
             {
               operationId: "",
@@ -171,6 +184,22 @@ export class AzuriteTelemetryClient {
       if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient !== undefined)
       {
         AzuriteTelemetryClient._totalQueueRequestCount++;
+        let requestProperties: { [key: string]: any } = {
+          apiVersion: "v"+context.request?.getHeader("x-ms-version"),
+          authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
+          instanceID: AzuriteTelemetryClient.instanceID,
+          sessionID: AzuriteTelemetryClient.sessionID,
+          //totalReqs:AzuriteTelemetryClient._totalQueueRequestCount,
+        };
+        if (context.request?.getHeader("content-length") !== undefined)
+        {
+          requestProperties["requestContentSize"] = context.request?.getHeader("content-length");
+        }
+        // if(context.response?.getHeader("content-length") !== undefined)
+        // { 
+        //   // Not work, as responds normally don't have "content-length" header, even has body.
+        //   requestProperties["respondsContentSize"] = context.response?.getHeader("content-length");
+        // }
         AzuriteTelemetryClient.requestClient.trackRequest(
           {
             name:"Q_" + QueueOperation[context.operation??0], 
@@ -180,14 +209,7 @@ export class AzuriteTelemetryClient {
             success:true, 
             id: context.contextID,
             source: context.request?.getHeader("user-agent"),
-            properties: 
-            {
-              apiVersion: "v"+context.request?.getHeader("x-ms-version"),
-              authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
-              requestContentSize: context.request?.getBody.length,
-              instanceID: AzuriteTelemetryClient.instanceID,
-              sessionID: AzuriteTelemetryClient.sessionID,
-            },
+            properties: requestProperties,
             contextObjects:
             {
               operationId: "",
@@ -211,6 +233,22 @@ export class AzuriteTelemetryClient {
       if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient !== undefined)
       {
         AzuriteTelemetryClient._totalTableRequestCount++;
+        let requestProperties: { [key: string]: any } = {
+          apiVersion: "v"+context.request?.getHeader("x-ms-version"),
+          authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
+          instanceID: AzuriteTelemetryClient.instanceID,
+          sessionID: AzuriteTelemetryClient.sessionID,
+          // totalReqs:AzuriteTelemetryClient._totalTableRequestCount,
+        };
+        if (context.request?.getHeader("content-length") !== undefined)
+        {
+          requestProperties["requestContentSize"] = context.request?.getHeader("content-length");
+        }
+        // if(context.response?.getHeader("content-length") !== undefined)
+        // { 
+        //   // Not work, as responds normally don't have "content-length" header, even has body.
+        //   requestProperties["respondsContentSize"] = context.response?.getHeader("content-length");
+        // }
         AzuriteTelemetryClient.requestClient.trackRequest(
           {
             name:"T_" + TableOperation[context.operation??0], 
@@ -220,14 +258,7 @@ export class AzuriteTelemetryClient {
             success:true, 
             id: context.contextID,
             source: context.request?.getHeader("user-agent"),
-            properties: 
-            {
-              apiVersion: "v"+context.request?.getHeader("x-ms-version"),
-              authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
-              requestContentSize: context.request?.getBody.length,
-              instanceID: AzuriteTelemetryClient.instanceID,
-              sessionID: AzuriteTelemetryClient.sessionID,
-            },
+            properties: requestProperties,
             contextObjects:
             {
               operationId: "",
@@ -280,6 +311,7 @@ export class AzuriteTelemetryClient {
             blobRequest: AzuriteTelemetryClient._totalBlobRequestCount,
             queueRequest: AzuriteTelemetryClient._totalQueueRequestCount,
             tableRequest: AzuriteTelemetryClient._totalTableRequestCount,
+            totalIngress: this._totalIngressSize,
           }
         });
       }
@@ -315,7 +347,7 @@ export class AzuriteTelemetryClient {
   }
 
 
-  private static GetInstanceID(): string {
+  private static GetInstanceID(inMemoryPersistence : boolean = false): string {
     const configFilePath = join(
       AzuriteTelemetryClient.location,
       AzuriteTelemetryClient.configFileName
@@ -323,23 +355,27 @@ export class AzuriteTelemetryClient {
 
     //const fs = require('fs');
     let instaceID = "";
+    if (inMemoryPersistence)
+    {
+      return uuid();
+    }
     try {
       if(!fs.existsSync(configFilePath))
         {
           instaceID = uuid();
-          fs.writeFile(configFilePath, instaceID, (err) => {
-            //TODO: write warning for write file failed.
+          fs.writeFile(configFilePath, `{"instaceID":"${instaceID}"}`, (err) => {
+            logger.warn('Fail to save instaceID, error: ' + err?.message);
           });
         }
         else{
 
           let data = fs.readFileSync(configFilePath, 'utf8');
-          instaceID = data.toString();
+          instaceID = JSON.parse(data.toString()).instaceID;
           if(instaceID === "")
           {
             instaceID = uuid();
             fs.writeFile(configFilePath, instaceID, (err) => {
-              //TODO: write warning for write file failed.
+              logger.warn('Fail to save instaceID, error: ' + err?.message);
             });
           }
 
@@ -358,8 +394,8 @@ export class AzuriteTelemetryClient {
           // });
         }
       return instaceID;
-    } catch {
-      // TODO: Add warning log for instanceID is empty
+    } catch (e) {
+      logger.warn('Fail to generate and save instaceID will use empty instaceID, error: ' + e.message);
       return instaceID;
     }
   }
