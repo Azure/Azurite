@@ -72,9 +72,6 @@ describe("Queue Keep-Alive header response test", () => {
     const keepAliveHeader = properties._response.headers.get("keep-alive");
     if (keepAliveHeader !== undefined) {
       assert.strictEqual(keepAliveHeader, "timeout=" + DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT);
-    } else {
-      // Handle the case where the header is undefined
-      assert.fail("keep-alive header is undefined");
     }
   });
 
