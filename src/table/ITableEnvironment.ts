@@ -8,6 +8,8 @@ export default interface ITableEnvironment {
   tableHost(): string | undefined;
   /** Optional. Customize listening port for table */
   tablePort(): number | undefined;
+  /** Optional. Customize keep alive timeout for table */
+  tableKeepAliveTimeout(): number | undefined;
   /** Optional. Use an existing folder as workspace path, default is current working directory */
   location(): Promise<string>;
   /** Optional. Disable access log displayed in console */

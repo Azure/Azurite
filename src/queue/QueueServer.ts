@@ -70,6 +70,10 @@ export default class QueueServer extends ServerBase {
         httpServer = http.createServer();
     }
 
+    if (configuration.keepAliveTimeout > 0) {
+      httpServer.keepAliveTimeout = configuration.keepAliveTimeout * 1000
+    }
+
     // We can change the persistency layer implementation by
     // creating a new XXXDataStore class implementing IBlobDataStore interface
     // and replace the default LokiBlobDataStore

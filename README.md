@@ -185,10 +185,13 @@ Following extension configurations are supported:
 
 - `azurite.blobHost` Blob service listening endpoint, by default 127.0.0.1
 - `azurite.blobPort` Blob service listening port, by default 10000
+- `azurite.blobKeepAliveTimeout` Blob service keep alive timeout in seconds, by default 5
 - `azurite.queueHost` Queue service listening endpoint, by default 127.0.0.1
 - `azurite.queuePort` Queue service listening port, by default 10001
+- `azurite.queueKeepAliveTimeout` Queue service keep alive timeout in seconds, by default 5
 - `azurite.tableHost` Table service listening endpoint, by default 127.0.0.1
 - `azurite.tablePort` Table service listening port, by default 10002
+- `azurite.tableKeepAliveTimeout` Queue service keep alive timeout in seconds, by default 5
 - `azurite.location` Workspace location folder path (can be relative or absolute). By default, in the VS Code extension, the currently opened folder is used. If launched from the command line, the current process working directory is the default. Relative paths are resolved relative to the default folder.
 - `azurite.silent` Silent mode to disable access log in Visual Studio channel, by default false
 - `azurite.debug` Output debug log into Azurite channel, by default false
@@ -233,7 +236,7 @@ docker run -p 10000:10000 -p 10001:10001 -v c:/azurite:/data mcr.microsoft.com/a
 #### Customize all Azurite V3 supported parameters for docker image
 
 ```bash
-docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0 --loose --skipApiVersionCheck --disableProductStyleUrl
+docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --blobKeepAliveTimeout 5 --queuePort 8888 --queueHost 0.0.0.0 --queueKeepAliveTimeout 5 --tablePort 9999 --tableHost 0.0.0.0 --tableKeepAliveTimeout 5 --loose --skipApiVersionCheck --disableProductStyleUrl 
 ```
 
 Above command will try to start Azurite image with configurations:
@@ -246,13 +249,19 @@ Above command will try to start Azurite image with configurations:
 
 `--blobHost 0.0.0.0` defines blob service listening endpoint to accept requests from host machine.
 
+`--blobKeepAliveTimeout 5` blob service keep alive timeout in seconds
+
 `--queuePort 8888` makes Azurite queue service listen to port 8888, while `-p 8888:8888` redirects requests from host machine's port 8888 to docker instance.
 
 `--queueHost 0.0.0.0` defines queue service listening endpoint to accept requests from host machine.
 
+`--queueKeepAliveTimeout 5` queue service keep alive timeout in seconds
+
 `--tablePort 9999` makes Azurite table service listen to port 9999, while `-p 9999:9999` redirects requests from host machine's port 9999 to docker instance.
 
 `--tableHost 0.0.0.0` defines table service listening endpoint to accept requests from host machine.
+
+`--tableKeepAliveTimeout 5` table service keep alive timeout in seconds
 
 `--loose` enables loose mode which ignore unsupported headers and parameters.
 

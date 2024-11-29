@@ -1,6 +1,7 @@
 export default interface IQueueEnvironment {
   queueHost(): string | undefined;
   queuePort(): number | undefined;
+  queueKeepAliveTimeout(): number | undefined;
   location(): Promise<string>;
   silent(): boolean;
   loose(): boolean;
