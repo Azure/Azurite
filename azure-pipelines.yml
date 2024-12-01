@@ -548,6 +548,36 @@ jobs:
         workingDirectory: "./"
         displayName: "Validate docker image"
 
+  - job: dockerarm64
+    displayName: Docker ARM64 AMD64 Build
+    pool:
+      name: 1ES_ARM_Agent_Pool
+      vmImage: Ubuntu_2004_ARM64
+    steps:
+      - script: |
+          npm ci --legacy-peer-deps
+        workingDirectory: "./"
+        displayName: "npm ci --legacy-peer-deps"
+
+      - script: |
+          npm run docker:init-multi-platform-builder
+          npm run docker:build-arm64
+          npm run docker:build-amd64
+        workingDirectory: "./"
+        displayName: "Build docker ARM64 AMD64 image"
+
+      - script: |
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest-arm64 azurite -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest-arm64 azurite-blob -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest-arm64 azurite-queue -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest-arm64 azurite-table -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest-amd64 azurite -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest-amd64 azurite-blob -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest-amd64 azurite-queue -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest-amd64 azurite-table -v
+        workingDirectory: "./"
+        displayName: "Validate ARM64 AMD64 docker image"
+
   - job: governance
     displayName: Component Governance Component Detection
     pool:
