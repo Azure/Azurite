@@ -32,17 +32,23 @@ export class AzuriteTelemetryClient {
   public static envAccountIsSet = false;
   public static envDBIsSet = false;
 
+  // Debug options
+  private static  isDebug = false;
+  private static requestCollectPercentage = AzuriteTelemetryClient.isDebug ? 100 : 1;
+  private static enableAppInsightLog = AzuriteTelemetryClient.isDebug? true : false;
+  private static cloudRole = AzuriteTelemetryClient.isDebug ? "AzuriteTest" : "Azurite";
+  // 0 means send as soon as it's collected, use it in both debug and release mode, since set any other value will make Azurite exist slower
+  private static requestMaxBatchSize = AzuriteTelemetryClient.isDebug ? 0 : 0; 
+
+
   private static appInsights = require('applicationinsights');
 
   public static init(location: string, enableTelemetry: boolean, env: any) {
     try{
-      //TODO: check in VSCODE extension
       AzuriteTelemetryClient.enableTelemetry = enableTelemetry;
 
       if (enableTelemetry !== false && AzuriteTelemetryClient.initialized != true)
       {
-        //Get instaceID and sessionID
-        //TODO: need check if this works on VScode extension
         AzuriteTelemetryClient.location = location;
         AzuriteTelemetryClient.instanceID = AzuriteTelemetryClient.GetInstanceID(typeof env?.inMemoryPersistence === "function" && env?.inMemoryPersistence());
 
@@ -50,12 +56,12 @@ export class AzuriteTelemetryClient {
         AzuriteTelemetryClient.env = env;
         if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.eventClient === undefined)
         {
-          this.eventClient = AzuriteTelemetryClient.createAppInsigntClient("AzuriteTest", 100, 0);
+          // for start/stop event, will collect 100%, and send asap
+          this.eventClient = AzuriteTelemetryClient.createAppInsigntClient(AzuriteTelemetryClient.cloudRole, 100, 0);
         }
         if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient === undefined)
         {
-          //TODO: change to 1% in product
-          this.requestClient = AzuriteTelemetryClient.createAppInsigntClient("AzuriteTest", 100, 0);
+          this.requestClient = AzuriteTelemetryClient.createAppInsigntClient(AzuriteTelemetryClient.cloudRole, AzuriteTelemetryClient.requestCollectPercentage, AzuriteTelemetryClient.requestMaxBatchSize);
         }
   
         AzuriteTelemetryClient.appInsights.start();        
@@ -75,8 +81,7 @@ export class AzuriteTelemetryClient {
   }
 
   private static removeRoleInstance ( envelope: Contracts.EnvelopeTelemetry) : boolean {
-    //var data = envelope.data.baseData;
-    // envelope.tags["ai.cloud.role"] = "";
+    // per privacy review, will not collect roleInstance name
     envelope.tags["ai.cloud.roleInstance"] = createHash('sha256').update(envelope.tags["ai.cloud.roleInstance"]).digest('hex');
 
     // per privacy review, we will not collect operation name as it contains request path
@@ -88,7 +93,7 @@ export class AzuriteTelemetryClient {
 
   public static createAppInsigntClient(cloudRole:string, samplingPercentage:number|undefined, maxBatchSize:number|undefined) : TelemetryClient 
   {
-    // Xclient APP
+    // Xclient APP: AzuriteTelemetryProd
     //const ConnectionString = 'InstrumentationKey=feb4ae36-1db7-4808-abaa-e0b94996d665;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/;ApplicationId=9af871a3-75b5-417c-8a2f-7f2eb1ba6a6c';
     
     //weiapp
@@ -117,9 +122,11 @@ export class AzuriteTelemetryClient {
     
     telemetryClient.config.samplingPercentage = samplingPercentage??100;
   
-    // For development only, make  your telemetry to be sent as soon as it's collected.
     // Enable AppInsight log, should enable in develoipment only
-    // appConfig.setInternalLogging(true, true);
+    if (AzuriteTelemetryClient.enableAppInsightLog)
+    {
+      appConfig.setInternalLogging(true, true);
+    }
     if (maxBatchSize !== undefined)
     {
       telemetryClient.config.maxBatchSize = maxBatchSize??0;
@@ -195,11 +202,6 @@ export class AzuriteTelemetryClient {
         {
           requestProperties["requestContentSize"] = context.request?.getHeader("content-length");
         }
-        // if(context.response?.getHeader("content-length") !== undefined)
-        // { 
-        //   // Not work, as responds normally don't have "content-length" header, even has body.
-        //   requestProperties["respondsContentSize"] = context.response?.getHeader("content-length");
-        // }
         AzuriteTelemetryClient.requestClient.trackRequest(
           {
             name:"Q_" + QueueOperation[context.operation??0], 
@@ -244,11 +246,6 @@ export class AzuriteTelemetryClient {
         {
           requestProperties["requestContentSize"] = context.request?.getHeader("content-length");
         }
-        // if(context.response?.getHeader("content-length") !== undefined)
-        // { 
-        //   // Not work, as responds normally don't have "content-length" header, even has body.
-        //   requestProperties["respondsContentSize"] = context.response?.getHeader("content-length");
-        // }
         AzuriteTelemetryClient.requestClient.trackRequest(
           {
             name:"T_" + TableOperation[context.operation??0], 
@@ -287,7 +284,6 @@ export class AzuriteTelemetryClient {
             instanceID: AzuriteTelemetryClient.instanceID,
             sessionID: AzuriteTelemetryClient.sessionID,
             parameters: await AzuriteTelemetryClient.GetAllParameterString()
-            // TODO: Add start Parameters
           }
         });
       }
@@ -353,7 +349,6 @@ export class AzuriteTelemetryClient {
       AzuriteTelemetryClient.configFileName
     );
 
-    //const fs = require('fs');
     let instaceID = "";
     if (inMemoryPersistence)
     {
@@ -378,20 +373,6 @@ export class AzuriteTelemetryClient {
               logger.warn('Fail to save instaceID, error: ' + err?.message);
             });
           }
-
-          // fs.readFile(configFilePath, function (err, data) {
-          //   if (!err)
-          //   {
-          //     instaceID = data.toString();
-          //   }
-          //   else
-          //   {
-          //     instaceID = uuid();
-          //     fs.writeFile(configFilePath, instaceID, (err) => {
-          //       //TODO: write warning for write file failed.
-          //     });
-          //   }
-          // });
         }
       return instaceID;
     } catch (e) {
