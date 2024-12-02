@@ -1,3 +1,4 @@
+import { AzuriteTelemetryClient } from "../../../src/common/Telemetry"
 import { StoreDestinationArray } from "../../../src/common/persistence/IExtentStore"
 import QueueConfiguration from "../../../src/queue/QueueConfiguration"
 import QueueServer from "../../../src/queue/QueueServer"
@@ -45,6 +46,7 @@ export default class QueueTestServerFactory {
       undefined,
       inMemoryPersistence
     );
+    AzuriteTelemetryClient.init("", true, undefined);
     return new QueueServer(config);
   }
 }
