@@ -1,3 +1,4 @@
+import { AzuriteTelemetryClient } from "../../../src/common/Telemetry";
 import TableConfiguration from "../../../src/table/TableConfiguration";
 import TableServer from "../../../src/table/TableServer";
 import { DEFAULT_TABLE_KEEP_ALIVE_TIMEOUT } from "../../../src/table/utils/constants";
@@ -44,6 +45,7 @@ export default class TableTestServerFactory {
       undefined,
       inMemoryPersistence
     );
+    AzuriteTelemetryClient.init("", true, undefined);
     return new TableServer(config);
   }
 }
