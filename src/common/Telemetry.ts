@@ -11,6 +11,9 @@ import * as fs from "fs";
 import uuid from "uuid";
 import { join } from "path";
 import logger from "./Logger";
+import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT, DEFAULT_BLOB_LISTENING_PORT, DEFAULT_BLOB_SERVER_HOST_NAME } from "../blob/utils/constants";
+import { DEFAULT_QUEUE_LISTENING_PORT } from "../queue/utils/constants";
+import { DEFAULT_TABLE_LISTENING_PORT } from "../table/utils/constants";
 
 export class AzuriteTelemetryClient {
   private static eventClient : TelemetryClient | undefined;
@@ -34,10 +37,10 @@ export class AzuriteTelemetryClient {
   public static isVSC = false;
 
   // Debug options
-  private static  isDebug = false;
+  private static  isDebug = true; // change to false in production
   private static requestCollectPercentage = AzuriteTelemetryClient.isDebug ? 100 : 1;
   private static enableAppInsightLog = AzuriteTelemetryClient.isDebug? true : false;
-  private static cloudRole = AzuriteTelemetryClient.isDebug ? "AzuriteTest" : "Azurite";
+  private static cloudRole = AzuriteTelemetryClient.isDebug ? "AzuriteTest" : "Azurite_SchemaV1.0";
   // 0 means send as soon as it's collected, use it in both debug and release mode, since set any other value will make Azurite exist slower
   private static requestMaxBatchSize = AzuriteTelemetryClient.isDebug ? 0 : 0; 
 
@@ -147,7 +150,7 @@ export class AzuriteTelemetryClient {
           authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
           instanceID: AzuriteTelemetryClient.instanceID,
           sessionID: AzuriteTelemetryClient.sessionID,
-          //totalReqs:AzuriteTelemetryClient._totalBlobRequestCount,
+          totalReqs:AzuriteTelemetryClient._totalBlobRequestCount,
         };
         if (context.request?.getHeader("content-length") !== undefined)
         {
@@ -198,12 +201,13 @@ export class AzuriteTelemetryClient {
           authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
           instanceID: AzuriteTelemetryClient.instanceID,
           sessionID: AzuriteTelemetryClient.sessionID,
-          //totalReqs:AzuriteTelemetryClient._totalQueueRequestCount,
+          totalReqs:AzuriteTelemetryClient._totalQueueRequestCount,
         };
         if (context.request?.getHeader("content-length") !== undefined)
         {
           requestProperties["requestContentSize"] = context.request?.getHeader("content-length");
         }
+        // Responds "content-length" Not work, as responds normally don't have "content-length" header even has body.
         AzuriteTelemetryClient.requestClient.trackRequest(
           {
             name:"Q_" + QueueOperation[context.operation??0], 
@@ -242,7 +246,7 @@ export class AzuriteTelemetryClient {
           authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
           instanceID: AzuriteTelemetryClient.instanceID,
           sessionID: AzuriteTelemetryClient.sessionID,
-          // totalReqs:AzuriteTelemetryClient._totalTableRequestCount,
+          totalReqs:AzuriteTelemetryClient._totalTableRequestCount,
         };
         if (context.request?.getHeader("content-length") !== undefined)
         {
@@ -428,11 +432,11 @@ export class AzuriteTelemetryClient {
         longParameters.forEach((flag) => {
           let value = workspaceConfiguration.get(flag);
           if (value !== undefined && value !== "" && value !== false && value !== null
-            && !(flag.endsWith("Host") && value === "localhost")
-            && !(flag.endsWith("KeepAliveTimeout") && value === 5)
-            && !(flag == "blobPort" && value === 10000)
-            && !(flag == "queuePort" && value === 10001)
-            && !(flag == "tablePort" && value === 10002))
+            && !(flag.endsWith("Host") && value === DEFAULT_BLOB_SERVER_HOST_NAME)
+            && !(flag.endsWith("KeepAliveTimeout") && value === DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT)
+            && !(flag == "blobPort" && value === DEFAULT_BLOB_LISTENING_PORT)
+            && !(flag == "queuePort" && value === DEFAULT_QUEUE_LISTENING_PORT)
+            && !(flag == "tablePort" && value === DEFAULT_TABLE_LISTENING_PORT))
           {
             parameters += flag + ",";
           }
