@@ -6,11 +6,11 @@ FROM mcr.microsoft.com/windows/nanoserver:ltsc2022-amd64 AS nodewindows
 RUN mkdir c:\node
 WORKDIR c:\\node
 
-RUN curl.exe -o Node.zip https://nodejs.org/dist/v14.21.3/node-v14.21.3-win-x64.zip
+RUN curl.exe -o Node.zip https://nodejs.org/dist/v20.0.0/node-v20.0.0-win-x64.zip
 RUN tar -xf Node.zip -C c:\node
 RUN del Node.zip
 
-ENV PATH="$PATH;C:\Node\node-v14.21.3-win-x64"
+ENV PATH="$PATH;C:\Node\node-v20.0.0-win-x64"
 
 #
 # Builder
@@ -25,10 +25,9 @@ COPY *.json LICENSE NOTICE.txt ./
 # Copy the source code and build the app
 COPY src ./src
 COPY tests ./tests
-RUN npm config set unsafe-perm=true && \
-  npm ci
+RUN  npm ci --unsafe-perm
 RUN npm run build && \
-  npm install -g --loglevel verbose
+  npm install -g --unsafe-perm  --loglevel verbose
 
 
 #
@@ -48,10 +47,11 @@ COPY package*.json LICENSE NOTICE.txt ./
 
 COPY --from=builder c:/azurite/dist/ dist/
 
-RUN dir c:\azurite
+RUN npm pkg set scripts.prepare="echo no-prepare"
 
-RUN npm config set unsafe-perm=true && \
-  npm install -g --loglevel verbose
+RUN npm ci --unsafe-perm
+
+RUN npm install -g --unsafe-perm --loglevel verbose
 
 # Blob Storage Port
 EXPOSE 10000
