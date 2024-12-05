@@ -47,7 +47,7 @@ docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 -v c:/azurite:/data mcr.
 **Customize Azurite V3 supported parameters for docker image**
 
 ```bash
-docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0 --loose --skipApiVersionCheck --disableProductStyleUrl
+docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --queuePort 8888 --queueHost 0.0.0.0 --tablePort 9999 --tableHost 0.0.0.0 --loose --skipApiVersionCheck --disableProductStyleUrl --disableTelemetry
 ```
 
 Above command will try to start Azurite image with configurations:
@@ -73,6 +73,8 @@ Above command will try to start Azurite image with configurations:
 `--skipApiVersionCheck` skip the request API version check.
 
 `--disableProductStyleUrl` force parsing storage account name from request URI path, instead of from request URI host.
+
+`--disableTelemetry` disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product.
 
 > If you use customized azurite parameters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 
