@@ -64,7 +64,7 @@ export default class VSCServerManagerTable extends VSCServerManagerBase {
   private async getConfiguration(): Promise<TableConfiguration> {
     const env = new VSCEnvironment();
     const location = await env.location();
-    AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
+    AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env.workspaceConfiguration, true);
 
     // Initialize server configuration
     const config = new TableConfiguration(

@@ -75,7 +75,7 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       location,
       DEFAULT_QUEUE_PERSISTENCE_PATH
     );
-    AzuriteTelemetryClient.init(DEFAULT_QUEUE_PERSISTENCE_ARRAY[0].locationPath, !env.disableTelemetry(), env);
+    AzuriteTelemetryClient.init(DEFAULT_QUEUE_PERSISTENCE_ARRAY[0].locationPath, !env.disableTelemetry(), env.workspaceConfiguration, true);
 
     // Initialize server configuration
     const config = new QueueConfiguration(

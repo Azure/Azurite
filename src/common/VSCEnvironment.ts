@@ -5,7 +5,7 @@ import { window, workspace, WorkspaceFolder } from "vscode";
 import IEnvironment from "./IEnvironment";
 
 export default class VSCEnvironment implements IEnvironment {
-  private workspaceConfiguration = workspace.getConfiguration("azurite");
+  public workspaceConfiguration = workspace.getConfiguration("azurite");
 
   public blobHost(): string | undefined {
     return this.workspaceConfiguration.get<string>("blobHost");
