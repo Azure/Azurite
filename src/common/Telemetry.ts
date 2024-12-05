@@ -31,6 +31,7 @@ export class AzuriteTelemetryClient {
   private static env: any = undefined;
   public static envAccountIsSet = false;
   public static envDBIsSet = false;
+  public static isVSC = false;
 
   // Debug options
   private static  isDebug = false;
@@ -43,12 +44,13 @@ export class AzuriteTelemetryClient {
 
   private static appInsights = require('applicationinsights');
 
-  public static init(location: string, enableTelemetry: boolean, env: any) {
+  public static init(location: string, enableTelemetry: boolean, env: any, isVSC: boolean = false) {
     try{
       AzuriteTelemetryClient.enableTelemetry = enableTelemetry;
 
       if (enableTelemetry !== false && AzuriteTelemetryClient.initialized != true)
       {
+        AzuriteTelemetryClient.isVSC = isVSC;
         AzuriteTelemetryClient.location = location;
         AzuriteTelemetryClient.instanceID = AzuriteTelemetryClient.GetInstanceID(typeof env?.inMemoryPersistence === "function" && env?.inMemoryPersistence());
 
@@ -163,7 +165,7 @@ export class AzuriteTelemetryClient {
             url:context.request !== undefined ? AzuriteTelemetryClient.GetRequestUri(context.request.getEndpoint()) : "",  
             duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
             resultCode:context.response?.getStatusCode()??0, 
-            success:true, 
+            success:context.response?.getStatusCode()?.toString().startsWith("2")??false,
             // Question: should we move InstanceID and SessionID to telemetry properties id & source, and move requestID and useragent to properties (customDimensions)?
             id: context.contextId, // Request ID
             source: context.request?.getHeader("user-agent"), // User Agent
@@ -208,7 +210,7 @@ export class AzuriteTelemetryClient {
             url:context.request !== undefined ? AzuriteTelemetryClient.GetRequestUri(context.request.getEndpoint()) : "", 
             duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
             resultCode:context.response?.getStatusCode()??0, 
-            success:true, 
+            success:context.response?.getStatusCode()?.toString().startsWith("2")??false,
             id: context.contextID,
             source: context.request?.getHeader("user-agent"),
             properties: requestProperties,
@@ -252,7 +254,7 @@ export class AzuriteTelemetryClient {
             url:context.request !== undefined ? AzuriteTelemetryClient.GetRequestUri(context.request.getEndpoint()) : "", 
             duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
             resultCode:context.response?.getStatusCode()??0, 
-            success:true, 
+            success:context.response?.getStatusCode()?.toString().startsWith("2")??false,
             id: context.contextID,
             source: context.request?.getHeader("user-agent"),
             properties: requestProperties,
@@ -411,83 +413,141 @@ export class AzuriteTelemetryClient {
     {
       return parameters;
     }
+    let longParameters = ["blobHost","queueHost","tableHost","blobPort","queuePort","tablePort","blobKeepAliveTimeout","queueKeepAliveTimeout","tableKeepAliveTimeout","location","cert","key","pwd","oauth","extentMemoryLimit","debug","silent","loose","skipApiVersionCheck","disableProductStyleUrl","inMemoryPersistence","disableTelemetry"];
+    let shortParameters: { [string: string]: any }  = {"d": "debug", "l": "location", "L": "loose", "s": "silent"};
 
-    if (typeof AzuriteTelemetryClient.env?.blobHost === "function" && AzuriteTelemetryClient.env?.blobHost() !== undefined && AzuriteTelemetryClient.env?.blobHost() !== "127.0.0.1")
+    if (AzuriteTelemetryClient.isVSC) // VSC
     {
-      parameters += "blobHost,";
+      let workspaceConfiguration = AzuriteTelemetryClient.env;
+      if (workspaceConfiguration === undefined)
+      {
+        return parameters;
+      }
+      else
+      {
+        longParameters.forEach((flag) => {
+          let value = workspaceConfiguration.get(flag);
+          if (value !== undefined && value !== "" && value !== false && value !== null
+            && !(flag.endsWith("Host") && value === "localhost")
+            && !(flag.endsWith("KeepAliveTimeout") && value === 5)
+            && !(flag == "blobPort" && value === 10000)
+            && !(flag == "queuePort" && value === 10001)
+            && !(flag == "tablePort" && value === 10002))
+          {
+            parameters += flag + ",";
+          }
+        });
+      }
     }
-    if (typeof AzuriteTelemetryClient.env?.queueHost === "function" && AzuriteTelemetryClient.env?.queueHost() !== undefined && AzuriteTelemetryClient.env?.queueHost() !== "127.0.0.1")
+    else // npm (exe, docker)
     {
-      parameters += "queueHost,";
+      process.argv.forEach((val, index) => {  
+        if (val.startsWith("--"))
+        {      
+          longParameters.forEach((flag) => {
+            if (val.toLowerCase() === (`--${flag}`).toLowerCase())
+            {
+              parameters += flag + ",";
+            }
+          });
+        }
+        else if(val.startsWith("-")) {
+          if(shortParameters[val.substring(1)] !== undefined)
+          {
+            parameters += shortParameters[val.substring(1)] + ",";
+          }
+        }
+      });
     }
-    if (typeof AzuriteTelemetryClient.env?.tableHost === "function" && AzuriteTelemetryClient.env?.tableHost() !== undefined && AzuriteTelemetryClient.env?.tableHost() !== "127.0.0.1")
-    {
-      parameters += "tableHost,";
-    }
-    if (typeof AzuriteTelemetryClient.env?.blobPort === "function" && AzuriteTelemetryClient.env?.blobPort() !== undefined && AzuriteTelemetryClient.env?.blobPort() !== 10000)
-    {
-      parameters += "blobPort,";
-    }
-    if (typeof AzuriteTelemetryClient.env?.queuePort === "function" && AzuriteTelemetryClient.env?.queuePort() !== undefined && AzuriteTelemetryClient.env?.queuePort() !== 10001)
-    {
-      parameters += "queuePort,";
-    }
-    if (typeof AzuriteTelemetryClient.env?.tablePort === "function" && AzuriteTelemetryClient.env?.tablePort() !== undefined && AzuriteTelemetryClient.env?.tablePort() !== 10002)
-    {
-      parameters += "tablePort,";
-    }
-    if (typeof AzuriteTelemetryClient.env?.location === "function" && (await AzuriteTelemetryClient.env?.location()) !== undefined)
-    {
-      parameters += "location,";
-    }
-    if (typeof AzuriteTelemetryClient.env?.silent === "function" && AzuriteTelemetryClient.env?.silent())
-    {
-      parameters += "silent,";
-    }
-    if (typeof AzuriteTelemetryClient.env?.loose === "function" && AzuriteTelemetryClient.env?.loose())
-    {
-      parameters += "loose,";
-    }
-    if (typeof AzuriteTelemetryClient.env?.skipApiVersionCheck === "function" && AzuriteTelemetryClient.env?.skipApiVersionCheck())
-    {
-      parameters += "skipApiVersionCheck,";
-    }
-    if (typeof AzuriteTelemetryClient.env?.disableProductStyleUrl === "function" && AzuriteTelemetryClient.env?.disableProductStyleUrl())
-    {
-      parameters += "disableProductStyleUrl,";
-    }
-    if (typeof AzuriteTelemetryClient.env?.cert === "function" && AzuriteTelemetryClient.env?.cert() !== undefined)
-    {
-      parameters += "cert,";
-    }
-    if (typeof AzuriteTelemetryClient.env?.key === "function" && AzuriteTelemetryClient.env?.key() !== undefined)
-    {
-      parameters += "key,";
-    }
-    if (typeof AzuriteTelemetryClient.env?.pwd === "function" && AzuriteTelemetryClient.env?.pwd() !== undefined)
-    {
-      parameters += "pwd,";
-    }
-    if (typeof AzuriteTelemetryClient.env?.oauth === "function" && AzuriteTelemetryClient.env?.oauth() !== undefined)
-    {
-      parameters += "oauth,";
-    }
-    if (typeof AzuriteTelemetryClient.env?.inMemoryPersistence === "function" && AzuriteTelemetryClient.env?.inMemoryPersistence())
-    {
-      parameters += "inMemoryPersistence,";
-    }
-    if (typeof AzuriteTelemetryClient.env?.extentMemoryLimit === "function" && AzuriteTelemetryClient.env?.extentMemoryLimit() !== undefined)
-    {
-      parameters += "extentMemoryLimit,";
-    }
-    if (typeof AzuriteTelemetryClient.env?.disableTelemetry === "function" && AzuriteTelemetryClient.env?.disableTelemetry())
-    {
-      parameters += "disableTelemetry,";
-    }
-    if (typeof AzuriteTelemetryClient.env?.debug === "function" && (await AzuriteTelemetryClient.env?.debug()) !== undefined)
-    {
-      parameters += "debug,";
-    }
-    return parameters;
+
+    // if (typeof AzuriteTelemetryClient.env?.blobHost === "function" && AzuriteTelemetryClient.env?.blobHost() !== undefined && AzuriteTelemetryClient.env?.blobHost() !== "127.0.0.1")
+    // {
+    //   parameters += "blobHost,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.queueHost === "function" && AzuriteTelemetryClient.env?.queueHost() !== undefined && AzuriteTelemetryClient.env?.queueHost() !== "127.0.0.1")
+    // {
+    //   parameters += "queueHost,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.tableHost === "function" && AzuriteTelemetryClient.env?.tableHost() !== undefined && AzuriteTelemetryClient.env?.tableHost() !== "127.0.0.1")
+    // {
+    //   parameters += "tableHost,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.blobPort === "function" && AzuriteTelemetryClient.env?.blobPort() !== undefined && AzuriteTelemetryClient.env?.blobPort() !== 10000)
+    // {
+    //   parameters += "blobPort,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.queuePort === "function" && AzuriteTelemetryClient.env?.queuePort() !== undefined && AzuriteTelemetryClient.env?.queuePort() !== 10001)
+    // {
+    //   parameters += "queuePort,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.tablePort === "function" && AzuriteTelemetryClient.env?.tablePort() !== undefined && AzuriteTelemetryClient.env?.tablePort() !== 10002)
+    // {
+    //   parameters += "tablePort,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.blobKeepAliveTimeout === "function" && AzuriteTelemetryClient.env?.blobKeepAliveTimeout() !== undefined && AzuriteTelemetryClient.env?.blobKeepAliveTimeout() !== 5)
+    // {
+    //   parameters += "blobKeepAliveTimeout,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.queueKeepAliveTimeout === "function" && AzuriteTelemetryClient.env?.queueKeepAliveTimeout() !== undefined && AzuriteTelemetryClient.env?.queueKeepAliveTimeout() !== 5)
+    // {
+    //   parameters += "queueKeepAliveTimeout,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.tableKeepAliveTimeout === "function" && AzuriteTelemetryClient.env?.tableKeepAliveTimeout() !== undefined && AzuriteTelemetryClient.env?.tableKeepAliveTimeout() !== 5)
+    // {
+    //   parameters += "tableKeepAliveTimeout,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.location === "function" && (await AzuriteTelemetryClient.env?.location()) !== undefined)
+    // {
+    //   parameters += "location,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.silent === "function" && AzuriteTelemetryClient.env?.silent())
+    // {
+    //   parameters += "silent,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.loose === "function" && AzuriteTelemetryClient.env?.loose())
+    // {
+    //   parameters += "loose,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.skipApiVersionCheck === "function" && AzuriteTelemetryClient.env?.skipApiVersionCheck())
+    // {
+    //   parameters += "skipApiVersionCheck,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.disableProductStyleUrl === "function" && AzuriteTelemetryClient.env?.disableProductStyleUrl())
+    // {
+    //   parameters += "disableProductStyleUrl,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.cert === "function" && AzuriteTelemetryClient.env?.cert() !== undefined)
+    // {
+    //   parameters += "cert,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.key === "function" && AzuriteTelemetryClient.env?.key() !== undefined)
+    // {
+    //   parameters += "key,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.pwd === "function" && AzuriteTelemetryClient.env?.pwd() !== undefined)
+    // {
+    //   parameters += "pwd,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.oauth === "function" && AzuriteTelemetryClient.env?.oauth() !== undefined)
+    // {
+    //   parameters += "oauth,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.inMemoryPersistence === "function" && AzuriteTelemetryClient.env?.inMemoryPersistence())
+    // {
+    //   parameters += "inMemoryPersistence,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.extentMemoryLimit === "function" && AzuriteTelemetryClient.env?.extentMemoryLimit() !== undefined)
+    // {
+    //   parameters += "extentMemoryLimit,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.disableTelemetry === "function" && AzuriteTelemetryClient.env?.disableTelemetry())
+    // {
+    //   parameters += "disableTelemetry,";
+    // }
+    // if (typeof AzuriteTelemetryClient.env?.debug === "function" && (await AzuriteTelemetryClient.env?.debug()) !== undefined)
+    // {
+    //   parameters += "debug,";
+    // }
+    return parameters.endsWith(",") ? parameters.substring(0, parameters.length - 1) : parameters;
   }
 }
