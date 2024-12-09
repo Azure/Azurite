@@ -547,6 +547,7 @@ jobs:
           docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-table -v
         workingDirectory: "./"
         displayName: "Validate docker image"
+
   - job: dockerwindows
     displayName: Docker Windows Build
     pool:
