@@ -47,7 +47,9 @@ COPY package*.json LICENSE NOTICE.txt ./
 
 COPY --from=builder c:/azurite/dist/ dist/
 
+USER ContainerAdministrator
 RUN npm pkg set scripts.prepare="echo no-prepare"
+USER ContainerUser
 
 RUN npm ci --unsafe-perm
 
