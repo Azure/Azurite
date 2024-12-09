@@ -41,10 +41,10 @@ export async function streamToLocalFile(
 export function deserializeRangeHeader(
   rangeHeaderValue?: string,
   xMsRangeHeaderValue?: string
-): [number, number] {
+): [number, number] | undefined {
   const range = xMsRangeHeaderValue || rangeHeaderValue;
   if (!range) {
-    return [0, Infinity];
+    return undefined;
   }
 
   let parts = range.split("=");
@@ -94,8 +94,8 @@ export function deserializePageBlobRangeHeader(
   force512boundary = true
 ): [number, number] {
   const ranges = deserializeRangeHeader(rangeHeaderValue, xMsRangeHeaderValue);
-  const startInclusive = ranges[0];
-  const endInclusive = ranges[1];
+  const startInclusive = ranges ? ranges[0] : 0;
+  const endInclusive = ranges ? ranges[1] : Infinity;
 
   if (force512boundary && startInclusive % 512 !== 0) {
     throw new RangeError(
