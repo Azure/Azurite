@@ -49,12 +49,12 @@ COPY --from=builder c:/azurite/dist/ dist/
 
 USER ContainerAdministrator
 RUN npm pkg set scripts.prepare="echo no-prepare"
-USER ContainerUser
 
 RUN npm ci --unsafe-perm
 
 RUN npm install -g --unsafe-perm --loglevel verbose
 
+USER ContainerUser
 # Blob Storage Port
 EXPOSE 10000
 # Queue Storage Port
