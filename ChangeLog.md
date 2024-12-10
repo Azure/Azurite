@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Add telemetry data collection to help improve the product. By default telemetry data will be collected. Add `--disableTelemetry` options disable telemetry data collection of this Azurite execution.
+
 ## 2024.10 Version 3.33.0
 
 General:

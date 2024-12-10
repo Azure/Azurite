@@ -13,12 +13,14 @@ import {
   DEFAULT_QUEUE_PERSISTENCE_PATH
 } from "./utils/constants";
 import { setExtentMemoryLimit } from "../common/ConfigurationBase";
+import { AzuriteTelemetryClient } from "../common/Telemetry";
 
 // tslint:disable:no-console
 
 function shutdown(server: QueueServer) {
   const beforeCloseMessage = `Azurite Queue service is closing...`;
   const afterCloseMessage = `Azurite Queue service successfully closed`;
+  AzuriteTelemetryClient.TraceStopEvent("Queue");
 
   console.log(beforeCloseMessage);
   server.close().then(() => {
@@ -89,6 +91,9 @@ async function main() {
   console.log(
     `Azurite Queue service successfully listens on ${server.getHttpServerAddress()}`
   );
+  
+  AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);
+  await AzuriteTelemetryClient.TraceStartEvent("Queue");
 
   // Handle close event
   process

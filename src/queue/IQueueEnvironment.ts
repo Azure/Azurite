@@ -13,4 +13,5 @@ export default interface IQueueEnvironment {
   debug(): Promise<string | boolean | undefined>;
   inMemoryPersistence(): boolean;
   extentMemoryLimit(): number | undefined;
+  disableTelemetry(): boolean;
 }

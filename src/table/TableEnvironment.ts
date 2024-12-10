@@ -56,7 +56,11 @@ args
   .option(["", "oauth"], 'Optional. OAuth level. Candidate values: "basic"')
   .option(["", "cert"], "Optional. Path to certificate file")
   .option(["", "key"], "Optional. Path to certificate key .pem file")
-  .option(["", "pwd"], "Optional. Password for .pfx file");
+  .option(["", "pwd"], "Optional. Password for .pfx file")
+  .option(
+    ["", "disableTelemetry"],
+    "Optional. Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product."
+  );
 
 (args as any).config.name = "azurite-table";
 
@@ -112,6 +116,14 @@ export default class TableEnvironment implements ITableEnvironment {
       return true;
     }
     // default is false which will try to get account name from request URI hostname
+    return false;
+  }
+
+  public disableTelemetry(): boolean {
+    if (this.flags.disableTelemetry !== undefined) {
+      return true;
+    }
+    // default is false which will collect telemetry data
     return false;
   }
 
