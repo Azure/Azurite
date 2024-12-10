@@ -39,6 +39,7 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   before(async () => {
     server = createTableServerForTestHttps();
     await server.start();
+    AzuriteTelemetryClient.init("", true, undefined);
     await AzuriteTelemetryClient.TraceStartEvent("Table Test");
   });
 

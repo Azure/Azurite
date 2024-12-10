@@ -28,7 +28,7 @@ export default function endMiddleware(
     )}`,
     context.contextID
   );
-  AzuriteTelemetryClient.TraceQueueRequest(context);
+  AzuriteTelemetryClient.TraceRequest(context);
 
   res.getBodyStream().end();
 }
