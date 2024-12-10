@@ -42,6 +42,7 @@ describe("Blob Cors requests test", () => {
 
   before(async () => {
     await server.start();
+    AzuriteTelemetryClient.init("", true, undefined);
     await AzuriteTelemetryClient.TraceStartEvent("Blob Test");
   });
 

@@ -42,6 +42,7 @@ describe("Queue OAuth Basic", () => {
       oauth: "basic"
     })
     await server.start();
+    AzuriteTelemetryClient.init("", true, undefined);
     await AzuriteTelemetryClient.TraceStartEvent("Queue Test");
   });
 

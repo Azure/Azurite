@@ -37,10 +37,10 @@ export class AzuriteTelemetryClient {
   public static isVSC = false;
 
   // Debug options
-  private static  isDebug = true; // change to false in production
-  private static requestCollectPercentage = AzuriteTelemetryClient.isDebug ? 100 : 1;
+  private static  isDebug = false; // false in production, true in development
+  private static requestCollectPercentage = AzuriteTelemetryClient.isDebug ? 100 : 100;
   private static enableAppInsightLog = AzuriteTelemetryClient.isDebug? true : false;
-  private static cloudRole = AzuriteTelemetryClient.isDebug ? "AzuriteTest" : "Azurite_SchemaV1.0";
+  private static cloudRole = AzuriteTelemetryClient.isDebug ? "AzuriteTest" : "Azurite_V1.0";
   // 0 means send as soon as it's collected, use it in both debug and release mode, since set any other value will make Azurite exist slower
   private static requestMaxBatchSize = AzuriteTelemetryClient.isDebug ? 0 : 0; 
 
@@ -56,6 +56,7 @@ export class AzuriteTelemetryClient {
         AzuriteTelemetryClient.isVSC = isVSC;
         AzuriteTelemetryClient.location = location;
         AzuriteTelemetryClient.instanceID = AzuriteTelemetryClient.GetInstanceID(typeof env?.inMemoryPersistence === "function" && env?.inMemoryPersistence());
+        logger.info(`InstaceID ${AzuriteTelemetryClient.instanceID}, SessionID ${AzuriteTelemetryClient.sessionID}.`);
 
         AzuriteTelemetryClient.enableTelemetry = enableTelemetry;
         AzuriteTelemetryClient.env = env;
@@ -117,15 +118,13 @@ export class AzuriteTelemetryClient {
     // Remove some default telemetry item in the telemetry envelope 
     let telemetryClient = new AzuriteTelemetryClient.appInsights.TelemetryClient(ConnectionString);
     telemetryClient.addTelemetryProcessor(AzuriteTelemetryClient.removeRoleInstance);
-    //appInsights.start();
-
-
+ 
     if (telemetryClient !== undefined)
     {
-      telemetryClient.context.tags[telemetryClient.context.keys.cloudRole] = "AzuriteTest";
+      telemetryClient.context.tags[telemetryClient.context.keys.cloudRole] = AzuriteTelemetryClient.cloudRole;
     }
     
-    telemetryClient.config.samplingPercentage = samplingPercentage??100;
+    telemetryClient.config.samplingPercentage = samplingPercentage??1;
   
     // Enable AppInsight log, should enable in develoipment only
     if (AzuriteTelemetryClient.enableAppInsightLog)
@@ -140,18 +139,42 @@ export class AzuriteTelemetryClient {
     return telemetryClient;
   }
 
-  public static TraceBlobRequest(context: BlobContext) {
+  public static TraceRequest(context: any) {
+    let serviceType = "";
+    let totalReqs = 0;
+    let reqName = "";
     try{
       if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient !== undefined)
       {
-        AzuriteTelemetryClient._totalBlobRequestCount++;
+        if (context instanceof BlobContext)
+        {
+          serviceType = "Blob";
+          AzuriteTelemetryClient._totalBlobRequestCount++;
+          totalReqs = AzuriteTelemetryClient._totalBlobRequestCount;
+          reqName = "B_" + BlobOperation[context.operation??0];
+        }
+        else if (context instanceof QueueContext)
+        {
+          serviceType = "Queue";
+          AzuriteTelemetryClient._totalQueueRequestCount++;          
+          totalReqs = AzuriteTelemetryClient._totalQueueRequestCount;
+          reqName = "Q_" + QueueOperation[context.operation??0];
+        }
+        else if (context instanceof TableContext)
+        {
+          serviceType = "Table";
+          AzuriteTelemetryClient._totalTableRequestCount++;
+          totalReqs = AzuriteTelemetryClient._totalTableRequestCount;
+          reqName = "T_" + TableOperation[context.operation??0];
+        }
         let requestProperties: { [key: string]: any } = {
           apiVersion: "v"+context.request?.getHeader("x-ms-version"),
           authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
           instanceID: AzuriteTelemetryClient.instanceID,
           sessionID: AzuriteTelemetryClient.sessionID,
-          totalReqs:AzuriteTelemetryClient._totalBlobRequestCount,
+          ReqNo:totalReqs,
         };
+        // Can't collect egress not since responds normally don't have "content-length" header even has body. So only collect ingress now.
         if (context.request?.getHeader("content-length") !== undefined)
         {
           const contentLength = context.request?.getHeader("content-length");
@@ -160,16 +183,14 @@ export class AzuriteTelemetryClient {
             this._totalIngressSize += parseInt(contentLength);
           }
         }
-        // Responds "content-length" Not work, as responds normally don't have "content-length" header even has body.
 
         AzuriteTelemetryClient.requestClient.trackRequest(
           {
-            name:"B_" + BlobOperation[context.operation??0], 
+            name:reqName, 
             url:context.request !== undefined ? AzuriteTelemetryClient.GetRequestUri(context.request.getEndpoint()) : "",  
             duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
             resultCode:context.response?.getStatusCode()??0, 
-            success:context.response?.getStatusCode()?.toString().startsWith("2")??false,
-            // Question: should we move InstanceID and SessionID to telemetry properties id & source, and move requestID and useragent to properties (customDimensions)?
+            success:(context.response?.getStatusCode() ?? 500) <= 399,
             id: context.contextId, // Request ID
             source: context.request?.getHeader("user-agent"), // User Agent
             properties: requestProperties,
@@ -183,102 +204,102 @@ export class AzuriteTelemetryClient {
             }
           });
       }
-      logger.verbose('Send blob telemetry: ' + BlobOperation[context.operation??0], context.contextId);
+      logger.verbose(`Send ${serviceType} telemetry: ` + reqName, context.contextId === undefined ? context.contextID : context.contextId);
     }
     catch (e)
     {
-      logger.warn('Fail to telemetry a blob request, error: ' + e.message);
+      logger.warn(`Fail to telemetry a ${serviceType} request, error: ` + e.message);
     }
   }
 
-  public static TraceQueueRequest(context: QueueContext) {
-    try{
-      if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient !== undefined)
-      {
-        AzuriteTelemetryClient._totalQueueRequestCount++;
-        let requestProperties: { [key: string]: any } = {
-          apiVersion: "v"+context.request?.getHeader("x-ms-version"),
-          authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
-          instanceID: AzuriteTelemetryClient.instanceID,
-          sessionID: AzuriteTelemetryClient.sessionID,
-          totalReqs:AzuriteTelemetryClient._totalQueueRequestCount,
-        };
-        if (context.request?.getHeader("content-length") !== undefined)
-        {
-          requestProperties["requestContentSize"] = context.request?.getHeader("content-length");
-        }
-        // Responds "content-length" Not work, as responds normally don't have "content-length" header even has body.
-        AzuriteTelemetryClient.requestClient.trackRequest(
-          {
-            name:"Q_" + QueueOperation[context.operation??0], 
-            url:context.request !== undefined ? AzuriteTelemetryClient.GetRequestUri(context.request.getEndpoint()) : "", 
-            duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
-            resultCode:context.response?.getStatusCode()??0, 
-            success:context.response?.getStatusCode()?.toString().startsWith("2")??false,
-            id: context.contextID,
-            source: context.request?.getHeader("user-agent"),
-            properties: requestProperties,
-            contextObjects:
-            {
-              operationId: "",
-              operationParentId: "",
-              operationName: "test",
-              operation_Name: "test",
-              appName: ""
-            }
-          });
-      }
-      logger.verbose('Send queue telemetry: ' + QueueOperation[context.operation??0], context.contextID);
-    }
-    catch (e)
-    {
-      logger.warn('Fail to telemetry a queue request, error: ' + e.message);
-    }
-  }
+  // public static TraceQueueRequest(context: QueueContext) {
+  //   try{
+  //     if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient !== undefined)
+  //     {
+  //       AzuriteTelemetryClient._totalQueueRequestCount++;
+  //       let requestProperties: { [key: string]: any } = {
+  //         apiVersion: "v"+context.request?.getHeader("x-ms-version"),
+  //         authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
+  //         instanceID: AzuriteTelemetryClient.instanceID,
+  //         sessionID: AzuriteTelemetryClient.sessionID,
+  //         totalReqs:AzuriteTelemetryClient._totalQueueRequestCount,
+  //       };
+  //       if (context.request?.getHeader("content-length") !== undefined)
+  //       {
+  //         requestProperties["requestContentSize"] = context.request?.getHeader("content-length");
+  //       }
+  //       // Responds "content-length" Not work, as responds normally don't have "content-length" header even has body.
+  //       AzuriteTelemetryClient.requestClient.trackRequest(
+  //         {
+  //           name:"Q_" + QueueOperation[context.operation??0], 
+  //           url:context.request !== undefined ? AzuriteTelemetryClient.GetRequestUri(context.request.getEndpoint()) : "", 
+  //           duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
+  //           resultCode:context.response?.getStatusCode()??0, 
+  //           success:context.response?.getStatusCode()?.toString().startsWith("2")??false,
+  //           id: context.contextID,
+  //           source: context.request?.getHeader("user-agent"),
+  //           properties: requestProperties,
+  //           contextObjects:
+  //           {
+  //             operationId: "",
+  //             operationParentId: "",
+  //             operationName: "test",
+  //             operation_Name: "test",
+  //             appName: ""
+  //           }
+  //         });
+  //     }
+  //     logger.verbose('Send queue telemetry: ' + QueueOperation[context.operation??0], context.contextID);
+  //   }
+  //   catch (e)
+  //   {
+  //     logger.warn('Fail to telemetry a queue request, error: ' + e.message);
+  //   }
+  // }
 
-  public static TraceTableRequest(context: TableContext) {
-    try{
-      if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient !== undefined)
-      {
-        AzuriteTelemetryClient._totalTableRequestCount++;
-        let requestProperties: { [key: string]: any } = {
-          apiVersion: "v"+context.request?.getHeader("x-ms-version"),
-          authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
-          instanceID: AzuriteTelemetryClient.instanceID,
-          sessionID: AzuriteTelemetryClient.sessionID,
-          totalReqs:AzuriteTelemetryClient._totalTableRequestCount,
-        };
-        if (context.request?.getHeader("content-length") !== undefined)
-        {
-          requestProperties["requestContentSize"] = context.request?.getHeader("content-length");
-        }
-        AzuriteTelemetryClient.requestClient.trackRequest(
-          {
-            name:"T_" + TableOperation[context.operation??0], 
-            url:context.request !== undefined ? AzuriteTelemetryClient.GetRequestUri(context.request.getEndpoint()) : "", 
-            duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
-            resultCode:context.response?.getStatusCode()??0, 
-            success:context.response?.getStatusCode()?.toString().startsWith("2")??false,
-            id: context.contextID,
-            source: context.request?.getHeader("user-agent"),
-            properties: requestProperties,
-            contextObjects:
-            {
-              operationId: "",
-              operationParentId: "",
-              operationName: "test",
-              operation_Name: "test",
-              appName: ""
-            }
-          });
-      }
-      logger.verbose('Send table telemetry: ' + TableOperation[context.operation??0], context.contextID);
-    }
-    catch (e)
-    {
-      logger.warn('Fail to telemetry a table request, error: ' + e.message);
-    }
-  }
+  // public static TraceTableRequest(context: TableContext) {
+  //   try{
+  //     if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient !== undefined)
+  //     {
+  //       AzuriteTelemetryClient._totalTableRequestCount++;
+  //       let requestProperties: { [key: string]: any } = {
+  //         apiVersion: "v"+context.request?.getHeader("x-ms-version"),
+  //         authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
+  //         instanceID: AzuriteTelemetryClient.instanceID,
+  //         sessionID: AzuriteTelemetryClient.sessionID,
+  //         totalReqs:AzuriteTelemetryClient._totalTableRequestCount,
+  //       };
+  //       if (context.request?.getHeader("content-length") !== undefined)
+  //       {
+  //         requestProperties["requestContentSize"] = context.request?.getHeader("content-length");
+  //       }
+  //       AzuriteTelemetryClient.requestClient.trackRequest(
+  //         {
+  //           name:"T_" + TableOperation[context.operation??0], 
+  //           url:context.request !== undefined ? AzuriteTelemetryClient.GetRequestUri(context.request.getEndpoint()) : "", 
+  //           duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
+  //           resultCode:context.response?.getStatusCode()??0, 
+  //           success:context.response?.getStatusCode()?.toString().startsWith("2")??false,
+  //           id: context.contextID,
+  //           source: context.request?.getHeader("user-agent"),
+  //           properties: requestProperties,
+  //           contextObjects:
+  //           {
+  //             operationId: "",
+  //             operationParentId: "",
+  //             operationName: "test",
+  //             operation_Name: "test",
+  //             appName: ""
+  //           }
+  //         });
+  //     }
+  //     logger.verbose('Send table telemetry: ' + TableOperation[context.operation??0], context.contextID);
+  //   }
+  //   catch (e)
+  //   {
+  //     logger.warn('Fail to telemetry a table request, error: ' + e.message);
+  //   }
+  // }
 
   public static async TraceStartEvent(serviceType: string = "") {
     try{
@@ -337,15 +358,6 @@ export class AzuriteTelemetryClient {
     {
       return endpoint;
     }
-
-    // let request = context.request;
-    // let requestUri = request.getUrl();
-    // let sig = request.getQuery("sig");
-    // if (sig!=undefined)
-    // {
-    //   requestUri = requestUri.replace(encodeURIComponent(sig), "[hidden]");
-    // }
-    // return `${request.getEndpoint()}${requestUri}`;
   }
 
 
@@ -362,34 +374,43 @@ export class AzuriteTelemetryClient {
     }
     try {
       if(!fs.existsSync(configFilePath))
-        {
-          instaceID = uuid();
-          fs.writeFile(configFilePath, `{"instaceID":"${instaceID}"}`, (err) => {
-            logger.warn('Fail to save instaceID, error: ' + err?.message);
-          });
-        }
-        else{
-
+      {
+        instaceID = uuid();
+        fs.writeFileSync(configFilePath, `{"instaceID":"${instaceID}"}`);
+      }
+      else{
+        try{
           let data = fs.readFileSync(configFilePath, 'utf8');
           instaceID = JSON.parse(data.toString()).instaceID;
-          if(instaceID === "")
-          {
-            instaceID = uuid();
-            fs.writeFile(configFilePath, instaceID, (err) => {
-              logger.warn('Fail to save instaceID, error: ' + err?.message);
-            });
-          }
         }
+        catch(e){
+          logger.warn(`Failed to read instaceID from file ${configFilePath} and will regenerate instanceID, error: ` + e.message);
+        }
+        if(instaceID === undefined || instaceID === "")
+        {
+          instaceID = uuid();
+          fs.writeFileSync(configFilePath, `{"instaceID":"${instaceID}"}`);
+        }
+      }
       return instaceID;
     } catch (e) {
-      logger.warn('Fail to generate and save instaceID will use empty instaceID, error: ' + e.message);
+      logger.warn(`Failed to read or generate/save instaceID, will use instaceID "${instaceID}", error: ` + e.message);
       return instaceID;
     }
   }
   
   private static GetRequestAuthentication(authorizationHeader: string|undefined, sigQuery: string|undefined): string {
+    
     let auth = authorizationHeader?.split(" ")[0];
-    if (auth === undefined)
+    if (auth !== undefined && auth !== "") 
+    {
+      if (sigQuery !== undefined)
+      {
+        auth = auth + ",Sas";
+      }
+      //else auth in head is already retrived, no need to add more
+    }
+    else // no auth header
     {
       if (sigQuery !== undefined)
       {

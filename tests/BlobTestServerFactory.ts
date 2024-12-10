@@ -2,7 +2,6 @@ import BlobConfiguration from "../src/blob/BlobConfiguration";
 import BlobServer from "../src/blob/BlobServer";
 import SqlBlobConfiguration from "../src/blob/SqlBlobConfiguration";
 import SqlBlobServer from "../src/blob/SqlBlobServer";
-import { AzuriteTelemetryClient } from "../src/common/Telemetry";
 import { StoreDestinationArray } from "../src/common/persistence/IExtentStore";
 import { DEFAULT_SQL_OPTIONS } from "../src/common/utils/constants";
 import { DEFAULT_BLOB_KEEP_ALIVE_TIMEOUT } from "../src/blob/utils/constants";
@@ -79,7 +78,6 @@ export default class BlobTestServerFactory {
         undefined,
         inMemoryPersistence
       );
-      AzuriteTelemetryClient.init("", true, undefined);
       return new BlobServer(config);
     }
   }
