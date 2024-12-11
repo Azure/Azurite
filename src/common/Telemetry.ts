@@ -36,7 +36,7 @@ export class AzuriteTelemetryClient {
 
   // Debug options
   private static  isDebug = false; // false in production, true in development
-  private static requestCollectPercentage = AzuriteTelemetryClient.isDebug ? 100 : 100;
+  private static requestCollectPercentage = AzuriteTelemetryClient.isDebug ? 100 : 1;
   private static enableAppInsightLog = AzuriteTelemetryClient.isDebug? true : false;
   private static cloudRole = AzuriteTelemetryClient.isDebug ? "AzuriteTest" : "Azurite_V1.0";
   // 0 means send as soon as it's collected, use it in both debug and release mode, since set any other value will make Azurite exist slower
@@ -197,121 +197,33 @@ export class AzuriteTelemetryClient {
           }
 
         AzuriteTelemetryClient.requestClient.trackRequest(
+        {
+          name:reqName, 
+          url:context.request !== undefined ? AzuriteTelemetryClient.GetRequestUri(context.request.getEndpoint()) : "",  
+          duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
+          resultCode:context.response?.getStatusCode()??0, 
+          success:(context.response?.getStatusCode() ?? 500) <= 399,
+          id: context.contextId, // Request ID
+          source: context.request?.getHeader("user-agent"), // User Agent
+          properties: requestProperties,
+          contextObjects:
           {
-            name:reqName, 
-            url:context.request !== undefined ? AzuriteTelemetryClient.GetRequestUri(context.request.getEndpoint()) : "",  
-            duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
-            resultCode:context.response?.getStatusCode()??0, 
-            success:(context.response?.getStatusCode() ?? 500) <= 399,
-            id: context.contextId, // Request ID
-            source: context.request?.getHeader("user-agent"), // User Agent
-            properties: requestProperties,
-            contextObjects:
-            {
-              operationId: "",
-              operationParentId: "",
-              operationName: "test",
-              operation_Name: "test",
-              appName: ""
-            }
-          });
+            operationId: "",
+            operationParentId: "",
+            operationName: "test",
+            operation_Name: "test",
+            appName: ""
+          }
+        });
+
+        logger.verbose(`Send ${serviceType} telemetry: ` + reqName, context.contextId === undefined ? context.contextID : context.contextId);
       }
-      logger.verbose(`Send ${serviceType} telemetry: ` + reqName, context.contextId === undefined ? context.contextID : context.contextId);
     }
     catch (e)
     {
       logger.warn(`Fail to telemetry a ${serviceType} request, error: ` + e.message);
     }
   }
-
-  // public static TraceQueueRequest(context: QueueContext) {
-  //   try{
-  //     if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient !== undefined)
-  //     {
-  //       AzuriteTelemetryClient._totalQueueRequestCount++;
-  //       let requestProperties: { [key: string]: any } = {
-  //         apiVersion: "v"+context.request?.getHeader("x-ms-version"),
-  //         authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
-  //         instanceID: AzuriteTelemetryClient.instanceID,
-  //         sessionID: AzuriteTelemetryClient.sessionID,
-  //         totalReqs:AzuriteTelemetryClient._totalQueueRequestCount,
-  //       };
-  //       if (context.request?.getHeader("content-length") !== undefined)
-  //       {
-  //         requestProperties["requestContentSize"] = context.request?.getHeader("content-length");
-  //       }
-  //       // Responds "content-length" Not work, as responds normally don't have "content-length" header even has body.
-  //       AzuriteTelemetryClient.requestClient.trackRequest(
-  //         {
-  //           name:"Q_" + QueueOperation[context.operation??0], 
-  //           url:context.request !== undefined ? AzuriteTelemetryClient.GetRequestUri(context.request.getEndpoint()) : "", 
-  //           duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
-  //           resultCode:context.response?.getStatusCode()??0, 
-  //           success:context.response?.getStatusCode()?.toString().startsWith("2")??false,
-  //           id: context.contextID,
-  //           source: context.request?.getHeader("user-agent"),
-  //           properties: requestProperties,
-  //           contextObjects:
-  //           {
-  //             operationId: "",
-  //             operationParentId: "",
-  //             operationName: "test",
-  //             operation_Name: "test",
-  //             appName: ""
-  //           }
-  //         });
-  //     }
-  //     logger.verbose('Send queue telemetry: ' + QueueOperation[context.operation??0], context.contextID);
-  //   }
-  //   catch (e)
-  //   {
-  //     logger.warn('Fail to telemetry a queue request, error: ' + e.message);
-  //   }
-  // }
-
-  // public static TraceTableRequest(context: TableContext) {
-  //   try{
-  //     if (AzuriteTelemetryClient.enableTelemetry && AzuriteTelemetryClient.requestClient !== undefined)
-  //     {
-  //       AzuriteTelemetryClient._totalTableRequestCount++;
-  //       let requestProperties: { [key: string]: any } = {
-  //         apiVersion: "v"+context.request?.getHeader("x-ms-version"),
-  //         authorization: context.request !== undefined ? AzuriteTelemetryClient.GetRequestAuthentication(context.request.getHeader("authorization"), context.request.getQuery("sig")) : "",
-  //         instanceID: AzuriteTelemetryClient.instanceID,
-  //         sessionID: AzuriteTelemetryClient.sessionID,
-  //         totalReqs:AzuriteTelemetryClient._totalTableRequestCount,
-  //       };
-  //       if (context.request?.getHeader("content-length") !== undefined)
-  //       {
-  //         requestProperties["requestContentSize"] = context.request?.getHeader("content-length");
-  //       }
-  //       AzuriteTelemetryClient.requestClient.trackRequest(
-  //         {
-  //           name:"T_" + TableOperation[context.operation??0], 
-  //           url:context.request !== undefined ? AzuriteTelemetryClient.GetRequestUri(context.request.getEndpoint()) : "", 
-  //           duration:context.startTime?((new Date()).getTime() - context.startTime?.getTime()):0, 
-  //           resultCode:context.response?.getStatusCode()??0, 
-  //           success:context.response?.getStatusCode()?.toString().startsWith("2")??false,
-  //           id: context.contextID,
-  //           source: context.request?.getHeader("user-agent"),
-  //           properties: requestProperties,
-  //           contextObjects:
-  //           {
-  //             operationId: "",
-  //             operationParentId: "",
-  //             operationName: "test",
-  //             operation_Name: "test",
-  //             appName: ""
-  //           }
-  //         });
-  //     }
-  //     logger.verbose('Send table telemetry: ' + TableOperation[context.operation??0], context.contextID);
-  //   }
-  //   catch (e)
-  //   {
-  //     logger.warn('Fail to telemetry a table request, error: ' + e.message);
-  //   }
-  // }
 
   public static async TraceStartEvent(serviceType: string = "") {
     try{
@@ -325,8 +237,8 @@ export class AzuriteTelemetryClient {
             parameters: await AzuriteTelemetryClient.GetAllParameterString()
           }
         });
+        logger.verbose('Send start telemetry');
       }
-      logger.verbose('Send start telemetry');
     }
     catch (e)
     {
@@ -350,8 +262,8 @@ export class AzuriteTelemetryClient {
             totalEgress: AzuriteTelemetryClient._totalEgressSize,
           }
         });
+        logger.verbose('Send stop telemetry');
       }
-      logger.verbose('Send stop telemetry');
     }
     catch (e)
     {
@@ -447,15 +359,15 @@ export class AzuriteTelemetryClient {
     {
       parameters += "AZURITE_DB,";
     }
-    if (AzuriteTelemetryClient.env === undefined)
-    {
-      return parameters;
-    }
     let longParameters = ["blobHost","queueHost","tableHost","blobPort","queuePort","tablePort","blobKeepAliveTimeout","queueKeepAliveTimeout","tableKeepAliveTimeout","location","cert","key","pwd","oauth","extentMemoryLimit","debug","silent","loose","skipApiVersionCheck","disableProductStyleUrl","inMemoryPersistence","disableTelemetry"];
     let shortParameters: { [string: string]: any }  = {"d": "debug", "l": "location", "L": "loose", "s": "silent"};
 
     if (AzuriteTelemetryClient.isVSC) // VSC
     {
+      if (AzuriteTelemetryClient.env === undefined)
+      {
+        return parameters;
+      }
       let workspaceConfiguration = AzuriteTelemetryClient.env;
       if (workspaceConfiguration === undefined)
       {
@@ -497,95 +409,7 @@ export class AzuriteTelemetryClient {
         }
       });
     }
-
-    // if (typeof AzuriteTelemetryClient.env?.blobHost === "function" && AzuriteTelemetryClient.env?.blobHost() !== undefined && AzuriteTelemetryClient.env?.blobHost() !== "127.0.0.1")
-    // {
-    //   parameters += "blobHost,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.queueHost === "function" && AzuriteTelemetryClient.env?.queueHost() !== undefined && AzuriteTelemetryClient.env?.queueHost() !== "127.0.0.1")
-    // {
-    //   parameters += "queueHost,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.tableHost === "function" && AzuriteTelemetryClient.env?.tableHost() !== undefined && AzuriteTelemetryClient.env?.tableHost() !== "127.0.0.1")
-    // {
-    //   parameters += "tableHost,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.blobPort === "function" && AzuriteTelemetryClient.env?.blobPort() !== undefined && AzuriteTelemetryClient.env?.blobPort() !== 10000)
-    // {
-    //   parameters += "blobPort,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.queuePort === "function" && AzuriteTelemetryClient.env?.queuePort() !== undefined && AzuriteTelemetryClient.env?.queuePort() !== 10001)
-    // {
-    //   parameters += "queuePort,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.tablePort === "function" && AzuriteTelemetryClient.env?.tablePort() !== undefined && AzuriteTelemetryClient.env?.tablePort() !== 10002)
-    // {
-    //   parameters += "tablePort,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.blobKeepAliveTimeout === "function" && AzuriteTelemetryClient.env?.blobKeepAliveTimeout() !== undefined && AzuriteTelemetryClient.env?.blobKeepAliveTimeout() !== 5)
-    // {
-    //   parameters += "blobKeepAliveTimeout,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.queueKeepAliveTimeout === "function" && AzuriteTelemetryClient.env?.queueKeepAliveTimeout() !== undefined && AzuriteTelemetryClient.env?.queueKeepAliveTimeout() !== 5)
-    // {
-    //   parameters += "queueKeepAliveTimeout,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.tableKeepAliveTimeout === "function" && AzuriteTelemetryClient.env?.tableKeepAliveTimeout() !== undefined && AzuriteTelemetryClient.env?.tableKeepAliveTimeout() !== 5)
-    // {
-    //   parameters += "tableKeepAliveTimeout,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.location === "function" && (await AzuriteTelemetryClient.env?.location()) !== undefined)
-    // {
-    //   parameters += "location,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.silent === "function" && AzuriteTelemetryClient.env?.silent())
-    // {
-    //   parameters += "silent,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.loose === "function" && AzuriteTelemetryClient.env?.loose())
-    // {
-    //   parameters += "loose,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.skipApiVersionCheck === "function" && AzuriteTelemetryClient.env?.skipApiVersionCheck())
-    // {
-    //   parameters += "skipApiVersionCheck,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.disableProductStyleUrl === "function" && AzuriteTelemetryClient.env?.disableProductStyleUrl())
-    // {
-    //   parameters += "disableProductStyleUrl,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.cert === "function" && AzuriteTelemetryClient.env?.cert() !== undefined)
-    // {
-    //   parameters += "cert,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.key === "function" && AzuriteTelemetryClient.env?.key() !== undefined)
-    // {
-    //   parameters += "key,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.pwd === "function" && AzuriteTelemetryClient.env?.pwd() !== undefined)
-    // {
-    //   parameters += "pwd,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.oauth === "function" && AzuriteTelemetryClient.env?.oauth() !== undefined)
-    // {
-    //   parameters += "oauth,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.inMemoryPersistence === "function" && AzuriteTelemetryClient.env?.inMemoryPersistence())
-    // {
-    //   parameters += "inMemoryPersistence,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.extentMemoryLimit === "function" && AzuriteTelemetryClient.env?.extentMemoryLimit() !== undefined)
-    // {
-    //   parameters += "extentMemoryLimit,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.disableTelemetry === "function" && AzuriteTelemetryClient.env?.disableTelemetry())
-    // {
-    //   parameters += "disableTelemetry,";
-    // }
-    // if (typeof AzuriteTelemetryClient.env?.debug === "function" && (await AzuriteTelemetryClient.env?.debug()) !== undefined)
-    // {
-    //   parameters += "debug,";
-    // }
+    
     return parameters.endsWith(",") ? parameters.substring(0, parameters.length - 1) : parameters;
   }
 }

@@ -33,6 +33,7 @@
     - [OAuth Configuration](#oauth-configuration)
     - [Skip API Version Check](#skip-api-version-check)
     - [Disable Product Style Url](#disable-product-style-url)
+    - [Disable Telemetry Collection](#disable-telemetry-collection)
     - [Use in-memory storage](#use-in-memory-storage)
     - [Command Line Options Differences between Azurite V2](#command-line-options-differences-between-azurite-v2)
   - [Supported Environment Variable Options](#supported-environment-variable-options)
