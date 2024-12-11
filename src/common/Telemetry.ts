@@ -23,7 +23,7 @@ export class AzuriteTelemetryClient {
   private static location: string;
   private static configFileName = "AzuriteConfig";
   private static _totalIngressSize: number = 0;
-  //private static _totalEgressSize: number = 0;
+  private static _totalEgressSize: number = 0;
   private static _totalBlobRequestCount: number = 0;
   private static _totalQueueRequestCount: number = 0;
   private static _totalTableRequestCount: number = 0;
@@ -32,8 +32,6 @@ export class AzuriteTelemetryClient {
   private static instanceID = "";
   private static initialized = false;
   private static env: any = undefined;
-  public static envAccountIsSet = false;
-  public static envDBIsSet = false;
   public static isVSC = false;
 
   // Debug options
@@ -174,15 +172,29 @@ export class AzuriteTelemetryClient {
           sessionID: AzuriteTelemetryClient.sessionID,
           ReqNo:totalReqs,
         };
-        // Can't collect egress not since responds normally don't have "content-length" header even has body. So only collect ingress now.
-        if (context.request?.getHeader("content-length") !== undefined)
-        {
-          const contentLength = context.request?.getHeader("content-length");
-          if (contentLength && parseInt(contentLength)) {
-            requestProperties["requestContentSize"] = contentLength;
-            this._totalIngressSize += parseInt(contentLength);
+
+        const ingress = context.request?.getHeader("content-length");
+        if (ingress !== undefined)
+          {
+            if (ingress && parseInt(ingress)) {
+              requestProperties["ingress"] = ingress;
+              this._totalIngressSize += parseInt(ingress);
+            }
           }
-        }
+
+          // When body is xml or json, "content-length" header won't return even has body, so currently can't be caculated into egress in telemetry.
+          // Head request don't has body but can has "content-length" header, like in GetBlobProperties "content-length" header means the blob length but not body length
+          if (context.request?.getMethod() !== "HEAD")
+          {
+            const egress = context.response?.getHeader("content-length");
+            if (egress !== undefined)
+            {
+              if (egress && parseInt(egress)) {
+                requestProperties["egress"] = egress;
+                this._totalEgressSize += parseInt(egress);
+              }
+            }
+          }
 
         AzuriteTelemetryClient.requestClient.trackRequest(
           {
@@ -334,7 +346,8 @@ export class AzuriteTelemetryClient {
             blobRequest: AzuriteTelemetryClient._totalBlobRequestCount,
             queueRequest: AzuriteTelemetryClient._totalQueueRequestCount,
             tableRequest: AzuriteTelemetryClient._totalTableRequestCount,
-            totalIngress: this._totalIngressSize,
+            totalIngress: AzuriteTelemetryClient._totalIngressSize,
+            totalEgress: AzuriteTelemetryClient._totalEgressSize,
           }
         });
       }
@@ -426,11 +439,11 @@ export class AzuriteTelemetryClient {
 
   private static async GetAllParameterString(): Promise<string> {
     let parameters = "";
-    if (this.envAccountIsSet)
+    if (process.env.AZURITE_ACCOUNTS)
     {
       parameters += "AZURITE_ACCOUNTS,";
     }
-    if (this.envDBIsSet)
+    if (process.env.AZURITE_DB)
     {
       parameters += "AZURITE_DB,";
     }

@@ -1,4 +1,3 @@
-import { AzuriteTelemetryClient } from "../../../common/Telemetry";
 import Context from "../Context";
 import MiddlewareError from "../errors/MiddlewareError";
 import IRequest from "../IRequest";
@@ -130,7 +129,6 @@ export default function errorMiddleware(
       context.contextID
     );
   }
-  AzuriteTelemetryClient.TraceRequest(context) ;
 
   next();
 }
