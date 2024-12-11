@@ -43,18 +43,16 @@ WORKDIR c:\\azurite
 # Default Workspace Volume
 VOLUME [ "c:/data" ]
 
-COPY package*.json LICENSE NOTICE.txt ./
+COPY --chown=ContainerUser package*.json LICENSE NOTICE.txt ./
 
-COPY --from=builder c:/azurite/dist/ dist/
+COPY --chown=ContainerUser --from=builder c:/azurite/dist/ dist/
 
-USER ContainerAdministrator
 RUN npm pkg set scripts.prepare="echo no-prepare"
 
 RUN npm ci --unsafe-perm
 
 RUN npm install -g --unsafe-perm --loglevel verbose
 
-USER ContainerUser
 # Blob Storage Port
 EXPOSE 10000
 # Queue Storage Port
