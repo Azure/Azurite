@@ -1,4 +1,3 @@
-import { AzuriteTelemetryClient } from "../../../common/Telemetry";
 import Context from "../Context";
 import IResponse from "../IResponse";
 import ILogger from "../utils/ILogger";
@@ -28,7 +27,6 @@ export default function endMiddleware(
     )}`,
     context.contextID
   );
-  AzuriteTelemetryClient.TraceRequest(context);
 
   res.getBodyStream().end();
 }
