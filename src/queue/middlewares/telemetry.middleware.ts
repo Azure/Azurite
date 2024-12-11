@@ -10,13 +10,11 @@ import ExpressRequestAdapter from '../generated/ExpressRequestAdapter';
 import ExpressResponseAdapter from '../generated/ExpressResponseAdapter';
 
 /**
- * End middleware is used to send out final HTTP response.
+ * TelemetryMiddleware is used to send telemetry for requests.
  *
  * @export
  * @param {Context} context
- * @param {Request} req An express compatible Request object
- * @param {Response} res An express compatible Response object
- * @param {ILogger} logger A valid logger
+ * @param {NextFunction} next An express middleware next callback
  */
 function telemetryMiddleware(
   context: Context,

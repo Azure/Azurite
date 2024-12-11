@@ -117,10 +117,6 @@ args
 export default class Environment implements IEnvironment {
   private flags = args.parse(process.argv);
 
-  //public ToString(): string | undefined {
-  //  return Object.getOwnPropertyNames(this.flags).join(", ");
-  //}
-
   public blobHost(): string | undefined {
     return this.flags.blobHost;
   }
