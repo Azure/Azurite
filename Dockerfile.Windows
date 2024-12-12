@@ -25,7 +25,7 @@ COPY *.json LICENSE NOTICE.txt ./
 # Copy the source code and build the app
 COPY src ./src
 COPY tests ./tests
-RUN  npm ci --unsafe-perm
+RUN npm ci --unsafe-perm
 RUN npm run build && \
   npm install -g --unsafe-perm  --loglevel verbose
 
@@ -43,9 +43,11 @@ WORKDIR c:\\azurite
 # Default Workspace Volume
 VOLUME [ "c:/data" ]
 
-COPY --chown=ContainerUser package*.json LICENSE NOTICE.txt ./
+COPY package*.json LICENSE NOTICE.txt ./
 
-COPY --chown=ContainerUser --from=builder c:/azurite/dist/ dist/
+COPY --from=builder c:/azurite/dist/ dist/
+
+USER ContainerAdministrator
 
 RUN npm pkg set scripts.prepare="echo no-prepare"
 
