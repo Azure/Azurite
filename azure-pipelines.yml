@@ -548,6 +548,29 @@ jobs:
         workingDirectory: "./"
         displayName: "Validate docker image"
 
+  - job: dockerwindows
+    displayName: Docker Windows Build
+    pool:
+      vmImage: "windows-latest"
+    steps:
+      - script: |
+          npm ci --legacy-peer-deps
+        workingDirectory: "./"
+        displayName: "npm ci --legacy-peer-deps"
+
+      - script: |
+          npm run docker:build-windows
+        workingDirectory: "./"
+        displayName: "Build docker image"
+
+      - script: |
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest "cmd /s /c azurite" -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest "cmd /s /c azurite-blob" -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest "cmd /s /c azurite-queue" -v
+          docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest "cmd /s /c azurite-table" -v
+        workingDirectory: "./"
+        displayName: "Validate docker image"
+
   - job: governance
     displayName: Component Governance Component Detection
     pool:
