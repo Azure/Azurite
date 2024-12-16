@@ -66,7 +66,7 @@ describe("ServiceAPIs", () => {
       await serviceClient.getUserDelegationKey(startTime, expiryTime);
       assert.fail("Should fail to invoke getUserDelegationKey with account key credentials")
     } catch (error) {
-      assert.strictEqual((error as any).details.AuthenticationErrorDetail, "Only authentication scheme Bearer is supported");
+      assert.strictEqual((error as any).details.authenticationErrorDetail, "Only authentication scheme Bearer is supported");
     }
   });
 
@@ -77,9 +77,7 @@ describe("ServiceAPIs", () => {
     const sasTokenExpiry = new Date();
     sasTokenExpiry.setDate(sasTokenExpiry.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const sharedKeyCredential = serviceClient.credential as StorageSharedKeyCredential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -107,7 +105,7 @@ describe("ServiceAPIs", () => {
       await serviceClientWithSAS.getUserDelegationKey(skStart, skExpiry);
       assert.fail("Should fail to invoke getUserDelegationKey with SAS token credentials")
     } catch (error) {
-      assert.strictEqual((error as any).details.AuthenticationErrorDetail, "Only authentication scheme Bearer is supported");
+      assert.strictEqual((error as any).details.authenticationErrorDetail, "Only authentication scheme Bearer is supported");
     }
   });
 

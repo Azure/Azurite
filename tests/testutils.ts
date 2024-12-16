@@ -145,7 +145,7 @@ export async function createRandomLocalFile(
 
     ws.on("open", () => {
       // tslint:disable-next-line:no-empty
-      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) {}
+      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) { }
       if (offsetInMB >= blockNumber) {
         ws.end();
       }
@@ -153,7 +153,7 @@ export async function createRandomLocalFile(
 
     ws.on("drain", () => {
       // tslint:disable-next-line:no-empty
-      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) {}
+      while (offsetInMB++ < blockNumber && ws.write(randomValueHex())) { }
       if (offsetInMB >= blockNumber) {
         ws.end();
       }
@@ -250,4 +250,14 @@ export function overrideRequest(
       }
     );
   };
+}
+
+export function getResponseHeader(res: any, headerName: string): string | undefined {
+  return res._response.headers.get(headerName);
+  if (res._response.headers._headersMap[headerName] === undefined) {
+    return undefined;
+  }
+  else {
+    return res._response.headers._headersMap[headerName].value;
+  }
 }
