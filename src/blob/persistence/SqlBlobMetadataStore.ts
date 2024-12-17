@@ -71,6 +71,7 @@ import PageWithDelimiter from "./PageWithDelimiter";
 import FilterBlobPage from "./FilterBlobPage";
 import { getBlobTagsCount, getTagsFromString, toBlobTags } from "../utils/utils";
 import { generateQueryBlobWithTagsWhereFunction } from "./QueryInterpreter/QueryInterpreter";
+import { NotImplementedinSQLError } from "../errors/NotImplementedError";
 
 // tslint:disable: max-classes-per-file
 class ServicesModel extends Model { }
@@ -1831,7 +1832,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
   }
 
   public undeleteBlob(): Promise<void> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedinSQLError();
   }
 
   public async createSnapshot(
@@ -2756,7 +2757,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     copySource: string,
     metadata: Models.BlobMetadata | undefined
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedinSQLError(context.contextId);
   }
 
   public setTier(
@@ -2866,7 +2867,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedinSQLError(context.contextId);
   }
 
   public clearRange(
@@ -2877,7 +2878,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedinSQLError(context.contextId);
   }
 
   public getPageRanges(
@@ -2889,7 +2890,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<GetPageRangeResponse> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedinSQLError(context.contextId);
   }
 
   public resizePageBlob(
@@ -2901,7 +2902,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     leaseAccessConditions?: Models.LeaseAccessConditions,
     modifiedAccessConditions?: Models.ModifiedAccessConditions
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedinSQLError(context.contextId);
   }
 
   public updateSequenceNumber(
@@ -2912,7 +2913,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     sequenceNumberAction: Models.SequenceNumberActionType,
     blobSequenceNumber: number | undefined
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedinSQLError(context.contextId);
   }
 
   public appendBlock(
@@ -2924,7 +2925,7 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
       | Models.AppendPositionAccessConditions
       | undefined
   ): Promise<Models.BlobPropertiesInternal> {
-    throw new Error("Method not implemented.");
+    throw new NotImplementedinSQLError(context.contextId);
   }
 
   public async listUncommittedBlockPersistencyChunks(
