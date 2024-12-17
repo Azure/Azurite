@@ -8,8 +8,8 @@ General:
 
 - Changed the responds status code of not implemented API from 500 to 501.
 - Added support for docker image based on Windows Base Image.
-- Add telemetry data collection to help improve the product. By default telemetry data will be collected. Add `--disableTelemetry` options disable telemetry data collection of this Azurite execution.
-- Updated Node and Alpine versions to account for EOL and CVE concerns
+- Added telemetry data collection to help improve the product. By default telemetry data will be collected. Add `--disableTelemetry` options disable telemetry data collection of this Azurite execution.
+- Updated Node and Alpine versions to account for EOL and CVE concerns.
 
 Blob:
 
