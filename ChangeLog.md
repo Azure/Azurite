@@ -274,6 +274,7 @@ General:
 - Bump up service API version to 2021-10-04
 - Added support for docker image on arm64 architecture.
 - Updated Readme by adding account key must be base64 encoded string.
+- Add script to build ARM64 docker image
 
 Table:
 
