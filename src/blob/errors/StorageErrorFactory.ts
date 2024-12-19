@@ -199,12 +199,14 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getInvalidPageRange2(contextID: string): StorageError {
+  public static getInvalidPageRange2(contextID: string, additionalHeaders?: { [key: string]: string }): StorageError {
     return new StorageError(
       416,
       "InvalidRange",
       "The range specified is invalid for the current size of the resource.",
-      contextID
+      contextID,
+      {},
+      additionalHeaders
     );
   }
 
