@@ -8,6 +8,10 @@ Blob:
 
 - GetBlob on Archive tier blobs now fails as expected.
 
+Table:
+
+- Fixed "Unexpected EOF" error when batch InsertReplace entities with Go SDK (issue #2519)
+
 ## 2024.10 Version 3.33.0
 
 General:
