@@ -12,6 +12,8 @@ RUN del Node.zip
 
 ENV PATH="%path%;C:\Windows\System32;C:\Node\node-v20.0.0-win-x64"
 
+ENTRYPOINT "cmd.exe /S /C"
+
 #
 # Builder
 #
@@ -63,5 +65,7 @@ EXPOSE 10000
 EXPOSE 10001
 # Table Storage Port
 EXPOSE 10002
+
+WORKDIR C:\\Node\\node-v20.0.0-win-x64\\
 
 CMD "azurite -l c:/data --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0"
