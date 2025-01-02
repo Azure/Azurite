@@ -10,9 +10,27 @@ import StorageError from "./StorageError";
 export default class NotImplementedError extends StorageError {
   public constructor(requestID: string = "") {
     super(
-      500,
+      501,
       "APINotImplemented",
       "Current API is not implemented yet. Please vote your wanted features to https://github.com/azure/azurite/issues",
+      requestID
+    );
+  }
+}
+
+/**
+ * Create customized error types by inheriting ServerError
+ *
+ * @export
+ * @class UnimplementedError
+ * @extends {StorageError}
+ */
+export class NotImplementedinSQLError extends StorageError {
+  public constructor(requestID: string = "") {
+    super(
+      501,
+      "APINotImplemented",
+      "Current API is not implemented yet when use a SQL database based metadata storage. Please vote your wanted features to https://github.com/azure/azurite/issues",
       requestID
     );
   }

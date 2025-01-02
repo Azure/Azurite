@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+General:
+
+- Changed the responds status code of not implemented API from 500 to 501.
+
 Blob:
 
 - GetBlob on Archive tier blobs now fails as expected.
