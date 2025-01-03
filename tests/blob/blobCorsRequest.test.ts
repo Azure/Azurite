@@ -11,6 +11,7 @@ import BlobTestServerFactory from "../BlobTestServerFactory";
 import {
   EMULATOR_ACCOUNT_KEY,
   EMULATOR_ACCOUNT_NAME,
+  getResponseHeader,
   sleep
 } from "../testutils";
 import OPTIONSRequestPolicyFactory from "./RequestPolicy/OPTIONSRequestPolicyFactory";
@@ -629,9 +630,9 @@ describe("Blob Cors requests test", () => {
 
     const res: any = await serviceClientWithOrigin.getProperties();
 
-    assert.ok(res["access-control-allow-origin"] === undefined);
-    assert.ok(res["access-control-expose-headers"] === undefined);
-    assert.ok(res.vary === undefined);
+    assert.ok(getResponseHeader(res, "access-control-allow-origin") === undefined);
+    assert.ok(getResponseHeader(res, "access-control-expose-headers") === undefined);
+    assert.ok(getResponseHeader(res, "vary") === undefined);
   });
 
   it("Service with mismatching cors rules should response header Vary @loki @sql", async () => {
@@ -667,10 +668,10 @@ describe("Blob Cors requests test", () => {
     const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
     let res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res.vary !== undefined);
+    assert.ok(getResponseHeader(res, "vary") !== undefined);
 
     res = await serviceClient.getProperties();
-    assert.ok(res.vary === undefined);
+    assert.ok(getResponseHeader(res, "vary") === undefined);
   });
 
   it("Request Match rule exists that allows all origins (*) @loki @sql", async () => {
@@ -706,14 +707,14 @@ describe("Blob Cors requests test", () => {
     const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
     let res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res["access-control-allow-origin"] === "*");
-    assert.ok(res.vary === undefined);
-    assert.ok(res["access-control-expose-headers"] !== undefined);
+    assert.ok(getResponseHeader(res, "access-control-allow-origin") === "*");
+    assert.ok(getResponseHeader(res, "vary") === undefined);
+    assert.ok(getResponseHeader(res, "access-control-expose-headers") !== undefined);
 
     res = await serviceClient.getProperties();
-    assert.ok(res["access-control-allow-origin"] === undefined);
-    assert.ok(res.vary === undefined);
-    assert.ok(res["access-control-expose-headers"] === undefined);
+    assert.ok(getResponseHeader(res, "access-control-allow-origin") === undefined);
+    assert.ok(getResponseHeader(res, "vary") === undefined);
+    assert.ok(getResponseHeader(res, "access-control-expose-headers") === undefined);
   });
 
   it("Request Match rule exists for exact origin @loki @sql", async () => {
@@ -749,9 +750,9 @@ describe("Blob Cors requests test", () => {
     const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
     const res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res["access-control-allow-origin"] === origin);
-    assert.ok(res.vary !== undefined);
-    assert.ok(res["access-control-expose-headers"] !== undefined);
+    assert.ok(getResponseHeader(res, "access-control-allow-origin") === origin);
+    assert.ok(getResponseHeader(res, "vary") !== undefined);
+    assert.ok(getResponseHeader(res, "access-control-expose-headers") !== undefined);
   });
 
   it("Requests with error response should apply for CORS @loki @sql", async () => {
@@ -793,13 +794,11 @@ describe("Blob Cors requests test", () => {
       await containerClientWithOrigin.getProperties();
     } catch (err) {
       assert.ok(
-        err.response.headers._headersMap["access-control-allow-origin"]
-          .value === origin
+        err.response.headers.get("access-control-allow-origin") === origin
       );
-      assert.ok(err.response.headers._headersMap.vary !== undefined);
+      assert.ok(err.response.headers.get("vary") !== undefined);
       assert.ok(
-        err.response.headers._headersMap["access-control-expose-headers"] !==
-          undefined
+        err.response.headers.get("access-control-expose-headers") !== undefined
       );
     }
   });
@@ -846,8 +845,8 @@ describe("Blob Cors requests test", () => {
     const serviceClientWithOrigin = new BlobServiceClient(baseURL, pipeline);
 
     const res: any = await serviceClientWithOrigin.getProperties();
-    assert.ok(res["access-control-allow-origin"] === origin);
-    assert.ok(res.vary !== undefined);
-    assert.ok(res["access-control-expose-headers"] !== undefined);
+    assert.ok(getResponseHeader(res, "access-control-allow-origin") === origin);
+    assert.ok(getResponseHeader(res, "vary") !== undefined);
+    assert.ok(getResponseHeader(res, "access-control-expose-headers") !== undefined);
   });
 });
