@@ -19,6 +19,57 @@ Table:
 
 ## 2024.10 Version 3.33.0
 
+General:
+
+- Bump up service API version to 2025-01-05
+
+Blob:
+
+- Added support for filtering blob by tags.
+- Fixed an issue where all blob APIs allowed metadata names which were not valid C# identifiers.
+- Fixed always including metadata on blob list even when not requested
+
+## 2024.08 Version 3.32.0
+
+General:
+
+- Bump mysql2 to resolve to 3.10.1 for security patches
+- Fixed an issue where premature client disconnections led to all following requests failing with a 500 error. (issue #1346)
+- Bump up service API version to 2024-11-04
+
+Blob:
+
+- Fixed issue of download 0 size blob with range > 0 should report error. (issue #2410)
+- Fixed issue of download a blob range without header x-ms-range-get-content-md5, should not return content-md5. (issue #2409)
+- Fixed issue of list container without include=metadata should not clear container metadata on server. (issue #2416)
+- Supported x-ms-copy-source-tag-option in copy blob from Uri. (issue #2398)
+- Added blobKeepAliveTimeout option (issue #2053)
+
+Table:
+
+- Added tableKeepAliveTimeout option (issue #2053)
+
+Queue:
+
+- Added queueKeepAliveTimeout option (issue #2053)
+
+## 2024.06 Version 3.31.0
+
+General:
+
+- Bump up service API version to 2024-08-04
+
+Blob:
+
+- Fix issue of not refreshing lease state within block blob/append blob upload operation. (issue #2352)
+
+## 2024.04 Version 3.30.0
+
+General:
+
+- Bump up service API version to 2024-05-04
+- Fixed issue of failure when connecting to mssql with docker image or exe.
+
 Blob:
 
 - Fixed issue of setting blob tag should not update Blob Etag and LastModified. (issue #2327)
