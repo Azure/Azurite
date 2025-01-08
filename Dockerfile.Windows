@@ -1,18 +1,18 @@
 #
 # Base-Node
 #
-FROM mcr.microsoft.com/windows/servercore:ltsc2022-amd64 AS nodewindows
+FROM mcr.microsoft.com/windows/servercore:ltsc2025-amd64 AS nodewindows
 # Install dependencies first
 RUN mkdir c:\node
 WORKDIR c:\\node
 
-RUN curl.exe -o Node.zip https://nodejs.org/dist/v20.0.0/node-v20.0.0-win-x64.zip
+RUN curl.exe -o Node.zip https://nodejs.org/dist/v22.12.0/node-v22.12.0-win-x64.zip
 RUN tar -xf Node.zip -C c:\node
 RUN del Node.zip
 
-ENV PATH="%path%;C:\Windows\System32;C:\Node\node-v20.0.0-win-x64"
-
-ENTRYPOINT "cmd.exe /S /C"
+USER ContainerAdministrator
+RUN setx /M PATH "%PATH%;C:\Node\node-v22.12.0-win-x64"
+USER ContainerUser
 
 #
 # Builder
@@ -51,7 +51,9 @@ COPY NOTICE.txt ./
 
 COPY --from=builder c:/azurite/dist/ dist/
 
-RUN takeown /F . /d Y /r
+USER ContainerAdministrator
+RUN icacls c:\azurite /grant "Authenticated Users":(OI)(CI)M
+USER ContainerUser
 
 RUN npm pkg set scripts.prepare="echo no-prepare"
 
@@ -66,6 +68,8 @@ EXPOSE 10001
 # Table Storage Port
 EXPOSE 10002
 
-WORKDIR C:\\Node\\node-v20.0.0-win-x64\\
+ENTRYPOINT "cmd.exe /S /C"
 
-CMD "azurite -l c:/data --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0"
+WORKDIR C:\\Node\\node-v22.12.0-win-x64\\
+
+CMD azurite -l c:/data --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0
