@@ -1,7 +1,7 @@
 #
 # Base-Node
 #
-FROM mcr.microsoft.com/windows/servercore:ltsc2025-amd64 AS nodewindows
+FROM mcr.microsoft.com/windows/servercore:ltsc2022-amd64 AS nodewindows
 # Install dependencies first
 RUN mkdir c:\node
 WORKDIR c:\\node
