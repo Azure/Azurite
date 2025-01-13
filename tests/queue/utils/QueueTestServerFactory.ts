@@ -1,6 +1,7 @@
 import { StoreDestinationArray } from "../../../src/common/persistence/IExtentStore"
 import QueueConfiguration from "../../../src/queue/QueueConfiguration"
 import QueueServer from "../../../src/queue/QueueServer"
+import { DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT } from "../../../src/queue/utils/constants";
 
 export interface IQueueTestServerFactoryParams {
   metadataDBPath: string
@@ -27,6 +28,7 @@ export default class QueueTestServerFactory {
     const config = new QueueConfiguration(
       host,
       port,
+      DEFAULT_QUEUE_KEEP_ALIVE_TIMEOUT,
       params.metadataDBPath,
       params.extentDBPath,
       params.persistencePathArray,

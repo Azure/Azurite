@@ -80,6 +80,10 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       options.modifiedAccessConditions
     );
 
+    if (blob.properties.accessTier === Models.AccessTier.Archive) {
+      throw StorageErrorFactory.getBlobArchived(context.contextId!);
+    }
+
     if (blob.properties.blobType === Models.BlobType.BlockBlob) {
       return this.downloadBlockBlobOrAppendBlob(options, context, blob);
     } else if (blob.properties.blobType === Models.BlobType.PageBlob) {
