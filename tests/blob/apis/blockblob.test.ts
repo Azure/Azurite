@@ -427,6 +427,7 @@ describe("BlockBlobAPIs", () => {
       await blockBlobClient.download(0, 3);
     } catch (error) {
       assert.deepStrictEqual(error.statusCode, 416);
+      assert.deepStrictEqual(error.response.headers.get("content-range"), 'bytes */0')
       return;
     }
     assert.fail();

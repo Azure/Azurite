@@ -18,6 +18,7 @@ import {
   getUniqueName,
   sleep
 } from "../../testutils";
+import RangePolicyFactory from "../RequestPolicy/RangePolicyFactory";
 
 // Set true to enable debug log
 configLogger(false);
@@ -316,6 +317,62 @@ describe("BlobAPIs", () => {
       return;
     }
     assert.fail();
+  });
+
+  it("download invalid range @loki @sql", async () => {
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(
+      new RangePolicyFactory("bytes=0--1")
+    );
+    const serviceClient = new BlobServiceClient(baseURL, pipeline);
+    const containerClient = serviceClient.getContainerClient(containerName);
+    const blobClient = containerClient.getBlobClient(blobName);
+
+    const result = await blobClient.download(0);
+    assert.deepStrictEqual(await bodyToString(result, content.length), content);
+    assert.equal(result.contentRange, undefined);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
+  });
+
+  it("download partial range (via custom policy) @loki @sql", async () => {
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(
+      new RangePolicyFactory("bytes=0-4")
+    );
+    const serviceClient = new BlobServiceClient(baseURL, pipeline);
+    const containerClient = serviceClient.getContainerClient(containerName);
+    const blobClient = containerClient.getBlobClient(blobName);
+
+    const result = await blobClient.download(0);
+    assert.deepStrictEqual(await bodyToString(result, content.length), content.substring(0, 5));
+    assert.equal(result.contentRange, `bytes 0-4/${content.length}`);
+    assert.equal(
+      result._response.request.headers.get("x-ms-client-request-id"),
+      result.clientRequestId
+    );
   });
 
   it("get properties response should not set content-type @loki @sql", async () => {

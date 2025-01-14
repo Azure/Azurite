@@ -199,13 +199,18 @@ export default class StorageErrorFactory {
     );
   }
 
-  public static getInvalidPageRange2(contextID: string): StorageError {
-    return new StorageError(
+  public static getInvalidPageRange2(contextID: string, contentRange?: string): StorageError {
+    let returnValue = new StorageError(
       416,
       "InvalidRange",
       "The range specified is invalid for the current size of the resource.",
       contextID
-    );
+    ); 
+    if(contentRange)
+    {
+      returnValue.headers!["Content-Range"] = contentRange;
+    }
+    return returnValue;
   }
 
   public static getInvalidLeaseDuration(
