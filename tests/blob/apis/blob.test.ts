@@ -18,6 +18,7 @@ import {
   getUniqueName,
   sleep
 } from "../../testutils";
+import CustomHeaderPolicyFactory from "../RequestPolicy/CustomHeaderPolicyFactory";
 import RangePolicyFactory from "../RequestPolicy/RangePolicyFactory";
 
 // Set true to enable debug log
@@ -2525,6 +2526,35 @@ describe("BlobAPIs", () => {
 
     const result = (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
     assert.deepStrictEqual(result, tags);
+  });
+
+  it("upload invalid x-ms-blob-content-md5 @loki @sql", async () => {
+    const pipeline = newPipeline(
+      new StorageSharedKeyCredential(
+        EMULATOR_ACCOUNT_NAME,
+        EMULATOR_ACCOUNT_KEY
+      ),
+      {
+        retryOptions: { maxTries: 1 },
+        // Make sure socket is closed once the operation is done.
+        keepAliveOptions: { enable: false }
+      }
+    );
+    pipeline.factories.unshift(
+      new CustomHeaderPolicyFactory("x-ms-blob-content-md5", "invalid-md5")
+    );
+    const serviceClient = new BlobServiceClient(baseURL, pipeline);
+    const containerClient = serviceClient.getContainerClient(containerName);
+
+    const blobClient = containerClient.getBlockBlobClient(blobName);
+    try {
+      await blobClient.upload("hello", 5, { tier: "Hot" });
+      assert.fail("Expected MD5 error");
+    } catch (err) {
+      assert.deepStrictEqual((err as any).statusCode, 400);
+      assert.deepStrictEqual((err as any).code, 'InvalidOperation');
+      assert.deepStrictEqual((err as any).details.errorCode, 'InvalidOperation');
+    }
   });
 
   it("Acquire Lease on Breaking Lease status, if LeaseId not match, throw LeaseIdMismatchWithLease error @loki @sql", async () => {
