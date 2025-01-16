@@ -413,6 +413,19 @@ jobs:
             docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-queue -v
             docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-table -v
       
+  Azurite_Windows_Docker:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci --legacy-peer-deps
+      - run: npm run docker:build-windows
+      - name: Validate docker image
+        run: |
+            docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite -v
+            docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-blob -v
+            docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-queue -v
+            docker run xstoreazurite.azurecr.io/public/azure-storage/azurite:latest azurite-table -v
+
   Azurite_ExeTest:
     runs-on: windows-latest
     steps:

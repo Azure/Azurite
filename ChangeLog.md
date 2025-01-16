@@ -7,6 +7,7 @@
 General:
 
 - Changed the responds status code of not implemented API from 500 to 501.
+- Added support for docker image based on Windows Base Image.
 
 Blob:
 
