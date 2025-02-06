@@ -73,9 +73,7 @@ describe("Blob batch API", () => {
   it("SubmitBatch batch deleting @loki @sql", async () => {
     const blobBatchClient = serviceClient.getBlobBatchClient();
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const sharedKeyCredential = serviceClient.credential as StorageSharedKeyCredential;
 
     // Submit batch request and verify response.
     const urls = blobClients.map((b) => b.url);
@@ -107,9 +105,7 @@ describe("Blob batch API", () => {
   it("SubmitBatch within container scope - batch set tier @loki @sql", async () => {
     const blobBatchClient = containerClient.getBlobBatchClient();
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const sharedKeyCredential = serviceClient.credential as StorageSharedKeyCredential;
 
     // Submit batch request and verify response.
     const urls = blobClients.map((b) => b.url);
@@ -136,9 +132,7 @@ describe("Blob batch API", () => {
   it("SubmitBatch batch set tier @loki @sql", async () => {
     const blobBatchClient = serviceClient.getBlobBatchClient();
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const sharedKeyCredential = serviceClient.credential as StorageSharedKeyCredential;
 
     // Submit batch request and verify response.
     const urls = blobClients.map((b) => b.url);
@@ -173,9 +167,7 @@ describe("Blob batch API", () => {
     const blobclientsNew: BlobClient[] = [];
     blobclientsNew.push(blockBlobClientNew);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const sharedKeyCredential = serviceClient.credential as StorageSharedKeyCredential;
 
     // Submit batch request and verify response.
     const urls = blobclientsNew.map((b) => b.url);
@@ -332,9 +324,7 @@ describe("Blob batch API", () => {
   it("SubmitBatch batch with different operations @loki @sql", async () => {
     const blobBatchClient = serviceClient.getBlobBatchClient();
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sharedKeyCredential = factories[factories.length - 1];
+    const sharedKeyCredential = serviceClient.credential as StorageSharedKeyCredential;
 
     // Submit batch request and verify response.
     const urls = blobClients.map((b) => b.url);
