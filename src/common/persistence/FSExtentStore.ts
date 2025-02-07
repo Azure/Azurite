@@ -1,6 +1,5 @@
 import {
   close,
-  createReadStream,
   createWriteStream,
   fdatasync,
   truncate,
@@ -31,6 +30,7 @@ import IExtentStore, {
 } from "./IExtentStore";
 import IOperationQueue from "./IOperationQueue";
 import OperationQueue from "./OperationQueue";
+import FileLazyReadStream from "./FileLazyReadStream";
 
 const statAsync = promisify(stat);
 const mkdirAsync = promisify(mkdir);
@@ -350,26 +350,19 @@ export default class FSExtentStore implements IExtentStore {
     const op = () =>
       new Promise<NodeJS.ReadableStream>((resolve, reject) => {
         this.logger.verbose(
-          `FSExtentStore:readExtent() Creating read stream. LocationId:${persistencyId} extentId:${
-            extentChunk.id
-          } path:${path} offset:${extentChunk.offset} count:${
-            extentChunk.count
+          `FSExtentStore:readExtent() Creating read stream. LocationId:${persistencyId} extentId:${extentChunk.id
+          } path:${path} offset:${extentChunk.offset} count:${extentChunk.count
           } end:${extentChunk.offset + extentChunk.count - 1}`,
           contextId
         );
-        const stream = createReadStream(path, {
-          start: extentChunk.offset,
-          end: extentChunk.offset + extentChunk.count - 1
-        }).on("close", () => {
-          this.logger.verbose(
-            `FSExtentStore:readExtent() Read stream closed. LocationId:${persistencyId} extentId:${
-              extentChunk.id
-            } path:${path} offset:${extentChunk.offset} count:${
-              extentChunk.count
-            } end:${extentChunk.offset + extentChunk.count - 1}`,
-            contextId
-          );
-        });
+        const stream = new FileLazyReadStream(
+          path,
+          extentChunk.offset,
+          extentChunk.offset + extentChunk.count - 1,
+          this.logger,
+          persistencyId,
+          extentChunk.id,
+          contextId);
         resolve(stream);
       });
 
