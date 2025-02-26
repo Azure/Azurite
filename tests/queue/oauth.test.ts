@@ -8,6 +8,7 @@ import { StoreDestinationArray } from "../../src/common/persistence/IExtentStore
 import { EMULATOR_ACCOUNT_KEY, generateJWTToken, getUniqueName } from "../testutils";
 import { SimpleTokenCredential } from "../simpleTokenCredential";
 import QueueTestServerFactory from "./utils/QueueTestServerFactory";
+import { AzuriteTelemetryClient } from "../../src/common/Telemetry";
 
 // Set true to enable debug log
 configLogger(false);
@@ -41,11 +42,14 @@ describe("Queue OAuth Basic", () => {
       oauth: "basic"
     })
     await server.start();
+    AzuriteTelemetryClient.init("", true, undefined);
+    await AzuriteTelemetryClient.TraceStartEvent("Queue Test");
   });
 
   after(async () => {
     await server.close();
     await server.clean();
+    AzuriteTelemetryClient.TraceStopEvent("Queue Test");
   });
 
   it(`Should work with create container @loki @sql`, async () => {

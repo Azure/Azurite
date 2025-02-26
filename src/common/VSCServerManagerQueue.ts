@@ -16,6 +16,7 @@ import VSCChannelWriteStream from "./VSCChannelWriteStream";
 import VSCEnvironment from "./VSCEnvironment";
 import VSCServerManagerBase from "./VSCServerManagerBase";
 import VSCServerManagerClosedState from "./VSCServerManagerClosedState";
+import { AzuriteTelemetryClient } from "./Telemetry";
 
 export default class VSCServerManagerBlob extends VSCServerManagerBase {
   public readonly accessChannelStream = new VSCChannelWriteStream(
@@ -51,9 +52,11 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
 
   public async startImpl(): Promise<void> {
     await this.server!.start();
+    await AzuriteTelemetryClient.TraceStartEvent("Queue-VSC");
   }
 
   public async closeImpl(): Promise<void> {
+    AzuriteTelemetryClient.TraceStopEvent("Queue-VSC");
     this.server!.close();
   }
 
@@ -72,6 +75,7 @@ export default class VSCServerManagerBlob extends VSCServerManagerBase {
       location,
       DEFAULT_QUEUE_PERSISTENCE_PATH
     );
+    AzuriteTelemetryClient.init(DEFAULT_QUEUE_PERSISTENCE_ARRAY[0].locationPath, !env.disableTelemetry(), env.workspaceConfiguration, true);
 
     // Initialize server configuration
     const config = new QueueConfiguration(

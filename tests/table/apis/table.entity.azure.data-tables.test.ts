@@ -20,6 +20,7 @@ import {
   LargeDataTablesTestEntityFactory,
   LargeTableTestEntity
 } from "../models/LargeDataTablesTestEntityFactory";
+import { AzuriteTelemetryClient } from "../../../src/common/Telemetry";
 // Set true to enable debug log
 configLogger(false);
 // For convenience, we have a switch to control the use
@@ -38,10 +39,13 @@ describe("table Entity APIs test - using Azure/data-tables", () => {
   before(async () => {
     server = createTableServerForTestHttps();
     await server.start();
+    AzuriteTelemetryClient.init("", true, undefined);
+    await AzuriteTelemetryClient.TraceStartEvent("Table Test");
   });
 
   after(async () => {
     await server.close();
+    AzuriteTelemetryClient.TraceStopEvent("Table Test");
   });
 
   it("01. Batch API should return row keys in format understood by @azure/data-tables, @loki", async () => {

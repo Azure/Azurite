@@ -5,12 +5,14 @@ import SqlBlobServer from "./SqlBlobServer";
 import BlobServer from "./BlobServer";
 import { setExtentMemoryLimit } from "../common/ConfigurationBase";
 import BlobEnvironment from "./BlobEnvironment";
+import { AzuriteTelemetryClient } from "../common/Telemetry";
 
 // tslint:disable:no-console
 
 function shutdown(server: BlobServer | SqlBlobServer) {
   const beforeCloseMessage = `Azurite Blob service is closing...`;
   const afterCloseMessage = `Azurite Blob service successfully closed`;
+  AzuriteTelemetryClient.TraceStopEvent("Blob");
 
   console.log(beforeCloseMessage);
   server.close().then(() => {
@@ -32,7 +34,8 @@ async function main() {
   // Enable debug log by default before first release for debugging purpose
   Logger.configLogger(config.enableDebugLog, config.debugLogFilePath);
 
-  setExtentMemoryLimit(new BlobEnvironment(), true);
+  let env = new BlobEnvironment();
+  setExtentMemoryLimit(env, true);
 
   // Start server
   console.log(
@@ -42,6 +45,10 @@ async function main() {
   console.log(
     `Azurite Blob service successfully listens on ${server.getHttpServerAddress()}`
   );
+  
+  const location = await env.location();
+  AzuriteTelemetryClient.init(location, !env.disableTelemetry(), env);  
+  await AzuriteTelemetryClient.TraceStartEvent("Blob");
 
   // Handle close event
   process

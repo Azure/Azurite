@@ -14,4 +14,5 @@ export default interface IBlobEnvironment {
   disableProductStyleUrl(): boolean;
   inMemoryPersistence(): boolean;
   extentMemoryLimit(): number | undefined;
+  disableTelemetry(): boolean;
 }

@@ -33,6 +33,7 @@
     - [OAuth Configuration](#oauth-configuration)
     - [Skip API Version Check](#skip-api-version-check)
     - [Disable Product Style Url](#disable-product-style-url)
+    - [Disable Telemetry Collection](#disable-telemetry-collection)
     - [Use in-memory storage](#use-in-memory-storage)
     - [Command Line Options Differences between Azurite V2](#command-line-options-differences-between-azurite-v2)
   - [Supported Environment Variable Options](#supported-environment-variable-options)
@@ -204,6 +205,7 @@ Following extension configurations are supported:
 - `azurite.disableProductStyleUrl` Force parsing storage account name from request URI path, instead of from request URI host.
 - `azurite.inMemoryPersistence` Disable persisting any data to disk. If the Azurite process is terminated, all data is lost.
 - `azurite.extentMemoryLimit` When using in-memory persistence, limit the total size of extents (blob and queue content) to a specific number of megabytes. This does not limit blob, queue, or table metadata. Defaults to 50% of total memory.
+- `azurite.disableTelemetry` Disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product.
 
 ### [DockerHub](https://hub.docker.com/_/microsoft-azure-storage-azurite)
 
@@ -236,7 +238,7 @@ docker run -p 10000:10000 -p 10001:10001 -v c:/azurite:/data mcr.microsoft.com/a
 #### Customize all Azurite V3 supported parameters for docker image
 
 ```bash
-docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --blobKeepAliveTimeout 5 --queuePort 8888 --queueHost 0.0.0.0 --queueKeepAliveTimeout 5 --tablePort 9999 --tableHost 0.0.0.0 --tableKeepAliveTimeout 5 --loose --skipApiVersionCheck --disableProductStyleUrl 
+docker run -p 7777:7777 -p 8888:8888 -p 9999:9999 -v c:/azurite:/workspace mcr.microsoft.com/azure-storage/azurite azurite -l /workspace -d /workspace/debug.log --blobPort 7777 --blobHost 0.0.0.0 --blobKeepAliveTimeout 5 --queuePort 8888 --queueHost 0.0.0.0 --queueKeepAliveTimeout 5 --tablePort 9999 --tableHost 0.0.0.0 --tableKeepAliveTimeout 5 --loose --skipApiVersionCheck --disableProductStyleUrl --disableTelemetry
 ```
 
 Above command will try to start Azurite image with configurations:
@@ -268,6 +270,8 @@ Above command will try to start Azurite image with configurations:
 `--skipApiVersionCheck` skip the request API version check.
 
 `--disableProductStyleUrl` force parsing storage account name from request URI path, instead of from request URI host.
+
+`--azurite.disableTelemetry` disable telemetry data collection of this Azurite execution. By default, Azurite will collect telemetry data to help improve the product.
 
 > If you use customized azurite parameters for docker image, `--blobHost 0.0.0.0`, `--queueHost 0.0.0.0` are required parameters.
 
@@ -440,6 +444,14 @@ Optional. When using FQDN instead of IP in request URI host, by default Azurite 
 
 ```cmd
 --disableProductStyleUrl
+```
+
+### Disable Telemetry Collection
+
+Optional. By default, Azurite will collect telemetry data to help improve the product. Disable telemetry data collection of this Azurite execution by:
+
+```cmd
+--disableTelemetry
 ```
 
 ### Use in-memory storage
@@ -989,7 +1001,7 @@ Detailed support matrix:
   - OAuth authentication
   - Shared Access Signature Account Level
   - Shared Access Signature Service Level (Not support response header override in service SAS)
-  - Container Public Access  
+  - Container Public Access
   - Blob Tags (preview)
 - Supported REST APIs
   - List Containers
