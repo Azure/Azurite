@@ -4,8 +4,11 @@
 
 ## Upcoming Release
 
+## 2025.02 Version 3.34.0
+
 General:
 
+- Bump up service API version to 2025-05-05
 - Changed the responds status code of not implemented API from 500 to 501.
 - Added support for docker image based on Windows Base Image.
 - Added telemetry data collection to help improve the product. By default telemetry data will be collected. Add `--disableTelemetry` options disable telemetry data collection of this Azurite execution.
