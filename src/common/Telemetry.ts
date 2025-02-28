@@ -97,12 +97,8 @@ export class AzuriteTelemetryClient {
 
   public static createAppInsigntClient(cloudRole:string, samplingPercentage:number|undefined, maxBatchSize:number|undefined) : TelemetryClient 
   {
-    // Xclient APP: AzuriteTelemetryProd
-    //const ConnectionString = 'InstrumentationKey=feb4ae36-1db7-4808-abaa-e0b94996d665;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/;ApplicationId=9af871a3-75b5-417c-8a2f-7f2eb1ba6a6c';
-    
-    //weiapp
-    const ConnectionString = 'InstrumentationKey=40e81e8c-36af-4cf3-b46e-a7d67ecb5628;IngestionEndpoint=https://westus-0.in.applicationinsights.azure.com/;LiveEndpoint=https://westus.livediagnostics.monitor.azure.com/;ApplicationId=edbe156f-ede6-4c39-b948-0c0c638c7004'
-    
+    const ConnectionString = 'InstrumentationKey=feb4ae36-1db7-4808-abaa-e0b94996d665;IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/;ApplicationId=9af871a3-75b5-417c-8a2f-7f2eb1ba6a6c';
+
     // disable default logging
     let appConfig = AzuriteTelemetryClient.appInsights.setup(ConnectionString);
     appConfig.setAutoCollectRequests(false)
