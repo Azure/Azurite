@@ -19,6 +19,7 @@ Blob:
 - Fixed issue of download 0 size blob with range > 0 should have header "Content-Range: bytes \*/0" in returned error. (issue #2458)
 - Aligned behavior with Azure to ignore invalid range requests for blob downloads. (issue #2458)
 - Consider both Content-MD5 and x-ms-blob-content-md5 when creating a blob.
+- Fixed issue of filtering blobs with correct multiple conditions on single tag (range queries). (issue #2514)
 
 Table:
 
