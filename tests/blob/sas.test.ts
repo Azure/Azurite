@@ -123,8 +123,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const startDate = new Date(2022, 3, 16, 14, 31, 48, 0);
     const endDate = new Date(2022, 3, 17, 14, 31, 48, 0);
 
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -182,9 +181,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -219,9 +216,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -263,9 +258,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -300,9 +293,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -337,9 +328,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -377,9 +366,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -425,9 +412,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -480,9 +465,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -527,9 +510,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -575,9 +556,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -630,9 +609,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const sas = generateAccountSASQueryParameters(
       {
@@ -681,9 +658,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -719,9 +694,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -777,9 +750,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -842,9 +813,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -890,9 +859,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -938,9 +905,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClientInvalid as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClientInvalid.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -988,9 +953,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClientSecondKey as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClientSecondKey.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1026,9 +989,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1092,9 +1053,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1161,9 +1120,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1228,9 +1185,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1294,9 +1249,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1361,9 +1314,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container-with-dash");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1432,9 +1383,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1485,9 +1434,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1532,9 +1479,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1586,9 +1531,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1631,9 +1574,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1678,9 +1619,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1732,9 +1671,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1777,9 +1714,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const storageSharedKeyCredential = factories[factories.length - 1];
+    const storageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("container");
     const containerClient = serviceClient.getContainerClient(containerName);
@@ -1845,9 +1780,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+    const sourceStorageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("con");
     const sourceContainerClient = serviceClient.getContainerClient(
@@ -2004,9 +1937,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+    const sourceStorageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("con");
     const sourceContainerClient = serviceClient.getContainerClient(
@@ -2079,9 +2010,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+    const sourceStorageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("con");
     const sourceContainerClient = serviceClient.getContainerClient(
@@ -2132,9 +2061,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const tmr = new Date();
     tmr.setDate(tmr.getDate() + 1);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+    const sourceStorageSharedKeyCredential = serviceClient.credential;
 
     const containerName = getUniqueName("con");
     const sourceContainerClient = serviceClient.getContainerClient(
@@ -2254,9 +2181,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const blockBlobClient = containerClient.getBlockBlobClient(blockBlobName);
     await blockBlobClient.upload("Hello, world", 12, { tags: tags });
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+    const sourceStorageSharedKeyCredential = serviceClient.credential as StorageSharedKeyCredential;
 
     const sasURL = generateAccountSASQueryParameters({
       expiresOn: tmr,
@@ -2298,9 +2223,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const blockBlobClient = containerClient.getBlockBlobClient(blockBlobName);
     await blockBlobClient.upload("Hello, world", 12, { tags: tags });
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+    const sourceStorageSharedKeyCredential = serviceClient.credential as StorageSharedKeyCredential;
 
     const sasURL = generateAccountSASQueryParameters({
       expiresOn: tmr,
@@ -2374,9 +2297,7 @@ describe("Shared Access Signature (SAS) authentication", () => {
     const blockBlobClient = containerClient.getBlockBlobClient(blockBlobName);
     await blockBlobClient.upload("Hello, world", 12);
 
-    // By default, credential is always the last element of pipeline factories
-    const factories = (serviceClient as any).pipeline.factories;
-    const sourceStorageSharedKeyCredential = factories[factories.length - 1];
+    const sourceStorageSharedKeyCredential = serviceClient.credential as StorageSharedKeyCredential;
 
     const sasURL = generateAccountSASQueryParameters({
       expiresOn: tmr,
