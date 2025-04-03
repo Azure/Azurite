@@ -8,7 +8,8 @@ import TableServer from "../../../src/table/TableServer";
 import {
   AzureNamedKeyCredential,
   AzureSASCredential,
-  TableClient
+  TableClient,
+  TableServiceClient
 } from "@azure/data-tables";
 import { copyFile } from "fs";
 import TableTestServerFactory, { ITableTestServerFactoryParams } from "./TableTestServerFactory";
@@ -183,7 +184,40 @@ export function createAzureDataTablesClient(
     );
   }
 }
+/**
+ * creates an Azure Data Tables client for local or service tests
+ *
+ * @export
+ * @param {boolean} local
+ * @param {string} tableName
+ * @return {*}  {TableClient}
+ */
+export function createAzureDataTableServiceClient(
+  local: boolean
+): TableServiceClient {
+  if (local) {
+    const sharedKeyCredential = new AzureNamedKeyCredential(
+      EMULATOR_ACCOUNT_NAME,
+      EMULATOR_ACCOUNT_KEY
+    );
 
+    return new TableServiceClient(
+      `https://${HOST}:${PORT}/${EMULATOR_ACCOUNT_NAME}`,
+      sharedKeyCredential
+    );
+  } else {
+    // return new TableClient(
+    //   process.env[AZURE_DATATABLES_STORAGE_STRING]! +
+    //     process.env[AZURE_DATATABLES_SAS]!,
+    //   tableName
+    // );
+
+    return new TableServiceClient(
+      process.env[AZURE_DATATABLES_STORAGE_STRING]!,
+      new AzureSASCredential(process.env[AZURE_DATATABLES_SAS]!)
+    );
+  }
+}
 /**
  * Default behavior will overwrite target.
  * This will copy the old db file with older schema on which we then
