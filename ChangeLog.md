@@ -24,6 +24,7 @@ Blob:
 Table:
 
 - Fixed "Unexpected EOF" error when batch InsertReplace entities with Go SDK (issue #2519)
+- Fixed default table HealthCheck fails with 400 bad request (issue #2450, #1573)
 
 ## 2024.10 Version 3.33.0
 
