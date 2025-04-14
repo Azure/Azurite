@@ -21,7 +21,7 @@ import {
   HOST,
   PORT
 } from "../utils/table.entity.test.utils";
-import { RestError } from "@azure/core-http";
+import { RestError } from "@azure/core-rest-pipeline";
 
 // Set true to enable debug log
 configLogger(false);
