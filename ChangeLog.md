@@ -24,6 +24,7 @@ Blob:
 Table:
 
 - Fixed "Unexpected EOF" error when batch InsertReplace entities with Go SDK (issue #2519)
+- Added support to query entity with simple filters as empty string, 'true' or 'false'. (issue #2450, #1573)
 
 ## 2024.10 Version 3.33.0
 

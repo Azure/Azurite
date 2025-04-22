@@ -47,8 +47,12 @@ export default class LokiTableStoreQueryGenerator {
   public static generateQueryTableWhereFunction(
     query: string | undefined
   ): (entity: Table) => boolean {
-    if (query === undefined) {
+    if (query === undefined || query === "" || query === "true") {
       return () => true;
+    }
+
+    if (query === "false") {
+      return () => false;
     }
 
     const queryTree = parseQuery(query);
@@ -80,8 +84,12 @@ export default class LokiTableStoreQueryGenerator {
   private static generateQueryEntityWhereFunction(
     query: string | undefined
   ): (entity: Entity) => boolean {
-    if (query === undefined || query === "") {
+    if (query === undefined || query === "" || query === "true") {
       return () => true;
+    }
+
+    if (query === "false") {
+      return () => false;
     }
 
     const queryTree = parseQuery(query);
