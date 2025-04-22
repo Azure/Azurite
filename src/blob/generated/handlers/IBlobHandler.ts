@@ -14,6 +14,7 @@ import Context from "../Context";
 
 export default interface IBlobHandler {
   download(options: Models.BlobDownloadOptionalParams, context: Context): Promise<Models.BlobDownloadResponse>;
+  cleanUpBlob(context: Context): Promise<void>;
   getProperties(options: Models.BlobGetPropertiesOptionalParams, context: Context): Promise<Models.BlobGetPropertiesResponse>;
   delete(options: Models.BlobDeleteMethodOptionalParams, context: Context): Promise<Models.BlobDeleteResponse>;
   undelete(options: Models.BlobUndeleteOptionalParams, context: Context): Promise<Models.BlobUndeleteResponse>;
