@@ -4,6 +4,16 @@
 
 ## Upcoming Release
 
+General:
+
+Blob:
+
+- Fixed issue of filtering blobs with correct multiple conditions on single tag (range queries). (issue #2514)
+
+Table:
+
+- Added support to query entity with simple filters as empty string, 'true' or 'false'. (issue #2450, #1573)
+
 ## 2025.02 Version 3.34.0
 
 General:
@@ -19,12 +29,10 @@ Blob:
 - Fixed issue of download 0 size blob with range > 0 should have header "Content-Range: bytes \*/0" in returned error. (issue #2458)
 - Aligned behavior with Azure to ignore invalid range requests for blob downloads. (issue #2458)
 - Consider both Content-MD5 and x-ms-blob-content-md5 when creating a blob.
-- Fixed issue of filtering blobs with correct multiple conditions on single tag (range queries). (issue #2514)
 
 Table:
 
 - Fixed "Unexpected EOF" error when batch InsertReplace entities with Go SDK (issue #2519)
-- Added support to query entity with simple filters as empty string, 'true' or 'false'. (issue #2450, #1573)
 
 ## 2024.10 Version 3.33.0
 
