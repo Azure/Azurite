@@ -3514,4 +3514,47 @@ export default class LokiBlobMetadataStore
     }
     return undefined;
   }
+
+  /**
+     * Seal blob.
+     *
+     * @param {Context} context
+     * @param {string} account
+     * @param {string} container
+     * @param {string} blob
+     * @returns {Promise<void>}
+     * @memberof IBlobMetadataStore
+     */
+  public async sealBlob(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string,
+    snapshot: string | undefined,
+    options: Models.AppendBlobSealOptionalParams,
+  ): Promise<Models.BlobPropertiesInternal> {
+    const coll = this.db.getCollection(this.BLOBS_COLLECTION);
+    const doc = await this.getBlob(context, account, container, blob);
+
+    validateWriteConditions(context, options.modifiedAccessConditions, doc);
+
+    if (!doc) {
+      throw StorageErrorFactory.getBlobNotFound(context.contextId);
+    }
+
+    if (doc.properties.blobType !== Models.BlobType.AppendBlob) {
+      throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId);
+    }
+
+    const lease = new BlobLeaseAdapter(doc);
+    new BlobWriteLeaseValidator(options.leaseAccessConditions).validate(lease, context);
+    new BlobWriteLeaseSyncer(doc).sync(lease);
+
+    doc.properties.isSealed = true;
+    doc.properties.lastModified = context.startTime!;
+    doc.properties.etag = newEtag();
+    coll.update(doc);
+
+    return doc.properties;
+  }
 }

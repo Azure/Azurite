@@ -1140,6 +1140,26 @@ export interface IBlobMetadataStore
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     modifiedAccessConditions?: Models.ModifiedAccessConditions,
   ): Promise<BlobTags | undefined>;
+
+  /**
+   * Seal blob.
+   *
+   * @param {Context} context
+   * @param {string} account
+   * @param {string} container
+   * @param {string} blob
+   * @returns {Promise<void>}
+   * @memberof IBlobMetadataStore
+   */
+  sealBlob(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string,
+    snapshot: string | undefined,
+    options: Models.AppendBlobSealOptionalParams,
+  ): Promise<Models.BlobPropertiesInternal>;
+
 }
 
 export default IBlobMetadataStore;
