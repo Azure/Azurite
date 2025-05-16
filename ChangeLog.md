@@ -9,6 +9,7 @@ General:
 Blob:
 
 - Fixed issue of filtering blobs with correct multiple conditions on single tag (range queries). (issue #2514)
+- Added support for sealing append blobs. (issue #810)
 
 Table:
 
