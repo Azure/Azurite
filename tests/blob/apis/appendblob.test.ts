@@ -679,4 +679,58 @@ describe("AppendBlobAPIs", () => {
       return;
     }
   });
+
+  it("Seal append blob should work @loki", async () => {
+    await appendBlobClient.create();
+    await appendBlobClient.appendBlock("abcdef", 6);
+    await appendBlobClient.seal();
+  });
+
+  it("Seal append blob not found @loki", async () => {
+    try {
+      await appendBlobClient.seal();
+    } catch (err) {
+      assert.deepStrictEqual(err.code, "BlobNotFound");
+      assert.deepStrictEqual(err.statusCode, 404);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("Seal blob wrong type @loki", async () => {
+    let blockBlobClient = blobClient.getBlockBlobClient();
+    await blockBlobClient.upload('a', 1);
+
+    try {
+      await appendBlobClient.seal();
+    } catch (err) {
+      assert.deepStrictEqual(err.code, "InvalidBlobType");
+      assert.deepStrictEqual(err.statusCode, 409);
+      return;
+    }
+    assert.fail();
+  });
+
+  it("Seal append blob get blob @loki", async () => {
+    await appendBlobClient.create();
+
+    const resultBefore = await blobClient.download(0);
+    assert.deepStrictEqual(resultBefore.isSealed, false);
+
+    await appendBlobClient.seal();
+    const resultAfter = await blobClient.download(0);
+    assert.deepStrictEqual(resultAfter.isSealed, true);
+  });
+
+  it("Seal append blob get blob properties @loki", async () => {
+    await appendBlobClient.create();
+
+    const resultBefore = await blobClient.getProperties();
+    assert.deepStrictEqual(resultBefore.isSealed, false);
+
+
+    await appendBlobClient.seal();
+    const resultAfter = await blobClient.getProperties();
+    assert.deepStrictEqual(resultAfter.isSealed, true);
+  });
 });

@@ -3546,4 +3546,74 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     }
     return undefined;
   }
+
+  /**
+   * Seal a blob.
+   * @param context 
+   * @param account 
+   * @param container 
+   * @param blob 
+   * @param snapshot 
+   * @param leaseAccessConditions
+   * @param modifiedAccessConditions
+   * @param appendPositionAccessConditions
+   * @throws StorageErrorFactory.getBlobNotFound
+   * @returns 
+   */
+  public async sealBlob(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string,
+    snapshot: string | undefined,
+    options: Models.AppendBlobSealOptionalParams,
+  ): Promise<Models.BlobPropertiesInternal> {
+    return this.sequelize.transaction(async (t) => {
+      await this.assertContainerExists(context, account, container, t);
+
+      const blobFindResult = await BlobsModel.findOne({
+        where: {
+          accountName: account,
+          containerName: container,
+          blobName: blob,
+          snapshot: snapshot === undefined ? "" : snapshot,
+          deleting: 0,
+          isCommitted: true
+        },
+        transaction: t
+      });
+
+      if (blobFindResult === null || blobFindResult === undefined) {
+        throw StorageErrorFactory.getBlobNotFound(context.contextId);
+      }
+
+      const blobModel = this.convertDbModelToBlobModel(blobFindResult);
+      if (blobModel.properties.blobType !== Models.BlobType.AppendBlob) {
+        throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId);
+      }
+
+      LeaseFactory.createLeaseState(new BlobLeaseAdapter(blobModel), context)
+        .validate(new BlobWriteLeaseValidator(options.leaseAccessConditions))
+        .sync(new BlobWriteLeaseSyncer(blobModel));
+
+      await BlobsModel.update(
+        {
+          isSealed: true,
+          ...this.convertLeaseToDbModel(new BlobLeaseAdapter(blobModel))
+        },
+        {
+          where: {
+            accountName: account,
+            containerName: container,
+            blobName: blob,
+            snapshot: snapshot === undefined ? "" : snapshot,
+            deleting: 0
+          },
+          transaction: t
+        }
+      );
+
+      return blobModel.properties;
+    });
+  }
 }
