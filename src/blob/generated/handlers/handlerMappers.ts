@@ -8,7 +8,7 @@ export interface IHandlerPath {
   arguments: string[];
 }
 
-const operationHandlerMapping: { [key: number]: IHandlerPath } = {};
+const operationHandlerMapping: {[key: number]: IHandlerPath} = {};
 
 operationHandlerMapping[Operation.Service_SetProperties] = {
   arguments: [
@@ -55,7 +55,7 @@ operationHandlerMapping[Operation.Service_GetAccountInfo] = {
 operationHandlerMapping[Operation.Service_GetAccountInfoWithHead] = {
   arguments: [],
   handler: "serviceHandler",
-  method: "getAccountInfo"
+  method: "getAccountInfoWithHead"
 };
 operationHandlerMapping[Operation.Service_SubmitBatch] = {
   arguments: [
@@ -93,7 +93,7 @@ operationHandlerMapping[Operation.Container_GetPropertiesWithHead] = {
     "options"
   ],
   handler: "containerHandler",
-  method: "getProperties"
+  method: "getPropertiesWithHead"
 };
 operationHandlerMapping[Operation.Container_Delete] = {
   arguments: [
@@ -202,16 +202,14 @@ operationHandlerMapping[Operation.Container_ListBlobHierarchySegment] = {
   method: "listBlobHierarchySegment"
 };
 operationHandlerMapping[Operation.Container_GetAccountInfo] = {
-  arguments: [
-  ],
+  arguments: [],
   handler: "containerHandler",
   method: "getAccountInfo"
 };
 operationHandlerMapping[Operation.Container_GetAccountInfoWithHead] = {
-  arguments: [
-  ],
+  arguments: [],
   handler: "containerHandler",
-  method: "getAccountInfo"
+  method: "getAccountInfoWithHead"
 };
 operationHandlerMapping[Operation.Blob_Download] = {
   arguments: [
@@ -364,16 +362,14 @@ operationHandlerMapping[Operation.Blob_SetTier] = {
   method: "setTier"
 };
 operationHandlerMapping[Operation.Blob_GetAccountInfo] = {
-  arguments: [
-  ],
+  arguments: [],
   handler: "blobHandler",
   method: "getAccountInfo"
 };
 operationHandlerMapping[Operation.Blob_GetAccountInfoWithHead] = {
-  arguments: [
-  ],
+  arguments: [],
   handler: "blobHandler",
-  method: "getAccountInfo"
+  method: "getAccountInfoWithHead"
 };
 operationHandlerMapping[Operation.Blob_Query] = {
   arguments: [
