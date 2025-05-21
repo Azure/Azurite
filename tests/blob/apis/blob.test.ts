@@ -260,8 +260,8 @@ describe("BlobAPIs", () => {
 
       const result = await blobClient.setAccessTier("Archive");
       assert.equal(
-          result._response.request.headers.get("x-ms-client-request-id"),
-          result.clientRequestId
+        result._response.request.headers.get("x-ms-client-request-id"),
+        result.clientRequestId
       );
       await blobClient.download(0);
     } catch (error) {
@@ -710,8 +710,7 @@ describe("BlobAPIs", () => {
         assert.strictEqual(error.code, 'InvalidMetadata');
         hasError = true;
       }
-      if (!hasError)
-      {
+      if (!hasError) {
         assert.fail();
       }
     }
@@ -1477,6 +1476,68 @@ describe("BlobAPIs", () => {
       result.contentDisposition,
       blobHTTPHeaders.blobContentDisposition
     );
+  });
+
+  it("Copy blob should work for page blob with seal @loki", async () => {
+    const sourceBlob = getUniqueName("blob");
+    const destBlob = getUniqueName("blob");
+
+    const sourceBlobClient = containerClient.getPageBlobClient(sourceBlob);
+    const destBlobClient = containerClient.getPageBlobClient(destBlob);
+
+    const metadata = { key: "value" };
+    const blobHTTPHeaders = {
+      blobCacheControl: "blobCacheControl",
+      blobContentDisposition: "blobContentDisposition",
+      blobContentEncoding: "blobContentEncoding",
+      blobContentLanguage: "blobContentLanguage",
+      blobContentType: "blobContentType"
+    };
+
+    const result_upload = await sourceBlobClient.create(512, {
+      metadata,
+      blobHTTPHeaders
+    });
+    assert.equal(
+      result_upload._response.request.headers.get("x-ms-client-request-id"),
+      result_upload.clientRequestId
+    );
+
+    const result_startcopy = await destBlobClient.beginCopyFromURL(
+      sourceBlobClient.url, {
+      sealBlob: true,
+    }
+    );
+    assert.equal(
+      result_startcopy
+        .getResult()!
+        ._response.request.headers.get("x-ms-client-request-id"),
+      result_startcopy.getResult()!._response.request.requestId
+    );
+
+    const result = await destBlobClient.getProperties();
+    assert.ok(result.date);
+    assert.deepStrictEqual(result.blobType, "PageBlob");
+    assert.ok(result.lastModified);
+    assert.deepStrictEqual(result.metadata, metadata);
+    assert.deepStrictEqual(
+      result.cacheControl,
+      blobHTTPHeaders.blobCacheControl
+    );
+    assert.deepStrictEqual(result.contentType, blobHTTPHeaders.blobContentType);
+    assert.deepStrictEqual(
+      result.contentEncoding,
+      blobHTTPHeaders.blobContentEncoding
+    );
+    assert.deepStrictEqual(
+      result.contentLanguage,
+      blobHTTPHeaders.blobContentLanguage
+    );
+    assert.deepStrictEqual(
+      result.contentDisposition,
+      blobHTTPHeaders.blobContentDisposition
+    );
+    assert.deepStrictEqual(result.isSealed, true);
   });
 
   it("Copy blob should not work for page blob and set tier @loki", async () => {

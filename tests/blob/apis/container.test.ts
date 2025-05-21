@@ -612,6 +612,44 @@ describe("ContainerAPIs", () => {
     }
   });
 
+  it("should list append blobs in container with sealed property @loki @sql", async () => {
+    const appendBlobClients = [];
+    const metadata = {
+      keya: "a",
+      keyb: "c"
+    };
+    for (let i = 0; i < 3; i++) {
+      const appendBlobClient = containerClient.getAppendBlobClient(
+        getUniqueName(`blockblob${i}/${i}`)
+      );
+      appendBlobClient.create({ metadata: metadata });
+      appendBlobClient.seal();
+      appendBlobClients.push(appendBlobClient);
+    }
+
+    const inputmarker = undefined;
+    const result = (
+      await containerClient
+        .listBlobsFlat()
+        .byPage({ continuationToken: inputmarker })
+        .next()
+    ).value;
+    assert.ok(result.serviceEndpoint.length > 0);
+    assert.ok(containerClient.url.indexOf(result.containerName));
+    assert.deepStrictEqual(result.continuationToken, "");
+    assert.deepStrictEqual(
+      result.segment.blobItems!.length,
+      appendBlobClients.length
+    );
+
+    let i = 0;
+    for (const blob of appendBlobClients) {
+      assert.ok(blob.url.indexOf(result.segment.blobItems![i].name));
+      assert.deepStrictEqual(result.segment.blobItems![i].properties.isSealed, true);
+      i++;
+    }
+  });
+
   // TODO: azure/storage-blob 12.9.0 will fail on  list uncommitted blob from container, will skip the case until this is fix in SDK or Azurite
   it.skip("should only show uncommitted blobs in listBlobFlatSegment with uncommittedblobs option @loki @sql", async () => {
     const blobClient = containerClient.getBlobClient(

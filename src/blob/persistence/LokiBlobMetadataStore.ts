@@ -1980,7 +1980,8 @@ export default class LokiBlobMetadataStore
         deletedTime: undefined,
         remainingRetentionDays: undefined,
         archiveStatus: undefined,
-        accessTierChangeTime: undefined
+        accessTierChangeTime: undefined,
+        isSealed: options.sealBlob,
       },
       metadata:
         metadata === undefined || Object.keys(metadata).length === 0
@@ -2421,6 +2422,10 @@ export default class LokiBlobMetadataStore
       lease,
       context
     );
+
+    if (doc.properties.isSealed) {
+      throw StorageErrorFactory.getBlobSealed(context.contextId);
+    }
 
     if (doc.properties.blobType !== Models.BlobType.AppendBlob) {
       throw StorageErrorFactory.getBlobInvalidBlobType(context.contextId);
