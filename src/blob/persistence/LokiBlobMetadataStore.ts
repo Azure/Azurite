@@ -1981,7 +1981,7 @@ export default class LokiBlobMetadataStore
         remainingRetentionDays: undefined,
         archiveStatus: undefined,
         accessTierChangeTime: undefined,
-        isSealed: options.sealBlob,
+        ...(sourceBlob.properties.blobType === Models.BlobType.AppendBlob && { isSealed: options.sealBlob }),
       },
       metadata:
         metadata === undefined || Object.keys(metadata).length === 0
