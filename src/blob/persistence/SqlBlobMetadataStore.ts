@@ -3546,4 +3546,28 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     }
     return undefined;
   }
+
+  /**
+   * Seal a blob.
+   * @param context 
+   * @param account 
+   * @param container 
+   * @param blob 
+   * @param snapshot 
+   * @param leaseAccessConditions
+   * @param modifiedAccessConditions
+   * @param appendPositionAccessConditions
+   * @throws StorageErrorFactory.getBlobNotFound
+   * @returns 
+   */
+  public async sealBlob(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string,
+    snapshot: string | undefined,
+    options: Models.AppendBlobSealOptionalParams,
+  ): Promise<Models.BlobPropertiesInternal> {
+    throw new NotImplementedinSQLError(context.contextId);
+  }
 }
