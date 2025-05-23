@@ -5,6 +5,7 @@ import {
   DEFAULT_QUEUE_LISTENING_PORT,
   DEFAULT_QUEUE_SERVER_HOST_NAME
 } from "./utils/constants";
+import { join } from "path";
 
 args
   .option(
@@ -77,7 +78,7 @@ export default class QueueEnvironment implements IQueueEnvironment {
   }
 
   public async location(): Promise<string> {
-    return this.flags.location || process.cwd();
+    return this.flags.location || join(process.cwd(), ".azurite");
   }
 
   public silent(): boolean {
