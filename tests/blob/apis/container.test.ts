@@ -612,7 +612,7 @@ describe("ContainerAPIs", () => {
     }
   });
 
-  it("should list append blobs in container with sealed property @loki @sql", async () => {
+  it("should list append blobs in container with sealed property @loki", async () => {
     const appendBlobClients = [];
     const metadata = {
       keya: "a",
