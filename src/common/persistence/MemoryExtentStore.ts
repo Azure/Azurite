@@ -4,8 +4,7 @@ import ZeroBytesStream from "../ZeroBytesStream";
 import IExtentMetadataStore, { IExtentModel } from "./IExtentMetadataStore";
 import IExtentStore, { IExtentChunk } from "./IExtentStore";
 import uuid = require("uuid");
-import multistream = require("multistream");
-import { Readable } from "stream";
+import { PassThrough, Readable, pipeline } from "stream";
 import { totalmem } from "os";
 
 export interface IMemoryExtentChunk extends IExtentChunk {
@@ -367,7 +366,12 @@ export default class MemoryExtentStore implements IExtentStore {
       );
     }
 
-    return multistream(streams);
+    const writable = pipeline(streams);
+    const passthrough = new PassThrough();
+
+    passthrough.pipe(writable);
+
+    return passthrough;
   }
 
   async deleteExtents(extents: Iterable<string>): Promise<number> {
