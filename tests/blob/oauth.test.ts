@@ -578,7 +578,7 @@ describe("Blob OAuth Basic", () => {
         err.message.includes("Server failed to authenticate the request."),
         true
       );
-      assert.deepStrictEqual(err.details.AuthenticationErrorDetail.includes("audience"), true);
+      assert.deepStrictEqual(err.details.authenticationErrorDetail.includes("audience"), true);
       return;
     }
     assert.fail();
@@ -653,7 +653,7 @@ describe("Blob OAuth Basic", () => {
         err.message.includes("Server failed to authenticate the request."),
         true
       );
-      assert.deepStrictEqual(err.details.AuthenticationErrorDetail.includes("issuer"), true);
+      assert.deepStrictEqual(err.details.authenticationErrorDetail.includes("issuer"), true);
       return;
     }
     assert.fail();
@@ -691,7 +691,7 @@ describe("Blob OAuth Basic", () => {
         err.message.includes("Server failed to authenticate the request."),
         true
       );
-      assert.deepStrictEqual(err.details.AuthenticationErrorDetail.includes("Lifetime"), true);
+      assert.deepStrictEqual(err.details.authenticationErrorDetail.includes("Lifetime"), true);
       return;
     }
     assert.fail();
@@ -729,7 +729,7 @@ describe("Blob OAuth Basic", () => {
         err.message.includes("Server failed to authenticate the request."),
         true
       );
-      assert.deepStrictEqual(err.details.AuthenticationErrorDetail.includes("expire"), true);
+      assert.deepStrictEqual(err.details.authenticationErrorDetail.includes("expire"), true);
       return;
     }
     assert.fail();
