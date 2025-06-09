@@ -1,6 +1,6 @@
 import args from "args";
 import { access, ensureDir } from "fs-extra";
-import { dirname } from "path";
+import { dirname, join } from "path";
 
 import IBlobEnvironment from "./IBlobEnvironment";
 import {
@@ -90,7 +90,7 @@ export default class BlobEnvironment implements IBlobEnvironment {
   }
 
   public async location(): Promise<string> {
-    const location = this.flags.location || process.cwd();
+    const location = this.flags.location || join(process.cwd(), '.azurite');
     await ensureDir(location);
     await access(location);
     return location;
