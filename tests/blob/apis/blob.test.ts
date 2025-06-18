@@ -260,8 +260,8 @@ describe("BlobAPIs", () => {
 
       const result = await blobClient.setAccessTier("Archive");
       assert.equal(
-          result._response.request.headers.get("x-ms-client-request-id"),
-          result.clientRequestId
+        result._response.request.headers.get("x-ms-client-request-id"),
+        result.clientRequestId
       );
       await blobClient.download(0);
     } catch (error) {
@@ -710,8 +710,7 @@ describe("BlobAPIs", () => {
         assert.strictEqual(error.code, 'InvalidMetadata');
         hasError = true;
       }
-      if (!hasError)
-      {
+      if (!hasError) {
         assert.fail();
       }
     }
