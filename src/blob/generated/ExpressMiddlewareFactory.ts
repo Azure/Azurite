@@ -92,13 +92,15 @@ export default class ExpressMiddlewareFactory extends MiddlewareFactory {
       handlers,
       this.logger
     );
-    return (req: Request, res: Response, next: NextFunction) => {
+      return (req: Request, res: Response, next: NextFunction) => {
       const request = new ExpressRequestAdapter(req);
       const response = new ExpressResponseAdapter(res);
+      let newContext = new Context(res.locals, this.contextPath, request, response);
       handlerMiddlewareFactory.createHandlerMiddleware()(
-        new Context(res.locals, this.contextPath, request, response),
+        newContext,
         next
       );
+      res.on("close", () => handlers.blobHandler.cleanUpBlob(newContext));
     };
   }
 
