@@ -17,10 +17,10 @@ jobs:
       vmImage: "ubuntu-20.04"
     strategy:
       matrix:
+        node_22_x:
+          node_version: 22.x
         node_20_x:
           node_version: 20.x
-        node_14_x:
-          node_version: 14.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -50,10 +50,10 @@ jobs:
       vmImage: "ubuntu-latest"
     strategy:
       matrix:
-        node_16_x:
-          node_version: 16.x
-        node_18_x:
-          node_version: 18.x
+        node_22_x:
+          node_version: 22.x
+        node_24_x:
+          node_version: 24.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -83,10 +83,10 @@ jobs:
       vmImage: "windows-latest"
     strategy:
       matrix:
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_22_x:
+          node_version: 22.x
+        node_24_x:
+          node_version: 24.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -116,10 +116,10 @@ jobs:
       vmImage: "macOS-latest"
     strategy:
       matrix:
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_22_x:
+          node_version: 22.x
+        node_20_x:
+          node_version: 20.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -149,10 +149,10 @@ jobs:
       vmImage: "ubuntu-latest"
     strategy:
       matrix:
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_24_x:
+          node_version: 24.x
+        node_20_x:
+          node_version: 20.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -184,10 +184,10 @@ jobs:
       vmImage: "ubuntu-latest"
     strategy:
       matrix:
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_22_x:
+          node_version: 22.x
+        node_24_x:
+          node_version: 24.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -217,10 +217,10 @@ jobs:
       vmImage: "windows-latest"
     strategy:
       matrix:
-        node_16_x:
-          node_version: 16.x
-        node_18_x:
-          node_version: 18.x
+        node_22_x:
+          node_version: 22.x
+        node_20_x:
+          node_version: 20.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -250,10 +250,10 @@ jobs:
       vmImage: "macOS-latest"
     strategy:
       matrix:
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_24_x:
+          node_version: 24.x
+        node_20_x:
+          node_version: 20.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -284,10 +284,10 @@ jobs:
     strategy:
       matrix:
         # Table tests no longer support older node versions
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_22_x:
+          node_version: 22.x
+        node_20_x:
+          node_version: 20.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -318,10 +318,10 @@ jobs:
     strategy:
       matrix:
         # Table tests no longer support older node versions
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_20_x:
+          node_version: 20.x
+        node_24_x:
+          node_version: 24.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -352,10 +352,10 @@ jobs:
     strategy:
       matrix:
         # Table tests no longer support older node versions
-        node_16_x:
-          node_version: 16.x
-        node_18_x:
-          node_version: 18.x
+        node_22_x:
+          node_version: 22.x
+        node_24_x:
+          node_version: 24.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -390,8 +390,8 @@ jobs:
         # Track with https://github.com/Azure/Azurite/issues/1550. Will add node 14 back later when the issue resolved.
         #node_14_x:
         #  node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_20_x:
+          node_version: 20.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -436,10 +436,10 @@ jobs:
     strategy:
       matrix:
         # Table tests no longer support older node versions
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_22_x:
+          node_version: 22.x
+        node_24_x:
+          node_version: 24.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -484,10 +484,10 @@ jobs:
     strategy:
       matrix:
         # Table tests no longer support node_8_x
-        node_14_x:
-          node_version: 14.x
-        node_16_x:
-          node_version: 16.x
+        node_22_x:
+          node_version: 22.x
+        node_20_x:
+          node_version: 20.x
     steps:
       - task: NodeTool@0
         inputs:
@@ -594,8 +594,8 @@ jobs:
         # our .exe build program is currently incompatible with node 10
         # node_10_x:
         #   node_version: 10.x
-        node_18_x:
-          node_version: 18.x
+        node_22_x:
+          node_version: 22.x
     steps:
       - task: NodeTool@0
         inputs:
