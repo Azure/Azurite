@@ -313,11 +313,11 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
             // using: 'BTREE',
             unique: true,
             fields: [
-              "blobId",
               "accountName",
               "containerName",
               "blobName",
-              "snapshot"
+              "snapshot",
+              "deleting"
             ]
           }
         ]
@@ -3497,6 +3497,16 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     return undefined;
   }  
 
+  /**
+   * Delete blob from SQL database.
+   * For performance, we used to mark deleting+1, instead of really delete. But this take issue like #2563. So change to real delete.
+   *
+   * @private
+   * @param {WhereOptions<any>} where
+   * @param {Transaction} [t]
+   * @returns {Promise<void>}
+   * @memberof SqlBlobMetadataStore
+   */
   private async deleteBlobFromSQL(where: WhereOptions<any>, t?: Transaction): Promise<void> {
     await BlobsModel.destroy({
       where,
@@ -3514,13 +3524,24 @@ export default class SqlBlobMetadataStore implements IBlobMetadataStore {
     //   }
     // );
   }
+
+    /**
+   * Delete block from SQL database.
+   * For performance, we used to mark deleting+1, instead of really delete. But this take issue like #2563. So change to real delete.
+   *
+   * @private
+   * @param {WhereOptions<any>} where
+   * @param {Transaction} [t]
+   * @returns {Promise<void>}
+   * @memberof SqlBlobMetadataStore
+   */
   private async deleteBlockFromSQL(where: WhereOptions<any>, t?: Transaction): Promise<void> {
-    await BlocksModel.destroy({
+     await BlocksModel.destroy({
       where,
       transaction: t
     });
 
-    // // TODO: GC blocks under deleting status
+    // TODO: GC blocks under deleting status
     // await BlocksModel.update(
     //   {
     //     deleting: literal("deleting + 1")
