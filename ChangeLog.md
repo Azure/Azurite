@@ -12,6 +12,7 @@ Blob:
 - Added support for sealing append blobs. (issue #810)
 - Added support for delegation sas with version of 2015-07-05.
 - Fix issue on SQL: Delete a container with blob, then create container/blob with same name, and delete container will fail. (issue #2563)
+- Fixed hang in blob operations when a client disconnects before the OperationQueue processes the request. (issue #2575)
 
 Table:
 
