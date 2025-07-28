@@ -4,13 +4,18 @@
 
 ## Upcoming Release
 
+## 2025.07 Version 3.35.0
+
 General:
+
+- Bump up service API version to 2025-11-05
+- Added support for service API version to 2025-07-05
 
 Blob:
 
 - Fixed issue of filtering blobs with correct multiple conditions on single tag (range queries). (issue #2514)
 - Added support for sealing append blobs. (issue #810)
-- Added support for delegation sas with version of 2015-07-05.
+- Added support for delegation sas with version of 2025-07-05.
 
 Table:
 
