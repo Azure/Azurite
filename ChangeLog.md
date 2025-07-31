@@ -16,6 +16,7 @@ Blob:
 - Fixed issue of filtering blobs with correct multiple conditions on single tag (range queries). (issue #2514)
 - Added support for sealing append blobs. (issue #810)
 - Added support for delegation sas with version of 2025-07-05.
+- Fix issue on SQL: Delete a container with blob, then create container/blob with same name, and delete container will fail. (issue #2563)
 
 Table:
 
