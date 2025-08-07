@@ -4,6 +4,10 @@
 
 ## Upcoming Release
 
+Blob:
+
+- Changed charaters validation against tag key in filtering blobs with tags to align with service side behavior. (issue #2561)
+
 ## 2025.07 Version 3.35.0
 
 General:
