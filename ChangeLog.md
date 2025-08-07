@@ -77,6 +77,7 @@ General:
 Blob:
 
 - Remove the default value for the `BlobSequenceNumber` parameter in the Swagger definition.
+- Allow quoted tag keys containing spaces and `+`, `-`, `.`, `/`, `:`, or `=` in blob tag filter conditions to match Azure Storage behavior. (issue #2561)
 
 Queue:
 

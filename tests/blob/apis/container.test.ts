@@ -1450,9 +1450,9 @@ describe("ContainerAPIs", () => {
     await containerClient.create();
 
     const tags: Tags = {
-      key_1: 'value_1'
+      " key 1 +-.:=_/": "value_1"
     };
-    const queryString = `key_1='value_1'`;
+    const queryString = `" key 1 +-.:=_/"='value_1'`;
 
     const blobName1 = getUniqueName("blobname1");
     const appendBlobClient1 = containerClient.getAppendBlobClient(blobName1);
