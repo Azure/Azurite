@@ -314,16 +314,23 @@ class QueryParser {
     this.query.throw('expecting tag value');
   }
 
-  private ContainsInvalidTagKeyCharacter(key: string): boolean {
+  private validateTagCharacter(key: string) {
     for (let c of key) {
       if (!(c >= 'a' && c <= 'z' ||
         c >= 'A' && c <= 'Z' ||
         c >= '0' && c <= '9' ||
-        c == '_')) {
-        return true;
+        c == ' ' ||
+        c == '+' ||
+        c == '-' ||
+        c == '.' ||
+        c == '/' ||
+        c == ':' ||
+        c == '=' ||
+        c == '_'
+      )) {
+        this.query.throw(`'${c}' not permitted in tag name or value`);
       }
     }
-    return false;
   }
 
   private validateKey(key: string) {
@@ -342,30 +349,14 @@ class QueryParser {
     if (!this.conditionHeader && ((key.length == 0) || (key.length > 128))) {
       this.query.throw('tag must be between 1 and 128 characters in length');
     }
-    if (this.ContainsInvalidTagKeyCharacter(key)) {
-      this.query.throw(`unexpected '${key}'`);
-    }
+    this.validateTagCharacter(key);
   }
 
   private validateValue(value: string) {
     if (!this.conditionHeader && (value.length > 256)) {
       this.query.throw(`tag value must be between 0 and 256 characters in length`);
     }
-    for (let c of value) {
-      if (!(c >= 'a' && c <= 'z' ||
-        c >= 'A' && c <= 'Z' ||
-        c >= '0' && c <= '9' ||
-        c == ' ' ||
-        c == '+' ||
-        c == '-' ||
-        c == '.' ||
-        c == '/' ||
-        c == ':' ||
-        c == '=' ||
-        c == '_')) {
-        this.query.throw(`'${c}' not permitted in tag name or value`);
-      }
-    }
+    this.validateTagCharacter(value);
   }
 
   /**

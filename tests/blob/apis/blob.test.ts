@@ -2434,6 +2434,19 @@ describe("BlobAPIs", () => {
     assert.deepStrictEqual(outputTags1, tags);
   });
 
+  it("get blob tag with ifTags condition - key with special chars @loki @sql", async () => {
+    let tags: Tags = {
+      " key 1 +-.:=_/": '1a',
+      key2: 'a1'
+    };
+    await blobClient.setTags(tags);
+
+    let queryString = `" key 1 +-.:=_/"='1a'`;
+    let outputTags = (await blobClient.getTags({ conditions: { tagConditions: queryString } })).tags;
+    assert.deepStrictEqual(outputTags, tags);
+  });
+
+
   it("get blob tag with long ifTags condition @loki @sql", async () => {
     const tags = {
       tag1: "val1",
