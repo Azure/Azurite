@@ -1128,8 +1128,10 @@ export default class LokiBlobMetadataStore
 
     validateWriteConditions(context, modifiedAccessConditions, blobDoc);
 
-    // Create if not exists
-    // TODO: Double check behaviour when versioning is enabled.
+  // If-None-Match: "*" (create only if absent). When blob versioning is enabled we allow
+  // multiple historical versions, so if a current blob exists we still honor ifNoneMatch="*"
+  // (service would fail create-on-existing). When versioning is disabled we keep only a single
+  // base blob (versionId "").
     if (
       modifiedAccessConditions &&
       modifiedAccessConditions.ifNoneMatch === "*" &&
@@ -1174,8 +1176,9 @@ export default class LokiBlobMetadataStore
       blob.isCurrentVersion = true;
     }
 
-    // When creating a blob, we are not creating a snapshot, therefore we use the
-    // non-snapshot version of the blob, which is empty string.
+  // Creating a blob (Put Blob / Commit Block List / Append) never creates a snapshot implicitly.
+  // Service semantics: absence of snapshot param is represented by empty string internally.
+  // (A snapshot is produced only via the Create Snapshot API.)
     blob.snapshot = "";
 
     delete (blob as any).$loki;

@@ -54,8 +54,7 @@ function buildBlockBlob(
   account: string,
   container: string,
   name: string,
-  content: string,
-  versionId?: string
+  content: string
 ): BlobModel {
   const now = new Date();
   return {
@@ -88,15 +87,11 @@ function buildBlockBlob(
       deleted: false,
       rehydratePriority: undefined,
       lastAccessedOn: undefined,
-      snapshot: undefined,
-      // Versioning related
-      versionId: versionId,
-      isCurrentVersion: true
+      snapshot: undefined
     },
     isCommitted: true,
     committedBlocksInOrder: [],
     // Versioning top-level fields (duplicated when persisted in Loki)
-    versionId: versionId ? versionId : "",
     snapshot: ""
   } as any as BlobModel;
 }
@@ -203,23 +198,11 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       const name = `blob-${uuid()}`;
 
       // Create first blob then manually mutate to simulate historical version with timestamped versionId
-      const blobV1 = buildBlockBlob(
-        ACCOUNT,
-        containerName,
-        name,
-        "first",
-        "20240101000000000"
-      );
+      const blobV1 = buildBlockBlob(ACCOUNT, containerName, name, "first");
       await store.createBlob(ctx, blobV1);
 
       // Simulate removal of empty version placeholder by setting non-empty versionId then saving another with later timestamp
-      const blobV2 = buildBlockBlob(
-        ACCOUNT,
-        containerName,
-        name,
-        "second",
-        "20250101000000000"
-      );
+      const blobV2 = buildBlockBlob(ACCOUNT, containerName, name, "second");
       await store.createBlob(ctx, blobV2);
 
       // Now request without version -> expect latest timestamp (v2)
@@ -234,9 +217,9 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       assert.strictEqual(
         fetched.versionId,
         "",
-        "Implementation collapses to empty versionId when overwriting (acceptable for disabled mode)"
+        "Disabled versioning mode maintains a single base version (empty versionId) regardless of prior timestamped ids"
       );
-      // If implementation evolves to retain both, adjust: expect timestamp 20250101000000000
+      // If disabled mode later preserves multiple historical records, update expectation (would pick highest timestamp)
     });
 
     it("can retrieve a version created while versioning was enabled after disabling versioning @loki", async () => {
@@ -245,7 +228,6 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       await store.clean();
 
       const name = `blob-${uuid()}`;
-      const versionTimestamp = "20250101010101000";
 
       // 1. Create persistent store with versioning enabled (inMemory=false)
       let persistent = new LokiBlobMetadataStore(DB_FILE, false, true);
@@ -254,14 +236,11 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         ctx,
         buildContainer(ACCOUNT, containerName)
       );
-      const blobV = buildBlockBlob(
-        ACCOUNT,
-        containerName,
-        name,
-        "body",
-        versionTimestamp
-      );
-      await persistent.createBlob(ctx, blobV);
+      const blobV = buildBlockBlob(ACCOUNT, containerName, name, "body");
+
+      const createdBlob = await persistent.createBlob(ctx, blobV);
+      const versionId = createdBlob.versionId;
+      assert.ok(!isNullOrWhitespace(versionId));
       await persistent.close(); // Do NOT clean so data persists
 
       // 2. Recreate store with versioning disabled using same DB file
@@ -275,20 +254,13 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         containerName,
         name,
         undefined,
-        versionTimestamp
+        versionId
       );
       assert.ok(
         !isNullOrWhitespace(fetched.versionId),
         "Fetched version should have a non-empty versionId"
       );
-      // If implementation normalizes version ids, allow equality check fallback
-      if (!isNullOrWhitespace(versionTimestamp)) {
-        assert.strictEqual(
-          fetched.versionId,
-          versionTimestamp,
-          "Should retrieve the exact version created while versioning enabled"
-        );
-      }
+      assert.deepStrictEqual(fetched.versionId, versionId);
     });
   });
 
