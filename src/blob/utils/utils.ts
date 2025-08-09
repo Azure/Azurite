@@ -5,6 +5,34 @@ import { USERDELEGATIONKEY_BASIC_KEY } from "./constants";
 import { BlobTag, BlobTags } from "@azure/storage-blob";
 import { TagContent } from "../persistence/QueryInterpreter/QueryNodes/IQueryNode";
 
+/**
+ * Parses the incoming value into a Date.
+ * Values unable to be parsed will result in an error.
+ * This function will only attempt to parse strings.
+ *
+ * @export
+ * @param {any} [value]
+ * @returns {Date | undefined}
+ */
+export function parseDateFromAssumedString(value: any): Date | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  if (typeof value === "string" && !isNullOrWhitespace(value)) {
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) {
+      return d;
+    }
+  }
+
+  return undefined;
+}
+
 export function isNullOrWhitespace(str: string | null | undefined): boolean {
   return !str?.trim();
 }

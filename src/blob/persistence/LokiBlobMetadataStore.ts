@@ -52,6 +52,7 @@ import IBlobMetadataStore, {
   GetContainerAccessPolicyResponse,
   GetContainerPropertiesResponse,
   GetPageRangeResponse,
+  IBlobAdditionalProperties,
   IContainerMetadata,
   IExtentChunk,
   PersistencyBlockModel,
@@ -69,6 +70,7 @@ import {
   getBlobTagsCount,
   getTagsFromString,
   isNullOrWhitespace,
+  parseDateFromAssumedString,
   toBlobTags
 } from "../utils/utils";
 import { AccountModel } from "../AccountModel";
@@ -1128,10 +1130,10 @@ export default class LokiBlobMetadataStore
 
     validateWriteConditions(context, modifiedAccessConditions, blobDoc);
 
-  // If-None-Match: "*" (create only if absent). When blob versioning is enabled we allow
-  // multiple historical versions, so if a current blob exists we still honor ifNoneMatch="*"
-  // (service would fail create-on-existing). When versioning is disabled we keep only a single
-  // base blob (versionId "").
+    // If-None-Match: "*" (create only if absent). When blob versioning is enabled we allow
+    // multiple historical versions, so if a current blob exists we still honor ifNoneMatch="*"
+    // (service would fail create-on-existing). When versioning is disabled we keep only a single
+    // base blob (versionId "").
     if (
       modifiedAccessConditions &&
       modifiedAccessConditions.ifNoneMatch === "*" &&
@@ -1176,9 +1178,9 @@ export default class LokiBlobMetadataStore
       blob.isCurrentVersion = true;
     }
 
-  // Creating a blob (Put Blob / Commit Block List / Append) never creates a snapshot implicitly.
-  // Service semantics: absence of snapshot param is represented by empty string internally.
-  // (A snapshot is produced only via the Create Snapshot API.)
+    // Creating a blob (Put Blob / Commit Block List / Append) never creates a snapshot implicitly.
+    // Service semantics: absence of snapshot param is represented by empty string internally.
+    // (A snapshot is produced only via the Create Snapshot API.)
     blob.snapshot = "";
 
     delete (blob as any).$loki;
@@ -3882,6 +3884,30 @@ export default class LokiBlobMetadataStore
     snapshot: string = "",
     versionId: string = ""
   ): BlobModel | undefined {
+    const blobFound = this.findBlobCore(
+      context,
+      account,
+      container,
+      blob,
+      snapshot,
+      versionId
+    );
+
+    if (blobFound) {
+      return this.reviveKnownDateFields(context, blobFound);
+    }
+
+    return blobFound;
+  }
+
+  private findBlobCore(
+    context: Context,
+    account: string,
+    container: string,
+    blob: string,
+    snapshot: string = "",
+    versionId: string = ""
+  ): BlobModel | undefined {
     const versionIdProvided = !isNullOrWhitespace(versionId);
     const snapshotProvided = !isNullOrWhitespace(snapshot);
 
@@ -3895,11 +3921,12 @@ export default class LokiBlobMetadataStore
 
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);
 
-    let blobDocFindChain = coll.chain().find({
+    const initQuery = {
       accountName: account,
       containerName: container,
       name: blob
-    });
+    };
+    let blobDocFindChain = coll.chain().find(initQuery);
 
     if (versionIdProvided) {
       // If versionId is provided, simply find and return that specific version
@@ -3910,9 +3937,25 @@ export default class LokiBlobMetadataStore
       blobDocFindChain = blobDocFindChain.find({ snapshot: snapshot });
       return blobDocFindChain.data()[0];
     } else if (this.isBlobVersioningEnabled()) {
+      let blobDoc = blobDocFindChain.find({ versionId: "" }).data()[0];
+
+      if (blobDoc) {
+        // This will only happen when versioning was previously disabled and is now
+        // enabled.
+        // TODO: Check Azure Prod behaviour
+        return blobDoc;
+      }
+
+      blobDocFindChain = coll.chain().find(initQuery);
       // If versioning is enabled and no versionId/snapshot provided, return the current version
-      blobDocFindChain = blobDocFindChain.find({ isCurrentVersion: true });
-      return blobDocFindChain.data()[0];
+      blobDoc = blobDocFindChain.find({ isCurrentVersion: true }).data()[0];
+
+      if (blobDoc) {
+        return blobDoc;
+      }
+
+      blobDocFindChain = coll.chain().find(initQuery);
+      return blobDocFindChain.simplesort("versionId").data()[0];
     } else {
       // If versioning is disabled and no snapshot provided
       // First try to find blob with versionId === ""
@@ -3923,6 +3966,7 @@ export default class LokiBlobMetadataStore
         return emptyVersionBlob;
       }
 
+      blobDocFindChain = coll.chain().find(initQuery);
       // If not found, return the current version
       blobDocFindChain = blobDocFindChain
         .find({
@@ -3931,5 +3975,69 @@ export default class LokiBlobMetadataStore
         .find({ isCurrentVersion: true });
       return blobDocFindChain.data()[0];
     }
+  }
+
+  /**
+   * Revive well-known date fields on a single blob document.
+   * For each targeted field:
+   *  - If it's already a Date, leave it.
+   *  - If it's a non-empty string, attempt to parse as Date. If valid, replace with Date.
+   *  - Ignore null/undefined or whitespace-only strings.
+   */
+  private reviveKnownDateFields(context: Context, blob: BlobModel): BlobModel {
+    if (!blob || typeof blob !== "object") {
+      return blob;
+    }
+
+    const propDateCannotBeUndefined: Array<
+      keyof Models.BlobPropertiesInternal
+    > = ["lastModified"];
+
+    const propDateKeys: Array<keyof Models.BlobPropertiesInternal> = [
+      "creationTime",
+      "copyCompletionTime",
+      "deletedTime",
+      "accessTierChangeTime",
+      "lastAccessedOn",
+      "immutabilityPolicyExpiresOn",
+      "expiresOn"
+    ];
+
+    const topLevelDateKeys: Array<keyof IBlobAdditionalProperties> = [
+      "leaseExpireTime",
+      "leaseBreakTime"
+    ];
+
+    // Helper
+
+    if (blob.properties) {
+      for (const k of propDateCannotBeUndefined) {
+        const parsedValue = parseDateFromAssumedString(blob.properties[k]);
+        if (parsedValue) {
+          (blob.properties[k] as Date) = parsedValue;
+        } else {
+          throw StorageErrorFactory.getInvalidOperation(
+            context.contextId,
+            "Invalid date format retrieved from storage for " +
+              k +
+              ". Value: " +
+              blob.properties[k]
+          );
+        }
+      }
+
+      // For properties that can be undefined, we parse and set them if valid
+      for (const k of propDateKeys) {
+        (blob.properties[k] as Date | undefined) = parseDateFromAssumedString(
+          blob.properties[k]
+        );
+      }
+    }
+
+    for (const k of topLevelDateKeys) {
+      (blob[k] as Date | undefined) = parseDateFromAssumedString(blob[k]);
+    }
+
+    return blob;
   }
 }

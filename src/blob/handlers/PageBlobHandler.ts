@@ -15,7 +15,8 @@ import IBlobMetadataStore, {
 import { BLOB_API_VERSION } from "../utils/constants";
 import {
   deserializePageBlobRangeHeader,
-  getTagsFromString
+  getTagsFromString,
+  isNullOrWhitespace
 } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 import IPageBlobRangesManager from "./IPageBlobRangesManager";
@@ -110,9 +111,6 @@ export default class PageBlobHandler
     );
 
     const etag = newEtag();
-    const versionId = this.metadataStore.isBlobVersioningEnabled()
-      ? date.toISOString()
-      : undefined;
 
     const blob: BlobModel = {
       deleted: false,
@@ -149,13 +147,12 @@ export default class PageBlobHandler
       blobTags:
         options.blobTagsString === undefined
           ? undefined
-          : getTagsFromString(options.blobTagsString, context.contextId!),
-      versionId: versionId
+          : getTagsFromString(options.blobTagsString, context.contextId!)
     };
 
     // TODO: What's happens when create page blob right before commit block list? Or should we lock
     // Should we check if there is an uncommitted blob?
-    await this.metadataStore.createBlob(
+    const createdBlob = await this.metadataStore.createBlob(
       context,
       blob,
       options.leaseAccessConditions,
@@ -172,7 +169,9 @@ export default class PageBlobHandler
       date,
       isServerEncrypted: true,
       clientRequestId: options.requestId,
-      versionId: versionId
+      versionId: isNullOrWhitespace(createdBlob.versionId)
+        ? undefined
+        : createdBlob.versionId
     };
 
     return response;

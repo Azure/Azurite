@@ -14,7 +14,7 @@ import { parseXML } from "../generated/utils/xml";
 import { BlobModel, BlockModel } from "../persistence/IBlobMetadataStore";
 import { BLOB_API_VERSION } from "../utils/constants";
 import BaseHandler from "./BaseHandler";
-import { getTagsFromString } from "../utils/utils";
+import { getTagsFromString, isNullOrWhitespace } from "../utils/utils";
 
 /**
  * BlobHandler handles Azure Storage BlockBlob related requests.
@@ -96,10 +96,6 @@ export default class BlockBlobHandler
       }
     }
 
-    const versionId = this.metadataStore.isBlobVersioningEnabled()
-      ? date.toISOString()
-      : undefined;
-
     const blob: BlobModel = {
       deleted: false,
       // Preserve metadata key case
@@ -134,8 +130,7 @@ export default class BlockBlobHandler
       blobTags:
         options.blobTagsString === undefined
           ? undefined
-          : getTagsFromString(options.blobTagsString, context.contextId!),
-      versionId: versionId
+          : getTagsFromString(options.blobTagsString, context.contextId!)
     };
 
     if (options.tier !== undefined) {
@@ -150,7 +145,7 @@ export default class BlockBlobHandler
     }
     // TODO: Need a lock for multi keys including containerName and blobName
     // TODO: Provide a specified function.
-    await this.metadataStore.createBlob(
+    const createdBlob = await this.metadataStore.createBlob(
       context,
       blob,
       options.leaseAccessConditions,
@@ -167,7 +162,9 @@ export default class BlockBlobHandler
       date,
       isServerEncrypted: true,
       clientRequestId: options.requestId,
-      versionId: versionId
+      versionId: isNullOrWhitespace(createdBlob.versionId)
+        ? undefined
+        : createdBlob.versionId
     };
 
     return response;

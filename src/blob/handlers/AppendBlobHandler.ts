@@ -13,7 +13,7 @@ import {
   MAX_APPEND_BLOB_BLOCK_COUNT,
   MAX_APPEND_BLOB_BLOCK_SIZE
 } from "../utils/constants";
-import { getTagsFromString } from "../utils/utils";
+import { getTagsFromString, isNullOrWhitespace } from "../utils/utils";
 import BaseHandler from "./BaseHandler";
 
 export default class AppendBlobHandler
@@ -51,10 +51,6 @@ export default class AppendBlobHandler
       context.contextId!
     );
 
-    const versionId = this.metadataStore.isBlobVersioningEnabled()
-      ? date.toISOString()
-      : undefined;
-
     const blob: BlobModel = {
       deleted: false,
       metadata,
@@ -83,11 +79,10 @@ export default class AppendBlobHandler
       blobTags:
         options.blobTagsString === undefined
           ? undefined
-          : getTagsFromString(options.blobTagsString, context.contextId!),
-      versionId: versionId
+          : getTagsFromString(options.blobTagsString, context.contextId!)
     };
 
-    await this.metadataStore.createBlob(
+    const createdBlob = await this.metadataStore.createBlob(
       context,
       blob,
       options.leaseAccessConditions,
@@ -104,7 +99,9 @@ export default class AppendBlobHandler
       date,
       isServerEncrypted: true,
       clientRequestId: options.requestId,
-      versionId: versionId
+      versionId: isNullOrWhitespace(createdBlob.versionId)
+        ? undefined
+        : createdBlob.versionId
     };
 
     return response;

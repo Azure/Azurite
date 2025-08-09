@@ -129,7 +129,7 @@ interface IPageBlobAdditionalProperties {
   pageRangesInOrder?: PersistencyPageRange[];
 }
 
-interface IBlobAdditionalProperties {
+export interface IBlobAdditionalProperties {
   accountName: string;
   containerName: string;
   leaseDurationSeconds?: number;

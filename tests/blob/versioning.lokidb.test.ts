@@ -10,7 +10,6 @@ import * as Models from "../../src/blob/generated/artifacts/models";
 import Context from "../../src/blob/generated/Context";
 import { configLogger } from "../../src/common/Logger";
 import { isNullOrWhitespace } from "../../src/blob/utils/utils";
-
 // Silence logs for tests
 configLogger(false);
 
@@ -62,7 +61,7 @@ function buildBlockBlob(
     containerName: container,
     name,
     properties: {
-      createdOn: now,
+      creationTime: now,
       lastModified: now,
       etag: `\"etag-${uuid()}\"`,
       blobType: Models.BlobType.BlockBlob,
@@ -163,16 +162,24 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         "",
         "Base version should have empty versionId"
       );
-      // getBlobProperties response model doesn't surface versionId (would be header in real service), so we don't assert it here.
     });
 
-    it("overwrites base blob and keeps only one current version when versioning disabled @loki", async () => {
+    it("overwrites base blob and keeps latest (no version) when versioning disabled @loki", async () => {
       const name = `blob-${uuid()}`;
-      const blobV1 = buildBlockBlob(ACCOUNT, containerName, name, "one");
-      await store.createBlob(ctx, blobV1);
+      const blobV1 = buildBlockBlob(ACCOUNT, containerName, name, "bob");
+      const createdV1 = await store.createBlob(ctx, blobV1);
 
-      const blobV2 = buildBlockBlob(ACCOUNT, containerName, name, "two");
-      await store.createBlob(ctx, blobV2);
+      const blobV2 = buildBlockBlob(ACCOUNT, containerName, name, "alice");
+      const createdV2 = await store.createBlob(ctx, blobV2);
+
+      assert.deepStrictEqual(createdV1.versionId, "");
+      assert.deepStrictEqual(createdV2.versionId, "");
+      assert.notDeepStrictEqual(createdV1.properties.contentLength, undefined);
+      assert.notDeepStrictEqual(createdV2.properties.contentLength, undefined);
+      assert.notDeepStrictEqual(
+        createdV1.properties.contentLength,
+        createdV2.properties.contentLength
+      );
 
       // Download latest (no version) should return v2 (still versionId "")
       const latest = await store.downloadBlob(
@@ -183,43 +190,16 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         undefined,
         undefined
       );
+
       assert.strictEqual(
         latest.properties.contentLength,
-        Buffer.byteLength("two")
+        blobV2.properties.contentLength
       );
       assert.strictEqual(
         latest.versionId,
         "",
         "Still base version placeholder"
       );
-    });
-
-    it("selects latest timestamped version when no empty versionId doc exists @loki", async () => {
-      const name = `blob-${uuid()}`;
-
-      // Create first blob then manually mutate to simulate historical version with timestamped versionId
-      const blobV1 = buildBlockBlob(ACCOUNT, containerName, name, "first");
-      await store.createBlob(ctx, blobV1);
-
-      // Simulate removal of empty version placeholder by setting non-empty versionId then saving another with later timestamp
-      const blobV2 = buildBlockBlob(ACCOUNT, containerName, name, "second");
-      await store.createBlob(ctx, blobV2);
-
-      // Now request without version -> expect latest timestamp (v2)
-      const fetched = await store.downloadBlob(
-        ctx,
-        ACCOUNT,
-        containerName,
-        name,
-        undefined,
-        undefined
-      );
-      assert.strictEqual(
-        fetched.versionId,
-        "",
-        "Disabled versioning mode maintains a single base version (empty versionId) regardless of prior timestamped ids"
-      );
-      // If disabled mode later preserves multiple historical records, update expectation (would pick highest timestamp)
     });
 
     it("can retrieve a version created while versioning was enabled after disabling versioning @loki", async () => {
@@ -268,11 +248,12 @@ describe("LokiBlobMetadataStoreVersioning", () => {
     let store: LokiBlobMetadataStore;
     let containerName: string;
     let ctx: Context;
+    const DB_FILE = "__test_db_blob__.json"; // standard shared test db path
 
     beforeEach(async () => {
       ctx = createContext();
       containerName = `container-${uuid()}`;
-      store = new LokiBlobMetadataStore("__test_db_blob__.json", true, true); // in-memory OK here
+      store = new LokiBlobMetadataStore(DB_FILE, false, true);
       await store.init();
       await store.createContainer(ctx, buildContainer(ACCOUNT, containerName));
     });
@@ -319,26 +300,22 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       assert.ok(current.isCurrentVersion, "Latest should be current version");
     });
 
-    it("promotes pre-versioning base blob to have a versionId timestamp on subsequent versioned create @loki", async () => {
-      // Simulate: start with store where versioning enabled but first blob may have empty versionId
-      const name = `blob-${uuid()}`;
-      const base = buildBlockBlob(ACCOUNT, containerName, name, "base");
-      await store.createBlob(ctx, base);
-      const first = await store.downloadBlob(
-        ctx,
-        ACCOUNT,
-        containerName,
-        name,
-        undefined,
-        undefined
-      );
-      const firstVersionIdBefore = first.versionId;
+    it("promotes a non-versioned base blob (created with versioning disabled) to have a versionId equal to its original lastModified when versioning is later enabled @loki", async () => {
+      await store.close();
+      await store.clean();
 
-      // Create new blob -> previous should now NOT be current
-      ctx.startTime = new Date(Date.now() + 50);
-      const second = buildBlockBlob(ACCOUNT, containerName, name, "second");
-      await store.createBlob(ctx, second);
-      const latest = await store.downloadBlob(
+      const name = `blob-${uuid()}`;
+
+      // 1. Create store with versioning DISABLED (persistent) and create base blob (versionId will be "").
+      let disabledStore = new LokiBlobMetadataStore(DB_FILE, false, false);
+      await disabledStore.init();
+      await disabledStore.createContainer(
+        ctx,
+        buildContainer(ACCOUNT, containerName)
+      );
+      const baseBlob = buildBlockBlob(ACCOUNT, containerName, name, "base");
+      await disabledStore.createBlob(ctx, baseBlob);
+      const baseFetched = await disabledStore.downloadBlob(
         ctx,
         ACCOUNT,
         containerName,
@@ -346,14 +323,70 @@ describe("LokiBlobMetadataStoreVersioning", () => {
         undefined,
         undefined
       );
-      assert.ok(latest.isCurrentVersion, "Latest should be current");
-      if (!isNullOrWhitespace(firstVersionIdBefore)) {
-        assert.notStrictEqual(
-          latest.versionId,
-          firstVersionIdBefore,
-          "New versionId should differ from previous"
-        );
-      }
+      assert.strictEqual(
+        baseFetched.versionId,
+        "",
+        "Pre-versioning blob should have empty versionId"
+      );
+      const originalLastModifiedIso =
+        baseFetched.properties.lastModified.toISOString();
+      await disabledStore.close();
+
+      // 2. Re-open SAME DB with versioning ENABLED.
+      store = new LokiBlobMetadataStore(DB_FILE, false, true);
+      await store.init();
+
+      // 3. Create a new version (same name). This should assign a versionId to prior base blob
+      //    using its lastModified timestamp, and mark it as not current.
+      ctx.startTime = new Date(Date.now() + 200); // ensure different timestamp for new current version
+      const secondBlob = buildBlockBlob(ACCOUNT, containerName, name, "second");
+      const newBlobVer = await store.createBlob(ctx, secondBlob);
+      assert.ok(
+        !isNullOrWhitespace(newBlobVer.versionId),
+        "New blob version should have a versionId"
+      );
+
+      // 4. Fetch current (no version) and previous (by derived versionId)
+      const current = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        undefined
+      );
+      assert.ok(
+        current.isCurrentVersion,
+        "Latest blob should be current after enabling versioning"
+      );
+      assert.ok(
+        !isNullOrWhitespace(current.versionId),
+        "Current blob should now have a non-empty versionId"
+      );
+
+      const previous = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        undefined,
+        originalLastModifiedIso
+      );
+      assert.strictEqual(
+        previous.versionId,
+        originalLastModifiedIso,
+        "Previous base blob should be promoted with versionId equal to its original lastModified ISO string"
+      );
+      assert.strictEqual(
+        previous.isCurrentVersion,
+        false,
+        "Previous version should no longer be current"
+      );
+      assert.notStrictEqual(
+        previous.versionId,
+        current.versionId,
+        "Current versionId should differ from promoted previous versionId"
+      );
     });
 
     it("allows addressing previous version by its versionId @loki", async () => {
