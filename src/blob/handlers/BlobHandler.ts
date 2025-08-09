@@ -70,12 +70,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
 
+    // TODO: Implement versioning
     const blob = await this.metadataStore.downloadBlob(
       context,
       accountName,
       containerName,
       blobName,
       options.snapshot,
+      undefined,
       options.leaseAccessConditions,
       options.modifiedAccessConditions
     );
@@ -107,6 +109,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobGetPropertiesOptionalParams,
     context: Context
   ): Promise<Models.BlobGetPropertiesResponse> {
+    // TODO: Implement versioning support.
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;
@@ -117,6 +120,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       options.snapshot,
+      undefined,
       options.leaseAccessConditions,
       options.modifiedAccessConditions
     );
@@ -126,39 +130,45 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     const response: Models.BlobGetPropertiesResponse = againstMetadata
       ? {
-        statusCode: 200,
-        metadata: res.metadata,
-        eTag: res.properties.etag,
-        requestId: context.contextId,
-        version: BLOB_API_VERSION,
-        date: context.startTime,
-        clientRequestId: options.requestId,
-        contentLength: res.properties.contentLength,
-        lastModified: res.properties.lastModified
-      }
+          statusCode: 200,
+          metadata: res.metadata,
+          eTag: res.properties.etag,
+          requestId: context.contextId,
+          version: BLOB_API_VERSION,
+          date: context.startTime,
+          clientRequestId: options.requestId,
+          contentLength: res.properties.contentLength,
+          lastModified: res.properties.lastModified
+        }
       : {
-        statusCode: 200,
-        metadata: res.metadata,
-        isIncrementalCopy: res.properties.incrementalCopy,
-        eTag: res.properties.etag,
-        requestId: context.contextId,
-        version: BLOB_API_VERSION,
-        date: context.startTime,
-        acceptRanges: "bytes",
-        blobCommittedBlockCount:
-          res.properties.blobType === Models.BlobType.AppendBlob
-            ? res.blobCommittedBlockCount
-            : undefined,
-        isServerEncrypted: true,
-        clientRequestId: options.requestId,
-        ...res.properties,
-        cacheControl: context.request!.getQuery("rscc") ?? res.properties.cacheControl,
-        contentDisposition: context.request!.getQuery("rscd") ?? res.properties.contentDisposition,
-        contentEncoding: context.request!.getQuery("rsce") ?? res.properties.contentEncoding,
-        contentLanguage: context.request!.getQuery("rscl") ?? res.properties.contentLanguage,
-        contentType: context.request!.getQuery("rsct") ?? res.properties.contentType,
-        tagCount: res.properties.tagCount,
-      };
+          statusCode: 200,
+          metadata: res.metadata,
+          isIncrementalCopy: res.properties.incrementalCopy,
+          eTag: res.properties.etag,
+          requestId: context.contextId,
+          version: BLOB_API_VERSION,
+          date: context.startTime,
+          acceptRanges: "bytes",
+          blobCommittedBlockCount:
+            res.properties.blobType === Models.BlobType.AppendBlob
+              ? res.blobCommittedBlockCount
+              : undefined,
+          isServerEncrypted: true,
+          clientRequestId: options.requestId,
+          ...res.properties,
+          cacheControl:
+            context.request!.getQuery("rscc") ?? res.properties.cacheControl,
+          contentDisposition:
+            context.request!.getQuery("rscd") ??
+            res.properties.contentDisposition,
+          contentEncoding:
+            context.request!.getQuery("rsce") ?? res.properties.contentEncoding,
+          contentLanguage:
+            context.request!.getQuery("rscl") ?? res.properties.contentLanguage,
+          contentType:
+            context.request!.getQuery("rsct") ?? res.properties.contentType,
+          tagCount: res.properties.tagCount
+        };
 
     return response;
   }
@@ -331,7 +341,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders(), context.contextId!
+      blobCtx.request!.getRawHeaders(),
+      context.contextId!
     );
 
     const res = await this.metadataStore.setBlobMetadata(
@@ -593,7 +604,8 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders(), context.contextId!
+      blobCtx.request!.getRawHeaders(),
+      context.contextId!
     );
 
     const res = await this.metadataStore.createSnapshot(
@@ -643,11 +655,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // TODO: Check dest Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
     const url = this.NewUriFromCopySource(copySource, context);
-    const [
-      sourceAccount,
-      sourceContainer,
-      sourceBlob
-    ] = extractStoragePartsFromPath(url.hostname, url.pathname, blobCtx.disableProductStyleUrl);
+    const [sourceAccount, sourceContainer, sourceBlob] =
+      extractStoragePartsFromPath(
+        url.hostname,
+        url.pathname,
+        blobCtx.disableProductStyleUrl
+      );
     const snapshot = url.searchParams.get("snapshot") || "";
 
     if (
@@ -659,13 +672,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     const sig = url.searchParams.get("sig");
-    if ((sourceAccount !== blobCtx.account) || (sig !== null)) {
+    if (sourceAccount !== blobCtx.account || sig !== null) {
       await this.validateCopySource(copySource, sourceAccount, context);
     }
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders(), context.contextId!
+      blobCtx.request!.getRawHeaders(),
+      context.contextId!
     );
 
     const res = await this.metadataStore.startCopyFromURL(
@@ -698,7 +712,11 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     return response;
   }
 
-  private async validateCopySource(copySource: string, sourceAccount: string, context: Context): Promise<void> {
+  private async validateCopySource(
+    copySource: string,
+    sourceAccount: string,
+    context: Context
+  ): Promise<void> {
     // Currently the only cross-account copy support is from/to the same Azurite instance. In either case access
     // is determined by performing a request to the copy source to see if the authentication is valid.
     const blobCtx = new BlobStorageContext(context);
@@ -793,11 +811,13 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const accountName = blobCtx.account!;
     const containerName = blobCtx.container!;
     const blobName = blobCtx.blob!;
+    // TODO: Implement versioning
     const blob = await this.metadataStore.downloadBlob(
       context,
       accountName,
       containerName,
       blobName,
+      undefined,
       undefined,
       options.leaseAccessConditions
     );
@@ -842,11 +862,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // TODO: Check dest Lease status, and set to available if it's expired, see sample in BlobHandler.setMetadata()
     const url = this.NewUriFromCopySource(copySource, context);
-    const [
-      sourceAccount,
-      sourceContainer,
-      sourceBlob
-    ] = extractStoragePartsFromPath(url.hostname, url.pathname, blobCtx.disableProductStyleUrl);
+    const [sourceAccount, sourceContainer, sourceBlob] =
+      extractStoragePartsFromPath(
+        url.hostname,
+        url.pathname,
+        blobCtx.disableProductStyleUrl
+      );
     const snapshot = url.searchParams.get("snapshot") || "";
 
     if (
@@ -862,13 +883,19 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     }
 
     // Specifying x-ms-copy-source-tag-option as COPY and x-ms-tags will result in error
-    if (options.copySourceTags === Models.BlobCopySourceTags.COPY && options.blobTagsString !== undefined) {
-      throw StorageErrorFactory.getBothUserTagsAndSourceTagsCopyPresentException(context.contextId!);
+    if (
+      options.copySourceTags === Models.BlobCopySourceTags.COPY &&
+      options.blobTagsString !== undefined
+    ) {
+      throw StorageErrorFactory.getBothUserTagsAndSourceTagsCopyPresentException(
+        context.contextId!
+      );
     }
 
     // Preserve metadata key case
     const metadata = convertRawHeadersToMetadata(
-      blobCtx.request!.getRawHeaders(), context.contextId!
+      blobCtx.request!.getRawHeaders(),
+      context.contextId!
     );
 
     const res = await this.metadataStore.copyFromURL(
@@ -1023,16 +1050,25 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
-      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
+      throw StorageErrorFactory.getInvalidPageRange2(
+        context.contextId!,
+        `bytes */${blob.properties.contentLength}`
+      );
     }
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
-      // report error is blob size is 0, and rangeEnd is specified but not 0 
-      if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
-        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
-      }
-      else {
+      // report error is blob size is 0, and rangeEnd is specified but not 0
+      if (
+        blob.properties.contentLength == 0 &&
+        rangeEnd !== 0 &&
+        rangeEnd !== Infinity
+      ) {
+        throw StorageErrorFactory.getInvalidPageRange2(
+          context.contextId!,
+          `bytes */${blob.properties.contentLength}`
+        );
+      } else {
         rangeEnd = blob.properties.contentLength! - 1;
       }
     }
@@ -1102,16 +1138,25 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime!,
       version: BLOB_API_VERSION,
       ...blob.properties,
-      cacheControl: context.request!.getQuery("rscc") ?? blob.properties.cacheControl,
-      contentDisposition: context.request!.getQuery("rscd") ?? blob.properties.contentDisposition,
-      contentEncoding: context.request!.getQuery("rsce") ?? blob.properties.contentEncoding,
-      contentLanguage: context.request!.getQuery("rscl") ?? blob.properties.contentLanguage,
-      contentType: context.request!.getQuery("rsct") ?? blob.properties.contentType,
+      cacheControl:
+        context.request!.getQuery("rscc") ?? blob.properties.cacheControl,
+      contentDisposition:
+        context.request!.getQuery("rscd") ?? blob.properties.contentDisposition,
+      contentEncoding:
+        context.request!.getQuery("rsce") ?? blob.properties.contentEncoding,
+      contentLanguage:
+        context.request!.getQuery("rscl") ?? blob.properties.contentLanguage,
+      contentType:
+        context.request!.getQuery("rsct") ?? blob.properties.contentType,
       blobContentMD5: blob.properties.contentMD5,
       acceptRanges: "bytes",
       contentLength,
       contentRange,
-      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5: undefined) : contentMD5,
+      contentMD5: contentRange
+        ? context.request!.getHeader("x-ms-range-get-content-md5")
+          ? contentMD5
+          : undefined
+        : contentMD5,
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
       clientRequestId: options.requestId,
@@ -1119,7 +1164,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       blobCommittedBlockCount:
         blob.properties.blobType === Models.BlobType.AppendBlob
           ? (blob.committedBlocksInOrder || []).length
-          : undefined,
+          : undefined
     };
 
     return response;
@@ -1151,16 +1196,25 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
     // Start Range is bigger than blob length
     if (rangeStart > blob.properties.contentLength!) {
-      throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
+      throw StorageErrorFactory.getInvalidPageRange2(
+        context.contextId!,
+        `bytes */${blob.properties.contentLength}`
+      );
     }
 
     // Will automatically shift request with longer data end than blob size to blob size
     if (rangeEnd + 1 >= blob.properties.contentLength!) {
-      // report error is blob size is 0, and rangeEnd is specified but not 0 
-      if (blob.properties.contentLength == 0 && rangeEnd !== 0 && rangeEnd !== Infinity) {
-        throw StorageErrorFactory.getInvalidPageRange2(context.contextId!,`bytes */${blob.properties.contentLength}`);
-      }
-      else {
+      // report error is blob size is 0, and rangeEnd is specified but not 0
+      if (
+        blob.properties.contentLength == 0 &&
+        rangeEnd !== 0 &&
+        rangeEnd !== Infinity
+      ) {
+        throw StorageErrorFactory.getInvalidPageRange2(
+          context.contextId!,
+          `bytes */${blob.properties.contentLength}`
+        );
+      } else {
         rangeEnd = blob.properties.contentLength! - 1;
       }
     }
@@ -1194,9 +1248,9 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       contentLength <= 0
         ? []
         : this.rangesManager.fillZeroRanges(blob.pageRangesInOrder, {
-          start: rangeStart,
-          end: rangeEnd
-        });
+            start: rangeStart,
+            end: rangeEnd
+          });
 
     const bodyGetter = async () => {
       return this.extentStore.readExtents(
@@ -1240,14 +1294,23 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       date: context.startTime!,
       version: BLOB_API_VERSION,
       ...blob.properties,
-      cacheControl: context.request!.getQuery("rscc") ?? blob.properties.cacheControl,
-      contentDisposition: context.request!.getQuery("rscd") ?? blob.properties.contentDisposition,
-      contentEncoding: context.request!.getQuery("rsce") ?? blob.properties.contentEncoding,
-      contentLanguage: context.request!.getQuery("rscl") ?? blob.properties.contentLanguage,
-      contentType: context.request!.getQuery("rsct") ?? blob.properties.contentType,
+      cacheControl:
+        context.request!.getQuery("rscc") ?? blob.properties.cacheControl,
+      contentDisposition:
+        context.request!.getQuery("rscd") ?? blob.properties.contentDisposition,
+      contentEncoding:
+        context.request!.getQuery("rsce") ?? blob.properties.contentEncoding,
+      contentLanguage:
+        context.request!.getQuery("rscl") ?? blob.properties.contentLanguage,
+      contentType:
+        context.request!.getQuery("rsct") ?? blob.properties.contentType,
       contentLength,
       contentRange,
-      contentMD5: contentRange ? (context.request!.getHeader("x-ms-range-get-content-md5") ? contentMD5: undefined) : contentMD5,
+      contentMD5: contentRange
+        ? context.request!.getHeader("x-ms-range-get-content-md5")
+          ? contentMD5
+          : undefined
+        : contentMD5,
       blobContentMD5: blob.properties.contentMD5,
       tagCount: getBlobTagsCount(blob.blobTags),
       isServerEncrypted: true,
@@ -1273,12 +1336,14 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     const account = blobCtx.account!;
     const container = blobCtx.container!;
     const blob = blobCtx.blob!;
+    // TODO: Implement versioning
     const tags = await this.metadataStore.getBlobTag(
       context,
       account,
       container,
       blob,
       options.snapshot,
+      undefined,
       options.leaseAccessConditions,
       options.modifiedAccessConditions
     );
@@ -1289,7 +1354,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       requestId: context.contextId,
       version: BLOB_API_VERSION,
       date: context.startTime,
-      clientRequestId: options.requestId,
+      clientRequestId: options.requestId
     };
 
     return response;
@@ -1299,6 +1364,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
     options: Models.BlobSetTagsOptionalParams,
     context: Context
   ): Promise<Models.BlobSetTagsResponse> {
+    // TODO: Implement versioning
     const blobCtx = new BlobStorageContext(context);
     const account = blobCtx.account!;
     const container = blobCtx.container!;
@@ -1317,6 +1383,7 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
       container,
       blob,
       snapshot,
+      undefined,
       options.leaseAccessConditions,
       tags,
       options.modifiedAccessConditions
@@ -1335,16 +1402,12 @@ export default class BlobHandler extends BaseHandler implements IBlobHandler {
 
   private NewUriFromCopySource(copySource: string, context: Context): URL {
     try {
-      return new URL(copySource)
-    }
-    catch
-    {
-      throw StorageErrorFactory.getInvalidHeaderValue(
-        context.contextId,
-        {
-          HeaderName: "x-ms-copy-source",
-          HeaderValue: copySource
-        })
+      return new URL(copySource);
+    } catch {
+      throw StorageErrorFactory.getInvalidHeaderValue(context.contextId, {
+        HeaderName: "x-ms-copy-source",
+        HeaderValue: copySource
+      });
     }
   }
 }

@@ -139,6 +139,7 @@ export default class AppendBlobHandler
       accountName,
       containerName,
       blobName,
+      undefined,
       undefined
     );
 

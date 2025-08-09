@@ -197,11 +197,13 @@ export default class PageBlobHandler
       );
     }
 
+    // TODO: Implement versioning
     const blob = await this.metadataStore.downloadBlob(
       context,
       accountName,
       containerName,
       blobName,
+      undefined,
       undefined,
       options.leaseAccessConditions
     );
@@ -295,11 +297,13 @@ export default class PageBlobHandler
       );
     }
 
+    // TODO: Implement versioning
     const blob = await this.metadataStore.downloadBlob(
       context,
       accountName,
       containerName,
       blobName,
+      undefined,
       undefined,
       options.leaseAccessConditions
     );

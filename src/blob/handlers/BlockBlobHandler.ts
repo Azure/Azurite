@@ -426,12 +426,14 @@ export default class BlockBlobHandler
     const blobName = blobCtx.blob!;
     const date = blobCtx.startTime!;
 
+    // TODO: Implement versioning
     const res = await this.metadataStore.getBlockList(
       context,
       accountName,
       containerName,
       blobName,
       options.snapshot,
+      undefined,
       undefined,
       options.leaseAccessConditions,
       options.modifiedAccessConditions

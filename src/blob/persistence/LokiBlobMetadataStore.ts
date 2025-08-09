@@ -2944,8 +2944,8 @@ export default class LokiBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    snapshot: string | undefined,
-    versionId: string | undefined,
+    snapshot: string = "",
+    versionId: string = "",
     isCommitted: boolean | undefined,
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     modifiedAccessConditions: Models.ModifiedAccessConditions | undefined
@@ -3431,8 +3431,8 @@ export default class LokiBlobMetadataStore
 
       arr[i] = obj[i];
     }
-
-    return arr;
+    // Return a Uint8Array view to satisfy strict typing expectations
+    return new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
   }
 
   /**
@@ -3723,8 +3723,8 @@ export default class LokiBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    snapshot: string | undefined,
-    versionId: string | undefined,
+    snapshot: string = "",
+    versionId: string = "",
     leaseAccessConditions: Models.LeaseAccessConditions | undefined,
     tags: Models.BlobTags | undefined
   ): Promise<void> {
@@ -3840,7 +3840,7 @@ export default class LokiBlobMetadataStore
     account: string,
     container: string,
     blob: string,
-    snapshot: string | undefined,
+    snapshot: string = "",
     options: Models.AppendBlobSealOptionalParams
   ): Promise<Models.BlobPropertiesInternal> {
     const coll = this.db.getCollection(this.BLOBS_COLLECTION);

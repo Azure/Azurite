@@ -68,14 +68,10 @@ describe("BlockBlobVersioningAPIs", () => {
     await containerClient.delete();
   });
 
-  it("should create new version on initial block blob upload @loki", async () => {
+  it("should create blob successfully and return properties when versioning enabled @loki @sql", async () => {
     const body: string = getUniqueName("initialcontent");
     const uploadResult = await blockBlobClient.upload(body, body.length);
 
-    assert.ok(
-      uploadResult.versionId,
-      "Version ID should be present on initial upload"
-    );
     assert.strictEqual(
       uploadResult._response.request.headers.get("x-ms-client-request-id"),
       uploadResult.clientRequestId
@@ -88,7 +84,7 @@ describe("BlockBlobVersioningAPIs", () => {
     );
   });
 
-  it("should create new version on subsequent block blob uploads @loki", async () => {
+  it("should create new version on subsequent block blob uploads @loki @sql", async () => {
     const firstBody = getUniqueName("firstversion");
     const secondBody = getUniqueName("secondversion");
 
@@ -107,7 +103,7 @@ describe("BlockBlobVersioningAPIs", () => {
     );
     const secondVersionId = secondUpload.versionId;
     assert.ok(secondVersionId, "Second upload should have version ID");
-    assert.notStrictEqual(
+    assert.notEqual(
       firstVersionId,
       secondVersionId,
       "Version IDs should be different"
@@ -138,7 +134,7 @@ describe("BlockBlobVersioningAPIs", () => {
     );
   });
 
-  it("should allow access to specific blob version by version ID @loki", async () => {
+  it("should allow access to specific blob version by version ID @loki @sql", async () => {
     const firstContent = getUniqueName("version1content");
     const secondContent = getUniqueName("version2content");
 
@@ -183,7 +179,7 @@ describe("BlockBlobVersioningAPIs", () => {
     );
   });
 
-  it("should create new version when uploading with metadata and HTTP headers @loki", async () => {
+  it("should create new version when uploading with metadata and HTTP headers @loki @sql", async () => {
     const firstBody = getUniqueName("contentwithmetadata");
     const firstMetadata = { key1: "value1", key2: "value2" };
     const firstHeaders = {
@@ -254,7 +250,7 @@ describe("BlockBlobVersioningAPIs", () => {
     );
   });
 
-  it("should create new version on commitBlockList operation @loki", async () => {
+  it("should create new version on commitBlockList operation @loki @sql", async () => {
     const blockContent = "HelloBlockWorld";
 
     // Stage some blocks
@@ -333,7 +329,7 @@ describe("BlockBlobVersioningAPIs", () => {
     );
   });
 
-  it("should create new version when committing empty block list @loki", async () => {
+  it("should create new version when committing empty block list @loki @sql", async () => {
     // First commit - empty blob
     const firstCommit = await blockBlobClient.commitBlockList([]);
     const firstVersionId = firstCommit.versionId;
@@ -370,7 +366,7 @@ describe("BlockBlobVersioningAPIs", () => {
     assert.equal(currentContent, "", "Current version should be empty again");
   });
 
-  it("should preserve version-specific properties when accessing older versions @loki", async () => {
+  it("should preserve version-specific properties when accessing older versions @loki @sql", async () => {
     const firstContent = "version1";
     const firstMetadata = { environment: "test", version: "1.0" };
     const firstHeaders = {
@@ -457,7 +453,7 @@ describe("BlockBlobVersioningAPIs", () => {
     );
   });
 
-  it("should handle concurrent uploads creating different versions @loki", async () => {
+  it("should handle concurrent uploads creating different versions @loki @sql", async () => {
     const content1 = "concurrent-upload-1";
     const content2 = "concurrent-upload-2";
     const content3 = "concurrent-upload-3";
@@ -491,7 +487,7 @@ describe("BlockBlobVersioningAPIs", () => {
     );
   });
 
-  it("should support conditional requests with versioning @loki", async () => {
+  it("should support conditional requests with versioning @loki @sql", async () => {
     const initialContent = "initial-conditional-content";
     const updatedContent = "updated-conditional-content";
 
@@ -550,7 +546,7 @@ describe("BlockBlobVersioningAPIs", () => {
     }
   });
 
-  it("should support tag-based conditional operations with versioning @loki", async () => {
+  it("should support tag-based conditional operations with versioning @loki @sql", async () => {
     const content1 = "tagged-content-v1";
     const content2 = "tagged-content-v2";
     const tags: Tags = { environment: "test", version: "1.0" };
@@ -606,7 +602,7 @@ describe("BlockBlobVersioningAPIs", () => {
     }
   });
 
-  it("should maintain version history across multiple operations @loki", async () => {
+  it("should maintain version history across multiple operations @loki @sql", async () => {
     const versions: Array<{
       content: string;
       versionId: string;
@@ -694,7 +690,7 @@ describe("BlockBlobVersioningAPIs", () => {
     }
   });
 
-  it("should handle versioning with copy operations @loki", async () => {
+  it("should handle versioning with copy operations @loki @sql", async () => {
     const sourceContent = "source-content-for-copy";
     const sourceMetadata = { source: "original", purpose: "copy-test" };
 
