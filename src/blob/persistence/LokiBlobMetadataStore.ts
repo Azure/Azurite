@@ -1273,10 +1273,11 @@ export default class LokiBlobMetadataStore
     if (this.isBlobVersioningEnabled()) {
       // If versioning is enabled, a new version will always be created alongside the snapshot
       // and contain the same contents as the snapshot.
-      snapshotBlob.snapshot = "";
+      const copiedSnapshot = JSON.parse(JSON.stringify(snapshotBlob));
+      copiedSnapshot.snapshot = "";
       const newVersion = await this.createBlob(
         context,
-        snapshotBlob,
+        copiedSnapshot,
         leaseAccessConditions,
         modifiedAccessConditions
       );
@@ -1532,7 +1533,7 @@ export default class LokiBlobMetadataStore
         name: blob,
         snapshot: { $gt: "" } // Only count actual snapshots, not empty snapshot (base blob)
       });
-      if (count > 1) {
+      if (count > 0) {
         throw StorageErrorFactory.getSnapshotsPresent(context.contextId!);
       } else {
         if (this.isBlobVersioningEnabled()) {
@@ -1569,16 +1570,16 @@ export default class LokiBlobMetadataStore
           containerName: container,
           name: blob
         });
-        doc.isCurrentVersion = false;
-        coll.update(doc);
       } else {
+        // Remove all snapshots first, then mark base blob as non-current
         coll.findAndRemove({
           accountName: account,
           containerName: container,
           name: blob,
           snapshot: { $gt: "" }
         });
-        coll.remove(doc);
+        doc.isCurrentVersion = false;
+        coll.update(doc);
       }
     }
 

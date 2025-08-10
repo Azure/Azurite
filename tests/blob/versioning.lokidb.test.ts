@@ -3655,4 +3655,556 @@ describe("LokiBlobMetadataStoreVersioning", () => {
       }
     });
   });
+
+  describe("deleteBlob comprehensive code path coverage @loki", () => {
+    let store: LokiBlobMetadataStore;
+    let disabledStore: LokiBlobMetadataStore;
+    let ctx: Context;
+    const containerName = "test-container";
+
+    beforeEach(async () => {
+      ctx = createContext();
+      // Versioning enabled
+      store = new LokiBlobMetadataStore("__test_db_blob__.json", false, true);
+      await store.init();
+      await store.createContainer(ctx, buildContainer(ACCOUNT, containerName));
+
+      // Versioning disabled
+      disabledStore = new LokiBlobMetadataStore(
+        "__test_db_blob_disabled__.json",
+        false,
+        false
+      );
+      await disabledStore.init();
+      await disabledStore.createContainer(
+        ctx,
+        buildContainer(ACCOUNT, containerName)
+      );
+    });
+
+    afterEach(async () => {
+      await store.close();
+      await store.clean();
+      await disabledStore.close();
+      await disabledStore.clean();
+    });
+
+    it("should throw error when versionId is provided with snapshot option @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      const created = await store.createBlob(ctx, blob);
+
+      // Create a snapshot
+      const snapshot = await store.createSnapshot(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+
+      try {
+        await store.deleteBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          { snapshot: snapshot.snapshot },
+          created.versionId
+        );
+        assert.fail(
+          "Should have thrown error when versionId provided with snapshot"
+        );
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 400);
+        assert.ok(
+          error.message.includes(
+            "When deleting a blob version, you cannot specify a snapshot"
+          )
+        );
+      }
+    });
+
+    it("should throw error when versionId is provided with deleteSnapshots option @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      const created = await store.createBlob(ctx, blob);
+
+      try {
+        await store.deleteBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          { deleteSnapshots: Models.DeleteSnapshotsOptionType.Include },
+          created.versionId
+        );
+        assert.fail(
+          "Should have thrown error when versionId provided with deleteSnapshots"
+        );
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 400);
+        assert.ok(
+          error.message.includes(
+            "When deleting a blob version, you cannot specify a snapshot"
+          )
+        );
+      }
+    });
+
+    it("should throw BlobNotFound when deleting non-existent blob @loki", async () => {
+      try {
+        await store.deleteBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          "non-existent-blob",
+          {}
+        );
+        assert.fail("Should have thrown BlobNotFound error");
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 404);
+      }
+    });
+
+    it("should throw error when trying to use deleteSnapshots against a snapshot @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, blob);
+
+      // Create a snapshot
+      const snapshot = await store.createSnapshot(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+
+      try {
+        await store.deleteBlob(ctx, ACCOUNT, containerName, name, {
+          snapshot: snapshot.snapshot,
+          deleteSnapshots: Models.DeleteSnapshotsOptionType.Include
+        });
+        assert.fail(
+          "Should have thrown error when using deleteSnapshots against snapshot"
+        );
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 400);
+        assert.ok(
+          error.message.includes("Invalid operation against a blob snapshot")
+        );
+      }
+    });
+
+    it("should delete specific version when versionId is provided @loki", async () => {
+      const name = `blob-${uuid()}`;
+
+      // Create version 1
+      const v1 = buildBlockBlob(ACCOUNT, containerName, name, "version1");
+      const created1 = await store.createBlob(ctx, v1);
+
+      // Create version 2
+      ctx.startTime = new Date(Date.now() + 100);
+      const v2 = buildBlockBlob(ACCOUNT, containerName, name, "version2");
+      await store.createBlob(ctx, v2);
+
+      // Delete version 1 specifically
+      await store.deleteBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        {},
+        created1.versionId
+      );
+
+      // Version 2 should still exist as current
+      const current = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+      assert.strictEqual(
+        current.properties.contentLength,
+        Buffer.byteLength("version2")
+      );
+
+      // Version 1 should be gone
+      try {
+        await store.downloadBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          "",
+          created1.versionId
+        );
+        assert.fail("Should have thrown error for deleted version");
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 404);
+      }
+    });
+
+    it("should throw SnapshotsPresent when deleting base blob with snapshots (versioning enabled) @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, blob);
+
+      // Create snapshots
+      await store.createSnapshot(ctx, ACCOUNT, containerName, name);
+      await store.createSnapshot(ctx, ACCOUNT, containerName, name);
+
+      try {
+        await store.deleteBlob(ctx, ACCOUNT, containerName, name, {});
+        assert.fail("Should have thrown SnapshotsPresent error");
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 409);
+        assert.ok(error.message.includes("has snapshots"));
+      }
+    });
+
+    it("should throw SnapshotsPresent when deleting base blob with snapshots (versioning disabled) @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await disabledStore.createBlob(ctx, blob);
+
+      // Create snapshots
+      await disabledStore.createSnapshot(ctx, ACCOUNT, containerName, name);
+      await disabledStore.createSnapshot(ctx, ACCOUNT, containerName, name);
+
+      try {
+        await disabledStore.deleteBlob(ctx, ACCOUNT, containerName, name, {});
+        assert.fail("Should have thrown SnapshotsPresent error");
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 409);
+        assert.ok(error.message.includes("has snapshots"));
+      }
+    });
+
+    it("should mark blob as non-current when deleting base blob without snapshots (versioning enabled) @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      const created = await store.createBlob(ctx, blob);
+
+      // Delete the blob (no snapshots exist)
+      await store.deleteBlob(ctx, ACCOUNT, containerName, name, {});
+
+      // Blob should be marked as non-current, not physically deleted
+      try {
+        await store.downloadBlob(ctx, ACCOUNT, containerName, name);
+        assert.fail("Should have thrown error for non-current blob");
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 404);
+      }
+
+      // But should still be accessible by version ID
+      const versionedBlob = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        "",
+        created.versionId
+      );
+      assert.strictEqual(
+        versionedBlob.properties.contentLength,
+        Buffer.byteLength("content")
+      );
+    });
+
+    it("should physically delete blob when deleting base blob without snapshots (versioning disabled) @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      const created = await disabledStore.createBlob(ctx, blob);
+
+      // Delete the blob (no snapshots exist)
+      await disabledStore.deleteBlob(ctx, ACCOUNT, containerName, name, {});
+
+      // Blob should be completely gone
+      try {
+        await disabledStore.downloadBlob(ctx, ACCOUNT, containerName, name);
+        assert.fail("Should have thrown error for deleted blob");
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 404);
+      }
+
+      // Should not be accessible by version ID either (versioning disabled)
+      try {
+        await disabledStore.downloadBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          "",
+          created.versionId
+        );
+        assert.fail("Should have thrown error for deleted blob by version");
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 404);
+      }
+    });
+
+    it("should delete individual snapshot when targeting specific snapshot @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, blob);
+
+      // Create multiple snapshots
+      const snapshot1 = await store.createSnapshot(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+      ctx.startTime = new Date(Date.now() + 100);
+      const snapshot2 = await store.createSnapshot(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+
+      // Delete first snapshot specifically
+      await store.deleteBlob(ctx, ACCOUNT, containerName, name, {
+        snapshot: snapshot1.snapshot
+      });
+
+      // Base blob should still exist
+      const baseBlob = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+      assert.strictEqual(
+        baseBlob.properties.contentLength,
+        Buffer.byteLength("content")
+      );
+
+      // Second snapshot should still exist
+      const snap2 = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        snapshot2.snapshot
+      );
+      assert.strictEqual(
+        snap2.properties.contentLength,
+        Buffer.byteLength("content")
+      );
+
+      // First snapshot should be gone
+      try {
+        await store.downloadBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          snapshot1.snapshot
+        );
+        assert.fail("Should have thrown error for deleted snapshot");
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 404);
+      }
+    });
+
+    it("should delete base blob and all snapshots when deleteSnapshots=include (versioning disabled) @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await disabledStore.createBlob(ctx, blob);
+
+      // Create snapshots
+      const snapshot1 = await disabledStore.createSnapshot(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+      const snapshot2 = await disabledStore.createSnapshot(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+
+      // Delete blob and all snapshots
+      await disabledStore.deleteBlob(ctx, ACCOUNT, containerName, name, {
+        deleteSnapshots: Models.DeleteSnapshotsOptionType.Include
+      });
+
+      // Base blob should be gone
+      try {
+        await disabledStore.downloadBlob(ctx, ACCOUNT, containerName, name);
+        assert.fail("Should have thrown error for deleted blob");
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 404);
+      }
+
+      // All snapshots should be gone
+      try {
+        await disabledStore.downloadBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          snapshot1.snapshot
+        );
+        assert.fail("Should have thrown error for deleted snapshot1");
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 404);
+      }
+
+      try {
+        await disabledStore.downloadBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          snapshot2.snapshot
+        );
+        assert.fail("Should have thrown error for deleted snapshot2");
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 404);
+      }
+    });
+
+    it("should delete snapshots only and mark base blob as non-current when deleteSnapshots=include (versioning enabled) @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      const created = await store.createBlob(ctx, blob);
+
+      // Create snapshots
+      const snapshot1 = await store.createSnapshot(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+      const snapshot2 = await store.createSnapshot(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+
+      // Delete blob and all snapshots
+      await store.deleteBlob(ctx, ACCOUNT, containerName, name, {
+        deleteSnapshots: Models.DeleteSnapshotsOptionType.Include
+      });
+
+      // Base blob should be marked as non-current
+      try {
+        await store.downloadBlob(ctx, ACCOUNT, containerName, name);
+        assert.fail("Should have thrown error for non-current blob");
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 404);
+      }
+
+      // All snapshots should be gone
+      try {
+        await store.downloadBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          snapshot1.snapshot
+        );
+        assert.fail("Should have thrown error for deleted snapshot1");
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 404);
+      }
+
+      try {
+        await store.downloadBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          snapshot2.snapshot
+        );
+        assert.fail("Should have thrown error for deleted snapshot2");
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 404);
+      }
+
+      // But base blob should still be accessible by version ID
+      const versionedBlob = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name,
+        "",
+        created.versionId
+      );
+      assert.strictEqual(
+        versionedBlob.properties.contentLength,
+        Buffer.byteLength("content")
+      );
+    });
+
+    it("should delete only snapshots when deleteSnapshots=only @loki", async () => {
+      const name = `blob-${uuid()}`;
+      const blob = buildBlockBlob(ACCOUNT, containerName, name, "content");
+      await store.createBlob(ctx, blob);
+
+      // Create snapshots
+      const snapshot1 = await store.createSnapshot(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+      const snapshot2 = await store.createSnapshot(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+
+      // Delete only snapshots
+      await store.deleteBlob(ctx, ACCOUNT, containerName, name, {
+        deleteSnapshots: Models.DeleteSnapshotsOptionType.Only
+      });
+
+      // Base blob should still exist and be current
+      const baseBlob = await store.downloadBlob(
+        ctx,
+        ACCOUNT,
+        containerName,
+        name
+      );
+      assert.strictEqual(
+        baseBlob.properties.contentLength,
+        Buffer.byteLength("content")
+      );
+
+      // All snapshots should be gone
+      try {
+        await store.downloadBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          snapshot1.snapshot
+        );
+        assert.fail("Should have thrown error for deleted snapshot1");
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 404);
+      }
+
+      try {
+        await store.downloadBlob(
+          ctx,
+          ACCOUNT,
+          containerName,
+          name,
+          snapshot2.snapshot
+        );
+        assert.fail("Should have thrown error for deleted snapshot2");
+      } catch (error) {
+        assert.strictEqual(error.statusCode, 404);
+      }
+    });
+  });
 });
